@@ -1,7 +1,8 @@
-// Loads the real static modules (capsule_viewer.js + result_v0_card.js) into
-// a fresh jsdom window per call, exactly as the shell inlines them (base
-// FIRST, then domain modules -- see base_viewer.py's render order comment).
-// No transpilation, no mocking: the same bytes that ship in the artifact.
+// Loads the real static modules (capsule_viewer.js + every registered domain
+// module) into a fresh jsdom window per call, exactly as the shell inlines
+// them (base FIRST, then domain modules in base_viewer.py's MODULE_SCRIPTS
+// order: conversation_exchange_card.js, then result_v0_card.js). No
+// transpilation, no mocking: the same bytes that ship in the artifact.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -29,6 +30,8 @@ export function loadViewer() {
   globalThis.document = window.document;
   // eslint-disable-next-line no-eval
   (0, eval)(readStatic("capsule_viewer.js"));
+  // eslint-disable-next-line no-eval
+  (0, eval)(readStatic("conversation_exchange_card.js"));
   // eslint-disable-next-line no-eval
   (0, eval)(readStatic("result_v0_card.js"));
   return window.CapsuleViewer;
