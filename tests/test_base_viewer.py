@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The fragment-carried BASE viewer + its domain-module plug-in seam
 (``capsule_viewer/base_viewer.py``). Moved, with its test coverage, from
-capsule-engine ([batch4-capsule-viewer-three-buckets]) -- capsule-engine
-keeps no copy after the move.
+capsule-engine -- capsule-engine keeps no copy after the move.
 
 Covers the public build/render surface and the two embed invariants
 ``render_base_viewer_html`` checks at runtime: exactly one fragment

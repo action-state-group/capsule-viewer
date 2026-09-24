@@ -1,8 +1,8 @@
 # Test fixtures
 
 Vendored byte-for-byte from `agent-action-capsule`'s
-`vectors/evidence-result/` ([batch4-evidence-result-schema-v0], schema frozen
-2026-09-22) -- the one synthetic OO positive fixture plus five negative
+`vectors/evidence-result/` (schema frozen 2026-09-22) -- the one synthetic OO
+positive fixture plus five negative
 fixtures, each mutated from the positive by exactly one field. See that
 repo's `vectors/evidence-result/README.md` for the full case table.
 

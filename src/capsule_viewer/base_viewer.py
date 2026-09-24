@@ -26,9 +26,9 @@ the per-record *card body* to a domain module registered on the JS seam
   instead.
 
 Moved out of ``capsule-engine`` (``capsule_engine/bundle_viewer/base_viewer.py``
-@ ``2fbd23ce``) by ``[batch4-capsule-viewer-three-buckets]`` -- this package is
-now the sole home of the fragment-carried viewer; capsule-engine keeps no
-copy. Fragment encoding is vendored in ``capsule_viewer.fragment`` (base64url
+@ ``2fbd23ce``) -- this package is now the sole home of the fragment-carried
+viewer; capsule-engine keeps no copy. Fragment encoding is vendored in
+``capsule_viewer.fragment`` (base64url
 of compact JSON, no padding) so every fragment-carried surface in this
 package shares one encoder and the JS decode below stays in step with it.
 """
