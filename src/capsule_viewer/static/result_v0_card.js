@@ -37,8 +37,106 @@
   var BUCKET_KEYS = ["met", "not_met", "not_evaluable"];
   var WITHHELD_LIKE = { WITHHELD: 1, NOT_COMMITTED: 1 };
 
+  // Claim types (schema $defs/ClaimType, PROPOSED against the 2026-09-25
+  // ruling: "close + reconcile as claim types in result v0"). An absent
+  // `type` is the pre-existing requirement claim. Anything outside this
+  // list is UNRECOGNIZED: rendered as its own labelled row carrying the raw
+  // type and contract_ref -- never refused for its type, never dropped
+  // ("anything that meets a claim type it doesn't recognize should show
+  // 'unrecognized', never drop the row").
+  var KNOWN_CLAIM_TYPES = ["requirement", "reconcile", "close"];
+  var RECONCILE_STATES = ["MATCHED", "A_ONLY", "B_ONLY", "CONFLICTING", "INSUFFICIENT", "UNRESOLVED"];
+  var STATE_OF_RECORD = ["A", "B", "none"];
+  var CLOSE_STATES = ["UNILATERAL", "AGREED"];
+
+  // How each reconcile state renders. The class is the load-bearing part
+  // and is pinned by negative fixtures, not styling: A_ONLY / B_ONLY are
+  // "one side missing" (rv0-rs-one-sided) and CONFLICTING is "both sides
+  // disagree" (rv0-rs-finding) -- the ruling's "one side missing isn't a
+  // finding; both sides disagreeing is." No class is shared between the
+  // one-sided states and the finding state.
+  var RECONCILE_ROWS = [
+    { state: "MATCHED", cls: "rv0-rs-matched", label: "matched -- present on both sides, equal" },
+    { state: "A_ONLY", cls: "rv0-rs-one-sided", label: "A only -- one side missing (this book has the row, the peer does not)" },
+    { state: "B_ONLY", cls: "rv0-rs-one-sided", label: "B only -- one side missing (the peer has the row, this book does not)" },
+    { state: "CONFLICTING", cls: "rv0-rs-finding", label: "conflicting -- both sides disagree" },
+    { state: "INSUFFICIENT", cls: "rv0-rs-gap", label: "insufficient -- the evidence to compare was missing" },
+    { state: "UNRESOLVED", cls: "rv0-rs-gap", label: "unresolved -- compared, not resolvable within the period" },
+  ];
+
   function isNonEmptyString(v) {
     return typeof v === "string" && v.length > 0;
+  }
+
+  function isNonNegativeInteger(v) {
+    return typeof v === "number" && isFinite(v) && Math.floor(v) === v && v >= 0;
+  }
+
+  function isPeriod(p) {
+    return !!p && typeof p === "object" && isNonEmptyString(p.start) && isNonEmptyString(p.end);
+  }
+
+  function isDigestRef(r) {
+    return !!r && typeof r === "object" && r.digest_alg === "SHA-256" && isNonEmptyString(r.digest);
+  }
+
+  // Absent `type` means "requirement" -- the pre-existing claim shape.
+  function claimType(claim) {
+    return claim && claim.type === undefined ? "requirement" : claim.type;
+  }
+
+  function isKnownClaimType(claim) {
+    return KNOWN_CLAIM_TYPES.indexOf(claimType(claim)) !== -1;
+  }
+
+  // The raw type, as text, for the unrecognized row -- a non-string type is
+  // shown as its JSON so the reader sees exactly what the document carried.
+  function rawTypeText(claim) {
+    var t = claim ? claim.type : undefined;
+    return typeof t === "string" ? t : JSON.stringify(t);
+  }
+
+  // Type-specific well-formedness. Same posture as the base fields: never
+  // defaulted, never silently fixed -- a missing count is NOT zero, and an
+  // AGREED close with no peer is NOT an agreement.
+  function reconcileIssues(body) {
+    var issues = [];
+    if (!body || typeof body !== "object") return ["reconcile body missing (type is \"reconcile\")"];
+    if (!isNonEmptyString(body.join_key)) issues.push("reconcile.join_key missing or empty");
+    if (!isNonEmptyString(body.peer)) issues.push("reconcile.peer missing or empty");
+    if (!isPeriod(body.period)) issues.push("reconcile.period missing or not {start, end}");
+    if (!body.counts || typeof body.counts !== "object") {
+      issues.push("reconcile.counts missing");
+    } else {
+      RECONCILE_STATES.forEach(function (state) {
+        if (!isNonNegativeInteger(body.counts[state])) {
+          issues.push("reconcile.counts." + state + " missing or not a non-negative integer (an absent state is never zero)");
+        }
+      });
+      Object.keys(body.counts).forEach(function (key) {
+        if (RECONCILE_STATES.indexOf(key) === -1) issues.push("reconcile.counts carries unknown state \"" + key + "\"");
+      });
+    }
+    if (STATE_OF_RECORD.indexOf(body.state_of_record) === -1) {
+      issues.push("reconcile.state_of_record missing or invalid (must be A, B, or none)");
+    }
+    return issues;
+  }
+
+  function closeIssues(body) {
+    var issues = [];
+    if (!body || typeof body !== "object") return ["close body missing (type is \"close\")"];
+    if (!isPeriod(body.period)) issues.push("close.period missing or not {start, end}");
+    if (CLOSE_STATES.indexOf(body.close_state) === -1) {
+      issues.push("close.close_state missing or invalid (must be UNILATERAL or AGREED)");
+    } else if (body.close_state === "AGREED") {
+      if (!isNonEmptyString(body.peer)) issues.push("close is AGREED but names no peer -- an agreement with nobody cannot render as agreed");
+      if (!isDigestRef(body.peer_close_ref)) issues.push("close is AGREED but cites no peer_close_ref -- the peer's citing Close record, by digest, is what makes it agreed");
+    } else {
+      if (body.peer !== undefined) issues.push("close is UNILATERAL but names a peer -- only an AGREED close names one");
+      if (body.peer_close_ref !== undefined) issues.push("close is UNILATERAL but carries a peer_close_ref -- only an AGREED close cites one");
+    }
+    return issues;
   }
 
   function isDigestRefArray(v) {
@@ -105,6 +203,23 @@
       if (!isNonEmptyString(presentation.narrative)) issues.push("story presentation.narrative missing");
     } else {
       issues.push("presentation.kind must be disclosure, analysis, or story");
+    }
+    // Type <-> body binding (schema Claim.allOf). An UNRECOGNIZED type is
+    // deliberately NOT an issue here: its row renders as "unrecognized"
+    // (renderClaimUnrecognized) and, because its base axes are the same
+    // axes every type carries, it still counts in the coverage/bucket
+    // recompute -- the viewer's ignorance of a type never turns the
+    // document's own aggregate red.
+    var type = claimType(claim);
+    if (type === "reconcile") {
+      issues = issues.concat(reconcileIssues(claim.reconcile));
+      if (claim.close !== undefined) issues.push("reconcile claim also carries a close body");
+    } else if (type === "close") {
+      issues = issues.concat(closeIssues(claim.close));
+      if (claim.reconcile !== undefined) issues.push("close claim also carries a reconcile body");
+    } else if (type === "requirement") {
+      if (claim.reconcile !== undefined) issues.push("requirement claim carries a reconcile body without type \"reconcile\"");
+      if (claim.close !== undefined) issues.push("requirement claim carries a close body without type \"close\"");
     }
     return issues;
   }
@@ -268,6 +383,89 @@
     return wrap;
   }
 
+  function renderPeriod(period) {
+    return period.start + " → " + period.end;
+  }
+
+  // A reconcile claim's body: the join, the peer, the period, which side
+  // is of record, then the six states AS COUNTS -- one row each, every
+  // state always shown (zero is a count too), never a ratio, never a
+  // percentage, never a total that could stand in for the six.
+  function renderReconcile(helpers, body) {
+    var wrap = helpers.el("div", "rv0-reconcile");
+    wrap.appendChild(
+      helpers.el(
+        "div",
+        "rv0-reconcile-head",
+        "reconcile: join on " + body.join_key + " · peer " + body.peer + " · period " + renderPeriod(body.period) +
+          " · state of record: " + body.state_of_record +
+          (body.state_of_record === "A" ? " (this book)" : body.state_of_record === "B" ? " (the peer)" : " (neither)")
+      )
+    );
+    var table = helpers.el("div", "rv0-reconcile-counts");
+    RECONCILE_ROWS.forEach(function (spec) {
+      var row = helpers.el("div", "rv0-reconcile-count " + spec.cls);
+      row.setAttribute("data-state", spec.state);
+      row.appendChild(helpers.el("span", "rv0-rs-state", spec.state));
+      row.appendChild(helpers.el("span", "rv0-rs-count", String(body.counts[spec.state])));
+      row.appendChild(helpers.el("span", "rv0-rs-label", spec.label));
+      table.appendChild(row);
+    });
+    wrap.appendChild(table);
+    return wrap;
+  }
+
+  // A close claim's body. UNILATERAL and AGREED are different classes AND
+  // different wording; the agreed mark (rv0-close-agreed-mark) and the
+  // peer lines exist ONLY on the AGREED branch -- a UNILATERAL close has
+  // nothing on its row that could read as agreement ("UNILATERAL never
+  // like AGREED"). This is pinned by tests, not styling.
+  function renderClose(helpers, body) {
+    var wrap = helpers.el("div", "rv0-close");
+    wrap.appendChild(helpers.el("div", "rv0-close-period", "close period: " + renderPeriod(body.period)));
+    if (body.close_state === "AGREED") {
+      wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-agreed", "AGREED -- the peer's own Close cites this one"));
+      wrap.appendChild(helpers.el("span", "rv0-close-agreed-mark", "✓ cited back by " + body.peer));
+      wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer));
+      wrap.appendChild(
+        helpers.el("div", "rv0-mono", "peer's citing Close: " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
+      );
+    } else {
+      wrap.appendChild(
+        helpers.el("span", "rv0-close-state rv0-close-unilateral", "UNILATERAL -- closed by this book alone; no peer Close cites it")
+      );
+    }
+    return wrap;
+  }
+
+  // A claim whose type this card does not know. It is NOT refused (its
+  // base fields may be perfectly well-formed) and NOT dropped: it renders
+  // as its own labelled row, shown as-is, carrying the raw type and the
+  // contract_ref so a reader can see exactly what the document claimed
+  // and under which contract -- and go find a renderer that knows it.
+  function renderClaimUnrecognized(helpers, claim) {
+    var row = helpers.el("div", "rv0-claim rv0-claim-unrecognized");
+    var id = isNonEmptyString(claim.id) ? claim.id : "(no id)";
+    row.appendChild(
+      helpers.el(
+        "div",
+        "rv0-claim-unrecognized-title",
+        "unrecognized claim type \"" + rawTypeText(claim) + "\" -- claim \"" + id + "\" shown as-is, not interpreted"
+      )
+    );
+    row.appendChild(helpers.el("div", "rv0-claim-unrecognized-type", "type: " + rawTypeText(claim)));
+    row.appendChild(helpers.el("div", "rv0-contract", "contract_ref: " + claim.contract_ref));
+    row.appendChild(helpers.el("div", "rv0-requirement", "requirement: " + claim.requirement_ref));
+    row.appendChild(
+      helpers.el(
+        "div",
+        "rv0-verdict-line",
+        "tier: " + claim.tier + " -- grade: " + claim.grade + " -- sufficiency: " + claim.sufficiency + " -- verdict: " + claim.verdict
+      )
+    );
+    return row;
+  }
+
   function renderClaimRefusal(helpers, claim, issues) {
     var row = helpers.el("div", "rv0-claim rv0-claim-refused");
     var id = claim && isNonEmptyString(claim.id) ? claim.id : "(no id)";
@@ -277,6 +475,15 @@
       list.appendChild(helpers.el("div", "rv0-claim-refused-reason", "• " + issue));
     });
     row.appendChild(list);
+    if (claim && typeof claim === "object" && !isKnownClaimType(claim)) {
+      row.appendChild(
+        helpers.el(
+          "div",
+          "rv0-claim-refused-note",
+          "type \"" + rawTypeText(claim) + "\" is unrecognized; the row is refused for the reasons above, not for its type"
+        )
+      );
+    }
     return row;
   }
 
@@ -284,6 +491,7 @@
     var row = helpers.el("div", "rv0-claim");
     var head = helpers.el("div", "rv0-claim-head");
     head.appendChild(helpers.el("span", "rv0-claim-id", claim.id));
+    head.appendChild(helpers.el("span", "rv0-claim-type", "type: " + claimType(claim)));
     head.appendChild(helpers.el("span", "rv0-tier", "tier: " + claim.tier));
     head.appendChild(helpers.el("span", "rv0-grade", "grade: " + claim.grade));
     row.appendChild(head);
@@ -299,6 +507,9 @@
     row.appendChild(
       helpers.el("div", "rv0-verdict-line", "sufficiency: " + claim.sufficiency + " -- verdict: " + claim.verdict)
     );
+    var type = claimType(claim);
+    if (type === "reconcile") row.appendChild(renderReconcile(helpers, claim.reconcile));
+    if (type === "close") row.appendChild(renderClose(helpers, claim.close));
     row.appendChild(renderPresentation(helpers, claim.presentation));
     row.appendChild(renderDigestRefs(helpers, "evidence", claim.evidence));
     row.appendChild(renderDigestRefs(helpers, "proofs", claim.proofs));
@@ -338,9 +549,15 @@
 
     var claimsWrap = helpers.el("div", "rv0-claims");
     claimsWrap.appendChild(helpers.el("h3", "rv0-section-title", "Claims"));
+    // One row per input claim, always: refused, unrecognized, or rendered.
+    // Nothing is ever dropped -- the rendered row count equals claims.length.
     claims.forEach(function (claim) {
       var issues = claimIssues(claim);
-      claimsWrap.appendChild(issues.length ? renderClaimRefusal(helpers, claim, issues) : renderClaim(helpers, claim));
+      var row;
+      if (issues.length) row = renderClaimRefusal(helpers, claim, issues);
+      else if (!isKnownClaimType(claim)) row = renderClaimUnrecognized(helpers, claim);
+      else row = renderClaim(helpers, claim);
+      claimsWrap.appendChild(row);
     });
     wrap.appendChild(claimsWrap);
 
@@ -356,5 +573,9 @@
     recompute: recompute,
     bucketDiagnostics: bucketDiagnostics,
     parseContractRef: parseContractRef,
+    claimType: claimType,
+    isKnownClaimType: isKnownClaimType,
+    KNOWN_CLAIM_TYPES: KNOWN_CLAIM_TYPES.slice(),
+    RECONCILE_STATES: RECONCILE_STATES.slice(),
   };
 })();
