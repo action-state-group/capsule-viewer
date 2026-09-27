@@ -51,10 +51,6 @@
       "close": {
         "close_state": "UNILATERAL",
         "peer": "oo-sor",
-        "peer_close_ref": {
-          "digest": "f1bbf63714310e7378e4d122e5e17b80664524b403e393ce0b923f64dbb1e114",
-          "digest_alg": "SHA-256"
-        },
         "period": {
           "end": "2026-09-02T00:00:00Z",
           "start": "2026-09-01T00:00:00Z"
@@ -98,6 +94,6 @@
   "view": {
     "producer_name": "OO",
     "spec_version": "presentation/v1",
-    "title": "OO Close -- 2026-09-01 (unilateral)"
+    "title": "OO Close -- 2026-09-01 (unilateral, peer named)"
   }
 }

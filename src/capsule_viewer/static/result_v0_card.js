@@ -145,8 +145,13 @@
       if (!isNonEmptyString(body.peer)) issues.push("close is CONTESTED but names no peer -- a rebuttal from nobody cannot render as contested");
       if (!isDigestRef(body.peer_close_ref)) issues.push("close is CONTESTED but cites no peer_close_ref -- the peer's rebutting record, by digest, is what makes it contested");
     } else {
-      if (body.peer !== undefined) issues.push("close is UNILATERAL but names a peer -- only an AGREED or CONTESTED close names one");
-      if (body.peer_close_ref !== undefined) issues.push("close is UNILATERAL but carries a peer_close_ref -- only an AGREED or CONTESTED close cites one");
+      // UNILATERAL: `peer` and `peer_close_ref` are OPTIONAL (schema, after
+      // close-v1's unconditional peer_close) -- a party may name the peer it
+      // closed against, and cite the peer's Close it reconciled with. If
+      // present they must be well-formed; naming a peer is not agreeing
+      // with it, and renderClose shows no agreed affordance either way.
+      if (body.peer !== undefined && !isNonEmptyString(body.peer)) issues.push("close.peer present but not a non-empty string");
+      if (body.peer_close_ref !== undefined && !isDigestRef(body.peer_close_ref)) issues.push("close.peer_close_ref present but not a digest-ref");
     }
     return issues;
   }
@@ -434,10 +439,15 @@
   // close -- a peer record REBUTS it -- renders as its own state
   // (rv0-close-contested, "contested -- peer rebuts"), never with the
   // agreed mark and never in UNILATERAL's wording. The peer line and the
-  // cited peer record appear on AGREED and CONTESTED (both exist only
-  // because a peer record links to the Close), never on UNILATERAL. The
-  // state is what the Result builder read from the links at build time;
-  // this card shows it as given. Pinned by tests, not styling.
+  // cited peer record are REQUIRED on AGREED and CONTESTED (both exist only
+  // because a peer record links to the Close). A UNILATERAL close MAY name
+  // the peer it was closed against and MAY cite the peer's Close it
+  // reconciled with (schema, after close-v1's unconditional peer_close);
+  // when it does, the line says the peer has not responded, and nothing on
+  // the row is the agreed mark or AGREED's wording -- "acknowledges" is
+  // AGREED's link word and never appears on a UNILATERAL row. The state is
+  // what the Result builder read from the links at build time; this card
+  // shows it as given. Pinned by tests, not styling.
   function renderClose(helpers, body) {
     var wrap = helpers.el("div", "rv0-close");
     wrap.appendChild(helpers.el("div", "rv0-close-period", "close period: " + renderPeriod(body.period)));
@@ -457,8 +467,16 @@
       );
     } else {
       wrap.appendChild(
-        helpers.el("span", "rv0-close-state rv0-close-unilateral", "UNILATERAL -- closed by this book alone; no peer record acknowledges or rebuts it")
+        helpers.el("span", "rv0-close-state rv0-close-unilateral", "UNILATERAL -- closed by this book alone; no peer record has responded to it")
       );
+      if (body.peer !== undefined) {
+        wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer + " -- no response from it"));
+      }
+      if (body.peer_close_ref !== undefined) {
+        wrap.appendChild(
+          helpers.el("div", "rv0-mono", "peer's Close reconciled with (no link back): " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
+        );
+      }
     }
     return wrap;
   }

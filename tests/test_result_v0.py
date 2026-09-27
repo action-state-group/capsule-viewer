@@ -21,21 +21,22 @@ from capsule_viewer.result_v0 import build_result_entry
 
 TESTDATA = Path(__file__).parent / "testdata"
 
-# Claim-type fixtures (PROPOSED, ruling 2026-09-25): the four schema
-# positives (the three Close states among them), the schema negatives the
-# card refuses, the schema negative the card renders as "unrecognized", and
-# the two viewer-owned render negatives.
+# Claim-type fixtures (PROPOSED, ruling 2026-09-25): the five schema
+# positives (the three Close states among them, UNILATERAL with and without
+# the peer named), the schema negatives the card refuses, the schema
+# negative the card renders as "unrecognized", and the viewer-owned render
+# negative.
 TYPED_FIXTURES = [
     "pos-oo-reconcile-result.json",
     "pos-oo-close-agreed-result.json",
     "pos-oo-close-unilateral-result.json",
+    "pos-oo-close-unilateral-named-peer-result.json",
     "pos-oo-close-contested-result.json",
     "neg-close-agreed-without-peer.json",
     "neg-close-contested-without-peer-close-ref.json",
     "neg-reconcile-tallies-missing-state.json",
     "neg-unrecognized-claim-type.json",
     "neg-render-reconcile-one-sided-only.json",
-    "neg-render-close-unilateral-with-peer-ref.json",
 ]
 
 
@@ -128,5 +129,6 @@ def test_shell_ships_the_claim_type_renderer_that_pins_the_rules():
         "one side missing",
         "both sides disagree",
         "contested -- peer rebuts",
+        "no peer record has responded to it",
     ):
         assert marker in html, marker

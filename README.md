@@ -71,10 +71,13 @@ rules that are pinned by negative fixtures and tests, never by styling:
   to the Close (`acknowledges` -> AGREED, `rebuts` -> CONTESTED, neither ->
   UNILATERAL); the claim carries what the Result builder read, and the card
   shows it as given. A `UNILATERAL` close carries nothing that could read
-  as agreement: no agreed mark, no peer line, no cited peer record. A
+  as agreement: no agreed mark, never `AGREED`'s wording. It may name the
+  peer it was closed against and cite the peer's Close it reconciled with
+  (both optional in the schema, after `close-v1.json`'s unconditional
+  `peer_close`); when it does, the line says the peer has not responded. A
   `CONTESTED` close never carries the agreed mark and never `UNILATERAL`'s
   wording. An `AGREED` or `CONTESTED` close with no peer or no cited peer
-  record, or a `UNILATERAL` close that names one, is refused.
+  record is refused.
 - **A claim whose `type` the card does not know is shown, never dropped**:
   its own `rv0-claim-unrecognized` row, labelled `unrecognized`, carrying
   the raw type and the claim's `contract_ref`. The rendered row count

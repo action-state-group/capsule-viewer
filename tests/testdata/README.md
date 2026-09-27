@@ -18,10 +18,15 @@ Vendored byte-for-byte from the same directory on the
 
 - `pos-oo-reconcile-result.json` (tallies keyed lowercase, as
   `schemas/judge/close-v1.json` keys them), `pos-oo-close-agreed-result.json`,
-  `pos-oo-close-unilateral-result.json`, `pos-oo-close-contested-result.json`
-  -- schema positives; the last three are the Evidence Layer's three Close
-  states (`draft-mih-agent-evidence-layer-00`, "Reconcile and Close"), each
-  `close_state` the state READ from the Close's inbound links at build time.
+  `pos-oo-close-unilateral-result.json`,
+  `pos-oo-close-unilateral-named-peer-result.json`,
+  `pos-oo-close-contested-result.json` -- schema positives; the last four
+  are the Evidence Layer's three Close states
+  (`draft-mih-agent-evidence-layer-00`, "Reconcile and Close"), each
+  `close_state` the state READ from the Close's inbound links at build
+  time. UNILATERAL comes both without and with the peer named: `peer` /
+  `peer_close_ref` are optional there, and the named-peer positive is the
+  render fixture for "naming the peer is not agreeing with it".
 - `neg-close-agreed-without-peer.json`,
   `neg-close-contested-without-peer-close-ref.json`,
   `neg-reconcile-tallies-missing-state.json` -- schema negatives; the card
@@ -41,9 +46,11 @@ constraints rather than leaving them to styling:
   `a_only 3 · b_only 2 · conflicting 0`: the one-sided rows are the only
   non-matched rows, and the finding class must still never attach to them;
   `CONFLICTING` still renders as the count `0`, never hidden.
-- `neg-render-close-unilateral-with-peer-ref.json` -- a `UNILATERAL` close
-  that also carries `peer` + `peer_close_ref`: refused, and nothing on the
-  page may read as agreed.
+
+(A former viewer-owned negative, `neg-render-close-unilateral-with-peer-ref`,
+refused a `UNILATERAL` close that named its peer; the schema now permits
+that, so the vendored named-peer positive replaced it -- the test asserts
+the absence of every agreed affordance on the rendered row instead.)
 
 `CONTESTED` needs no viewer-owned negative of its own: the vendored
 `pos-oo-close-contested-result.json` is the negative fixture for "never the

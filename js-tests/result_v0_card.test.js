@@ -290,11 +290,16 @@ describe("claim types -- reconcile: six counts as counts, one-sided is never a f
 });
 
 describe("claim types -- close: three states; UNILATERAL never renders like AGREED, CONTESTED like neither", () => {
-  // Everything a UNILATERAL row must not carry: it has no peer at all.
+  // Everything a UNILATERAL row that names no peer must not carry.
   const AGREED_AFFORDANCES = ".rv0-close-agreed, .rv0-close-agreed-mark, .rv0-close-peer, .rv0-stamp";
-  // Everything a CONTESTED row must not carry: it names the rebutting peer
-  // (so .rv0-close-peer is legitimate), but nothing that reads as agreement.
+  // Everything a CONTESTED row -- or a UNILATERAL row that names its peer --
+  // must not carry: the peer line is legitimate there, but nothing that
+  // reads as agreement.
   const AGREED_MARKS = ".rv0-close-agreed, .rv0-close-agreed-mark, .rv0-stamp";
+  // The exact UNILATERAL class and label, pinned like CONTESTED's. The label
+  // never says "acknowledges" -- that is AGREED's link word.
+  const UNILATERAL_CLASS = "rv0-close-state rv0-close-unilateral";
+  const UNILATERAL_LABEL = "UNILATERAL -- closed by this book alone; no peer record has responded to it";
 
   it("AGREED renders its own class and label, the agreed mark, the peer, and the peer's acknowledging Close by digest", async () => {
     const doc = fixture("pos-oo-close-agreed-result.json");
@@ -310,30 +315,79 @@ describe("claim types -- close: three states; UNILATERAL never renders like AGRE
     expect(claimEl.querySelector(".rv0-close").textContent).toContain(doc.claims[1].close.peer_close_ref.digest);
   });
 
-  it("UNILATERAL renders a different class and a different label from AGREED", async () => {
+  it("UNILATERAL renders its own exact class and exact label -- neither AGREED's, and never AGREED's link word", async () => {
     const agreed = await render(fixture("pos-oo-close-agreed-result.json"));
     const unilateral = await render(fixture("pos-oo-close-unilateral-result.json"));
+    const claimEl = claimRow(unilateral.node, "close-1");
+    expect(claimEl.querySelector(".rv0-claim-type").textContent).toBe("type: close");
     const a = claimRow(agreed.node, "close-1").querySelector(".rv0-close-state");
-    const u = claimRow(unilateral.node, "close-1").querySelector(".rv0-close-state");
-    expect(u.className).toContain("rv0-close-unilateral");
+    const u = claimEl.querySelector(".rv0-close-state");
+    expect(u.className).toBe(UNILATERAL_CLASS);
+    expect(u.textContent).toBe(UNILATERAL_LABEL);
     expect(u.className).not.toContain("rv0-close-agreed");
-    expect(u.textContent).toContain("UNILATERAL");
+    expect(u.textContent).not.toMatch(/agreed|acknowledg/i);
     expect(u.className).not.toBe(a.className);
     expect(u.textContent).not.toBe(a.textContent);
+    // Its base axes are untouched: the Close was sealed; the agreement axis is close_state alone.
+    expect(claimEl.querySelector(".rv0-verdict-line").textContent).toBe("sufficiency: SATISFIED -- verdict: met");
   });
 
-  it("NEGATIVE: a UNILATERAL close carries no agreed/stamp-like affordance at all", async () => {
+  it("NEGATIVE: a UNILATERAL close (no peer named) carries no agreed affordance, no peer affordance, and none of AGREED's wording", async () => {
     const { node } = await render(fixture("pos-oo-close-unilateral-result.json"));
     const claimEl = claimRow(node, "close-1");
     expect(claimEl.className).not.toContain("rv0-claim-refused");
     expect(claimEl.querySelectorAll(AGREED_AFFORDANCES)).toHaveLength(0);
     const closeBlock = claimEl.querySelector(".rv0-close");
-    expect(closeBlock.textContent).not.toMatch(/agreed/i);
+    expect(closeBlock.textContent).not.toMatch(/agreed|acknowledg/i);
     expect(closeBlock.textContent).not.toContain("✓");
-    expect(closeBlock.querySelectorAll(".rv0-badge")).toHaveLength(0);
+    expect(closeBlock.textContent).not.toMatch(/peer:/);
+    expect(closeBlock.querySelectorAll(".rv0-badge, .rv0-mono")).toHaveLength(0);
     Array.from(closeBlock.querySelectorAll("*")).forEach((el) => expect(el.className).not.toMatch(/agreed|stamp|ok\b/));
     // ...and nowhere else on the page either (the base's recompute badges say "matches claims[]", not "agreed").
     expect(node.querySelectorAll(AGREED_AFFORDANCES)).toHaveLength(0);
+  });
+
+  it("a UNILATERAL close that names its peer renders the peer as unanswered -- same exact class and label, still no agreed affordance", async () => {
+    const doc = fixture("pos-oo-close-unilateral-named-peer-result.json");
+    const { node } = await render(doc);
+    const claimEl = claimRow(node, "close-1");
+    expect(claimEl.className).not.toContain("rv0-claim-refused");
+    const state = claimEl.querySelector(".rv0-close-state");
+    expect(state.className).toBe(UNILATERAL_CLASS);
+    expect(state.textContent).toBe(UNILATERAL_LABEL);
+    expect(claimEl.querySelector(".rv0-close-peer").textContent).toBe("peer: oo-sor -- no response from it");
+    const closeBlock = claimEl.querySelector(".rv0-close");
+    expect(closeBlock.textContent).not.toMatch(/agreed|acknowledg/i);
+    expect(closeBlock.textContent).not.toContain("✓");
+    expect(closeBlock.querySelectorAll(".rv0-mono")).toHaveLength(0); // nothing cited: no peer_close_ref on this fixture
+    Array.from(closeBlock.querySelectorAll("*")).forEach((el) => expect(el.className).not.toMatch(/agreed|stamp|ok\b/));
+    expect(node.querySelectorAll(AGREED_MARKS)).toHaveLength(0);
+  });
+
+  it("NEGATIVE: a UNILATERAL close that names AND cites its peer is rendered, not refused, and still carries nothing of AGREED's", async () => {
+    const agreed = fixture("pos-oo-close-agreed-result.json");
+    const tampered = clone(fixture("pos-oo-close-unilateral-named-peer-result.json"));
+    tampered.claims[1].close.peer_close_ref = agreed.claims[1].close.peer_close_ref; // the peer's Close, reconciled with, not (yet) linking back
+    const { node } = await render(tampered);
+    expect(node.querySelectorAll(".rv0-claim")).toHaveLength(tampered.claims.length);
+    expect(node.querySelectorAll(".rv0-claim-refused")).toHaveLength(0);
+    const claimEl = claimRow(node, "close-1");
+    const state = claimEl.querySelector(".rv0-close-state");
+    expect(state.className).toBe(UNILATERAL_CLASS);
+    expect(state.textContent).toBe(UNILATERAL_LABEL);
+    const closeBlock = claimEl.querySelector(".rv0-close");
+    expect(closeBlock.textContent).toContain("no link back");
+    expect(closeBlock.textContent).toContain(agreed.claims[1].close.peer_close_ref.digest);
+    expect(closeBlock.textContent).not.toMatch(/agreed|acknowledg/i);
+    expect(closeBlock.textContent).not.toContain("✓");
+    Array.from(closeBlock.querySelectorAll("*")).forEach((el) => expect(el.className).not.toMatch(/agreed|stamp|ok\b/));
+    expect(node.querySelectorAll(AGREED_MARKS)).toHaveLength(0);
+    // A malformed citation is still refused -- optional never means unchecked.
+    const broken = clone(tampered);
+    broken.claims[1].close.peer_close_ref = { digest_alg: "SHA-256" };
+    const refused = (await render(broken)).node.querySelectorAll(".rv0-claim-refused");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].textContent).toContain("close.peer_close_ref present but not a digest-ref");
   });
 
   it("CONTESTED renders its own class and label ('contested -- peer rebuts'), the peer, and the peer's rebutting record by digest", async () => {
@@ -413,16 +467,111 @@ describe("claim types -- close: three states; UNILATERAL never renders like AGRE
     expect(node.querySelectorAll(".rv0-close-state")).toHaveLength(0);
   });
 
-  it("NEGATIVE: a UNILATERAL close that smuggles in a peer + peer_close_ref is refused, not rendered as agreed", async () => {
-    const doc = fixture("neg-render-close-unilateral-with-peer-ref.json");
-    const { node } = await render(doc);
-    expect(node.querySelectorAll(".rv0-claim")).toHaveLength(doc.claims.length);
-    const refused = node.querySelectorAll(".rv0-claim-refused");
-    expect(refused).toHaveLength(1);
-    expect(refused[0].textContent).toContain("UNILATERAL but names a peer");
-    expect(refused[0].textContent).toContain("UNILATERAL but carries a peer_close_ref");
-    expect(node.querySelectorAll(AGREED_AFFORDANCES)).toHaveLength(0);
-  });
+});
+
+// ---------------------------------------------------------------------------
+// XSS through the five typed-body strings the card renders: reconcile's
+// join_key / peer / state_of_record, close's peer, and peer_close_ref.digest.
+// The base XSS suite above injects only through view.title, a summary, and
+// `type`; a card whose renderReconcile switched to innerHTML would pass it.
+// ---------------------------------------------------------------------------
+
+describe("XSS -- the five typed-body strings reach the DOM as text, never as markup", () => {
+  const PAYLOADS = [
+    "<img src=x onerror=window.pwned=1>",
+    "</script><script>window.pwned=1</script>",
+    "\"'><b onmouseover=window.pwned=1>x</b>",
+  ];
+  const HOSTILE_ELEMENTS = "img, script, b";
+
+  // No element was created from the payload, and its `<` reached the
+  // serialized DOM escaped (`&lt;`) -- text, not a tag. (The attribute
+  // names survive as text too; that is the point, not a leak.)
+  function assertNoElementCreated(node) {
+    expect(node.querySelectorAll(HOSTILE_ELEMENTS)).toHaveLength(0);
+    expect(node.innerHTML).not.toMatch(/<(img|script|b)[\s>]/);
+  }
+  function assertInert(node) {
+    assertNoElementCreated(node);
+    expect(node.innerHTML).toContain("&lt;");
+  }
+
+  for (const PAYLOAD of PAYLOADS) {
+    it(`reconcile.join_key = ${JSON.stringify(PAYLOAD)} renders verbatim in the head line as text`, async () => {
+      const tampered = clone(fixture("pos-oo-reconcile-result.json"));
+      const body = tampered.claims[1].reconcile;
+      body.join_key = PAYLOAD;
+      const { node } = await render(tampered);
+      const claimEl = claimRow(node, "reconcile-1");
+      expect(claimEl.className).not.toContain("rv0-claim-refused");
+      expect(claimEl.querySelector(".rv0-reconcile-head").textContent).toBe(
+        "reconcile: join on " + PAYLOAD + " · peer " + body.peer + " · period " + body.period.start + " → " + body.period.end + " · state of record: B (the peer)"
+      );
+      assertInert(node);
+    });
+
+    it(`reconcile.peer = ${JSON.stringify(PAYLOAD)} renders verbatim in the head line as text`, async () => {
+      const tampered = clone(fixture("pos-oo-reconcile-result.json"));
+      const body = tampered.claims[1].reconcile;
+      body.peer = PAYLOAD;
+      const { node } = await render(tampered);
+      const claimEl = claimRow(node, "reconcile-1");
+      expect(claimEl.className).not.toContain("rv0-claim-refused");
+      expect(claimEl.querySelector(".rv0-reconcile-head").textContent).toBe(
+        "reconcile: join on " + body.join_key + " · peer " + PAYLOAD + " · period " + body.period.start + " → " + body.period.end + " · state of record: B (the peer)"
+      );
+      assertInert(node);
+    });
+
+    it(`reconcile.state_of_record = ${JSON.stringify(PAYLOAD)} never reaches the DOM at all -- the enum gate refuses the row, nothing echoes it, nothing is dropped`, async () => {
+      const tampered = clone(fixture("pos-oo-reconcile-result.json"));
+      tampered.claims[1].reconcile.state_of_record = PAYLOAD;
+      const { node } = await render(tampered);
+      expect(node.querySelectorAll(".rv0-claim")).toHaveLength(tampered.claims.length);
+      const refused = node.querySelectorAll(".rv0-claim-refused");
+      expect(refused).toHaveLength(1);
+      expect(refused[0].textContent).toContain("reconcile.state_of_record missing or invalid");
+      expect(node.textContent).not.toContain(PAYLOAD);
+      expect(node.querySelectorAll(".rv0-reconcile-head")).toHaveLength(1); // reconcile-2 still renders
+      assertNoElementCreated(node);
+      expect(node.innerHTML).not.toContain("&lt;"); // not even as escaped text: the value is gated, not echoed
+    });
+
+    it(`close.peer = ${JSON.stringify(PAYLOAD)} renders verbatim on the peer line and the agreed mark as text`, async () => {
+      const tampered = clone(fixture("pos-oo-close-agreed-result.json"));
+      tampered.claims[1].close.peer = PAYLOAD;
+      const { node } = await render(tampered);
+      const claimEl = claimRow(node, "close-1");
+      expect(claimEl.className).not.toContain("rv0-claim-refused");
+      expect(claimEl.querySelector(".rv0-close-peer").textContent).toBe("peer: " + PAYLOAD);
+      expect(claimEl.querySelector(".rv0-close-agreed-mark").textContent).toBe("✓ acknowledged by " + PAYLOAD);
+      assertInert(node);
+    });
+
+    it(`close.peer = ${JSON.stringify(PAYLOAD)} on a UNILATERAL close renders verbatim as text`, async () => {
+      const tampered = clone(fixture("pos-oo-close-unilateral-named-peer-result.json"));
+      tampered.claims[1].close.peer = PAYLOAD;
+      const { node } = await render(tampered);
+      const claimEl = claimRow(node, "close-1");
+      expect(claimEl.className).not.toContain("rv0-claim-refused");
+      expect(claimEl.querySelector(".rv0-close-peer").textContent).toBe("peer: " + PAYLOAD + " -- no response from it");
+      assertInert(node);
+    });
+
+    it(`close.peer_close_ref.digest = ${JSON.stringify(PAYLOAD)} renders verbatim on the cited-record line as text`, async () => {
+      for (const name of ["pos-oo-close-agreed-result.json", "pos-oo-close-contested-result.json"]) {
+        const tampered = clone(fixture(name));
+        tampered.claims[1].close.peer_close_ref.digest = PAYLOAD;
+        const { node } = await render(tampered);
+        const claimEl = claimRow(node, "close-1");
+        expect(claimEl.className, name).not.toContain("rv0-claim-refused");
+        const mono = claimEl.querySelector(".rv0-close .rv0-mono");
+        expect(mono.textContent, name).toMatch(/^peer's (acknowledging Close|rebutting record): SHA-256: /);
+        expect(mono.textContent.slice(mono.textContent.indexOf("SHA-256: ") + "SHA-256: ".length), name).toBe(PAYLOAD);
+        assertInert(node);
+      }
+    });
+  }
 });
 
 describe("claim types -- an unrecognized type is shown as 'unrecognized', never dropped", () => {
@@ -469,13 +618,13 @@ describe("claim types -- an unrecognized type is shown as 'unrecognized', never 
       "pos-oo-reconcile-result.json",
       "pos-oo-close-agreed-result.json",
       "pos-oo-close-unilateral-result.json",
+      "pos-oo-close-unilateral-named-peer-result.json",
       "pos-oo-close-contested-result.json",
       "neg-close-agreed-without-peer.json",
       "neg-close-contested-without-peer-close-ref.json",
       "neg-reconcile-tallies-missing-state.json",
       "neg-unrecognized-claim-type.json",
       "neg-render-reconcile-one-sided-only.json",
-      "neg-render-close-unilateral-with-peer-ref.json",
       "neg-untiered-claim.json",
     ];
     for (const name of names) {
