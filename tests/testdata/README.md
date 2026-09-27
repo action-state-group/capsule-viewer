@@ -16,12 +16,18 @@ Vendored byte-for-byte from the same directory on the
 `desk/result-v0-claim-types` branch of `agent-action-capsule` (the
 `reconcile` / `close` claim types):
 
-- `pos-oo-reconcile-result.json`, `pos-oo-close-agreed-result.json`,
-  `pos-oo-close-unilateral-result.json` -- schema positives.
+- `pos-oo-reconcile-result.json` (tallies keyed lowercase, as
+  `schemas/judge/close-v1.json` keys them), `pos-oo-close-agreed-result.json`,
+  `pos-oo-close-unilateral-result.json`, `pos-oo-close-contested-result.json`
+  -- schema positives; the last three are the Evidence Layer's three Close
+  states (`draft-mih-agent-evidence-layer-00`, "Reconcile and Close"), each
+  `close_state` the state READ from the Close's inbound links at build time.
 - `neg-close-agreed-without-peer.json`,
-  `neg-reconcile-counts-missing-state.json` -- schema negatives; the card
-  refuses both, never defaults a missing count to zero and never shows an
-  agreed affordance for an agreement with nobody.
+  `neg-close-contested-without-peer-close-ref.json`,
+  `neg-reconcile-tallies-missing-state.json` -- schema negatives; the card
+  refuses all three, never defaults a missing tally to zero, never shows an
+  agreed affordance for an agreement with nobody, and never shows a contested
+  state for a rebuttal it cannot cite.
 - `neg-unrecognized-claim-type.json` -- a schema NEGATIVE (closed-world
   `type` enum) that is a render POSITIVE here: the card shows the claim as
   an `unrecognized` row with the raw type and `contract_ref`, never drops
@@ -32,9 +38,15 @@ above so every digest is still real), pinning the ruling's rendering
 constraints rather than leaving them to styling:
 
 - `neg-render-reconcile-one-sided-only.json` -- `reconcile-1` with
-  `A_ONLY 3 · B_ONLY 2 · CONFLICTING 0`: the one-sided rows are the only
+  `a_only 3 · b_only 2 · conflicting 0`: the one-sided rows are the only
   non-matched rows, and the finding class must still never attach to them;
   `CONFLICTING` still renders as the count `0`, never hidden.
 - `neg-render-close-unilateral-with-peer-ref.json` -- a `UNILATERAL` close
   that also carries `peer` + `peer_close_ref`: refused, and nothing on the
   page may read as agreed.
+
+`CONTESTED` needs no viewer-owned negative of its own: the vendored
+`pos-oo-close-contested-result.json` is the negative fixture for "never the
+agreed mark, never UNILATERAL's label" (the tests assert the absence on the
+rendered row), and the vendored
+`neg-close-contested-without-peer-close-ref.json` pins the refusal.

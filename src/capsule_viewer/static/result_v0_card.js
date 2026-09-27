@@ -45,24 +45,33 @@
   // ("anything that meets a claim type it doesn't recognize should show
   // 'unrecognized', never drop the row").
   var KNOWN_CLAIM_TYPES = ["requirement", "reconcile", "close"];
-  var RECONCILE_STATES = ["MATCHED", "A_ONLY", "B_ONLY", "CONFLICTING", "INSUFFICIENT", "UNRESOLVED"];
   var STATE_OF_RECORD = ["A", "B", "none"];
-  var CLOSE_STATES = ["UNILATERAL", "AGREED"];
+  // The Evidence Layer's three Close states (draft-mih-agent-evidence-
+  // layer-00, "Reconcile and Close"): read from the links other records
+  // make to the Close, never from a field the Close sets. AGREED = a
+  // counterparty record `acknowledges` it; CONTESTED = a record `rebuts`
+  // it; UNILATERAL = neither. The claim's close_state is what the Result
+  // builder READ at build time; this card renders it, it does not derive it.
+  var CLOSE_STATES = ["UNILATERAL", "AGREED", "CONTESTED"];
 
-  // How each reconcile state renders. The class is the load-bearing part
-  // and is pinned by negative fixtures, not styling: A_ONLY / B_ONLY are
-  // "one side missing" (rv0-rs-one-sided) and CONFLICTING is "both sides
-  // disagree" (rv0-rs-finding) -- the ruling's "one side missing isn't a
-  // finding; both sides disagreeing is." No class is shared between the
-  // one-sided states and the finding state.
+  // How each reconcile state renders. `state` is the Evidence Layer's
+  // uppercase state name; `key` is how the claim's `tallies` object spells
+  // it -- lowercase, exactly as schemas/judge/close-v1.json's
+  // ReconcileTallies keys it. The class is the load-bearing part and is
+  // pinned by negative fixtures, not styling: A_ONLY / B_ONLY are "one side
+  // missing" (rv0-rs-one-sided) and CONFLICTING is "both sides disagree"
+  // (rv0-rs-finding) -- the ruling's "one side missing isn't a finding;
+  // both sides disagreeing is." No class is shared between the one-sided
+  // states and the finding state.
   var RECONCILE_ROWS = [
-    { state: "MATCHED", cls: "rv0-rs-matched", label: "matched -- present on both sides, equal" },
-    { state: "A_ONLY", cls: "rv0-rs-one-sided", label: "A only -- one side missing (this book has the row, the peer does not)" },
-    { state: "B_ONLY", cls: "rv0-rs-one-sided", label: "B only -- one side missing (the peer has the row, this book does not)" },
-    { state: "CONFLICTING", cls: "rv0-rs-finding", label: "conflicting -- both sides disagree" },
-    { state: "INSUFFICIENT", cls: "rv0-rs-gap", label: "insufficient -- the evidence to compare was missing" },
-    { state: "UNRESOLVED", cls: "rv0-rs-gap", label: "unresolved -- compared, not resolvable within the period" },
+    { state: "MATCHED", key: "matched", cls: "rv0-rs-matched", label: "matched -- present on both sides, equal" },
+    { state: "A_ONLY", key: "a_only", cls: "rv0-rs-one-sided", label: "A only -- one side missing (this book has the row, the peer does not)" },
+    { state: "B_ONLY", key: "b_only", cls: "rv0-rs-one-sided", label: "B only -- one side missing (the peer has the row, this book does not)" },
+    { state: "CONFLICTING", key: "conflicting", cls: "rv0-rs-finding", label: "conflicting -- both sides disagree" },
+    { state: "INSUFFICIENT", key: "insufficient", cls: "rv0-rs-gap", label: "insufficient -- the evidence to compare was missing" },
+    { state: "UNRESOLVED", key: "unresolved", cls: "rv0-rs-gap", label: "unresolved -- compared, not resolvable within the period" },
   ];
+  var RECONCILE_KEYS = RECONCILE_ROWS.map(function (spec) { return spec.key; });
 
   function isNonEmptyString(v) {
     return typeof v === "string" && v.length > 0;
@@ -105,16 +114,16 @@
     if (!isNonEmptyString(body.join_key)) issues.push("reconcile.join_key missing or empty");
     if (!isNonEmptyString(body.peer)) issues.push("reconcile.peer missing or empty");
     if (!isPeriod(body.period)) issues.push("reconcile.period missing or not {start, end}");
-    if (!body.counts || typeof body.counts !== "object") {
-      issues.push("reconcile.counts missing");
+    if (!body.tallies || typeof body.tallies !== "object") {
+      issues.push("reconcile.tallies missing");
     } else {
-      RECONCILE_STATES.forEach(function (state) {
-        if (!isNonNegativeInteger(body.counts[state])) {
-          issues.push("reconcile.counts." + state + " missing or not a non-negative integer (an absent state is never zero)");
+      RECONCILE_KEYS.forEach(function (key) {
+        if (!isNonNegativeInteger(body.tallies[key])) {
+          issues.push("reconcile.tallies." + key + " missing or not a non-negative integer (an absent state is never zero)");
         }
       });
-      Object.keys(body.counts).forEach(function (key) {
-        if (RECONCILE_STATES.indexOf(key) === -1) issues.push("reconcile.counts carries unknown state \"" + key + "\"");
+      Object.keys(body.tallies).forEach(function (key) {
+        if (RECONCILE_KEYS.indexOf(key) === -1) issues.push("reconcile.tallies carries unknown state \"" + key + "\"");
       });
     }
     if (STATE_OF_RECORD.indexOf(body.state_of_record) === -1) {
@@ -128,13 +137,16 @@
     if (!body || typeof body !== "object") return ["close body missing (type is \"close\")"];
     if (!isPeriod(body.period)) issues.push("close.period missing or not {start, end}");
     if (CLOSE_STATES.indexOf(body.close_state) === -1) {
-      issues.push("close.close_state missing or invalid (must be UNILATERAL or AGREED)");
+      issues.push("close.close_state missing or invalid (must be UNILATERAL, AGREED, or CONTESTED)");
     } else if (body.close_state === "AGREED") {
       if (!isNonEmptyString(body.peer)) issues.push("close is AGREED but names no peer -- an agreement with nobody cannot render as agreed");
-      if (!isDigestRef(body.peer_close_ref)) issues.push("close is AGREED but cites no peer_close_ref -- the peer's citing Close record, by digest, is what makes it agreed");
+      if (!isDigestRef(body.peer_close_ref)) issues.push("close is AGREED but cites no peer_close_ref -- the peer's acknowledging Close record, by digest, is what makes it agreed");
+    } else if (body.close_state === "CONTESTED") {
+      if (!isNonEmptyString(body.peer)) issues.push("close is CONTESTED but names no peer -- a rebuttal from nobody cannot render as contested");
+      if (!isDigestRef(body.peer_close_ref)) issues.push("close is CONTESTED but cites no peer_close_ref -- the peer's rebutting record, by digest, is what makes it contested");
     } else {
-      if (body.peer !== undefined) issues.push("close is UNILATERAL but names a peer -- only an AGREED close names one");
-      if (body.peer_close_ref !== undefined) issues.push("close is UNILATERAL but carries a peer_close_ref -- only an AGREED close cites one");
+      if (body.peer !== undefined) issues.push("close is UNILATERAL but names a peer -- only an AGREED or CONTESTED close names one");
+      if (body.peer_close_ref !== undefined) issues.push("close is UNILATERAL but carries a peer_close_ref -- only an AGREED or CONTESTED close cites one");
     }
     return issues;
   }
@@ -407,7 +419,7 @@
       var row = helpers.el("div", "rv0-reconcile-count " + spec.cls);
       row.setAttribute("data-state", spec.state);
       row.appendChild(helpers.el("span", "rv0-rs-state", spec.state));
-      row.appendChild(helpers.el("span", "rv0-rs-count", String(body.counts[spec.state])));
+      row.appendChild(helpers.el("span", "rv0-rs-count", String(body.tallies[spec.key])));
       row.appendChild(helpers.el("span", "rv0-rs-label", spec.label));
       table.appendChild(row);
     });
@@ -415,24 +427,37 @@
     return wrap;
   }
 
-  // A close claim's body. UNILATERAL and AGREED are different classes AND
-  // different wording; the agreed mark (rv0-close-agreed-mark) and the
-  // peer lines exist ONLY on the AGREED branch -- a UNILATERAL close has
-  // nothing on its row that could read as agreement ("UNILATERAL never
-  // like AGREED"). This is pinned by tests, not styling.
+  // A close claim's body. The three states are three classes AND three
+  // wordings. The agreed mark (rv0-close-agreed-mark) exists ONLY on the
+  // AGREED branch: a UNILATERAL close has nothing on its row that could
+  // read as agreement ("UNILATERAL never like AGREED"), and a CONTESTED
+  // close -- a peer record REBUTS it -- renders as its own state
+  // (rv0-close-contested, "contested -- peer rebuts"), never with the
+  // agreed mark and never in UNILATERAL's wording. The peer line and the
+  // cited peer record appear on AGREED and CONTESTED (both exist only
+  // because a peer record links to the Close), never on UNILATERAL. The
+  // state is what the Result builder read from the links at build time;
+  // this card shows it as given. Pinned by tests, not styling.
   function renderClose(helpers, body) {
     var wrap = helpers.el("div", "rv0-close");
     wrap.appendChild(helpers.el("div", "rv0-close-period", "close period: " + renderPeriod(body.period)));
     if (body.close_state === "AGREED") {
-      wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-agreed", "AGREED -- the peer's own Close cites this one"));
-      wrap.appendChild(helpers.el("span", "rv0-close-agreed-mark", "✓ cited back by " + body.peer));
+      wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-agreed", "AGREED -- the peer's own Close acknowledges this one"));
+      wrap.appendChild(helpers.el("span", "rv0-close-agreed-mark", "✓ acknowledged by " + body.peer));
       wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer));
       wrap.appendChild(
-        helpers.el("div", "rv0-mono", "peer's citing Close: " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
+        helpers.el("div", "rv0-mono", "peer's acknowledging Close: " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
+      );
+    } else if (body.close_state === "CONTESTED") {
+      wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-contested", "CONTESTED -- peer rebuts this Close"));
+      wrap.appendChild(helpers.el("span", "rv0-close-contested-mark", "contested -- peer rebuts: " + body.peer));
+      wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer));
+      wrap.appendChild(
+        helpers.el("div", "rv0-mono", "peer's rebutting record: " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
       );
     } else {
       wrap.appendChild(
-        helpers.el("span", "rv0-close-state rv0-close-unilateral", "UNILATERAL -- closed by this book alone; no peer Close cites it")
+        helpers.el("span", "rv0-close-state rv0-close-unilateral", "UNILATERAL -- closed by this book alone; no peer record acknowledges or rebuts it")
       );
     }
     return wrap;
@@ -576,6 +601,8 @@
     claimType: claimType,
     isKnownClaimType: isKnownClaimType,
     KNOWN_CLAIM_TYPES: KNOWN_CLAIM_TYPES.slice(),
-    RECONCILE_STATES: RECONCILE_STATES.slice(),
+    RECONCILE_STATES: RECONCILE_ROWS.map(function (spec) { return spec.state; }),
+    RECONCILE_KEYS: RECONCILE_KEYS.slice(),
+    CLOSE_STATES: CLOSE_STATES.slice(),
   };
 })();
