@@ -10,7 +10,7 @@ the link.
 
 Vendored here (not imported from capsule-engine) because this package is the
 new, sole home of the fragment-carried viewer -- capsule-engine keeps no copy
-after the move ([batch4-capsule-viewer-three-buckets]).
+after the move.
 """
 from __future__ import annotations
 
