@@ -14,7 +14,8 @@ This is a copy for this repo's own render tests, not a second definition:
 
 Vendored byte-for-byte from the same directory on the
 `desk/result-v0-claim-types` branch of `agent-action-capsule` (the
-`reconcile` / `close` claim types):
+`reconcile` / `close` claim types; `cmp`-verified against that branch's
+`60d6e63`):
 
 - `pos-oo-reconcile-result.json` (tallies keyed lowercase, as
   `schemas/judge/close-v1.json` keys them), `pos-oo-close-agreed-result.json`,
@@ -51,6 +52,33 @@ constraints rather than leaving them to styling:
 refused a `UNILATERAL` close that named its peer; the schema now permits
 that, so the vendored named-peer positive replaced it -- the test asserts
 the absence of every agreed affordance on the rendered row instead.)
+
+## `close_state` is derivable -- the records sidecars (2026-09-28)
+
+After the maintainer's adversarial review ("a contested close relabelled
+'agreed' validates"), every close claim cites the Close it reports on
+(`close_ref`) and its `close_state` is recomputed from the links other
+records make to that Close, never trusted. Each close fixture is therefore
+vendored with its **`<name>.records.json`** sidecar -- the record headers
+the claim cites (`links[{type, target}]`, the evidence-book header shape),
+the same objects the schema repo's checker walks. `build_result_entry(result,
+records=...)` carries them under `entry.records`; the card indexes them by
+digest (the base's `jsonDigest` port) and reads the `acknowledges` /
+`rebuts` links at `close_ref`: any `rebuts` => `CONTESTED`, else
+`acknowledges` => `AGREED`, else `UNILATERAL`.
+
+- `neg-close-agreed-relabelled-contested.json` (+ `.records.json`) -- the
+  CONTESTED positive with `close_state` relabelled `AGREED`, nothing else
+  changed. **Schema-valid** (the hole); with its records supplied the card
+  renders `CONTESTED` with a `state mismatch` marker (the asserted value on
+  the marker's data attribute only, never in the text) -- never `AGREED`.
+  Without records it renders the asserted `AGREED` under a
+  `producer-asserted` chip, never bare.
+- The `AGREED` row no longer carries a mark of its own: the former
+  `✓ acknowledged by <peer>` affordance is gone (a check-mark beside a
+  state the card may not have verified read as a verification it was not).
+  `AGREED` is its label, the peer, and the peer's acknowledging Close by
+  digest.
 
 `CONTESTED` needs no viewer-owned negative of its own: the vendored
 `pos-oo-close-contested-result.json` is the negative fixture for "never the

@@ -17,12 +17,14 @@
 // exactly the same "recomputed value disagrees with the stated row" pattern
 // the base uses for capsule_id, applied to this kind's own data shape.
 //
-// This module owns NO canonicalization and reads NO digest bytes -- a
-// claim's evidence/proofs are refs only (nothing here to hash against; the
-// bytes live elsewhere, resolved by digest against the evidence's own
-// disclosure record). All of this module's checks are structural/
-// traceability checks over the document's own claims array, never a
-// capsule_id-style cryptographic recompute.
+// This module owns NO canonicalization -- a claim's evidence/proofs are
+// refs only (the bytes live elsewhere, resolved by digest against the
+// evidence's own disclosure record). The one place it needs a digest -- to
+// find a close claim's cited Close among the records an entry may carry
+// beside the Result (`entry.records`) -- it uses the base's own recompute
+// port, CapsuleViewer.jsonDigest, never a port of its own. Every other
+// check here is a structural/traceability check over the document's own
+// claims array, never a capsule_id-style cryptographic recompute.
 (function () {
   "use strict";
 
@@ -50,9 +52,18 @@
   // layer-00, "Reconcile and Close"): read from the links other records
   // make to the Close, never from a field the Close sets. AGREED = a
   // counterparty record `acknowledges` it; CONTESTED = a record `rebuts`
-  // it; UNILATERAL = neither. The claim's close_state is what the Result
-  // builder READ at build time; this card renders it, it does not derive it.
+  // it; UNILATERAL = neither. After the maintainer's adversarial review
+  // (2026-09-28: "a contested close relabelled 'agreed' validates") the
+  // claim's close_state is DERIVABLE, never asserted: the claim cites its
+  // Close (`close_ref`) and, when the entry carries the cited records
+  // (`entry.records`, see result_v0.py), this card RECOMPUTES the state
+  // from the links those records make to the Close and shows a `state
+  // mismatch` marker where the Result's own value disagrees. When the
+  // records are not supplied the asserted state is shown under a
+  // `producer-asserted` chip -- never bare -- because a Result document
+  // alone holds nothing the state can be checked against.
   var CLOSE_STATES = ["UNILATERAL", "AGREED", "CONTESTED"];
+  var CLOSE_LINK_TYPES = { acknowledges: 1, rebuts: 1 };
 
   // How each reconcile state renders. `state` is the Evidence Layer's
   // uppercase state name; `key` is how the claim's `tallies` object spells
@@ -136,6 +147,9 @@
     var issues = [];
     if (!body || typeof body !== "object") return ["close body missing (type is \"close\")"];
     if (!isPeriod(body.period)) issues.push("close.period missing or not {start, end}");
+    if (!isDigestRef(body.close_ref)) {
+      issues.push("close.close_ref missing or not a digest-ref -- the Close this claim reports on, by digest, is what close_state is recomputed from");
+    }
     if (CLOSE_STATES.indexOf(body.close_state) === -1) {
       issues.push("close.close_state missing or invalid (must be UNILATERAL, AGREED, or CONTESTED)");
     } else if (body.close_state === "AGREED") {
@@ -432,51 +446,163 @@
     return wrap;
   }
 
+  // The state a Close's inbound links read (spec section 4.1): any `rebuts`
+  // link makes it CONTESTED; otherwise any `acknowledges` link makes it
+  // AGREED; neither leaves it UNILATERAL. `links` is the list of
+  // {type, record} pairs found at the Close; never a field of any record.
+  function deriveCloseState(links) {
+    var i;
+    for (i = 0; i < links.length; i++) if (links[i].type === "rebuts") return "CONTESTED";
+    for (i = 0; i < links.length; i++) if (links[i].type === "acknowledges") return "AGREED";
+    return "UNILATERAL";
+  }
+
+  // Index the supplied records by digest. The digest is the base's own
+  // recompute port (CapsuleViewer.jsonDigest -- the same hand-port of
+  // canonical.py the capsule_id chip uses); this module re-ports nothing.
+  // A record the port cannot digest (a float, an unsupported value) is
+  // left out and can therefore never be the cited Close.
+  async function indexRecordsByDigest(records) {
+    var byDigest = {};
+    if (!Array.isArray(records)) return byDigest;
+    for (var i = 0; i < records.length; i++) {
+      try {
+        byDigest[await window.CapsuleViewer.jsonDigest(records[i])] = records[i];
+      } catch (e) {
+        // not digestable: not a record this card can cite
+      }
+    }
+    return byDigest;
+  }
+
+  // What this card knows about one close claim's state once the supplied
+  // records have been read. `derivation` is "recomputed" when the cited
+  // Close is among the records (its inbound links were walked -- an empty
+  // walk is a real UNILATERAL), "producer-asserted" when it is not, or no
+  // records were supplied. `state` is what the card shows: recomputed when
+  // it can be, the asserted value only otherwise.
+  function closeDerivation(body, byDigest) {
+    var asserted = body.close_state;
+    var closeDigest = body.close_ref.digest;
+    if (!Object.prototype.hasOwnProperty.call(byDigest, closeDigest)) {
+      return { derivation: "producer-asserted", state: asserted, asserted: asserted, links: [], mismatch: false, peerRefMismatch: false };
+    }
+    var links = [];
+    Object.keys(byDigest).forEach(function (digest) {
+      var record = byDigest[digest];
+      var recordLinks = record && Array.isArray(record.links) ? record.links : [];
+      recordLinks.forEach(function (link) {
+        if (link && link.target === closeDigest && CLOSE_LINK_TYPES[link.type]) {
+          links.push({ type: link.type, record: digest });
+        }
+      });
+    });
+    var derived = deriveCloseState(links);
+    var wanted = derived === "AGREED" ? "acknowledges" : derived === "CONTESTED" ? "rebuts" : null;
+    var peerDigest = body.peer_close_ref ? body.peer_close_ref.digest : undefined;
+    var peerRefMismatch =
+      wanted !== null &&
+      !links.some(function (link) {
+        return link.type === wanted && link.record === peerDigest;
+      });
+    return {
+      derivation: "recomputed",
+      state: derived,
+      asserted: asserted,
+      links: links,
+      mismatch: derived !== asserted,
+      peerRefMismatch: peerRefMismatch,
+    };
+  }
+
   // A close claim's body. The three states are three classes AND three
-  // wordings. The agreed mark (rv0-close-agreed-mark) exists ONLY on the
-  // AGREED branch: a UNILATERAL close has nothing on its row that could
-  // read as agreement ("UNILATERAL never like AGREED"), and a CONTESTED
-  // close -- a peer record REBUTS it -- renders as its own state
-  // (rv0-close-contested, "contested -- peer rebuts"), never with the
-  // agreed mark and never in UNILATERAL's wording. The peer line and the
-  // cited peer record are REQUIRED on AGREED and CONTESTED (both exist only
-  // because a peer record links to the Close). A UNILATERAL close MAY name
-  // the peer it was closed against and MAY cite the peer's Close it
-  // reconciled with (schema, after close-v1's unconditional peer_close);
-  // when it does, the line says the peer has not responded, and nothing on
-  // the row is the agreed mark or AGREED's wording -- "acknowledges" is
-  // AGREED's link word and never appears on a UNILATERAL row. The state is
-  // what the Result builder read from the links at build time; this card
-  // shows it as given. Pinned by tests, not styling.
-  function renderClose(helpers, body) {
+  // wordings. A UNILATERAL close has nothing on its row that could read as
+  // agreement ("UNILATERAL never like AGREED"), and a CONTESTED close -- a
+  // peer record REBUTS it -- renders as its own state (rv0-close-contested,
+  // "contested -- peer rebuts"), never in AGREED's or UNILATERAL's wording.
+  // AGREED carries NO mark of its own (the former check-mark-and-peer
+  // affordance is gone, 2026-09-28): its label, the peer, and the peer's
+  // acknowledging Close by digest are the whole affordance -- a check-mark
+  // beside a state the card may not have been able to verify read as a
+  // verification it was not. The peer line and the cited peer record are
+  // shown on AGREED and CONTESTED (both exist only because a peer record
+  // links to the Close). A UNILATERAL close MAY name the peer it was
+  // closed against and MAY cite the peer's Close it reconciled with; when
+  // it does, the line says the peer has not responded, and "acknowledges"
+  // -- AGREED's link word -- never appears on a UNILATERAL row.
+  //
+  // The state shown is `derived.state`: recomputed from the supplied
+  // records' links when the cited Close is among them, the Result's own
+  // value otherwise. Every close row carries exactly one derivation chip
+  // (rv0-close-recomputed or rv0-close-producer-asserted) -- an asserted
+  // state is never shown bare -- and a `state mismatch` marker
+  // (rv0-close-state-mismatch) whenever the recomputed state is not the
+  // asserted one; the asserted value lives on that marker's data
+  // attribute, never in the text a reader takes as the state. Pinned by
+  // tests, not styling.
+  function renderClose(helpers, body, derived) {
     var wrap = helpers.el("div", "rv0-close");
+    var state = derived.state;
+    var peer = body.peer;
+    var peerRef = body.peer_close_ref;
     wrap.appendChild(helpers.el("div", "rv0-close-period", "close period: " + renderPeriod(body.period)));
-    if (body.close_state === "AGREED") {
+    if (state === "AGREED") {
       wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-agreed", "AGREED -- the peer's own Close acknowledges this one"));
-      wrap.appendChild(helpers.el("span", "rv0-close-agreed-mark", "✓ acknowledged by " + body.peer));
-      wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer));
-      wrap.appendChild(
-        helpers.el("div", "rv0-mono", "peer's acknowledging Close: " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
-      );
-    } else if (body.close_state === "CONTESTED") {
+      wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + (peer !== undefined ? peer : "(not named by the Result)")));
+      if (peerRef !== undefined) {
+        wrap.appendChild(helpers.el("div", "rv0-mono", "peer's acknowledging Close: " + peerRef.digest_alg + ": " + peerRef.digest));
+      }
+    } else if (state === "CONTESTED") {
       wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-contested", "CONTESTED -- peer rebuts this Close"));
-      wrap.appendChild(helpers.el("span", "rv0-close-contested-mark", "contested -- peer rebuts: " + body.peer));
-      wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer));
-      wrap.appendChild(
-        helpers.el("div", "rv0-mono", "peer's rebutting record: " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
-      );
+      wrap.appendChild(helpers.el("span", "rv0-close-contested-mark", "contested -- peer rebuts: " + (peer !== undefined ? peer : "(not named by the Result)")));
+      wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + (peer !== undefined ? peer : "(not named by the Result)")));
+      if (peerRef !== undefined) {
+        wrap.appendChild(helpers.el("div", "rv0-mono", "peer's rebutting record: " + peerRef.digest_alg + ": " + peerRef.digest));
+      }
     } else {
       wrap.appendChild(
         helpers.el("span", "rv0-close-state rv0-close-unilateral", "UNILATERAL -- closed by this book alone; no peer record has responded to it")
       );
-      if (body.peer !== undefined) {
-        wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + body.peer + " -- no response from it"));
+      if (peer !== undefined) {
+        wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + peer + " -- no response from it"));
       }
-      if (body.peer_close_ref !== undefined) {
+      if (peerRef !== undefined) {
         wrap.appendChild(
-          helpers.el("div", "rv0-mono", "peer's Close reconciled with (no link back): " + body.peer_close_ref.digest_alg + ": " + body.peer_close_ref.digest)
+          helpers.el("div", "rv0-mono", "peer's Close reconciled with (no link back): " + peerRef.digest_alg + ": " + peerRef.digest)
         );
       }
+    }
+    wrap.appendChild(helpers.el("div", "rv0-mono rv0-close-ref", "cited Close: " + body.close_ref.digest_alg + ": " + body.close_ref.digest));
+    var chip;
+    if (derived.derivation === "recomputed") {
+      chip = helpers.el(
+        "span",
+        "rv0-close-derivation rv0-close-recomputed",
+        "recomputed from " + derived.links.length + (derived.links.length === 1 ? " link" : " links") + " to the cited Close in the supplied records"
+      );
+    } else {
+      chip = helpers.el(
+        "span",
+        "rv0-close-derivation rv0-close-producer-asserted",
+        "producer-asserted -- the cited Close is not among the supplied records, so this state is the Result's own word, unverified here"
+      );
+    }
+    chip.setAttribute("data-derivation", derived.derivation);
+    wrap.appendChild(chip);
+    if (derived.mismatch) {
+      var mismatch = helpers.el(
+        "span",
+        "rv0-close-state-mismatch",
+        "state mismatch -- the Result asserts a different state than the cited Close's links read; the recomputed state is shown"
+      );
+      mismatch.setAttribute("data-asserted-state", derived.asserted);
+      mismatch.setAttribute("data-recomputed-state", derived.state);
+      wrap.appendChild(mismatch);
+    }
+    if (derived.peerRefMismatch) {
+      wrap.appendChild(
+        helpers.el("span", "rv0-close-peer-ref-mismatch", "peer_close_ref is not the record carrying the link that makes this state")
+      );
     }
     return wrap;
   }
@@ -530,7 +656,7 @@
     return row;
   }
 
-  function renderClaim(helpers, claim) {
+  function renderClaim(helpers, claim, byDigest) {
     var row = helpers.el("div", "rv0-claim");
     var head = helpers.el("div", "rv0-claim-head");
     head.appendChild(helpers.el("span", "rv0-claim-id", claim.id));
@@ -552,7 +678,7 @@
     );
     var type = claimType(claim);
     if (type === "reconcile") row.appendChild(renderReconcile(helpers, claim.reconcile));
-    if (type === "close") row.appendChild(renderClose(helpers, claim.close));
+    if (type === "close") row.appendChild(renderClose(helpers, claim.close, closeDerivation(claim.close, byDigest)));
     row.appendChild(renderPresentation(helpers, claim.presentation));
     row.appendChild(renderDigestRefs(helpers, "evidence", claim.evidence));
     row.appendChild(renderDigestRefs(helpers, "proofs", claim.proofs));
@@ -573,6 +699,10 @@
     var allClaimsById = indexAllClaims(claims);
     var recomputed = recompute(claims);
     var diagnostics = bucketDiagnostics(allClaimsById, statedBuckets);
+    // The records the entry carries beside the Result (result_v0.py's
+    // `records=`): what a close claim's state is recomputed from. Absent
+    // means every close state is producer-asserted, and says so.
+    var byDigest = await indexRecordsByDigest(entry.records);
 
     var wrap = helpers.el("div", "result-card");
 
@@ -599,7 +729,7 @@
       var row;
       if (issues.length) row = renderClaimRefusal(helpers, claim, issues);
       else if (!isKnownClaimType(claim)) row = renderClaimUnrecognized(helpers, claim);
-      else row = renderClaim(helpers, claim);
+      else row = renderClaim(helpers, claim, byDigest);
       claimsWrap.appendChild(row);
     });
     wrap.appendChild(claimsWrap);
@@ -618,6 +748,8 @@
     parseContractRef: parseContractRef,
     claimType: claimType,
     isKnownClaimType: isKnownClaimType,
+    deriveCloseState: deriveCloseState,
+    closeDerivation: closeDerivation,
     KNOWN_CLAIM_TYPES: KNOWN_CLAIM_TYPES.slice(),
     RECONCILE_STATES: RECONCILE_ROWS.map(function (spec) { return spec.state; }),
     RECONCILE_KEYS: RECONCILE_KEYS.slice(),

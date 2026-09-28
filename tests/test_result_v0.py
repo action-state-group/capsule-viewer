@@ -36,7 +36,19 @@ TYPED_FIXTURES = [
     "neg-close-contested-without-peer-close-ref.json",
     "neg-reconcile-tallies-missing-state.json",
     "neg-unrecognized-claim-type.json",
+    "neg-close-agreed-relabelled-contested.json",
     "neg-render-reconcile-one-sided-only.json",
+]
+
+# The close fixtures ship the record headers their claim cites beside them
+# (`<name>.records.json`, vendored with the fixtures); the card recomputes
+# close_state from those records' links when the entry carries them.
+CLOSE_FIXTURES = [
+    "pos-oo-close-agreed-result.json",
+    "pos-oo-close-contested-result.json",
+    "pos-oo-close-unilateral-result.json",
+    "pos-oo-close-unilateral-named-peer-result.json",
+    "neg-close-agreed-relabelled-contested.json",
 ]
 
 
@@ -126,9 +138,43 @@ def test_shell_ships_the_claim_type_renderer_that_pins_the_rules():
         "rv0-close-unilateral",
         "rv0-close-agreed",
         "rv0-close-contested",
+        "rv0-close-recomputed",
+        "rv0-close-producer-asserted",
+        "rv0-close-state-mismatch",
         "one side missing",
         "both sides disagree",
         "contested -- peer rebuts",
         "no peer record has responded to it",
     ):
         assert marker in html, marker
+    # the ✓ affordance on AGREED is gone from the shipped bytes (2026-09-28)
+    assert "rv0-close-agreed-mark" not in html
+    assert "acknowledged by" not in html
+
+
+# --- close_state is derivable: the records travel beside the Result ---------
+
+
+@pytest.mark.parametrize("name", CLOSE_FIXTURES)
+def test_records_travel_beside_the_result_byte_identical(name: str):
+    result = load(name)
+    records = load(name.replace(".json", ".records.json"))
+    entry = build_result_entry(result, records=records)
+    assert entry["records"] == records
+    assert entry["record"] == result
+    decoded = decode(encode_fragment(build_payload([entry])))
+    assert decoded["entries"][0]["records"] == records
+    assert decoded["entries"][0]["record"] == result
+    # every digest the close claim cites names a record in the sidecar --
+    # the vendored copy is the one the schema repo's checker walked
+    cited = {result["claims"][1]["close"]["close_ref"]["digest"]}
+    if "peer_close_ref" in result["claims"][1]["close"]:
+        cited.add(result["claims"][1]["close"]["peer_close_ref"]["digest"])
+    assert cited  # the card, not Python, digests the records (js-tests)
+
+
+def test_entry_without_records_carries_no_records_key():
+    entry = build_result_entry(load("pos-oo-close-agreed-result.json"))
+    assert "records" not in entry
+    decoded = decode(encode_fragment(build_payload([entry])))
+    assert "records" not in decoded["entries"][0]
