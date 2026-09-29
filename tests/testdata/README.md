@@ -14,10 +14,10 @@ This is a copy for this repo's own render tests, not a second definition:
 
 Vendored byte-for-byte from the same directory on the
 `desk/result-v0-claim-types` branch of `agent-action-capsule` (the
-`reconcile` / `close` claim types; `cmp`-verified, all 23 files, against
-that branch's `1a2d6f9` -- the maintainer's second pass, 2026-09-28, under
-which the CONTESTED positive carries `verdict: not_met`, bucketed under
-`not_met`: a contested Close never counts as met):
+`reconcile` / `close` claim types; `cmp`-verified, all 29 vendored files,
+against that branch's `1529b73` -- the maintainer's third pass, 2026-09-29;
+since the second pass the CONTESTED positive carries `verdict: not_met`,
+bucketed under `not_met`: a contested Close never counts as met):
 
 - `pos-oo-reconcile-result.json` (tallies keyed lowercase, as
   `schemas/judge/close-v1.json` keys them), `pos-oo-close-agreed-result.json`,
@@ -103,10 +103,31 @@ vendored file trips it. No fixture is vendored for this: the negatives are
 mutations of the positives in the tests (`sha256:`-prefixed, 63/65 hex,
 uppercase, non-hex, empty, non-string).
 
-Not vendored from `1a2d6f9` (follow-up): the schema repo's four new
-negatives -- `neg-close-contested-verdict-met` (schema), and the link-walk
-negatives `neg-close-agreed-self-acknowledged` (an acknowledgement from the
-Close's own `book_id` makes no state), `neg-close-ref-not-in-evidence`,
+## The counterparty is the named peer's book (2026-09-29, maintainer's third pass)
+
+"Neither book_id nor signer alone is enough, since a producer can mint a
+second book or a second key equally easily." The card now applies the two
+parts of the counterparty rule a record header can show: an
+`acknowledges` / `rebuts` link makes a state only when the linking record's
+**(1) `book_id`** is present and differs from the cited Close's and **(2)**
+equals the claim's named **`peer`**; a Close whose header names no
+`book_id` takes no link at all. Part **(3)** -- a different signer key --
+is not visible in a record header (the vendored sidecars carry `v`,
+`book_id`, `seq`, `links`, ...; no `key_id`), so it is the emitter's and the
+CLI's, where the Producer Envelope `key_id` is. An ignored link is listed on
+the row with its reason (`rv0-close-ignored-link`), never counted. Three
+link-walk negatives vendored byte-for-byte from `1529b73`, each schema-valid,
+each asserting `AGREED`, each rendering `UNILATERAL` with a `state mismatch`
+marker and never the agreed wording:
+
+| File | The acknowledger | Why it makes no state |
+|---|---|---|
+| `neg-close-agreed-self-acknowledged` (+ `.records.json`) | book `oo`, the Close's own (seq 42) | (1) a producer cannot agree with itself |
+| `neg-close-agreed-third-book` (+ `.records.json`) | book `oo-audit` (seq 7), not the named peer `oo-sor` | (2) a different book is necessary, not sufficient |
+| `neg-close-agreed-bookless-close` (+ `.records.json`) | the named peer `oo-sor` (seq 20) -- but the cited Close names no `book_id` | a Close that names no book has no counterparty |
+
+Still not vendored from `1529b73` (follow-up): `neg-close-contested-verdict-met`
+(schema-rejected) and the link-walk negatives `neg-close-ref-not-in-evidence`,
 `neg-close-peer-ref-not-in-evidence` (both refs must resolve inside
-`evidence[]`). The card does not yet apply those three walk rules, so
-vendoring the fixtures before the rules would pin the wrong render.
+`evidence[]`). The card does not yet apply that walk rule, so vendoring the
+fixtures before the rule would pin the wrong render.

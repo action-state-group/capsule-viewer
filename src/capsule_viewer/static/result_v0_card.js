@@ -50,9 +50,13 @@
   var STATE_OF_RECORD = ["A", "B", "none"];
   // The Evidence Layer's three Close states (draft-mih-agent-evidence-
   // layer-00, "Reconcile and Close"): read from the links other records
-  // make to the Close, never from a field the Close sets. AGREED = a
-  // counterparty record `acknowledges` it; CONTESTED = a record `rebuts`
-  // it; UNILATERAL = neither. After the maintainer's adversarial review
+  // make to the Close, never from a field the Close sets. AGREED = the
+  // NAMED PEER's book, under a different key, `acknowledges` the Close
+  // (a record whose `book_id` is the claim's `peer`, not the Close's own,
+  // carries the link) -- not "an independent party", until the contract
+  // pins the peer's key (2026-09-29, see ignoredLinkReason);
+  // CONTESTED = such a counterparty record `rebuts` it; UNILATERAL =
+  // neither. After the maintainer's adversarial review
   // (2026-09-28: "a contested close relabelled 'agreed' validates") the
   // claim's close_state is DERIVABLE, never asserted: the claim cites its
   // Close (`close_ref`) and, when the entry carries the cited records
@@ -489,19 +493,48 @@
   // walk is a real UNILATERAL), "producer-asserted" when it is not, or no
   // records were supplied. `state` is what the card shows: recomputed when
   // it can be, the asserted value only otherwise.
+  // Why an inbound acknowledges/rebuts link made no state (maintainer's
+  // third pass, 2026-09-29: "neither book_id nor signer alone is enough,
+  // since a producer can mint a second book or a second key equally
+  // easily"). A link counts only from the COUNTERPARTY -- all of:
+  //   (1) the linking record's `book_id` is present and differs from the
+  //       cited Close's `book_id`;
+  //   (2) that `book_id` equals the claim's named `peer` (`close.peer`);
+  //   (3) the linking record is signed under a different key than the
+  //       Close -- NOT checked here: the supplied records are evidence-book
+  //       record headers (v, book_id, seq, links, ...) and carry no
+  //       signer. (3) is the emitter's and the CLI's, where the record's
+  //       Producer Envelope `key_id` is visible.
+  // A Close whose header names no `book_id` takes no link at all: nothing
+  // can be shown to be its counterparty. Returns null when the link counts.
+  function ignoredLinkReason(closeRecord, peer, record) {
+    var closeBook = closeRecord && isNonEmptyString(closeRecord.book_id) ? closeRecord.book_id : undefined;
+    var book = record && isNonEmptyString(record.book_id) ? record.book_id : undefined;
+    if (closeBook === undefined) return "the cited Close names no book_id, so nothing can be its counterparty";
+    if (book === undefined) return "the linking record names no book_id";
+    if (book === closeBook) return "the linking record is from the Close's own book";
+    if (!isNonEmptyString(peer)) return "the claim names no peer, so no book can be the counterparty";
+    if (book !== peer) return "the linking record's book_id is not the claim's named peer";
+    return null;
+  }
+
   function closeDerivation(body, byDigest) {
     var asserted = body.close_state;
     var closeDigest = body.close_ref.digest;
     if (!Object.prototype.hasOwnProperty.call(byDigest, closeDigest)) {
-      return { derivation: "producer-asserted", state: asserted, asserted: asserted, links: [], mismatch: false, peerRefMismatch: false };
+      return { derivation: "producer-asserted", state: asserted, asserted: asserted, links: [], ignored: [], mismatch: false, peerRefMismatch: false };
     }
+    var closeRecord = byDigest[closeDigest];
     var links = [];
+    var ignored = [];
     Object.keys(byDigest).forEach(function (digest) {
       var record = byDigest[digest];
       var recordLinks = record && Array.isArray(record.links) ? record.links : [];
       recordLinks.forEach(function (link) {
         if (link && link.target === closeDigest && CLOSE_LINK_TYPES[link.type]) {
-          links.push({ type: link.type, record: digest });
+          var reason = ignoredLinkReason(closeRecord, body.peer, record);
+          if (reason === null) links.push({ type: link.type, record: digest });
+          else ignored.push({ type: link.type, record: digest, reason: reason });
         }
       });
     });
@@ -518,6 +551,7 @@
       state: derived,
       asserted: asserted,
       links: links,
+      ignored: ignored,
       mismatch: derived !== asserted,
       peerRefMismatch: peerRefMismatch,
     };
@@ -586,7 +620,8 @@
       chip = helpers.el(
         "span",
         "rv0-close-derivation rv0-close-recomputed",
-        "recomputed from " + derived.links.length + (derived.links.length === 1 ? " link" : " links") + " to the cited Close in the supplied records"
+        "recomputed from " + derived.links.length + (derived.links.length === 1 ? " link" : " links") + " to the cited Close in the supplied records" +
+          (derived.ignored.length === 0 ? "" : " (" + derived.ignored.length + (derived.ignored.length === 1 ? " other link" : " other links") + " ignored -- not from the counterparty)")
       );
     } else {
       chip = helpers.el(
@@ -612,6 +647,21 @@
         helpers.el("span", "rv0-close-peer-ref-mismatch", "peer_close_ref is not the record carrying the link that makes this state")
       );
     }
+    // Inbound links that made no state -- from the Close's own book, or a
+    // book that is not the named peer -- are listed with the reason, never
+    // counted: a reader sees why the state was not read from them. The
+    // link type goes on a data attribute only, so an ignored acknowledgement
+    // never puts AGREED's wording on a UNILATERAL row; the digest is the
+    // card's own jsonDigest of the record, rendered as text.
+    derived.ignored.forEach(function (link) {
+      var line = helpers.el(
+        "div",
+        "rv0-close-ignored-link",
+        "link from " + link.record + " ignored -- not from the counterparty: " + link.reason
+      );
+      line.setAttribute("data-ignored-link", link.type);
+      wrap.appendChild(line);
+    });
     return wrap;
   }
 

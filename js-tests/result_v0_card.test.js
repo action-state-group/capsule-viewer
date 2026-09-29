@@ -564,15 +564,26 @@ describe("XSS -- the five typed-body strings reach the DOM as text, never as mar
       expect(node.innerHTML).not.toContain("&lt;"); // not even as escaped text: the value is gated, not echoed
     });
 
-    it(`close.peer = ${JSON.stringify(PAYLOAD)} renders verbatim on the peer line as text (AGREED, with and without records)`, async () => {
+    it(`close.peer = ${JSON.stringify(PAYLOAD)} renders verbatim on the peer line as text (AGREED without records; with records the renamed peer makes the row UNILATERAL -- the payload is still text)`, async () => {
       const tampered = clone(fixture("pos-oo-close-agreed-result.json"));
       tampered.claims[1].close.peer = PAYLOAD;
       for (const records of [undefined, recordsFor("pos-oo-close-agreed-result.json")]) {
         const { node } = await render(tampered, records);
         const claimEl = claimRow(node, "close-1");
         expect(claimEl.className).not.toContain("rv0-claim-refused");
-        expect(claimEl.querySelector(".rv0-close-peer").textContent).toBe("peer: " + PAYLOAD);
+        // Without records: the asserted AGREED, producer-asserted, peer line
+        // "peer: <payload>". With records (third pass): the acknowledger's
+        // book `oo-sor` is no longer the claim's named peer, so the row is
+        // UNILATERAL and the peer line says the (renamed) peer has not
+        // responded. Either way the payload reaches the DOM as text only.
+        expect(claimEl.querySelector(".rv0-close-peer").textContent).toBe(
+          records === undefined ? "peer: " + PAYLOAD : "peer: " + PAYLOAD + " -- no response from it",
+        );
         expect(claimEl.querySelectorAll(".rv0-close-agreed-mark")).toHaveLength(0);
+        if (records !== undefined) {
+          expect(claimEl.querySelector(".rv0-close-state").className).toContain("rv0-close-unilateral");
+          expect(claimEl.querySelectorAll(".rv0-close-ignored-link")).toHaveLength(1);
+        }
         assertInert(node);
       }
     });
@@ -815,8 +826,137 @@ describe("close_state is recomputed from the supplied records' links, never take
     expect(node.querySelectorAll(".rv0-close-state, .rv0-close-derivation")).toHaveLength(0);
   });
 
+  // The maintainer's third pass (2026-09-29): "neither book_id nor signer
+  // alone is enough, since a producer can mint a second book or a second
+  // key equally easily." A link makes a state only from the COUNTERPARTY:
+  // (1) a different book_id that (2) is the claim's named peer, and (3) a
+  // different signer key. The card sees record headers (book_id, no
+  // signer), so it applies (1) and (2); (3) is the emitter's and the CLI's.
+  // Each vendored negative asserts AGREED over an acknowledger that is not
+  // the counterparty; each renders UNILATERAL with the state-mismatch
+  // marker, lists the ignored link with its reason, and never carries
+  // AGREED's class or wording.
+  describe("the counterparty is the named peer's book (third pass) -- a self-, third-book, or book-less acknowledgement never renders AGREED", () => {
+    const COUNTERPARTY_NEGATIVES = [
+      ["neg-close-agreed-self-acknowledged.json", "the linking record is from the Close's own book"],
+      ["neg-close-agreed-third-book.json", "the linking record's book_id is not the claim's named peer"],
+      ["neg-close-agreed-bookless-close.json", "the cited Close names no book_id, so nothing can be its counterparty"],
+    ];
+
+    function expectNeverAgreed(claimEl, reason) {
+      const state = claimEl.querySelector(".rv0-close-state");
+      expect(state.className).toBe("rv0-close-state rv0-close-unilateral");
+      expect(state.textContent).toContain("UNILATERAL");
+      const closeBlock = claimEl.querySelector(".rv0-close");
+      expect(closeBlock.querySelectorAll(".rv0-close-agreed, .rv0-close-agreed-mark")).toHaveLength(0);
+      expect(closeBlock.textContent).not.toMatch(/agreed|acknowledg/i);
+      expect(closeBlock.textContent).not.toContain("✓");
+      const mismatch = closeBlock.querySelectorAll(".rv0-close-state-mismatch");
+      expect(mismatch).toHaveLength(1);
+      expect(mismatch[0].getAttribute("data-asserted-state")).toBe("AGREED");
+      expect(mismatch[0].getAttribute("data-recomputed-state")).toBe("UNILATERAL");
+      const chip = closeBlock.querySelector(".rv0-close-derivation");
+      expect(chip.className).toContain("rv0-close-recomputed");
+      expect(chip.textContent).toBe(
+        "recomputed from 0 links to the cited Close in the supplied records (1 other link ignored -- not from the counterparty)",
+      );
+      const ignored = closeBlock.querySelectorAll(".rv0-close-ignored-link");
+      expect(ignored).toHaveLength(1);
+      expect(ignored[0].getAttribute("data-ignored-link")).toBe("acknowledges"); // the type lives on the attribute only
+      expect(ignored[0].textContent).toMatch(/^link from [0-9a-f]{64} ignored -- not from the counterparty: /);
+      expect(ignored[0].textContent).toContain(reason);
+      // the peer line still names the peer the Result named -- as a peer that has not responded
+      expect(closeBlock.querySelector(".rv0-close-peer").textContent).toBe("peer: oo-sor -- no response from it");
+    }
+
+    for (const [name, reason] of COUNTERPARTY_NEGATIVES) {
+      it(`NEGATIVE (vendored): ${name} renders UNILATERAL with a state mismatch and the ignored link's reason -- never AGREED`, async () => {
+        const doc = fixture(name);
+        expect(doc.claims[1].close.close_state).toBe("AGREED"); // the lie, as vendored
+        expect(doc.claims[1].close.peer).toBe("oo-sor");
+        const { node } = await render(doc, recordsFor(name));
+        expect(node.querySelectorAll(".rv0-claim")).toHaveLength(doc.claims.length);
+        const claimEl = claimRow(node, "close-1");
+        expect(claimEl.className).not.toContain("rv0-claim-refused");
+        expectNeverAgreed(claimEl, reason);
+        // the recount disagrees with the producer's met bucket only if the
+        // card counted verdicts by state -- it does not (the verdict is the
+        // claim's own field); the mismatch is on the close row itself
+      });
+
+      it(`NEGATIVE (vendored): ${name} WITHOUT records shows the asserted AGREED only under a producer-asserted chip -- never bare`, async () => {
+        const { node } = await render(fixture(name));
+        const claimEl = claimRow(node, "close-1");
+        expect(claimEl.querySelector(".rv0-close-state").className).toContain("rv0-close-agreed");
+        expect(claimEl.querySelector(".rv0-close-derivation").className).toContain("rv0-close-producer-asserted");
+        expect(claimEl.querySelectorAll(".rv0-close-ignored-link")).toHaveLength(0);
+      });
+    }
+
+    it("NEGATIVE: the AGREED positive with the claim's peer renamed -- the peer's own acknowledgement is now from a book that is not the named peer", async () => {
+      const doc = clone(fixture("pos-oo-close-agreed-result.json"));
+      doc.claims[1].close.peer = "oo-other";
+      const { node } = await render(doc, recordsFor("pos-oo-close-agreed-result.json"));
+      const claimEl = claimRow(node, "close-1");
+      const state = claimEl.querySelector(".rv0-close-state");
+      expect(state.className).toBe("rv0-close-state rv0-close-unilateral");
+      expect(claimEl.querySelectorAll(".rv0-close-state-mismatch")).toHaveLength(1);
+      const ignored = claimEl.querySelector(".rv0-close-ignored-link");
+      expect(ignored.textContent).toContain("the linking record's book_id is not the claim's named peer");
+      expect(claimEl.querySelector(".rv0-close").textContent).not.toMatch(/agreed|acknowledg/i);
+    });
+
+    it("NEGATIVE: the AGREED positive over records whose Close lost its book_id -- a Close naming no book takes no linker, not even the named peer's", async () => {
+      const doc = fixture("pos-oo-close-agreed-result.json");
+      const records = clone(recordsFor("pos-oo-close-agreed-result.json"));
+      // the Close's digest changes with its content, so re-point the claim at it
+      delete records[0].book_id;
+      const { CapsuleViewer } = await render(doc, records);
+      const closeDigest = await CapsuleViewer.jsonDigest(records[0]);
+      const tampered = clone(doc);
+      tampered.claims[1].close.close_ref.digest = closeDigest;
+      tampered.claims[1].evidence[0].digest = closeDigest;
+      tampered.claims[1].presentation.evidence[0].digest = closeDigest;
+      records[1].links.forEach((l) => { if (l.type === "acknowledges") l.target = closeDigest; });
+      const { node } = await render(tampered, records);
+      const claimEl = claimRow(node, "close-1");
+      expect(claimEl.querySelector(".rv0-close-state").className).toBe("rv0-close-state rv0-close-unilateral");
+      expect(claimEl.querySelectorAll(".rv0-close-state-mismatch")).toHaveLength(1);
+      expect(claimEl.querySelector(".rv0-close-ignored-link").textContent).toContain("the cited Close names no book_id");
+    });
+
+    it("a rebuttal from a non-counterparty makes no CONTESTED either: the CONTESTED positive with the rebutting record moved to the Close's own book reads UNILATERAL", async () => {
+      const doc = fixture("pos-oo-close-contested-result.json");
+      const records = clone(recordsFor("pos-oo-close-contested-result.json"));
+      records[1].book_id = "oo"; // the rebuttal now comes from the Close's own book
+      const rebuttalDigest = await (await render(doc, records)).CapsuleViewer.jsonDigest(records[1]);
+      const tampered = clone(doc);
+      tampered.claims[1].close.peer_close_ref.digest = rebuttalDigest;
+      tampered.claims[1].evidence[1].digest = rebuttalDigest;
+      tampered.claims[1].presentation.evidence[1].digest = rebuttalDigest;
+      const { node } = await render(tampered, records);
+      const claimEl = claimRow(node, "close-1");
+      expect(claimEl.querySelector(".rv0-close-state").className).toBe("rv0-close-state rv0-close-unilateral");
+      expect(claimEl.querySelectorAll(".rv0-close-contested, .rv0-close-contested-mark")).toHaveLength(0);
+      expect(claimEl.querySelectorAll(".rv0-close-state-mismatch")).toHaveLength(1);
+      expect(claimEl.querySelector(".rv0-close-ignored-link").getAttribute("data-ignored-link")).toBe("rebuts");
+    });
+
+    it("the honest positives carry no ignored link: every inbound link on them is from the named peer's book", async () => {
+      for (const [name] of CLOSE_FIXTURES) {
+        const { node } = await render(fixture(name), recordsFor(name));
+        expect(node.querySelectorAll(".rv0-close-ignored-link"), name).toHaveLength(0);
+      }
+    });
+  });
+
   it("every close row carries exactly one derivation chip, whatever the state or the records -- an asserted state is never shown bare", async () => {
-    const names = CLOSE_FIXTURES.map(([name]) => name).concat(["neg-close-agreed-relabelled-contested.json"]);
+    const names = CLOSE_FIXTURES.map(([name]) => name).concat([
+      "neg-close-agreed-relabelled-contested.json",
+      "neg-close-agreed-self-acknowledged.json",
+      "neg-close-agreed-third-book.json",
+      "neg-close-agreed-bookless-close.json",
+    ]);
     for (const name of names) {
       for (const records of [undefined, recordsFor(name)]) {
         const { node } = await render(fixture(name), records);

@@ -49,6 +49,12 @@ CLOSE_FIXTURES = [
     "pos-oo-close-unilateral-result.json",
     "pos-oo-close-unilateral-named-peer-result.json",
     "neg-close-agreed-relabelled-contested.json",
+    # the maintainer's third pass (2026-09-29): the counterparty is the
+    # named peer's book -- each asserts AGREED over an acknowledger that is
+    # not that (the Close's own book; a third book; a Close naming no book)
+    "neg-close-agreed-self-acknowledged.json",
+    "neg-close-agreed-third-book.json",
+    "neg-close-agreed-bookless-close.json",
 ]
 
 
@@ -141,6 +147,7 @@ def test_shell_ships_the_claim_type_renderer_that_pins_the_rules():
         "rv0-close-recomputed",
         "rv0-close-producer-asserted",
         "rv0-close-state-mismatch",
+        "rv0-close-ignored-link",
         "one side missing",
         "both sides disagree",
         "contested -- peer rebuts",
