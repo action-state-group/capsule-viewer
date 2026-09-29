@@ -15,7 +15,9 @@ This is a copy for this repo's own render tests, not a second definition:
 Vendored byte-for-byte from the same directory on the
 `desk/result-v0-claim-types` branch of `agent-action-capsule` (the
 `reconcile` / `close` claim types; `cmp`-verified, all 29 vendored files,
-against that branch's `1529b73` -- the maintainer's third pass, 2026-09-29;
+against that branch's `963fe99` -- rebased onto main after the maintainer's
+fourth pass, 2026-09-29, which changed no fixture (they are byte-identical
+to the third pass's `1529b73`);
 since the second pass the CONTESTED positive carries `verdict: not_met`,
 bucketed under `not_met`: a contested Close never counts as met):
 
@@ -114,9 +116,13 @@ equals the claim's named **`peer`**; a Close whose header names no
 `book_id` takes no link at all. Part **(3)** -- a different signer key --
 is not visible in a record header (the vendored sidecars carry `v`,
 `book_id`, `seq`, `links`, ...; no `key_id`), so it is the emitter's and the
-CLI's, where the Producer Envelope `key_id` is. An ignored link is listed on
+CLI's, which verify the Producer Envelope under its `key_id`. Because the
+card cannot check it, every row it draws `AGREED` carries a visible caveat
+(fourth pass): `rv0-close-key-unchecked`, "peer key not checked -- this card
+sees no signing keys, so it cannot show the peer's record was signed under
+a key other than this Close's". An ignored link is listed on
 the row with its reason (`rv0-close-ignored-link`), never counted. Three
-link-walk negatives vendored byte-for-byte from `1529b73`, each schema-valid,
+link-walk negatives vendored byte-for-byte from `1529b73` (unchanged at `963fe99`), each schema-valid,
 each asserting `AGREED`, each rendering `UNILATERAL` with a `state mismatch`
 marker and never the agreed wording:
 
@@ -126,7 +132,7 @@ marker and never the agreed wording:
 | `neg-close-agreed-third-book` (+ `.records.json`) | book `oo-audit` (seq 7), not the named peer `oo-sor` | (2) a different book is necessary, not sufficient |
 | `neg-close-agreed-bookless-close` (+ `.records.json`) | the named peer `oo-sor` (seq 20) -- but the cited Close names no `book_id` | a Close that names no book has no counterparty |
 
-Still not vendored from `1529b73` (follow-up): `neg-close-contested-verdict-met`
+Still not vendored from `963fe99` (follow-up): `neg-close-contested-verdict-met`
 (schema-rejected) and the link-walk negatives `neg-close-ref-not-in-evidence`,
 `neg-close-peer-ref-not-in-evidence` (both refs must resolve inside
 `evidence[]`). The card does not yet apply that walk rule, so vendoring the

@@ -339,6 +339,42 @@ describe("claim types -- close: three states; UNILATERAL never renders like AGRE
     expect(closeBlock.querySelectorAll(".rv0-close-state-mismatch")).toHaveLength(0);
   });
 
+  // Maintainer's fourth pass (2026-09-29): the card never sees keys, so
+  // every AGREED row says so -- whether the state is producer-asserted or
+  // recomputed from supplied records -- and no other state carries it.
+  it("every AGREED row carries a visible 'peer key not checked' caveat (text + class); UNILATERAL and CONTESTED rows do not", async () => {
+    const CAVEAT = "peer key not checked -- this card sees no signing keys, so it cannot show the peer's record was signed under a key other than this Close's";
+    const agreedName = "pos-oo-close-agreed-result.json";
+    for (const records of [undefined, recordsFor(agreedName)]) {
+      const { node } = await render(fixture(agreedName), records);
+      const claimEl = claimRow(node, "close-1");
+      expect(claimEl.querySelector(".rv0-close-state").className).toContain("rv0-close-agreed");
+      const caveats = claimEl.querySelectorAll(".rv0-close-key-unchecked");
+      expect(caveats).toHaveLength(1);
+      expect(caveats[0].className).toBe("rv0-close-key-unchecked");
+      expect(caveats[0].textContent).toBe(CAVEAT);
+      expect(caveats[0].getAttribute("data-key-checked")).toBe("false");
+      // it sits right after the state label, on the row a reader sees
+      expect(caveats[0].previousElementSibling.className).toContain("rv0-close-agreed");
+    }
+    for (const name of [
+      "pos-oo-close-contested-result.json",
+      "pos-oo-close-unilateral-result.json",
+      "pos-oo-close-unilateral-named-peer-result.json",
+    ]) {
+      const { node } = await render(fixture(name), recordsFor(name));
+      const claimEl = claimRow(node, "close-1");
+      expect(claimEl.querySelectorAll(".rv0-close-key-unchecked")).toHaveLength(0);
+      expect(claimEl.textContent).not.toContain("peer key not checked");
+    }
+    // a relabelled AGREED the records read CONTESTED draws no AGREED, so no caveat either
+    const relabelled = await render(
+      fixture("neg-close-agreed-relabelled-contested.json"),
+      recordsFor("neg-close-agreed-relabelled-contested.json"),
+    );
+    expect(claimRow(relabelled.node, "close-1").querySelectorAll(".rv0-close-key-unchecked")).toHaveLength(0);
+  });
+
   it("UNILATERAL renders its own exact class and exact label -- neither AGREED's, and never AGREED's link word", async () => {
     const agreed = await render(fixture("pos-oo-close-agreed-result.json"));
     const unilateral = await render(fixture("pos-oo-close-unilateral-result.json"));

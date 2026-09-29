@@ -582,6 +582,14 @@
   // asserted one; the asserted value lives on that marker's data
   // attribute, never in the text a reader takes as the state. Pinned by
   // tests, not styling.
+  //
+  // Every AGREED row also carries a visible caveat (rv0-close-key-unchecked,
+  // "peer key not checked"; maintainer's fourth pass, 2026-09-29). The
+  // counterparty rule has three parts -- another book, the named peer's
+  // book, a different signing key -- and this card sees only record
+  // headers, which carry no signer. It checks the first two; the third is
+  // the emitter's and the CLI's, which verify the Producer Envelope under
+  // its key_id. So an AGREED this card draws never reads as a key check.
   function renderClose(helpers, body, derived) {
     var wrap = helpers.el("div", "rv0-close");
     var state = derived.state;
@@ -590,6 +598,13 @@
     wrap.appendChild(helpers.el("div", "rv0-close-period", "close period: " + renderPeriod(body.period)));
     if (state === "AGREED") {
       wrap.appendChild(helpers.el("span", "rv0-close-state rv0-close-agreed", "AGREED -- the peer's own Close acknowledges this one"));
+      var unchecked = helpers.el(
+        "span",
+        "rv0-close-key-unchecked",
+        "peer key not checked -- this card sees no signing keys, so it cannot show the peer's record was signed under a key other than this Close's"
+      );
+      unchecked.setAttribute("data-key-checked", "false");
+      wrap.appendChild(unchecked);
       wrap.appendChild(helpers.el("div", "rv0-close-peer", "peer: " + (peer !== undefined ? peer : "(not named by the Result)")));
       if (peerRef !== undefined) {
         wrap.appendChild(helpers.el("div", "rv0-mono", "peer's acknowledging Close: " + peerRef.digest_alg + ": " + peerRef.digest));
