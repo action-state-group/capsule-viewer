@@ -429,8 +429,11 @@ describe("claim types -- close: three states; UNILATERAL never renders like AGRE
     expect(mark.textContent).toContain("oo-sor");
     expect(claimEl.querySelector(".rv0-close-peer").textContent).toBe("peer: oo-sor");
     expect(claimEl.querySelector(".rv0-close").textContent).toContain(doc.claims[1].close.peer_close_ref.digest);
-    // Its base axes are untouched: the Close was sealed; the agreement axis is close_state alone.
-    expect(claimEl.querySelector(".rv0-verdict-line").textContent).toBe("sufficiency: SATISFIED -- verdict: met");
+    // A CONTESTED Close never counts as met (2026-09-28, maintainer's second
+    // pass): the vendored positive carries not_met, bucketed as such.
+    expect(claimEl.querySelector(".rv0-verdict-line").textContent).toBe("sufficiency: SATISFIED -- verdict: not_met");
+    expect(doc.aggregate.buckets.not_met).toEqual(["close-1"]);
+    expect(doc.aggregate.buckets.met).toEqual(["claim-1"]);
   });
 
   it("NEGATIVE: a CONTESTED close never carries the agreed mark, the AGREED class, or AGREED's wording", async () => {
@@ -584,17 +587,24 @@ describe("XSS -- the five typed-body strings reach the DOM as text, never as mar
       assertInert(node);
     });
 
-    it(`close.peer_close_ref.digest = ${JSON.stringify(PAYLOAD)} renders verbatim on the cited-record line as text`, async () => {
+    it(`close.peer_close_ref.digest = ${JSON.stringify(PAYLOAD)} never reaches the DOM at all -- the digest-format gate refuses the row (2026-09-28), nothing echoes it, nothing is dropped`, async () => {
+      // Before the digest-format rule this payload rendered verbatim as
+      // text on the cited-record line; a digest that is not 64 lowercase
+      // hex is now refused before any line is built, so the payload is
+      // never in the DOM in any form -- the same posture as the enum gates.
       for (const name of ["pos-oo-close-agreed-result.json", "pos-oo-close-contested-result.json"]) {
         const tampered = clone(fixture(name));
         tampered.claims[1].close.peer_close_ref.digest = PAYLOAD;
-        const { node } = await render(tampered);
+        const { node } = await render(tampered, recordsFor(name));
+        expect(node.querySelectorAll(".rv0-claim"), name).toHaveLength(tampered.claims.length);
         const claimEl = claimRow(node, "close-1");
-        expect(claimEl.className, name).not.toContain("rv0-claim-refused");
-        const mono = claimEl.querySelector(".rv0-close .rv0-mono");
-        expect(mono.textContent, name).toMatch(/^peer's (acknowledging Close|rebutting record): SHA-256: /);
-        expect(mono.textContent.slice(mono.textContent.indexOf("SHA-256: ") + "SHA-256: ".length), name).toBe(PAYLOAD);
-        assertInert(node);
+        expect(claimEl.className, name).toContain("rv0-claim-refused");
+        expect(claimEl.textContent, name).toMatch(/cites no peer_close_ref/);
+        expect(node.textContent, name).not.toContain(PAYLOAD);
+        expect(node.querySelectorAll(".rv0-close, .rv0-close-state, .rv0-close-derivation"), name).toHaveLength(0);
+        // not assertInert: the payload is not in the DOM even as escaped text
+        assertNoElementCreated(node);
+        expect(node.innerHTML, name).not.toContain("&lt;img");
       }
     });
   }
@@ -731,8 +741,9 @@ describe("close_state is recomputed from the supplied records' links, never take
     expect(mismatch[0].getAttribute("data-recomputed-state")).toBe("CONTESTED");
     expect(closeBlock.querySelector(".rv0-close-derivation").className).toContain("rv0-close-recomputed");
     expect(closeBlock.querySelectorAll(".rv0-close-peer-ref-mismatch")).toHaveLength(0); // peer_close_ref does cite the rebutting record
-    // the base axes and the aggregate are untouched by the relabel
-    expect(claimEl.querySelector(".rv0-verdict-line").textContent).toBe("sufficiency: SATISFIED -- verdict: met");
+    // the base axes and the aggregate are untouched by the relabel (the
+    // CONTESTED positive it derives from carries not_met since 2026-09-28)
+    expect(claimEl.querySelector(".rv0-verdict-line").textContent).toBe("sufficiency: SATISFIED -- verdict: not_met");
     expect(node.textContent).toContain("Evaluated population: 2 (recomputed 2)");
   });
 
@@ -820,6 +831,95 @@ describe("close_state is recomputed from the supplied records' links, never take
   });
 
   it("deriveCloseState: any rebuts wins, else acknowledges, else UNILATERAL", async () => {
+    const { CapsuleViewer } = await render(fixture("pos-oo-claims-result.json"));
+    void CapsuleViewer;
+    const { deriveCloseState } = window.__resultV0CardInternals;
+    expect(deriveCloseState([])).toBe("UNILATERAL");
+    expect(deriveCloseState([{ type: "acknowledges", record: "a" }])).toBe("AGREED");
+    expect(deriveCloseState([{ type: "rebuts", record: "b" }])).toBe("CONTESTED");
+    expect(deriveCloseState([{ type: "acknowledges", record: "a" }, { type: "rebuts", record: "b" }])).toBe("CONTESTED");
+  });
+});
+
+describe("digest format -- a digest-ref is SHA-256 + exactly 64 lowercase hex; anything else is refused, never resolved", () => {
+  // The format every vendored vector carries (schema $defs/HexDigest, the
+  // output of the canonicalization's json_digest). Maintainer's second
+  // pass, 2026-09-28: the check used to accept any non-empty string.
+  const GOOD = fixture("pos-oo-close-agreed-result.json").claims[1].close.close_ref.digest;
+  const MALFORMED = [
+    ["sha256: prefixed", "sha256:" + GOOD],
+    ["63 hex characters", GOOD.slice(0, 63)],
+    ["65 hex characters", GOOD + "0"],
+    ["uppercase hex", GOOD.toUpperCase()],
+    ["non-hex characters", "g".repeat(64)],
+    ["empty", ""],
+    ["not a string", 12345678],
+  ];
+
+  it("isDigestRef accepts exactly the vectors' form", async () => {
+    await render(fixture("pos-oo-claims-result.json"));
+    const { isDigestRef } = window.__resultV0CardInternals;
+    expect(GOOD).toMatch(/^[0-9a-f]{64}$/);
+    expect(isDigestRef({ digest_alg: "SHA-256", digest: GOOD })).toBe(true);
+    expect(isDigestRef({ digest_alg: "SHA-512", digest: GOOD })).toBe(false);
+    expect(isDigestRef({ digest: GOOD })).toBe(false);
+    for (const [label, digest] of MALFORMED) {
+      expect(isDigestRef({ digest_alg: "SHA-256", digest }), label).toBe(false);
+    }
+  });
+
+  for (const [label, digest] of MALFORMED) {
+    it(`NEGATIVE: close_ref.digest ${label} -> the claim is refused; no state, no derivation chip, nothing resolved -- even with the records supplied`, async () => {
+      const doc = clone(fixture("pos-oo-close-agreed-result.json"));
+      doc.claims[1].close.close_ref.digest = digest;
+      const { node } = await render(doc, recordsFor("pos-oo-close-agreed-result.json"));
+      expect(node.querySelectorAll(".rv0-claim")).toHaveLength(doc.claims.length);
+      const refused = node.querySelectorAll(".rv0-claim-refused");
+      expect(refused).toHaveLength(1);
+      expect(refused[0].textContent).toContain("close.close_ref missing or not a digest-ref (SHA-256, 64 lowercase hex)");
+      expect(node.querySelectorAll(".rv0-close, .rv0-close-state, .rv0-close-derivation, .rv0-close-state-mismatch")).toHaveLength(0);
+      expect(node.textContent).not.toMatch(/recomputed from \d+ link|producer-asserted --/);
+      // and the recount excludes the refused claim, so the aggregate disagrees visibly
+      expect(node.textContent).toContain("Evaluated population: 2 (recomputed 1)");
+    });
+  }
+
+  it("NEGATIVE: a malformed digest in evidence[] refuses the claim -- a row that is not in the vectors' digest form can never resolve", async () => {
+    const doc = clone(fixture("pos-oo-claims-result.json"));
+    doc.claims[0].evidence[0].digest = "sha256:" + doc.claims[0].evidence[0].digest;
+    const { node } = await render(doc);
+    const refused = node.querySelectorAll(".rv0-claim-refused");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].textContent).toContain('Claim "claim-1" refused');
+    expect(refused[0].textContent).toContain("evidence[] missing or not all digest-refs (SHA-256, 64 lowercase hex)");
+    expect(node.querySelectorAll(".rv0-claim")).toHaveLength(3);
+  });
+
+  it("NEGATIVE: an AGREED close whose peer_close_ref.digest is uppercase hex is refused as citing no peer_close_ref -- never rendered agreed", async () => {
+    const doc = clone(fixture("pos-oo-close-agreed-result.json"));
+    doc.claims[1].close.peer_close_ref.digest = doc.claims[1].close.peer_close_ref.digest.toUpperCase();
+    const { node } = await render(doc, recordsFor("pos-oo-close-agreed-result.json"));
+    const refused = node.querySelectorAll(".rv0-claim-refused");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].textContent).toContain("close is AGREED but cites no peer_close_ref");
+    expect(node.querySelectorAll(".rv0-close-agreed, .rv0-close-state")).toHaveLength(0);
+  });
+
+  it("every vendored fixture's digests are in the vectors' form: no positive is refused for a digest", async () => {
+    for (const name of [
+      "pos-oo-claims-result.json",
+      "pos-oo-reconcile-result.json",
+      "pos-oo-close-agreed-result.json",
+      "pos-oo-close-unilateral-result.json",
+      "pos-oo-close-unilateral-named-peer-result.json",
+      "pos-oo-close-contested-result.json",
+    ]) {
+      const { node } = await render(fixture(name));
+      expect(node.querySelectorAll(".rv0-claim-refused"), name).toHaveLength(0);
+    }
+  });
+
+  it("(kept) deriveCloseState table, unchanged by the digest rule", async () => {
     const { CapsuleViewer } = await render(fixture("pos-oo-claims-result.json"));
     void CapsuleViewer;
     const { deriveCloseState } = window.__resultV0CardInternals;

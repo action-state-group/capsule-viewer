@@ -14,8 +14,10 @@ This is a copy for this repo's own render tests, not a second definition:
 
 Vendored byte-for-byte from the same directory on the
 `desk/result-v0-claim-types` branch of `agent-action-capsule` (the
-`reconcile` / `close` claim types; `cmp`-verified against that branch's
-`60d6e63`):
+`reconcile` / `close` claim types; `cmp`-verified, all 23 files, against
+that branch's `1a2d6f9` -- the maintainer's second pass, 2026-09-28, under
+which the CONTESTED positive carries `verdict: not_met`, bucketed under
+`not_met`: a contested Close never counts as met):
 
 - `pos-oo-reconcile-result.json` (tallies keyed lowercase, as
   `schemas/judge/close-v1.json` keys them), `pos-oo-close-agreed-result.json`,
@@ -85,3 +87,26 @@ digest (the base's `jsonDigest` port) and reads the `acknowledges` /
 agreed mark, never UNILATERAL's label" (the tests assert the absence on the
 rendered row), and the vendored
 `neg-close-contested-without-peer-close-ref.json` pins the refusal.
+
+## Digest format (2026-09-28, maintainer's second pass)
+
+Every digest in every vendored file is `SHA-256` + exactly 64 lowercase
+hex (schema `$defs/HexDigest`; the output of the canonicalization's
+`json_digest`, and the only form the card's `jsonDigest` port can match).
+The card's `isDigestRef` and Python's `capsule_viewer.result_v0.is_digest_ref`
+accept exactly that form -- no `sha256:` prefix, no uppercase, no other
+length. A claim carrying any other form is **refused** at render time (a
+refusal row; no state, no derivation chip, nothing resolved), and
+`build_result_entry(..., strict=True)` refuses it before embedding;
+`test_every_vendored_fixture_is_in_the_vectors_digest_form` pins that no
+vendored file trips it. No fixture is vendored for this: the negatives are
+mutations of the positives in the tests (`sha256:`-prefixed, 63/65 hex,
+uppercase, non-hex, empty, non-string).
+
+Not vendored from `1a2d6f9` (follow-up): the schema repo's four new
+negatives -- `neg-close-contested-verdict-met` (schema), and the link-walk
+negatives `neg-close-agreed-self-acknowledged` (an acknowledgement from the
+Close's own `book_id` makes no state), `neg-close-ref-not-in-evidence`,
+`neg-close-peer-ref-not-in-evidence` (both refs must resolve inside
+`evidence[]`). The card does not yet apply those three walk rules, so
+vendoring the fixtures before the rules would pin the wrong render.

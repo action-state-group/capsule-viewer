@@ -96,8 +96,21 @@
     return !!p && typeof p === "object" && isNonEmptyString(p.start) && isNonEmptyString(p.end);
   }
 
+  // The digest format the vectors carry (schema $defs/HexDigest): exactly
+  // 64 lowercase hex characters, the bare lowercase-hex SHA-256 the base's
+  // jsonDigest port produces -- no `sha256:` prefix, no uppercase, no other
+  // length. A ref whose digest is not in this form can never resolve
+  // against the supplied records (2026-09-28, maintainer's second pass:
+  // "the digest check accepts any non-empty string"), so the claim is
+  // refused rather than rendered around it.
+  var HEX64 = /^[0-9a-f]{64}$/;
+
+  function isHexDigest(v) {
+    return typeof v === "string" && HEX64.test(v);
+  }
+
   function isDigestRef(r) {
-    return !!r && typeof r === "object" && r.digest_alg === "SHA-256" && isNonEmptyString(r.digest);
+    return !!r && typeof r === "object" && r.digest_alg === "SHA-256" && isHexDigest(r.digest);
   }
 
   // Absent `type` means "requirement" -- the pre-existing claim shape.
@@ -148,7 +161,7 @@
     if (!body || typeof body !== "object") return ["close body missing (type is \"close\")"];
     if (!isPeriod(body.period)) issues.push("close.period missing or not {start, end}");
     if (!isDigestRef(body.close_ref)) {
-      issues.push("close.close_ref missing or not a digest-ref -- the Close this claim reports on, by digest, is what close_state is recomputed from");
+      issues.push("close.close_ref missing or not a digest-ref (SHA-256, 64 lowercase hex) -- the Close this claim reports on, by digest, is what close_state is recomputed from");
     }
     if (CLOSE_STATES.indexOf(body.close_state) === -1) {
       issues.push("close.close_state missing or invalid (must be UNILATERAL, AGREED, or CONTESTED)");
@@ -171,12 +184,7 @@
   }
 
   function isDigestRefArray(v) {
-    return (
-      Array.isArray(v) &&
-      v.every(function (r) {
-        return r && r.digest_alg === "SHA-256" && isNonEmptyString(r.digest);
-      })
-    );
+    return Array.isArray(v) && v.every(isDigestRef);
   }
 
   // <contract_id>@<version> -- exactly one '@', both sides non-empty. Never
@@ -205,7 +213,7 @@
     }
     if (VALID_SUFFICIENCY.indexOf(claim.sufficiency) === -1) issues.push("missing or invalid sufficiency");
     if (VALID_VERDICTS.indexOf(claim.verdict) === -1) issues.push("missing or invalid verdict");
-    if (!isDigestRefArray(claim.evidence)) issues.push("evidence[] missing or not all digest-refs");
+    if (!isDigestRefArray(claim.evidence)) issues.push("evidence[] missing or not all digest-refs (SHA-256, 64 lowercase hex)");
     if (!Array.isArray(claim.proofs)) issues.push("proofs[] missing");
     // The binding rule (spec section 1): verdict met/not_met only when
     // sufficiency is SATISFIED; otherwise verdict must be not_evaluable.
@@ -748,6 +756,7 @@
     parseContractRef: parseContractRef,
     claimType: claimType,
     isKnownClaimType: isKnownClaimType,
+    isDigestRef: isDigestRef,
     deriveCloseState: deriveCloseState,
     closeDerivation: closeDerivation,
     KNOWN_CLAIM_TYPES: KNOWN_CLAIM_TYPES.slice(),
