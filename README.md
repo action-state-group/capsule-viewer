@@ -49,6 +49,40 @@ See `js-tests/result_v0_card.test.js` for the refusal-path and tamper-vector
 proofs (each a red-state assertion against a specific one-field mutant of
 the fixture, several with the green-state fix reverted alongside).
 
+### Claim types: `reconcile` and `close` (PROPOSED, ruling 2026-09-25)
+
+A claim may carry `type` (`requirement` -- the default when absent --
+`reconcile`, or `close`). The card renders the typed body beneath the
+claim's ordinary tier / grade / sufficiency / verdict lines, under three
+rules that are pinned by negative fixtures and tests, never by styling:
+
+- **A reconcile row shows the six states as counts** (`MATCHED · A_ONLY ·
+  B_ONLY · CONFLICTING · INSUFFICIENT · UNRESOLVED`, read from the claim's
+  `tallies`, keyed lowercase as `schemas/judge/close-v1.json` keys them),
+  one row each, always all six, never a ratio or a percentage. `A_ONLY` / `B_ONLY` render as
+  *one side missing* (`rv0-rs-one-sided`); `CONFLICTING` renders as *both
+  sides disagree* (`rv0-rs-finding`). The two share no class and no
+  wording -- "one side missing isn't a finding; both sides disagreeing
+  is." A `tallies` object missing any state is refused, never read as zero.
+- **A close row renders the three Close states differently** --
+  `UNILATERAL` (`rv0-close-unilateral`), `AGREED` (`rv0-close-agreed`),
+  `CONTESTED` (`rv0-close-contested`, "contested -- peer rebuts"). The
+  states are the Evidence Layer's, read from the links other records make
+  to the Close (`acknowledges` -> AGREED, `rebuts` -> CONTESTED, neither ->
+  UNILATERAL); the claim carries what the Result builder read, and the card
+  shows it as given. A `UNILATERAL` close carries nothing that could read
+  as agreement: no agreed mark, never `AGREED`'s wording. It may name the
+  peer it was closed against and cite the peer's Close it reconciled with
+  (both optional in the schema, after `close-v1.json`'s unconditional
+  `peer_close`); when it does, the line says the peer has not responded. A
+  `CONTESTED` close never carries the agreed mark and never `UNILATERAL`'s
+  wording. An `AGREED` or `CONTESTED` close with no peer or no cited peer
+  record is refused.
+- **A claim whose `type` the card does not know is shown, never dropped**:
+  its own `rv0-claim-unrecognized` row, labelled `unrecognized`, carrying
+  the raw type and the claim's `contract_ref`. The rendered row count
+  always equals the input claim count.
+
 ## Fixtures
 
 `tests/testdata/` vendors the synthetic `OO` fixtures from
