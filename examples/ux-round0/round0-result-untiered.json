@@ -1,0 +1,943 @@
+{
+  "aggregate": {
+    "buckets": {
+      "met": [
+        "J-1001/coverage_determined_correctly",
+        "J-1001/amount_within_policy_limits",
+        "J-1001/payment_effect_observed",
+        "J-1001/customer_notified",
+        "J-1002/coverage_determined_correctly",
+        "J-1002/payment_effect_observed",
+        "J-1002/customer_notified",
+        "J-1003/coverage_determined_correctly",
+        "J-1003/amount_within_policy_limits",
+        "J-1004/coverage_determined_correctly",
+        "J-1004/amount_within_policy_limits",
+        "J-1005/amount_within_policy_limits",
+        "J-1005/payment_effect_observed",
+        "J-1005/customer_notified",
+        "J-1006/amount_within_policy_limits",
+        "J-1006/payment_effect_observed"
+      ],
+      "not_evaluable": [
+        "J-1003/payment_effect_observed",
+        "J-1003/customer_notified",
+        "J-1004/customer_notified",
+        "J-1006/coverage_determined_correctly",
+        "J-1006/customer_notified"
+      ],
+      "not_met": [
+        "J-1002/amount_within_policy_limits",
+        "J-1004/payment_effect_observed",
+        "J-1005/coverage_determined_correctly"
+      ]
+    },
+    "coverage": {
+      "evaluated_population": 24,
+      "excluded_not_applicable": 3,
+      "unknown_count": 1
+    }
+  },
+  "claims": [
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "6ad8269cdab79e31ac8914a0dd7ed410cf3d02df3cab04d0fafd3adca80af8f8",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1001/coverage_determined_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "6ad8269cdab79e31ac8914a0dd7ed410cf3d02df3cab04d0fafd3adca80af8f8",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "e4ec75bf90c252deff0b36e61af811b81bc8a9dd78bdcf9193a5155927015624",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "coverage_determined_correctly",
+      "sufficiency": "SATISFIED",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "778d1e3c036b41ea79027d7e76dd0459c59ee2d088d0d5032b59509b9e2e928c",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "74c210f48b987aa4296035a07f130692bbadf16f021f4e7a401c27483dec2189",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1001/amount_within_policy_limits",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "778d1e3c036b41ea79027d7e76dd0459c59ee2d088d0d5032b59509b9e2e928c",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "74c210f48b987aa4296035a07f130692bbadf16f021f4e7a401c27483dec2189",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "841144d58f983d203c1ea00980974aae49c983658fc086e4f949e6bb6a23d2f7",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "amount_within_policy_limits",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "232ccd944fc8ed5710562785db1a6d1796c724f1c4e6c7c511b402e3f3591f0b",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "ef5100335086ed5f84e9c5d191d3a45449933f927176f2474073aef14497e1db",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1001/payment_effect_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "232ccd944fc8ed5710562785db1a6d1796c724f1c4e6c7c511b402e3f3591f0b",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "ef5100335086ed5f84e9c5d191d3a45449933f927176f2474073aef14497e1db",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "e8e3261c05b192e260b62dc14c7b9d18267c508b68df3205f5c90e82d481658b",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "payment_effect_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "45a5162c37164224a9606bc6a4ff9405709ec47636f881fbd86bf358fa91feb7",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "b15669c422ec03578d0ba97bdf05afb408b8321f113d10f5ab5f9c989ce210b4",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1001/customer_notified",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "45a5162c37164224a9606bc6a4ff9405709ec47636f881fbd86bf358fa91feb7",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "b15669c422ec03578d0ba97bdf05afb408b8321f113d10f5ab5f9c989ce210b4",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "4df373c6e64f802a02270c5f87c6bee49d8c6c7b1b98ada05a7d5b2745b3ef6f",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "customer_notified",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "8a75e10db11d5542898757b000f6ecc2a1fc0095846c7a9e87a129c68c301f71",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1002/coverage_determined_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "8a75e10db11d5542898757b000f6ecc2a1fc0095846c7a9e87a129c68c301f71",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "e7c721482c7de410fe2e53a7aabf3b81abc15683b8eb9bb6f48858ddaa6a4ed0",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "coverage_determined_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "903dcb38f2b996f9d957779e3d36fe2be2e7c893ce554418b3ee3951a95d601e",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "0c3c98af4955888c433969dda433580bda64b882dc17b404631a84168e84ab86",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1002/amount_within_policy_limits",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "903dcb38f2b996f9d957779e3d36fe2be2e7c893ce554418b3ee3951a95d601e",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "0c3c98af4955888c433969dda433580bda64b882dc17b404631a84168e84ab86",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "4e15e9d28ccfbe7e2c5d3506de3d2946f4d9b44bf2cf483568759fc077f3c74a",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "amount_within_policy_limits",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "not_met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "c4c8e11108eeb38f3ab96c824cfe429e0866cc0e6b39607887a4f1b63e857ce8",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "3fe97477c6b6cc8d9db8618c7d49d40b161f530527535c7e5c2c8068e5e467f2",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1002/payment_effect_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "c4c8e11108eeb38f3ab96c824cfe429e0866cc0e6b39607887a4f1b63e857ce8",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "3fe97477c6b6cc8d9db8618c7d49d40b161f530527535c7e5c2c8068e5e467f2",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "a090c51c8435a5e2dc3e32d1f3cc2181f66bab6b8928294cf0647212f669c6bb",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "payment_effect_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "ca9b65ea2f6824c65d8a4cf3eb41a968ba22eab131330b47edecb903424eee54",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "cb7c2479ca08868434169dca42d39edd194dfa1b5e8b172f5cdd980016f14998",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1002/customer_notified",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "ca9b65ea2f6824c65d8a4cf3eb41a968ba22eab131330b47edecb903424eee54",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "cb7c2479ca08868434169dca42d39edd194dfa1b5e8b172f5cdd980016f14998",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "aab73d322936f05ab440088ef8e88ff794a75b19828463945774be328452a695",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "customer_notified",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "ebb5f97944e2b0acb841bc454fb84dc47ce0dce7001d58aad4db682ce13ca000",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1003/coverage_determined_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "ebb5f97944e2b0acb841bc454fb84dc47ce0dce7001d58aad4db682ce13ca000",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "88def7c92227fb40c652d48450548cdf178d0e2900098db67313903a191df541",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "coverage_determined_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "d8c4930e561df734240a7a7347fdd42de1fa10daa68cb4768ef1457089c20bba",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "a77a223032a41f2e7a4d53e8cb8ee68628bbe5a568bdef9db947ad51fef19985",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1003/amount_within_policy_limits",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "d8c4930e561df734240a7a7347fdd42de1fa10daa68cb4768ef1457089c20bba",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "a77a223032a41f2e7a4d53e8cb8ee68628bbe5a568bdef9db947ad51fef19985",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "f556cc6178de7fa199e5886cf66c4ed9396215a9a2d7ceaac3a40dd7c421b849",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "amount_within_policy_limits",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "4d6b5b78da865a3bab88ef53bb8cbf57bfbeefc8af04f903517d201e4e9aad37",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "302d60133389ae98da72453fd1805991234614a8c0949673b7faaa8ec71e5cfd",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1003/payment_effect_observed",
+      "presentation": {
+        "kind": "analysis",
+        "status": "WITHHELD",
+        "summary": "The payment processor confirmed a matching record exists but withheld it under its own disclosure policy; the evaluator could not examine it."
+      },
+      "proofs": [
+        {
+          "digest": "49ba0cbf1193d761dcc559e8fabe62e84980493a70b7e4bb7081d8182b9ea573",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "payment_effect_observed",
+      "sufficiency": "GAP",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "1e55d9bd3979c5f17b6554b7fb13010ed50a2435699279b181b4304d1d73bf5f",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "acbb152f4b464ca4d0afb1e4c9835b5cbd0fc2440c19c91c96ab9bde82d96514",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1003/customer_notified",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "1e55d9bd3979c5f17b6554b7fb13010ed50a2435699279b181b4304d1d73bf5f",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "acbb152f4b464ca4d0afb1e4c9835b5cbd0fc2440c19c91c96ab9bde82d96514",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "NOT_FOUND"
+      },
+      "proofs": [
+        {
+          "digest": "c1953b269bcefd21db32ddd2b84480f58429269fa5aeda7d8da6a75ade809fc0",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "customer_notified",
+      "sufficiency": "GAP",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "954267aa68dde1898e3ed082e2a74861a54955a5c637bc0f2b1bef48033b94ce",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1004/coverage_determined_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "954267aa68dde1898e3ed082e2a74861a54955a5c637bc0f2b1bef48033b94ce",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "0ee606f707406a93679362e4b08e4083adbe73e2fa76bfb66a1d11aeb89a2275",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "coverage_determined_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "9ce82bc2bce12e638722bb5c157433d60444d71aa3f49f1e429ee1952b093eb6",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "dc1cd012ddc2f3f3bee4fa4e5824ead738b2edb27e61a647064d0fd22f5dda71",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1004/amount_within_policy_limits",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "9ce82bc2bce12e638722bb5c157433d60444d71aa3f49f1e429ee1952b093eb6",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "dc1cd012ddc2f3f3bee4fa4e5824ead738b2edb27e61a647064d0fd22f5dda71",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "cd00a76a02c592c4dc549a08fd1486efe9e3d214039d08801e7c48197ee5fbe9",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "amount_within_policy_limits",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "24ce2cc1cb0d74a2c428645ab07532302302d4c87de9073f059fbf951cbbbcb5",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "1749f8d4d72a011205350056c990ba415b86e7b2cd3a966a7d0a79bdf74b0a9d",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1004/payment_effect_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "24ce2cc1cb0d74a2c428645ab07532302302d4c87de9073f059fbf951cbbbcb5",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "1749f8d4d72a011205350056c990ba415b86e7b2cd3a966a7d0a79bdf74b0a9d",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "CONTRADICTED"
+      },
+      "proofs": [
+        {
+          "digest": "c9ca355e5a25f7810aa3f49d8e18849229e359b772b56bd004c68928b52d76c0",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "payment_effect_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "not_met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "9ff0a21fd01a2c53010d90e30877f9d8e2e14e6377ad9e204fe0205fafcf02b1",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "d9494b97a5271a7a6c14879aace17910038820bde474b1db7d130942113a4215",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1004/customer_notified",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "9ff0a21fd01a2c53010d90e30877f9d8e2e14e6377ad9e204fe0205fafcf02b1",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "d9494b97a5271a7a6c14879aace17910038820bde474b1db7d130942113a4215",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "UNKNOWN"
+      },
+      "proofs": [
+        {
+          "digest": "f56aed54576285446cab387b344c22c4b10824a768aef8e216fb5753aec198ac",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "customer_notified",
+      "sufficiency": "UNKNOWN",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "608d416b24df9491c23ad72e4a39f46574eceebf56018feace7d4bee309a4678",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1005/coverage_determined_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "608d416b24df9491c23ad72e4a39f46574eceebf56018feace7d4bee309a4678",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "49ceea6d3b59691558c0ef2b73ab4beda71be432b14378a8a470c30d7b99de3a",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "coverage_determined_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "not_met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "9fadd10fc5921b46b45adb6752faae79a198e344d0a7d36c5cae6b11b68461d0",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "aa7c3fff32923a924f9423bca1fecee7b1d7871f5e30208dc8e372227411147d",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1005/amount_within_policy_limits",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "9fadd10fc5921b46b45adb6752faae79a198e344d0a7d36c5cae6b11b68461d0",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "aa7c3fff32923a924f9423bca1fecee7b1d7871f5e30208dc8e372227411147d",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "bb75ab15dc6bb167ef5dd2c04951b6b3bcce76b6d331208dfaa7896d11786968",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "amount_within_policy_limits",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "c6ca7642017b2b27fbe4c532e8f4baea769a766c0f6e4759a4a316161e4a10b5",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "61a242803a1f982c71316945eff3867c95f9bb21e03e93298fb4d97cfabda5be",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1005/payment_effect_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "c6ca7642017b2b27fbe4c532e8f4baea769a766c0f6e4759a4a316161e4a10b5",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "61a242803a1f982c71316945eff3867c95f9bb21e03e93298fb4d97cfabda5be",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "6fa6bb82963a8b30968b842f84cac9e8ee8a2ea24a7753f9fba9e2357b826036",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "payment_effect_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "99102e571fe0cec82664becc04f622b8898ef199e014b57578c1f9a517819348",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "6e6bc4c17c31e897469b0223b96634fc4c5e0c3ecfe64a697cbb08564125138f",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1005/customer_notified",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "99102e571fe0cec82664becc04f622b8898ef199e014b57578c1f9a517819348",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "6e6bc4c17c31e897469b0223b96634fc4c5e0c3ecfe64a697cbb08564125138f",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "5b133049c9e1291121390860410c8eccd8a295a02c91f73dfb1fd9272977bf14",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "customer_notified",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "e25b285661a8c426752c0c0651e1cfde9ae850fdcbb1f6c1d8e96f6f04fd6760",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1006/coverage_determined_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "e25b285661a8c426752c0c0651e1cfde9ae850fdcbb1f6c1d8e96f6f04fd6760",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "INSUFFICIENT"
+      },
+      "proofs": [
+        {
+          "digest": "5e788141fbe29d215c193e6069c42cab791955255ca6e44123d8ab796b30d13f",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "coverage_determined_correctly",
+      "sufficiency": "INSUFFICIENT",
+      "tier": "judged",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "fb3ade2cfea740ab00c277c9aa3326fe6a7bcb0d00e3cd2f8791fbf35ef5f276",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "7a9dc607f5548d072bf257eb3981118b9c46f9a8c97c9201a9845fc9dc36a696",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "J-1006/amount_within_policy_limits",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "fb3ade2cfea740ab00c277c9aa3326fe6a7bcb0d00e3cd2f8791fbf35ef5f276",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "7a9dc607f5548d072bf257eb3981118b9c46f9a8c97c9201a9845fc9dc36a696",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "dfb6f4d37c6523d8652a417988ce28160c75169ffbe221a68d5935d08714b9be",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "amount_within_policy_limits",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "22278bf0ae86e8216a216010ad2559b81d69695dd07b720ee18af7b6b28ef857",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "90ae46f35a3a5613f257bdbd66242937b5a6b3e2c05b1ae6b9fd3122dadcadba",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "J-1006/payment_effect_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "22278bf0ae86e8216a216010ad2559b81d69695dd07b720ee18af7b6b28ef857",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "90ae46f35a3a5613f257bdbd66242937b5a6b3e2c05b1ae6b9fd3122dadcadba",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "415dceffb4f11dc9432838a3a419fca2debad3aa23a6eeb04e8482c8832cf175",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "payment_effect_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-motor-claims-settlement@0.3",
+      "evidence": [
+        {
+          "digest": "259f625e1e1e71d26159ca1d8ee888f015a141e9d7db2088f8c8e7b43ea6a7a1",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "0632e1810afb4abe20559a14c124df3cff1123be37c86c171aef2110a3d4b9c9",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "J-1006/customer_notified",
+      "presentation": {
+        "kind": "story",
+        "narrative": "The outbound-messages system was not connected for this window, so no notification records were committed; the requirement could not be evaluated either way.",
+        "status": "NOT_COMMITTED"
+      },
+      "proofs": [
+        {
+          "digest": "a96a75ed8fab00589804e9ef4ed090ddaeed4035010c8b8cf3935b43bb99c23b",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "customer_notified",
+      "sufficiency": "GAP",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    }
+  ],
+  "generated_at": "2026-09-30T00:00:00Z",
+  "result_version": "evidence-result-v0",
+  "view": {
+    "producer_name": "Example Insurer (synthetic)",
+    "spec_version": "presentation/v1",
+    "title": "Motor claims settlement -- September (synthetic, UX round 0)"
+  }
+}
