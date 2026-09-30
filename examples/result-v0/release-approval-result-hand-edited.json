@@ -1,0 +1,944 @@
+{
+  "aggregate": {
+    "buckets": {
+      "met": [
+        "R-101/change_risk_assessed_correctly",
+        "R-101/tests_passed_on_release_commit",
+        "R-101/deployment_observed",
+        "R-101/release_notes_published",
+        "R-102/change_risk_assessed_correctly",
+        "R-102/deployment_observed",
+        "R-102/release_notes_published",
+        "R-103/change_risk_assessed_correctly",
+        "R-103/tests_passed_on_release_commit",
+        "R-104/change_risk_assessed_correctly",
+        "R-104/tests_passed_on_release_commit",
+        "R-105/tests_passed_on_release_commit",
+        "R-105/deployment_observed",
+        "R-105/release_notes_published",
+        "R-106/tests_passed_on_release_commit",
+        "R-106/deployment_observed",
+        "R-103/release_notes_published"
+      ],
+      "not_evaluable": [
+        "R-103/deployment_observed",
+        "R-104/release_notes_published",
+        "R-106/change_risk_assessed_correctly",
+        "R-106/release_notes_published"
+      ],
+      "not_met": [
+        "R-102/tests_passed_on_release_commit",
+        "R-104/deployment_observed",
+        "R-105/change_risk_assessed_correctly"
+      ]
+    },
+    "coverage": {
+      "evaluated_population": 24,
+      "excluded_not_applicable": 3,
+      "unknown_count": 1
+    }
+  },
+  "claims": [
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "60220ec813c3f8d707d71c16ecf4e5ac3cc987122641c8789adedecacdd09ff8",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-101/change_risk_assessed_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "60220ec813c3f8d707d71c16ecf4e5ac3cc987122641c8789adedecacdd09ff8",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "2f55c40a33393db5f3e2a0667aff88a7a75bb3b45b2f1362f86155b90ac71571",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "change_risk_assessed_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "b9d6c00b12ff6693766fa761715acb43091c863297759ad663eb911a8ae2e3fb",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "35a918f92948096c19d583c2d332bc933930f6e2059f8bfaa716883938cfd9cf",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-101/tests_passed_on_release_commit",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "b9d6c00b12ff6693766fa761715acb43091c863297759ad663eb911a8ae2e3fb",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "35a918f92948096c19d583c2d332bc933930f6e2059f8bfaa716883938cfd9cf",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "b2fd23545954c8b8cf58a0acf1b6b6f2e8b4c658a628dd9e3619c1a56d4af21f",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "tests_passed_on_release_commit",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "af69536cba1012785d1b0ca44d31f4c59a004342750d6d1436362d1cce6c1c88",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "7d8a2866e99a816b7034d266d97e5d27f2fa925859cc530f0123b80a38cc34cd",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-101/deployment_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "af69536cba1012785d1b0ca44d31f4c59a004342750d6d1436362d1cce6c1c88",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "7d8a2866e99a816b7034d266d97e5d27f2fa925859cc530f0123b80a38cc34cd",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "0ad413059fcd6d07faacfb8d4854991a3a6d88a94d4e2525ff6420ad2ceb8179",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "deployment_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "38ccc8fe04f44480e6c185c54d20fa9ae9ac36f2e67e71ee731c5ed41ff1acfd",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "5bdf66647abcdae6b80f47b2dcf3bbdd98caca03c787a99d8f465ec71cb4a421",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-101/release_notes_published",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "38ccc8fe04f44480e6c185c54d20fa9ae9ac36f2e67e71ee731c5ed41ff1acfd",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "5bdf66647abcdae6b80f47b2dcf3bbdd98caca03c787a99d8f465ec71cb4a421",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "3040884c36ed87f5c829fef3cef74e9e6c358962f292f8c80acadbcdad7f586f",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "release_notes_published",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "ce768cce16f445d348748e986a7efadf3f48592548d239a1400a650ea3434419",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-102/change_risk_assessed_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "ce768cce16f445d348748e986a7efadf3f48592548d239a1400a650ea3434419",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "fafd25c70e5ef82755ea4b5d55a9ff933ebaf262527cd38b5f8a883270dab025",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "change_risk_assessed_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "f3baec938b43f399b374b5224c25ac603f1694cfadcea8b37702776c9b76363b",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "dda2c616a9d3aa0493c663d3a468bd5110bddb0c007c7168bcaf30df0f6da971",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-102/tests_passed_on_release_commit",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "f3baec938b43f399b374b5224c25ac603f1694cfadcea8b37702776c9b76363b",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "dda2c616a9d3aa0493c663d3a468bd5110bddb0c007c7168bcaf30df0f6da971",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "78e72bab6a28cf2d929eb803c4691e00c9c4fee1fd92f4fe1a0090b41eb50fed",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "tests_passed_on_release_commit",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "not_met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "853ad16f1745ea1998ad3cd78839d17dc8eafd7c0ba36d3d4ad02c1f72f7045c",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "6ef5cf70ef361372b9842d612cd7f353de1a5ad6e19d4b2dac02761b4c83f281",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-102/deployment_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "853ad16f1745ea1998ad3cd78839d17dc8eafd7c0ba36d3d4ad02c1f72f7045c",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "6ef5cf70ef361372b9842d612cd7f353de1a5ad6e19d4b2dac02761b4c83f281",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "7c7f476e076c9dffa5331bb2767e6addb2ad541295652256103a0a24aa050d2f",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "deployment_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "64def0c1807ed63ffc8ab0ac15c59bede492048cdf3742ff3fd0428489bc29dc",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "67b2b17304de5ab10c309790bbf5ee08d8e92591687e79b530bdd0dcdfca33fa",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-102/release_notes_published",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "64def0c1807ed63ffc8ab0ac15c59bede492048cdf3742ff3fd0428489bc29dc",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "67b2b17304de5ab10c309790bbf5ee08d8e92591687e79b530bdd0dcdfca33fa",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "d44aa8536190fe5181b18f58b1792cf60eca0df664bb61ee0b261f059c6831cd",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "release_notes_published",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "6fb9f64dae017b6d34bc2c680f30a2d278466e1edd41e5b17a3be9bbefd940bb",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-103/change_risk_assessed_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "6fb9f64dae017b6d34bc2c680f30a2d278466e1edd41e5b17a3be9bbefd940bb",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "9bc59f90dbcb317cb83bec789c2fc8747eb919fcd6128689745a2e170c3ed521",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "change_risk_assessed_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "39f0d2d2692a793ab5cde910a919fb308e0c42915e87cf10e1f570b359b16212",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "bccdb1c54d6f6f47b3fb11b5380cf2ab3a0a2f0c8bffa0c6a7f3cc72fc4160bc",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-103/tests_passed_on_release_commit",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "39f0d2d2692a793ab5cde910a919fb308e0c42915e87cf10e1f570b359b16212",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "bccdb1c54d6f6f47b3fb11b5380cf2ab3a0a2f0c8bffa0c6a7f3cc72fc4160bc",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "dad5e9c23dcd1bc1b3c2b8b6cd05926a888c72582c354e1839bcbe75c8fdf310",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "tests_passed_on_release_commit",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "3ab08ce0d9c311e86702cbb9246b301068cd310652d3fd3bca5c99df746b1133",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "864cf441e5959aeee414ecf1ddc57b45f4583493ac65bd7c201bc0d56dcf9f0b",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-103/deployment_observed",
+      "presentation": {
+        "kind": "analysis",
+        "status": "WITHHELD",
+        "summary": "The hosting provider confirmed a matching deployment record exists but withheld it under its own disclosure policy; the evaluator could not examine it."
+      },
+      "proofs": [
+        {
+          "digest": "0e595af7574cfce350c97f29eb8290ce42432d95880f3c837f817eb0ff74b8e5",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "deployment_observed",
+      "sufficiency": "GAP",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "9147dfff0789f721f2a1f46b1747c4f0296f29d0a54f60045165ed756148a332",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "2e614594b702448358c6773912f23605cb45dc176ef724bdc39e976db3f8d4e4",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-103/release_notes_published",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "9147dfff0789f721f2a1f46b1747c4f0296f29d0a54f60045165ed756148a332",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "2e614594b702448358c6773912f23605cb45dc176ef724bdc39e976db3f8d4e4",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "NOT_FOUND"
+      },
+      "proofs": [
+        {
+          "digest": "ff810cd54d9fde7b5e56ad54604b4eef4d4991cd6dbc350a389f541fb96c475a",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "release_notes_published",
+      "sufficiency": "GAP",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "a1c0b9bc6a6ceb9102b6b0cf92e24735cef25857211a208f2789bde7a08d44ee",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-104/change_risk_assessed_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "a1c0b9bc6a6ceb9102b6b0cf92e24735cef25857211a208f2789bde7a08d44ee",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "5b8dc7108c7c92b05e1f2881f528951a194e81820e0dff3cc93d0c9f69c7db8c",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "change_risk_assessed_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "b9a58938c232c876225fc28f0c00f443c79a6b36e31315d0172c829088ca8463",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "ef6780dc71a3f158f14bf207011816ede98ff7186be595705ef379a2b1c9755b",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-104/tests_passed_on_release_commit",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "b9a58938c232c876225fc28f0c00f443c79a6b36e31315d0172c829088ca8463",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "ef6780dc71a3f158f14bf207011816ede98ff7186be595705ef379a2b1c9755b",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "5608e470eef2a416e22c2ac64bafe5504ff7551d509ff64335e255f3f8e6c273",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "tests_passed_on_release_commit",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "169ac0c5598053183694a8f1fff0199c6db54fa48dd28ad5e890a76ca4436b11",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "a875a0a4476873cbf4f0d8b1116fa4dca2f494b5ea25b416bccb1a5e1dba2b35",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-104/deployment_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "169ac0c5598053183694a8f1fff0199c6db54fa48dd28ad5e890a76ca4436b11",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "a875a0a4476873cbf4f0d8b1116fa4dca2f494b5ea25b416bccb1a5e1dba2b35",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "CONTRADICTED"
+      },
+      "proofs": [
+        {
+          "digest": "1c89c8eadf0cfce3413d407d39a80d471349a6e056e9ff77d2070e6f01f67ff1",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "deployment_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "not_met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "6dec1d8ad8402a94e6ba8117b806a81a063a973276586c96b16479e5c048d3d4",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "f340fa65adc1429c494accba3b2528f055be5b95a37a3bdcf4624e949237a34a",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-104/release_notes_published",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "6dec1d8ad8402a94e6ba8117b806a81a063a973276586c96b16479e5c048d3d4",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "f340fa65adc1429c494accba3b2528f055be5b95a37a3bdcf4624e949237a34a",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "UNKNOWN"
+      },
+      "proofs": [
+        {
+          "digest": "bee0af862b8cac52e44f9361c1b10341ad96660a3b260d61fb6448caa4891c5d",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "release_notes_published",
+      "sufficiency": "UNKNOWN",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "92c648988b8f632776c985b8e89c140eb4d4c12e237c9b7e27ae1d56192c8e89",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-105/change_risk_assessed_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "92c648988b8f632776c985b8e89c140eb4d4c12e237c9b7e27ae1d56192c8e89",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "0920027336c10885779a0afe95e843c5fb0351f6f3f57002cd4dacbe7db6905d",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "change_risk_assessed_correctly",
+      "sufficiency": "SATISFIED",
+      "tier": "judged",
+      "verdict": "not_met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "cfb03bdabcd40292bbc36e85b05507d46811bb91cfba51ef2dc2e9996312e0bb",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "3197c135078ea166376a004d9e93f1e1b7a404a62adbb99f00236b5e9af36708",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-105/tests_passed_on_release_commit",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "cfb03bdabcd40292bbc36e85b05507d46811bb91cfba51ef2dc2e9996312e0bb",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "3197c135078ea166376a004d9e93f1e1b7a404a62adbb99f00236b5e9af36708",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "c3b463cbeab2f043ffcf02b045c3bc0edbab938955b39e066f81b2b9d75d0305",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "tests_passed_on_release_commit",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "d971704fcb95b1175fd81eada56a3d464a8e841e8710bd5a4f4403008300b09e",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "9aaf3d2f4845b57bca9d505ee364797f049a0ecd2a4d4de8f6eb48cd52679e98",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-105/deployment_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "d971704fcb95b1175fd81eada56a3d464a8e841e8710bd5a4f4403008300b09e",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "9aaf3d2f4845b57bca9d505ee364797f049a0ecd2a4d4de8f6eb48cd52679e98",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "bcf7b4045cf03717c6761fd8db692ad5ec435a06ca800fd72177fca24a7ef16c",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "deployment_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "f823d63b33fea0f7447a622a5ab2d36db6e17b376e16103a41854bd5d9cd3e95",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "21b3e8c425ffa56187cad517c05a3af93ca6634ea25c26d6776deb9f3456cb9e",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-105/release_notes_published",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "f823d63b33fea0f7447a622a5ab2d36db6e17b376e16103a41854bd5d9cd3e95",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "21b3e8c425ffa56187cad517c05a3af93ca6634ea25c26d6776deb9f3456cb9e",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "223a8b788bd3b24daef6222d82bdc8d57b1f630103ea28c350ac958a203a78f6",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "release_notes_published",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "272c560329c23cd9c1a8a2e2aef2d21bf87faa759051c106f69b20fdad27c73b",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-106/change_risk_assessed_correctly",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "272c560329c23cd9c1a8a2e2aef2d21bf87faa759051c106f69b20fdad27c73b",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "INSUFFICIENT"
+      },
+      "proofs": [
+        {
+          "digest": "11255179e33653edd0020ad9753f44361d3ad1fc063efd61151865e0df3fa855",
+          "digest_alg": "SHA-256",
+          "kind": "receipt"
+        }
+      ],
+      "requirement_ref": "change_risk_assessed_correctly",
+      "sufficiency": "INSUFFICIENT",
+      "tier": "judged",
+      "verdict": "not_evaluable"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "79309ba2efa923855602ad17ebac4e3ae2c9971458a1d16e17782df6f2d6bb14",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "c91f73ae56d664180c9434357c1194fd3f9130e124933fb0a4775ca7f3c2cc5c",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "witnessed",
+      "id": "R-106/tests_passed_on_release_commit",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "79309ba2efa923855602ad17ebac4e3ae2c9971458a1d16e17782df6f2d6bb14",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "c91f73ae56d664180c9434357c1194fd3f9130e124933fb0a4775ca7f3c2cc5c",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "4e38bdc5e5b2f4d30ae9cf0854a557ac82c13d63e46910cf7d7f001080db7e89",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "tests_passed_on_release_commit",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "07558f6fd65f6fcc6d871ace722e05d17d4d3d1f4b7b9bade0847c771e144826",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "dc72668ea2495a4e45018027f1071a84f33cd693646d45533ff3226befdf9ff8",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "self-attested",
+      "id": "R-106/deployment_observed",
+      "presentation": {
+        "evidence": [
+          {
+            "digest": "07558f6fd65f6fcc6d871ace722e05d17d4d3d1f4b7b9bade0847c771e144826",
+            "digest_alg": "SHA-256"
+          },
+          {
+            "digest": "dc72668ea2495a4e45018027f1071a84f33cd693646d45533ff3226befdf9ff8",
+            "digest_alg": "SHA-256"
+          }
+        ],
+        "kind": "disclosure",
+        "status": "SATISFIED"
+      },
+      "proofs": [
+        {
+          "digest": "412e28ff2a4ef7e7d3fe4b865b3f6a9e09e7d62a10544d49019daa2f3ebaed2c",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "deployment_observed",
+      "sufficiency": "SATISFIED",
+      "tier": "recomputed",
+      "verdict": "met"
+    },
+    {
+      "contract_ref": "ec:example-software-release-approval@0.3",
+      "evidence": [
+        {
+          "digest": "e498a6d38ae8daa8ad9f4b5265e30b344c4fb0b97da31470c00acce1ee02cf75",
+          "digest_alg": "SHA-256"
+        },
+        {
+          "digest": "b9cfa1ceb6f495e55282b2f1c766a89bcc01c43b2ba0e7b8b99da0dc54467435",
+          "digest_alg": "SHA-256"
+        }
+      ],
+      "grade": "countersigned",
+      "id": "R-106/release_notes_published",
+      "presentation": {
+        "kind": "story",
+        "narrative": "The documentation site was not connected for this window, so no publication records were committed; the requirement could not be evaluated either way.",
+        "status": "NOT_COMMITTED"
+      },
+      "proofs": [
+        {
+          "digest": "07cef97aa4fe4b977616c3b8fe70cda8da10cb33dea7f05e07d44b24392d34a7",
+          "digest_alg": "SHA-256",
+          "kind": "inclusion_proof"
+        }
+      ],
+      "requirement_ref": "release_notes_published",
+      "sufficiency": "GAP",
+      "tier": "recomputed",
+      "verdict": "not_evaluable"
+    }
+  ],
+  "generated_at": "2026-09-30T00:00:00Z",
+  "result_version": "evidence-result-v0",
+  "view": {
+    "producer_name": "Example Project (synthetic)",
+    "spec_version": "presentation/v1",
+    "title": "Software release approval -- September (synthetic example)"
+  }
+}

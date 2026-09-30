@@ -1,18 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Build the UX round-0 comprehension fixtures: one synthetic Evidence Result
-v0 document (a motor-claims settlement contract, 24 claims over six jobs)
-and two one-field variants of it, each rendered to a self-contained viewer
-HTML file.
+"""Build the example Result v0 fixtures: one synthetic Evidence Result v0
+document (a software release approval contract, 24 claims over six
+releases) and two one-field variants of it, each rendered to a
+self-contained viewer HTML file.
 
-Everything here is synthetic. The insurer, the jobs, the contract and every
-digest are invented; each digest is the SHA-256 of a fixed label string, so
+Everything here is synthetic. The producer, the releases, the contract and
+every digest are invented; each digest is the SHA-256 of a fixed label string, so
 the files are reproducible byte-for-byte and name nothing real.
 
-    python examples/ux-round0/build_fixtures.py            # rewrite the JSON fixtures
-    python examples/ux-round0/build_fixtures.py --html DIR  # also render DIR/*.html
+    python examples/result-v0/build_fixtures.py            # rewrite the JSON fixtures
+    python examples/result-v0/build_fixtures.py --html DIR  # also render DIR/*.html
 
 The JSON files beside this script are the committed output;
-tests/test_ux_round0_fixtures.py fails if they drift from what this script
+tests/test_result_v0_examples.py fails if they drift from what this script
 builds.
 """
 from __future__ import annotations
@@ -26,63 +26,63 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 
-CONTRACT_REF = "ec:example-motor-claims-settlement@0.3"
+CONTRACT_REF = "ec:example-software-release-approval@0.3"
 GENERATED_AT = "2026-09-30T00:00:00Z"
 
-# requirement_ref -> tier. `coverage_determined_correctly` needs a judgment
-# (a reviewer or model read the file); the other three are recomputed from
+# requirement_ref -> tier. `change_risk_assessed_correctly` needs a judgment
+# (a reviewer or model read the change); the other three are recomputed from
 # records by a deterministic check.
 REQUIREMENTS = [
-    ("coverage_determined_correctly", "judged"),
-    ("amount_within_policy_limits", "recomputed"),
-    ("payment_effect_observed", "recomputed"),
-    ("customer_notified", "recomputed"),
+    ("change_risk_assessed_correctly", "judged"),
+    ("tests_passed_on_release_commit", "recomputed"),
+    ("deployment_observed", "recomputed"),
+    ("release_notes_published", "recomputed"),
 ]
 
-JOBS = ["J-1001", "J-1002", "J-1003", "J-1004", "J-1005", "J-1006"]
+JOBS = ["R-101", "R-102", "R-103", "R-104", "R-105", "R-106"]
 
 # Every (job, requirement) outcome that is NOT the default (SATISFIED, met).
 # Each entry: sufficiency, verdict, presentation status, and a carrier
 # override where the evidence is not disclosed.
 EXCEPTIONS: dict[tuple[str, str], dict[str, Any]] = {
     # Two clean failures: enough evidence, and it shows the requirement was not met.
-    ("J-1002", "amount_within_policy_limits"): {"sufficiency": "SATISFIED", "verdict": "not_met"},
-    ("J-1005", "coverage_determined_correctly"): {"sufficiency": "SATISFIED", "verdict": "not_met"},
-    # A contradiction: the payments record disagrees with the claims record.
-    ("J-1004", "payment_effect_observed"): {
+    ("R-102", "tests_passed_on_release_commit"): {"sufficiency": "SATISFIED", "verdict": "not_met"},
+    ("R-105", "change_risk_assessed_correctly"): {"sufficiency": "SATISFIED", "verdict": "not_met"},
+    # A contradiction: the deployment log disagrees with the release record.
+    ("R-104", "deployment_observed"): {
         "sufficiency": "SATISFIED",
         "verdict": "not_met",
         "status": "CONTRADICTED",
     },
     # Not enough evidence to decide -- NOT a failure.
-    ("J-1003", "customer_notified"): {
+    ("R-103", "release_notes_published"): {
         "sufficiency": "GAP",
         "verdict": "not_evaluable",
         "status": "NOT_FOUND",
     },
-    ("J-1006", "customer_notified"): {
+    ("R-106", "release_notes_published"): {
         "sufficiency": "GAP",
         "verdict": "not_evaluable",
         "carrier": "story",
         "status": "NOT_COMMITTED",
-        "text": "The outbound-messages system was not connected for this window, so no notification "
+        "text": "The documentation site was not connected for this window, so no publication "
         "records were committed; the requirement could not be evaluated either way.",
     },
-    ("J-1003", "payment_effect_observed"): {
+    ("R-103", "deployment_observed"): {
         "sufficiency": "GAP",
         "verdict": "not_evaluable",
         "carrier": "analysis",
         "status": "WITHHELD",
-        "text": "The payment processor confirmed a matching record exists but withheld it under its "
-        "own disclosure policy; the evaluator could not examine it.",
+        "text": "The hosting provider confirmed a matching deployment record exists but withheld it "
+        "under its own disclosure policy; the evaluator could not examine it.",
     },
-    ("J-1006", "coverage_determined_correctly"): {
+    ("R-106", "change_risk_assessed_correctly"): {
         "sufficiency": "INSUFFICIENT",
         "verdict": "not_evaluable",
         "status": "INSUFFICIENT",
     },
     # Evaluated, but the outcome could not be resolved -- counted in coverage.unknown_count.
-    ("J-1004", "customer_notified"): {
+    ("R-104", "release_notes_published"): {
         "sufficiency": "UNKNOWN",
         "verdict": "not_evaluable",
         "status": "UNKNOWN",
@@ -93,13 +93,13 @@ EXCEPTIONS: dict[tuple[str, str], dict[str, Any]] = {
 GRADES = ["witnessed", "self-attested", "countersigned"]
 
 # Requirements the contract excluded as not applicable (never claims):
-# the four-eyes approval rule only applies above a payout threshold, and
-# three of the six jobs were under it.
+# the security sign-off rule only applies to releases that touch the
+# authentication module, and three of the six releases did not.
 EXCLUDED_NOT_APPLICABLE = 3
 
 
 def digest(label: str) -> str:
-    return hashlib.sha256(("synthetic-ux-round0:" + label).encode()).hexdigest()
+    return hashlib.sha256(("synthetic-example:" + label).encode()).hexdigest()
 
 
 def ref(label: str) -> dict[str, str]:
@@ -154,15 +154,15 @@ def build_result() -> dict[str, Any]:
         "generated_at": GENERATED_AT,
         "result_version": "evidence-result-v0",
         "view": {
-            "producer_name": "Example Insurer (synthetic)",
+            "producer_name": "Example Project (synthetic)",
             "spec_version": "presentation/v1",
-            "title": "Motor claims settlement -- September (synthetic, UX round 0)",
+            "title": "Software release approval -- September (synthetic example)",
         },
     }
 
 
 # The claim the two variants touch: a not_evaluable claim (a gap, not a failure).
-VARIANT_CLAIM = "J-1003/customer_notified"
+VARIANT_CLAIM = "R-103/release_notes_published"
 
 
 def build_hand_edited(result: dict[str, Any]) -> dict[str, Any]:
@@ -188,9 +188,9 @@ def build_untiered(result: dict[str, Any]) -> dict[str, Any]:
 def fixtures() -> dict[str, dict[str, Any]]:
     result = build_result()
     return {
-        "round0-result.json": result,
-        "round0-result-hand-edited.json": build_hand_edited(result),
-        "round0-result-untiered.json": build_untiered(result),
+        "release-approval-result.json": result,
+        "release-approval-result-hand-edited.json": build_hand_edited(result),
+        "release-approval-result-untiered.json": build_untiered(result),
     }
 
 

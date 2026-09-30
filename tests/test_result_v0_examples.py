@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The UX round-0 fixtures in ``examples/ux-round0/``: the committed JSON is
+"""The example Result v0 fixtures in ``examples/result-v0/``: the committed JSON is
 exactly what ``build_fixtures.py`` builds, the positive is internally
 consistent (every bucket and count traces to a claim), and each variant is
 the positive with exactly the one change it claims to make.
 
 How the card renders each file is pinned in
-``js-tests/ux_round0_fixtures.test.js``.
+``js-tests/result_v0_examples.test.js``.
 """
 from __future__ import annotations
 
@@ -17,11 +17,11 @@ import pytest
 
 from capsule_viewer.result_v0 import build_result_entry, malformed_digest_refs
 
-EXAMPLE_DIR = Path(__file__).resolve().parent.parent / "examples" / "ux-round0"
+EXAMPLE_DIR = Path(__file__).resolve().parent.parent / "examples" / "result-v0"
 
 
 def _load_builder():
-    spec = importlib.util.spec_from_file_location("ux_round0_build", EXAMPLE_DIR / "build_fixtures.py")
+    spec = importlib.util.spec_from_file_location("result_v0_examples_build", EXAMPLE_DIR / "build_fixtures.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -47,7 +47,7 @@ def test_every_digest_is_in_the_vectors_form(name):
 
 
 def test_positive_buckets_and_coverage_trace_to_claims():
-    result = _committed("round0-result.json")
+    result = _committed("release-approval-result.json")
     claims = result["claims"]
     by_verdict = {"met": [], "not_met": [], "not_evaluable": []}
     for claim in claims:
@@ -56,9 +56,9 @@ def test_positive_buckets_and_coverage_trace_to_claims():
     coverage = result["aggregate"]["coverage"]
     assert coverage["evaluated_population"] == len(claims)
     assert coverage["unknown_count"] == sum(1 for c in claims if c["sufficiency"] == "UNKNOWN")
-    # Round 0 needs every bucket populated, both tiers, all three grades, and
-    # a not_evaluable claim of each carrier kind -- otherwise a participant
-    # never meets the distinction the round is testing.
+    # Every bucket populated, both tiers, all three grades, and a
+    # not_evaluable claim under each carrier kind, so the example exercises
+    # every distinction the card draws.
     assert all(by_verdict.values())
     assert {c["tier"] for c in claims} == {"recomputed", "judged"}
     assert {c["grade"] for c in claims} == {"self-attested", "witnessed", "countersigned"}
@@ -68,15 +68,15 @@ def test_positive_buckets_and_coverage_trace_to_claims():
 
 
 def test_positive_says_it_is_synthetic():
-    view = _committed("round0-result.json")["view"]
+    view = _committed("release-approval-result.json")["view"]
     assert "(synthetic)" in view["producer_name"]
     assert "synthetic" in view["title"]
     assert builder.CONTRACT_REF.startswith("ec:example-")
 
 
 def test_hand_edited_variant_moves_one_bucket_entry_and_nothing_else():
-    positive = _committed("round0-result.json")
-    variant = _committed("round0-result-hand-edited.json")
+    positive = _committed("release-approval-result.json")
+    variant = _committed("release-approval-result-hand-edited.json")
     assert variant["claims"] == positive["claims"]
     assert variant["aggregate"]["coverage"] == positive["aggregate"]["coverage"]
     moved = builder.VARIANT_CLAIM
@@ -87,8 +87,8 @@ def test_hand_edited_variant_moves_one_bucket_entry_and_nothing_else():
 
 
 def test_untiered_variant_drops_exactly_one_tier():
-    positive = _committed("round0-result.json")
-    variant = _committed("round0-result-untiered.json")
+    positive = _committed("release-approval-result.json")
+    variant = _committed("release-approval-result-untiered.json")
     assert "tier" not in variant["claims"][0]
     restored = json.loads(json.dumps(variant))
     restored["claims"][0]["tier"] = positive["claims"][0]["tier"]
