@@ -1,0 +1,50 @@
+{
+  "register_id": "example/change-management-register/2.0.0",
+  "rows": [
+    {
+      "clause": {
+        "article": "§4.2 (Risk assessment)",
+        "effective_from": "2026-01-01",
+        "instrument": "Example Change Management Policy (synthetic)"
+      },
+      "effective_from": "2026-01-01",
+      "evidence_class": "JUDGED",
+      "id": "CM-4.2",
+      "owner": "release-engineering",
+      "scope": "every production release",
+      "source": "Example Change Management Policy (synthetic)",
+      "statement": "Every release carries a risk assessment reviewed by a second engineer.",
+      "version": "2.0.0"
+    },
+    {
+      "clause": {
+        "article": "§5.1 (Release testing)",
+        "effective_from": "2026-01-01",
+        "instrument": "Example Change Management Policy (synthetic)"
+      },
+      "effective_from": "2026-01-01",
+      "evidence_class": "RULE",
+      "id": "CM-5.1",
+      "owner": "release-engineering",
+      "scope": "every production release",
+      "source": "Example Change Management Policy (synthetic)",
+      "statement": "The required test suite passes on the commit that is released.",
+      "version": "2.0.0"
+    },
+    {
+      "clause": {
+        "article": "§6.3 (Release notes)",
+        "effective_from": "2026-01-01",
+        "instrument": "Example Change Management Policy (synthetic)"
+      },
+      "effective_from": "2026-01-01",
+      "evidence_class": "DOC",
+      "id": "CM-6.3",
+      "owner": "release-engineering",
+      "scope": "every production release",
+      "source": "Example Change Management Policy (synthetic)",
+      "statement": "Release notes are published no later than the release itself.",
+      "version": "2.0.0"
+    }
+  ]
+}

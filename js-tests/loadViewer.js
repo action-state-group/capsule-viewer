@@ -1,4 +1,4 @@
-// Loads the real static modules (capsule_viewer.js + result_v0_card.js) into
+// Loads the real static modules (capsule_viewer.js + result_v0_panels.js + result_v0_card.js) into
 // a fresh jsdom window per call, exactly as the shell inlines them (base
 // FIRST, then domain modules -- see base_viewer.py's render order comment).
 // No transpilation, no mocking: the same bytes that ship in the artifact.
@@ -29,6 +29,8 @@ export function loadViewer() {
   globalThis.document = window.document;
   // eslint-disable-next-line no-eval
   (0, eval)(readStatic("capsule_viewer.js"));
+  // eslint-disable-next-line no-eval
+  (0, eval)(readStatic("result_v0_panels.js"));
   // eslint-disable-next-line no-eval
   (0, eval)(readStatic("result_v0_card.js"));
   return window.CapsuleViewer;
