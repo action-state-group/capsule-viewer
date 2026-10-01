@@ -2,9 +2,15 @@
 
 Vendored byte-for-byte from `agent-action-capsule`'s
 `vectors/evidence-result/` ([batch4-evidence-result-schema-v0], schema frozen
-2026-09-22) -- the one synthetic OO positive fixture plus five negative
+2026-09-22) -- the one synthetic EXAMPLE-ORG positive fixture plus five negative
 fixtures, each mutated from the positive by exactly one field. See that
 repo's `vectors/evidence-result/README.md` for the full case table.
+
+All vendored `agent-action-capsule` fixtures were re-synced byte-for-byte from
+its `vectors/evidence-result/` on 2026-10-01, when the placeholder org became
+`EXAMPLE-ORG`; the dated commit notes below describe the original vendoring.
+`neg-render-reconcile-one-sided-only.json` was rebuilt from the re-synced
+reconcile positive by the same four tally edits.
 
 This is a copy for this repo's own render tests, not a second definition:
 `spec/evidence-result-v0.md` and `schemas/evidence-result-v0.json` in
@@ -21,11 +27,11 @@ to the third pass's `1529b73`);
 since the second pass the CONTESTED positive carries `verdict: not_met`,
 bucketed under `not_met`: a contested Close never counts as met):
 
-- `pos-oo-reconcile-result.json` (tallies keyed lowercase, as
-  `schemas/judge/close-v1.json` keys them), `pos-oo-close-agreed-result.json`,
-  `pos-oo-close-unilateral-result.json`,
-  `pos-oo-close-unilateral-named-peer-result.json`,
-  `pos-oo-close-contested-result.json` -- schema positives; the last four
+- `pos-example-org-reconcile-result.json` (tallies keyed lowercase, as
+  `schemas/judge/close-v1.json` keys them), `pos-example-org-close-agreed-result.json`,
+  `pos-example-org-close-unilateral-result.json`,
+  `pos-example-org-close-unilateral-named-peer-result.json`,
+  `pos-example-org-close-contested-result.json` -- schema positives; the last four
   are the Evidence Layer's three Close states
   (`draft-mih-agent-evidence-layer-00`, "Reconcile and Close"), each
   `close_state` the state READ from the Close's inbound links at build
@@ -85,7 +91,7 @@ digest (the base's `jsonDigest` port) and reads the `acknowledges` /
   digest.
 
 `CONTESTED` needs no viewer-owned negative of its own: the vendored
-`pos-oo-close-contested-result.json` is the negative fixture for "never the
+`pos-example-org-close-contested-result.json` is the negative fixture for "never the
 agreed mark, never UNILATERAL's label" (the tests assert the absence on the
 rendered row), and the vendored
 `neg-close-contested-without-peer-close-ref.json` pins the refusal.
@@ -128,9 +134,9 @@ marker and never the agreed wording:
 
 | File | The acknowledger | Why it makes no state |
 |---|---|---|
-| `neg-close-agreed-self-acknowledged` (+ `.records.json`) | book `oo`, the Close's own (seq 42) | (1) a producer cannot agree with itself |
-| `neg-close-agreed-third-book` (+ `.records.json`) | book `oo-audit` (seq 7), not the named peer `oo-sor` | (2) a different book is necessary, not sufficient |
-| `neg-close-agreed-bookless-close` (+ `.records.json`) | the named peer `oo-sor` (seq 20) -- but the cited Close names no `book_id` | a Close that names no book has no counterparty |
+| `neg-close-agreed-self-acknowledged` (+ `.records.json`) | book `example-org`, the Close's own (seq 42) | (1) a producer cannot agree with itself |
+| `neg-close-agreed-third-book` (+ `.records.json`) | book `example-org-audit` (seq 7), not the named peer `example-org-sor` | (2) a different book is necessary, not sufficient |
+| `neg-close-agreed-bookless-close` (+ `.records.json`) | the named peer `example-org-sor` (seq 20) -- but the cited Close names no `book_id` | a Close that names no book has no counterparty |
 
 Still not vendored from `963fe99` (follow-up): `neg-close-contested-verdict-met`
 (schema-rejected) and the link-walk negatives `neg-close-ref-not-in-evidence`,
@@ -143,7 +149,8 @@ fixtures before the rule would pin the wrong render.
 - `pos-coverage-report-result.json` -- vendored byte-for-byte from
   `capsule-engine`'s `tests/fixtures/evidence-result/coverage-report-result.json`
   (coverage per requirement, `coverage-report/v0`; proposed, not yet on that
-  repo's main -- `cmp`-verified against its commit `3163f8d`). Three
+  repo's main -- `cmp`-verified against its commit `3163f8d`; since then
+  only `view.producer_name` changed, to `EXAMPLE-ORG`). Three
   requirements: one covered, one with a missing source and a named remedy,
   one whose records all come from one producer (correlated, not
   corroborated).
