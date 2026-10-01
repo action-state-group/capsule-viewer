@@ -1,8 +1,7 @@
 # Test fixtures
 
 Vendored byte-for-byte from `agent-action-capsule`'s
-`vectors/evidence-result/` ([batch4-evidence-result-schema-v0], schema frozen
-2026-09-22) -- the one synthetic EXAMPLE-ORG positive fixture plus five negative
+`vectors/evidence-result/` (schema frozen 2026-09-22) -- the one synthetic EXAMPLE-ORG positive fixture plus five negative
 fixtures, each mutated from the positive by exactly one field. See that
 repo's `vectors/evidence-result/README.md` for the full case table.
 
@@ -16,10 +15,10 @@ This is a copy for this repo's own render tests, not a second definition:
 `spec/evidence-result-v0.md` and `schemas/evidence-result-v0.json` in
 `agent-action-capsule` remain the normative source.
 
-## Claim-type fixtures (PROPOSED, Steven's ruling 2026-09-25)
+## Claim-type fixtures (PROPOSED, the 2026-09-25 ruling)
 
-Vendored byte-for-byte from the same directory on the
-`desk/result-v0-claim-types` branch of `agent-action-capsule` (the
+Vendored byte-for-byte from the same directory on a pre-merge branch of
+`agent-action-capsule` (the
 `reconcile` / `close` claim types; `cmp`-verified, all 29 vendored files,
 against that branch's `963fe99` -- rebased onto main after the maintainer's
 fourth pass, 2026-09-29, which changed no fixture (they are byte-identical
