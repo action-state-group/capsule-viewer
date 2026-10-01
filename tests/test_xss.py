@@ -29,11 +29,11 @@ TESTDATA = Path(__file__).parent / "testdata"
 # reaches the page as textContent, never markup -- is js-tests' XSS suite;
 # this is the string-level half for the same five fields.
 TYPED_STRING_FIELDS = [
-    ("pos-oo-reconcile-result.json", ("reconcile", "join_key")),
-    ("pos-oo-reconcile-result.json", ("reconcile", "peer")),
-    ("pos-oo-reconcile-result.json", ("reconcile", "state_of_record")),
-    ("pos-oo-close-agreed-result.json", ("close", "peer")),
-    ("pos-oo-close-agreed-result.json", ("close", "peer_close_ref", "digest")),
+    ("pos-example-org-reconcile-result.json", ("reconcile", "join_key")),
+    ("pos-example-org-reconcile-result.json", ("reconcile", "peer")),
+    ("pos-example-org-reconcile-result.json", ("reconcile", "state_of_record")),
+    ("pos-example-org-close-agreed-result.json", ("close", "peer")),
+    ("pos-example-org-close-agreed-result.json", ("close", "peer_close_ref", "digest")),
 ]
 HOSTILE = [PAYLOAD, "<img src=x onerror=window.pwned=1>", "\"'><b onmouseover=window.pwned=1>x</b>"]
 

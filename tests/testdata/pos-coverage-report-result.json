@@ -300,7 +300,7 @@
   "generated_at": "2026-10-01T00:00:00Z",
   "result_version": "evidence-result-v0",
   "view": {
-    "producer_name": "OO",
+    "producer_name": "EXAMPLE-ORG",
     "spec_version": "presentation/v1",
     "title": "Human oversight evidence coverage (synthetic)"
   }

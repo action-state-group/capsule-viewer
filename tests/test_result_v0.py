@@ -27,11 +27,11 @@ TESTDATA = Path(__file__).parent / "testdata"
 # negative the card renders as "unrecognized", and the viewer-owned render
 # negative.
 TYPED_FIXTURES = [
-    "pos-oo-reconcile-result.json",
-    "pos-oo-close-agreed-result.json",
-    "pos-oo-close-unilateral-result.json",
-    "pos-oo-close-unilateral-named-peer-result.json",
-    "pos-oo-close-contested-result.json",
+    "pos-example-org-reconcile-result.json",
+    "pos-example-org-close-agreed-result.json",
+    "pos-example-org-close-unilateral-result.json",
+    "pos-example-org-close-unilateral-named-peer-result.json",
+    "pos-example-org-close-contested-result.json",
     "neg-close-agreed-without-peer.json",
     "neg-close-contested-without-peer-close-ref.json",
     "neg-reconcile-tallies-missing-state.json",
@@ -44,10 +44,10 @@ TYPED_FIXTURES = [
 # (`<name>.records.json`, vendored with the fixtures); the card recomputes
 # close_state from those records' links when the entry carries them.
 CLOSE_FIXTURES = [
-    "pos-oo-close-agreed-result.json",
-    "pos-oo-close-contested-result.json",
-    "pos-oo-close-unilateral-result.json",
-    "pos-oo-close-unilateral-named-peer-result.json",
+    "pos-example-org-close-agreed-result.json",
+    "pos-example-org-close-contested-result.json",
+    "pos-example-org-close-unilateral-result.json",
+    "pos-example-org-close-unilateral-named-peer-result.json",
     "neg-close-agreed-relabelled-contested.json",
     # the maintainer's third pass (2026-09-29): the counterparty is the
     # named peer's book -- each asserts AGREED over an acknowledger that is
@@ -67,7 +67,7 @@ def decode(fragment: str) -> dict:
 
 
 def test_build_result_entry_carries_no_capsule_id():
-    result = load("pos-oo-claims-result.json")
+    result = load("pos-example-org-claims-result.json")
     entry = build_result_entry(result)
     assert entry["capsule_id"] is None
     assert entry["record"] == result
@@ -75,7 +75,7 @@ def test_build_result_entry_carries_no_capsule_id():
 
 
 def test_result_entry_embeds_and_round_trips_through_the_fragment():
-    result = load("pos-oo-claims-result.json")
+    result = load("pos-example-org-claims-result.json")
     entry = build_result_entry(result)
     fragment = encode_fragment(build_payload([entry]))
     html = render_base_viewer_html(fragment)
@@ -83,12 +83,12 @@ def test_result_entry_embeds_and_round_trips_through_the_fragment():
     assert 'register("result/v0"' in html
     # the fragment is base64url -- the claims content never appears as raw
     # JSON text in the shell (it only exists decoded, in-browser, at runtime)
-    assert "OO Claims Result" not in html
+    assert "EXAMPLE-ORG Claims Result" not in html
     assert fragment in html
 
 
 def test_result_entry_round_trips_byte_identical_claims():
-    result = load("pos-oo-claims-result.json")
+    result = load("pos-example-org-claims-result.json")
     entry = build_result_entry(result)
     payload = build_payload([entry])
     fragment = encode_fragment(payload)
@@ -133,7 +133,7 @@ def test_shell_ships_the_claim_type_renderer_that_pins_the_rules():
     knows the three types -- the same bytes js-tests exercise, not a stale
     copy. Each marker is a load-bearing class the JS tests assert on."""
     html = render_base_viewer_html(
-        encode_fragment(build_payload([build_result_entry(load("pos-oo-reconcile-result.json"))]))
+        encode_fragment(build_payload([build_result_entry(load("pos-example-org-reconcile-result.json"))]))
     )
     assert "<script src=" not in html
     for marker in (
@@ -181,7 +181,7 @@ def test_records_travel_beside_the_result_byte_identical(name: str):
 
 
 def test_entry_without_records_carries_no_records_key():
-    entry = build_result_entry(load("pos-oo-close-agreed-result.json"))
+    entry = build_result_entry(load("pos-example-org-close-agreed-result.json"))
     assert "records" not in entry
     decoded = decode(encode_fragment(build_payload([entry])))
     assert "records" not in decoded["entries"][0]
@@ -222,15 +222,15 @@ def test_is_digest_ref_accepts_exactly_the_vectors_form():
 
 @pytest.mark.parametrize("label,digest", MALFORMED)
 def test_strict_refuses_a_malformed_close_ref_and_names_the_position(label: str, digest):
-    result = load("pos-oo-close-agreed-result.json")
+    result = load("pos-example-org-close-agreed-result.json")
     result["claims"][1]["close"]["close_ref"]["digest"] = digest
     assert malformed_digest_refs(result) == ["claims[1].close.close_ref"], label
     with pytest.raises(ValueError, match=r"claims\[1\]\.close\.close_ref"):
-        build_result_entry(result, records=load("pos-oo-close-agreed-result.records.json"), strict=True)
+        build_result_entry(result, records=load("pos-example-org-close-agreed-result.records.json"), strict=True)
 
 
 def test_malformed_digest_refs_walks_every_digest_position():
-    result = load("pos-oo-close-agreed-result.json")
+    result = load("pos-example-org-close-agreed-result.json")
     result["claims"][0]["evidence"][0]["digest"] = "sha256:" + GOOD
     result["claims"][0]["proofs"][0]["digest"] = GOOD.upper()
     result["claims"][0]["presentation"]["evidence"][0]["digest_alg"] = "SHA-512"
@@ -246,7 +246,7 @@ def test_malformed_digest_refs_walks_every_digest_position():
 def test_default_carries_a_malformed_document_byte_identical_for_the_card_to_refuse():
     """The carrier never repairs: the card renders the refusal row
     (js-tests), so the malformed value must reach it exactly as written."""
-    result = load("pos-oo-close-agreed-result.json")
+    result = load("pos-example-org-close-agreed-result.json")
     result["claims"][1]["close"]["close_ref"]["digest"] = "sha256:" + GOOD
     entry = build_result_entry(result)
     assert entry["record"] == result

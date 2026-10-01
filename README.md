@@ -85,7 +85,7 @@ rules that are pinned by negative fixtures and tests, never by styling:
 
 ## Fixtures
 
-`tests/testdata/` vendors the synthetic `OO` fixtures from
+`tests/testdata/` vendors the synthetic `EXAMPLE-ORG` fixtures from
 `agent-action-capsule`'s `vectors/evidence-result/` -- the round-0
 comprehension example this package's tests render.
 
