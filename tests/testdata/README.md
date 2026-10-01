@@ -156,7 +156,7 @@ fixtures before the rule would pin the wrong render.
 - `pos-coverage-report-contract.json` -- the contract it cites, vendored
   byte-for-byte from `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`.
 
-## Epistemic types are lowercase (Steven's ruling, 2026-10-01)
+## Epistemic types are lowercase (the 2026-10-01 ruling)
 
 `epistemic_type` values are the Evidence Layer's closed set spelled exactly
 as `agent-action-capsule`'s `schemas/vendor/epistemic-types.json` spells
