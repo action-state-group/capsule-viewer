@@ -4,25 +4,25 @@
 // result/v0 card: "Coverage and gaps" and "Obligations". Pure functions over
 // plain JSON; no DOM, no network, no canonicalization.
 //
-// A Result v0 document alone cannot answer either question: it names a
-// requirement by `requirement_ref` and a contract by `contract_ref`, but not
-// what sources the requirement needs or which clause it implements. Both
-// answers come from inputs an entry may carry BESIDE the Result, the same
-// way it already carries `records` for close claims (see result_v0.py):
+// Coverage comes from the Result's own optional `coverage_report`
+// (coverage-report/v0: per requirement, the sources found, the independence
+// of their producers, and each gap with the connector that would close it).
+// The obligation view groups requirements by the `obligation_refs` each
+// coverage row carries. Two inputs MAY travel beside the Result in the entry
+// (see result_v0.py), and only add detail:
 //
-//   entry.contract  -- the Evidence Contract the claims were evaluated under
-//                      (capsule-engine schemas/evidence-contract-v0.json)
-//   entry.register  -- the obligation register its obligation_refs cite,
-//                      as JSON ({register_id, rows[]})
-//   entry.coverage  -- per-requirement source coverage
-//                      ({coverage_version: "v0", contract_ref, requirements[]})
+//   entry.contract  -- the Evidence Contract the claims were evaluated under:
+//                      requirement statements and required sources, and the
+//                      obligation_refs when the Result has no coverage_report
+//   entry.register  -- the obligation register those refs cite, as JSON
+//                      ({register_id, rows[]}): clause, source, version,
+//                      effective dates
 //
-// Posture, same as the card's: nothing is defaulted, nothing is dropped.
-// A claim whose contract_ref is not this contract is listed as foreign,
-// never joined. A requirement with no obligation reference lands in its own
-// "unmapped" group. A missing input is named as missing; the functions say
-// what they could not establish rather than guessing it. Counts only, never
-// a ratio or percentage.
+// Posture, same as the card's: the coverage report is RECOMPUTED where it
+// can be (summary counts, sufficiency-from-status, claim_ids against the
+// claims, source counts, independence) and every disagreement is listed as
+// a diagnostic, never repaired. Nothing is defaulted, nothing is dropped. A
+// missing input is named as missing. Counts only, never a ratio.
 (function () {
   "use strict";
 
@@ -39,7 +39,8 @@
   // metric derived from them; a human report, a semantic judgment or an
   // adjudication is judged. A producer's own claim lifts nothing: it stays
   // self-attested whatever is connected. An obligation reference is the
-  // clause itself, not evidence that it was met.
+  // clause itself, not evidence that it was met. Shown only when the
+  // coverage row states the source's epistemic type -- never guessed.
   var RAISES_TO = {
     OBSERVED_EVENT: { tier: "recomputed", assurance: "Verifiable" },
     SYSTEM_OF_RECORD_FACT: { tier: "recomputed", assurance: "Verifiable" },
@@ -50,9 +51,10 @@
     PRODUCER_CLAIM: { tier: null, assurance: "self-attested only" },
     OBLIGATION_REFERENCE: { tier: null, assurance: "not evidence of performance" },
   };
-  var TIER_RANK = { recomputed: 2, judged: 1 };
 
-  // Why a not_evaluable claim is not evaluable decides what closes it.
+  // coverage-report/v0's fixed status -> sufficiency mapping.
+  var STATUS_TO_SUFFICIENCY = { SATISFIED: "SATISFIED", NOT_FOUND: "GAP", INSUFFICIENT: "INSUFFICIENT", UNKNOWN: "UNKNOWN" };
+
   // WITHHELD means the evidence exists and its holder did not disclose it:
   // connecting another source does not fix that, a disclosure does.
   var DISCLOSURE_GAP = { WITHHELD: 1 };
@@ -63,6 +65,10 @@
 
   function isNonEmptyString(v) {
     return typeof v === "string" && v.length > 0;
+  }
+
+  function arr(v) {
+    return Array.isArray(v) ? v : [];
   }
 
   function contractRefOf(contract) {
@@ -78,25 +84,22 @@
     return RAISES_TO[epistemicType] || { tier: null, assurance: "unknown epistemic type" };
   }
 
-  // The best tier any of the accepted types could support, or null.
-  function bestRaise(types) {
-    var best = null;
-    (types || []).forEach(function (t) {
-      var r = raisesTo(t);
-      if (r.tier && (!best || TIER_RANK[r.tier] > TIER_RANK[best.tier])) best = r;
+  function claimsById(result) {
+    var out = {};
+    arr(isObject(result) ? result.claims : null).forEach(function (c) {
+      if (isObject(c) && isNonEmptyString(c.id) && !out[c.id]) out[c.id] = c;
     });
-    return best;
+    return out;
   }
 
   // Claims that can be joined to a requirement: an object with a string
-  // requirement_ref and a known verdict. Anything else is the card's to
-  // refuse; here it is counted as unjoinable, never silently skipped.
+  // requirement_ref and a known verdict, under `contractRef`. Anything else
+  // is the card's to refuse; here it is listed, never silently skipped.
   function partitionClaims(result, contractRef) {
-    var claims = isObject(result) && Array.isArray(result.claims) ? result.claims : [];
     var byRequirement = {};
     var foreign = [];
     var unjoinable = [];
-    claims.forEach(function (claim) {
+    arr(isObject(result) ? result.claims : null).forEach(function (claim) {
       if (!isObject(claim) || !isNonEmptyString(claim.requirement_ref) || VERDICTS.indexOf(claim.verdict) === -1) {
         unjoinable.push(isObject(claim) && isNonEmptyString(claim.id) ? claim.id : "(claim without id)");
         return;
@@ -110,148 +113,196 @@
     return { byRequirement: byRequirement, foreign: foreign, unjoinable: unjoinable };
   }
 
-  function requirementsOf(contract) {
-    return isObject(contract) && Array.isArray(contract.requirements)
-      ? contract.requirements.filter(function (r) { return isObject(r) && isNonEmptyString(r.id); })
-      : [];
+  function contractRequirements(contract) {
+    var out = {};
+    arr(isObject(contract) ? contract.requirements : null).forEach(function (r) {
+      if (isObject(r) && isNonEmptyString(r.id) && !out[r.id]) out[r.id] = r;
+    });
+    return out;
   }
 
-  function indexCoverage(coverage, contractRef) {
-    var issues = [];
-    var byRequirement = {};
-    if (coverage === undefined || coverage === null) return { byRequirement: null, issues: issues };
-    if (!isObject(coverage) || !Array.isArray(coverage.requirements)) {
-      issues.push("coverage input is not {coverage_version, contract_ref, requirements[]}");
-      return { byRequirement: null, issues: issues };
-    }
-    if (coverage.coverage_version !== "v0") issues.push("coverage_version is not \"v0\"");
-    if (contractRef && coverage.contract_ref !== contractRef) {
-      issues.push("coverage is for " + JSON.stringify(coverage.contract_ref) + ", not " + contractRef + " -- not used");
-      return { byRequirement: null, issues: issues };
-    }
-    coverage.requirements.forEach(function (row, i) {
-      if (!isObject(row) || !isNonEmptyString(row.requirement_ref) || !Array.isArray(row.sources)) {
-        issues.push("coverage.requirements[" + i + "] has no requirement_ref or sources[]");
+  function countVerdicts(claims) {
+    var counts = emptyCounts();
+    claims.forEach(function (c) { counts[c.verdict] += 1; });
+    return counts;
+  }
+
+  // The coverage report's cross-element checks (the engine's
+  // verify_coverage_report), collected rather than raised: every
+  // disagreement is one diagnostic line, and the report is still shown.
+  function coverageDiagnostics(report, byId) {
+    var diags = [];
+    var contractRef = report.contract_ref;
+    var rows = arr(report.requirements);
+    var expected = { requirements: rows.length, satisfied: 0, with_gaps: 0, gaps: 0, gaps_without_remedy: 0 };
+    rows.forEach(function (row, i) {
+      if (!isObject(row)) {
+        diags.push("coverage_report.requirements[" + i + "] is not an object");
         return;
       }
-      byRequirement[row.requirement_ref] = row;
+      var ref = JSON.stringify(row.requirement_ref);
+      if (!(row.status in STATUS_TO_SUFFICIENCY)) {
+        diags.push("requirement " + ref + " status " + JSON.stringify(row.status) + " is not a coverage status");
+      } else if (row.sufficiency !== STATUS_TO_SUFFICIENCY[row.status]) {
+        diags.push("requirement " + ref + " status " + row.status + " requires sufficiency " + STATUS_TO_SUFFICIENCY[row.status] + ", got " + JSON.stringify(row.sufficiency));
+      }
+      arr(row.claim_ids).forEach(function (id) {
+        var c = byId[id];
+        if (!c) diags.push("requirement " + ref + " names claim " + JSON.stringify(id) + ", which has no claim");
+        else if (c.requirement_ref !== row.requirement_ref || c.contract_ref !== contractRef) {
+          diags.push("claim " + JSON.stringify(id) + " is for " + c.contract_ref + "/" + c.requirement_ref + ", not " + contractRef + "/" + row.requirement_ref);
+        }
+      });
+      var distinct = {};
+      arr(row.sources).forEach(function (src) {
+        if (!isObject(src)) return;
+        var name = ref + " source " + JSON.stringify(src.source);
+        if ((src.contemporaneous_count || 0) + (src.backfilled_count || 0) !== src.record_count) {
+          diags.push("requirement " + name + ": contemporaneous + backfilled != record_count");
+        }
+        if (arr(src.evidence).length !== src.record_count) diags.push("requirement " + name + ": evidence digests != record_count");
+        if ((src.status === "NOT_FOUND") !== (src.record_count === 0)) {
+          diags.push("requirement " + name + ": NOT_FOUND exactly when record_count is 0");
+        }
+        arr(src.evidence).forEach(function (e) { if (isObject(e)) distinct[e.digest] = 1; });
+      });
+      var ind = isObject(row.independence) ? row.independence : {};
+      var nDistinct = Object.keys(distinct).length;
+      if ((ind.independent_producers || 0) + (ind.correlated_records || 0) !== nDistinct) {
+        diags.push("requirement " + ref + ": independent_producers + correlated_records != " + nDistinct + " distinct records");
+      }
+      var required = typeof ind.required_producers === "number" ? ind.required_producers : 1;
+      if (ind.met !== ((ind.independent_producers || 0) >= required)) {
+        diags.push("requirement " + ref + ": independence.met disagrees with its producer counts");
+      }
+      var gaps = arr(row.gaps);
+      if (row.status === "SATISFIED" && (gaps.length || !ind.met)) {
+        diags.push("requirement " + ref + " is SATISFIED but has gaps or unmet independence");
+      }
+      expected.gaps += gaps.length;
+      expected.gaps_without_remedy += gaps.filter(function (g) { return !isObject(g) || g.remedy === null || g.remedy === undefined; }).length;
+      expected.satisfied += row.status === "SATISFIED" ? 1 : 0;
+      expected.with_gaps += gaps.length ? 1 : 0;
     });
-    return { byRequirement: byRequirement, issues: issues };
+    var stated = isObject(report.summary) ? report.summary : {};
+    Object.keys(expected).forEach(function (k) {
+      if (stated[k] !== expected[k]) {
+        diags.push("summary." + k + " is " + JSON.stringify(stated[k]) + " but recomputes to " + expected[k]);
+      }
+    });
+    return { diagnostics: diags, summary: expected };
   }
 
-  // Corroboration as stated by the coverage input. Spans from one producer
-  // agree with each other because they share a source: correlation, never
-  // corroboration. Only independent producers count toward corroboration.
-  function corroborationOf(row) {
-    var c = row && isObject(row.corroboration) ? row.corroboration : null;
-    if (!c) return null;
-    return {
-      independent_producers: typeof c.independent_producers === "number" ? c.independent_producers : null,
-      same_producer_spans: typeof c.same_producer_spans === "number" ? c.same_producer_spans : null,
-      corroborated: typeof c.independent_producers === "number" && c.independent_producers >= 2,
-    };
-  }
-
-  function gapRecommendations(requirement, claims, coverageRow) {
-    var gapClaims = claims.filter(function (c) { return c.verdict === "not_evaluable"; });
-    if (!gapClaims.length) return [];
-    var withheld = [];
-    var missing = [];
-    gapClaims.forEach(function (c) {
-      var status = isObject(c.presentation) ? c.presentation.status : undefined;
-      if (DISCLOSURE_GAP[status]) withheld.push(c.id);
-      else missing.push(c.id);
+  // One recommendation per gap, in the report's order. The remedy is the
+  // report's, shown as stated (connector + the assurance mode it raises
+  // the source to); `tier` is added only when the source row states its
+  // epistemic type. A gap with no remedy is kept and says so.
+  function gapRecommendations(row, rowClaims) {
+    var sourceTypes = {};
+    arr(row.sources).forEach(function (s) {
+      if (isObject(s) && isNonEmptyString(s.source) && isNonEmptyString(s.epistemic_type)) sourceTypes[s.source] = s.epistemic_type;
     });
+    var notEvaluable = rowClaims.filter(function (c) { return c.verdict === "not_evaluable"; });
     var recs = [];
+    var withheld = notEvaluable.filter(function (c) { return isObject(c.presentation) && DISCLOSURE_GAP[c.presentation.status]; });
     if (withheld.length) {
       recs.push({
         kind: "disclosure",
-        claims: withheld,
-        action: "the evidence exists but was withheld by its holder; a disclosure, not a new source, closes this gap",
-        raises_to: null,
+        source: null,
+        detail: "the evidence exists but was withheld by its holder; a disclosure, not a new source, closes this gap",
+        remedy: null,
+        tier: null,
+        claims: withheld.map(function (c) { return c.id; }),
       });
     }
-    if (!missing.length) return recs;
-    var er = isObject(requirement.evidence_requirements) ? requirement.evidence_requirements : {};
-    if (coverageRow) {
-      var sourceTypes = {};
-      coverageRow.sources.forEach(function (s) {
-        if (isObject(s) && isNonEmptyString(s.source)) sourceTypes[s.source] = s.epistemic_type;
-      });
-      var missingSources = Array.isArray(coverageRow.missing_sources)
-        ? coverageRow.missing_sources
-        : coverageRow.sources.filter(function (s) { return isObject(s) && s.present === false; }).map(function (s) { return s.source; });
-      if (!missingSources.length) {
-        recs.push({
-          kind: "unexplained",
-          claims: missing,
-          action: "every required source is reported present; the gap is not a missing source -- review the claims",
-          raises_to: null,
-        });
-      }
-      missingSources.forEach(function (source) {
-        var type = sourceTypes[source];
-        recs.push({
-          kind: "instrument",
-          source: source,
-          epistemic_type: type || null,
-          claims: missing,
-          action: "connect " + source,
-          raises_to: type ? raisesTo(type) : null,
-        });
-      });
-    } else {
+    arr(row.gaps).forEach(function (g) {
+      if (!isObject(g)) return;
+      var type = isNonEmptyString(g.source) ? sourceTypes[g.source] : undefined;
       recs.push({
-        kind: "instrument-candidates",
-        sources: Array.isArray(er.required_sources) ? er.required_sources.slice() : [],
-        claims: missing,
-        action: "the contract requires these sources; which of them is missing is not known without a coverage input",
-        raises_to: bestRaise(er.accepted_epistemic_types),
+        kind: g.kind,
+        source: isNonEmptyString(g.source) ? g.source : null,
+        detail: isNonEmptyString(g.detail) ? g.detail : null,
+        remedy: isObject(g.remedy) ? { connector: g.remedy.connector, raises_to: g.remedy.raises_to } : null,
+        tier: type ? raisesTo(type) : null,
+        claims: notEvaluable.map(function (c) { return c.id; }),
       });
-    }
+    });
     return recs;
   }
 
-  // Coverage and gaps: per requirement, its claim counts, its source coverage when
-  // known, and what would move its not_evaluable claims out of that bucket.
-  function coverageGaps(result, contract, coverage) {
-    var contractRef = contractRefOf(contract);
-    var out = { contract_ref: contractRef, requirements: [], foreign_claims: [], unjoinable_claims: [], issues: [] };
-    if (!contractRef) {
-      out.issues.push("no contract supplied (or it has no id/version) -- requirements and their sources are unknown");
+  // Coverage and gaps: per requirement, its claim counts, the sources found
+  // and their producers' independence, and what would close each gap.
+  function coverageGaps(result, contract) {
+    var report = isObject(result) && isObject(result.coverage_report) ? result.coverage_report : null;
+    var out = {
+      contract_ref: null,
+      summary: null,
+      requirements: [],
+      foreign_claims: [],
+      unjoinable_claims: [],
+      diagnostics: [],
+      issues: [],
+    };
+    var reqs = contractRequirements(contract);
+    if (!report) {
+      out.issues.push("the Result carries no coverage_report -- which sources were found and what closes each gap is not known");
       return out;
     }
-    var parts = partitionClaims(result, contractRef);
-    var cov = indexCoverage(coverage, contractRef);
+    out.contract_ref = isNonEmptyString(report.contract_ref) ? report.contract_ref : null;
+    if (report.spec_version !== "coverage-report/v0") {
+      out.issues.push("coverage_report.spec_version is " + JSON.stringify(report.spec_version) + ", not \"coverage-report/v0\"");
+    }
+    var contractRef = contractRefOf(contract);
+    if (contract !== undefined && contract !== null && contractRef !== out.contract_ref) {
+      out.issues.push("the supplied contract is " + JSON.stringify(contractRef) + ", not the coverage report's " + JSON.stringify(out.contract_ref) + " -- its statements and sources are not used");
+      reqs = {};
+    } else if (!contractRef) {
+      out.issues.push("no contract supplied -- requirement statements are not shown");
+    }
+    var byId = claimsById(result);
+    var checked = coverageDiagnostics(report, byId);
+    out.diagnostics = checked.diagnostics;
+    out.summary = { stated: isObject(report.summary) ? report.summary : null, recomputed: checked.summary };
+    var parts = partitionClaims(result, out.contract_ref);
     out.foreign_claims = parts.foreign;
     out.unjoinable_claims = parts.unjoinable;
-    out.issues = cov.issues.slice();
-    if (cov.byRequirement === null && !cov.issues.length) {
-      out.issues.push("no coverage input -- present and missing sources are not known");
-    }
-    var known = {};
-    requirementsOf(contract).forEach(function (req) {
-      known[req.id] = 1;
-      var claims = parts.byRequirement[req.id] || [];
-      var counts = emptyCounts();
-      claims.forEach(function (c) { counts[c.verdict] += 1; });
-      var covRow = cov.byRequirement ? cov.byRequirement[req.id] || null : null;
-      var er = isObject(req.evidence_requirements) ? req.evidence_requirements : {};
+    var covered = {};
+    arr(report.requirements).forEach(function (row) {
+      if (!isObject(row) || !isNonEmptyString(row.requirement_ref)) return;
+      covered[row.requirement_ref] = 1;
+      var rowClaims = parts.byRequirement[row.requirement_ref] || [];
+      var req = reqs[row.requirement_ref];
       out.requirements.push({
-        requirement_ref: req.id,
-        statement: isNonEmptyString(req.statement) ? req.statement : null,
-        counts: counts,
-        required_sources: Array.isArray(er.required_sources) ? er.required_sources.slice() : [],
-        sources: covRow ? covRow.sources.slice() : null,
-        corroboration: corroborationOf(covRow),
-        recommendations: gapRecommendations(req, claims, covRow),
+        requirement_ref: row.requirement_ref,
+        statement: req && isNonEmptyString(req.statement) ? req.statement : null,
+        status: row.status,
+        sufficiency: row.sufficiency,
+        counts: countVerdicts(rowClaims),
+        sources: arr(row.sources).filter(isObject).map(function (s) {
+          return {
+            source: s.source,
+            status: s.status,
+            record_count: s.record_count,
+            contemporaneous_count: s.contemporaneous_count,
+            backfilled_count: s.backfilled_count,
+            producer_count: s.producer_count,
+            epistemic_type: isNonEmptyString(s.epistemic_type) ? s.epistemic_type : null,
+          };
+        }),
+        // Records from one producer correlate; only distinct producers corroborate.
+        independence: isObject(row.independence)
+          ? {
+              required_producers: row.independence.required_producers,
+              independent_producers: row.independence.independent_producers,
+              correlated_records: row.independence.correlated_records,
+              met: row.independence.met,
+            }
+          : null,
+        recommendations: gapRecommendations(row, rowClaims),
       });
     });
     Object.keys(parts.byRequirement).forEach(function (ref) {
-      if (!known[ref]) {
-        out.issues.push("claims cite requirement " + JSON.stringify(ref) + ", which the contract does not define");
-        parts.byRequirement[ref].forEach(function (c) { out.unjoinable_claims.push(c.id); });
-      }
+      if (!covered[ref]) out.issues.push("claims cite requirement " + JSON.stringify(ref) + ", which has no coverage row");
     });
     return out;
   }
@@ -295,57 +346,82 @@
     };
   }
 
-  // The obligation keys a requirement cites: its obligation_refs, plus a
-  // clause_ref when the requirement is an obligation-profile requirement
-  // carrying its citation inline.
-  function obligationKeys(req) {
-    var keys = [];
-    if (Array.isArray(req.obligation_refs)) {
-      req.obligation_refs.forEach(function (k) { if (isNonEmptyString(k) && keys.indexOf(k) === -1) keys.push(k); });
-    }
-    if (isNonEmptyString(req.clause_ref) && keys.indexOf(req.clause_ref) === -1) keys.push(req.clause_ref);
-    return keys;
+  function uniqueStrings(list) {
+    var out = [];
+    arr(list).forEach(function (k) { if (isNonEmptyString(k) && out.indexOf(k) === -1) out.push(k); });
+    return out;
   }
 
-  // Obligations: clause -> requirement -> established status. One group per
-  // obligation key the contract cites, in first-cited order; a requirement
-  // citing two obligations appears under both; requirements citing none go
-  // under `unmapped`.
+  // Obligations: clause -> requirement -> established status. The
+  // requirement list and each requirement's obligation_refs come from the
+  // coverage report when the Result carries one, otherwise from the
+  // contract (obligation_refs, plus an inline clause_ref). One group per
+  // cited obligation, in first-cited order; a requirement citing two appears
+  // under both; requirements citing none go under `unmapped`.
   function obligationTree(result, contract, register) {
-    var contractRef = contractRefOf(contract);
-    var out = { contract_ref: contractRef, obligations: [], unmapped: [], foreign_claims: [], unjoinable_claims: [], issues: [] };
-    if (!contractRef) {
-      out.issues.push("no contract supplied (or it has no id/version) -- obligations cannot be traced");
+    var report = isObject(result) && isObject(result.coverage_report) ? result.coverage_report : null;
+    var out = {
+      contract_ref: null,
+      refs_from: null,
+      obligations: [],
+      unmapped: [],
+      foreign_claims: [],
+      unjoinable_claims: [],
+      issues: [],
+    };
+    var reqs = contractRequirements(contract);
+    var list = [];
+    if (report) {
+      out.contract_ref = isNonEmptyString(report.contract_ref) ? report.contract_ref : null;
+      out.refs_from = "coverage_report";
+      arr(report.requirements).forEach(function (row) {
+        if (isObject(row) && isNonEmptyString(row.requirement_ref)) {
+          list.push({ id: row.requirement_ref, keys: uniqueStrings(row.obligation_refs) });
+        }
+      });
+    } else if (contractRefOf(contract)) {
+      out.contract_ref = contractRefOf(contract);
+      out.refs_from = "contract";
+      Object.keys(reqs).forEach(function (id) {
+        var r = reqs[id];
+        list.push({ id: id, keys: uniqueStrings(arr(r.obligation_refs).concat(isNonEmptyString(r.clause_ref) ? [r.clause_ref] : [])) });
+      });
+    } else {
+      out.issues.push("neither a coverage_report nor a contract -- obligations cannot be traced");
       return out;
     }
-    var parts = partitionClaims(result, contractRef);
     var reg = indexRegister(register);
-    out.foreign_claims = parts.foreign;
-    out.unjoinable_claims = parts.unjoinable;
-    out.issues = reg.issues.slice();
+    out.issues = out.issues.concat(reg.issues);
     if (reg.rows === null && !reg.issues.length) {
       out.issues.push("no register input -- clause text, source and effective dates are not shown");
     }
+    var contractRef = contractRefOf(contract);
+    if (contractRef && contractRef !== out.contract_ref) {
+      out.issues.push("the supplied contract is " + JSON.stringify(contractRef) + ", not " + JSON.stringify(out.contract_ref) + " -- its statements are not used");
+      reqs = {};
+    }
+    var parts = partitionClaims(result, out.contract_ref);
+    out.foreign_claims = parts.foreign;
+    out.unjoinable_claims = parts.unjoinable;
     var groups = {};
     var order = [];
-    requirementsOf(contract).forEach(function (req) {
-      var claims = parts.byRequirement[req.id] || [];
-      var counts = emptyCounts();
-      claims.forEach(function (c) { counts[c.verdict] += 1; });
+    list.forEach(function (item) {
+      var claims = parts.byRequirement[item.id] || [];
+      var counts = countVerdicts(claims);
+      var req = reqs[item.id];
       var node = {
-        requirement_ref: req.id,
-        statement: isNonEmptyString(req.statement) ? req.statement : null,
+        requirement_ref: item.id,
+        statement: req && isNonEmptyString(req.statement) ? req.statement : null,
         counts: counts,
         claims: claims.map(function (c) {
           return { id: c.id, verdict: c.verdict, sufficiency: c.sufficiency, tier: c.tier, grade: c.grade };
         }),
       };
-      var keys = obligationKeys(req);
-      if (!keys.length) {
+      if (!item.keys.length) {
         out.unmapped.push(node);
         return;
       }
-      keys.forEach(function (key) {
+      item.keys.forEach(function (key) {
         if (!groups[key]) {
           var row = reg.rows ? reg.rows[key] : undefined;
           groups[key] = {

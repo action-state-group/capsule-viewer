@@ -86,7 +86,6 @@ def build_result_entry(
     records: list[dict[str, Any]] | None = None,
     contract: dict[str, Any] | None = None,
     register: dict[str, Any] | None = None,
-    coverage: dict[str, Any] | None = None,
     strict: bool = False,
 ) -> dict[str, Any]:
     """One fragment entry carrying a Result v0 document.
@@ -115,17 +114,14 @@ def build_result_entry(
     ``producer-asserted`` chip -- it has nothing to check it against, and
     says so rather than showing the state bare.
 
-    ``contract``, ``register`` and ``coverage`` (optional) are the inputs
-    the card's coverage-and-gaps and obligation sections read
-    (``static/result_v0_panels.js``): the Evidence Contract the claims were
-    evaluated under, the obligation register (as JSON, ``{register_id,
-    rows[]}``) its ``obligation_refs`` cite, and a per-requirement source
-    coverage statement (``{coverage_version: "v0", contract_ref,
-    requirements[]}``). A Result alone names requirements and a contract
-    but not what sources a requirement needs or which clause it
-    implements. Each travels byte-for-byte under the entry key of the same
-    name; none is validated or repaired here, and each section says what it
-    could not establish when its input is absent.
+    ``contract`` and ``register`` (optional) add detail to the card's
+    coverage-and-gaps and obligation data (``static/result_v0_panels.js``),
+    which reads the Result's own ``coverage_report``: the Evidence Contract
+    the claims were evaluated under (requirement statements and required
+    sources) and the obligation register (as JSON, ``{register_id,
+    rows[]}``) its ``obligation_refs`` cite (clause, source, version,
+    effective dates). Each travels byte-for-byte under the entry key of the
+    same name; neither is validated or repaired here.
     """
     if strict:
         malformed = malformed_digest_refs(result)
@@ -141,7 +137,7 @@ def build_result_entry(
     }
     if records is not None:
         entry["records"] = list(records)
-    for key, value in (("contract", contract), ("register", register), ("coverage", coverage)):
+    for key, value in (("contract", contract), ("register", register)):
         if value is not None:
             entry[key] = value
     return entry

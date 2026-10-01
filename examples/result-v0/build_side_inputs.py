@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Build the synthetic inputs that travel beside the example Result v0: the
-Evidence Contract its claims were evaluated under, the obligation register
-that contract cites, and a per-requirement source coverage statement.
+"""Build the synthetic inputs for the example Result v0's coverage and
+obligation data: the Evidence Contract its claims were evaluated under, the
+obligation register that contract cites, and the Result again carrying its
+coverage report (coverage-report/v0: per requirement, the sources found,
+their producers' independence, and each gap with what would close it).
 
 They feed the card's "Coverage and gaps" and "Obligations" sections
 (``static/result_v0_panels.js``). Everything is invented: the policy, its
@@ -14,6 +16,7 @@ from what this script builds.
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -29,7 +32,9 @@ def _load_result_builder():
     return module
 
 
-CONTRACT_REF = _load_result_builder().CONTRACT_REF
+RESULT_BUILDER = _load_result_builder()
+CONTRACT_REF = RESULT_BUILDER.CONTRACT_REF
+JOBS = RESULT_BUILDER.JOBS
 CONTRACT_ID, CONTRACT_VERSION = CONTRACT_REF.split("@")
 POLICY = "Example Change Management Policy (synthetic)"
 
@@ -50,6 +55,9 @@ def build_contract() -> dict[str, Any]:
                 "evidence_requirements": {
                     "accepted_epistemic_types": ["HUMAN_REPORT", "SEMANTIC_JUDGMENT", "SYSTEM_OF_RECORD_FACT"],
                     "required_sources": ["risk-review-record", "change-diff", "second-reviewer-signoff"],
+                    # Two parties must stand behind the assessment; both sources
+                    # present come from one review tool, so they only correlate.
+                    "independence": "2",
                 },
                 "obligation_refs": ["CM-4.2"],
             },
@@ -119,62 +127,142 @@ def build_register() -> dict[str, Any]:
     }
 
 
-def _source(name: str, present: bool, epistemic_type: str, producer: str) -> dict[str, Any]:
-    return {"source": name, "present": present, "epistemic_type": epistemic_type, "producer": producer}
+# Synthetic records per (requirement, source): one per release unless a
+# release is listed as lacking it. (producer, backfilled releases, epistemic type)
+SOURCES: dict[str, list[tuple[str, str | None, list[str], str]]] = {
+    # (source, producer -- None when no record exists, backfilled releases, epistemic type)
+    "change_risk_assessed_correctly": [
+        ("risk-review-record", "review-tool", ["R-101", "R-102"], "HUMAN_REPORT"),
+        ("change-diff", "review-tool", [], "SYSTEM_OF_RECORD_FACT"),
+        ("second-reviewer-signoff", None, [], "HUMAN_REPORT"),
+    ],
+    "tests_passed_on_release_commit": [("ci-run-record", "ci-service", [], "SYSTEM_OF_RECORD_FACT")],
+    "deployment_observed": [
+        ("deploy-log", "hosting-provider", [], "OBSERVED_EVENT"),
+        ("release-record", "release-tool", [], "SYSTEM_OF_RECORD_FACT"),
+    ],
+    "release_notes_published": [
+        ("docs-site-publication-log", None, [], "OBSERVED_EVENT"),
+        ("release-record", "release-tool", [], "SYSTEM_OF_RECORD_FACT"),
+    ],
+}
+
+# The connector that would capture each missing source. The correlated-only
+# gap names none, so it is counted in summary.gaps_without_remedy.
+REMEDIES = {
+    "second-reviewer-signoff": {"connector": "human_approval", "raises_to": "committed"},
+    "docs-site-publication-log": {"connector": "native_emission", "raises_to": "observed"},
+}
+
+STATUS_ORDER = ("NOT_FOUND", "INSUFFICIENT", "UNKNOWN", "SATISFIED")
+STATUS_TO_SUFFICIENCY = {"SATISFIED": "SATISFIED", "NOT_FOUND": "GAP", "INSUFFICIENT": "INSUFFICIENT", "UNKNOWN": "UNKNOWN"}
 
 
-def build_coverage() -> dict[str, Any]:
-    """Per requirement: which required sources were connected for the period.
-    Proposed v0 shape, to be agreed with the per-requirement coverage report."""
+def _record_digest(source: str, release: str) -> str:
+    return hashlib.sha256(f"synthetic-example:record:{source}:{release}".encode()).hexdigest()
+
+
+def _requirement_row(requirement: dict[str, Any], claim_ids: list[str]) -> dict[str, Any]:
+    """One coverage row, computed the way coverage-report/v0 defines it:
+    producers are counted, not records -- records from one producer
+    correlate, they do not corroborate."""
+    ref = requirement["id"]
+    need = int(requirement["evidence_requirements"].get("independence", "1"))
+    sources, gaps, records = [], [], {}
+    for source, producer, backfilled, epistemic_type in SOURCES[ref]:
+        releases = JOBS if producer else []
+        evidence = [{"digest": _record_digest(source, r), "digest_alg": "SHA-256"} for r in releases]
+        for r in releases:
+            records[_record_digest(source, r)] = producer
+        sources.append(
+            {
+                "backfilled_count": len(backfilled),
+                "contemporaneous_count": len(releases) - len(backfilled),
+                "duplicates_collapsed": 0,
+                "epistemic_type": epistemic_type,
+                "evidence": evidence,
+                "producer_count": 1 if releases else 0,
+                "record_count": len(releases),
+                "source": source,
+                "status": "SATISFIED" if releases else "NOT_FOUND",
+            }
+        )
+        if not releases:
+            gaps.append(
+                {
+                    "detail": f"no record from source {source!r} is in the evaluated records",
+                    "kind": "missing_source",
+                    "remedy": REMEDIES.get(source),
+                    "source": source,
+                }
+            )
+    producers = set(records.values())
+    independent = len(producers)
+    met = independent >= need
+    statuses = [s["status"] for s in sources]
+    if not met and records:
+        statuses.append("INSUFFICIENT")
+        gaps.append(
+            {
+                "detail": (
+                    f"the requirement asks for {need} independent producer(s); its {len(records)} record(s) "
+                    f"come from {independent} producer(s) -- records from one producer correlate, they do not "
+                    "corroborate; add a source another party produces"
+                ),
+                "kind": "correlated_only",
+                "remedy": None,
+            }
+        )
+    status = next(s for s in STATUS_ORDER if s in statuses)
     return {
-        "coverage_version": "v0",
-        "contract_ref": CONTRACT_REF,
-        "requirements": [
-            {
-                "requirement_ref": "change_risk_assessed_correctly",
-                "sources": [
-                    _source("risk-review-record", True, "HUMAN_REPORT", "review-tool"),
-                    _source("change-diff", True, "SYSTEM_OF_RECORD_FACT", "review-tool"),
-                    _source("second-reviewer-signoff", False, "HUMAN_REPORT", "review-tool"),
-                ],
-                "missing_sources": ["second-reviewer-signoff"],
-                # Both present sources come from one producer: they agree with each
-                # other because they share it -- correlation, not corroboration.
-                "corroboration": {"independent_producers": 1, "same_producer_spans": 2},
-            },
-            {
-                "requirement_ref": "tests_passed_on_release_commit",
-                "sources": [_source("ci-run-record", True, "SYSTEM_OF_RECORD_FACT", "ci-service")],
-                "missing_sources": [],
-                "corroboration": {"independent_producers": 1, "same_producer_spans": 1},
-            },
-            {
-                "requirement_ref": "deployment_observed",
-                "sources": [
-                    _source("deploy-log", True, "OBSERVED_EVENT", "hosting-provider"),
-                    _source("release-record", True, "SYSTEM_OF_RECORD_FACT", "release-tool"),
-                ],
-                "missing_sources": [],
-                "corroboration": {"independent_producers": 2, "same_producer_spans": 0},
-            },
-            {
-                "requirement_ref": "release_notes_published",
-                "sources": [
-                    _source("docs-site-publication-log", False, "OBSERVED_EVENT", "docs-site"),
-                    _source("release-record", True, "SYSTEM_OF_RECORD_FACT", "release-tool"),
-                ],
-                "missing_sources": ["docs-site-publication-log"],
-                "corroboration": {"independent_producers": 1, "same_producer_spans": 0},
-            },
-        ],
+        "claim_ids": claim_ids,
+        "gaps": gaps,
+        "independence": {
+            "correlated_records": len(records) - independent,
+            "independent_producers": independent,
+            "met": met,
+            "required_producers": need,
+        },
+        "obligation_refs": list(requirement.get("obligation_refs", [])),
+        "requirement_ref": ref,
+        "sources": sources,
+        "status": status,
+        "sufficiency": STATUS_TO_SUFFICIENCY[status],
     }
+
+
+def build_coverage_report(result: dict[str, Any], contract: dict[str, Any]) -> dict[str, Any]:
+    rows = [
+        _requirement_row(req, [c["id"] for c in result["claims"] if c["requirement_ref"] == req["id"]])
+        for req in contract["requirements"]
+    ]
+    all_gaps = [g for row in rows for g in row["gaps"]]
+    return {
+        "contract_ref": CONTRACT_REF,
+        "requirements": rows,
+        "spec_version": "coverage-report/v0",
+        "summary": {
+            "gaps": len(all_gaps),
+            "gaps_without_remedy": sum(1 for g in all_gaps if g["remedy"] is None),
+            "requirements": len(rows),
+            "satisfied": sum(1 for row in rows if row["status"] == "SATISFIED"),
+            "with_gaps": sum(1 for row in rows if row["gaps"]),
+        },
+    }
+
+
+def build_result_with_coverage() -> dict[str, Any]:
+    """The example Result, carrying its coverage report."""
+    result = RESULT_BUILDER.build_result()
+    result["coverage_report"] = build_coverage_report(result, build_contract())
+    return result
 
 
 def side_inputs() -> dict[str, dict[str, Any]]:
     return {
         "release-approval-contract.json": build_contract(),
         "release-approval-register.json": build_register(),
-        "release-approval-coverage.json": build_coverage(),
+        "release-approval-result-with-coverage.json": build_result_with_coverage(),
     }
 
 

@@ -14,21 +14,22 @@ fixed label string).
 Claim ids are `<release>/<requirement>`. Result v0 has no job field, so the
 job (here, a release) is carried in the id and the card lists claims flat.
 
-## Side inputs
+## Coverage and obligations
 
-A Result names each requirement and its contract but not the sources a
-requirement needs or the clause it implements. Three synthetic inputs travel
-beside it in the viewer entry (`build_result_entry(..., contract=,
-register=, coverage=)`) and feed the coverage-and-gaps and obligation data
-(`src/capsule_viewer/static/result_v0_panels.js`):
+A Result names each requirement and its contract. It does not say which
+sources a requirement needs, which of them were found, or which clause the
+requirement implements. Three synthetic files supply that for the coverage
+and obligation data (`src/capsule_viewer/static/result_v0_panels.js`):
 
 | File | What it is |
 |---|---|
-| `release-approval-contract.json` | The Evidence Contract the claims cite: four requirements, their required sources and the clauses they cite. One requirement cites no clause; one cites a clause the register lacks |
+| `release-approval-result-with-coverage.json` | The example Result plus its `coverage_report` (`coverage-report/v0`): per requirement, the sources found, how many independent producers stand behind them, and each gap with the connector that would close it. Two sources are missing. The risk assessment's records all come from one review tool, so they correlate and do not corroborate |
+| `release-approval-contract.json` | The Evidence Contract the claims cite: requirement statements, required sources and cited clauses. One requirement cites no clause; one cites a clause the register lacks |
 | `release-approval-register.json` | The obligation register those clauses come from: three rows of an invented change management policy |
-| `release-approval-coverage.json` | Which required sources were connected, per requirement. Two are missing; one requirement's sources share a producer, so they correlate and do not corroborate |
 
-`python examples/result-v0/build_side_inputs.py` rewrites them;
+The contract and register travel beside the Result in the viewer entry
+(`build_result_entry(..., contract=, register=)`). `python
+examples/result-v0/build_side_inputs.py` rewrites all three, and
 `tests/test_result_v0_side_inputs.py` fails if they drift.
 
 ## Build and render

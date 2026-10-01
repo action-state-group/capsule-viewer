@@ -12,6 +12,7 @@
           "SEMANTIC_JUDGMENT",
           "SYSTEM_OF_RECORD_FACT"
         ],
+        "independence": "2",
         "required_sources": [
           "risk-review-record",
           "change-diff",

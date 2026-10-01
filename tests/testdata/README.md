@@ -137,3 +137,15 @@ Still not vendored from `963fe99` (follow-up): `neg-close-contested-verdict-met`
 `neg-close-peer-ref-not-in-evidence` (both refs must resolve inside
 `evidence[]`). The card does not yet apply that walk rule, so vendoring the
 fixtures before the rule would pin the wrong render.
+
+## Coverage report fixtures (PROPOSED)
+
+- `pos-coverage-report-result.json` -- vendored byte-for-byte from
+  `capsule-engine`'s `tests/fixtures/evidence-result/coverage-report-result.json`
+  (coverage per requirement, `coverage-report/v0`; proposed, not yet on that
+  repo's main -- `cmp`-verified against its commit `3163f8d`). Three
+  requirements: one covered, one with a missing source and a named remedy,
+  one whose records all come from one producer (correlated, not
+  corroborated).
+- `pos-coverage-report-contract.json` -- the contract it cites, vendored
+  byte-for-byte from `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`.
