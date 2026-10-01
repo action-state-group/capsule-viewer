@@ -55,6 +55,8 @@ __all__ = [
 _BASE_SCRIPT = "capsule_viewer.js"
 MODULE_SCRIPTS: tuple[str, ...] = (
     "conversation_exchange_card.js",
+    # Data only (registers no card); loaded before the result/v0 card that reads it.
+    "result_v0_panels.js",
     "result_v0_card.js",
 )
 

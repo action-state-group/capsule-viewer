@@ -1,0 +1,100 @@
+{
+  "consequence": {
+    "class": "report",
+    "rule_ref": "example-release-approval-report-v1"
+  },
+  "id": "ec:example-software-release-approval",
+  "requirements": [
+    {
+      "evidence_requirements": {
+        "accepted_epistemic_types": [
+          "HUMAN_REPORT",
+          "SEMANTIC_JUDGMENT",
+          "SYSTEM_OF_RECORD_FACT"
+        ],
+        "independence": "2",
+        "required_sources": [
+          "risk-review-record",
+          "change-diff",
+          "second-reviewer-signoff"
+        ]
+      },
+      "id": "change_risk_assessed_correctly",
+      "obligation_refs": [
+        "CM-4.2"
+      ],
+      "profile": "quality",
+      "statement": "the change's risk was assessed and the assessment fits the change"
+    },
+    {
+      "evidence_requirements": {
+        "accepted_epistemic_types": [
+          "OBSERVED_EVENT",
+          "SYSTEM_OF_RECORD_FACT"
+        ],
+        "required_sources": [
+          "ci-run-record"
+        ]
+      },
+      "id": "tests_passed_on_release_commit",
+      "obligation_refs": [
+        "CM-5.1",
+        "CM-7.1"
+      ],
+      "profile": "process",
+      "required_sequence": [
+        "tests-passed",
+        "release-cut"
+      ],
+      "statement": "the required test suite passed on the exact commit released"
+    },
+    {
+      "evidence_requirements": {
+        "accepted_epistemic_types": [
+          "OBSERVED_EVENT"
+        ],
+        "required_sources": [
+          "deploy-log",
+          "release-record"
+        ]
+      },
+      "id": "deployment_observed",
+      "profile": "process",
+      "required_sequence": [
+        "release-cut",
+        "deployed"
+      ],
+      "statement": "the release was observed deployed to production"
+    },
+    {
+      "evidence_requirements": {
+        "accepted_epistemic_types": [
+          "OBSERVED_EVENT",
+          "SYSTEM_OF_RECORD_FACT"
+        ],
+        "required_sources": [
+          "docs-site-publication-log",
+          "release-record"
+        ]
+      },
+      "id": "release_notes_published",
+      "obligation_refs": [
+        "CM-6.3"
+      ],
+      "profile": "process",
+      "required_sequence": [
+        "release-cut",
+        "notes-published"
+      ],
+      "statement": "release notes were published for the release"
+    }
+  ],
+  "subject": {
+    "job_type": "software-release",
+    "population_selector": "releases cut in evaluation_period"
+  },
+  "temporal": {
+    "evaluation_period": "2026-09"
+  },
+  "version": "0.3"
+}
