@@ -258,13 +258,12 @@ describe("epistemic types", () => {
     expect(log).toMatchObject({ epistemic_type: "observed_event", epistemic_type_as_written: "OBSERVED_EVENT", epistemic_type_recognized: true });
   });
 
-  it("the engine's vendored contract (still uppercase upstream, not hand-edited here) reads as recognized lowercase", () => {
+  it("the engine's vendored contract is canonical lowercase: recognized, no legacy fold", () => {
     const accepted = engineContract().requirements.flatMap((r) => (r.evidence_requirements || {}).accepted_epistemic_types || []);
     expect(accepted.length).toBeGreaterThan(0);
     for (const t of accepted) {
-      const read = panels().epistemicTypeOf(t);
-      expect(read.recognized).toBe(true);
-      expect(CANONICAL_EPISTEMIC_TYPES).toContain(read.value);
+      expect(panels().epistemicTypeOf(t)).toEqual({ value: t, as_written: t, recognized: true, legacy_case: false });
+      expect(CANONICAL_EPISTEMIC_TYPES).toContain(t);
     }
   });
 
