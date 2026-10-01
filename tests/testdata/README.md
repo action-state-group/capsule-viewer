@@ -154,7 +154,8 @@ fixtures before the rule would pin the wrong render.
   one whose records all come from one producer (correlated, not
   corroborated).
 - `pos-coverage-report-contract.json` -- the contract it cites, vendored
-  byte-for-byte from `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`.
+  byte-for-byte from `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`
+  at commit `d9b7c19`.
 
 ## Epistemic types are lowercase (the 2026-10-01 ruling)
 
@@ -167,9 +168,7 @@ is folded to the lowercase token for lookup and read as recognized, with the
 spelling it was written in kept beside it; a value not in the set in any
 case is kept as written and marked unrecognized, never dropped.
 
-`pos-coverage-report-contract.json` is still uppercase
-(`accepted_epistemic_types: ["SYSTEM_OF_RECORD_FACT", ...]`) because its
-upstream, `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`,
-is still uppercase on that repo's `main`. It is not hand-edited here; it
-re-vendors when upstream lowercases, and until then it is the fixture for
-the legacy-uppercase reading.
+`pos-coverage-report-contract.json` is lowercase, re-vendored byte-for-byte
+from `capsule-engine` commit `d9b7c19` (where that repo lowercased its
+epistemic types). The legacy-uppercase reading is covered by the JS tests,
+which upper-case the canonical tokens and a coverage row in memory.
