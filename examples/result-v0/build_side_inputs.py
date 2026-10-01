@@ -53,7 +53,7 @@ def build_contract() -> dict[str, Any]:
                 "profile": "quality",
                 "statement": "the change's risk was assessed and the assessment fits the change",
                 "evidence_requirements": {
-                    "accepted_epistemic_types": ["HUMAN_REPORT", "SEMANTIC_JUDGMENT", "SYSTEM_OF_RECORD_FACT"],
+                    "accepted_epistemic_types": ["human_report", "semantic_judgment", "system_of_record_fact"],
                     "required_sources": ["risk-review-record", "change-diff", "second-reviewer-signoff"],
                     # Two parties must stand behind the assessment; both sources
                     # present come from one review tool, so they only correlate.
@@ -67,7 +67,7 @@ def build_contract() -> dict[str, Any]:
                 "statement": "the required test suite passed on the exact commit released",
                 "required_sequence": ["tests-passed", "release-cut"],
                 "evidence_requirements": {
-                    "accepted_epistemic_types": ["OBSERVED_EVENT", "SYSTEM_OF_RECORD_FACT"],
+                    "accepted_epistemic_types": ["observed_event", "system_of_record_fact"],
                     "required_sources": ["ci-run-record"],
                 },
                 # The second reference is deliberately absent from the register:
@@ -81,7 +81,7 @@ def build_contract() -> dict[str, Any]:
                 "statement": "the release was observed deployed to production",
                 "required_sequence": ["release-cut", "deployed"],
                 "evidence_requirements": {
-                    "accepted_epistemic_types": ["OBSERVED_EVENT"],
+                    "accepted_epistemic_types": ["observed_event"],
                     "required_sources": ["deploy-log", "release-record"],
                 },
             },
@@ -91,7 +91,7 @@ def build_contract() -> dict[str, Any]:
                 "statement": "release notes were published for the release",
                 "required_sequence": ["release-cut", "notes-published"],
                 "evidence_requirements": {
-                    "accepted_epistemic_types": ["OBSERVED_EVENT", "SYSTEM_OF_RECORD_FACT"],
+                    "accepted_epistemic_types": ["observed_event", "system_of_record_fact"],
                     "required_sources": ["docs-site-publication-log", "release-record"],
                 },
                 "obligation_refs": ["CM-6.3"],
@@ -132,18 +132,18 @@ def build_register() -> dict[str, Any]:
 SOURCES: dict[str, list[tuple[str, str | None, list[str], str]]] = {
     # (source, producer -- None when no record exists, backfilled releases, epistemic type)
     "change_risk_assessed_correctly": [
-        ("risk-review-record", "review-tool", ["R-101", "R-102"], "HUMAN_REPORT"),
-        ("change-diff", "review-tool", [], "SYSTEM_OF_RECORD_FACT"),
-        ("second-reviewer-signoff", None, [], "HUMAN_REPORT"),
+        ("risk-review-record", "review-tool", ["R-101", "R-102"], "human_report"),
+        ("change-diff", "review-tool", [], "system_of_record_fact"),
+        ("second-reviewer-signoff", None, [], "human_report"),
     ],
-    "tests_passed_on_release_commit": [("ci-run-record", "ci-service", [], "SYSTEM_OF_RECORD_FACT")],
+    "tests_passed_on_release_commit": [("ci-run-record", "ci-service", [], "system_of_record_fact")],
     "deployment_observed": [
-        ("deploy-log", "hosting-provider", [], "OBSERVED_EVENT"),
-        ("release-record", "release-tool", [], "SYSTEM_OF_RECORD_FACT"),
+        ("deploy-log", "hosting-provider", [], "observed_event"),
+        ("release-record", "release-tool", [], "system_of_record_fact"),
     ],
     "release_notes_published": [
-        ("docs-site-publication-log", None, [], "OBSERVED_EVENT"),
-        ("release-record", "release-tool", [], "SYSTEM_OF_RECORD_FACT"),
+        ("docs-site-publication-log", None, [], "observed_event"),
+        ("release-record", "release-tool", [], "system_of_record_fact"),
     ],
 }
 

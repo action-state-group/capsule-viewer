@@ -8,9 +8,9 @@
     {
       "evidence_requirements": {
         "accepted_epistemic_types": [
-          "HUMAN_REPORT",
-          "SEMANTIC_JUDGMENT",
-          "SYSTEM_OF_RECORD_FACT"
+          "human_report",
+          "semantic_judgment",
+          "system_of_record_fact"
         ],
         "independence": "2",
         "required_sources": [
@@ -29,8 +29,8 @@
     {
       "evidence_requirements": {
         "accepted_epistemic_types": [
-          "OBSERVED_EVENT",
-          "SYSTEM_OF_RECORD_FACT"
+          "observed_event",
+          "system_of_record_fact"
         ],
         "required_sources": [
           "ci-run-record"
@@ -51,7 +51,7 @@
     {
       "evidence_requirements": {
         "accepted_epistemic_types": [
-          "OBSERVED_EVENT"
+          "observed_event"
         ],
         "required_sources": [
           "deploy-log",
@@ -69,8 +69,8 @@
     {
       "evidence_requirements": {
         "accepted_epistemic_types": [
-          "OBSERVED_EVENT",
-          "SYSTEM_OF_RECORD_FACT"
+          "observed_event",
+          "system_of_record_fact"
         ],
         "required_sources": [
           "docs-site-publication-log",

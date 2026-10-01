@@ -41,16 +41,34 @@
   // self-attested whatever is connected. An obligation reference is the
   // clause itself, not evidence that it was met. Shown only when the
   // coverage row states the source's epistemic type -- never guessed.
+  //
+  // Keyed by the canonical tokens: lowercase, underscore-separated, exactly
+  // as the Evidence Layer's closed set spells them
+  // (agent-action-capsule schemas/vendor/epistemic-types.json).
   var RAISES_TO = {
-    OBSERVED_EVENT: { tier: "recomputed", assurance: "Verifiable" },
-    SYSTEM_OF_RECORD_FACT: { tier: "recomputed", assurance: "Verifiable" },
-    DERIVED_METRIC: { tier: "recomputed", assurance: "Verifiable" },
-    HUMAN_REPORT: { tier: "judged", assurance: "Attested" },
-    SEMANTIC_JUDGMENT: { tier: "judged", assurance: "Attested" },
-    ADJUDICATION: { tier: "judged", assurance: "Attested" },
-    PRODUCER_CLAIM: { tier: null, assurance: "self-attested only" },
-    OBLIGATION_REFERENCE: { tier: null, assurance: "not evidence of performance" },
+    observed_event: { tier: "recomputed", assurance: "Verifiable" },
+    system_of_record_fact: { tier: "recomputed", assurance: "Verifiable" },
+    derived_metric: { tier: "recomputed", assurance: "Verifiable" },
+    human_report: { tier: "judged", assurance: "Attested" },
+    semantic_judgment: { tier: "judged", assurance: "Attested" },
+    adjudication: { tier: "judged", assurance: "Attested" },
+    producer_claim: { tier: null, assurance: "self-attested only" },
+    obligation_reference: { tier: null, assurance: "not evidence of performance" },
   };
+
+  // Documents from other tools may still spell a value in uppercase
+  // (OBSERVED_EVENT): the reader folds it to the canonical lowercase token
+  // for lookup and treats it as recognized. A value that is not in the set
+  // in any case is kept exactly as written and reported as unrecognized --
+  // never dropped, never relabelled.
+  function epistemicTypeOf(value) {
+    if (!isNonEmptyString(value)) return null;
+    var canonical = value.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(RAISES_TO, canonical)) {
+      return { value: canonical, as_written: value, recognized: true, legacy_case: canonical !== value };
+    }
+    return { value: value, as_written: value, recognized: false, legacy_case: false };
+  }
 
   // coverage-report/v0's fixed status -> sufficiency mapping.
   var STATUS_TO_SUFFICIENCY = { SATISFIED: "SATISFIED", NOT_FOUND: "GAP", INSUFFICIENT: "INSUFFICIENT", UNKNOWN: "UNKNOWN" };
@@ -81,7 +99,8 @@
   }
 
   function raisesTo(epistemicType) {
-    return RAISES_TO[epistemicType] || { tier: null, assurance: "unknown epistemic type" };
+    var t = epistemicTypeOf(epistemicType);
+    return t && t.recognized ? RAISES_TO[t.value] : { tier: null, assurance: "unknown epistemic type" };
   }
 
   function claimsById(result) {
@@ -286,7 +305,11 @@
             contemporaneous_count: s.contemporaneous_count,
             backfilled_count: s.backfilled_count,
             producer_count: s.producer_count,
-            epistemic_type: isNonEmptyString(s.epistemic_type) ? s.epistemic_type : null,
+            // The canonical lowercase token when recognized (an uppercase
+            // legacy spelling is folded); otherwise the value as written.
+            epistemic_type: isNonEmptyString(s.epistemic_type) ? epistemicTypeOf(s.epistemic_type).value : null,
+            epistemic_type_as_written: isNonEmptyString(s.epistemic_type) ? s.epistemic_type : null,
+            epistemic_type_recognized: isNonEmptyString(s.epistemic_type) ? epistemicTypeOf(s.epistemic_type).recognized : null,
           };
         }),
         // Records from one producer correlate; only distinct producers corroborate.
@@ -446,6 +469,7 @@
     coverageGaps: coverageGaps,
     obligationTree: obligationTree,
     raisesTo: raisesTo,
+    epistemicTypeOf: epistemicTypeOf,
     RAISES_TO: JSON.parse(JSON.stringify(RAISES_TO)),
   };
 })();

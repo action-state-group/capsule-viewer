@@ -202,8 +202,86 @@ describe("coverageGaps", () => {
   });
 
   it("a producer's own claim lifts no tier", () => {
-    expect(panels().raisesTo("PRODUCER_CLAIM")).toEqual({ tier: null, assurance: "self-attested only" });
-    expect(panels().raisesTo("SOMETHING_ELSE").tier).toBeNull();
+    expect(panels().raisesTo("producer_claim")).toEqual({ tier: null, assurance: "self-attested only" });
+    expect(panels().raisesTo("something_else").tier).toBeNull();
+  });
+});
+
+// The Evidence Layer's closed set, spelled exactly as agent-action-capsule's
+// schemas/vendor/epistemic-types.json spells it (Steven's ruling 2026-10-01:
+// epistemic-type values are lowercase in spec text, schemas, vectors, code).
+const CANONICAL_EPISTEMIC_TYPES = [
+  "observed_event",
+  "system_of_record_fact",
+  "producer_claim",
+  "human_report",
+  "semantic_judgment",
+  "derived_metric",
+  "adjudication",
+  "obligation_reference",
+];
+
+describe("epistemic types", () => {
+  it("lowercase is canonical: the tier map is keyed by exactly the closed set's lowercase tokens", () => {
+    expect(Object.keys(panels().RAISES_TO).sort()).toEqual([...CANONICAL_EPISTEMIC_TYPES].sort());
+    for (const t of CANONICAL_EPISTEMIC_TYPES) {
+      expect(panels().epistemicTypeOf(t)).toEqual({ value: t, as_written: t, recognized: true, legacy_case: false });
+      expect(panels().raisesTo(t).assurance).not.toBe("unknown epistemic type");
+    }
+  });
+
+  it("the example's sources come out as canonical lowercase tokens, all recognized", () => {
+    const out = panels().coverageGaps(result(), contract());
+    const sources = out.requirements.flatMap((r) => r.sources).filter((s) => s.epistemic_type !== null);
+    expect(sources.length).toBeGreaterThan(0);
+    for (const s of sources) {
+      expect(CANONICAL_EPISTEMIC_TYPES).toContain(s.epistemic_type);
+      expect(s.epistemic_type_as_written).toBe(s.epistemic_type);
+      expect(s.epistemic_type_recognized).toBe(true);
+    }
+  });
+
+  it("a legacy uppercase value from another tool is folded to lowercase for lookup and shown as recognized", () => {
+    for (const t of CANONICAL_EPISTEMIC_TYPES) {
+      const upper = t.toUpperCase();
+      expect(panels().epistemicTypeOf(upper)).toEqual({ value: t, as_written: upper, recognized: true, legacy_case: true });
+      expect(panels().raisesTo(upper)).toEqual(panels().raisesTo(t));
+    }
+    // A coverage row written by an uppercase producer: same tier, same
+    // recommendation, the value normalized, the spelling kept beside it.
+    const r = result();
+    const row = r.coverage_report.requirements.find((x) => x.requirement_ref === "release_notes_published");
+    row.sources.forEach((s) => { s.epistemic_type = s.epistemic_type.toUpperCase(); });
+    const notes = req(panels().coverageGaps(r, contract()), "release_notes_published");
+    expect(notes.recommendations[0].tier).toEqual({ tier: "recomputed", assurance: "Verifiable" });
+    const log = notes.sources.find((s) => s.source === "docs-site-publication-log");
+    expect(log).toMatchObject({ epistemic_type: "observed_event", epistemic_type_as_written: "OBSERVED_EVENT", epistemic_type_recognized: true });
+  });
+
+  it("the engine's vendored contract (still uppercase upstream, not hand-edited here) reads as recognized lowercase", () => {
+    const accepted = engineContract().requirements.flatMap((r) => (r.evidence_requirements || {}).accepted_epistemic_types || []);
+    expect(accepted.length).toBeGreaterThan(0);
+    for (const t of accepted) {
+      const read = panels().epistemicTypeOf(t);
+      expect(read.recognized).toBe(true);
+      expect(CANONICAL_EPISTEMIC_TYPES).toContain(read.value);
+    }
+  });
+
+  it("a genuinely unknown value is kept exactly as written and shown as unrecognized, never dropped", () => {
+    expect(panels().epistemicTypeOf("Vibes_Based_Assertion")).toEqual({
+      value: "Vibes_Based_Assertion", as_written: "Vibes_Based_Assertion", recognized: false, legacy_case: false,
+    });
+    expect(panels().raisesTo("vibes_based_assertion")).toEqual({ tier: null, assurance: "unknown epistemic type" });
+    const r = result();
+    const row = r.coverage_report.requirements.find((x) => x.requirement_ref === "release_notes_published");
+    row.sources.forEach((s) => { s.epistemic_type = "vibes_based_assertion"; });
+    const notes = req(panels().coverageGaps(r, contract()), "release_notes_published");
+    expect(notes.sources.length).toBe(row.sources.length);
+    for (const s of notes.sources) {
+      expect(s).toMatchObject({ epistemic_type: "vibes_based_assertion", epistemic_type_as_written: "vibes_based_assertion", epistemic_type_recognized: false });
+    }
+    expect(notes.recommendations[0].tier).toEqual({ tier: null, assurance: "unknown epistemic type" });
   });
 });
 
