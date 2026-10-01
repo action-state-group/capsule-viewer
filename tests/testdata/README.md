@@ -155,3 +155,21 @@ fixtures before the rule would pin the wrong render.
   corroborated).
 - `pos-coverage-report-contract.json` -- the contract it cites, vendored
   byte-for-byte from `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`.
+
+## Epistemic types are lowercase (Steven's ruling, 2026-10-01)
+
+`epistemic_type` values are the Evidence Layer's closed set spelled exactly
+as `agent-action-capsule`'s `schemas/vendor/epistemic-types.json` spells
+them: lowercase, underscore-separated (`observed_event`,
+`system_of_record_fact`, ...). The viewer keys on those tokens. A document
+from another tool that still writes a value in uppercase (`OBSERVED_EVENT`)
+is folded to the lowercase token for lookup and read as recognized, with the
+spelling it was written in kept beside it; a value not in the set in any
+case is kept as written and marked unrecognized, never dropped.
+
+`pos-coverage-report-contract.json` is still uppercase
+(`accepted_epistemic_types: ["SYSTEM_OF_RECORD_FACT", ...]`) because its
+upstream, `capsule-engine`'s `examples/contracts/ai-act-human-oversight.json`,
+is still uppercase on that repo's `main`. It is not hand-edited here; it
+re-vendors when upstream lowercases, and until then it is the fixture for
+the legacy-uppercase reading.

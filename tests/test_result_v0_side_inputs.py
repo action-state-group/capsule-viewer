@@ -93,3 +93,29 @@ def test_side_inputs_travel_in_the_entry_and_the_artifact():
 def test_absent_side_inputs_add_no_keys():
     entry = build_result_entry(_committed("release-approval-result.json"))
     assert not {"contract", "register"} & set(entry)
+
+
+# The Evidence Layer's closed epistemic_type set, spelled exactly as
+# agent-action-capsule's schemas/vendor/epistemic-types.json spells it:
+# lowercase ASCII, underscore-separated (Steven's ruling, 2026-10-01).
+CANONICAL_EPISTEMIC_TYPES = {
+    "observed_event",
+    "system_of_record_fact",
+    "producer_claim",
+    "human_report",
+    "semantic_judgment",
+    "derived_metric",
+    "adjudication",
+    "obligation_reference",
+}
+
+
+def test_viewer_owned_side_inputs_spell_epistemic_types_lowercase():
+    contract = _committed("release-approval-contract.json")
+    result = _committed("release-approval-result-with-coverage.json")
+    seen = [
+        t for r in contract["requirements"] for t in r["evidence_requirements"].get("accepted_epistemic_types", [])
+    ]
+    seen += [s["epistemic_type"] for row in result["coverage_report"]["requirements"] for s in row["sources"]]
+    assert seen, "the side inputs should carry epistemic types to check"
+    assert set(seen) <= CANONICAL_EPISTEMIC_TYPES, sorted(set(seen) - CANONICAL_EPISTEMIC_TYPES)
