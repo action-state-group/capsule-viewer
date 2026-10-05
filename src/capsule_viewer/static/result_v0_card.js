@@ -220,7 +220,11 @@
       issues.push("missing or invalid grade (must be self-attested / witnessed / countersigned)");
     }
     if (VALID_SUFFICIENCY.indexOf(claim.sufficiency) === -1) issues.push("missing or invalid sufficiency");
-    if (VALID_VERDICTS.indexOf(claim.verdict) === -1) issues.push("missing or invalid verdict");
+    if (claim.verdict === "not_applicable") {
+      issues.push('verdict "not_applicable" is a population exclusion, not a verdict');
+    } else if (VALID_VERDICTS.indexOf(claim.verdict) === -1) {
+      issues.push("missing or invalid verdict");
+    }
     if (!isDigestRefArray(claim.evidence)) issues.push("evidence[] missing or not all digest-refs (SHA-256, 64 lowercase hex)");
     if (!Array.isArray(claim.proofs)) issues.push("proofs[] missing");
     // The binding rule (spec section 1): verdict met/not_met only when

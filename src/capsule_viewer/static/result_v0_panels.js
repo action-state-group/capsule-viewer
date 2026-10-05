@@ -32,12 +32,14 @@
 
   var VERDICTS = ["met", "not_met", "not_evaluable"];
 
-  // Retired spellings of not_evaluable that results sealed before the
-  // vocabulary settled may carry. Read as aliases so a sealed result still
+  // The retired spelling of not_evaluable that results sealed before the
+  // vocabulary settled may carry. Read as an alias so a sealed result still
   // renders under the one canonical spelling; the record itself is never
-  // modified. Shared with the card (result_v0_card.js), which loads after
-  // this module.
-  var RETIRED_VERDICT_SPELLINGS = { insufficient_evidence: "not_evaluable", not_applicable: "not_evaluable" };
+  // modified. "not_applicable" is deliberately absent: it names a requirement
+  // excluded from the evaluated population and was never a verdict, so it is
+  // passed through and refused as a defect, never counted as not_evaluable.
+  // Shared with the card (result_v0_card.js), which loads after this module.
+  var RETIRED_VERDICT_SPELLINGS = { insufficient_evidence: "not_evaluable" };
 
   function canonicalVerdict(verdict) {
     return Object.prototype.hasOwnProperty.call(RETIRED_VERDICT_SPELLINGS, verdict) ? RETIRED_VERDICT_SPELLINGS[verdict] : verdict;

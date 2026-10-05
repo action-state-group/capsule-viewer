@@ -1,10 +1,14 @@
 // Retired verdict spellings on already-sealed results.
 //
 // The verdict vocabulary is met / not_met / not_evaluable. Results sealed
-// before that settled may spell not_evaluable as "insufficient_evidence" or
-// "not_applicable". The card reads both as aliases, renders one spelling,
-// says which spelling the sealed record carries, and never modifies the
-// record itself. Any other unknown verdict is still refused.
+// before that settled may spell not_evaluable as "insufficient_evidence".
+// The card reads it as an alias, renders one spelling, says which spelling
+// the sealed record carries, and never modifies the record itself.
+//
+// "not_applicable" is not a retired spelling. It names a requirement
+// excluded from the evaluated population and was never a verdict, so a claim
+// carrying it is refused as a defect, never read as not_evaluable. Any other
+// unknown verdict is refused too.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -50,7 +54,7 @@ function withRetiredSpelling(spelling, { bucketKey } = {}) {
 }
 
 describe("result/v0 card -- retired verdict spellings", () => {
-  for (const spelling of ["insufficient_evidence", "not_applicable"]) {
+  for (const spelling of ["insufficient_evidence"]) {
     it(`reads a sealed "${spelling}" as not_evaluable and renders only the canonical spelling`, async () => {
       const { doc, id } = withRetiredSpelling(spelling);
       const node = await render(doc);
@@ -96,12 +100,11 @@ describe("result/v0 card -- retired verdict spellings", () => {
 });
 
 describe("result/v0 panels -- retired verdict spellings", () => {
-  it("canonicalVerdict maps the two retired spellings and passes every other value through", () => {
+  it("canonicalVerdict maps the retired spelling and passes every other value through, not_applicable included", () => {
     loadViewer();
     const { canonicalVerdict } = globalThis.window.CapsuleViewerResultPanels;
     expect(canonicalVerdict("insufficient_evidence")).toBe("not_evaluable");
-    expect(canonicalVerdict("not_applicable")).toBe("not_evaluable");
-    for (const v of ["met", "not_met", "not_evaluable", "inconclusive"]) expect(canonicalVerdict(v)).toBe(v);
+    for (const v of ["met", "not_met", "not_evaluable", "not_applicable", "inconclusive"]) expect(canonicalVerdict(v)).toBe(v);
   });
 
   it("the obligation view joins a retired-spelling claim and counts it as not_evaluable", () => {
@@ -120,5 +123,47 @@ describe("result/v0 panels -- retired verdict spellings", () => {
     expect(tree.obligations.map((o) => o.counts)).toEqual(baseline.obligations.map((o) => o.counts));
     const shown = tree.obligations.flatMap((o) => o.requirements.flatMap((r) => r.claims.map((c) => c.verdict)));
     expect(shown).not.toContain("insufficient_evidence");
+  });
+});
+
+describe("result/v0 -- not_applicable in a verdict field is a defect, never not_evaluable", () => {
+  it("the card refuses the claim and names why", async () => {
+    const { doc, id } = withRetiredSpelling("not_applicable");
+    const node = await render(doc);
+    const refused = node.querySelectorAll(".rv0-claim-refused");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].textContent).toContain(id);
+    expect(refused[0].textContent).toContain('verdict "not_applicable" is a population exclusion, not a verdict');
+    expect(node.querySelector(".rv0-retired-verdict")).toBeNull();
+  });
+
+  it("the refused claim is not counted as evaluated, so the stated population disagrees visibly", async () => {
+    const { doc } = withRetiredSpelling("not_applicable");
+    const node = await render(doc);
+    const stated = doc.aggregate.coverage.evaluated_population;
+    const populationRow = Array.from(node.querySelectorAll(".rv0-stat")).find((r) => r.textContent.includes("Evaluated population"));
+    expect(populationRow.textContent).toContain(`Evaluated population: ${stated} (recomputed ${stated - 1})`);
+    expect(populationRow.querySelector(".rv0-badge").className).toContain("fail");
+  });
+
+  it("a stated not_applicable bucket is not read as the not_evaluable bucket", async () => {
+    const { doc, id } = withRetiredSpelling("not_applicable", { bucketKey: "not_applicable" });
+    const node = await render(doc);
+    expect(bucketRow(node, "not_evaluable").textContent).not.toContain(id);
+  });
+
+  it("the obligation view leaves the claim unjoined rather than counting it not_evaluable", () => {
+    loadViewer();
+    const { obligationTree } = globalThis.window.CapsuleViewerResultPanels;
+    const result = read(EXAMPLES, "release-approval-result.json");
+    const contract = read(EXAMPLES, "release-approval-contract.json");
+    const register = read(EXAMPLES, "release-approval-register.json");
+    const doc = clone(result);
+    const target = doc.claims.find((c) => c.verdict === "not_evaluable");
+    target.verdict = "not_applicable";
+    const tree = obligationTree(doc, contract, register);
+    expect(tree.unjoinable_claims).toContain(target.id);
+    const shown = tree.obligations.flatMap((o) => o.requirements.flatMap((r) => r.claims.map((c) => c.id)));
+    expect(shown).not.toContain(target.id);
   });
 });
