@@ -31,6 +31,10 @@
   if (typeof window === "undefined" || !window.CapsuleViewer) {
     throw new Error("result_v0_card.js: base CapsuleViewer not loaded");
   }
+  if (!window.CapsuleViewerResultPanels) {
+    throw new Error("result_v0_card.js: result_v0_panels.js not loaded");
+  }
+  var canonicalVerdict = window.CapsuleViewerResultPanels.canonicalVerdict;
 
   var VALID_TIERS = ["recomputed", "judged"];
   var VALID_GRADES = ["self-attested", "witnessed", "countersigned"];
@@ -323,6 +327,30 @@
       });
     });
     return lines;
+  }
+
+  // A sealed claim whose verdict is a retired spelling of not_evaluable is
+  // read as a copy carrying the canonical spelling; the sealed record is
+  // never modified. Every other claim is returned as-is, so an unknown
+  // verdict still reaches claimIssues and is refused.
+  function readClaim(sealed) {
+    if (!sealed || typeof sealed !== "object") return sealed;
+    var verdict = canonicalVerdict(sealed.verdict);
+    return verdict === sealed.verdict ? sealed : Object.assign({}, sealed, { verdict: verdict });
+  }
+
+  // Stated buckets keyed by a retired spelling are read into the canonical
+  // bucket, so the bucket row and its cross-check use one spelling.
+  function readBuckets(stated) {
+    var retiredKeys = Object.keys(stated).filter(function (key) { return canonicalVerdict(key) !== key; });
+    if (!retiredKeys.length) return stated;
+    var out = Object.assign({}, stated);
+    retiredKeys.forEach(function (key) {
+      var canonical = canonicalVerdict(key);
+      out[canonical] = [].concat(out[canonical] || [], stated[key]);
+      delete out[key];
+    });
+    return out;
   }
 
   function indexAllClaims(claims) {
@@ -729,7 +757,7 @@
     return row;
   }
 
-  function renderClaim(helpers, claim, byDigest) {
+  function renderClaim(helpers, claim, byDigest, retiredSpelling) {
     var row = helpers.el("div", "rv0-claim");
     var head = helpers.el("div", "rv0-claim-head");
     head.appendChild(helpers.el("span", "rv0-claim-id", claim.id));
@@ -749,6 +777,15 @@
     row.appendChild(
       helpers.el("div", "rv0-verdict-line", "sufficiency: " + claim.sufficiency + " -- verdict: " + claim.verdict)
     );
+    if (retiredSpelling) {
+      row.appendChild(
+        helpers.el(
+          "div",
+          "rv0-retired-verdict",
+          "the sealed record spells this verdict \"" + retiredSpelling + "\", a retired spelling read as " + claim.verdict
+        )
+      );
+    }
     var type = claimType(claim);
     if (type === "reconcile") row.appendChild(renderReconcile(helpers, claim.reconcile));
     if (type === "close") row.appendChild(renderClose(helpers, claim.close, closeDerivation(claim.close, byDigest)));
@@ -760,14 +797,15 @@
 
   async function renderResultV0Card(entry, helpers) {
     var record = entry.record || {};
-    var claims = Array.isArray(record.claims) ? record.claims : [];
+    var sealedClaims = Array.isArray(record.claims) ? record.claims : [];
+    var claims = sealedClaims.map(readClaim);
     var aggregate = record.aggregate || {};
     var statedCoverage = aggregate.coverage || {
       evaluated_population: "(missing)",
       excluded_not_applicable: "(missing)",
       unknown_count: "(missing)",
     };
-    var statedBuckets = aggregate.buckets || {};
+    var statedBuckets = readBuckets(aggregate.buckets || {});
 
     var allClaimsById = indexAllClaims(claims);
     var recomputed = recompute(claims);
@@ -797,12 +835,13 @@
     claimsWrap.appendChild(helpers.el("h3", "rv0-section-title", "Claims"));
     // One row per input claim, always: refused, unrecognized, or rendered.
     // Nothing is ever dropped -- the rendered row count equals claims.length.
-    claims.forEach(function (claim) {
+    claims.forEach(function (claim, i) {
       var issues = claimIssues(claim);
+      var retiredSpelling = claim !== sealedClaims[i] ? sealedClaims[i].verdict : null;
       var row;
       if (issues.length) row = renderClaimRefusal(helpers, claim, issues);
       else if (!isKnownClaimType(claim)) row = renderClaimUnrecognized(helpers, claim);
-      else row = renderClaim(helpers, claim, byDigest);
+      else row = renderClaim(helpers, claim, byDigest, retiredSpelling);
       claimsWrap.appendChild(row);
     });
     wrap.appendChild(claimsWrap);

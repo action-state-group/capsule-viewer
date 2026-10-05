@@ -32,6 +32,17 @@
 
   var VERDICTS = ["met", "not_met", "not_evaluable"];
 
+  // Retired spellings of not_evaluable that results sealed before the
+  // vocabulary settled may carry. Read as aliases so a sealed result still
+  // renders under the one canonical spelling; the record itself is never
+  // modified. Shared with the card (result_v0_card.js), which loads after
+  // this module.
+  var RETIRED_VERDICT_SPELLINGS = { insufficient_evidence: "not_evaluable", not_applicable: "not_evaluable" };
+
+  function canonicalVerdict(verdict) {
+    return Object.prototype.hasOwnProperty.call(RETIRED_VERDICT_SPELLINGS, verdict) ? RETIRED_VERDICT_SPELLINGS[verdict] : verdict;
+  }
+
   // Which tier a source of a given epistemic type can support once it is
   // connected. The Result spec ties tier to the assurance ladder
   // (recomputed <=> Verifiable, judged <=> Attested). A deterministic check
@@ -118,7 +129,10 @@
     var byRequirement = {};
     var foreign = [];
     var unjoinable = [];
-    arr(isObject(result) ? result.claims : null).forEach(function (claim) {
+    arr(isObject(result) ? result.claims : null).forEach(function (sealed) {
+      var verdict = isObject(sealed) ? canonicalVerdict(sealed.verdict) : undefined;
+      // A copy, never an edit: the sealed claim keeps its own spelling.
+      var claim = isObject(sealed) && verdict !== sealed.verdict ? Object.assign({}, sealed, { verdict: verdict }) : sealed;
       if (!isObject(claim) || !isNonEmptyString(claim.requirement_ref) || VERDICTS.indexOf(claim.verdict) === -1) {
         unjoinable.push(isObject(claim) && isNonEmptyString(claim.id) ? claim.id : "(claim without id)");
         return;
@@ -466,6 +480,7 @@
   }
 
   window.CapsuleViewerResultPanels = {
+    canonicalVerdict: canonicalVerdict,
     coverageGaps: coverageGaps,
     obligationTree: obligationTree,
     raisesTo: raisesTo,
