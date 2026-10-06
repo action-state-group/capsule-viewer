@@ -212,6 +212,7 @@ _SHELL = r"""<!DOCTYPE html>
   .rv0-claim-id { font-weight:600; font-size:13px; color:#0B0E14; }
   .rv0-tier, .rv0-grade { font-size:11px; color:#3A5BD9; background:#EEF1FB; border-radius:100px; padding:2px 9px; }
   .rv0-contract, .rv0-requirement, .rv0-verdict-line { font-size:12.5px; color:#3A3F4B; line-height:1.6; }
+  .rv0-retired-verdict { font-size:11.5px; color:#7A6355; line-height:1.6; }
   .rv0-presentation { margin-top:6px; }
   .rv0-presentation-kind { font-size:11.5px; color:#5C6573; text-transform:uppercase; letter-spacing:0.4px; }
   .rv0-narrative { font-size:13px; color:#161B25; line-height:1.55; margin-top:4px; white-space:pre-wrap; }
