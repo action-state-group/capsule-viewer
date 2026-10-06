@@ -172,3 +172,27 @@ case is kept as written and marked unrecognized, never dropped.
 from `capsule-engine` commit `d9b7c19` (where that repo lowercased its
 epistemic types). The legacy-uppercase reading is covered by the JS tests,
 which upper-case the canonical tokens and a coverage row in memory.
+
+## UNKNOWN sufficiency (2026-10-04)
+
+Until these two files, no positive fixture here or in `capsule-engine`
+carried a claim whose sufficiency is UNKNOWN: 23 claims across 9 positive
+files, none of them UNKNOWN. A reader that dropped UNKNOWN claims or showed
+them as another sufficiency matched every positive fixture. Both files are
+copied byte-for-byte from `capsule-engine`'s
+`tests/fixtures/evidence-result/`, written there by
+`scripts/generate_evidence_result_unknown_fixtures.py` through its Result
+emitter. Both repos pin the same sha256.
+
+- `pos-unknown-claim-result.json` (= `unknown-claim-result.json`) -- one
+  SATISFIED/met claim and one UNKNOWN/not_evaluable claim.
+- `pos-unknown-count-aggregate-result.json` (=
+  `unknown-count-aggregate-result.json`) -- six claims covering all four
+  sufficiencies, two of them UNKNOWN and not adjacent, so `unknown_count` is
+  2 and must agree with `claims[]`. Remapping UNKNOWN to GAP leaves every
+  bucket unchanged, so only the sufficiency strings and `unknown_count`
+  show it.
+
+`tests/test_result_v0_unknown.py` fails if the positive files (`neg-*`
+excluded) ever again hold no UNKNOWN claim. `js-tests/result_v0_unknown.test.js`
+pins the rendered sufficiency of every claim in order.
