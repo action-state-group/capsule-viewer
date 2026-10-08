@@ -34,6 +34,7 @@ from capsule_viewer.kit import (
     verdict_pill,
     verification_details,
 )
+from capsule_viewer.kit.contract import check_fragment
 from capsule_viewer.kit.fixture import fixture_page
 
 HOSTILE = "<script>window.pwned=1</script>\"'><img src=x onerror=1>"
@@ -171,11 +172,30 @@ def test_nested_component_output_is_not_double_escaped():
     assert isinstance(html, Markup)
 
 
-def test_components_emit_no_link_image_script_or_inline_style():
-    for html in [*_every_component("plain"), fixture_page()]:
-        lowered = html.lower()
-        for forbidden in ("href=", "src=", "<script", "<img", "<a ", "style=\"", "<link"):
-            assert forbidden not in lowered, forbidden
+def test_every_component_stays_inside_the_element_and_attribute_allowlist():
+    for html in [*_every_component("plain"), *_every_component(HOSTILE)]:
+        assert check_fragment(html) == [], html
+
+
+def test_the_fixture_page_has_no_link_image_script_or_inline_style():
+    lowered = fixture_page().lower()
+    for forbidden in ("href=", "src=", "<script", "<img", "<a ", "style=\"", "<link", "<svg", "<iframe"):
+        assert forbidden not in lowered, forbidden
+
+
+def test_concatenated_component_output_stays_markup_and_nests_unescaped():
+    pair = verdict_pill("met") + disclosure_badge("withheld")
+    assert isinstance(pair, Markup)
+    html = drilldown("x", pair)
+    assert "&lt;span" not in html and html.count('<span class="cv-') == 2
+    joined = Markup(" ").join([verdict_pill("met"), disclosure_badge("withheld")])
+    assert isinstance(joined, Markup) and "&lt;span" not in section("t", joined)
+
+
+def test_plain_text_concatenated_onto_markup_is_escaped():
+    assert "<script>" not in verdict_pill("met") + HOSTILE
+    assert "<script>" not in HOSTILE + verdict_pill("met")
+    assert "<script>" not in Markup(" ").join([verdict_pill("met"), HOSTILE])
 
 
 def test_page_inlines_the_kit_stylesheet_under_a_hash_pinned_csp():
@@ -188,7 +208,17 @@ def test_page_inlines_the_kit_stylesheet_under_a_hash_pinned_csp():
     assert "--cv-color-text" in css
 
 
-def test_page_csp_hash_does_not_match_a_different_stylesheet():
-    html = page("t", "x")
-    other = base64.b64encode(hashlib.sha256(b"\nbody{}").digest()).decode("ascii")
-    assert other not in html
+def test_page_csp_hash_follows_the_stylesheet_it_inlines(monkeypatch):
+    import capsule_viewer.kit.components as components
+
+    before = page("t", "x")
+    monkeypatch.setattr(components, "kit_css", lambda: "body { color: red; }")
+    after = page("t", "x")
+    expected = base64.b64encode(hashlib.sha256(b"\nbody { color: red; }").digest()).decode("ascii")
+    assert f"sha256-{expected}" in unescape(after)
+    assert f"sha256-{expected}" not in unescape(before)
+
+
+def test_page_csp_allows_no_image_script_or_connection():
+    csp = unescape(re.search(r'Content-Security-Policy" content="([^"]*)"', page("t", "x")).group(1))
+    assert "img-src 'none'" in csp and "connect-src 'none'" in csp and "script-src" not in csp

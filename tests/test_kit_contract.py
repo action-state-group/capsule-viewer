@@ -104,11 +104,28 @@ def test_a_module_that_declines_its_own_context_is_rejected():
         check_module_renders(CountsModule(), {"kind": "other"})
 
 
-@pytest.mark.parametrize("injected", ["<script>x()</script>", '<a href="https://example.com">x</a>', '<p style="x">'])
+@pytest.mark.parametrize(
+    "injected",
+    [
+        "<script>x()</script>",
+        '<a href="https://example.com">x</a>',
+        '<p style="x">',
+        "<svg onload=x()></svg>",
+        '<p href = "x">',
+        '<iframe srcdoc="x"></iframe>',
+        '<object data="x"></object>',
+        '<form action="x"></form>',
+        "<img src=x>",
+        '<div onclick="x()">',
+        "<!-- x -->",
+        "<style>p{}</style>",
+    ],
+)
 def test_a_module_that_renders_script_links_or_inline_style_is_rejected(injected):
     class Leaky(CountsModule):
         def render(self, model, services):
-            return services.section("Counts", services.metric_grid(model)) + injected
+            # A raw str, as a hostile module would build it: Markup's + would escape it.
+            return str(services.section("Counts", services.metric_grid(model))) + injected
 
     with pytest.raises(ModuleContractError, match="render output contains"):
         check_module_renders(Leaky(), CONTEXT)

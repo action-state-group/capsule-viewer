@@ -103,7 +103,8 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
   reflows on its own width (`@container`), so a module never writes a media
   query. `js-tests/kit_layout.test.js` opens the every-component fixture page
   (`python -m capsule_viewer.kit fixture`) in headless Chromium at 360, 390
-  and 1280 px and under print media, and fails on any horizontal overflow; it
+  and 1280 px and under emulated print media at a 680 px page width (layout
+  only; it does not paginate), and fails on any horizontal overflow; it
   also opens a Drilldown with the page's scripting disabled. Set
   `CHROME_PATH` if Chromium is not in a standard location; without one the
   suite is skipped locally with a warning and fails under CI.

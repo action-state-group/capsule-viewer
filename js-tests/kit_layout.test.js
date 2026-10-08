@@ -30,7 +30,8 @@ const COMPONENTS = [
   "timeline",
 ];
 // 360 and 390: small and common phones. 680: the printable width of an A4 or
-// Letter page at default margins, laid out under print media.
+// Letter page at default margins, laid out under emulated print media (the
+// layout a printer gets; this does not paginate or produce a PDF).
 // `phone`: whether the primitives must be in their phone layout (stacked
 // table rows, one metric column). Print sits near the table's threshold, so
 // only its overflow is asserted.
@@ -74,9 +75,14 @@ const MEASURE = `(() => {
       if (r.width === 0 && r.height === 0) continue;
       const out = r.right > vw + 0.5 || r.left < -0.5;
       const inner = el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== "visible";
-      if (out || inner) {
+      // Spilling out of its own component's box, even while still on screen.
+      const root = el.parentElement && el.parentElement.closest("[data-cv]");
+      const rr = root && root.getBoundingClientRect();
+      const spill = rr && (r.right > rr.right + 0.5 || r.left < rr.left - 0.5);
+      if (out || inner || spill) {
         overflow.push(name + ": <" + el.tagName.toLowerCase() + " class='" + el.className + "'> left " +
-          Math.round(r.left) + " right " + Math.round(r.right) + (inner ? " (scrolls inside)" : ""));
+          Math.round(r.left) + " right " + Math.round(r.right) +
+          (inner ? " (scrolls inside)" : "") + (spill ? " (spills out of its component)" : ""));
       }
     }
   }

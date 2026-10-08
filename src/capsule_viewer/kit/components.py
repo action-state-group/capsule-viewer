@@ -4,7 +4,9 @@
 Each component is a function from plain values to a ``Markup`` string. Every
 piece of text a caller passes is HTML-escaped; only ``Markup`` (another
 component's output) passes through unescaped, so components compose without
-double-escaping and caller data can never become markup.
+double-escaping and caller data can never become markup. ``Markup`` stays
+``Markup`` under ``+`` and ``join`` (a plain ``str`` operand is escaped on the
+way in), so concatenated component output nests like a single component's.
 
 Components render only what they are given. None of them computes a verdict,
 a count, a disclosure state or a verification outcome: ``verdict_pill`` shows
@@ -13,8 +15,15 @@ the verdict it is handed, ``verification_details`` shows a verifier's result,
 vocabulary is shown as a visible refusal naming the value -- never dropped,
 never defaulted to a neighbouring state.
 
-No component emits a hyperlink, an image, a script or a style attribute;
-``tests/test_no_network.py`` holds the kit to that.
+No component emits a hyperlink, an image, a script or a style attribute:
+every component's output passes ``contract.check_fragment``'s element and
+attribute allowlist (``tests/test_kit_components.py``), and
+``tests/test_no_network.py`` holds the stylesheet and pages to no network
+reference.
+
+The disclosure vocabulary here is the presentation one (``disclosed`` /
+``committed`` / ``withheld`` / ``not_present``). A module reading a record whose
+own status spelling differs maps it explicitly; the kit never guesses.
 """
 from __future__ import annotations
 
@@ -31,6 +40,14 @@ from .tokens import kit_css
 class Markup(str):
     """HTML this kit produced. Passed through as-is when nested."""
 
+    def __add__(self, other: str) -> Markup:
+        return Markup(str.__add__(self, _text(other)))
+
+    def __radd__(self, other: str) -> Markup:
+        return Markup(str.__add__(_text(other), self))
+
+    def join(self, parts: Iterable[str]) -> Markup:
+        return Markup(str.join(self, (_text(part) for part in parts)))
 
 
 def _text(value: str) -> str:
@@ -367,7 +384,7 @@ def page(title: str, *children: str) -> Markup:
     """A complete, self-contained document: the kit stylesheet inlined in the
     head, no script, and a CSP that permits only that exact stylesheet."""
     css = "\n" + kit_css()
-    csp = f"default-src 'none'; style-src '{_style_hash(css)}'; img-src data:; connect-src 'none'"
+    csp = f"default-src 'none'; style-src '{_style_hash(css)}'; img-src 'none'; connect-src 'none'"
     return Markup(
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
         f'<meta http-equiv="Content-Security-Policy" content="{escape(csp, quote=True)}">\n'

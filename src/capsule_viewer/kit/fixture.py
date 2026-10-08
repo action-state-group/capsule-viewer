@@ -69,12 +69,12 @@ def fixture_page() -> str:
             30: [CalendarMark("close", "info")],
         },
     )
-    badges = Markup(
-        "<p>" + " ".join(disclosure_badge(s) for s in ("disclosed", "committed", "withheld", "not_present", "partially_shown")) + "</p>"
-    )
-    pills = Markup(
-        "<p>" + " ".join(verdict_pill(v) for v in ("met", "not_met", "not_evaluable", "insufficient_evidence", "not_applicable")) + "</p>"
-    )
+    badges = Markup("<p>") + Markup(" ").join(
+        disclosure_badge(s) for s in ("disclosed", "committed", "withheld", "not_present", "partially_shown")
+    ) + Markup("</p>")
+    pills = Markup("<p>") + Markup(" ").join(
+        verdict_pill(v) for v in ("met", "not_met", "not_evaluable", "insufficient_evidence", "not_applicable")
+    ) + Markup("</p>")
     cites = citation_list(
         [
             Citation("Approval record", DIGEST),
@@ -105,10 +105,9 @@ def fixture_page() -> str:
             ),
         )
     )
-    parties = Markup(
-        party_card(Party("producer", "EXAMPLE-ORG release pipeline", (("key id", LONG_ID), ("digest", DIGEST))))
-        + party_card(Party("counterparty", "EXAMPLE-ORG audit"))
-    )
+    parties = party_card(
+        Party("producer", "EXAMPLE-ORG release pipeline", (("key id", LONG_ID), ("digest", DIGEST)))
+    ) + party_card(Party("counterparty", "EXAMPLE-ORG audit"))
     events = timeline(
         [
             TimelineEvent("2026-09-01T09:00:00Z", "Release requested"),

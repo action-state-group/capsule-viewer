@@ -8,7 +8,8 @@ is tested against, written so re-pointing it is mechanical:
 * member names are the contract's own spelling (``manifest``, ``canRender``,
   ``buildModel``, ``render``), not Python-cased, so nothing is renamed later;
 * ``Context`` stands in for the verified-bundle context type and becomes an
-  import of it; the kit and every module only ever READ a context;
+  import of it. A module is meant only to read a context; this draft does
+  not enforce that (the contract's context type is expected to be immutable);
 * ``ModuleManifest`` carries the manifest fields the plan names and is replaced
   by (or validated against) the contract's manifest schema.
 
@@ -19,13 +20,15 @@ page, permalink and embedded are the shell's packaging of that fragment, not
 module outputs. ``KitServices`` is the Protocol the kit itself satisfies, so a
 module is written against the Protocol, never the concrete functions.
 
-A module never verifies. ``render`` receives a model built from an
-already-verified context and the kit; it has no verifier to call.
+A module never verifies: nothing in this contract hands it a verifier, and
+``render`` receives only its model and the kit. The draft cannot stop a module
+importing one; that is a review rule, not a check here.
 """
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from typing import Protocol, TypeVar, runtime_checkable
 
 from . import components as _c
@@ -58,18 +61,18 @@ class ModuleManifest:
 class KitServices(Protocol):
     """The kit primitives a module renders with."""
 
-    def section(self, title: str, *children: str, level: int = 2) -> str: ...
-    def metric_grid(self, metrics: Sequence[_c.Metric]) -> str: ...
-    def data_table(self, columns: Sequence[str], rows: Sequence[Sequence[str]], caption: str = "") -> str: ...
-    def calendar_grid(self, year: int, month: int, marks: Mapping[int, Sequence[_c.CalendarMark]]) -> str: ...
-    def disclosure_badge(self, state: str) -> str: ...
-    def verdict_pill(self, verdict: str) -> str: ...
-    def citation_list(self, citations: Sequence[_c.Citation]) -> str: ...
-    def drilldown(self, summary: str, *children: str, expanded: bool = False) -> str: ...
-    def evidence_details(self, items: Sequence[_c.EvidenceItem]) -> str: ...
-    def verification_details(self, result: _c.VerificationResult) -> str: ...
-    def party_card(self, party: _c.Party) -> str: ...
-    def timeline(self, events: Sequence[_c.TimelineEvent]) -> str: ...
+    def section(self, title: str, *children: str, level: int = 2) -> _c.Markup: ...
+    def metric_grid(self, metrics: Sequence[_c.Metric]) -> _c.Markup: ...
+    def data_table(self, columns: Sequence[str], rows: Sequence[Sequence[str]], caption: str = "") -> _c.Markup: ...
+    def calendar_grid(self, year: int, month: int, marks: Mapping[int, Sequence[_c.CalendarMark]]) -> _c.Markup: ...
+    def disclosure_badge(self, state: str) -> _c.Markup: ...
+    def verdict_pill(self, verdict: str) -> _c.Markup: ...
+    def citation_list(self, citations: Sequence[_c.Citation]) -> _c.Markup: ...
+    def drilldown(self, summary: str, *children: str, expanded: bool = False) -> _c.Markup: ...
+    def evidence_details(self, items: Sequence[_c.EvidenceItem]) -> _c.Markup: ...
+    def verification_details(self, result: _c.VerificationResult) -> _c.Markup: ...
+    def party_card(self, party: _c.Party) -> _c.Markup: ...
+    def timeline(self, events: Sequence[_c.TimelineEvent]) -> _c.Markup: ...
 
 
 @runtime_checkable
@@ -134,18 +137,65 @@ def check_module(module: object) -> None:
         raise ModuleContractError(f"{type(module).__name__}: " + "; ".join(problems))
 
 
+# What a module's HTML fragment may contain: the elements and attributes the
+# kit itself emits, plus a little inline text markup. Anything else -- script,
+# svg, iframe, object, form, a, img, link, style, any on* handler, href, src,
+# srcdoc, action, style= -- is outside the list and rejected by name.
+ALLOWED_ELEMENTS = frozenset(
+    "section h2 h3 h4 div p span strong em code br ul ol li dl dt dd "
+    "table caption thead tbody tr th td details summary".split()
+)
+ALLOWED_ATTRIBUTES = frozenset({"class", "title", "scope", "open", "aria-hidden", "aria-label"})
+
+
+class _FragmentAudit(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.problems: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in ALLOWED_ELEMENTS:
+            self.problems.append(f"element <{tag}>")
+        for name, _value in attrs:
+            if name not in ALLOWED_ATTRIBUTES and not name.startswith("data-"):
+                self.problems.append(f"attribute {name}= on <{tag}>")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+
+    def handle_comment(self, data: str) -> None:
+        self.problems.append("comment")
+
+    def handle_decl(self, decl: str) -> None:
+        self.problems.append(f"declaration <!{decl}>")
+
+    def handle_pi(self, data: str) -> None:
+        self.problems.append("processing instruction")
+
+    def unknown_decl(self, data: str) -> None:
+        self.problems.append("marked section")
+
+
+def check_fragment(html: str) -> list[str]:
+    """Every element and attribute in *html* outside the allowlist, by name."""
+    audit = _FragmentAudit()
+    audit.feed(html)
+    audit.close()
+    return audit.problems
+
+
 def check_module_renders(module: HtmlPresentationModule[ModelT], context: Context) -> str:
     """Behavioural conformance over one context the module claims it can render:
-    ``canRender`` says yes, ``buildModel`` then ``render`` with the kit yields an
-    HTML fragment with no script and no link. Returns the fragment."""
+    ``canRender`` says yes, and ``buildModel`` then ``render`` with the kit
+    yields a string whose every element and attribute is on the allowlist above
+    (so no script, handler, link, embed or inline style). Returns the fragment."""
     check_module(module)
     if module.canRender(context) is not True:
         raise ModuleContractError(f"{module.manifest.id}: canRender returned non-True for its own fixture")
     html = module.render(module.buildModel(context), KIT)
     if not isinstance(html, str):
         raise ModuleContractError(f"{module.manifest.id}: render returned {type(html).__name__}, not str")
-    lowered = html.lower()
-    for forbidden in ("<script", "href=", "src=", "<style", "style="):
-        if forbidden in lowered:
-            raise ModuleContractError(f"{module.manifest.id}: render output contains {forbidden!r}")
+    problems = check_fragment(html)
+    if problems:
+        raise ModuleContractError(f"{module.manifest.id}: render output contains " + ", ".join(problems))
     return html
