@@ -105,8 +105,10 @@ describe.skipIf(!chromePath)("component kit layout (headless Chromium)", () => {
     dir = mkdtempSync(join(tmpdir(), "cv-kit-fixture-"));
     fixture = buildFixture(dir);
     browser = await launch(chromePath);
+    if (browser.relaunchedAfter) console.warn("kit layout suite: Chromium needed a relaunch: " + browser.relaunchedAfter);
     tab = await browser.newPage();
-  }, 60000);
+    // Two startup attempts (60s each under CI) plus building the fixture.
+  }, 150000);
 
   afterAll(async () => {
     if (browser) await browser.close();

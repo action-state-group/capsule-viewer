@@ -11,12 +11,20 @@
 // rejects after REQUEST_TIMEOUT_MS, and every pending call rejects at once if
 // the browser exits or the socket closes, so a dead browser fails a test fast
 // instead of hanging it.
+//
+// Startup: Chromium's stderr is kept (the last STDERR_TAIL_BYTES) and quoted
+// in any startup error, so a CI failure says why the browser did not come up.
+// A failed start is retried ONCE with a fresh profile; the first failure is
+// printed (console.warn) and returned on the browser as `relaunchedAfter`, so
+// a pass that needed the retry is visible, never silent.
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const STARTUP_TIMEOUT_MS = 20000;
+// CI runners can be slow to bring Chromium up on a cold image.
+const STARTUP_TIMEOUT_MS = process.env.CI ? 60000 : 20000;
+const STDERR_TAIL_BYTES = 4000;
 const REQUEST_TIMEOUT_MS = 15000;
 const EXIT_GRACE_MS = 5000;
 
@@ -43,6 +51,23 @@ function readPortFile(portFile) {
 }
 
 export async function launch(chromePath) {
+  let first;
+  try {
+    return await launchOnce(chromePath);
+  } catch (err) {
+    first = err;
+  }
+  console.warn("headless Chromium failed to start; relaunching once with a fresh profile.\nFirst attempt: " + first.message);
+  try {
+    const browser = await launchOnce(chromePath);
+    browser.relaunchedAfter = first.message;
+    return browser;
+  } catch (second) {
+    throw new Error("headless Chromium failed to start twice.\nFirst attempt: " + first.message + "\nSecond attempt: " + second.message);
+  }
+}
+
+async function launchOnce(chromePath) {
   const profile = mkdtempSync(join(tmpdir(), "cv-kit-chrome-"));
   const args = [
     "--headless=new",
@@ -51,13 +76,23 @@ export async function launch(chromePath) {
     "--no-first-run",
     "--no-default-browser-check",
     "--disable-gpu",
+    // /dev/shm is small in containers and on some runners; use /tmp instead.
+    "--disable-dev-shm-usage",
     "--hide-scrollbars",
     "about:blank",
   ];
   // GitHub's Ubuntu runners refuse Chromium's user-namespace sandbox.
   if (process.env.CI) args.unshift("--no-sandbox");
 
-  const proc = spawn(chromePath, args, { stdio: "ignore" });
+  const proc = spawn(chromePath, args, { stdio: ["ignore", "ignore", "pipe"] });
+  // Read continuously (an unread pipe would block Chromium), keep only the tail.
+  let stderrTail = "";
+  proc.stderr.setEncoding("utf8");
+  proc.stderr.on("data", (chunk) => {
+    stderrTail = (stderrTail + chunk).slice(-STDERR_TAIL_BYTES);
+  });
+  const withStderr = (message) =>
+    message + (stderrTail.trim() ? "\n--- Chromium stderr (tail) ---\n" + stderrTail.trimEnd() : "\n(Chromium wrote nothing to stderr)");
   let gone = null; // why the browser is no longer usable, once it is not
   const exited = new Promise((resolve) => proc.once("exit", resolve));
   proc.once("error", (err) => (gone = gone || "could not start " + chromePath + ": " + err.message));
@@ -130,7 +165,7 @@ export async function launch(chromePath) {
     });
   } catch (err) {
     await shutdown();
-    throw err;
+    throw new Error(withStderr(err.message));
   }
 
   ws.addEventListener("close", () => {
