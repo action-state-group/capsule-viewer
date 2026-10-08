@@ -31,11 +31,14 @@ const COMPONENTS = [
 ];
 // 360 and 390: small and common phones. 680: the printable width of an A4 or
 // Letter page at default margins, laid out under print media.
+// `phone`: whether the primitives must be in their phone layout (stacked
+// table rows, one metric column). Print sits near the table's threshold, so
+// only its overflow is asserted.
 const VIEWPORTS = [
-  { name: "phone-360", width: 360, media: "screen" },
-  { name: "phone-390", width: 390, media: "screen" },
-  { name: "desktop-1280", width: 1280, media: "screen" },
-  { name: "print", width: 680, media: "print" },
+  { name: "phone-360", width: 360, media: "screen", phone: true },
+  { name: "phone-390", width: 390, media: "screen", phone: true },
+  { name: "desktop-1280", width: 1280, media: "screen", phone: false },
+  { name: "print", width: 680, media: "print", phone: null },
 ];
 
 const chromePath = findChrome();
@@ -77,7 +80,13 @@ const MEASURE = `(() => {
       }
     }
   }
-  return { vw, pageScrollWidth: document.documentElement.scrollWidth, fixtures, overflow };
+  const thead = document.querySelector('[data-fixture="data-table"] thead');
+  const grid = document.querySelector('[data-fixture="metric-grid"] .cv-metrics');
+  const layout = {
+    tableStacked: getComputedStyle(thead).display === "none",
+    metricColumns: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+  };
+  return { vw, pageScrollWidth: document.documentElement.scrollWidth, fixtures, overflow, layout };
 })()`;
 
 describe.skipIf(!chromePath)("component kit layout (headless Chromium)", () => {
@@ -112,6 +121,11 @@ describe.skipIf(!chromePath)("component kit layout (headless Chromium)", () => {
       for (const name of COMPONENTS) expect(m.fixtures[name], name).toBeGreaterThan(0);
       expect(m.overflow).toEqual([]);
       expect(m.pageScrollWidth).toBeLessThanOrEqual(m.vw);
+      if (vp.phone === true) expect(m.layout).toEqual({ tableStacked: true, metricColumns: 1 });
+      if (vp.phone === false) {
+        expect(m.layout.tableStacked).toBe(false);
+        expect(m.layout.metricColumns).toBeGreaterThan(1);
+      }
     }, 30000);
   }
 
