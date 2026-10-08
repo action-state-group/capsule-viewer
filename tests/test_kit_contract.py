@@ -38,8 +38,16 @@ class CountsModule:
         return services.section("Counts", services.metric_grid(model))
 
 
+CONTRACT_MEMBERS = {
+    "manifest": CountsModule.manifest,
+    "canRender": CountsModule.canRender,
+    "buildModel": CountsModule.buildModel,
+    "render": CountsModule.render,
+}
+
+
 def _without(member):
-    attrs = {name: getattr(CountsModule, name) for name in REQUIRED_MODULE_MEMBERS if name != member}
+    attrs = {name: value for name, value in CONTRACT_MEMBERS.items() if name != member}
     return type(f"No_{member}", (), attrs)()
 
 
@@ -63,7 +71,7 @@ def test_a_module_missing_a_required_member_is_rejected(member):
 
 
 def test_the_required_members_are_exactly_the_contracts_four():
-    assert REQUIRED_MODULE_MEMBERS == ("manifest", "canRender", "buildModel", "render")
+    assert REQUIRED_MODULE_MEMBERS == ("manifest", "canRender", "buildModel", "render") == tuple(CONTRACT_MEMBERS)
 
 
 def test_a_non_callable_method_is_rejected():

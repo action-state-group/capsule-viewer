@@ -26,16 +26,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Protocol, TypeVar, runtime_checkable
 
 from . import components as _c
 
 # Draft stand-in for the verified-bundle context type (see module docstring).
 Context = object
+ModelT = TypeVar("ModelT")
 
 DRAFT_MANIFEST_NAMESPACE = "aac.presentation-manifest/v0"
 REQUIRED_MODULE_MEMBERS: tuple[str, ...] = ("manifest", "canRender", "buildModel", "render")
-_METHODS: tuple[str, ...] = ("canRender", "buildModel", "render")
 
 
 @dataclass(frozen=True)
@@ -73,14 +73,15 @@ class KitServices(Protocol):
 
 
 @runtime_checkable
-class HtmlPresentationModule(Protocol):
-    """A module whose output kind is an HTML fragment."""
+class HtmlPresentationModule(Protocol[ModelT]):
+    """A module whose output kind is an HTML fragment. ``ModelT`` is the
+    module's own model type: what ``buildModel`` returns, ``render`` takes."""
 
     manifest: ModuleManifest
 
     def canRender(self, context: Context) -> bool: ...
-    def buildModel(self, context: Context) -> object: ...
-    def render(self, model: object, services: KitServices) -> str: ...
+    def buildModel(self, context: Context) -> ModelT: ...
+    def render(self, model: ModelT, services: KitServices) -> str: ...
 
 
 class Kit:
@@ -114,11 +115,14 @@ def check_module(module: object) -> None:
     Raises ``ModuleContractError`` naming every problem at once.
     """
     problems = [f"missing {name}" for name in REQUIRED_MODULE_MEMBERS if not hasattr(module, name)]
-    problems += [
-        f"{name} is not callable" for name in _METHODS if hasattr(module, name) and not callable(getattr(module, name))
-    ]
-    manifest = getattr(module, "manifest", None)
-    if manifest is not None:
+    if hasattr(module, "canRender") and not callable(module.canRender):
+        problems.append("canRender is not callable")
+    if hasattr(module, "buildModel") and not callable(module.buildModel):
+        problems.append("buildModel is not callable")
+    if hasattr(module, "render") and not callable(module.render):
+        problems.append("render is not callable")
+    if hasattr(module, "manifest"):
+        manifest = module.manifest
         if not isinstance(manifest, ModuleManifest):
             problems.append(f"manifest is {type(manifest).__name__}, not ModuleManifest")
         else:
@@ -130,7 +134,7 @@ def check_module(module: object) -> None:
         raise ModuleContractError(f"{type(module).__name__}: " + "; ".join(problems))
 
 
-def check_module_renders(module: HtmlPresentationModule, context: Context) -> str:
+def check_module_renders(module: HtmlPresentationModule[ModelT], context: Context) -> str:
     """Behavioural conformance over one context the module claims it can render:
     ``canRender`` says yes, ``buildModel`` then ``render`` with the kit yields an
     HTML fragment with no script and no link. Returns the fragment."""
