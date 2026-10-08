@@ -17,7 +17,9 @@ const CANDIDATES = [
 ];
 
 export function findChrome() {
-  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  // An explicit CHROME_PATH is the only candidate when set: a wrong one means
+  // "no Chromium", never a silent fallback to another browser.
+  if (process.env.CHROME_PATH) return existsSync(process.env.CHROME_PATH) ? process.env.CHROME_PATH : null;
   return CANDIDATES.find((p) => existsSync(p)) || null;
 }
 
