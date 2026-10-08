@@ -41,3 +41,19 @@ def test_no_network_primitive_in_assembled_html_for_capsule_and_result_entries()
     html = render_base_viewer_html(encode_fragment(build_payload(entries)))
     for token in FORBIDDEN:
         assert token not in html, f"assembled HTML contains forbidden network primitive: {token}"
+
+
+# The presentation kit: its stylesheet and the page it assembles carry no
+# network reference of any kind -- no link, no remote url(), no @import, no
+# external font -- so a kit page opens offline exactly like the base viewer.
+KIT_FORBIDDEN = [*FORBIDDEN, "http://", "https://", "url(", "@import", "@font-face", "href=", "src="]
+
+
+def test_no_network_reference_or_external_href_in_the_kit():
+    from capsule_viewer.kit import kit_css, page
+    from capsule_viewer.kit.fixture import fixture_page
+
+    for name, source in [("kit.css", kit_css()), ("kit page", page("t", "x")), ("kit fixture page", fixture_page())]:
+        lowered = source.lower()
+        for token in KIT_FORBIDDEN:
+            assert token not in lowered, f"{name} contains forbidden network reference: {token}"

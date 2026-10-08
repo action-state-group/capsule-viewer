@@ -83,6 +83,42 @@ rules that are pinned by negative fixtures and tests, never by styling:
   the raw type and the claim's `contract_ref`. The rendered row count
   always equals the input claim count.
 
+## Presentation component kit
+
+`capsule_viewer.kit` is a small set of server-rendered, script-free building
+blocks for presentation modules: `section`, `metric_grid`, `data_table`,
+`calendar_grid`, `disclosure_badge` (DISCLOSED / COMMITTED (opening not
+supplied) / WITHHELD / NOT PRESENT), `verdict_pill` (`met` / `not_met` /
+`not_evaluable`; reads the retired `insufficient_evidence` as `not_evaluable`
+and refuses `not_applicable`), `citation_list`, `drilldown` (native
+`<details>`), `evidence_details`, `verification_details`, `party_card` and
+`timeline`. `page()` wraps them in a self-contained document with the kit
+stylesheet inlined under a hash-pinned Content-Security-Policy.
+
+- **Components show what they are given.** None computes a verdict, a count,
+  a disclosure state or a verification outcome; a value outside a component's
+  closed vocabulary is rendered as a visible refusal, never dropped or
+  defaulted (`tests/test_kit_components.py`).
+- **Phone behaviour lives in the primitives.** Each responsive component
+  reflows on its own width (`@container`), so a module never writes a media
+  query. `js-tests/kit_layout.test.js` opens the every-component fixture page
+  (`python -m capsule_viewer.kit fixture`) in headless Chromium at 360, 390
+  and 1280 px and under print media, and fails on any horizontal overflow; it
+  also opens a Drilldown with the page's scripting disabled. Set
+  `CHROME_PATH` if Chromium is not in a standard location; without one the
+  suite is skipped locally with a warning and fails under CI.
+- **Tokens.** `kit/tokens.py` is the one source of the `--cv-*` design tokens.
+  The block at the top of `static/kit.css` is generated from it
+  (`python -m capsule_viewer.kit tokens --write`) and `tests/test_kit_tokens.py`
+  fails if the two disagree, if a component rule hard-codes a colour, or if a
+  text/background pair falls below WCAG AA (4.5:1).
+- **Module contract (draft).** `kit/contract.py` declares the presentation
+  module interface -- `manifest`, `canRender`, `buildModel`, `render` -- as
+  `typing.Protocol`s, with `check_module` / `check_module_renders` as the
+  conformance check every module must pass (`tests/test_kit_contract.py`). It
+  is a local draft of the presentation contract being written in
+  agent-action-capsule and is re-pointed at that contract when it lands.
+
 ## Fixtures
 
 `tests/testdata/` vendors the synthetic `EXAMPLE-ORG` fixtures from
@@ -109,7 +145,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/ruff check src tests
 
 npm install
-npm test
+npm test   # the kit layout suite also needs Chromium (CHROME_PATH)
 ```
 
 ## Boundary

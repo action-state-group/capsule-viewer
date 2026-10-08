@@ -29,7 +29,7 @@ where = ["src"]
 include = ["capsule_viewer*"]
 
 [tool.setuptools.package-data]
-capsule_viewer = ["static/*.js"]
+capsule_viewer = ["static/*.js", "static/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
