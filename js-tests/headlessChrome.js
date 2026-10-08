@@ -5,8 +5,9 @@
 //
 // Lifecycle: launch() owns the Chromium process and its temporary profile.
 // If launch fails part-way it kills the process and removes the profile before
-// rethrowing; close() always ends the process (SIGKILL if Browser.close does
-// not finish it) and removes the profile. A protocol call that gets no answer
+// rethrowing; close() waits for the process to exit (SIGTERM, then SIGKILL,
+// only if Browser.close has not ended it within the grace period) and only
+// then removes the profile. A protocol call that gets no answer
 // rejects after REQUEST_TIMEOUT_MS, and every pending call rejects at once if
 // the browser exits or the socket closes, so a dead browser fails a test fast
 // instead of hanging it.
@@ -83,13 +84,18 @@ export async function launch(chromePath) {
       }
     }
     if (ws) ws.close();
-    if (proc.exitCode === null && proc.signalCode === null) {
-      const timer = setTimeout(() => proc.kill("SIGKILL"), EXIT_GRACE_MS);
-      proc.kill();
-      await exited;
-      clearTimeout(timer);
-    }
-    rmSync(profile, { recursive: true, force: true });
+    // Let Browser.close finish the shutdown it started; escalate only if the
+    // process is still alive after the grace period. Always wait for the exit:
+    // Chromium writes into its profile until it is gone, and removing the
+    // directory under it fails with ENOTEMPTY.
+    const term = setTimeout(() => proc.kill(), EXIT_GRACE_MS);
+    const kill = setTimeout(() => proc.kill("SIGKILL"), 2 * EXIT_GRACE_MS);
+    if (proc.exitCode === null && proc.signalCode === null) await exited;
+    clearTimeout(term);
+    clearTimeout(kill);
+    // A helper process can still be flushing a file for a moment after the
+    // main process exits; retry rather than fail the suite on teardown.
+    rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 
   let nextId = 1;
