@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from html import escape
 from importlib import resources
 
@@ -62,6 +63,12 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "step.log": frozenset({"seq", "leaf", "log"}),
     "provenance.by": frozenset({"producers"}),
     "wording.provenance": frozenset({"id", "sha"}),
+    # The bilateral module's (``bilateral.py``); one pack words both.
+    "deal.agree": frozenset({"deal"}),
+    "deal.mismatch": frozenset({"deals"}),
+    "party.heading": frozenset({"role", "member"}),
+    "join.line": frozenset({"basis", "declared", "derived"}),
+    "corroboration.redundant": frozenset({"reasons"}),
 }
 SHARED_AUDIENCES = ("counterparty", "adjudicator")
 
@@ -101,6 +108,19 @@ def unilateral_manifest(forbid_profiles: Sequence[str] = ()) -> Manifest:
     forbids = UNILATERAL_MANIFEST["forbids"]
     extra = [p for p in forbid_profiles if p not in forbids["profiles"]]
     return {**UNILATERAL_MANIFEST, "forbids": {**forbids, "profiles": [*forbids["profiles"], *extra]}}
+
+
+@dataclass(frozen=True)
+class Levels:
+    """One copy, drawn: L0's headline and notes, L1's and L2's sections, and
+    whether each opens at the page's depth."""
+
+    headline: Markup
+    notes: tuple[Markup, ...]
+    l1: tuple[str, ...]
+    l2: tuple[str, ...]
+    l1_open: bool
+    l2_open: bool
 
 
 def _m(text: str) -> Markup:
@@ -166,18 +186,34 @@ class UnilateralReceiptModule:
         return build_receipt(context, self.bind, self.assurance, self.audience)
 
     def render(self, model: ReceiptModel, services: KitServices) -> str:
-        # The kit for this render; the helpers below draw with it.
-        self.kit = services
-        l1_open = self.depth in ("L1", "L2")
-        l2_open = self.depth == "L2"
+        levels = self.levels(model, services)
+        l0: list[str] = []
+        if model.demo:
+            l0.append(_el("p", self.w("badge.demo"), data_demo="true"))
+        l0 += [_el("h2", self.w("page.title")), levels.headline, *levels.notes]
         return str(
             _join(
                 [
-                    _el("div", self._l0(model), data_level="L0"),
-                    _el("div", services.drilldown(self.w("depth.l1"), *self._l1(model, l1_open), expanded=l1_open), data_level="L1"),
-                    _el("div", services.drilldown(self.w("depth.l2"), *self._l2(model), expanded=l2_open), data_level="L2"),
+                    _el("div", _join(l0), data_level="L0"),
+                    _el("div", services.drilldown(self.w("depth.l1"), *levels.l1, expanded=levels.l1_open), data_level="L1"),
+                    _el("div", services.drilldown(self.w("depth.l2"), *levels.l2, expanded=levels.l2_open), data_level="L2"),
                 ]
             )
+        )
+
+    def levels(self, model: ReceiptModel, services: KitServices) -> Levels:
+        """One copy's content at each depth, drawn with *services*: the pieces
+        ``render`` lays out, and a composition lays out once per copy."""
+        # The kit for this render; the helpers below draw with it.
+        self.kit = services
+        l1_open = self.depth in ("L1", "L2")
+        return Levels(
+            headline=_el("div", self._headline(model), data_headline="true"),
+            notes=tuple(self._copy_notes(model)),
+            l1=tuple(self._l1(model, l1_open)),
+            l2=tuple(self._l2(model)),
+            l1_open=l1_open,
+            l2_open=self.depth == "L2",
         )
 
     # ---- words --------------------------------------------------------------
@@ -209,10 +245,10 @@ class UnilateralReceiptModule:
             return str(self._enum(prefix, part.value)) if prefix else part.value
         return self.kit.disclosure_badge(part)
 
-    def _l0(self, model: ReceiptModel) -> Markup:
+    def _headline(self, model: ReceiptModel) -> Markup:
         h = model.headline
         state = self._enum("state", h.state) if h.state else Markup(escape(self.w("l0.state.missing")))
-        metrics = self.kit.metric_grid(
+        return self.kit.metric_grid(
             [
                 Metric(self.w("l0.deal_type"), Markup(self._part(h.deal_type, "deal_type"))),
                 Metric(self.w("l0.item"), Markup(self._part(h.item))),
@@ -220,10 +256,11 @@ class UnilateralReceiptModule:
                 Metric(self.w("l0.state"), state),
             ]
         )
-        parts: list[str] = []
-        if model.demo:
-            parts.append(_el("p", self.w("badge.demo"), data_demo="true"))
-        parts += [_el("h2", self.w("page.title")), _el("div", metrics, data_headline="true")]
+
+    def _copy_notes(self, model: ReceiptModel) -> list[Markup]:
+        """For a shared copy, whom it was cut for and what it leaves out; the
+        producer's scope line; the witness and countersign rungs."""
+        parts: list[Markup] = []
         if model.report.audience in SHARED_AUDIENCES:
             kinds = ", ".join(model.report.withheld)
             parts.append(self._p(self.w(f"shared.{model.report.audience}", kinds=kinds), data_shared=model.report.audience))
@@ -231,7 +268,7 @@ class UnilateralReceiptModule:
             parts.append(self._p(model.report.scope, data_sealed_text="scope"))
         parts.append(self._p(self._witness(model), data_rung="witness"))
         parts.append(self._p(self._countersign(model), data_rung="countersign"))
-        return _join(parts)
+        return parts
 
     def _witness(self, model: ReceiptModel) -> str:
         if model.witnessed == "pass":

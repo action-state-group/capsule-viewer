@@ -1,7 +1,8 @@
-// The receipt module's pages in a real browser: every receipt fixture, for its
-// own audience, fully open (depth L2) and as it first opens (depth L0), must fit
-// a phone, a desktop and a printed page with no horizontal overflow. The pages
-// are the module's real output (python -m capsule_viewer.receipt ...).
+// The receipt modules' pages in a real browser: every receipt fixture (one copy,
+// or a composed/v1 bundle of both parties' copies), for its own audience, fully
+// open (depth L2) and as it first opens (depth L0), must fit a phone, a desktop
+// and a printed page with no horizontal overflow. The pages are the modules'
+// real output (python -m capsule_viewer.receipt ...).
 //
 // Without a Chromium the suite is SKIPPED locally with a warning, and FAILS
 // under CI (process.env.CI) -- a missing browser must never read as a pass.
@@ -20,6 +21,12 @@ const FIXTURES = [
   { name: "counterparty", audience: "counterparty" },
   { name: "adjudicator", audience: "adjudicator" },
   { name: "golden-2", audience: "keep" },
+  // Two copies: L0 holds both parties' headlines, so it is not held to one
+  // phone screen (oneScreen false); every other check applies.
+  { name: "bilateral-keep", audience: "keep", oneScreen: false },
+  { name: "bilateral-counterparty", audience: "counterparty", oneScreen: false },
+  { name: "bilateral-adjudicator", audience: "adjudicator", oneScreen: false },
+  { name: "bilateral-two-deals", audience: "counterparty", oneScreen: false },
 ];
 const DEPTHS = ["L0", "L2"];
 // The viewport height headlessChrome.js opens every page at.
@@ -115,7 +122,7 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
           expect(m.overflow).toEqual([]);
           expect(m.pageScrollWidth).toBeLessThanOrEqual(m.vw);
           // L0 is one screen at a phone's width: it ends inside the 900px-tall viewport.
-          if (vp.media === "screen" && vp.width <= 390) expect(m.l0Bottom).toBeLessThanOrEqual(PHONE_HEIGHT);
+          if (fx.oneScreen !== false && vp.media === "screen" && vp.width <= 390) expect(m.l0Bottom).toBeLessThanOrEqual(PHONE_HEIGHT);
         }, 30000);
       }
     }
@@ -123,12 +130,14 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
 
   // Both halves of "prints": a page opened at L0 has its steps closed on screen
   // and printed in full.
-  it("an L0 page hides its steps on screen and prints them", async () => {
-    await tab.open(pages["keep-L0"].url, { width: 390, media: "screen" });
-    const screen = await tab.evaluate(MEASURE);
-    expect(screen.visibleRecords).toBe(0);
-    await tab.open(pages["keep-L0"].url, { width: 680, media: "print" });
-    const printed = await tab.evaluate(MEASURE);
-    expect(printed.visibleRecords).toBe(printed.records);
-  }, 30000);
+  for (const name of ["keep", "bilateral-counterparty"]) {
+    it(`${name}: an L0 page hides its steps on screen and prints them`, async () => {
+      await tab.open(pages[`${name}-L0`].url, { width: 390, media: "screen" });
+      const screen = await tab.evaluate(MEASURE);
+      expect(screen.visibleRecords).toBe(0);
+      await tab.open(pages[`${name}-L0`].url, { width: 680, media: "print" });
+      const printed = await tab.evaluate(MEASURE);
+      expect(printed.visibleRecords).toBe(printed.records);
+    }, 30000);
+  }
 });
