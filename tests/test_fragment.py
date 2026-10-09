@@ -4,7 +4,7 @@ Fragment Codec (base64url, no padding, over UTF-8 JCS bytes), and still reads
 tokens from this package's earlier encoder, which escaped non-ASCII and DEL.
 
 ``aac-presentation-fragment-vectors.json`` is copied byte-for-byte from
-agent-action-capsule PR #209; ``fragment-codec-utf8-vectors.json`` carries
+agent-action-capsule ``main`` (PR #209, merged at 4d26845); ``fragment-codec-utf8-vectors.json`` carries
 that repo's encoder output for the non-ASCII cases (see testdata/README.md).
 The vectors are the arbiter, and they hold only strings, integers, booleans
 and null: numbers keep ``json.dumps`` formatting, which is JCS for integers
