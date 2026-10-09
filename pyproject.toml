@@ -22,14 +22,14 @@ Homepage = "https://github.com/action-state-group/capsule-viewer"
 Source = "https://github.com/action-state-group/capsule-viewer"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.4"]
+dev = ["pytest>=7.0", "ruff>=0.4", "jsonschema>=4.18"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["capsule_viewer*"]
 
 [tool.setuptools.package-data]
-capsule_viewer = ["static/*.js", "static/*.css"]
+capsule_viewer = ["static/*.js", "static/*.css", "rules/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
