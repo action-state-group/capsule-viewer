@@ -208,10 +208,11 @@ tokens.
 - `aac-presentation-fragment-vectors.json` -- copied byte-for-byte
   (`cmp`-verified) from `agent-action-capsule`'s
   `ts/test/testdata/presentation-fragment-vectors.json` at
-  `cf08c3e9fd98b57396fae2d26401c163c3726f77`, the head of PR #209 (branch
-  `one-builder`), which is not yet merged. Re-point to that repo's `main`
-  when #209 merges. Its `fragment_py` tokens were written by this repo's
-  earlier encoder at `7592055`: for the five `ascii_json: true` cases they
+  `main` after PR #209 merged (`4d26845`); it was first copied from that PR's
+  head `cf08c3e9fd98b57396fae2d26401c163c3726f77`, and the file, `encodeFragment`,
+  `decodeFragment` and the `jcs` they call are unchanged between the two.
+  Its `fragment_py` tokens were written by this repo's earlier encoder at
+  `7592055`: for the five `ascii_json: true` cases they
   are also AAC's token; for `delete-character` and `non-ascii` they are the
   escaped tokens the decoder must keep reading.
 - `fragment-codec-utf8-vectors.json` -- viewer-owned. `aac_tokens` holds
