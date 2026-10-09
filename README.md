@@ -120,6 +120,40 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
   is a local draft of the presentation contract being written in
   agent-action-capsule and is re-pointed at that contract when it lands.
 
+## Receipt module
+
+`capsule_viewer.receipt` is the unilateral deal receipt,
+`capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
+`x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the
+`x-deal-v0` extension and forbids `composed/v1`, so a composition never resolves to it.
+It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`,
+`adjudicator`) in `html`.
+
+- **Selection** goes through `registry.py`: agent-action-capsule's presentation contract
+  (sections 3.2 and 4), with the static ambiguity test at registration and a hard error,
+  never first-wins, at resolution (`tests/test_receipt_registry.py`).
+- **The module never verifies.** Its context is built from what `capsulectl verify
+  --bundle` reported (`verifier_report.py`), and that report is refused unless its
+  `bundle_digest` is the digest of the exact bundle supplied (`digest.py`), so an
+  edited copy never renders under the original's verdict. Committed words are shown
+  only when the core's `sha256-jcs-nonce256` service (`binding.py`) opens them.
+- **No producer is named in the manifest.** A deployment that also registers a module
+  selected by a producer-named profile passes that profile at render time
+  (`unilateral_manifest(forbid_profiles=...)`), like the wording pack.
+- **A copy is shown only as its own audience's.** The copy's sealed report names the
+  audience it was cut for; asked for as any other audience's page, the module declines.
+- **Per record**, it shows DISCLOSED / COMMITTED / WITHHELD / NOT PRESENT and the
+  record's place in the log. What a relying party gets is the share builder's decision,
+  made when the copy was cut; the module shows it and never makes it
+  (`tests/test_receipt_module.py`).
+- **Depth:** L0 the deal, item, amount and state; L1 what was asked, proposed, approved
+  and done, with the merchant's evidence; L2 the verifier's checks and every record.
+- **Words** come from a wording pack (`receipt/wording-en.json` is a neutral English
+  example) or are capsulectl's own sealed report lines, shown as such.
+- `tests/test_receipt_golden.py` accounts for every line deal-view.js showed for
+  capsule-cli's receipt golden; `js-tests/receipt_layout.test.js` holds every fixture
+  to no horizontal overflow at 360, 390 and 1280 px and in print.
+
 ## Fixtures
 
 `tests/testdata/` vendors the synthetic `EXAMPLE-ORG` fixtures from
