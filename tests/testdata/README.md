@@ -196,3 +196,25 @@ emitter. Both repos pin the same sha256.
 `tests/test_result_v0_unknown.py` fails if the positive files (`neg-*`
 excluded) ever again hold no UNKNOWN claim. `js-tests/result_v0_unknown.test.js`
 pins the rendered sufficiency of every claim in order.
+
+## Fragment codec vectors (2026-10-08)
+
+The encoder now writes Agent Action Capsule's Fragment Codec: base64url, no
+padding, over UTF-8 JSON with members in RFC 8785 (JCS) order. Before, it
+wrote `\uXXXX` escapes for non-ASCII and DEL, so its token differed from
+AAC's for any such text. The decoder is unchanged and still reads those older
+tokens.
+
+- `aac-presentation-fragment-vectors.json` -- copied byte-for-byte
+  (`cmp`-verified) from `agent-action-capsule`'s
+  `ts/test/testdata/presentation-fragment-vectors.json` at
+  `cf08c3e9fd98b57396fae2d26401c163c3726f77`, the head of PR #209 (branch
+  `one-builder`), which is not yet merged. Re-point to that repo's `main`
+  when #209 merges. Its `fragment_py` tokens were written by this repo's
+  earlier encoder at `7592055`: for the five `ascii_json: true` cases they
+  are also AAC's token; for `delete-character` and `non-ascii` they are the
+  escaped tokens the decoder must keep reading.
+- `fragment-codec-utf8-vectors.json` -- viewer-owned. `aac_tokens` holds
+  AAC's token for those two non-ASCII cases, and `cases` adds two new
+  non-ASCII payloads (accented Latin, CJK). Every token in it was produced by
+  running `encodeFragment` from `ts/src/bundle.ts` at that same commit.

@@ -1,0 +1,25 @@
+{
+  "description": "Viewer-owned companion to aac-presentation-fragment-vectors.json. token is what agent-action-capsule's encodeFragment (ts/src/bundle.ts at cf08c3e9fd98b57396fae2d26401c163c3726f77) writes: base64url, no padding, over UTF-8 JCS bytes. aac_tokens gives that encoder's token for each copied case whose ascii_json is false; cases are two new non-ASCII payloads.",
+  "aac_tokens": {
+    "delete-character": "eyJzIjoiYX9iIn0",
+    "non-ascii": "eyJzZXAiOiLigKgiLCJ0aXRsZSI6IkNhZsOpIOKAlCDml6XmnKwg8J-YgCJ9"
+  },
+  "cases": [
+    {
+      "name": "accented-latin",
+      "token": "eyJub3RlIjoiQ3LDqG1lIGJyw7tsw6llIMOgIGxhIGZhw6dvbiBkZSBOb8OrbCIsIsOpdGF0IjoicsOpZ2zDqSJ9",
+      "payload": {
+        "note": "Crème brûlée à la façon de Noël",
+        "état": "réglé"
+      }
+    },
+    {
+      "name": "cjk",
+      "token": "eyJsYWJlbCI6IuaXpeacrOiqnuOBruODhuOCreOCueODiCIsInN1bW1hcnkiOiLmlbDmja7lt7LmoLjlr7kifQ",
+      "payload": {
+        "label": "日本語のテキスト",
+        "summary": "数据已核对"
+      }
+    }
+  ]
+}
