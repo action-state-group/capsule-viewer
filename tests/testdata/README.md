@@ -218,3 +218,16 @@ tokens.
   AAC's token for those two non-ASCII cases, and `cases` adds two new
   non-ASCII payloads (accented Latin, CJK). Every token in it was produced by
   running `encodeFragment` from `ts/src/bundle.ts` at that same commit.
+
+## Presentation manifests (2026-10-09)
+
+`aac-presentation/` holds copies, byte-for-byte, of `agent-action-capsule`'s
+`schemas/presentation-manifest-v0.json` and its six built-in manifests
+(`schemas/examples/presentation-manifest-v0/builtin-*.json`), plus its
+ambiguous pair (`neg-ambiguous-pair/a.json`, `b.json`), at
+`67b056caec94a8fe6659c4ccfc758521932951fb` (its `main`, with the presentation
+contract and the registry merged). `tests/test_rules_manifest.py` validates the
+Rules module's manifest and the example wording pack against the schema, and
+runs the contract's static ambiguity test (section 4.5) between the Rules
+manifest and every built-in; the same test must find the ambiguous pair. `spec/presentation-contract-v0.md` in that
+repository remains the normative source.

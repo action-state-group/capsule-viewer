@@ -120,6 +120,60 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
   is a local draft of the presentation contract being written in
   agent-action-capsule and is re-pointed at that contract when it lands.
 
+## Rules module (`capsuleviewer.rules/v0`)
+
+`capsule_viewer.rules` renders one page over a rules-comparison record: a
+rules comparison whose every value is an id or an enum
+(`RulesComparison/v0`: per rule, `rule_id`, `action_state.disposition` and
+`.assurance`, `platform_baseline.status` and `.assurance`, `capability_refs`).
+It reads the comparison from the root record's disclosed `agent_output`; the
+root's disclosed `agent_input` names the record kind as its `spec_version`.
+The record kind is the deployer's, supplied at render time like the wording
+pack (`rules_page(context, pack_bytes, wording_sha256, record_kind)`); the
+manifest requires the profile `spec_version:<record_kind>`, built by
+`rules_manifest(record_kind)`. The fixtures use
+`org.example.rules-comparison/v0`.
+
+- **Words come only from a wording pack** (`aac.wording-pack/v0`), passed with
+  its `wording_sha256`. The pack's exact bytes must hash to it, or the pack is
+  refused, the page says so, and every label falls back to its key. The page
+  carries the `wording_sha256` of the pack it used (`data-wording-sha256`, and
+  in L2). `rules/wording-en.json` is an example English pack with neutral
+  example wording; a product's own pack is supplied at render time and is not
+  part of this repository. Swapping packs changes words and never an
+  identifier (`tests/test_rules_module.py`).
+- **Depth** is the caller's (`depth="L0" | "L1" | "L2"`), never the bundle's.
+  L0 is one summary line with counts per disposition, recounted from the rows;
+  L1 is one row per rule (what it covers, what happens, what the platform does
+  today), each opening onto how it is decided, what it applies to and how the
+  platform's part is known; L2, collapsed at the bottom, is the proof: the
+  verifier's checks, the record's capsule id and every record's checkpoint position, pack id
+  and definition digest, baseline envelope digest, each rule's raw tokens,
+  every disclosure state, and any legacy `report/v1` rows the bundle also
+  carries, shown as the producer wrote them. Every level is in the document at
+  every depth, so it prints.
+- **A value no pack knows is shown raw**, marked unrecognized, never dropped;
+  so is an enum value spelled other than `RulesComparison/v0` spells it. A
+  bundle that did not verify, or any of whose disclosures mismatched, gets the
+  refusal and the verifier's checks and no level at all. The profile tokens
+  are derived as agent-action-capsule's `describeContext` derives them, so a
+  root that carries an Evidence Result is left to the Result presentations.
+- **Manifest** (`rules/manifest.json`, every member except the required
+  profile): `trusted-executable`, `html` only, requires
+  `spec_version:<record_kind>` and forbids the Evidence
+  Result profile, so it is never ambiguous with agent-action-capsule's built-in
+  manifests (`tests/test_rules_manifest.py` runs the contract's static
+  ambiguity test against them). Not `declarative`: a declarative module cannot
+  count rows per disposition, reads only the root's `agent_input`, and has no
+  module detail in L2.
+- `python -m capsule_viewer.rules fixture [--depth L0|L1|L2]` prints the
+  synthetic page `js-tests/rules_layout.test.js` holds to no horizontal
+  overflow at 360, 390 and 1280 px and in print, at every depth.
+
+The module never verifies: `capsule_viewer.context.build_context` takes a
+verifier's result and the per-member disclosure statuses it reported, and
+builds a read-only context from them.
+
 ## Fixtures
 
 `tests/testdata/` vendors the synthetic `EXAMPLE-ORG` fixtures from
@@ -151,9 +205,10 @@ npm test   # the kit layout suite also needs Chromium (CHROME_PATH)
 
 ## Boundary
 
-Zero pack code, zero company vocabulary. Renders any conforming record
-generically -- it has no concept of a specific pack, contract catalog, or
-customer. No network at render time (`tests/test_no_network.py` asserts no
+Zero pack code. The base and the kit render any conforming record
+generically -- they have no concept of a specific pack, contract catalog, or
+customer. The Rules module names no record kind and carries no pack either:
+the record kind and the words for a pack's rules arrive at render time. No network at render time (`tests/test_no_network.py` asserts no
 `fetch`/`XMLHttpRequest`/`<script src>`/etc. appear in any shipped static
 module or in an assembled artifact).
 
