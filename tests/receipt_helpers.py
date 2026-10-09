@@ -11,6 +11,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import TypedDict
 
+from capsule_viewer.composed import composition_from_capsulectl
 from capsule_viewer.context import Json
 from capsule_viewer.digest import bundle_digest
 from capsule_viewer.receipt import example_wording_pack, receipt_page
@@ -20,6 +21,15 @@ RECEIPTS = Path(__file__).parent / "testdata" / "receipt"
 PACK = example_wording_pack()
 PACK_SHA = hashlib.sha256(PACK).hexdigest()
 FIXTURES = ("keep", "counterparty", "adjudicator", "golden-2")
+# The composed/v1 fixtures, each a composition of both parties' copies of one
+# deal, and the page audience each is for (the two-deals one is a
+# counterparty composition whose copies name two deals).
+BILATERAL = {
+    "bilateral-keep": "keep",
+    "bilateral-counterparty": "counterparty",
+    "bilateral-adjudicator": "adjudicator",
+    "bilateral-two-deals": "counterparty",
+}
 # A loaded JSON document the tests may change before rendering.
 Doc = dict[str, Json]
 
@@ -44,6 +54,8 @@ def report_for(bundle: Doc, output: Doc) -> Doc:
 
 
 def audience_of(name: str) -> str:
+    if name in BILATERAL:
+        return BILATERAL[name]
     return "keep" if name.startswith("golden") else name
 
 
@@ -52,7 +64,10 @@ def render(name: str, depth: str = "L2", bundle: Doc | None = None, output: Doc 
     bundle = bundle or raw_bundle
     output = output or (report_for(bundle, raw_output) if bundle is not raw_bundle else raw_output)
     context, assurance = context_from_capsulectl(bundle, output)
-    return receipt_page(context, assurance, PACK, PACK_SHA, audience=audience or audience_of(name), depth=depth)
+    composition = composition_from_capsulectl(bundle, output)
+    return receipt_page(
+        context, assurance, PACK, PACK_SHA, audience=audience or audience_of(name), depth=depth, composition=composition
+    )
 
 
 class _Snapshot(HTMLParser):
@@ -101,3 +116,34 @@ def visible_text(html: str) -> str:
     body = html.split("<body", 1)[-1]
     text = unescape(re.sub(r"<[^>]+>", " ", body))
     return re.sub(r"\s+", " ", text).strip()
+
+
+class _Region(HTMLParser):
+    """The text inside every element carrying ``data-party`` = *party*."""
+
+    def __init__(self, party: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.party = party
+        self.depth = 0  # open elements since entering a region; 0 = outside
+        self.text: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if self.depth:
+            self.depth += 1
+        elif dict(attrs).get("data-party") == self.party:
+            self.depth = 1
+
+    def handle_endtag(self, tag):
+        if self.depth:
+            self.depth -= 1
+
+    def handle_data(self, data):
+        if self.depth:
+            self.text.append(data)
+
+
+def party_text(html: str, party: str) -> str:
+    """What the page shows for one party's copy, whitespace collapsed."""
+    parser = _Region(party)
+    parser.feed(html)
+    return re.sub(r"\s+", " ", " ".join(parser.text)).strip()

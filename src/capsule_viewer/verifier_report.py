@@ -104,6 +104,16 @@ def context_from_capsulectl(
     ``capsulectl verify --bundle`` printed for that same bundle."""
     if output.get("spec_version") != REPORT_VERSION:
         raise VerifierReportError(f"not a {REPORT_VERSION} report: {output.get('spec_version')!r}")
+    return context_from_bundle_report(bundle, output)
+
+
+def context_from_bundle_report(
+    bundle: JsonObject, output: CapsulectlReport
+) -> tuple[VerifiedBundleContext, Assurance]:
+    """``context_from_capsulectl`` for one bundle's report inside a report
+    already read: a composed/v1 member's, which capsulectl prints on the member
+    without a ``spec_version`` of its own. The same binding holds: the report's
+    ``bundle_digest`` must be the digest of exactly *bundle*."""
     try:
         digest = bundle_digest(bundle)
     except NotCanonical as exc:

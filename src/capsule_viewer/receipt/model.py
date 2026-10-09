@@ -53,6 +53,16 @@ _SECTION_BY_RECORD_TYPE = {
     "approval": "approved",
     "action": "acted",
     "claim": "statements",
+    "task_authority": "authorized",
+}
+# A typed record (capsulectl ``--records typed``) names its kind in its own
+# ``type``; each carries the body of the x-deal-v0 record type it stands for.
+_RECORD_TYPE_BY_TYPED = {
+    "proposed-action/v0": "check",
+    "action-evaluation/v0": "verdict",
+    "action-approval/v0": "approval",
+    "action-record/v0": "action",
+    "task-authority/v0": "task_authority",
 }
 _SECTION_BY_STEP_KIND = {
     "open": "authorized",
@@ -289,6 +299,7 @@ def _facts(record_type: str | None, body: Mapping[str, Frozen]) -> tuple[Fact, .
         differences = body.get("differences")
         found = [
             _token("result", body.get("result")),
+            _token("disposition", body.get("disposition")),
             Fact("differences", str(len(differences)), "count") if isinstance(differences, tuple) else None,
             _token("judge", _map(body.get("judge")).get("kind")),
             _token("rules", _map(body.get("rules")).get("status")),
@@ -443,10 +454,16 @@ def _step(reader: _Reader, capsule_id: str, entry: Mapping[str, Frozen]) -> Step
     record_type = None
     body: Mapping[str, Frozen] = {}
     if payload is not None:
-        record_type = _str(_map(payload.get(EXTENSION)).get("record_type")) or _str(payload.get("record_type"))
+        typed = _str(payload.get("type"))
+        record_type = (
+            _str(_map(payload.get(EXTENSION)).get("record_type"))
+            or _str(payload.get("record_type"))
+            or (typed if typed in _RECORD_TYPE_BY_TYPED else None)
+        )
         body = _map(payload.get("body"))
-    if record_type is not None:
-        section = _SECTION_BY_RECORD_TYPE.get(record_type, "other")
+    kind = _RECORD_TYPE_BY_TYPED.get(record_type or "", record_type)
+    if kind is not None:
+        section = _SECTION_BY_RECORD_TYPE.get(kind, "other")
     else:
         section = _SECTION_BY_STEP_KIND.get(_str(entry.get("kind")) or "", "other")
     disclosure = reader.disclosure(capsule_id)
@@ -457,7 +474,7 @@ def _step(reader: _Reader, capsule_id: str, entry: Mapping[str, Frozen]) -> Step
         record_type=record_type,
         log=reader.log(capsule_id),
         key_id=_str(reader.headers.get(capsule_id, {}).get("key_id")),
-        facts=_facts(record_type, body),
+        facts=_facts(kind, body),
         line=_str(entry.get("line")),
         at=_str(entry.get("at")),
         n=_int(entry.get("n")),
@@ -548,6 +565,31 @@ def _headline(steps: tuple[Step, ...], root: str | None, report: Report) -> Head
         (s for s in reversed(steps) if s.section == "acted"), None
     )
     return Headline(_part(opened, "deal_type"), item, _part(acted, "amount"), report.state)
+
+
+def copy_audience(context: VerifiedBundleContext) -> str:
+    """The audience the copy in *context* was cut for, as its own sealed report
+    names it; ``ReceiptUnavailable`` when it carries no readable sealed report."""
+    _, raw = _Reader(context).sealed_report()
+    audience = _str(raw.get("audience"))
+    if audience is None:
+        raise ReceiptUnavailable("the sealed report names no audience")
+    return audience
+
+
+def named_deals(context: VerifiedBundleContext) -> frozenset[str]:
+    """Every deal the copy's disclosed records name: per record its deal id,
+    else its chain id (typed records carry only a chain id). One copy of one
+    deal names exactly one."""
+    named = set()
+    for cid in context.records:
+        payload = context.disclosed(cid, "agent_input")
+        if not isinstance(payload, Mapping):
+            continue
+        deal = _str(_map(payload.get(EXTENSION)).get("deal_id")) or _str(payload.get("deal_id")) or _str(payload.get("chain_id"))
+        if deal is not None:
+            named.add(deal)
+    return frozenset(named)
 
 
 def build_receipt(context: VerifiedBundleContext, bind: Binder, assurance: Assurance, audience: str) -> ReceiptModel:

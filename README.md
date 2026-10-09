@@ -208,6 +208,31 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   capsule-cli's receipt golden; `js-tests/receipt_layout.test.js` holds every fixture
   to no horizontal overflow at 360, 390 and 1280 px and in print.
 
+### Bilateral receipt (`capsuleviewer.receipt.bilateral/v0`)
+
+`capsule_viewer.receipt.bilateral` is one deal as both parties hold it, over a
+`composed/v1` bundle: the outer bundle carries `composed/v1` and no `x-deal-v0`, and each
+carried member is one party's own `x-deal-v0` copy, byte for byte, with its own
+completeness proof. Its manifest (`receipt/manifest-bilateral.json`) requires
+`composed/v1` and forbids an outer `x-deal-v0`, so it and the unilateral module never
+match one bundle (`tests/test_receipt_bilateral.py`). `receipt_page` registers both.
+
+- **Each copy is read through its own context.** capsulectl verifies each carried member
+  as an Evidence Bundle of its own; `composed.py` builds that member's context from the
+  member's own report, refused unless the report is for that member's exact bytes. One
+  copy never fills in what the other leaves out.
+- **One deal or not.** The deals each copy's disclosed records name (a record's deal id,
+  else its chain id): both naming the same one is one deal; otherwise the page says the
+  copies name different deals and picks neither.
+- **Joins** are shown as the verifier reported them: the composer's declared state, the
+  verifier's derived state and, for an agreement, corroborating or redundant. L2 carries
+  the generic composition section in agent-action-capsule's words (`composed.py`).
+- **Audiences:** a page shows the copies cut for its audience; the keep page also shows
+  the other party's copy as it was handed over (its counterparty cut), beside at most
+  one keep copy. Any other mix is declined.
+- Fixtures: `examples/receipt/build_bilateral_fixtures.sh` (see
+  `tests/testdata/receipt/README.md`).
+
 ## Fixtures
 
 `tests/testdata/` vendors the synthetic `EXAMPLE-ORG` fixtures from

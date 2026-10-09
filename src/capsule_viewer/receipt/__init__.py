@@ -1,9 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The unilateral deal receipt module (``capsuleviewer.receipt.unilateral/v0``),
-its manifest, and an example English wording pack (``wording-en.json``) with
-neutral example wording."""
+"""The deal receipt modules, unilateral (``capsuleviewer.receipt.unilateral/v0``,
+one party's copy) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
+composed/v1 bundle of both parties' copies), their manifests, and an example
+English wording pack (``wording-en.json``) with neutral example wording."""
 from importlib import resources
 
+from .bilateral import (
+    BILATERAL_MANIFEST,
+    BilateralModel,
+    BilateralReceiptModule,
+    bilateral_manifest,
+    build_bilateral,
+)
 from .model import ReceiptModel, ReceiptUnavailable, build_receipt
 from .module import PLACEHOLDERS, UNILATERAL_MANIFEST, UnilateralReceiptModule, unilateral_manifest
 from .page import receipt_page, receipt_registry
@@ -15,6 +23,11 @@ def example_wording_pack() -> bytes:
 
 
 __all__ = [
+    "BILATERAL_MANIFEST",
+    "BilateralModel",
+    "BilateralReceiptModule",
+    "build_bilateral",
+    "bilateral_manifest",
     "PLACEHOLDERS",
     "UNILATERAL_MANIFEST",
     "ReceiptModel",
