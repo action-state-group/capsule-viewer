@@ -30,6 +30,19 @@ BILATERAL = {
     "bilateral-adjudicator": "adjudicator",
     "bilateral-two-deals": "counterparty",
 }
+# The seller copies and the audience each was cut for. ``seller-producer-*`` are
+# capsulectl's own seller copies (the producer engages the seller kind);
+# ``seller-*`` are built by build_seller_fixtures.sh (the kind engaged by its
+# fixture step), ``seller-declined`` a thread closed not_selected.
+SELLER = {
+    "seller-keep": "keep",
+    "seller-counterparty": "counterparty",
+    "seller-adjudicator": "adjudicator",
+    "seller-declined": "counterparty",
+    "seller-producer-keep": "keep",
+    "seller-producer-counterparty": "counterparty",
+    "seller-producer-adjudicator": "adjudicator",
+}
 # A loaded JSON document the tests may change before rendering.
 Doc = dict[str, Json]
 
@@ -56,6 +69,10 @@ def report_for(bundle: Doc, output: Doc) -> Doc:
 def audience_of(name: str) -> str:
     if name in BILATERAL:
         return BILATERAL[name]
+    if name in SELLER:
+        return SELLER[name]
+    if name == "seller-bilateral" or name.startswith("buyer-producer-"):
+        return "counterparty"
     return "keep" if name.startswith("golden") else name
 
 

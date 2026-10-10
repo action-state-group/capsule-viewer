@@ -1,5 +1,5 @@
 {
-  "bundle_digest": "7d63abfbfacfd84c8523c8cc2a6e6e6477e1b9aab754f8917152c2ef1210fb06",
+  "bundle_digest": "5fe1155f2d0f1e90048bafa41ba02e48e83bdb6579e4ceb77ac36d20dd2e371b",
   "checkpoint": {
     "findings": [],
     "status": "pass"
@@ -16,9 +16,9 @@
     {
       "composed": {
         "composed_digest": {
-          "declared": "68af29ea65ecd1ea6ff5a71467ca462b910259750675c2d010158a454e011663",
+          "declared": "b1fb6a03ddace177266613cb1660d967b36e29c8f31bfd44441758242e3e17f5",
           "matches": true,
-          "recomputed": "68af29ea65ecd1ea6ff5a71467ca462b910259750675c2d010158a454e011663"
+          "recomputed": "b1fb6a03ddace177266613cb1660d967b36e29c8f31bfd44441758242e3e17f5"
         },
         "composition_closure": {
           "findings": [],
@@ -158,7 +158,7 @@
           {
             "body": "carried",
             "bundle": {
-              "bundle_digest": "391bdcd2da38aa8586144202c7273d9c485608bccc80cf7ad12d555a8d2762a3",
+              "bundle_digest": "ee4bfaf0644e4710c5c1d809699680d3bf133819fb53a55b2f8d94cf022a6c72",
               "checkpoint": {
                 "findings": [],
                 "status": "pass"
@@ -224,6 +224,10 @@
               "extensions": [
                 {
                   "kind": "x-cadence-witness/v0",
+                  "status": "uninterpreted"
+                },
+                {
+                  "kind": "x-deal-seller/v0",
                   "status": "uninterpreted"
                 },
                 {

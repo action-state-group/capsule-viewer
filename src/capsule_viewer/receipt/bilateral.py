@@ -14,8 +14,11 @@ What the module shows, and where it comes from:
 
 * **the parties**: each carried copy, read through its own context (built
   from the verifier's report on that member, bound to that member's bytes),
-  by the unilateral receipt model. One copy is never read through the other:
-  what one leaves out stays left out;
+  by the unilateral receipt model, or by the seller receipt model when the
+  copy engages the seller kind (``role.py``). A copy whose packaging and
+  sealed ``party_role`` disagree (the kind without ``seller``, or ``seller``
+  without the kind) declines the whole composition. One copy is never read through the other: what one
+  leaves out stays left out;
 * **one deal or not**: the deals each copy's disclosed records name (a
   record's deal id, else its chain id; a withheld record names nothing the
   page can read). Both name exactly one, the same: one deal. Anything else is
@@ -63,7 +66,9 @@ from .model import (
     copy_audience,
     named_deals,
 )
-from .module import DEPTHS, UnilateralReceiptModule, _el, _join, draft_manifest
+from .module import DEPTHS, Levels, UnilateralReceiptModule, _el, _join, draft_manifest
+from .role import sealed_side, seller_kind_engaged
+from .seller import SellerModel, SellerReceiptModule, build_seller
 
 BILATERAL_MANIFEST: Manifest = json.loads(
     resources.files(__package__).joinpath("manifest-bilateral.json").read_text(encoding="utf-8")
@@ -94,6 +99,7 @@ class PartyCopy:
     deals: frozenset[str]
     assurance: Assurance
     receipt: ReceiptModel
+    seller: SellerModel | None = None  # set when the copy is a seller's
 
 
 @dataclass(frozen=True)
@@ -159,6 +165,13 @@ def _party(part: Part, bind: Binder) -> PartyCopy:
     ``x-deal-v0`` extension names (a copy without one is declined)."""
     cut = copy_audience(part.context)
     observer = part.observer
+    # A copy that engages the seller kind is read as a seller's; build_seller
+    # declines it unless its opening record seals party_role seller. A copy
+    # that seals seller without the kind is declined too: the packaging and
+    # the sealed fact must agree either way.
+    if not seller_kind_engaged(part.context) and sealed_side(part.context) == "seller":
+        raise ReceiptUnavailable(f"{part.member.id} is sealed as a seller's copy and does not engage the seller kind")
+    seller = build_seller(part.context, bind, part.assurance, cut) if seller_kind_engaged(part.context) else None
     return PartyCopy(
         member=part.member.id,
         observer=part.member.observer,
@@ -168,6 +181,7 @@ def _party(part: Part, bind: Binder) -> PartyCopy:
         deals=named_deals(part.context),
         assurance=part.assurance,
         receipt=build_receipt(part.context, bind, part.assurance, cut),
+        seller=seller,
     )
 
 
@@ -257,7 +271,7 @@ class BilateralReceiptModule:
 
     def render(self, model: BilateralModel, services: KitServices) -> str:
         self.kit = services
-        drawn = [self._copy(p).levels(p.receipt, services) for p in model.parties]
+        drawn = [self._levels(p, services) for p in model.parties]
         l1_open = self.depth in ("L1", "L2")
         l2_open = self.depth == "L2"
 
@@ -300,9 +314,13 @@ class BilateralReceiptModule:
         """An enum's words, or the token itself when the pack has none."""
         return self.pack.get(f"{prefix}.{value}") or value
 
-    def _copy(self, party: PartyCopy) -> UnilateralReceiptModule:
-        """The unilateral module, drawing one copy at this page's depth."""
-        return UnilateralReceiptModule(self.pack, self.depth, party.audience, party.assurance, self.bind)
+    def _levels(self, party: PartyCopy, services: KitServices) -> Levels:
+        """One copy at this page's depth, drawn by the seller module when it is
+        a seller's copy and by the unilateral module otherwise."""
+        if party.seller is not None:
+            seller = SellerReceiptModule(self.pack, self.depth, party.audience, party.assurance, self.bind)
+            return seller.seller_levels(party.seller, services)
+        return UnilateralReceiptModule(self.pack, self.depth, party.audience, party.assurance, self.bind).levels(party.receipt, services)
 
     def _heading(self, party: PartyCopy) -> str:
         role = party.role or self.w("party.role_undeclared")

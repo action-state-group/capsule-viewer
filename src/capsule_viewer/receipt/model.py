@@ -567,6 +567,12 @@ def _headline(steps: tuple[Step, ...], root: str | None, report: Report) -> Head
     return Headline(_part(opened, "deal_type"), item, _part(acted, "amount"), report.state)
 
 
+def sealed_report(context: VerifiedBundleContext) -> tuple[str, Mapping[str, Frozen]]:
+    """The copy's sealed report: its record id and its report object, read as
+    ``build_receipt`` reads it; ``ReceiptUnavailable`` when there is none."""
+    return _Reader(context).sealed_report()
+
+
 def copy_audience(context: VerifiedBundleContext) -> str:
     """The audience the copy in *context* was cut for, as its own sealed report
     names it; ``ReceiptUnavailable`` when it carries no readable sealed report."""

@@ -1,0 +1,71 @@
+{
+  "bundle_digest": "961b55fc23fde29f2cbf7d368c9536be6029f0d7eec7c84750e3de1d19375a79",
+  "checkpoint": {
+    "findings": [],
+    "status": "pass"
+  },
+  "countersignatures": [],
+  "disclosures": [
+    {
+      "capsule_id": "2b652e1e65f68e355fcea1dec92e50fe12fa3db6f533fb5e5c8747c628a11682",
+      "member": "agent_input",
+      "status": "withheld"
+    },
+    {
+      "capsule_id": "65086c11072cc06f49aadc2613fda8c3814af262a900f59aaef26ee3a007376d",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "d55c3bcd3c7ad48a03da94890da8a8887fc545529a2e749a79363fabbe8e55a1",
+      "member": "agent_input",
+      "status": "withheld"
+    }
+  ],
+  "extensions": [
+    {
+      "kind": "x-cadence-witness/v0",
+      "status": "uninterpreted"
+    },
+    {
+      "kind": "x-deal-v0",
+      "sealed_report": "65086c11072cc06f49aadc2613fda8c3814af262a900f59aaef26ee3a007376d",
+      "status": "pass"
+    }
+  ],
+  "graph_closure": {
+    "findings": [],
+    "status": "pass"
+  },
+  "interval_coverage": {
+    "findings": [],
+    "status": "pass"
+  },
+  "per_record_membership": {
+    "findings": [],
+    "status": "pass"
+  },
+  "producer_signatures": {
+    "findings": [],
+    "status": "pass"
+  },
+  "record_identity": {
+    "2b652e1e65f68e355fcea1dec92e50fe12fa3db6f533fb5e5c8747c628a11682": "passed",
+    "65086c11072cc06f49aadc2613fda8c3814af262a900f59aaef26ee3a007376d": "passed",
+    "d55c3bcd3c7ad48a03da94890da8a8887fc545529a2e749a79363fabbe8e55a1": "passed"
+  },
+  "record_signatures": {
+    "2b652e1e65f68e355fcea1dec92e50fe12fa3db6f533fb5e5c8747c628a11682": "authored",
+    "65086c11072cc06f49aadc2613fda8c3814af262a900f59aaef26ee3a007376d": "authored",
+    "d55c3bcd3c7ad48a03da94890da8a8887fc545529a2e749a79363fabbe8e55a1": "authored"
+  },
+  "spec_version": "capsule-cli-result/v1",
+  "verdict": "VALID",
+  "witnesses": {
+    "findings": [
+      "witness_receipt_absent"
+    ],
+    "receipts": [],
+    "status": "withheld"
+  }
+}

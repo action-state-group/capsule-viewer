@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The unilateral receipt module, ``capsuleviewer.receipt.unilateral/v0``: one
 party's own receipt for one deal, over an ``x-deal-v0`` bundle that carries no
-composition.
+composition and is not a seller's copy (its manifest forbids the seller kind,
+and ``canRender`` declines a copy whose sealed records show a seller's side,
+``role.sealed_side``: the seller receipt, ``seller.py``, is that copy's).
 
 Depth (presentation contract section 9):
 
@@ -45,6 +47,7 @@ from ..registry import Manifest
 from ..verifier_report import Assurance
 from ..wording import WordingPack
 from .model import Binder, Committed, Fact, Item, ReceiptModel, ReceiptUnavailable, Step, build_receipt
+from .role import SELLER_KIND, sealed_side, seller_kind_engaged
 
 DEPTHS = ("L0", "L1", "L2")
 # The values this module fills, per wording key; every other key takes none.
@@ -94,7 +97,14 @@ def draft_manifest(raw: Manifest) -> ModuleManifest:
     )
 
 
-UNILATERAL_MANIFEST = _load("manifest-unilateral.json")
+def _forbidding_the_seller_kind(raw: Manifest) -> Manifest:
+    """*raw* with ``SELLER_KIND`` added to its forbidden extensions: a seller's
+    copy is the seller receipt's (``seller.py``), never this module's."""
+    forbids = raw["forbids"]
+    return {**raw, "forbids": {**forbids, "extensions": [*forbids["extensions"], SELLER_KIND]}}
+
+
+UNILATERAL_MANIFEST = _forbidding_the_seller_kind(_load("manifest-unilateral.json"))
 
 
 def unilateral_manifest(forbid_profiles: Sequence[str] = ()) -> Manifest:
@@ -174,6 +184,11 @@ class UnilateralReceiptModule:
     # ---- the contract -------------------------------------------------------
 
     def canRender(self, context: VerifiedBundleContext) -> bool:  # noqa: N802 -- the contract's member name
+        # A seller's copy, by its packaging or by its own sealed records,
+        # is never shown as this module's: a copy whose seller kind was dropped
+        # renders no receipt rather than a buyer's (``role.py``).
+        if seller_kind_engaged(context) or sealed_side(context) == "seller":
+            return False
         try:
             build_receipt(context, self.bind, self.assurance, self.audience)
         except ReceiptUnavailable:
@@ -299,7 +314,7 @@ class UnilateralReceiptModule:
             parts.append(self._p(self.w("step.line", text=step.line), data_sealed_text="step-line"))
         if step.disclosure == "disclosed":
             facts = [
-                _join([_el("dt", self.w(f"fact.{f.name}")),
+                _join([_el("dt", self._fact_label(f.name)),
                        _el("dd", f.value, class_="cv-mono", data_fact=f.name)])
                 for f in step.facts
             ]
@@ -310,6 +325,10 @@ class UnilateralReceiptModule:
         if step.log:
             attrs["data_log"] = f"{step.log.log_id}:{step.log.seq}:{step.log.leaf_index}"
         return _el("div", _join(parts), **attrs)
+
+    def _fact_label(self, name: str) -> str:
+        """The label of a step's fact *name*."""
+        return self.w(f"fact.{name}")
 
     def _steps(self, model: ReceiptModel, ids: Sequence[str]) -> Markup:
         """The steps an item was read from, each as its own record shows it."""

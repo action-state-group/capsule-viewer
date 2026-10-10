@@ -1,5 +1,5 @@
-// The receipt modules' pages in a real browser: every receipt fixture (one copy,
-// or a composed/v1 bundle of both parties' copies), for its own audience, fully
+// The receipt modules' pages in a real browser: every receipt fixture (a buyer's
+// or a seller's copy, or a composed/v1 bundle of both parties' copies), for its own audience, fully
 // open (depth L2) and as it first opens (depth L0), must fit a phone, a desktop
 // and a printed page with no horizontal overflow. The pages are the modules'
 // real output (python -m capsule_viewer.receipt ...).
@@ -27,6 +27,17 @@ const FIXTURES = [
   { name: "bilateral-counterparty", audience: "counterparty", oneScreen: false },
   { name: "bilateral-adjudicator", audience: "adjudicator", oneScreen: false },
   { name: "bilateral-two-deals", audience: "counterparty", oneScreen: false },
+  // The seller receipt: a thread with a handover, the buyer-facing copy, a
+  // declined thread, capsulectl's own seller copies, and the composition
+  // with the buyer's half.
+  { name: "seller-keep", audience: "keep" },
+  { name: "seller-counterparty", audience: "counterparty" },
+  { name: "seller-adjudicator", audience: "adjudicator" },
+  { name: "seller-declined", audience: "counterparty" },
+  { name: "seller-producer-keep", audience: "keep" },
+  { name: "seller-producer-counterparty", audience: "counterparty" },
+  { name: "seller-producer-adjudicator", audience: "adjudicator" },
+  { name: "seller-bilateral", audience: "counterparty", oneScreen: false },
 ];
 const DEPTHS = ["L0", "L2"];
 // The viewport height headlessChrome.js opens every page at.
@@ -130,7 +141,7 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
 
   // Both halves of "prints": a page opened at L0 has its steps closed on screen
   // and printed in full.
-  for (const name of ["keep", "bilateral-counterparty"]) {
+  for (const name of ["keep", "bilateral-counterparty", "seller-counterparty"]) {
     it(`${name}: an L0 page hides its steps on screen and prints them`, async () => {
       await tab.open(pages[`${name}-L0`].url, { width: 390, media: "screen" });
       const screen = await tab.evaluate(MEASURE);
