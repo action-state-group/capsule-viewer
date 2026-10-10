@@ -3,8 +3,9 @@
 serialisation of the bundle without ``countersignatures`` -- the definition
 agent-action-capsule's ``bundle_digest`` and capsulectl both use.
 
-The page builder uses it for one thing: to check that a verifier's report
-names this exact bundle (``verifier_report``). It does not verify anything.
+The page builder uses it to check that a verifier's report names this exact
+bundle (``verifier_report``), and ``record_digest`` to find which record a
+typed reference names. Neither verifies anything.
 
 JCS here covers the value domain the capsule profile permits: null, booleans,
 strings, integers within +/-(2**53 - 1), arrays and objects. A float or a
@@ -72,3 +73,11 @@ def jcs(value: Json) -> bytes:
 
 def bundle_digest(bundle: JsonObject) -> str:
     return hashlib.sha256(jcs({k: v for k, v in bundle.items() if k != "countersignatures"})).hexdigest()
+
+
+def record_digest(payload: Json) -> str:
+    """The digest a typed record reference names (``{"type": "record",
+    "digest_alg": "SHA-256", "digest": ...}``): lowercase hex SHA-256 of the
+    JCS of the record's payload, as capsulectl computes it. A module uses it
+    to find which record in a copy a reference names; it checks nothing."""
+    return hashlib.sha256(jcs(payload)).hexdigest()

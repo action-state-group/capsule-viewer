@@ -1,5 +1,5 @@
 {
-  "bundle_digest": "64b79a5ee16cb7e2849536270f3f44083c91a8bdc80b3e2ea0322d5ad48118e3",
+  "bundle_digest": "cbca4f9be2a5698772ef4526a1b6767c8102bd25f0f76c3a9e72a6b309b2125b",
   "checkpoint": {
     "findings": [],
     "status": "pass"
@@ -16,9 +16,9 @@
     {
       "composed": {
         "composed_digest": {
-          "declared": "2f6e98d65991e123f50d2634a1ae34f4825d94a1e505dc362d96415e5033999b",
+          "declared": "f65795c869f511437c2a7a9e52d8ce3116c66a0c40b13bb2d9f61cf19d769fec",
           "matches": true,
-          "recomputed": "2f6e98d65991e123f50d2634a1ae34f4825d94a1e505dc362d96415e5033999b"
+          "recomputed": "f65795c869f511437c2a7a9e52d8ce3116c66a0c40b13bb2d9f61cf19d769fec"
         },
         "composition_closure": {
           "findings": [],
@@ -70,9 +70,19 @@
                   "status": "withheld"
                 },
                 {
+                  "capsule_id": "61a8ed65e696423fde19847f8011b38c16451c64f1a893ccac61e8803dace638",
+                  "member": "agent_input",
+                  "status": "disclosure_match"
+                },
+                {
                   "capsule_id": "97c4954bd2d2e0aae05f2e6103e8e7fb322b22834d74e058de6362bf09286e77",
                   "member": "agent_input",
                   "status": "withheld"
+                },
+                {
+                  "capsule_id": "a257d0ec91c88b75fd6bae85b45cb482440cabfd5940376c2d029b58ff5c43cb",
+                  "member": "agent_input",
+                  "status": "disclosure_match"
                 },
                 {
                   "capsule_id": "d35d2c65d86ba2dd0bdb401349059dc184019a6ede642a44122a17fb59d5097f",
@@ -83,16 +93,6 @@
                   "capsule_id": "dbefdc961c848ff8b93006c997a84a9e0fa5f8f875618b0ceeb7a8a5247a739f",
                   "member": "agent_input",
                   "status": "withheld"
-                },
-                {
-                  "capsule_id": "61a8ed65e696423fde19847f8011b38c16451c64f1a893ccac61e8803dace638",
-                  "member": "agent_input",
-                  "status": "disclosure_match"
-                },
-                {
-                  "capsule_id": "a257d0ec91c88b75fd6bae85b45cb482440cabfd5940376c2d029b58ff5c43cb",
-                  "member": "agent_input",
-                  "status": "disclosure_match"
                 },
                 {
                   "capsule_id": "fb32eac87950a45260a19ca349c8d36785bb543624040b32c57c878175e1fc9a",
@@ -165,7 +165,7 @@
           {
             "body": "carried",
             "bundle": {
-              "bundle_digest": "391bdcd2da38aa8586144202c7273d9c485608bccc80cf7ad12d555a8d2762a3",
+              "bundle_digest": "ee4bfaf0644e4710c5c1d809699680d3bf133819fb53a55b2f8d94cf022a6c72",
               "checkpoint": {
                 "findings": [],
                 "status": "pass"
@@ -231,6 +231,10 @@
               "extensions": [
                 {
                   "kind": "x-cadence-witness/v0",
+                  "status": "uninterpreted"
+                },
+                {
+                  "kind": "x-deal-seller/v0",
                   "status": "uninterpreted"
                 },
                 {

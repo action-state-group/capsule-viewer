@@ -132,6 +132,14 @@ container_root=$(capsulectl publish --profile composer --request compose.json | 
 capsulectl cll checkpoint create --profile composer >/dev/null
 capsulectl disclose --profile composer --root "$container_root" --out container.json >/dev/null
 
+# FIXTURE STEP (see build_seller_fixtures.sh): capsulectl at the commit these
+# are built from does not engage the seller kind, so every seller copy gets it
+# here before it is composed.
+for copy in seller/counterparty seller/adjudicator other-seller/counterparty; do
+  python3 "$here/engage_seller_kind.py" "$work/$copy.json" >"$work/$copy.engaged.json"
+  mv "$work/$copy.engaged.json" "$work/$copy.json"
+done
+
 compose() { # name, part a, part b, join...
   local name="$1" a="$2" b="$3"
   shift 3

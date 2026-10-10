@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The deal receipt modules, unilateral (``capsuleviewer.receipt.unilateral/v0``,
-one party's copy) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
+a buyer's copy), seller (``capsuleviewer.receipt.seller/v0``, a seller's copy
+of one buyer thread) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
 composed/v1 bundle of both parties' copies), their manifests, and an example
 English wording pack (``wording-en.json``) with neutral example wording."""
 from importlib import resources
@@ -15,6 +16,8 @@ from .bilateral import (
 from .model import ReceiptModel, ReceiptUnavailable, build_receipt
 from .module import PLACEHOLDERS, UNILATERAL_MANIFEST, UnilateralReceiptModule, unilateral_manifest
 from .page import receipt_page, receipt_registry
+from .role import SELLER_KIND, sealed_party_role, sealed_side, seller_kind_engaged
+from .seller import SELLER_MANIFEST, SellerModel, SellerReceiptModule, build_seller, seller_manifest
 
 
 def example_wording_pack() -> bytes:
@@ -32,10 +35,19 @@ __all__ = [
     "UNILATERAL_MANIFEST",
     "ReceiptModel",
     "ReceiptUnavailable",
+    "SELLER_KIND",
+    "SELLER_MANIFEST",
+    "SellerModel",
+    "SellerReceiptModule",
     "UnilateralReceiptModule",
     "build_receipt",
+    "build_seller",
     "example_wording_pack",
     "receipt_page",
     "receipt_registry",
+    "sealed_party_role",
+    "sealed_side",
+    "seller_kind_engaged",
+    "seller_manifest",
     "unilateral_manifest",
 ]

@@ -65,7 +65,7 @@
   },
   "extensions": {
     "composed/v1": {
-      "composed_digest": "4ed753fe303c77dfbc7f9d5550b8abcb452ccfa5751888bb6f5c87d8c94df199",
+      "composed_digest": "055b83f933f687158ea1be7fe49926209c2107f91c170f86dfd02bfccfde1276",
       "joins": [
         {
           "basis": "pre_agreed_identifier",
@@ -1778,6 +1778,7 @@
               "x-cadence-witness/v0": {
                 "state": "not_configured"
               },
+              "x-deal-seller/v0": {},
               "x-deal-v0": {
                 "sealed_report": "fbd0adf404dcafcf9154d7c9584e8df23a3e30de630797be92f97fa0dcb93951"
               }
@@ -2102,7 +2103,7 @@
               "producer": "capsulectl"
             }
           },
-          "digest": "39696ffaf997fc9342cef9434a50be1636b7efc606a83297ddd04bf919fb6257",
+          "digest": "b977bea2a3c6c94ce0432fe6a2e63ac8db48e038bab8d186f545223e7efa3623",
           "id": "party-b",
           "observer": "obs-b",
           "outcome": "artifact",

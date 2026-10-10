@@ -1,5 +1,5 @@
 {
-  "bundle_digest": "889b5222c646344b3de31d56f397e3b6ce452a99e38ef7a948abeb8a171a0790",
+  "bundle_digest": "01c532a8750e88e889c100b0e5403221a440e909bb3b7893be450ae44bf0e29f",
   "checkpoint": {
     "findings": [],
     "status": "pass"
@@ -16,9 +16,9 @@
     {
       "composed": {
         "composed_digest": {
-          "declared": "4ed753fe303c77dfbc7f9d5550b8abcb452ccfa5751888bb6f5c87d8c94df199",
+          "declared": "055b83f933f687158ea1be7fe49926209c2107f91c170f86dfd02bfccfde1276",
           "matches": true,
-          "recomputed": "4ed753fe303c77dfbc7f9d5550b8abcb452ccfa5751888bb6f5c87d8c94df199"
+          "recomputed": "055b83f933f687158ea1be7fe49926209c2107f91c170f86dfd02bfccfde1276"
         },
         "composition_closure": {
           "findings": [],
@@ -103,6 +103,11 @@
                   "status": "withheld"
                 },
                 {
+                  "capsule_id": "61a8ed65e696423fde19847f8011b38c16451c64f1a893ccac61e8803dace638",
+                  "member": "agent_input",
+                  "status": "disclosure_match"
+                },
+                {
                   "capsule_id": "97c4954bd2d2e0aae05f2e6103e8e7fb322b22834d74e058de6362bf09286e77",
                   "member": "agent_input",
                   "status": "withheld"
@@ -121,11 +126,6 @@
                   "capsule_id": "dbefdc961c848ff8b93006c997a84a9e0fa5f8f875618b0ceeb7a8a5247a739f",
                   "member": "agent_input",
                   "status": "withheld"
-                },
-                {
-                  "capsule_id": "61a8ed65e696423fde19847f8011b38c16451c64f1a893ccac61e8803dace638",
-                  "member": "agent_input",
-                  "status": "disclosure_match"
                 },
                 {
                   "capsule_id": "f420f6e4d8a5790e24837f139c24a4507fa001c2e137dc8c9a88fdf9c9730cbd",
@@ -205,7 +205,7 @@
           {
             "body": "carried",
             "bundle": {
-              "bundle_digest": "39696ffaf997fc9342cef9434a50be1636b7efc606a83297ddd04bf919fb6257",
+              "bundle_digest": "b977bea2a3c6c94ce0432fe6a2e63ac8db48e038bab8d186f545223e7efa3623",
               "checkpoint": {
                 "findings": [],
                 "status": "pass"
@@ -276,6 +276,10 @@
               "extensions": [
                 {
                   "kind": "x-cadence-witness/v0",
+                  "status": "uninterpreted"
+                },
+                {
+                  "kind": "x-deal-seller/v0",
                   "status": "uninterpreted"
                 },
                 {

@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""A complete offline page for one deal receipt: both receipt modules
-registered by their manifests (the unilateral one for a single copy, the
-bilateral one for a composition of two), resolved through the registry,
+"""A complete offline page for one deal receipt: the receipt modules
+registered by their manifests (the unilateral one for a buyer's single copy,
+the seller one for a seller's, the bilateral one for a composition of two),
+resolved through the registry,
 worded by a wording pack whose bytes must hash to the ``wording_sha256``
 given (contract section 7.4)."""
 from __future__ import annotations
@@ -17,9 +18,10 @@ from ..verifier_report import Assurance
 from ..wording import EMPTY_PACK, WordingPack, WordingPackError, load_wording_pack
 from .bilateral import BilateralReceiptModule
 from .module import PLACEHOLDERS, UnilateralReceiptModule
+from .seller import SellerReceiptModule
 
 
-def receipt_registry(*modules: UnilateralReceiptModule | BilateralReceiptModule) -> Registry:
+def receipt_registry(*modules: UnilateralReceiptModule | SellerReceiptModule | BilateralReceiptModule) -> Registry:
     """A registry holding the receipt modules given."""
     registry = Registry()
     for module in modules:
@@ -51,5 +53,6 @@ def receipt_page(
     except WordingPackError as exc:
         notices.append(notice(PACK_REFUSED.format(reason=str(exc)), "wording-refused"))
     unilateral = UnilateralReceiptModule(pack, depth, audience, assurance, check_opening, forbid_profiles)
+    seller = SellerReceiptModule(pack, depth, audience, assurance, check_opening, forbid_profiles)
     bilateral = BilateralReceiptModule(pack, depth, audience, assurance, composition, check_opening, forbid_profiles)
-    return present(context, receipt_registry(unilateral, bilateral), audience=audience, fmt=fmt, notices=notices)
+    return present(context, receipt_registry(unilateral, seller, bilateral), audience=audience, fmt=fmt, notices=notices)
