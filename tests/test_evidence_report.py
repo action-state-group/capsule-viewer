@@ -1,0 +1,238 @@
+# SPDX-License-Identifier: Apache-2.0
+"""The evidence report page: capsule-emit's verifier checks, this renders.
+
+Every bundle here is produced by the donated libraries (capsule-emit,
+checkpointed-local-log) and every result by capsule-emit's
+``check_evidence_file``. These tests hold the page to three things: it shows
+the verifier's statuses and not its own (a result altered after the check
+renders as altered); it never renders one bundle's result over another
+bundle's records; and it points the reader back at the donated verifier.
+"""
+from __future__ import annotations
+
+import dataclasses
+import html
+import importlib.util
+import json
+import re
+
+import pytest
+from capsule_emit.evidence_file import Check, check_evidence_file
+from evidence_report_helpers import exported_bundle, whole_log_bundle
+
+from capsule_viewer import evidence_report
+from capsule_viewer.evidence_report import BundleMismatch, check_and_render, main, render_report_html
+
+FORBIDDEN = ["fetch(", "XMLHttpRequest", "WebSocket(", "<script", "import(", "navigator.sendBeacon", "@import", "url("]
+
+
+def _verdict_class(page: str) -> str:
+    start = page.index('<div class="verdict ') + len('<div class="verdict ')
+    return page[start : page.index('"', start)]
+
+
+def _tamper(bundle: dict) -> dict:
+    """The same bundle with one record's content changed after sealing."""
+    edited = json.loads(json.dumps(bundle))
+    edited["records"][0]["timestamp"] = "1999-01-01T00:00:00Z"
+    return edited
+
+
+@pytest.fixture
+def exported(tmp_path):
+    return exported_bundle(tmp_path)
+
+
+def test_a_whole_log_bundle_renders_the_verifiers_valid_result(tmp_path):
+    bundle = whole_log_bundle(tmp_path)
+    check, page = check_and_render(bundle, source="b.json")
+    assert check.verdict == "VALID"
+    assert _verdict_class(page) == "pass"
+    assert "Everything this file claims checks" in page
+    for c in check.checks:
+        assert html.escape(c.plain) in page
+    assert check.bundle_digest in page
+    assert "test-log" in page and "signed the checkpoint and every record" in page
+    assert page.count("<tr>") == 1 + len(bundle["records"])
+    # payloads_mode "selected" with no disclosures: the text is not in the file.
+    assert "The request and response text" in page
+
+
+def test_an_exported_bundle_renders_exactly_what_the_verifier_reported(exported):
+    path, bundle = exported
+    check, page = check_and_render(bundle, source=path.name)
+    # agent-action-capsule 0.7 cannot check a producer-selected interval, so
+    # the verifier withholds it; the page says so rather than claiming VALID.
+    assert check.verdict == "INCOMPLETE"
+    assert _verdict_class(page) == "withheld"
+    statuses = {c.name: c.status for c in check.checks}
+    assert statuses["interval_coverage"] == "withheld"
+    for c in check.checks:
+        assert f'<li class="{c.status}">' in page and html.escape(c.plain) in page
+    assert "example-org/node-1" in page
+    assert "capsule-emit verify --bundle bundle.json" in page
+
+
+def test_a_tampered_record_renders_as_the_verifier_failed_it(exported):
+    _, bundle = exported
+    check, page = check_and_render(_tamper(bundle))
+    assert check.verdict == "INVALID"
+    assert _verdict_class(page) == "fail"
+    assert "This file does not check" in page
+    assert "record_identity_invalid:" in page
+
+
+def test_the_page_shows_the_result_it_is_given_not_one_it_computes(tmp_path):
+    """The result is the verifier's: a status changed after the check shows
+    as changed, on a bundle that itself checks. If the page re-checked the
+    bundle it would still say VALID."""
+    bundle = whole_log_bundle(tmp_path)
+    check = check_evidence_file(bundle)
+    assert check.verdict == "VALID"
+    altered = dataclasses.replace(
+        check,
+        checks=[Check(c.name, "fail", ("altered",)) if c.name == "graph_closure" else c for c in check.checks],
+    )
+    page = render_report_html(bundle, altered)
+    assert _verdict_class(page) == "fail" and "altered" in page
+    assert _verdict_class(render_report_html(bundle, check)) == "pass"
+
+
+@pytest.mark.parametrize(
+    "status, words",
+    [("pass", "witness.example: verified"), ("withheld", "witness.example: not checked (no key known)"),
+     ("fail", "witness.example: <strong>does not verify</strong>")],
+)
+def test_the_witness_line_is_each_receipt_as_the_verifier_judged_it(tmp_path, status, words):
+    """Render only: a receipt result in the shape check_evidence_file reports
+    it (``witness_receipts``), on a bundle whose checkpoint verified."""
+    bundle = whole_log_bundle(tmp_path)
+    check = dataclasses.replace(
+        check_evidence_file(bundle),
+        witness=Check("witnesses", status),
+        witness_receipts=[{"ts_url": "https://witness.example", "binding": "cll", "status": status, "reason": "r"}],
+    )
+    assert words in render_report_html(bundle, check)
+
+
+def test_a_result_for_another_bundle_is_refused(exported):
+    _, bundle = exported
+    check = check_evidence_file(bundle)
+    with pytest.raises(BundleMismatch):
+        render_report_html(_tamper(bundle), check)
+
+
+def test_a_result_naming_no_digest_is_refused(exported):
+    _, bundle = exported
+    check = dataclasses.replace(check_evidence_file(bundle), bundle_digest=None)
+    with pytest.raises(BundleMismatch):
+        render_report_html(bundle, check)
+
+
+def test_a_not_a_bundle_result_is_not_drawn_over_a_real_bundle(exported):
+    """A result whose kind flag was flipped still carries the real file's
+    digest and records: it is refused, not drawn under a fail headline."""
+    _, bundle = exported
+    flipped = dataclasses.replace(check_evidence_file(bundle), kind_ok=False)
+    with pytest.raises(BundleMismatch):
+        render_report_html(bundle, flipped)
+
+
+def _with_float(bundle: dict) -> dict:
+    """A file the verifier checks but gives no digest (a float is outside JCS)."""
+    edited = json.loads(json.dumps(bundle))
+    edited["extensions"] = {"x-example": 1.5}
+    return edited
+
+
+def test_a_file_with_no_digest_renders_as_capsule_emit_renders_it(exported, tmp_path, capsys):
+    bundle = _with_float(exported[1])
+    check, page = check_and_render(bundle)
+    assert check.bundle_digest is None and check.kind_ok
+    with pytest.raises(BundleMismatch):  # handed in from outside, it cannot be bound
+        render_report_html(bundle, check)
+    path = tmp_path / "float.json"
+    path.write_text(json.dumps(bundle))
+    out = tmp_path / "float.html"
+    assert main([str(path), "-o", str(out)]) == {"VALID": 0, "INCOMPLETE": 2, "INVALID": 1}[check.verdict]
+    assert out.read_text(encoding="utf-8") == check_and_render(bundle, source="float.json")[1]
+    assert _verdict_class(page) == {"VALID": "pass", "INCOMPLETE": "withheld", "INVALID": "fail"}[check.verdict]
+
+
+def test_a_file_that_is_not_an_evidence_bundle_renders_as_a_failure():
+    check, page = check_and_render({"bundle_kind": "something-else"})
+    assert not check.kind_ok and check.verdict == "INVALID"
+    assert _verdict_class(page) == "fail" and "not an evidence file" in page
+
+
+def test_without_a_signed_checkpoint_the_page_never_claims_a_log(tmp_path):
+    check, page = check_and_render(whole_log_bundle(tmp_path, cose=False))
+    assert check.verdict == "INCOMPLETE"
+    assert "no signed checkpoint" in page and "signed the checkpoint" not in page
+    assert "That these records are in any committed log" in page
+    assert "<dt>Log</dt>" not in page
+
+
+def test_the_page_is_offline_and_escapes_what_it_shows(exported):
+    _, bundle = exported
+    hostile = '<img src=x onerror="alert(1)">.json'
+    _, page = check_and_render(bundle, source=hostile)
+    assert hostile not in page and "&lt;img src=x" in page
+    for token in FORBIDDEN:
+        assert token not in page, token
+    _, plain_page = check_and_render(bundle, source="bundle.json")
+    assert not re.search(r"(src|href)=|https?://", plain_page)
+
+
+def test_the_cli_writes_the_page_and_exits_with_the_verifiers_verdict(exported, tmp_path, capsys):
+    path, _ = exported
+    out = tmp_path / "report.html"
+    assert main([str(path), "-o", str(out)]) == 2  # INCOMPLETE, as capsule-emit exits
+    assert "report: INCOMPLETE" in capsys.readouterr().out
+    assert _verdict_class(out.read_text(encoding="utf-8")) == "withheld"
+    tampered = tmp_path / "tampered.json"
+    tampered.write_text(json.dumps(_tamper(json.loads(path.read_text()))))
+    assert main([str(tampered), "-o", str(out)]) == 1
+    assert main([str(tmp_path / "absent.json")]) == 1
+
+
+def test_this_module_runs_no_check_of_its_own():
+    """The only verifier this module calls is capsule-emit's."""
+    source = importlib.util.find_spec("capsule_viewer.evidence_report").origin
+    text = open(source, encoding="utf-8").read()
+    for name in ("verify_bundle", "verify_capsule_signature", "checkpoint_from_cose", "inclusion_proof", "hashlib"):
+        assert name not in text, name
+    assert evidence_report.RERUN_COMMAND == "capsule-emit verify --bundle"
+
+
+def test_the_page_matches_capsule_emits_own_while_capsule_emit_still_ships_it(exported, tmp_path):
+    """The move is faithful: for the same bundle and result, the page is the
+    page capsule-emit's ``evidence_report`` rendered, byte for byte. Once
+    capsule-emit's copy is removed this comparison has nothing to compare."""
+    if importlib.util.find_spec("capsule_emit.evidence_report") is None:
+        pytest.skip("LOUD: capsule-emit no longer ships evidence_report; the parity check did not run")
+    from capsule_emit.evidence_report import render_report_html as donated_render
+
+    unsigned = tmp_path / "unsigned"
+    unsigned.mkdir()
+    bundles = (
+        exported[1],
+        whole_log_bundle(tmp_path),
+        _tamper(exported[1]),
+        whole_log_bundle(unsigned, cose=False),
+        _with_float(exported[1]),
+        {"bundle_kind": "something-else"},
+    )
+    for bundle in bundles:
+        check, page = check_and_render(bundle, source="f.json")
+        assert page == donated_render(bundle, check, source="f.json")
+    # A result capsule-emit can produce (witness receipts, countersignatures,
+    # extensions, missing records), drawn by both.
+    bundle = whole_log_bundle(tmp_path)
+    check = dataclasses.replace(
+        check_evidence_file(bundle),
+        witness=Check("witnesses", "fail"),
+        witness_receipts=[{"ts_url": "https://w.example", "binding": "cll", "status": "fail", "reason": "r"}],
+        countersignatures=2, extensions=("x-a",), missing=("ab" * 32,),
+    )
+    assert render_report_html(bundle, check, source="f.json") == donated_render(bundle, check, source="f.json")
