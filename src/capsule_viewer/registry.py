@@ -10,6 +10,8 @@ contract (``spec/presentation-contract-v0.md``):
   of one profile key) and any manifest that some descriptor would match
   together with one already registered in the same tier (section 4.5, the
   static ambiguity test).
+* ``unmet`` names every clause of a manifest a descriptor fails, as the
+  manifest states it; a manifest matches when there is none.
 * ``Registry.resolve`` is section 4.3: the gate, the match, the specific tier,
   the fallback tier. An ambiguous match raises ``AmbiguityError`` naming every
   colliding id; order, priority and ``canRender`` never break a tie.
@@ -177,18 +179,27 @@ def is_dead(m: Manifest) -> bool:
     )
 
 
+def unmet(m: Manifest, d: Descriptor, audience: str, fmt: str) -> tuple[str, ...]:
+    """Every clause of *m* that *d*, *audience* and *fmt* fail, each named as
+    the manifest states it (``requires extension x``, ``forbids extension x``,
+    and so on); empty when *m* matches (section 4.3, step 2)."""
+    reasons: list[str] = []
+    if m["requires"]["bundle_kind"] != d.bundle_kind:
+        reasons.append(f"requires bundle_kind {m['requires']['bundle_kind']}")
+    reasons += [f"requires profile {p}" for p in sorted(_requires(m, "profiles") - d.profiles)]
+    reasons += [f"requires extension {x}" for x in sorted(_requires(m, "extensions") - d.extensions)]
+    reasons += [f"forbids profile {p}" for p in sorted(_forbids(m, "profiles") & d.profiles)]
+    reasons += [f"forbids extension {x}" for x in sorted(_forbids(m, "extensions") & d.extensions)]
+    if audience not in m["audiences"] and "*" not in m["audiences"]:
+        reasons.append(f"audience {audience} not served")
+    if fmt not in m["formats"]:
+        reasons.append(f"format {fmt} not produced")
+    return tuple(reasons)
+
+
 def matches(m: Manifest, d: Descriptor, audience: str, fmt: str) -> bool:
     """Section 4.3, step 2, for one manifest."""
-    audiences = m["audiences"]
-    return (
-        m["requires"]["bundle_kind"] == d.bundle_kind
-        and _requires(m, "profiles") <= d.profiles
-        and _requires(m, "extensions") <= d.extensions
-        and not _forbids(m, "profiles") & d.profiles
-        and not _forbids(m, "extensions") & d.extensions
-        and (audience in audiences or "*" in audiences)
-        and fmt in m["formats"]
-    )
+    return not unmet(m, d, audience, fmt)
 
 
 def _version(text: str) -> tuple[int, ...]:
