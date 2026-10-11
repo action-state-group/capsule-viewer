@@ -22,7 +22,10 @@ Homepage = "https://github.com/action-state-group/capsule-viewer"
 Source = "https://github.com/action-state-group/capsule-viewer"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.4", "jsonschema>=4.18"]
+# The evidence report page renders capsule-emit's verifier result; the check
+# itself is capsule-emit's (capsule_emit.evidence_file.check_evidence_file).
+evidence = ["capsule-emit>=0.9.0,<0.10"]
+dev = ["pytest>=7.0", "ruff>=0.4", "jsonschema>=4.18", "capsule-emit>=0.9.0,<0.10"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

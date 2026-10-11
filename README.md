@@ -233,6 +233,35 @@ match one bundle (`tests/test_receipt_bilateral.py`). `receipt_page` registers b
 - Fixtures: `examples/receipt/build_bilateral_fixtures.sh` (see
   `tests/testdata/receipt/README.md`).
 
+## Evidence report page
+
+`capsule_viewer.evidence_report` renders one readable, offline HTML page from
+an evidence file (`evidence-bundle/v2`). It is the page half of capsule-emit's
+evidence report; the checking stays in capsule-emit.
+
+- **It never checks.** The page is drawn from the result of capsule-emit's
+  `capsule_emit.evidence_file.check_evidence_file`, read unchanged
+  (`render_report_html(bundle, check)`), or `check_and_render(bundle)` calls
+  that verifier and renders what it returns. A result altered after the check
+  renders as altered (`tests/test_evidence_report.py`).
+- **A result handed in is bound to the bundle it is drawn over.**
+  `render_report_html(bundle, check)` raises `BundleMismatch` unless the
+  result's `bundle_digest` equals agent-action-capsule's `bundle_digest` of the
+  bundle supplied (that digest leaves out `countersignatures`, so the carried
+  countersignature count is not bound). `check_and_render` and the command
+  below run the verifier on the very file they render.
+- **Check it yourself** points at the donated verifier,
+  `capsule-emit verify --bundle FILE.json`, which needs nothing from this
+  package.
+- Needs the `evidence` extra (`pip install "capsule-viewer[evidence]"`).
+
+```
+python -m capsule_viewer.evidence_report bundle.json -o report.html
+```
+
+It exits as `capsule-emit verify --bundle` does: 0 VALID, 2 INCOMPLETE,
+1 INVALID or unreadable.
+
 ## Fixtures
 
 `tests/testdata/` vendors the synthetic `EXAMPLE-ORG` fixtures from
