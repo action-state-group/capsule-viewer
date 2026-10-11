@@ -1,0 +1,155 @@
+{
+  "buyer/composed": {
+    "audience": "keep",
+    "descriptor": {
+      "bundle_kind": "evidence-bundle/v2",
+      "extensions": [
+        "composed/v1",
+        "producer-key/v1"
+      ],
+      "profiles": []
+    },
+    "fixture": "bilateral-keep",
+    "format": "html",
+    "modules": {
+      "capsuleviewer.receipt.bilateral/v0": {
+        "applicable": true,
+        "unmet": []
+      },
+      "capsuleviewer.receipt.seller/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension x-deal-seller/v0",
+          "requires extension x-deal-v0",
+          "forbids extension composed/v1"
+        ]
+      },
+      "capsuleviewer.receipt.unilateral/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension x-deal-v0",
+          "forbids extension composed/v1"
+        ]
+      }
+    },
+    "resolution": {
+      "module": "capsuleviewer.receipt.bilateral/v0",
+      "outcome": "module"
+    },
+    "sealed_side": null
+  },
+  "buyer/unilateral": {
+    "audience": "keep",
+    "descriptor": {
+      "bundle_kind": "evidence-bundle/v2",
+      "extensions": [
+        "x-cadence-witness/v0",
+        "x-deal-v0"
+      ],
+      "profiles": []
+    },
+    "fixture": "keep",
+    "format": "html",
+    "modules": {
+      "capsuleviewer.receipt.bilateral/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension composed/v1",
+          "forbids extension x-deal-v0"
+        ]
+      },
+      "capsuleviewer.receipt.seller/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension x-deal-seller/v0"
+        ]
+      },
+      "capsuleviewer.receipt.unilateral/v0": {
+        "applicable": true,
+        "unmet": []
+      }
+    },
+    "resolution": {
+      "module": "capsuleviewer.receipt.unilateral/v0",
+      "outcome": "module"
+    },
+    "sealed_side": "buyer"
+  },
+  "seller/composed": {
+    "audience": "counterparty",
+    "descriptor": {
+      "bundle_kind": "evidence-bundle/v2",
+      "extensions": [
+        "composed/v1",
+        "producer-key/v1"
+      ],
+      "profiles": []
+    },
+    "fixture": "seller-bilateral",
+    "format": "html",
+    "modules": {
+      "capsuleviewer.receipt.bilateral/v0": {
+        "applicable": true,
+        "unmet": []
+      },
+      "capsuleviewer.receipt.seller/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension x-deal-seller/v0",
+          "requires extension x-deal-v0",
+          "forbids extension composed/v1"
+        ]
+      },
+      "capsuleviewer.receipt.unilateral/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension x-deal-v0",
+          "forbids extension composed/v1"
+        ]
+      }
+    },
+    "resolution": {
+      "module": "capsuleviewer.receipt.bilateral/v0",
+      "outcome": "module"
+    },
+    "sealed_side": null
+  },
+  "seller/unilateral": {
+    "audience": "keep",
+    "descriptor": {
+      "bundle_kind": "evidence-bundle/v2",
+      "extensions": [
+        "x-cadence-witness/v0",
+        "x-deal-seller/v0",
+        "x-deal-v0"
+      ],
+      "profiles": []
+    },
+    "fixture": "seller-keep",
+    "format": "html",
+    "modules": {
+      "capsuleviewer.receipt.bilateral/v0": {
+        "applicable": false,
+        "unmet": [
+          "requires extension composed/v1",
+          "forbids extension x-deal-v0"
+        ]
+      },
+      "capsuleviewer.receipt.seller/v0": {
+        "applicable": true,
+        "unmet": []
+      },
+      "capsuleviewer.receipt.unilateral/v0": {
+        "applicable": false,
+        "unmet": [
+          "forbids extension x-deal-seller/v0"
+        ]
+      }
+    },
+    "resolution": {
+      "module": "capsuleviewer.receipt.seller/v0",
+      "outcome": "module"
+    },
+    "sealed_side": "seller"
+  }
+}
