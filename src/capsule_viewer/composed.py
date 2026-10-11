@@ -379,7 +379,8 @@ def composition_section(c: Composition, kit: KitServices) -> Markup:
                 _el("dl", _el("dt", d.pointer), *(_el("dd", _value_text(v)) for v in d.values), data_pointer=d.pointer)
                 for d in j.differences
             ]
-            joins.append(kit.drilldown(f"Differing values: {_pair_text(j.members)}", *lists))
+            # Shown inside the page's L2 toggle: a list, never a second toggle (one level of details).
+            joins.append(_el("div", _p(f"Differing values: {_pair_text(j.members)}"), *lists, data_differences="true"))
     out.append(kit.section("Joins", *joins, level=4))
     out.append(
         kit.section(

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Negative fixture: L0 behind a toggle</title>
+</head>
+<body class="cv-kit">
+<!-- Must FAIL the L0 check: the base view (title, verification state and
+     metrics) sits inside a details, so it is not always visible. Nothing is
+     nested, so this is the only fault. -->
+<main class="cv-page">
+<details class="cv-drilldown" data-cv="drilldown"><summary>Example toggle</summary><div class="cv-drilldown__body">
+<div class="cv-verification" data-cv="verification-details"><div class="cv-verification__outcome-row"><span class="cv-verification__outcome cv-pill cv-tone--positive" data-outcome="verified">Verified</span></div></div>
+<div data-level="L0">
+<h2>Example title</h2>
+<div class="cv-metrics-wrap" data-cv="metric-grid"><dl class="cv-metrics">
+<div class="cv-metric"><dt class="cv-metric__label">Example metric</dt><dd class="cv-metric__value">1</dd></div>
+</dl></div>
+</div>
+</div></details>
+</main>
+</body>
+</html>

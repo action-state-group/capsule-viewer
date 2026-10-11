@@ -466,18 +466,24 @@ class SellerReceiptModule(UnilateralReceiptModule):
             state = self._enum("state", model.receipt.report.state)
         else:
             state = Markup(self.w("l0.state.missing"))
-        return self.kit.metric_grid(
+        # At most three metrics in L0; payment and handover are the lines under them.
+        grid = self.kit.metric_grid(
             [
                 Metric(self.w("seller.l0.item"), Markup(self._part(model.item))),
                 Metric(self.w("seller.l0.amount"), Markup(self._part(model.amount))),
-                # No deal record kind carries a payment the seller received
-                # (evidence records do not say what they are about), so a
-                # copy never has one to show: the tile says so.
-                Metric(self.w("seller.l0.payment"), Markup(self.w("seller.payment.not_recorded"))),
-                Metric(self.w("seller.l0.handover"), _el("span", self._handover_text(model.handover), data_handover=model.handover.state)),
                 Metric(self.w("l0.state"), state),
             ]
         )
+        # No deal record kind carries a payment the seller received (evidence
+        # records do not say what they are about), so a copy never has one to
+        # show: the line says so.
+        payment = _el("p", _join([self.w("seller.l0.payment"), ": ", self.w("seller.payment.not_recorded")]), data_seller_line="payment")
+        handover = _el(
+            "p",
+            _join([self.w("seller.l0.handover"), ": ", _el("span", self._handover_text(model.handover), data_handover=model.handover.state)]),
+            data_seller_line="handover",
+        )
+        return grid + payment + handover
 
     def _seller_notes(self, model: SellerModel) -> list[Markup]:
         """The unilateral module's copy notes, with a shared copy's list of
