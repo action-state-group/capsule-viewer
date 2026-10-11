@@ -222,6 +222,17 @@ async function launchOnce(chromePath) {
         if (res.exceptionDetails) throw new Error("evaluate failed: " + JSON.stringify(res.exceptionDetails));
         return res.result.value;
       },
+      // The whole page as a PNG (a Buffer), at the width open() set and the
+      // page's full height: what a reader scrolling the page would see.
+      async screenshot() {
+        const size = await this.evaluate("({ w: document.documentElement.clientWidth, h: Math.ceil(document.documentElement.scrollHeight) })");
+        const res = await call("Page.captureScreenshot", {
+          format: "png",
+          captureBeyondViewport: true,
+          clip: { x: 0, y: 0, width: size.w, height: size.h, scale: 1 },
+        });
+        return Buffer.from(res.data, "base64");
+      },
       async click(x, y) {
         for (const type of ["mousePressed", "mouseReleased"]) {
           await call("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 });

@@ -256,7 +256,7 @@ def test_no_copy_is_filled_from_the_other():
     buyer, seller = party_text(html, "party-a"), party_text(html, "party-b")
     assert "cat sticker" in seller and "6.27 USD" in seller
     assert "cat sticker" not in buyer and "6.27 USD" not in buyer
-    assert re.search(r"Deal WITHHELD Item WITHHELD Amount WITHHELD", buyer)
+    assert re.search(r"Deal: WITHHELD Item WITHHELD Amount WITHHELD", buyer)
 
 
 def test_each_party_shows_only_its_own_records():

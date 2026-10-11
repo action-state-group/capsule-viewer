@@ -41,7 +41,10 @@ digest, composition closure and each copy's digest must all hold.
 
 Depth follows the unilateral module: L0 the deal, the joins and each copy's
 headline; L1 each copy's why; L2 the verifier's checks, the composition and
-each copy's records.
+each copy's records. One level of details, as there: L1 and L2 are each one
+``<details>``, and each copy (and the composition) is a section inside it,
+never a toggle inside a toggle. A page carrying a ``keep`` copy shows the
+PRIVATE banner in L0, under the title.
 """
 from __future__ import annotations
 
@@ -275,22 +278,25 @@ class BilateralReceiptModule:
         l1_open = self.depth in ("L1", "L2")
         l2_open = self.depth == "L2"
 
-        l0: list[str] = [_el("h2", self.w("bilateral.title")), self._deal(model), self._joins(model)]
+        l0: list[str] = [_el("h2", self.w("bilateral.title"))]
+        if any(p.audience == "keep" for p in model.parties):
+            l0.append(UnilateralReceiptModule(self.pack).private_banner())
+        l0 += [self._deal(model), self._joins(model)]
         for party, levels in zip(model.parties, drawn, strict=True):
             body = _join([levels.headline, *levels.notes])
             l0.append(_el("div", services.section(self._heading(party), body, level=3), data_party=party.member, data_cut=party.audience))
         l0.append(_el("p", self.w("parts.own"), class_="cv-muted"))
 
         l1 = [
-            _el("div", services.drilldown(self._heading(p), *levels.l1, expanded=l1_open), data_party=p.member)
+            _el("div", services.section(self._heading(p), *levels.l1, level=3), data_party=p.member)
             for p, levels in zip(model.parties, drawn, strict=True)
         ]
         l2: list[str] = [services.verification_details(model.verification)]
         if model.bundle_digest:
             l2.append(_el("p", _join([self.w("l2.bundle_digest"), " ", _el("span", model.bundle_digest, class_="cv-mono", data_bundle_digest="true")])))
-        l2.append(_el("div", services.drilldown(self.w("l2.composition"), composition_section(model.composition, services), expanded=l2_open), data_composition="true"))
+        l2.append(_el("div", services.section(self.w("l2.composition"), composition_section(model.composition, services), level=3), data_composition="true"))
         l2 += [
-            _el("div", services.drilldown(self._heading(p), *levels.l2, expanded=l2_open), data_party=p.member)
+            _el("div", services.section(self._heading(p), *levels.l2, level=3), data_party=p.member)
             for p, levels in zip(model.parties, drawn, strict=True)
         ]
         return str(

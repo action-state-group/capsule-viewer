@@ -5,6 +5,8 @@
   "entries": {
     "page.title": "Deal report",
     "badge.demo": "DEMO",
+    "banner.private.label": "PRIVATE",
+    "banner.private.text": "This is your own copy of this deal report, with everything this page shows. Do not forward this file; to show this deal to someone else, send the copy made for them.",
     "depth.l1": "Why: what was asked, proposed, approved and done",
     "depth.l2": "Verify: the records, their places in the log and the checks",
     "l0.deal_type": "Deal",
@@ -59,7 +61,7 @@
     "class.delivery_promise": "Delivery promise",
     "class.other": "Other",
     "summary.sealed": "The text on this page was written by capsulectl when the receipt was made and sealed as a record in this file; the verifier checked that record. It is capsulectl's summary of the steps, not the steps themselves.",
-    "summary.lines": "The summary lines below, and each step's line, were written by capsulectl on this device and sealed with the receipt: they were checked as unchanged since, not that they are right. Open an item to see the steps it was read from; each step's sealed record is checked.",
+    "summary.lines": "The summary lines below, and each step's line, were written by capsulectl on this device and sealed with the receipt: they were checked as unchanged since, not that they are right. Under each item are the steps it was read from; each step's sealed record is checked.",
     "acted.nothing": "Nothing yet.",
     "merchant.none": "No merchant email is attached to this receipt.",
     "merchant.intro": "Two different things stand behind each email. The merchant's signature is checked against the merchant's published key, saved when the email was sealed; it shows what the merchant sent, and it does not depend on the agent. Our seal shows this device kept these exact bytes from that time on; it is our own record. Amounts, dates and order numbers below are read from the email by capsulectl and may be misread.",

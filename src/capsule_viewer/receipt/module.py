@@ -22,6 +22,15 @@ Depth (presentation contract section 9):
   its disclosure state, place in the log and signing key, who sealed them and
   the wording pack this page was worded with.
 
+One level of details (the consumer convention): L0 is always visible, and L1
+and L2 are each one ``<details>``; nothing inside them is a ``<details>``, so
+a reader never opens a toggle inside a toggle. An item's steps, a merchant
+email and a cancellation are sections inside L1, shown when L1 is open.
+
+A ``keep`` copy, the owner's own file, carries the PRIVATE banner in L0: a
+share sheet can still forward this file, and the banner is what says it is
+not the copy to send. A copy cut for anyone else never carries it.
+
 Every word on the page is the wording pack's or the sealed report's (shown as
 capsulectl's sealed text). Nothing is read from a bundle-carried presentation
 setting. The module never verifies: the gate and every disclosure state arrive
@@ -205,7 +214,10 @@ class UnilateralReceiptModule:
         l0: list[str] = []
         if model.demo:
             l0.append(_el("p", self.w("badge.demo"), data_demo="true"))
-        l0 += [_el("h2", self.w("page.title")), levels.headline, *levels.notes]
+        l0.append(_el("h2", self.w("page.title")))
+        if model.report.audience == "keep":
+            l0.append(self.private_banner())
+        l0 += [levels.headline, *levels.notes]
         return str(
             _join(
                 [
@@ -230,6 +242,11 @@ class UnilateralReceiptModule:
             l1_open=l1_open,
             l2_open=self.depth == "L2",
         )
+
+    def private_banner(self) -> Markup:
+        """The PRIVATE banner a ``keep`` copy carries in L0, worded by the pack."""
+        label = _el("span", self.w("banner.private.label"), class_="cv-badge")
+        return _el("p", _join([label, " ", self.w("banner.private.text")]), class_="cv-tone--caution", data_banner="private")
 
     # ---- words --------------------------------------------------------------
 
@@ -263,9 +280,10 @@ class UnilateralReceiptModule:
     def _headline(self, model: ReceiptModel) -> Markup:
         h = model.headline
         state = self._enum("state", h.state) if h.state else Markup(escape(self.w("l0.state.missing")))
-        return self.kit.metric_grid(
+        # At most three metrics in L0; the deal type is the line they sit under.
+        deal_type = _el("p", _join([self.w("l0.deal_type"), ": ", Markup(self._part(h.deal_type, "deal_type"))]), data_deal_type="true")
+        return deal_type + self.kit.metric_grid(
             [
-                Metric(self.w("l0.deal_type"), Markup(self._part(h.deal_type, "deal_type"))),
                 Metric(self.w("l0.item"), Markup(self._part(h.item))),
                 Metric(self.w("l0.amount"), Markup(self._part(h.amount))),
                 Metric(self.w("l0.state"), state),
@@ -351,7 +369,9 @@ class UnilateralReceiptModule:
             text = "⚠️ " + text
         if not item.steps:
             return self._p(text, data_sealed_text="item")
-        return self.kit.drilldown(text, self.kit.section(self.w("steps.summary"), self._steps(model, item.steps), level=4), expanded=open_)
+        # Inside L1 already: the steps are listed under the item, not behind a second toggle.
+        return _el("div", _join([self._p(text, data_sealed_text="item"),
+                                 self.kit.section(self.w("steps.summary"), self._steps(model, item.steps), level=4)]), data_item="true")
 
     def _section_steps(self, model: ReceiptModel, section: str) -> list[Markup]:
         return [self._step(s) for s in model.steps if s.section == section]
@@ -417,12 +437,12 @@ class UnilateralReceiptModule:
             extra = [self._note(r.deadline_note)] if r.deadline_note else []
             out.append(self.kit.section(self.w("section.deadlines"), lines, *extra))
         for c in r.cancellations:
-            shows = self.kit.drilldown(
+            shows = self.kit.section(
                 self.w("cancellation.shows"),
                 _el("ul", _join(_el("li", p) for p in c.proven)),
                 self.kit.section(self.w("cancellation.not_shows"), _el("ul", _join(_el("li", p) for p in c.not_proven)), level=4),
                 self._steps(model, c.steps),
-                expanded=True,
+                level=3,
             )
             out.append(self.kit.section(self.w("section.cancellation"), shows))
 
@@ -470,7 +490,7 @@ class UnilateralReceiptModule:
                 body.append(self._facts_table(rows))
             body.append(self._steps(model, m.steps))
             title = self.w("merchant.order", order=m.order_id) if m.order_id else self.w("merchant.email")
-            out.append(self.kit.drilldown(title, *body, expanded=True))
+            out.append(self.kit.section(title, *body, level=3))
         return out
 
     def _facts_table(self, rows: Sequence[Sequence[str]]) -> Markup:
