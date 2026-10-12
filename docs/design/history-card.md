@@ -1,11 +1,22 @@
-# History Card: design (v0, not built)
+# History Card: design (v0)
 
-Status: design only. No viewer module, no page, no wording pack. This document,
-the manifest sketch beside it (`history-card.manifest.json`), one fixture
-(`tests/testdata/history/selection.bundle.json`, built by
-`examples/history/build_fixture.py`) and its recompute check
-(`tests/history_recompute.py`, `tests/test_history_card_design.py`) are the
-whole deliverable. A build item follows only after this design is read.
+Status: built, as amended on 2026-10-12 (rulings PM u331). The module is
+`src/capsule_viewer/static/history_card.js`, one self-contained module-slot
+script with its words compiled in; its manifest is
+`src/capsule_viewer/history/manifest.json` (this directory's sketch, plus the
+script's pin). The Python side is the manifest, the recompute check's Python
+twin (`capsule_viewer.history.recompute`) and the fixtures.
+
+**Amendment (2026-10-12): records come from nested per-deal bundles.** The
+first version of this design read the selected records from one flat bundle.
+That shape cannot verify on real binaries: each real deal lives in its own log
+with its own checkpoint, and rc15's `verify --bundle` reports the flat fixture
+INVALID (`membership_record_unbound`). A History Card's input is now a
+container that nests one member bundle per picked deal, the way
+`x-deal-sale/v0` nests a sale's threads (section 1). The container is written
+by a verb that does not exist yet, neutral `[deal-history-container-verb]`
+(section 6). Until it does, the tests run on a hand-built nested stand-in
+(section 5), which is rebuilt from real nested bundles once the verb exists.
 
 A History Card shows a person's own selected deal records to someone else: what
 they chose to show, over what period, and what outcome evidence those records
@@ -29,6 +40,20 @@ All paths are at the commits named here. Nothing in this design changes them.
 ## 1. Selection: holder-directed, an `explicit_set` account
 
 The holder picks records. The card never picks for them and never widens the pick.
+
+**Where the records are.** The input is a container (`evidence-bundle/v2`)
+whose `x-history-selection/v0` block carries, beside `definition`, `account`
+and `holder_asserted`, a `deals` object: `{"<deal id>": <that deal's own
+evidence-bundle/v2>}`, one member per picked deal, as `x-deal-sale/v0` carries
+`{"threads": {"<thread deal id>": <the thread's own bundle>}}`. Each member is
+verified as its own Evidence Bundle (its own log, checkpoint and membership),
+never as part of the container. The container carries no deal records of its
+own. Every read of a deal record goes through one function,
+`selected_records(bundle)` (Python) and `selectedRecords(bundle)` (the
+module): the records of every member, in deal id order, each with its own
+member's disclosed `agent_input`. Selection, recompute and drawing take only
+its output; a record outside the members (a top-level record, as in the flat
+fixture) is never read.
 
 The selection is a `capsule_emit.account` **`Selection(kind="explicit_set",
 coverage=Coverage(references=(...)))`** [core-acct], under an
@@ -61,8 +86,8 @@ Why `explicit_set` and not the other two kinds the core defines [core-def]:
 - `explicit_set` cites each member through `references[]`, which is exactly
   a holder pick. The core notes that it does not build the reference
   resolution path for `explicit_set` [core-acct, `Coverage` docstring]. The card
-  does not need the core to: every reference must resolve inside the bundle
-  itself (section 3). Nothing is filed against capsule-emit.
+  does not need the core to: every reference must resolve inside the nested
+  member bundles (section 3). Nothing is filed against capsule-emit.
 
 The definition carries no `predicate`. A predicate would make the card a
 filter over a history the reader cannot see. The pick is the `references` list.
@@ -109,7 +134,9 @@ about a different question and is never carried onto the card.
 Every derived value either recomputes from the records disclosed in the bundle
 or sits under `holder_asserted`, labelled. Nothing else is shown.
 
-The check (`tests/history_recompute.py`, `recompute_errors`) reads the bundle alone:
+The check (`capsule_viewer.history.recompute.recompute_errors` in Python, and
+`recomputeErrors` / `check` in the module) reads the container alone, its deal
+records only through `selected_records`:
 
 1. The account's `definition_digest` equals SHA-256 of the JCS of the
    `definition` it carries. A swapped definition fails [core-replay,
@@ -120,10 +147,14 @@ The check (`tests/history_recompute.py`, `recompute_errors`) reads the bundle al
 3. `completeness` is `not_asserted`. `asserted_result` has no member beyond the
    four in section 2.
 4. Every entry under `holder_asserted` is `{value, label: "holder_asserted"}`.
-5. Each reference is unique and resolves to exactly one record in `records[]`.
+5. Each reference is unique and resolves to exactly one record of the member
+   bundles; no record is carried twice (in two members, or twice in one).
    That record recomputes to its `capsule_id` (JCS without `capsule_id`,
-   `signature`, `key_id` [aac-id]), and its disclosure hashes to its
-   `agent_input_digest`. The bundle holds no record outside the selection.
+   `signature`, `key_id` [aac-id]), and its member's disclosure hashes to its
+   `agent_input_digest`. The members hold no record outside the selection
+   (open for the container verb: if a deal bundle cannot be cut to the picked
+   records and still verify, this rule becomes "a record outside the selection
+   is not counted and carries no disclosure", and both twins change).
 6. `period`, `selected_count` and `outcome_evidence` are recomputed from the
    resolved records and must equal the asserted values.
 
@@ -132,7 +163,7 @@ never inside it [mesh-card, `verify_history_card` and its enrichment note]. This
 fixture, `holder_asserted.records_held_in_period` (23) is such a value. Nothing
 in the bundle can recompute it, so it is shown only under its label.
 
-The fixture passes. The mutants, each in `tests/test_history_card_design.py`:
+The nested stand-in passes. The mutants, each in `tests/test_history_card_design.py` (and run against the module in `js-tests/history_card.test.js`, which agrees with the Python check on every one):
 
 | Mutant | Result |
 | --- | --- |
@@ -145,14 +176,19 @@ The fixture passes. The mutants, each in `tests/test_history_card_design.py`:
 | a disclosed `agent_input` edited | fails: digest binding |
 | the definition's `reads` extended | fails: `definition_digest` |
 | a record in the bundle but not in the selection | fails |
+| a record carried in two deal bundles | fails: `carried twice` |
+| the flat shape (records at the top level) | fails: none is read, `selected but not disclosed` |
+| one outcome flipped in what the card states | fails: `outcome_evidence` mismatch; the module draws the mismatch, never the card |
 
 The check itself was mutated too. With the reference-resolution step and the
 count comparison removed, the dropped-record tests fail (they expect the error).
 Restored, they pass.
 
-The records carry no signatures. This check covers selection and recompute, not
-signing. A built module runs it after the bundle verifier, as the receipt modules
-read `capsulectl verify` output, and never instead of it.
+The stand-in's records carry no signatures. This check covers selection and
+recompute, not signing. The module runs it after the page runtime's gate, never
+instead of it; each member bundle's signatures, log and membership are its own
+verifier's (as each sale thread is verified as its own bundle), and the card
+says so in L2.
 
 ## 4. Manifest sketch: `capsuleviewer.history/v0`
 
@@ -161,6 +197,12 @@ read `capsulectl verify` output, and never instead of it.
 
 - `requires`: `bundle_kind: evidence-bundle/v2`, `extensions.required:
   ["x-history-selection/v0"]`.
+- `executable`: `{"carrier": "module-slot", "script_sha256": ...}`, the carrier
+  capsulectl's `presentation build` takes for a plugin's module (capsule-cli
+  #207; any other carrier is `unsupported_carrier`). The pin is the SHA-256 of
+  `history_card.js`'s bytes; the sketch carries zeros, as a script's own copy
+  of its manifest does. No `style_sha256` and no `wording_sha256`: the words
+  are compiled into the script, and none is private.
 - `forbids`: the three report and result profiles the receipt manifests already
   forbid (`spec_version:report/v1`, `spec_version:evaluation-summary/v1`,
   `result_version:evidence-result-v0`). Nothing else.
@@ -179,47 +221,68 @@ test [registry] is run in the tests:
 
 - Without any forbids, the sketch co-matches all five specific built-ins. With
   the three profile forbids, it co-matches none.
-- As this repository's manifests stand, the sketch co-matches all three
-  receipt manifests and the Rules manifest: a selection bundle may also engage
-  x-deal-v0, composed/v1 or a rules profile. Ambiguity is resolved by forbids,
-  never priority. **The build item adds `x-history-selection/v0` to `forbids.extensions` of
-  each of those four.** The test shows that with that one token each, none
-  co-matches. The sketch could not forbid them instead: it would have to forbid
-  x-deal-v0 and composed/v1, which its own records carry.
+- Without a forbid, the sketch co-matches all three receipt manifests and the
+  Rules manifest: a container may also engage x-deal-v0, composed/v1 or a rules
+  profile. Ambiguity is resolved by forbids, never priority. **The build adds
+  `x-history-selection/v0` to `forbids.extensions` of each of those four**, and
+  the tests show that with that one token each, none co-matches.
+- capsulectl's own deal view (`capsulectl.deal-view/v0`, capsule-cli) requires
+  x-deal-v0 and forbids no extension, so as shipped it co-matches this module,
+  and a registry holding both refuses the second. The fix is the same one
+  token in that manifest, in capsule-cli; `tests/test_history_module.py` pins
+  the current state against a vendored copy.
 
 `x-history-selection/v0` is a private `x-` kind, local to this repository's
 modules. It is not proposed to the neutral spec.
 
-## 5. The fixture
+## 5. The fixtures
 
-`tests/testdata/history/selection.bundle.json`: 8 selected records across 7
-synthetic deals (`deal-example-01` to `-07`), 2026-09-14 to 2026-10-09:
-4 decided purchases (`effect.status:dispatched`), 2 booking notes (`none`),
-1 refund that cites the purchase it reverses (`action_class:money.refund`),
-1 outcome record (`outcome:mismatch`, an unchecked action).
+`tests/testdata/history/selection.bundle.json` (the first fixture, built by
+`examples/history/build_fixture.py` through the account core): 8 selected
+records across 7 synthetic deals (`deal-example-01` to `-07`), 2026-09-14 to
+2026-10-09: 4 decided purchases (`effect.status:dispatched`), 2 booking notes
+(`none`), 1 refund that cites the purchase it reverses
+(`action_class:money.refund`), 1 outcome record (`outcome:mismatch`, an
+unchecked action). It is flat, and **it cannot verify on real binaries**: each
+real deal has its own log and checkpoint, and rc15 reports it INVALID
+(`membership_record_unbound`). The module does not read its top-level records.
+
+`tests/testdata/history/nested-selection.bundle.json` is the **stand-in** the
+tests run on, pending the container verb: the same eight records regrouped
+into seven member bundles under `deals`, nothing re-signed or re-sealed, built
+by `examples/history/build_nested_fixture.py`. It has no checkpoints,
+certificates or signatures and does not verify; its README says so.
+`nested-mutant-flipped-outcome.bundle.json` is the same container with one
+outcome flipped in what the card states. Once the verb exists, both are
+rebuilt from real nested bundles it writes, and that container is held to
+`capsulectl verify`.
 
 The record shapes follow the x-deal-v0 history entries capsulectl writes
 (v0.1.0-rc14 and capsule-cli main). Both the `x-deal-v0` form and the typed
-`action-record/v0` form are present, for a purchase and for a booking. Every value is synthetic: deal ids,
-amounts, counterparty fingerprints, key id, producer commit and times. Record
-ids and disclosure digests are real digests of those synthetic values.
+`action-record/v0` form are present, for a purchase and for a booking. Every
+value is synthetic: deal ids, amounts, counterparty fingerprints, key id,
+producer commit and times. Record ids and disclosure digests are real digests
+of those synthetic values.
 
-Rebuild (needs source checkouts of capsule-emit and agent-action-capsule):
+Rebuild (the first needs source checkouts of capsule-emit and agent-action-capsule):
 
     PYTHONPATH=CAPSULE_EMIT/python:AGENT_ACTION_CAPSULE/python python3 examples/history/build_fixture.py
+    PYTHONPATH=src python3 examples/history/build_nested_fixture.py
 
-The rebuild is deterministic: the same bytes every time.
+Both rebuilds are deterministic: the same bytes every time.
 
-## 6. Holder-side verb: a dependency, not designed here
+## 6. The container verb: a dependency, not designed here
 
-Assembling a selection bundle is a producer-side verb: list my records, let me
-pick, cut the bundle with `x-history-selection/v0`. It lives outside this
-repository and is tracked as its own item. This design depends on it and does
-not design it. Until it exists, the only selection bundle is the fixture.
+Assembling a History container is a producer-side verb: list my deals, let me
+pick records, and write a container that nests each picked deal's own bundle
+under `x-history-selection/v0`'s `deals`, with the account over the picked
+references. It is neutral `[deal-history-container-verb]`, it lives outside
+this repository, and it does not exist yet. This design depends on it and does
+not design it. Until it exists, the only containers are the stand-ins.
 
 ## Not in this design
 
-- No viewer module, page, layout, wording pack or golden.
-- No change to any receipt or Rules manifest (section 4 names the change the build item makes).
+- No wording pack: the module's words are compiled in.
 - No change to capsule-emit; the core already has everything section 1 uses.
+- No change to capsule-cli (the container verb, and the deal view's forbid, are its own items).
 - Nothing proposed to the neutral spec.

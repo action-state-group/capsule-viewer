@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The History Card design (docs/design/history-card.md): the fixture's recompute
-check passes, each mutant flips it, and the manifest sketch is checked against
-the presentation contract. No module is registered; the sketch is a design file."""
+"""The History Card design (docs/design/history-card.md): the nested stand-in
+fixture's recompute check passes, each mutant flips it, and the manifest sketch
+is checked against the presentation contract. The built module ships the
+sketch as its manifest (``tests/test_history_module.py``)."""
 from __future__ import annotations
 
 import copy
@@ -10,12 +11,14 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from history_recompute import SELECTION_EXTENSION, _digest, derive, recompute_errors
+from history_recompute import SELECTION_EXTENSION, _digest, derive, recompute_errors, selected_records
 
 from capsule_viewer.registry import co_matchable
 
 HERE = Path(__file__).parent
-FIXTURE = HERE / "testdata" / "history" / "selection.bundle.json"
+# The nested stand-in (one member bundle per picked deal), pending the container verb.
+FIXTURE = HERE / "testdata" / "history" / "nested-selection.bundle.json"
+FLAT = HERE / "testdata" / "history" / "selection.bundle.json"
 SKETCH = HERE.parent / "docs" / "design" / "history-card.manifest.json"
 AAC = HERE / "testdata" / "aac-presentation"
 RECEIPTS = HERE.parent / "src" / "capsule_viewer" / "receipt"
@@ -30,9 +33,15 @@ def _ext(b: dict) -> dict:
     return b["extensions"][SELECTION_EXTENSION]
 
 
+def _member(b: dict, cid: str) -> dict:
+    return next(m for m in _ext(b)["deals"].values() if any(r["capsule_id"] == cid for r in m["records"]))
+
+
 def _drop(b: dict, index: int, *, reference_too: bool) -> str:
-    rec = b["records"].pop(index)
-    del b["disclosures"][rec["capsule_id"]]
+    rec = selected_records(b)[index]["record"]
+    member = _member(b, rec["capsule_id"])
+    member["records"].remove(rec)
+    del member["disclosures"][rec["capsule_id"]]
     if reference_too:
         _ext(b)["account"]["selection"]["input_identity"]["references"].remove(rec["capsule_id"])
     return rec["capsule_id"]
@@ -44,7 +53,9 @@ def test_the_fixture_recomputes(bundle):
 
 def test_the_fixture_is_the_selection_the_design_describes(bundle):
     asserted = _ext(bundle)["account"]["asserted_result"]
-    assert asserted["selected_count"] == len(bundle["records"]) == 8
+    assert asserted["selected_count"] == len(selected_records(bundle)) == 8
+    assert len(_ext(bundle)["deals"]) == 7  # deal-example-01 to -07, one member bundle each
+    assert bundle["records"] == [] and bundle["disclosures"] == {}
     assert asserted["completeness"] == "not_asserted"
     assert sum(asserted["outcome_evidence"].values()) == asserted["selected_count"]
     assert asserted["outcome_evidence"] == {
@@ -54,7 +65,7 @@ def test_the_fixture_is_the_selection_the_design_describes(bundle):
         "outcome:mismatch": 1,
     }
     # Both record forms are present: x-deal-v0 and the typed action-record/v0.
-    forms = {"typed" if d["agent_input"].get("type") == "action-record/v0" else "x-deal-v0" for d in bundle["disclosures"].values()}
+    forms = {"typed" if s["agent_input"].get("type") == "action-record/v0" else "x-deal-v0" for s in selected_records(bundle)}
     assert forms == {"typed", "x-deal-v0"}
 
 
@@ -85,7 +96,7 @@ def test_an_honest_smaller_selection_passes(bundle):
     # Dropping a record AND restating every count is a different, honest selection.
     # The check cannot tell, which is why the card never asserts completeness.
     _drop(bundle, 1, reference_too=True)
-    _ext(bundle)["account"]["asserted_result"] = derive(bundle["records"], bundle["disclosures"])
+    _ext(bundle)["account"]["asserted_result"] = derive(selected_records(bundle))
     assert recompute_errors(bundle) == []
 
 
@@ -109,14 +120,30 @@ def test_mutant_an_unlabelled_extra_count_flips_the_check(bundle):
 
 
 def test_mutant_an_edited_disclosure_flips_the_check(bundle):
-    cid = bundle["records"][0]["capsule_id"]
-    bundle["disclosures"][cid]["agent_input"]["body"]["amount_minor"] += 1
+    cid = selected_records(bundle)[0]["record"]["capsule_id"]
+    _member(bundle, cid)["disclosures"][cid]["agent_input"]["body"]["amount_minor"] += 1
     assert any("agent_input_digest" in e for e in recompute_errors(bundle))
 
 
 def test_mutant_a_swapped_definition_flips_the_check(bundle):
     _ext(bundle)["definition"]["reads"].append("agent_input.body.amount_minor")
     assert any("definition_digest" in e for e in recompute_errors(bundle))
+
+
+def test_mutant_a_record_carried_in_two_deal_bundles_flips_the_check(bundle):
+    first = selected_records(bundle)[0]
+    other = next(m for d, m in _ext(bundle)["deals"].items() if d != first["deal"])
+    other["records"].append(copy.deepcopy(first["record"]))
+    assert any("is carried twice" in e for e in recompute_errors(bundle))
+
+
+def test_records_outside_the_nested_bundles_are_not_read():
+    # The flat design fixture (records at the top level) is not the shape: none of its
+    # records is read, so every reference is unresolved. It cannot verify on real
+    # binaries either (each deal has its own log); see the design, section 5.
+    flat = json.loads(FLAT.read_text(encoding="utf-8"))
+    assert selected_records(flat) == []
+    assert any(e.startswith("selected but not disclosed") for e in recompute_errors(flat))
 
 
 def test_mutant_an_unselected_record_in_the_bundle_flips_the_check(bundle):
@@ -138,6 +165,7 @@ def test_the_sketch_is_schema_valid():
     validator = jsonschema.Draft202012Validator({**SCHEMA, "$ref": "#/$defs/PresentationManifest"})
     assert list(validator.iter_errors(SKETCH_JSON)) == []
     # It forbids only the three report/result profiles, the receipts' own profile forbids.
+    assert SKETCH_JSON["executable"]["carrier"] == "module-slot"
     assert SKETCH_JSON["forbids"] == {"profiles": RECEIPT_MANIFESTS["manifest-unilateral"]["forbids"]["profiles"]}
 
 
@@ -160,19 +188,22 @@ def _viewer_specific_manifests() -> dict[str, dict]:
     return {**RECEIPT_MANIFESTS, "rules": rules_manifest(RECORD_KIND)}
 
 
-def test_the_sketch_needs_each_viewer_module_to_forbid_the_selection_extension():
-    # As they stand, the three receipt manifests and the Rules manifest each co-match the
-    # sketch (a selection bundle may also engage x-deal-v0, composed/v1 or a rules profile),
-    # and the registry refuses an ambiguous pair. Resolved by forbids, never priority.
+def test_each_viewer_module_forbids_the_selection_extension_and_needs_to():
+    # The build item's change (design section 4): each receipt manifest and the Rules
+    # manifest forbids x-history-selection/v0, and so none co-matches the sketch. Without
+    # that one token each would (a selection bundle may also engage x-deal-v0, composed/v1
+    # or a rules profile), and the registry refuses an ambiguous pair. Forbids, never priority.
     manifests = _viewer_specific_manifests()
-    assert sorted(n for n, m in manifests.items() if co_matchable(SKETCH_JSON, m)) == [
+    assert all(SELECTION_EXTENSION in m["forbids"]["extensions"] for m in manifests.values())
+    assert sorted(n for n, m in manifests.items() if co_matchable(SKETCH_JSON, m)) == []
+    unpatched = {}
+    for name, m in manifests.items():
+        bare = copy.deepcopy(m)
+        bare["forbids"]["extensions"].remove(SELECTION_EXTENSION)
+        unpatched[name] = bare
+    assert sorted(n for n, m in unpatched.items() if co_matchable(SKETCH_JSON, m)) == [
         "manifest-bilateral",
         "manifest-seller",
         "manifest-unilateral",
         "rules",
     ]
-    # With one forbids token added to each (the build item's change), none does.
-    for m in manifests.values():
-        patched = copy.deepcopy(m)
-        patched.setdefault("forbids", {}).setdefault("extensions", []).append(SELECTION_EXTENSION)
-        assert not co_matchable(SKETCH_JSON, patched)

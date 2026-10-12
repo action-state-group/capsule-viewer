@@ -344,3 +344,21 @@ def test_an_ambiguous_page_never_says_the_bundle_failed():
     html = present(context, registry, audience="keep")
     assert REFUSAL not in html
     assert AMBIGUOUS.split("(")[0] in html and "org.example.twin/v0" in html
+
+
+def test_never_co_matchable_with_the_history_card():
+    """A history selection bundle carries x-deal-v0 records too; the receipt
+    forbids x-history-selection/v0, so it and capsuleviewer.history/v0 never
+    both match one bundle (docs/design/history-card.md, section 4)."""
+    from capsule_viewer.history import HISTORY_MANIFEST, SELECTION_EXTENSION
+
+    for manifest in (UNILATERAL_MANIFEST, CONFIGURED):
+        assert SELECTION_EXTENSION in manifest["forbids"]["extensions"]
+        assert not co_matchable(manifest, HISTORY_MANIFEST)
+        assert not co_matchable(HISTORY_MANIFEST, manifest)
+    registry = Registry()
+    registry.register(CONFIGURED, lambda _c: True)
+    registry.register(HISTORY_MANIFEST, lambda _c: True)  # no AmbiguityError, in either order
+    registry = Registry()
+    registry.register(HISTORY_MANIFEST, lambda _c: True)
+    registry.register(CONFIGURED, lambda _c: True)

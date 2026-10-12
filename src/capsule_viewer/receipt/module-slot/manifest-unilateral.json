@@ -20,6 +20,7 @@
     ],
     "extensions": [
       "composed/v1",
+      "x-history-selection/v0",
       "x-deal-seller/v0"
     ]
   },
@@ -35,7 +36,7 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "e5092c91bab41aed7ee0d3718be6f8f5c87fa8a51629e7559dcef13d80fe2812",
+    "script_sha256": "56d3f8fcfaa4d7aa6bcee61581cf05d302a6abc4d09aab62d3c5b180bc25e658",
     "style_sha256": [
       "3ebe7e581f56665a6a0b5a122fd8447c6be9e06fbcd262e304d83948915d93fd"
     ]

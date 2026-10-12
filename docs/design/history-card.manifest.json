@@ -30,6 +30,7 @@
   "fallback": false,
   "priority": 1,
   "executable": {
-    "carrier": "core-runtime"
+    "carrier": "module-slot",
+    "script_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   }
 }

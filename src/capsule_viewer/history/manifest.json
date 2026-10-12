@@ -1,0 +1,36 @@
+{
+  "spec_version": "aac.presentation-manifest/v0",
+  "id": "capsuleviewer.history/v0",
+  "presentation_api": "aac.presentation-api/v0",
+  "runtime_min": "0.1.0",
+  "trust_class": "trusted-executable",
+  "requires": {
+    "bundle_kind": "evidence-bundle/v2",
+    "extensions": {
+      "required": [
+        "x-history-selection/v0"
+      ]
+    }
+  },
+  "forbids": {
+    "profiles": [
+      "spec_version:report/v1",
+      "spec_version:evaluation-summary/v1",
+      "result_version:evidence-result-v0"
+    ]
+  },
+  "audiences": [
+    "keep",
+    "counterparty",
+    "adjudicator"
+  ],
+  "formats": [
+    "html"
+  ],
+  "fallback": false,
+  "priority": 1,
+  "executable": {
+    "carrier": "module-slot",
+    "script_sha256": "ed31e5bca6ea3ea35edc8e1bcb3bf3ba2696a6507c72e9be946e440a04f187f3"
+  }
+}

@@ -10,6 +10,9 @@
   "forbids": {
     "profiles": [
       "result_version:evidence-result-v0"
+    ],
+    "extensions": [
+      "x-history-selection/v0"
     ]
   },
   "audiences": [
