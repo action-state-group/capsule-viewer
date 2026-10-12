@@ -193,7 +193,7 @@
         if (!isObject(src)) return;
         var name = ref + " source " + JSON.stringify(src.source);
         if ((src.contemporaneous_count || 0) + (src.backfilled_count || 0) !== src.record_count) {
-          diags.push("requirement " + name + ": contemporaneous + backfilled != record_count");
+          diags.push("requirement " + name + ": contemporaneous_count + backfilled_count != record_count");
         }
         if (arr(src.evidence).length !== src.record_count) diags.push("requirement " + name + ": evidence digests != record_count");
         if ((src.status === "NOT_FOUND") !== (src.record_count === 0)) {

@@ -166,7 +166,7 @@ describe("coverageGaps", () => {
     r.coverage_report.requirements[1].sources[0].backfilled_count = 1;
     const out = panels().coverageGaps(r, contract());
     expect(out.diagnostics).toContain(
-      'requirement "tests_passed_on_release_commit" source "ci-run-record": contemporaneous + backfilled != record_count',
+      'requirement "tests_passed_on_release_commit" source "ci-run-record": contemporaneous_count + backfilled_count != record_count',
     );
   });
 

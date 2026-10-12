@@ -37,6 +37,10 @@ CORE_PAGE_FROM = 50
 REWORDED = {
     7: "summary.lines",
     25: "summary.sealed",
+    # Retired vocabulary (tests/test_prose_word_discipline.py): the line named
+    # a property in order to deny it; the rest of the sentence already says
+    # what the seal does and does not show.
+    31: "claims.tamper",
     49: "claims.scope",
 }
 DROPPED = {
@@ -72,7 +76,7 @@ def test_the_map_accounts_for_every_deal_view_line(page):
 def test_most_deal_view_lines_are_shown_verbatim(page):
     text = visible_text(page)
     verbatim = [i for i in DEAL_VIEW if LINES[i] in text]
-    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 42
+    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 41
 
 
 def test_dropped_lines_are_really_gone(page):

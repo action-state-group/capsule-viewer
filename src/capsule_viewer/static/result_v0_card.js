@@ -217,7 +217,7 @@
       issues.push("missing or invalid tier (must be \"recomputed\" or \"judged\")");
     }
     if (VALID_GRADES.indexOf(claim.grade) === -1) {
-      issues.push("missing or invalid grade (must be self-attested / witnessed / countersigned)");
+      issues.push("missing or invalid grade (must be 'self-attested', 'witnessed' or 'countersigned')");
     }
     if (VALID_SUFFICIENCY.indexOf(claim.sufficiency) === -1) issues.push("missing or invalid sufficiency");
     if (claim.verdict === "not_applicable") {

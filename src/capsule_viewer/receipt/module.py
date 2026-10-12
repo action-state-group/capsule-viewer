@@ -305,7 +305,7 @@ class UnilateralReceiptModule:
 
     def _witness(self, model: ReceiptModel) -> str:
         if model.witnessed == "pass":
-            return self.w("rung.witnessed")
+            return self.w("rung.witness_verified")
         if model.witnessed == "fail":
             return self.w("rung.witness_failed")
         if model.witnessed == "withheld":
