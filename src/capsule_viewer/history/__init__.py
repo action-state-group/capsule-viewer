@@ -11,7 +11,17 @@ import hashlib
 import json
 from importlib import resources
 
-from .recompute import SELECTION_EXTENSION, check, derive, recompute_errors, selected_records, selection_block
+from .recompute import (
+    PROPERTIES,
+    SELECTION_EXTENSION,
+    check,
+    derive,
+    recompute_errors,
+    sealed_or_inline_report,
+    sealed_selection,
+    selected_records,
+    selection_block,
+)
 
 HISTORY_ID = "capsuleviewer.history/v0"
 SCRIPT = "history_card.js"
@@ -36,6 +46,7 @@ HISTORY_MANIFEST = history_manifest()
 __all__ = [
     "HISTORY_ID",
     "HISTORY_MANIFEST",
+    "PROPERTIES",
     "SELECTION_EXTENSION",
     "check",
     "derive",
@@ -43,6 +54,8 @@ __all__ = [
     "history_script_bytes",
     "recompute_errors",
     "script_sha256",
+    "sealed_or_inline_report",
+    "sealed_selection",
     "selected_records",
     "selection_block",
 ]

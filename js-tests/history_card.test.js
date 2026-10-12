@@ -4,13 +4,14 @@
 // for: EvidenceGraph.registerPresentation captures what the script registers,
 // and the tests call its canRender, buildModel and render as the runtime
 // would, with a context carrying the bundle and a host with L0, L1 and L2.
-// The stand-in fixtures carry no signatures, so the real runtime would refuse
-// them before any module runs; that is the container verb's to change.
 //
-// (1) the nested stand-in fixture recomputes in the module and renders the card;
-// (2) the mutant (one flipped outcome) renders the mismatch, never the card;
-// and the module agrees with the Python check (python -m capsule_viewer.history
-// check) on the fixture and on every mutant below.
+// The inputs are real Histories: capsulectl `deal history` wrote every file
+// under tests/testdata/history/ (examples/history/cut_fixtures.sh), and
+// verify/<name>.json is what `capsulectl verify --bundle` printed for it.
+// (1) the shareable Histories render the card; (2) each refused file renders
+// its refusal and no card value; (3) the module and the Python check
+// (python -m capsule_viewer.history check) agree on every file and on every
+// edit below; (4) the same in headless Chromium at 390px and 1280px.
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -26,14 +27,31 @@ const SCRIPT_BYTES = readFileSync(join(ROOT, "src", "capsule_viewer", "static", 
 const SCRIPT = SCRIPT_BYTES.toString("utf8");
 const MANIFEST = JSON.parse(readFileSync(join(ROOT, "src", "capsule_viewer", "history", "manifest.json"), "utf8"));
 const DATA = join(ROOT, "tests", "testdata", "history");
-const NESTED = JSON.parse(readFileSync(join(DATA, "nested-selection.bundle.json"), "utf8"));
-const MUTANT = JSON.parse(readFileSync(join(DATA, "nested-mutant-flipped-outcome.bundle.json"), "utf8"));
-const FLAT = JSON.parse(readFileSync(join(DATA, "selection.bundle.json"), "utf8"));
+const read = (name) => JSON.parse(readFileSync(join(DATA, `${name}.bundle.json`), "utf8"));
+const verified = (name) => {
+  const report = JSON.parse(readFileSync(join(DATA, "verify", `${name}.json`), "utf8"));
+  return { verdict: report.verdict, ...report.extensions.find((e) => e.kind === EXT) };
+};
+const CUT = JSON.parse(readFileSync(join(DATA, "cut.json"), "utf8"));
+const D = CUT.deals;
+const PICKED = [D.closed, D.private, D.floor].sort();
 const EXT = "x-history-selection/v0";
 const PY = process.env.PYTHON || "python3";
 const PY_ENV = { ...process.env, PYTHONPATH: join(ROOT, "src") };
 
+// What the page shows for each real file (the mutant matrix).
+const MATRIX = {
+  "history-counterparty": ["card", []],
+  "history-adjudicator": ["card", []],
+  "history-keep": ["not_shareable", ["history_audience_keep", ...PICKED.map((d) => `deal_audience_keep:${d}`)]],
+  "mutant-flipped-outcome": ["invalid", [`deal_bundle_not_the_selected_one:${D.closed}`]],
+  "mutant-mixed-signer": ["not_shareable", [`deal_not_in_selection:${D.second_profile}`, "deal_signers_differ"]],
+  "mutant-not-in-selection": ["not_shareable", [`deal_not_in_selection:${D.other}`]],
+};
+const SHAREABLE = read("history-counterparty");
+
 const clone = (v) => JSON.parse(JSON.stringify(v));
+const ext = (b) => b.extensions[EXT];
 
 // The script in a fresh window, with a stand-in runtime that captures the registration.
 function load() {
@@ -56,14 +74,12 @@ function present(bundle) {
   return { model, host };
 }
 
-function pythonErrors(bundle, dir, name) {
+function python(bundle, dir, name) {
   const file = join(dir, `${name}.json`);
   writeFileSync(file, JSON.stringify(bundle));
   const res = spawnSync(PY, ["-m", "capsule_viewer.history", "check", file], { cwd: ROOT, env: PY_ENV, encoding: "utf8" });
   return JSON.parse(res.stdout);
 }
-
-const member = (b, cid) => Object.values(b.extensions[EXT].deals).find((m) => m.records.some((r) => r.capsule_id === cid));
 
 describe("the module and its pin", () => {
   it("the manifest pins these exact script bytes", () => {
@@ -81,9 +97,8 @@ describe("the module and its pin", () => {
 
   it("canRender takes any selection block, and nothing else", () => {
     const { registered } = load();
-    expect(registered[0].canRender({ bundle: NESTED })).toBe(true);
-    expect(registered[0].canRender({ bundle: MUTANT })).toBe(true);
-    const none = clone(NESTED);
+    for (const name of Object.keys(MATRIX)) expect(registered[0].canRender({ bundle: read(name) })).toBe(true);
+    const none = clone(SHAREABLE);
     delete none.extensions[EXT];
     expect(registered[0].canRender({ bundle: none })).toBe(false);
   });
@@ -98,86 +113,83 @@ describe("the module's primitives", () => {
     }
   });
 
-  it("UTF-8 and JCS: the definition digest is the one the design pins (a third implementation)", () => {
+  it("UTF-8 and JCS: each nested deal copy hashes to the digest capsulectl sealed", () => {
     const { H } = load();
     for (const text of ["plain", "é", "€ and 𝄞", "\u0000\u001f"]) expect(Buffer.from(H.utf8(text))).toEqual(Buffer.from(text, "utf8"));
     expect(() => H.utf8("\ud800")).toThrow();
     expect(() => H.jcs({ a: 1.5 })).toThrow();
-    const def = NESTED.extensions[EXT].definition;
-    expect(H.sha256Hex(H.utf8(H.jcs(def)))).toBe("a6cf2944408ac0b8b0fe0adaf54d40631e9772376838bb413220e0c77f2da2b1");
+    for (const entry of ext(SHAREABLE).selection) {
+      expect(H.sha256Hex(H.utf8(H.jcs(ext(SHAREABLE).deals[entry.deal_id])))).toBe(entry.bundle_digest);
+    }
   });
 
-  it("deal records are read only through selectedRecords, from the nested per-deal bundles", () => {
+  it("deal records are read only through selectedRecords: the selected deals, in selection order", () => {
     const { H } = load();
-    const selected = H.selectedRecords(NESTED);
-    expect(selected).toHaveLength(8);
-    expect(new Set(selected.map((s) => s.deal)).size).toBe(7);
-    for (const s of selected) expect(s.agent_input).toEqual(member(NESTED, s.record.capsule_id).disclosures[s.record.capsule_id].agent_input);
-    // check() takes only that output.
-    expect(H.check(NESTED.extensions[EXT], selected)).toEqual([]);
-    expect(H.check(NESTED.extensions[EXT], [])[0]).toMatch(/^selected but not disclosed/);
-    // Top-level records (the flat design fixture's shape) are not read.
-    expect(H.selectedRecords(FLAT)).toEqual([]);
+    const selected = H.selectedRecords(SHAREABLE);
+    const order = ext(SHAREABLE).selection.map((e) => e.deal_id);
+    expect([...new Set(selected.map((s) => s.deal))]).toEqual(order);
+    expect(selected).toHaveLength(order.reduce((n, d) => n + ext(SHAREABLE).deals[d].records.length, 0));
+    // A deal carried but not selected is never read for values.
+    const extra = read("mutant-not-in-selection");
+    expect(H.selectedRecords(extra).some((s) => s.deal === D.other)).toBe(false);
+  });
+
+  it("reads each copy's audience as capsule-cli's sealedOrInlineReport does", () => {
+    const { H } = load();
+    const deals = ext(SHAREABLE).deals;
+    expect("sealed_report" in deals[D.private].extensions["x-deal-v0"]).toBe(true); // a sealed report, disclosed
+    expect("sealed_report" in deals[D.closed].extensions["x-deal-v0"]).toBe(false); // an inline one
+    for (const d of PICKED) expect(H.sealedOrInlineReport(deals[d]).audience).toBe("counterparty");
   });
 });
 
-describe("acceptance (1): the nested stand-in fixture renders through the module", () => {
-  it("recomputes in the module", () => {
-    const { H } = load();
-    expect(H.recomputeErrors(NESTED)).toEqual([]);
-    expect(H.derive(H.selectedRecords(NESTED))).toEqual(NESTED.extensions[EXT].account.asserted_result);
-  });
+describe("the mutant matrix: each real file, in the module", () => {
+  for (const [name, [state, findings]] of Object.entries(MATRIX)) {
+    it(`${name}: ${state}`, () => {
+      const { model, host } = present(read(name));
+      expect(model.result.state).toBe(state);
+      expect(model.result.findings).toEqual(findings);
+      const v = verified(name);
+      for (const f of v.findings) expect(model.result.findings).toContain(f);
+      expect(model.result.holder_key).toBe(v.holder_key);
+      expect(model.result.signer_keys).toEqual(v.signer_keys);
+      expect(host.L0.getAttribute("data-history-state")).toBe(state);
+      if (state === "card") {
+        expect(host.L0.querySelector('[data-history="card"]')).not.toBeNull();
+      } else {
+        expect(host.L0.querySelector('[data-history="card"]')).toBeNull();
+        expect(host.L0.querySelector("[data-history-value]")).toBeNull();
+        expect(host.L1.childNodes).toHaveLength(0);
+        expect([...host.L0.querySelectorAll("[data-history-error]")].map((e) => e.getAttribute("data-history-error"))).toEqual(findings);
+      }
+    });
+  }
 
-  it("renders the card: the four values, the holder's labelled value, one level of details", () => {
-    const { model, host } = present(NESTED);
-    expect(model.errors).toEqual([]);
-    expect(host.L0.getAttribute("data-history-state")).toBe("card");
-    expect(host.L0.querySelector('[data-history="card"]')).not.toBeNull();
-    expect(host.L0.querySelector('[data-history="mismatch"]')).toBeNull();
+  it("the card: the four values, computed by this page, one level of details", () => {
+    const { model, host } = present(SHAREABLE);
     const value = (k) => host.L0.querySelector(`[data-history-value="${k}"]`).textContent;
-    expect(value("selected_count")).toBe("8");
-    expect(value("period")).toBe("2026-09-14T10:02:11Z to 2026-10-09T14:44:02Z");
+    expect(value("selected_count")).toBe("3");
     expect(value("completeness")).toBe("Not asserted");
-    const buckets = [...host.L0.querySelectorAll("[data-bucket]")].map((li) => [li.getAttribute("data-bucket"), li.querySelector("strong").textContent]);
-    expect(buckets).toEqual([["action_class:money.refund", "1"], ["effect.status:dispatched", "4"], ["none", "2"], ["outcome:mismatch", "1"]]);
-    expect(host.L0.querySelector('[data-holder-asserted="records_held_in_period"]').textContent).toContain("holder_asserted");
+    const v = model.result.values;
+    expect(value("period")).toBe(`${v.period.from} to ${v.period.to}`);
+    const buckets = [...host.L0.querySelectorAll("[data-bucket]")].map((li) => [li.getAttribute("data-bucket"), Number(li.querySelector("strong").textContent)]);
+    expect(Object.fromEntries(buckets)).toEqual(v.outcome_evidence);
+    expect(host.L0.querySelector("[data-history-provenance]").getAttribute("data-history-provenance")).toBe("computed");
+    expect(host.L0.querySelector("[data-history-audience]").getAttribute("data-history-audience")).toBe("counterparty");
     expect(host.L0.querySelector("[data-history-forbids]").textContent).toBe(load().H.WORDS.forbidding);
-    // L1: each selected record with its deal; L2: how it was checked. One <details> each, none nested.
-    const rows = [...host.L1.querySelectorAll("[data-record]")];
-    expect(rows).toHaveLength(8);
-    expect(new Set(rows.map((r) => r.children[1].textContent)).size).toBe(7);
+    expect(host.L1.querySelectorAll("[data-deal]")).toHaveLength(3);
     for (const level of [host.L1, host.L2]) expect(level.querySelectorAll("details")).toHaveLength(1);
     expect(host.L0.querySelectorAll("details")).toHaveLength(0);
   });
-});
 
-describe("acceptance (2): one flipped outcome", () => {
-  it("the module finds the mismatch", () => {
-    const { H } = load();
-    const errors = H.recomputeErrors(MUTANT);
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toMatch(/^outcome_evidence: recomputed .*"outcome:mismatch":1.* != asserted .*"outcome:match":1/);
-  });
-
-  it("renders the mismatch, never the card", () => {
-    const { model, host } = present(MUTANT);
-    expect(model.errors).toHaveLength(1);
-    expect(host.L0.getAttribute("data-history-state")).toBe("mismatch");
-    expect(host.L0.querySelector('[data-history="card"]')).toBeNull();
-    expect(host.L0.querySelector("[data-history-value]")).toBeNull();
-    expect(host.L1.childNodes).toHaveLength(0);
-    expect(host.L2.childNodes).toHaveLength(0);
-    expect(host.L0.textContent).toContain("This selection does not recompute");
-    expect([...host.L0.querySelectorAll("[data-history-error]")].map((e) => e.textContent)).toEqual(model.errors);
-  });
-
-  it("a flipped outcome in a deal bundle's disclosed record is caught by its digest", () => {
-    const b = clone(NESTED);
-    const s = load().H.selectedRecords(b).find((x) => x.agent_input.body.outcome === "mismatch");
-    member(b, s.record.capsule_id).disclosures[s.record.capsule_id].agent_input.body.outcome = "match";
-    const { model, host } = present(b);
-    expect(model.errors).toEqual([`record ${s.record.capsule_id}: disclosed agent_input does not match its agent_input_digest`]);
-    expect(host.L0.querySelector('[data-history="card"]')).toBeNull();
+  it("L2 lists each property's status, and never says verified", () => {
+    const { host } = present(SHAREABLE);
+    const status = Object.fromEntries([...host.L2.querySelectorAll("[data-property]")].map((r) => [r.getAttribute("data-property"), r.getAttribute("data-property-status")]));
+    expect(Object.keys(status)).toEqual(load().H.PROPERTIES);
+    for (const p of ["selection_record_signature", "history_log", "member_signatures", "member_logs"]) expect(status[p]).toBe("NOT_CHECKED");
+    expect(status.values).toBe("NOT_PRESENT");
+    expect(host.L2.textContent).not.toMatch(/\bverified\b/i);
+    expect(host.L0.textContent).not.toMatch(/\bverified\b/i);
   });
 });
 
@@ -188,42 +200,63 @@ describe("the module and the Python check agree", () => {
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  const ext = (b) => b.extensions[EXT];
-  const first = (b) => Object.values(ext(b).deals)[0];
-  const MUTANTS = {
-    fixture: () => {},
-    "flipped outcome": (b) => Object.assign(b, clone(MUTANT)),
-    "record dropped, reference kept": (b) => { const m = first(b); const r = m.records.pop(); delete m.disclosures[r.capsule_id]; },
-    "record and reference dropped": (b) => {
-      const m = first(b); const r = m.records.pop(); delete m.disclosures[r.capsule_id];
-      const refs = ext(b).account.selection.input_identity.references; refs.splice(refs.indexOf(r.capsule_id), 1);
+  const asserted = (b, flip) => {
+    const values = clone(load().H.check(b).values);
+    if (flip) {
+      values.outcome_evidence["effect.status:failed"] = values.outcome_evidence["effect.status:dispatched"];
+      delete values.outcome_evidence["effect.status:dispatched"];
+    }
+    ext(b).asserted_result = values;
+  };
+  const EDITS = {
+    ...Object.fromEntries(Object.keys(MATRIX).map((name) => [name, (b) => Object.assign(b, read(name))])),
+    "asserted_result that recomputes": (b) => asserted(b, false),
+    "asserted_result with a flipped outcome": (b) => asserted(b, true),
+    "a selected deal dropped": (b) => { delete ext(b).deals[D.floor]; },
+    "the keep copy of one deal spliced in": (b) => { ext(b).deals[D.closed] = ext(read("history-keep")).deals[D.closed]; },
+    "another key under a picked deal's name": (b) => { ext(b).deals[D.closed] = ext(read("mutant-mixed-signer")).deals[D.second_profile]; },
+    "the carried selection edited": (b) => { ext(b).selection = ext(b).selection.slice(0, 2); },
+    "the sealed selection edited": (b) => {
+      const sealed = b.disclosures[ext(b).selection_record].agent_input;
+      sealed.selection = sealed.selection.slice(0, 2);
+      ext(b).selection = clone(sealed.selection);
     },
-    "record carried twice": (b) => { Object.values(ext(b).deals)[1].records.push(clone(first(b).records[0])); },
-    "count edited": (b) => { ext(b).account.asserted_result.outcome_evidence.none = 1; },
-    "completeness asserted": (b) => { ext(b).account.asserted_result.completeness = "complete"; },
-    "extra count": (b) => { ext(b).account.asserted_result.records_held_in_period = 23; },
-    "relabelled holder value": (b) => { ext(b).holder_asserted.records_held_in_period.label = "verified"; },
-    "disclosure edited": (b) => { const m = first(b); m.disclosures[m.records[0].capsule_id].agent_input.body.amount_minor += 1; },
-    "definition widened": (b) => { ext(b).definition.reads.push("agent_input.body.amount_minor"); },
-    "unselected record": (b) => { ext(b).account.selection.input_identity.references.pop(); },
-    "record header edited": (b) => { first(b).records[0].timestamp = "2026-09-14T10:02:12Z"; },
-    "period edited": (b) => { ext(b).account.asserted_result.period.to = "2026-10-10T00:00:00Z"; },
-    "flat shape": (b) => Object.assign(b, clone(FLAT)),
+    "a nested record header edited": (b) => { ext(b).deals[D.closed].records[0].timestamp = "2026-01-01T00:00:00Z"; },
+    "a nested disclosure edited": (b) => {
+      const m = ext(b).deals[D.closed];
+      const id = Object.keys(m.disclosures).find((k) => "agent_input" in m.disclosures[k]);
+      m.disclosures[id].agent_input.body.edited = true;
+    },
+    "every signature removed": (b) => { for (const m of [b, ...Object.values(ext(b).deals)]) for (const r of m.records) delete r.signature; },
+    "every checkpoint removed": (b) => { for (const m of [b, ...Object.values(ext(b).deals)]) delete m.checkpoint; },
+    "no selection block": (b) => { delete b.extensions[EXT]; },
   };
 
-  for (const [name, mutate] of Object.entries(MUTANTS)) {
-    it(`${name}: same verdict, and the same reasons where the values print alike`, () => {
-      const b = clone(NESTED);
-      mutate(b);
-      const js = load().H.recomputeErrors(b);
-      const py = pythonErrors(b, dir, name.replace(/\W+/g, "-"));
-      expect(js.length === 0).toBe(py.length === 0);
-      expect(js.length === 0).toBe(name === "fixture");
+  for (const [name, edit] of Object.entries(EDITS)) {
+    it(`${name}: same state, findings and property statuses`, () => {
+      const b = clone(SHAREABLE);
+      edit(b);
+      const js = load().H.check(b);
+      const py = python(b, dir, name.replace(/\W+/g, "-"));
+      expect(js.state).toBe(py.state);
+      expect(js.properties).toEqual(py.properties);
+      expect(js.values).toEqual(py.values);
       // Python prints values with repr, the module with JSON; the reason itself is the same.
-      const head = (e) => e.split(/: | \(|, is /)[0];
-      expect(js.map(head)).toEqual(py.map(head));
+      const head = (e) => e.split(/: /)[0];
+      expect(js.findings.map(head)).toEqual(py.findings.map(head));
     });
   }
+
+  it("each state, for the edits", () => {
+    const state = (edit) => { const b = clone(SHAREABLE); edit(b); return present(b).model.result.state; };
+    expect(state(EDITS["asserted_result that recomputes"])).toBe("card");
+    expect(state(EDITS["asserted_result with a flipped outcome"])).toBe("mismatch");
+    expect(state(EDITS["a selected deal dropped"])).toBe("not_shareable");
+    expect(state(EDITS["the keep copy of one deal spliced in"])).toBe("not_shareable");
+    expect(state(EDITS["another key under a picked deal's name"])).toBe("not_shareable");
+    expect(state(EDITS["every signature removed"])).toBe("invalid");
+    expect(state(EDITS["every checkpoint removed"])).toBe("invalid");
+  });
 });
 
 // In a real browser: the module rendered into a host on a page with the kit's
@@ -240,8 +273,8 @@ describe.skipIf(!chromePath)("the module in headless Chromium", () => {
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "cv-history-page-"));
     const css = execFileSync(PY, ["-c", "from capsule_viewer.kit import kit_css; print(kit_css())"], { cwd: ROOT, env: PY_ENV, encoding: "utf8" });
-    for (const [name, bundle] of [["fixture", NESTED], ["mutant", MUTANT]]) {
-      const data = JSON.stringify(bundle).replace(/</g, "\\u003c");
+    for (const name of Object.keys(MATRIX)) {
+      const data = JSON.stringify(read(name)).replace(/</g, "\\u003c");
       const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
 <body class="cv-kit"><main class="cv-page"><div data-level="L0"></div><div data-level="L1"></div><div data-level="L2"></div></main>
 <script>var EvidenceGraph = { registerPresentation: function (m) { window.__history = m; } };</script>
@@ -264,22 +297,17 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
     state: document.querySelector('[data-level="L0"]').getAttribute("data-history-state"),
     card: !!document.querySelector('[data-history="card"]'),
     count: (document.querySelector('[data-history-value="selected_count"]') || {}).textContent || null,
-    errors: [...document.querySelectorAll("[data-history-error]")].map((e) => e.textContent),
+    errors: [...document.querySelectorAll("[data-history-error]")].map((e) => e.getAttribute("data-history-error")),
     overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   }))()`;
 
   for (const width of [390, 1280]) {
-    it(`fixture at ${width}px: the card`, async () => {
-      await tab.open(urls.fixture, { width });
-      expect(await tab.evaluate(STATE)).toMatchObject({ state: "card", card: true, count: "8", errors: [], overflow: false });
-    }, 30000);
-
-    it(`mutant at ${width}px: the mismatch, never the card`, async () => {
-      await tab.open(urls.mutant, { width });
-      const m = await tab.evaluate(STATE);
-      expect(m).toMatchObject({ state: "mismatch", card: false, count: null, overflow: false });
-      expect(m.errors).toHaveLength(1);
-      expect(m.errors[0]).toMatch(/^outcome_evidence: recomputed/);
-    }, 30000);
+    for (const [name, [state, findings]] of Object.entries(MATRIX)) {
+      it(`${name} at ${width}px: ${state}`, async () => {
+        await tab.open(urls[name], { width });
+        const m = await tab.evaluate(STATE);
+        expect(m).toMatchObject({ state, card: state === "card", count: state === "card" ? "3" : null, errors: findings, overflow: false });
+      }, 30000);
+    }
   }
 });

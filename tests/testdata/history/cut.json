@@ -1,0 +1,35 @@
+{
+ "deals": {
+  "closed": "deal-ee9a64ce107db5af",
+  "floor": "deal-5094f2795e4f6a80",
+  "other": "deal-372bce2d972fe1d3",
+  "private": "deal-49fdaf2bacee1632",
+  "second_profile": "deal-687d83f891c9eb83"
+ },
+ "holder_key": "0a3a6aef4746e44d8940279b64231c516ef02dfbd79c930356e810842448c425",
+ "private_values": {
+  "address": [
+   "41 Larkspur Lane, Apt 3, Springfield",
+   "Larkspur",
+   "Springfield"
+  ],
+  "card": [
+   "4111 1111 1111 1111",
+   "4111-1111-1111-1111"
+  ],
+  "code": [
+   "739142"
+  ],
+  "contact": [
+   "orders@stickers.example",
+   "+1 555 010 7788",
+   "Sticker Shop Ltd"
+  ],
+  "floor": [
+   "170000",
+   "min_total_minor",
+   "go down to 1700"
+  ]
+ },
+ "second_key": "76abe7c001c82f5d9ed340e52142a1f590607a34ae2be09e94fae91c6cfeb90e"
+}

@@ -1,157 +1,277 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The History Card design (docs/design/history-card.md): the nested stand-in
-fixture's recompute check passes, each mutant flips it, and the manifest sketch
-is checked against the presentation contract. The built module ships the
-sketch as its manifest (``tests/test_history_module.py``)."""
+"""The History Card design (docs/design/history-card.md) against real
+Histories: capsulectl ``deal history`` wrote every file under
+``tests/testdata/history/`` (``examples/history/cut_fixtures.sh``) and
+``verify/<name>.json`` is what ``capsulectl verify --bundle`` printed for it.
+The check here (``capsule_viewer.history.recompute``) names what capsulectl
+names, shows a card only for a shareable History, and never calls a signature,
+checkpoint or log membership verified. The manifest sketch is checked against
+the presentation contract."""
 from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 
 import jsonschema
 import pytest
-from history_recompute import SELECTION_EXTENSION, _digest, derive, recompute_errors, selected_records
 
+from capsule_viewer.history import (
+    PROPERTIES,
+    SELECTION_EXTENSION,
+    check,
+    recompute_errors,
+    sealed_selection,
+    selected_records,
+)
+from capsule_viewer.history.fixture import with_asserted_result
 from capsule_viewer.registry import co_matchable
 
 HERE = Path(__file__).parent
-# The nested stand-in (one member bundle per picked deal), pending the container verb.
-FIXTURE = HERE / "testdata" / "history" / "nested-selection.bundle.json"
-FLAT = HERE / "testdata" / "history" / "selection.bundle.json"
+DATA = HERE / "testdata" / "history"
 SKETCH = HERE.parent / "docs" / "design" / "history-card.manifest.json"
 AAC = HERE / "testdata" / "aac-presentation"
 RECEIPTS = HERE.parent / "src" / "capsule_viewer" / "receipt"
+CUT = json.loads((DATA / "cut.json").read_text(encoding="utf-8"))
+DEALS = CUT["deals"]
+PICKED = sorted([DEALS["closed"], DEALS["private"], DEALS["floor"]])
+
+# What the page shows for each real file (the mutant matrix).
+MATRIX = {
+    "history-counterparty": ("card", []),
+    "history-adjudicator": ("card", []),
+    "history-keep": ("not_shareable", ["history_audience_keep"] + [f"deal_audience_keep:{d}" for d in PICKED]),
+    "mutant-flipped-outcome": ("invalid", [f"deal_bundle_not_the_selected_one:{DEALS['closed']}"]),
+    "mutant-mixed-signer": ("not_shareable", [f"deal_not_in_selection:{DEALS['second_profile']}", "deal_signers_differ"]),
+    "mutant-not-in-selection": ("not_shareable", [f"deal_not_in_selection:{DEALS['other']}"]),
+}
+
+
+def _load(name: str) -> dict:
+    return json.loads((DATA / f"{name}.bundle.json").read_text(encoding="utf-8"))
+
+
+def _verify(name: str) -> dict:
+    report = json.loads((DATA / "verify" / f"{name}.json").read_text(encoding="utf-8"))
+    (entry,) = [e for e in report["extensions"] if e.get("kind") == SELECTION_EXTENSION]
+    return {"verdict": report["verdict"], **entry}
 
 
 @pytest.fixture
 def bundle() -> dict:
-    return json.loads(FIXTURE.read_text(encoding="utf-8"))
+    return _load("history-counterparty")
 
 
 def _ext(b: dict) -> dict:
     return b["extensions"][SELECTION_EXTENSION]
 
 
-def _member(b: dict, cid: str) -> dict:
-    return next(m for m in _ext(b)["deals"].values() if any(r["capsule_id"] == cid for r in m["records"]))
+# ---- the fixtures are real, and say where they came from ---------------------------
 
 
-def _drop(b: dict, index: int, *, reference_too: bool) -> str:
-    rec = selected_records(b)[index]["record"]
-    member = _member(b, rec["capsule_id"])
-    member["records"].remove(rec)
-    del member["disclosures"][rec["capsule_id"]]
-    if reference_too:
-        _ext(b)["account"]["selection"]["input_identity"]["references"].remove(rec["capsule_id"])
-    return rec["capsule_id"]
+def test_the_readme_names_the_capsule_cli_commit_the_fixtures_were_cut_from():
+    text = (DATA / "README.md").read_text(encoding="utf-8")
+    assert re.search(r"capsule-cli\s+`521d41f[0-9a-f]{33}`", text), "the full SHA of the producer commit"
+    assert "stand-in" not in text.lower()
 
 
-def test_the_fixture_recomputes(bundle):
-    assert recompute_errors(bundle) == []
+def test_every_file_is_a_history_bundle_of_the_holders_history_log():
+    for name in MATRIX:
+        b = _load(name)
+        assert b["bundle_kind"] == "evidence-bundle/v2"
+        assert b["completeness_certificate"]["log_id"] == b["checkpoint"]["log_id"] == "deal-history"
+        ext = _ext(b)
+        assert set(ext) == {"selection_record", "selection", "deals"}
+        record = next(r for r in b["records"] if r["capsule_id"] == ext["selection_record"])
+        assert record["action_id"] == "capsulectl-deal-history"
+        sealed = sealed_selection(b)
+        assert set(sealed) == {"type", "profile", "audience", "nonce", "selection"}
+        assert (sealed["type"], sealed["profile"]) == ("history_selection", SELECTION_EXTENSION)
+        for entry in sealed["selection"]:
+            assert set(entry) == {"deal_id", "bundle_digest"}
+            assert re.fullmatch(r"deal-[0-9a-f]{16}", entry["deal_id"]) and re.fullmatch(r"[0-9a-f]{64}", entry["bundle_digest"])
 
 
-def test_the_fixture_is_the_selection_the_design_describes(bundle):
-    asserted = _ext(bundle)["account"]["asserted_result"]
-    assert asserted["selected_count"] == len(selected_records(bundle)) == 8
-    assert len(_ext(bundle)["deals"]) == 7  # deal-example-01 to -07, one member bundle each
-    assert bundle["records"] == [] and bundle["disclosures"] == {}
-    assert asserted["completeness"] == "not_asserted"
-    assert sum(asserted["outcome_evidence"].values()) == asserted["selected_count"]
-    assert asserted["outcome_evidence"] == {
-        "action_class:money.refund": 1,
-        "effect.status:dispatched": 4,
-        "none": 2,
-        "outcome:mismatch": 1,
-    }
-    # Both record forms are present: x-deal-v0 and the typed action-record/v0.
-    forms = {"typed" if s["agent_input"].get("type") == "action-record/v0" else "x-deal-v0" for s in selected_records(bundle)}
-    assert forms == {"typed", "x-deal-v0"}
+@pytest.mark.parametrize("name", sorted(MATRIX))
+def test_the_page_names_what_capsulectl_verify_names(name):
+    reading, verified = check(_load(name)), _verify(name)
+    state, findings = MATRIX[name]
+    assert reading["state"] == state
+    assert reading["findings"] == findings
+    # capsulectl's findings are the page's (the page adds only what capsulectl reports as
+    # audience or does not check: the keep marker).
+    assert set(verified["findings"]) <= set(reading["findings"])
+    assert (verified["verdict"] == "VALID") == (not verified["findings"])
+    assert reading["holder_key"] == verified["holder_key"]
+    assert reading["audience"] == verified["audience"]
+    assert reading["signer_keys"] == verified["signer_keys"]
+    # A card only for a file capsulectl passes and whose audience is shareable.
+    assert (state == "card") == (verified["verdict"] == "VALID" and verified["audience"] in ("counterparty", "adjudicator"))
 
 
-def test_the_definition_digest_agrees_with_the_account_core():
-    # Pinned from capsule_emit.account's definition_digest() when the fixture was built
-    # (examples/history/build_fixture.py); recomputed here with this repo's own JCS.
-    bundle = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    pinned = "a6cf2944408ac0b8b0fe0adaf54d40631e9772376838bb413220e0c77f2da2b1"
-    assert _ext(bundle)["account"]["derivation"]["definition_digest"] == pinned
-    assert _digest(_ext(bundle)["definition"]) == pinned
+def test_signers_are_the_holder_key_or_a_second_profiles_key():
+    assert _verify("history-counterparty")["signer_keys"] == {CUT["holder_key"]: PICKED}
+    signers = check(_load("mutant-mixed-signer"))["signer_keys"]
+    assert signers == {CUT["holder_key"]: PICKED, CUT["second_key"]: [DEALS["second_profile"]]}
 
 
-@pytest.mark.parametrize("index", range(8))
-def test_mutant_a_dropped_record_flips_the_check(bundle, index):
-    cid = _drop(bundle, index, reference_too=False)
-    assert any(cid in e and "selected but not disclosed" in e for e in recompute_errors(bundle))
+# ---- the values ---------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("index", range(8))
-def test_mutant_a_dropped_record_and_reference_flips_the_counts(bundle, index):
-    _drop(bundle, index, reference_too=True)
-    errors = recompute_errors(bundle)
-    assert any(e.startswith("selected_count: recomputed 7 != asserted 8") for e in errors), errors
-    assert any(e.startswith("outcome_evidence:") for e in errors), errors
+def test_the_values_are_computed_from_the_selected_deals(bundle):
+    reading = check(bundle)
+    values = reading["values"]
+    selected = selected_records(bundle)
+    assert values["selected_count"] == 3 == len(_ext(bundle)["selection"])
+    assert {s["deal"] for s in selected} == set(PICKED)
+    assert sum(values["outcome_evidence"].values()) == len(selected) == sum(len(m["records"]) for m in _ext(bundle)["deals"].values())
+    times = sorted(s["record"]["timestamp"] for s in selected)
+    assert values["period"] == {"from": times[0], "to": times[-1], "temporal_provenance": "producer_asserted"}
+    assert values["completeness"] == "not_asserted"
+    # The counterparty copy withholds most bodies; the pay act's effect.status stays in its sealed header.
+    assert values["outcome_evidence"]["effect.status:dispatched"] == 1
+    assert values["outcome_evidence"]["withheld"] > 0
+    assert reading["properties"]["values"] == "NOT_PRESENT"  # no asserted_result: computed by this page
 
 
-def test_an_honest_smaller_selection_passes(bundle):
-    # Dropping a record AND restating every count is a different, honest selection.
-    # The check cannot tell, which is why the card never asserts completeness.
-    _drop(bundle, 1, reference_too=True)
-    _ext(bundle)["account"]["asserted_result"] = derive(selected_records(bundle))
-    assert recompute_errors(bundle) == []
+def test_an_asserted_result_that_recomputes_is_shown_and_one_that_does_not_is_refused(bundle):
+    stated = check(with_asserted_result(bundle))
+    assert stated["state"] == "card" and stated["properties"]["values"] == "PASS"
+    flipped = check(with_asserted_result(bundle, flip_bucket=("effect.status:dispatched", "effect.status:failed")))
+    assert flipped["state"] == "mismatch" and flipped["values"] is None
+    assert len(flipped["findings"]) == 1 and flipped["findings"][0].startswith("outcome_evidence: recomputed")
+    extra = with_asserted_result(bundle)
+    _ext(extra)["asserted_result"]["records_held_in_period"] = 23
+    assert check(extra)["state"] == "mismatch"
 
 
-def test_mutant_an_edited_count_flips_the_check(bundle):
-    _ext(bundle)["account"]["asserted_result"]["outcome_evidence"]["none"] = 1
-    _ext(bundle)["account"]["asserted_result"]["outcome_evidence"]["effect.status:dispatched"] = 5
-    assert any(e.startswith("outcome_evidence:") for e in recompute_errors(bundle))
+# ---- the properties: FAIL, NOT_CHECKED and NOT_PRESENT ---------------------------------
 
 
-def test_mutant_asserted_completeness_flips_the_check(bundle):
-    _ext(bundle)["account"]["asserted_result"]["completeness"] = "complete"
-    assert any("completeness must be not_asserted" in e for e in recompute_errors(bundle))
+def test_a_card_never_calls_a_signature_or_a_log_verified(bundle):
+    props = check(bundle)["properties"]
+    assert list(props) == list(PROPERTIES)
+    for p in ("selection_record_signature", "history_log", "member_signatures", "member_logs"):
+        assert props[p] == "NOT_CHECKED", p
+    assert set(props.values()) <= {"PASS", "NOT_CHECKED", "NOT_PRESENT"}
 
 
-def test_mutant_an_unlabelled_extra_count_flips_the_check(bundle):
-    _ext(bundle)["account"]["asserted_result"]["records_held_in_period"] = 23
-    assert any("nothing recomputes" in e for e in recompute_errors(bundle))
-    bundle2 = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    _ext(bundle2)["holder_asserted"]["records_held_in_period"]["label"] = "verified"
-    assert any("not labelled holder_asserted" in e for e in recompute_errors(bundle2))
+def test_an_unsigned_stand_in_never_renders_as_a_history(bundle):
+    for member in [bundle, *_ext(bundle)["deals"].values()]:
+        for r in member["records"]:
+            r.pop("signature")
+    reading = check(bundle)
+    assert reading["state"] == "invalid" and reading["values"] is None
+    assert "selection_record_unsigned" in reading["findings"]
+    assert all(f"deal_record_unsigned:{d}" in reading["findings"] for d in PICKED)
+    assert reading["properties"]["selection_record_signature"] == "NOT_PRESENT"
+    assert reading["properties"]["member_signatures"] == "NOT_PRESENT"
 
 
-def test_mutant_an_edited_disclosure_flips_the_check(bundle):
-    cid = selected_records(bundle)[0]["record"]["capsule_id"]
-    _member(bundle, cid)["disclosures"][cid]["agent_input"]["body"]["amount_minor"] += 1
-    assert any("agent_input_digest" in e for e in recompute_errors(bundle))
+def test_a_history_without_checkpoints_never_renders(bundle):
+    for member in [bundle, *_ext(bundle)["deals"].values()]:
+        del member["checkpoint"]
+    reading = check(bundle)
+    assert reading["state"] == "invalid"
+    assert reading["properties"]["history_log"] == "NOT_PRESENT" and reading["properties"]["member_logs"] == "NOT_PRESENT"
 
 
-def test_mutant_a_swapped_definition_flips_the_check(bundle):
-    _ext(bundle)["definition"]["reads"].append("agent_input.body.amount_minor")
-    assert any("definition_digest" in e for e in recompute_errors(bundle))
+# ---- the not-shareable states, beyond the cut files -----------------------------------
 
 
-def test_mutant_a_record_carried_in_two_deal_bundles_flips_the_check(bundle):
-    first = selected_records(bundle)[0]
-    other = next(m for d, m in _ext(bundle)["deals"].items() if d != first["deal"])
-    other["records"].append(copy.deepcopy(first["record"]))
-    assert any("is carried twice" in e for e in recompute_errors(bundle))
+def test_a_selected_deal_dropped_is_not_shareable(bundle):
+    del _ext(bundle)["deals"][DEALS["floor"]]
+    reading = check(bundle)
+    assert reading["state"] == "not_shareable" and reading["findings"] == [f"deal_missing:{DEALS['floor']}"]
+    assert reading["properties"]["membership"] == "FAIL"
 
 
-def test_records_outside_the_nested_bundles_are_not_read():
-    # The flat design fixture (records at the top level) is not the shape: none of its
-    # records is read, so every reference is unresolved. It cannot verify on real
-    # binaries either (each deal has its own log); see the design, section 5.
-    flat = json.loads(FLAT.read_text(encoding="utf-8"))
-    assert selected_records(flat) == []
-    assert any(e.startswith("selected but not disclosed") for e in recompute_errors(flat))
+def test_the_holders_own_copy_of_one_deal_spliced_in_is_not_shareable(bundle):
+    keep = _ext(_load("history-keep"))["deals"][DEALS["closed"]]
+    _ext(bundle)["deals"][DEALS["closed"]] = keep
+    reading = check(bundle)
+    assert reading["state"] == "not_shareable"
+    closed = DEALS["closed"]
+    assert reading["findings"] == [
+        f"deal_bundle_not_the_selected_one:{closed}",
+        f"deal_audience_not_selected:{closed}",
+        f"deal_audience_keep:{closed}",
+    ]
 
 
-def test_mutant_an_unselected_record_in_the_bundle_flips_the_check(bundle):
-    _ext(bundle)["account"]["selection"]["input_identity"]["references"].pop()
-    assert any("in the bundle but not selected" in e for e in recompute_errors(bundle))
+def test_another_key_under_a_picked_deals_name_is_not_shareable(bundle):
+    second = _ext(_load("mutant-mixed-signer"))["deals"][DEALS["second_profile"]]
+    _ext(bundle)["deals"][DEALS["closed"]] = second
+    reading = check(bundle)
+    assert reading["state"] == "not_shareable"
+    assert f"deal_signed_by_other_key:{DEALS['closed']}" in reading["findings"] and "deal_signers_differ" in reading["findings"]
 
 
-# --- the manifest sketch -------------------------------------------------------
+# ---- what capsulectl verify catches by the seal, the page catches too ---------------------
+
+
+def test_the_carried_selection_edited_is_not_sealed(bundle):
+    _ext(bundle)["selection"] = _ext(bundle)["selection"][:2]
+    reading = check(bundle)
+    assert reading["findings"][0] == "selection_not_sealed" and reading["state"] != "card"
+
+
+def test_the_sealed_selection_edited_does_not_match_its_seal(bundle):
+    sealed = sealed_selection(bundle)
+    sealed["selection"] = sealed["selection"][:2]
+    _ext(bundle)["selection"] = copy.deepcopy(sealed["selection"])
+    reading = check(bundle)
+    assert reading["findings"][0] == "selection_record_unverified" and reading["state"] != "card"
+
+
+def test_an_empty_selection_is_missing(bundle):
+    sealed_selection(bundle)["selection"] = []
+    _ext(bundle)["selection"] = []
+    assert "selection_missing" in recompute_errors(bundle)
+
+
+def test_a_nested_record_edited_is_caught_by_its_id_and_its_deals_digest(bundle):
+    member = _ext(bundle)["deals"][DEALS["closed"]]
+    member["records"][0]["timestamp"] = "2026-01-01T00:00:00Z"
+    closed = DEALS["closed"]
+    assert recompute_errors(bundle) == [f"deal_bundle_not_the_selected_one:{closed}", f"deal_record_id_mismatch:{closed}"]
+
+
+def test_a_nested_disclosure_edited_is_caught(bundle):
+    member = _ext(bundle)["deals"][DEALS["closed"]]
+    cid, entry = next((k, v) for k, v in member["disclosures"].items() if "agent_input" in v)
+    entry["agent_input"]["body"]["edited"] = True
+    closed = DEALS["closed"]
+    assert recompute_errors(bundle) == [f"deal_bundle_not_the_selected_one:{closed}", f"deal_disclosure_mismatch:{closed}"]
+
+
+def test_a_file_with_no_selection_block_is_not_a_history(bundle):
+    del bundle["extensions"][SELECTION_EXTENSION]
+    reading = check(bundle)
+    assert reading["state"] == "invalid" and set(reading["properties"].values()) == {"NOT_PRESENT"}
+
+
+# ---- the byte scan ------------------------------------------------------------------------
+
+PRIVATE = [v for values in CUT["private_values"].values() for v in values]
+
+
+@pytest.mark.parametrize("name", ["history-counterparty", "history-adjudicator"])
+def test_a_shareable_history_carries_none_of_the_floor_address_or_contact_strings(name):
+    raw = (DATA / f"{name}.bundle.json").read_bytes()
+    hits = {v: raw.count(v.encode("utf-8")) for v in PRIVATE if raw.count(v.encode("utf-8"))}
+    assert hits == {}
+
+
+def test_the_byte_scan_finds_them_in_the_holders_own_copy():
+    # The scan's control: the keep History of the same deals carries them.
+    raw = (DATA / "history-keep.bundle.json").read_bytes()
+    for kind in ("address", "card", "code", "floor"):
+        assert any(raw.count(v.encode("utf-8")) for v in CUT["private_values"][kind]), kind
+
+
+# ---- the manifest sketch -------------------------------------------------------
 
 SCHEMA = json.loads((AAC / "presentation-manifest-v0.json").read_text(encoding="utf-8"))
 SKETCH_JSON = json.loads(SKETCH.read_text(encoding="utf-8"))
@@ -189,10 +309,9 @@ def _viewer_specific_manifests() -> dict[str, dict]:
 
 
 def test_each_viewer_module_forbids_the_selection_extension_and_needs_to():
-    # The build item's change (design section 4): each receipt manifest and the Rules
-    # manifest forbids x-history-selection/v0, and so none co-matches the sketch. Without
-    # that one token each would (a selection bundle may also engage x-deal-v0, composed/v1
-    # or a rules profile), and the registry refuses an ambiguous pair. Forbids, never priority.
+    # Each receipt manifest and the Rules manifest forbids x-history-selection/v0, and so
+    # none co-matches the sketch. Without that one token each would, and the registry
+    # refuses an ambiguous pair. Forbids, never priority.
     manifests = _viewer_specific_manifests()
     assert all(SELECTION_EXTENSION in m["forbids"]["extensions"] for m in manifests.values())
     assert sorted(n for n, m in manifests.items() if co_matchable(SKETCH_JSON, m)) == []

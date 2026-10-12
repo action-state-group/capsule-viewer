@@ -2,14 +2,13 @@
 """The History Card module (``capsuleviewer.history/v0``) as built from
 docs/design/history-card.md: a module-slot script (``static/history_card.js``)
 pinned by its manifest, which is the design's sketch; the registry resolves a
-history container to it and to nothing else; it is never co-matchable with a
-deal receipt; its words are clean. The script itself is tested directly in
+History (every real file capsulectl cut, the refused ones too) to it and to
+nothing else; it is never co-matchable with a deal receipt; its words are clean. The script itself is tested directly in
 js-tests/history_card.test.js."""
 from __future__ import annotations
 
 import copy
 import hashlib
-import importlib.util
 import json
 import re
 from collections.abc import Mapping
@@ -24,12 +23,11 @@ from capsule_viewer.history import (
     HISTORY_MANIFEST,
     SELECTION_EXTENSION,
     history_script_bytes,
-    recompute_errors,
     selection_block,
 )
 from capsule_viewer.history.fixture import example_context
 from capsule_viewer.receipt import BilateralReceiptModule, SellerReceiptModule, UnilateralReceiptModule
-from capsule_viewer.registry import AmbiguityError, Registry, co_matchable, descriptor
+from capsule_viewer.registry import Registry, co_matchable, descriptor
 from capsule_viewer.rules import rules_manifest
 from capsule_viewer.rules.fixture import RECORD_KIND
 from capsule_viewer.verifier_report import context_from_capsulectl
@@ -37,22 +35,21 @@ from capsule_viewer.wording import EMPTY_PACK
 
 ROOT = Path(__file__).resolve().parent.parent
 HISTORY = ROOT / "tests" / "testdata" / "history"
-NESTED = HISTORY / "nested-selection.bundle.json"
-MUTANT = HISTORY / "nested-mutant-flipped-outcome.bundle.json"
+FILES = sorted(HISTORY.glob("*.bundle.json"))
+SHAREABLE = HISTORY / "history-counterparty.bundle.json"
 SKETCH = ROOT / "docs" / "design" / "history-card.manifest.json"
 SCRIPT = ROOT / "src" / "capsule_viewer" / "static" / "history_card.js"
 AAC = ROOT / "tests" / "testdata" / "aac-presentation"
 SCHEMA = json.loads((AAC / "presentation-manifest-v0.json").read_text(encoding="utf-8"))
 BUILTINS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((AAC / "builtin").glob("*.json"))}
 GENERIC = json.loads((AAC / "examples" / "example-generic-fallback.json").read_text(encoding="utf-8"))
-DEAL_VIEW = json.loads((ROOT / "tests" / "testdata" / "capsulectl" / "deal-view.manifest.json").read_text(encoding="utf-8"))
 AUDIENCES = ("keep", "counterparty", "adjudicator")
 RULES_PROFILE = f"spec_version:{RECORD_KIND}"
 # The module's text: the files the vocabulary grep (acceptance 4) reads.
 MODULE_TEXT = sorted(p for p in (ROOT / "src" / "capsule_viewer" / "history").glob("*") if p.is_file()) + [SCRIPT]
 
 
-def _bundle(path: Path = NESTED) -> dict:
+def _bundle(path: Path = SHAREABLE) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -123,24 +120,6 @@ def test_history_and_each_deal_receipt_are_not_co_matchable(deal_view):
     assert co_matchable(HISTORY_MANIFEST, bare)
 
 
-def test_capsulectl_deal_view_as_shipped_is_co_matchable_with_history():
-    """capsulectl.deal-view/v0 (capsule-cli, vendored under tests/testdata/capsulectl)
-    requires x-deal-v0 and forbids no extension. No container this design describes
-    engages x-deal-v0 at its top level (the member bundles do), but the static test
-    (contract 4.5) asks whether ANY descriptor matches both, and one carrying both
-    kinds does, so a registry holding both refuses the second. The deal view forbidding
-    x-history-selection/v0 is the one-token fix, in capsule-cli. Pinned here so a
-    refreshed copy that carries the fix flips this test."""
-    assert co_matchable(HISTORY_MANIFEST, DEAL_VIEW)
-    registry = Registry()
-    registry.register(DEAL_VIEW, lambda _c: True)
-    with pytest.raises(AmbiguityError):
-        registry.register(HISTORY_MANIFEST, lambda _c: True)
-    fixed = copy.deepcopy(DEAL_VIEW)
-    fixed["forbids"].setdefault("extensions", []).append(SELECTION_EXTENSION)
-    assert not co_matchable(HISTORY_MANIFEST, fixed)
-
-
 def test_history_is_not_co_matchable_with_any_specific_builtin_or_the_rules_module():
     for m in BUILTINS.values():
         if not m["fallback"]:
@@ -168,7 +147,8 @@ def viewer_registry() -> Registry:
 
 @pytest.mark.parametrize("audience", AUDIENCES)
 def test_auto_resolves_the_history_container_to_the_history_module(audience):
-    for path in (NESTED, MUTANT):  # the mutant too: shown as the mismatch, never handed elsewhere
+    assert len(FILES) == 6
+    for path in FILES:  # the refused ones too: shown as what is wrong, never handed elsewhere
         context = example_context(_bundle(path))
         assert descriptor(context).extensions == {SELECTION_EXTENSION}
         resolution = viewer_registry().resolve(context, audience, "html")
@@ -180,36 +160,6 @@ def test_a_deal_bundle_never_resolves_to_the_history_module():
     context, _ = context_from_capsulectl(bundle, output)
     resolution = viewer_registry().resolve(context, "keep", "html")
     assert resolution.entry is not None and resolution.entry.id == "capsuleviewer.receipt.unilateral/v0"
-
-
-# ---- the stand-in fixtures ---------------------------------------------------------
-
-
-def test_the_nested_fixtures_are_what_their_builder_writes():
-    spec = importlib.util.spec_from_file_location("build_nested_fixture", ROOT / "examples" / "history" / "build_nested_fixture.py")
-    builder = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(builder)
-    built = builder.build()
-    assert set(built) == {NESTED, MUTANT}
-    for path, text in built.items():
-        assert path.read_text(encoding="utf-8") == text, path.name
-
-
-def test_the_mutant_is_the_container_with_one_outcome_flipped():
-    container, mutant = _bundle(), _bundle(MUTANT)
-    assert recompute_errors(container) == []
-    assert mutant["extensions"][SELECTION_EXTENSION]["deals"] == container["extensions"][SELECTION_EXTENSION]["deals"]
-    evidence = mutant["extensions"][SELECTION_EXTENSION]["account"]["asserted_result"]["outcome_evidence"]
-    assert "outcome:match" in evidence and "outcome:mismatch" not in evidence
-    errors = recompute_errors(mutant)
-    assert len(errors) == 1 and errors[0].startswith("outcome_evidence: recomputed")
-
-
-def test_no_stand_in_claims_a_signature_or_a_checkpoint():
-    for path in (NESTED, MUTANT):
-        text = path.read_text(encoding="utf-8")
-        for token in ('"signature"', "completeness_certificate", "checkpoint", "countersignatures"):
-            assert token not in text, (path.name, token)
 
 
 # ---- words: compiled in, and clean -------------------------------------------------

@@ -1,34 +1,39 @@
 # History Card fixtures
 
-## `nested-selection.bundle.json` and `nested-mutant-flipped-outcome.bundle.json`: STAND-INS
+Every file here was written by a real capsulectl, built from capsule-cli
+`521d41f315a69d38a1f793dfb159c249abbcfcb3` (PR #209, branch
+`deal-history-container-verb`), by `examples/history/cut_fixtures.sh` on
+scratch profiles. Nothing was re-signed or re-sealed. The deals are the ones
+capsule-cli's own `deal_history_test.go` makes; `cut.json` names their ids,
+the holder's key, the second profile's key and the private values the deals
+hold.
 
-These are hand-built stand-ins, pending the container verb (neutral
-`[deal-history-container-verb]`), which does not exist yet. They pin the
-nested shape the History Card reads (docs/design/history-card.md, sections 1
-and 5), the selection and the recompute. They do not verify, and nothing here
-claims they do:
+When these were cut (2026-10-12), PR #209's published head was
+`993949f8677db44a2d916ae067df40a2763e0095`, which still writes the earlier
+`x-deal-history/v0` container with an unsigned selection. The commit above is
+the one that writes the shape this page reads; it was not yet pushed to the PR.
 
-- the container carries no records, log, checkpoint or certificate of its own;
-- each member bundle under `extensions["x-history-selection/v0"].deals` is the
-  design fixture's records for one deal, regrouped, with no checkpoint,
-  completeness certificate or signature;
-- nothing is signed or re-sealed. The records, capsule ids and disclosures are
-  the design fixture's own bytes.
+| File | What it is | `capsulectl verify --bundle` | The page |
+| --- | --- | --- | --- |
+| `history-counterparty.bundle.json` | `deal history` over the closed, private and floor deals (`--audience counterparty`, the default: the Standard preset) | VALID | the card |
+| `history-adjudicator.bundle.json` | the same deals, `--audience adjudicator` | VALID | the card |
+| `history-keep.bundle.json` | the same deals, `--audience keep` (the holder's own copy) | VALID, audience `keep` | Not a shareable History |
+| `mutant-flipped-outcome.bundle.json` | the counterparty History with the closed deal's report saying it failed | INVALID: `deal_bundle_not_the_selected_one` | This History does not check |
+| `mutant-mixed-signer.bundle.json` | the counterparty History with a second profile's deal spliced in beside the picked ones | INVALID: `deal_not_in_selection`, `deal_signers_differ` | Not a shareable History |
+| `mutant-not-in-selection.bundle.json` | the counterparty History with the holder's unpicked deal spliced in | INVALID: `deal_not_in_selection` | Not a shareable History |
 
-They are built by `examples/history/build_nested_fixture.py` from
-`selection.bundle.json` (deterministic). The mutant is the same container with
-one outcome flipped in what the card states (`outcome:mismatch` becomes
-`outcome:match`), every record unchanged.
+`verify/<name>.json` is what `capsulectl verify --bundle` printed for each
+file, as printed. The mutants are made by `examples/history/make_mutants.py`.
 
-When the container verb exists, both are replaced by a container it writes
-from real per-deal bundles, and that container is held to `capsulectl verify`.
+The shareable files (counterparty, adjudicator) carry none of the floor,
+address, card, code or contact strings in `cut.json`; the keep file carries
+them. `tests/test_history_card_design.py` scans the bytes.
 
-## `selection.bundle.json`: the design fixture (flat, superseded shape)
+## Recut
 
-The fixture the design was first read against (merged in #23): eight records
-of seven deals in one flat bundle. That shape cannot verify on real binaries:
-each real deal lives in its own log with its own checkpoint, and rc15's
-`verify --bundle` reports it INVALID (`membership_record_unbound`). The module
-does not read top-level records, so this file never renders a card; it is
-kept as the source the stand-ins are regrouped from and for the definition
-digest the account core pinned.
+    go build -o capsulectl ./cmd/capsulectl          # in a capsule-cli checkout at the commit above
+    examples/history/cut_fixtures.sh path/to/capsulectl path/to/capsule-cli
+
+Keys, deal ids, nonces and times are new on every cut, so a recut rewrites
+every file and `cut.json`. When #209's head moves, recut from it and update
+the commit named above.
