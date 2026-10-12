@@ -32,24 +32,23 @@ def example_context(bundle: Mapping) -> VerifiedBundleContext:
     return build_context(bundle, VERIFIED, status)
 
 
-def with_asserted_result(bundle: Mapping, *, flip_bucket: tuple[str, str] | None = None) -> dict:
+def with_asserted_result(bundle: Mapping, *, flip_status: tuple[str, str] | None = None) -> dict:
     """*bundle* with an ``asserted_result`` beside the selection: the values
-    this page computes, or those values with one outcome-evidence bucket
-    renamed (``flip_bucket=(from, to)``). The selection record seals no
-    values, so an asserted_result is the file's statement only; the page
-    recomputes it."""
+    this page computes, or those values with one effect status renamed
+    (``flip_status=(from, to)``). The selection record seals no values, so an
+    asserted_result is the file's statement only; the page recomputes it."""
     out = copy.deepcopy(dict(bundle))
     reading = check(out)
     if reading["values"] is None:
         raise ValueError(f"the bundle renders no card: {reading['findings']}")
     values = copy.deepcopy(reading["values"])
-    if flip_bucket is not None:
-        old, new = flip_bucket
-        evidence = values["outcome_evidence"]
-        if old not in evidence:
-            raise ValueError(f"no {old} bucket to flip")
-        evidence[new] = evidence.pop(old) + evidence.get(new, 0)
-        values["outcome_evidence"] = dict(sorted(evidence.items()))
+    if flip_status is not None:
+        old, new = flip_status
+        statuses = values["effect_status"]
+        if old not in statuses:
+            raise ValueError(f"no effect status {old} to flip")
+        statuses[new] = statuses.pop(old) + statuses.get(new, 0)
+        values["effect_status"] = dict(sorted(statuses.items()))
     out["extensions"][SELECTION_EXTENSION]["asserted_result"] = values
     return out
 
@@ -125,8 +124,8 @@ def with_audience(bundle: Mapping, audience: str) -> dict:
     report (its sealed deal report, or its inline x-deal-v0 block) says
     *audience*, each selection entry names the new copy's digest, and the
     selection record seals *audience* and those entries. Used to test the
-    'history' audience before a producer that writes it (u888) is cut from;
-    no capsulectl wrote these bytes and they do not verify."""
+    audiences capsulectl refuses to write a History for (counterparty,
+    adjudicator); no capsulectl wrote these bytes and they do not verify."""
     out = copy.deepcopy(dict(bundle))
     ext = out["extensions"][SELECTION_EXTENSION]
     digests = {}

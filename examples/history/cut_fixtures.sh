@@ -21,15 +21,20 @@
 #             holder's own copy written last;
 #   floor   - a seller's deal with a price floor;
 #   other   - one more retail deal, never picked into the shareable History;
+#   sale_a  - a seller's deal with buyer A (TestDealHistoryForAnotherBuyerCarriesNothingOfTheFirst:
+#             A's name, contact, address, the item and its price in the opening, a message from A);
+#   sale_b  - the same seller's deal with an unrelated buyer B;
 # and, on a second profile (a second key), one retail deal.
 #
 # Files written (tests/testdata/history/):
-#   history-counterparty.bundle.json   closed + private + floor, --audience counterparty (the default)
-#   history-adjudicator.bundle.json    the same deals, --audience adjudicator
+#   history-history.bundle.json        closed + private + floor, --audience history (the default: every
+#                                      record's payload withheld; the shareable History)
 #   history-keep.bundle.json           the same deals, --audience keep (the keep copy, never one to send)
-#   mutant-*.bundle.json               the counterparty History edited (make_mutants.py): flipped
-#                                      outcome, mixed signer, not in selection, selection not
-#                                      the root, not on the deal-history log
+#   history-two-buyers.bundle.json     sale_a + sale_b, --audience history: the History the seller sends to buyer B
+#   history-two-buyers-keep.bundle.json  the same two deals, --audience keep (the byte scan's control)
+#   refused/<audience>.txt             what `deal history --audience counterparty|adjudicator` printed
+#                                      (the producer refuses both for a History) and its exit status
+#   mutant-*.bundle.json               the history History edited (make_mutants.py)
 #   verify/<name>.json                 `capsulectl verify --bundle` on each file, as printed
 #   cut.json                           the deal ids, the holder keys and the private values used
 set -euo pipefail
@@ -108,6 +113,31 @@ FLOOR=$(deal open --records typed --input "$(json floor '{"type":"purchase","dem
   "recourse":{"rail":"card","refundable":false}}')" | field deal_id)
 OTHER=$(retail_deal)
 
+# Two buyers of one seller (the holder): capsule-cli deal_history_test.go sellerToBuyerA, and a buyer B.
+A_NAME="Avery Quinlan"; A_EMAIL="avery@quinlan.example"; A_PHONE="+1 555 014 2233"; A_PLACE="12 Juniper Court, Lakeview"
+A_ITEM="vintage road bike"; A_MESSAGE="Avery here: please hold the vintage road bike, I will collect it at 12 Juniper Court"
+B_NAME="Blair Okonkwo"; B_EMAIL="blair@okonkwo.example"; B_PHONE="+1 555 019 4477"; B_PLACE="7 Alder Row, Brookfield"
+B_ITEM="folding tandem bike"; B_MESSAGE="Blair here: please ship the folding tandem bike to 7 Alder Row"
+sale() { # NAME DOMAIN EMAIL PHONE PLACE ITEM PRICE_MINOR MESSAGE
+  local id
+  id=$(deal open --records typed --input "$(json "sale-$2" '{"type":"purchase","channel":"web",
+    "intent":{"verbatim":"Sell my '"$6"' to '"${1%% *}"' for '"$(( $7 / 100 ))"'","party_role":"seller",
+              "asked":{"item":"'"$6"'","quantity":1},"allowed":["commit"]},
+    "who":{"name":"'"$1"'","domain":"'"$2"'","email":"'"$3"'","phone":"'"$4"'"},
+    "terms":{"item":"'"$6"'","quantity":1,"price_minor":'"$7"',"currency":"USD","place":"'"$5"'"},
+    "recourse":{"rail":"card","refundable":false}}')" | field deal_id)
+  deal note --deal "$id" --kind message --input "$(json "sale-$2-msg" '{"from":"counterparty","channel":"web","text":"'"$8"'"}')" >/dev/null
+  deal check --deal "$id" --input "$(json "sale-$2-check" '{"action":"commit","terms":{"item":"'"$6"'","price_minor":'"$7"'}}')" >/dev/null
+  echo "$id"
+}
+SALE_A=$(sale "$A_NAME" quinlan.example "$A_EMAIL" "$A_PHONE" "$A_PLACE" "$A_ITEM" 145000 "$A_MESSAGE")
+SALE_B=$(sale "$B_NAME" okonkwo.example "$B_EMAIL" "$B_PHONE" "$B_PLACE" "$B_ITEM" 98000 "$B_MESSAGE")
+for id in "$SALE_A" "$SALE_B" "$FLOOR" "$CLOSED"; do
+  # The holder's own copy of each, so every step is under a checkpoint and a
+  # keep copy can name a current report (as the producer's own test does).
+  "$C" --profile holder bundle --deal "$id" --out "$WORK/own-$id.json" >/dev/null
+done
+
 history() { # NAME AUDIENCE DEAL...
   local name=$1 audience=$2
   shift 2
@@ -115,26 +145,44 @@ history() { # NAME AUDIENCE DEAL...
   for id in "$@"; do args+=(--deal "$id"); done
   deal history --audience "$audience" --out "$WORK/$name.json" "${args[@]}" >/dev/null
 }
-history history-counterparty counterparty "$CLOSED" "$PRIVATE" "$FLOOR"
-history history-adjudicator adjudicator "$CLOSED" "$PRIVATE" "$FLOOR"
+history history-history history "$CLOSED" "$PRIVATE" "$FLOOR"
 history history-keep keep "$CLOSED" "$PRIVATE" "$FLOOR"
-history other-counterparty counterparty "$OTHER"
+history history-two-buyers history "$SALE_A" "$SALE_B"
+history history-two-buyers-keep keep "$SALE_A" "$SALE_B"
+history other-history history "$OTHER"
+# The producer refuses a History of counterparty or adjudicator copies: its
+# refusal is the fixture evidence (the page's cases for them are in memory).
+mkdir -p "$WORK/refused"
+for audience in counterparty adjudicator; do
+  set +e
+  deal history --audience "$audience" --out "$WORK/refused-$audience.json" --deal "$CLOSED" --deal "$PRIVATE" --deal "$FLOOR" \
+    >"$WORK/refused/$audience.out" 2>&1
+  code=$?
+  set -e
+  if [ "$code" -eq 0 ] || [ -e "$WORK/refused-$audience.json" ]; then
+    echo "deal history --audience $audience was not refused" >&2
+    exit 1
+  fi
+  { echo "\$ capsulectl deal history --audience $audience --out FILE --deal CLOSED --deal PRIVATE --deal FLOOR"
+    cat "$WORK/refused/$audience.out"; echo "exit status: $code"; } > "$WORK/refused/$audience.txt"
+done
 
 # ---- a second profile: a second key ---------------------------------------------
 PROFILE=second
 SECOND_KEY=$("$C" deal init --profile second --dir "$WORK/second" --no-witness --materiality "$MATERIALITY" | field public_key)
 SECOND=$(retail_deal)
-history second-counterparty counterparty "$SECOND"
+history second-history history "$SECOND"
 
 # ---- the files ------------------------------------------------------------------
-mkdir -p "$OUT/verify"
-rm -f "$OUT"/history-*.bundle.json "$OUT"/mutant-*.bundle.json "$OUT"/verify/*.json
-for name in history-counterparty history-adjudicator history-keep; do
+mkdir -p "$OUT/verify" "$OUT/refused"
+rm -f "$OUT"/history-*.bundle.json "$OUT"/mutant-*.bundle.json "$OUT"/verify/*.json "$OUT"/refused/*.txt
+for name in history-history history-keep history-two-buyers history-two-buyers-keep; do
   cp "$WORK/$name.json" "$OUT/$name.bundle.json"
   chmod 644 "$OUT/$name.bundle.json"
 done
-"$PY" "$ROOT/examples/history/make_mutants.py" "$OUT/history-counterparty.bundle.json" \
-  "$WORK/other-counterparty.json" "$WORK/second-counterparty.json" "$OUT"
+cp "$WORK"/refused/*.txt "$OUT/refused/"
+PYTHONPATH="$ROOT/src" "$PY" "$ROOT/examples/history/make_mutants.py" "$OUT/history-history.bundle.json" \
+  "$WORK/other-history.json" "$WORK/second-history.json" "$OUT/history-keep.bundle.json" "$WORK/shared-cp.json" "$OUT"
 
 for f in "$OUT"/history-*.bundle.json "$OUT"/mutant-*.bundle.json; do
   name=$(basename "$f" .bundle.json)
@@ -145,7 +193,8 @@ done
 "$PY" - "$OUT/cut.json" <<EOF
 import json, sys
 json.dump({
-  "deals": {"closed": "$CLOSED", "private": "$PRIVATE", "floor": "$FLOOR", "other": "$OTHER", "second_profile": "$SECOND"},
+  "deals": {"closed": "$CLOSED", "private": "$PRIVATE", "floor": "$FLOOR", "other": "$OTHER", "second_profile": "$SECOND",
+            "sale_a": "$SALE_A", "sale_b": "$SALE_B"},
   "holder_key": "$HOLDER_KEY",
   "second_key": "$SECOND_KEY",
   "private_values": {
@@ -154,6 +203,23 @@ json.dump({
     "code": ["$CODE"],
     "contact": ["$EMAIL", "$PHONE", "$SHOP"],
     "floor": ["170000", "min_total_minor", "go down to 1700"]
+  },
+  # capsule-cli deal_history_test.go's buyerA list (and writtenAmounts(1450)), whole values beside it.
+  "buyer_a": {
+    "name": ["$A_NAME", "Avery", "Quinlan"],
+    "contact": ["$A_EMAIL", "$A_PHONE", "quinlan.example", "555 014 2233"],
+    "address": ["$A_PLACE", "Juniper"],
+    "item": ["$A_ITEM"],
+    "price": ["145000", "1450.00", "\$1450", "1,450.00", "\$1,450", "1,450", "1.450,00", "1 450", "1'450", "USD 1,450", "1450 usd", "1450usd"],
+    "message": ["$A_MESSAGE", "please hold"]
+  },
+  "buyer_b": {
+    "name": ["$B_NAME", "Blair", "Okonkwo"],
+    "contact": ["$B_EMAIL", "$B_PHONE", "okonkwo.example"],
+    "address": ["$B_PLACE", "Alder Row"],
+    "item": ["$B_ITEM"],
+    "price": ["98000"],
+    "message": ["$B_MESSAGE"]
   }
 }, open(sys.argv[1], "w"), indent=1, sort_keys=True)
 open(sys.argv[1], "a").write("\n")

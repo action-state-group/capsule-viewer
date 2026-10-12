@@ -27,6 +27,11 @@
 // of which verifies on its own. A record's signature sits outside its Capsule
 // ID, so anyone can re-sign someone else's counterparty copies under a fresh
 // key; nothing here says K's holder made, took part in or owns the deals.
+// A History's copies are for the audience "history": each withholds every
+// record's payload, so only a record's time and an act's effect.status (both
+// in the capsule) show. Outcome and action class are in payloads: the page
+// shows them as not proven (not_proven, as capsulectl verify reports it,
+// derived here from the withheld payloads) and infers nothing about them.
 // Fields this page does not know (in the sealed selection, in a selection
 // entry) are tolerated and never shown; the carried selection is still
 // compared with the sealed one entry for entry, every field included.
@@ -37,9 +42,10 @@
 // From the page's verifier (the VerifiedBundleContext buildModel receives) it
 // reads the selection record's identity and the history log's checkpoint and
 // membership, PASS or FAIL as checked by this page. That verifier checks no
-// record signature, so the selection record's signature stays NOT_CHECKED;
-// each nested deal copy's signatures and log are NOT_CHECKED too (capsulectl
-// verifies them on the sender's machine, not this page).
+// record signature, so every signature status (the selection record's, each
+// deal copy's) is NOT_CHECKED, in one wording (WORDS.signatureNotChecked):
+// checked by capsulectl on the sender's machine, not by this page. Each
+// nested deal copy's log is NOT_CHECKED in the same words.
 //
 // Deal records are read from the input only by selectedRecords (the twin of
 // the Python selected_records). derive and drawing take its output only.
@@ -55,20 +61,22 @@
   var SELECTION_ACTION_ID = "capsulectl-deal-history";
   var DEAL_PROFILE = "x-deal-v0";
   var REPORT_POINTER = "sealed_report";
-  // "history" is the one shareable audience (neutral u888). The others are
-  // copies made for someone in particular and never shown to anyone else:
-  // keep (never one to send), counterparty (the original participant's) and
-  // adjudicator (made for a dispute about that deal; open question, failing
-  // closed until em-dev confirms it).
-  var SHAREABLE_AUDIENCES = ["history"];
-  var UNSHAREABLE_AUDIENCES = ["keep", "counterparty", "adjudicator"];
-  var RECOMPUTED_KEYS = ["completeness", "outcome_evidence", "period", "selected_count"];
+  // "history" is the one shareable audience (neutral u888). A keep History
+  // (a copy to keep, with every payload) verifies but is never one to send. Any other
+  // sealed audience (counterparty, adjudicator: capsulectl refuses both for a
+  // History) fails capsulectl verify: selection_audience_not_history.
+  var HISTORY_AUDIENCE = "history";
+  var KEEP_AUDIENCE = "keep";
+  // What a history copy does not prove, in capsulectl verify's order (its History entry's "not_proven").
+  var NOT_PROVEN = ["outcome", "action_class"];
+  var RECOMPUTED_KEYS = ["completeness", "effect_status", "period", "selected_count"];
   var PROPERTIES = [
     "selection_record", "selection_record_signature", "selection_root", "history_log", "selection_sealed", "membership", "member_digests",
     "audience", "signer_keys", "member_records", "member_signatures", "member_logs", "values",
   ];
-  // The properties of the nested member bundles that this page does not check.
-  var MEMBER_BUNDLE_PROPERTIES = ["member_signatures", "member_logs"];
+  // The properties capsulectl checks on the sender's machine and this page
+  // does not: every signature, and each nested deal copy's log.
+  var SENDER_CHECKED_PROPERTIES = ["selection_record_signature", "member_signatures", "member_logs"];
   var CAPSULE_ID_EXCLUDED = { capsule_id: true, signature: true, key_id: true };
   var DEAL_ID = /^deal-[0-9a-f]{16}$/;
   var HEX_DIGEST = /^[0-9a-f]{64}$/;
@@ -77,20 +85,27 @@
 
   // ---- the page's words (compiled in; no pack is read) ---------------------
 
+  // The one wording of every signature status (and each deal copy's log).
+  var SIGNATURE_NOT_CHECKED = "checked by capsulectl on the sender's machine, not by this page";
+
   var WORDS = {
     title: "History",
     lead: "Deal copies presented by the holder of key K, each a copy for the audience below. The card shows the copies the sealed selection names and no others.",
     limitation: "A History shows only that the holder of key K presents these copies, each of which verifies on its own. It does not show that the holder of key K made, took part in or owns these deals.",
     keyK: "Key K (signs the selection record)",
-    audience: { history: "Copy made to be shown in a History" },
+    audience: { history: "History copies: every record's payload withheld; only its time and an act's effect status show" },
     period: "Period",
     periodNote: "earliest to latest record time in the selected deals, as the records state them (producer_asserted)",
     selected: "Deals selected",
     completeness: "Completeness",
     notAsserted: "Not asserted",
     completenessNote: "The holder of key K chose which copies to present. The selection does not claim to be every deal of anyone, for any period.",
-    outcome: "Outcome evidence in the selected deals' records",
-    outcomeNote: "Each record counts once, under the sealed field and value it came from. A record this copy withholds counts as withheld.",
+    effectStatus: "Effect status in the selected deals' records",
+    effectStatusNote: "Each record whose capsule states an effect status counts once, under that status: what the producer's runtime claimed, not that it happened.",
+    effectStatusNone: "No record states an effect status.",
+    notProvenTitle: "Not proven by this History",
+    notProven: { outcome: "Outcome", action_class: "Action class" },
+    notProvenValue: "not proven: the copy withholds the record payload",
     computedHere: "Computed by this page from the records in this file. The file states no values of its own.",
     recomputedHere: "Stated in this file and recomputed by this page from the records in it.",
     forbidding: "This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.",
@@ -100,7 +115,7 @@
     l1Records: "Records",
     l1Digest: "Matches its selection entry",
     l1Time: "Time",
-    l1Bucket: "Outcome evidence",
+    l1Status: "Effect status",
     l1Id: "Record (capsule id)",
     l2: "How this page checked the file",
     l2Lead: "Each property and what this page found. NOT_CHECKED means this page does not check it; it is not a pass.",
@@ -108,8 +123,9 @@
     l2Status: "Status",
     l2Holder: "Key K (signs the selection record)",
     l2Signers: "Keys named by the selected deals' records",
-    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest. For the History's own bundle it reads the result of the page's verifier: the selection record's identity, the history log's checkpoint and the selection record's membership in that log. That verifier does not check a record's signature, so the selection record's signature is not checked by this page. capsulectl verify --bundle checks it, and each deal in the History.",
-    memberNotChecked: "verified by capsulectl on the sender's machine, not by this page",
+    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest, and for the History's own bundle reads the page's verifier on the selection record's identity, the history log's checkpoint and the selection record's membership in that log: those are checked by this page. The page's verifier does not check a record's signature, so every signature status here is " + SIGNATURE_NOT_CHECKED + ".",
+    signatureNotChecked: SIGNATURE_NOT_CHECKED,
+    memberNotChecked: SIGNATURE_NOT_CHECKED,
     property: {
       selection_record: "The selection record is on the history log's bundle, recomputes to its id and its sealed pick matches its digest",
       selection_record_signature: "The selection record's signature",
@@ -127,12 +143,12 @@
     },
     status: {
       PASS: "holds (checked by this page)",
-      FAIL: "fails",
+      FAIL: "fails (checked by this page)",
       NOT_CHECKED: "not checked by this page",
       NOT_PRESENT: "not in this file",
     },
     notShareableTitle: "Not a shareable History",
-    notShareableLead: "This file is not a History to be shown to anyone: it holds a keep copy (never one to send), the original participant's copies or copies made for an adjudicator (not ones to show anyone else), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.",
+    notShareableLead: "This file is not a History to be shown to anyone: it holds a keep copy (never one to send), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.",
     invalidTitle: "This History does not check",
     invalidLead: "This page found what does not hold in this file, so no card is shown.",
     mismatchTitle: "This History does not recompute",
@@ -140,13 +156,11 @@
     reasons: "What did not hold:",
     finding: {
       history_audience_keep: "the History is a keep copy (audience keep), never one to send",
-      history_audience_counterparty: "the History holds the original participant's copies (audience counterparty), not ones to show anyone else",
-      history_audience_adjudicator: "the History holds copies made for an adjudicator in a dispute about each deal (audience adjudicator), not ones to show anyone else",
-      history_audience_unknown: "the sealed selection names no audience this page knows",
+      selection_audience_not_history: "the sealed selection is not for the audience history, the copies a History is shown with (counterparty and adjudicator copies are made for someone in the deal)",
       deal_audience_keep: "this deal's copy is a keep copy (audience keep)",
-      deal_audience_counterparty: "this deal's copy is the original participant's copy (audience counterparty), not one to show anyone else",
-      deal_audience_adjudicator: "this deal's copy was made for an adjudicator (audience adjudicator), not one to show anyone else",
       deal_audience_not_selected: "this deal's copy is for another audience than the sealed one",
+      deal_payload_disclosed: "this deal's copy discloses a record payload, which a History's copy withholds",
+      deal_invalid: "this deal's copy does not verify on its own",
       deal_signers_differ: "the selected deals' records are signed by more than one key",
       deal_signed_by_other_key: "this deal's records name a key other than K, the key that signs the selection record",
       deal_not_in_selection: "this deal is carried but is not in the sealed selection",
@@ -168,13 +182,7 @@
       history_log_unproven: "the page's verifier found that the history log's checkpoint, or the selection record's membership in that log, does not hold",
       history_bundle_unverified: "the page's verifier did not pass the History's own bundle (its records, root, disclosures, checkpoint or membership)",
     },
-    gloss: {
-      none: "a disclosed record with no outcome evidence",
-      withheld: "a record this copy withholds",
-      "action_class:money.refund": "a refund record",
-      "outcome:": "an outcome record that says ",
-      "effect.status:": "the producer's runtime claimed ",
-    },
+    statusGloss: "the producer's runtime claimed ",
   };
 
   // ---- SHA-256 (FIPS 180-4), synchronous ------------------------------------
@@ -349,32 +357,47 @@
   }
 
   // ---- the values (design section 2) -----------------------------------------
+  // Only what each record's capsule states is read (its time, an act's effect
+  // status): never a payload, so nothing about an outcome or an action class
+  // is inferred.
 
-  function bucket(record, agentInput) {
-    var body = obj(obj(agentInput).body);
-    if (has(body, "outcome")) return "outcome:" + body.outcome;
-    if (body.action_class === "money.refund") return "action_class:money.refund";
-    var status = obj(record.effect).status;
-    if (status) return "effect.status:" + status;
-    if (agentInput === null || agentInput === undefined) return "withheld";
-    return "none";
+  function effectStatus(record) {
+    var status = obj(obj(record).effect).status;
+    return typeof status === "string" && status ? status : null;
   }
 
   function derive(selected, selectedCount) {
-    var breakdown = {};
+    var statuses = {};
     selected.forEach(function (s) {
-      var b = bucket(s.record, s.agent_input);
-      breakdown[b] = (breakdown[b] || 0) + 1;
+      var status = effectStatus(s.record);
+      if (status !== null) statuses[status] = (statuses[status] || 0) + 1;
     });
     var sorted = {};
-    Object.keys(breakdown).sort().forEach(function (key) { sorted[key] = breakdown[key]; });
+    Object.keys(statuses).sort().forEach(function (key) { sorted[key] = statuses[key]; });
     var times = selected.map(function (s) { return String(s.record.timestamp); }).sort();
     return {
       period: { from: times.length ? times[0] : null, to: times.length ? times[times.length - 1] : null, temporal_provenance: "producer_asserted" },
       selected_count: selectedCount,
-      outcome_evidence: sorted,
+      effect_status: sorted,
       completeness: "not_asserted",
     };
+  }
+
+  // What the History does not prove, from the payloads its copies withhold: a
+  // record whose payload is withheld shows no outcome and no action class, so
+  // for a History for the "history" audience whose selected records withhold
+  // a payload both are not proven (capsulectl verify's not_proven, in its
+  // order); [] otherwise (a keep History discloses them; any other audience
+  // fails). The twin of capsule_viewer.history.recompute.not_proven.
+  function notProven(selected, audience) {
+    if (audience !== HISTORY_AUDIENCE || !selected.some(function (s) { return s.agent_input === null; })) return [];
+    return NOT_PROVEN.slice();
+  }
+
+  // capsule-cli payloadDisclosed: any disclosure entry of the copy is non-empty.
+  function payloadDisclosed(member) {
+    var disclosures = obj(obj(member).disclosures);
+    return Object.keys(disclosures).some(function (k) { return isObj(disclosures[k]) && Object.keys(disclosures[k]).length > 0; });
   }
 
   // ---- the check (design section 3) ------------------------------------------
@@ -409,9 +432,14 @@
     var head = finding.split(":")[0];
     return [
       "deal_signers_differ", "deal_signed_by_other_key", "deal_not_in_selection", "deal_missing",
-      "history_audience_keep", "history_audience_counterparty", "history_audience_adjudicator",
-      "deal_audience_keep", "deal_audience_counterparty", "deal_audience_adjudicator",
+      "history_audience_keep", "deal_audience_keep",
     ].indexOf(head) >= 0;
+  }
+
+  // capsulectl verify findings that make the History INVALID whatever else it
+  // holds: "This History does not check", never "Not a shareable History".
+  function doesNotCheck(finding) {
+    return ["selection_audience_not_history", "deal_payload_disclosed"].indexOf(finding.split(":")[0]) >= 0;
   }
 
   // ---- the page's verifier: agent-action-capsule's VerifiedBundleContext ------
@@ -471,7 +499,7 @@
   }
 
   // The whole reading of a bundle: {state, findings, properties, holder_key,
-  // audience, signer_keys, deals, values, asserted, mismatches}. values is
+  // audience, signer_keys, deals, not_proven, values, asserted, mismatches}. values is
   // null unless state is "card". With a context (its VerifiedBundleContext),
   // the selection record's identity and the history log are read from the
   // page's verifier as well; without one, from the file alone (as the Python
@@ -493,7 +521,7 @@
       PROPERTIES.forEach(function (p) { none[p] = "NOT_PRESENT"; });
       return {
         state: "invalid", findings: ["no " + SELECTION_EXTENSION + " block in an evidence-bundle/v2"], properties: none,
-        holder_key: "", audience: "", signer_keys: {}, deals: [], values: null, asserted: false, mismatches: [],
+        holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, asserted: false, mismatches: [],
       };
     }
 
@@ -571,8 +599,9 @@
       order.push(deal);
     });
 
-    if (UNSHAREABLE_AUDIENCES.indexOf(audience) >= 0) fail("audience", "history_audience_" + audience);
-    else if (SHAREABLE_AUDIENCES.indexOf(audience) < 0) fail("audience", "history_audience_unknown");
+    // capsulectl verify: the sealed audience is history, or keep (VALID, never one to send).
+    if (audience === KEEP_AUDIENCE) fail("audience", "history_audience_keep");
+    else if (audience !== HISTORY_AUDIENCE) fail("audience", "selection_audience_not_history");
 
     var carried = obj(block.deals);
     var signers = {};
@@ -616,14 +645,18 @@
       var copyFor = sealedOrInlineReport(member).audience;
       entry.audience = typeof copyFor === "string" ? copyFor : "";
       if (copyFor !== audience) fail("audience", "deal_audience_not_selected:" + deal);
-      if (UNSHAREABLE_AUDIENCES.indexOf(copyFor) >= 0) fail("audience", "deal_audience_" + copyFor + ":" + deal);
+      if (copyFor === KEEP_AUDIENCE) fail("audience", "deal_audience_keep:" + deal);
+      if (audience === HISTORY_AUDIENCE && payloadDisclosed(member)) fail("audience", "deal_payload_disclosed:" + deal);
       var k = noteKeys(deal, member);
       if (k.unsigned) {
         anyUnsigned = true;
         failed.push("deal_record_unsigned:" + deal);
       }
       k.keys.forEach(function (key) { if (key !== holder) fail("signer_keys", "deal_signed_by_other_key:" + deal); });
-      recordFindings(deal, member).forEach(function (f) { fail("member_records", f); });
+      var own = recordFindings(deal, member);
+      own.forEach(function (f) { fail("member_records", f); });
+      // A record that does not recompute: the copy cannot verify VALID on its own.
+      if (own.length) fail("member_records", "deal_invalid:" + deal);
       if (!Object.keys(obj(member.checkpoint)).length || !Object.keys(obj(member.completeness_certificate)).length) {
         checkpointMissing = true;
         failed.push("deal_checkpoint_missing:" + deal);
@@ -634,7 +667,8 @@
     status.member_logs = checkpointMissing || !deals.length ? "NOT_PRESENT" : "NOT_CHECKED";
 
     var hasAsserted = has(block, "asserted_result");
-    var values = derive(selectedRecords(bundle), order.length);
+    var selected = selectedRecords(bundle);
+    var values = derive(selected, order.length);
     var mismatches = [];
     if (hasAsserted) {
       var a = obj(block.asserted_result);
@@ -652,13 +686,14 @@
     // one is called anyway, it shows that and no card, whatever else holds.
     if (verdict !== null && !verdict.verified) failed.unshift("history_bundle_unverified");
     var findings = failed.filter(function (f, i) { return failed.indexOf(f) === i; });
-    var state = verdict !== null && !verdict.verified ? "invalid" :
+    var state = verdict !== null && !verdict.verified ? "invalid" : findings.some(doesNotCheck) ? "invalid" :
       findings.some(notShareable) ? "not_shareable" : findings.length ? "invalid" : mismatches.length ? "mismatch" : "card";
     var sortedSigners = {};
     Object.keys(signers).sort().forEach(function (key) { sortedSigners[key] = signers[key].slice().sort(); });
     return {
       state: state, findings: findings.concat(mismatches), properties: status, holder_key: holder, audience: audience,
-      signer_keys: sortedSigners, deals: deals, values: state === "card" ? values : null, asserted: hasAsserted, mismatches: mismatches,
+      signer_keys: sortedSigners, deals: deals, not_proven: notProven(selected, audience), values: state === "card" ? values : null,
+      asserted: hasAsserted, mismatches: mismatches,
     };
   }
 
@@ -706,12 +741,6 @@
     return el(doc, "div", { class: "cv-table-wrap", "data-cv": "data-table" }, [el(doc, "table", { class: "cv-table" }, [head, body])]);
   }
 
-  function gloss(name) {
-    if (WORDS.gloss[name]) return WORDS.gloss[name];
-    if (name.indexOf("outcome:") === 0) return WORDS.gloss["outcome:"] + name.slice(8);
-    if (name.indexOf("effect.status:") === 0) return WORDS.gloss["effect.status:"] + name.slice(14) + " (not that it arrived)";
-    return "";
-  }
 
   function findingText(finding) {
     var parts = finding.split(":");
@@ -729,7 +758,7 @@
   function drawChecks(doc, result) {
     var rows = PROPERTIES.map(function (p) {
       var s = result.properties[p];
-      var words = s === "NOT_CHECKED" && MEMBER_BUNDLE_PROPERTIES.indexOf(p) >= 0 ? WORDS.memberNotChecked : WORDS.status[s];
+      var words = s === "NOT_CHECKED" && SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0 ? WORDS.signatureNotChecked : WORDS.status[s];
       return { attrs: { "data-property": p, "data-property-status": s }, cells: [WORDS.property[p], el(doc, "span", {}, [statusBadge(doc, s), " " + words])] };
     });
     var signerRows = Object.keys(result.signer_keys).map(function (key) {
@@ -748,12 +777,15 @@
 
   function drawCard(doc, result, selected) {
     var v = result.values;
-    var outcomeRows = Object.keys(v.outcome_evidence).map(function (name) {
-      return el(doc, "li", { "data-bucket": name }, [
-        el(doc, "strong", {}, [String(v.outcome_evidence[name])]), " ",
+    var statusRows = Object.keys(v.effect_status).map(function (name) {
+      return el(doc, "li", { "data-effect-status": name }, [
+        el(doc, "strong", {}, [String(v.effect_status[name])]), " ",
         el(doc, "span", { class: "cv-mono" }, [name]),
-        gloss(name) ? el(doc, "span", { class: "cv-muted" }, [" (" + gloss(name) + ")"]) : null,
+        el(doc, "span", { class: "cv-muted" }, [" (" + WORDS.statusGloss + name + ")"]),
       ]);
+    });
+    var notProvenRows = result.not_proven.map(function (name) {
+      return metric(doc, WORDS.notProven[name] || name, WORDS.notProvenValue, "", "not_proven:" + name);
     });
     var l0 = el(doc, "div", { "data-history": "card" }, [
       el(doc, "h2", {}, [WORDS.title]),
@@ -768,7 +800,11 @@
           metric(doc, WORDS.completeness, WORDS.notAsserted, WORDS.completenessNote, "completeness"),
         ]),
       ]),
-      section(doc, WORDS.outcome, [el(doc, "ul", { "data-history-value": "outcome_evidence" }, outcomeRows), el(doc, "p", { class: "cv-muted" }, [WORDS.outcomeNote])]),
+      section(doc, WORDS.effectStatus, [
+        statusRows.length ? el(doc, "ul", { "data-history-value": "effect_status" }, statusRows) : el(doc, "p", { "data-history-value": "effect_status" }, [WORDS.effectStatusNone]),
+        el(doc, "p", { class: "cv-muted" }, [WORDS.effectStatusNote]),
+      ]),
+      notProvenRows.length ? section(doc, WORDS.notProvenTitle, [el(doc, "dl", { class: "cv-metrics", "data-history-not-proven": result.not_proven.join(" ") }, notProvenRows)]) : null,
       el(doc, "p", { class: "cv-notice", "data-history-provenance": result.asserted ? "recomputed" : "computed" }, [result.asserted ? WORDS.recomputedHere : WORDS.computedHere]),
       el(doc, "p", { class: "cv-muted", "data-history-forbids": "true" }, [WORDS.forbidding]),
     ]);
@@ -779,11 +815,11 @@
       return { attrs: { "data-deal": d.deal_id }, cells: [el(doc, "span", { class: "cv-mono" }, [d.deal_id]), d.audience, String(counts[d.deal_id] || 0), d.digest] };
     });
     var recordRows = selected.map(function (s) {
-      return { attrs: { "data-record": s.record.capsule_id }, cells: [String(s.record.timestamp), s.deal, el(doc, "span", { class: "cv-mono" }, [bucket(s.record, s.agent_input)]), el(doc, "span", { class: "cv-mono" }, [String(s.record.capsule_id)])] };
+      return { attrs: { "data-record": s.record.capsule_id }, cells: [String(s.record.timestamp), s.deal, el(doc, "span", { class: "cv-mono" }, [effectStatus(s.record) || "-"]), el(doc, "span", { class: "cv-mono" }, [String(s.record.capsule_id)])] };
     });
     var l1 = drilldown(doc, WORDS.l1, [
       table(doc, [WORDS.l1DealId, WORDS.l1Copy, WORDS.l1Records, WORDS.l1Digest], dealRows),
-      table(doc, [WORDS.l1Time, WORDS.l1DealId, WORDS.l1Bucket, WORDS.l1Id], recordRows),
+      table(doc, [WORDS.l1Time, WORDS.l1DealId, WORDS.l1Status, WORDS.l1Id], recordRows),
     ]);
     return [l0, l1, drawChecks(doc, result)];
   }
@@ -807,7 +843,7 @@
     return isObj(selectionBlock(obj(context).bundle));
   }
 
-  // {result: check's reading, selected: selectedRecords}.
+  // {result: check's reading, selected: selectedRecords, not_proven}.
   function buildModel(context) {
     var bundle = obj(context).bundle;
     var result;
@@ -816,9 +852,9 @@
     } catch (e) {
       var none = {};
       PROPERTIES.forEach(function (p) { none[p] = "NOT_CHECKED"; });
-      result = { state: "invalid", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", signer_keys: {}, deals: [], values: null, asserted: false, mismatches: [] };
+      result = { state: "invalid", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, asserted: false, mismatches: [] };
     }
-    return { result: result, selected: result.state === "card" ? selectedRecords(bundle) : [] };
+    return { result: result, selected: result.state === "card" ? selectedRecords(bundle) : [], not_proven: result.not_proven };
   }
 
   // Draws into host.L0, host.L1 and host.L2: the card, or only the reason
@@ -844,7 +880,9 @@
     sha256Hex: sha256Hex,
     utf8: utf8,
     jcs: jcs,
-    bucket: bucket,
+    effectStatus: effectStatus,
+    notProven: notProven,
+    payloadDisclosed: payloadDisclosed,
     selectionBlock: selectionBlock,
     sealedSelection: sealedSelection,
     sealedOrInlineReport: sealedOrInlineReport,

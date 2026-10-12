@@ -11,10 +11,12 @@
 // The inputs are real Histories: capsulectl `deal history` wrote every file
 // under tests/testdata/history/ (examples/history/cut_fixtures.sh), and
 // verify/<name>.json is what `capsulectl verify --bundle` printed for it.
-// (1) the shareable Histories render the card; (2) each refused file renders
-// its refusal and no card value; (3) the module and the Python check
-// (python -m capsule_viewer.history check) agree on every file and on every
-// edit below; (4) the same in headless Chromium at 390px and 1280px.
+// (1) the shareable Histories (audience history) render the card, with outcome
+// and action class not proven; (2) each refused file renders its refusal and
+// no card value; (3) the module and the Python check (python -m
+// capsule_viewer.history check) agree on every file and on every edit below;
+// (4) no rendered text calls a signature verified, valid or checked by this
+// page; (5) the same in headless Chromium at 390px and 1280px.
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -45,38 +47,88 @@ const PY = process.env.PYTHON || "python3";
 const PY_ENV = { ...process.env, PYTHONPATH: join(ROOT, "src") };
 
 // What the page shows for each real file (the mutant matrix), under its
-// capsulectl-verified context. 7ebf001 writes no "history" audience: every real
-// file holds copies made for someone in particular, so none is shareable (u888),
-// and each mutant of the counterparty History carries that beside its own
-// finding. The two outer mutants fail the page's verifier itself (graph closure;
-// checkpoint): the runtime would call no module for them, and the module, called
-// anyway, says so first and draws no card.
-const copies = (audience) => [`history_audience_${audience}`, ...PICKED.map((d) => `deal_audience_${audience}:${d}`)];
-const CP = copies("counterparty");
+// capsulectl-verified context. The three outer mutants fail the page's verifier
+// itself (graph closure; checkpoint; the re-sealed root's membership): the
+// runtime would call no module for them, and the module, called anyway, says so
+// first and draws no card.
+const CLOSED = D.closed, PRIVATE_DEAL = D.private;
+const KEEP = ["history_audience_keep", ...PICKED.map((d) => `deal_audience_keep:${d}`)];
+const SALES = [D.sale_a, D.sale_b].sort();
 const MATRIX = {
-  "history-counterparty": ["not_shareable", CP],
-  "history-adjudicator": ["not_shareable", copies("adjudicator")],
-  "history-keep": ["not_shareable", copies("keep")],
-  "mutant-flipped-outcome": ["not_shareable", [CP[0], `deal_bundle_not_the_selected_one:${D.closed}`, ...CP.slice(1)]],
-  "mutant-mixed-signer": ["not_shareable", [CP[0], `deal_not_in_selection:${D.second_profile}`, ...CP.slice(1), "deal_signers_differ"]],
-  "mutant-not-in-selection": ["not_shareable", [CP[0], `deal_not_in_selection:${D.other}`, ...CP.slice(1)]],
-  "mutant-selection-not-root": ["invalid", ["history_bundle_unverified", "selection_record_not_root", ...CP]],
-  "mutant-not-history-log": ["invalid", ["history_bundle_unverified", "not_a_history_log", ...CP]],
+  "history-history": ["card", []],
+  "history-keep": ["not_shareable", KEEP],
+  "history-two-buyers": ["card", []],
+  "history-two-buyers-keep": ["not_shareable", ["history_audience_keep", ...SALES.map((d) => `deal_audience_keep:${d}`)]],
+  "mutant-flipped-status": ["invalid", [`deal_bundle_not_the_selected_one:${CLOSED}`, `deal_record_id_mismatch:${CLOSED}`, `deal_invalid:${CLOSED}`]],
+  "mutant-mixed-signer": ["not_shareable", [`deal_not_in_selection:${D.second_profile}`, "deal_signers_differ"]],
+  "mutant-not-in-selection": ["not_shareable", [`deal_not_in_selection:${D.other}`]],
+  "mutant-selection-not-root": ["invalid", ["history_bundle_unverified", "selection_record_not_root"]],
+  "mutant-not-history-log": ["invalid", ["history_bundle_unverified", "not_a_history_log"]],
+  "mutant-payload-disclosed": ["invalid", [`deal_bundle_not_the_selected_one:${CLOSED}`, `deal_payload_disclosed:${CLOSED}`]],
+  "mutant-counterparty-member": ["invalid", [`deal_bundle_not_the_selected_one:${PRIVATE_DEAL}`, `deal_audience_not_selected:${PRIVATE_DEAL}`, `deal_payload_disclosed:${PRIVATE_DEAL}`]],
+  "mutant-audience-not-history": ["invalid", ["history_bundle_unverified", "history_log_unproven", "selection_audience_not_history", ...PICKED.map((d) => `deal_audience_not_selected:${d}`)]],
 };
+const OUTER_FAILS = ["mutant-selection-not-root", "mutant-not-history-log", "mutant-audience-not-history"];
+// What capsulectl verify finds that this page cannot: a signature that does not verify.
+const SIGNATURE_ONLY = { "mutant-audience-not-history": ["selection_record_unsigned"] };
 // The L0 limitation: who presents the copies, never who made the deals.
 const LIMITATION = "A History shows only that the holder of key K presents these copies, each of which verifies on its own. " +
   "It does not show that the holder of key K made, took part in or owns these deals.";
-// The shareable baseline: the counterparty History re-sealed in memory for the
-// audience "history" (capsule_viewer.history.fixture.with_audience) until a
-// producer that writes it (u888) is cut from. Its context's interval coverage
-// and membership are ASSUMED (aacContext.js): a re-seal does not verify against
-// the checkpoint.
+// A History for another audience, re-sealed in memory (capsule_viewer.history.fixture.with_audience):
+// capsulectl refuses to write one for counterparty or adjudicator.
 const withAudience = (name, audience) => JSON.parse(execFileSync(PY, ["-c",
   "import json, sys\nfrom capsule_viewer.history.fixture import with_audience\n" +
   "print(json.dumps(with_audience(json.load(open(sys.argv[1])), sys.argv[2])))",
   join(DATA, `${name}.bundle.json`), audience], { cwd: ROOT, env: PY_ENV, encoding: "utf8", maxBuffer: 1 << 26 }));
-const SHAREABLE = withAudience("history-counterparty", "history");
-const MEMBER_WORDS = "verified by capsulectl on the sender's machine, not by this page";
+// The shareable baseline: the history History, as capsulectl wrote it.
+const SHAREABLE = read("history-history");
+// The one wording of every signature status (PM u335).
+const SIGNATURE_WORDS = "checked by capsulectl on the sender's machine, not by this page";
+const NOT_PROVEN_WORDS = "not proven: the copy withholds the record payload";
+
+// Every sentence of the rendered text (or of the HTML, tags as breaks) that
+// names a signature and calls it verified, valid or checked by this page.
+const BAD_SIGNATURE = /\bverified\b|\bvalid\b|checked by this page/i;
+function signatureClaims(text) {
+  return text.split(/\n+|(?<=\.)\s+/).filter((sentence) => /signature/i.test(sentence) && BAD_SIGNATURE.test(sentence));
+}
+// The text of each block of a rendered host, one per line, and its HTML with tags as line breaks.
+const blocks = (root) => [...root.querySelectorAll("h2, h3, p, li, tr, dt, dd, summary")].map((e) => e.textContent).join("\n");
+const htmlText = (html) => html.replace(/<[^>]*>/g, "\n");
+
+const sha = (v) => createHash("sha256").update(Buffer.from(load().H.jcs(v), "utf8")).digest("hex");
+const flip = (sig) => sig.slice(0, -2) + (sig.endsWith("00") ? "01" : "00");
+// The selection record re-sealed over its edited agent_input: agent_input_digest, capsule id,
+// disclosure key, membership key, root and selection_record follow (its signature does not).
+function resealSelection(b, edit, carry = true) {
+  const old = ext(b).selection_record;
+  const sealed = b.disclosures[old];
+  delete b.disclosures[old];
+  edit(sealed.agent_input);
+  const record = b.records.find((r) => r.capsule_id === old);
+  record.model_attestation.compute_attestation.agent_input_digest = sha(sealed.agent_input);
+  record.capsule_id = sha(Object.fromEntries(Object.entries(record).filter(([k]) => !["capsule_id", "signature", "key_id"].includes(k))));
+  b.disclosures[record.capsule_id] = sealed;
+  const memberships = b.completeness_certificate.memberships;
+  memberships[record.capsule_id] = memberships[old];
+  delete memberships[old];
+  b.root = ext(b).selection_record = record.capsule_id;
+  if (carry) ext(b).selection = clone(sealed.agent_input.selection);
+  return b;
+}
+function forgeRootSignature(b) {
+  const r = b.records.find((x) => x.capsule_id === b.root);
+  r.signature = flip(r.signature);
+  return b;
+}
+// One record of the closed deal's copy carries a forged signature (outside its capsule id); the
+// selection is re-sealed over the copy's new digest, so every digest this page checks holds.
+function forgeMemberSignature(b) {
+  const member = ext(b).deals[CLOSED];
+  member.records[0].signature = flip(member.records[0].signature);
+  const digest = sha(member);
+  return resealSelection(b, (sealed) => { sealed.selection.find((e) => e.deal_id === CLOSED).bundle_digest = digest; });
+}
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const ext = (b) => b.extensions[EXT];
@@ -164,12 +216,18 @@ describe("the module's primitives", () => {
 
   it("reads each copy's audience as capsule-cli's sealedOrInlineReport does", () => {
     const { H } = load();
-    const deals = ext(read("history-counterparty")).deals;
-    expect("sealed_report" in deals[D.private].extensions["x-deal-v0"]).toBe(true); // a sealed report, disclosed
-    expect("sealed_report" in deals[D.closed].extensions["x-deal-v0"]).toBe(false); // an inline one
-    for (const d of PICKED) expect(H.sealedOrInlineReport(deals[d]).audience).toBe("counterparty");
-    // The in-memory "history" re-seal changes the report each way reads it from.
-    for (const d of PICKED) expect(H.sealedOrInlineReport(ext(SHAREABLE).deals[d]).audience).toBe("history");
+    // A history copy: an inline x-deal-v0 block naming the audience and the deal, no report text, no payload.
+    for (const d of PICKED) {
+      expect(ext(SHAREABLE).deals[d].extensions["x-deal-v0"]).toEqual({ audience: "history", deal_id: d });
+      expect(H.sealedOrInlineReport(ext(SHAREABLE).deals[d]).audience).toBe("history");
+      expect(H.payloadDisclosed(ext(SHAREABLE).deals[d])).toBe(false);
+    }
+    const keep = ext(read("history-keep")).deals;
+    expect("sealed_report" in keep[D.private].extensions["x-deal-v0"]).toBe(true); // a sealed report, disclosed
+    for (const d of PICKED) {
+      expect(H.sealedOrInlineReport(keep[d]).audience).toBe("keep");
+      expect(H.payloadDisclosed(keep[d])).toBe(true);
+    }
   });
 });
 
@@ -180,9 +238,13 @@ describe("the mutant matrix: each real file, in the module", () => {
       expect(model.result.state).toBe(state);
       expect(model.result.findings).toEqual(findings);
       const v = verified(name);
-      for (const f of v.findings) expect(model.result.findings).toContain(f);
+      for (const f of v.findings) if (!(SIGNATURE_ONLY[name] || []).includes(f)) expect(model.result.findings).toContain(f);
       expect(model.result.holder_key).toBe(v.holder_key);
       expect(model.result.signer_keys).toEqual(v.signer_keys);
+      // not_proven, derived by the page from the withheld payloads, is verify's field exactly.
+      expect(model.not_proven).toEqual(v.not_proven || []);
+      expect(model.result.not_proven).toEqual(v.not_proven || []);
+      expect(state === "card").toBe(v.verdict === "VALID" && v.audience === "history");
       expect(host.L0.getAttribute("data-history-state")).toBe(state);
       if (state === "card") {
         expect(host.L0.querySelector('[data-history="card"]')).not.toBeNull();
@@ -195,15 +257,22 @@ describe("the mutant matrix: each real file, in the module", () => {
     });
   }
 
-  it("the card: the four values, computed by this page, one level of details", () => {
-    const { model, host } = present(SHAREABLE);
+  it("the card: period, deals, effect status and completeness computed by this page; outcome and action class not proven", () => {
+    const { model, host } = present(SHAREABLE, realContext("history-history"));
     const value = (k) => host.L0.querySelector(`[data-history-value="${k}"]`).textContent;
     expect(value("selected_count")).toBe("3");
     expect(value("completeness")).toBe("Not asserted");
     const v = model.result.values;
     expect(value("period")).toBe(`${v.period.from} to ${v.period.to}`);
-    const buckets = [...host.L0.querySelectorAll("[data-bucket]")].map((li) => [li.getAttribute("data-bucket"), Number(li.querySelector("strong").textContent)]);
-    expect(Object.fromEntries(buckets)).toEqual(v.outcome_evidence);
+    expect(v.effect_status).toEqual({ dispatched: 1 });
+    const statuses = [...host.L0.querySelectorAll("[data-effect-status]")].map((li) => [li.getAttribute("data-effect-status"), Number(li.querySelector("strong").textContent)]);
+    expect(Object.fromEntries(statuses)).toEqual(v.effect_status);
+    // Outcome and action class: not proven, in these words, and nothing inferred.
+    expect(model.not_proven).toEqual(["outcome", "action_class"]);
+    expect(host.L0.querySelector("[data-history-not-proven]").getAttribute("data-history-not-proven")).toBe("outcome action_class");
+    expect(value("not_proven:outcome")).toBe(NOT_PROVEN_WORDS);
+    expect(value("not_proven:action_class")).toBe(NOT_PROVEN_WORDS);
+    expect(host.L0.textContent).not.toMatch(/withheld outcome|outcome evidence|outcome:/i);
     expect(host.L0.querySelector("[data-history-provenance]").getAttribute("data-history-provenance")).toBe("computed");
     expect(host.L0.querySelector("[data-history-audience]").getAttribute("data-history-audience")).toBe("history");
     expect(host.L0.querySelector("[data-history-forbids]").textContent).toBe(load().H.WORDS.forbidding);
@@ -216,23 +285,36 @@ describe("the mutant matrix: each real file, in the module", () => {
     expect(host.L0.querySelectorAll("details")).toHaveLength(0);
   });
 
-  it("L2 lists each property's status, and says verified only of capsulectl on the sender's machine", () => {
-    const { host } = present(SHAREABLE);
+  it("the two-buyer History: a card of two deals, no effect status stated", () => {
+    const { model, host } = present(read("history-two-buyers"), realContext("history-two-buyers"));
+    expect(model.result.state).toBe("card");
+    expect(host.L0.querySelector('[data-history-value="selected_count"]').textContent).toBe("2");
+    expect(host.L0.querySelector('[data-history-value="effect_status"]').textContent).toBe(load().H.WORDS.effectStatusNone);
+    expect(model.not_proven).toEqual(["outcome", "action_class"]);
+  });
+
+  it("L2: every signature status is NOT_CHECKED in one wording; digests and the log are checked by this page", () => {
+    const { H } = load();
+    const { host } = present(SHAREABLE, realContext("history-history"));
     const rows = [...host.L2.querySelectorAll("[data-property]")];
     const status = Object.fromEntries(rows.map((r) => [r.getAttribute("data-property"), r.getAttribute("data-property-status")]));
-    expect(Object.keys(status)).toEqual(load().H.PROPERTIES);
-    // The page's verifier checks no record signature: the selection record's stays NOT_CHECKED.
-    expect(status.selection_record_signature).toBe("NOT_CHECKED");
-    expect(status.history_log).toBe("PASS"); // read from the context (here a stand-in's assumed log verdicts)
-    expect(status.selection_root).toBe("PASS");
-    expect(status.values).toBe("NOT_PRESENT");
-    // The nested member bundles: NOT_CHECKED, in exactly these words.
-    for (const p of ["member_signatures", "member_logs"]) {
+    const words = (p) => rows.find((r) => r.getAttribute("data-property") === p).lastChild.textContent;
+    expect(Object.keys(status)).toEqual(H.PROPERTIES);
+    // The page's verifier checks no record signature: every signature status is NOT_CHECKED, in one string.
+    for (const p of ["selection_record_signature", "member_signatures", "member_logs"]) {
       expect(status[p]).toBe("NOT_CHECKED");
-      expect(rows.find((r) => r.getAttribute("data-property") === p).lastChild.textContent).toBe(`NOT_CHECKED ${MEMBER_WORDS}`);
+      expect(words(p)).toBe(`NOT_CHECKED ${SIGNATURE_WORDS}`);
     }
-    expect(load().H.WORDS.memberNotChecked).toBe(MEMBER_WORDS);
-    expect(host.L2.textContent.split(MEMBER_WORDS).join("")).not.toMatch(/\bverified\b/i);
+    expect(H.WORDS.signatureNotChecked).toBe(SIGNATURE_WORDS);
+    expect(H.WORDS.memberNotChecked).toBe(SIGNATURE_WORDS);
+    expect(H.WORDS.l2Signing.endsWith(`every signature status here is ${SIGNATURE_WORDS}.`)).toBe(true);
+    // The digest and completeness properties: checked by this page.
+    for (const p of ["selection_record", "selection_root", "history_log", "selection_sealed", "membership", "member_digests", "member_records"]) {
+      expect(status[p]).toBe("PASS");
+      expect(words(p)).toBe("PASS holds (checked by this page)");
+    }
+    expect(status.values).toBe("NOT_PRESENT");
+    expect(signatureClaims(blocks(host.L2))).toEqual([]);
     expect(host.L0.textContent).not.toMatch(/\bverified\b/i);
   });
 });
@@ -272,8 +354,8 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
 
   it("a real History: the selection record and the history log PASS under capsulectl's verdicts; NOT_CHECKED from the file alone", () => {
     const { H } = load();
-    const b = read("history-counterparty");
-    const withContext = H.check(b, realContext("history-counterparty")).properties;
+    const b = read("history-history");
+    const withContext = H.check(b, realContext("history-history")).properties;
     expect(withContext.selection_record).toBe("PASS");
     expect(withContext.selection_root).toBe("PASS");
     expect(withContext.history_log).toBe("PASS");
@@ -288,7 +370,7 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
     for (const name of Object.keys(MATRIX)) {
       const ctx = realContext(name);
       expect(H.bundleVerified(ctx.verification), name).toBe(aacBundleVerified(ctx.verification));
-      expect(aacBundleVerified(ctx.verification), name).toBe(!["mutant-selection-not-root", "mutant-not-history-log"].includes(name));
+      expect(aacBundleVerified(ctx.verification), name).toBe(!OUTER_FAILS.includes(name));
     }
   });
 
@@ -332,33 +414,74 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
     expect(h.L0.querySelector("[data-history-value]")).toBeNull();
   });
 
-  it("the outer root signature broken: the context carries no signature verdict, so it stays NOT_CHECKED", () => {
+  // Every rendered text and HTML of a host: never a signature called verified, valid or checked by this page.
+  const expectNoSignatureClaim = (h) => {
+    for (const level of [h.L0, h.L1, h.L2]) {
+      expect(signatureClaims(blocks(level))).toEqual([]);
+      expect(signatureClaims(htmlText(level.innerHTML))).toEqual([]);
+    }
+  };
+
+  it("the outer root signature forged: the context carries no signature verdict, it stays NOT_CHECKED, and nothing calls it verified", () => {
     // AAC's verifyBundle checks no record signature (verify.ts verifyClass1 leaves signature and
     // key_id out of the capsule id and checks neither): the context is the same, and the page
     // cannot say FAIL. capsulectl verify does check it. This pins that gap.
-    const b = clone(SHAREABLE);
-    const r = rootRecord(b);
-    r.signature = r.signature.slice(0, -2) + (r.signature.endsWith("00") ? "01" : "00");
+    const b = forgeRootSignature(clone(SHAREABLE));
     const broken = standInContext(b), intact = standInContext(SHAREABLE);
     expect(JSON.stringify(broken.verification)).toBe(JSON.stringify(intact.verification));
-    const { model } = present(b, broken);
+    const { model, host: h } = present(b, broken);
     expect(model.result.properties.selection_record_signature).toBe("NOT_CHECKED");
     expect(model.result.properties).toEqual(present(SHAREABLE, intact).model.result.properties);
+    expect(model.result.state).toBe("card");
+    expectNoSignatureClaim(h);
   });
 
-  for (const audience of ["counterparty", "adjudicator", "keep"]) {
-    it(`audience ${audience}: not a shareable History, in its own words`, () => {
-      const b = withAudience("history-counterparty", audience);
+  it("a member record's signature forged (the selection re-sealed over it): member_signatures NOT_CHECKED, nothing calls it verified", () => {
+    const b = forgeMemberSignature(clone(SHAREABLE));
+    const { model, host: h } = present(b);
+    expect(model.result.state).toBe("card");
+    expect(model.result.findings).toEqual([]);
+    expect(model.result.properties.member_signatures).toBe("NOT_CHECKED");
+    expect(model.result.properties.selection_record_signature).toBe("NOT_CHECKED");
+    expectNoSignatureClaim(h);
+    // Unforged, the same page: the forgery changes nothing this page can see.
+    expect(model.result.properties).toEqual(present(clone(SHAREABLE), standInContext(SHAREABLE)).model.result.properties);
+  });
+
+  it("every real file: no rendered text calls a signature verified, valid or checked by this page", () => {
+    for (const name of Object.keys(MATRIX)) expectNoSignatureClaim(present(read(name), realContext(name)).host);
+  });
+
+  for (const audience of ["counterparty", "adjudicator"]) {
+    it(`audience ${audience} (capsulectl refuses it; re-sealed in memory): This History does not check`, () => {
+      const b = withAudience("history-history", audience);
       const { model, host: h } = present(b);
-      expect(model.result.state).toBe("not_shareable");
-      expect(model.result.findings).toEqual(copies(audience));
+      expect(model.result.state).toBe("invalid");
+      expect(model.result.findings).toEqual(["selection_audience_not_history"]);
+      expect(model.not_proven).toEqual([]);
       expect(h.L0.querySelector('[data-history="card"]')).toBeNull();
+      expect(h.L0.querySelector("h2").textContent).toBe(load().H.WORDS.invalidTitle);
       const words = load().H.WORDS.finding;
-      const items = [...h.L0.querySelectorAll("[data-history-error]")].map((li) => li.textContent);
-      expect(items[0]).toBe(`${words[`history_audience_${audience}`]} [history_audience_${audience}]`);
-      expect(items[1].startsWith(`${words[`deal_audience_${audience}`]} (`)).toBe(true);
+      expect(h.L0.querySelector("[data-history-error]").textContent).toBe(`${words.selection_audience_not_history} [selection_audience_not_history]`);
     });
   }
+
+  it("audience keep (re-sealed in memory): VALID to capsulectl, Not a shareable History here", () => {
+    const { model, host: h } = present(withAudience("history-history", "keep"));
+    expect(model.result.state).toBe("not_shareable");
+    expect(model.result.findings).toEqual(KEEP);
+    expect(h.L0.querySelector("h2").textContent).toBe(load().H.WORDS.notShareableTitle);
+  });
+
+  it("a payload disclosed, or the audience not history: This History does not check, never the card", () => {
+    for (const name of ["mutant-payload-disclosed", "mutant-counterparty-member", "mutant-audience-not-history"]) {
+      const { model, host: h } = present(read(name), realContext(name));
+      expect(model.result.state, name).toBe("invalid");
+      expect(h.L0.querySelector("h2").textContent, name).toBe(load().H.WORDS.invalidTitle);
+      expect(h.L0.querySelector('[data-history="card"]'), name).toBeNull();
+      expect(verified(name).verdict, name).toBe("INVALID");
+    }
+  });
 
   it("audience history: the card", () => {
     const { model, host: h } = present(SHAREABLE);
@@ -378,38 +501,35 @@ describe("the module and the Python check agree", () => {
   const asserted = (b, flip) => {
     const values = clone(load().H.check(b).values);
     if (flip) {
-      values.outcome_evidence["effect.status:failed"] = values.outcome_evidence["effect.status:dispatched"];
-      delete values.outcome_evidence["effect.status:dispatched"];
+      values.effect_status.failed = values.effect_status.dispatched;
+      delete values.effect_status.dispatched;
     }
     ext(b).asserted_result = values;
   };
   // Two fields a later #209 may add: "recipient" in the sealed selection,
   // "steps_after_checkpoint" in each entry. The selection record is re-sealed
   // over them (agent_input_digest, capsule id, disclosure key, root).
-  const sha = (v) => createHash("sha256").update(Buffer.from(load().H.jcs(v), "utf8")).digest("hex");
-  const futureFields = (b, carry) => {
-    const old = ext(b).selection_record;
-    const sealed = b.disclosures[old];
-    delete b.disclosures[old];
-    sealed.agent_input.recipient = "recipient-not-shown-7f3a";
-    sealed.agent_input.selection.forEach((e, i) => { e.steps_after_checkpoint = i + 2; });
-    const record = b.records.find((r) => r.capsule_id === old);
-    record.model_attestation.compute_attestation.agent_input_digest = sha(sealed.agent_input);
-    const pre = Object.fromEntries(Object.entries(record).filter(([k]) => !["capsule_id", "signature", "key_id"].includes(k)));
-    record.capsule_id = sha(pre);
-    b.disclosures[record.capsule_id] = sealed;
-    const memberships = b.completeness_certificate.memberships;
-    memberships[record.capsule_id] = memberships[old];
-    delete memberships[old];
-    b.root = ext(b).selection_record = record.capsule_id;
-    if (carry) ext(b).selection = clone(sealed.agent_input.selection);
-  };
+  const futureFields = (b, carry) => resealSelection(b, (sealed) => {
+    sealed.recipient = "recipient-not-shown-7f3a";
+    sealed.selection.forEach((e, i) => { e.steps_after_checkpoint = i + 2; });
+  }, carry);
   const EDITS = {
     ...Object.fromEntries(Object.keys(MATRIX).map((name) => [name, (b) => Object.assign(b, read(name))])),
     "asserted_result that recomputes": (b) => asserted(b, false),
-    "asserted_result with a flipped outcome": (b) => asserted(b, true),
+    "asserted_result with a flipped effect status": (b) => asserted(b, true),
     "a selected deal dropped": (b) => { delete ext(b).deals[D.floor]; },
     "the keep copy of one deal spliced in": (b) => { ext(b).deals[D.closed] = ext(read("history-keep")).deals[D.closed]; },
+    "one payload disclosed in a deal's copy": (b) => {
+      const kept = ext(read("history-keep")).deals[D.closed];
+      const id = Object.keys(kept.disclosures).find((k) => Object.keys(kept.disclosures[k]).length);
+      ext(b).deals[D.closed].disclosures[id] = kept.disclosures[id];
+    },
+    "audience counterparty, re-sealed": (b) => Object.assign(b, withAudience("history-history", "counterparty")),
+    "audience adjudicator, re-sealed": (b) => Object.assign(b, withAudience("history-history", "adjudicator")),
+    "audience keep, re-sealed": (b) => Object.assign(b, withAudience("history-history", "keep")),
+    "the sealed audience alone set to counterparty": (b) => resealSelection(b, (sealed) => { sealed.audience = "counterparty"; }),
+    "a member record's signature forged": (b) => forgeMemberSignature(b),
+    "the root signature forged": (b) => forgeRootSignature(b),
     "another key under a picked deal's name": (b) => { ext(b).deals[D.closed] = ext(read("mutant-mixed-signer")).deals[D.second_profile]; },
     "the carried selection edited": (b) => { ext(b).selection = ext(b).selection.slice(0, 2); },
     "the sealed selection edited": (b) => {
@@ -418,7 +538,8 @@ describe("the module and the Python check agree", () => {
       ext(b).selection = clone(sealed.selection);
     },
     "a nested record header edited": (b) => { ext(b).deals[D.closed].records[0].timestamp = "2026-01-01T00:00:00Z"; },
-    "a nested disclosure edited": (b) => {
+    "a nested disclosure edited (the keep History)": (b) => {
+      Object.assign(b, read("history-keep"));
       const m = ext(b).deals[D.closed];
       const id = Object.keys(m.disclosures).find((k) => "agent_input" in m.disclosures[k]);
       m.disclosures[id].agent_input.body.edited = true;
@@ -441,6 +562,7 @@ describe("the module and the Python check agree", () => {
       expect(js.state).toBe(py.state);
       expect(js.properties).toEqual(py.properties);
       expect(js.values).toEqual(py.values);
+      expect(js.not_proven).toEqual(py.not_proven);
       // Python prints values with repr, the module with JSON; the reason itself is the same.
       const head = (e) => e.split(/: /)[0];
       expect(js.findings.map(head)).toEqual(py.findings.map(head));
@@ -450,9 +572,16 @@ describe("the module and the Python check agree", () => {
   it("each state, for the edits", () => {
     const state = (edit) => { const b = clone(SHAREABLE); edit(b); return present(b).model.result.state; };
     expect(state(EDITS["asserted_result that recomputes"])).toBe("card");
-    expect(state(EDITS["asserted_result with a flipped outcome"])).toBe("mismatch");
+    expect(state(EDITS["asserted_result with a flipped effect status"])).toBe("mismatch");
     expect(state(EDITS["a selected deal dropped"])).toBe("not_shareable");
-    expect(state(EDITS["the keep copy of one deal spliced in"])).toBe("not_shareable");
+    expect(state(EDITS["the keep copy of one deal spliced in"])).toBe("invalid");
+    expect(state(EDITS["one payload disclosed in a deal's copy"])).toBe("invalid");
+    expect(state(EDITS["audience counterparty, re-sealed"])).toBe("invalid");
+    expect(state(EDITS["audience adjudicator, re-sealed"])).toBe("invalid");
+    expect(state(EDITS["audience keep, re-sealed"])).toBe("not_shareable");
+    expect(state(EDITS["the sealed audience alone set to counterparty"])).toBe("invalid");
+    expect(state(EDITS["a member record's signature forged"])).toBe("card");
+    expect(state(EDITS["the root signature forged"])).toBe("card");
     expect(state(EDITS["another key under a picked deal's name"])).toBe("not_shareable");
     expect(state(EDITS["every signature removed"])).toBe("invalid");
     expect(state(EDITS["every checkpoint removed"])).toBe("invalid");
@@ -490,9 +619,15 @@ const chromePath = findChrome();
 if (!chromePath && process.env.CI) throw new Error("history card test: no Chromium found under CI; set CHROME_PATH");
 if (!chromePath) console.warn("SKIPPED history card in headless Chromium: no Chromium found (set CHROME_PATH to run it)");
 
-// Every real file, and the in-memory "history" History (the one card).
-const SHAREABLE_PAGE = "history-audience-history (in memory)";
-const PAGES = { ...MATRIX, [SHAREABLE_PAGE]: ["card", []] };
+// Every real file, and the two forged signatures (in memory; each still a card).
+const FORGED_ROOT = "forged root signature (in memory)";
+const FORGED_MEMBER = "forged member signature (in memory)";
+const PAGES = { ...MATRIX, [FORGED_ROOT]: ["card", []], [FORGED_MEMBER]: ["card", []] };
+const COUNT = { "history-history": "3", "history-two-buyers": "2", [FORGED_ROOT]: "3", [FORGED_MEMBER]: "3" };
+const PAGE_CONTEXT = {
+  [FORGED_ROOT]: () => { const b = forgeRootSignature(clone(SHAREABLE)); return standInContext(b); },
+  [FORGED_MEMBER]: () => standInContext(forgeMemberSignature(clone(SHAREABLE))),
+};
 
 describe.skipIf(!chromePath)("the module in headless Chromium", () => {
   let browser;
@@ -504,7 +639,7 @@ describe.skipIf(!chromePath)("the module in headless Chromium", () => {
     const css = execFileSync(PY, ["-c", "from capsule_viewer.kit import kit_css; print(kit_css())"], { cwd: ROOT, env: PY_ENV, encoding: "utf8" });
     for (const name of Object.keys(PAGES)) {
       // The context, as data: the module reads its bundle, root, verification and completeness.
-      const ctx = name === SHAREABLE_PAGE ? standInContext(SHAREABLE) : realContext(name);
+      const ctx = PAGE_CONTEXT[name] ? PAGE_CONTEXT[name]() : realContext(name);
       const data = JSON.stringify(ctx).replace(/</g, "\\u003c");
       const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
 <body class="cv-kit"><main class="cv-page"><div data-level="L0"></div><div data-level="L1"></div><div data-level="L2"></div></main>
@@ -531,6 +666,8 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
     errors: [...document.querySelectorAll("[data-history-error]")].map((e) => e.getAttribute("data-history-error")),
     limitation: (document.querySelector("[data-history-limitation]") || {}).textContent || null,
     overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    text: [...document.querySelectorAll("main h2, main h3, main p, main li, main tr, main dt, main dd, main summary")].map((e) => e.innerText).join("\\n"),
+    html: document.querySelector("main").outerHTML,
   }))()`;
 
   for (const width of [390, 1280]) {
@@ -538,7 +675,10 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
       it(`${name} at ${width}px: ${state}`, async () => {
         await tab.open(urls[name], { width });
         const m = await tab.evaluate(STATE);
-        expect(m).toMatchObject({ state, card: state === "card", count: state === "card" ? "3" : null, errors: findings, limitation: state === "card" ? LIMITATION : null, overflow: false });
+        expect(m).toMatchObject({ state, card: state === "card", count: state === "card" ? COUNT[name] : null, errors: findings, limitation: state === "card" ? LIMITATION : null, overflow: false });
+        // Nothing in the Chromium page calls a signature verified, valid or checked by this page.
+        expect(signatureClaims(m.text)).toEqual([]);
+        expect(signatureClaims(htmlText(m.html))).toEqual([]);
       }, 30000);
     }
   }

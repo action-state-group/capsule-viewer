@@ -20,16 +20,26 @@ Fields this check does not know (in the sealed selection, in a selection
 entry) are tolerated and never shown; the carried selection is still
 compared with the sealed one entry for entry, every field included.
 
+The copies a History is shown with are for the audience ``history``: each
+withholds every record's payload, so only a record's time and an act's
+``effect.status`` (both in the capsule) show. A deal's outcome and its acts'
+action classes are in payloads, so a History does not prove them:
+``not_proven`` is ``["outcome", "action_class"]``, as ``capsulectl verify``
+reports it, derived here from the withheld payloads. Nothing is inferred
+about them.
+
 ``check(bundle)`` returns everything the card needs: the findings (named as
 ``capsulectl verify`` names them where it has a name), a status per property
-(PASS, FAIL, NOT_CHECKED, NOT_PRESENT), the state the page shows and, only
-when the state is ``card``, the values. ``recompute_errors(bundle)`` is the
-findings alone.
+(PASS, FAIL, NOT_CHECKED, NOT_PRESENT), the state the page shows,
+``not_proven`` and, only when the state is ``card``, the values.
+``recompute_errors(bundle)`` is the findings alone.
 
 This check reads the file alone. It recomputes record ids, disclosure
 digests and nested bundle digests with this repository's own JCS
 (``capsule_viewer.digest``). It does not verify signatures, checkpoints or
-log membership: those are reported NOT_CHECKED, never as verified. The page
+log membership: those are reported NOT_CHECKED, never as verified. Every
+signature status is NOT_CHECKED in one wording: checked by capsulectl on the
+sender's machine, not by this page. The page
 runs the same check in ``static/history_card.js`` (``check``); there, and
 only there, the selection record's identity and the history log's checkpoint
 and membership are also read from the page's verifier (agent-action-capsule's
@@ -48,13 +58,15 @@ HISTORY_LOG_ID = "deal-history"
 SELECTION_ACTION_ID = "capsulectl-deal-history"
 DEAL_PROFILE = "x-deal-v0"
 REPORT_POINTER = "sealed_report"
-# "history" is the one shareable audience (neutral u888). keep (never one to
-# send), counterparty (the original participant's copy) and adjudicator
-# (made for a dispute about that deal; open, failing closed) are never shown
-# to anyone else.
-SHAREABLE_AUDIENCES = ("history",)
-UNSHAREABLE_AUDIENCES = ("keep", "counterparty", "adjudicator")
-RECOMPUTED_KEYS = ("completeness", "outcome_evidence", "period", "selected_count")
+# "history" is the one shareable audience (neutral u888). A keep History (a
+# copy to keep, with every payload) verifies but is never one to send. Any other sealed
+# audience (counterparty, adjudicator: capsulectl refuses both for a History)
+# fails capsulectl verify: selection_audience_not_history.
+HISTORY_AUDIENCE = "history"
+KEEP_AUDIENCE = "keep"
+# What a history copy does not prove, in capsulectl verify's order (its History entry's "not_proven").
+NOT_PROVEN = ("outcome", "action_class")
+RECOMPUTED_KEYS = ("completeness", "effect_status", "period", "selected_count")
 # agent-action-capsule canonical.py: capsule_id and the local-only producer fields leave the preimage.
 CAPSULE_ID_EXCLUDED = frozenset({"capsule_id", "signature", "key_id"})
 DEAL_ID = re.compile(r"^deal-[0-9a-f]{16}$")
@@ -151,34 +163,46 @@ def selected_records(bundle: Mapping) -> list[dict]:
     return out
 
 
-def bucket(record: Mapping, agent_input: Mapping | None) -> str:
-    """One bucket per record, the first rule that applies (design section 2)."""
-    body = _obj(_obj(agent_input).get("body"))
-    if "outcome" in body:
-        return f"outcome:{body['outcome']}"
-    if body.get("action_class") == "money.refund":
-        return "action_class:money.refund"
+def effect_status(record: Mapping) -> str | None:
+    """The status a record's capsule states for its effect (an act's), or ``None``."""
     status = _obj(record.get("effect")).get("status")
-    if status:
-        return f"effect.status:{status}"
-    if agent_input is None:
-        return "withheld"
-    return "none"
+    return status if isinstance(status, str) and status else None
 
 
 def derive(selected: list[dict], selected_count: int) -> dict:
-    """The four values, from ``selected_records`` entries and the number of selected deals."""
-    breakdown: dict[str, int] = {}
+    """The values, from ``selected_records`` entries and the number of selected
+    deals. Only what each record's capsule states is read (its time, an act's
+    effect status): never a payload, so nothing about an outcome or an action
+    class is inferred."""
+    statuses: dict[str, int] = {}
     for s in selected:
-        b = bucket(s["record"], s["agent_input"])
-        breakdown[b] = breakdown.get(b, 0) + 1
+        status = effect_status(s["record"])
+        if status is not None:
+            statuses[status] = statuses.get(status, 0) + 1
     times = sorted(str(s["record"].get("timestamp")) for s in selected)
     return {
         "period": {"from": times[0] if times else None, "to": times[-1] if times else None, "temporal_provenance": "producer_asserted"},
         "selected_count": selected_count,
-        "outcome_evidence": dict(sorted(breakdown.items())),
+        "effect_status": dict(sorted(statuses.items())),
         "completeness": "not_asserted",
     }
+
+
+def not_proven(selected: list[dict], audience: str) -> list[str]:
+    """What the History does not prove, from the payloads its copies withhold:
+    a record whose payload is withheld shows no outcome and no action class,
+    so for a History for the ``history`` audience whose selected records
+    withhold a payload, both are not proven (``capsulectl verify``'s
+    ``not_proven``, in its order). ``[]`` otherwise (a keep History discloses
+    them; any other audience fails)."""
+    if audience != HISTORY_AUDIENCE or not any(s["agent_input"] is None for s in selected):
+        return []
+    return list(NOT_PROVEN)
+
+
+def payload_disclosed(member: Mapping) -> bool:
+    """capsule-cli ``payloadDisclosed``: any disclosure entry of the copy is non-empty."""
+    return any(isinstance(d, Mapping) and len(d) > 0 for d in _obj(member.get("disclosures")).values())
 
 
 def _signed(record: Mapping) -> bool:
@@ -209,15 +233,21 @@ def _not_shareable(finding: str) -> bool:
         "deal_signed_by_other_key",
         "deal_not_in_selection",
         "deal_missing",
-        *(f"history_audience_{a}" for a in UNSHAREABLE_AUDIENCES),
-        *(f"deal_audience_{a}" for a in UNSHAREABLE_AUDIENCES),
+        "history_audience_keep",
+        "deal_audience_keep",
     )
+
+
+# capsulectl verify findings that make the History INVALID whatever else it
+# holds: "This History does not check", never "Not a shareable History".
+def _does_not_check(finding: str) -> bool:
+    return finding.split(":")[0] in ("selection_audience_not_history", "deal_payload_disclosed")
 
 
 def check(bundle: Mapping) -> dict:
     """The whole reading of *bundle*: ``{"state", "findings", "properties",
-    "holder_key", "audience", "signer_keys", "deals", "values", "asserted",
-    "mismatches"}``. ``values`` is ``None`` unless ``state`` is ``card``."""
+    "holder_key", "audience", "signer_keys", "deals", "not_proven", "values",
+    "asserted", "mismatches"}``. ``values`` is ``None`` unless ``state`` is ``card``."""
     bundle = _obj(bundle)
     block = selection_block(bundle)
     status = {p: PASS for p in PROPERTIES}
@@ -231,7 +261,7 @@ def check(bundle: Mapping) -> dict:
         return {
             "state": "invalid", "findings": [f"no {SELECTION_EXTENSION} block in an evidence-bundle/v2"],
             "properties": {p: NOT_PRESENT for p in PROPERTIES}, "holder_key": "", "audience": "",
-            "signer_keys": {}, "deals": [], "values": None, "asserted": False, "mismatches": [],
+            "signer_keys": {}, "deals": [], "not_proven": [], "values": None, "asserted": False, "mismatches": [],
         }
 
     # The selection record: the bundle's root, recomputing to its id, its disclosure bound, signed.
@@ -290,10 +320,11 @@ def check(bundle: Mapping) -> dict:
             continue
         picked[deal] = digest
 
-    if audience in UNSHAREABLE_AUDIENCES:
-        fail("audience", f"history_audience_{audience}")
-    elif audience not in SHAREABLE_AUDIENCES:
-        fail("audience", "history_audience_unknown")
+    # capsulectl verify: the sealed audience is history, or keep (VALID, never one to send).
+    if audience == KEEP_AUDIENCE:
+        fail("audience", "history_audience_keep")
+    elif audience != HISTORY_AUDIENCE:
+        fail("audience", "selection_audience_not_history")
 
     carried = _obj(block.get("deals"))
     signers: dict[str, list[str]] = {}
@@ -336,8 +367,10 @@ def check(bundle: Mapping) -> dict:
         entry["audience"] = copy_for if isinstance(copy_for, str) else ""
         if copy_for != audience:
             fail("audience", f"deal_audience_not_selected:{deal}")
-        if copy_for in UNSHAREABLE_AUDIENCES:
-            fail("audience", f"deal_audience_{copy_for}:{deal}")
+        if copy_for == KEEP_AUDIENCE:
+            fail("audience", f"deal_audience_keep:{deal}")
+        if audience == HISTORY_AUDIENCE and payload_disclosed(member):
+            fail("audience", f"deal_payload_disclosed:{deal}")
         keys, unsigned = note_keys(deal, member)
         if unsigned:
             any_unsigned = True
@@ -345,8 +378,12 @@ def check(bundle: Mapping) -> dict:
         for key in keys:
             if key != holder:
                 fail("signer_keys", f"deal_signed_by_other_key:{deal}")
-        for finding in _record_findings(deal, member):
+        record_findings = _record_findings(deal, member)
+        for finding in record_findings:
             fail("member_records", finding)
+        if record_findings:
+            # A record that does not recompute: the copy cannot verify VALID on its own.
+            fail("member_records", f"deal_invalid:{deal}")
         if not (_obj(member.get("checkpoint")) and _obj(member.get("completeness_certificate"))):
             any_checkpoint_missing = True
             failed.append(f"deal_checkpoint_missing:{deal}")
@@ -358,7 +395,8 @@ def check(bundle: Mapping) -> dict:
     # The values: computed here; compared with asserted_result only when the file states one.
     asserted = block.get("asserted_result")
     has_asserted = "asserted_result" in block
-    values = derive(selected_records(bundle), len(picked))
+    selected = selected_records(bundle)
+    values = derive(selected, len(picked))
     mismatches: list[str] = []
     if has_asserted:
         a = _obj(asserted)
@@ -373,7 +411,9 @@ def check(bundle: Mapping) -> dict:
         status["values"] = NOT_PRESENT
 
     findings = list(dict.fromkeys(failed))
-    if any(_not_shareable(f) for f in findings):
+    if any(_does_not_check(f) for f in findings):
+        state = "invalid"
+    elif any(_not_shareable(f) for f in findings):
         state = "not_shareable"
     elif findings:
         state = "invalid"
@@ -391,6 +431,7 @@ def check(bundle: Mapping) -> dict:
         "audience": audience,
         "signer_keys": dict(sorted(signers.items())),
         "deals": deals,
+        "not_proven": not_proven(selected, audience),
         "values": values if state == "card" else None,
         "asserted": has_asserted,
         "mismatches": mismatches,
