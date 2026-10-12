@@ -23,11 +23,11 @@
 // Like verifyBundle, it checks no record signature: verifyClass1 leaves
 // `signature` and `key_id` out of the capsule id and checks neither.
 //
-// Copied from capsule-viewer branch history-card-module-build (PR #26, not yet
-// merged) for the receipt modules' tests, with one addition: a composed/v1
-// block's verification (`extensions[].composed`, AAC's ComposedResult), read
-// from capsulectl verify's report on the block (`aacComposed`). Whichever of
-// the two lands second reconciles the two copies.
+// One file for the History module's tests (#26) and the receipt modules' tests
+// (#27). The receipt modules' tests add one thing: a composed/v1 block's
+// verification (`extensions[].composed`, AAC's ComposedResult), read from
+// capsulectl verify's report on the block (`aacComposed`). The context's
+// shape is checked against AAC's interface source in js-tests/history_card.test.js.
 import { createHash } from "node:crypto";
 
 const EXCLUDED = new Set(["capsule_id", "signature", "key_id"]);

@@ -34,8 +34,12 @@
 // (capsule_viewer.history.recompute.check): the same findings, the same
 // per-property statuses (PASS, FAIL, NOT_CHECKED, NOT_PRESENT), the same state.
 // It recomputes record ids, disclosure digests and nested bundle digests.
-// It does not verify a signature, a checkpoint or log membership; those are
-// NOT_CHECKED here, and the page never calls them verified.
+// From the page's verifier (the VerifiedBundleContext buildModel receives) it
+// reads the selection record's identity and the history log's checkpoint and
+// membership, PASS or FAIL as checked by this page. That verifier checks no
+// record signature, so the selection record's signature stays NOT_CHECKED;
+// each nested deal copy's signatures and log are NOT_CHECKED too (capsulectl
+// verifies them on the sender's machine, not this page).
 //
 // Deal records are read from the input only by selectedRecords (the twin of
 // the Python selected_records). derive and drawing take its output only.
@@ -51,17 +55,25 @@
   var SELECTION_ACTION_ID = "capsulectl-deal-history";
   var DEAL_PROFILE = "x-deal-v0";
   var REPORT_POINTER = "sealed_report";
-  var SHAREABLE_AUDIENCES = ["counterparty", "adjudicator"];
+  // "history" is the one shareable audience (neutral u888). The others are
+  // copies made for someone in particular and never shown to anyone else:
+  // keep (never one to send), counterparty (the original participant's) and
+  // adjudicator (made for a dispute about that deal; open question, failing
+  // closed until em-dev confirms it).
+  var SHAREABLE_AUDIENCES = ["history"];
+  var UNSHAREABLE_AUDIENCES = ["keep", "counterparty", "adjudicator"];
   var RECOMPUTED_KEYS = ["completeness", "outcome_evidence", "period", "selected_count"];
   var PROPERTIES = [
     "selection_record", "selection_record_signature", "selection_root", "history_log", "selection_sealed", "membership", "member_digests",
     "audience", "signer_keys", "member_records", "member_signatures", "member_logs", "values",
   ];
+  // The properties of the nested member bundles that this page does not check.
+  var MEMBER_BUNDLE_PROPERTIES = ["member_signatures", "member_logs"];
   var CAPSULE_ID_EXCLUDED = { capsule_id: true, signature: true, key_id: true };
   var DEAL_ID = /^deal-[0-9a-f]{16}$/;
   var HEX_DIGEST = /^[0-9a-f]{64}$/;
   var MAX_SAFE = 9007199254740991;
-  var MANIFEST = {"spec_version": "aac.presentation-manifest/v0", "id": "capsuleviewer.history/v0", "presentation_api": "aac.presentation-api/v0", "runtime_min": "0.1.0", "trust_class": "trusted-executable", "requires": {"bundle_kind": "evidence-bundle/v2", "extensions": {"required": ["x-history-selection/v0"]}}, "forbids": {"profiles": ["spec_version:report/v1", "spec_version:evaluation-summary/v1", "result_version:evidence-result-v0"]}, "audiences": ["keep", "counterparty", "adjudicator"], "formats": ["html"], "fallback": false, "priority": 1, "executable": {"carrier": "module-slot", "script_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}};
+  var MANIFEST = {"spec_version": "aac.presentation-manifest/v0", "id": "capsuleviewer.history/v0", "presentation_api": "aac.presentation-api/v0", "runtime_min": "0.1.0", "trust_class": "trusted-executable", "requires": {"bundle_kind": "evidence-bundle/v2", "extensions": {"required": ["x-history-selection/v0"]}}, "forbids": {"profiles": ["spec_version:report/v1", "spec_version:evaluation-summary/v1", "result_version:evidence-result-v0"]}, "audiences": ["history", "keep", "counterparty", "adjudicator"], "formats": ["html"], "fallback": false, "priority": 1, "executable": {"carrier": "module-slot", "script_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}};
 
   // ---- the page's words (compiled in; no pack is read) ---------------------
 
@@ -70,7 +82,7 @@
     lead: "Deal copies presented by the holder of key K, each a copy for the audience below. The card shows the copies the sealed selection names and no others.",
     limitation: "A History shows only that the holder of key K presents these copies, each of which verifies on its own. It does not show that the holder of key K made, took part in or owns these deals.",
     keyK: "Key K (signs the selection record)",
-    audience: { counterparty: "Copy for the other party in each deal", adjudicator: "Copy for an adjudicator" },
+    audience: { history: "Copy made to be shown in a History" },
     period: "Period",
     periodNote: "earliest to latest record time in the selected deals, as the records state them (producer_asserted)",
     selected: "Deals selected",
@@ -96,7 +108,8 @@
     l2Status: "Status",
     l2Holder: "Key K (signs the selection record)",
     l2Signers: "Keys named by the selected deals' records",
-    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest. It does not check a signature, a checkpoint or log membership: capsulectl verify --bundle does, for the History and for each deal in it.",
+    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest. For the History's own bundle it reads the result of the page's verifier: the selection record's identity, the history log's checkpoint and the selection record's membership in that log. That verifier does not check a record's signature, so the selection record's signature is not checked by this page. capsulectl verify --bundle checks it, and each deal in the History.",
+    memberNotChecked: "verified by capsulectl on the sender's machine, not by this page",
     property: {
       selection_record: "The selection record is on the history log's bundle, recomputes to its id and its sealed pick matches its digest",
       selection_record_signature: "The selection record's signature",
@@ -113,13 +126,13 @@
       values: "Values stated in the file recompute",
     },
     status: {
-      PASS: "holds (checked in this page)",
+      PASS: "holds (checked by this page)",
       FAIL: "fails",
       NOT_CHECKED: "not checked by this page",
       NOT_PRESENT: "not in this file",
     },
     notShareableTitle: "Not a shareable History",
-    notShareableLead: "This file is not a History to be shown to anyone: it holds a keep copy (never one to send), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.",
+    notShareableLead: "This file is not a History to be shown to anyone: it holds a keep copy (never one to send), the original participant's copies or copies made for an adjudicator (not ones to show anyone else), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.",
     invalidTitle: "This History does not check",
     invalidLead: "This page found what does not hold in this file, so no card is shown.",
     mismatchTitle: "This History does not recompute",
@@ -127,8 +140,12 @@
     reasons: "What did not hold:",
     finding: {
       history_audience_keep: "the History is a keep copy (audience keep), never one to send",
+      history_audience_counterparty: "the History holds the original participant's copies (audience counterparty), not ones to show anyone else",
+      history_audience_adjudicator: "the History holds copies made for an adjudicator in a dispute about each deal (audience adjudicator), not ones to show anyone else",
       history_audience_unknown: "the sealed selection names no audience this page knows",
       deal_audience_keep: "this deal's copy is a keep copy (audience keep)",
+      deal_audience_counterparty: "this deal's copy is the original participant's copy (audience counterparty), not one to show anyone else",
+      deal_audience_adjudicator: "this deal's copy was made for an adjudicator (audience adjudicator), not one to show anyone else",
       deal_audience_not_selected: "this deal's copy is for another audience than the sealed one",
       deal_signers_differ: "the selected deals' records are signed by more than one key",
       deal_signed_by_other_key: "this deal's records name a key other than K, the key that signs the selection record",
@@ -148,6 +165,8 @@
       selection_record_not_root: "the selection record is not the root of the History's bundle",
       history_checkpoint_missing: "the History carries no checkpoint",
       not_a_history_log: "the History's bundle is not of a deal-history log",
+      history_log_unproven: "the page's verifier found that the history log's checkpoint, or the selection record's membership in that log, does not hold",
+      history_bundle_unverified: "the page's verifier did not pass the History's own bundle (its records, root, disclosures, checkpoint or membership)",
     },
     gloss: {
       none: "a disclosed record with no outcome evidence",
@@ -387,9 +406,64 @@
   }
 
   function notShareable(finding) {
-    if (finding === "deal_signers_differ" || finding === "history_audience_keep") return true;
     var head = finding.split(":")[0];
-    return ["deal_signed_by_other_key", "deal_audience_keep", "deal_not_in_selection", "deal_missing"].indexOf(head) >= 0;
+    return [
+      "deal_signers_differ", "deal_signed_by_other_key", "deal_not_in_selection", "deal_missing",
+      "history_audience_keep", "history_audience_counterparty", "history_audience_adjudicator",
+      "deal_audience_keep", "deal_audience_counterparty", "deal_audience_adjudicator",
+    ].indexOf(head) >= 0;
+  }
+
+  // ---- the page's verifier: agent-action-capsule's VerifiedBundleContext ------
+  // The runtime hands canRender and buildModel a VerifiedBundleContext
+  // (agent-action-capsule ts/src/bundle.ts): one verifyBundle run over the
+  // bundle. The module reads its verdicts on the History's own bundle from
+  // it and never recomputes them:
+  //   context.verification.capsuleResults[root]   the selection record's identity
+  //   context.root                               the bundle's root
+  //   context.completeness.intervalCoverage      the checkpoint and the range of the log
+  //   context.completeness.perRecordMembership   each record's membership in that log
+  //   context.completeness.memberships[root]     the selection record's log coordinates
+  // verifyBundle checks no record signature (verify.ts verifyClass1 leaves
+  // signature and key_id out of the id and checks neither), so the context
+  // holds no verdict on the selection record's signature: it stays
+  // NOT_CHECKED. A context without a verification (a bare {bundle}, or the
+  // Python twin) leaves every one of these as the file alone shows it.
+
+  function claim(c) {
+    var o = obj(c);
+    return { status: typeof o.status === "string" ? o.status : "", findings: Array.isArray(o.findings) ? o.findings : [] };
+  }
+
+  // The runtime's gate (presentation-registry.ts bundleVerified): the shell
+  // calls no module unless it holds. A module called on a context where it
+  // does not hold draws no card.
+  function bundleVerified(verification) {
+    var membership = claim(verification.perRecordMembership);
+    var results = obj(verification.capsuleResults);
+    return claim(verification.graphClosure).status === "pass" &&
+      claim(verification.intervalCoverage).status === "pass" &&
+      (membership.status === "pass" || (membership.status === "fail" && membership.findings.length > 0 &&
+        membership.findings.every(function (f) { return typeof f === "string" && f.indexOf("membership_record_unbound:") === 0; }))) &&
+      Object.keys(results).every(function (id) { return obj(results[id]).ok === true; }) &&
+      (Array.isArray(verification.disclosures) ? verification.disclosures : []).every(function (d) {
+        return obj(d).status === "disclosure_match" || obj(d).status === "withheld";
+      });
+  }
+
+  // The verdicts this module takes from the context, or null without one.
+  function verdicts(context) {
+    var c = obj(context);
+    if (!isObj(c.verification)) return null;
+    var completeness = obj(c.completeness);
+    return {
+      verified: bundleVerified(c.verification),
+      root: typeof c.root === "string" ? c.root : undefined,
+      capsuleResults: obj(c.verification.capsuleResults),
+      intervalCoverage: claim(completeness.intervalCoverage),
+      perRecordMembership: claim(completeness.perRecordMembership),
+      memberships: obj(completeness.memberships),
+    };
   }
 
   function show(v) {
@@ -398,9 +472,13 @@
 
   // The whole reading of a bundle: {state, findings, properties, holder_key,
   // audience, signer_keys, deals, values, asserted, mismatches}. values is
-  // null unless state is "card".
-  function check(bundle) {
+  // null unless state is "card". With a context (its VerifiedBundleContext),
+  // the selection record's identity and the history log are read from the
+  // page's verifier as well; without one, from the file alone (as the Python
+  // twin does).
+  function check(bundle, context) {
     bundle = obj(bundle);
+    var verdict = verdicts(context);
     var block = selectionBlock(bundle);
     var status = {};
     PROPERTIES.forEach(function (p) { status[p] = "PASS"; });
@@ -438,6 +516,11 @@
       }
       holder = typeof record.key_id === "string" ? record.key_id : "";
     }
+    // The page's verifier on the selection record's identity (verifyClass1 via verifyBundle).
+    if (verdict !== null && record !== null) {
+      var identity = obj(verdict.capsuleResults[recordId]);
+      if (identity.ok !== true || identity.capsuleId !== recordId) fail("selection_record", "selection_record_unverified");
+    }
     if (record !== null && signed(record)) {
       status.selection_record_signature = "NOT_CHECKED";
     } else {
@@ -445,11 +528,27 @@
       failed.push("selection_record_unsigned");
     }
     // capsulectl verify: the bundle's root is the selection record, and its log is deal-history.
-    if (typeof recordId !== "string" || bundle.root !== recordId) fail("selection_root", "selection_record_not_root");
+    var rootId = verdict !== null ? verdict.root : bundle.root;
+    if (typeof recordId !== "string" || rootId !== recordId) fail("selection_root", "selection_record_not_root");
     var checkpoint = obj(bundle.checkpoint), certificate = obj(bundle.completeness_certificate);
     if (Object.keys(checkpoint).length && Object.keys(certificate).length) {
       status.history_log = "NOT_CHECKED";
       if (checkpoint.log_id !== HISTORY_LOG_ID || certificate.log_id !== HISTORY_LOG_ID) fail("history_log", "not_a_history_log");
+      else if (verdict !== null) {
+        // The page's verifier: the range up to the checkpoint and each record's
+        // membership, and the selection record's own coordinates in deal-history.
+        var coverage = verdict.intervalCoverage, membership = verdict.perRecordMembership;
+        var at = obj(obj(verdict.memberships[recordId]).log_coordinates);
+        if (coverage.status !== "pass" || membership.status !== "pass" || at.log_id !== HISTORY_LOG_ID) {
+          fail("history_log", "history_log_unproven");
+        } else if (!coverage.findings.length && !membership.findings.length) {
+          status.history_log = "PASS";
+        }
+        // A pass with findings is checkpoint_unverified: the range and the
+        // memberships hold against a checkpoint whose own signature the
+        // verifier could not authenticate (bundle.ts authenticateCheckpoint),
+        // so the history log stays NOT_CHECKED.
+      }
     } else {
       status.history_log = "NOT_PRESENT";
       failed.push("history_checkpoint_missing");
@@ -472,7 +571,7 @@
       order.push(deal);
     });
 
-    if (audience === "keep") fail("audience", "history_audience_keep");
+    if (UNSHAREABLE_AUDIENCES.indexOf(audience) >= 0) fail("audience", "history_audience_" + audience);
     else if (SHAREABLE_AUDIENCES.indexOf(audience) < 0) fail("audience", "history_audience_unknown");
 
     var carried = obj(block.deals);
@@ -517,7 +616,7 @@
       var copyFor = sealedOrInlineReport(member).audience;
       entry.audience = typeof copyFor === "string" ? copyFor : "";
       if (copyFor !== audience) fail("audience", "deal_audience_not_selected:" + deal);
-      if (copyFor === "keep") fail("audience", "deal_audience_keep:" + deal);
+      if (UNSHAREABLE_AUDIENCES.indexOf(copyFor) >= 0) fail("audience", "deal_audience_" + copyFor + ":" + deal);
       var k = noteKeys(deal, member);
       if (k.unsigned) {
         anyUnsigned = true;
@@ -549,8 +648,12 @@
       status.values = "NOT_PRESENT";
     }
 
+    // The runtime calls no module for a bundle its verifier does not pass; if
+    // one is called anyway, it shows that and no card, whatever else holds.
+    if (verdict !== null && !verdict.verified) failed.unshift("history_bundle_unverified");
     var findings = failed.filter(function (f, i) { return failed.indexOf(f) === i; });
-    var state = findings.some(notShareable) ? "not_shareable" : findings.length ? "invalid" : mismatches.length ? "mismatch" : "card";
+    var state = verdict !== null && !verdict.verified ? "invalid" :
+      findings.some(notShareable) ? "not_shareable" : findings.length ? "invalid" : mismatches.length ? "mismatch" : "card";
     var sortedSigners = {};
     Object.keys(signers).sort().forEach(function (key) { sortedSigners[key] = signers[key].slice().sort(); });
     return {
@@ -626,7 +729,8 @@
   function drawChecks(doc, result) {
     var rows = PROPERTIES.map(function (p) {
       var s = result.properties[p];
-      return { attrs: { "data-property": p, "data-property-status": s }, cells: [WORDS.property[p], el(doc, "span", {}, [statusBadge(doc, s), " " + WORDS.status[s]])] };
+      var words = s === "NOT_CHECKED" && MEMBER_BUNDLE_PROPERTIES.indexOf(p) >= 0 ? WORDS.memberNotChecked : WORDS.status[s];
+      return { attrs: { "data-property": p, "data-property-status": s }, cells: [WORDS.property[p], el(doc, "span", {}, [statusBadge(doc, s), " " + words])] };
     });
     var signerRows = Object.keys(result.signer_keys).map(function (key) {
       return el(doc, "li", { "data-signer": key }, [el(doc, "span", { class: "cv-mono" }, [key]), ": " + result.signer_keys[key].join(", ")]);
@@ -708,7 +812,7 @@
     var bundle = obj(context).bundle;
     var result;
     try {
-      result = check(bundle);
+      result = check(bundle, context);
     } catch (e) {
       var none = {};
       PROPERTIES.forEach(function (p) { none[p] = "NOT_CHECKED"; });
@@ -747,6 +851,7 @@
     selectedRecords: selectedRecords,
     derive: derive,
     check: check,
+    bundleVerified: bundleVerified,
     recomputeErrors: recomputeErrors,
   };
   if (typeof root.EvidenceGraph !== "undefined" && root.EvidenceGraph && typeof root.EvidenceGraph.registerPresentation === "function") {

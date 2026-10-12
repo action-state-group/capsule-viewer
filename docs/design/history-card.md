@@ -1,7 +1,9 @@
 # History Card: design (v0)
 
 Status: built, reworked on 2026-10-12 to the History file shape agreed with
-the producer (capsule-cli PR #209), and re-cut on #209's head 7ebf001. The module is
+the producer (capsule-cli PR #209), re-cut on #209's head 7ebf001, and since
+reading agent-action-capsule's VerifiedBundleContext and the "history" audience
+(PM u334, design v0.5, neutral u888). The module is
 `src/capsule_viewer/static/history_card.js`, one self-contained module-slot
 script with its words compiled in; its manifest is
 `src/capsule_viewer/history/manifest.json` (this directory's sketch, plus the
@@ -29,6 +31,7 @@ says or implies that the holder of key K made, took part in or owns the deals.
 | [producer] | capsule-cli `7ebf00173c95e9287069a159a864e0793744da2e` (PR #209) | `internal/cli/deal_history.go` (`deal history`, `historyEntry`), `internal/cli/deal_sale_bundle.go` (`sealedOrInlineReport`) |
 | [aac-id] | agent-action-capsule `ab4ee43b71d6e074c6a000b5b19a9caf9720235e` | `python/agent_action_capsule/canonical.py` (`compute_capsule_id`, `json_digest`) |
 | [registry] | this repository | `src/capsule_viewer/registry.py` (`co_matchable`, the static ambiguity test) |
+| [aac-context] | agent-action-capsule `3a7aca6` | `ts/src/bundle.ts` (`VerifiedBundleContext`, `buildVerifiedBundleContext`, `verifyBundle`), `ts/src/verify.ts` (`VerificationResult`, `verifyClass1`), `ts/src/presentation-registry.ts` (`bundleVerified`, `resolveModules`), `ts/src/evidence-graph-view.ts` (`renderEvidenceGraph`) |
 
 ## 1. The History file
 
@@ -47,7 +50,7 @@ The holder of key K selects deal copies. The card never selects and never widens
 
   ```json
   {"type": "history_selection", "profile": "x-history-selection/v0",
-   "audience": "counterparty" | "adjudicator" | "keep", "nonce": "<hex>",
+   "audience": "history" | "counterparty" | "adjudicator" | "keep", "nonce": "<hex>",
    "selection": [{"deal_id": "deal-<16 hex>", "bundle_digest": "<sha256 of the nested bundle's JCS>"}]}
   ```
 
@@ -75,16 +78,30 @@ The holder of key K selects deal copies. The card never selects and never widens
 selection record's `audience`. Each nested deal's audience is its report's
 `audience`, read as capsule-cli's `sealedOrInlineReport` reads it: the sealed
 `deal_report` record's `report` when `x-deal-v0` names one by
-`sealed_report`, else the inline `x-deal-v0` block. `counterparty` and
-`adjudicator` are both shareable. `keep` anywhere (the History's or any
-deal's) means the file is a keep copy, never one to send, and **not a
-shareable History**.
+`sealed_report`, else the inline `x-deal-v0` block. **`history` is the only
+shareable audience** (neutral u888: the producer will make `--audience
+history` the default for `deal history` and refuse `counterparty`). Every
+other audience, the History's or any deal's, makes the file **not a
+shareable History**, each under its own finding:
 
-**The Standard preset** is the counterparty copy, `deal history`'s default
-audience: each deal as `deal report --share counterparty` withholds it (home
-address, card and payment identifiers, codes, contact details, the price
-floor). `tests/testdata/history/history-counterparty.bundle.json` is one; the
-tests scan its bytes for those values and find none.
+- `keep`: the keep copy, never one to send (`history_audience_keep`,
+  `deal_audience_keep:<id>`);
+- `counterparty`: the original participant's copy, not one to show anyone
+  else (`history_audience_counterparty`, `deal_audience_counterparty:<id>`);
+- `adjudicator`: a copy made for an adjudicator in a dispute about that deal,
+  not for showing to a third party (`history_audience_adjudicator`,
+  `deal_audience_adjudicator:<id>`). **Open**: em-dev recommends the producer
+  refuse it and confirms with their measurement; until then the page fails
+  closed.
+
+**The Standard preset** will be the `history` copy. 7ebf001 writes no
+`history` audience yet, so the real fixtures stay cut from it (its default,
+`counterparty`, withholds the home address, card and payment identifiers,
+codes, contact details and the price floor; the tests scan
+`history-counterparty.bundle.json` and `history-adjudicator.bundle.json` for
+those values and find none) and the tests reach the `history` audience by an
+in-memory re-seal (`capsule_viewer.history.fixture.with_audience`). They are
+re-cut when em-dev's u888 producer lands.
 
 Every read of a deal record goes through one function, `selected_records`
 (Python) and `selectedRecords` (the module): the records of each deal the
@@ -130,8 +147,9 @@ claims the selection is all of anything.
 ## 3. The check
 
 `check(bundle)` (Python, `capsule_viewer.history.recompute`) and `check` (the
-module) read the file alone. They return the findings, a status per property
-and one state. The findings carry `capsulectl verify`'s names where it has
+module) read the file alone. The module's `check(bundle, context)`, which its
+`buildModel` runs, also reads the page verifier's result from the context
+(below). They return the findings, a status per property and one state. The findings carry `capsulectl verify`'s names where it has
 one [producer, `historyEntry`]:
 
 | Finding | When |
@@ -149,14 +167,21 @@ one [producer, `historyEntry`]:
 | `deal_signed_by_other_key:<id>`, `deal_signers_differ` | a deal's records name a key other than K; the carried deals' records name more than one key |
 | `deal_record_unsigned:<id>` | a deal record carries no `key_id` or `signature` |
 | `history_audience_keep`, `deal_audience_keep:<id>` | the keep marker (section 1), this page's own names |
+| `history_audience_counterparty`, `deal_audience_counterparty:<id>`, `history_audience_adjudicator`, `deal_audience_adjudicator:<id>` | a copy for the other party or for an adjudicator (section 1), this page's own names |
+| `history_audience_unknown` | the sealed audience is none of the four |
+| `history_log_unproven` | (module, from the context) the page's verifier found the history log's interval coverage or membership failing, or the selection record has no `deal-history` coordinates |
+| `history_bundle_unverified` | (module, from the context) the runtime's own gate does not hold for the History's bundle |
 | `deal_record_id_mismatch:<id>`, `deal_disclosure_mismatch:<id>` | a nested record does not recompute to its capsule id [aac-id], or a disclosure does not match its digest |
 | `history_checkpoint_missing`, `deal_checkpoint_missing:<id>` | no checkpoint (this page's own names) |
 
 **The states**, in order; only the last shows a value:
 
+0. **This History does not check**, first, when the page's verifier does not
+   pass the History's own bundle (`history_bundle_unverified`).
 1. **Not a shareable History**: mixed signers, a signer that is not the
-   selection record's key, any keep member or keep audience, a deal that is
-   not in the selection, or a selection entry with no deal.
+   selection record's key, any member or sealed audience other than
+   `history`, a deal that is not in the selection, or a selection entry with
+   no deal.
 2. **This History does not check**: any other finding.
 3. **This History does not recompute**: a stated `asserted_result` that does
    not match.
@@ -168,21 +193,52 @@ The page lists all thirteen in L2:
 
 | Property | What this page does |
 | --- | --- |
-| selection record, selection record is the root, carried vs sealed selection, membership, nested digests, audience, signer keys (as `key_id` names them), nested record ids and disclosures, stated values | recomputes: PASS or FAIL (stated values NOT_PRESENT when there are none) |
-| the selection record's signature; each deal's record signatures | NOT_CHECKED when present, NOT_PRESENT when absent |
-| the history log (its `log_id` is recomputed: FAIL when it is not `deal-history`), its checkpoint and the selection record's membership; each copy's deal log, checkpoint and membership | NOT_CHECKED when present, NOT_PRESENT when absent |
+| selection record (also FAIL when the context's `capsuleResults` for it is not ok), selection record is the root (the context's `root`), carried vs sealed selection, membership, nested digests, audience, signer keys (as `key_id` names them), nested record ids and disclosures, stated values | recomputes: PASS or FAIL (stated values NOT_PRESENT when there are none) |
+| the history log: its `log_id` (recomputed: FAIL when it is not `deal-history`), its checkpoint and the selection record's membership | read from the context: PASS (checked by this page) or FAIL; NOT_CHECKED when the verifier passed the range and memberships against a checkpoint it could not authenticate (`checkpoint_unverified`), or with no context (the Python twin); NOT_PRESENT when absent |
+| the selection record's signature | NOT_CHECKED when present (the context carries no signature verdict, below), NOT_PRESENT when absent |
+| each deal's record signatures; each copy's deal log, checkpoint and membership | NOT_CHECKED, in the words "verified by capsulectl on the sender's machine, not by this page"; NOT_PRESENT when absent |
 
-This page never calls a signature, a checkpoint or log membership verified.
-`capsulectl verify --bundle` checks them, for the History and for each deal
-in it; the module runs after the page runtime's gate, never instead of it. An
-unsigned stand-in (every signature removed) is NOT_PRESENT and refused: it
-never renders as a History.
+**What the module reads from the context [aac-context].** The runtime hands
+`canRender` and `buildModel` a `VerifiedBundleContext`, built once by
+`buildVerifiedBundleContext` from one `verifyBundle` run. The module reads:
+
+- the selection record's identity: `verification.capsuleResults[<id>]`
+  (`ok`, `capsuleId`; `verifyClass1` recomputes the capsule id);
+- the root: `root`;
+- the history log: `completeness.intervalCoverage` (the range proof up to the
+  checkpoint and the checkpoint's authentication), `completeness.perRecordMembership`
+  (each record's inclusion proof) and `completeness.memberships[<id>].log_coordinates`
+  (the selection record's place in `deal-history`); the log id is read from
+  the certificate and checkpoint the verifier checked them against;
+- the runtime's gate, recomputed from `verification` as `bundleVerified` does.
+
+**Not in the context: the selection record's signature.** `verifyClass1`
+leaves `signature` and `key_id` out of the capsule id and checks neither;
+nothing in `verifyBundle` checks a record's signature. So
+`selection_record_signature` stays NOT_CHECKED, a broken signature leaves the
+context unchanged (a test pins this), and `capsulectl verify --bundle`
+remains the check of it.
+
+**When outer verification fails.** The runtime does not call the module:
+`resolveModules` refuses an unverified context before any manifest is
+matched or any `canRender` is called, and `renderEvidenceGraph` throws if a
+module is ever selected for one. Called anyway (directly, or by another
+host), the module shows **This History does not check** with
+`history_bundle_unverified` first, and no card value.
+
+Each nested deal copy is still only recomputed here (ids, disclosures,
+digests); its signatures and log are NOT_CHECKED. An unsigned stand-in (every
+signature removed) is NOT_PRESENT and refused: it never renders as a
+History.
 
 The tests hold each real file's reading to what `capsulectl verify` printed
 for it (`tests/testdata/history/verify/`): capsulectl's findings are among the
 page's, key K (`holder_key`), audience and signer keys are capsulectl's, and the
 page shows a card exactly when capsulectl says VALID and the audience is
-shareable.
+`history` (no 7ebf001 file). In the module the context of a real file carries
+capsulectl verify's verdicts on it (`js-tests/aacContext.js`, a stand-in for
+`buildVerifiedBundleContext`, which js-tests cannot import; its shape is
+checked against the interface source).
 
 ## 4. Manifest sketch: `capsuleviewer.history/v0`
 
@@ -228,16 +284,18 @@ and a seller's deal with a price floor.
 
 | File | `capsulectl verify` | The page |
 | --- | --- | --- |
-| `history-counterparty` (the Standard preset) | VALID | the card |
-| `history-adjudicator` | VALID | the card |
+| `history-counterparty` (7ebf001's default audience) | VALID | Not a shareable History (counterparty) |
+| `history-adjudicator` | VALID | Not a shareable History (adjudicator; open) |
 | `history-keep` (`--audience keep`) | VALID, audience keep | Not a shareable History |
-| `mutant-flipped-outcome` (the closed deal's report says it failed) | INVALID | This History does not check |
+| `mutant-flipped-outcome` (the closed deal's report says it failed) | INVALID | Not a shareable History (counterparty), with `deal_bundle_not_the_selected_one` |
 | `mutant-mixed-signer` (a second profile's deal spliced in) | INVALID | Not a shareable History |
 | `mutant-not-in-selection` (an unselected deal of the same key spliced in) | INVALID | Not a shareable History |
-| `mutant-selection-not-root` (the bundle's `root` edited) | INVALID: `selection_record_not_root` | This History does not check |
-| `mutant-not-history-log` (the certificate's `log_id` set to a deal's log) | INVALID: `not_a_history_log` | This History does not check |
+| `mutant-selection-not-root` (the bundle's `root` edited) | INVALID: `selection_record_not_root` | This History does not check (the page's verifier fails it: graph closure) |
+| `mutant-not-history-log` (the certificate's `log_id` set to a deal's log) | INVALID: `not_a_history_log` | This History does not check (the page's verifier fails it: checkpoint) |
 
-The tests add further edits of the counterparty History in memory: a selected
+The card is shown for the `history` audience, reached by re-sealing the
+counterparty History in memory (`fixture.with_audience`). The tests add
+further edits of that History in memory: a selected
 deal dropped, the keep copy of one deal spliced in, another key under a
 picked deal's name, either selection edited, a nested record or disclosure
 edited, every signature or checkpoint removed, and an `asserted_result` that

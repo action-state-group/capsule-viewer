@@ -43,7 +43,7 @@ AAC = ROOT / "tests" / "testdata" / "aac-presentation"
 SCHEMA = json.loads((AAC / "presentation-manifest-v0.json").read_text(encoding="utf-8"))
 BUILTINS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((AAC / "builtin").glob("*.json"))}
 GENERIC = json.loads((AAC / "examples" / "example-generic-fallback.json").read_text(encoding="utf-8"))
-AUDIENCES = ("keep", "counterparty", "adjudicator")
+AUDIENCES = ("history", "keep", "counterparty", "adjudicator")
 RULES_PROFILE = f"spec_version:{RECORD_KIND}"
 # The module's text: the files the vocabulary grep (acceptance 4) reads.
 MODULE_TEXT = sorted(p for p in (ROOT / "src" / "capsule_viewer" / "history").glob("*") if p.is_file()) + [SCRIPT]

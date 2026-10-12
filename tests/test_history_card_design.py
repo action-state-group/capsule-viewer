@@ -27,7 +27,7 @@ from capsule_viewer.history import (
     sealed_selection,
     selected_records,
 )
-from capsule_viewer.history.fixture import with_asserted_result
+from capsule_viewer.history.fixture import reseal_selection, with_asserted_result, with_audience
 from capsule_viewer.registry import co_matchable
 
 HERE = Path(__file__).parent
@@ -39,16 +39,25 @@ CUT = json.loads((DATA / "cut.json").read_text(encoding="utf-8"))
 DEALS = CUT["deals"]
 PICKED = sorted([DEALS["closed"], DEALS["private"], DEALS["floor"]])
 
-# What the page shows for each real file (the mutant matrix).
+
+def _copies(audience: str) -> list[str]:
+    return [f"history_audience_{audience}"] + [f"deal_audience_{audience}:{d}" for d in PICKED]
+
+
+# What the file-only check finds in each real file (the mutant matrix). 7ebf001
+# writes no "history" audience, so every real file is a copy made for someone in
+# particular: counterparty and adjudicator are not shareable either (u888), and
+# each mutant of the counterparty History carries that beside its own finding.
+CP = _copies("counterparty")
 MATRIX = {
-    "history-counterparty": ("card", []),
-    "history-adjudicator": ("card", []),
-    "history-keep": ("not_shareable", ["history_audience_keep"] + [f"deal_audience_keep:{d}" for d in PICKED]),
-    "mutant-flipped-outcome": ("invalid", [f"deal_bundle_not_the_selected_one:{DEALS['closed']}"]),
-    "mutant-mixed-signer": ("not_shareable", [f"deal_not_in_selection:{DEALS['second_profile']}", "deal_signers_differ"]),
-    "mutant-not-in-selection": ("not_shareable", [f"deal_not_in_selection:{DEALS['other']}"]),
-    "mutant-selection-not-root": ("invalid", ["selection_record_not_root"]),
-    "mutant-not-history-log": ("invalid", ["not_a_history_log"]),
+    "history-counterparty": ("not_shareable", CP),
+    "history-adjudicator": ("not_shareable", _copies("adjudicator")),
+    "history-keep": ("not_shareable", _copies("keep")),
+    "mutant-flipped-outcome": ("not_shareable", [CP[0], f"deal_bundle_not_the_selected_one:{DEALS['closed']}", *CP[1:]]),
+    "mutant-mixed-signer": ("not_shareable", [CP[0], f"deal_not_in_selection:{DEALS['second_profile']}", *CP[1:], "deal_signers_differ"]),
+    "mutant-not-in-selection": ("not_shareable", [CP[0], f"deal_not_in_selection:{DEALS['other']}", *CP[1:]]),
+    "mutant-selection-not-root": ("not_shareable", ["selection_record_not_root", *CP]),
+    "mutant-not-history-log": ("not_shareable", ["not_a_history_log", *CP]),
 }
 # The mutants that edit the outer bundle's root or log id (everything else about them is as cut).
 OUTER_EDITS = {"mutant-selection-not-root", "mutant-not-history-log"}
@@ -64,9 +73,16 @@ def _verify(name: str) -> dict:
     return {"verdict": report["verdict"], **entry}
 
 
+def _history() -> dict:
+    """The counterparty History re-sealed in memory for the audience "history"
+    (fixture.with_audience): the shareable baseline until a producer that
+    writes that audience (u888) is cut from."""
+    return with_audience(_load("history-counterparty"), "history")
+
+
 @pytest.fixture
 def bundle() -> dict:
-    return _load("history-counterparty")
+    return _history()
 
 
 def _ext(b: dict) -> dict:
@@ -115,8 +131,23 @@ def test_the_page_names_what_capsulectl_verify_names(name):
     assert reading["holder_key"] == verified["holder_key"]
     assert reading["audience"] == verified["audience"]
     assert reading["signer_keys"] == verified["signer_keys"]
-    # A card only for a file capsulectl passes and whose audience is shareable.
-    assert (state == "card") == (verified["verdict"] == "VALID" and verified["audience"] in ("counterparty", "adjudicator"))
+    # A card only for a file capsulectl passes and whose audience is "history" (none of 7ebf001's).
+    assert (state == "card") == (verified["verdict"] == "VALID" and verified["audience"] == "history")
+    assert state != "card"
+
+
+@pytest.mark.parametrize("audience", ["counterparty", "adjudicator", "keep"])
+def test_only_the_history_audience_is_shareable(audience):
+    shareable = check(_history())
+    assert shareable["state"] == "card" and shareable["audience"] == "history" and shareable["findings"] == []
+    reading = check(with_audience(_load("history-counterparty"), audience))
+    assert reading["state"] == "not_shareable" and reading["values"] is None
+    assert reading["findings"] == _copies(audience)
+    assert reading["properties"]["audience"] == "FAIL"
+    # The sealed audience alone, the copies left as they are: still not shareable, and named.
+    one = reseal_selection(_history(), lambda sealed: sealed.update(audience=audience))
+    assert check(one)["state"] == "not_shareable"
+    assert check(one)["findings"][0] == f"history_audience_{audience}"
 
 
 def test_the_selection_record_must_be_the_root_and_the_log_deal_history():
@@ -124,12 +155,12 @@ def test_the_selection_record_must_be_the_root_and_the_log_deal_history():
     assert root["properties"]["selection_root"] == "FAIL" and root["values"] is None
     log = check(_load("mutant-not-history-log"))
     assert log["properties"]["history_log"] == "FAIL" and log["values"] is None
-    assert check(_load("history-counterparty"))["properties"]["selection_root"] == "PASS"
+    assert check(_history())["properties"]["selection_root"] == "PASS"
     # The same two checks in memory, on the checkpoint's log id and on a missing root.
-    b = _load("history-counterparty")
+    b = _history()
     b["checkpoint"]["log_id"] = DEALS["closed"]
     assert check(b)["findings"] == ["not_a_history_log"]
-    b = _load("history-counterparty")
+    b = _history()
     del b["root"]
     assert check(b)["findings"] == ["selection_record_not_root"]
 
@@ -310,7 +341,7 @@ def test_a_recipient_and_steps_after_checkpoint_do_not_break_the_parse(bundle):
     assert reading["state"] == "card", reading["findings"]
     assert reading["findings"] == []
     assert reading["values"]["selected_count"] == 3
-    assert reading["values"] == check(_load("history-counterparty"))["values"]
+    assert reading["values"] == check(_history())["values"]
     # Not displayed: neither field reaches what the page draws from.
     shown = json.dumps(reading)
     assert RECIPIENT not in shown and "recipient" not in shown and "steps_after_checkpoint" not in shown
@@ -322,7 +353,7 @@ def test_the_carried_selection_is_still_compared_entry_for_entry_with_the_future
     reading = check(b)
     assert reading["findings"] == ["selection_not_sealed"] and reading["state"] == "invalid"
     # One entry's extra field differs: still not the sealed selection.
-    b = _reseal(_load("history-counterparty"), _with_future_fields)
+    b = _reseal(_history(), _with_future_fields)
     _ext(b)["selection"] = copy.deepcopy(sealed_selection(b)["selection"])
     _ext(b)["selection"][0]["steps_after_checkpoint"] = 99
     assert check(b)["findings"] == ["selection_not_sealed"]

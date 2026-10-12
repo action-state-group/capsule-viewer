@@ -30,7 +30,10 @@ This check reads the file alone. It recomputes record ids, disclosure
 digests and nested bundle digests with this repository's own JCS
 (``capsule_viewer.digest``). It does not verify signatures, checkpoints or
 log membership: those are reported NOT_CHECKED, never as verified. The page
-runs the same check in ``static/history_card.js`` (``check``).
+runs the same check in ``static/history_card.js`` (``check``); there, and
+only there, the selection record's identity and the history log's checkpoint
+and membership are also read from the page's verifier (agent-action-capsule's
+VerifiedBundleContext), which this file-only twin does not have.
 """
 from __future__ import annotations
 
@@ -45,7 +48,12 @@ HISTORY_LOG_ID = "deal-history"
 SELECTION_ACTION_ID = "capsulectl-deal-history"
 DEAL_PROFILE = "x-deal-v0"
 REPORT_POINTER = "sealed_report"
-SHAREABLE_AUDIENCES = ("counterparty", "adjudicator")
+# "history" is the one shareable audience (neutral u888). keep (never one to
+# send), counterparty (the original participant's copy) and adjudicator
+# (made for a dispute about that deal; open, failing closed) are never shown
+# to anyone else.
+SHAREABLE_AUDIENCES = ("history",)
+UNSHAREABLE_AUDIENCES = ("keep", "counterparty", "adjudicator")
 RECOMPUTED_KEYS = ("completeness", "outcome_evidence", "period", "selected_count")
 # agent-action-capsule canonical.py: capsule_id and the local-only producer fields leave the preimage.
 CAPSULE_ID_EXCLUDED = frozenset({"capsule_id", "signature", "key_id"})
@@ -196,11 +204,13 @@ def _record_findings(deal: str, member: Mapping) -> list[str]:
 
 # Findings that make a file not a shareable History (design section 3).
 def _not_shareable(finding: str) -> bool:
-    return finding in ("deal_signers_differ", "history_audience_keep") or finding.split(":")[0] in (
+    return finding.split(":")[0] in (
+        "deal_signers_differ",
         "deal_signed_by_other_key",
-        "deal_audience_keep",
         "deal_not_in_selection",
         "deal_missing",
+        *(f"history_audience_{a}" for a in UNSHAREABLE_AUDIENCES),
+        *(f"deal_audience_{a}" for a in UNSHAREABLE_AUDIENCES),
     )
 
 
@@ -280,8 +290,8 @@ def check(bundle: Mapping) -> dict:
             continue
         picked[deal] = digest
 
-    if audience == "keep":
-        fail("audience", "history_audience_keep")
+    if audience in UNSHAREABLE_AUDIENCES:
+        fail("audience", f"history_audience_{audience}")
     elif audience not in SHAREABLE_AUDIENCES:
         fail("audience", "history_audience_unknown")
 
@@ -326,8 +336,8 @@ def check(bundle: Mapping) -> dict:
         entry["audience"] = copy_for if isinstance(copy_for, str) else ""
         if copy_for != audience:
             fail("audience", f"deal_audience_not_selected:{deal}")
-        if copy_for == "keep":
-            fail("audience", f"deal_audience_keep:{deal}")
+        if copy_for in UNSHAREABLE_AUDIENCES:
+            fail("audience", f"deal_audience_{copy_for}:{deal}")
         keys, unsigned = note_keys(deal, member)
         if unsigned:
             any_unsigned = True

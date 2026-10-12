@@ -1,0 +1,12 @@
+{
+  "source": "agent-action-capsule 3a7aca6, ts/src/bundle.ts and ts/src/verify.ts",
+  "note": "The fields of the TypeScript interfaces js-tests/aacContext.js stands in for. A name ending in ? is optional. js-tests/history_card.test.js checks the stand-in against this list, and this list against the interface source when an agent-action-capsule checkout is present (AAC_TS_SRC, default ../agent-action-capsule--main/ts/src).",
+  "interfaces": {
+    "VerifiedBundleContext": {"file": "bundle.ts", "fields": ["bundle", "root", "verification", "resolvedDisclosures", "records", "recordIndex", "countersignatures", "countersigners", "extensions", "completeness"]},
+    "VerifiedBundleContext.completeness": {"file": "bundle.ts", "fields": ["graphClosure", "intervalCoverage", "perRecordMembership", "memberships"]},
+    "BundleVerificationResult": {"file": "bundle.ts", "fields": ["bundleDigest?", "graphClosure", "intervalCoverage", "perRecordMembership", "disclosures", "extensions", "countersignatures", "verification?", "capsuleResults"]},
+    "ClaimResult": {"file": "bundle.ts", "fields": ["status", "findings"]},
+    "DisclosureResult": {"file": "bundle.ts", "fields": ["capsuleId", "member", "status"]},
+    "VerificationResult": {"file": "verify.ts", "fields": ["ok", "findings", "assurance", "capsuleId?"]}
+  }
+}

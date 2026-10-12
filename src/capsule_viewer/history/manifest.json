@@ -20,6 +20,7 @@
     ]
   },
   "audiences": [
+    "history",
     "keep",
     "counterparty",
     "adjudicator"
@@ -31,6 +32,6 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "09bb7ef1233d8d0aa8ccff8a64e008707300f9f46b8eda9a41f9681bf212c9e3"
+    "script_sha256": "328f8134635443b5bf1879405fe3e2a7ac022f625c0d98a873b847667f5453ed"
   }
 }
