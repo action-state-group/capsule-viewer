@@ -1,14 +1,24 @@
 # SPDX-License-Identifier: Apache-2.0
 """The History Card check (docs/design/history-card.md, sections 1 to 3).
 
-A History is an ``evidence-bundle/v2`` of the holder's own history log
-(``deal-history``). One record on it, the selection record (action_id
-``capsulectl-deal-history``), seals the holder's pick and is signed by the
-holder's key. The bundle's ``x-history-selection/v0`` extension carries:
+A History is an ``evidence-bundle/v2`` of a history log (log id
+``deal-history``) whose root record, the selection record (action_id
+``capsulectl-deal-history``), seals a selection of deal copies and is signed
+by one key, K. The bundle's ``x-history-selection/v0`` extension carries:
 
     {"selection_record": <that record's capsule id>,
      "selection": [{"deal_id", "bundle_digest"}],   # equal to the sealed one
      "deals": {<deal id>: <that deal's copy for the audience, an evidence-bundle/v2>}}
+
+What a History shows is only that the holder of key K presents these copies,
+each of which verifies on its own. A record's signature sits outside its
+Capsule ID, so anyone can re-sign someone else's counterparty copies under a
+fresh key and still get VALID: a History does not show that K's holder made,
+took part in or owns those deals, and nothing here says it does.
+
+Fields this check does not know (in the sealed selection, in a selection
+entry) are tolerated and never shown; the carried selection is still
+compared with the sealed one entry for entry, every field included.
 
 ``check(bundle)`` returns everything the card needs: the findings (named as
 ``capsulectl verify`` names them where it has a name), a status per property
@@ -46,6 +56,7 @@ HEX_DIGEST = re.compile(r"^[0-9a-f]{64}$")
 PROPERTIES = (
     "selection_record",
     "selection_record_signature",
+    "selection_root",
     "history_log",
     "selection_sealed",
     "membership",
@@ -213,7 +224,7 @@ def check(bundle: Mapping) -> dict:
             "signer_keys": {}, "deals": [], "values": None, "asserted": False, "mismatches": [],
         }
 
-    # The selection record: on the history log, recomputing to its id, its disclosure bound, signed.
+    # The selection record: the bundle's root, recomputing to its id, its disclosure bound, signed.
     record_id = block.get("selection_record")
     records = bundle.get("records") if isinstance(bundle.get("records"), list) else []
     record = next((_obj(r) for r in records if _obj(r).get("capsule_id") == record_id and isinstance(record_id, str)), None)
@@ -238,12 +249,15 @@ def check(bundle: Mapping) -> dict:
     else:
         status["selection_record_signature"] = NOT_PRESENT
         failed.append("selection_record_unsigned")
+    # capsulectl verify: the bundle's root is the selection record, and its log is deal-history.
+    if not isinstance(record_id, str) or bundle.get("root") != record_id:
+        fail("selection_root", "selection_record_not_root")
     checkpoint = _obj(bundle.get("checkpoint"))
     certificate = _obj(bundle.get("completeness_certificate"))
     if checkpoint and certificate:
         status["history_log"] = NOT_CHECKED
         if checkpoint.get("log_id") != HISTORY_LOG_ID or certificate.get("log_id") != HISTORY_LOG_ID:
-            fail("history_log", "history_not_of_its_log")
+            fail("history_log", "not_a_history_log")
     else:
         status["history_log"] = NOT_PRESENT
         failed.append("history_checkpoint_missing")

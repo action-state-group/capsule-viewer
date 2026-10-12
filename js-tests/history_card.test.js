@@ -47,7 +47,12 @@ const MATRIX = {
   "mutant-flipped-outcome": ["invalid", [`deal_bundle_not_the_selected_one:${D.closed}`]],
   "mutant-mixed-signer": ["not_shareable", [`deal_not_in_selection:${D.second_profile}`, "deal_signers_differ"]],
   "mutant-not-in-selection": ["not_shareable", [`deal_not_in_selection:${D.other}`]],
+  "mutant-selection-not-root": ["invalid", ["selection_record_not_root"]],
+  "mutant-not-history-log": ["invalid", ["not_a_history_log"]],
 };
+// The L0 limitation: who presents the copies, never who made the deals.
+const LIMITATION = "A History shows only that the holder of key K presents these copies, each of which verifies on its own. " +
+  "It does not show that the holder of key K made, took part in or owns these deals.";
 const SHAREABLE = read("history-counterparty");
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -177,6 +182,10 @@ describe("the mutant matrix: each real file, in the module", () => {
     expect(host.L0.querySelector("[data-history-provenance]").getAttribute("data-history-provenance")).toBe("computed");
     expect(host.L0.querySelector("[data-history-audience]").getAttribute("data-history-audience")).toBe("counterparty");
     expect(host.L0.querySelector("[data-history-forbids]").textContent).toBe(load().H.WORDS.forbidding);
+    // The presenter limitation, word for word, in L0; key K beside it.
+    expect(host.L0.querySelector("[data-history-limitation]").textContent).toBe(LIMITATION);
+    expect(load().H.WORDS.limitation).toBe(LIMITATION);
+    expect(host.L0.querySelector("[data-history-key]").textContent).toBe(model.result.holder_key);
     expect(host.L1.querySelectorAll("[data-deal]")).toHaveLength(3);
     for (const level of [host.L1, host.L2]) expect(level.querySelectorAll("details")).toHaveLength(1);
     expect(host.L0.querySelectorAll("details")).toHaveLength(0);
@@ -187,6 +196,7 @@ describe("the mutant matrix: each real file, in the module", () => {
     const status = Object.fromEntries([...host.L2.querySelectorAll("[data-property]")].map((r) => [r.getAttribute("data-property"), r.getAttribute("data-property-status")]));
     expect(Object.keys(status)).toEqual(load().H.PROPERTIES);
     for (const p of ["selection_record_signature", "history_log", "member_signatures", "member_logs"]) expect(status[p]).toBe("NOT_CHECKED");
+    expect(status.selection_root).toBe("PASS");
     expect(status.values).toBe("NOT_PRESENT");
     expect(host.L2.textContent).not.toMatch(/\bverified\b/i);
     expect(host.L0.textContent).not.toMatch(/\bverified\b/i);
@@ -207,6 +217,24 @@ describe("the module and the Python check agree", () => {
       delete values.outcome_evidence["effect.status:dispatched"];
     }
     ext(b).asserted_result = values;
+  };
+  // Two fields a later #209 may add: "recipient" in the sealed selection,
+  // "steps_after_checkpoint" in each entry. The selection record is re-sealed
+  // over them (agent_input_digest, capsule id, disclosure key, root).
+  const sha = (v) => createHash("sha256").update(Buffer.from(load().H.jcs(v), "utf8")).digest("hex");
+  const futureFields = (b, carry) => {
+    const old = ext(b).selection_record;
+    const sealed = b.disclosures[old];
+    delete b.disclosures[old];
+    sealed.agent_input.recipient = "recipient-not-shown-7f3a";
+    sealed.agent_input.selection.forEach((e, i) => { e.steps_after_checkpoint = i + 2; });
+    const record = b.records.find((r) => r.capsule_id === old);
+    record.model_attestation.compute_attestation.agent_input_digest = sha(sealed.agent_input);
+    const pre = Object.fromEntries(Object.entries(record).filter(([k]) => !["capsule_id", "signature", "key_id"].includes(k)));
+    record.capsule_id = sha(pre);
+    b.disclosures[record.capsule_id] = sealed;
+    b.root = ext(b).selection_record = record.capsule_id;
+    if (carry) ext(b).selection = clone(sealed.agent_input.selection);
   };
   const EDITS = {
     ...Object.fromEntries(Object.keys(MATRIX).map((name) => [name, (b) => Object.assign(b, read(name))])),
@@ -230,6 +258,10 @@ describe("the module and the Python check agree", () => {
     "every signature removed": (b) => { for (const m of [b, ...Object.values(ext(b).deals)]) for (const r of m.records) delete r.signature; },
     "every checkpoint removed": (b) => { for (const m of [b, ...Object.values(ext(b).deals)]) delete m.checkpoint; },
     "no selection block": (b) => { delete b.extensions[EXT]; },
+    "root set to another id": (b) => { b.root = "0".repeat(64); },
+    "checkpoint log id set to a deal's log": (b) => { b.checkpoint.log_id = D.closed; },
+    "recipient and steps_after_checkpoint added, carried as sealed": (b) => futureFields(b, true),
+    "recipient and steps_after_checkpoint sealed, not carried": (b) => futureFields(b, false),
   };
 
   for (const [name, edit] of Object.entries(EDITS)) {
@@ -256,6 +288,31 @@ describe("the module and the Python check agree", () => {
     expect(state(EDITS["another key under a picked deal's name"])).toBe("not_shareable");
     expect(state(EDITS["every signature removed"])).toBe("invalid");
     expect(state(EDITS["every checkpoint removed"])).toBe("invalid");
+    expect(state(EDITS["root set to another id"])).toBe("invalid");
+    expect(state(EDITS["checkpoint log id set to a deal's log"])).toBe("invalid");
+    expect(state(EDITS["recipient and steps_after_checkpoint sealed, not carried"])).toBe("invalid");
+  });
+
+  it("the two future fields: the card renders, and neither field is shown", () => {
+    const b = clone(SHAREABLE);
+    EDITS["recipient and steps_after_checkpoint added, carried as sealed"](b);
+    expect(b.disclosures[ext(b).selection_record].agent_input.recipient).toBe("recipient-not-shown-7f3a");
+    expect(ext(b).selection.every((e) => "steps_after_checkpoint" in e)).toBe(true);
+    const { model, host } = present(b);
+    expect(model.result.state).toBe("card");
+    expect(model.result.findings).toEqual([]);
+    expect(model.result.values).toEqual(present(clone(SHAREABLE)).model.result.values);
+    const text = host.L0.textContent + host.L1.textContent + host.L2.textContent;
+    const attrs = [host.L0, host.L1, host.L2].map((h) => h.innerHTML).join("");
+    for (const hidden of ["recipient", "steps_after_checkpoint"]) {
+      expect(text).not.toContain(hidden);
+      expect(attrs).not.toContain(hidden);
+    }
+    // The comparison is of full entries: one extra field changed in the carried copy is not the sealed selection.
+    const changed = clone(SHAREABLE);
+    EDITS["recipient and steps_after_checkpoint added, carried as sealed"](changed);
+    ext(changed).selection[0].steps_after_checkpoint = 99;
+    expect(present(changed).model.result.findings).toEqual(["selection_not_sealed"]);
   });
 });
 
@@ -298,6 +355,7 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
     card: !!document.querySelector('[data-history="card"]'),
     count: (document.querySelector('[data-history-value="selected_count"]') || {}).textContent || null,
     errors: [...document.querySelectorAll("[data-history-error]")].map((e) => e.getAttribute("data-history-error")),
+    limitation: (document.querySelector("[data-history-limitation]") || {}).textContent || null,
     overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   }))()`;
 
@@ -306,7 +364,7 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
       it(`${name} at ${width}px: ${state}`, async () => {
         await tab.open(urls[name], { width });
         const m = await tab.evaluate(STATE);
-        expect(m).toMatchObject({ state, card: state === "card", count: state === "card" ? "3" : null, errors: findings, overflow: false });
+        expect(m).toMatchObject({ state, card: state === "card", count: state === "card" ? "3" : null, errors: findings, limitation: state === "card" ? LIMITATION : null, overflow: false });
       }, 30000);
     }
   }

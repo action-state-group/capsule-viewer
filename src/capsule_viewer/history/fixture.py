@@ -34,7 +34,7 @@ def with_asserted_result(bundle: Mapping, *, flip_bucket: tuple[str, str] | None
     """*bundle* with an ``asserted_result`` beside the selection: the values
     this page computes, or those values with one outcome-evidence bucket
     renamed (``flip_bucket=(from, to)``). The selection record seals no
-    values, so an asserted_result is the holder's statement only; the page
+    values, so an asserted_result is the file's statement only; the page
     recomputes it."""
     out = copy.deepcopy(dict(bundle))
     reading = check(out)

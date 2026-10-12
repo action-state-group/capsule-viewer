@@ -147,7 +147,7 @@ def viewer_registry() -> Registry:
 
 @pytest.mark.parametrize("audience", AUDIENCES)
 def test_auto_resolves_the_history_container_to_the_history_module(audience):
-    assert len(FILES) == 6
+    assert len(FILES) == 8
     for path in FILES:  # the refused ones too: shown as what is wrong, never handed elsewhere
         context = example_context(_bundle(path))
         assert descriptor(context).extensions == {SELECTION_EXTENSION}
@@ -184,7 +184,7 @@ def test_acceptance_4_the_vocabulary_grep_returns_only_the_forbidding_sentence()
     assert hits == [
         (
             "history_card.js",
-            'forbidding: "This card shows properties of the holder\'s selection and never a score, rating, reputation, rank or trust number.",',
+            'forbidding: "This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.",',
         )
     ]
 
@@ -201,3 +201,37 @@ def test_trust_appears_only_as_the_schema_member_and_in_the_forbidding_sentence(
     assert ("manifest.json", '"trust_class": "trusted-executable",') in hits
     # In the script: the forbidding sentence, and the manifest copy's schema member.
     assert all("forbidding:" in line or "var MANIFEST" in line for name, line in hits if name == "history_card.js")
+
+
+# ---- the presenter limitation (a History shows who presents, not who made the deals) ----
+
+LIMITATION = (
+    "A History shows only that the holder of key K presents these copies, each of which verifies on its own. "
+    "It does not show that the holder of key K made, took part in or owns these deals."
+)
+
+
+def test_the_l0_limitation_sentence_is_pinned():
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert f'limitation: "{LIMITATION}",' in text
+    # Drawn in L0 of the card, as a notice (js-tests/history_card.test.js checks the rendered text).
+    assert '"data-history-limitation": "true" }, [WORDS.limitation]' in text
+
+
+# Words that say or imply the key's holder made, took part in or owns the deals.
+AUTHORSHIP = re.compile(
+    r"holder'?s own|holder'?s pick|holder'?s selection|holder'?s producer|holder'?s history|holder'?s unpicked|"
+    r"your deals|their deals|this person|a person|chose to show|"
+    r"\b(?:his|her|their) (?:deals|history)\b|deals of (?:the )?holder|owner of the deals",
+    re.IGNORECASE,
+)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [SCRIPT, ROOT / "src" / "capsule_viewer" / "history" / "recompute.py", ROOT / "docs" / "design" / "history-card.md"],
+    ids=lambda p: p.name,
+)
+def test_no_word_says_the_key_holder_made_or_owns_the_deals(path):
+    hits = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if AUTHORSHIP.search(line)]
+    assert hits == []

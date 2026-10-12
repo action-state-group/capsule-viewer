@@ -14,7 +14,11 @@ second profile (another key). Writes into OUT_DIR:
 * ``mutant-mixed-signer.bundle.json``: the second profile's deal spliced in
   beside the picked deals (records signed by another key);
 * ``mutant-not-in-selection.bundle.json``: the holder's own unpicked deal
-  spliced in beside the picked deals (same key, not in the sealed selection).
+  spliced in beside the picked deals (same key, not in the sealed selection);
+* ``mutant-selection-not-root.bundle.json``: the outer bundle's ``root``
+  names another capsule id, so the selection record is not its root;
+* ``mutant-not-history-log.bundle.json``: the outer bundle's completeness
+  certificate names a deal's log (``deal-...``), not ``deal-history``.
 """
 from __future__ import annotations
 
@@ -62,6 +66,23 @@ def spliced(history: dict, donor: dict) -> dict:
     return out
 
 
+def selection_not_root(history: dict) -> dict:
+    out = copy.deepcopy(history)
+    if out["root"] != out["extensions"][EXT]["selection_record"]:
+        raise SystemExit("the selection record is not the root of the History as cut")
+    out["root"] = "0" * 64
+    return out
+
+
+def not_history_log(history: dict) -> dict:
+    out = copy.deepcopy(history)
+    cert = out["completeness_certificate"]
+    if cert["log_id"] != "deal-history":
+        raise SystemExit(f"the History as cut is on log {cert['log_id']!r}, not deal-history")
+    cert["log_id"] = next(iter(out["extensions"][EXT]["deals"]))
+    return out
+
+
 def main(argv: list[str]) -> int:
     history, other, second, out_dir = argv
     base = _load(history)
@@ -69,6 +90,8 @@ def main(argv: list[str]) -> int:
         "mutant-flipped-outcome": flipped_outcome(base),
         "mutant-mixed-signer": spliced(base, _load(second)),
         "mutant-not-in-selection": spliced(base, _load(other)),
+        "mutant-selection-not-root": selection_not_root(base),
+        "mutant-not-history-log": not_history_log(base),
     }
     for name, value in files.items():
         Path(out_dir, f"{name}.bundle.json").write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")

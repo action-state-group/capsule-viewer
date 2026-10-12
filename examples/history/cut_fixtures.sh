@@ -26,8 +26,10 @@
 # Files written (tests/testdata/history/):
 #   history-counterparty.bundle.json   closed + private + floor, --audience counterparty (the default)
 #   history-adjudicator.bundle.json    the same deals, --audience adjudicator
-#   history-keep.bundle.json           the same deals, --audience keep (the holder's own copy)
-#   mutant-*.bundle.json               the counterparty History edited (make_mutants.py)
+#   history-keep.bundle.json           the same deals, --audience keep (the keep copy, never one to send)
+#   mutant-*.bundle.json               the counterparty History edited (make_mutants.py): flipped
+#                                      outcome, mixed signer, not in selection, selection not
+#                                      the root, not on the deal-history log
 #   verify/<name>.json                 `capsulectl verify --bundle` on each file, as printed
 #   cut.json                           the deal ids, the holder keys and the private values used
 set -euo pipefail

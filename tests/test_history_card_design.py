@@ -10,6 +10,7 @@ the presentation contract."""
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -17,6 +18,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+from capsule_viewer.digest import jcs
 from capsule_viewer.history import (
     PROPERTIES,
     SELECTION_EXTENSION,
@@ -45,7 +47,11 @@ MATRIX = {
     "mutant-flipped-outcome": ("invalid", [f"deal_bundle_not_the_selected_one:{DEALS['closed']}"]),
     "mutant-mixed-signer": ("not_shareable", [f"deal_not_in_selection:{DEALS['second_profile']}", "deal_signers_differ"]),
     "mutant-not-in-selection": ("not_shareable", [f"deal_not_in_selection:{DEALS['other']}"]),
+    "mutant-selection-not-root": ("invalid", ["selection_record_not_root"]),
+    "mutant-not-history-log": ("invalid", ["not_a_history_log"]),
 }
+# The mutants that edit the outer bundle's root or log id (everything else about them is as cut).
+OUTER_EDITS = {"mutant-selection-not-root", "mutant-not-history-log"}
 
 
 def _load(name: str) -> dict:
@@ -72,16 +78,19 @@ def _ext(b: dict) -> dict:
 
 def test_the_readme_names_the_capsule_cli_commit_the_fixtures_were_cut_from():
     text = (DATA / "README.md").read_text(encoding="utf-8")
-    assert re.search(r"capsule-cli\s+`521d41f[0-9a-f]{33}`", text), "the full SHA of the producer commit"
+    assert re.search(r"capsule-cli\s+`7ebf00173c95e9287069a159a864e0793744da2e`", text), "the full SHA of the producer commit"
     assert "stand-in" not in text.lower()
+    assert "521d41f" not in text and "993949f" not in text and "provisional" not in text.lower()
 
 
 def test_every_file_is_a_history_bundle_of_the_holders_history_log():
     for name in MATRIX:
         b = _load(name)
         assert b["bundle_kind"] == "evidence-bundle/v2"
-        assert b["completeness_certificate"]["log_id"] == b["checkpoint"]["log_id"] == "deal-history"
         ext = _ext(b)
+        if name not in OUTER_EDITS:
+            assert b["completeness_certificate"]["log_id"] == b["checkpoint"]["log_id"] == "deal-history"
+            assert b["root"] == ext["selection_record"]
         assert set(ext) == {"selection_record", "selection", "deals"}
         record = next(r for r in b["records"] if r["capsule_id"] == ext["selection_record"])
         assert record["action_id"] == "capsulectl-deal-history"
@@ -108,6 +117,21 @@ def test_the_page_names_what_capsulectl_verify_names(name):
     assert reading["signer_keys"] == verified["signer_keys"]
     # A card only for a file capsulectl passes and whose audience is shareable.
     assert (state == "card") == (verified["verdict"] == "VALID" and verified["audience"] in ("counterparty", "adjudicator"))
+
+
+def test_the_selection_record_must_be_the_root_and_the_log_deal_history():
+    root = check(_load("mutant-selection-not-root"))
+    assert root["properties"]["selection_root"] == "FAIL" and root["values"] is None
+    log = check(_load("mutant-not-history-log"))
+    assert log["properties"]["history_log"] == "FAIL" and log["values"] is None
+    assert check(_load("history-counterparty"))["properties"]["selection_root"] == "PASS"
+    # The same two checks in memory, on the checkpoint's log id and on a missing root.
+    b = _load("history-counterparty")
+    b["checkpoint"]["log_id"] = DEALS["closed"]
+    assert check(b)["findings"] == ["not_a_history_log"]
+    b = _load("history-counterparty")
+    del b["root"]
+    assert check(b)["findings"] == ["selection_record_not_root"]
 
 
 def test_signers_are_the_holder_key_or_a_second_profiles_key():
@@ -246,6 +270,64 @@ def test_a_nested_disclosure_edited_is_caught(bundle):
     assert recompute_errors(bundle) == [f"deal_bundle_not_the_selected_one:{closed}", f"deal_disclosure_mismatch:{closed}"]
 
 
+# ---- forward compatibility: fields a later #209 may add -------------------------------------
+
+
+def _digest(value) -> str:
+    return hashlib.sha256(jcs(value)).hexdigest()
+
+
+def _reseal(b: dict, edit) -> dict:
+    """*b* with its sealed selection edited by *edit* and the selection record
+    re-sealed over it: agent_input_digest, capsule id, disclosure key, root and
+    selection_record follow. (The signature no longer matches; this page does
+    not check one, capsulectl verify would.)"""
+    ext = _ext(b)
+    old = ext["selection_record"]
+    sealed = b["disclosures"].pop(old)
+    edit(sealed["agent_input"])
+    record = next(r for r in b["records"] if r["capsule_id"] == old)
+    record["model_attestation"]["compute_attestation"]["agent_input_digest"] = _digest(sealed["agent_input"])
+    record["capsule_id"] = _digest({k: v for k, v in record.items() if k not in ("capsule_id", "signature", "key_id")})
+    b["disclosures"][record["capsule_id"]] = sealed
+    b["root"] = ext["selection_record"] = record["capsule_id"]
+    return b
+
+
+RECIPIENT = "recipient-not-shown-7f3a"
+
+
+def _with_future_fields(sealed: dict) -> None:
+    sealed["recipient"] = RECIPIENT
+    for i, entry in enumerate(sealed["selection"]):
+        entry["steps_after_checkpoint"] = i + 2
+
+
+def test_a_recipient_and_steps_after_checkpoint_do_not_break_the_parse(bundle):
+    b = _reseal(bundle, _with_future_fields)
+    _ext(b)["selection"] = copy.deepcopy(sealed_selection(b)["selection"])
+    reading = check(b)
+    assert reading["state"] == "card", reading["findings"]
+    assert reading["findings"] == []
+    assert reading["values"]["selected_count"] == 3
+    assert reading["values"] == check(_load("history-counterparty"))["values"]
+    # Not displayed: neither field reaches what the page draws from.
+    shown = json.dumps(reading)
+    assert RECIPIENT not in shown and "recipient" not in shown and "steps_after_checkpoint" not in shown
+
+
+def test_the_carried_selection_is_still_compared_entry_for_entry_with_the_future_fields(bundle):
+    # The sealed entries carry steps_after_checkpoint; the carried ones do not: not the sealed selection.
+    b = _reseal(bundle, _with_future_fields)
+    reading = check(b)
+    assert reading["findings"] == ["selection_not_sealed"] and reading["state"] == "invalid"
+    # One entry's extra field differs: still not the sealed selection.
+    b = _reseal(_load("history-counterparty"), _with_future_fields)
+    _ext(b)["selection"] = copy.deepcopy(sealed_selection(b)["selection"])
+    _ext(b)["selection"][0]["steps_after_checkpoint"] = 99
+    assert check(b)["findings"] == ["selection_not_sealed"]
+
+
 def test_a_file_with_no_selection_block_is_not_a_history(bundle):
     del bundle["extensions"][SELECTION_EXTENSION]
     reading = check(bundle)
@@ -264,7 +346,7 @@ def test_a_shareable_history_carries_none_of_the_floor_address_or_contact_string
     assert hits == {}
 
 
-def test_the_byte_scan_finds_them_in_the_holders_own_copy():
+def test_the_byte_scan_finds_them_in_the_keep_copy():
     # The scan's control: the keep History of the same deals carries them.
     raw = (DATA / "history-keep.bundle.json").read_bytes()
     for kind in ("address", "card", "code", "floor"):

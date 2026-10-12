@@ -18,10 +18,18 @@
 // with textContent; nothing from the bundle is parsed as HTML.
 //
 // The input is a History as capsulectl `deal history` writes it: an
-// evidence-bundle/v2 of the holder's own history log ("deal-history") whose
-// one disclosed record (action_id "capsulectl-deal-history") seals the pick,
-// and whose x-history-selection/v0 extension carries
+// evidence-bundle/v2 of a history log ("deal-history") whose root record, the
+// one disclosed record (action_id "capsulectl-deal-history"), seals a
+// selection of deal copies and is signed by one key, K; its
+// x-history-selection/v0 extension carries
 //   {selection_record, selection: [{deal_id, bundle_digest}], deals: {<deal id>: <evidence-bundle/v2>}}.
+// A History shows only that the holder of key K presents these copies, each
+// of which verifies on its own. A record's signature sits outside its Capsule
+// ID, so anyone can re-sign someone else's counterparty copies under a fresh
+// key; nothing here says K's holder made, took part in or owns the deals.
+// Fields this page does not know (in the sealed selection, in a selection
+// entry) are tolerated and never shown; the carried selection is still
+// compared with the sealed one entry for entry, every field included.
 // check(bundle) is the twin of the Python check
 // (capsule_viewer.history.recompute.check): the same findings, the same
 // per-property statuses (PASS, FAIL, NOT_CHECKED, NOT_PRESENT), the same state.
@@ -46,7 +54,7 @@
   var SHAREABLE_AUDIENCES = ["counterparty", "adjudicator"];
   var RECOMPUTED_KEYS = ["completeness", "outcome_evidence", "period", "selected_count"];
   var PROPERTIES = [
-    "selection_record", "selection_record_signature", "history_log", "selection_sealed", "membership", "member_digests",
+    "selection_record", "selection_record_signature", "selection_root", "history_log", "selection_sealed", "membership", "member_digests",
     "audience", "signer_keys", "member_records", "member_signatures", "member_logs", "values",
   ];
   var CAPSULE_ID_EXCLUDED = { capsule_id: true, signature: true, key_id: true };
@@ -59,19 +67,21 @@
 
   var WORDS = {
     title: "History",
-    lead: "Deals the holder chose to show, each as its own copy for the reader. The holder made this pick; the card does not widen it.",
+    lead: "Deal copies presented by the holder of key K, each a copy for the audience below. The card shows the copies the sealed selection names and no others.",
+    limitation: "A History shows only that the holder of key K presents these copies, each of which verifies on its own. It does not show that the holder of key K made, took part in or owns these deals.",
+    keyK: "Key K (signs the selection record)",
     audience: { counterparty: "Copy for the other party in each deal", adjudicator: "Copy for an adjudicator" },
     period: "Period",
-    periodNote: "earliest to latest record time in the selected deals, as the holder's producer wrote them (producer_asserted)",
+    periodNote: "earliest to latest record time in the selected deals, as the records state them (producer_asserted)",
     selected: "Deals selected",
     completeness: "Completeness",
     notAsserted: "Not asserted",
-    completenessNote: "This is the holder's pick. It does not claim to be all of their deals, for any period.",
+    completenessNote: "The holder of key K chose which copies to present. The selection does not claim to be every deal of anyone, for any period.",
     outcome: "Outcome evidence in the selected deals' records",
     outcomeNote: "Each record counts once, under the sealed field and value it came from. A record this copy withholds counts as withheld.",
     computedHere: "Computed by this page from the records in this file. The file states no values of its own.",
     recomputedHere: "Stated in this file and recomputed by this page from the records in it.",
-    forbidding: "This card shows properties of the holder's selection and never a score, rating, reputation, rank or trust number.",
+    forbidding: "This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.",
     l1: "Each selected deal and its records",
     l1DealId: "Deal",
     l1Copy: "Copy for",
@@ -84,18 +94,19 @@
     l2Lead: "Each property and what this page found. NOT_CHECKED means this page does not check it; it is not a pass.",
     l2Property: "Property",
     l2Status: "Status",
-    l2Holder: "Holder key (signs the selection record)",
+    l2Holder: "Key K (signs the selection record)",
     l2Signers: "Keys named by the selected deals' records",
     l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest. It does not check a signature, a checkpoint or log membership: capsulectl verify --bundle does, for the History and for each deal in it.",
     property: {
       selection_record: "The selection record is on the history log's bundle, recomputes to its id and its sealed pick matches its digest",
       selection_record_signature: "The selection record's signature",
-      history_log: "The history log's checkpoint and the selection record's membership",
+      selection_root: "The selection record is the root of the History's bundle",
+      history_log: "The bundle is of a deal-history log (its checkpoint and the selection record's membership)",
       selection_sealed: "The selection the file carries is the sealed one",
       membership: "Every carried deal is selected and every selected deal is carried",
       member_digests: "Each deal copy is the one its selection entry names (digest)",
       audience: "Every copy is for the sealed audience, and that audience is shareable",
-      signer_keys: "One key, the holder's, named by every record",
+      signer_keys: "One key, K, named by every record",
       member_records: "Each deal's records recompute to their ids and their disclosures match",
       member_signatures: "Each deal's record signatures",
       member_logs: "Each deal copy is of its own deal log (checkpoint and membership)",
@@ -108,19 +119,19 @@
       NOT_PRESENT: "not in this file",
     },
     notShareableTitle: "Not a shareable History",
-    notShareableLead: "This file is not one History a person can be shown: it holds the holder's own copy, deals signed by another key, or deals outside the sealed pick. No card is shown.",
+    notShareableLead: "This file is not a History to be shown to anyone: it holds a keep copy (never one to send), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.",
     invalidTitle: "This History does not check",
     invalidLead: "This page found what does not hold in this file, so no card is shown.",
     mismatchTitle: "This History does not recompute",
     mismatchLead: "The values this file states do not follow from the records it carries, so no card is shown.",
     reasons: "What did not hold:",
     finding: {
-      history_audience_keep: "the History is the holder's own copy (keep), never one to send",
+      history_audience_keep: "the History is a keep copy (audience keep), never one to send",
       history_audience_unknown: "the sealed selection names no audience this page knows",
-      deal_audience_keep: "this deal is the holder's own copy (keep)",
+      deal_audience_keep: "this deal's copy is a keep copy (audience keep)",
       deal_audience_not_selected: "this deal's copy is for another audience than the sealed one",
       deal_signers_differ: "the selected deals' records are signed by more than one key",
-      deal_signed_by_other_key: "this deal's records name a key other than the holder's",
+      deal_signed_by_other_key: "this deal's records name a key other than K, the key that signs the selection record",
       deal_not_in_selection: "this deal is carried but is not in the sealed selection",
       deal_missing: "this deal is in the sealed selection but is not carried",
       deal_bundle_not_the_selected_one: "this deal's copy is not the one the selection names",
@@ -134,8 +145,9 @@
       selection_entry_malformed: "a selection entry is malformed",
       selection_record_unverified: "the selection record is missing, or does not match its seal",
       selection_record_unsigned: "the selection record carries no signature",
+      selection_record_not_root: "the selection record is not the root of the History's bundle",
       history_checkpoint_missing: "the History carries no checkpoint",
-      history_not_of_its_log: "the History is not of the holder's history log",
+      not_a_history_log: "the History's bundle is not of a deal-history log",
     },
     gloss: {
       none: "a disclosed record with no outcome evidence",
@@ -432,10 +444,12 @@
       status.selection_record_signature = "NOT_PRESENT";
       failed.push("selection_record_unsigned");
     }
+    // capsulectl verify: the bundle's root is the selection record, and its log is deal-history.
+    if (typeof recordId !== "string" || bundle.root !== recordId) fail("selection_root", "selection_record_not_root");
     var checkpoint = obj(bundle.checkpoint), certificate = obj(bundle.completeness_certificate);
     if (Object.keys(checkpoint).length && Object.keys(certificate).length) {
       status.history_log = "NOT_CHECKED";
-      if (checkpoint.log_id !== HISTORY_LOG_ID || certificate.log_id !== HISTORY_LOG_ID) fail("history_log", "history_not_of_its_log");
+      if (checkpoint.log_id !== HISTORY_LOG_ID || certificate.log_id !== HISTORY_LOG_ID) fail("history_log", "not_a_history_log");
     } else {
       status.history_log = "NOT_PRESENT";
       failed.push("history_checkpoint_missing");
@@ -608,7 +622,7 @@
     return el(doc, "span", { class: "cv-badge " + tone, "data-status": status }, [status]);
   }
 
-  // L2: every property with its status, the holder key and the keys the deals name.
+  // L2: every property with its status, key K and the keys the deals name.
   function drawChecks(doc, result) {
     var rows = PROPERTIES.map(function (p) {
       var s = result.properties[p];
@@ -640,6 +654,8 @@
     var l0 = el(doc, "div", { "data-history": "card" }, [
       el(doc, "h2", {}, [WORDS.title]),
       el(doc, "p", {}, [WORDS.lead]),
+      el(doc, "p", { class: "cv-notice", "data-history-limitation": "true" }, [WORDS.limitation]),
+      el(doc, "p", {}, [WORDS.keyK + ": ", el(doc, "span", { class: "cv-mono", "data-history-key": "true" }, [result.holder_key])]),
       el(doc, "p", { "data-history-audience": result.audience }, [WORDS.audience[result.audience] + " (" + result.audience + ")"]),
       el(doc, "div", { class: "cv-metrics-wrap", "data-cv": "metric-grid" }, [
         el(doc, "dl", { class: "cv-metrics" }, [

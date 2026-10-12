@@ -1,26 +1,23 @@
 # History Card fixtures
 
 Every file here was written by a real capsulectl, built from capsule-cli
-`521d41f315a69d38a1f793dfb159c249abbcfcb3` (PR #209, branch
+`7ebf00173c95e9287069a159a864e0793744da2e` (PR #209's head, branch
 `deal-history-container-verb`), by `examples/history/cut_fixtures.sh` on
 scratch profiles. Nothing was re-signed or re-sealed. The deals are the ones
 capsule-cli's own `deal_history_test.go` makes; `cut.json` names their ids,
-the holder's key, the second profile's key and the private values the deals
-hold.
-
-When these were cut (2026-10-12), PR #209's published head was
-`993949f8677db44a2d916ae067df40a2763e0095`, which still writes the earlier
-`x-deal-history/v0` container with an unsigned selection. The commit above is
-the one that writes the shape this page reads; it was not yet pushed to the PR.
+key K (`holder_key`, the key that signs the selection record), the second
+profile's key and the private values the deals hold.
 
 | File | What it is | `capsulectl verify --bundle` | The page |
 | --- | --- | --- | --- |
 | `history-counterparty.bundle.json` | `deal history` over the closed, private and floor deals (`--audience counterparty`, the default: the Standard preset) | VALID | the card |
 | `history-adjudicator.bundle.json` | the same deals, `--audience adjudicator` | VALID | the card |
-| `history-keep.bundle.json` | the same deals, `--audience keep` (the holder's own copy) | VALID, audience `keep` | Not a shareable History |
+| `history-keep.bundle.json` | the same deals, `--audience keep` (the keep copy, never one to send) | VALID, audience `keep` | Not a shareable History |
 | `mutant-flipped-outcome.bundle.json` | the counterparty History with the closed deal's report saying it failed | INVALID: `deal_bundle_not_the_selected_one` | This History does not check |
 | `mutant-mixed-signer.bundle.json` | the counterparty History with a second profile's deal spliced in beside the picked ones | INVALID: `deal_not_in_selection`, `deal_signers_differ` | Not a shareable History |
-| `mutant-not-in-selection.bundle.json` | the counterparty History with the holder's unpicked deal spliced in | INVALID: `deal_not_in_selection` | Not a shareable History |
+| `mutant-not-in-selection.bundle.json` | the counterparty History with an unselected deal of the same key spliced in | INVALID: `deal_not_in_selection` | Not a shareable History |
+| `mutant-selection-not-root.bundle.json` | the counterparty History with its `root` set to another capsule id | INVALID: `selection_record_not_root` | This History does not check |
+| `mutant-not-history-log.bundle.json` | the counterparty History with its completeness certificate's `log_id` set to a deal's log | INVALID: `not_a_history_log` (and `checkpoint_field_mismatch:log_id`) | This History does not check |
 
 `verify/<name>.json` is what `capsulectl verify --bundle` printed for each
 file, as printed. The mutants are made by `examples/history/make_mutants.py`.
