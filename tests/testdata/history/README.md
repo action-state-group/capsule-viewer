@@ -1,12 +1,27 @@
 # History Card fixtures
 
 Every file here was written by a real capsulectl, built from capsule-cli
-`ff8daad50dbb255053c3732684e81be516a461de` (PR #209's head, branch
-`deal-history-container-verb`, built on #211 `e9b1f210`), by
-`examples/history/cut_fixtures.sh` on scratch profiles. The deals are the ones
-capsule-cli's own `deal_history_test.go` makes; `cut.json` names their ids,
-key K (`holder_key`, the key that signs the selection record), the second
-profile's key, the private values the deals hold and the two buyers' values.
+`cb68ea9179ae1ad443d103201a18adc23096fdb4` (PR #209's head, branch
+`deal-history-container-verb`), by `examples/history/cut_fixtures.sh` on
+scratch profiles. The deals are the ones capsule-cli's own
+`deal_history_test.go` makes; `cut.json` names their ids, key K
+(`holder_key`, the key that signs the selection record), the second profile's
+key, the private values the deals hold, the two buyers' values, who each
+History sent is for (`recipient`) and the step written after the floor deal's
+checkpoint (`later_step`).
+
+**D2, D3, D4.** Each History is on a log of its own, `deal-history/<nonce>`
+(the 64-hex nonce its selection record seals). A History for the `history`
+audience seals who it is for (`--to`, the sealed `recipient`: "a new buyer";
+the two-buyer one "buyer B"); a keep History seals none. Each selection entry
+seals `steps_after_checkpoint`: the floor deal has one message written after
+its latest checkpoint, so its entry says 1 and no copy shows that step (the
+History is still VALID). `capsulectl verify` reports `"holder_stated":
+["recipient", "steps_after_checkpoint"]`, the recipient and each deal's count;
+the page derives the same and shows them as the holder's statements, never as
+checked. capsulectl refuses a History sent without `--to`
+(`refused/no-recipient.txt`) and `--to` with `--audience keep`
+(`refused/keep-with-recipient.txt`).
 
 **Audiences.** `deal history` writes `--audience history` by default: each
 deal's copy withholds every record's payload, so only a record's time and an
@@ -39,18 +54,28 @@ record disclosing only them: a producer decision for capsule-cli 0.1.5
 | `mutant-payload-disclosed.bundle.json` | one payload of the closed deal disclosed (taken from its keep copy) | INVALID: `deal_bundle_not_the_selected_one`, `deal_payload_disclosed` | This History does not check |
 | `mutant-counterparty-member.bundle.json` | the private deal's counterparty copy (`disclose --share counterparty`) in place of its history copy | INVALID: `deal_bundle_not_the_selected_one`, `deal_audience_not_selected`, `deal_payload_disclosed` | This History does not check |
 | `mutant-audience-not-history.bundle.json` | the sealed audience set to counterparty and the selection record re-sealed (its old signature kept) | INVALID: `selection_record_unsigned`, `selection_audience_not_history`, `deal_audience_not_selected` x3 | This History does not check (`history_bundle_unverified`: the re-sealed root's membership fails) |
+| `mutant-wrong-nonce.bundle.json` | its completeness certificate's `log_id` set to another History's log (`deal-history/` and that History's nonce) | INVALID: `not_a_history_log` | This History does not check (`history_bundle_unverified`: the checkpoint fails) |
+| `mutant-recipient-missing.bundle.json` | the sealed `recipient` removed and the selection record re-sealed | INVALID: `selection_record_unsigned`, `selection_recipient_missing` | This History does not check (`history_bundle_unverified`, `history_log_unproven`) |
+| `mutant-steps-negative.bundle.json` | the floor deal's sealed `steps_after_checkpoint` set to -1, re-sealed (the carried selection follows) | INVALID: `selection_record_unsigned`, `selection_entry_malformed`, `deal_not_in_selection` | This History does not check (`history_bundle_unverified`, `history_log_unproven`) |
+| `mutant-steps-not-integer.bundle.json` | the same, set to the text `"1"` | INVALID: `selection_record_unsigned`, `selection_entry_malformed`, `deal_not_in_selection` | This History does not check (`history_bundle_unverified`, `history_log_unproven`) |
 
 "The page" is the module under a context carrying capsulectl verify's verdicts
 on the file (`js-tests/aacContext.js`). The file-only check (the Python twin,
 and the module without a context) finds the same findings, but for
 `history_bundle_unverified` and `history_log_unproven`, which come from the
-page's verifier. capsulectl's `selection_record_unsigned` on the last mutant
-is a signature that no longer verifies: the page checks no signature (NOT_CHECKED,
+page's verifier. capsulectl's `selection_record_unsigned` on the re-sealed
+mutants is a signature that no longer verifies: the page checks no signature (NOT_CHECKED,
 checked by capsulectl on the sender's machine, not by this page).
 
 `verify/<name>.json` is what `capsulectl verify --bundle` printed for each
 file, as printed. The mutants are made by `examples/history/make_mutants.py`;
-only `mutant-audience-not-history` is re-sealed, and none is re-signed.
+only `mutant-audience-not-history`, `mutant-recipient-missing` and the two
+`mutant-steps-*` are re-sealed, and none is re-signed.
+
+One reading the page cannot match exactly: a `steps_after_checkpoint` written
+`1.0`. capsulectl (`json.Number`) and the Python twin (a float) call it
+malformed; the page's `JSON.parse` reads it as the integer 1. capsulectl
+never writes one.
 
 **Byte scans** (`tests/test_history_card_design.py`): the history History
 carries none of the floor, address, card, code or contact strings in
@@ -58,7 +83,8 @@ carries none of the floor, address, card, code or contact strings in
 none of buyer A's name, contact, address, item, price (written every way
 capsule-cli's test writes it) or message text, nor buyer B's; its keep copy
 carries A's name, address, item and price (neither keep copy holds the
-contact or message text).
+contact or message text). The floor deal's later step (`later_step` in
+`cut.json`) is in neither the history nor the keep copy.
 
 ## Recut
 
@@ -72,6 +98,6 @@ the commit named above.
 **Wording data.** `l0-golden.json` holds the L0 goldens (History Basic wording, section 5.2):
 section 5.2's example and a year-end case in memory, and the two real cards
 (`history-history`, `history-two-buyers`: K = 0 and F = 0, since capsule-cli
-writes only `dispatched`). `t8-banned.json` is the T8 wording list: the three
+writes only `dispatched`; Steven ruled on 2026-10-12 that the zeros stay). `t8-banned.json` is the T8 wording list: the three
 banned deal-status phrases and the similarity-claim patterns. The Python and
 JavaScript tests both read it, and other lints may reuse it.

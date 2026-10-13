@@ -1,0 +1,3 @@
+$ capsulectl deal history --audience keep --to "a new buyer" --out FILE --deal CLOSED
+capsulectl: invalid input or profile configuration: --to names who a History is for; --audience keep is your own copy, never one to send
+exit status: 2

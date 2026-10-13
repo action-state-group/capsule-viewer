@@ -63,15 +63,21 @@
   ]
  },
  "deals": {
-  "closed": "deal-55cd56ba5f6c4dcd",
-  "floor": "deal-44809872b1ee9f26",
-  "other": "deal-1e1dabcb6ef8ac2d",
-  "private": "deal-436bff65b32188bd",
-  "sale_a": "deal-760bc03b9c5a3e37",
-  "sale_b": "deal-613cc9a05761f9ee",
-  "second_profile": "deal-df8a638033a5c324"
+  "closed": "deal-7b25241cb74060b5",
+  "floor": "deal-7fe9fbcd6e889117",
+  "other": "deal-218acc186affa7cd",
+  "private": "deal-fac64d2cfa8a7e61",
+  "sale_a": "deal-4c53ef46f2f0f1d4",
+  "sale_b": "deal-3c6d3654f630f0f4",
+  "second_profile": "deal-f3d25037c0bbd1a1"
  },
- "holder_key": "af8d56856c69a6b26e384742d2629913b7129bfe5db7bb81b41156e0ecdd9ec9",
+ "holder_key": "9fc8f079ced0cd8ec621b2249a660d5ae2027afdee6609426569cb812ff96f8a",
+ "later_step": {
+  "deal": "deal-7fe9fbcd6e889117",
+  "text": [
+   "Example Buyer asked to see the bicycle once more before paying"
+  ]
+ },
  "private_values": {
   "address": [
    "41 Larkspur Lane, Apt 3, Springfield",
@@ -96,5 +102,9 @@
    "go down to 1700"
   ]
  },
- "second_key": "0bd6d6ebe896fce7284eee991c8b36836073104b8ab84770f2814432218fbd17"
+ "recipient": {
+  "history-history": "a new buyer",
+  "history-two-buyers": "buyer B"
+ },
+ "second_key": "49d650f831568c2f1ded6158580d1ca41d41599a0d85e1b871222246ed7e0924"
 }

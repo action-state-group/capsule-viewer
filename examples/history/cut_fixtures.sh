@@ -19,7 +19,10 @@
 #             code and the shop's contact details, with a counterparty copy and
 #             an adjudicator copy shared (each seals its report) and the
 #             holder's own copy written last;
-#   floor   - a seller's deal with a price floor;
+#   floor   - a seller's deal with a price floor, and one step (a message)
+#             written after its latest checkpoint, so its History copy leaves
+#             that step out and its selection entry says so
+#             (steps_after_checkpoint 1);
 #   other   - one more retail deal, never picked into the shareable History;
 #   sale_a  - a seller's deal with buyer A (TestDealHistoryForAnotherBuyerCarriesNothingOfTheFirst:
 #             A's name, contact, address, the item and its price in the opening, a message from A);
@@ -28,12 +31,14 @@
 #
 # Files written (tests/testdata/history/):
 #   history-history.bundle.json        closed + private + floor, --audience history (the default: every
-#                                      record's payload withheld; the shareable History)
-#   history-keep.bundle.json           the same deals, --audience keep (the keep copy, never one to send)
-#   history-two-buyers.bundle.json     sale_a + sale_b, --audience history: the History the seller sends to buyer B
+#                                      record's payload withheld; the shareable History), --to "a new buyer"
+#   history-keep.bundle.json           the same deals, --audience keep (the keep copy, never one to send; no --to)
+#   history-two-buyers.bundle.json     sale_a + sale_b, --audience history --to "buyer B": the History the seller sends to buyer B
 #   history-two-buyers-keep.bundle.json  the same two deals, --audience keep (the byte scan's control)
 #   refused/<audience>.txt             what `deal history --audience counterparty|adjudicator` printed
 #                                      (the producer refuses both for a History) and its exit status
+#   refused/no-recipient.txt           what `deal history` printed with no --to (required for audience history)
+#   refused/keep-with-recipient.txt    what `deal history --audience keep --to ...` printed (keep is for no one)
 #   mutant-*.bundle.json               the history History edited (make_mutants.py)
 #   verify/<name>.json                 `capsulectl verify --bundle` on each file, as printed
 #   cut.json                           the deal ids, the holder keys and the private values used
@@ -137,25 +142,35 @@ for id in "$SALE_A" "$SALE_B" "$FLOOR" "$CLOSED"; do
   # keep copy can name a current report (as the producer's own test does).
   "$C" --profile holder bundle --deal "$id" --out "$WORK/own-$id.json" >/dev/null
 done
+# One step after the floor deal's latest checkpoint (capsule-cli
+# TestDealHistoryStopsAtTheLatestCheckpoint): no copy shows it, and the
+# floor deal's selection entry seals steps_after_checkpoint 1.
+LATER_TEXT="Example Buyer asked to see the bicycle once more before paying"
+deal note --deal "$FLOOR" --kind message --input "$(json floor-later '{"from":"counterparty","channel":"web","text":"'"$LATER_TEXT"'"}')" >/dev/null
 
-history() { # NAME AUDIENCE DEAL...
-  local name=$1 audience=$2
-  shift 2
+# Who each History is for (deal history --to), as the holder states it.
+TO="a new buyer"
+TO_B="buyer B"
+
+history() { # NAME AUDIENCE TO DEAL... (TO empty: no --to, as keep requires)
+  local name=$1 audience=$2 to=$3
+  shift 3
   local args=()
   for id in "$@"; do args+=(--deal "$id"); done
-  deal history --audience "$audience" --out "$WORK/$name.json" "${args[@]}" >/dev/null
+  if [ -n "$to" ]; then args+=(--to "$to"); fi
+  deal history --audience "$audience" --out "$WORK/$name.json" "${args[@]}" >"$WORK/$name.out"
 }
-history history-history history "$CLOSED" "$PRIVATE" "$FLOOR"
-history history-keep keep "$CLOSED" "$PRIVATE" "$FLOOR"
-history history-two-buyers history "$SALE_A" "$SALE_B"
-history history-two-buyers-keep keep "$SALE_A" "$SALE_B"
-history other-history history "$OTHER"
+history history-history history "$TO" "$CLOSED" "$PRIVATE" "$FLOOR"
+history history-keep keep "" "$CLOSED" "$PRIVATE" "$FLOOR"
+history history-two-buyers history "$TO_B" "$SALE_A" "$SALE_B"
+history history-two-buyers-keep keep "" "$SALE_A" "$SALE_B"
+history other-history history "$TO" "$OTHER"
 # The producer refuses a History of counterparty or adjudicator copies: its
 # refusal is the fixture evidence (the page's cases for them are in memory).
 mkdir -p "$WORK/refused"
 for audience in counterparty adjudicator; do
   set +e
-  deal history --audience "$audience" --out "$WORK/refused-$audience.json" --deal "$CLOSED" --deal "$PRIVATE" --deal "$FLOOR" \
+  deal history --audience "$audience" --to "$TO" --out "$WORK/refused-$audience.json" --deal "$CLOSED" --deal "$PRIVATE" --deal "$FLOOR" \
     >"$WORK/refused/$audience.out" 2>&1
   code=$?
   set -e
@@ -163,15 +178,32 @@ for audience in counterparty adjudicator; do
     echo "deal history --audience $audience was not refused" >&2
     exit 1
   fi
-  { echo "\$ capsulectl deal history --audience $audience --out FILE --deal CLOSED --deal PRIVATE --deal FLOOR"
+  { echo "\$ capsulectl deal history --audience $audience --to \"$TO\" --out FILE --deal CLOSED --deal PRIVATE --deal FLOOR"
     cat "$WORK/refused/$audience.out"; echo "exit status: $code"; } > "$WORK/refused/$audience.txt"
 done
+# D2: --to is required for a History sent (audience history) and refused for keep.
+refuse() { # NAME SHOWN-COMMAND ARGS...
+  local name=$1 shown=$2 code
+  shift 2
+  set +e
+  deal history --out "$WORK/refused-$name.json" --deal "$CLOSED" "$@" >"$WORK/refused/$name.out" 2>&1
+  code=$?
+  set -e
+  if [ "$code" -eq 0 ] || [ -e "$WORK/refused-$name.json" ]; then
+    echo "deal history $* was not refused" >&2
+    exit 1
+  fi
+  { echo "\$ capsulectl deal history $shown --out FILE --deal CLOSED"
+    cat "$WORK/refused/$name.out"; echo "exit status: $code"; } > "$WORK/refused/$name.txt"
+}
+refuse no-recipient "(no --to)"
+refuse keep-with-recipient "--audience keep --to \"$TO\"" --audience keep --to "$TO"
 
 # ---- a second profile: a second key ---------------------------------------------
 PROFILE=second
 SECOND_KEY=$("$C" deal init --profile second --dir "$WORK/second" --no-witness --materiality "$MATERIALITY" | field public_key)
 SECOND=$(retail_deal)
-history second-history history "$SECOND"
+history second-history history "$TO" "$SECOND"
 
 # ---- the files ------------------------------------------------------------------
 mkdir -p "$OUT/verify" "$OUT/refused"
@@ -182,7 +214,7 @@ for name in history-history history-keep history-two-buyers history-two-buyers-k
 done
 cp "$WORK"/refused/*.txt "$OUT/refused/"
 PYTHONPATH="$ROOT/src" "$PY" "$ROOT/examples/history/make_mutants.py" "$OUT/history-history.bundle.json" \
-  "$WORK/other-history.json" "$WORK/second-history.json" "$OUT/history-keep.bundle.json" "$WORK/shared-cp.json" "$OUT"
+  "$WORK/other-history.json" "$WORK/second-history.json" "$OUT/history-keep.bundle.json" "$WORK/shared-cp.json" "$FLOOR" "$OUT"
 
 for f in "$OUT"/history-*.bundle.json "$OUT"/mutant-*.bundle.json; do
   name=$(basename "$f" .bundle.json)
@@ -196,6 +228,9 @@ json.dump({
   "deals": {"closed": "$CLOSED", "private": "$PRIVATE", "floor": "$FLOOR", "other": "$OTHER", "second_profile": "$SECOND",
             "sale_a": "$SALE_A", "sale_b": "$SALE_B"},
   "holder_key": "$HOLDER_KEY",
+  # Who each History is for (--to), as sealed; and the floor deal's step after its checkpoint.
+  "recipient": {"history-history": "$TO", "history-two-buyers": "$TO_B"},
+  "later_step": {"deal": "$FLOOR", "text": ["$LATER_TEXT"]},
   "second_key": "$SECOND_KEY",
   "private_values": {
     "address": ["$ADDRESS", "Larkspur", "Springfield"],

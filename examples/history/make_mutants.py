@@ -3,14 +3,15 @@
 ``cut_fixtures.sh`` wrote (``--audience history``: every record's payload
 withheld).
 
-    PYTHONPATH=src python3 examples/history/make_mutants.py HISTORY OTHER SECOND KEEP SHARED OUT_DIR
+    PYTHONPATH=src python3 examples/history/make_mutants.py HISTORY OTHER SECOND KEEP SHARED LATER_DEAL OUT_DIR
 
 HISTORY is the history History of the closed, private and floor deals; OTHER
 is a History of one more deal of the same holder (same key, not picked);
 SECOND is a History of one deal of a second profile (another key); KEEP is the
 keep History of the same three deals; SHARED is the counterparty copy of the
-private deal that ``capsulectl disclose --share counterparty`` wrote. Writes
-into OUT_DIR:
+private deal that ``capsulectl disclose --share counterparty`` wrote;
+LATER_DEAL is the id of the deal with a step after its checkpoint (the floor
+deal). Writes into OUT_DIR:
 
 * ``mutant-flipped-status.bundle.json``: the closed deal's pay act says its
   effect failed where the real copy says dispatched (the one value a history
@@ -23,7 +24,12 @@ into OUT_DIR:
 * ``mutant-selection-not-root.bundle.json``: the outer bundle's ``root``
   names another capsule id, so the selection record is not its root;
 * ``mutant-not-history-log.bundle.json``: the outer bundle's completeness
-  certificate names a deal's log (``deal-...``), not ``deal-history``;
+  certificate names a deal's log (``deal-...``), not the History's own
+  ``deal-history/<nonce>``;
+* ``mutant-wrong-nonce.bundle.json``: the outer bundle's completeness
+  certificate names another History's log (``deal-history/`` and OTHER's
+  nonce), not ``deal-history/`` and its own sealed nonce (capsulectl verify:
+  ``not_a_history_log``);
 * ``mutant-payload-disclosed.bundle.json``: the closed deal's history copy
   with one record's payload disclosed, taken from the keep copy of the same
   record (capsulectl verify: ``deal_payload_disclosed``);
@@ -33,9 +39,17 @@ into OUT_DIR:
 * ``mutant-audience-not-history.bundle.json``: the sealed selection's
   audience set to ``counterparty`` and the selection record re-sealed over it
   (capsulectl verify: ``selection_audience_not_history``). Its record id
-  changes, so its signature and its log membership no longer hold either.
+  changes, so its signature and its log membership no longer hold either;
+* ``mutant-recipient-missing.bundle.json``: the sealed ``recipient`` removed
+  and the selection record re-sealed (capsulectl verify:
+  ``selection_recipient_missing``);
+* ``mutant-steps-negative.bundle.json``: the floor deal's sealed
+  ``steps_after_checkpoint`` set to -1, re-sealed, the carried selection
+  following (capsulectl verify: ``selection_entry_malformed:<floor>``);
+* ``mutant-steps-not-integer.bundle.json``: the same, set to the text
+  ``"1"`` (not a JSON integer).
 
-Only the last re-seals anything (``capsule_viewer.history.fixture``); no
+Only the last four re-seal anything (``capsule_viewer.history.fixture``); no
 mutant is re-signed.
 """
 from __future__ import annotations
@@ -49,6 +63,7 @@ from pathlib import Path
 from capsule_viewer.history.fixture import reseal_selection
 
 EXT = "x-history-selection/v0"
+HISTORY_LOG_PREFIX = "deal-history/"
 
 
 def _load(path: str) -> dict:
@@ -98,9 +113,22 @@ def selection_not_root(history: dict) -> dict:
 def not_history_log(history: dict) -> dict:
     out = copy.deepcopy(history)
     cert = out["completeness_certificate"]
-    if cert["log_id"] != "deal-history":
-        raise SystemExit(f"the History as cut is on log {cert['log_id']!r}, not deal-history")
+    if cert["log_id"] != HISTORY_LOG_PREFIX + _nonce(out):
+        raise SystemExit(f"the History as cut is on log {cert['log_id']!r}, not deal-history/<its nonce>")
     cert["log_id"] = next(iter(out["extensions"][EXT]["deals"]))
+    return out
+
+
+def _nonce(history: dict) -> str:
+    return history["disclosures"][history["extensions"][EXT]["selection_record"]]["agent_input"]["nonce"]
+
+
+def wrong_nonce(history: dict, other: dict) -> dict:
+    out = copy.deepcopy(history)
+    cert = out["completeness_certificate"]
+    if cert["log_id"] != HISTORY_LOG_PREFIX + _nonce(out) or _nonce(other) == _nonce(out):
+        raise SystemExit("the two Histories as cut are not each on a log of their own")
+    cert["log_id"] = other["completeness_certificate"]["log_id"]
     return out
 
 
@@ -134,8 +162,24 @@ def audience_not_history(history: dict) -> dict:
     return reseal_selection(history, lambda sealed: sealed.update(audience="counterparty"))
 
 
+def recipient_missing(history: dict) -> dict:
+    def edit(sealed: dict) -> None:
+        if not sealed.pop("recipient", None):
+            raise SystemExit("the History as cut seals no recipient")
+
+    return reseal_selection(history, edit)
+
+
+def steps_after_checkpoint(history: dict, deal_id: str, value) -> dict:
+    def edit(sealed: dict) -> None:
+        (entry,) = [e for e in sealed["selection"] if e["deal_id"] == deal_id]
+        entry["steps_after_checkpoint"] = value
+
+    return reseal_selection(history, edit)
+
+
 def main(argv: list[str]) -> int:
-    history, other, second, keep, shared, out_dir = argv
+    history, other, second, keep, shared, later_deal, out_dir = argv
     base = _load(history)
     files = {
         "mutant-flipped-status": flipped_status(base),
@@ -146,6 +190,10 @@ def main(argv: list[str]) -> int:
         "mutant-payload-disclosed": payload_disclosed(base, _load(keep)),
         "mutant-counterparty-member": counterparty_member(base, _load(shared)),
         "mutant-audience-not-history": audience_not_history(base),
+        "mutant-wrong-nonce": wrong_nonce(base, _load(other)),
+        "mutant-recipient-missing": recipient_missing(base),
+        "mutant-steps-negative": steps_after_checkpoint(base, later_deal, -1),
+        "mutant-steps-not-integer": steps_after_checkpoint(base, later_deal, "1"),
     }
     for name, value in files.items():
         Path(out_dir, f"{name}.bundle.json").write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")

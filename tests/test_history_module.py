@@ -147,7 +147,7 @@ def viewer_registry() -> Registry:
 
 @pytest.mark.parametrize("audience", AUDIENCES)
 def test_auto_resolves_the_history_container_to_the_history_module(audience):
-    assert len(FILES) == 12
+    assert len(FILES) == 16
     for path in FILES:  # the refused ones too: shown as what is wrong, never handed elsewhere
         context = example_context(_bundle(path))
         assert descriptor(context).extensions == {SELECTION_EXTENSION}

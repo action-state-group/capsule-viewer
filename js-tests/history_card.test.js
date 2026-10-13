@@ -51,7 +51,7 @@ const PY_ENV = { ...process.env, PYTHONPATH: join(ROOT, "src") };
 // itself (graph closure; checkpoint; the re-sealed root's membership): the
 // runtime would call no module for them, and the module, called anyway, says so
 // first and draws no card.
-const CLOSED = D.closed, PRIVATE_DEAL = D.private;
+const CLOSED = D.closed, PRIVATE_DEAL = D.private, FLOOR = D.floor;
 const KEEP = ["history_audience_keep", ...PICKED.map((d) => `deal_audience_keep:${d}`)];
 const SALES = [D.sale_a, D.sale_b].sort();
 const MATRIX = {
@@ -67,10 +67,16 @@ const MATRIX = {
   "mutant-payload-disclosed": ["invalid", [`deal_bundle_not_the_selected_one:${CLOSED}`, `deal_payload_disclosed:${CLOSED}`]],
   "mutant-counterparty-member": ["invalid", [`deal_bundle_not_the_selected_one:${PRIVATE_DEAL}`, `deal_audience_not_selected:${PRIVATE_DEAL}`, `deal_payload_disclosed:${PRIVATE_DEAL}`]],
   "mutant-audience-not-history": ["invalid", ["history_bundle_unverified", "history_log_unproven", "selection_audience_not_history", ...PICKED.map((d) => `deal_audience_not_selected:${d}`)]],
+  "mutant-wrong-nonce": ["invalid", ["history_bundle_unverified", "not_a_history_log"]],
+  "mutant-recipient-missing": ["invalid", ["history_bundle_unverified", "history_log_unproven", "selection_recipient_missing"]],
+  "mutant-steps-negative": ["invalid", ["history_bundle_unverified", "history_log_unproven", `selection_entry_malformed:${FLOOR}`, `deal_not_in_selection:${FLOOR}`]],
+  "mutant-steps-not-integer": ["invalid", ["history_bundle_unverified", "history_log_unproven", `selection_entry_malformed:${FLOOR}`, `deal_not_in_selection:${FLOOR}`]],
 };
-const OUTER_FAILS = ["mutant-selection-not-root", "mutant-not-history-log", "mutant-audience-not-history"];
+// The mutants whose selection record is re-sealed (make_mutants.py): its old signature kept.
+const RESEALED = ["mutant-audience-not-history", "mutant-recipient-missing", "mutant-steps-negative", "mutant-steps-not-integer"];
+const OUTER_FAILS = ["mutant-selection-not-root", "mutant-not-history-log", "mutant-wrong-nonce", ...RESEALED];
 // What capsulectl verify finds that this page cannot: a signature that does not verify.
-const SIGNATURE_ONLY = { "mutant-audience-not-history": ["selection_record_unsigned"] };
+const SIGNATURE_ONLY = Object.fromEntries(RESEALED.map((name) => [name, ["selection_record_unsigned"]]));
 // The L0 limitation: who presents the copies, never who made the deals.
 const LIMITATION = "A History shows only that the holder of key K presents these copies, each of which verifies on its own. " +
   "It does not show that the holder of key K made, took part in or owns these deals.";
@@ -252,6 +258,11 @@ describe("the mutant matrix: each real file, in the module", () => {
       for (const f of v.findings) if (!(SIGNATURE_ONLY[name] || []).includes(f)) expect(model.result.findings).toContain(f);
       expect(model.result.holder_key).toBe(v.holder_key);
       expect(model.result.signer_keys).toEqual(v.signer_keys);
+      // D2/D3: the holder's statements, derived by the page as verify derives them.
+      expect(model.result.holder_stated).toEqual(v.holder_stated);
+      expect(v.holder_stated).toEqual(["recipient", "steps_after_checkpoint"]);
+      expect(model.result.recipient).toBe(v.recipient || "");
+      expect(model.result.deals.map((d) => [d.deal_id, d.steps_after_checkpoint])).toEqual(v.deals.map((d) => [d.deal_id, d.steps_after_checkpoint]));
       // not_proven, derived by the page from the withheld payloads, is verify's field exactly.
       expect(model.not_proven).toEqual(v.not_proven || []);
       expect(model.result.not_proven).toEqual(v.not_proven || []);
@@ -325,6 +336,9 @@ describe("the mutant matrix: each real file, in the module", () => {
       expect(words(p)).toBe("PASS holds (checked by this page)");
     }
     expect(status.values).toBe("NOT_PRESENT");
+    // What the holder states (D2/D3): never a pass, and the row says no one checks it.
+    expect(status.holder_stated).toBe("NOT_CHECKED");
+    expect(words("holder_stated")).toBe(`NOT_CHECKED ${H.WORDS.holderStatedNotChecked}`);
     expect(signatureClaims(blocks(host.L2))).toEqual([]);
     expect(host.L0.textContent).not.toMatch(/\bverified\b/i);
   });
@@ -664,13 +678,15 @@ describe("the module and the Python check agree", () => {
     }
     ext(b).asserted_result = values;
   };
-  // Two fields a later #209 may add: "recipient" in the sealed selection,
-  // "steps_after_checkpoint" in each entry. The selection record is re-sealed
-  // over them (agent_input_digest, capsule id, disclosure key, root).
-  const futureFields = (b, carry) => resealSelection(b, (sealed) => {
-    sealed.recipient = "recipient-not-shown-7f3a";
-    sealed.selection.forEach((e, i) => { e.steps_after_checkpoint = i + 2; });
+  // Fields a later head may add, in the sealed selection and in each entry: tolerated, never
+  // shown. The selection record is re-sealed over them (agent_input_digest, capsule id,
+  // disclosure key, root).
+  const UNKNOWN = "unknown-field-not-shown-7f3a";
+  const unknownFields = (b, carry) => resealSelection(b, (sealed) => {
+    sealed.x_later_field = UNKNOWN;
+    sealed.selection.forEach((e) => { e.x_later_field = UNKNOWN; });
   }, carry);
+  const floorSteps = (value) => (b) => resealSelection(b, (sealed) => { sealed.selection.find((e) => e.deal_id === FLOOR).steps_after_checkpoint = value; });
   const EDITS = {
     ...Object.fromEntries(Object.keys(MATRIX).map((name) => [name, (b) => Object.assign(b, read(name))])),
     "asserted_result that recomputes": (b) => asserted(b, false),
@@ -707,8 +723,21 @@ describe("the module and the Python check agree", () => {
     "no selection block": (b) => { delete b.extensions[EXT]; },
     "root set to another id": (b) => { b.root = "0".repeat(64); },
     "checkpoint log id set to a deal's log": (b) => { b.checkpoint.log_id = D.closed; },
-    "recipient and steps_after_checkpoint added, carried as sealed": (b) => futureFields(b, true),
-    "recipient and steps_after_checkpoint sealed, not carried": (b) => futureFields(b, false),
+    "unknown fields added, carried as sealed": (b) => unknownFields(b, true),
+    "unknown fields sealed, not carried": (b) => unknownFields(b, false),
+    "the recipient removed, re-sealed": (b) => resealSelection(b, (sealed) => { delete sealed.recipient; }),
+    "the recipient blank, re-sealed": (b) => resealSelection(b, (sealed) => { sealed.recipient = "  "; }),
+    "the recipient not a string, re-sealed": (b) => resealSelection(b, (sealed) => { sealed.recipient = 7; }),
+    "steps_after_checkpoint negative, re-sealed": floorSteps(-1),
+    "steps_after_checkpoint as text, re-sealed": floorSteps("1"),
+    "steps_after_checkpoint removed, re-sealed": (b) => resealSelection(b, (sealed) => { delete sealed.selection.find((e) => e.deal_id === FLOOR).steps_after_checkpoint; }),
+    "steps_after_checkpoint 1.5 (no JCS form; set in place)": (b) => {
+      for (const sel of [b.disclosures[ext(b).selection_record].agent_input.selection, ext(b).selection]) sel.find((e) => e.deal_id === FLOOR).steps_after_checkpoint = 1.5;
+    },
+    "steps_after_checkpoint changed in the carried copy only": (b) => { ext(b).selection[0].steps_after_checkpoint = 99; },
+    "log id with another nonce": (b) => { b.completeness_certificate.log_id = read("mutant-wrong-nonce").completeness_certificate.log_id; },
+    "log id the fixed deal-history of earlier heads": (b) => { b.checkpoint.log_id = b.completeness_certificate.log_id = "deal-history"; },
+    "the keep History (no recipient)": (b) => Object.assign(b, read("history-keep")),
   };
 
   for (const [name, edit] of Object.entries(EDITS)) {
@@ -747,29 +776,65 @@ describe("the module and the Python check agree", () => {
     expect(state(EDITS["every checkpoint removed"])).toBe("invalid");
     expect(state(EDITS["root set to another id"])).toBe("invalid");
     expect(state(EDITS["checkpoint log id set to a deal's log"])).toBe("invalid");
-    expect(state(EDITS["recipient and steps_after_checkpoint sealed, not carried"])).toBe("invalid");
+    expect(state(EDITS["unknown fields sealed, not carried"])).toBe("invalid");
+    expect(state(EDITS["unknown fields added, carried as sealed"])).toBe("card");
+    for (const name of Object.keys(EDITS).filter((n) => /^the recipient|^steps_after_checkpoint|^log id/.test(n))) expect(state(EDITS[name]), name).toBe("invalid");
+    expect(state(EDITS["the keep History (no recipient)"])).toBe("not_shareable");
   });
 
-  it("the two future fields: the card renders, and neither field is shown", () => {
-    const b = clone(SHAREABLE);
-    EDITS["recipient and steps_after_checkpoint added, carried as sealed"](b);
-    expect(b.disclosures[ext(b).selection_record].agent_input.recipient).toBe("recipient-not-shown-7f3a");
-    expect(ext(b).selection.every((e) => "steps_after_checkpoint" in e)).toBe(true);
-    const { model, host } = present(b);
-    expect(model.result.state).toBe("card");
-    expect(model.result.findings).toEqual([]);
-    expect(model.result.values).toEqual(present(clone(SHAREABLE)).model.result.values);
-    const text = host.L0.textContent + host.L1.textContent + host.L2.textContent;
-    const attrs = [host.L0, host.L1, host.L2].map((h) => h.innerHTML).join("");
-    for (const hidden of ["recipient", "steps_after_checkpoint"]) {
-      expect(text).not.toContain(hidden);
-      expect(attrs).not.toContain(hidden);
+  it("D2/D3/D4 findings, named as capsulectl names them", () => {
+    const findings = (edit) => { const b = clone(SHAREABLE); edit(b); return present(b).model.result.findings; };
+    for (const name of ["the recipient removed, re-sealed", "the recipient blank, re-sealed", "the recipient not a string, re-sealed"]) {
+      expect(findings(EDITS[name]), name).toEqual(["selection_recipient_missing"]);
     }
-    // The comparison is of full entries: one extra field changed in the carried copy is not the sealed selection.
-    const changed = clone(SHAREABLE);
-    EDITS["recipient and steps_after_checkpoint added, carried as sealed"](changed);
-    ext(changed).selection[0].steps_after_checkpoint = 99;
-    expect(present(changed).model.result.findings).toEqual(["selection_not_sealed"]);
+    for (const name of ["steps_after_checkpoint negative, re-sealed", "steps_after_checkpoint as text, re-sealed", "steps_after_checkpoint removed, re-sealed"]) {
+      expect(findings(EDITS[name]), name).toEqual([`selection_entry_malformed:${FLOOR}`, `deal_not_in_selection:${FLOOR}`]);
+    }
+    // 1.5 has no JCS form, so the sealed selection no longer matches its digest either.
+    const fractional = findings(EDITS["steps_after_checkpoint 1.5 (no JCS form; set in place)"]);
+    for (const f of [`selection_entry_malformed:${FLOOR}`, `deal_not_in_selection:${FLOOR}`]) expect(fractional).toContain(f);
+    expect(findings(EDITS["steps_after_checkpoint changed in the carried copy only"])).toEqual(["selection_not_sealed"]);
+    expect(findings(EDITS["log id with another nonce"])).toEqual(["not_a_history_log"]);
+    expect(findings(EDITS["log id the fixed deal-history of earlier heads"])).toEqual(["not_a_history_log"]);
+    const { H } = load();
+    expect([0, 1, 7].map(H.stepCount)).toEqual([0, 1, 7]);
+    expect([-1, 1.5, "1", true, null, undefined, 2 ** 53].map(H.stepCount)).toEqual([null, null, null, null, null, null, null]);
+  });
+
+  it("the holder's statements: shown as the holder's, never as checked; unknown fields never shown", () => {
+    const { H } = load();
+    const { model, host } = present(SHAREABLE, realContext("history-history"));
+    expect(model.result.state).toBe("card");
+    // D2: who the History is for, in L0, as the holder states it.
+    expect(model.result.recipient).toBe(CUT.recipient["history-history"]);
+    expect(host.L0.querySelector("[data-history-recipient]").textContent).toBe(`For ${CUT.recipient["history-history"]}, as stated by the holder`);
+    expect(H.WORDS.recipient).toEqual({ before: "For ", after: ", as stated by the holder" });
+    // D3: the floor deal (1 step after its checkpoint) and only it says later steps exist.
+    const later = [...host.L1.querySelectorAll("[data-history-later-steps]")].map((e) => e.closest("[data-deal]").getAttribute("data-deal"));
+    expect(later).toEqual([FLOOR]);
+    expect(host.L1.querySelector("[data-history-later-steps]").textContent).toBe(" (later steps exist, per the holder)");
+    expect(H.WORDS.l1LaterSteps).toBe("later steps exist, per the holder");
+    // Never as checked: the property is NOT_CHECKED, and no rendered line calls either statement checked or verified.
+    expect(model.result.properties.holder_stated).toBe("NOT_CHECKED");
+    const lines = blocks(host.L0).split("\n").concat(blocks(host.L1).split("\n")).filter((l) => /as stated by the holder|per the holder/.test(l));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) expect(line).not.toMatch(/verified|checked|valid/i);
+    // The two-buyer History: for buyer B, no deal with later steps.
+    const two = present(read("history-two-buyers"), realContext("history-two-buyers")).host;
+    expect(two.L0.querySelector("[data-history-recipient]").textContent).toBe(`For ${CUT.recipient["history-two-buyers"]}, as stated by the holder`);
+    expect(two.L1.querySelector("[data-history-later-steps]")).toBeNull();
+    // No card, no recipient line: a refusal shows no statement of the file's.
+    const keep = present(read("history-keep"), realContext("history-keep")).host;
+    expect(keep.L0.querySelector("[data-history-recipient]")).toBeNull();
+    // Unknown fields: the card renders, unchanged, and the field is never shown.
+    const b = clone(SHAREABLE);
+    EDITS["unknown fields added, carried as sealed"](b);
+    const u = present(b);
+    expect(u.model.result.state).toBe("card");
+    expect(u.model.result.values).toEqual(present(clone(SHAREABLE)).model.result.values);
+    const all = [u.host.L0, u.host.L1, u.host.L2].map((h) => h.innerHTML).join("");
+    expect(all).not.toContain(UNKNOWN);
+    expect(all).not.toContain("x_later_field");
   });
 });
 

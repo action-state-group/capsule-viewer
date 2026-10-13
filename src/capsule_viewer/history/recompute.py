@@ -1,14 +1,23 @@
 # SPDX-License-Identifier: Apache-2.0
 """The History Card check (docs/design/history-card.md, sections 1 to 3).
 
-A History is an ``evidence-bundle/v2`` of a history log (log id
-``deal-history``) whose root record, the selection record (action_id
+A History is an ``evidence-bundle/v2`` of a log of its own (log id
+``deal-history/<nonce>``, the nonce the selection record seals: 64 lowercase
+hex) whose root record, the selection record (action_id
 ``capsulectl-deal-history``), seals a selection of deal copies and is signed
 by one key, K. The bundle's ``x-history-selection/v0`` extension carries:
 
     {"selection_record": <that record's capsule id>,
-     "selection": [{"deal_id", "bundle_digest"}],   # equal to the sealed one
+     "selection": [{"deal_id", "bundle_digest", "steps_after_checkpoint"}],   # equal to the sealed one
      "deals": {<deal id>: <that deal's copy for the audience, an evidence-bundle/v2>}}
+
+Two reads are what the holder states, signed with the selection and checked
+against no deal (``holder_stated``, as ``capsulectl verify`` reports it): the
+sealed ``recipient``, who the History is for (required for the audience
+``history``, absent for ``keep``), and each entry's
+``steps_after_checkpoint``, how many steps the deal has after its copy's
+checkpoint (a JSON integer >= 0). The page shows them as the holder's
+statements and never as checked.
 
 What a History shows is only that the holder of key K presents these copies,
 each of which verifies on its own. A record's signature sits outside its
@@ -16,7 +25,7 @@ Capsule ID, so anyone can re-sign someone else's counterparty copies under a
 fresh key and still get VALID: a History does not show that K's holder made,
 took part in or owns those deals, and nothing here says it does.
 
-Fields this check does not know (in the sealed selection, in a selection
+Other fields this check does not know (in the sealed selection, in a selection
 entry) are tolerated and never shown; the carried selection is still
 compared with the sealed one entry for entry, every field included.
 
@@ -54,7 +63,11 @@ from collections.abc import Mapping
 from ..digest import jcs
 
 SELECTION_EXTENSION = "x-history-selection/v0"
-HISTORY_LOG_ID = "deal-history"
+# A History's own log: this prefix and the selection record's sealed nonce.
+HISTORY_LOG_PREFIX = "deal-history/"
+# The reads of a History that are what the holder states (capsulectl verify's "holder_stated", in its order).
+HOLDER_STATED = ("recipient", "steps_after_checkpoint")
+MAX_SAFE_INTEGER = 2**53 - 1
 SELECTION_ACTION_ID = "capsulectl-deal-history"
 DEAL_PROFILE = "x-deal-v0"
 REPORT_POINTER = "sealed_report"
@@ -94,6 +107,7 @@ PROPERTIES = (
     "selection_root",
     "history_log",
     "selection_sealed",
+    "holder_stated",
     "membership",
     "member_digests",
     "audience",
@@ -274,6 +288,23 @@ def payload_disclosed(member: Mapping) -> bool:
     return any(isinstance(d, Mapping) and len(d) > 0 for d in _obj(member.get("disclosures")).values())
 
 
+def step_count(value) -> int | None:
+    """A sealed ``steps_after_checkpoint``: a JSON integer >= 0 (not a
+    boolean, a float or text), as capsule-cli ``stepCount`` reads it; ``None``
+    when it is not one. Bounded by the largest integer the page can read
+    exactly (2**53 - 1)."""
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_SAFE_INTEGER:
+        return None
+    return value
+
+
+def recipient_of(sealed: Mapping) -> str:
+    """The sealed ``recipient`` as capsulectl verify reports it: the string as
+    sealed, or ``""`` when it is absent or not a string."""
+    recipient = sealed.get("recipient")
+    return recipient if isinstance(recipient, str) else ""
+
+
 def _signed(record: Mapping) -> bool:
     return bool(record.get("key_id")) and bool(record.get("signature"))
 
@@ -310,13 +341,19 @@ def _not_shareable(finding: str) -> bool:
 # capsulectl verify findings that make the History INVALID whatever else it
 # holds: "This History does not check", never "Not a shareable History".
 def _does_not_check(finding: str) -> bool:
-    return finding.split(":")[0] in ("selection_audience_not_history", "deal_payload_disclosed")
+    return finding.split(":")[0] in (
+        "selection_audience_not_history",
+        "deal_payload_disclosed",
+        "selection_recipient_missing",
+        "selection_entry_malformed",
+    )
 
 
 def check(bundle: Mapping) -> dict:
     """The whole reading of *bundle*: ``{"state", "page_state", "findings",
-    "properties", "holder_key", "audience", "signer_keys", "deals",
-    "not_proven", "values", "l0", "asserted", "mismatches"}``. ``values`` and
+    "properties", "holder_key", "audience", "recipient", "holder_stated",
+    "signer_keys", "deals", "not_proven", "values", "l0", "asserted",
+    "mismatches"}``. ``values`` and
     ``l0`` are ``None`` unless ``state`` is ``card``."""
     bundle = _obj(bundle)
     block = selection_block(bundle)
@@ -331,7 +368,7 @@ def check(bundle: Mapping) -> dict:
         return {
             "state": "invalid", "page_state": "failed", "findings": [f"no {SELECTION_EXTENSION} block in an evidence-bundle/v2"],
             "properties": {p: NOT_PRESENT for p in PROPERTIES}, "holder_key": "", "audience": "",
-            "signer_keys": {}, "deals": [], "not_proven": [], "values": None, "l0": None, "asserted": False, "mismatches": [],
+            "recipient": "", "holder_stated": [], "signer_keys": {}, "deals": [], "not_proven": [], "values": None, "l0": None, "asserted": False, "mismatches": [],
         }
 
     # The selection record: the bundle's root, recomputing to its id, its disclosure bound, signed.
@@ -359,14 +396,17 @@ def check(bundle: Mapping) -> dict:
     else:
         status["selection_record_signature"] = NOT_PRESENT
         failed.append("selection_record_unsigned")
-    # capsulectl verify: the bundle's root is the selection record, and its log is deal-history.
+    # capsulectl verify: the bundle's root is the selection record, and its log
+    # is the History's own, deal-history/ and the sealed nonce (64 hex).
     if not isinstance(record_id, str) or bundle.get("root") != record_id:
         fail("selection_root", "selection_record_not_root")
     checkpoint = _obj(bundle.get("checkpoint"))
     certificate = _obj(bundle.get("completeness_certificate"))
+    nonce = _obj(sealed).get("nonce")
+    log_id = HISTORY_LOG_PREFIX + nonce if isinstance(nonce, str) and HEX_DIGEST.match(nonce) else None
     if checkpoint and certificate:
         status["history_log"] = NOT_CHECKED
-        if checkpoint.get("log_id") != HISTORY_LOG_ID or certificate.get("log_id") != HISTORY_LOG_ID:
+        if log_id is None or checkpoint.get("log_id") != log_id or certificate.get("log_id") != log_id:
             fail("history_log", "not_a_history_log")
     else:
         status["history_log"] = NOT_PRESENT
@@ -376,19 +416,32 @@ def check(bundle: Mapping) -> dict:
     if not _same(block.get("selection"), sealed.get("selection")):
         fail("selection_sealed", "selection_not_sealed")
     audience = sealed.get("audience") if isinstance(sealed.get("audience"), str) else ""
+    # The holder's statements (capsulectl verify's holder_stated): present and
+    # well formed, never checked against the deals, so NOT_CHECKED at best.
+    recipient = recipient_of(sealed)
+    status["holder_stated"] = NOT_CHECKED
+    if audience == HISTORY_AUDIENCE and not recipient.strip():
+        fail("holder_stated", "selection_recipient_missing")
 
     # The sealed selection's entries.
     listed = sealed.get("selection") if isinstance(sealed.get("selection"), list) else []
     if not listed:
         fail("membership", "selection_missing")
     picked: dict[str, str] = {}
+    later: dict[str, int] = {}
     for raw in listed:
         e = _obj(raw)
         deal, digest = e.get("deal_id"), e.get("bundle_digest")
-        if not isinstance(deal, str) or deal in picked or not DEAL_ID.match(deal) or not isinstance(digest, str) or not HEX_DIGEST.match(digest):
+        steps = step_count(e.get("steps_after_checkpoint"))
+        if (
+            not isinstance(deal, str) or deal in picked or not DEAL_ID.match(deal)
+            or not isinstance(digest, str) or not HEX_DIGEST.match(digest) or steps is None
+        ):
+            if steps is None:
+                status["holder_stated"] = FAIL
             fail("membership", f"selection_entry_malformed:{deal if isinstance(deal, str) else ''}")
             continue
-        picked[deal] = digest
+        picked[deal], later[deal] = digest, steps
 
     # capsulectl verify: the sealed audience is history, or keep (VALID, never one to send).
     if audience == KEEP_AUDIENCE:
@@ -420,7 +473,7 @@ def check(bundle: Mapping) -> dict:
     any_unsigned = False
     for deal, digest in picked.items():
         member = carried.get(deal)
-        entry = {"deal_id": deal, "audience": "", "digest": "missing"}
+        entry = {"deal_id": deal, "steps_after_checkpoint": later[deal], "audience": "", "digest": "missing"}
         deals.append(entry)
         if not isinstance(member, Mapping):
             fail("membership", f"deal_missing:{deal}")
@@ -500,6 +553,8 @@ def check(bundle: Mapping) -> dict:
         "properties": status,
         "holder_key": holder,
         "audience": audience,
+        "recipient": recipient,
+        "holder_stated": list(HOLDER_STATED),
         "signer_keys": dict(sorted(signers.items())),
         "deals": deals,
         "not_proven": not_proven(selected, audience),

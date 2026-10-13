@@ -18,11 +18,19 @@
 // with textContent; nothing from the bundle is parsed as HTML.
 //
 // The input is a History as capsulectl `deal history` writes it: an
-// evidence-bundle/v2 of a history log ("deal-history") whose root record, the
-// one disclosed record (action_id "capsulectl-deal-history"), seals a
-// selection of deal copies and is signed by one key, K; its
-// x-history-selection/v0 extension carries
-//   {selection_record, selection: [{deal_id, bundle_digest}], deals: {<deal id>: <evidence-bundle/v2>}}.
+// evidence-bundle/v2 of a log of its own ("deal-history/" and the nonce the
+// selection record seals, 64 lowercase hex) whose root record, the one
+// disclosed record (action_id "capsulectl-deal-history"), seals a selection of
+// deal copies and is signed by one key, K; its x-history-selection/v0
+// extension carries
+//   {selection_record, selection: [{deal_id, bundle_digest, steps_after_checkpoint}], deals: {<deal id>: <evidence-bundle/v2>}}.
+// Two reads are what the holder states, signed with the selection and checked
+// against no deal (holder_stated, as capsulectl verify reports it): the sealed
+// recipient (who the History is for; required for the audience history) and
+// each entry's steps_after_checkpoint (steps the deal has after its copy's
+// checkpoint, a JSON integer >= 0). The page shows them as the holder's
+// statements ("For <recipient>, as stated by the holder"; "later steps exist,
+// per the holder") and never as checked.
 // A History shows only that the holder of key K presents these copies, each
 // of which verifies on its own. A record's signature sits outside its Capsule
 // ID, so anyone can re-sign someone else's counterparty copies under a fresh
@@ -32,7 +40,7 @@
 // in the capsule) show. Outcome and action class are in payloads: the page
 // shows them as not proven (not_proven, as capsulectl verify reports it,
 // derived here from the withheld payloads) and infers nothing about them.
-// Fields this page does not know (in the sealed selection, in a selection
+// Other fields this page does not know (in the sealed selection, in a selection
 // entry) are tolerated and never shown; the carried selection is still
 // compared with the sealed one entry for entry, every field included.
 // check(bundle) is the twin of the Python check
@@ -64,7 +72,10 @@
   "use strict";
 
   var SELECTION_EXTENSION = "x-history-selection/v0";
-  var HISTORY_LOG_ID = "deal-history";
+  // A History's own log: this prefix and the selection record's sealed nonce.
+  var HISTORY_LOG_PREFIX = "deal-history/";
+  // The reads of a History that are what the holder states (capsulectl verify's "holder_stated", in its order).
+  var HOLDER_STATED = ["recipient", "steps_after_checkpoint"];
   var SELECTION_ACTION_ID = "capsulectl-deal-history";
   var DEAL_PROFILE = "x-deal-v0";
   var REPORT_POINTER = "sealed_report";
@@ -91,7 +102,7 @@
   // the reading's state (pageState).
   var PAGE_STATES = ["checking", "integrity_checked", "failed", "unable_to_verify"];
   var PROPERTIES = [
-    "selection_record", "selection_record_signature", "selection_root", "history_log", "selection_sealed", "membership", "member_digests",
+    "selection_record", "selection_record_signature", "selection_root", "history_log", "selection_sealed", "holder_stated", "membership", "member_digests",
     "audience", "signer_keys", "member_records", "member_signatures", "member_logs", "values",
   ];
   // The properties capsulectl checks on the sender's machine and this page
@@ -153,6 +164,9 @@
     l1Copy: "Copy for",
     l1Records: "Records",
     l1Digest: "Matches its selection entry",
+    l1LaterSteps: "later steps exist, per the holder",
+    recipient: { before: "For ", after: ", as stated by the holder" },
+    holderStatedNotChecked: "what the holder states, sealed with the selection; not checked against the deals by this page or by capsulectl",
     l1Time: "Time",
     l1Status: "Effect status",
     l1Id: "Record (capsule id)",
@@ -169,8 +183,9 @@
       selection_record: "The selection record is on the history log's bundle, recomputes to its id and its sealed pick matches its digest",
       selection_record_signature: "The selection record's signature",
       selection_root: "The selection record is the root of the History's bundle",
-      history_log: "The bundle is of a deal-history log (its checkpoint and the selection record's membership)",
+      history_log: "The bundle is of the History's own log, deal-history/ and the sealed nonce (its checkpoint and the selection record's membership)",
       selection_sealed: "The selection the file carries is the sealed one",
+      holder_stated: "What the holder states with the selection: who the History is for, and each deal's later steps",
       membership: "Every carried deal is selected and every selected deal is carried",
       member_digests: "Each deal copy is the one its selection entry names (digest)",
       audience: "Every copy is for the sealed audience, and that audience is shareable",
@@ -214,12 +229,13 @@
       deal_checkpoint_missing: "this deal's copy carries no checkpoint",
       selection_not_sealed: "the selection the file carries is not the sealed one",
       selection_missing: "the sealed selection names no deal",
-      selection_entry_malformed: "a selection entry is malformed",
+      selection_entry_malformed: "a selection entry is malformed (its deal id, digest or count of later steps)",
+      selection_recipient_missing: "the sealed selection does not say who the History is for",
       selection_record_unverified: "the selection record is missing, or does not match its seal",
       selection_record_unsigned: "the selection record carries no signature",
       selection_record_not_root: "the selection record is not the root of the History's bundle",
       history_checkpoint_missing: "the History carries no checkpoint",
-      not_a_history_log: "the History's bundle is not of a deal-history log",
+      not_a_history_log: "the History's bundle is not of its own log (deal-history/ and the nonce its selection record seals)",
       history_log_unproven: "the page's verifier found that the history log's checkpoint, or the selection record's membership in that log, does not hold",
       history_bundle_unverified: "the page's verifier did not pass the History's own bundle (its records, root, disclosures, checkpoint or membership)",
     },
@@ -489,6 +505,17 @@
 
   // ---- the check (design section 3) ------------------------------------------
 
+  // A sealed steps_after_checkpoint: a JSON integer >= 0, as capsule-cli
+  // stepCount reads it; null when it is not one. The twin of step_count.
+  function stepCount(value) {
+    return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_SAFE ? value : null;
+  }
+
+  // The sealed recipient as capsulectl verify reports it ("" when absent or not a string). The twin of recipient_of.
+  function recipientOf(sealed) {
+    return typeof sealed.recipient === "string" ? sealed.recipient : "";
+  }
+
   function signed(record) {
     return !!record.key_id && !!record.signature;
   }
@@ -526,7 +553,7 @@
   // capsulectl verify findings that make the History INVALID whatever else it
   // holds: "This History does not check", never "Not a shareable History".
   function doesNotCheck(finding) {
-    return ["selection_audience_not_history", "deal_payload_disclosed"].indexOf(finding.split(":")[0]) >= 0;
+    return ["selection_audience_not_history", "deal_payload_disclosed", "selection_recipient_missing", "selection_entry_malformed"].indexOf(finding.split(":")[0]) >= 0;
   }
 
   // ---- the page's verifier: agent-action-capsule's VerifiedBundleContext ------
@@ -608,7 +635,7 @@
       PROPERTIES.forEach(function (p) { none[p] = "NOT_PRESENT"; });
       return {
         state: "invalid", page_state: "failed", findings: ["no " + SELECTION_EXTENSION + " block in an evidence-bundle/v2"], properties: none,
-        holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [],
+        holder_key: "", audience: "", recipient: "", holder_stated: [], signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [],
       };
     }
 
@@ -642,19 +669,22 @@
       status.selection_record_signature = "NOT_PRESENT";
       failed.push("selection_record_unsigned");
     }
-    // capsulectl verify: the bundle's root is the selection record, and its log is deal-history.
+    // capsulectl verify: the bundle's root is the selection record, and its log
+    // is the History's own, deal-history/ and the sealed nonce (64 hex).
     var rootId = verdict !== null ? verdict.root : bundle.root;
     if (typeof recordId !== "string" || rootId !== recordId) fail("selection_root", "selection_record_not_root");
     var checkpoint = obj(bundle.checkpoint), certificate = obj(bundle.completeness_certificate);
+    var nonce = obj(sealed).nonce;
+    var logId = typeof nonce === "string" && HEX_DIGEST.test(nonce) ? HISTORY_LOG_PREFIX + nonce : null;
     if (Object.keys(checkpoint).length && Object.keys(certificate).length) {
       status.history_log = "NOT_CHECKED";
-      if (checkpoint.log_id !== HISTORY_LOG_ID || certificate.log_id !== HISTORY_LOG_ID) fail("history_log", "not_a_history_log");
+      if (logId === null || checkpoint.log_id !== logId || certificate.log_id !== logId) fail("history_log", "not_a_history_log");
       else if (verdict !== null) {
         // The page's verifier: the range up to the checkpoint and each record's
-        // membership, and the selection record's own coordinates in deal-history.
+        // membership, and the selection record's own coordinates in the History's log.
         var coverage = verdict.intervalCoverage, membership = verdict.perRecordMembership;
         var at = obj(obj(verdict.memberships[recordId]).log_coordinates);
-        if (coverage.status !== "pass" || membership.status !== "pass" || at.log_id !== HISTORY_LOG_ID) {
+        if (coverage.status !== "pass" || membership.status !== "pass" || at.log_id !== logId) {
           fail("history_log", "history_log_unproven");
         } else if (!coverage.findings.length && !membership.findings.length) {
           status.history_log = "PASS";
@@ -672,17 +702,24 @@
     sealed = obj(sealed);
     if (!same(block.selection, sealed.selection)) fail("selection_sealed", "selection_not_sealed");
     var audience = typeof sealed.audience === "string" ? sealed.audience : "";
+    // The holder's statements (capsulectl verify's holder_stated): present and
+    // well formed, never checked against the deals, so NOT_CHECKED at best.
+    var recipient = recipientOf(sealed);
+    status.holder_stated = "NOT_CHECKED";
+    if (audience === HISTORY_AUDIENCE && !recipient.trim()) fail("holder_stated", "selection_recipient_missing");
 
     var listed = Array.isArray(sealed.selection) ? sealed.selection : [];
     if (!listed.length) fail("membership", "selection_missing");
-    var picked = {}, order = [];
+    var picked = {}, later = {}, order = [];
     listed.forEach(function (raw) {
-      var e = obj(raw), deal = e.deal_id, dg = e.bundle_digest;
-      if (has(picked, deal) || typeof deal !== "string" || !DEAL_ID.test(deal) || typeof dg !== "string" || !HEX_DIGEST.test(dg)) {
+      var e = obj(raw), deal = e.deal_id, dg = e.bundle_digest, steps = stepCount(e.steps_after_checkpoint);
+      if (has(picked, deal) || typeof deal !== "string" || !DEAL_ID.test(deal) || typeof dg !== "string" || !HEX_DIGEST.test(dg) || steps === null) {
+        if (steps === null) status.holder_stated = "FAIL";
         fail("membership", "selection_entry_malformed:" + (typeof deal === "string" ? deal : ""));
         return;
       }
       picked[deal] = dg;
+      later[deal] = steps;
       order.push(deal);
     });
 
@@ -713,7 +750,7 @@
     var checkpointMissing = false, anyUnsigned = false;
     order.forEach(function (deal) {
       var member = has(carried, deal) ? carried[deal] : null;
-      var entry = { deal_id: deal, audience: "", digest: "missing" };
+      var entry = { deal_id: deal, steps_after_checkpoint: later[deal], audience: "", digest: "missing" };
       deals.push(entry);
       if (!isObj(member)) {
         fail("membership", "deal_missing:" + deal);
@@ -779,6 +816,7 @@
     Object.keys(signers).sort().forEach(function (key) { sortedSigners[key] = signers[key].slice().sort(); });
     return {
       state: state, page_state: pageState(state), findings: findings.concat(mismatches), properties: status, holder_key: holder, audience: audience,
+      recipient: recipient, holder_stated: HOLDER_STATED.slice(),
       signer_keys: sortedSigners, deals: deals, not_proven: notProven(selected, audience), values: state === "card" ? values : null,
       l0: state === "card" ? l0Lines(values, stepCounts(selected)) : null, asserted: hasAsserted, mismatches: mismatches,
     };
@@ -849,6 +887,15 @@
     ]);
   }
 
+  // A property's status in words: the signature rows say who checks them; the
+  // holder's statements say no one does.
+  function statusWords(p, s) {
+    if (s !== "NOT_CHECKED") return WORDS.status[s];
+    if (SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0) return WORDS.signatureNotChecked;
+    if (p === "holder_stated") return WORDS.holderStatedNotChecked;
+    return WORDS.status[s];
+  }
+
   // FR-31: what this page checked in this file (PASS or FAIL), what it did not
   // (NOT_CHECKED) and what the file does not carry (NOT_PRESENT), from the
   // property statuses themselves, so the lists cannot claim more than ran.
@@ -857,7 +904,7 @@
     return groups.map(function (g) {
       var items = PROPERTIES.filter(function (p) { return g[2].indexOf(result.properties[p]) >= 0; }).map(function (p) {
         var s = result.properties[p];
-        var words = s === "NOT_CHECKED" && SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0 ? WORDS.signatureNotChecked : WORDS.status[s];
+        var words = statusWords(p, s);
         return el(doc, "li", { "data-check": p }, [WORDS.property[p] + ": " + words]);
       });
       return el(doc, "div", { "data-history-checks": g[0] }, [
@@ -871,7 +918,7 @@
   function drawChecks(doc, result) {
     var rows = PROPERTIES.map(function (p) {
       var s = result.properties[p];
-      var words = s === "NOT_CHECKED" && SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0 ? WORDS.signatureNotChecked : WORDS.status[s];
+      var words = statusWords(p, s);
       return { attrs: { "data-property": p, "data-property-status": s }, cells: [WORDS.property[p], el(doc, "span", {}, [statusBadge(doc, s), " " + words])] };
     });
     var signerRows = Object.keys(result.signer_keys).map(function (key) {
@@ -907,6 +954,7 @@
       drawPageState(doc, result.page_state),
       el(doc, "p", {}, [WORDS.lead]),
       el(doc, "p", { class: "cv-notice", "data-history-limitation": "true" }, [WORDS.limitation]),
+      result.recipient ? el(doc, "p", { "data-history-recipient": "true" }, [WORDS.recipient.before + result.recipient + WORDS.recipient.after]) : null,
       el(doc, "p", {}, [WORDS.keyK + ": ", el(doc, "span", { class: "cv-mono", "data-history-key": "true" }, [result.holder_key])]),
       el(doc, "p", { "data-history-audience": result.audience }, [WORDS.audience[result.audience] + " (" + result.audience + ")"]),
       el(doc, "div", { class: "cv-metrics-wrap", "data-cv": "metric-grid" }, [
@@ -928,7 +976,9 @@
     var counts = {};
     selected.forEach(function (s) { counts[s.deal] = (counts[s.deal] || 0) + 1; });
     var dealRows = result.deals.map(function (d) {
-      return { attrs: { "data-deal": d.deal_id }, cells: [el(doc, "span", { class: "cv-mono" }, [d.deal_id]), d.audience, String(counts[d.deal_id] || 0), d.digest] };
+      var dealCell = el(doc, "span", {}, [el(doc, "span", { class: "cv-mono" }, [d.deal_id]),
+        d.steps_after_checkpoint > 0 ? el(doc, "span", { class: "cv-muted", "data-history-later-steps": "true" }, [" (" + WORDS.l1LaterSteps + ")"]) : null]);
+      return { attrs: { "data-deal": d.deal_id }, cells: [dealCell, d.audience, String(counts[d.deal_id] || 0), d.digest] };
     });
     var recordRows = selected.map(function (s) {
       return { attrs: { "data-record": s.record.capsule_id }, cells: [String(s.record.timestamp), s.deal, el(doc, "span", { class: "cv-mono" }, [effectStatus(s.record) || "-"]), el(doc, "span", { class: "cv-mono" }, [String(s.record.capsule_id)])] };
@@ -969,7 +1019,7 @@
     } catch (e) {
       var none = {};
       PROPERTIES.forEach(function (p) { none[p] = "NOT_CHECKED"; });
-      result = { state: "not_checked", page_state: "unable_to_verify", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [] };
+      result = { state: "not_checked", page_state: "unable_to_verify", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", recipient: "", holder_stated: [], signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [] };
     }
     return { result: result, selected: result.state === "card" ? selectedRecords(bundle) : [], not_proven: result.not_proven, page_state: result.page_state };
   }
@@ -1004,6 +1054,8 @@
     SELECTION_EXTENSION: SELECTION_EXTENSION,
     PROPERTIES: PROPERTIES,
     PAGE_STATES: PAGE_STATES,
+    HOLDER_STATED: HOLDER_STATED,
+    stepCount: stepCount,
     COMPLETED_STATUS: COMPLETED_STATUS,
     FAILED_STATUS: FAILED_STATUS,
     checkingModel: checkingModel,
