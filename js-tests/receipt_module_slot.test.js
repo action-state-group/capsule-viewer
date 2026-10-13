@@ -152,16 +152,53 @@ const LAYOUT = `(() => {
   const skip = (e) => e.id === "cv-host" || e.hasAttribute("data-receipt-module") || e.tagName === "STYLE" || e.tagName === "SCRIPT";
   const els = [...main.querySelectorAll("*")].filter((e) => !skip(e));
   const props = ${JSON.stringify(STYLE_PROPS)};
+  const path = (e) => {
+    const parts = [];
+    for (let n = e; n && n !== main; n = n.parentElement) {
+      if (skip(n)) continue;
+      const data = [...n.attributes].filter((a) => a.name.startsWith("data-")).map((a) => "[" + a.name + "=" + a.value + "]").join("");
+      parts.unshift(n.tagName.toLowerCase() + (n.classList.length ? "." + [...n.classList].join(".") : "") + data);
+    }
+    return parts.join(" > ");
+  };
   return {
     text: main.innerText,
     size: [document.documentElement.clientWidth, document.documentElement.scrollHeight],
     elements: els.map((e) => {
       const r = e.getBoundingClientRect();
       const cs = getComputedStyle(e);
-      return [e.tagName, ...[r.x, r.y, r.width, r.height].map((v) => Math.round(v * 100) / 100), ...props.map((p) => cs.getPropertyValue(p))].join("|");
+      return {
+        path: path(e),
+        text: (e.textContent || "").slice(0, 60),
+        // Direct text nodes: the parsed Python page has one per run of text; the script may build several.
+        textNodes: [...e.childNodes].filter((n) => n.nodeType === 3).length,
+        box: { x: r.x, y: r.y, width: r.width, height: r.height },
+        style: Object.fromEntries(props.map((p) => [p, cs.getPropertyValue(p)])),
+      };
     }),
+    // What decides the look besides the elements: the stylesheets in order, and the fonts the page has.
+    sheets: [...document.styleSheets].map((sh) => (sh.ownerNode && sh.ownerNode.id ? "#" + sh.ownerNode.id : sh.ownerNode ? sh.ownerNode.tagName : "?") + ":" + sh.cssRules.length),
   };
 })()`;
+// The first differences between two pages' elements (same order: the script
+// page's host and wrapper are left out), each as path, which part, both values.
+// Boxes are compared to 1/100 px.
+function elementDifferences(script, python, limit = 5) {
+  const out = [];
+  const round = (v) => Math.round(v * 100) / 100;
+  for (let i = 0; i < Math.max(script.length, python.length) && out.length < limit; i += 1) {
+    const a = script[i], b = python[i];
+    if (!a || !b || a.path !== b.path) {
+      out.push(`#${i} element: script ${a ? a.path : "(none)"} | python ${b ? b.path : "(none)"}`);
+      continue;
+    }
+    const parts = [];
+    for (const k of ["x", "y", "width", "height"]) if (round(a.box[k]) !== round(b.box[k])) parts.push(`${k} ${a.box[k]} vs ${b.box[k]}`);
+    for (const k of Object.keys(b.style)) if (a.style[k] !== b.style[k]) parts.push(`${k} ${JSON.stringify(a.style[k])} vs ${JSON.stringify(b.style[k])}`);
+    if (parts.length) out.push(`#${i} ${b.path} ("${b.text}"): ${parts.join("; ")}; text nodes ${a.textNodes} vs ${b.textNodes} (script vs python)`);
+  }
+  return out;
+}
 // The share of pixels two screenshots of equal text, boxes and styles may
 // differ in (rasterisation, never content: see (3) above).
 const PIXEL_TOLERANCE = 0.002;
@@ -257,7 +294,14 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
           }
           expect(layout.script.text, `${label}: text`).toBe(layout.python.text);
           expect(layout.script.size, `${label}: page size`).toEqual(layout.python.size);
-          expect(layout.script.elements, `${label}: every element's box and computed style`).toEqual(layout.python.elements);
+          expect(layout.script.elements.length, `${label}: element count`).toBe(layout.python.elements.length);
+          const differences = elementDifferences(layout.script.elements, layout.python.elements);
+          if (differences.length) {
+            const report = `${label}: elements differ in box or computed style (first ${differences.length}):\n  ${differences.join("\n  ")}\n` +
+              `  stylesheets: script [${layout.script.sheets.join(", ")}] python [${layout.python.sheets.join(", ")}]`;
+            console.warn(report);
+            expect.fail(report);
+          }
           const digest = (b) => createHash("sha256").update(b).digest("hex");
           if (digest(shots.script) !== digest(shots.python)) {
             const d = pixelDifference(shots.script, shots.python);
