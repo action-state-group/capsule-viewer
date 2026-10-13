@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from html import escape
 
 from .tokens import kit_css
+from .words import word
 
 
 class Markup(str):
@@ -174,12 +175,13 @@ def _mark(mark: CalendarMark) -> Markup:
 
 # ---- DisclosureBadge --------------------------------------------------------
 
-# state -> (label, tone). The four states and their wording are fixed.
+# state -> (label, tone). The four states are fixed; their words are the kit
+# pack's (``kit.words``).
 DISCLOSURE_STATES: dict[str, tuple[str, str]] = {
-    "disclosed": ("DISCLOSED", "positive"),
-    "committed": ("COMMITTED (opening not supplied)", "info"),
-    "withheld": ("WITHHELD", "caution"),
-    "not_present": ("NOT PRESENT", "neutral"),
+    "disclosed": (word("kit.disclosure.disclosed"), "positive"),
+    "committed": (word("kit.disclosure.committed"), "info"),
+    "withheld": (word("kit.disclosure.withheld"), "caution"),
+    "not_present": (word("kit.disclosure.not_present"), "neutral"),
 }
 
 
@@ -283,12 +285,12 @@ def evidence_details(items: Sequence[EvidenceItem]) -> Markup:
 
 # ---- VerificationDetails ----------------------------------------------------
 
-# outcome -> (wording, tone). The wording never upgrades "integrity covered"
-# into "understood" or "correct".
+# outcome -> (wording, tone), the wording the kit pack's (``kit.words``). The
+# wording never upgrades "integrity covered" into "understood" or "correct".
 VERIFICATION_OUTCOMES: dict[str, tuple[str, str]] = {
-    "verified": ("Verified", "positive"),
-    "failed": ("Did not verify", "negative"),
-    "not_checked": ("Not checked", "neutral"),
+    "verified": (word("kit.outcome.verified"), "positive"),
+    "failed": (word("kit.outcome.failed"), "negative"),
+    "not_checked": (word("kit.outcome.not_checked"), "neutral"),
 }
 
 
@@ -320,7 +322,7 @@ def verification_details(result: VerificationResult) -> Markup:
     headline = _tag(
         "div",
         "cv-verification__outcome-row",
-        [_outcome(result.outcome, "cv-verification__outcome cv-pill"), _tag("span", "cv-muted", [f" reported by {result.verifier}"])],
+        [_outcome(result.outcome, "cv-verification__outcome cv-pill"), _tag("span", "cv-muted", [" " + word("kit.reported_by", verifier=result.verifier)])],
     )
     checks = []
     for check in result.checks:

@@ -8,9 +8,12 @@
 // (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js).
 // `python -m capsule_viewer.receipt.module_slot --write` writes each one from
 // it, filling the lines marked "@generated": the module it registers, its
-// manifest, the words (compiled in from the example English wording pack,
-// receipt/wording-en.json, whose id and sha256 the page names in L2) and the
-// kit stylesheet (static/kit.css, pinned by the manifest's style_sha256).
+// manifest, the two wording packs as data (each pack's exact bytes, as
+// text: the receipt modules' example English pack, receipt/wording-en.json,
+// whose id and wording_sha256 the page names in L2, and the kit's,
+// kit/wording-en.json, the words of the kit's vocabularies and of the
+// composition section), capsule-viewer's version and the kit stylesheet
+// (static/kit.css, pinned by the manifest's style_sha256).
 // Each script carries the whole of this file and registers exactly one
 // module: the page builder puts one script in the page per module it chose,
 // and a script never registers a module the builder did not choose.
@@ -21,12 +24,17 @@
 // and fails on any difference in the model or the rendered result. Names
 // below follow the Python ones, so a reader can hold the two side by side.
 //
-// It imports nothing and reads no wording pack. UTF-8, SHA-256 and JCS are
-// computed here, synchronously. It never verifies: canRender and buildModel
-// read the VerifiedBundleContext the page's runtime built (one verification
-// run); the gate and every disclosure state arrive decided. Committed words
-// are shown only when their opening recomputes to the sealed commitment (the
-// presentation contract's sha256-jcs-nonce256, section 7.2). render draws
+// It imports nothing. Every word it shows is a wording pack's: it parses
+// each pack at load and hashes the pack's bytes for its wording_sha256 (the
+// presentation contract, section 7.4), and the model buildModel returns
+// records the receipt pack's wording_sha256 and the renderer_version. The
+// code holds no person-facing words (tests/test_wording_packs.py greps it).
+// UTF-8, SHA-256 and JCS are computed here, synchronously. It never
+// verifies: canRender and buildModel read the VerifiedBundleContext the
+// page's runtime built (one verification run); the gate and every
+// disclosure state arrive decided. Committed words are shown only when their
+// opening recomputes to the sealed commitment (the presentation contract's
+// sha256-jcs-nonce256, section 7.2). render draws
 // into the host's L0, L1 and L2 with createElement and textContent: nothing
 // from the bundle is parsed as HTML.
 //
@@ -49,8 +57,10 @@
 
   var KIND = "unilateral"; // @generated KIND
   var MANIFEST = {}; // @generated MANIFEST
-  var WORDS = {}; // @generated WORDS
-  var PACK = { id: "", sha256: "" }; // @generated PACK
+  // The packs' exact bytes, as text (UTF-8 decoded), and capsule-viewer's version.
+  var PACK_TEXT = ""; // @generated PACK_TEXT
+  var KIT_PACK_TEXT = ""; // @generated KIT_PACK_TEXT
+  var VERSION = ""; // @generated VERSION
   var KIT_CSS = ""; // @generated KIT_CSS
   // The seller copy's bundle extension kind (capsule_viewer.receipt.role.SELLER_KIND).
   var SELLER_KIND = ""; // @generated SELLER_KIND
@@ -82,24 +92,16 @@
   var MERCHANT_ROWS = ["approved", "agent_reported", "charged", "charged_on", "cancel_by", "domains", "key_size"];
   var PROVENANCES = ["seller_observed", "carrier", "buyer_confirmed"];
   var CUTS = { keep: ["keep", "counterparty"], counterparty: ["counterparty"], adjudicator: ["adjudicator"] };
-  // The kit's closed vocabularies (capsule_viewer.kit.components).
-  var DISCLOSURE_STATES = {
-    disclosed: ["DISCLOSED", "positive"],
-    committed: ["COMMITTED (opening not supplied)", "info"],
-    withheld: ["WITHHELD", "caution"],
-    not_present: ["NOT PRESENT", "neutral"],
-  };
-  var VERIFICATION_OUTCOMES = {
-    verified: ["Verified", "positive"],
-    failed: ["Did not verify", "negative"],
-    not_checked: ["Not checked", "neutral"],
-  };
-  // The composition section's words: agent-action-capsule's composition view
-  // (capsule_viewer.composed, after ts/src/composed-view.ts).
-  var NOT_APPLICABLE = "—";
-  var COMPOSED_SCOPE = "Composition closure covers the declared members only; it is not completeness of participation.";
-  var COMPOSED_CUSTODY = "Custody domains are labels declared by whoever composed this block. Identical labels make an agreeing pair " +
-    "redundant; distinct labels do not establish that two observers are independent.";
+  // The kit's closed vocabularies (capsule_viewer.kit.components): state ->
+  // tone; the words are the kit pack's (kit.disclosure.<state>, kit.outcome.<outcome>).
+  var DISCLOSURE_STATES = { disclosed: "positive", committed: "info", withheld: "caution", not_present: "neutral" };
+  var VERIFICATION_OUTCOMES = { verified: "positive", failed: "negative", not_checked: "neutral" };
+  // The composition section's columns (capsule_viewer.composed MEMBER_COLUMNS,
+  // JOIN_COLUMNS), as kit pack keys: agent-action-capsule's composition view
+  // (after ts/src/composed-view.ts), its words the kit pack's composed.* entries.
+  var MEMBER_COLUMNS = ["member", "observer", "outcome", "body", "digest", "graph_closure", "interval_coverage",
+    "per_record_membership", "refusal_signature", "findings"];
+  var JOIN_COLUMNS = ["members", "basis", "declared", "derived", "result"];
 
   // ---- JSON as Python reads it ----------------------------------------------
   // The Python twin reads decoded JSON with isinstance checks and Python
@@ -766,6 +768,10 @@
       witnessed: v.assurance.witnesses,
       countersignatures: v.assurance.countersignatures,
       verification: v.verification,
+      // Presentation provenance: the module's build sets both (stamp, below);
+      // a model nested in another keeps null, as the Python twin's None.
+      wording_sha256: null,
+      renderer_version: null,
     };
   }
 
@@ -955,6 +961,8 @@
       handover: handover,
       commitments: commitments,
       keys: keys,
+      wording_sha256: null,
+      renderer_version: null,
     };
   }
 
@@ -1113,6 +1121,8 @@
         composition: composition,
         bundle_digest: v.assurance.bundle_digest,
         verification: v.verification,
+        wording_sha256: null,
+        renderer_version: null,
       };
     });
   }
@@ -1182,8 +1192,7 @@
   };
   Kit.prototype.disclosureBadge = function (state) {
     if (!own(DISCLOSURE_STATES, state)) return this.refusal("DisclosureBadge", state, "state must be one of " + Object.keys(DISCLOSURE_STATES).join(", "));
-    var entry = DISCLOSURE_STATES[state];
-    return this.d.el("span", { class: "cv-badge cv-tone--" + entry[1], "data-cv": "disclosure-badge", "data-state": state }, [entry[0]]);
+    return this.d.el("span", { class: "cv-badge cv-tone--" + DISCLOSURE_STATES[state], "data-cv": "disclosure-badge", "data-state": state }, [kw("kit.disclosure." + state)]);
   };
   Kit.prototype.drilldown = function (summary, children, expanded) {
     var d = this.d;
@@ -1203,13 +1212,12 @@
   };
   Kit.prototype.outcome = function (outcome, cls) {
     if (!own(VERIFICATION_OUTCOMES, outcome)) return this.refusal("VerificationDetails", outcome, "outcome must be one of " + Object.keys(VERIFICATION_OUTCOMES).join(", "));
-    var entry = VERIFICATION_OUTCOMES[outcome];
-    return this.d.el("span", { class: cls + " cv-tone--" + entry[1], "data-outcome": outcome }, [entry[0]]);
+    return this.d.el("span", { class: cls + " cv-tone--" + VERIFICATION_OUTCOMES[outcome], "data-outcome": outcome }, [kw("kit.outcome." + outcome)]);
   };
   Kit.prototype.verificationDetails = function (result) {
     var d = this.d, kit = this;
     var headline = d.el("div", { class: "cv-verification__outcome-row" }, [
-      kit.outcome(result.outcome, "cv-verification__outcome cv-pill"), d.el("span", { class: "cv-muted" }, [" reported by " + result.verifier]),
+      kit.outcome(result.outcome, "cv-verification__outcome cv-pill"), d.el("span", { class: "cv-muted" }, [" " + kw("kit.reported_by", { verifier: result.verifier })]),
     ]);
     var checks = result.checks.map(function (c) {
       var parts = [kit.outcome(c.outcome, "cv-pill"), d.el("span", {}, [c.name])];
@@ -1220,17 +1228,43 @@
   };
 
   // ---- words ----------------------------------------------------------------
+  // A wording pack (aac.wording-pack/v0) read from its bytes: its id, its
+  // entries and its wording_sha256, the SHA-256 of the bytes as they are (never
+  // re-serialised). Bytes that are not a pack give no pack, as the Python
+  // twin's EMPTY_PACK: no entries (every label is shown by its key) and an
+  // empty wording_sha256.
+
+  var WORDING_PACK_VERSION = "aac.wording-pack/v0";
+  var NO_PACK_ID = "none.refused/v0";
+  function readPack(text) {
+    var raw = null;
+    try { raw = JSON.parse(text); } catch (e) { raw = null; }
+    var entries = isMap(raw) ? raw.entries : null;
+    var keys = isMap(entries) ? Object.keys(entries) : [];
+    var ok = isMap(raw) && raw.wording_pack_version === WORDING_PACK_VERSION && typeof raw.id === "string" && keys.length > 0 &&
+      keys.every(function (k) { return typeof entries[k] === "string" && entries[k] !== ""; });
+    if (!ok) return { id: NO_PACK_ID, entries: {}, wording_sha256: "" };
+    return { id: raw.id, entries: entries, wording_sha256: sha256Hex(utf8(text)) };
+  }
+  var PACK = readPack(PACK_TEXT);
+  var KIT_PACK = readPack(KIT_PACK_TEXT);
+  var WORDS = PACK.entries;
+  // What a page built by these scripts records beside its model: the module
+  // and capsule-viewer's version that drew it (the Python twin's RENDERER_VERSION).
+  function rendererVersion(kind) { return "capsuleviewer.receipt." + kind + "/v0@" + VERSION; }
 
   var PLACEHOLDER = /\{([a-z_]+)\}/g;
-  function word(key) { return own(WORDS, key) ? WORDS[key] : null; }
-  function w(key, values) {
-    var template = word(key);
-    if (template === null) return "[" + key + "]";
-    return template.replace(PLACEHOLDER, function (_, name) {
+  function fill(entries, key, values) {
+    if (!own(entries, key)) return "[" + key + "]";
+    return entries[key].replace(PLACEHOLDER, function (_, name) {
       if (!values || !own(values, name)) throw new Error("no value for {" + name + "} in " + key);
       return values[name];
     });
   }
+  function word(key) { return own(WORDS, key) ? WORDS[key] : null; }
+  function w(key, values) { return fill(WORDS, key, values); }
+  // The kit pack's words (the kit's vocabularies and the composition section).
+  function kw(key, values) { return fill(KIT_PACK.entries, key, values); }
 
   // ---- drawing: one copy (module.py, seller.py) ------------------------------
 
@@ -1469,7 +1503,7 @@
     var producers = model.producers.map(function (p) { return p !== null ? p : w("provenance.unrecorded"); }).join(w("provenance.then"));
     var prov = [this.note(w("provenance.by", { producers: producers }), { "data-provenance": "true" })];
     if (model.report.instructions) prov.push(this.note(model.report.instructions, { "data-sealed-text": "instructions" }));
-    prov.push(this.note(w("wording.provenance", { id: PACK.id, sha: PACK.sha256 || "-" })));
+    prov.push(this.note(w("wording.provenance", { id: PACK.id, sha: PACK.wording_sha256 || "-" })));
     out.push(kit.section(w("section.provenance"), prov, 3));
     return out;
   };
@@ -1730,7 +1764,7 @@
   // ---- drawing: the composition section and the bilateral page ---------------
 
   function pairText(members) { return members[0] + " – " + members[1]; }
-  function findingsText(findings) { return findings.length ? findings.join(", ") : "none"; }
+  function findingsText(findings) { return findings.length ? findings.join(", ") : kw("composed.none"); }
   function claimText(c) { return c.findings.length ? c.status + " (" + c.findings.join(", ") + ")" : c.status; }
   // Python's json.dumps(v, ensure_ascii=False, separators=(",", ":")).
   function pyJson(v) {
@@ -1740,55 +1774,57 @@
     return JSON.stringify(v);
   }
   function corroborationText(c) {
-    if (c.result === "redundant") return (c.report || "redundant, not corroborating") + " (" + c.reasons.join(", ") + ")";
-    if (c.result === "corroborating") return "corroborating, on declared custody";
-    return "not applicable: the join did not derive agree";
+    if (c.result === "redundant") return (c.report || kw("composed.corroboration.redundant")) + " (" + c.reasons.join(", ") + ")";
+    if (c.result === "corroborating") return kw("composed.corroboration.corroborating");
+    return kw("composed.corroboration.not_applicable");
   }
+  function columns(prefix, keys) { return keys.map(function (k) { return kw(prefix + k); }); }
 
   function compositionSection(dr, c) {
     var d = dr.d, kit = dr.kit;
-    var out = [d.el("p", { "data-composition-status": c.status }, ["composed/v1 check: " + c.status])];
-    if (c.findings.length) out.push(d.el("p", {}, ["findings: " + c.findings.join(", ")]));
-    if (c.malformed) return kit.section("Composition", out, 3);
-    out.push(d.el("p", {}, [COMPOSED_SCOPE]));
-    out.push(kit.section("Composed digest", [kit.dataTable(["declared", "recomputed", "matches"],
-      [[c.digest_declared, c.digest_recomputed || "uncomputable", c.digest_matches ? "yes" : "no"]])], 4));
+    var heading = kw("composed.heading");
+    var out = [d.el("p", { "data-composition-status": c.status }, [kw("composed.check", { status: c.status })])];
+    if (c.findings.length) out.push(d.el("p", {}, [kw("composed.findings", { findings: c.findings.join(", ") })]));
+    if (c.malformed) return kit.section(heading, out, 3);
+    out.push(d.el("p", {}, [kw("composed.scope")]));
+    out.push(kit.section(kw("composed.digest.heading"), [kit.dataTable(columns("composed.digest.", ["declared", "recomputed", "matches"]),
+      [[c.digest_declared, c.digest_recomputed || kw("composed.digest.uncomputable"), kw(c.digest_matches ? "composed.digest.yes" : "composed.digest.no")]])], 4));
+    var na = kw("composed.not_applicable");
     var rows = c.members.map(function (m) {
       return [m.id, m.observer, m.outcome, m.body, m.digest]
-        .concat(m.claims !== null ? m.claims.map(claimText) : [NOT_APPLICABLE, NOT_APPLICABLE, NOT_APPLICABLE])
-        .concat([m.refusal_signature || NOT_APPLICABLE, findingsText(m.findings)]);
+        .concat(m.claims !== null ? m.claims.map(claimText) : [na, na, na])
+        .concat([m.refusal_signature || na, findingsText(m.findings)]);
     });
-    out.push(kit.section("Members", [kit.dataTable(["member", "observer", "outcome", "body", "digest", "graph closure", "interval coverage",
-      "per-record membership", "refusal signature", "findings"], rows)], 4));
-    out.push(kit.section("Observers", [
-      kit.dataTable(["observer", "role", "custody domain"], c.observers.map(function (o) { return [o.id, o.role, o.custody_domain]; })),
-      d.el("p", {}, [COMPOSED_CUSTODY]),
+    out.push(kit.section(kw("composed.members.heading"), [kit.dataTable(columns("composed.members.", MEMBER_COLUMNS), rows)], 4));
+    out.push(kit.section(kw("composed.observers.heading"), [
+      kit.dataTable(columns("composed.observers.", ["observer", "role", "custody_domain"]), c.observers.map(function (o) { return [o.id, o.role, o.custody_domain]; })),
+      d.el("p", {}, [kw("composed.custody")]),
     ], 4));
-    var missing = c.closure_missing.length ? c.closure_missing.join(", ") : "none";
-    out.push(kit.section("Composition closure", [
-      d.el("p", { "data-closure-status": c.closure.status }, [c.closure.status + "; missing: " + missing + "; findings: " + findingsText(c.closure.findings)]),
+    var missing = c.closure_missing.length ? c.closure_missing.join(", ") : kw("composed.none");
+    out.push(kit.section(kw("composed.closure.heading"), [
+      d.el("p", { "data-closure-status": c.closure.status }, [kw("composed.closure.line", { status: c.closure.status, missing: missing, findings: findingsText(c.closure.findings) })]),
     ], 4));
     if (!c.joins.length) {
-      out.push(kit.section("Joins", [d.el("p", {}, ["No joins."])], 4));
-      return kit.section("Composition", out, 3);
+      out.push(kit.section(kw("composed.joins.heading"), [d.el("p", {}, [kw("composed.joins.none")])], 4));
+      return kit.section(heading, out, 3);
     }
-    var joins = [kit.dataTable(["members", "basis", "declared", "derived", "result"], c.joins.map(function (j) {
-      return [pairText(j.members), j.basis, j.declared, j.derived || "not derivable", j.result];
+    var joins = [kit.dataTable(columns("composed.joins.", JOIN_COLUMNS), c.joins.map(function (j) {
+      return [pairText(j.members), j.basis, j.declared, j.derived || kw("composed.joins.not_derivable"), j.result];
     }))];
     c.joins.forEach(function (j) {
       if (!j.differences.length) return;
       var lists = j.differences.map(function (diff) {
         return d.el("dl", { "data-pointer": diff.pointer }, [d.el("dt", {}, [diff.pointer])].concat(diff.values.map(function (x) {
-          return d.el("dd", {}, [x.resolved ? x.member + ": " + pyJson(x.value) : x.member + ": does not resolve"]);
+          return d.el("dd", {}, [x.resolved ? x.member + ": " + pyJson(x.value) : kw("composed.joins.unresolved", { member: x.member })]);
         })));
       });
-      joins.push(d.el("div", { "data-differences": "true" }, [d.el("p", {}, ["Differing values: " + pairText(j.members)])].concat(lists)));
+      joins.push(d.el("div", { "data-differences": "true" }, [d.el("p", {}, [kw("composed.joins.differences", { pair: pairText(j.members) })])].concat(lists)));
     });
-    out.push(kit.section("Joins", joins, 4));
-    out.push(kit.section("Agreement", [kit.dataTable(["members", "result"], c.corroboration.map(function (x) {
+    out.push(kit.section(kw("composed.joins.heading"), joins, 4));
+    out.push(kit.section(kw("composed.agreement.heading"), [kit.dataTable(columns("composed.agreement.", ["members", "result"]), c.corroboration.map(function (x) {
       return [pairText(x.members), corroborationText(x)];
     }))], 4));
-    return kit.section("Composition", out, 3);
+    return kit.section(heading, out, 3);
   }
 
   // bilateral._token: an enum's words, or the token itself when there are none.
@@ -1883,6 +1919,17 @@
       if (sellerKindEngaged(v) || sealedSide(v) === "seller") throw new Unavailable("a seller's copy is the seller receipt's");
       return buildReceipt(v, e.audience);
     };
+    // The page's view-model records the pack it is worded with and the
+    // renderer that drew it (presentation provenance, never sealed).
+    var stamp = function (model) {
+      model.wording_sha256 = PACK.wording_sha256;
+      model.renderer_version = rendererVersion(kind);
+      return model;
+    };
+    var stamped = function (context) {
+      var built = build(context);
+      return built && typeof built.then === "function" ? built.then(stamp) : stamp(built);
+    };
     var declined = function (err) {
       if (err instanceof Unavailable) return false;
       throw err;
@@ -1900,7 +1947,7 @@
           return declined(err);
         }
       },
-      buildModel: build,
+      buildModel: stamped,
       // Draws into host.L0, host.L1 and host.L2 at host.depth.
       render: function (model, host) {
         var doc = host.L0.ownerDocument;
@@ -1929,6 +1976,10 @@
     MANIFEST: MANIFEST,
     WORDS: WORDS,
     PACK: PACK,
+    KIT_PACK: KIT_PACK,
+    VERSION: VERSION,
+    readPack: readPack,
+    rendererVersion: rendererVersion,
     KIT_CSS: KIT_CSS,
     module: module,
     createModule: createModule,

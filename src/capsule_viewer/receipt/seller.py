@@ -46,7 +46,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib import resources
 
 from ..binding import check_opening
@@ -56,6 +56,7 @@ from ..kit.components import Markup, Metric
 from ..kit.contract import KitServices
 from ..registry import Manifest
 from ..verifier_report import Assurance
+from ..version import renderer_version
 from ..wording import WordingPack
 from .model import Binder, Fact, ReceiptModel, ReceiptUnavailable, build_receipt, format_amount, sealed_report
 from .module import SHARED_AUDIENCES, Levels, UnilateralReceiptModule, _el, _join, draft_manifest
@@ -149,6 +150,12 @@ class SellerModel:
     handover: Handover
     commitments: tuple[tuple[str, str, str], ...]  # (step, field, commitment), in record order
     keys: tuple[str, ...]  # distinct signing keys, in record order
+    # Presentation provenance (contract 7.3), never sealed: the wording_sha256 of
+    # the pack the page is worded with and the renderer_version. The module's
+    # buildModel sets both; a model nested in another (a seller's receipt, a
+    # bilateral party's copy) keeps None.
+    wording_sha256: str | None = None
+    renderer_version: str | None = None
 
     @property
     def demo(self) -> bool:
@@ -395,7 +402,8 @@ class SellerReceiptModule(UnilateralReceiptModule):
         return True
 
     def buildModel(self, context: VerifiedBundleContext) -> SellerModel:  # noqa: N802 -- the contract's member name
-        return build_seller(context, self.bind, self.assurance, self.audience)
+        model = build_seller(context, self.bind, self.assurance, self.audience)
+        return replace(model, wording_sha256=self.pack.wording_sha256, renderer_version=renderer_version(self.manifest_json["id"]))
 
     def render(self, model: SellerModel, services: KitServices) -> str:
         levels = self.seller_levels(model, services)

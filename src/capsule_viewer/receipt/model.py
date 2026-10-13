@@ -208,6 +208,12 @@ class ReceiptModel:
     witnessed: str  # the verifier's witnesses claim, or "absent"
     countersignatures: tuple[str, ...]  # each countersignature result's status
     verification: VerificationResult
+    # Presentation provenance (contract 7.3), never sealed: the wording_sha256 of
+    # the pack the page is worded with and the renderer_version. The module's
+    # buildModel sets both; a model nested in another (a seller's receipt, a
+    # bilateral party's copy) keeps None.
+    wording_sha256: str | None = None
+    renderer_version: str | None = None
 
     def step(self, capsule_id: str) -> Step | None:
         return next((s for s in self.steps if s.capsule_id == capsule_id), None)
