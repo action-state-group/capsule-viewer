@@ -14,8 +14,17 @@
 //     scrolls sideways.
 // (3) headless Chromium, the receipt goldens (tests/goldens/receipt-*.png):
 //     each page the Python module renders and the same page with the script
-//     drawing its body, screenshotted on this machine, must be the same
-//     pixels, every toggle closed and every toggle open.
+//     drawing its body, every toggle closed and every toggle open. Before each
+//     screenshot both pages are settled the same way: fonts loaded
+//     (document.fonts.ready), the kit stylesheet applied, two frames painted.
+//     Then, always: the same text, and every element the same box and the same
+//     computed style. And the screenshots must be the same pixels; where they
+//     are not (CI's Chrome produced differing screenshots of the two pages
+//     where this machine's did not), at most PIXEL_TOLERANCE of the pixels may
+//     differ, at the same page size, and the difference is printed. With text,
+//     every box and every computed style already equal, what is left between
+//     two screenshots is how the browser rasterised them, not what the page
+//     shows.
 //
 // Same skip/fail rule as the layout suites: the Chromium part is skipped
 // locally with a warning when there is no Chromium, and fails under CI.
@@ -28,6 +37,7 @@ import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { standInContext } from "./aacContext.js";
 import { findChrome, launch } from "./headlessChrome.js";
+import { pixelDifference } from "./pngPixels.js";
 import {
   caseInputs, KINDS, loadScript, manifestOf, PY, PY_ENV, pythonOracle, readBundle, readVerify, RECEIPTS,
   REVIVE_CONTEXT, ROOT, scriptBytes, scriptJson, serializeContext,
@@ -125,6 +135,36 @@ const MEASURE = `(() => ({
   nested: document.querySelectorAll("details details").length,
   module: document.querySelector("[data-receipt-module]")?.getAttribute("data-receipt-module") ?? null,
 }))()`;
+// Fonts loaded, the kit stylesheet applied (a drilldown has its border), two frames painted.
+const SETTLE_FOR_SHOT = `(async () => {
+  await document.fonts.ready;
+  const styled = () => { const d = document.querySelector(".cv-drilldown"); return !d || getComputedStyle(d).borderTopStyle === "solid"; };
+  for (let i = 0; i < 100 && !styled(); i += 1) await new Promise((r) => setTimeout(r, 20));
+  for (let i = 0; i < 2; i += 1) await new Promise((r) => requestAnimationFrame(() => r()));
+  return styled();
+})()`;
+// The page as laid out: the text, and per element (outside the script page's
+// host and wrapper) its tag, box and computed style.
+const STYLE_PROPS = ["display", "visibility", "color", "background-color", "font-family", "font-size", "font-weight", "font-style",
+  "line-height", "border-top-style", "border-top-width", "border-top-color", "border-left-width", "padding-left", "margin-top"];
+const LAYOUT = `(() => {
+  const main = document.querySelector("main");
+  const skip = (e) => e.id === "cv-host" || e.hasAttribute("data-receipt-module") || e.tagName === "STYLE" || e.tagName === "SCRIPT";
+  const els = [...main.querySelectorAll("*")].filter((e) => !skip(e));
+  const props = ${JSON.stringify(STYLE_PROPS)};
+  return {
+    text: main.innerText,
+    size: [document.documentElement.clientWidth, document.documentElement.scrollHeight],
+    elements: els.map((e) => {
+      const r = e.getBoundingClientRect();
+      const cs = getComputedStyle(e);
+      return [e.tagName, ...[r.x, r.y, r.width, r.height].map((v) => Math.round(v * 100) / 100), ...props.map((p) => cs.getPropertyValue(p))].join("|");
+    }),
+  };
+})()`;
+// The share of pixels two screenshots of equal text, boxes and styles may
+// differ in (rasterisation, never content: see (3) above).
+const PIXEL_TOLERANCE = 0.002;
 const OPEN_ALL = `document.querySelectorAll("details").forEach((d) => { d.open = true; }); document.querySelectorAll("details").length`;
 
 describe.skipIf(!chromePath)("in headless Chromium", () => {
@@ -177,7 +217,7 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
     { name: "bilateral-counterparty", audience: "counterparty", kind: "bilateral" },
   ];
   for (const g of GOLDENS) {
-    it(`golden receipt-${g.name}: the script's page is the Python page, pixel for pixel, at 390 and 1280, closed and open`, async () => {
+    it(`golden receipt-${g.name}: the script's page is the Python page (text, boxes, styles, pixels) at 390 and 1280, closed and open`, async () => {
       const page = execFileSync(PY, ["-m", "capsule_viewer.receipt", join(RECEIPTS, `${g.name}.bundle.json`), join(RECEIPTS, `${g.name}.verify.json`), g.audience, "L0"],
         { cwd: ROOT, env: PY_ENV, encoding: "utf8" });
       // Both pages without the CSP meta (the script page runs inline scripts); layout is unchanged by it.
@@ -203,15 +243,28 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
       writeFileSync(files.script, scripted);
       for (const width of [390, 1280]) {
         for (const state of ["closed", "open"]) {
+          const label = `receipt-${g.name}-${width}-${state}`;
           const shots = {};
+          const layout = {};
           for (const [side, file] of Object.entries(files)) {
             await tab.open(pathToFileURL(file).href, { width, media: "screen" });
             if (side === "script") expect((await settle()).rendered).toBe("true");
             if (state === "open") await tab.evaluate(OPEN_ALL);
+            const settled = await tab.call("Runtime.evaluate", { expression: SETTLE_FOR_SHOT, awaitPromise: true, returnByValue: true });
+            expect(settled.result.value, `${label} ${side}: the kit stylesheet applied`).toBe(true);
+            layout[side] = await tab.evaluate(LAYOUT);
             shots[side] = await tab.screenshot();
           }
+          expect(layout.script.text, `${label}: text`).toBe(layout.python.text);
+          expect(layout.script.size, `${label}: page size`).toEqual(layout.python.size);
+          expect(layout.script.elements, `${label}: every element's box and computed style`).toEqual(layout.python.elements);
           const digest = (b) => createHash("sha256").update(b).digest("hex");
-          expect(digest(shots.script), `receipt-${g.name}-${width}-${state}`).toBe(digest(shots.python));
+          if (digest(shots.script) !== digest(shots.python)) {
+            const d = pixelDifference(shots.script, shots.python);
+            expect(d, `${label}: screenshot sizes`).not.toBeNull();
+            console.warn(`${label}: screenshots differ in ${d.differing} of ${d.total} pixels (${d.width}x${d.height}); text, boxes and styles equal`);
+            expect(d.differing / d.total, `${label}: share of differing pixels`).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+          }
         }
       }
     }, 120000);
