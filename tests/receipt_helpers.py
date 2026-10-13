@@ -73,6 +73,8 @@ def audience_of(name: str) -> str:
         return SELLER[name]
     if name == "seller-bilateral" or name.startswith("buyer-producer-"):
         return "counterparty"
+    if name.startswith("main-"):  # cut by examples/receipt/cut_main_bundles.sh: main-<side>-<audience>
+        return name.rsplit("-", 1)[1]
     return "keep" if name.startswith("golden") else name
 
 

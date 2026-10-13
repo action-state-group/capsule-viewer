@@ -402,7 +402,12 @@ class SellerReceiptModule(UnilateralReceiptModule):
         l0: list[str] = []
         if model.demo:
             l0.append(_el("p", self.w("badge.demo"), data_demo="true"))
-        l0 += [_el("h2", self.w("seller.title")), levels.headline, *levels.notes]
+        l0.append(_el("h2", self.w("seller.title")))
+        # The seller's own copy carries the PRIVATE banner, as every keep copy
+        # does (module.py); a copy cut for anyone else never does.
+        if model.receipt.report.audience == "keep":
+            l0.append(self.private_banner())
+        l0 += [levels.headline, *levels.notes]
         return str(
             _join(
                 [

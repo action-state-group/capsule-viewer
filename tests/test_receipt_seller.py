@@ -159,10 +159,15 @@ def test_the_seller_manifest_requires_the_kind_and_the_unilateral_forbids_it():
 
 def test_the_kind_is_named_in_one_place():
     """The final name (x-deal-seller/v0) lives in role.py's constant; no
-    manifest file or other module spells it."""
+    manifest file or other module spells it. The module-slot scripts and
+    their manifests carry it as module_slot.py writes them from that constant
+    (tests/test_receipt_module_slot.py holds them to it)."""
+    from capsule_viewer.receipt import module_slot
+
     assert SELLER_KIND == "x-deal-seller/v0"
     src = ROOT / "src" / "capsule_viewer"
-    sources = [p for p in src.rglob("*") if p.suffix in (".py", ".json", ".js", ".css")]
+    generated = {p.resolve() for p in module_slot.outputs()}
+    sources = [p for p in src.rglob("*") if p.suffix in (".py", ".json", ".js", ".css") and p.resolve() not in generated]
     naming = sorted(str(p.relative_to(src)) for p in sources if SELLER_KIND in p.read_text(encoding="utf-8"))
     assert naming == ["receipt/role.py"]
 
