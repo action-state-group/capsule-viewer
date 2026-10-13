@@ -26,8 +26,9 @@
 // One file for the History module's tests (#26) and the receipt modules' tests
 // (#27). The receipt modules' tests add one thing: a composed/v1 block's
 // verification (`extensions[].composed`, AAC's ComposedResult), read from
-// capsulectl verify's report on the block (`aacComposed`). The context's
-// shape is checked against AAC's interface source in js-tests/history_card.test.js.
+// capsulectl verify's report on the block (`aacComposed`). Both are checked
+// against AAC's interface source: the context in js-tests/history_card.test.js,
+// the composed/v1 verification in js-tests/aac_context.test.js.
 import { createHash } from "node:crypto";
 
 const EXCLUDED = new Set(["capsule_id", "signature", "key_id"]);
@@ -197,6 +198,27 @@ export function interfaceFields(source, name, nested) {
   }
   const field = new RegExp(`^${indent}readonly (\\w+)(\\??):`);
   return body.map((l) => field.exec(l)).filter(Boolean).map((m) => m[1] + m[2]);
+}
+
+/**
+ * The field names of `export type <name> =`, a union of inline object types,
+ * in an AAC source file: every variant's fields in first-seen order, a name
+ * ending in "?" where some variant declares it optional or lacks it.
+ */
+export function unionFields(source, name) {
+  const lines = source.split("\n");
+  const start = lines.findIndex((l) => l.startsWith(`export type ${name} =`));
+  if (start < 0) return null;
+  const end = lines.findIndex((l, i) => i > start && l.startsWith("    };"));
+  const variants = [];
+  for (const line of lines.slice(start + 1, end + 1)) {
+    if (line.startsWith("  | {")) variants.push(new Map());
+    const m = /^ {6}readonly (\w+)(\??):/.exec(line);
+    if (m && variants.length) variants[variants.length - 1].set(m[1], m[2] === "?");
+  }
+  const order = [];
+  for (const v of variants) for (const k of v.keys()) if (!order.includes(k)) order.push(k);
+  return order.map((k) => (variants.every((v) => v.has(k) && !v.get(k)) ? k : `${k}?`));
 }
 
 /**

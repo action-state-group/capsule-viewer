@@ -8,5 +8,16 @@
     "ClaimResult": {"file": "bundle.ts", "fields": ["status", "findings"]},
     "DisclosureResult": {"file": "bundle.ts", "fields": ["capsuleId", "member", "status"]},
     "VerificationResult": {"file": "verify.ts", "fields": ["ok", "findings", "assurance", "capsuleId?"]}
+  },
+  "composed_source": "agent-action-capsule 3a7aca6, ts/src/bundle.ts and ts/src/composed.ts",
+  "composed_note": "The fields of a composed/v1 block's verification as js-tests/aacContext.js aacComposed builds it (the receipt modules' contexts, #27). A union type's fields are every variant's, a name ending in ? where some variant lacks it or declares it optional. js-tests/aac_context.test.js checks the stand-in against this list, and this list against the source when an agent-action-capsule checkout is present.",
+  "composed": {
+    "ExtensionResult": {"file": "bundle.ts", "union": true, "fields": ["kind", "status", "interpreter?", "integrityCovered", "composed?"]},
+    "ComposedResult": {"file": "composed.ts", "union": true, "fields": ["status", "malformed", "findings", "composedDigest?", "members?", "observers?", "compositionClosure?", "joins?", "corroboration?"]},
+    "ComposedDigestResult": {"file": "composed.ts", "fields": ["declared", "recomputed", "matches"]},
+    "ComposedMemberResult": {"file": "composed.ts", "fields": ["id", "observer", "outcome", "body", "digest", "findings", "bundle?", "refusalSignature?"]},
+    "ComposedMemberClaims": {"file": "composed.ts", "fields": ["graphClosure", "intervalCoverage", "perRecordMembership"]},
+    "ComposedClaim": {"file": "composed.ts", "fields": ["status", "findings"]},
+    "ObserverDeclaration": {"file": "composed.ts", "fields": ["id", "role", "custodyDomain"]}
   }
 }
