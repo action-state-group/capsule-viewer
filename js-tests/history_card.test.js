@@ -311,7 +311,7 @@ describe("the mutant matrix: each real file, in the module", () => {
     const { model, host } = present(read("history-two-buyers"), realContext("history-two-buyers"));
     expect(model.result.state).toBe("card");
     expect(host.L0.querySelector('[data-history-value="selected_count"]').textContent).toBe("2");
-    expect(host.L0.querySelector('[data-history-value="effect_status"]').textContent).toBe(load().H.WORDS.effectStatusNone);
+    expect(host.L0.querySelector('[data-history-value="effect_status"]').textContent).toBe(load().H.WORDS["effect_status.none"]);
     expect(model.not_proven).toEqual(["outcome", "action_class"]);
   });
 
@@ -327,9 +327,9 @@ describe("the mutant matrix: each real file, in the module", () => {
       expect(status[p]).toBe("NOT_CHECKED");
       expect(words(p)).toBe(`NOT_CHECKED ${SIGNATURE_WORDS}`);
     }
-    expect(H.WORDS.signatureNotChecked).toBe(SIGNATURE_WORDS);
-    expect(H.WORDS.memberNotChecked).toBe(SIGNATURE_WORDS);
-    expect(H.WORDS.l2Signing.endsWith(`every signature status here is ${SIGNATURE_WORDS}.`)).toBe(true);
+    expect(H.WORDS.signature_not_checked).toBe(SIGNATURE_WORDS);
+    expect(H.WORDS.member_not_checked).toBe(SIGNATURE_WORDS);
+    expect(H.WORDS["l2.signing"].endsWith(`every signature status here is ${SIGNATURE_WORDS}.`)).toBe(true);
     // The digest and completeness properties: checked by this page.
     for (const p of ["selection_record", "selection_root", "history_log", "selection_sealed", "membership", "member_digests", "member_records"]) {
       expect(status[p]).toBe("PASS");
@@ -338,7 +338,7 @@ describe("the mutant matrix: each real file, in the module", () => {
     expect(status.values).toBe("NOT_PRESENT");
     // What the holder states (D2/D3): never a pass, and the row says no one checks it.
     expect(status.holder_stated).toBe("NOT_CHECKED");
-    expect(words("holder_stated")).toBe(`NOT_CHECKED ${H.WORDS.holderStatedNotChecked}`);
+    expect(words("holder_stated")).toBe(`NOT_CHECKED ${H.WORDS.holder_stated_not_checked}`);
     expect(signatureClaims(blocks(host.L2))).toEqual([]);
     expect(host.L0.textContent).not.toMatch(/\bverified\b/i);
   });
@@ -426,8 +426,8 @@ describe("History Basic wording: L0, T8, the page states and the checks-ran list
       const line = [...h.L0.querySelectorAll("p[data-history-page-state]")];
       expect(line, s).toHaveLength(1);
       expect(line[0].getAttribute("data-history-page-state")).toBe(s);
-      expect(line[0].querySelector("strong").textContent).toBe(H.WORDS.pageState[s]);
-      expect(line[0].textContent).toBe(`${H.WORDS.pageState[s]}. ${H.WORDS.pageStateNote[s]}`);
+      expect(line[0].querySelector("strong").textContent).toBe(H.WORDS[`page_state.${s}`]);
+      expect(line[0].textContent).toBe(`${H.WORDS[`page_state.${s}`]}. ${H.WORDS[`page_state_note.${s}`]}`);
       // A value only in the integrity-checked state.
       expect(!!h.L0.querySelector("[data-history-value]"), s).toBe(s === "integrity_checked");
       for (const level of [h.L0, h.L1, h.L2]) {
@@ -439,9 +439,9 @@ describe("History Basic wording: L0, T8, the page states and the checks-ran list
     for (const i of [0, 1, 2]) expect(new Set(drawn.map((d) => d[i])).size).toBe(4);
     // Unable to verify is not a finding about the file: its own title, never "does not check".
     const unable = drawState("unable_to_verify");
-    expect(unable.L0.querySelector("h2").textContent).toBe(H.WORDS.notCheckedTitle);
+    expect(unable.L0.querySelector("h2").textContent).toBe(H.WORDS["not_checked.title"]);
     expect(unable.L0.getAttribute("data-history-state")).toBe("not_checked");
-    expect(unable.L0.textContent).not.toContain(H.WORDS.invalidTitle);
+    expect(unable.L0.textContent).not.toContain(H.WORDS["invalid.title"]);
   });
 
   it("every real file's page state is the mapping of its state", () => {
@@ -480,7 +480,7 @@ describe("History Basic wording: L0, T8, the page states and the checks-ran list
       for (const p of ["selection_record_signature", "member_signatures"]) {
         expect(listed("ran"), name).not.toContain(p);
         const row = h.L2.querySelector(`[data-history-checks="not-ran"] [data-check="${p}"]`);
-        if (props[p] === "NOT_CHECKED") expect(row.textContent).toBe(`${H.WORDS.property[p]}: ${SIGNATURE_WORDS}`);
+        if (props[p] === "NOT_CHECKED") expect(row.textContent).toBe(`${H.WORDS[`property.${p}`]}: ${SIGNATURE_WORDS}`);
       }
       expect(signatureClaims(blocks(h.L2)), name).toEqual([]);
     }
@@ -632,9 +632,9 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
       expect(model.result.findings).toEqual(["selection_audience_not_history"]);
       expect(model.not_proven).toEqual([]);
       expect(h.L0.querySelector('[data-history="card"]')).toBeNull();
-      expect(h.L0.querySelector("h2").textContent).toBe(load().H.WORDS.invalidTitle);
-      const words = load().H.WORDS.finding;
-      expect(h.L0.querySelector("[data-history-error]").textContent).toBe(`${words.selection_audience_not_history} [selection_audience_not_history]`);
+      expect(h.L0.querySelector("h2").textContent).toBe(load().H.WORDS["invalid.title"]);
+      const words = load().H.WORDS["finding.selection_audience_not_history"];
+      expect(h.L0.querySelector("[data-history-error]").textContent).toBe(`${words} [selection_audience_not_history]`);
     });
   }
 
@@ -642,14 +642,14 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
     const { model, host: h } = present(withAudience("history-history", "keep"));
     expect(model.result.state).toBe("not_shareable");
     expect(model.result.findings).toEqual(KEEP);
-    expect(h.L0.querySelector("h2").textContent).toBe(load().H.WORDS.notShareableTitle);
+    expect(h.L0.querySelector("h2").textContent).toBe(load().H.WORDS["not_shareable.title"]);
   });
 
   it("a payload disclosed, or the audience not history: This History does not check, never the card", () => {
     for (const name of ["mutant-payload-disclosed", "mutant-counterparty-member", "mutant-audience-not-history"]) {
       const { model, host: h } = present(read(name), realContext(name));
       expect(model.result.state, name).toBe("invalid");
-      expect(h.L0.querySelector("h2").textContent, name).toBe(load().H.WORDS.invalidTitle);
+      expect(h.L0.querySelector("h2").textContent, name).toBe(load().H.WORDS["invalid.title"]);
       expect(h.L0.querySelector('[data-history="card"]'), name).toBeNull();
       expect(verified(name).verdict, name).toBe("INVALID");
     }
@@ -659,7 +659,7 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
     const { model, host: h } = present(SHAREABLE);
     expect(model.result.audience).toBe("history");
     expect(model.result.state).toBe("card");
-    expect(h.L0.querySelector("[data-history-audience]").textContent).toBe(`${load().H.WORDS.audience.history} (history)`);
+    expect(h.L0.querySelector("[data-history-audience]").textContent).toBe(`${load().H.WORDS["audience.history"]} (history)`);
   });
 });
 
@@ -808,12 +808,12 @@ describe("the module and the Python check agree", () => {
     // D2: who the History is for, in L0, as the holder states it.
     expect(model.result.recipient).toBe(CUT.recipient["history-history"]);
     expect(host.L0.querySelector("[data-history-recipient]").textContent).toBe(`For ${CUT.recipient["history-history"]}, as stated by the holder`);
-    expect(H.WORDS.recipient).toEqual({ before: "For ", after: ", as stated by the holder" });
+    expect(H.WORDS.recipient).toBe("For {recipient}, as stated by the holder");
     // D3: the floor deal (1 step after its checkpoint) and only it says later steps exist.
     const later = [...host.L1.querySelectorAll("[data-history-later-steps]")].map((e) => e.closest("[data-deal]").getAttribute("data-deal"));
     expect(later).toEqual([FLOOR]);
     expect(host.L1.querySelector("[data-history-later-steps]").textContent).toBe(" (later steps exist, per the holder)");
-    expect(H.WORDS.l1LaterSteps).toBe("later steps exist, per the holder");
+    expect(H.WORDS["l1.later_steps"]).toBe("later steps exist, per the holder");
     // Never as checked: the property is NOT_CHECKED, and no rendered line calls either statement checked or verified.
     expect(model.result.properties.holder_stated).toBe("NOT_CHECKED");
     const lines = blocks(host.L0).split("\n").concat(blocks(host.L1).split("\n")).filter((l) => /as stated by the holder|per the holder/.test(l));

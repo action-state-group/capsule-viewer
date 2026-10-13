@@ -61,6 +61,7 @@ import re
 from collections.abc import Mapping
 
 from ..digest import jcs
+from .words import word
 
 SELECTION_EXTENSION = "x-history-selection/v0"
 # A History's own log: this prefix and the selection record's sealed nonce.
@@ -87,12 +88,13 @@ RECOMPUTED_KEYS = ("completeness", "effect_status", "period", "selected_count")
 # neither. capsule-cli writes only "dispatched" for a deal's act.
 COMPLETED_STATUS = "confirmed"
 FAILED_STATUS = "failed"
-MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-# L0's words, as the module compiles them in (history_card.js WORDS.l0*).
-L0_TITLE = "History Card \u00b7 Delivery outcomes not established"
-L0_DEALS = ("selected deal", "selected deals")
-L0_COMPLETED = "with recorded completed steps"
-L0_FAILED = "with a recorded failed step"
+# L0's words, from the module's wording pack (history/wording-en.json, the
+# bytes history_card.js carries), keys l0.* and period.*.
+MONTHS = tuple(word(f"period.month.{m}") for m in range(1, 13))
+L0_TITLE = word("l0.title")
+L0_DEALS = (word("l0.deals.one"), word("l0.deals.other"))
+L0_COMPLETED = word("l0.completed")
+L0_FAILED = word("l0.failed")
 # The page check states (History Basic wording, FR-32).
 PAGE_STATES = ("checking", "integrity_checked", "failed", "unable_to_verify")
 # agent-action-capsule canonical.py: capsule_id and the local-only producer fields leave the preimage.
@@ -235,10 +237,12 @@ def period_text(period: Mapping) -> str:
 
     start, end = at(period.get("from")), at(period.get("to"))
     if start is None or end is None:
-        return f"{_js_str(period.get('from'))} to {_js_str(period.get('to'))}"
+        return word("period.range", **{"from": _js_str(period.get("from")), "to": _js_str(period.get("to"))})
     if start[0] != end[0]:
-        return f"{start[1]} {start[0]}\u2013{end[1]} {end[0]}"
-    return ("" if start[1] == end[1] else f"{start[1]}\u2013") + f"{end[1]} {end[0]}"
+        return word("period.years", **{"from": start[1], "from_year": start[0], "to": end[1], "to_year": end[0]})
+    if start[1] == end[1]:
+        return word("period.one_month", month=end[1], year=end[0])
+    return word("period.months", **{"from": start[1], "to": end[1], "year": end[0]})
 
 
 def _js_str(v) -> str:

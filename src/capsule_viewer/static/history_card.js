@@ -2,10 +2,14 @@
 // The History Card, in the page: capsuleviewer.history/v0's check and card
 // (docs/design/history-card.md, sections 1 to 3).
 //
-// One self-contained script. It imports nothing and reads no wording pack:
-// its words are compiled in (WORDS below). It needs only the DOM; UTF-8 and
-// SHA-256 are computed here, synchronously, so the check runs the same in a
-// secure context, on file:// and in Node.
+// One self-contained script. It imports nothing. Its words are its wording
+// pack's (capsule_viewer/history/wording-en.json), carried here as data (the
+// pack's bytes, PACK_TEXT below) and read at load: the code holds no
+// person-facing words (tests/test_wording_packs.py greps it), and the model
+// buildModel returns records the pack's wording_sha256 and the
+// renderer_version. It needs only the DOM; UTF-8 and SHA-256 are computed
+// here, synchronously, so the check runs the same in a secure context, on
+// file:// and in Node.
 //
 // It is a module-slot script (agent-action-capsule's presentation contract,
 // as capsulectl.deal-view/v0 is): at load it registers its module with the
@@ -51,7 +55,7 @@
 // reads the selection record's identity and the history log's checkpoint and
 // membership, PASS or FAIL as checked by this page. That verifier checks no
 // record signature, so every signature status (the selection record's, each
-// deal copy's) is NOT_CHECKED, in one wording (WORDS.signatureNotChecked):
+// deal copy's) is NOT_CHECKED, in one wording (the pack's signature_not_checked):
 // checked by capsulectl on the sender's machine, not by this page. Each
 // nested deal copy's log is NOT_CHECKED in the same words.
 //
@@ -96,7 +100,6 @@
   // deal's act, so on its Histories K and F are 0.
   var COMPLETED_STATUS = "confirmed";
   var FAILED_STATUS = "failed";
-  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   // The page check states (History Basic wording, FR-32), each drawn distinctly. checking is
   // drawn before the model is built (checkingModel); the others follow from
   // the reading's state (pageState).
@@ -114,133 +117,13 @@
   var MAX_SAFE = 9007199254740991;
   var MANIFEST = {"spec_version": "aac.presentation-manifest/v0", "id": "capsuleviewer.history/v0", "presentation_api": "aac.presentation-api/v0", "runtime_min": "0.1.0", "trust_class": "trusted-executable", "requires": {"bundle_kind": "evidence-bundle/v2", "extensions": {"required": ["x-history-selection/v0"]}}, "forbids": {"profiles": ["spec_version:report/v1", "spec_version:evaluation-summary/v1", "result_version:evidence-result-v0"]}, "audiences": ["history", "keep", "counterparty", "adjudicator"], "formats": ["html"], "fallback": false, "priority": 1, "executable": {"carrier": "module-slot", "script_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}};
 
-  // ---- the page's words (compiled in; no pack is read) ---------------------
-
-  // The one wording of every signature status (and each deal copy's log).
-  var SIGNATURE_NOT_CHECKED = "checked by capsulectl on the sender's machine, not by this page";
-
-  var WORDS = {
-    l0Title: "History Card \u00b7 Delivery outcomes not established",
-    l0Deals: { one: "selected deal", other: "selected deals" },
-    l0Completed: "with recorded completed steps",
-    l0Failed: "with a recorded failed step",
-    pageState: {
-      checking: "Checking",
-      integrity_checked: "Integrity checked",
-      failed: "Failed",
-      unable_to_verify: "Unable to verify",
-    },
-    pageStateNote: {
-      checking: "This page is checking the file. No value is shown until the check ends.",
-      integrity_checked: "This page checked the file's contents, as listed under How this page checked the file. Signatures are " + SIGNATURE_NOT_CHECKED + ".",
-      failed: "This page found that the file does not hold as a History to show. No value is shown.",
-      unable_to_verify: "This page could not run its check on this file. That is not a finding about the file: check it with capsulectl verify --bundle.",
-    },
-    checksRan: "Checked by this page",
-    checksNotRan: "Not checked by this page",
-    checksAbsent: "Not in this file",
-    checksNone: "None.",
-    lead: "Deal copies presented by the holder of key K, each a copy for the audience below. The card shows the copies the sealed selection names and no others.",
-    limitation: "A History shows only that the holder of key K presents these copies, each of which verifies on its own. It does not show that the holder of key K made, took part in or owns these deals.",
-    keyK: "Key K (signs the selection record)",
-    audience: { history: "History copies: every record's payload withheld; only its time and an act's effect status show" },
-    period: "Period",
-    periodNote: "earliest to latest record time in the selected deals, as the records state them (producer_asserted)",
-    selected: "Deals selected",
-    completeness: "Completeness",
-    notAsserted: "Not asserted",
-    completenessNote: "The holder of key K chose which copies to present. The selection does not claim to be every deal of anyone, for any period.",
-    effectStatus: "Effect status in the selected deals' records",
-    effectStatusNote: "Each record whose capsule states an effect status counts once, under that status: what the producer's runtime claimed, not that it happened.",
-    effectStatusNone: "No record states an effect status.",
-    notProvenTitle: "Not proven by this History",
-    notProven: { outcome: "Outcome", action_class: "Action class" },
-    notProvenValue: "not proven: the copy withholds the record payload",
-    computedHere: "Computed by this page from the records in this file. The file states no values of its own.",
-    recomputedHere: "Stated in this file and recomputed by this page from the records in it.",
-    forbidding: "This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.",
-    l1: "Each selected deal and its records",
-    l1DealId: "Deal",
-    l1Copy: "Copy for",
-    l1Records: "Records",
-    l1Digest: "Matches its selection entry",
-    l1LaterSteps: "later steps exist, per the holder",
-    recipient: { before: "For ", after: ", as stated by the holder" },
-    holderStatedNotChecked: "what the holder states, sealed with the selection; not checked against the deals by this page or by capsulectl",
-    l1Time: "Time",
-    l1Status: "Effect status",
-    l1Id: "Record (capsule id)",
-    l2: "How this page checked the file",
-    l2Lead: "Each property and what this page found. NOT_CHECKED means this page does not check it; it is not a pass.",
-    l2Property: "Property",
-    l2Status: "Status",
-    l2Holder: "Key K (signs the selection record)",
-    l2Signers: "Keys named by the selected deals' records",
-    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest, and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier does not check a record's signature, so every signature status here is " + SIGNATURE_NOT_CHECKED + ".",
-    signatureNotChecked: SIGNATURE_NOT_CHECKED,
-    memberNotChecked: SIGNATURE_NOT_CHECKED,
-    property: {
-      selection_record: "The selection record is on the history log's bundle, recomputes to its id and its sealed pick matches its digest",
-      selection_record_signature: "The selection record's signature",
-      selection_root: "The selection record is the root of the History's bundle",
-      history_log: "The bundle is of the History's own log, deal-history/ and the sealed nonce (its checkpoint and the selection record's membership)",
-      selection_sealed: "The selection the file carries is the sealed one",
-      holder_stated: "What the holder states with the selection: who the History is for, and each deal's later steps",
-      membership: "Every carried deal is selected and every selected deal is carried",
-      member_digests: "Each deal copy is the one its selection entry names (digest)",
-      audience: "Every copy is for the sealed audience, and that audience is shareable",
-      signer_keys: "One key, K, named by every record",
-      member_records: "Each deal's records recompute to their ids and their disclosures match",
-      member_signatures: "Each deal's record signatures",
-      member_logs: "Each deal copy is of its own deal log (checkpoint and membership)",
-      values: "Values stated in the file recompute",
-    },
-    status: {
-      PASS: "holds (checked by this page)",
-      FAIL: "fails (checked by this page)",
-      NOT_CHECKED: "not checked by this page",
-      NOT_PRESENT: "not in this file",
-    },
-    notShareableTitle: "Not a shareable History",
-    notShareableLead: "This file is not a History to be shown to anyone: it holds a keep copy (never one to send), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.",
-    invalidTitle: "This History does not check",
-    invalidLead: "This page found what does not hold in this file, so no card is shown.",
-    mismatchTitle: "This History does not recompute",
-    mismatchLead: "The values this file states do not follow from the records it carries, so no card is shown.",
-    notCheckedTitle: "This page could not check this file",
-    notCheckedLead: "The check stopped before it finished, so no card is shown.",
-    reasons: "What did not hold:",
-    finding: {
-      history_audience_keep: "the History is a keep copy (audience keep), never one to send",
-      selection_audience_not_history: "the sealed selection is not for the audience history, the copies a History is shown with (counterparty and adjudicator copies are made for someone in the deal)",
-      deal_audience_keep: "this deal's copy is a keep copy (audience keep)",
-      deal_audience_not_selected: "this deal's copy is for another audience than the sealed one",
-      deal_payload_disclosed: "this deal's copy discloses a record payload, which a History's copy withholds",
-      deal_invalid: "this deal's copy does not verify on its own",
-      deal_signers_differ: "the selected deals' records are signed by more than one key",
-      deal_signed_by_other_key: "this deal's records name a key other than K, the key that signs the selection record",
-      deal_not_in_selection: "this deal is carried but is not in the sealed selection",
-      deal_missing: "this deal is in the sealed selection but is not carried",
-      deal_bundle_not_the_selected_one: "this deal's copy is not the one the selection names",
-      deal_not_a_bundle: "this deal's copy is not an evidence-bundle/v2",
-      deal_record_unsigned: "a record of this deal carries no signature",
-      deal_record_id_mismatch: "a record of this deal does not recompute to its id",
-      deal_disclosure_mismatch: "a disclosure of this deal does not match its digest",
-      deal_checkpoint_missing: "this deal's copy carries no checkpoint",
-      selection_not_sealed: "the selection the file carries is not the sealed one",
-      selection_missing: "the sealed selection names no deal",
-      selection_entry_malformed: "a selection entry is malformed (its deal id, digest or count of later steps)",
-      selection_recipient_missing: "the sealed selection does not say who the History is for",
-      selection_record_unverified: "the selection record is missing, or does not match its seal",
-      selection_record_unsigned: "the selection record carries no signature",
-      selection_record_not_root: "the selection record is not the root of the History's bundle",
-      history_checkpoint_missing: "the History carries no checkpoint",
-      not_a_history_log: "the History's bundle is not of its own log (deal-history/ and the nonce its selection record seals)",
-      history_log_unproven: "the page's verifier found that the history log's checkpoint, or the selection record's membership in that log, does not hold",
-      history_bundle_unverified: "the page's verifier did not pass the History's own bundle (its records, root, disclosures, checkpoint or membership)",
-    },
-    statusGloss: "the producer's runtime claimed ",
-  };
+  // ---- the page's words: the module's wording pack, as data -----------------
+  // The pack's exact bytes as text (UTF-8 decoded; capsule_viewer/history/
+  // wording-en.json, put here by `python -m capsule_viewer.history pin`) and
+  // capsule-viewer's version. Every word the module shows is the pack's: read
+  // below (readPack), after the SHA-256 that hashes it.
+  var PACK_TEXT = "{\n  \"wording_pack_version\": \"aac.wording-pack/v0\",\n  \"id\": \"capsuleviewer.history.wording.example-en/v0\",\n  \"locale\": \"en\",\n  \"entries\": {\n    \"l0.title\": \"History Card · Delivery outcomes not established\",\n    \"l0.deals.one\": \"selected deal\",\n    \"l0.deals.other\": \"selected deals\",\n    \"l0.completed\": \"with recorded completed steps\",\n    \"l0.failed\": \"with a recorded failed step\",\n    \"page_state.checking\": \"Checking\",\n    \"page_state.integrity_checked\": \"Integrity checked\",\n    \"page_state.failed\": \"Failed\",\n    \"page_state.unable_to_verify\": \"Unable to verify\",\n    \"page_state_note.checking\": \"This page is checking the file. No value is shown until the check ends.\",\n    \"page_state_note.integrity_checked\": \"This page checked the file's contents, as listed under How this page checked the file. Signatures are checked by capsulectl on the sender's machine, not by this page.\",\n    \"page_state_note.failed\": \"This page found that the file does not hold as a History to show. No value is shown.\",\n    \"page_state_note.unable_to_verify\": \"This page could not run its check on this file. That is not a finding about the file: check it with capsulectl verify --bundle.\",\n    \"checks.ran\": \"Checked by this page\",\n    \"checks.not_ran\": \"Not checked by this page\",\n    \"checks.absent\": \"Not in this file\",\n    \"checks.none\": \"None.\",\n    \"lead\": \"Deal copies presented by the holder of key K, each a copy for the audience below. The card shows the copies the sealed selection names and no others.\",\n    \"limitation\": \"A History shows only that the holder of key K presents these copies, each of which verifies on its own. It does not show that the holder of key K made, took part in or owns these deals.\",\n    \"key_k\": \"Key K (signs the selection record)\",\n    \"audience.history\": \"History copies: every record's payload withheld; only its time and an act's effect status show\",\n    \"period\": \"Period\",\n    \"period.note\": \"earliest to latest record time in the selected deals, as the records state them (producer_asserted)\",\n    \"period.range\": \"{from} to {to}\",\n    \"period.month.1\": \"Jan\",\n    \"period.month.2\": \"Feb\",\n    \"period.month.3\": \"Mar\",\n    \"period.month.4\": \"Apr\",\n    \"period.month.5\": \"May\",\n    \"period.month.6\": \"Jun\",\n    \"period.month.7\": \"Jul\",\n    \"period.month.8\": \"Aug\",\n    \"period.month.9\": \"Sep\",\n    \"period.month.10\": \"Oct\",\n    \"period.month.11\": \"Nov\",\n    \"period.month.12\": \"Dec\",\n    \"period.one_month\": \"{month} {year}\",\n    \"period.months\": \"{from}–{to} {year}\",\n    \"period.years\": \"{from} {from_year}–{to} {to_year}\",\n    \"selected\": \"Deals selected\",\n    \"completeness\": \"Completeness\",\n    \"not_asserted\": \"Not asserted\",\n    \"completeness.note\": \"The holder of key K chose which copies to present. The selection does not claim to be every deal of anyone, for any period.\",\n    \"effect_status\": \"Effect status in the selected deals' records\",\n    \"effect_status.note\": \"Each record whose capsule states an effect status counts once, under that status: what the producer's runtime claimed, not that it happened.\",\n    \"effect_status.none\": \"No record states an effect status.\",\n    \"effect_status.gloss\": \"the producer's runtime claimed {status}\",\n    \"not_proven.title\": \"Not proven by this History\",\n    \"not_proven.outcome\": \"Outcome\",\n    \"not_proven.action_class\": \"Action class\",\n    \"not_proven.value\": \"not proven: the copy withholds the record payload\",\n    \"computed_here\": \"Computed by this page from the records in this file. The file states no values of its own.\",\n    \"recomputed_here\": \"Stated in this file and recomputed by this page from the records in it.\",\n    \"forbidding\": \"This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.\",\n    \"l1\": \"Each selected deal and its records\",\n    \"l1.deal\": \"Deal\",\n    \"l1.copy\": \"Copy for\",\n    \"l1.records\": \"Records\",\n    \"l1.digest\": \"Matches its selection entry\",\n    \"l1.later_steps\": \"later steps exist, per the holder\",\n    \"recipient\": \"For {recipient}, as stated by the holder\",\n    \"holder_stated_not_checked\": \"what the holder states, sealed with the selection; not checked against the deals by this page or by capsulectl\",\n    \"l1.time\": \"Time\",\n    \"l1.status\": \"Effect status\",\n    \"l1.id\": \"Record (capsule id)\",\n    \"l2\": \"How this page checked the file\",\n    \"l2.lead\": \"Each property and what this page found. NOT_CHECKED means this page does not check it; it is not a pass.\",\n    \"l2.property\": \"Property\",\n    \"l2.status\": \"Status\",\n    \"l2.holder\": \"Key K (signs the selection record)\",\n    \"l2.signers\": \"Keys named by the selected deals' records\",\n    \"l2.signing\": \"This page recomputes record ids, disclosure digests and each deal copy's digest, and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier does not check a record's signature, so every signature status here is checked by capsulectl on the sender's machine, not by this page.\",\n    \"signature_not_checked\": \"checked by capsulectl on the sender's machine, not by this page\",\n    \"member_not_checked\": \"checked by capsulectl on the sender's machine, not by this page\",\n    \"property.selection_record\": \"The selection record is on the history log's bundle, recomputes to its id and its sealed pick matches its digest\",\n    \"property.selection_record_signature\": \"The selection record's signature\",\n    \"property.selection_root\": \"The selection record is the root of the History's bundle\",\n    \"property.history_log\": \"The bundle is of the History's own log, deal-history/ and the sealed nonce (its checkpoint and the selection record's membership)\",\n    \"property.selection_sealed\": \"The selection the file carries is the sealed one\",\n    \"property.holder_stated\": \"What the holder states with the selection: who the History is for, and each deal's later steps\",\n    \"property.membership\": \"Every carried deal is selected and every selected deal is carried\",\n    \"property.member_digests\": \"Each deal copy is the one its selection entry names (digest)\",\n    \"property.audience\": \"Every copy is for the sealed audience, and that audience is shareable\",\n    \"property.signer_keys\": \"One key, K, named by every record\",\n    \"property.member_records\": \"Each deal's records recompute to their ids and their disclosures match\",\n    \"property.member_signatures\": \"Each deal's record signatures\",\n    \"property.member_logs\": \"Each deal copy is of its own deal log (checkpoint and membership)\",\n    \"property.values\": \"Values stated in the file recompute\",\n    \"status.pass\": \"holds (checked by this page)\",\n    \"status.fail\": \"fails (checked by this page)\",\n    \"status.not_checked\": \"not checked by this page\",\n    \"status.not_present\": \"not in this file\",\n    \"not_shareable.title\": \"Not a shareable History\",\n    \"not_shareable.lead\": \"This file is not a History to be shown to anyone: it holds a keep copy (never one to send), deal copies signed by a key other than K, or deal copies outside the sealed selection. No card is shown.\",\n    \"invalid.title\": \"This History does not check\",\n    \"invalid.lead\": \"This page found what does not hold in this file, so no card is shown.\",\n    \"mismatch.title\": \"This History does not recompute\",\n    \"mismatch.lead\": \"The values this file states do not follow from the records it carries, so no card is shown.\",\n    \"not_checked.title\": \"This page could not check this file\",\n    \"not_checked.lead\": \"The check stopped before it finished, so no card is shown.\",\n    \"reasons\": \"What did not hold:\",\n    \"finding.history_audience_keep\": \"the History is a keep copy (audience keep), never one to send\",\n    \"finding.selection_audience_not_history\": \"the sealed selection is not for the audience history, the copies a History is shown with (counterparty and adjudicator copies are made for someone in the deal)\",\n    \"finding.deal_audience_keep\": \"this deal's copy is a keep copy (audience keep)\",\n    \"finding.deal_audience_not_selected\": \"this deal's copy is for another audience than the sealed one\",\n    \"finding.deal_payload_disclosed\": \"this deal's copy discloses a record payload, which a History's copy withholds\",\n    \"finding.deal_invalid\": \"this deal's copy does not verify on its own\",\n    \"finding.deal_signers_differ\": \"the selected deals' records are signed by more than one key\",\n    \"finding.deal_signed_by_other_key\": \"this deal's records name a key other than K, the key that signs the selection record\",\n    \"finding.deal_not_in_selection\": \"this deal is carried but is not in the sealed selection\",\n    \"finding.deal_missing\": \"this deal is in the sealed selection but is not carried\",\n    \"finding.deal_bundle_not_the_selected_one\": \"this deal's copy is not the one the selection names\",\n    \"finding.deal_not_a_bundle\": \"this deal's copy is not an evidence-bundle/v2\",\n    \"finding.deal_record_unsigned\": \"a record of this deal carries no signature\",\n    \"finding.deal_record_id_mismatch\": \"a record of this deal does not recompute to its id\",\n    \"finding.deal_disclosure_mismatch\": \"a disclosure of this deal does not match its digest\",\n    \"finding.deal_checkpoint_missing\": \"this deal's copy carries no checkpoint\",\n    \"finding.selection_not_sealed\": \"the selection the file carries is not the sealed one\",\n    \"finding.selection_missing\": \"the sealed selection names no deal\",\n    \"finding.selection_entry_malformed\": \"a selection entry is malformed (its deal id, digest or count of later steps)\",\n    \"finding.selection_recipient_missing\": \"the sealed selection does not say who the History is for\",\n    \"finding.selection_record_unverified\": \"the selection record is missing, or does not match its seal\",\n    \"finding.selection_record_unsigned\": \"the selection record carries no signature\",\n    \"finding.selection_record_not_root\": \"the selection record is not the root of the History's bundle\",\n    \"finding.history_checkpoint_missing\": \"the History carries no checkpoint\",\n    \"finding.not_a_history_log\": \"the History's bundle is not of its own log (deal-history/ and the nonce its selection record seals)\",\n    \"finding.history_log_unproven\": \"the page's verifier found that the history log's checkpoint, or the selection record's membership in that log, does not hold\",\n    \"finding.history_bundle_unverified\": \"the page's verifier did not pass the History's own bundle (its records, root, disclosures, checkpoint or membership)\"\n  }\n}\n"; // @generated PACK_TEXT
+  var VERSION = "0.0.1"; // @generated VERSION
 
   // ---- SHA-256 (FIPS 180-4), synchronous ------------------------------------
 
@@ -336,6 +219,42 @@
 
   function digest(value) {
     return sha256Hex(utf8(jcs(value)));
+  }
+
+  // ---- the words -------------------------------------------------------------
+  // A wording pack (aac.wording-pack/v0) read from its bytes: its id, its
+  // entries and its wording_sha256, the SHA-256 of the bytes as they are
+  // (presentation contract, section 7.4; never re-serialised). Bytes that are
+  // not a pack give no pack: no entries (every label is shown by its key) and
+  // an empty wording_sha256, as the Python wording.EMPTY_PACK.
+
+  var WORDING_PACK_VERSION = "aac.wording-pack/v0";
+  var NO_PACK_ID = "none.refused/v0";
+  function readPack(text) {
+    var raw = null;
+    try { raw = JSON.parse(text); } catch (e) { raw = null; }
+    var entries = isObj(raw) ? raw.entries : null;
+    var keys = isObj(entries) ? Object.keys(entries) : [];
+    var ok = isObj(raw) && raw.wording_pack_version === WORDING_PACK_VERSION && typeof raw.id === "string" && keys.length > 0 &&
+      keys.every(function (k) { return typeof entries[k] === "string" && entries[k] !== ""; });
+    if (!ok) return { id: NO_PACK_ID, entries: {}, wording_sha256: "" };
+    return { id: raw.id, entries: entries, wording_sha256: sha256Hex(utf8(text)) };
+  }
+  var PACK = readPack(PACK_TEXT);
+  var WORDS = PACK.entries;
+  // What the page records beside its model: the module and capsule-viewer's
+  // version that drew it (capsule_viewer.version.renderer_version).
+  var RENDERER_VERSION = "capsuleviewer.history/v0@" + VERSION;
+
+  // The pack's entry for key, its {name} placeholders filled from values; a
+  // key the pack lacks is shown as [key].
+  var PLACEHOLDER = /\{([a-z_]+)\}/g;
+  function w(key, values) {
+    if (!has(WORDS, key)) return "[" + key + "]";
+    return WORDS[key].replace(PLACEHOLDER, function (_, name) {
+      if (!values || !has(values, name)) throw new Error("no value for {" + name + "} in " + key);
+      return values[name];
+    });
   }
 
   // ---- the input: the one place deal records are read ------------------------
@@ -458,21 +377,22 @@
   function periodText(period) {
     var at = function (t) {
       var m = /^(\d{4})-(\d{2})/.exec(typeof t === "string" ? t : "");
-      return m && +m[2] >= 1 && +m[2] <= 12 ? { year: m[1], month: MONTHS[+m[2] - 1] } : null;
+      return m && +m[2] >= 1 && +m[2] <= 12 ? { year: m[1], month: w("period.month." + +m[2]) } : null;
     };
     var from = at(period.from), to = at(period.to);
-    if (!from || !to) return String(period.from) + " to " + String(period.to);
-    if (from.year !== to.year) return from.month + " " + from.year + "\u2013" + to.month + " " + to.year;
-    return (from.month === to.month ? "" : from.month + "\u2013") + to.month + " " + to.year;
+    if (!from || !to) return w("period.range", { from: String(period.from), to: String(period.to) });
+    if (from.year !== to.year) return w("period.years", { from: from.month, from_year: from.year, to: to.month, to_year: to.year });
+    if (from.month === to.month) return w("period.one_month", { month: to.month, year: to.year });
+    return w("period.months", { from: from.month, to: to.month, year: to.year });
   }
 
   // L0's first two lines (History Basic wording, section 5.2). The twin of l0_lines.
   function l0Lines(values, counts) {
     var n = values.selected_count;
     return [
-      WORDS.l0Title,
-      n + " " + (n === 1 ? WORDS.l0Deals.one : WORDS.l0Deals.other) + " \u00b7 " + periodText(values.period) + " \u00b7 " +
-        counts.completed + " " + WORDS.l0Completed + " \u00b7 " + counts.failed + " " + WORDS.l0Failed,
+      w("l0.title"),
+      n + " " + w(n === 1 ? "l0.deals.one" : "l0.deals.other") + " \u00b7 " + periodText(values.period) + " \u00b7 " +
+        counts.completed + " " + w("l0.completed") + " \u00b7 " + counts.failed + " " + w("l0.failed"),
     ];
   }
 
@@ -869,10 +789,13 @@
 
   function findingText(finding) {
     var parts = finding.split(":");
-    var words = WORDS.finding[parts[0]];
-    if (!words) return finding;
+    if (!has(WORDS, "finding." + parts[0])) return finding;
+    var words = w("finding." + parts[0]);
     return parts.length > 1 && parts[1] ? words + " (" + parts.slice(1).join(":") + ")" : words;
   }
+
+  // A property status's words (status.pass, status.fail, status.not_checked, status.not_present).
+  function statusText(status) { return w("status." + status.toLowerCase()); }
 
   function statusBadge(doc, status) {
     var tone = status === "PASS" ? "cv-tone--positive" : status === "FAIL" ? "cv-tone--negative" : "cv-tone--caution";
@@ -883,33 +806,33 @@
   function drawPageState(doc, pageState) {
     var tone = { checking: "cv-tone--info", integrity_checked: "cv-tone--positive", failed: "cv-tone--negative", unable_to_verify: "cv-tone--caution" }[pageState];
     return el(doc, "p", { class: "cv-notice " + tone, "data-history-page-state": pageState }, [
-      el(doc, "strong", {}, [WORDS.pageState[pageState]]), ". " + WORDS.pageStateNote[pageState],
+      el(doc, "strong", {}, [w("page_state." + pageState)]), ". " + w("page_state_note." + pageState),
     ]);
   }
 
   // A property's status in words: the signature rows say who checks them; the
   // holder's statements say no one does.
   function statusWords(p, s) {
-    if (s !== "NOT_CHECKED") return WORDS.status[s];
-    if (SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0) return WORDS.signatureNotChecked;
-    if (p === "holder_stated") return WORDS.holderStatedNotChecked;
-    return WORDS.status[s];
+    if (s !== "NOT_CHECKED") return statusText(s);
+    if (SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0) return w("signature_not_checked");
+    if (p === "holder_stated") return w("holder_stated_not_checked");
+    return statusText(s);
   }
 
   // FR-31: what this page checked in this file (PASS or FAIL), what it did not
   // (NOT_CHECKED) and what the file does not carry (NOT_PRESENT), from the
   // property statuses themselves, so the lists cannot claim more than ran.
   function checksLists(doc, result) {
-    var groups = [["ran", WORDS.checksRan, ["PASS", "FAIL"]], ["not-ran", WORDS.checksNotRan, ["NOT_CHECKED"]], ["absent", WORDS.checksAbsent, ["NOT_PRESENT"]]];
+    var groups = [["ran", w("checks.ran"), ["PASS", "FAIL"]], ["not-ran", w("checks.not_ran"), ["NOT_CHECKED"]], ["absent", w("checks.absent"), ["NOT_PRESENT"]]];
     return groups.map(function (g) {
       var items = PROPERTIES.filter(function (p) { return g[2].indexOf(result.properties[p]) >= 0; }).map(function (p) {
         var s = result.properties[p];
         var words = statusWords(p, s);
-        return el(doc, "li", { "data-check": p }, [WORDS.property[p] + ": " + words]);
+        return el(doc, "li", { "data-check": p }, [w("property." + p) + ": " + words]);
       });
       return el(doc, "div", { "data-history-checks": g[0] }, [
         el(doc, "h4", {}, [g[1]]),
-        items.length ? el(doc, "ul", {}, items) : el(doc, "p", {}, [WORDS.checksNone]),
+        items.length ? el(doc, "ul", {}, items) : el(doc, "p", {}, [w("checks.none")]),
       ]);
     });
   }
@@ -919,20 +842,20 @@
     var rows = PROPERTIES.map(function (p) {
       var s = result.properties[p];
       var words = statusWords(p, s);
-      return { attrs: { "data-property": p, "data-property-status": s }, cells: [WORDS.property[p], el(doc, "span", {}, [statusBadge(doc, s), " " + words])] };
+      return { attrs: { "data-property": p, "data-property-status": s }, cells: [w("property." + p), el(doc, "span", {}, [statusBadge(doc, s), " " + words])] };
     });
     var signerRows = Object.keys(result.signer_keys).map(function (key) {
       return el(doc, "li", { "data-signer": key }, [el(doc, "span", { class: "cv-mono" }, [key]), ": " + result.signer_keys[key].join(", ")]);
     });
-    return drilldown(doc, WORDS.l2, [
-      el(doc, "p", {}, [WORDS.l2Lead]),
-      table(doc, [WORDS.l2Property, WORDS.l2Status], rows),
+    return drilldown(doc, w("l2"), [
+      el(doc, "p", {}, [w("l2.lead")]),
+      table(doc, [w("l2.property"), w("l2.status")], rows),
     ].concat(checksLists(doc, result), [
       el(doc, "dl", {}, [
-        el(doc, "dt", {}, [WORDS.l2Holder]), el(doc, "dd", { class: "cv-mono", "data-holder-key": "true" }, [result.holder_key || "-"]),
-        el(doc, "dt", {}, [WORDS.l2Signers]), el(doc, "dd", {}, [el(doc, "ul", {}, signerRows)]),
+        el(doc, "dt", {}, [w("l2.holder")]), el(doc, "dd", { class: "cv-mono", "data-holder-key": "true" }, [result.holder_key || "-"]),
+        el(doc, "dt", {}, [w("l2.signers")]), el(doc, "dd", {}, [el(doc, "ul", {}, signerRows)]),
       ]),
-      el(doc, "p", { class: "cv-muted" }, [WORDS.l2Signing]),
+      el(doc, "p", { class: "cv-muted" }, [w("l2.signing")]),
     ]));
   }
 
@@ -942,62 +865,62 @@
       return el(doc, "li", { "data-effect-status": name }, [
         el(doc, "strong", {}, [String(v.effect_status[name])]), " ",
         el(doc, "span", { class: "cv-mono" }, [name]),
-        el(doc, "span", { class: "cv-muted" }, [" (" + WORDS.statusGloss + name + ")"]),
+        el(doc, "span", { class: "cv-muted" }, [" (" + w("effect_status.gloss", { status: name }) + ")"]),
       ]);
     });
     var notProvenRows = result.not_proven.map(function (name) {
-      return metric(doc, WORDS.notProven[name] || name, WORDS.notProvenValue, "", "not_proven:" + name);
+      return metric(doc, has(WORDS, "not_proven." + name) ? w("not_proven." + name) : name, w("not_proven.value"), "", "not_proven:" + name);
     });
     var l0 = el(doc, "div", { "data-history": "card" }, [
       el(doc, "h2", { "data-history-l0": "1" }, [result.l0[0]]),
       el(doc, "p", { "data-history-l0": "2" }, [result.l0[1]]),
       drawPageState(doc, result.page_state),
-      el(doc, "p", {}, [WORDS.lead]),
-      el(doc, "p", { class: "cv-notice", "data-history-limitation": "true" }, [WORDS.limitation]),
-      result.recipient ? el(doc, "p", { "data-history-recipient": "true" }, [WORDS.recipient.before + result.recipient + WORDS.recipient.after]) : null,
-      el(doc, "p", {}, [WORDS.keyK + ": ", el(doc, "span", { class: "cv-mono", "data-history-key": "true" }, [result.holder_key])]),
-      el(doc, "p", { "data-history-audience": result.audience }, [WORDS.audience[result.audience] + " (" + result.audience + ")"]),
+      el(doc, "p", {}, [w("lead")]),
+      el(doc, "p", { class: "cv-notice", "data-history-limitation": "true" }, [w("limitation")]),
+      result.recipient ? el(doc, "p", { "data-history-recipient": "true" }, [w("recipient", { recipient: result.recipient })]) : null,
+      el(doc, "p", {}, [w("key_k") + ": ", el(doc, "span", { class: "cv-mono", "data-history-key": "true" }, [result.holder_key])]),
+      el(doc, "p", { "data-history-audience": result.audience }, [w("audience." + result.audience) + " (" + result.audience + ")"]),
       el(doc, "div", { class: "cv-metrics-wrap", "data-cv": "metric-grid" }, [
         el(doc, "dl", { class: "cv-metrics" }, [
-          metric(doc, WORDS.period, v.period.from + " to " + v.period.to, WORDS.periodNote, "period"),
-          metric(doc, WORDS.selected, String(v.selected_count), "", "selected_count"),
-          metric(doc, WORDS.completeness, WORDS.notAsserted, WORDS.completenessNote, "completeness"),
+          metric(doc, w("period"), w("period.range", { from: String(v.period.from), to: String(v.period.to) }), w("period.note"), "period"),
+          metric(doc, w("selected"), String(v.selected_count), "", "selected_count"),
+          metric(doc, w("completeness"), w("not_asserted"), w("completeness.note"), "completeness"),
         ]),
       ]),
-      section(doc, WORDS.effectStatus, [
-        statusRows.length ? el(doc, "ul", { "data-history-value": "effect_status" }, statusRows) : el(doc, "p", { "data-history-value": "effect_status" }, [WORDS.effectStatusNone]),
-        el(doc, "p", { class: "cv-muted" }, [WORDS.effectStatusNote]),
+      section(doc, w("effect_status"), [
+        statusRows.length ? el(doc, "ul", { "data-history-value": "effect_status" }, statusRows) : el(doc, "p", { "data-history-value": "effect_status" }, [w("effect_status.none")]),
+        el(doc, "p", { class: "cv-muted" }, [w("effect_status.note")]),
       ]),
-      notProvenRows.length ? section(doc, WORDS.notProvenTitle, [el(doc, "dl", { class: "cv-metrics", "data-history-not-proven": result.not_proven.join(" ") }, notProvenRows)]) : null,
-      el(doc, "p", { class: "cv-notice", "data-history-provenance": result.asserted ? "recomputed" : "computed" }, [result.asserted ? WORDS.recomputedHere : WORDS.computedHere]),
-      el(doc, "p", { class: "cv-muted", "data-history-forbids": "true" }, [WORDS.forbidding]),
+      notProvenRows.length ? section(doc, w("not_proven.title"), [el(doc, "dl", { class: "cv-metrics", "data-history-not-proven": result.not_proven.join(" ") }, notProvenRows)]) : null,
+      el(doc, "p", { class: "cv-notice", "data-history-provenance": result.asserted ? "recomputed" : "computed" }, [result.asserted ? w("recomputed_here") : w("computed_here")]),
+      el(doc, "p", { class: "cv-muted", "data-history-forbids": "true" }, [w("forbidding")]),
     ]);
 
     var counts = {};
     selected.forEach(function (s) { counts[s.deal] = (counts[s.deal] || 0) + 1; });
     var dealRows = result.deals.map(function (d) {
       var dealCell = el(doc, "span", {}, [el(doc, "span", { class: "cv-mono" }, [d.deal_id]),
-        d.steps_after_checkpoint > 0 ? el(doc, "span", { class: "cv-muted", "data-history-later-steps": "true" }, [" (" + WORDS.l1LaterSteps + ")"]) : null]);
+        d.steps_after_checkpoint > 0 ? el(doc, "span", { class: "cv-muted", "data-history-later-steps": "true" }, [" (" + w("l1.later_steps") + ")"]) : null]);
       return { attrs: { "data-deal": d.deal_id }, cells: [dealCell, d.audience, String(counts[d.deal_id] || 0), d.digest] };
     });
     var recordRows = selected.map(function (s) {
       return { attrs: { "data-record": s.record.capsule_id }, cells: [String(s.record.timestamp), s.deal, el(doc, "span", { class: "cv-mono" }, [effectStatus(s.record) || "-"]), el(doc, "span", { class: "cv-mono" }, [String(s.record.capsule_id)])] };
     });
-    var l1 = drilldown(doc, WORDS.l1, [
-      table(doc, [WORDS.l1DealId, WORDS.l1Copy, WORDS.l1Records, WORDS.l1Digest], dealRows),
-      table(doc, [WORDS.l1Time, WORDS.l1DealId, WORDS.l1Status, WORDS.l1Id], recordRows),
+    var l1 = drilldown(doc, w("l1"), [
+      table(doc, [w("l1.deal"), w("l1.copy"), w("l1.records"), w("l1.digest")], dealRows),
+      table(doc, [w("l1.time"), w("l1.deal"), w("l1.status"), w("l1.id")], recordRows),
     ]);
     return [l0, l1, drawChecks(doc, result)];
   }
 
   function drawRefusal(doc, result) {
-    var title = { not_shareable: WORDS.notShareableTitle, invalid: WORDS.invalidTitle, mismatch: WORDS.mismatchTitle, not_checked: WORDS.notCheckedTitle }[result.state];
-    var lead = { not_shareable: WORDS.notShareableLead, invalid: WORDS.invalidLead, mismatch: WORDS.mismatchLead, not_checked: WORDS.notCheckedLead }[result.state];
+    var title = w(result.state + ".title");
+    var lead = w(result.state + ".lead");
     return el(doc, "div", { "data-history": result.state }, [
       el(doc, "h2", {}, [title]),
       drawPageState(doc, result.page_state),
       el(doc, "p", { class: "cv-notice cv-tone--negative", "data-notice": "history-" + result.state }, [lead]),
-      el(doc, "p", {}, [WORDS.reasons]),
+      el(doc, "p", {}, [w("reasons")]),
       el(doc, "ul", {}, result.findings.map(function (f) {
         return el(doc, "li", { "data-history-error": f }, [findingText(f) + " ", el(doc, "span", { class: "cv-mono cv-muted" }, ["[" + f + "]"])]);
       })),
@@ -1010,7 +933,9 @@
     return isObj(selectionBlock(obj(context).bundle));
   }
 
-  // {result: check's reading, selected: selectedRecords, not_proven}.
+  // {result: check's reading, selected: selectedRecords, not_proven, page_state,
+  // wording_sha256, renderer_version}: the last two the page's presentation
+  // provenance (the pack it is worded with, the renderer that drew it), never sealed.
   function buildModel(context) {
     var bundle = obj(context).bundle;
     var result;
@@ -1021,12 +946,15 @@
       PROPERTIES.forEach(function (p) { none[p] = "NOT_CHECKED"; });
       result = { state: "not_checked", page_state: "unable_to_verify", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", recipient: "", holder_stated: [], signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [] };
     }
-    return { result: result, selected: result.state === "card" ? selectedRecords(bundle) : [], not_proven: result.not_proven, page_state: result.page_state };
+    return {
+      result: result, selected: result.state === "card" ? selectedRecords(bundle) : [], not_proven: result.not_proven, page_state: result.page_state,
+      wording_sha256: PACK.wording_sha256, renderer_version: RENDERER_VERSION,
+    };
   }
 
   // The model a host renders while the check runs: the checking state, no value.
   function checkingModel() {
-    return { result: null, selected: [], not_proven: [], page_state: "checking" };
+    return { result: null, selected: [], not_proven: [], page_state: "checking", wording_sha256: PACK.wording_sha256, renderer_version: RENDERER_VERSION };
   }
 
   // Draws into host.L0, host.L1 and host.L2: the card, or only the reason
@@ -1065,6 +993,11 @@
     pageState: pageState,
     MANIFEST: MANIFEST,
     WORDS: WORDS,
+    PACK: PACK,
+    VERSION: VERSION,
+    RENDERER_VERSION: RENDERER_VERSION,
+    readPack: readPack,
+    word: w,
     module: module,
     sha256Hex: sha256Hex,
     utf8: utf8,

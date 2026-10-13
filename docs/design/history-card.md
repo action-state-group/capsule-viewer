@@ -12,7 +12,10 @@ requirements FR-7a, FR-7b, FR-31, FR-32, section 5.2 and test T8
 (company-oss u343, rc16); its consumer strings are in one table, **Wording
 (Steven-gated)**, at the end. The module is
 `src/capsule_viewer/static/history_card.js`, one self-contained module-slot
-script with its words compiled in; its manifest is
+script that reads its words from its wording pack,
+`src/capsule_viewer/history/wording-en.json`, carried in the script as data
+(the pack's bytes, which the script hashes for the `wording_sha256` its model
+records with its `renderer_version`); its manifest is
 `src/capsule_viewer/history/manifest.json` (this directory's sketch, plus the
 script's pin). The Python side is the manifest, the check's Python twin
 (`capsule_viewer.history.recompute`) and the fixture helpers.
@@ -358,8 +361,9 @@ checked against the interface source).
   capsulectl's `presentation build` takes for a plugin's module (capsule-cli
   #207). The pin is the SHA-256 of `history_card.js`'s bytes; the sketch
   carries zeros, as a script's own copy of its manifest does. No
-  `style_sha256` and no `wording_sha256`: the words are compiled into the
-  script, and none is private.
+  `style_sha256` and no `wording_sha256`: the pack's bytes are inside the
+  pinned script (so `script_sha256` pins them too), none of its words is
+  private, and the page's model records the pack's `wording_sha256`.
 - `forbids`: the three report and result profiles the receipt manifests
   forbid (`spec_version:report/v1`, `spec_version:evaluation-summary/v1`,
   `result_version:evidence-result-v0`). Nothing else.
@@ -427,42 +431,45 @@ fields the page does not know, re-sealed.
 ## Wording (Steven-gated)
 
 Every consumer string this design adds for History Basic (FR-7a, FR-7b,
-FR-31, FR-32, section 5.2), in one place for review. The module
-compiles them in (`history_card.js`, `WORDS`); the Python twin repeats the L0
-ones (`recompute.py`).
+FR-31, FR-32, section 5.2), in one place for review. They live in the
+module's wording pack, `src/capsule_viewer/history/wording-en.json`, under
+the keys below: the script reads every word from that pack as data
+(`python -m capsule_viewer.history pin` puts the pack's bytes in it), and the
+Python twin reads its L0 words from the same pack (`recompute.py`). Moving
+them there changed no string (2026-10-13, [viewer-wording-pack-data]).
 
-| Key (`WORDS.`) | Where | String |
+| Pack key | Where | String |
 | --- | --- | --- |
-| `l0Title` | L0, line 1 (the card's heading) | History Card · Delivery outcomes not established |
-| `l0Deals.other` / `l0Deals.one` | L0, line 2 | N selected deals / 1 selected deal |
-| `l0Completed` | L0, line 2 | K with recorded completed steps |
-| `l0Failed` | L0, line 2 | F with a recorded failed step |
+| `l0.title` | L0, line 1 (the card's heading) | History Card · Delivery outcomes not established |
+| `l0.deals.other` / `l0.deals.one` | L0, line 2 | N selected deals / 1 selected deal |
+| `l0.completed` | L0, line 2 | K with recorded completed steps |
+| `l0.failed` | L0, line 2 | F with a recorded failed step |
 | (line 2, assembled) | L0, line 2 | N selected deals · \<period\> · K with recorded completed steps · F with a recorded failed step |
-| `pageState.checking` | page check state | Checking |
-| `pageStateNote.checking` | page check state | This page is checking the file. No value is shown until the check ends. |
-| `pageState.integrity_checked` | page check state | Integrity checked |
-| `pageStateNote.integrity_checked` | page check state | This page checked the file's contents, as listed under How this page checked the file. Signatures are checked by capsulectl on the sender's machine, not by this page. |
-| `pageState.failed` | page check state | Failed |
-| `pageStateNote.failed` | page check state | This page found that the file does not hold as a History to show. No value is shown. |
-| `pageState.unable_to_verify` | page check state | Unable to verify |
-| `pageStateNote.unable_to_verify` | page check state | This page could not run its check on this file. That is not a finding about the file: check it with capsulectl verify --bundle. |
-| `notCheckedTitle` | L0, unable to verify | This page could not check this file |
-| `notCheckedLead` | L0, unable to verify | The check stopped before it finished, so no card is shown. |
-| `checksRan` | L2 list heading | Checked by this page |
-| `checksNotRan` | L2 list heading | Not checked by this page |
-| `checksAbsent` | L2 list heading | Not in this file |
-| `checksNone` | L2, an empty list | None. |
-| `l2Signing` (changed) | L2 | before: "... and for the History's own bundle reads the page's verifier on the selection record's identity, the history log's checkpoint and the selection record's membership in that log: those are checked by this page. The page's verifier ..." after: "... and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier ..." (the ending, "every signature status here is checked by capsulectl on the sender's machine, not by this page.", is unchanged) |
+| `page_state.checking` | page check state | Checking |
+| `page_state_note.checking` | page check state | This page is checking the file. No value is shown until the check ends. |
+| `page_state.integrity_checked` | page check state | Integrity checked |
+| `page_state_note.integrity_checked` | page check state | This page checked the file's contents, as listed under How this page checked the file. Signatures are checked by capsulectl on the sender's machine, not by this page. |
+| `page_state.failed` | page check state | Failed |
+| `page_state_note.failed` | page check state | This page found that the file does not hold as a History to show. No value is shown. |
+| `page_state.unable_to_verify` | page check state | Unable to verify |
+| `page_state_note.unable_to_verify` | page check state | This page could not run its check on this file. That is not a finding about the file: check it with capsulectl verify --bundle. |
+| `not_checked.title` | L0, unable to verify | This page could not check this file |
+| `not_checked.lead` | L0, unable to verify | The check stopped before it finished, so no card is shown. |
+| `checks.ran` | L2 list heading | Checked by this page |
+| `checks.not_ran` | L2 list heading | Not checked by this page |
+| `checks.absent` | L2 list heading | Not in this file |
+| `checks.none` | L2, an empty list | None. |
+| `l2.signing` (changed) | L2 | before: "... and for the History's own bundle reads the page's verifier on the selection record's identity, the history log's checkpoint and the selection record's membership in that log: those are checked by this page. The page's verifier ..." after: "... and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier ..." (the ending, "every signature status here is checked by capsulectl on the sender's machine, not by this page.", is unchanged) |
 | `title` (removed) | L0 heading | before: "History"; after: `l0Title` |
 
 **D2/D3/D4 additions, pending Steven** (capsule-cli cb68ea9, neutral u949):
 
-| Key (`WORDS.`) | Where | String |
+| Pack key | Where | String |
 | --- | --- | --- |
-| `recipient` (`before` + recipient + `after`) | L0, the card only, after the limitation | For \<recipient\>, as stated by the holder |
-| `l1LaterSteps` | L1, beside a deal whose `steps_after_checkpoint` > 0 | later steps exist, per the holder |
+| `recipient` (`{recipient}` filled) | L0, the card only, after the limitation | For \<recipient\>, as stated by the holder |
+| `l1.later_steps` | L1, beside a deal whose `steps_after_checkpoint` > 0 | later steps exist, per the holder |
 | `property.holder_stated` | L2 | What the holder states with the selection: who the History is for, and each deal's later steps |
-| `holderStatedNotChecked` | L2, `holder_stated` when NOT_CHECKED | what the holder states, sealed with the selection; not checked against the deals by this page or by capsulectl |
+| `holder_stated_not_checked` | L2, `holder_stated` when NOT_CHECKED | what the holder states, sealed with the selection; not checked against the deals by this page or by capsulectl |
 | `finding.selection_recipient_missing` | L0, a refusal's reasons | the sealed selection does not say who the History is for |
 | `finding.selection_entry_malformed` (changed) | L0, a refusal's reasons | before: "a selection entry is malformed"; after: "a selection entry is malformed (its deal id, digest or count of later steps)" |
 | `finding.not_a_history_log` (changed) | L0, a refusal's reasons | before: "the History's bundle is not of a deal-history log"; after: "the History's bundle is not of its own log (deal-history/ and the nonce its selection record seals)" |
@@ -476,6 +483,6 @@ ones (`recompute.py`).
 
 ## Not in this design
 
-- No wording pack: the module's words are compiled in.
+- No `wording_sha256` in the manifest: the pack is inside the pinned script.
 - No change to capsule-cli or capsule-emit.
 - Nothing proposed to the neutral spec.
