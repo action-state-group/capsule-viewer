@@ -47,6 +47,13 @@
 // checked by capsulectl on the sender's machine, not by this page. Each
 // nested deal copy's log is NOT_CHECKED in the same words.
 //
+// L0 opens with two lines (History Basic wording, FR-7a, section 5.2): "History Card \u00b7
+// Delivery outcomes not established", then the deal count, the period and K
+// and F (stepCounts), then the page check state (FR-32: checking, integrity
+// checked, failed, unable to verify). L2 lists what this page checked, what it
+// did not and what the file does not carry, from the property statuses (FR-31).
+// The words are Steven-gated: docs/design/history-card.md, "Wording (Steven-gated)".
+//
 // Deal records are read from the input only by selectedRecords (the twin of
 // the Python selected_records). derive and drawing take its output only.
 //
@@ -70,6 +77,19 @@
   // What a history copy does not prove, in capsulectl verify's order (its History entry's "not_proven").
   var NOT_PROVEN = ["outcome", "action_class"];
   var RECOMPUTED_KEYS = ["completeness", "effect_status", "period", "selected_count"];
+  // The L0 counts (History Basic wording, FR-7a, section 5.2): K, the deals with at least one
+  // record whose capsule states effect.status "confirmed" (agent-action-capsule:
+  // the result observed and bound), and F, the deals with at least one record
+  // stating "failed". dispatched (sent, result not observed), planned and
+  // reverted count toward neither. capsule-cli writes only "dispatched" for a
+  // deal's act, so on its Histories K and F are 0.
+  var COMPLETED_STATUS = "confirmed";
+  var FAILED_STATUS = "failed";
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // The page check states (History Basic wording, FR-32), each drawn distinctly. checking is
+  // drawn before the model is built (checkingModel); the others follow from
+  // the reading's state (pageState).
+  var PAGE_STATES = ["checking", "integrity_checked", "failed", "unable_to_verify"];
   var PROPERTIES = [
     "selection_record", "selection_record_signature", "selection_root", "history_log", "selection_sealed", "membership", "member_digests",
     "audience", "signer_keys", "member_records", "member_signatures", "member_logs", "values",
@@ -89,7 +109,26 @@
   var SIGNATURE_NOT_CHECKED = "checked by capsulectl on the sender's machine, not by this page";
 
   var WORDS = {
-    title: "History",
+    l0Title: "History Card \u00b7 Delivery outcomes not established",
+    l0Deals: { one: "selected deal", other: "selected deals" },
+    l0Completed: "with recorded completed steps",
+    l0Failed: "with a recorded failed step",
+    pageState: {
+      checking: "Checking",
+      integrity_checked: "Integrity checked",
+      failed: "Failed",
+      unable_to_verify: "Unable to verify",
+    },
+    pageStateNote: {
+      checking: "This page is checking the file. No value is shown until the check ends.",
+      integrity_checked: "This page checked the file's contents, as listed under How this page checked the file. Signatures are " + SIGNATURE_NOT_CHECKED + ".",
+      failed: "This page found that the file does not hold as a History to show. No value is shown.",
+      unable_to_verify: "This page could not run its check on this file. That is not a finding about the file: check it with capsulectl verify --bundle.",
+    },
+    checksRan: "Checked by this page",
+    checksNotRan: "Not checked by this page",
+    checksAbsent: "Not in this file",
+    checksNone: "None.",
     lead: "Deal copies presented by the holder of key K, each a copy for the audience below. The card shows the copies the sealed selection names and no others.",
     limitation: "A History shows only that the holder of key K presents these copies, each of which verifies on its own. It does not show that the holder of key K made, took part in or owns these deals.",
     keyK: "Key K (signs the selection record)",
@@ -123,7 +162,7 @@
     l2Status: "Status",
     l2Holder: "Key K (signs the selection record)",
     l2Signers: "Keys named by the selected deals' records",
-    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest, and for the History's own bundle reads the page's verifier on the selection record's identity, the history log's checkpoint and the selection record's membership in that log: those are checked by this page. The page's verifier does not check a record's signature, so every signature status here is " + SIGNATURE_NOT_CHECKED + ".",
+    l2Signing: "This page recomputes record ids, disclosure digests and each deal copy's digest, and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier does not check a record's signature, so every signature status here is " + SIGNATURE_NOT_CHECKED + ".",
     signatureNotChecked: SIGNATURE_NOT_CHECKED,
     memberNotChecked: SIGNATURE_NOT_CHECKED,
     property: {
@@ -153,6 +192,8 @@
     invalidLead: "This page found what does not hold in this file, so no card is shown.",
     mismatchTitle: "This History does not recompute",
     mismatchLead: "The values this file states do not follow from the records it carries, so no card is shown.",
+    notCheckedTitle: "This page could not check this file",
+    notCheckedLead: "The check stopped before it finished, so no card is shown.",
     reasons: "What did not hold:",
     finding: {
       history_audience_keep: "the History is a keep copy (audience keep), never one to send",
@@ -383,6 +424,52 @@
     };
   }
 
+  // K and F for L0: {completed, failed}, each a number of deals (not records).
+  // The twin of capsule_viewer.history.recompute.step_counts.
+  function stepCounts(selected) {
+    var completed = {}, failed = {};
+    selected.forEach(function (s) {
+      var status = effectStatus(s.record);
+      if (status === COMPLETED_STATUS) completed[s.deal] = true;
+      if (status === FAILED_STATUS) failed[s.deal] = true;
+    });
+    return { completed: Object.keys(completed).length, failed: Object.keys(failed).length };
+  }
+
+  // The period as L0 states it, from the records' own times (UTC, as written):
+  // "Oct 2026", "Jan\u2013Sep 2026" or "Dec 2025\u2013Feb 2026"; the raw times when
+  // either does not start with a year and a month. The twin of period_text.
+  function periodText(period) {
+    var at = function (t) {
+      var m = /^(\d{4})-(\d{2})/.exec(typeof t === "string" ? t : "");
+      return m && +m[2] >= 1 && +m[2] <= 12 ? { year: m[1], month: MONTHS[+m[2] - 1] } : null;
+    };
+    var from = at(period.from), to = at(period.to);
+    if (!from || !to) return String(period.from) + " to " + String(period.to);
+    if (from.year !== to.year) return from.month + " " + from.year + "\u2013" + to.month + " " + to.year;
+    return (from.month === to.month ? "" : from.month + "\u2013") + to.month + " " + to.year;
+  }
+
+  // L0's first two lines (History Basic wording, section 5.2). The twin of l0_lines.
+  function l0Lines(values, counts) {
+    var n = values.selected_count;
+    return [
+      WORDS.l0Title,
+      n + " " + (n === 1 ? WORDS.l0Deals.one : WORDS.l0Deals.other) + " \u00b7 " + periodText(values.period) + " \u00b7 " +
+        counts.completed + " " + WORDS.l0Completed + " \u00b7 " + counts.failed + " " + WORDS.l0Failed,
+    ];
+  }
+
+  // The page check state for a reading's state: the card is integrity_checked;
+  // does not check, does not recompute and not shareable are failed; a check
+  // that could not run (not_checked) is unable_to_verify. The twin of page_state.
+  function pageState(state) {
+    if (state === "card") return "integrity_checked";
+    if (state === "not_checked") return "unable_to_verify";
+    if (state === "checking") return "checking";
+    return "failed";
+  }
+
   // What the History does not prove, from the payloads its copies withhold: a
   // record whose payload is withheld shows no outcome and no action class, so
   // for a History for the "history" audience whose selected records withhold
@@ -520,8 +607,8 @@
       var none = {};
       PROPERTIES.forEach(function (p) { none[p] = "NOT_PRESENT"; });
       return {
-        state: "invalid", findings: ["no " + SELECTION_EXTENSION + " block in an evidence-bundle/v2"], properties: none,
-        holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, asserted: false, mismatches: [],
+        state: "invalid", page_state: "failed", findings: ["no " + SELECTION_EXTENSION + " block in an evidence-bundle/v2"], properties: none,
+        holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [],
       };
     }
 
@@ -691,9 +778,9 @@
     var sortedSigners = {};
     Object.keys(signers).sort().forEach(function (key) { sortedSigners[key] = signers[key].slice().sort(); });
     return {
-      state: state, findings: findings.concat(mismatches), properties: status, holder_key: holder, audience: audience,
+      state: state, page_state: pageState(state), findings: findings.concat(mismatches), properties: status, holder_key: holder, audience: audience,
       signer_keys: sortedSigners, deals: deals, not_proven: notProven(selected, audience), values: state === "card" ? values : null,
-      asserted: hasAsserted, mismatches: mismatches,
+      l0: state === "card" ? l0Lines(values, stepCounts(selected)) : null, asserted: hasAsserted, mismatches: mismatches,
     };
   }
 
@@ -754,6 +841,32 @@
     return el(doc, "span", { class: "cv-badge " + tone, "data-status": status }, [status]);
   }
 
+  // The page check state (FR-32): one line, its own tone, its own attribute.
+  function drawPageState(doc, pageState) {
+    var tone = { checking: "cv-tone--info", integrity_checked: "cv-tone--positive", failed: "cv-tone--negative", unable_to_verify: "cv-tone--caution" }[pageState];
+    return el(doc, "p", { class: "cv-notice " + tone, "data-history-page-state": pageState }, [
+      el(doc, "strong", {}, [WORDS.pageState[pageState]]), ". " + WORDS.pageStateNote[pageState],
+    ]);
+  }
+
+  // FR-31: what this page checked in this file (PASS or FAIL), what it did not
+  // (NOT_CHECKED) and what the file does not carry (NOT_PRESENT), from the
+  // property statuses themselves, so the lists cannot claim more than ran.
+  function checksLists(doc, result) {
+    var groups = [["ran", WORDS.checksRan, ["PASS", "FAIL"]], ["not-ran", WORDS.checksNotRan, ["NOT_CHECKED"]], ["absent", WORDS.checksAbsent, ["NOT_PRESENT"]]];
+    return groups.map(function (g) {
+      var items = PROPERTIES.filter(function (p) { return g[2].indexOf(result.properties[p]) >= 0; }).map(function (p) {
+        var s = result.properties[p];
+        var words = s === "NOT_CHECKED" && SENDER_CHECKED_PROPERTIES.indexOf(p) >= 0 ? WORDS.signatureNotChecked : WORDS.status[s];
+        return el(doc, "li", { "data-check": p }, [WORDS.property[p] + ": " + words]);
+      });
+      return el(doc, "div", { "data-history-checks": g[0] }, [
+        el(doc, "h4", {}, [g[1]]),
+        items.length ? el(doc, "ul", {}, items) : el(doc, "p", {}, [WORDS.checksNone]),
+      ]);
+    });
+  }
+
   // L2: every property with its status, key K and the keys the deals name.
   function drawChecks(doc, result) {
     var rows = PROPERTIES.map(function (p) {
@@ -767,12 +880,13 @@
     return drilldown(doc, WORDS.l2, [
       el(doc, "p", {}, [WORDS.l2Lead]),
       table(doc, [WORDS.l2Property, WORDS.l2Status], rows),
+    ].concat(checksLists(doc, result), [
       el(doc, "dl", {}, [
         el(doc, "dt", {}, [WORDS.l2Holder]), el(doc, "dd", { class: "cv-mono", "data-holder-key": "true" }, [result.holder_key || "-"]),
         el(doc, "dt", {}, [WORDS.l2Signers]), el(doc, "dd", {}, [el(doc, "ul", {}, signerRows)]),
       ]),
       el(doc, "p", { class: "cv-muted" }, [WORDS.l2Signing]),
-    ]);
+    ]));
   }
 
   function drawCard(doc, result, selected) {
@@ -788,7 +902,9 @@
       return metric(doc, WORDS.notProven[name] || name, WORDS.notProvenValue, "", "not_proven:" + name);
     });
     var l0 = el(doc, "div", { "data-history": "card" }, [
-      el(doc, "h2", {}, [WORDS.title]),
+      el(doc, "h2", { "data-history-l0": "1" }, [result.l0[0]]),
+      el(doc, "p", { "data-history-l0": "2" }, [result.l0[1]]),
+      drawPageState(doc, result.page_state),
       el(doc, "p", {}, [WORDS.lead]),
       el(doc, "p", { class: "cv-notice", "data-history-limitation": "true" }, [WORDS.limitation]),
       el(doc, "p", {}, [WORDS.keyK + ": ", el(doc, "span", { class: "cv-mono", "data-history-key": "true" }, [result.holder_key])]),
@@ -825,10 +941,11 @@
   }
 
   function drawRefusal(doc, result) {
-    var title = { not_shareable: WORDS.notShareableTitle, invalid: WORDS.invalidTitle, mismatch: WORDS.mismatchTitle }[result.state];
-    var lead = { not_shareable: WORDS.notShareableLead, invalid: WORDS.invalidLead, mismatch: WORDS.mismatchLead }[result.state];
+    var title = { not_shareable: WORDS.notShareableTitle, invalid: WORDS.invalidTitle, mismatch: WORDS.mismatchTitle, not_checked: WORDS.notCheckedTitle }[result.state];
+    var lead = { not_shareable: WORDS.notShareableLead, invalid: WORDS.invalidLead, mismatch: WORDS.mismatchLead, not_checked: WORDS.notCheckedLead }[result.state];
     return el(doc, "div", { "data-history": result.state }, [
       el(doc, "h2", {}, [title]),
+      drawPageState(doc, result.page_state),
       el(doc, "p", { class: "cv-notice cv-tone--negative", "data-notice": "history-" + result.state }, [lead]),
       el(doc, "p", {}, [WORDS.reasons]),
       el(doc, "ul", {}, result.findings.map(function (f) {
@@ -852,9 +969,14 @@
     } catch (e) {
       var none = {};
       PROPERTIES.forEach(function (p) { none[p] = "NOT_CHECKED"; });
-      result = { state: "invalid", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, asserted: false, mismatches: [] };
+      result = { state: "not_checked", page_state: "unable_to_verify", findings: ["the check could not read this file: " + e.message], properties: none, holder_key: "", audience: "", signer_keys: {}, deals: [], not_proven: [], values: null, l0: null, asserted: false, mismatches: [] };
     }
-    return { result: result, selected: result.state === "card" ? selectedRecords(bundle) : [], not_proven: result.not_proven };
+    return { result: result, selected: result.state === "card" ? selectedRecords(bundle) : [], not_proven: result.not_proven, page_state: result.page_state };
+  }
+
+  // The model a host renders while the check runs: the checking state, no value.
+  function checkingModel() {
+    return { result: null, selected: [], not_proven: [], page_state: "checking" };
   }
 
   // Draws into host.L0, host.L1 and host.L2: the card, or only the reason
@@ -862,11 +984,18 @@
   function render(model, host) {
     var doc = host.L0.ownerDocument;
     var r = model.result;
+    if (r === null) {
+      host.L0.appendChild(el(doc, "div", { "data-history": "checking" }, [drawPageState(doc, "checking")]));
+      host.L0.setAttribute("data-history-state", "checking");
+      host.L0.setAttribute("data-history-page-state", "checking");
+      return;
+    }
     var parts = r.state === "card" ? drawCard(doc, r, model.selected) : [drawRefusal(doc, r), null, drawChecks(doc, r)];
     [host.L0, host.L1, host.L2].forEach(function (region, i) {
       if (parts[i]) region.appendChild(parts[i]);
     });
     host.L0.setAttribute("data-history-state", r.state);
+    host.L0.setAttribute("data-history-page-state", r.page_state);
   }
 
   var module = { manifest: MANIFEST, canRender: canRender, buildModel: buildModel, render: render };
@@ -874,6 +1003,14 @@
   root.CapsuleViewerHistory = {
     SELECTION_EXTENSION: SELECTION_EXTENSION,
     PROPERTIES: PROPERTIES,
+    PAGE_STATES: PAGE_STATES,
+    COMPLETED_STATUS: COMPLETED_STATUS,
+    FAILED_STATUS: FAILED_STATUS,
+    checkingModel: checkingModel,
+    stepCounts: stepCounts,
+    periodText: periodText,
+    l0Lines: l0Lines,
+    pageState: pageState,
     MANIFEST: MANIFEST,
     WORDS: WORDS,
     module: module,

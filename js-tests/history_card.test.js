@@ -85,6 +85,17 @@ const SHAREABLE = read("history-history");
 // The one wording of every signature status (PM u335).
 const SIGNATURE_WORDS = "checked by capsulectl on the sender's machine, not by this page";
 const NOT_PROVEN_WORDS = "not proven: the copy withholds the record payload";
+// History Basic wording: the L0 golden (section 5.2), the T8 list (one data file, shared), the four page states (FR-32).
+const L0_GOLDEN = JSON.parse(readFileSync(join(DATA, "l0-golden.json"), "utf8"));
+const L0_TITLE = "History Card \u00b7 Delivery outcomes not established";
+const T8 = JSON.parse(readFileSync(join(DATA, "t8-banned.json"), "utf8"));
+const T8_PATTERNS = [
+  ...T8.banned_deal_status.phrases.map((p) => [p, new RegExp(`\\b${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i")]),
+  ...T8.similarity_claim.patterns.map((p) => [p, new RegExp(p, "i")]),
+];
+// Every T8 hit in a text, one line at a time: [pattern, line].
+const t8 = (text) => text.split("\n").flatMap((line) => T8_PATTERNS.filter(([, rx]) => rx.test(line)).map(([p]) => [p, line]));
+const PAGE_STATES = ["checking", "integrity_checked", "failed", "unable_to_verify"];
 
 // Every sentence of the rendered text (or of the HTML, tags as breaks) that
 // names a signature and calls it verified, valid or checked by this page.
@@ -316,6 +327,153 @@ describe("the mutant matrix: each real file, in the module", () => {
     expect(status.values).toBe("NOT_PRESENT");
     expect(signatureClaims(blocks(host.L2))).toEqual([]);
     expect(host.L0.textContent).not.toMatch(/\bverified\b/i);
+  });
+});
+
+describe("History Basic wording: L0, T8, the page states and the checks-ran list", () => {
+  it("L0 golden: the module's first two lines match section 5.2 exactly", () => {
+    const { H } = load();
+    for (const c of L0_GOLDEN.cases) {
+      let lines;
+      if (c.fixture) {
+        const { model, host } = present(read(c.fixture), realContext(c.fixture));
+        lines = model.result.l0;
+        // Drawn first in L0, in this order, before anything else of the card.
+        expect([...host.L0.querySelectorAll("[data-history-l0]")].map((e) => e.textContent), c.name).toEqual(c.l0);
+        const card = host.L0.querySelector('[data-history="card"]');
+        expect(card.children[0].getAttribute("data-history-l0")).toBe("1");
+        expect(card.children[1].getAttribute("data-history-l0")).toBe("2");
+        expect(card.children[2].getAttribute("data-history-page-state")).toBe("integrity_checked");
+      } else {
+        const selected = c.selected.map((x) => ({ ...x, agent_input: null }));
+        lines = H.l0Lines(H.derive(selected, c.selected_count), H.stepCounts(selected));
+      }
+      expect(lines, c.name).toEqual(c.l0);
+      expect(lines[0]).toBe(L0_TITLE);
+    }
+  });
+
+  it("K and F: deals with a confirmed record, deals with a failed one; nothing else counts", () => {
+    const { H } = load();
+    expect([H.COMPLETED_STATUS, H.FAILED_STATUS]).toEqual(["confirmed", "failed"]);
+    const sel = (...pairs) => pairs.map(([deal, status]) => ({ deal, record: { timestamp: "2026-01-01T00:00:00Z", effect: { status } } }));
+    expect({ ...H.stepCounts(sel(["a", "confirmed"], ["a", "confirmed"], ["b", "failed"], ["b", "confirmed"])) }).toEqual({ completed: 2, failed: 1 });
+    expect({ ...H.stepCounts(sel(["a", "dispatched"], ["b", "planned"], ["c", "reverted"])) }).toEqual({ completed: 0, failed: 0 });
+  });
+
+  it("T8: the wording grep over the module's strings is 0", () => {
+    expect(T8.banned_deal_status.phrases).toEqual(["done", "completed sale", "delivered"]);
+    expect(t8(SCRIPT)).toEqual([]);
+    const { H } = load();
+    const strings = [];
+    const walk = (v) => (typeof v === "string" ? strings.push(v) : v && typeof v === "object" && Object.values(v).forEach(walk));
+    walk(H.WORDS);
+    expect(strings.length).toBeGreaterThan(80);
+    expect(t8(strings.join("\n"))).toEqual([]);
+    // The grep finds what it is for.
+    expect(t8("2 deals done\nDelivered\na completed sale\nitems similar to this one").length).toBe(4);
+  });
+
+  it("T8: no rendered text of any file says it either, and the card's first two lines say outcomes are not established", () => {
+    for (const name of Object.keys(MATRIX)) {
+      const { model, host } = present(read(name), realContext(name));
+      expect(t8([host.L0, host.L1, host.L2].map(blocks).join("\n")), name).toEqual([]);
+      if (model.result.state === "card") expect(model.result.l0.slice(0, 2).join(" ")).toMatch(/outcomes not established/);
+    }
+  });
+
+  // One host per page state: checking (the checking model), integrity checked (the card),
+  // failed (each refusal), unable to verify (a check that could not run).
+  function drawState(pageState) {
+    const { H, registered, document } = load();
+    const module = registered[0];
+    const h = host(document);
+    if (pageState === "checking") module.render(H.checkingModel(), h, {});
+    else if (pageState === "unable_to_verify") {
+      const ctx = { ...standInContext(clone(SHAREABLE)) };
+      delete ctx.verification;
+      Object.defineProperty(ctx, "verification", { get() { throw new Error("the verifier did not load"); } });
+      module.render(module.buildModel(ctx), h, {});
+    } else {
+      const name = pageState === "failed" ? "history-keep" : "history-history";
+      module.render(module.buildModel(realContext(name)), h, {});
+    }
+    return h;
+  }
+
+  it("four page states, each drawn distinctly (FR-32), mapped from the module's outcomes", () => {
+    const { H } = load();
+    expect([...H.PAGE_STATES]).toEqual(PAGE_STATES);
+    const map = Object.fromEntries(["card", "invalid", "mismatch", "not_shareable", "not_checked", "checking"].map((s) => [s, H.pageState(s)]));
+    expect(map).toEqual({ card: "integrity_checked", invalid: "failed", mismatch: "failed", not_shareable: "failed", not_checked: "unable_to_verify", checking: "checking" });
+    const drawn = PAGE_STATES.map((s) => {
+      const h = drawState(s);
+      expect(h.L0.getAttribute("data-history-page-state"), s).toBe(s);
+      const line = [...h.L0.querySelectorAll("p[data-history-page-state]")];
+      expect(line, s).toHaveLength(1);
+      expect(line[0].getAttribute("data-history-page-state")).toBe(s);
+      expect(line[0].querySelector("strong").textContent).toBe(H.WORDS.pageState[s]);
+      expect(line[0].textContent).toBe(`${H.WORDS.pageState[s]}. ${H.WORDS.pageStateNote[s]}`);
+      // A value only in the integrity-checked state.
+      expect(!!h.L0.querySelector("[data-history-value]"), s).toBe(s === "integrity_checked");
+      for (const level of [h.L0, h.L1, h.L2]) {
+        expect(signatureClaims(blocks(level)), s).toEqual([]);
+        expect(t8(blocks(level)), s).toEqual([]);
+      }
+      return [line[0].textContent, line[0].className, h.L0.innerHTML];
+    });
+    for (const i of [0, 1, 2]) expect(new Set(drawn.map((d) => d[i])).size).toBe(4);
+    // Unable to verify is not a finding about the file: its own title, never "does not check".
+    const unable = drawState("unable_to_verify");
+    expect(unable.L0.querySelector("h2").textContent).toBe(H.WORDS.notCheckedTitle);
+    expect(unable.L0.getAttribute("data-history-state")).toBe("not_checked");
+    expect(unable.L0.textContent).not.toContain(H.WORDS.invalidTitle);
+  });
+
+  it("every real file's page state is the mapping of its state", () => {
+    const { H } = load();
+    for (const name of Object.keys(MATRIX)) {
+      const { model, host: h } = present(read(name), realContext(name));
+      expect(model.result.page_state, name).toBe(H.pageState(model.result.state));
+      expect(h.L0.getAttribute("data-history-page-state"), name).toBe(model.result.page_state);
+    }
+  });
+
+  it("the checks-ran list (FR-31): exactly what this page checked, what it did not and what is absent", () => {
+    const { H } = load();
+    const cases = [
+      ["history-history", realContext("history-history")],
+      ["history-history (no verifier context)", { bundle: SHAREABLE }],
+      ["history-keep", realContext("history-keep")],
+      ["every signature removed", null],
+    ];
+    for (const [name, ctx0] of cases) {
+      let ctx = ctx0;
+      if (!ctx) {
+        const b = clone(SHAREABLE);
+        for (const m of [b, ...Object.values(ext(b).deals)]) for (const r of m.records) delete r.signature;
+        ctx = { bundle: b };
+      }
+      const { model, host: h } = present(ctx.bundle, ctx);
+      const props = model.result.properties;
+      const listed = (g) => [...h.L2.querySelectorAll(`[data-history-checks="${g}"] [data-check]`)].map((e) => e.getAttribute("data-check"));
+      const want = (statuses) => H.PROPERTIES.filter((p) => statuses.includes(props[p]));
+      expect(listed("ran"), name).toEqual(want(["PASS", "FAIL"]));
+      expect(listed("not-ran"), name).toEqual(want(["NOT_CHECKED"]));
+      expect(listed("absent"), name).toEqual(want(["NOT_PRESENT"]));
+      expect([...listed("ran"), ...listed("not-ran"), ...listed("absent")].sort()).toEqual([...H.PROPERTIES].sort());
+      // The signature rows are never under "checked by this page", and say who checks them.
+      for (const p of ["selection_record_signature", "member_signatures"]) {
+        expect(listed("ran"), name).not.toContain(p);
+        const row = h.L2.querySelector(`[data-history-checks="not-ran"] [data-check="${p}"]`);
+        if (props[p] === "NOT_CHECKED") expect(row.textContent).toBe(`${H.WORDS.property[p]}: ${SIGNATURE_WORDS}`);
+      }
+      expect(signatureClaims(blocks(h.L2)), name).toEqual([]);
+    }
+    // Without a verifier the history log is not listed as checked here.
+    const bare = present(SHAREABLE, { bundle: SHAREABLE }).host;
+    expect(bare.L2.querySelector('[data-history-checks="not-ran"] [data-check="history_log"]')).not.toBeNull();
+    expect(bare.L2.querySelector('[data-history-checks="ran"] [data-check="history_log"]')).toBeNull();
   });
 });
 
@@ -563,6 +721,8 @@ describe("the module and the Python check agree", () => {
       expect(js.properties).toEqual(py.properties);
       expect(js.values).toEqual(py.values);
       expect(js.not_proven).toEqual(py.not_proven);
+      expect(js.page_state).toBe(py.page_state);
+      expect(js.l0).toEqual(py.l0);
       // Python prints values with repr, the module with JSON; the reason itself is the same.
       const head = (e) => e.split(/: /)[0];
       expect(js.findings.map(head)).toEqual(py.findings.map(head));
@@ -622,13 +782,19 @@ if (!chromePath) console.warn("SKIPPED history card in headless Chromium: no Chr
 // Every real file, and the two forged signatures (in memory; each still a card).
 const FORGED_ROOT = "forged root signature (in memory)";
 const FORGED_MEMBER = "forged member signature (in memory)";
+const CHECKING = "checking (before the model is built)";
+const UNABLE = "the check could not run (in memory)";
 const PAGES = { ...MATRIX, [FORGED_ROOT]: ["card", []], [FORGED_MEMBER]: ["card", []] };
+// The page check state each page draws (FR-32), and the two pages that draw the other two.
+const PAGE_STATE = Object.fromEntries(Object.entries(PAGES).map(([name, [state]]) => [name, state === "card" ? "integrity_checked" : "failed"]));
+const STATE_PAGES = { [CHECKING]: "checking", [UNABLE]: "unable_to_verify" };
 const COUNT = { "history-history": "3", "history-two-buyers": "2", [FORGED_ROOT]: "3", [FORGED_MEMBER]: "3" };
 const PAGE_CONTEXT = {
   [FORGED_ROOT]: () => { const b = forgeRootSignature(clone(SHAREABLE)); return standInContext(b); },
   [FORGED_MEMBER]: () => standInContext(forgeMemberSignature(clone(SHAREABLE))),
 };
 
+const drawnStates = {};
 describe.skipIf(!chromePath)("the module in headless Chromium", () => {
   let browser;
   let tab;
@@ -637,16 +803,20 @@ describe.skipIf(!chromePath)("the module in headless Chromium", () => {
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "cv-history-page-"));
     const css = execFileSync(PY, ["-c", "from capsule_viewer.kit import kit_css; print(kit_css())"], { cwd: ROOT, env: PY_ENV, encoding: "utf8" });
-    for (const name of Object.keys(PAGES)) {
+    for (const name of [...Object.keys(PAGES), ...Object.keys(STATE_PAGES)]) {
       // The context, as data: the module reads its bundle, root, verification and completeness.
-      const ctx = PAGE_CONTEXT[name] ? PAGE_CONTEXT[name]() : realContext(name);
+      const ctx = PAGE_CONTEXT[name] ? PAGE_CONTEXT[name]() : STATE_PAGES[name] ? standInContext(SHAREABLE) : realContext(name);
       const data = JSON.stringify(ctx).replace(/</g, "\\u003c");
+      // The checking page renders the checking model; the unable page's verifier throws when read.
+      const run = name === CHECKING ? "m.render(window.CapsuleViewerHistory.checkingModel(), host, {});"
+        : (name === UNABLE ? 'Object.defineProperty(ctx, "verification", { get: function () { throw new Error("the verifier did not load"); } }); ' : "") +
+          "if (m.canRender(ctx)) m.render(m.buildModel(ctx), host, {});";
       const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
 <body class="cv-kit"><main class="cv-page"><div data-level="L0"></div><div data-level="L1"></div><div data-level="L2"></div></main>
 <script>var EvidenceGraph = { registerPresentation: function (m) { window.__history = m; } };</script>
 <script>${SCRIPT}</script>
 <script>(function () { var m = window.__history, ctx = ${data}, q = function (l) { return document.querySelector('[data-level="' + l + '"]'); };
-if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }, {}); })();</script></body></html>`;
+var host = { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }; ${run} })();</script></body></html>`;
       const file = join(dir, `${name.replace(/\W+/g, "-")}.html`);
       writeFileSync(file, html);
       urls[name] = pathToFileURL(file).href;
@@ -661,6 +831,9 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
 
   const STATE = `(() => ({
     state: document.querySelector('[data-level="L0"]').getAttribute("data-history-state"),
+    pageState: document.querySelector('[data-level="L0"]').getAttribute("data-history-page-state"),
+    drawn: [...document.querySelectorAll("[data-history-page-state]")].filter((e) => e.tagName === "P").map((e) => [e.getAttribute("data-history-page-state"), e.querySelector("strong").innerText, getComputedStyle(e).borderLeftColor + getComputedStyle(e).backgroundColor + getComputedStyle(e).color]),
+    l0: [...document.querySelectorAll("[data-history-l0]")].map((e) => e.innerText),
     card: !!document.querySelector('[data-history="card"]'),
     count: (document.querySelector('[data-history-value="selected_count"]') || {}).textContent || null,
     errors: [...document.querySelectorAll("[data-history-error]")].map((e) => e.getAttribute("data-history-error")),
@@ -679,7 +852,32 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
         // Nothing in the Chromium page calls a signature verified, valid or checked by this page.
         expect(signatureClaims(m.text)).toEqual([]);
         expect(signatureClaims(htmlText(m.html))).toEqual([]);
+        // FR-32: the page check state, drawn once; FR-7a: the card's first line says outcomes are not established.
+        expect(m.pageState).toBe(PAGE_STATE[name]);
+        expect(m.drawn.map((d) => d[0])).toEqual([PAGE_STATE[name]]);
+        if (state === "card") expect(m.l0[0]).toBe(L0_TITLE);
+        else expect(m.l0).toEqual([]);
+        expect(t8(m.text)).toEqual([]);
+        drawnStates[`${width}:${m.drawn[0][0]}`] = m.drawn[0].slice(1);
       }, 30000);
     }
+    for (const [name, pageState] of Object.entries(STATE_PAGES)) {
+      it(`${name} at ${width}px: ${pageState}`, async () => {
+        await tab.open(urls[name], { width });
+        const m = await tab.evaluate(STATE);
+        expect(m).toMatchObject({ pageState, card: false, count: null, overflow: false, l0: [] });
+        expect(m.drawn.map((d) => d[0])).toEqual([pageState]);
+        expect(m.text).not.toMatch(/data-history-value/);
+        expect(t8(m.text)).toEqual([]);
+        expect(signatureClaims(m.text)).toEqual([]);
+        drawnStates[`${width}:${pageState}`] = m.drawn[0].slice(1);
+      }, 30000);
+    }
+    it(`the four page states at ${width}px are drawn distinctly (label and colours)`, () => {
+      const four = PAGE_STATES.map((s) => drawnStates[`${width}:${s}`]);
+      expect(four.every(Boolean)).toBe(true);
+      expect(new Set(four.map((d) => d[0])).size).toBe(4);
+      expect(new Set(four.map((d) => d[1])).size).toBe(4);
+    });
   }
 });

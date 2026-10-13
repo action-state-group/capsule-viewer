@@ -235,3 +235,101 @@ AUTHORSHIP = re.compile(
 def test_no_word_says_the_key_holder_made_or_owns_the_deals(path):
     hits = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if AUTHORSHIP.search(line)]
     assert hits == []
+
+
+# ---- History Basic wording (FR-7a, FR-7b, FR-31, FR-32; test T8) -------------------------
+
+from capsule_viewer.history.recompute import (  # noqa: E402
+    COMPLETED_STATUS,
+    FAILED_STATUS,
+    PAGE_STATES,
+    check,
+    derive,
+    l0_lines,
+    page_state,
+    step_counts,
+)
+
+T8 = json.loads((HISTORY / "t8-banned.json").read_text(encoding="utf-8"))
+L0_GOLDEN = json.loads((HISTORY / "l0-golden.json").read_text(encoding="utf-8"))
+
+
+def _t8_patterns() -> dict[str, re.Pattern]:
+    out = {p: re.compile(r"\b" + re.escape(p) + r"\b", re.IGNORECASE) for p in T8["banned_deal_status"]["phrases"]}
+    out.update({p: re.compile(p, re.IGNORECASE) for p in T8["similarity_claim"]["patterns"]})
+    return out
+
+
+def t8_hits(lines: list[tuple[str, str]]) -> list[tuple[str, str, str]]:
+    return [(where, label, line) for where, line in lines for label, rx in _t8_patterns().items() if rx.search(line)]
+
+
+def test_t8_lists_exactly_the_three_named_phrases_and_a_similarity_rule():
+    assert T8["banned_deal_status"]["phrases"] == ["done", "completed sale", "delivered"]
+    assert T8["similarity_claim"]["note"] and T8["similarity_claim"]["patterns"]
+    # The patterns catch what they are for, and not the module's own L0 words.
+    rx = _t8_patterns()
+    assert rx["done"].search("3 deals done") and rx["delivered"].search("Delivered")
+    assert any(r.search("has sold items similar to this") for r in rx.values())
+    assert not any(r.search(line) for r in rx.values() for line in L0_GOLDEN["cases"][0]["l0"])
+
+
+def test_t8_the_wording_grep_over_the_modules_strings_is_zero():
+    lines = [(path.name, line) for path in MODULE_TEXT for line in path.read_text(encoding="utf-8").splitlines()]
+    assert len(lines) > 1000
+    assert t8_hits(lines) == []
+
+
+def test_t8_the_rendered_l0_has_outcomes_not_established_in_its_first_two_lines():
+    for name in ("history-history", "history-two-buyers"):
+        lines = check(_bundle(HISTORY / f"{name}.bundle.json"))["l0"]
+        assert "outcomes not established" in " ".join(lines[:2]), name
+
+
+@pytest.mark.parametrize("case", L0_GOLDEN["cases"], ids=lambda c: c["name"])
+def test_the_l0_golden_matches_section_5_2(case):
+    if "fixture" in case:
+        reading = check(_bundle(HISTORY / f"{case['fixture']}.bundle.json"))
+        assert reading["state"] == "card"
+        lines = reading["l0"]
+    else:
+        selected = case["selected"]
+        lines = l0_lines(derive(selected, case["selected_count"]), step_counts(selected))
+    assert lines == case["l0"]
+    assert lines[0] == "History Card · Delivery outcomes not established"
+
+
+def test_k_and_f_count_deals_by_effect_status_confirmed_and_failed():
+    assert (COMPLETED_STATUS, FAILED_STATUS) == ("confirmed", "failed")
+
+    def sel(*pairs):
+        return [{"deal": d, "record": {"timestamp": "2026-01-01T00:00:00Z", "effect": {"status": s}}} for d, s in pairs]
+
+    # A deal counts once however many records state the status; one deal may count in both.
+    assert step_counts(sel(("a", "confirmed"), ("a", "confirmed"), ("b", "failed"), ("b", "confirmed"))) == {"completed": 2, "failed": 1}
+    # dispatched (sent, result not observed), planned and reverted count toward neither.
+    assert step_counts(sel(("a", "dispatched"), ("b", "planned"), ("c", "reverted"))) == {"completed": 0, "failed": 0}
+    # The real fixtures: capsule-cli writes only "dispatched" for a deal's act.
+    statuses = {
+        (r.get("effect") or {}).get("status")
+        for path in FILES
+        for m in selection_block(_bundle(path))["deals"].values()
+        for r in m["records"]
+    }
+    assert statuses == {None, "dispatched", "failed"}  # failed only in mutant-flipped-status, which does not check
+    assert check(_bundle(HISTORY / "mutant-flipped-status.bundle.json"))["l0"] is None
+
+
+def test_four_page_states_map_from_the_readings_states():
+    assert PAGE_STATES == ("checking", "integrity_checked", "failed", "unable_to_verify")
+    assert {s: page_state(s) for s in ("card", "invalid", "mismatch", "not_shareable", "not_checked", "checking")} == {
+        "card": "integrity_checked",
+        "invalid": "failed",
+        "mismatch": "failed",
+        "not_shareable": "failed",
+        "not_checked": "unable_to_verify",
+        "checking": "checking",
+    }
+    for path in FILES:
+        reading = check(_bundle(path))
+        assert reading["page_state"] == page_state(reading["state"]), path.name

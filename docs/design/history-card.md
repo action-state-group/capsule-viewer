@@ -4,7 +4,11 @@ Status: built, reworked on 2026-10-12 to the History file shape agreed with
 the producer (capsule-cli PR #209), reading agent-action-capsule's
 VerifiedBundleContext (PM u334, design v0.5), and re-cut on #209's head
 ff8daad, whose `deal history` writes the `history` audience by default
-(neutral u888/u890, PM u335). The module is
+(neutral u888/u890, PM u335). The History Basic wording (L0 lines, banned
+status words, page check states, checks-ran list) follows wording
+requirements FR-7a, FR-7b, FR-31, FR-32, section 5.2 and test T8
+(company-oss u343, rc16); its consumer strings are in one table, **Wording
+(Steven-gated)**, at the end. The module is
 `src/capsule_viewer/static/history_card.js`, one self-contained module-slot
 script with its words compiled in; its manifest is
 `src/capsule_viewer/history/manifest.json` (this directory's sketch, plus the
@@ -140,7 +144,36 @@ payload.
 | `selected_count` | the number of selected deals (capsule-cli adds no count field; the page counts the deals) |
 | `effect_status` | `{status: count}`: each selected record whose capsule states `effect.status` counts once under it |
 | `completeness` | always `"not_asserted"` |
+| K (L0) | the number of selected deals with at least one record whose capsule states `effect.status` `confirmed` |
+| F (L0) | the number of selected deals with at least one record whose capsule states `effect.status` `failed` |
 | outcome, action class | **not proven**: "not proven: the copy withholds the record payload" (`not_proven`, above) |
+
+**K and F, and the status values.** agent-action-capsule defines five
+`effect.status` values (spec draft -05, the Effect Record): `planned`,
+`dispatched` (sent; result not observed), `confirmed` (result observed and
+bound), `failed` and `reverted`. A recorded completed step is `confirmed`, the
+only value that says the result was observed; a recorded failed step is
+`failed`. `dispatched`, `planned` and `reverted` count toward neither. K and F
+count deals, not records, and one deal can count in both. capsule-cli at
+[producer] writes only `dispatched` for a deal's act (`internal/cli/deal.go`,
+`dealCapsuleInput`), so the real fixtures give K = 0 and F = 0; the in-memory
+golden (`tests/testdata/history/l0-golden.json`) exercises both counts.
+
+**L0.** The card opens with two lines, then the page check state:
+
+```
+History Card · Delivery outcomes not established
+N selected deals · <period> · K with recorded completed steps · F with a recorded failed step
+```
+
+`<period>` is the months of the earliest and latest record times, as the
+records state them: `Oct 2026`, `Jan–Sep 2026`, or `Dec 2025–Feb 2026`
+across a year. With N = 1 the line says `1 selected deal`. The golden holds
+section 5.2's example (`6 selected deals · Jan–Sep 2026 · 5 with recorded
+completed steps · 1 with a recorded failed step`) and the two real cards.
+No line suggests the deals resemble any item, and no deal status uses a
+phrase in `tests/testdata/history/t8-banned.json`: test T8 greps the module
+for those phrases and its similarity patterns and finds none.
 
 `effect_status` reads only the capsule's own field. `dispatched` means the
 producer's runtime claimed a dispatch, not that it arrived. A record with no
@@ -203,6 +236,26 @@ one [producer, `historyEntry`]:
 3. **This History does not recompute**: a stated `asserted_result` that does
    not match.
 4. **The card.**
+
+**The page check states** (FR-32), one per page, each drawn as its own
+line with its own tone and its own `data-history-page-state`:
+
+| Page check state | The module's outcome |
+| --- | --- |
+| checking | before the model is built: the host renders `checkingModel()`; no value, no finding |
+| integrity checked | the card (state `card`) |
+| failed | This History does not check (`invalid`), This History does not recompute (`mismatch`), Not a shareable History (`not_shareable`) |
+| unable to verify | the check could not run (`not_checked`: `buildModel` caught an error, every property NOT_CHECKED); titled "This page could not check this file", never "does not check" |
+
+A keep History is VALID to capsulectl but is still **failed** here: the page
+check is whether this is a History to show, and a keep copy is not.
+
+**The checks-ran list** (FR-31). L2 lists, from the property statuses
+themselves, the properties this page checked (PASS or FAIL), those it did not
+check (NOT_CHECKED) and those the file does not carry (NOT_PRESENT). The
+signature rows are never under "Checked by this page"; they read
+"checked by capsulectl on the sender's machine, not by this page". Without a
+verifier context the history log is listed as not checked.
 
 **Per-property statuses** distinguish FAIL, NOT_CHECKED and NOT_PRESENT
 (PM design v0.3 §345); a property this page checks and finds holding is PASS.
@@ -331,6 +384,45 @@ a nested record or (keep) disclosure edited, every signature or checkpoint
 removed, a forged root or member signature, an `asserted_result` that
 recomputes or has one effect status flipped, and a History carrying the two
 possible future fields (`recipient`, `steps_after_checkpoint`), re-sealed.
+
+## Wording (Steven-gated)
+
+Every consumer string this design adds for History Basic (FR-7a, FR-7b,
+FR-31, FR-32, section 5.2), in one place for review. The module
+compiles them in (`history_card.js`, `WORDS`); the Python twin repeats the L0
+ones (`recompute.py`).
+
+| Key (`WORDS.`) | Where | String |
+| --- | --- | --- |
+| `l0Title` | L0, line 1 (the card's heading) | History Card · Delivery outcomes not established |
+| `l0Deals.other` / `l0Deals.one` | L0, line 2 | N selected deals / 1 selected deal |
+| `l0Completed` | L0, line 2 | K with recorded completed steps |
+| `l0Failed` | L0, line 2 | F with a recorded failed step |
+| (line 2, assembled) | L0, line 2 | N selected deals · \<period\> · K with recorded completed steps · F with a recorded failed step |
+| `pageState.checking` | page check state | Checking |
+| `pageStateNote.checking` | page check state | This page is checking the file. No value is shown until the check ends. |
+| `pageState.integrity_checked` | page check state | Integrity checked |
+| `pageStateNote.integrity_checked` | page check state | This page checked the file's contents, as listed under How this page checked the file. Signatures are checked by capsulectl on the sender's machine, not by this page. |
+| `pageState.failed` | page check state | Failed |
+| `pageStateNote.failed` | page check state | This page found that the file does not hold as a History to show. No value is shown. |
+| `pageState.unable_to_verify` | page check state | Unable to verify |
+| `pageStateNote.unable_to_verify` | page check state | This page could not run its check on this file. That is not a finding about the file: check it with capsulectl verify --bundle. |
+| `notCheckedTitle` | L0, unable to verify | This page could not check this file |
+| `notCheckedLead` | L0, unable to verify | The check stopped before it finished, so no card is shown. |
+| `checksRan` | L2 list heading | Checked by this page |
+| `checksNotRan` | L2 list heading | Not checked by this page |
+| `checksAbsent` | L2 list heading | Not in this file |
+| `checksNone` | L2, an empty list | None. |
+| `l2Signing` (changed) | L2 | before: "... and for the History's own bundle reads the page's verifier on the selection record's identity, the history log's checkpoint and the selection record's membership in that log: those are checked by this page. The page's verifier ..." after: "... and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier ..." (the ending, "every signature status here is checked by capsulectl on the sender's machine, not by this page.", is unchanged) |
+| `title` (removed) | L0 heading | before: "History"; after: `l0Title` |
+
+Open for Steven: section 5.2's line 2 ends "· deals you picked, not all of
+them". The page's reader is the recipient, not the holder of key K, and the
+presenter wording rule keeps the page from addressing the holder, so the page
+does not show that clause; the Completeness "Not asserted" note already says
+the selection is not all of anything. The L0 golden pins line 2 without it.
+Also open: whether a keep History's page check state should be "failed" (as
+now) or a fifth wording.
 
 ## Not in this design
 

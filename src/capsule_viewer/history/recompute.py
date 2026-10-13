@@ -67,6 +67,21 @@ KEEP_AUDIENCE = "keep"
 # What a history copy does not prove, in capsulectl verify's order (its History entry's "not_proven").
 NOT_PROVEN = ("outcome", "action_class")
 RECOMPUTED_KEYS = ("completeness", "effect_status", "period", "selected_count")
+# The L0 counts (History Basic wording, FR-7a, section 5.2): K counts the deals with at least
+# one record whose capsule states effect.status "confirmed" (agent-action-capsule:
+# the result observed and bound), F the deals with at least one "failed".
+# dispatched (sent, result not observed), planned and reverted count toward
+# neither. capsule-cli writes only "dispatched" for a deal's act.
+COMPLETED_STATUS = "confirmed"
+FAILED_STATUS = "failed"
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+# L0's words, as the module compiles them in (history_card.js WORDS.l0*).
+L0_TITLE = "History Card \u00b7 Delivery outcomes not established"
+L0_DEALS = ("selected deal", "selected deals")
+L0_COMPLETED = "with recorded completed steps"
+L0_FAILED = "with a recorded failed step"
+# The page check states (History Basic wording, FR-32).
+PAGE_STATES = ("checking", "integrity_checked", "failed", "unable_to_verify")
 # agent-action-capsule canonical.py: capsule_id and the local-only producer fields leave the preimage.
 CAPSULE_ID_EXCLUDED = frozenset({"capsule_id", "signature", "key_id"})
 DEAL_ID = re.compile(r"^deal-[0-9a-f]{16}$")
@@ -188,6 +203,60 @@ def derive(selected: list[dict], selected_count: int) -> dict:
     }
 
 
+def step_counts(selected: list[dict]) -> dict:
+    """K and F for L0: ``{"completed", "failed"}``, each a number of deals (not records)."""
+    completed = {s["deal"] for s in selected if effect_status(s["record"]) == COMPLETED_STATUS}
+    failed = {s["deal"] for s in selected if effect_status(s["record"]) == FAILED_STATUS}
+    return {"completed": len(completed), "failed": len(failed)}
+
+
+def period_text(period: Mapping) -> str:
+    """The period as L0 states it, from the records' own times (UTC, as
+    written): ``Oct 2026``, ``Jan\u2013Sep 2026`` or ``Dec 2025\u2013Feb 2026``; the raw
+    times when either does not start with a year and a month."""
+
+    def at(t):
+        m = re.match(r"(\d{4})-(\d{2})", t) if isinstance(t, str) else None
+        return (m.group(1), MONTHS[int(m.group(2)) - 1]) if m and 1 <= int(m.group(2)) <= 12 else None
+
+    start, end = at(period.get("from")), at(period.get("to"))
+    if start is None or end is None:
+        return f"{_js_str(period.get('from'))} to {_js_str(period.get('to'))}"
+    if start[0] != end[0]:
+        return f"{start[1]} {start[0]}\u2013{end[1]} {end[0]}"
+    return ("" if start[1] == end[1] else f"{start[1]}\u2013") + f"{end[1]} {end[0]}"
+
+
+def _js_str(v) -> str:
+    # As the module's String(v): null for None.
+    return "null" if v is None else str(v)
+
+
+def l0_lines(values: Mapping, counts: Mapping) -> list[str]:
+    """L0's first two lines (History Basic wording, section 5.2)."""
+    n = values["selected_count"]
+    deals = L0_DEALS[0] if n == 1 else L0_DEALS[1]
+    return [
+        L0_TITLE,
+        f"{n} {deals} \u00b7 {period_text(values['period'])} \u00b7 "
+        f"{counts['completed']} {L0_COMPLETED} \u00b7 {counts['failed']} {L0_FAILED}",
+    ]
+
+
+def page_state(state: str) -> str:
+    """The page check state for a reading's state: the card is
+    ``integrity_checked``; does not check, does not recompute and not
+    shareable are ``failed``; a check that could not run (``not_checked``,
+    the module's) is ``unable_to_verify``."""
+    if state == "card":
+        return "integrity_checked"
+    if state == "not_checked":
+        return "unable_to_verify"
+    if state == "checking":
+        return "checking"
+    return "failed"
+
+
 def not_proven(selected: list[dict], audience: str) -> list[str]:
     """What the History does not prove, from the payloads its copies withhold:
     a record whose payload is withheld shows no outcome and no action class,
@@ -245,9 +314,10 @@ def _does_not_check(finding: str) -> bool:
 
 
 def check(bundle: Mapping) -> dict:
-    """The whole reading of *bundle*: ``{"state", "findings", "properties",
-    "holder_key", "audience", "signer_keys", "deals", "not_proven", "values",
-    "asserted", "mismatches"}``. ``values`` is ``None`` unless ``state`` is ``card``."""
+    """The whole reading of *bundle*: ``{"state", "page_state", "findings",
+    "properties", "holder_key", "audience", "signer_keys", "deals",
+    "not_proven", "values", "l0", "asserted", "mismatches"}``. ``values`` and
+    ``l0`` are ``None`` unless ``state`` is ``card``."""
     bundle = _obj(bundle)
     block = selection_block(bundle)
     status = {p: PASS for p in PROPERTIES}
@@ -259,9 +329,9 @@ def check(bundle: Mapping) -> dict:
 
     if not isinstance(block, Mapping) or bundle.get("bundle_kind") != "evidence-bundle/v2":
         return {
-            "state": "invalid", "findings": [f"no {SELECTION_EXTENSION} block in an evidence-bundle/v2"],
+            "state": "invalid", "page_state": "failed", "findings": [f"no {SELECTION_EXTENSION} block in an evidence-bundle/v2"],
             "properties": {p: NOT_PRESENT for p in PROPERTIES}, "holder_key": "", "audience": "",
-            "signer_keys": {}, "deals": [], "not_proven": [], "values": None, "asserted": False, "mismatches": [],
+            "signer_keys": {}, "deals": [], "not_proven": [], "values": None, "l0": None, "asserted": False, "mismatches": [],
         }
 
     # The selection record: the bundle's root, recomputing to its id, its disclosure bound, signed.
@@ -425,6 +495,7 @@ def check(bundle: Mapping) -> dict:
         signers[key].sort()
     return {
         "state": state,
+        "page_state": page_state(state),
         "findings": findings + mismatches,
         "properties": status,
         "holder_key": holder,
@@ -433,6 +504,7 @@ def check(bundle: Mapping) -> dict:
         "deals": deals,
         "not_proven": not_proven(selected, audience),
         "values": values if state == "card" else None,
+        "l0": l0_lines(values, step_counts(selected)) if state == "card" else None,
         "asserted": has_asserted,
         "mismatches": mismatches,
     }

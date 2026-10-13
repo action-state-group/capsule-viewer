@@ -68,3 +68,10 @@ contact or message text).
 Keys, deal ids, nonces and times are new on every cut, so a recut rewrites
 every file and `cut.json`. When #209's head moves, recut from it and update
 the commit named above.
+
+**Wording data.** `l0-golden.json` holds the L0 goldens (History Basic wording, section 5.2):
+section 5.2's example and a year-end case in memory, and the two real cards
+(`history-history`, `history-two-buyers`: K = 0 and F = 0, since capsule-cli
+writes only `dispatched`). `t8-banned.json` is the T8 wording list: the three
+banned deal-status phrases and the similarity-claim patterns. The Python and
+JavaScript tests both read it, and other lints may reuse it.
