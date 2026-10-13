@@ -233,6 +233,46 @@ match one bundle (`tests/test_receipt_bilateral.py`). `receipt_page` registers b
 - Fixtures: `examples/receipt/build_bilateral_fixtures.sh` (see
   `tests/testdata/receipt/README.md`).
 
+### The receipt modules in the page: module-slot scripts
+
+The three receipt modules (unilateral, seller, bilateral) also ship as module-slot
+scripts, the form a page builder puts in a page (capsulectl `presentation build`, from
+a plugin that carries them): `static/receipt_unilateral.js`, `static/receipt_seller.js`
+and `static/receipt_bilateral.js`, pinned by `receipt/module-slot/manifest-*.json`
+(`executable.carrier` `module-slot`, `script_sha256`, and `style_sha256` for the kit
+stylesheet each script inserts once at render).
+
+- **One source, three scripts.** `static/receipt_core.js` is the source;
+  `python -m capsule_viewer.receipt.module_slot --write` writes each script from it with
+  its manifest, the example pack's words compiled in (the script reads no pack) and the
+  kit stylesheet, and writes the manifests (the Python modules' manifests, same ids and
+  selection clauses, with the module-slot carrier). One script per module: a builder puts
+  one script in a page per module it chose, so a shared script would register modules it
+  did not choose. `tests/test_receipt_module_slot.py` fails when a committed file is not
+  what the generator writes.
+- **The Python modules are the test oracle.** `js-tests/receipt_parity.test.js` runs
+  every receipt fixture, at every audience, and every copy whose seller kind was dropped
+  or added, through both (`tests/receipt_oracle.py` prints the Python side): the same
+  `canRender`, the same model field for field, and the same render at L0, L1 and L2 (both
+  parsed and serialised one canonical way). `js-tests/receipt_module_slot.test.js` also
+  holds the receipt goldens' pages to the same pixels in headless Chromium, and renders the
+  copies capsulectl (capsule-cli main) cut.
+- **What the page's runtime does not hand a module:** the page's audience (a copy is shown
+  as the audience its own sealed report names, never relabelled), a witness result (the
+  page's verifier reports none, and the witness line says so) and a composition's carried
+  copies as contexts of their own (the bilateral script asks the page's runtime to verify
+  each carried copy).
+- **Selection beside capsulectl's deal view.** agent-action-capsule's registry never
+  orders two modules of one tier: priority is not read, and a second module some
+  descriptor could match together with a registered one is refused at registration
+  (`ts/src/presentation-registry.ts`). `capsulectl.deal-view/v0` requires `x-deal-v0`,
+  forbids no extension and serves `*`, so the unilateral and seller receipts co-match it
+  (the bilateral one does not), and no forbids clause on either side can part them: a real
+  copy's descriptor matches both. `presentation build` never puts the deal view in a page,
+  so the three register there with no ambiguity and the page resolves each copy to its
+  receipt; `presentation list`, which registers the deal view beside them, stops at
+  registration (`tests/test_receipt_module_slot.py`).
+
 ## Evidence report page
 
 `capsule_viewer.evidence_report` renders one readable, offline HTML page from

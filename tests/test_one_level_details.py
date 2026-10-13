@@ -213,14 +213,29 @@ def test_seller_pages_are_one_level(name):
     assert one_level_faults(render(name, "L2")) == []
 
 
-@pytest.mark.parametrize("name", ["keep", "golden-2", "bilateral-keep"])
+@pytest.mark.parametrize("name", ["keep", "golden-2", "bilateral-keep", "seller-keep", "seller-producer-keep", "main-buyer-keep", "main-seller-keep"])
 def test_a_keep_copy_carries_the_private_banner_in_l0(name):
     html = render(name, "L0")
     assert shape(html).private_banners == [True]
     assert html.index('data-banner="private"') < html.index('data-level="L1"')
 
 
-@pytest.mark.parametrize("name", ["counterparty", "adjudicator", "bilateral-counterparty", "bilateral-adjudicator", "bilateral-two-deals"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "counterparty",
+        "adjudicator",
+        "bilateral-counterparty",
+        "bilateral-adjudicator",
+        "bilateral-two-deals",
+        "seller-counterparty",
+        "seller-adjudicator",
+        "seller-declined",
+        "seller-producer-counterparty",
+        "main-buyer-counterparty",
+        "main-seller-counterparty",
+    ],
+)
 def test_a_copy_for_anyone_else_carries_no_private_banner(name):
     html = render(name, "L2")
     assert shape(html).private_banners == []

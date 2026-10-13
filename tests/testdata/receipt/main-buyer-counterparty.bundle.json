@@ -1,0 +1,654 @@
+{
+  "bundle_kind": "evidence-bundle/v2",
+  "bundle_version": "2",
+  "checkpoint": {
+    "cose": "0oRYh6QBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCAkmBUECI_m5NfmjUg2iDS6o0dV0dIyrCSfpWpDC6BAfA-iAXgaZGVhbC9kZWFsLTliZWQwMzRmNzg1Y2QyZDYCeB1kZWFsL2RlYWwtOWJlZDAzNGY3ODVjZDJkNiMxNaBZApCnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUPaWlzc3VlZF9hdHgYMjAyNi0xMC0xM1QwNDoxMTo0MC4zOTRaaXByZXZfc2l6ZQtqY29tbWl0bWVudFgjgVgg1MfSiRi1cHdL7IeRbVkL5saEo5THFHYV9p0EqD2XQ4FvcHJldl9jb21taXRtZW50WGeDWCARsAAs-_n__yiiOzpdoH8pvhGl9OraSdp37l-ETSWK-1gg5mwqK0Hx49J6AvoFgB2Gvg9i7krkucwdS0d0yZuGDORYIGZCGcE_EbvmURjr-SH88DqUCXaXZ3eaY_fSGqT0zAeNcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2ELZnNpemVfYg9nd2l0bmVzc4OBWCDZxljQSwxUrjz5T1NqqMcwc6TFIsth6qrv_X25SccW0oJYIHEYr2qJ53wY_FWywheUt4SgquYmKU_JqKfNlesv925NWCARsAAs-_n__yiiOzpdoH8pvhGl9OraSdp37l-ETSWK-4NYIOSCnxxIbMQhqnKNGKaVhtGyuEN1GqzbpW_WTm490hglWCDmbCorQfHj0noC-gWAHYa-D2LuSuS5zB1LR3TJm4YM5FggEbAALPv5__8oojs6XaB_Kb4RpfTq2knad-5fhE0livtpbmV3X3BlYWtzgVgg1MfSiRi1cHdL7IeRbVkL5saEo5THFHYV9p0EqD2XQ4Fpb2xkX3BlYWtzg1ggEbAALPv5__8oojs6XaB_Kb4RpfTq2knad-5fhE0livtYIOZsKitB8ePSegL6BYAdhr4PYu5K5LnMHUtHdMmbhgzkWCBmQhnBPxG75lEY6_kh_PA6lAl2l2d3mmP30hqk9MwHjVhAUCeIO_M22qZMVWefyyXrm0QX-9GlxzBvja7uSuxA4UA8N_TbbBZEkTsFeu43_AuOjB9XI-PJnhzoPOO_7ANtBA",
+    "key_id": "24981504088fe6e4d7e68d48368834baa34755d1d232ac249fa56a430ba0407c",
+    "kind": "mmr_checkpoint",
+    "log_id": "deal/deal-9bed034f785cd2d6",
+    "mmr_size": 15,
+    "prev_root": "1091ae7e592a6b21963a73ac6f6589a198c964f5f2fd08547ae0a4e1761b9bd2",
+    "prev_size": 11,
+    "root": "d4c7d28918b570774bec87916d590be6c684a394c7147615f69d04a83d974381",
+    "statement": "0oRYh6QBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCAkmBUECI/m5NfmjUg2iDS6o0dV0dIyrCSfpWpDC6BAfA+iAXgaZGVhbC9kZWFsLTliZWQwMzRmNzg1Y2QyZDYCeB1kZWFsL2RlYWwtOWJlZDAzNGY3ODVjZDJkNiMxNaBZApCnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUPaWlzc3VlZF9hdHgYMjAyNi0xMC0xM1QwNDoxMTo0MC4zOTRaaXByZXZfc2l6ZQtqY29tbWl0bWVudFgjgVgg1MfSiRi1cHdL7IeRbVkL5saEo5THFHYV9p0EqD2XQ4FvcHJldl9jb21taXRtZW50WGeDWCARsAAs+/n//yiiOzpdoH8pvhGl9OraSdp37l+ETSWK+1gg5mwqK0Hx49J6AvoFgB2Gvg9i7krkucwdS0d0yZuGDORYIGZCGcE/EbvmURjr+SH88DqUCXaXZ3eaY/fSGqT0zAeNcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2ELZnNpemVfYg9nd2l0bmVzc4OBWCDZxljQSwxUrjz5T1NqqMcwc6TFIsth6qrv/X25SccW0oJYIHEYr2qJ53wY/FWywheUt4SgquYmKU/JqKfNlesv925NWCARsAAs+/n//yiiOzpdoH8pvhGl9OraSdp37l+ETSWK+4NYIOSCnxxIbMQhqnKNGKaVhtGyuEN1GqzbpW/WTm490hglWCDmbCorQfHj0noC+gWAHYa+D2LuSuS5zB1LR3TJm4YM5FggEbAALPv5//8oojs6XaB/Kb4RpfTq2knad+5fhE0livtpbmV3X3BlYWtzgVgg1MfSiRi1cHdL7IeRbVkL5saEo5THFHYV9p0EqD2XQ4Fpb2xkX3BlYWtzg1ggEbAALPv5//8oojs6XaB/Kb4RpfTq2knad+5fhE0livtYIOZsKitB8ePSegL6BYAdhr4PYu5K5LnMHUtHdMmbhgzkWCBmQhnBPxG75lEY6/kh/PA6lAl2l2d3mmP30hqk9MwHjVhAUCeIO/M22qZMVWefyyXrm0QX+9GlxzBvja7uSuxA4UA8N/TbbBZEkTsFeu43/AuOjB9XI+PJnhzoPOO/7ANtBA==",
+    "timestamp": "2026-10-13T04:11:40.394Z",
+    "v": 1
+  },
+  "completeness": {
+    "closure_depth": 5,
+    "missing": [],
+    "payloads_mode": "selected",
+    "records_mode": "complete",
+    "suppressed_fields": []
+  },
+  "completeness_certificate": {
+    "body_digests": [
+      "2368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c",
+      "00790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a3",
+      "48353bb593f1aa9e40b6bffd376c4456fdf8a58b21dc472ad12c20c2b75e9e5c",
+      "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988",
+      "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547",
+      "20adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab1",
+      "729ffb3f73acade2701646e57dd16646dcd5e324f0436d70ade466910590dd0d",
+      "9c9287a149d94bf0b15d27bc9891496a895ff798346d00998b6975a5fdee7ecf"
+    ],
+    "first_seq": 1,
+    "last_seq": 8,
+    "log_id": "deal/deal-9bed034f785cd2d6",
+    "memberships": {
+      "00790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a3": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 1,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "bc13104747f988e689034f3e3b8d653b3df912ebba5045801f1ef3c8f6fa21f3",
+            "e687defb9c9191f076a3b83c4f4cdf7402a548a403636946f316485c944424ad",
+            "d9c658d04b0c54ae3cf94f536aa8c73073a4c522cb61eaaaeffd7db949c716d2"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 1,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 2
+        }
+      },
+      "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 4,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "f1e44bfc5da8c8b28c956580a96018c882da52fd5fe134490d210d163ea87305",
+            "7118af6a89e77c18fc55b2c21794b784a0aae626294fc9a8a7cd95eb2ff76e4d",
+            "11b0002cfbf9ffff28a23b3a5da07f29be11a5f4eada49da77ee5f844d258afb"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 4,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 5
+        }
+      },
+      "20adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab1": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 5,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "d367de12161408440882a1aecb34a4f8ace72ba73a4e26277f0874c9c75a11ad",
+            "7118af6a89e77c18fc55b2c21794b784a0aae626294fc9a8a7cd95eb2ff76e4d",
+            "11b0002cfbf9ffff28a23b3a5da07f29be11a5f4eada49da77ee5f844d258afb"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 5,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 6
+        }
+      },
+      "2368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 0,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "4b33b9dd31201f293e55d1ff5ac35c28433ce1151b84ffff28999c81e8f3982a",
+            "e687defb9c9191f076a3b83c4f4cdf7402a548a403636946f316485c944424ad",
+            "d9c658d04b0c54ae3cf94f536aa8c73073a4c522cb61eaaaeffd7db949c716d2"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 0,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 1
+        }
+      },
+      "48353bb593f1aa9e40b6bffd376c4456fdf8a58b21dc472ad12c20c2b75e9e5c": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 2,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "bc28ddfff5452ffd59ba326804c0def7b0b21785c933b4391a4fadf2c62bcecb",
+            "495cac530a3cdf967dd05e50b17cdc08cdf8ae8bf2d2da0bfed43fcaf6fe5904",
+            "d9c658d04b0c54ae3cf94f536aa8c73073a4c522cb61eaaaeffd7db949c716d2"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 2,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 3
+        }
+      },
+      "729ffb3f73acade2701646e57dd16646dcd5e324f0436d70ade466910590dd0d": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 6,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "e4829f1c486cc421aa728d18a69586d1b2b843751aacdba56fd64e6e3dd21825",
+            "e66c2a2b41f1e3d27a02fa05801d86be0f62ee4ae4b9cc1d4b4774c99b860ce4",
+            "11b0002cfbf9ffff28a23b3a5da07f29be11a5f4eada49da77ee5f844d258afb"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 6,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 7
+        }
+      },
+      "9c9287a149d94bf0b15d27bc9891496a895ff798346d00998b6975a5fdee7ecf": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 7,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "664219c13f11bbe65118ebf921fcf03a9409769767779a63f7d21aa4f4cc078d",
+            "e66c2a2b41f1e3d27a02fa05801d86be0f62ee4ae4b9cc1d4b4774c99b860ce4",
+            "11b0002cfbf9ffff28a23b3a5da07f29be11a5f4eada49da77ee5f844d258afb"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 7,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 8
+        }
+      },
+      "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 3,
+          "peaks_left": [],
+          "peaks_right": [],
+          "size": 15,
+          "v": 1,
+          "witness": [
+            "f3fba00ac509f9f4efa6aad1b0b7f4b3128bdcc9eb032f317502921e04786115",
+            "495cac530a3cdf967dd05e50b17cdc08cdf8ae8bf2d2da0bfed43fcaf6fe5904",
+            "d9c658d04b0c54ae3cf94f536aa8c73073a4c522cb61eaaaeffd7db949c716d2"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 3,
+          "log_id": "deal/deal-9bed034f785cd2d6",
+          "seq": 4
+        }
+      }
+    },
+    "range_proof": {
+      "from_index": 0,
+      "from_seq": 1,
+      "size": 15,
+      "to_index": 7,
+      "to_seq": 8,
+      "witness": []
+    },
+    "range_root": "d4c7d28918b570774bec87916d590be6c684a394c7147615f69d04a83d974381"
+  },
+  "disclosures": {
+    "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547": {
+      "agent_input": {
+        "body": {
+          "approver": "standing_intent",
+          "choice": "proceed",
+          "proceed": true
+        },
+        "x-deal-v0": {
+          "at": "2026-10-13T04:11:38Z",
+          "baseline_ref": {
+            "digest": "78222a36d42634041a4548cde2238fa5027b86223e0366f5bf1ccb3b98b08fb1",
+            "digest_alg": "SHA-256",
+            "type": "deal-record"
+          },
+          "canonicalization": "jcs",
+          "commit_alg": "sha256-jcs-nonce256",
+          "deal_id": "deal-9bed034f785cd2d6",
+          "prev": {
+            "digest": "0d6e4c6566cd7312687afa7149694993a2975c86e2b3b63f546e270eeabfa781",
+            "digest_alg": "SHA-256",
+            "type": "deal-record"
+          },
+          "producer": {
+            "commit": "unknown",
+            "name": "capsulectl",
+            "version": "0.1.0-dev"
+          },
+          "profile": "x-deal-v0",
+          "record_type": "approval",
+          "refs": [
+            {
+              "digest": "0d6e4c6566cd7312687afa7149694993a2975c86e2b3b63f546e270eeabfa781",
+              "digest_alg": "SHA-256",
+              "rel": "approves",
+              "type": "deal-record"
+            }
+          ],
+          "seq": 5
+        }
+      }
+    },
+    "9c9287a149d94bf0b15d27bc9891496a895ff798346d00998b6975a5fdee7ecf": {
+      "agent_input": {
+        "audience": "counterparty",
+        "deal_id": "deal-9bed034f785cd2d6",
+        "nonce": "5bf82dd242e462eefcb3b92d8995db398be1416da7c0151b9aec48f5e3c18a0b",
+        "profile": "x-deal-v0",
+        "report": {
+          "anomalies": [],
+          "asked_step": "2368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c",
+          "audience": "counterparty",
+          "deal_id": "deal-9bed034f785cd2d6",
+          "did": [
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "kind": "check",
+              "steps": [
+                "00790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a3",
+                "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988",
+                "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547"
+              ],
+              "text": "Checked before paying: no differences"
+            },
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "kind": "act",
+              "steps": [
+                "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547",
+                "20adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab1"
+              ],
+              "text": "Did: pay $6.27 by card"
+            }
+          ],
+          "did_line": "What you asked, what was proposed and what you approved are sealed on the agent's device, where they happened. What the agent did is the agent's own report: no independent source, such as the merchant's own email, is attached.",
+          "email_scope": "This covers one email from the merchant about this deal. It is not a record of everything the merchant sent or charged.",
+          "lifecycle": {
+            "as_of": "2026-10-13T04:11:40Z",
+            "later": [],
+            "may_change": "Records can be linked to this deal after this receipt was made (a merchant's confirmation, a shipping notice, a refund). This receipt shows those sealed when it was made; to see later ones, make a new report with `capsulectl deal report`.",
+            "state": "open",
+            "text": "Open: waiting for the merchant's receipt. It is expected to close by 2026-10-27."
+          },
+          "merchant": [],
+          "scope": "This receipt covers this one deal. It is not a record of everything the agent did.",
+          "steps": [
+            {
+              "at": "2026-10-13T04:11:37Z",
+              "capsule_id": "2368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c",
+              "kind": "open",
+              "line": "Opened a purchase deal (details withheld)",
+              "n": 1,
+              "withheld": true
+            },
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "capsule_id": "00790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a3",
+              "kind": "snapshot",
+              "line": "About to pay $6.27",
+              "n": 2,
+              "withheld": true
+            },
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "capsule_id": "48353bb593f1aa9e40b6bffd376c4456fdf8a58b21dc472ad12c20c2b75e9e5c",
+              "kind": "private",
+              "line": "A record kept for the user only (withheld)",
+              "n": 3,
+              "withheld": true
+            },
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "capsule_id": "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988",
+              "kind": "check",
+              "line": "Check: no differences",
+              "n": 4,
+              "withheld": false
+            },
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "capsule_id": "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547",
+              "kind": "approval",
+              "line": "Went ahead on what you already allowed",
+              "n": 5,
+              "withheld": false
+            },
+            {
+              "at": "2026-10-13T04:11:38Z",
+              "capsule_id": "20adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab1",
+              "kind": "act",
+              "line": "Did: pay $6.27 by card",
+              "n": 6,
+              "withheld": true
+            }
+          ],
+          "told": [],
+          "verify_command": "capsulectl verify --bundle buyer-counterparty.html",
+          "withheld": [
+            "home address",
+            "names, payees and contact details",
+            "card and payment identifiers",
+            "verification codes",
+            "message text",
+            "claim text and sources",
+            "your own words",
+            "item, place and condition details",
+            "the merchant email's text, items and signing domain",
+            "booking, confirmation and reservation codes, and any order number its signed email does not confirm",
+            "your spending limit"
+          ]
+        },
+        "type": "deal_report"
+      }
+    },
+    "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988": {
+      "agent_input": {
+        "body": {
+          "differences": [],
+          "judge": {
+            "kind": "rules"
+          },
+          "materiality": {
+            "digest": "05ec66b4a21025a66288cafc74e7fa1c540cc62695c5f536df84f4a7d7f66d4a",
+            "label_commitment": "9e57f4feb793fc038c4f100e079c71a60177c1a6f1547157c9fd7fd248083a24"
+          },
+          "notes": [
+            "first_time_counterparty"
+          ],
+          "options": [],
+          "result": "pass",
+          "rules": {
+            "status": "not_configured"
+          }
+        },
+        "x-deal-v0": {
+          "at": "2026-10-13T04:11:38Z",
+          "baseline_ref": {
+            "digest": "78222a36d42634041a4548cde2238fa5027b86223e0366f5bf1ccb3b98b08fb1",
+            "digest_alg": "SHA-256",
+            "type": "deal-record"
+          },
+          "canonicalization": "jcs",
+          "commit_alg": "sha256-jcs-nonce256",
+          "deal_id": "deal-9bed034f785cd2d6",
+          "prev": {
+            "digest": "32bd60cf5840e6b7bbee881ffee89070cbc47d120ece9c70126e9b0aaed8db4e",
+            "digest_alg": "SHA-256",
+            "type": "deal-record"
+          },
+          "producer": {
+            "commit": "unknown",
+            "name": "capsulectl",
+            "version": "0.1.0-dev"
+          },
+          "profile": "x-deal-v0",
+          "record_type": "verdict",
+          "refs": [
+            {
+              "digest": "6399a0e4f05dbc0346b05e6432fa7870aa694b3fb8f5399a9898094445c6c8c0",
+              "digest_alg": "SHA-256",
+              "rel": "checks",
+              "type": "deal-record"
+            }
+          ],
+          "seq": 4
+        }
+      }
+    }
+  },
+  "extensions": {
+    "x-cadence-witness/v0": {
+      "state": "not_configured"
+    },
+    "x-deal-v0": {
+      "sealed_report": "9c9287a149d94bf0b15d27bc9891496a895ff798346d00998b6975a5fdee7ecf"
+    }
+  },
+  "records": [
+    {
+      "action_id": "deal-9bed034f785cd2d6/1",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "2368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c",
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "78222a36d42634041a4548cde2238fa5027b86223e0366f5bf1ccb3b98b08fb1"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a058202368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c5840d872a9755864cd62f1a400ae9ea0c90872e0dcdedfbfab6aec6d20ac4c24aa1c9091fecf8d657d758aa16942826973e85e2d4aecc16980630f26924a99cb7f02",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:37Z"
+    },
+    {
+      "action_id": "deal-9bed034f785cd2d6/2",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "chained"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "00790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a3",
+      "chain": {
+        "parent_capsule_id": "2368fce2bc35a3a032f43b10cfa11a012a4291d51b182ca67791fca525e9c46c",
+        "relation": "follows"
+      },
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6399a0e4f05dbc0346b05e6432fa7870aa694b3fb8f5399a9898094445c6c8c0"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a0582000790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a358402da6b42084f206b76ca11de02d485fe3b94cdf4389500db2b43295e08f4605d9f07b977eb762fcaad6a95fcc7c64751fb6ece37f43412a654eefef1ff2a37001",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:38Z"
+    },
+    {
+      "action_id": "deal-9bed034f785cd2d6/3",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "chained"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "48353bb593f1aa9e40b6bffd376c4456fdf8a58b21dc472ad12c20c2b75e9e5c",
+      "chain": {
+        "parent_capsule_id": "00790b6854cc9500a96428fb313573dc0b7f49547f40bdacfc931ad8b99088a3",
+        "relation": "follows"
+      },
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "32bd60cf5840e6b7bbee881ffee89070cbc47d120ece9c70126e9b0aaed8db4e"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a0582048353bb593f1aa9e40b6bffd376c4456fdf8a58b21dc472ad12c20c2b75e9e5c5840b0a6decb8a948713b92cd1c441749180ef06f865bbdf0d075cda380a8e3856e1de162e8dfd01a5396266f8d075c684c46656f1caaced9df5b58e76a9223cc10a",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:38Z"
+    },
+    {
+      "action_id": "deal-9bed034f785cd2d6/4",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "chained"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988",
+      "chain": {
+        "parent_capsule_id": "48353bb593f1aa9e40b6bffd376c4456fdf8a58b21dc472ad12c20c2b75e9e5c",
+        "relation": "follows"
+      },
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "0d6e4c6566cd7312687afa7149694993a2975c86e2b3b63f546e270eeabfa781"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a05820f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a11898858404a348ea4a7538c46c4c19f01b5d1ddee3c3da0e9abdfdaa564371307ab6f50ea0b86e4560bf5ece85551ceae23cd845943c989d8e512dc3d651d71c3899b0908",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:38Z"
+    },
+    {
+      "action_id": "deal-9bed034f785cd2d6/5",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "chained"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547",
+      "chain": {
+        "parent_capsule_id": "f3c741e44f5a9bd5d5c825cf26659dce50a22da271c7a7ff1a0932a88a118988",
+        "relation": "follows"
+      },
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "8a77ee96db5933cdb87ddf5708dc8dbdb8e82b286235b326017a5b3e6d1b2f66"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a058200617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f54454758409c1d471dfa334ee63073ec202e7e4a89ec35ee26ec95fed1c92a937e9bb12861449fa9a4d1be12b5462e2d00b4d53d02488c4a369dd1d34dbb6bee59f1e67500",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:38Z"
+    },
+    {
+      "action_id": "deal-9bed034f785cd2d6/6",
+      "action_type": "decide",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "dispatched_unconfirmed",
+        "ledger_mode": "chained"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "20adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab1",
+      "chain": {
+        "parent_capsule_id": "0617b1bd96408447b6ba7c41116343b1ee4021df28a6bb05139e12d72f544547",
+        "relation": "follows"
+      },
+      "developer": "capsulectl-deal",
+      "disposition": {
+        "approver": "policy",
+        "decision": "accept",
+        "human_disposed": false,
+        "verdict_class": "executed"
+      },
+      "effect": {
+        "effect_attestation": "runtime_claimed",
+        "irreversibility_class": "one_way_recoverable",
+        "status": "dispatched",
+        "type": "send_payment"
+      },
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "69320994ed6d88d15f3b421103d97c36d0d398f34ebc599a3034d323fe3eaa3e"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a0582020adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab15840620a21c1adb600bac5ad5e717842b829cd3e3aab01467fe39941ec9da34cd668047ba1e4132198214976c6a92ed56e2cf5fc8d336df471aa840b320b7490b408",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:38Z"
+    },
+    {
+      "action_id": "capsulectl-deal-report",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "729ffb3f73acade2701646e57dd16646dcd5e324f0436d70ade466910590dd0d",
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "92958b1a873408dfd9b342e8dc61066913a2d8eaeb9c825b55d04f7468e3b7b5"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a05820729ffb3f73acade2701646e57dd16646dcd5e324f0436d70ade466910590dd0d584042cf6ec0cbb4e962b71dffe8c4783e3ef72250a410710bb9ea881d43eabbaa17140591f24f8487c92fdaa2871a4c6adb399b819198171bf05465170517e2ed01",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:39Z"
+    },
+    {
+      "action_id": "capsulectl-deal-report",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "9c9287a149d94bf0b15d27bc9891496a895ff798346d00998b6975a5fdee7ecf",
+      "developer": "capsulectl-deal",
+      "format_version": "4",
+      "key_id": "14dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c153",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "27f05906390b237c3854c2cf3f7178532b54632582eafd77a78b29bd9b8dfade"
+        }
+      },
+      "operator": "deal",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582014dbb5aa1e84f48f51f90a6783f091971488df271bad924a277e6d13eae8c1530127a058209c9287a149d94bf0b15d27bc9891496a895ff798346d00998b6975a5fdee7ecf5840dd55064311689523783565d5fadc0cac02f9d0d116a5d4a92fbaba803cd6d6f8f8b6f68f09dd2ddb6a1eea2b5631bcf5f51709700bef2b07064ce4f7e36d050f",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-13T04:11:40Z"
+    }
+  ],
+  "root": "20adb4ec6dd291723cd50354a38721a5b2d57341a00e092e1d40153f7fc80ab1",
+  "verification": {
+    "checks": [
+      "graph_closure",
+      "interval_coverage",
+      "per_record_membership"
+    ],
+    "producer": "capsulectl"
+  }
+}
