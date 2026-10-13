@@ -1907,6 +1907,10 @@
         var depth = DEPTHS.indexOf(host.depth) >= 0 ? host.depth : "L0";
         ensureStyle(doc);
         var levels = DRAW[kind](doc, depth, model);
+        // One text node per run of text, as the Python twin's HTML parses: the
+        // browser shapes each text node on its own, so a run built from several
+        // would lay out a fraction of a pixel differently.
+        levels.forEach(function (level) { level.normalize(); });
         [host.L0, host.L1, host.L2].forEach(function (region, i) {
           var wrap = doc.createElement("div");
           wrap.className = "cv-kit";

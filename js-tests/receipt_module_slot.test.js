@@ -18,8 +18,9 @@
 //     screenshot both pages are settled the same way: fonts loaded
 //     (document.fonts.ready), the kit stylesheet applied, two frames painted.
 //     Then, always: the same text, and every element the same box and the same
-//     computed style. And the screenshots must be the same pixels; where they
-//     are not (CI's Chrome produced differing screenshots of the two pages
+//     computed style. A box edge may differ by at most one LayoutUnit (1/64 px):
+//     sub-pixel layout rounding, printed when it is used; a style property
+//     never. And the screenshots must be the same pixels; where they are not (CI's Chrome produced differing screenshots of the two pages
 //     where this machine's did not), at most PIXEL_TOLERANCE of the pixels may
 //     differ, at the same page size, and the difference is printed. With text,
 //     every box and every computed style already equal, what is left between
@@ -78,6 +79,9 @@ describe("real copies capsulectl cut, in jsdom", () => {
       expect(root.textContent.includes("PRIVATE")).toBe(c.keep);
       if (c.keep) expect(banners[0].closest('[data-level="L0"]')).not.toBeNull();
       else expect(root.querySelector("[data-shared]").getAttribute("data-shared")).toBe("counterparty");
+      // One text node per run of text, as the Python page parses (render normalises).
+      const split = [...root.querySelectorAll("*")].filter((e) => [...e.childNodes].some((n, i, all) => n.nodeType === 3 && all[i + 1]?.nodeType === 3));
+      expect(split.length).toBe(0);
       expect(root.querySelectorAll("details").length).toBe(2);
       expect(root.querySelectorAll("details details").length).toBe(0);
       expect(root.querySelectorAll("details[open]").length).toBe(0);
@@ -186,6 +190,7 @@ const LAYOUT = `(() => {
 function elementDifferences(script, python, limit = 5) {
   const out = [];
   const round = (v) => Math.round(v * 100) / 100;
+  const rounding = [];
   for (let i = 0; i < Math.max(script.length, python.length) && out.length < limit; i += 1) {
     const a = script[i], b = python[i];
     if (!a || !b || a.path !== b.path) {
@@ -193,12 +198,21 @@ function elementDifferences(script, python, limit = 5) {
       continue;
     }
     const parts = [];
-    for (const k of ["x", "y", "width", "height"]) if (round(a.box[k]) !== round(b.box[k])) parts.push(`${k} ${a.box[k]} vs ${b.box[k]}`);
+    for (const k of ["x", "y", "width", "height"]) {
+      if (round(a.box[k]) === round(b.box[k])) continue;
+      // Sub-pixel layout rounding: at most one LayoutUnit (1/64 px) per edge is
+      // allowed, and printed. Never for a style property.
+      if (Math.abs(a.box[k] - b.box[k]) <= LAYOUT_UNIT) rounding.push(`#${i} ${b.path}: ${k} ${a.box[k]} vs ${b.box[k]}`);
+      else parts.push(`${k} ${a.box[k]} vs ${b.box[k]}`);
+    }
     for (const k of Object.keys(b.style)) if (a.style[k] !== b.style[k]) parts.push(`${k} ${JSON.stringify(a.style[k])} vs ${JSON.stringify(b.style[k])}`);
     if (parts.length) out.push(`#${i} ${b.path} ("${b.text}"): ${parts.join("; ")}; text nodes ${a.textNodes} vs ${b.textNodes} (script vs python)`);
   }
+  if (rounding.length) console.warn(`within one LayoutUnit (sub-pixel layout rounding), script vs python:\n  ${rounding.join("\n  ")}`);
   return out;
 }
+// One LayoutUnit: the browser's sub-pixel layout grain.
+const LAYOUT_UNIT = 1 / 64;
 // The share of pixels two screenshots of equal text, boxes and styles may
 // differ in (rasterisation, never content: see (3) above).
 const PIXEL_TOLERANCE = 0.002;
