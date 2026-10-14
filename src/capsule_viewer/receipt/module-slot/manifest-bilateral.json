@@ -19,7 +19,8 @@
       "result_version:evidence-result-v0"
     ],
     "extensions": [
-      "x-deal-v0"
+      "x-deal-v0",
+      "x-history-selection/v0"
     ]
   },
   "audiences": [
@@ -34,7 +35,7 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "1cebeb0134d9479367c342bf4f943709888d692d50f6dfc98ed3891a444e3507",
+    "script_sha256": "f524dedd86a4ef04a3315955b89a59de918b90cb51a75aeefa8621fea259d28c",
     "style_sha256": [
       "3ebe7e581f56665a6a0b5a122fd8447c6be9e06fbcd262e304d83948915d93fd"
     ]

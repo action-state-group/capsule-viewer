@@ -1,0 +1,203 @@
+{
+ "about": "L0 goldens (History Basic wording, section 5.2, FR-7a). Line 1 and line 2 exactly; the module (l0Lines) and the Python twin (l0_lines) must both produce them. K counts deals with an effect.status \"confirmed\" record, F deals with a \"failed\" one; dispatched, planned and reverted count toward neither.",
+ "cases": [
+  {
+   "name": "section 5.2 example (in memory)",
+   "selected_count": 6,
+   "selected": [
+    {
+     "deal": "deal-0000000000000001",
+     "record": {
+      "timestamp": "2026-01-15T10:00:00Z"
+     }
+    },
+    {
+     "deal": "deal-0000000000000001",
+     "record": {
+      "timestamp": "2026-01-15T10:00:00Z",
+      "effect": {
+       "status": "dispatched"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000001",
+     "record": {
+      "timestamp": "2026-01-15T10:00:00Z",
+      "effect": {
+       "status": "confirmed"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000002",
+     "record": {
+      "timestamp": "2026-02-03T09:00:00Z"
+     }
+    },
+    {
+     "deal": "deal-0000000000000002",
+     "record": {
+      "timestamp": "2026-02-03T09:00:00Z",
+      "effect": {
+       "status": "dispatched"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000002",
+     "record": {
+      "timestamp": "2026-02-03T09:00:00Z",
+      "effect": {
+       "status": "confirmed"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000003",
+     "record": {
+      "timestamp": "2026-04-20T12:00:00Z"
+     }
+    },
+    {
+     "deal": "deal-0000000000000003",
+     "record": {
+      "timestamp": "2026-04-20T12:00:00Z",
+      "effect": {
+       "status": "dispatched"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000003",
+     "record": {
+      "timestamp": "2026-04-20T12:00:00Z",
+      "effect": {
+       "status": "confirmed"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000004",
+     "record": {
+      "timestamp": "2026-06-01T08:30:00Z"
+     }
+    },
+    {
+     "deal": "deal-0000000000000004",
+     "record": {
+      "timestamp": "2026-06-01T08:30:00Z",
+      "effect": {
+       "status": "dispatched"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000004",
+     "record": {
+      "timestamp": "2026-06-01T08:30:00Z",
+      "effect": {
+       "status": "confirmed"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000005",
+     "record": {
+      "timestamp": "2026-08-11T16:00:00Z"
+     }
+    },
+    {
+     "deal": "deal-0000000000000005",
+     "record": {
+      "timestamp": "2026-08-11T16:00:00Z",
+      "effect": {
+       "status": "dispatched"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000005",
+     "record": {
+      "timestamp": "2026-08-11T16:00:00Z",
+      "effect": {
+       "status": "confirmed"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000006",
+     "record": {
+      "timestamp": "2026-09-28T11:00:00Z"
+     }
+    },
+    {
+     "deal": "deal-0000000000000006",
+     "record": {
+      "timestamp": "2026-09-28T11:00:00Z",
+      "effect": {
+       "status": "dispatched"
+      }
+     }
+    },
+    {
+     "deal": "deal-0000000000000006",
+     "record": {
+      "timestamp": "2026-09-28T11:00:00Z",
+      "effect": {
+       "status": "failed"
+      }
+     }
+    }
+   ],
+   "l0": [
+    "History Card · Delivery outcomes not established",
+    "6 selected deals · Jan–Sep 2026 · 5 with recorded completed steps · 1 with a recorded failed step"
+   ]
+  },
+  {
+   "name": "one deal over a year end (in memory)",
+   "selected_count": 1,
+   "selected": [
+    {
+     "deal": "deal-00000000000000aa",
+     "record": {
+      "timestamp": "2025-12-30T23:00:00Z",
+      "effect": {
+       "status": "reverted"
+      }
+     }
+    },
+    {
+     "deal": "deal-00000000000000aa",
+     "record": {
+      "timestamp": "2026-02-02T01:00:00Z",
+      "effect": {
+       "status": "planned"
+      }
+     }
+    }
+   ],
+   "l0": [
+    "History Card · Delivery outcomes not established",
+    "1 selected deal · Dec 2025–Feb 2026 · 0 with recorded completed steps · 0 with a recorded failed step"
+   ]
+  },
+  {
+   "name": "history-history",
+   "fixture": "history-history",
+   "l0": [
+    "History Card · Delivery outcomes not established",
+    "3 selected deals · Oct 2026 · 0 with recorded completed steps · 0 with a recorded failed step"
+   ]
+  },
+  {
+   "name": "history-two-buyers",
+   "fixture": "history-two-buyers",
+   "l0": [
+    "History Card · Delivery outcomes not established",
+    "2 selected deals · Oct 2026 · 0 with recorded completed steps · 0 with a recorded failed step"
+   ]
+  }
+ ]
+}

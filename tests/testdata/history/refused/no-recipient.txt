@@ -1,0 +1,3 @@
+$ capsulectl deal history (no --to) --out FILE --deal CLOSED
+capsulectl: invalid input or profile configuration: deal history needs --to: who the History is for, as sealed in its selection record
+exit status: 2

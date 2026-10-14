@@ -1,0 +1,110 @@
+{
+ "buyer_a": {
+  "address": [
+   "12 Juniper Court, Lakeview",
+   "Juniper"
+  ],
+  "contact": [
+   "avery@quinlan.example",
+   "+1 555 014 2233",
+   "quinlan.example",
+   "555 014 2233"
+  ],
+  "item": [
+   "vintage road bike"
+  ],
+  "message": [
+   "Avery here: please hold the vintage road bike, I will collect it at 12 Juniper Court",
+   "please hold"
+  ],
+  "name": [
+   "Avery Quinlan",
+   "Avery",
+   "Quinlan"
+  ],
+  "price": [
+   "145000",
+   "1450.00",
+   "$1450",
+   "1,450.00",
+   "$1,450",
+   "1,450",
+   "1.450,00",
+   "1 450",
+   "1'450",
+   "USD 1,450",
+   "1450 usd",
+   "1450usd"
+  ]
+ },
+ "buyer_b": {
+  "address": [
+   "7 Alder Row, Brookfield",
+   "Alder Row"
+  ],
+  "contact": [
+   "blair@okonkwo.example",
+   "+1 555 019 4477",
+   "okonkwo.example"
+  ],
+  "item": [
+   "folding tandem bike"
+  ],
+  "message": [
+   "Blair here: please ship the folding tandem bike to 7 Alder Row"
+  ],
+  "name": [
+   "Blair Okonkwo",
+   "Blair",
+   "Okonkwo"
+  ],
+  "price": [
+   "98000"
+  ]
+ },
+ "deals": {
+  "closed": "deal-2e96f9010fd7be7b",
+  "floor": "deal-315ac8a21d1b49b4",
+  "other": "deal-9575076068c5ba6a",
+  "private": "deal-710e3aa068d1ad07",
+  "sale_a": "deal-be94d153c1557bea",
+  "sale_b": "deal-d3979b3bbd5541e7",
+  "second_profile": "deal-6b854e52cbcc29bb"
+ },
+ "holder_key": "ae87c78d602e0bdc7113113a2208753351017a99573b48801a6b91ebdc17d791",
+ "later_step": {
+  "deal": "deal-315ac8a21d1b49b4",
+  "text": [
+   "Example Buyer asked to see the bicycle once more before paying"
+  ]
+ },
+ "private_values": {
+  "address": [
+   "41 Larkspur Lane, Apt 3, Springfield",
+   "Larkspur",
+   "Springfield"
+  ],
+  "card": [
+   "4111 1111 1111 1111",
+   "4111-1111-1111-1111"
+  ],
+  "code": [
+   "739142"
+  ],
+  "contact": [
+   "orders@stickers.example",
+   "+1 555 010 7788",
+   "Sticker Shop Ltd"
+  ],
+  "floor": [
+   "170000",
+   "min_total_minor",
+   "go down to 1700"
+  ]
+ },
+ "recipient": {
+  "history-history": "a new buyer",
+  "history-two-buyers": "buyer B"
+ },
+ "second_key": "8b655ad8fb199c3788613b7e0de439dbadb5f91627bdcb33f0f92982c2072d70"
+}

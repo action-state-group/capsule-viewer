@@ -20,7 +20,8 @@
       "result_version:evidence-result-v0"
     ],
     "extensions": [
-      "composed/v1"
+      "composed/v1",
+      "x-history-selection/v0"
     ]
   },
   "audiences": [
@@ -35,7 +36,7 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "3e9e46f35e47953527ff36f00314a6d73d57bc9378e46fe411fac87eaaf018bc",
+    "script_sha256": "36ef130ffb6a76ea39d61c703f1bf05533d775a3e123eaa70b27b616e2570811",
     "style_sha256": [
       "3ebe7e581f56665a6a0b5a122fd8447c6be9e06fbcd262e304d83948915d93fd"
     ]

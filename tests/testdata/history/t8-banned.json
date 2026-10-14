@@ -1,0 +1,22 @@
+{
+  "about": "History Basic wording test T8 (FR-7a, FR-7b): the History wording grep. capsule-viewer's tests read this file; other lints may reuse it. Only the phrases the rc16 item names are listed.",
+  "banned_deal_status": {
+    "note": "Never used as a deal's status in a History Basic string. Matched case-insensitively, as whole words, over every line of the module's source (history_card.js and src/capsule_viewer/history/*) and over the text the module renders for every fixture.",
+    "phrases": [
+      "done",
+      "completed sale",
+      "delivered"
+    ]
+  },
+  "similarity_claim": {
+    "note": "No similarity claim (FR-7b): no History string may say or imply that the presented deals resemble an item under discussion, or that the key's holder has experience with such items. Tested as these case-insensitive patterns (this repository's own, not copied text), over the same strings, with 0 hits.",
+    "patterns": [
+      "\\bsimilar",
+      "\\bresembl",
+      "\\bexperience",
+      "\\brelevant\\b",
+      "\\blike (?:this|these|that|the one)\\b",
+      "\\bsame (?:kind|sort|type) of\\b"
+    ]
+  }
+}
