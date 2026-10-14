@@ -41,7 +41,8 @@
 #   refused/keep-with-recipient.txt    what `deal history --audience keep --to ...` printed (keep is for no one)
 #   mutant-*.bundle.json               the history History edited (make_mutants.py)
 #   verify/<name>.json                 `capsulectl verify --bundle` on each file, as printed
-#   cut.json                           the deal ids, the holder keys and the private values used
+#   cut.json                           the deal ids, the holder keys, the private values used and the
+#                                      capsule-cli commit the capsulectl was built from (producer_commit)
 set -euo pipefail
 
 if [ $# -ne 2 ]; then
@@ -55,6 +56,9 @@ OUT="$ROOT/tests/testdata/history"
 DEMO="$CLI/skills/deal/demo/retail-checkout"
 MATERIALITY="$CLI/skills/deal/profile/materiality-predicate/neutral.json"
 PY="${PYTHON:-python3}"
+# The capsule-cli commit the fixtures are cut from (cut.json producer_commit): the
+# checkout's HEAD, which must be the commit CAPSULECTL was built from.
+PRODUCER_COMMIT=$(git -C "$CLI" rev-parse --verify HEAD)
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -228,6 +232,8 @@ json.dump({
   "deals": {"closed": "$CLOSED", "private": "$PRIVATE", "floor": "$FLOOR", "other": "$OTHER", "second_profile": "$SECOND",
             "sale_a": "$SALE_A", "sale_b": "$SALE_B"},
   "holder_key": "$HOLDER_KEY",
+  # The capsule-cli commit (full SHA) the capsulectl that wrote these files was built from.
+  "producer_commit": "$PRODUCER_COMMIT",
   # Who each History is for (--to), as sealed; and the floor deal's step after its checkpoint.
   "recipient": {"history-history": "$TO", "history-two-buyers": "$TO_B"},
   "later_step": {"deal": "$FLOOR", "text": ["$LATER_TEXT"]},

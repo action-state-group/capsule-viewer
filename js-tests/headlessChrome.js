@@ -27,6 +27,12 @@ const STARTUP_TIMEOUT_MS = process.env.CI ? 60000 : 20000;
 const STDERR_TAIL_BYTES = 4000;
 const REQUEST_TIMEOUT_MS = 15000;
 const EXIT_GRACE_MS = 5000;
+// The longest close() can take: Browser.close unanswered (REQUEST_TIMEOUT_MS),
+// then SIGTERM and SIGKILL (2 * EXIT_GRACE_MS), plus the profile removal's
+// retries. A suite's afterAll that closes the browser passes this as its hook
+// timeout: vitest's 10s default fails a teardown that is only slow, as when
+// several Chromium suites shut down at once on a loaded machine.
+export const CLOSE_TIMEOUT_MS = REQUEST_TIMEOUT_MS + 2 * EXIT_GRACE_MS + 5000;
 
 const CANDIDATES = [
   "/usr/bin/google-chrome",

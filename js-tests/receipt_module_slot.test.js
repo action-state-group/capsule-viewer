@@ -37,7 +37,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { standInContext } from "./aacContext.js";
-import { findChrome, launch } from "./headlessChrome.js";
+import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { pixelDifference } from "./pngPixels.js";
 import {
   caseInputs, KINDS, loadScript, manifestOf, PY, PY_ENV, pythonOracle, readBundle, readVerify, RECEIPTS,
@@ -230,7 +230,7 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
   afterAll(async () => {
     if (browser) await browser.close();
     if (dir) rmSync(dir, { recursive: true, force: true });
-  });
+  }, CLOSE_TIMEOUT_MS);
 
   const settle = async () => {
     for (let i = 0; i < 100; i += 1) {

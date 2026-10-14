@@ -107,6 +107,7 @@ and refused for `keep` (`tests/testdata/history/refused/`).
 
   The carried `selection` must equal the sealed one exactly. Each nested copy
   is its deal's own bundle, of its own deal log, verified on its own.
+  Besides `x-deal-v0` (and `x-deal-seller/v0` on a seller's deal), each nested copy carries capsule-cli's `x-cadence-witness/v0` extension (`{"state": "not_configured"}` in every fixture, the profiles being made with `--no-witness`); the card does not read it, and like the rest of the copy it is covered by that copy's `bundle_digest`.
 
 **The audience and the keep marker.** The History's audience is the sealed
 selection record's `audience`. Each nested deal's audience is its report's
@@ -455,7 +456,7 @@ ones (`recompute.py`).
 | `l2Signing` (changed) | L2 | before: "... and for the History's own bundle reads the page's verifier on the selection record's identity, the history log's checkpoint and the selection record's membership in that log: those are checked by this page. The page's verifier ..." after: "... and, where the page has a verifier, reads it on the History's own bundle. The lists below name exactly what this page checked in this file and what it did not. The page's verifier ..." (the ending, "every signature status here is checked by capsulectl on the sender's machine, not by this page.", is unchanged) |
 | `title` (removed) | L0 heading | before: "History"; after: `l0Title` |
 
-**D2/D3/D4 additions, pending Steven** (capsule-cli cb68ea9, neutral u949):
+**D2/D3/D4 additions, approved by Steven on 2026-10-14** (capsule-cli `88503f966ce85c40e01705f37c9ef734678cfd59`, neutral u949):
 
 | Key (`WORDS.`) | Where | String |
 | --- | --- | --- |
@@ -471,7 +472,7 @@ ones (`recompute.py`).
 **Ruled by Steven on 2026-10-12** (company-oss u346); none is open:
 
 - K and F stay as counted: on capsule-cli's Histories they are 0 (it writes only `dispatched`), and the zeros stay until neutral [deal-outcome-seal] lands.
-- Section 5.2's "· deals you picked, not all of them" tail stays dropped from L0 line 2 (the reader is the recipient; the Completeness note says the selection is not all of anything).
+- Section 5.2's closing clause on L0 line 2 (that the deals shown are a selection, short of every deal) stays dropped (the reader is the recipient; the Completeness note says the selection is not all of anything).
 - A keep History's page check state is "failed", not a fifth wording.
 
 ## Not in this design

@@ -105,7 +105,12 @@ def _ext(b: dict) -> dict:
 
 def test_the_readme_names_the_capsule_cli_commit_the_fixtures_were_cut_from():
     text = (DATA / "README.md").read_text(encoding="utf-8")
-    assert re.search(r"capsule-cli\s+`88503f966ce85c40e01705f37c9ef734678cfd59`", text), "the full SHA of the producer commit"
+    commit = CUT["producer_commit"]
+    assert re.fullmatch(r"[0-9a-f]{40}", commit), "cut.json names the producer commit as a full SHA"
+    assert commit == "88503f966ce85c40e01705f37c9ef734678cfd59"
+    assert re.search(r"capsule-cli\s+`" + commit + "`", text), "the README names cut.json's producer commit, full SHA"
+    design = (HERE.parent / "docs" / "design" / "history-card.md").read_text(encoding="utf-8")
+    assert re.search(r"capsule-cli\s+`" + commit + "`", design), "the design's producer row names cut.json's producer commit"
     assert "stand-in" not in text.lower()
     assert "ff8daad" not in text and "7ebf001" not in text and "521d41f" not in text and "993949f" not in text and "provisional" not in text.lower()
 

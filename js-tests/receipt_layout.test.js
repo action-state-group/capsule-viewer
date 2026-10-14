@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { findChrome, launch } from "./headlessChrome.js";
+import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = join(ROOT, "tests", "testdata", "receipt");
@@ -112,7 +112,7 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
   afterAll(async () => {
     if (browser) await browser.close();
     if (dir) rmSync(dir, { recursive: true, force: true });
-  });
+  }, CLOSE_TIMEOUT_MS);
 
   it("no receipt page carries a script", () => {
     for (const page of Object.values(pages)) expect(page.html.toLowerCase()).not.toContain("<script");
