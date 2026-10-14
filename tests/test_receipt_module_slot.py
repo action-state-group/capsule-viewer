@@ -38,9 +38,11 @@ import jsonschema
 import pytest
 from receipt_helpers import RECEIPTS, audience_of, load
 
+from capsule_viewer.kit.words import kit_pack_bytes
 from capsule_viewer.receipt import BILATERAL_MANIFEST, SELLER_MANIFEST, UNILATERAL_MANIFEST, module_slot
 from capsule_viewer.registry import AmbiguityError, Registry, co_matchable, descriptor, matches
 from capsule_viewer.verifier_report import context_from_capsulectl
+from capsule_viewer.version import VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 AAC = ROOT / "tests" / "testdata" / "aac-presentation"
@@ -88,15 +90,17 @@ def test_each_manifest_is_schema_valid_and_pins_its_script_and_the_kit_styleshee
 
 
 @pytest.mark.parametrize("kind", module_slot.KINDS)
-def test_each_script_carries_its_manifest_the_words_and_the_stylesheet(kind):
+def test_each_script_carries_its_manifest_the_packs_and_the_stylesheet(kind):
     script = module_slot.script_path(kind).read_text(encoding="utf-8")
     assert module_slot.script_path(kind).stat().st_size < PRESENTATION_FILE_LIMIT
     assert _generated(script, "KIND") == kind
     # A script cannot carry its own digest: all zeros there, as in capsulectl's deal view.
     assert _generated(script, "MANIFEST") == {**SLOT[kind], "executable": {**SLOT[kind]["executable"], "script_sha256": "0" * 64}}
-    pack = module_slot.pack_bytes()
-    assert _generated(script, "WORDS") == json.loads(pack)["entries"]
-    assert _generated(script, "PACK") == {"id": json.loads(pack)["id"], "sha256": hashlib.sha256(pack).hexdigest()}
+    # The two wording packs, each its exact bytes as text: the script hashes them
+    # for its wording_sha256 (js-tests/wording_packs.test.js).
+    assert _generated(script, "PACK_TEXT").encode("utf-8") == module_slot.pack_bytes()
+    assert _generated(script, "KIT_PACK_TEXT").encode("utf-8") == kit_pack_bytes()
+    assert _generated(script, "VERSION") == VERSION
     assert _generated(script, "KIT_CSS") == module_slot.KIT_CSS.read_text(encoding="utf-8")
 
 

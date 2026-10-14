@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from html import escape
 from importlib import resources
 
@@ -54,6 +54,7 @@ from ..kit.components import EvidenceItem, Markup, Metric
 from ..kit.contract import KitServices, ModuleManifest
 from ..registry import Manifest
 from ..verifier_report import Assurance
+from ..version import renderer_version
 from ..wording import WordingPack
 from .model import Binder, Committed, Fact, Item, ReceiptModel, ReceiptUnavailable, Step, build_receipt
 from .role import SELLER_KIND, sealed_side, seller_kind_engaged
@@ -207,7 +208,8 @@ class UnilateralReceiptModule:
         return True
 
     def buildModel(self, context: VerifiedBundleContext) -> ReceiptModel:  # noqa: N802 -- the contract's member name
-        return build_receipt(context, self.bind, self.assurance, self.audience)
+        model = build_receipt(context, self.bind, self.assurance, self.audience)
+        return replace(model, wording_sha256=self.pack.wording_sha256, renderer_version=renderer_version(self.manifest_json["id"]))
 
     def render(self, model: ReceiptModel, services: KitServices) -> str:
         levels = self.levels(model, services)

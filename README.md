@@ -244,8 +244,10 @@ stylesheet each script inserts once at render).
 
 - **One source, three scripts.** `static/receipt_core.js` is the source;
   `python -m capsule_viewer.receipt.module_slot --write` writes each script from it with
-  its manifest, the example pack's words compiled in (the script reads no pack) and the
-  kit stylesheet, and writes the manifests (the Python modules' manifests, same ids and
+  its manifest, two wording packs as data (each pack's exact bytes: the receipt pack the
+  Python modules read and the kit's, `kit/wording-en.json`, the words of the kit's
+  vocabularies and the composition section, which `capsule_viewer.kit.words` reads),
+  capsule-viewer's version and the kit stylesheet, and writes the manifests (the Python modules' manifests, same ids and
   selection clauses, with the module-slot carrier). One script per module: a builder puts
   one script in a page per module it chose, so a shared script would register modules it
   did not choose. `tests/test_receipt_module_slot.py` fails when a committed file is not

@@ -22,10 +22,13 @@ from capsule_viewer.history import (
     HISTORY_ID,
     HISTORY_MANIFEST,
     SELECTION_EXTENSION,
+    filled_script,
     history_script_bytes,
     selection_block,
 )
+from capsule_viewer.history.__main__ import main as history_main
 from capsule_viewer.history.fixture import example_context
+from capsule_viewer.history.words import HISTORY_PACK, history_pack_bytes
 from capsule_viewer.receipt import BilateralReceiptModule, SellerReceiptModule, UnilateralReceiptModule
 from capsule_viewer.registry import Registry, co_matchable, descriptor
 from capsule_viewer.rules import rules_manifest
@@ -45,8 +48,17 @@ BUILTINS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((A
 GENERIC = json.loads((AAC / "examples" / "example-generic-fallback.json").read_text(encoding="utf-8"))
 AUDIENCES = ("history", "keep", "counterparty", "adjudicator")
 RULES_PROFILE = f"spec_version:{RECORD_KIND}"
-# The module's text: the files the vocabulary grep (acceptance 4) reads.
+# The module's text: the files the vocabulary grep (acceptance 4) reads. The
+# History's wording pack (history/wording-en.json) is one of them.
 MODULE_TEXT = sorted(p for p in (ROOT / "src" / "capsule_viewer" / "history").glob("*") if p.is_file()) + [SCRIPT]
+PACK_FILE = ROOT / "src" / "capsule_viewer" / "history" / "wording-en.json"
+GENERATED = re.compile(r"^  var \w+ = .*; // @generated \w+$")
+
+
+def module_lines(path: Path) -> list[str]:
+    """*path*'s lines, but for the script's generated lines: they carry the
+    pack's bytes as data, and the pack is read as a file of its own."""
+    return [line for line in path.read_text(encoding="utf-8").splitlines() if not GENERATED.match(line)]
 
 
 def _bundle(path: Path = SHAREABLE) -> dict:
@@ -162,13 +174,20 @@ def test_a_deal_bundle_never_resolves_to_the_history_module():
     assert resolution.entry is not None and resolution.entry.id == "capsuleviewer.receipt.unilateral/v0"
 
 
-# ---- words: compiled in, and clean -------------------------------------------------
+# ---- words: the module's wording pack, and clean ----------------------------------
 
 
-def test_no_wording_pack_is_read():
-    for path in MODULE_TEXT:
-        text = path.read_text(encoding="utf-8")
-        assert "wording_pack" not in text and "wording-en.json" not in text and "wording_sha256" not in text, path.name
+def test_the_script_carries_the_pack_bytes_and_pin_writes_nothing_new():
+    assert PACK_FILE in MODULE_TEXT
+    generated = dict(re.findall(r"^  var (\w+) = (.*); // @generated \1$", SCRIPT.read_text(encoding="utf-8"), re.MULTILINE))
+    assert sorted(generated) == ["PACK_TEXT", "VERSION"]
+    # The pack's exact bytes, as text: the script hashes them for its wording_sha256.
+    assert json.loads(generated["PACK_TEXT"]).encode("utf-8") == history_pack_bytes() == PACK_FILE.read_bytes()
+    assert filled_script(SCRIPT.read_text(encoding="utf-8")) == SCRIPT.read_text(encoding="utf-8")
+    assert history_main(["pin", "--check"]) == 0
+    # No words of the module's own beside the pack's: the old compiled-in table is gone.
+    assert "var WORDS = {" not in SCRIPT.read_text(encoding="utf-8")
+    assert HISTORY_PACK.id == "capsuleviewer.history.wording.example-en/v0" and HISTORY_PACK.locale == "en"
 
 
 VOCABULARY = re.compile(r"score|rating|reputation|rank", re.IGNORECASE)
@@ -178,13 +197,13 @@ def test_acceptance_4_the_vocabulary_grep_returns_only_the_forbidding_sentence()
     hits = [
         (path.name, line.strip())
         for path in MODULE_TEXT
-        for line in path.read_text(encoding="utf-8").splitlines()
+        for line in module_lines(path)
         if VOCABULARY.search(line)
     ]
     assert hits == [
         (
-            "history_card.js",
-            'forbidding: "This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.",',
+            "wording-en.json",
+            '"forbidding": "This card shows properties of the presented selection and never a score, rating, reputation, rank or trust number.",',
         )
     ]
 
@@ -194,13 +213,14 @@ def test_trust_appears_only_as_the_schema_member_and_in_the_forbidding_sentence(
     hits = [
         (path.name, line.strip())
         for path in MODULE_TEXT
-        for line in path.read_text(encoding="utf-8").splitlines()
+        for line in module_lines(path)
         if pattern.search(line)
     ]
-    assert sorted(name for name, _ in hits) == ["history_card.js", "history_card.js", "manifest.json"]
+    assert sorted(name for name, _ in hits) == ["history_card.js", "manifest.json", "wording-en.json"]
     assert ("manifest.json", '"trust_class": "trusted-executable",') in hits
-    # In the script: the forbidding sentence, and the manifest copy's schema member.
-    assert all("forbidding:" in line or "var MANIFEST" in line for name, line in hits if name == "history_card.js")
+    # In the pack: the forbidding sentence; in the script: the manifest copy's schema member.
+    assert all('"forbidding":' in line for name, line in hits if name == "wording-en.json")
+    assert all("var MANIFEST" in line for name, line in hits if name == "history_card.js")
 
 
 # ---- the presenter limitation (a History shows who presents, not who made the deals) ----
@@ -212,10 +232,9 @@ LIMITATION = (
 
 
 def test_the_l0_limitation_sentence_is_pinned():
-    text = SCRIPT.read_text(encoding="utf-8")
-    assert f'limitation: "{LIMITATION}",' in text
+    assert HISTORY_PACK.get("limitation") == LIMITATION
     # Drawn in L0 of the card, as a notice (js-tests/history_card.test.js checks the rendered text).
-    assert '"data-history-limitation": "true" }, [WORDS.limitation]' in text
+    assert '"data-history-limitation": "true" }, [w("limitation")]' in SCRIPT.read_text(encoding="utf-8")
 
 
 # Words that say or imply the key's holder made, took part in or owns the deals.
@@ -229,7 +248,7 @@ AUTHORSHIP = re.compile(
 
 @pytest.mark.parametrize(
     "path",
-    [SCRIPT, ROOT / "src" / "capsule_viewer" / "history" / "recompute.py", ROOT / "docs" / "design" / "history-card.md"],
+    [SCRIPT, PACK_FILE, ROOT / "src" / "capsule_viewer" / "history" / "recompute.py", ROOT / "docs" / "design" / "history-card.md"],
     ids=lambda p: p.name,
 )
 def test_no_word_says_the_key_holder_made_or_owns_the_deals(path):

@@ -32,16 +32,18 @@ from html import escape
 from .context import Frozen, Json, JsonObject, VerifiedBundleContext
 from .kit.components import Markup
 from .kit.contract import KitServices
+from .kit.words import word
 from .verifier_report import Assurance, CapsulectlReport, VerifierReportError, context_from_bundle_report
 
 KIND = "composed/v1"
-NOT_APPLICABLE = "—"
-SCOPE = "Composition closure covers the declared members only; it is not completeness of participation."
-CUSTODY = (
-    "Custody domains are labels declared by whoever composed this block. Identical labels make an agreeing pair "
-    "redundant; distinct labels do not establish that two observers are independent."
-)
+# The section's words are the kit pack's (``kit.words``, keys ``composed.*``).
+NOT_APPLICABLE = word("composed.not_applicable")
+SCOPE = word("composed.scope")
+CUSTODY = word("composed.custody")
 _MEMBER_CLAIMS = ("graph_closure", "interval_coverage", "per_record_membership")
+# The columns of the members and joins tables, as kit pack keys (composed.members.*, composed.joins.*).
+MEMBER_COLUMNS = ("member", "observer", "outcome", "body", "digest", *_MEMBER_CLAIMS, "refusal_signature", "findings")
+JOIN_COLUMNS = ("members", "basis", "declared", "derived", "result")
 
 
 @dataclass(frozen=True)
@@ -280,20 +282,20 @@ def _pair_text(members: tuple[str, str]) -> str:
 
 
 def _findings(findings: Sequence[str]) -> str:
-    return ", ".join(findings) if findings else "none"
+    return ", ".join(findings) if findings else word("composed.none")
 
 
 def _corroboration_text(c: Corroboration) -> str:
     if c.result == "redundant":
-        return f"{c.report or 'redundant, not corroborating'} ({', '.join(c.reasons)})"
+        return f"{c.report or word('composed.corroboration.redundant')} ({', '.join(c.reasons)})"
     if c.result == "corroborating":
-        return "corroborating, on declared custody"
-    return "not applicable: the join did not derive agree"
+        return word("composed.corroboration.corroborating")
+    return word("composed.corroboration.not_applicable")
 
 
 def _value_text(v: JoinValue) -> str:
     if not v.resolved:
-        return f"{v.member}: does not resolve"
+        return word("composed.joins.unresolved", member=v.member)
     return f"{v.member}: {json.dumps(v.value, ensure_ascii=False, separators=(',', ':'))}"
 
 
@@ -308,18 +310,22 @@ def _p(text: str, **attrs: str) -> Markup:
 
 def composition_section(c: Composition, kit: KitServices) -> Markup:
     """agent-action-capsule's composition section, in its words, over *c*."""
-    out: list[str] = [_p(f"composed/v1 check: {c.status}", data_composition_status=c.status)]
+    out: list[str] = [_p(word("composed.check", status=c.status), data_composition_status=c.status)]
     if c.findings:
-        out.append(_p(f"findings: {', '.join(c.findings)}"))
+        out.append(_p(word("composed.findings", findings=", ".join(c.findings))))
     if c.malformed:
-        return kit.section("Composition", *out, level=3)
+        return kit.section(word("composed.heading"), *out, level=3)
     out.append(_p(SCOPE))
     out.append(
         kit.section(
-            "Composed digest",
+            word("composed.digest.heading"),
             kit.data_table(
-                ["declared", "recomputed", "matches"],
-                [[c.digest_declared, c.digest_recomputed or "uncomputable", "yes" if c.digest_matches else "no"]],
+                [word("composed.digest.declared"), word("composed.digest.recomputed"), word("composed.digest.matches")],
+                [[
+                    c.digest_declared,
+                    c.digest_recomputed or word("composed.digest.uncomputable"),
+                    word("composed.digest.yes") if c.digest_matches else word("composed.digest.no"),
+                ]],
             ),
             level=4,
         )
@@ -339,10 +345,9 @@ def composition_section(c: Composition, kit: KitServices) -> Markup:
     ]
     out.append(
         kit.section(
-            "Members",
+            word("composed.members.heading"),
             kit.data_table(
-                ["member", "observer", "outcome", "body", "digest", "graph closure", "interval coverage",
-                 "per-record membership", "refusal signature", "findings"],
+                [word(f"composed.members.{col}") for col in MEMBER_COLUMNS],
                 rows,
             ),
             level=4,
@@ -350,27 +355,33 @@ def composition_section(c: Composition, kit: KitServices) -> Markup:
     )
     out.append(
         kit.section(
-            "Observers",
-            kit.data_table(["observer", "role", "custody domain"], [[o.id, o.role, o.custody_domain] for o in c.observers]),
+            word("composed.observers.heading"),
+            kit.data_table(
+                [word("composed.observers.observer"), word("composed.observers.role"), word("composed.observers.custody_domain")],
+                [[o.id, o.role, o.custody_domain] for o in c.observers],
+            ),
             _p(CUSTODY),
             level=4,
         )
     )
-    missing = ", ".join(c.closure_missing) if c.closure_missing else "none"
+    missing = ", ".join(c.closure_missing) if c.closure_missing else word("composed.none")
     out.append(
         kit.section(
-            "Composition closure",
-            _p(f"{c.closure.status}; missing: {missing}; findings: {_findings(c.closure.findings)}", data_closure_status=c.closure.status),
+            word("composed.closure.heading"),
+            _p(
+                word("composed.closure.line", status=c.closure.status, missing=missing, findings=_findings(c.closure.findings)),
+                data_closure_status=c.closure.status,
+            ),
             level=4,
         )
     )
     if not c.joins:
-        out.append(kit.section("Joins", _p("No joins."), level=4))
-        return kit.section("Composition", *out, level=3)
+        out.append(kit.section(word("composed.joins.heading"), _p(word("composed.joins.none")), level=4))
+        return kit.section(word("composed.heading"), *out, level=3)
     joins: list[str] = [
         kit.data_table(
-            ["members", "basis", "declared", "derived", "result"],
-            [[_pair_text(j.members), j.basis, j.declared, j.derived or "not derivable", j.result] for j in c.joins],
+            [word(f"composed.joins.{col}") for col in JOIN_COLUMNS],
+            [[_pair_text(j.members), j.basis, j.declared, j.derived or word("composed.joins.not_derivable"), j.result] for j in c.joins],
         )
     ]
     for j in c.joins:
@@ -380,13 +391,16 @@ def composition_section(c: Composition, kit: KitServices) -> Markup:
                 for d in j.differences
             ]
             # Shown inside the page's L2 toggle: a list, never a second toggle (one level of details).
-            joins.append(_el("div", _p(f"Differing values: {_pair_text(j.members)}"), *lists, data_differences="true"))
-    out.append(kit.section("Joins", *joins, level=4))
+            joins.append(_el("div", _p(word("composed.joins.differences", pair=_pair_text(j.members))), *lists, data_differences="true"))
+    out.append(kit.section(word("composed.joins.heading"), *joins, level=4))
     out.append(
         kit.section(
-            "Agreement",
-            kit.data_table(["members", "result"], [[_pair_text(x.members), _corroboration_text(x)] for x in c.corroboration]),
+            word("composed.agreement.heading"),
+            kit.data_table(
+                [word("composed.agreement.members"), word("composed.agreement.result")],
+                [[_pair_text(x.members), _corroboration_text(x)] for x in c.corroboration],
+            ),
             level=4,
         )
     )
-    return kit.section("Composition", *out, level=3)
+    return kit.section(word("composed.heading"), *out, level=3)

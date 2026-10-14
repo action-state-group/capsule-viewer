@@ -5,12 +5,16 @@ plugin carrying them), and the manifests that pin them.
 
 ``static/receipt_core.js`` is their one source. Each script is that file with
 its ``@generated`` lines filled: the module it registers, its manifest (with
-``script_sha256`` all zeros, as a script cannot carry its own digest), the
-words of the example English wording pack (``wording-en.json``, compiled in:
-the script reads no pack), the pack's id and sha256 (named in L2) and the kit
-stylesheet (``static/kit.css``), which the script inserts once at render and
-the manifest pins by ``style_sha256``, and the seller kind (``role.SELLER_KIND``,
-named there and nowhere else).
+``script_sha256`` all zeros, as a script cannot carry its own digest), two
+wording packs as data, each one's exact bytes as text (the example English
+pack, ``wording-en.json``, the one the Python modules read, and the kit's,
+``kit/wording-en.json``, the words of the kit's vocabularies and of the
+composition section, the one ``kit.words`` reads), which the script parses
+and hashes for its ``wording_sha256`` at load, capsule-viewer's version (for
+the ``renderer_version`` its model records), the kit stylesheet
+(``static/kit.css``), which the script inserts once at render and the
+manifest pins by ``style_sha256``, and the seller kind (``role.SELLER_KIND``,
+named there and nowhere else). The script holds no words of its own.
 
 One script per module, not one shared script for the three: a page builder
 puts one script in the page per module it chose (``--module``, or the modules
@@ -37,7 +41,9 @@ from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
 
+from ..kit.words import kit_pack_bytes
 from ..registry import Manifest
+from ..version import VERSION
 from .bilateral import BILATERAL_MANIFEST
 from .module import UNILATERAL_MANIFEST
 from .role import SELLER_KIND
@@ -83,16 +89,19 @@ def _js(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
 
 
-def script_bytes(kind: str) -> bytes:
-    """The script for *kind*: the core with its generated lines filled."""
-    pack = pack_bytes()
-    raw = json.loads(pack.decode("utf-8"))
+def script_bytes(kind: str, pack: bytes | None = None, kit_pack: bytes | None = None) -> bytes:
+    """The script for *kind*: the core with its generated lines filled. *pack*
+    and *kit_pack* stand in other pack bytes (a test's stub pack); by default
+    the shipped ones."""
+    pack = pack_bytes() if pack is None else pack
+    kit_pack = kit_pack_bytes() if kit_pack is None else kit_pack
     css = KIT_CSS.read_bytes()
     values = {
         "KIND": _js(kind),
         "MANIFEST": _js(_manifest(kind, ZERO, _sha(css))),
-        "WORDS": _js(raw["entries"]),
-        "PACK": _js({"id": raw["id"], "sha256": _sha(pack)}),
+        "PACK_TEXT": _js(pack.decode("utf-8")),
+        "KIT_PACK_TEXT": _js(kit_pack.decode("utf-8")),
+        "VERSION": _js(VERSION),
         "KIT_CSS": _js(css.decode("utf-8")),
         "SELLER_KIND": _js(SELLER_KIND),
     }
