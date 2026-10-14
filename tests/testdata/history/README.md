@@ -7,8 +7,9 @@ scratch profiles. The deals are the ones capsule-cli's own
 `deal_history_test.go` makes; `cut.json` names their ids, key K
 (`holder_key`, the key that signs the selection record), the second profile's
 key, the private values the deals hold, the two buyers' values, who each
-History sent is for (`recipient`) and the step written after the floor deal's
-checkpoint (`later_step`).
+History sent is for (`recipient`), the step written after the floor deal's
+checkpoint (`later_step`) and the capsule-cli commit the capsulectl was built
+from (`producer_commit`, the full SHA above).
 
 **D2, D3, D4.** Each History is on a log of its own, `deal-history/<nonce>`
 (the 64-hex nonce its selection record seals). A History for the `history`

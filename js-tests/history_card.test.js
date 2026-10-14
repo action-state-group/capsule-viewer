@@ -25,7 +25,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM } from "jsdom";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { findChrome, launch } from "./headlessChrome.js";
+import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { aacBundleVerified, interfaceFields, runtimeRender, standInContext } from "./aacContext.js";
 import { existsSync } from "node:fs";
 
@@ -892,7 +892,7 @@ var host = { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }; ${run} })();<
   afterAll(async () => {
     if (browser) await browser.close();
     if (dir) rmSync(dir, { recursive: true, force: true });
-  });
+  }, CLOSE_TIMEOUT_MS);
 
   const STATE = `(() => ({
     state: document.querySelector('[data-level="L0"]').getAttribute("data-history-state"),
