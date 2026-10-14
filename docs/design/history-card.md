@@ -2,8 +2,8 @@
 
 Status: built, reworked on 2026-10-12 to the History file shape agreed with
 the producer (capsule-cli PR #209), reading agent-action-capsule's
-VerifiedBundleContext (PM u334, design v0.5), and re-cut on #209's head
-cb68ea9, whose `deal history` writes the `history` audience by default
+VerifiedBundleContext (PM u334, design v0.5), and re-cut on capsule-cli
+main, #209 merged as squash 88503f96 (first cut on #209's head cb68ea9), whose `deal history` writes the `history` audience by default
 (neutral u888/u890, PM u335), seals who the History is for and each deal's
 steps after its checkpoint, and writes each History on a log of its own
 (D2/D3/D4, neutral u949). The History Basic wording (L0 lines, banned
@@ -37,7 +37,7 @@ says or implies that the holder of key K made, took part in or owns the deals.
 
 | Ref | Repository and commit | Path |
 | --- | --- | --- |
-| [producer] | capsule-cli `cb68ea9179ae1ad443d103201a18adc23096fdb4` (PR #209) | `internal/cli/deal_history.go` (`deal history`, `dealHistoryMember`, `historyBundle`, `historyEntry`, `historyHolderStated`, `historyNotProven`, `historyLogPrefix`, `stepCount`, `payloadDisclosed`), `internal/cli/deal_sale_bundle.go` (`sealedOrInlineReport`) |
+| [producer] | capsule-cli `88503f966ce85c40e01705f37c9ef734678cfd59` (main, #209 merged as squash 88503f96) | `internal/cli/deal_history.go` (`deal history`, `dealHistoryMember`, `historyBundle`, `historyEntry`, `historyHolderStated`, `historyNotProven`, `historyLogPrefix`, `stepCount`, `payloadDisclosed`), `internal/cli/deal_sale_bundle.go` (`sealedOrInlineReport`) |
 | [aac-id] | agent-action-capsule `ab4ee43b71d6e074c6a000b5b19a9caf9720235e` | `python/agent_action_capsule/canonical.py` (`compute_capsule_id`, `json_digest`) |
 | [registry] | this repository | `src/capsule_viewer/registry.py` (`co_matchable`, the static ambiguity test) |
 | [aac-context] | agent-action-capsule `3a7aca6` | `ts/src/bundle.ts` (`VerifiedBundleContext`, `buildVerifiedBundleContext`, `verifyBundle`), `ts/src/verify.ts` (`VerificationResult`, `verifyClass1`), `ts/src/presentation-registry.ts` (`bundleVerified`, `resolveModules`), `ts/src/evidence-graph-view.ts` (`renderEvidenceGraph`) |

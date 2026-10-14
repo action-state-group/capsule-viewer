@@ -42,7 +42,7 @@ PICKED = sorted([DEALS["closed"], DEALS["private"], DEALS["floor"]])
 
 
 # What the file-only check finds in each real file (the mutant matrix), cut from
-# cb68ea9: the history History renders the card; the keep History is VALID but
+# 88503f9: the history History renders the card; the keep History is VALID but
 # never one to send; each mutant of the history History is named as capsulectl
 # names it. capsulectl refuses a History of counterparty or adjudicator copies
 # (refused/<audience>.txt): those are in-memory edits below.
@@ -105,7 +105,7 @@ def _ext(b: dict) -> dict:
 
 def test_the_readme_names_the_capsule_cli_commit_the_fixtures_were_cut_from():
     text = (DATA / "README.md").read_text(encoding="utf-8")
-    assert re.search(r"capsule-cli\s+`cb68ea9179ae1ad443d103201a18adc23096fdb4`", text), "the full SHA of the producer commit"
+    assert re.search(r"capsule-cli\s+`88503f966ce85c40e01705f37c9ef734678cfd59`", text), "the full SHA of the producer commit"
     assert "stand-in" not in text.lower()
     assert "ff8daad" not in text and "7ebf001" not in text and "521d41f" not in text and "993949f" not in text and "provisional" not in text.lower()
 

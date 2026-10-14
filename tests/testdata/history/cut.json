@@ -63,17 +63,17 @@
   ]
  },
  "deals": {
-  "closed": "deal-7b25241cb74060b5",
-  "floor": "deal-7fe9fbcd6e889117",
-  "other": "deal-218acc186affa7cd",
-  "private": "deal-fac64d2cfa8a7e61",
-  "sale_a": "deal-4c53ef46f2f0f1d4",
-  "sale_b": "deal-3c6d3654f630f0f4",
-  "second_profile": "deal-f3d25037c0bbd1a1"
+  "closed": "deal-2e96f9010fd7be7b",
+  "floor": "deal-315ac8a21d1b49b4",
+  "other": "deal-9575076068c5ba6a",
+  "private": "deal-710e3aa068d1ad07",
+  "sale_a": "deal-be94d153c1557bea",
+  "sale_b": "deal-d3979b3bbd5541e7",
+  "second_profile": "deal-6b854e52cbcc29bb"
  },
- "holder_key": "9fc8f079ced0cd8ec621b2249a660d5ae2027afdee6609426569cb812ff96f8a",
+ "holder_key": "ae87c78d602e0bdc7113113a2208753351017a99573b48801a6b91ebdc17d791",
  "later_step": {
-  "deal": "deal-7fe9fbcd6e889117",
+  "deal": "deal-315ac8a21d1b49b4",
   "text": [
    "Example Buyer asked to see the bicycle once more before paying"
   ]
@@ -106,5 +106,5 @@
   "history-history": "a new buyer",
   "history-two-buyers": "buyer B"
  },
- "second_key": "49d650f831568c2f1ded6158580d1ca41d41599a0d85e1b871222246ed7e0924"
+ "second_key": "8b655ad8fb199c3788613b7e0de439dbadb5f91627bdcb33f0f92982c2072d70"
 }

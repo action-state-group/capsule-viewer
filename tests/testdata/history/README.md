@@ -1,8 +1,8 @@
 # History Card fixtures
 
 Every file here was written by a real capsulectl, built from capsule-cli
-`cb68ea9179ae1ad443d103201a18adc23096fdb4` (PR #209's head, branch
-`deal-history-container-verb`), by `examples/history/cut_fixtures.sh` on
+`88503f966ce85c40e01705f37c9ef734678cfd59` (capsule-cli main, #209 merged
+as squash 88503f96), by `examples/history/cut_fixtures.sh` on
 scratch profiles. The deals are the ones capsule-cli's own
 `deal_history_test.go` makes; `cut.json` names their ids, key K
 (`holder_key`, the key that signs the selection record), the second profile's
@@ -92,8 +92,9 @@ contact or message text). The floor deal's later step (`later_step` in
     PYTHON=.venv/bin/python3 examples/history/cut_fixtures.sh path/to/capsulectl path/to/capsule-cli
 
 Keys, deal ids, nonces and times are new on every cut, so a recut rewrites
-every file and `cut.json`. When #209's head moves, recut from it and update
-the commit named above.
+every file and `cut.json`. When capsule-cli's `deal history` or the deal
+copies it carries change, recut from the new commit and update the commit
+named above.
 
 **Wording data.** `l0-golden.json` holds the L0 goldens (History Basic wording, section 5.2):
 section 5.2's example and a year-end case in memory, and the two real cards
@@ -101,3 +102,33 @@ section 5.2's example and a year-end case in memory, and the two real cards
 writes only `dispatched`; Steven ruled on 2026-10-12 that the zeros stay). `t8-banned.json` is the T8 wording list: the three
 banned deal-status phrases and the similarity-claim patterns. The Python and
 JavaScript tests both read it, and other lints may reuse it.
+
+## Re-pin to 88503f96
+
+The fixtures were first cut on #209's head `cb68ea9`; #209 merged into
+capsule-cli main as squash `88503f96` (its tree is #209's last head
+`4b57c929`'s). Between the two, `deal_history.go` and `deal_sale_bundle.go`
+are unchanged, but main brought in #216 (`composed.go` joins the parties'
+copies on `deal_id`), and `deal.go` now seals the deal id as a top-level
+`deal_id` member on every step's Capsule (`dealIDMember`).
+
+What changed in the bytes: every file was recut (new keys, deal ids, nonces
+and times, as on any recut). In each deal copy a History carries, every step
+record (`action_id` `<deal id>/<n>`) now holds `deal_id`, equal to the
+copy's key under `deals`; the deal-report records and the History's own
+selection record hold none. The four Histories grow by 340 to 581 bytes.
+`refused/` is byte-identical. Every `verify/` report gives the same verdict
+and the same finding codes as before; only the ids and digests inside them,
+and the order of entries in a report's `disclosures`, differ.
+
+The `x-history-selection/v0` shape is unchanged: the extension's members
+(`selection_record`, `selection`, `deals`), each selection entry's
+`deal_id`, `bundle_digest` and `steps_after_checkpoint`, the sealed
+selection record (`type` `history_selection`, `audience`, `nonce`,
+`recipient`, `selection`), the log `deal-history/<nonce>`, and verify's
+`holder_stated` and `not_proven` are what `deal_history.go` at 88503f96
+writes and what `capsule_viewer/history/recompute.py` and
+`static/history_card.js` read. A JSON key diff of every file before and
+after shows one added path, `deals/<id>/records[]/deal_id` (a string). The
+page reads a record's Capsule ID over every member but `capsule_id`,
+`signature` and `key_id`, so the new member needs no change here.
