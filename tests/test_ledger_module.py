@@ -192,6 +192,18 @@ def test_an_altered_result_shows_as_altered(ledger):
     assert _outcome(ledger_page(bundle, check)) == "incomplete"
 
 
+def test_a_valid_result_is_verified_with_every_row(ledger):
+    """A ledger's file carries no signed checkpoint, so capsule-emit calls it
+    INCOMPLETE at best; a VALID result (as for a file built with one) draws
+    as verified, with the rows."""
+    bundle = ledger_bundle(read_ledger(ledger))
+    check = check_evidence_file(bundle)
+    valid = dataclasses.replace(check, checks=[dataclasses.replace(c, status="pass", findings=()) for c in check.checks])
+    assert valid.verdict == "VALID"
+    page = ledger_page(bundle, valid)
+    assert _outcome(page) == "verified" and _rows(page) == 3 and REFUSAL not in page
+
+
 def test_hostile_record_text_and_ledger_name_are_text(tmp_path):
     path = tmp_path / "l.jsonl"
     signer = LocalKeypairSigner(tmp_path / "k.pem")
@@ -216,7 +228,39 @@ def test_the_module_conforms_and_its_output_is_on_the_allowlist(ledger):
     context = context_from_check(bundle, check_evidence_file(bundle))
     fragment = check_module_renders(LedgerModule("demo.jsonl"), context)
     assert check_fragment(fragment) == []
-    assert 'data-level="L0"' in fragment and 'data-level="L1"' in fragment and 'data-level="L2"' in fragment
+    assert 'data-level="L0"' in fragment and 'data-level="L1"' in fragment
+    assert "cv-verification" not in fragment  # L2 is the core's, drawn by the shell
+
+
+@pytest.mark.parametrize("depth, rows_open", [("L0", False), ("L1", True), ("L2", True)])
+def test_depth_opens_the_rows_and_never_hides_a_check(ledger, depth, rows_open):
+    check, page = check_and_render(read_ledger(ledger), depth=depth)
+    assert ('<details class="cv-drilldown" data-cv="drilldown" open>' in page) is rows_open
+    assert _rows(page) == 3  # every level is in the document at every depth
+    for record in check.records:
+        assert f"Record {record.capsule_id}" in page
+    with pytest.raises(ValueError):
+        LedgerModule(depth="L3")
+
+
+def test_a_module_that_draws_nothing_still_leaves_the_checks(ledger, monkeypatch):
+    bundle = ledger_bundle(read_ledger(ledger))
+    monkeypatch.setattr(LedgerModule, "render", lambda self, model, services: "")
+    page = ledger_page(bundle, check_evidence_file(bundle))
+    assert "intact; signature authored" in page and _outcome(page) == "incomplete"
+
+
+def test_what_the_file_carries_unchecked_is_listed(ledger):
+    bundle = ledger_bundle(read_ledger(ledger))
+    check = dataclasses.replace(
+        check_evidence_file(bundle), countersignatures=2, extensions=("x-a",), missing=("ab" * 32,)
+    )
+    page = ledger_page(bundle, check)
+    assert "2 countersignature(s): carried, not verified" in page
+    assert "Extension blocks: carried, not interpreted" in page and "x-a" in page
+    assert "1 cited record(s) not in the file" in page
+    assert "No witness receipt is checked" in page  # the witness check, whatever its status
+    assert "no proven log position" in page
 
 
 def test_an_unverified_context_is_never_rendered(ledger):

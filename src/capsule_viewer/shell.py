@@ -69,6 +69,7 @@ def present(
     audience: str,
     fmt: str = "html",
     notices: Sequence[Markup] = (),
+    core_checks: bool = False,
 ) -> str:
     """The page for *context*, with whichever module *registry* resolves. A
     module is an entry whose ``module`` has ``buildModel`` and ``render`` and
@@ -89,4 +90,5 @@ def present(
     except Exception:  # contract 4.3: a module failure collapses to the refusal, never a partial page
         return str(page(FALLBACK_TITLE, notice(FAILED, "failed"), *refused, checks))
     title = getattr(module, "title", FALLBACK_TITLE)
-    return str(page(title, banner(context.verification), *notices, *refused, Markup(body)))
+    tail = (checks,) if core_checks else ()
+    return str(page(title, banner(context.verification), *notices, *refused, Markup(body), *tail))

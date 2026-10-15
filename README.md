@@ -326,10 +326,15 @@ are marked and counted.
 - **The banner is the verifier's verdict.** VALID shows as verified,
   INCOMPLETE as incomplete (the kit's `incomplete` outcome: a ledger with no
   signed checkpoint is not tied to any committed log), INVALID as the
-  contract's refusal with the failing checks and no row. L2 lists every check
-  and every record's identity and signature as the verifier reported them.
-  The module never verifies, and if it throws, the verification is shown as it
-  was with a statement that the presentation failed.
+  contract's refusal with the failing checks and no row. The shell follows the
+  module with the verifier's checks on every path (`present(...,
+  core_checks=True)`): every check, the witness check, what the file carries
+  unchecked, and each record's log position, identity and signature. The
+  module never verifies; if it throws or draws nothing, the verification is
+  shown as it was.
+- **Depth** is the caller's (`--depth L0|L1|L2`, default L1): L0 is the
+  ledger's name and its record and refusal counts, L1 the rows in one
+  disclosure (closed at L0), L2 the core's checks.
 - **Manifest** (`ledger/manifest.json`): a fallback over any
   `evidence-bundle/v2`, `html` only. It is the floor of the ledger page's own
   registry and an alternative to agent-action-capsule's

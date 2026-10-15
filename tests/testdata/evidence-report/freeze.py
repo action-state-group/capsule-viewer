@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """One-off: freeze capsule-emit's render_report_html output as capsule-viewer goldens.
 
-Run with capsule-viewer's venv:
-  .venv/bin/python freeze_report_goldens.py <emit-repo> <out-dir>
+Run from the capsule-viewer checkout (it imports tests/evidence_report_helpers.py
+from there), with capsule-viewer's venv and a capsule-emit that still ships
+evidence_report (0.9.1):
+  .venv/bin/python tests/testdata/evidence-report/freeze.py <capsule-emit checkout> tests/testdata/evidence-report
 Each case is a directory holding bundle.json, check.json and page.html, where
 page.html is capsule_emit.evidence_report.render_report_html (or, for a bundle
 with no digest, the page `capsule-emit report` wrote) for that bundle and check.

@@ -12,12 +12,14 @@ record's time. A record whose disposition is ``denied``, or whose verdict is
 it.
 
 Depth (contract section 9): L0 is the ledger's name and its record and
-refusal counts, L1 the rows, L2 the verifier's checks as the context carries
-them, every record's identity and signature among them.
+refusal counts; L1 the rows, in one disclosure that is open at L1 and L2. L2
+is the core's: the page's shell follows the module with the verifier's
+checks, every record's position, identity and signature among them. The
+module adds no L2 detail.
 
-The module never verifies. It reads the records and the verifier's result from
-the context; whether each record is intact and signed is the verifier's, shown
-in L2, never worked out by a row. Every value it shows is the record's,
+The module never verifies. It reads only the records from the context;
+whether each record is intact and signed is the verifier's, shown in the
+core's L2, never worked out by a row. Every value it shows is the record's,
 escaped by the kit.
 
 Manifest: a fallback over any ``evidence-bundle/v2``. It is the floor of the
@@ -34,10 +36,11 @@ from html import escape
 from importlib import resources
 
 from ..context import Frozen, VerifiedBundleContext
-from ..kit.components import Markup, Metric, VerificationResult
+from ..kit.components import Markup, Metric
 from ..kit.contract import KitServices, ModuleManifest
 
 TITLE = "Capsule ledger"
+DEPTHS = ("L0", "L1", "L2")
 COLUMNS = ("Capsule id", "Action", "Actor", "Verdict", "Effect", "Chain", "Time")
 
 # capsule-emit's effect status words, as its ledger view showed them.
@@ -76,7 +79,6 @@ class Row:
 class LedgerModel:
     source: str
     rows: tuple[Row, ...]
-    verification: VerificationResult
 
     @property
     def refusals(self) -> int:
@@ -180,8 +182,11 @@ class LedgerModule:
     )
     title = TITLE
 
-    def __init__(self, source: str = "") -> None:
+    def __init__(self, source: str = "", depth: str = "L1") -> None:
+        if depth not in DEPTHS:
+            raise ValueError(f"depth must be one of {DEPTHS}, got {depth!r}")
         self.source = source
+        self.depth = depth
 
     def canRender(self, context: VerifiedBundleContext) -> bool:
         return context.verified and isinstance(_get(context.bundle, "records"), tuple)
@@ -190,8 +195,7 @@ class LedgerModule:
         records = _get(context.bundle, "records")
         if not context.verified or not isinstance(records, tuple):
             raise ValueError(f"{self.manifest.id}: buildModel called on a context canRender refuses")
-        rows = tuple(row(r) for r in records if isinstance(r, Mapping))
-        return LedgerModel(self.source, rows, context.verification)
+        return LedgerModel(self.source, tuple(row(r) for r in records if isinstance(r, Mapping)))
 
     def render(self, model: LedgerModel, services: KitServices) -> str:
         metrics = [Metric("Records", str(len(model.rows))), Metric("Refusals", str(model.refusals))]
@@ -212,14 +216,13 @@ class LedgerModule:
                 for r in model.rows
             ],
         )
+        rows = services.drilldown(f"Records ({len(model.rows)})", table, expanded=self.depth != "L0")
         return str(
-            Markup(f'<div class="cv-ledger" data-module="{escape(self.manifest.id)}">')
+            Markup(f'<div class="cv-ledger" data-module="{escape(self.manifest.id)}" data-depth="{self.depth}">')
             + Markup('<div data-level="L0">')
             + services.metric_grid(metrics)
             + Markup('</div><div data-level="L1">')
-            + services.section("Records", table)
-            + Markup('</div><div data-level="L2">')
-            + services.section("Verification", services.verification_details(model.verification))
+            + rows
             + Markup("</div></div>")
         )
 

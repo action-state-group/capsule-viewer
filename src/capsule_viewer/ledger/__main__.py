@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""``python -m capsule_viewer.ledger LEDGER [-o OUTPUT.html]``: the ledger page,
+"""``python -m capsule_viewer.ledger LEDGER [--depth L0|L1|L2] [-o OUTPUT.html]``: the ledger page,
 offline. It exits as ``capsule-emit verify --bundle`` does on the ledger's
 file: 0 VALID, 2 INCOMPLETE, 1 INVALID, empty or unreadable."""
 from __future__ import annotations
@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
         "capsule-emit's verifier as one evidence file; this only draws the page.",
     )
     parser.add_argument("path", metavar="LEDGER", help="a JSONL ledger, as capsule-emit ledger view reads one")
+    parser.add_argument("--depth", choices=("L0", "L1", "L2"), default="L1", help="the opening level (default: L1, the rows open)")
     parser.add_argument("-o", "--out", metavar="OUTPUT.html", default=None, help="write the page here (default: stdout)")
     args = parser.parse_args(argv)
 
@@ -30,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
         records = read_ledger(args.path)
         if not records:
             raise ValueError(f"{args.path} is empty or not found")
-        check, page = check_and_render(records, source=args.path)
+        check, page = check_and_render(records, source=args.path, depth=args.depth)
     except (ValueError, OSError, PermalinkError) as err:
         print(f"ledger: {err}", file=sys.stderr)
         return 1

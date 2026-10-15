@@ -7,7 +7,7 @@
  },
  "records": [
   {
-   "action_id": "grant/7fe9e976-718d-442d-a7fd-cbbbcd5717f7",
+   "action_id": "grant/3790902d-79f0-45a6-b042-26908de82a15",
    "action_type": "decide",
    "assurance": {
     "attestation_mode": "self_attested",
@@ -15,7 +15,7 @@
     "ledger_mode": "standalone"
    },
    "canonicalization_id": "jcs",
-   "capsule_id": "642fa788379514f70c337b6fed34028bb82fffe136b1bdf73f0b6012040d3083",
+   "capsule_id": "82d2c173a5bbff94eafd339eed80cb2bab45e6ff023bdb2674b33e874f991c25",
    "developer": "",
    "disposition": {
     "approver": "policy",
@@ -29,19 +29,19 @@
     "type": "memory_write"
    },
    "format_version": "4",
-   "key_id": "79c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b7429",
+   "key_id": "ad6681767113d63945d3ef442f8ee629dcebcda61f76906bcd93529e00826212",
    "model_attestation": {
     "compute_attestation": {
      "agent_input_digest": "4b56b1702e711f4cfe292af8d45bfbf284b110ae167ddbb595ee2d713d174746"
     }
    },
    "operator": "<script>alert(1)</script><a href=\"javascript:alert(1)\">x</a>",
-   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582079c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b74290127a05820642fa788379514f70c337b6fed34028bb82fffe136b1bdf73f0b6012040d30835840c913d746f3058ee395a9ff9748126eb4dff45192a75c12ddddbc8cb8f9b389b1ad842fb233288b5a9965f91aae7f691468029476ff3ef06a4ef548fc0a126a00",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ad6681767113d63945d3ef442f8ee629dcebcda61f76906bcd93529e008262120127a0582082d2c173a5bbff94eafd339eed80cb2bab45e6ff023bdb2674b33e874f991c25584033e7c547856a01fc36746ffce6b9c339e7bf2dd763ab867cd7a9762c1f63d2e6d7b29850f0327e1a3365a82806f954bd2ef6dacfc178be98b634361b12b30109",
    "spec_version": "draft-mih-scitt-agent-action-capsule-05",
-   "timestamp": "2026-10-15T19:40:58.853708Z"
+   "timestamp": "2026-10-15T19:48:07.897003Z"
   },
   {
-   "action_id": "write_po/97a0f1d4-573b-4f59-b67a-26d242d4d2ee",
+   "action_id": "write_po/062813ee-f10f-4ae7-99e2-6c6d5f9062b2",
    "action_type": "decide",
    "assurance": {
     "attestation_mode": "self_attested",
@@ -49,9 +49,9 @@
     "ledger_mode": "chained"
    },
    "canonicalization_id": "jcs",
-   "capsule_id": "fe3c53e1654ec0f29b32436b4d0d53b3ded2bb08ce10d09d1a98ff8dc8215a84",
+   "capsule_id": "02d0735e2006d3d7a840aaa753008b876908ddc605528e512738bb9f0a941e3d",
    "chain": {
-    "parent_capsule_id": "642fa788379514f70c337b6fed34028bb82fffe136b1bdf73f0b6012040d3083",
+    "parent_capsule_id": "82d2c173a5bbff94eafd339eed80cb2bab45e6ff023bdb2674b33e874f991c25",
     "relation": "confirms"
    },
    "developer": "<script>alert(1)</script><a href=\"javascript:alert(1)\">x</a>",
@@ -67,7 +67,7 @@
     "type": "spend"
    },
    "format_version": "4",
-   "key_id": "79c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b7429",
+   "key_id": "ad6681767113d63945d3ef442f8ee629dcebcda61f76906bcd93529e00826212",
    "model_attestation": {
     "compute_attestation": {
      "agent_input_digest": "8565a568653654ae5b4d4444245fa76e8bdea8c7d0db4a75bcffbb60bd6a0452",
@@ -81,12 +81,12 @@
     }
    },
    "operator": "",
-   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582079c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b74290127a05820fe3c53e1654ec0f29b32436b4d0d53b3ded2bb08ce10d09d1a98ff8dc8215a845840ff4721b69e0a1909af2fc7c66c05d1b7f644dc83f45df83ad65634ea1bb25c1e9a039ab674441f3c5976cd960920698b2fa206270c7930167346c99885ac8706",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ad6681767113d63945d3ef442f8ee629dcebcda61f76906bcd93529e008262120127a0582002d0735e2006d3d7a840aaa753008b876908ddc605528e512738bb9f0a941e3d5840368ec31b31606695b12d48563ced432cb3ee95766ccd8440a4b07e4b87b954c3c45ee1572066a6d5195b5db885586986002335c0302bedb08d7a11c21e6e4f0d",
    "spec_version": "draft-mih-scitt-agent-action-capsule-05",
-   "timestamp": "2026-10-15T19:40:58.854159Z"
+   "timestamp": "2026-10-15T19:48:07.897446Z"
   },
   {
-   "action_id": "write_po/a8891ba3-79e9-4668-97cd-0d46884c1f0b",
+   "action_id": "write_po/4af0f4ea-e2ea-4ebc-83ca-c38d9f867574",
    "action_type": "decide",
    "assurance": {
     "attestation_mode": "self_attested",
@@ -94,7 +94,7 @@
     "ledger_mode": "standalone"
    },
    "canonicalization_id": "jcs",
-   "capsule_id": "80fbe209daaa25254713847674d4360f9bb483ce13ea72f65c38442331923b9a",
+   "capsule_id": "fef15035579594cefa29bf452845d148fd5af67da3c1d7363688267b67473778",
    "developer": "po-agent@v1",
    "disposition": {
     "approver": "policy",
@@ -107,7 +107,7 @@
     "type": "spend"
    },
    "format_version": "4",
-   "key_id": "79c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b7429",
+   "key_id": "ad6681767113d63945d3ef442f8ee629dcebcda61f76906bcd93529e00826212",
    "model_attestation": {
     "compute_attestation": {
      "agent_input_digest": "aebcca5f2da4999140b08302faef160fb1ee0efe9badb8415b4cb57c1b9ce0df",
@@ -121,10 +121,10 @@
     }
    },
    "operator": "",
-   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582079c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b74290127a0582080fbe209daaa25254713847674d4360f9bb483ce13ea72f65c38442331923b9a5840f4e84989bf80c84f1fc7ac540694878211324dba6ed35fa39e5f94ba4a6af5e066cbd9cf898f027572687656b48bde0ee97439f43a233726583ce2e13418bf00",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ad6681767113d63945d3ef442f8ee629dcebcda61f76906bcd93529e008262120127a05820fef15035579594cefa29bf452845d148fd5af67da3c1d7363688267b674737785840d12f620ddc85a1259431267f8b4797f3efff4074e0b28298597f04908731f54d42a91f76e048d720555f5cdba27cafdd1e77de96cc77d1c29d40487cd75c8b0d",
    "spec_version": "draft-mih-scitt-agent-action-capsule-05",
-   "timestamp": "2026-10-15T19:40:58.854544Z"
+   "timestamp": "2026-10-15T19:48:07.897886Z"
   }
  ],
- "root": "80fbe209daaa25254713847674d4360f9bb483ce13ea72f65c38442331923b9a"
+ "root": "fef15035579594cefa29bf452845d148fd5af67da3c1d7363688267b67473778"
 }
