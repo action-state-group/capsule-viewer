@@ -1,7 +1,7 @@
 {
  "kind_ok": true,
- "bundle_digest": "6d4b55bf677cdb3534fe7b954804f38bbcc0f13763a8825c379e8e6bb207cba6",
- "root": "c6091f057ce495fe29982327d2c437747f520532e0ab1107939aecf2b914c524",
+ "bundle_digest": "89a7ac9fe103d8a976b7f065efe7988f18cf7bad23708f40fab60287d64b1e78",
+ "root": "fc83e1043bbdf5eca5c5892c3a29e775f745efafbc1f0dd0b2acb79f556109c1",
  "checks": [
   {
    "name": "records",
@@ -44,26 +44,26 @@
  ],
  "records": [
   {
-   "capsule_id": "4e37727e09b1f0699cce0a9a58eb4a2ec03fa8f5aa2cacedb1e68d8e6a01a44f",
+   "capsule_id": "82b46c9a39a1cc149aa3c931ad1427aac5105f6192a139a836d759888f5fe889",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "4ebfd86bb510f99985709e98521b803098ec4b6a59bbd02d8af83e08fa2457e0",
+   "key_id": "85fb702cc810bee8e9f589fdcba133953f97cee552bbf865991737946def674b",
    "seq": null,
    "messages": []
   },
   {
-   "capsule_id": "5ff17a8d5a529c0a5f3a8b4c2331bc930d969d8b9d8a37c27f0458fae38c1a0a",
+   "capsule_id": "ee014fe6da658c0125338f71fa2bdda15661dea1903c0b5abf4af849602fda66",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "4ebfd86bb510f99985709e98521b803098ec4b6a59bbd02d8af83e08fa2457e0",
+   "key_id": "85fb702cc810bee8e9f589fdcba133953f97cee552bbf865991737946def674b",
    "seq": null,
    "messages": []
   },
   {
-   "capsule_id": "c6091f057ce495fe29982327d2c437747f520532e0ab1107939aecf2b914c524",
+   "capsule_id": "fc83e1043bbdf5eca5c5892c3a29e775f745efafbc1f0dd0b2acb79f556109c1",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "4ebfd86bb510f99985709e98521b803098ec4b6a59bbd02d8af83e08fa2457e0",
+   "key_id": "85fb702cc810bee8e9f589fdcba133953f97cee552bbf865991737946def674b",
    "seq": null,
    "messages": []
   }

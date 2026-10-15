@@ -45,7 +45,8 @@ def verification_of(check: EvidenceFileCheck) -> VerificationResult:
     of its checks and its witness-receipt check in their own plain words with
     their findings; what the file carries that nothing checked
     (countersignatures, extension blocks, cited records not in the file); and
-    each record's log position, identity and signature as it judged them."""
+    each record's identity and signature as it judged them, with its log
+    position, said to be claimed unless the verifier proved membership."""
     checks = [Check(c.plain, _STATUS.get(c.status, "failed"), ", ".join(c.findings)) for c in check.checks]
     if check.witness is not None:
         checks.append(Check(check.witness.plain, _STATUS.get(check.witness.status, "failed"), ", ".join(check.witness.findings)))
@@ -55,12 +56,18 @@ def verification_of(check: EvidenceFileCheck) -> VerificationResult:
         checks.append(Check("Extension blocks: carried, not interpreted", "not_checked", ", ".join(check.extensions)))
     if check.missing:
         checks.append(Check(f"{len(check.missing)} cited record(s) not in the file", "not_checked", ", ".join(check.missing)))
+    # A record's position is the file's claim until the verifier proved
+    # membership; capsule-emit reports it either way.
+    proven = any(c.name == "per_record_membership" and c.status == "pass" for c in check.checks)
     for r in check.records:
         if not r.identity_ok or r.signature == "invalid":
             outcome = "failed"
         else:
             outcome = "verified" if r.signature == "authored" else "not_checked"
-        position = f"log position {r.seq}" if r.seq is not None else "no proven log position"
+        if r.seq is None:
+            position = "no log position"
+        else:
+            position = f"log position {r.seq}" if proven else f"claimed log position {r.seq}, not proven"
         intact = "intact" if r.identity_ok else "does not match its id"
         checks.append(Check(f"Record {r.capsule_id}", outcome, f"{position}; {intact}; signature {r.signature}"))
     return VerificationResult(VERIFIER, _VERDICT[check.verdict], tuple(checks))

@@ -260,7 +260,23 @@ def test_what_the_file_carries_unchecked_is_listed(ledger):
     assert "Extension blocks: carried, not interpreted" in page and "x-a" in page
     assert "1 cited record(s) not in the file" in page
     assert "No witness receipt is checked" in page  # the witness check, whatever its status
-    assert "no proven log position" in page
+    assert "no log position" in page
+
+
+@pytest.mark.parametrize("membership, words", [("pass", "log position 7;"), ("withheld", "claimed log position 7, not proven"),
+                                                ("fail", "claimed log position 7, not proven")])
+def test_a_log_position_is_claimed_until_membership_is_proven(ledger, membership, words):
+    bundle = ledger_bundle(read_ledger(ledger))
+    check = check_evidence_file(bundle)
+    check = dataclasses.replace(
+        check,
+        checks=[dataclasses.replace(c, status=membership) if c.name == "per_record_membership" else c for c in check.checks],
+        records=[dataclasses.replace(r, seq=7) for r in check.records],
+    )
+    page = ledger_page(bundle, check)
+    assert words in page
+    if membership != "pass":
+        assert "log position 7;" not in page.replace("claimed log position 7", "")
 
 
 def test_an_unverified_context_is_never_rendered(ledger):
