@@ -276,8 +276,8 @@ stylesheet each script inserts once at render).
 ## Evidence report page
 
 `capsule_viewer.evidence_report` renders one readable, offline HTML page from
-an evidence file (`evidence-bundle/v2`). It is the page half of capsule-emit's
-evidence report; the checking stays in capsule-emit.
+an evidence file (`evidence-bundle/v2`). It is the page capsule-emit's
+`capsule-emit report` drew, moved here; the checking stays in capsule-emit.
 
 - **It never checks.** The page is drawn from the result of capsule-emit's
   `capsule_emit.evidence_file.check_evidence_file`, read unchanged
@@ -293,6 +293,14 @@ evidence report; the checking stays in capsule-emit.
 - **Check it yourself** points at the donated verifier,
   `capsule-emit verify --bundle FILE.json`, which needs nothing from this
   package.
+- **The page is the one capsule-emit drew.** `tests/testdata/evidence-report/`
+  freezes, per case, a bundle, capsule-emit's result for it and the page
+  capsule-emit's own renderer drew from the two (capsule-emit 0.9.1, the
+  renderer at capsule-emit main `35b2b42`). The page drawn here from the same
+  pair must be byte-identical (`tests/test_evidence_report_golden.py`).
+  `tests/test_evidence_report_cases.py` checks the same files live: tampered
+  signatures, proofs and roots, a withheld payload, a malformed oversized
+  `bundle_ref` and injected markup.
 - Needs the `evidence` extra (`pip install "capsule-viewer[evidence]"`).
 
 ```
@@ -301,6 +309,44 @@ python -m capsule_viewer.evidence_report bundle.json -o report.html
 
 It exits as `capsule-emit verify --bundle` does: 0 VALID, 2 INCOMPLETE,
 1 INVALID or unreadable.
+
+## Ledger module (`capsuleviewer.ledger/v0`)
+
+`capsule_viewer.ledger` is the page capsule-emit's `ledger view --html` wrote:
+every record of a capsule ledger as one row, with the actor's lineage label, the
+verdict, the effect, the chain label, each gate check and the time; refusals
+are marked and counted.
+
+- **The ledger is checked as one evidence file.** capsule-emit's
+  `permalink.build_bundle` makes the file over every record and its
+  `check_evidence_file` checks it. `ledger_page(bundle, check)` binds that
+  result to the file as the report does, builds the context from it, and
+  draws the page through the shell (`capsule_viewer.shell.present`) with the
+  module resolved from its manifest.
+- **The banner is the verifier's verdict.** VALID shows as verified,
+  INCOMPLETE as incomplete (the kit's `incomplete` outcome: a ledger with no
+  signed checkpoint is not tied to any committed log), INVALID as the
+  contract's refusal with the failing checks and no row. L2 lists every check
+  and every record's identity and signature as the verifier reported them.
+  The module never verifies, and if it throws, the verification is shown as it
+  was with a statement that the presentation failed.
+- **Manifest** (`ledger/manifest.json`): a fallback over any
+  `evidence-bundle/v2`, `html` only. It is the floor of the ledger page's own
+  registry and an alternative to agent-action-capsule's
+  `aac.builtin.no-aggregate/v0`; a registry refuses to hold both.
+- `tests/testdata/ledger/` freezes three pages (incomplete, tampered,
+  hostile); `freeze.py` there rewrites them for an intended change.
+  `js-tests/offline_pages.test.js` opens these and the report goldens in
+  headless Chromium with the network emulated offline: no request but the
+  page itself, no script, no console error.
+- Needs the `evidence` extra.
+
+```
+python -m capsule_viewer.ledger ledger.jsonl -o ledger.html
+```
+
+It exits as the report does: 0 VALID, 2 INCOMPLETE, 1 INVALID, empty or
+unreadable.
 
 ## Fixtures
 

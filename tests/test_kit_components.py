@@ -103,6 +103,12 @@ def test_verification_details_shows_the_given_outcome_and_never_upgrades_it():
     assert "a verifier" in html
 
 
+def test_an_incomplete_result_is_never_worded_or_toned_as_verified():
+    html = verification_details(VerificationResult("a verifier", "incomplete", (Check("checkpoint", "not_checked"),)))
+    assert '<span class="cv-verification__outcome cv-pill cv-tone--caution" data-outcome="incomplete">Incomplete</span>' in html
+    assert "Verified" not in html and "cv-tone--positive" not in html
+
+
 def test_verification_details_refuses_an_unknown_outcome():
     html = verification_details(VerificationResult("v", "probably_fine"))
     assert 'data-refused="VerificationDetails"' in html and "data-outcome" not in html

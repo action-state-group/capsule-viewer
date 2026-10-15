@@ -1,0 +1,94 @@
+{
+ "kind_ok": true,
+ "bundle_digest": "a7ac053ce8ef29b7f50d4700846231d208f608ee9cdbaaf6898fbefdf6a77b22",
+ "root": "b9b53b1afacb595607d103f31c4ff1a950eddf68501ac7b327f4eb2ece88c638",
+ "checks": [
+  {
+   "name": "records",
+   "status": "fail",
+   "findings": [
+    "record_identity_invalid:0d9d8a342624e1f351a7055ae045126a60258b5758124cc23f18c9fbd95ea675"
+   ]
+  },
+  {
+   "name": "signatures",
+   "status": "fail",
+   "findings": [
+    "producer_signature_invalid:0d9d8a342624e1f351a7055ae045126a60258b5758124cc23f18c9fbd95ea675"
+   ]
+  },
+  {
+   "name": "graph_closure",
+   "status": "fail",
+   "findings": [
+    "record_identity_invalid:0d9d8a342624e1f351a7055ae045126a60258b5758124cc23f18c9fbd95ea675"
+   ]
+  },
+  {
+   "name": "checkpoint",
+   "status": "withheld",
+   "findings": [
+    "checkpoint_signature_absent"
+   ]
+  },
+  {
+   "name": "interval_coverage",
+   "status": "withheld",
+   "findings": [
+    "completeness_evidence_absent",
+    "checkpoint_unverified"
+   ]
+  },
+  {
+   "name": "per_record_membership",
+   "status": "withheld",
+   "findings": [
+    "completeness_evidence_absent",
+    "checkpoint_unverified"
+   ]
+  }
+ ],
+ "records": [
+  {
+   "capsule_id": "8120550d702c6e366b6ca7907b88f1a1406bd8a0cc18fb78c69f531745c536b0",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "674a76f20629b42151062296e1996b97cdbd4694e6b69a1f97cbd02e6ec6eefb",
+   "seq": null,
+   "messages": []
+  },
+  {
+   "capsule_id": "0d9d8a342624e1f351a7055ae045126a60258b5758124cc23f18c9fbd95ea675",
+   "identity_ok": false,
+   "signature": "invalid",
+   "key_id": "674a76f20629b42151062296e1996b97cdbd4694e6b69a1f97cbd02e6ec6eefb",
+   "seq": null,
+   "messages": [
+    "capsule_id=0d9d8a342624e1f351a7055ae045126a60258b5758124cc23f18c9fbd95ea675: self-attested Ed25519 signature does not verify against key_id -- content, signature, or key_id was tampered or forged"
+   ]
+  },
+  {
+   "capsule_id": "b9b53b1afacb595607d103f31c4ff1a950eddf68501ac7b327f4eb2ece88c638",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "674a76f20629b42151062296e1996b97cdbd4694e6b69a1f97cbd02e6ec6eefb",
+   "seq": null,
+   "messages": []
+  }
+ ],
+ "checkpoint": {},
+ "checkpoint_authenticated": false,
+ "signer_matches_checkpoint": null,
+ "missing": [],
+ "closure_depth": 3,
+ "countersignatures": 0,
+ "extensions": [],
+ "witness": {
+  "name": "witnesses",
+  "status": "withheld",
+  "findings": [
+   "witness_receipt_absent"
+  ]
+ },
+ "witness_receipts": []
+}

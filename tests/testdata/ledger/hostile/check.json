@@ -1,0 +1,86 @@
+{
+ "kind_ok": true,
+ "bundle_digest": "008355dd095c6670b003a7d3825958c2253f0f8ab9e6728d4522bcb8c5360b31",
+ "root": "80fbe209daaa25254713847674d4360f9bb483ce13ea72f65c38442331923b9a",
+ "checks": [
+  {
+   "name": "records",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "signatures",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "graph_closure",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "checkpoint",
+   "status": "withheld",
+   "findings": [
+    "checkpoint_signature_absent"
+   ]
+  },
+  {
+   "name": "interval_coverage",
+   "status": "withheld",
+   "findings": [
+    "completeness_evidence_absent",
+    "checkpoint_unverified"
+   ]
+  },
+  {
+   "name": "per_record_membership",
+   "status": "withheld",
+   "findings": [
+    "completeness_evidence_absent",
+    "checkpoint_unverified"
+   ]
+  }
+ ],
+ "records": [
+  {
+   "capsule_id": "642fa788379514f70c337b6fed34028bb82fffe136b1bdf73f0b6012040d3083",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "79c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b7429",
+   "seq": null,
+   "messages": []
+  },
+  {
+   "capsule_id": "fe3c53e1654ec0f29b32436b4d0d53b3ded2bb08ce10d09d1a98ff8dc8215a84",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "79c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b7429",
+   "seq": null,
+   "messages": []
+  },
+  {
+   "capsule_id": "80fbe209daaa25254713847674d4360f9bb483ce13ea72f65c38442331923b9a",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "79c9fb76683323bd3d0166d5a8ec74d45f0d840933248ea9553351a3293b7429",
+   "seq": null,
+   "messages": []
+  }
+ ],
+ "checkpoint": {},
+ "checkpoint_authenticated": false,
+ "signer_matches_checkpoint": null,
+ "missing": [],
+ "closure_depth": 3,
+ "countersignatures": 0,
+ "extensions": [],
+ "witness": {
+  "name": "witnesses",
+  "status": "withheld",
+  "findings": [
+   "witness_receipt_absent"
+  ]
+ },
+ "witness_receipts": []
+}

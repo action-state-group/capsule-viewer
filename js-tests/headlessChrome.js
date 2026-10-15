@@ -198,6 +198,14 @@ async function launchOnce(chromePath) {
     await call("Page.enable");
     return {
       call,
+      // Calls fn with every protocol event for this page; returns the unsubscribe.
+      onEvent(fn) {
+        const own = (msg) => {
+          if (msg.sessionId === sessionId) fn(msg);
+        };
+        listeners.push(own);
+        return () => listeners.splice(listeners.indexOf(own), 1);
+      },
       async open(url, { width, media = "screen", scripts = true }) {
         await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: false });
         await call("Emulation.setEmulatedMedia", { media });

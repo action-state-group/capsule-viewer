@@ -287,6 +287,9 @@ def evidence_details(items: Sequence[EvidenceItem]) -> Markup:
 # into "understood" or "correct".
 VERIFICATION_OUTCOMES: dict[str, tuple[str, str]] = {
     "verified": ("Verified", "positive"),
+    # Nothing failed, but something the evidence claims is not shown (a
+    # verifier's INCOMPLETE): never worded or toned as verified.
+    "incomplete": ("Incomplete", "caution"),
     "failed": ("Did not verify", "negative"),
     "not_checked": ("Not checked", "neutral"),
 }
