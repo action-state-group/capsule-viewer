@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Evidence report</title><style>
+:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--muted:#59636e;--line:#d1d9e0;
+--pass:#1a7f37;--withheld:#9a6700;--fail:#cf222e;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;
+--line:#3d444d;--pass:#3fb950;--withheld:#d29922;--fail:#f85149;--card:#151b23}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
+font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px}
+.muted{color:var(--muted)}.verdict{border:1px solid var(--line);border-left-width:6px;
+border-radius:6px;padding:12px 16px;margin:16px 0;background:var(--card)}
+.verdict.pass{border-left-color:var(--pass)}.verdict.withheld{border-left-color:var(--withheld)}
+.verdict.fail{border-left-color:var(--fail)}
+ul.checks{list-style:none;padding:0;margin:0}ul.checks li{display:flex;gap:10px;padding:6px 0;
+border-bottom:1px solid var(--line)}.mark{width:1.2em;font-weight:700;flex:none}
+.pass .mark,.mark.pass{color:var(--pass)}.withheld .mark,.mark.withheld{color:var(--withheld)}
+.fail .mark,.mark.fail{color:var(--fail)}
+.find{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);word-break:break-all}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0}dt{color:var(--muted)}
+dd{margin:0;word-break:break-all}code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+</style></head><body><main>
+<h1>Evidence report</h1>
+<div class="muted">Checked offline from the file alone. Root record <code>8ac60166764cd436…</code>.</div>
+<div class="verdict withheld"><strong>Incomplete: what this file carries checks, but some things it does not show; they are marked below.</strong></div>
+<h2>What was checked</h2><ul class="checks"><li class="pass"><span class="mark">✓</span><div><strong>Checks.</strong> Every record is intact: its id recomputes from its content.</div></li><li class="pass"><span class="mark">✓</span><div><strong>Checks.</strong> Every record is signed, and every signature checks.</div></li><li class="pass"><span class="mark">✓</span><div><strong>Checks.</strong> Every record the file&#x27;s records cite, to the stated depth, is in the file.</div></li><li class="pass"><span class="mark">✓</span><div><strong>Checks.</strong> The log&#x27;s checkpoint is signed, and the file&#x27;s copy of it matches what was signed.</div></li><li class="withheld"><span class="mark">–</span><div><strong>Not shown.</strong> Producer-selected file; this verifier cannot check its selection. Each record&#x27;s own place in the log is checked below.<div class="find">selection_not_checkable</div></div></li><li class="pass"><span class="mark">✓</span><div><strong>Checks.</strong> Each record is proven to be in the log at the position it claims.</div></li></ul>
+<h2>About this file</h2><dl><dt>File</dt><dd>f.json</dd><dt>Records</dt><dd>3 (log positions 1–3)</dd><dt>Log</dt><dd>example-org/node-1</dd><dt>Checkpoint</dt><dd>signed 2026-10-15T19:35:37Z · root <code>1f712bd4e1f6c62e…</code></dd><dt>Signer</dt><dd><code>ed5dfef9966ac8bf…</code> · signed the checkpoint and every record</dd><dt>Witness receipts</dt><dd>none checked: No witness receipt is checked: the file carries none, or no key is known for its witness.</dd><dt>File digest</dt><dd><code></code></dd></dl>
+<h2>Records</h2><div class="scroll"><table>
+<thead><tr><th>#</th><th>Time</th><th>Kind</th><th>Model</th><th>Record</th><th>Intact</th><th>Signature</th></tr></thead>
+<tbody><tr><td>1</td><td>2026-10-15T19:35:37</td><td>decide</td><td></td><td><code>cf2c8ce4d893…</code></td><td><span class="mark pass">✓</span></td><td><span class="mark pass">✓</span> authored</td></tr><tr><td>2</td><td>2026-10-15T19:35:37</td><td>decide</td><td></td><td><code>8867cda1ea13…</code></td><td><span class="mark pass">✓</span></td><td><span class="mark pass">✓</span> authored</td></tr><tr><td>3</td><td>2026-10-15T19:35:37</td><td>decide</td><td></td><td><code>8ac60166764c…</code> (root)</td><td><span class="mark pass">✓</span></td><td><span class="mark pass">✓</span> authored</td></tr></tbody></table></div>
+<h2>What this file does not show</h2><ul><li>Whether any answer was right. The file shows what was recorded, not that it was correct.</li><li>Who holds the signing key. A key shows that one holder signed; naming the holder needs a directory or a witness.</li><li>Anything cited more than 0 step(s) back from the newest record.</li><li>Records outside log positions 1–3: this file says nothing about them.</li><li>Extension blocks, carried but not interpreted: x-example</li></ul>
+<h2>Check it yourself</h2><p><code>capsule-emit verify --bundle f.json</code>, or open the file in any
+evidence-bundle/v2 verifier. Anyone can check it; no account is needed.</p>
+</main></body></html>

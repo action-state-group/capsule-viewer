@@ -1,0 +1,84 @@
+{
+ "kind_ok": true,
+ "bundle_digest": "ebacc20a426cc6ddf0b4d6ffa03d6825159d0bfe600a131020ba8ae56d9d14bf",
+ "root": "ed04a1ea45ba1384ae79625e42359f3feb4632c1c9d1b80dd3c17e1b60b5fa92",
+ "checks": [
+  {
+   "name": "records",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "signatures",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "graph_closure",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "checkpoint",
+   "status": "fail",
+   "findings": [
+    "checkpoint_field_mismatch:log_id"
+   ]
+  },
+  {
+   "name": "interval_coverage",
+   "status": "withheld",
+   "findings": [
+    "checkpoint_unverified"
+   ]
+  },
+  {
+   "name": "per_record_membership",
+   "status": "withheld",
+   "findings": [
+    "checkpoint_unverified"
+   ]
+  }
+ ],
+ "records": [
+  {
+   "capsule_id": "637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+   "seq": 1,
+   "messages": []
+  },
+  {
+   "capsule_id": "418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+   "seq": 2,
+   "messages": []
+  },
+  {
+   "capsule_id": "ed04a1ea45ba1384ae79625e42359f3feb4632c1c9d1b80dd3c17e1b60b5fa92",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+   "seq": 3,
+   "messages": []
+  }
+ ],
+ "checkpoint": {},
+ "checkpoint_authenticated": false,
+ "signer_matches_checkpoint": null,
+ "missing": [],
+ "closure_depth": 0,
+ "countersignatures": 0,
+ "extensions": [],
+ "witness": {
+  "name": "witnesses",
+  "status": "withheld",
+  "findings": [
+   "witness_receipt_absent"
+  ]
+ },
+ "witness_receipts": []
+}

@@ -1,0 +1,105 @@
+{
+ "kind_ok": true,
+ "bundle_digest": "f54bdb43adba370ad07edcfa624261dd06cb9045e22acb0b9be476a6bd161dd7",
+ "root": "ed04a1ea45ba1384ae79625e42359f3feb4632c1c9d1b80dd3c17e1b60b5fa92",
+ "checks": [
+  {
+   "name": "records",
+   "status": "fail",
+   "findings": [
+    "record_identity_invalid:637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1",
+    "record_identity_invalid:418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492"
+   ]
+  },
+  {
+   "name": "signatures",
+   "status": "fail",
+   "findings": [
+    "producer_signature_invalid:637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1",
+    "producer_signature_invalid:418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492"
+   ]
+  },
+  {
+   "name": "graph_closure",
+   "status": "fail",
+   "findings": [
+    "record_identity_invalid:637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1",
+    "record_identity_invalid:418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492"
+   ]
+  },
+  {
+   "name": "checkpoint",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "interval_coverage",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "per_record_membership",
+   "status": "fail",
+   "findings": [
+    "membership_record_unknown:637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1",
+    "membership_record_unknown:418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492",
+    "membership_record_missing:1",
+    "membership_record_missing:2"
+   ]
+  }
+ ],
+ "records": [
+  {
+   "capsule_id": "637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1",
+   "identity_ok": false,
+   "signature": "invalid",
+   "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+   "seq": 1,
+   "messages": [
+    "capsule_id=637d95fa0e9dbf592c9981c4c67c8540a907964b66e33759d8c53a539cdf7ef1: self-attested Ed25519 signature does not verify against key_id -- content, signature, or key_id was tampered or forged"
+   ]
+  },
+  {
+   "capsule_id": "418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492",
+   "identity_ok": false,
+   "signature": "invalid",
+   "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+   "seq": 2,
+   "messages": [
+    "capsule_id=418f24048773650c96848cf642ea9a084574e7e430671f64eb87760ae0b04492: self-attested Ed25519 signature does not verify against key_id -- content, signature, or key_id was tampered or forged"
+   ]
+  },
+  {
+   "capsule_id": "ed04a1ea45ba1384ae79625e42359f3feb4632c1c9d1b80dd3c17e1b60b5fa92",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+   "seq": 3,
+   "messages": []
+  }
+ ],
+ "checkpoint": {
+  "log_id": "test-log",
+  "mmr_size": 4,
+  "root": "c952dcbd6753d99303ece84aea2cb7ac5733fd1447b85ec4a52c9d2b6f9feeb7",
+  "key_id": "aeed9715ace157492fce4c3836986a60eb11d492e7dd9517cd731756debef525",
+  "timestamp": "2026-10-01T00:00:00Z",
+  "prev_size": 0,
+  "prev_root": "",
+  "witnesses": []
+ },
+ "checkpoint_authenticated": true,
+ "signer_matches_checkpoint": true,
+ "missing": [],
+ "closure_depth": 0,
+ "countersignatures": 0,
+ "extensions": [],
+ "witness": {
+  "name": "witnesses",
+  "status": "withheld",
+  "findings": [
+   "witness_receipt_absent"
+  ]
+ },
+ "witness_receipts": []
+}

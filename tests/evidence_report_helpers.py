@@ -14,11 +14,14 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
+import re
+from html.parser import HTMLParser
 from pathlib import Path
 from types import SimpleNamespace
 
 from capsule_emit import LocalKeypairSigner, seal
 from capsule_emit.cli import main as capsule_emit_main
+from capsule_emit.evidence_file import Check, EvidenceFileCheck, RecordCheck
 from capsule_emit.ledger import read_ledger
 from cll.checkpoint import (
     CheckpointRecord,
@@ -139,3 +142,41 @@ def whole_log_bundle(tmp_path: Path, *, n: int = 3, cose: bool = True) -> dict:
         },
         "checkpoint": checkpoint,
     }
+
+
+class _Tags(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tags: list[tuple[str, list[tuple[str, str | None]]]] = []
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.append((tag, attrs))
+
+
+def no_link_or_script(page: str) -> None:
+    """Nothing on the page loads, links or runs: as parsed, no element that
+    fetches or runs, no handler or URL attribute, and no URL in the stylesheet
+    (caller text may still spell those, escaped, as text)."""
+    parser = _Tags()
+    parser.feed(page)
+    for tag, attrs in parser.tags:
+        assert tag not in ("script", "img", "iframe", "a", "link", "object", "embed", "form"), tag
+        for name, _ in attrs:
+            assert name not in ("src", "href", "action", "srcdoc") and not name.startswith("on"), (tag, name)
+    style = page[page.index("<style>") : page.index("</style>")]
+    assert not re.search(r"https?://|@import|url\(", style)
+
+
+def frozen_check(raw: dict) -> EvidenceFileCheck:
+    """``check.json`` back into capsule-emit's result type."""
+    check = lambda c: Check(c["name"], c["status"], tuple(c["findings"]))  # noqa: E731
+    return EvidenceFileCheck(
+        **{
+            **raw,
+            "checks": [check(c) for c in raw["checks"]],
+            "records": [RecordCheck(**{**r, "messages": tuple(r["messages"])}) for r in raw["records"]],
+            "missing": tuple(raw["missing"]),
+            "extensions": tuple(raw["extensions"]),
+            "witness": check(raw["witness"]) if raw["witness"] else None,
+        }
+    )

@@ -1,0 +1,192 @@
+{
+ "bundle_kind": "evidence-bundle/v2",
+ "bundle_version": "2",
+ "checkpoint": {
+  "key_id": "2d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f6",
+  "kind": "mmr_checkpoint",
+  "log_id": "test-log",
+  "mmr_size": 4,
+  "prev_root": "",
+  "prev_size": 0,
+  "root": "af1d3a0917ceb915bd29b31dc81ae87d52865730af58ede657435c2cab09d438",
+  "signature": "",
+  "timestamp": "2026-10-01T00:00:00Z",
+  "v": 1,
+  "witnesses": []
+ },
+ "completeness": {
+  "closure_depth": 0,
+  "payloads_mode": "selected",
+  "records_mode": "complete",
+  "suppressed_fields": []
+ },
+ "completeness_certificate": {
+  "body_digests": [
+   "2ebbcb8ea0ce94d0e67f966789775c2273e98a55c4922009d1241e2369ef7101",
+   "a9e14104011289ef91e99ac409c9e7db53e2fd539fdeebd122b1c6b0cb8ecc10",
+   "52fec5d5808b49d18f3f583fe6f3c9c20dfa5e3ea06cf60341cbac7f739dbcb6"
+  ],
+  "first_seq": 1,
+  "last_seq": 3,
+  "log_id": "test-log",
+  "memberships": {
+   "2ebbcb8ea0ce94d0e67f966789775c2273e98a55c4922009d1241e2369ef7101": {
+    "inclusion_proof": {
+     "kind": "inclusion",
+     "leaf_index": 0,
+     "peaks_left": [],
+     "peaks_right": [
+      "0d5892f42b0a8c9fa14e29f1d6db1b992c5555d019fed4be0d1798880ee6a056"
+     ],
+     "size": 4,
+     "v": 1,
+     "witness": [
+      "cc1e9703793c0181dc612a9e00604a25b39ab9fca96f6db4f6971c0c9be5521c"
+     ]
+    },
+    "log_coordinates": {
+     "leaf_index": 0,
+     "log_id": "test-log",
+     "seq": 1
+    }
+   },
+   "52fec5d5808b49d18f3f583fe6f3c9c20dfa5e3ea06cf60341cbac7f739dbcb6": {
+    "inclusion_proof": {
+     "kind": "inclusion",
+     "leaf_index": 2,
+     "peaks_left": [
+      "5ef7943152c86a2e2709e00aeb7679f50d76d2ceff4c1b2f60474d9b055b3507"
+     ],
+     "peaks_right": [],
+     "size": 4,
+     "v": 1,
+     "witness": []
+    },
+    "log_coordinates": {
+     "leaf_index": 2,
+     "log_id": "test-log",
+     "seq": 3
+    }
+   },
+   "a9e14104011289ef91e99ac409c9e7db53e2fd539fdeebd122b1c6b0cb8ecc10": {
+    "inclusion_proof": {
+     "kind": "inclusion",
+     "leaf_index": 1,
+     "peaks_left": [],
+     "peaks_right": [
+      "0d5892f42b0a8c9fa14e29f1d6db1b992c5555d019fed4be0d1798880ee6a056"
+     ],
+     "size": 4,
+     "v": 1,
+     "witness": [
+      "645269e051aaa978625041f5f7461bbe597144ebc848876fbc628741dc1375e8"
+     ]
+    },
+    "log_coordinates": {
+     "leaf_index": 1,
+     "log_id": "test-log",
+     "seq": 2
+    }
+   }
+  },
+  "range_proof": {
+   "from_index": 0,
+   "from_seq": 1,
+   "size": 4,
+   "to_index": 2,
+   "to_seq": 3,
+   "witness": []
+  },
+  "range_root": "af1d3a0917ceb915bd29b31dc81ae87d52865730af58ede657435c2cab09d438"
+ },
+ "records": [
+  {
+   "action_id": "seal/674e217f-116f-48e9-bf0b-dfeadbf2c9aa",
+   "action_type": "decide",
+   "assurance": {
+    "attestation_mode": "self_attested",
+    "effect_mode": "not_applicable",
+    "ledger_mode": "standalone"
+   },
+   "canonicalization_id": "jcs",
+   "capsule_id": "2ebbcb8ea0ce94d0e67f966789775c2273e98a55c4922009d1241e2369ef7101",
+   "developer": "",
+   "disposition": {
+    "approver": "policy",
+    "decision": "accept",
+    "human_disposed": false,
+    "verdict_class": "executed"
+   },
+   "format_version": "4",
+   "key_id": "2d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f6",
+   "model_attestation": {
+    "compute_attestation": {
+     "agent_input_digest": "4b56b1702e711f4cfe292af8d45bfbf284b110ae167ddbb595ee2d713d174746"
+    }
+   },
+   "operator": "",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d69640458202d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f60127a058202ebbcb8ea0ce94d0e67f966789775c2273e98a55c4922009d1241e2369ef71015840912a0218d64e0f2aaaf8f119a95aca1ba86bcbf2c4a86e7050de8a293518d7e921cc2baf2107e370b10148fb0ad12cb6499cbf6638ad88b633116d7912c4750b",
+   "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+   "timestamp": "2026-10-15T19:35:37.619213Z"
+  },
+  {
+   "action_id": "seal/0aa0d43e-b336-44d1-b955-351507b84a34",
+   "action_type": "decide",
+   "assurance": {
+    "attestation_mode": "self_attested",
+    "effect_mode": "not_applicable",
+    "ledger_mode": "standalone"
+   },
+   "canonicalization_id": "jcs",
+   "capsule_id": "a9e14104011289ef91e99ac409c9e7db53e2fd539fdeebd122b1c6b0cb8ecc10",
+   "developer": "",
+   "disposition": {
+    "approver": "policy",
+    "decision": "accept",
+    "human_disposed": false,
+    "verdict_class": "executed"
+   },
+   "format_version": "4",
+   "key_id": "2d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f6",
+   "model_attestation": {
+    "compute_attestation": {
+     "agent_input_digest": "8565a568653654ae5b4d4444245fa76e8bdea8c7d0db4a75bcffbb60bd6a0452"
+    }
+   },
+   "operator": "",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d69640458202d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f60127a05820a9e14104011289ef91e99ac409c9e7db53e2fd539fdeebd122b1c6b0cb8ecc105840d01317e838f0f8fa994d90859f18b971e280d9c0fbeeb0c2b7923a40fe30ca0ff6cb626a6f2ef47374b2b57d127e99bd4c71904f20a32ecf7de65562db22020f",
+   "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+   "timestamp": "2026-10-15T19:35:37.619543Z"
+  },
+  {
+   "action_id": "seal/34828db8-1858-4e78-be81-d9937656c153",
+   "action_type": "decide",
+   "assurance": {
+    "attestation_mode": "self_attested",
+    "effect_mode": "not_applicable",
+    "ledger_mode": "standalone"
+   },
+   "canonicalization_id": "jcs",
+   "capsule_id": "52fec5d5808b49d18f3f583fe6f3c9c20dfa5e3ea06cf60341cbac7f739dbcb6",
+   "developer": "",
+   "disposition": {
+    "approver": "policy",
+    "decision": "accept",
+    "human_disposed": false,
+    "verdict_class": "executed"
+   },
+   "format_version": "4",
+   "key_id": "2d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f6",
+   "model_attestation": {
+    "compute_attestation": {
+     "agent_input_digest": "aebcca5f2da4999140b08302faef160fb1ee0efe9badb8415b4cb57c1b9ce0df"
+    }
+   },
+   "operator": "",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d69640458202d9af80cd85f11746110d775519778d359945562ee25f9eda4c0eaa6b8dd56f60127a0582052fec5d5808b49d18f3f583fe6f3c9c20dfa5e3ea06cf60341cbac7f739dbcb658402b559d632a76472fae1adb2a4f063e35459c1114393b390120070c59a23de3de6b264eb2bcadaedff60ebc03fffc0ea02127e5b9237b22a4d4fa4e10b1c72902",
+   "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+   "timestamp": "2026-10-15T19:35:37.619797Z"
+  }
+ ],
+ "root": "52fec5d5808b49d18f3f583fe6f3c9c20dfa5e3ea06cf60341cbac7f739dbcb6"
+}

@@ -232,3 +232,18 @@ Rules module's manifest and the example wording pack against the schema, and
 runs the contract's static ambiguity test (section 4.5) between the Rules
 manifest and every built-in; the same test must find the ambiguous pair. `spec/presentation-contract-v0.md` in that
 repository remains the normative source.
+
+## Evidence report and Ledger page goldens
+
+`evidence-report/<case>/` holds a bundle, capsule-emit's `check_evidence_file`
+result for it and the page capsule-emit's own `render_report_html` drew from
+the two, frozen before the report moved here (capsule-emit 0.9.1, whose
+renderer is byte-identical to capsule-emit main `35b2b42`). `freeze.py` there
+is the script that wrote them, kept as their provenance: it needs a
+capsule-emit checkout for the `_stub_receipt` test helper and the
+`test-vectors/evidence-file` vector, and a capsule-emit that still ships
+`evidence_report`. The `witnessed` case also carries the witness directory
+its receipt checks under.
+
+`ledger/<case>/` holds the Ledger page's own goldens, written by
+`ledger/freeze.py` with this package.
