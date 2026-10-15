@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from capsule_emit.evidence_file import EvidenceFileCheck
 
-__all__ = ["BundleMismatch", "check_and_render", "main", "render_report_html"]
+__all__ = ["BundleMismatch", "bind_result", "check_and_render", "main", "render_report_html"]
 
 #: Where a reader re-runs the check without this package: the donated verifier.
 RERUN_COMMAND = "capsule-emit verify --bundle"
@@ -87,7 +87,7 @@ def _short(hex_id: str | None, n: int = 12) -> str:
     return f"{hex_id[:n]}…" if hex_id and len(hex_id) > n else (hex_id or "")
 
 
-def _bind(bundle: Any, check: EvidenceFileCheck) -> None:
+def bind_result(bundle: Any, check: EvidenceFileCheck) -> None:
     """Refuse a result computed for any bundle but ``bundle``.
 
     The digest is the bundle digest the verifier reports (it leaves out
@@ -153,8 +153,8 @@ def render_report_html(bundle: Any, check: EvidenceFileCheck, *, source: str = "
     """The report page for ``bundle`` given capsule-emit's ``check`` of it.
 
     Raises :class:`BundleMismatch` when ``check`` cannot be shown to be for
-    this bundle (see :func:`_bind`)."""
-    _bind(bundle, check)
+    this bundle (see :func:`bind_result`)."""
+    bind_result(bundle, check)
     return _page(bundle, check, source)
 
 

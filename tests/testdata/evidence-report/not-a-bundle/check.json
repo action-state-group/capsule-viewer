@@ -1,0 +1,24 @@
+{
+ "kind_ok": false,
+ "bundle_digest": null,
+ "root": null,
+ "checks": [
+  {
+   "name": "records",
+   "status": "fail",
+   "findings": [
+    "not_an_evidence_bundle_v2"
+   ]
+  }
+ ],
+ "records": [],
+ "checkpoint": {},
+ "checkpoint_authenticated": false,
+ "signer_matches_checkpoint": null,
+ "missing": [],
+ "closure_depth": null,
+ "countersignatures": 0,
+ "extensions": [],
+ "witness": null,
+ "witness_receipts": []
+}

@@ -1,0 +1,75 @@
+{
+ "kind_ok": true,
+ "bundle_digest": "e84a7de99e556ed2ab78ebc07ded2106bf8a2a678ab6afafa76f484f9ce0c3e8",
+ "root": "40cec543cb815d3fe341a07e3a53c2e24b3bde6c471879a8ff482a92b52a1bc5",
+ "checks": [
+  {
+   "name": "records",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "signatures",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "graph_closure",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "checkpoint",
+   "status": "pass",
+   "findings": []
+  },
+  {
+   "name": "interval_coverage",
+   "status": "fail",
+   "findings": [
+    "completeness_certificate_invalid"
+   ]
+  },
+  {
+   "name": "per_record_membership",
+   "status": "fail",
+   "findings": [
+    "completeness_certificate_invalid"
+   ]
+  }
+ ],
+ "records": [
+  {
+   "capsule_id": "40cec543cb815d3fe341a07e3a53c2e24b3bde6c471879a8ff482a92b52a1bc5",
+   "identity_ok": true,
+   "signature": "authored",
+   "key_id": "75860843f3f857871dbdc5b2638d9bee7cb913041677379720b2187bd7e8220a",
+   "seq": 1,
+   "messages": []
+  }
+ ],
+ "checkpoint": {
+  "log_id": "capsule-emit-mesh",
+  "mmr_size": 63,
+  "root": "2423f88f1a6e76e2c075b298460378ebafe7a7ba8318af13dd7e8c1e9d125a1b",
+  "key_id": "75860843f3f857871dbdc5b2638d9bee7cb913041677379720b2187bd7e8220a",
+  "timestamp": "2026-10-01T23:04:00.000Z",
+  "prev_size": 0,
+  "prev_root": "",
+  "witnesses": []
+ },
+ "checkpoint_authenticated": true,
+ "signer_matches_checkpoint": true,
+ "missing": [],
+ "closure_depth": 0,
+ "countersignatures": 0,
+ "extensions": [],
+ "witness": {
+  "name": "witnesses",
+  "status": "withheld",
+  "findings": [
+   "witness_receipt_absent"
+  ]
+ },
+ "witness_receipts": []
+}

@@ -203,36 +203,3 @@ def test_this_module_runs_no_check_of_its_own():
     for name in ("verify_bundle", "verify_capsule_signature", "checkpoint_from_cose", "inclusion_proof", "hashlib"):
         assert name not in text, name
     assert evidence_report.RERUN_COMMAND == "capsule-emit verify --bundle"
-
-
-def test_the_page_matches_capsule_emits_own_while_capsule_emit_still_ships_it(exported, tmp_path):
-    """The move is faithful: for the same bundle and result, the page is the
-    page capsule-emit's ``evidence_report`` rendered, byte for byte. Once
-    capsule-emit's copy is removed this comparison has nothing to compare."""
-    if importlib.util.find_spec("capsule_emit.evidence_report") is None:
-        pytest.skip("LOUD: capsule-emit no longer ships evidence_report; the parity check did not run")
-    from capsule_emit.evidence_report import render_report_html as donated_render
-
-    unsigned = tmp_path / "unsigned"
-    unsigned.mkdir()
-    bundles = (
-        exported[1],
-        whole_log_bundle(tmp_path),
-        _tamper(exported[1]),
-        whole_log_bundle(unsigned, cose=False),
-        _with_float(exported[1]),
-        {"bundle_kind": "something-else"},
-    )
-    for bundle in bundles:
-        check, page = check_and_render(bundle, source="f.json")
-        assert page == donated_render(bundle, check, source="f.json")
-    # A result capsule-emit can produce (witness receipts, countersignatures,
-    # extensions, missing records), drawn by both.
-    bundle = whole_log_bundle(tmp_path)
-    check = dataclasses.replace(
-        check_evidence_file(bundle),
-        witness=Check("witnesses", "fail"),
-        witness_receipts=[{"ts_url": "https://w.example", "binding": "cll", "status": "fail", "reason": "r"}],
-        countersignatures=2, extensions=("x-a",), missing=("ab" * 32,),
-    )
-    assert render_report_html(bundle, check, source="f.json") == donated_render(bundle, check, source="f.json")

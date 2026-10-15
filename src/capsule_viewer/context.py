@@ -7,8 +7,9 @@ verification run. Its reference type is TypeScript (``ts/src/bundle.ts``). This
 is the subset a server-rendered module here reads, with the same meaning:
 
 * ``verified`` is the viewer's gate over the verifier's report, as AAC's
-  ``bundleVerified`` applies it: the verifier's outcome is ``verified`` and no
-  disclosure is a ``disclosure_mismatch``. Nothing in this package checks a
+  ``bundleVerified`` applies it: the verifier's outcome is ``verified`` (or
+  ``incomplete``: nothing failed, something is not shown, which the banner
+  says) and no disclosure is a ``disclosure_mismatch``. Nothing in this package checks a
   signature, digest or proof itself: ``build_context`` takes the verifier's
   result and its per-member disclosure statuses as given.
 * ``disclosures`` maps each record's ``capsule_id`` to both disclosable members,
@@ -34,6 +35,9 @@ from typing import Literal, TypeAlias
 from .kit.components import VerificationResult
 
 DISCLOSABLE_MEMBERS: tuple[str, ...] = ("agent_input", "agent_output")
+# The verifier outcomes that pass the gate. ``incomplete`` is a verifier's
+# INCOMPLETE: no check failed. Nothing reported as ``failed`` passes.
+GATE_OUTCOMES: frozenset[str] = frozenset({"verified", "incomplete"})
 RESULT_VERSION = "evidence-result-v0"
 RESULT_RECORD_TYPE = "evidence_result"
 
@@ -83,7 +87,7 @@ class VerifiedBundleContext:
 
     @property
     def verified(self) -> bool:
-        return self.verification.outcome == "verified" and not any(
+        return self.verification.outcome in GATE_OUTCOMES and not any(
             entry.state == "disclosure_mismatch" for members in self.disclosures.values() for entry in members.values()
         )
 

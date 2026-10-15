@@ -1,0 +1,13 @@
+{
+ "directory_version": "1",
+ "witnesses": [
+  {
+   "name": "test witness",
+   "endpoint": "https://witness.example",
+   "since": "2026-01-01",
+   "key_ids": [
+    "2a7fff72fd3c7c655be634a52ea43cd35fe1cfa6c12700cf957542e82af08e28"
+   ]
+  }
+ ]
+}

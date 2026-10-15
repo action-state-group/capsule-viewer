@@ -1,0 +1,130 @@
+{
+ "bundle_kind": "evidence-bundle/v2",
+ "bundle_version": "2",
+ "completeness": {
+  "closure_depth": 3,
+  "records_mode": "complete"
+ },
+ "records": [
+  {
+   "action_id": "grant/e2d4f642-ec40-45d1-8195-50e947dfa7b2",
+   "action_type": "decide",
+   "assurance": {
+    "attestation_mode": "self_attested",
+    "effect_mode": "dispatched_unconfirmed",
+    "ledger_mode": "standalone"
+   },
+   "canonicalization_id": "jcs",
+   "capsule_id": "9964cc4fcb641a1390078bb51050a00507386a83262434e950903d1801ce2602",
+   "developer": "",
+   "disposition": {
+    "approver": "policy",
+    "decision": "accept",
+    "human_disposed": false,
+    "verdict_class": "executed"
+   },
+   "effect": {
+    "effect_attestation": "runtime_claimed",
+    "status": "dispatched",
+    "type": "memory_write"
+   },
+   "format_version": "4",
+   "key_id": "36d686fcd0ad1c3f6b9785f2d12aa91cbd1b833d0b3378617deb701ba6cd0631",
+   "model_attestation": {
+    "compute_attestation": {
+     "agent_input_digest": "4b56b1702e711f4cfe292af8d45bfbf284b110ae167ddbb595ee2d713d174746"
+    }
+   },
+   "operator": "<script>alert(1)</script><a href=\"javascript:alert(1)\">x</a>",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582036d686fcd0ad1c3f6b9785f2d12aa91cbd1b833d0b3378617deb701ba6cd06310127a058209964cc4fcb641a1390078bb51050a00507386a83262434e950903d1801ce2602584016b5883021943a1369a75b19f8746be6e36c979b2e824396db320ae53256bf3dcc278acfd0418bb653f4dd827687811d0e12d9f06a3a6655545245a6da02d00f",
+   "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+   "timestamp": "2026-10-15T19:59:48.680013Z"
+  },
+  {
+   "action_id": "write_po/cbd1137c-8329-4a93-b99d-c2978f10438e",
+   "action_type": "decide",
+   "assurance": {
+    "attestation_mode": "self_attested",
+    "effect_mode": "dispatched_unconfirmed",
+    "ledger_mode": "chained"
+   },
+   "canonicalization_id": "jcs",
+   "capsule_id": "c9df0067ce5bbf3c555f44da072bdffc750016cb14eab28bf61a1c0f2f643f75",
+   "chain": {
+    "parent_capsule_id": "9964cc4fcb641a1390078bb51050a00507386a83262434e950903d1801ce2602",
+    "relation": "confirms"
+   },
+   "developer": "<script>alert(1)</script><a href=\"javascript:alert(1)\">x</a>",
+   "disposition": {
+    "approver": "policy",
+    "decision": "accept",
+    "human_disposed": false,
+    "verdict_class": "executed"
+   },
+   "effect": {
+    "effect_attestation": "runtime_claimed",
+    "status": "dispatched",
+    "type": "spend"
+   },
+   "format_version": "4",
+   "key_id": "36d686fcd0ad1c3f6b9785f2d12aa91cbd1b833d0b3378617deb701ba6cd0631",
+   "model_attestation": {
+    "compute_attestation": {
+     "agent_input_digest": "8565a568653654ae5b4d4444245fa76e8bdea8c7d0db4a75bcffbb60bd6a0452",
+     "gate_checks": [
+      {
+       "name": "AmountUnderCap",
+       "passed": true,
+       "reason": null
+      }
+     ]
+    }
+   },
+   "operator": "",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582036d686fcd0ad1c3f6b9785f2d12aa91cbd1b833d0b3378617deb701ba6cd06310127a05820c9df0067ce5bbf3c555f44da072bdffc750016cb14eab28bf61a1c0f2f643f755840206ea6620ab2fe399fb106123eb8a7d17ae37c64deb88958e29ea0aa51deb2a049af02cd9312b800334ffcd56631b4de7a058215f7d6239d39262bf50f3fee00",
+   "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+   "timestamp": "2026-10-15T19:59:48.680455Z"
+  },
+  {
+   "action_id": "write_po/03527e13-1449-4978-a6ec-9c4be1d3ac58",
+   "action_type": "decide",
+   "assurance": {
+    "attestation_mode": "self_attested",
+    "effect_mode": "not_applicable",
+    "ledger_mode": "standalone"
+   },
+   "canonicalization_id": "jcs",
+   "capsule_id": "2e873e67c3007b8e4593941485c5f211742e7bdf7d383a8fc04fc05b729d6771",
+   "developer": "po-agent@v1",
+   "disposition": {
+    "approver": "policy",
+    "decision": "denied",
+    "human_disposed": false,
+    "verdict_class": "blocked"
+   },
+   "effect": {
+    "status": "planned",
+    "type": "spend"
+   },
+   "format_version": "4",
+   "key_id": "36d686fcd0ad1c3f6b9785f2d12aa91cbd1b833d0b3378617deb701ba6cd0631",
+   "model_attestation": {
+    "compute_attestation": {
+     "agent_input_digest": "aebcca5f2da4999140b08302faef160fb1ee0efe9badb8415b4cb57c1b9ce0df",
+     "gate_checks": [
+      {
+       "name": "AmountUnderCap",
+       "passed": false,
+       "reason": "<script>alert(1)</script><a href=\"javascript:alert(1)\">x</a>"
+      }
+     ]
+    }
+   },
+   "operator": "",
+   "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d696404582036d686fcd0ad1c3f6b9785f2d12aa91cbd1b833d0b3378617deb701ba6cd06310127a058202e873e67c3007b8e4593941485c5f211742e7bdf7d383a8fc04fc05b729d6771584010ab13b65649e839611ca26134a9a60aa025ff706e802b1c954af19e29b4428ea9caf600104b91c52465c0d85c15647526da01a7277c0c379a2f74221f98290a",
+   "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+   "timestamp": "2026-10-15T19:59:48.680799Z"
+  }
+ ],
+ "root": "2e873e67c3007b8e4593941485c5f211742e7bdf7d383a8fc04fc05b729d6771"
+}
