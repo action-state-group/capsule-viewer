@@ -10,6 +10,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.1.0 and go 0.1.0 (2026-10-16)
+
+The first release of the npm package and of the Go module (tag `go/v0.1.0`).
+
 ### Added
 
 - The page emitter and presentation builder, moved from agent-action-capsule
