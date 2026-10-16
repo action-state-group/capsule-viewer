@@ -21,8 +21,7 @@ here. The format follows
   - TypeScript: `emitEvidenceGraphHtml`, `buildPresentation`,
     `offlineHtmlFromFragment` and the rest of agent-action-capsule's
     `emitter.ts` and `presentation-builder.ts` exports, from the package
-    root. The browser condition exports the in-browser renderer
-    (`renderEvidenceGraph`), and the package ships it bundled as
+    root. The in-browser renderer (`renderEvidenceGraph`) ships bundled as
     `dist/evidence-graph.iife.js`. Bundle verification comes from
     `@action-state-group/agent-action-capsule` 0.1.1, now a dependency, along
     with `@action-state-group/cll`, which that version needs to load.

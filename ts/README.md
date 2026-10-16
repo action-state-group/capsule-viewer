@@ -14,9 +14,8 @@ import {
 } from "@action-state-group/capsule-viewer";
 ```
 
-The browser condition of the same specifier exports the in-browser renderer
-(`renderEvidenceGraph`). `dist/evidence-graph.iife.js` is that renderer
-bundled for a page's core runtime slot. Bundle verification comes from
+The in-browser renderer (`renderEvidenceGraph`) ships bundled as
+`dist/evidence-graph.iife.js`, for a page's core runtime slot. Bundle verification comes from
 `@action-state-group/agent-action-capsule`.
 
 The code moved here from agent-action-capsule (agent-action-capsule#281) and
