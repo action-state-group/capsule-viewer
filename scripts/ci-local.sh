@@ -11,3 +11,8 @@ python3 -m venv .venv >/dev/null 2>&1 || true
 
 npm install --no-audit --no-fund
 npm test
+.venv/bin/pytest -q .github/test_release.py
+
+(cd ts && npm ci --no-audit --no-fund && npm run check)
+
+(cd go && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...)

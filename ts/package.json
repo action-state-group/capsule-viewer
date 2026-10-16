@@ -1,0 +1,45 @@
+{
+  "name": "@action-state-group/capsule-viewer",
+  "version": "0.0.0",
+  "description": "capsule-viewer's offline presentation page shell and builder, under the Agent Action Capsule presentation contract",
+  "license": "Apache-2.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "check": "npm run format:check && npm run typecheck && npm test && npm run build && npm run check:package",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "check:package": "node scripts/check-package.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "prettier": "3.6.2",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/action-state-group/capsule-viewer.git",
+    "directory": "ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
