@@ -1,0 +1,8 @@
+{
+  "ts": {
+    "kind": "npm",
+    "manifest": "ts/package.json",
+    "tag_prefix": "ts/v",
+    "workflow": "publish-ts.yml"
+  }
+}

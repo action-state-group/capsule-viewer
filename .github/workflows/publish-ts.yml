@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: Apache-2.0
+# Adapted from capsule-emit publish-ts.yml at 8e8f541.
+# Publish @action-state-group/capsule-viewer to npm for a ts/v<version> tag:
+# tag-release.yml dispatches this on the tag it creates when a version bump
+# merges (see RELEASING.md), and publishing a GitHub Release for such a tag
+# also runs it. The npm trusted publisher names this repository, publish-ts.yml
+# and the npm environment.
+#
+# An already-published version is refused rather than skipped: every release
+# from this workflow is a new version built from the tagged commit.
+name: Release · Publish TypeScript
+
+on:
+  release:
+    types: [published]
+  # tag-release.yml dispatches this on the ts/v<version> tag it creates.
+  # Dispatched on a branch, it does nothing.
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# One publish at a time for this package, so the dist-tag choice below sees
+# npm as the previous publish left it. GitHub keeps one pending run per group,
+# so a third release queued behind two is cancelled; re-run it.
+concurrency:
+  group: publish-ts
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'ts/v')) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/ts/v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: ts
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref_name }}
+          fetch-depth: 0
+      - name: Validate TypeScript release identity and source
+        run: python3 ../.github/release.py --repo .. check ts "$RELEASE_TAG"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Refuse a version that is already published
+        run: |
+          spec="$(node -p "const p = require('./package.json'); p.name + '@' + p.version")"
+          if npm view "$spec" version >published.txt 2>view-error.txt; then
+            echo "::error::$spec is already published; release a new version" >&2
+            exit 1
+          fi
+          grep -q E404 view-error.txt || { cat view-error.txt >&2; exit 1; }
+      - run: npm ci
+      - run: npm run check
+      - name: Choose the dist-tag
+        # npm refuses a prerelease without an explicit dist-tag, and `latest`
+        # must never move backward: a stable version older than npm's current
+        # `latest` (a backport, or a release that finished out of order)
+        # publishes under `backport` instead.
+        run: |
+          version=$(node -p "require('./package.json').version")
+          # Only a clean answer or an explicit "not found" counts: treating a
+          # registry or network error as "no latest" could move latest backward.
+          if ! latest=$(npm view "$(node -p "require('./package.json').name")" dist-tags.latest 2>"$RUNNER_TEMP/latest-error.txt"); then
+            grep -q E404 "$RUNNER_TEMP/latest-error.txt" || { cat "$RUNNER_TEMP/latest-error.txt" >&2; exit 1; }
+            latest=""
+          fi
+          dist_tag=$(node -e '
+            const [version, latest] = process.argv.slice(1);
+            const core = (v) => v.split("-")[0].split(".").map(Number);
+            const older = (a, b) => { for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i]; return false; };
+            console.log(version.includes("-") ? "next" : latest && older(core(version), core(latest)) ? "backport" : "latest");
+          ' "$version" "$latest")
+          echo "DIST_TAG=$dist_tag" >> "$GITHUB_ENV"
+      - name: Publish
+        run: npm publish --tag "$DIST_TAG"

@@ -382,6 +382,16 @@ npm install
 npm test   # the kit layout suite also needs Chromium (CHROME_PATH)
 ```
 
+`scripts/ci-local.sh` runs these plus the `ts/` package's `npm run check` and
+the `go/` module's tests, as CI does.
+
+## Packages and releases
+
+Besides the Python package above, the repository holds the npm package
+`@action-state-group/capsule-viewer` (`ts/`) and the Go module
+`github.com/action-state-group/capsule-viewer/go` (`go/`).
+[RELEASING.md](RELEASING.md) says how each is released.
+
 ## Boundary
 
 Zero pack code. The base and the kit render any conforming record
