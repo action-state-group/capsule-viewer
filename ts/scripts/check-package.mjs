@@ -30,9 +30,13 @@ try {
   const paths = packed.files.map(({ path }) => path);
   for (const required of [
     "LICENSE",
+    "LICENSE-BSD-3-Clause",
     "README.md",
     "dist/index.js",
     "dist/index.d.ts",
+    "dist/browser.js",
+    "dist/emitter-shell.html",
+    "dist/evidence-graph.iife.js",
   ])
     assert(paths.includes(required), `${required} is not in the package`);
   for (const path of paths)
@@ -51,12 +55,16 @@ try {
     "--no-fund",
     join(temporary, packed.filename),
   ]);
+  // The emitter reads dist/emitter-shell.html as it loads, so emitting a page
+  // from the installed package also proves the shell was packed beside it.
   run("node", [
     "--input-type=module",
     "-e",
-    `await import(${JSON.stringify(name)});`,
+    `const { emitEvidenceGraphHtml } = await import(${JSON.stringify(name)});
+     const page = emitEvidenceGraphHtml({}, "/*IIFE*/");
+     if (!page.startsWith("<!doctype html>")) throw new Error("no page");`,
   ]);
-  console.log(`${packed.filename}: ${paths.length} files, imports cleanly`);
+  console.log(`${packed.filename}: ${paths.length} files, emits a page`);
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }
