@@ -87,13 +87,13 @@ npm's trusted publisher names owner `action-state-group`, repository
 | npm | `@action-state-group/capsule-viewer` | `publish-ts.yml` | `npm` |
 
 It is set in the package's **Settings → Trusted Publisher** on npmjs.com. npm
-offers that only for a package that exists, so the first version is published
-by hand by an `@action-state-group` npm owner: after Release · Tag creates
-`ts/v<version>`, its publisher run fails at the upload step, and the owner runs
-`npm ci && npm run check && npm publish --access public` from `ts/` with that
-tag checked out, then configures the trusted publisher. Do not re-run the failed
-run after the manual publish; its check rejects a version npm already has.
-Every later version goes through the flow above.
+offers that only for a package that exists, so an `@action-state-group` npm
+owner published a `0.0.0` placeholder by hand, before the release flow existed,
+and then configured the trusted publisher. The first OIDC release is `0.1.0`.
+
+A new manifest counts as a version change, so the merge that added `ts/` at
+`0.0.0` made Release · Tag create `ts/v0.0.0`. Its publisher run failed at the
+"already published" check, as expected, and uploaded nothing. Do not re-run it.
 
 Renaming a publisher workflow breaks publishing until the registry is updated
 first. No registry token is stored in this repository: trusted publishing
