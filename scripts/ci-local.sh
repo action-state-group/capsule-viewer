@@ -15,4 +15,5 @@ npm test
 
 (cd ts && npm ci --no-audit --no-fund && npm run check)
 
-(cd go && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...)
+(cd go && test -z "$(gofmt -l .)" && go mod tidy && test -z "$(git status --porcelain -- .)" \
+  && go vet ./... && go test -race ./...)
