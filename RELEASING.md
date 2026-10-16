@@ -32,7 +32,9 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    the version from the current one, commits the bump with a sign-off, and
    pushes `release/<package>-v<version>`.
 2. **Review.** Open the pull request from the link in the run summary. Open it
-   yourself: a pull request opened by the workflow would not start CI.
+   yourself: a pull request opened by the workflow would not start CI. Add the
+   [CHANGELOG](CHANGELOG.md) entry on the same branch if it is not in yet; the
+   GitHub Release notes point to it.
 3. **Merge.** [Release · Tag](https://github.com/action-state-group/capsule-viewer/actions/workflows/tag-release.yml)
    runs on the merge. For each package whose version changed it creates the
    tag and GitHub Release on the merge commit and dispatches the package's
