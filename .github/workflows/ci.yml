@@ -47,6 +47,9 @@ jobs:
           cache: npm
           cache-dependency-path: ts/package-lock.json
       - run: npm ci
+      # The CSP and offline-page browser tests skip without a Chrome; the
+      # hosted runner ships one, so its absence is a failure here.
+      - run: test -x /usr/bin/google-chrome
       - run: npm run check
 
   # The Go module github.com/action-state-group/capsule-viewer/go. A Go release
