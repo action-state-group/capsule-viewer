@@ -197,6 +197,33 @@ emitter. Both repos pin the same sha256.
 excluded) ever again hold no UNKNOWN claim. `js-tests/result_v0_unknown.test.js`
 pins the rendered sufficiency of every claim in order.
 
+## Extension members, `x-` (2026-10-16)
+
+Evidence Result v0 admits members named `x-...` on the document and on each
+claim (`spec/evidence-result-v0.md` section 8a, agent-action-capsule #297). A
+verifier ignores them, and an extension member never changes a claim's
+meaning or verdict. Both files are copied byte-for-byte (`cmp`-verified) from
+`agent-action-capsule`'s `vectors/evidence-result/` at
+`7662a00362049bcf287108497a1e3a867141dd67`; the sha256 below is the one that
+directory's `SHA256SUMS` lists.
+
+| File | sha256 | x- members |
+|---|---|---|
+| `pos-example-org-extended-result.json` | `f194bcb3baa4c3db25e6b13b7d8996d4e00ef4fcc6f7dac187a059e68af4ebb7` | `x-judged-selection` on the document, `x-judge-pin` on `claim-2`; stripped of them it equals `pos-example-org-claims-result.json` |
+| `pos-judge-producer-x-judge-result.json` | `d8c1ee5b38ac7680ecfbfce1d24b605afbe4b21f4db62b4f6ad0f0668a577f70` | `x-judged-selection` on the document; `x-judge-pin`, `x-judge-pin-digest`, `x-judge-rationale`, `x-judge-rule-id` on each claim |
+
+`tests/test_result_v0_extension_members.py` and
+`js-tests/result_v0_extension_members.test.js` pin both digests (the Python
+test checks the JS file pins the same ones). The card renders each file
+byte-identically to the same document with its `x-` members removed: no label,
+value, chip or count comes from an `x-` member, and `x-` members written to
+mimic defined ones (`x-verdict`, `x-tier`, `x-close_state`, `x-aggregate`, ...)
+move nothing. `build_result_entry`, default and `strict=True`, carries them
+byte-identical and never walks them as digest positions. The schema negatives
+from the same commit (`neg-unprefixed-*`, `neg-judge-producer-unprefixed-result`)
+are not vendored: this viewer does not validate against the schema, so it
+renders a bare unknown member the same way it ignores an `x-` one.
+
 ## Fragment codec vectors (2026-10-08)
 
 The encoder now writes Agent Action Capsule's Fragment Codec: base64url, no
