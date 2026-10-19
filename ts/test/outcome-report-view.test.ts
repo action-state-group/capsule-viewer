@@ -3,8 +3,9 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
+import { conversationStatus } from "../src/outcome-report-view.js";
 import { jsonDigest } from "@action-state-group/agent-action-capsule";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -16,7 +17,20 @@ function fixture(name: string): Obj {
   ) as Obj;
 }
 
+/** Render, then open the report's proofs toggle at the foot (built on first open, like every toggle). */
 async function render(bundle: unknown): Promise<HTMLElement> {
+  const root = await renderClosed(bundle);
+  for (const proofs of root.querySelectorAll<HTMLDetailsElement>(
+    '[data-section="report-proofs"] > details',
+  )) {
+    proofs.open = true;
+    proofs.dispatchEvent(new Event("toggle"));
+  }
+  return root;
+}
+
+/** Render with every toggle closed, as a reader first sees the page. */
+async function renderClosed(bundle: unknown): Promise<HTMLElement> {
   const root = document.createElement("main");
   await renderEvidenceGraph(bundle, root);
   return root;
@@ -120,13 +134,21 @@ it("renders the header meta: pack id/version, period, conversation count, result
   const root = await render(bundle);
   const meta = root.querySelector<HTMLElement>('[data-section="meta"]')!;
   // pack and version from the claims' contract_ref; the lock date is stated
-  // by nothing in the bundle, so it reads "not stated"
+  // by nothing in the bundle, so the header draws no lock line at all
   expect(meta.textContent).toContain("tau2-airline-outcomes/v1 v1");
-  expect(meta.textContent).toContain("Terms locked: not stated");
+  expect(meta.textContent).not.toContain("Terms locked");
   expect(meta.textContent).not.toContain("2026-08-31");
-  expect(meta.textContent).toContain("2026-09-23 – 2026-09-23");
+  expect(meta.textContent).toContain("Period2026-09-23");
   expect(meta.textContent).toContain("50");
-  expect(meta.textContent).toContain(ids["result"]);
+  // what was checked, in one plain sentence
+  expect(
+    meta.querySelector<HTMLElement>("[data-what-checked]")!.textContent,
+  ).toContain("9 rules in 3 groups");
+  // the Result capsule id is a proof, not a headline
+  expect(meta.textContent).not.toContain(ids["result"]);
+  expect(
+    root.querySelector<HTMLElement>("[data-report-ids]")!.textContent,
+  ).toContain(ids["result"]);
 });
 
 // ---------------------------------------------------------------------------
@@ -140,7 +162,9 @@ it("renders report lines with counts recomputed from the claims, and held/added 
   const line = (key: string) =>
     table.querySelector<HTMLElement>(`[data-line="${key}"]`)!;
   expect(line("resolved").dataset.count).toBe("0");
-  expect(line("missed").dataset.count).toBe("50");
+  // a conversation the judge could not decide is never counted as missed
+  expect(line("missed").dataset.count).toBe("48");
+  expect(line("undecided").dataset.count).toBe("2");
   expect(line("held").dataset.count).toBe("0");
   expect(line("added").dataset.count).toBe("0");
   expect(line("resolved").textContent).toContain("0 of 50");
@@ -160,7 +184,7 @@ it("shows counts by default, never a percentage, unless the presentation flag as
     '[data-rows="report-lines"]',
   )!;
   expect(pctTable.querySelector('[data-line="missed"]')!.textContent).toContain(
-    "100%",
+    "96%",
   );
 });
 
@@ -276,37 +300,49 @@ it("renders human spot checks: k of n per week, from an injected calibration-sum
 // why conversations missed
 // ---------------------------------------------------------------------------
 
-it("renders per-check pass counts and missed-reason groups, grouped by criterion when no reason_code is cited", async () => {
+it("summarises results rule by rule: per-check pass counts, every rule's counts add up, and a rule opens into exactly the conversations it did not meet", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
-  const bars = root.querySelector<HTMLElement>("[data-check-bars]")!;
+  const rules = root.querySelector<HTMLElement>('[data-section="rules"]')!;
+  const group = (id: string) =>
+    rules.querySelector<HTMLElement>(`tr.grp[data-check-id="${id}"]`)!;
+  expect(group("policy_compliance").dataset.passCount).toBe("4");
+  expect(group("task_resolution").dataset.passCount).toBe("2");
+  expect(group("grounded_communication").dataset.passCount).toBe("2");
+  const rows = rules.querySelectorAll<HTMLElement>("tr[data-rule]");
+  expect(rows).toHaveLength(9);
+  for (const row of rows) {
+    const counts = [...row.querySelectorAll<HTMLElement>("td.n")].map((td) =>
+      Number(td.textContent),
+    );
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(50);
+    const [, notMet, , undecided] = counts;
+    // the conversations open in a full-width row right below the rule
+    const drillRow = row.nextElementSibling as HTMLElement | null;
+    const drill =
+      drillRow !== null && drillRow.dataset.drillFor === row.dataset.rule
+        ? drillRow.querySelector<HTMLElement>('details[data-level="1"]')
+        : null;
+    if (notMet! + undecided! === 0) {
+      expect(drill).toBeNull();
+      continue;
+    }
+    open(drill!);
+    const convs = drill!.querySelectorAll<HTMLElement>("article.conv");
+    expect(convs).toHaveLength(notMet! + undecided!);
+    // each one really did not meet this rule
+    const first = open(convs[0]!);
+    expect(
+      first.querySelector<HTMLElement>(`tr[data-crit="${row.dataset.rule}"]`)!
+        .dataset.critVerdict,
+    ).not.toBe("met");
+  }
+  // the label is the criterion's readable name, never a raw snake_case id
   expect(
-    bars.querySelector<HTMLElement>('[data-check-id="policy_compliance"]')!
-      .dataset.passCount,
-  ).toBe("4");
-  expect(
-    bars.querySelector<HTMLElement>('[data-check-id="task_resolution"]')!
-      .dataset.passCount,
-  ).toBe("2");
-  expect(
-    bars.querySelector<HTMLElement>('[data-check-id="grounded_communication"]')!
-      .dataset.passCount,
-  ).toBe("2");
-
-  const reasons = root.querySelector<HTMLElement>("[data-reasons]")!;
-  const fallback = reasons.querySelector<HTMLElement>(
-    '[data-reason-key="policy_compliance.confirmed_before_acting"]',
-  )!;
-  expect(fallback.dataset.reasonStructured).toBe("false");
-  expect(fallback.dataset.count).toBe("17");
-  // the fallback label is the criterion id made readable, never parsed from
-  // the judge's free-text rationale, and never a raw snake_case id
-  expect(fallback.textContent).toContain("Confirmed before acting");
-  expect(fallback.textContent).toContain("(Policy compliance)");
-  const total = Array.from(
-    reasons.querySelectorAll("[data-reason-key]"),
-  ).reduce((sum, el) => sum + Number((el as HTMLElement).dataset.count), 0);
-  expect(total).toBe(50);
+    rules.querySelector(
+      'tr[data-rule="policy_compliance.confirmed_before_acting"]',
+    )!.textContent,
+  ).toContain("Confirmed before acting");
 });
 
 it("never shows a raw reason_code: with no sealed label, the miss is named by its failing criterion", async () => {
@@ -324,12 +360,11 @@ it("never shows a raw reason_code: with no sealed label, the miss is named by it
   };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  const reasons = root.querySelector<HTMLElement>("[data-reasons]")!;
-  expect(
-    reasons.querySelector('[data-reason-key="acted_without_confirmation"]'),
-  ).toBeNull();
-  expect(reasons.querySelector('[data-reason-structured="true"]')).toBeNull();
-  expect(reasons.textContent).not.toContain("acted_without_confirmation");
+  expand(root);
+  for (const conv of root.querySelectorAll<HTMLElement>("article.conv"))
+    open(conv);
+  const page = root.querySelector<HTMLElement>('[data-page="outcome-report"]')!;
+  expect(page.textContent).not.toContain("acted_without_confirmation");
 });
 
 // ---------------------------------------------------------------------------
@@ -341,9 +376,10 @@ it("renders the terms from the bundle: unstated terms marked, the resolution rul
   const root = await render(bundle);
   const terms = root.querySelector<HTMLElement>('[data-section="terms"]')!;
   expect(terms.textContent).toContain("what counts as resolved");
-  expect(terms.textContent).toContain(
-    "Agreed with the counterparty: not stated. Locked: not stated.",
-  );
+  // nothing in the bundle states an agreement or a lock date: the terms
+  // draw neither, rather than a standing "not stated"
+  expect(terms.textContent).not.toContain("Agreed with the counterparty");
+  expect(terms.textContent).not.toContain("Locked");
   expect(terms.textContent).not.toContain("airline policy");
   expect(terms.textContent).toContain(
     "A conversation resolves only when every criterion judged for it is met or does not apply, and at least one is met.",
@@ -645,11 +681,56 @@ it("still renders report/v1 and evaluation-summary/v1 root families exactly as b
 // the rationale exactly as sealed, why, and the ids to recompute it
 // ---------------------------------------------------------------------------
 
-/** Open a conversation the way a reader does: its body is built on first open. */
+/**
+ * As in a browser, a conversation's body is built only when it nears the
+ * view: these tests stand in an IntersectionObserver that never fires on its
+ * own, and `open` brings one conversation into view. Without it every opened
+ * line would build every conversation it lists.
+ */
+type Seen = (entries: { isIntersecting: boolean }[]) => void;
+const inView = new Map<Element, Seen>();
+beforeEach(() => {
+  (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
+    class {
+      constructor(private readonly seen: Seen) {}
+      observe(target: Element): void {
+        inView.set(target, this.seen);
+      }
+      disconnect(): void {}
+    };
+});
+afterEach(() => {
+  delete (globalThis as { IntersectionObserver?: unknown })
+    .IntersectionObserver;
+  inView.clear();
+});
+
+/** Open a toggle, or bring a conversation (never a toggle) into view: either way its body is built. */
 function open(conv: HTMLElement): HTMLElement {
-  (conv as HTMLDetailsElement).open = true;
-  conv.dispatchEvent(new Event("toggle"));
+  if (conv.tagName === "DETAILS") {
+    (conv as HTMLDetailsElement).open = true;
+    conv.dispatchEvent(new Event("toggle"));
+    return conv;
+  }
+  const slot = conv.querySelector(":scope > .conv-slot");
+  if (slot !== null) inView.get(slot)?.([{ isIntersecting: true }]);
   return conv;
+}
+
+/** Toggle 1 on every summary line: builds the conversation lists. */
+function expand(root: HTMLElement): HTMLElement {
+  for (const line of root.querySelectorAll<HTMLElement>(
+    'details[data-level="1"].line',
+  ))
+    open(line);
+  return root;
+}
+
+/** Toggle 2 inside an opened conversation: builds its proofs. */
+function proofs(conv: HTMLElement): HTMLElement {
+  return open(
+    conv.querySelector<HTMLElement>('details[data-level="2"].proofs')!,
+  );
 }
 
 /** The fixture's sealed report payloads, keyed by the claim id that cites them. */
@@ -666,7 +747,7 @@ function reportsByClaim(source: Obj): Map<string, Obj> {
   return out;
 }
 
-it("drill-down: the missed line opens into every missed conversation, each with nine criteria, verdicts and the judge's P", async () => {
+it("two levels: the missed line opens (toggle 1) into every missed conversation, each with nine rules and their results, and its proofs (toggle 2) carry the judge's P", async () => {
   const source = fixture("outcome-report-bundle.json");
   const reports = reportsByClaim(source);
   const { bundle } = await sealEvidenceBundle(source);
@@ -676,37 +757,66 @@ it("drill-down: the missed line opens into every missed conversation, each with 
     'details[data-drill="missed"]',
   )!;
   expect(drill).not.toBeNull();
-  expect(drill.querySelector("summary")!.textContent).toContain(
-    "open › 50 conversations",
+  expect(drill.dataset.level).toBe("1");
+  expect(drill.querySelector("summary")!.textContent).toBe(
+    "Show the 48 conversations",
   );
-  const convs = drill.querySelectorAll<HTMLElement>("details.conv");
-  expect(convs).toHaveLength(50);
+  // closed, toggle 1 has built nothing
+  expect(drill.querySelectorAll("article.conv")).toHaveLength(0);
+  open(drill);
+  const convs = drill.querySelectorAll<HTMLElement>("article.conv");
+  expect(convs).toHaveLength(48);
   // the resolved line has nothing behind it in this fixture: no empty drill
   expect(
     root.querySelector('[data-line="resolved"] details[data-drill]'),
   ).toBeNull();
 
-  // closed, a conversation carries only its summary row
-  expect(convs[0]!.querySelector("tr[data-crit]")).toBeNull();
+  // a conversation is not a toggle: its header and its body are in place
   const conv = open(convs[0]!);
+  expect(conv.tagName).toBe("ARTICLE");
   const id = conv.dataset.conversation!;
-  expect(conv.querySelector("summary")!.textContent).toContain("missed");
+  expect(conv.querySelector(".conv-h")!.textContent).toContain("missed");
+  // the missed line says why first: the reasons, then the conversations
+  // under each, all inside the one level-1 toggle
+  const why = drill.querySelector<HTMLElement>('[data-section="why-missed"]')!;
+  expect(why.textContent).toContain("Why conversations missed");
+  expect(
+    [...why.querySelectorAll<HTMLElement>("tr[data-reason-key]")]
+      .map((r) => Number(r.dataset.count))
+      .reduce((a, b) => a + b, 0),
+  ).toBe(48);
+  // no third level: the conversation holds exactly one toggle, the proofs
+  const nested = conv.querySelectorAll<HTMLElement>("details");
+  expect(nested).toHaveLength(1);
+  expect(nested[0]!.dataset.level).toBe("2");
+  const proofBox = proofs(conv);
   const rows = conv.querySelectorAll<HTMLElement>("tr[data-crit]");
   expect(rows).toHaveLength(9);
   for (const row of rows) {
     const claimId = `${id}::${row.dataset.crit}`;
     const report = reports.get(claimId)!;
     expect(report).toBeDefined();
-    // the rationale is drawn exactly as sealed, never rewritten
+    // the proofs carry the rationale exactly as sealed, never rewritten
+    const sealedRow = proofBox.querySelector<HTMLElement>(
+      `tr[data-proof-crit="${row.dataset.crit}"]`,
+    )!;
     expect(
-      row.querySelector<HTMLElement>('[data-rationale="sealed"]')!.textContent,
+      sealedRow.querySelector<HTMLElement>('[data-rationale="sealed"]')!
+        .textContent,
     ).toBe(report.rationale);
+    // level 1 says how sure the judge was, in plain words
+    expect(row.querySelector(".sealed")!.textContent).toMatch(
+      /^The judge was \d+% sure\.$/u,
+    );
     // P is read back from the sealed rationale's probabilities for the verdict returned
     const probs = /'([a-z_]+)': ([0-9.]+)/gu;
     const table = new Map<string, number>();
     for (const m of (report.rationale as string).matchAll(probs))
       table.set(m[1]!, Number(m[2]));
-    expect(row.querySelector<HTMLElement>("[data-p]")!.dataset.p).toBe(
+    const proofRow = proofBox.querySelector<HTMLElement>(
+      `tr[data-proof-crit="${row.dataset.crit}"]`,
+    )!;
+    expect(proofRow.querySelector<HTMLElement>("[data-p]")!.dataset.p).toBe(
       table.get(report.verdict as string)!.toFixed(2),
     );
     expect(row.dataset.critVerdict).toBe(report.verdict);
@@ -714,8 +824,8 @@ it("drill-down: the missed line opens into every missed conversation, each with 
   expect(
     conv.querySelector<HTMLElement>('[data-rationale-label="derived"]')!
       .textContent,
-  ).toBe(
-    "Rationale: derived from the judge's probabilities; the judge returns no free-text reasoning.",
+  ).toContain(
+    "The judge's note is derived from its probabilities; the judge returns no free-text reasoning",
   );
 });
 
@@ -724,15 +834,17 @@ it("drill-down: says plainly the transcript is absent, and gives the record ids 
   const reports = reportsByClaim(source);
   const { bundle, ids } = await sealEvidenceBundle(source);
   const root = await render(bundle);
+  expand(root);
   const conv = open(
-    root.querySelector<HTMLElement>('[data-drill="missed"] details.conv')!,
+    root.querySelector<HTMLElement>('[data-drill="missed"] article.conv')!,
   );
+  proofs(conv);
   const id = conv.dataset.conversation!;
   const anyReport = [...reports.entries()].find(([claimId]) =>
     claimId.startsWith(`${id}::`),
   )![1];
   const absent = conv.querySelector<HTMLElement>('[data-transcript="absent"]')!;
-  expect(absent.textContent).toContain("Not in this bundle");
+  expect(absent.textContent).toContain("not in this bundle");
   expect(absent.textContent).toContain(anyReport.source_capsule_id as string);
   const check = conv.querySelector<HTMLElement>("[data-check-it]")!;
   expect(check.textContent).toContain(ids["result"]);
@@ -740,12 +852,11 @@ it("drill-down: says plainly the transcript is absent, and gives the record ids 
   expect(check.textContent).toContain(
     "d1eb15a561a0eb31fb4bb6be88ce239aa903a77e79985291429065e83c305b96",
   );
-  expect(check.querySelectorAll("dt")).toHaveLength(4 + 9);
+  // case, case record, result capsule, transcript, judge pin
+  expect(check.querySelectorAll("dt")).toHaveLength(5);
   const why = conv.querySelector<HTMLElement>('[data-why="missed"]')!;
-  expect(why.textContent).toContain("Turns cited: none");
-  expect(why.querySelectorAll("[data-why-criterion]").length).toBeGreaterThan(
-    0,
-  );
+  expect(why.textContent).toMatch(/^Missed: \d+ of \d+ rules that applied/u);
+  expect(conv.textContent).toContain("cites no turn of the conversation");
   // still a static page: no button, no script
   expect(root.querySelectorAll("button, script")).toHaveLength(0);
 });
@@ -775,23 +886,38 @@ it("drill-down: a not_applicable criterion is its own state -- no claim, no P, n
   };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  const naLine = root.querySelector<HTMLElement>(
-    '[data-line="not-applicable"] details[data-drill="not-applicable"]',
+  expect(
+    root.querySelector<HTMLElement>('[data-line="not-applicable"]')!.dataset
+      .count,
+  ).toBe("1");
+  const ruleRow = root.querySelector<HTMLElement>(
+    'tr[data-rule="grounded_communication.refunds_match_payment_records"]',
   )!;
-  expect(naLine.querySelectorAll("details.conv")).toHaveLength(1);
-  open(naLine.querySelector<HTMLElement>("details.conv")!);
-  const row = naLine.querySelector<HTMLElement>(
+  // one conversation where the rule did not apply: counted in its own column
+  expect(ruleRow.querySelectorAll("td.n")[2]!.textContent).toBe("1");
+  expand(root);
+  const conv = [...root.querySelectorAll<HTMLElement>("article.conv")]
+    .map((c) => open(c))
+    .find((c) =>
+      c.querySelector(
+        'tr[data-crit="grounded_communication.refunds_match_payment_records"][data-crit-verdict="not_applicable"]',
+      ),
+    )!;
+  const row = conv.querySelector<HTMLElement>(
     'tr[data-crit="grounded_communication.refunds_match_payment_records"]',
   )!;
-  expect(row.dataset.critVerdict).toBe("not_applicable");
   expect(
     row.querySelector<HTMLElement>('[data-pill="not_applicable"]')!.textContent,
-  ).toBe("not applicable");
-  expect(row.querySelector("[data-p]")).toBeNull();
-  expect(row.textContent).toContain("No claim");
+  ).toBe("did not apply");
+  expect(row.textContent).toContain("did not come up");
+  const proofRow = proofs(conv).querySelector<HTMLElement>(
+    'tr[data-proof-crit="grounded_communication.refunds_match_payment_records"]',
+  )!;
+  expect(proofRow.querySelector("[data-p]")).toBeNull();
+  expect(proofRow.textContent).toContain("no claim");
 });
 
-it("drill-down: every missed-reason row opens into exactly the conversations it counts, and a resolved conversation says why it billed", async () => {
+it("drill-down: the resolved line opens into exactly its conversations, and a resolved conversation says why in one sentence", async () => {
   const source = fixture("outcome-report-bundle.json");
   const resultDoc = ((source.disclosures as Obj).result as Obj)
     .agent_input as Obj;
@@ -819,25 +945,15 @@ it("drill-down: every missed-reason row opens into exactly the conversations it 
   };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  for (const reason of root.querySelectorAll<HTMLElement>(
-    "[data-reasons] [data-reason-key]",
-  )) {
-    expect(reason.tagName).toBe("DETAILS");
-    expect(reason.querySelector("summary")!.textContent).toContain(
-      "see them ›",
-    );
-    expect(reason.querySelectorAll("details.conv")).toHaveLength(
-      Number(reason.dataset.count),
-    );
-  }
+  expand(root);
   const resolved = root.querySelector<HTMLElement>('[data-drill="resolved"]')!;
-  const convs = resolved.querySelectorAll<HTMLElement>("details.conv");
+  const convs = resolved.querySelectorAll<HTMLElement>("article.conv");
   expect(convs).toHaveLength(1);
   expect(convs[0]!.dataset.conversation).toBe(first);
   open(convs[0]!);
   expect(
     convs[0]!.querySelector('[data-why="resolved"]')!.textContent,
-  ).toContain("Resolved: 9 criteria met");
+  ).toContain("Resolved: all 9 rules that applied were met.");
 });
 
 /** The fixture judged on only its first n criteria, with its first
@@ -881,34 +997,35 @@ async function resolvedWithCriteria(
 
 it("a resolved conversation counts the criteria its pack judged, not a fixed nine", async () => {
   const { root, first } = await resolvedWithCriteria(4);
+  expand(root);
   const conv = root.querySelector<HTMLElement>(
-    `[data-drill="resolved"] details.conv[data-conversation="${first}"]`,
+    `[data-drill="resolved"] article.conv[data-conversation="${first}"]`,
   )!;
   expect(conv.querySelector(".cwhy")!.textContent).toBe(
-    "all four criteria met or not applicable",
+    "every rule that applied was met",
   );
   open(conv);
-  expect(conv.querySelector('[data-why="resolved"]')!.textContent).toContain(
-    "Resolved: 4 criteria met and 0 not applicable. The rule bills a conversation only when all four pass",
+  expect(conv.querySelector('[data-why="resolved"]')!.textContent).toBe(
+    "Resolved: all 4 rules that applied were met.",
   );
+  proofs(conv);
   expect(conv.textContent).toContain("take the AND of the four verdicts");
   expect(conv.textContent).not.toContain("nine");
 });
 
 it("a conversation judged on one criterion says so in the singular", async () => {
   const { root, first } = await resolvedWithCriteria(1);
+  expand(root);
   const conv = root.querySelector<HTMLElement>(
-    `[data-drill="resolved"] details.conv[data-conversation="${first}"]`,
+    `[data-drill="resolved"] article.conv[data-conversation="${first}"]`,
   )!;
-  expect(conv.querySelector(".cwhy")!.textContent).toBe(
-    "its one criterion met or not applicable",
-  );
   open(conv);
-  expect(conv.querySelector('[data-why="resolved"]')!.textContent).toContain(
-    "Resolved: 1 criterion met and 0 not applicable.",
+  expect(conv.querySelector('[data-why="resolved"]')!.textContent).toBe(
+    "Resolved: the 1 rule that applied was met.",
   );
-  expect(conv.textContent).toContain("only when its one criterion passes");
+  proofs(conv);
   expect(conv.textContent).toContain("take the AND of the one verdict");
+  expect(conv.textContent).not.toContain("rules that applied");
 });
 
 it("drill-down: a tampered bundle draws no conversation at all (verify-first holds)", async () => {
@@ -934,7 +1051,7 @@ it("drill-down: a tampered bundle draws no conversation at all (verify-first hol
     disclosures: { ...disclosures, [resultId]: { agent_input: tampered } },
   });
   expect(root.querySelector('[data-verify="failed"]')).not.toBeNull();
-  expect(root.querySelectorAll("details.conv")).toHaveLength(0);
+  expect(root.querySelectorAll("article.conv")).toHaveLength(0);
 });
 
 it("reads the pack version from the claims' contract_ref, so the header and terms panel show the version judged under", async () => {
@@ -983,8 +1100,9 @@ function withClauseClaims(
 }
 
 function fareRow(root: HTMLElement): HTMLElement {
+  expand(root);
   const conv = open(
-    root.querySelector<HTMLElement>('[data-drill="missed"] details.conv')!,
+    root.querySelector<HTMLElement>('[data-drill="missed"] article.conv')!,
   );
   return conv.querySelector<HTMLElement>(
     'tr[data-crit="policy_compliance.within_fare_rules"]',
@@ -1112,11 +1230,13 @@ it("wording: a bundle whose reports state none says so -- no wording is supplied
   expect(
     terms.querySelector<HTMLElement>("[data-wording-note]")!.textContent,
   ).toContain("Rule wording not stated");
+  // stated once for the conversation, not repeated on every rule
   const row = fareRow(root);
+  expect(row.querySelector("small[data-wording]")).toBeNull();
   expect(
-    row.querySelector<HTMLElement>("small[data-wording]")!.dataset.wording,
-  ).toBe("unstated");
-  expect(row.querySelector(".wsrc")).not.toBeNull();
+    row.closest(".conv-b")!.querySelector<HTMLElement>("[data-gaps]")!
+      .textContent,
+  ).toContain("The rule wording is not in this bundle.");
 });
 
 it("wording: reports that disagree on a criterion's wording are not resolved by picking one", async () => {
@@ -1240,13 +1360,15 @@ it("dating: backfilled case records put the calendar and period on the source's 
   );
   expect(note.textContent).toContain("Timezone not stated on 50 of 50");
   const meta = root.querySelector<HTMLElement>('[data-section="meta"]')!;
-  expect(meta.textContent).toContain("2025-06-05 – 2025-06-05");
+  expect(meta.textContent).toContain("Period2025-06-05");
   expect(meta.querySelector<HTMLElement>("[data-sealed]")!.textContent).toBe(
     "Sealed2026-09-23",
   );
   expect(meta.querySelector("[data-date-note]")).not.toBeNull();
   // the drill-down says which date it used, verbatim, and the sealed day
-  const conv = open(root.querySelector<HTMLElement>("details.conv")!);
+  expand(root);
+  const conv = open(root.querySelector<HTMLElement>("article.conv")!);
+  proofs(conv);
   const dated = conv.querySelector<HTMLElement>("[data-dated]")!;
   expect(dated.dataset.dated).toBe("source");
   expect(dated.textContent).toBe(
@@ -1278,7 +1400,7 @@ it("dating: case records with no backfill are dated by their own timestamp, as g
   const note = calendar.querySelector<HTMLElement>("[data-date-note]")!;
   expect(note.dataset.dateNote).toBe("record");
   expect(note.textContent).toBe(
-    "Dates are each conversation's own record date (the time its case record states), as given, not when the judgments were sealed. Sealed 2026-09-23.",
+    "The period is when the conversations happened (each case record's own time, as given), not when they were judged. Sealed 2026-09-23.",
   );
   const meta = root.querySelector<HTMLElement>('[data-section="meta"]')!;
   expect(meta.textContent).toContain("2026-09-21 – 2026-09-22");
@@ -1291,8 +1413,188 @@ it("dating: with no case record cited, the calendar keeps the judged day and the
   expect(days.map((d) => d.dataset.day)).toEqual(["2026-09-23"]);
   expect(root.querySelector("[data-date-note]")).toBeNull();
   expect(root.querySelector("[data-sealed]")).toBeNull();
-  const conv = open(root.querySelector<HTMLElement>("details.conv")!);
+  expand(root);
+  const conv = open(root.querySelector<HTMLElement>("article.conv")!);
+  proofs(conv);
   expect(conv.querySelector("[data-check-it]")).not.toBeNull();
   expect(conv.querySelector("[data-dated]")).toBeNull();
   expect(conv.textContent).not.toContain("Judged and sealed");
+});
+
+// ---------------------------------------------------------------------------
+// two levels, plain words, and the missed-label fix
+// ---------------------------------------------------------------------------
+
+it("a conversation the judge could not decide reads 'could not decide', never 'missed'", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const root = expand(await render(bundle));
+  const undecided = root.querySelectorAll<HTMLElement>(
+    '[data-drill="undecided"] article.conv',
+  );
+  expect(undecided).toHaveLength(2);
+  for (const conv of undecided) {
+    expect(conv.dataset.conversationVerdict).toBe("not_evaluable");
+    const pill = conv.querySelector<HTMLElement>(".conv-h [data-pill]")!;
+    expect(pill.dataset.pill).toBe("undecided");
+    expect(pill.textContent).toBe("could not decide");
+    expect(conv.querySelector(".conv-h")!.textContent).not.toContain("missed");
+  }
+  // and none of them is listed under the missed line
+  const missed = new Set(
+    [
+      ...root.querySelectorAll<HTMLElement>(
+        '[data-drill="missed"] article.conv',
+      ),
+    ].map((c) => c.dataset.conversation),
+  );
+  for (const conv of undecided)
+    expect(missed.has(conv.dataset.conversation)).toBe(false);
+});
+
+it("true two levels: no toggle sits inside more than one toggle, a level-1 never holds a level-1, and a level-2 holds none", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const root = expand(await render(bundle));
+  for (const conv of root.querySelectorAll<HTMLElement>("article.conv"))
+    proofs(open(conv));
+  const all = [
+    ...root.querySelectorAll<HTMLElement>(
+      '[data-page="outcome-report"] details',
+    ),
+  ];
+  expect(all.length).toBeGreaterThan(50);
+  for (const details of all) {
+    expect(["1", "2"]).toContain(details.dataset.level);
+    let ancestors = 0;
+    for (let a = details.parentElement; a !== null; a = a.parentElement)
+      if (a.tagName === "DETAILS") ancestors += 1;
+    expect(ancestors).toBeLessThanOrEqual(1);
+    if (details.dataset.level === "1")
+      expect(details.querySelector('details[data-level="1"]')).toBeNull();
+    if (details.dataset.level === "2")
+      expect(details.querySelector("details")).toBeNull();
+  }
+  // a conversation's proofs are two clicks from the summary: its line, then
+  // the proofs; the conversation itself is never a toggle
+  const conv = root.querySelector<HTMLElement>(
+    '[data-drill="missed"] article.conv',
+  )!;
+  const proofToggle = conv.querySelector<HTMLElement>(
+    'details[data-level="2"]',
+  )!;
+  expect(proofToggle.parentElement!.closest("details")).toBe(
+    root.querySelector('[data-drill="missed"]'),
+  );
+});
+
+it("lazy: a closed line builds nothing, the report's proofs build on first open, and in a browser each conversation's body builds only as it nears the view", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const observed: ((entries: { isIntersecting: boolean }[]) => void)[] = [];
+  const g = globalThis as { IntersectionObserver?: unknown };
+  g.IntersectionObserver = class {
+    constructor(cb: (entries: { isIntersecting: boolean }[]) => void) {
+      observed.push(cb);
+    }
+    observe(): void {}
+    disconnect(): void {}
+  };
+  try {
+    const root = await renderClosed(bundle);
+    expect(root.querySelectorAll("article.conv")).toHaveLength(0);
+    const foot = root.querySelector<HTMLElement>(
+      '[data-section="report-proofs"] details',
+    )!;
+    expect(foot.querySelector('[data-section="terms"]')).toBeNull();
+    open(foot);
+    expect(foot.querySelector('[data-section="terms"]')).not.toBeNull();
+    const drill = open(
+      root.querySelector<HTMLElement>('[data-drill="missed"]')!,
+    );
+    const convs = drill.querySelectorAll<HTMLElement>("article.conv");
+    expect(convs).toHaveLength(48);
+    // listed in place, every body still pending until it nears the view
+    expect(drill.querySelectorAll('[data-body="pending"]')).toHaveLength(48);
+    expect(drill.querySelector("tr[data-crit]")).toBeNull();
+    observed[0]!([{ isIntersecting: true }]);
+    expect(convs[0]!.querySelectorAll("tr[data-crit]")).toHaveLength(9);
+    expect(drill.querySelectorAll('[data-body="pending"]')).toHaveLength(47);
+  } finally {
+    delete g.IntersectionObserver;
+  }
+});
+
+it("a conversation with no rule result is undecided, never 'no rule applied'", () => {
+  expect(
+    conversationStatus({
+      verdict: "not_evaluable",
+      criteria: [],
+    } as unknown as Parameters<typeof conversationStatus>[0]),
+  ).toBe("undecided");
+});
+
+it("ladder: an undecided rule whose report is withheld reads 'could not decide (report withheld)', never 'not checked'", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  ((source.extensions as Obj)["outcome-report/v1"] as Obj).result_words =
+    "ladder";
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  // withhold every report of the undecided rules
+  const undecided = (resultDoc.claims as Obj[]).filter(
+    (c) => c.verdict === "not_evaluable",
+  );
+  expect(undecided.length).toBeGreaterThan(0);
+  for (const claim of undecided)
+    delete (source.disclosures as Obj)[
+      (claim.evidence as Obj[])[0]!.digest as string
+    ];
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = expand(await render(bundle));
+  for (const conv of root.querySelectorAll<HTMLElement>(
+    '[data-drill="undecided"] article.conv',
+  ))
+    open(conv);
+  const row = root.querySelector<HTMLElement>(
+    'article.conv tr[data-crit-verdict="not_evaluable"]',
+  )!;
+  const pill = row.querySelector<HTMLElement>("[data-pill]")!;
+  expect(pill.textContent).toBe("could not decide (report withheld)");
+  expect(row.textContent).toContain("the judge's report is withheld");
+  for (const p of root.querySelectorAll("article.conv [data-pill]"))
+    expect(p.textContent).not.toBe("not checked");
+});
+
+it("result_words: 'ladder' words results on the grade ladder; the default stays plain", async () => {
+  const { bundle } = await sealedOutcomeReportBundle((source) => {
+    ((source.extensions as Obj)["outcome-report/v1"] as Obj).result_words =
+      "ladder";
+  });
+  const root = expand(await render(bundle));
+  expect(
+    root.querySelector<HTMLElement>('[data-page="outcome-report"]')!.dataset
+      .resultWords,
+  ).toBe("ladder");
+  expect(root.querySelector('[data-line="missed"] b')!.textContent).toBe(
+    "Failed (missed)",
+  );
+  const conv = open(
+    root.querySelector<HTMLElement>('[data-drill="missed"] article.conv')!,
+  );
+  expect(conv.querySelector(".conv-h [data-pill]")!.textContent).toBe("failed");
+  const words = new Set(
+    [...conv.querySelectorAll<HTMLElement>("tr[data-crit] [data-pill]")].map(
+      (p) => p.textContent,
+    ),
+  );
+  for (const word of words)
+    expect([
+      "established",
+      "failed",
+      "not present",
+      "inconclusive",
+      "not checked",
+    ]).toContain(word);
+  const { bundle: plain } = await sealedOutcomeReportBundle();
+  const plainRoot = await render(plain);
+  expect(plainRoot.querySelector('[data-line="missed"] b')!.textContent).toBe(
+    "Missed",
+  );
 });

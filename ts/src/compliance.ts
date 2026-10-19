@@ -12,10 +12,15 @@ import type {
   ComplianceRow,
 } from "./compliance-presentation.js";
 import {
+  claimsCitedCase,
   findTranscript,
   NOT_STATED,
   readableId,
+  reportSealedDay,
+  reportState,
+  withheldReports,
   type ConversationTranscript,
+  type ReportState,
 } from "@action-state-group/agent-action-capsule";
 import {
   REQUIREMENT_CLAIM,
@@ -79,6 +84,8 @@ export interface SessionTest {
   readonly reportDigest?: string;
   readonly judgePinDigest?: string;
   readonly contract?: string;
+  /** What the bundle shows of the cited report (outcome-report.ts `reportState`); present whenever `claim` is. */
+  readonly reportState?: ReportState;
 }
 
 export interface Session {
@@ -86,6 +93,8 @@ export interface Session {
   readonly day: string;
   readonly tests: readonly SessionTest[];
   readonly sourceCapsuleId?: string;
+  /** Where `sourceCapsuleId` was read: the disclosed reports, or the claims' own citations when the reports are withheld. */
+  readonly caseFrom?: "reports" | "claims";
   readonly transcript: ConversationTranscript;
 }
 
@@ -141,6 +150,11 @@ export interface ComplianceRunInfo {
   readonly contract?: string;
   readonly judgePinDigest?: string;
   readonly pinned: boolean;
+  /** Claims whose cited report the bundle carries but does not disclose, of `reportsCited` (see outcome-report.ts `withheldReports`). Mismatched or unreadable reports are counted apart, never as withheld. */
+  readonly reportsWithheld?: number;
+  readonly reportsMismatched?: number;
+  readonly reportsUnreadable?: number;
+  readonly reportsCited?: number;
 }
 
 export interface CompliancePack {
@@ -305,25 +319,40 @@ function buildSessions(
       const judgePinDigest = asString(payload?.judge_pin_digest);
       const source = asString(payload?.source_capsule_id);
       if (source !== undefined) sources.add(source);
-      if (day === NOT_STATED) day = dayOf(payload);
+      if (day === NOT_STATED)
+        day = reportSealedDay(result.records, claim) ?? dayOf(payload);
       const reportDigest = claim.evidence[0]?.digest;
       tests.push({
         criterionId,
         verdict: drawnVerdict(claim),
-        tier: sealedTier(payload),
+        // The report's own epistemic_type when disclosed; when the report
+        // is withheld, the tier the Result's signed claim states.
+        tier: payload === undefined ? claim.tier : sealedTier(payload),
         claim,
         ...(reportDigest === undefined ? {} : { reportDigest }),
         ...(rationale === undefined ? {} : { rationale }),
         ...(contract === undefined ? {} : { contract }),
         ...(judgePinDigest === undefined ? {} : { judgePinDigest }),
+        reportState: reportState(result.records, claim),
       });
+    }
+    // Only when every report of the session is withheld (claimsCitedCase
+    // refuses otherwise): disclosed reports that name no case, or
+    // mismatched ones, leave the case unresolved.
+    let caseFrom: Session["caseFrom"] = "reports";
+    if (sources.size === 0) {
+      const cited = claimsCitedCase(result.records, conversationClaims);
+      if (cited !== undefined) {
+        sources.add(cited);
+        caseFrom = "claims";
+      }
     }
     const sourceCapsuleId = sources.size === 1 ? [...sources][0]! : undefined;
     sessions.push({
       conversationId,
       day,
       tests,
-      ...(sourceCapsuleId === undefined ? {} : { sourceCapsuleId }),
+      ...(sourceCapsuleId === undefined ? {} : { sourceCapsuleId, caseFrom }),
       transcript: findTranscript(
         result,
         conversationId,
@@ -433,7 +462,10 @@ function buildObligation(
   };
 }
 
-function buildRunInfo(sessions: readonly Session[]): ComplianceRunInfo {
+function buildRunInfo(
+  result: ResultRoot,
+  sessions: readonly Session[],
+): ComplianceRunInfo {
   const contracts = new Set<string>();
   const pins = new Set<string>();
   for (const session of sessions)
@@ -445,6 +477,36 @@ function buildRunInfo(sessions: readonly Session[]): ComplianceRunInfo {
     ...(contracts.size === 1 ? { contract: [...contracts][0]! } : {}),
     ...(pins.size === 1 ? { judgePinDigest: [...pins][0]! } : {}),
     pinned: contracts.size <= 1 && pins.size <= 1,
+    ...withheldOf(result, sessions),
+  };
+}
+
+function withheldOf(
+  result: ResultRoot,
+  sessions: readonly Session[],
+): {
+  reportsWithheld?: number;
+  reportsMismatched?: number;
+  reportsUnreadable?: number;
+  reportsCited?: number;
+} {
+  const counted = withheldReports(
+    result.records,
+    sessions.flatMap((s) =>
+      s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
+    ),
+  );
+  return {
+    ...(counted.withheld > 0 ? { reportsWithheld: counted.withheld } : {}),
+    ...(counted.mismatched > 0
+      ? { reportsMismatched: counted.mismatched }
+      : {}),
+    ...(counted.unreadable > 0
+      ? { reportsUnreadable: counted.unreadable }
+      : {}),
+    ...(counted.withheld + counted.mismatched + counted.unreadable > 0
+      ? { reportsCited: counted.total }
+      : {}),
   };
 }
 
@@ -514,7 +576,7 @@ export function buildComplianceModel(
     sessions,
     findings: buildFindings(obligations),
     totalSessions: sessions.length,
-    runInfo: buildRunInfo(sessions),
+    runInfo: buildRunInfo(result, sessions),
     qualityProtocol: presentation.qualityProtocol,
     capsuleId: result.capsuleId,
   };

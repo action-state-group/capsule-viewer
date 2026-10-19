@@ -16,6 +16,18 @@ import {
   verifyJudgePin,
 } from "@action-state-group/agent-action-capsule";
 import { OUTCOME_REPORT_CSS } from "./outcome-report-styles.js";
+import {
+  judgedOf,
+  lazyBody,
+  levelToggle,
+  proofList,
+  renderChat,
+  ruleWord,
+  wordPill,
+  caseParts,
+  judgeNote,
+  type Worded,
+} from "./report-levels.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
 
@@ -121,32 +133,6 @@ const TIER_LABEL: Record<CriterionTierReading, string> = {
   mixed: "tier differs across conversations",
 };
 
-// ---------------------------------------------------------------------------
-// Drill-down: every report line and every missed-reason row opens into the
-// conversations behind it, and each conversation opens into its criteria,
-// the rationale exactly as sealed, why it missed, and the ids to
-// recompute it. Native <details>, no script, no button: the page stays a
-// static rendering of a bundle that already verified. Read ONLY from the
-// model, which reads only from the verified bundle.
-// ---------------------------------------------------------------------------
-
-type DrawnVerdict = Conversation["criteria"][number]["verdict"];
-
-const VERDICT_TEXT: Record<DrawnVerdict, string> = {
-  met: "met",
-  not_met: "not met",
-  not_evaluable: "not evaluable",
-  failed: "failed verification",
-  unsupported: "unsupported",
-  not_applicable: "not applicable",
-};
-
-/** `tau2:airline:task-20:trial-0` reads "task 20"; any other id is shown whole. */
-function caseLabel(conversationId: string): string {
-  const match = /task-([0-9]+)/u.exec(conversationId);
-  return match === null ? conversationId : `task ${match[1]}`;
-}
-
 function criterionLabel(
   model: OutcomeReportModel,
   checkId: string,
@@ -225,31 +211,6 @@ function renderProducerNote(
   );
   host.append(box);
 }
-function isMiss(verdict: DrawnVerdict): boolean {
-  return (
-    verdict === "not_met" || verdict === "failed" || verdict === "unsupported"
-  );
-}
-
-function pill(verdict: DrawnVerdict | "resolved" | "missed"): HTMLElement {
-  const text =
-    verdict === "resolved"
-      ? "resolved"
-      : verdict === "missed"
-        ? "missed"
-        : VERDICT_TEXT[verdict];
-  const tone =
-    verdict === "met" || verdict === "resolved"
-      ? "ok"
-      : verdict === "not_applicable"
-        ? "na"
-        : verdict === "not_evaluable"
-          ? "ne"
-          : "bad";
-  const value = el("span", `pill ${tone}`, text);
-  value.dataset.pill = verdict;
-  return value;
-}
 
 const fmtP = (p: number): string => p.toFixed(2);
 
@@ -261,6 +222,106 @@ function verdictProbability(
   if (probs === undefined) return undefined;
   const key = criterion.claim?.verdict ?? criterion.verdict;
   return probs[key];
+}
+
+// ---------------------------------------------------------------------------
+// Two levels, no more (see report-levels.ts): every summary line opens
+// (toggle 1) into the conversations behind it, listed in place and each
+// readable as it stands -- its result rule by rule and the conversation with
+// its tool calls -- and each conversation's proofs are toggle 2. Read ONLY
+// from the model, which reads only from the verified bundle.
+// ---------------------------------------------------------------------------
+
+type DrawnVerdict = Conversation["criteria"][number]["verdict"];
+type DrawnCriterion = Conversation["criteria"][number];
+
+/** The raw verdict names, kept for the proofs (what the sealed record says). */
+const VERDICT_TEXT: Record<DrawnVerdict, string> = {
+  met: "met",
+  not_met: "not met",
+  not_evaluable: "not evaluable",
+  failed: "failed verification",
+  unsupported: "unsupported",
+  not_applicable: "not applicable",
+};
+
+function isMiss(verdict: DrawnVerdict): boolean {
+  return (
+    verdict === "not_met" || verdict === "failed" || verdict === "unsupported"
+  );
+}
+
+/** A conversation's result. `nothing-applied`: it has rules and every one was not applicable, so nothing was checked -- never "missed". A conversation with no rule result at all is undecided, never "no rule applied". */
+export type ConversationStatus =
+  | "resolved"
+  | "missed"
+  | "undecided"
+  | "nothing-applied";
+
+export function conversationStatus(
+  conversation: Conversation,
+): ConversationStatus {
+  if (conversation.verdict === "met") return "resolved";
+  if (conversation.verdict === "not_met") return "missed";
+  return conversation.criteria.length > 0 &&
+    conversation.criteria.every((c) => c.verdict === "not_applicable")
+    ? "nothing-applied"
+    : "undecided";
+}
+
+function ladderOn(model: OutcomeReportModel): boolean {
+  return model.options.resultWords === "ladder";
+}
+
+function statusWord(
+  status: ConversationStatus,
+  conversation: Conversation,
+  ladder: boolean,
+): Worded {
+  if (!ladder)
+    return status === "resolved"
+      ? { word: "resolved", tone: "ok" }
+      : status === "missed"
+        ? { word: "missed", tone: "bad" }
+        : status === "undecided"
+          ? { word: "could not decide", tone: "ne" }
+          : { word: "no rule applied", tone: "na" };
+  if (status === "resolved") return { word: "established", tone: "ok" };
+  if (status === "missed") return { word: "failed", tone: "bad" };
+  if (status === "nothing-applied") return { word: "not present", tone: "na" };
+  // Three-valued: a judge ran on an undecided rule, none did, or the
+  // withheld reports cannot say which.
+  const judged = conversation.criteria
+    .filter((c) => c.verdict === "not_evaluable")
+    .map((c) => judgedOf(c.reportState, c.judgePinDigest));
+  if (judged.includes("yes")) return { word: "inconclusive", tone: "ne" };
+  if (judged.length > 0 && judged.every((j) => j === "no"))
+    return { word: "not checked", tone: "ne" };
+  return { word: "could not decide (report withheld)", tone: "ne" };
+}
+
+function criterionWord(c: DrawnCriterion, ladder: boolean): Worded {
+  return ruleWord(c.verdict, ladder, judgedOf(c.reportState, c.judgePinDigest));
+}
+
+/** The plain note for a rule whose report carries no rationale: why there is none. */
+function noNoteText(c: DrawnCriterion): string {
+  switch (c.reportState) {
+    case "withheld":
+      return "Not in this bundle: the judge's report is withheld.";
+    case "mismatch":
+      return "Not shown: the report in this bundle does not match what was sealed.";
+    case "unreadable":
+      return "Not shown: the report in this bundle cannot be read.";
+    default:
+      return "The judge left no note.";
+  }
+}
+
+function names(model: OutcomeReportModel, list: readonly DrawnCriterion[]) {
+  return list
+    .map((c) => criterionLabel(model, c.checkId, c.criterionId).label)
+    .join(", ");
 }
 
 const COUNT_WORDS = [
@@ -284,159 +345,275 @@ function countWord(n: number): string {
   return COUNT_WORDS[n] ?? String(n);
 }
 
-/**
- * How a resolved conversation's criteria read, from the number the pack
- * judged it on: "all four criteria met or not applicable". A conversation
- * has at least one criterion: the terms come from its own claims.
- */
-function allCriteriaMet(n: number): string {
-  if (n === 1) return "its one criterion met or not applicable";
-  return `all ${countWord(n)} criteria met or not applicable`;
+/** One plain sentence: the conversation's result and the rules behind it. */
+function resultSentence(
+  conversation: Conversation,
+  model: OutcomeReportModel,
+): string {
+  const all = conversation.criteria;
+  const applied = all.filter((c) => c.verdict !== "not_applicable");
+  const na = all.length - applied.length;
+  const misses = all.filter((c) => isMiss(c.verdict));
+  const undecided = all.filter((c) => c.verdict === "not_evaluable");
+  const naText = na > 0 ? ` ${na} did not apply.` : "";
+  switch (conversationStatus(conversation)) {
+    case "resolved":
+      return applied.length === 1
+        ? `Resolved: the 1 rule that applied was met.${naText}`
+        : `Resolved: all ${applied.length} rules that applied were met.${naText}`;
+    case "missed":
+      return `Missed: ${misses.length} of ${applied.length} ${applied.length === 1 ? "rule" : "rules"} that applied ${misses.length === 1 ? "was" : "were"} not met (${names(model, misses)}).${naText}`;
+    case "undecided":
+      return undecided.length === 0
+        ? "Could not decide: this bundle holds no rule result for this conversation."
+        : `Could not decide: no rule was broken, but the judge could not decide ${names(model, undecided)}.${naText}`;
+    case "nothing-applied":
+      return "No rule applied to this conversation, so nothing was checked. It is neither resolved nor missed.";
+  }
 }
 
+/**
+ * One conversation, in place inside a level-1 toggle: a header line (case,
+ * result, why, model) and its body right below it, never a toggle of its
+ * own. The body is built when it scrolls near the view (`lazyBody`).
+ */
 function renderConversation(
   conversation: Conversation,
   model: OutcomeReportModel,
   runInfo: OutcomeReportRunInfo,
 ): HTMLElement {
-  const resolved = conversation.verdict === "met";
-  const details = el("details", "conv");
-  details.dataset.conversation = conversation.conversationId;
-  details.dataset.conversationVerdict = conversation.verdict;
+  const status = conversationStatus(conversation);
+  const item = el("article", "conv");
+  item.dataset.conversation = conversation.conversationId;
+  item.dataset.conversationVerdict = conversation.verdict;
+  item.dataset.status = status;
+  const head = el("div", "conv-h");
+  const parts = caseParts(conversation.conversationId);
+  head.append(el("span", "cid", parts.label));
+  head.append(
+    wordPill(statusWord(status, conversation, ladderOn(model)), status),
+  );
   const misses = conversation.criteria.filter((c) => isMiss(c.verdict));
-  const unjudged = conversation.criteria.filter(
+  const undecided = conversation.criteria.filter(
     (c) => c.verdict === "not_evaluable",
   );
-  const na = conversation.criteria.filter(
-    (c) => c.verdict === "not_applicable",
-  );
-
-  const summary = el("summary", "conv-s");
-  summary.append(el("span", "cid", caseLabel(conversation.conversationId)));
-  summary.append(pill(resolved ? "resolved" : "missed"));
-  summary.append(
+  head.append(
     el(
       "span",
       "cwhy",
-      resolved
-        ? `${allCriteriaMet(conversation.criteria.length)}${na.length > 0 ? ` (${na.length} not applicable)` : ""}`
-        : `missed on: ${[...misses, ...(misses.length === 0 ? unjudged : [])]
-            .map((c) => criterionLabel(model, c.checkId, c.criterionId).label)
-            .join(", ")}`,
+      status === "missed"
+        ? `not met: ${names(model, misses)}`
+        : status === "undecided"
+          ? undecided.length === 0
+            ? "no rule result in this bundle"
+            : `could not decide: ${names(model, undecided)}`
+          : status === "nothing-applied"
+            ? "no rule applied"
+            : "every rule that applied was met",
     ),
   );
-  summary.append(el("span", "go", "open ›"));
-  details.append(summary);
-
-  // The body (a row and a sealed rationale per criterion, the ids) is
-  // built the first time this conversation is opened, not up front: the
-  // same conversation appears under its report line and under its missed
-  // reason, and building every body eagerly multiplies the page's DOM for
-  // content nobody opened. Built from the same model either way.
-  let built = false;
-  details.addEventListener("toggle", () => {
-    if (built || !(details as HTMLDetailsElement).open) return;
-    built = true;
-    details.append(
-      conversationBody(conversation, model, runInfo, {
-        resolved,
-        misses,
-        unjudged,
-        na,
-      }),
-    );
-  });
-  return details;
-}
-
-function renderTranscript(conversation: Conversation): HTMLElement {
-  const t = conversation.transcript;
-  const wrap = el("div", "tx");
-  wrap.dataset.transcript = t.state;
-  if (t.state !== "verified") {
-    wrap.append(
-      el(
-        "p",
-        "absent",
-        t.state === "absent"
-          ? `Not in this bundle. The conversation and its tool calls are sealed in the case record ${conversation.sourceCapsuleId ?? "(not stated by the reports)"}, which this Result does not cite, so this page cannot show them and does not vouch for them.`
-          : `Not shown: ${t.reason ?? "the cited transcript does not check"}.`,
-      ),
-    );
-    return wrap;
-  }
-  wrap.append(
-    el(
-      "p",
-      "small",
-      `Sealed in record ${t.transcriptRecordId}. Its content digest equals what the judged case capsule ${conversation.sourceCapsuleId} committed to (${t.inputDigest}), checked on this page: this is the conversation the judge read. ${t.turns!.length} messages, in order.`,
-    ),
-  );
-  const list = el("ol", "turns");
-  t.turns!.forEach((turn, index) => {
-    const item = el(
-      "li",
-      `turn ${turn.role === "user" || turn.role === "assistant" || turn.role === "tool" ? turn.role : "other"}`,
-    );
-    item.dataset.turn = String(index);
-    item.dataset.role = turn.role;
-    const head = el("div", "who", `msg[${index}] ${turn.role}`);
-    item.append(head);
-    if (turn.content !== undefined && turn.content.length > 0)
-      item.append(
-        el(turn.role === "tool" ? "pre" : "div", "say", turn.content),
-      );
-    for (const call of turn.toolCalls) {
-      const callEl = el("pre", "call", `${call.name}(${call.arguments})`);
-      callEl.dataset.toolCall = call.name;
-      item.append(callEl);
-    }
-    list.append(item);
-  });
-  wrap.append(list);
-  return wrap;
+  head.append(el("span", "cmodel", parts.model ?? ""));
+  item.append(head);
+  const body = el("div", "conv-slot");
+  item.append(body);
+  lazyBody(body, () => conversationBody(conversation, model, runInfo));
+  return item;
 }
 
 function conversationBody(
   conversation: Conversation,
   model: OutcomeReportModel,
   runInfo: OutcomeReportRunInfo,
-  parts: {
-    resolved: boolean;
-    misses: Conversation["criteria"][number][];
-    unjudged: Conversation["criteria"][number][];
-    na: Conversation["criteria"][number][];
-  },
 ): HTMLElement {
-  const { resolved, misses, unjudged, na } = parts;
   const body = el("div", "conv-b");
+  const ladder = ladderOn(model);
+  const sentence = el("p", "verdict-line", resultSentence(conversation, model));
+  sentence.dataset.why = conversationStatus(conversation);
+  body.append(sentence);
 
-  // 1. What the agent did
-  body.append(el("h4", "", "What the agent did"));
-  body.append(renderTranscript(conversation));
-
-  // 2. The criteria
-  body.append(el("h4", "", "The criteria"));
-  const contractRefs = new Set(
-    conversation.criteria.flatMap((c) =>
-      c.claim === undefined ? [] : [c.claim.contractRef],
-    ),
+  // Rule by rule, in plain words
+  body.append(el("h4", "", "Rule by rule"));
+  // The judge's notes and the rule wording are shown per rule only when the
+  // bundle carries them; otherwise one line says so, not one per rule.
+  const hasNotes = conversation.criteria.some((c) => c.rationale !== undefined);
+  const wordings = conversation.criteria.map(
+    (c) => criterionLabel(model, c.checkId, c.criterionId).source,
   );
-  body.append(
-    el(
-      "p",
-      "small",
-      `Judged under ${[...contractRefs].join(", ") || "no stated contract"}. ${wordingNote(model)} P is the probability the judge gave the verdict it returned.`,
-    ),
-  );
+  const anyWording = wordings.some((w) => w === "sealed");
   const table = el("table", "crit");
   table.dataset.criteriaTable = conversation.conversationId;
   const head = element("thead");
   const headRow = element("tr");
+  headRow.append(element("th", "Rule"), element("th", "Result"));
+  if (hasNotes) headRow.append(element("th", "The judge's note"));
+  head.append(headRow);
+  table.append(head);
+  const tbody = element("tbody");
+  for (const criterion of conversation.criteria) {
+    const ref = `${criterion.checkId}.${criterion.criterionId}`;
+    const tr = element("tr");
+    tr.dataset.crit = ref;
+    tr.dataset.critVerdict = criterion.verdict;
+    const label = criterionLabel(
+      model,
+      criterion.checkId,
+      criterion.criterionId,
+    );
+    const nameCell = el("td", "cn");
+    nameCell.append(el("b", "", label.label));
+    const rowBadge = editedBadge(model, ref);
+    if (rowBadge !== undefined) nameCell.append(rowBadge);
+    if (label.source === "sealed") {
+      const wording = el("small", "", label.text);
+      wording.dataset.wording = label.source;
+      nameCell.append(wording);
+    } else if (anyWording) {
+      const wording = el("small", "wsrc", WORDING_FALLBACK_LABEL[label.source]);
+      wording.dataset.wording = label.source;
+      nameCell.append(wording);
+    }
+    tr.append(nameCell);
+    const verdictCell = element("td");
+    verdictCell.append(
+      wordPill(criterionWord(criterion, ladder), criterion.verdict),
+    );
+    tr.append(verdictCell);
+    if (!hasNotes) {
+      tbody.append(tr);
+      continue;
+    }
+    const noteCell = el("td", "rat");
+    if (criterion.verdict === "not_applicable")
+      noteCell.append(
+        el("span", "muted", "This rule did not come up in this conversation."),
+      );
+    else if (criterion.rationale !== undefined)
+      noteCell.append(
+        el(
+          "span",
+          "sealed",
+          judgeNote(
+            criterion.rationale,
+            criterion.claim?.verdict ?? criterion.verdict,
+          ),
+        ),
+      );
+    else noteCell.append(el("span", "muted", noNoteText(criterion)));
+    tr.append(noteCell);
+    tbody.append(tr);
+  }
+  table.append(tbody);
+  const scroll = el("div", "tscroll");
+  scroll.append(table);
+  body.append(scroll);
+  const gaps: string[] = [];
+  if (!anyWording)
+    gaps.push(
+      wordings.includes("mixed")
+        ? "The rule wording is not shown: the reports in this bundle state different wordings."
+        : "The rule wording is not in this bundle.",
+    );
+  if (!hasNotes) {
+    const states = new Set(
+      conversation.criteria.flatMap((c) =>
+        c.claim === undefined ? [] : [c.reportState],
+      ),
+    );
+    gaps.push(
+      states.size === 1 && states.has("withheld")
+        ? "The judge's notes are not in this bundle: its reports are withheld."
+        : states.has("mismatch") || states.has("unreadable")
+          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, or cannot be read."
+          : states.has("withheld")
+            ? "The judge's notes are not in this bundle: some of its reports are withheld."
+            : "The judge left no notes.",
+    );
+  }
+  if (gaps.length > 0) {
+    const gap = el("p", "small", gaps.join(" "));
+    gap.dataset.gaps = "true";
+    body.append(gap);
+  }
+
+  // The conversation itself
+  body.append(el("h4", "", "The conversation"));
+  body.append(
+    renderChat(conversation.transcript, conversation.sourceCapsuleId),
+  );
+
+  // Toggle 2: the proofs
+  body.append(
+    levelToggle(
+      2,
+      "Proofs: record ids, digests and the judge pin",
+      () => conversationProofs(conversation, model, runInfo),
+      { className: "proofs" },
+    ),
+  );
+  return body;
+}
+
+function conversationProofs(
+  conversation: Conversation,
+  model: OutcomeReportModel,
+  runInfo: OutcomeReportRunInfo,
+): HTMLElement {
+  const box = el("div", "pf-b");
+  box.dataset.proofsFor = conversation.conversationId;
+  const rows: ([string, string] | [string, string, Record<string, string>])[] =
+    [];
+  rows.push(["Case", conversation.conversationId]);
+  rows.push([
+    "Case record",
+    conversation.sourceCapsuleId === undefined
+      ? "not stated by the reports"
+      : `${conversation.sourceCapsuleId}${conversation.caseFrom === "claims" ? " (cited by every claim of this conversation; the reports that name it are withheld)" : ""}`,
+  ]);
+  const dated = conversation.dated;
+  if (dated.basis !== "judged") {
+    rows.push([
+      "Dated by",
+      `${dated.stated ?? dated.date}${dated.zone === "not-stated" ? " (timezone not stated)" : ""}: ${BASIS_TEXT[dated.basis]}`,
+      { dated: dated.basis },
+    ]);
+    if (dated.importedAt !== undefined)
+      rows.push(["Imported", dated.importedAt]);
+    rows.push(["Judged and sealed", conversation.judgedDay]);
+  }
+  rows.push(["Result capsule", model.capsuleId]);
+  const t = conversation.transcript;
+  if (t.state === "verified") {
+    rows.push(["Transcript record", t.transcriptRecordId!]);
+    rows.push([
+      "Case input digest",
+      `${t.inputDigest!} (the transcript's digest equals what the judged case committed to, checked on this page)`,
+    ]);
+  } else
+    rows.push([
+      "Transcript",
+      t.state === "absent"
+        ? "not in this bundle"
+        : `not shown: ${t.reason ?? "does not check"}`,
+    ]);
+  rows.push([
+    "Judge pin",
+    runInfo.judgePinDigest === undefined
+      ? pinNotShown(runInfo)
+      : `${runInfo.judgePinDigest}${runInfo.judgePinRecomputes === true && runInfo.judgePin !== undefined ? ` = ${runInfo.judgePin.modelId}, prompt ${runInfo.judgePin.promptDigest}, axes ${runInfo.judgePin.axesDigest} (recomputed on this page)` : ""}`,
+  ]);
+  const dl = proofList(rows);
+  dl.dataset.checkIt = conversation.conversationId;
+  box.append(dl);
+
+  box.append(el("h5", "", "Each rule's sealed report"));
+  const table = el("table", "crit pft");
+  const head = element("thead");
+  const headRow = element("tr");
   headRow.append(
-    element("th", "Criterion"),
-    element("th", "Verdict"),
+    element("th", "Rule"),
+    element("th", "Sealed verdict"),
     el("th", "n", "P"),
+    element("th", "Report capsule (book record)"),
     element("th", "Rationale, as sealed"),
   );
   head.append(headRow);
@@ -444,158 +621,76 @@ function conversationBody(
   const tbody = element("tbody");
   for (const criterion of conversation.criteria) {
     const tr = element("tr");
-    tr.dataset.crit = `${criterion.checkId}.${criterion.criterionId}`;
-    tr.dataset.critVerdict = criterion.verdict;
-    const names = criterionLabel(
-      model,
-      criterion.checkId,
-      criterion.criterionId,
+    tr.dataset.proofCrit = `${criterion.checkId}.${criterion.criterionId}`;
+    tr.append(
+      element(
+        "td",
+        criterionLabel(model, criterion.checkId, criterion.criterionId).label,
+      ),
+      element("td", VERDICT_TEXT[criterion.verdict]),
     );
-    const nameCell = el("td", "cn");
-    nameCell.append(el("b", "", names.label));
-    const rowBadge = editedBadge(
-      model,
-      `${criterion.checkId}.${criterion.criterionId}`,
-    );
-    if (rowBadge !== undefined) nameCell.append(rowBadge);
-    const wordingCell = el("small", "", names.text);
-    wordingCell.dataset.wording = names.source;
-    nameCell.append(wordingCell);
-    if (names.source !== "sealed")
-      nameCell.append(
-        el("small", "wsrc", WORDING_FALLBACK_LABEL[names.source]),
-      );
-    tr.append(nameCell);
-    const verdictCell = element("td");
-    verdictCell.append(pill(criterion.verdict));
-    tr.append(verdictCell);
     const p = verdictProbability(criterion);
     const pCell = el("td", "n", p === undefined ? "–" : fmtP(p));
     if (p !== undefined) pCell.dataset.p = fmtP(p);
     tr.append(pCell);
-    const rationaleCell = el("td", "rat");
-    if (criterion.verdict === "not_applicable") {
-      rationaleCell.append(
-        el(
-          "span",
-          "muted",
-          "No claim: Result v0 excludes a not-applicable judgment from its claims, so this bundle cites no report for it.",
-        ),
-      );
-    } else if (criterion.rationale !== undefined) {
+    tr.append(
+      el(
+        "td",
+        "mono",
+        criterion.claim === undefined
+          ? "no claim: Result v0 carries none for a rule that did not apply"
+          : `${criterion.reportCapsuleId ?? "not cited"}${criterion.reportRecordId === undefined ? "" : ` (${criterion.reportRecordId})`}`,
+      ),
+    );
+    const rationale = el("td", "rat");
+    if (criterion.rationale !== undefined) {
       const sealed = el("code", "sealed", criterion.rationale);
       sealed.dataset.rationale = "sealed";
-      rationaleCell.append(sealed);
-    } else {
-      rationaleCell.append(
-        el("span", "muted", "no rationale in the cited report"),
-      );
-    }
-    tr.append(rationaleCell);
+      rationale.append(sealed);
+    } else rationale.append(el("span", "muted", "–"));
+    tr.append(rationale);
     tbody.append(tr);
   }
   table.append(tbody);
   const scroll = el("div", "tscroll");
   scroll.append(table);
-  body.append(scroll);
-  const honest = el(
+  box.append(scroll);
+  const derived = el(
     "p",
-    "small",
-    "Rationale: derived from the judge's probabilities; the judge returns no free-text reasoning.",
+    "",
+    "P is the probability the judge gave the verdict it returned. The judge's note is derived from its probabilities; the judge returns no free-text reasoning and cites no turn of the conversation.",
   );
-  honest.dataset.rationaleLabel = "derived";
-  body.append(honest);
-
-  // 3. Why
-  body.append(el("h4", "", "Why"));
-  const why = el("ul", "why");
-  why.dataset.why = resolved ? "resolved" : "missed";
-  if (resolved) {
-    const met = conversation.criteria.filter((c) => c.verdict === "met").length;
-    const n = conversation.criteria.length;
-    why.append(
-      element(
-        "li",
-        `Resolved: ${met} ${met === 1 ? "criterion" : "criteria"} met and ${na.length} not applicable. The rule bills a conversation only when ${n === 1 ? "its one criterion passes" : `all ${countWord(n)} pass`}, and not applicable counts as passing.`,
-      ),
-    );
-  } else {
-    for (const criterion of misses.length > 0 ? misses : unjudged) {
-      const names = criterionLabel(
-        model,
-        criterion.checkId,
-        criterion.criterionId,
-      );
-      const p = verdictProbability(criterion);
-      const item = element(
-        "li",
-        `${names.label} (${names.question}): ${VERDICT_TEXT[criterion.verdict]}${p === undefined ? "" : `, P ${fmtP(p)}`}${criterion.confidence === undefined ? "" : `, confidence ${fmtP(criterion.confidence)}`}.`,
-      );
-      item.dataset.whyCriterion = `${criterion.checkId}.${criterion.criterionId}`;
-      why.append(item);
-    }
-  }
-  why.append(
-    el(
-      "li",
-      "muted",
-      "Turns cited: none. The judge returns a verdict and probabilities per criterion, with no reference to any turn of the conversation.",
-    ),
-  );
-  body.append(why);
-
-  // 4. Check it
-  body.append(el("h4", "", "Check it"));
-  const check = el("dl", "chk");
-  check.dataset.checkIt = conversation.conversationId;
-  const row = (label: string, value: string): void => {
-    check.append(element("dt", label), element("dd", value));
-  };
-  row("Case", conversation.conversationId);
-  row(
-    "Case record",
-    conversation.sourceCapsuleId ?? "not stated by the reports",
-  );
-  // A conversation dated by its judged day (no case record date) adds no
-  // rows: the page reads exactly as it did before record dating.
-  const dated = conversation.dated;
-  if (dated.basis !== "judged") {
-    row(
-      "Dated by",
-      `${dated.stated ?? dated.date}${dated.zone === "not-stated" ? " (timezone not stated)" : ""}: ${BASIS_TEXT[dated.basis]}`,
-    );
-    check.lastElementChild!.setAttribute("data-dated", dated.basis);
-    if (dated.importedAt !== undefined) row("Imported", dated.importedAt);
-    row("Judged and sealed", conversation.judgedDay);
-  }
-  row("Result capsule", model.capsuleId);
-  if (conversation.transcript.state === "verified") {
-    row("Transcript record", conversation.transcript.transcriptRecordId!);
-    row("Case input digest", conversation.transcript.inputDigest!);
-  }
-  row(
-    "Judge pin",
-    runInfo.judgePinDigest === undefined
-      ? "not stated"
-      : `${runInfo.judgePinDigest}${runInfo.judgePinRecomputes === true && runInfo.judgePin !== undefined ? ` = ${runInfo.judgePin.modelId}, prompt ${runInfo.judgePin.promptDigest}, axes ${runInfo.judgePin.axesDigest} (recomputed on this page)` : ""}`,
-  );
-  for (const criterion of conversation.criteria) {
-    if (criterion.claim === undefined) continue;
-    row(
-      `Report: ${criterionLabel(model, criterion.checkId, criterion.criterionId).label}`,
-      `${criterion.reportCapsuleId ?? "not cited"}${criterion.reportRecordId === undefined ? "" : ` (book record ${criterion.reportRecordId})`}`,
-    );
-  }
-  body.append(check);
-  body.append(
+  derived.dataset.rationaleLabel = "derived";
+  box.append(derived);
+  box.append(
     el(
       "p",
-      "small",
-      `To recompute: read each report above from the book, check its digest, and take the AND of the ${conversation.criteria.length === 1 ? "one verdict" : `${countWord(conversation.criteria.length)} verdicts`} (not applicable passes). To re-judge, run the pinned judge on the case record and compare.`,
+      "",
+      `To recompute: read each report above from the book, check its digest, and take the AND of the ${conversation.criteria.length === 1 ? "one verdict" : `${countWord(conversation.criteria.length)} verdicts`} (a rule that did not apply passes; a conversation where nothing applied is not resolved). To re-judge, run the pinned judge on the case record and compare.`,
     ),
   );
+  return box;
+}
 
-  return body;
+/** What a page says when no judge pin is drawn: withheld reports are not the same as an unstated pin, and a mismatched report is neither. */
+function pinNotShown(runInfo: OutcomeReportRunInfo): string {
+  if (!runInfo.pinned)
+    return "differs across the cited reports, so none is shown";
+  const unread =
+    (runInfo.reportsMismatched ?? 0) + (runInfo.reportsUnreadable ?? 0);
+  const cited = runInfo.reportsCited ?? 0;
+  const parts: string[] = [];
+  if (runInfo.reportsWithheld !== undefined)
+    parts.push(
+      `the judge's reports that state it are withheld (${fmtCount(runInfo.reportsWithheld)} of ${fmtCount(cited)})`,
+    );
+  if (unread > 0)
+    parts.push(
+      `${fmtCount(unread)} of ${fmtCount(cited)} reports in this bundle do not match what was sealed or cannot be read`,
+    );
+  return parts.length === 0
+    ? "not stated"
+    : `not in this bundle: ${parts.join("; ")}`;
 }
 
 function renderConversationList(
@@ -614,18 +709,99 @@ function renderConversationList(
   return list;
 }
 
+/** Toggle 1 on a summary line: the conversations behind it, listed in place, built on open. */
 function drill(
+  label: string,
+  build: () => Node,
+  key: string,
+): HTMLDetailsElement {
+  const details = levelToggle(1, label, build, { className: "line" });
+  details.dataset.drill = key;
+  return details;
+}
+
+function conversationsDrill(
   label: string,
   conversations: readonly Conversation[],
   model: OutcomeReportModel,
   runInfo: OutcomeReportRunInfo,
   key: string,
+): HTMLDetailsElement {
+  return drill(
+    label,
+    () => renderConversationList(conversations, model, runInfo, key),
+    key,
+  );
+}
+
+/**
+ * The missed line's toggle: why conversations missed, then the missed
+ * conversations under each reason, in place. A reason is the producer's
+ * sealed reason code when the terms give it a label (`terms.reasonCodes`),
+ * else the first rule not met; a raw code is never shown. Content of the
+ * one level-1 toggle, never a level of its own.
+ */
+function whyMissed(
+  missed: readonly Conversation[],
+  model: OutcomeReportModel,
+  runInfo: OutcomeReportRunInfo,
 ): HTMLElement {
-  const details = el("details", "drill");
-  details.dataset.drill = key;
-  details.append(el("summary", "", label));
-  details.append(renderConversationList(conversations, model, runInfo, key));
-  return details;
+  const box = el("div", "why-missed");
+  box.dataset.section = "why-missed";
+  const missedIds = new Set(missed.map((c) => c.conversationId));
+  const groups = model.missedReasons
+    .map((g) => ({
+      ...g,
+      conversations: g.conversations.filter((c) =>
+        missedIds.has(c.conversationId),
+      ),
+    }))
+    .filter((g) => g.conversations.length > 0);
+  box.dataset.reasons = String(groups.length);
+  box.append(el("h5", "", "Why conversations missed"));
+  const table = element("table");
+  const tbody = element("tbody");
+  for (const group of groups) {
+    const tr = element("tr");
+    tr.dataset.reasonKey = group.key;
+    tr.dataset.reasonStructured = String(group.structured);
+    tr.dataset.count = String(group.conversations.length);
+    tr.append(
+      element("td", group.label),
+      el("td", "n", fmtCount(group.conversations.length)),
+    );
+    tbody.append(tr);
+  }
+  table.append(tbody);
+  box.append(table);
+  const anyStructured = groups.some((g) => g.structured);
+  box.append(
+    el(
+      "p",
+      "small",
+      anyStructured
+        ? "Each reason is the reason code the producer sealed in the judge's report, by its label in the terms; a conversation with no labelled code is listed under the first rule it did not meet."
+        : "No report in this bundle carries a labelled reason code, so each conversation is listed under the first rule it did not meet.",
+    ),
+  );
+  for (const group of groups) {
+    const head = el(
+      "div",
+      "rsn-h",
+      `${group.label} · ${fmtCount(group.conversations.length)}`,
+    );
+    head.dataset.reasonFor = group.key;
+    box.append(head);
+    box.append(
+      renderConversationList(
+        group.conversations,
+        model,
+        runInfo,
+        `reason:${group.key}`,
+      ),
+    );
+  }
+  return box;
 }
 
 // ---------------------------------------------------------------------------
@@ -669,7 +845,7 @@ function datingNote(model: OutcomeReportModel): string | undefined {
     );
   else if (basis === "record")
     parts.push(
-      "Dates are each conversation's own record date (the time its case record states), as given, not when the judgments were sealed.",
+      "The period is when the conversations happened (each case record's own time, as given), not when they were judged.",
     );
   else {
     parts.push(
@@ -709,9 +885,12 @@ function renderMeta(host: HTMLElement, model: OutcomeReportModel): void {
   row1.append(bill);
   const title = el("div", "ih-title");
   title.append(el("h1", "inv-title", "Outcome report"));
-  title.append(
-    el("div", "inv-sub", `Terms locked: ${model.terms.pack.locked}`),
-  );
+  // No Evidence Contract field states when the terms were locked; the line
+  // is drawn only when one does, never as a standing "not stated".
+  if (model.terms.pack.locked !== NOT_STATED)
+    title.append(
+      el("div", "inv-sub", `Terms locked: ${model.terms.pack.locked}`),
+    );
   row1.append(title);
   section.append(row1);
 
@@ -728,7 +907,9 @@ function renderMeta(host: HTMLElement, model: OutcomeReportModel): void {
     "Period",
     first === undefined || last === undefined
       ? "no conversations"
-      : `${first} – ${last}`,
+      : first === last
+        ? first
+        : `${first} – ${last}`,
   );
   const note = datingNote(model);
   if (note !== undefined) {
@@ -736,8 +917,17 @@ function renderMeta(host: HTMLElement, model: OutcomeReportModel): void {
     details.lastElementChild!.setAttribute("data-sealed", "");
   }
   metaRow("Conversations", fmtCount(model.totalCount));
-  metaRow("Result capsule", model.capsuleId);
-  row2.append(el("div", "party"), details);
+  const checked = el("div", "party");
+  const rules = model.terms.checks.reduce((n, c) => n + c.criteria.length, 0);
+  checked.append(el("div", "k", "What was checked"));
+  const what = el(
+    "div",
+    "d",
+    `Each conversation against ${rules} rule${rules === 1 ? "" : "s"} in ${model.terms.checks.length} group${model.terms.checks.length === 1 ? "" : "s"}: ${model.terms.checks.map((c) => c.question).join(" · ")}. A conversation is resolved when every rule that applies to it is met, and at least one applies.`,
+  );
+  what.dataset.whatChecked = String(rules);
+  checked.append(what);
+  row2.append(checked, details);
   section.append(row2);
   if (note !== undefined) {
     const label = el("p", "date-note", note);
@@ -748,7 +938,7 @@ function renderMeta(host: HTMLElement, model: OutcomeReportModel): void {
 }
 
 // ---------------------------------------------------------------------------
-// Report lines
+// Summary: report lines
 // ---------------------------------------------------------------------------
 
 function renderLines(
@@ -763,80 +953,101 @@ function renderLines(
   table.dataset.rows = "report-lines";
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
-  headRow.append(element("th", "Description"), element("th", "Count"));
+  headRow.append(element("th", "Result"), el("th", "n", "Conversations"));
   thead.append(headRow);
   table.append(thead);
   const tbody = document.createElement("tbody");
+  const ladder = ladderOn(model);
+  const byStatus = (status: ConversationStatus) =>
+    model.conversations.filter((c) => conversationStatus(c) === status);
+  const resolved = byStatus("resolved");
+  const missed = byStatus("missed");
+  const undecided = [...byStatus("undecided"), ...byStatus("nothing-applied")];
+  const share = (n: number) =>
+    fmtShare(n, model.totalCount, model.options.percentages);
   // held is read from calibration samples, resolved from claim rollups --
   // two independent sources this card shows side by side and never
   // subtracts one from the other.
-  const lines: ReadonlyArray<readonly [string, string, number, string]> = [
-    [
-      "resolved",
-      "Conversations resolved correctly",
-      model.resolvedCount,
-      fmtShare(
-        model.resolvedCount,
-        model.totalCount,
-        model.options.percentages,
-      ),
-    ],
-    [
-      "missed",
-      "Conversations missed",
-      model.missedCount,
-      fmtShare(model.missedCount, model.totalCount, model.options.percentages),
-    ],
-    [
-      "held",
-      "Held pending adjudication",
-      model.heldCount,
-      fmtCount(model.heldCount),
-    ],
-    [
-      "added",
-      "Added after adjudication",
-      model.addedCount,
-      fmtCount(model.addedCount),
-    ],
-    [
-      "not-applicable",
-      "Criterion judgments not applicable",
-      model.notApplicableCount,
-      fmtCount(model.notApplicableCount),
-    ],
+  type Line = {
+    key: string;
+    label: string;
+    help: string;
+    count: number;
+    shown: string;
+    behind?: readonly Conversation[];
+  };
+  const lines: Line[] = [
+    {
+      key: "resolved",
+      label: ladder ? "Established (resolved)" : "Resolved",
+      help: "Every rule that applied was met.",
+      count: resolved.length,
+      shown: share(resolved.length),
+      behind: resolved,
+    },
+    {
+      key: "missed",
+      label: ladder ? "Failed (missed)" : "Missed",
+      help: "At least one rule was not met.",
+      count: missed.length,
+      shown: share(missed.length),
+      behind: missed,
+    },
   ];
-  for (const [key, label, count, shown] of lines) {
+  if (undecided.length > 0)
+    lines.push({
+      key: "undecided",
+      label: ladder ? "Inconclusive or not present" : "Could not decide",
+      help: "No rule was broken, but the judge could not decide a rule, or no rule applied. Neither resolved nor missed.",
+      count: undecided.length,
+      shown: share(undecided.length),
+      behind: undecided,
+    });
+  lines.push(
+    {
+      key: "held",
+      label: "Held for a person to decide",
+      help: "A person's spot check disagreed with a resolved result.",
+      count: model.heldCount,
+      shown: fmtCount(model.heldCount),
+    },
+    {
+      key: "added",
+      label: "Added after a person's check",
+      help: "A person's spot check found a missed result was in fact resolved.",
+      count: model.addedCount,
+      shown: fmtCount(model.addedCount),
+    },
+  );
+  for (const line of lines) {
     const tr = document.createElement("tr");
-    tr.dataset.line = key;
-    tr.dataset.count = String(count);
+    tr.dataset.line = line.key;
+    tr.dataset.count = String(line.count);
     const desc = el("td", "desc");
-    desc.append(el("b", "", label));
-    const behind =
-      key === "resolved"
-        ? model.conversations.filter((c) => c.verdict === "met")
-        : key === "missed"
-          ? model.conversations.filter((c) => c.verdict !== "met")
-          : key === "not-applicable"
-            ? model.conversations.filter((c) =>
-                c.criteria.some((cr) => cr.verdict === "not_applicable"),
-              )
-            : undefined;
-    if (behind !== undefined && behind.length > 0)
+    desc.append(el("b", "", line.label));
+    desc.append(el("small", "", line.help));
+    if (line.behind !== undefined && line.behind.length > 0) {
+      const label = `Show the ${fmtCount(line.behind.length)} conversation${line.behind.length === 1 ? "" : "s"}`;
+      const behind = line.behind;
       desc.append(
-        drill(
-          `open › ${fmtCount(behind.length)} conversation${behind.length === 1 ? "" : "s"}`,
-          behind,
-          model,
-          runInfo,
-          key,
-        ),
+        line.key === "missed"
+          ? drill(label, () => whyMissed(behind, model, runInfo), line.key)
+          : conversationsDrill(label, behind, model, runInfo, line.key),
       );
-    tr.append(desc, el("td", "n", shown));
+    }
+    tr.append(desc, el("td", "n", line.shown));
     tbody.append(tr);
   }
   table.append(tbody);
   section.append(table);
+  const na = el(
+    "p",
+    "na-note",
+    `${fmtCount(model.notApplicableCount)} rule check${model.notApplicableCount === 1 ? "" : "s"} did not apply to the conversation and count as met beside a met rule.`,
+  );
+  na.dataset.line = "not-applicable";
+  na.dataset.count = String(model.notApplicableCount);
+  section.append(na);
   host.append(section);
 
   const stamps = el("div", "stamps inl");
@@ -849,19 +1060,122 @@ function renderLines(
     el(
       "small",
       "",
-      "every count and share above is recomputed from result.claims and the records they cite, never read from a stated total",
+      "every count on this page is recomputed from the sealed claims and the records they cite",
     ),
   );
   stamps.append(stamp);
   host.append(stamps);
+}
 
-  const tamper = el(
-    "p",
-    "tamper-note",
-    'This card only ever renders a bundle that already verified: there is no interactive "try tampering" control here, because this viewer never shows content first and checks second. Tamper with any claim, record, or checkpoint in the underlying bundle and the whole page — this card included — is replaced by the verification-failed banner, before anything here is drawn.',
+// ---------------------------------------------------------------------------
+// Summary: results rule by rule
+// ---------------------------------------------------------------------------
+
+function renderRules(
+  host: HTMLElement,
+  model: OutcomeReportModel,
+  runInfo: OutcomeReportRunInfo,
+): void {
+  const section = el("section", "sec");
+  section.dataset.section = "rules";
+  section.append(el("h2", "", "Results rule by rule"));
+  section.append(
+    el(
+      "p",
+      "lede",
+      "How many conversations met each rule. Open a rule to read the conversations where it was not met.",
+    ),
   );
-  tamper.dataset.tamperNote = "verify-first";
-  host.append(tamper);
+  const ladder = ladderOn(model);
+  const table = el("table", "rules");
+  table.dataset.rows = "rules";
+  const thead = element("thead");
+  const headRow = element("tr");
+  headRow.append(
+    element("th", "Rule"),
+    el("th", "n", ruleWord("met", ladder, "yes").word),
+    el("th", "n", ruleWord("not_met", ladder, "yes").word),
+    el("th", "n", ruleWord("not_applicable", ladder, "yes").word),
+    el("th", "n", ladder ? "inconclusive / not checked" : "could not decide"),
+  );
+  thead.append(headRow);
+  table.append(thead);
+  const tbody = element("tbody");
+  for (const check of model.terms.checks) {
+    const group = el("tr", "grp");
+    group.dataset.checkId = check.id;
+    group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
+    const cell = el("td", "", check.question);
+    cell.setAttribute("colspan", "5");
+    group.append(cell);
+    tbody.append(group);
+    for (const criterion of check.criteria) {
+      const ref = `${check.id}.${criterion.id}`;
+      const of = (pick: (v: DrawnVerdict) => boolean) =>
+        model.conversations.filter((c) =>
+          c.criteria.some(
+            (cr) =>
+              cr.checkId === check.id &&
+              cr.criterionId === criterion.id &&
+              pick(cr.verdict),
+          ),
+        );
+      const met = of((v) => v === "met");
+      const notMet = of(isMiss);
+      const na = of((v) => v === "not_applicable");
+      const undecided = of((v) => v === "not_evaluable");
+      const tr = el("tr", "rule");
+      tr.dataset.rule = ref;
+      tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
+      const label = criterionLabel(model, check.id, criterion.id);
+      const nameCell = el("td", "cn");
+      nameCell.append(el("b", "", label.label));
+      const badge = editedBadge(model, ref);
+      if (badge !== undefined) nameCell.append(badge);
+      if (label.source === "sealed")
+        nameCell.append(el("small", "", label.text));
+      const problems = [
+        ...notMet,
+        ...undecided.filter((c) => !notMet.includes(c)),
+      ];
+      tr.append(
+        nameCell,
+        el("td", "n ok", fmtCount(met.length)),
+        el(
+          "td",
+          `n${notMet.length > 0 ? " bad" : ""}`,
+          fmtCount(notMet.length),
+        ),
+        el("td", "n", fmtCount(na.length)),
+        el("td", "n", fmtCount(undecided.length)),
+      );
+      tbody.append(tr);
+      // The conversations behind a rule open in a full-width row below it,
+      // so each one reads at the table's width.
+      if (problems.length > 0) {
+        const drillRow = el("tr", "drill-row");
+        drillRow.dataset.drillFor = ref;
+        const cell = element("td");
+        cell.setAttribute("colspan", "5");
+        cell.append(
+          conversationsDrill(
+            `${fmtCount(notMet.length)} not met${undecided.length > 0 ? `, ${fmtCount(undecided.length)} undecided` : ""}: show them`,
+            problems,
+            model,
+            runInfo,
+            `rule:${ref}`,
+          ),
+        );
+        drillRow.append(cell);
+        tbody.append(drillRow);
+      }
+    }
+  }
+  table.append(tbody);
+  const scroll = el("div", "tscroll");
+  scroll.append(table);
+  section.append(scroll);
+  host.append(section);
 }
 
 // ---------------------------------------------------------------------------
@@ -1012,79 +1326,17 @@ function renderHumanChecks(
 }
 
 // ---------------------------------------------------------------------------
-// Why conversations missed
-// ---------------------------------------------------------------------------
-
-function renderWhyMissed(
-  host: HTMLElement,
-  model: OutcomeReportModel,
-  runInfo: OutcomeReportRunInfo,
-): void {
-  const section = el("section", "sec");
-  section.dataset.section = "why-missed";
-  section.append(el("h2", "", "Why conversations missed"));
-  const bars = el("div", "bars");
-  bars.dataset.checkBars = "true";
-  for (const check of model.terms.checks) {
-    const count = model.checkPassCounts.get(check.id) ?? 0;
-    const item = el("div", "bar");
-    item.dataset.checkId = check.id;
-    item.dataset.passCount = String(count);
-    const nm = el("div", "nm", check.question);
-    const track = el("div", "track");
-    const share = model.totalCount === 0 ? 0 : count / model.totalCount;
-    const fill = element("i");
-    fill.style.width = `${Math.round(share * 100)}%`;
-    track.append(fill);
-    const num = el(
-      "div",
-      "num",
-      fmtShare(count, model.totalCount, model.options.percentages),
-    );
-    item.append(nm, track, num);
-    bars.append(item);
-  }
-  section.append(bars);
-
-  const reasons = el("div", "reasons");
-  reasons.dataset.reasons = String(model.missedReasons.length);
-  for (const group of model.missedReasons) {
-    const item = el("details", "rsn-d");
-    item.dataset.reasonKey = group.key;
-    item.dataset.reasonStructured = String(group.structured);
-    item.dataset.count = String(group.conversations.length);
-    const row = el("summary", "rsn");
-    row.append(
-      element("span", group.label),
-      el("span", "c", `${fmtCount(group.conversations.length)} · see them ›`),
-    );
-    item.append(row);
-    item.append(
-      renderConversationList(
-        group.conversations,
-        model,
-        runInfo,
-        `reason:${group.key}`,
-      ),
-    );
-    reasons.append(item);
-  }
-  section.append(reasons);
-  host.append(section);
-}
-
-// ---------------------------------------------------------------------------
 // The terms
 // ---------------------------------------------------------------------------
 
 function renderTerms(host: HTMLElement, model: OutcomeReportModel): void {
-  const section = el("section", "sec");
+  const section = el("div", "rp-s");
   section.dataset.section = "terms";
-  section.append(el("h2", "", "The terms: what counts as resolved"));
+  section.append(el("h3", "", "The terms: what counts as resolved"));
   const lede = el(
     "p",
     "lede",
-    `Agreed with the counterparty: ${model.terms.pack.agreement}. Locked: ${model.terms.pack.locked}. Every term below is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}".`,
+    `Every term below is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}".${model.terms.pack.agreement === NOT_STATED ? "" : ` Agreed with the counterparty: ${model.terms.pack.agreement}.`}`,
   );
   lede.dataset.termsSource = "bundle";
   section.append(lede);
@@ -1102,7 +1354,8 @@ function renderTerms(host: HTMLElement, model: OutcomeReportModel): void {
       ? NOT_STATED
       : `${model.terms.pack.version} (from the claims' contract_ref)`,
   );
-  packField("Locked", model.terms.pack.locked);
+  if (model.terms.pack.locked !== NOT_STATED)
+    packField("Locked", model.terms.pack.locked);
   section.append(pack);
 
   const outcome = el("div", "outcome");
@@ -1166,9 +1419,9 @@ function renderTerms(host: HTMLElement, model: OutcomeReportModel): void {
 // ---------------------------------------------------------------------------
 
 function renderWhatRan(host: HTMLElement, runInfo: OutcomeReportRunInfo): void {
-  const section = el("section", "sec");
+  const section = el("div", "rp-s");
   section.dataset.section = "what-ran";
-  section.append(el("h2", "", "What ran"));
+  section.append(el("h3", "", "What ran"));
   const ran = el("div", "ran");
   ran.dataset.pinned = String(runInfo.pinned);
   if (runInfo.judgePinRecomputes !== undefined)
@@ -1198,7 +1451,7 @@ function renderWhatRan(host: HTMLElement, runInfo: OutcomeReportRunInfo): void {
   box(
     "Judge pin digest",
     runInfo.judgePinDigest === undefined
-      ? "not stated"
+      ? pinNotShown(runInfo)
       : pin === undefined
         ? runInfo.judgePinDigest
         : `${runInfo.judgePinDigest} (recomputed from the model, prompt, axes and sampling params shown here)`,
@@ -1256,9 +1509,9 @@ function renderVerificationDetails(
   bundle: unknown,
   verified: BundleVerificationResult,
 ): void {
-  const section = el("section", "sec");
+  const section = el("div", "rp-s");
   section.dataset.section = "verification-details";
-  section.append(el("h2", "", "Verification details"));
+  section.append(el("h3", "", "Verification details"));
   section.append(
     el("p", "lede", "Repeat offline with the open-source verifier."),
   );
@@ -1281,6 +1534,49 @@ function renderVerificationDetails(
   host.append(section);
 }
 
+// ---------------------------------------------------------------------------
+// Proofs for the whole report: one toggle at the foot of the page
+// ---------------------------------------------------------------------------
+
+function renderReportProofs(
+  host: HTMLElement,
+  model: OutcomeReportModel,
+  runInfo: OutcomeReportRunInfo,
+  bundle: unknown,
+  verified: BundleVerificationResult,
+): void {
+  const section = el("section", "sec rp");
+  section.dataset.section = "report-proofs";
+  // Built on first open, like every other toggle.
+  const toggle = levelToggle(
+    2,
+    "Proofs for this report: the terms, what ran, and how to verify the whole bundle",
+    () => {
+      const box = el("div", "pf-b");
+      const ids = proofList([
+        ["Result capsule", model.capsuleId],
+        ["Outcomes pack", packLine(model)],
+      ]);
+      ids.dataset.reportIds = "true";
+      box.append(ids);
+      renderTerms(box, model);
+      renderWhatRan(box, runInfo);
+      renderVerificationDetails(box, bundle, verified);
+      const tamper = el(
+        "p",
+        "tamper-note",
+        'This page only ever renders a bundle that already verified: there is no interactive "try tampering" control, because this viewer never shows content first and checks second. Tamper with any claim, record, or checkpoint in the underlying bundle and the whole page is replaced by the verification-failed banner, before anything here is drawn.',
+      );
+      tamper.dataset.tamperNote = "verify-first";
+      box.append(tamper);
+      return box;
+    },
+    { className: "proofs" },
+  );
+  section.append(toggle);
+  host.append(section);
+}
+
 export async function renderOutcomeReportPage(
   result: ResultRoot,
   options: OutcomeReportOptions,
@@ -1292,6 +1588,8 @@ export async function renderOutcomeReportPage(
   const runInfo = await verifyJudgePin(model.runInfo);
   const wrapper = el("section", "oi");
   wrapper.dataset.page = "outcome-report";
+  wrapper.dataset.levels = "2";
+  if (ladderOn(model)) wrapper.dataset.resultWords = "ladder";
   const style = document.createElement("style");
   style.textContent = OUTCOME_REPORT_CSS;
   wrapper.append(style);
@@ -1303,12 +1601,10 @@ export async function renderOutcomeReportPage(
   sheet.append(pad);
   wrapper.append(sheet);
 
+  renderRules(wrapper, model, runInfo);
   renderCalendar(wrapper, model);
   renderHumanChecks(wrapper, model.calibration);
-  renderWhyMissed(wrapper, model, runInfo);
-  renderTerms(wrapper, model);
-  renderWhatRan(wrapper, runInfo);
-  renderVerificationDetails(wrapper, bundle, verified);
+  renderReportProofs(wrapper, model, runInfo, bundle, verified);
   root.append(wrapper);
 }
 

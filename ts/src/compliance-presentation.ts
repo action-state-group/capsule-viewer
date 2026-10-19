@@ -67,6 +67,8 @@ export interface ComplianceQualityProtocol {
 
 export interface CompliancePresentation {
   readonly enabled: boolean;
+  /** `result_words: "ladder"`: word results on the grade ladder; see outcome-report-presentation.ts. Display only. */
+  readonly resultWords?: "ladder";
   readonly regulation: string;
   readonly obligations: readonly ComplianceObligation[];
   readonly qualityProtocol?: ComplianceQualityProtocol;
@@ -191,6 +193,9 @@ export function readCompliancePresentation(
   const qualityProtocol = readQualityProtocol(block.quality_protocol);
   return {
     enabled: true,
+    ...(block.result_words === "ladder"
+      ? { resultWords: "ladder" as const }
+      : {}),
     regulation,
     obligations,
     ...(qualityProtocol === undefined ? {} : { qualityProtocol }),
