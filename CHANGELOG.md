@@ -21,6 +21,28 @@ here. The format follows
   (`capsule-emit>=0.12,<0.13` in the `evidence` and `dev` extras), which
   removes the `permalink.build_bundle` this used (capsule-emit#338).
 
+### Added
+
+- The outcome report and EU AI Act obligations cards carry a short block on
+  their front, outside every toggle, that says who judged, who witnessed and
+  what verified:
+  - **Judged by:** each distinct judge pin the cited reports state, with its
+    count (never one picked for all); the model only where the reports' pin
+    components recompute to that pin. Withheld reports read "withheld" with
+    their count, and results recomputed by a checker are named as such.
+  - **Witnessed by:** the witness receipts in `checkpoint.witnesses` as the
+    bundle states them (this page does not check them), else "not stated";
+    then the checkpoint's log id, size and root, and whether this page could
+    check its signature.
+  - **Verified by:** this page's code, by package name and version, with the
+    verifier and its version (`ts/src/viewer-build.ts`, held to the
+    installed packages by a test and by the page runtime build), and the
+    producer the bundle's own report names, else "not stated".
+
+  Every value comes from the verified bundle or the viewer's build constants
+  and is set as text only. New runtime style hashes in
+  `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+
 ### Changed
 
 - The outcome report and EU AI Act obligations cards have two levels and no

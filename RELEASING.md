@@ -34,7 +34,13 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
 2. **Review.** Open the pull request from the link in the run summary. Open it
    yourself: a pull request opened by the workflow would not start CI. Add the
    [CHANGELOG](CHANGELOG.md) entry on the same branch if it is not in yet; the
-   GitHub Release notes point to it.
+   GitHub Release notes point to it. For `ts`, also set `viewerVersion` in
+   [`ts/src/viewer-build.ts`](ts/src/viewer-build.ts) to the new version on
+   the same branch: report pages name it in their "Verified by" line, and
+   `npm run check` fails until it matches `ts/package.json`. A dependency
+   bump of `@action-state-group/agent-action-capsule` or
+   `@action-state-group/cll` sets `verifierVersion` or `cllVersion` there the
+   same way.
 3. **Merge.** [Release · Tag](https://github.com/action-state-group/capsule-viewer/actions/workflows/tag-release.yml)
    runs on the merge. For each package whose version changed it creates the
    tag and GitHub Release on the merge commit and dispatches the package's

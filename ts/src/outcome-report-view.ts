@@ -31,6 +31,7 @@ import {
 } from "./report-levels.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
+import { provenanceLines, renderProvenance } from "./report-provenance.js";
 
 /**
  * The outcome-report card, rendered from a verified `ResultRoot`. Called
@@ -1770,6 +1771,21 @@ export async function renderOutcomeReportPage(
   const pad = el("div", "pad");
   renderMeta(pad, model);
   renderLines(pad, model, runInfo);
+  // Who judged, who witnessed, what verified: on the front, never in a toggle.
+  pad.append(
+    renderProvenance(
+      await provenanceLines(
+        result.records,
+        model.conversations.flatMap((c) =>
+          c.criteria.flatMap((cr) =>
+            cr.claim === undefined ? [] : [cr.claim],
+          ),
+        ),
+        bundle,
+        verified,
+      ),
+    ),
+  );
   sheet.append(pad);
   wrapper.append(sheet);
 
