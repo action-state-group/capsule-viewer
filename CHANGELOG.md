@@ -10,6 +10,15 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- The outcome report counts the criteria each conversation was judged on
+  instead of always saying "nine", and fits a 390px viewport: the header
+  stacks at narrow widths, and the day calendar keeps each date on one line.
+  Ported from agent-action-capsule#323. The Go emitter's CSP hash for
+  `OUTCOME_REPORT_CSS` (`go/emitter/runtime-style-hashes.txt`) follows, so a
+  page whose runtime carries the new stylesheet is not blocked.
+
 ## ts 0.1.0 and go 0.1.0 (2026-10-16)
 
 The first release of the npm package and of the Go module (tag `go/v0.1.0`).
