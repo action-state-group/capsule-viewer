@@ -317,14 +317,18 @@ every record of a capsule ledger as one row, with the actor's lineage label, the
 verdict, the effect, the chain label, each gate check and the time; refusals
 are marked and counted.
 
-- **The ledger is checked as one evidence file.** capsule-emit's
-  `permalink.build_bundle` makes the file over every record and its
-  `check_evidence_file` checks it. `ledger_page(bundle, check)` binds that
-  result to the file as the report does, builds the context from it, and
-  draws the page through the shell (`capsule_viewer.shell.present`) with the
-  module resolved from its manifest.
+- **The page is drawn over the ledger's evidence file.** The ledger's
+  producer makes the file (`evidence-bundle/v2`), for example `capsule-emit
+  bundle LEDGER --all -o bundle.json`, which proves every record under the
+  log's signed checkpoint (and refuses a log with none); this package never
+  builds one and holds no key.
+  `check_and_render(bundle)` runs capsule-emit's `check_evidence_file` on it;
+  `ledger_page(bundle, check)` binds that result to the file as the report
+  does, builds the context from it, and draws the page through the shell
+  (`capsule_viewer.shell.present`) with the module resolved from its
+  manifest.
 - **The banner is the verifier's verdict.** VALID shows as verified,
-  INCOMPLETE as incomplete (the kit's `incomplete` outcome: a ledger with no
+  INCOMPLETE as incomplete (the kit's `incomplete` outcome: a file with no
   signed checkpoint is not tied to any committed log), INVALID as the
   contract's refusal with the failing checks and no row. The shell follows the
   module with the verifier's checks on every path (`present(...,
@@ -347,10 +351,11 @@ are marked and counted.
 - Needs the `evidence` extra.
 
 ```
-python -m capsule_viewer.ledger ledger.jsonl -o ledger.html
+capsule-emit bundle ledger.jsonl --all -o bundle.json
+python -m capsule_viewer.ledger bundle.json -o ledger.html
 ```
 
-It exits as the report does: 0 VALID, 2 INCOMPLETE, 1 INVALID, empty or
+It exits as the report does: 0 VALID, 2 INCOMPLETE, 1 INVALID or
 unreadable.
 
 ## Fixtures

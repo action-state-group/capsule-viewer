@@ -1,27 +1,27 @@
 {
  "kind_ok": true,
- "bundle_digest": "994ab3b329773fbd8ff0c56ef73e1fb0dbe67bb9eb60df2a78e1c6fcc558f1ef",
- "root": "61986e3191e462f4e822ac8117d69f53037bc6491c3c966abf21b53e4ef473a6",
+ "bundle_digest": "8ae322d869f151d645d580c1d604c2aac67916d9495166a26e1ac150d5202455",
+ "root": "9472859e04afe0a108d095861177a98099d9d93b708c17620033aa8be223e6b7",
  "checks": [
   {
    "name": "records",
    "status": "fail",
    "findings": [
-    "record_identity_invalid:38fac374a16b48b0da13db32d0f2571a5d3df8b7d0546eee786f21e0da8578c1"
+    "record_identity_invalid:e1e29c003431b0b1fe475ad4208b7cc8f2af08c5b331450bb789d0db23362050"
    ]
   },
   {
    "name": "signatures",
    "status": "fail",
    "findings": [
-    "producer_signature_invalid:38fac374a16b48b0da13db32d0f2571a5d3df8b7d0546eee786f21e0da8578c1"
+    "producer_signature_invalid:e1e29c003431b0b1fe475ad4208b7cc8f2af08c5b331450bb789d0db23362050"
    ]
   },
   {
    "name": "graph_closure",
    "status": "fail",
    "findings": [
-    "record_identity_invalid:38fac374a16b48b0da13db32d0f2571a5d3df8b7d0546eee786f21e0da8578c1"
+    "record_identity_invalid:e1e29c003431b0b1fe475ad4208b7cc8f2af08c5b331450bb789d0db23362050"
    ]
   },
   {
@@ -50,28 +50,28 @@
  ],
  "records": [
   {
-   "capsule_id": "fa04b176509e64796c3390bbefcb40c6a5c6e7759f7c67eb712156398640cd06",
+   "capsule_id": "5d4e959e5abe5b1b0e6b9f5b8ab06fc38276a3432b48379c558ab8de32a16a3b",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "45ba3aa307cded97b1d0ffd5d9689bf76776020a1a621b3399845b738104b1af",
+   "key_id": "c16ee24e3d692d6f2acdc48a336463f9d130ba3d8e1ab160e2e74146962b03a5",
    "seq": null,
    "messages": []
   },
   {
-   "capsule_id": "38fac374a16b48b0da13db32d0f2571a5d3df8b7d0546eee786f21e0da8578c1",
+   "capsule_id": "e1e29c003431b0b1fe475ad4208b7cc8f2af08c5b331450bb789d0db23362050",
    "identity_ok": false,
    "signature": "invalid",
-   "key_id": "45ba3aa307cded97b1d0ffd5d9689bf76776020a1a621b3399845b738104b1af",
+   "key_id": "c16ee24e3d692d6f2acdc48a336463f9d130ba3d8e1ab160e2e74146962b03a5",
    "seq": null,
    "messages": [
-    "capsule_id=38fac374a16b48b0da13db32d0f2571a5d3df8b7d0546eee786f21e0da8578c1: self-attested Ed25519 signature does not verify against key_id -- content, signature, or key_id was tampered or forged"
+    "capsule_id=e1e29c003431b0b1fe475ad4208b7cc8f2af08c5b331450bb789d0db23362050: self-attested Ed25519 signature does not verify against key_id -- content, signature, or key_id was tampered or forged"
    ]
   },
   {
-   "capsule_id": "61986e3191e462f4e822ac8117d69f53037bc6491c3c966abf21b53e4ef473a6",
+   "capsule_id": "9472859e04afe0a108d095861177a98099d9d93b708c17620033aa8be223e6b7",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "45ba3aa307cded97b1d0ffd5d9689bf76776020a1a621b3399845b738104b1af",
+   "key_id": "c16ee24e3d692d6f2acdc48a336463f9d130ba3d8e1ab160e2e74146962b03a5",
    "seq": null,
    "messages": []
   }
@@ -80,7 +80,7 @@
  "checkpoint_authenticated": false,
  "signer_matches_checkpoint": null,
  "missing": [],
- "closure_depth": 3,
+ "closure_depth": 2,
  "countersignatures": 0,
  "extensions": [],
  "witness": {
