@@ -41,12 +41,18 @@ export interface JudgePinCount {
   /** The model the reports name for this pin, only when every report with this pin names the same components and they recompute to it. */
   readonly model?: string;
   /** Why no model is named: the reports carry no components, carry different ones, or theirs do not recompute to the pin. */
-  readonly modelNotShown?: "not_stated" | "differs" | "does_not_recompute";
+  readonly modelNotShown?:
+    | "not_stated"
+    | "partly_stated"
+    | "differs"
+    | "does_not_recompute";
 }
 
 export interface JudgeTally {
-  /** Claims citing a report this bundle carries. */
+  /** Claims citing a report, carried or not. */
   readonly cited: number;
+  /** Claims citing a report this bundle does not carry. */
+  readonly notCarried: number;
   readonly pins: readonly JudgePinCount[];
   readonly withheld: number;
   /** Reports supplied but not matching their commitment, or not an object. */
@@ -113,6 +119,7 @@ export async function tallyJudges(
   claims: readonly ResultClaim[],
 ): Promise<JudgeTally> {
   let cited = 0;
+  let notCarried = 0;
   let withheld = 0;
   let unread = 0;
   let unnamed = 0;
@@ -123,9 +130,15 @@ export async function tallyJudges(
   >();
   const checkers = new Map<string, number>();
   for (const claim of claims) {
+    // A claim with no evidence cites no report; one whose report is not in
+    // the bundle still counts toward "N of M", as not carried.
+    if (claim.evidence[0]?.digest === undefined) continue;
     const state = reportState(records, claim);
-    if (state === "not_carried") continue;
     cited += 1;
+    if (state === "not_carried") {
+      notCarried += 1;
+      continue;
+    }
     if (state === "withheld") {
       withheld += 1;
       continue;
@@ -163,7 +176,8 @@ export async function tallyJudges(
     let model: string | undefined;
     let modelNotShown: JudgePinCount["modelNotShown"];
     if (entry.parts.size === 0) modelNotShown = "not_stated";
-    else if (entry.parts.size > 1 || entry.bare > 0) modelNotShown = "differs";
+    else if (entry.parts.size > 1) modelNotShown = "differs";
+    else if (entry.bare > 0) modelNotShown = "partly_stated";
     else {
       const parts = [...entry.parts.values()][0]!;
       const checked = await verifyJudgePin({
@@ -172,10 +186,11 @@ export async function tallyJudges(
         judgePin: parts,
       });
       if (checked.judgePinRecomputes === true)
-        model =
+        model = quoted(
           parts.modelVersion === undefined
             ? parts.modelId
-            : `${parts.modelId} ${parts.modelVersion}`;
+            : `${parts.modelId} ${parts.modelVersion}`,
+        );
       else modelNotShown = "does_not_recompute";
     }
     counted.push({
@@ -188,6 +203,7 @@ export async function tallyJudges(
   counted.sort((a, b) => b.count - a.count || (a.digest < b.digest ? -1 : 1));
   return {
     cited,
+    notCarried,
     pins: counted,
     withheld,
     unread,
@@ -213,6 +229,9 @@ export interface ProvenanceLine {
 }
 
 const fmt = (n: number): string => n.toLocaleString("en-US");
+/** A bundle-supplied string, quoted and capped, so it can never read as this page's own words. */
+const quoted = (value: string): string =>
+  JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}…` : value);
 const short = (digest: string): string =>
   digest.length > 12 ? `${digest.slice(0, 12)}…` : digest;
 
@@ -235,7 +254,9 @@ export function judgeLine(tally: JudgeTally): ProvenanceLine {
         ? "model not shown (the model the reports state does not recompute to the pin)"
         : pin.modelNotShown === "differs"
           ? "model not shown (the reports with this pin state different models)"
-          : `model ${NOT_STATED}`);
+          : pin.modelNotShown === "partly_stated"
+            ? "model not shown (some reports with this pin state no model)"
+            : `model ${NOT_STATED}`);
     parts.push(
       `${model}, pinned, pin ${short(pin.digest)} (${of(pin.count)} results)`,
     );
@@ -246,6 +267,10 @@ export function judgeLine(tally: JudgeTally): ProvenanceLine {
         ? `not in this bundle: the judge's reports are withheld (${of(tally.withheld)})`
         : `the reports for ${of(tally.withheld)} results are withheld, so their judge is not in this bundle`,
     );
+  if (tally.notCarried > 0)
+    parts.push(
+      `the reports for ${of(tally.notCarried)} results are not in this bundle, so their judge is ${NOT_STATED}`,
+    );
   if (tally.unread > 0)
     parts.push(
       `${of(tally.unread)} reports do not match what was sealed or cannot be read`,
@@ -253,7 +278,7 @@ export function judgeLine(tally: JudgeTally): ProvenanceLine {
   const recomputed =
     tally.checkers.reduce((n, c) => n + c.count, 0) + tally.recomputedUnnamed;
   if (recomputed > 0) {
-    const by = tally.checkers.map((c) => `${c.ref} (${fmt(c.count)})`);
+    const by = tally.checkers.map((c) => `${quoted(c.ref)} (${fmt(c.count)})`);
     if (tally.recomputedUnnamed > 0)
       by.push(`checker ${NOT_STATED} (${fmt(tally.recomputedUnnamed)})`);
     parts.push(
@@ -268,7 +293,10 @@ export function judgeLine(tally: JudgeTally): ProvenanceLine {
       ? "withheld"
       : judged > 1 ||
           (judged === 1 &&
-            (tally.withheld > 0 || tally.unread > 0 || tally.unnamed > 0))
+            (tally.withheld > 0 ||
+              tally.notCarried > 0 ||
+              tally.unread > 0 ||
+              tally.unnamed > 0))
         ? "mixed"
         : judged === 1
           ? "stated"
@@ -282,12 +310,14 @@ interface WitnessEntry {
   readonly url?: string;
   readonly treeSize?: number;
   readonly stub: boolean;
+  /** Not an object: no witness can be read from it. */
+  readonly malformed: boolean;
 }
 
 function witnessEntries(checkpoint: unknown): WitnessEntry[] {
   if (!isObject(checkpoint) || !Array.isArray(checkpoint.witnesses)) return [];
   return checkpoint.witnesses.map((w: unknown): WitnessEntry => {
-    if (!isObject(w)) return { stub: false };
+    if (!isObject(w)) return { stub: false, malformed: true };
     const url = asString(w.ts_url);
     const size = w.tree_size;
     return {
@@ -296,6 +326,7 @@ function witnessEntries(checkpoint: unknown): WitnessEntry[] {
         ? { treeSize: size }
         : {}),
       stub: w.is_stub === true,
+      malformed: false,
     };
   });
 }
@@ -309,7 +340,7 @@ export function witnessLine(
   const page = buildVerificationPageModel(bundle, verified);
   const logId = isObject(checkpoint) ? asString(checkpoint.log_id) : undefined;
   const facts: string[] = [];
-  if (logId !== undefined) facts.push(`log ${logId}`);
+  if (logId !== undefined) facts.push(`log ${quoted(logId)}`);
   if (page.checkpointSize !== undefined)
     facts.push(`size ${fmt(page.checkpointSize)}`);
   if (page.checkpointRoot !== undefined)
@@ -326,26 +357,38 @@ export function witnessLine(
       : "; the bundle carries no signature for it";
   const about =
     facts.length === 0 ? "" : ` The checkpoint: ${facts.join(", ")}${signed}.`;
-  const entries = witnessEntries(checkpoint);
+  const all = witnessEntries(checkpoint);
+  const entries = all.filter((e) => !e.stub && !e.malformed);
+  const stubs = all.filter((e) => e.stub).length;
+  const malformed = all.filter((e) => e.malformed).length;
+  const others = [
+    stubs === 0
+      ? ""
+      : `${fmt(stubs)} placeholder${stubs === 1 ? "" : "s"}, not receipts`,
+    malformed === 0
+      ? ""
+      : `${fmt(malformed)} entr${malformed === 1 ? "y" : "ies"} that cannot be read`,
+  ].filter((t) => t !== "");
+  const besides =
+    others.length === 0 ? "" : ` It also carries ${others.join(" and ")}.`;
   if (entries.length === 0)
     return {
       key: "witness",
       label: "Witnessed by",
-      text: `${NOT_STATED} in this bundle: it carries no witness receipt for its checkpoint.${about}`,
+      text: `${NOT_STATED} in this bundle: it carries no witness receipt for its checkpoint.${besides}${about}`,
       state: "not-stated",
     };
   const named = entries.map((e) =>
     [
-      e.url ?? `a witness, address ${NOT_STATED}`,
+      e.url === undefined ? `a receipt, witness ${NOT_STATED}` : quoted(e.url),
       e.treeSize === undefined ? "" : ` (tree size ${fmt(e.treeSize)})`,
-      e.stub ? " (a placeholder, not a receipt)" : "",
     ].join(""),
   );
   return {
     key: "witness",
     label: "Witnessed by",
-    text: `${named.join("; ")}, as the bundle states; this page does not check witness receipts.${about}`,
-    state: "stated",
+    text: `${named.join("; ")}, as the bundle states; this page does not check witness receipts.${besides}${about}`,
+    state: others.length === 0 ? "stated" : "mixed",
   };
 }
 
@@ -369,7 +412,7 @@ export function verifierLine(
   const built =
     producer === undefined
       ? `The tool that built this bundle is ${NOT_STATED} in it.`
-      : `The tool that built this bundle is ${NOT_STATED} in it; the bundle's own report names its producer as "${producer}", ${version === undefined ? "with no version" : `version ${version}`}.`;
+      : `The bundle's own report, which this page does not check, names the tool that built it as ${quoted(producer)}, ${version === undefined ? `version ${NOT_STATED}` : `version ${quoted(version)}`}.`;
   return {
     key: "verifier",
     label: "Verified by",

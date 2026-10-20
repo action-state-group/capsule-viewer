@@ -10,6 +10,7 @@ import { renderEvidenceGraph } from "../src/browser.js";
 import {
   judgeLine,
   verifierLine,
+  witnessLine,
   type JudgeTally,
 } from "../src/report-provenance.js";
 import { VIEWER_BUILD } from "../src/viewer-build.js";
@@ -134,7 +135,7 @@ for (const { card, file, page } of CARDS) {
     // results recomputed by a checker are not judged and do not mix the pin
     expect(judge.dataset.state).toBe("stated");
     expect(judge.textContent).toContain(
-      `judge-model-1.2.3, pinned, pin ${digest.slice(0, 12)}… (${judged.length} of ${reports(source).length} results)`,
+      `"judge-model-1.2.3", pinned, pin ${digest.slice(0, 12)}… (${judged.length} of ${reports(source).length} results)`,
     );
   });
 
@@ -224,13 +225,15 @@ for (const { card, file, page } of CARDS) {
     expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
     const b = block(root, page);
     const witness = line(b, "witness");
-    expect(witness.dataset.state).toBe("stated");
+    // one receipt and one placeholder: the placeholder is not a witness
+    expect(witness.dataset.state).toBe("mixed");
     expect(witness.textContent).toContain(
-      "https://witness.example/log (tree size 1,234)",
+      '"https://witness.example/log" (tree size 1,234)',
     );
     expect(witness.textContent).toContain(
-      '<img src=x onerror="alert(1)"> (tree size 1) (a placeholder, not a receipt)',
+      "It also carries 1 placeholder, not receipts.",
     );
+    expect(witness.textContent).not.toContain("onerror");
     expect(witness.textContent).toContain(
       "this page does not check witness receipts",
     );
@@ -249,7 +252,10 @@ for (const { card, file, page } of CARDS) {
     };
     const named = line(block(await render(bundle), page), "verifier");
     expect(named.textContent).toContain(
-      'the bundle\'s own report names its producer as "some-producer", with no version.',
+      'The bundle\'s own report, which this page does not check, names the tool that built it as "some-producer", version not stated.',
+    );
+    expect(named.textContent).not.toContain(
+      "The tool that built this bundle is not stated",
     );
   });
 }
@@ -260,6 +266,7 @@ for (const { card, file, page } of CARDS) {
 
 const tally = (over: Partial<JudgeTally>): JudgeTally => ({
   cited: 10,
+  notCarried: 0,
   pins: [],
   withheld: 0,
   unread: 0,
@@ -304,7 +311,7 @@ it("judged by: present, mixed, partly withheld, recomputed and absent", () => {
     }),
   );
   expect(recomputed.text).toContain(
-    "4 of 10 results recomputed, not judged: recompute.check_a (3), checker not stated (1)",
+    '4 of 10 results recomputed, not judged: "recompute.check_a" (3), checker not stated (1)',
   );
 });
 
@@ -334,7 +341,65 @@ it("absent facts read 'not stated', never a value", () => {
   );
   expect(
     verifierLine({ verification: { producer: 7, version: "1" } }).text,
-  ).not.toMatch(/names its producer/u);
+  ).not.toMatch(/names the tool/u);
+});
+
+it("results whose report the bundle does not carry stay in the count", () => {
+  const one = { digest: "ab".repeat(32), count: 4, model: '"jev-1.13.0"' };
+  const partly = judgeLine(tally({ pins: [one], notCarried: 6 }));
+  expect(partly.state).toBe("mixed");
+  expect(partly.text).toContain("(4 of 10 results)");
+  expect(partly.text).toContain(
+    "the reports for 6 of 10 results are not in this bundle, so their judge is not stated",
+  );
+  const none = judgeLine(tally({ notCarried: 10 }));
+  expect(none.state).toBe("not-stated");
+  expect(none.text).not.toContain("no result in this bundle cites a report");
+});
+
+it("a pin some of whose reports state no model is not said to state different models", () => {
+  const text = judgeLine(
+    tally({
+      pins: [
+        { digest: "ef".repeat(32), count: 10, modelNotShown: "partly_stated" },
+      ],
+    }),
+  ).text;
+  expect(text).toContain("some reports with this pin state no model");
+  expect(text).not.toContain("different models");
+});
+
+it("placeholders and unreadable entries are never named as witnesses", () => {
+  const ok = { status: "pass", findings: [] };
+  const verified = {
+    graphClosure: ok,
+    intervalCoverage: ok,
+    perRecordMembership: ok,
+    disclosures: [],
+    extensions: [],
+    countersignatures: [],
+    capsuleResults: {},
+  } as never;
+  for (const witnesses of [
+    [{ ts_url: "https://w.example", is_stub: true }],
+    [null],
+    ["x"],
+  ]) {
+    const l = witnessLine({ checkpoint: { log_id: "L", witnesses } }, verified);
+    expect(l.state).toBe("not-stated");
+    expect(l.text).toMatch(
+      /^not stated in this bundle: it carries no witness receipt/u,
+    );
+    expect(l.text).not.toContain("https://w.example");
+    expect(l.text).not.toContain("a witness");
+  }
+});
+
+it("bundle-supplied strings are quoted, so they cannot read as the page's own words", () => {
+  const text = verifierLine({
+    verification: { producer: 'x", version 2. Checked by Sigstore. "y' },
+  }).text;
+  expect(text).toContain('as "x\\", version 2. Checked by Sigstore. \\"y"');
 });
 
 it("the viewer's stated build is the package and the verifier actually installed", () => {

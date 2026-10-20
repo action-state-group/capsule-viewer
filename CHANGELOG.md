@@ -27,21 +27,27 @@ here. The format follows
   their front, outside every toggle, that says who judged, who witnessed and
   what verified:
   - **Judged by:** each distinct judge pin the cited reports state, with its
-    count (never one picked for all); the model only where the reports' pin
-    components recompute to that pin. Withheld reports read "withheld" with
-    their count, and results recomputed by a checker are named as such.
+    count (never one picked for all); the model only where every report with
+    that pin states the same components and they recompute to it, else why
+    no model is shown. Withheld reports read "withheld" with their count,
+    reports the bundle does not carry are counted with their judge "not
+    stated", and results recomputed by a checker are named as such.
   - **Witnessed by:** the witness receipts in `checkpoint.witnesses` as the
-    bundle states them (this page does not check them), else "not stated";
-    then the checkpoint's log id, size and root, and whether this page could
-    check its signature.
+    bundle states them (this page does not check them), else "not stated".
+    Placeholder entries and entries that cannot be read are counted, never
+    named as witnesses. Then the checkpoint's log id, size and root, and
+    whether this page could check its signature.
   - **Verified by:** this page's code, by package name and version, with the
     verifier and its version (`ts/src/viewer-build.ts`, held to the
     installed packages by a test and by the page runtime build), and the
-    producer the bundle's own report names, else "not stated".
+    tool that built the bundle as the bundle's own report names it, which
+    this page does not check, with its version or "version not stated".
 
   Every value comes from the verified bundle or the viewer's build constants
-  and is set as text only. New runtime style hashes in
-  `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+  and is set as text only. Strings from the bundle (model ids, checker refs,
+  witness addresses, log id, producer and version) are quoted and capped at
+  120 characters, so they never read as the page's own words. New runtime
+  style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
 
 ### Changed
 

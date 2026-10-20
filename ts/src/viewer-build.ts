@@ -5,7 +5,7 @@
  * verifier it is built with, each at its exact version. A report's
  * "Verified by" line names these. They are constants, not read at run time,
  * so every packaging of a page (offline file, fragment, embedded, static)
- * says the same thing. test/viewer-build.test.ts holds them to the installed
+ * says the same thing. test/report-provenance.test.ts holds them to the installed
  * packages, and scripts/build-iife.mjs refuses to bundle the page runtime
  * when they disagree.
  */
