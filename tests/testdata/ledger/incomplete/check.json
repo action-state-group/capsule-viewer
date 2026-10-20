@@ -1,7 +1,7 @@
 {
  "kind_ok": true,
- "bundle_digest": "89a7ac9fe103d8a976b7f065efe7988f18cf7bad23708f40fab60287d64b1e78",
- "root": "fc83e1043bbdf5eca5c5892c3a29e775f745efafbc1f0dd0b2acb79f556109c1",
+ "bundle_digest": "6a9e12769fbb146a233704e169126330f6536d8a3cbef93d8f9da264e6b3263b",
+ "root": "6e750bb0406b98b92d26a6cf6727a612eab4e57e873a0550113078430499ebbe",
  "checks": [
   {
    "name": "records",
@@ -44,26 +44,26 @@
  ],
  "records": [
   {
-   "capsule_id": "82b46c9a39a1cc149aa3c931ad1427aac5105f6192a139a836d759888f5fe889",
+   "capsule_id": "1453294ecdca86aedf65ffb14da8e4dc68c2508bb0759a447d5c50a5c2f78abb",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "85fb702cc810bee8e9f589fdcba133953f97cee552bbf865991737946def674b",
+   "key_id": "32a8877d7493c244267f840aecc8d1c0e819b4df9cc5de52535daa8938ab6f57",
    "seq": null,
    "messages": []
   },
   {
-   "capsule_id": "ee014fe6da658c0125338f71fa2bdda15661dea1903c0b5abf4af849602fda66",
+   "capsule_id": "3e9f022506d560cba97ca4b762c5b6825ab302198c16637db7b28712a93970d2",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "85fb702cc810bee8e9f589fdcba133953f97cee552bbf865991737946def674b",
+   "key_id": "32a8877d7493c244267f840aecc8d1c0e819b4df9cc5de52535daa8938ab6f57",
    "seq": null,
    "messages": []
   },
   {
-   "capsule_id": "fc83e1043bbdf5eca5c5892c3a29e775f745efafbc1f0dd0b2acb79f556109c1",
+   "capsule_id": "6e750bb0406b98b92d26a6cf6727a612eab4e57e873a0550113078430499ebbe",
    "identity_ok": true,
    "signature": "authored",
-   "key_id": "85fb702cc810bee8e9f589fdcba133953f97cee552bbf865991737946def674b",
+   "key_id": "32a8877d7493c244267f840aecc8d1c0e819b4df9cc5de52535daa8938ab6f57",
    "seq": null,
    "messages": []
   }
@@ -72,7 +72,7 @@
  "checkpoint_authenticated": false,
  "signer_matches_checkpoint": null,
  "missing": [],
- "closure_depth": 3,
+ "closure_depth": 2,
  "countersignatures": 0,
  "extensions": [],
  "witness": {

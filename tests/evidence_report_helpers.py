@@ -3,7 +3,7 @@
 libraries only (capsule-emit, checkpointed-local-log); nothing here checks one.
 
 * :func:`exported_bundle`: a node ledger (three sealed records and a checkpoint
-  signed by the node key) written out by ``capsule-emit export --all``, the way
+  signed by the node key) written out by ``capsule-emit bundle --all``, the way
   a producer hands a third party an evidence file.
 * :func:`whole_log_bundle`: a bundle over a whole three-record log with its
   completeness certificate, built as capsule-emit's own ``test_evidence_file``
@@ -61,7 +61,7 @@ class _CheckpointSigner:
 
 
 def exported_bundle(tmp_path: Path) -> tuple[Path, dict]:
-    """``(path, bundle)`` of the evidence file ``capsule-emit export --all`` writes."""
+    """``(path, bundle)`` of the evidence file ``capsule-emit bundle --all`` writes."""
     key = tmp_path / "node-key.pem"
     signer = LocalKeypairSigner(key)
     flat = tmp_path / "flat.jsonl"
@@ -77,8 +77,8 @@ def exported_bundle(tmp_path: Path) -> tuple[Path, dict]:
     (ledger / "capsules.jsonl").write_text("".join(json.dumps(c) + "\n" for c in capsules))
     (ledger / "checkpoints.jsonl").write_text(json.dumps(dataclasses.asdict(cp)) + "\n")
     out = tmp_path / "bundle.json"
-    code = capsule_emit_main(["export", "--all", "--signing-key", str(key), "-o", str(out), str(ledger)])
-    assert code == 0, "capsule-emit export did not write the evidence file"
+    code = capsule_emit_main(["bundle", "--all", "--signing-key", str(key), "-o", str(out), str(ledger)])
+    assert code == 0, "capsule-emit bundle did not write the evidence file"
     return out, json.loads(out.read_text(encoding="utf-8"))
 
 

@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """The Ledger presentation module (``capsuleviewer.ledger/v0``) and its page:
 capsule-emit's ``ledger view --html``, moved here. ``python -m
-capsule_viewer.ledger LEDGER -o OUTPUT.html`` writes the page."""
+capsule_viewer.ledger BUNDLE.json -o OUTPUT.html`` writes the page over an
+evidence file of the ledger, such as ``capsule-emit bundle LEDGER --all``
+writes."""
 from .module import MANIFEST, LedgerModel, LedgerModule, Row, row
-from .page import check_and_render, context_from_check, ledger_bundle, ledger_page, verification_of
+from .page import check_and_render, context_from_check, ledger_page, verification_of
 
 __all__ = [
     "MANIFEST",
@@ -12,7 +14,6 @@ __all__ = [
     "Row",
     "check_and_render",
     "context_from_check",
-    "ledger_bundle",
     "ledger_page",
     "row",
     "verification_of",

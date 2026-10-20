@@ -3,8 +3,9 @@
 ``ledger view --html`` wrote, now under agent-action-capsule's presentation
 contract.
 
-The ledger is first made one evidence file (``evidence-bundle/v2``) over all
-its records, by capsule-emit's own ``permalink.build_bundle``. capsule-emit's
+The page is drawn over an evidence file (``evidence-bundle/v2``) of the
+ledger that its producer made, for example with ``capsule-emit bundle LEDGER
+--all``; the viewer never builds one and holds no key. capsule-emit's
 verifier, ``check_evidence_file``, checks that file; its result becomes the
 page's verification (:func:`verification_of`) and the context the module
 reads, after :func:`~capsule_viewer.evidence_report.bind_result` has shown the
@@ -14,15 +15,15 @@ registry; the module fills only the records, and the shell follows them with
 the verifier's checks.
 
 So the banner is the verifier's verdict, never the module's: VALID shows as
-verified, INCOMPLETE as incomplete (a ledger with no signed checkpoint is not
-tied to any log), and INVALID as the contract's refusal, with the checks that
+verified, INCOMPLETE as incomplete (something the file claims is not proven:
+a file with no signed checkpoint is not tied to any log, and one without a
+range proof does not prove that no record is missing), and INVALID as the contract's refusal, with the checks that
 failed and no record shown. A module that throws, or draws nothing, leaves the
 banner and checks as they were; one that throws shows that the presentation
 failed.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from ..context import VerifiedBundleContext, build_context
@@ -97,18 +98,10 @@ def ledger_page(bundle: Any, check: EvidenceFileCheck, *, source: str = "", dept
     return present(context, registry, audience="*", core_checks=True)
 
 
-def ledger_bundle(records: Sequence[dict]) -> dict:
-    """One evidence file over every record of a ledger, as capsule-emit builds
-    one (its ``permalink.build_bundle``; the root is the last record)."""
-    from capsule_emit.permalink import build_bundle
-
-    return build_bundle(list(records), bundle=True)
-
-
-def check_and_render(records: Sequence[dict], *, source: str = "", depth: str = "L1") -> tuple[EvidenceFileCheck, str]:
-    """The ledger's file, capsule-emit's check of it and the page."""
+def check_and_render(bundle: Any, *, source: str = "", depth: str = "L1") -> tuple[EvidenceFileCheck, str]:
+    """capsule-emit's check of the ledger's evidence file *bundle*, and the
+    page drawn from it."""
     from capsule_emit.evidence_file import check_evidence_file
 
-    bundle = ledger_bundle(records)
     check = check_evidence_file(bundle)
     return check, ledger_page(bundle, check, source=source, depth=depth)

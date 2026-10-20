@@ -3,8 +3,11 @@
 here (its HTML assertions came from capsule-emit's ``test_viewer.py``), under
 agent-action-capsule's presentation contract.
 
-Every ledger is sealed by capsule-emit and every result is capsule-emit's
-``check_evidence_file`` of the ledger's one evidence file.
+Every ledger is sealed by capsule-emit. Its evidence file is the one its
+producer hands over: agent-action-capsule's unproven bundle of every record
+(these ledgers carry no checkpoint), or ``capsule-emit bundle --all``'s for a
+checkpointed log. Every result is capsule-emit's ``check_evidence_file`` of
+that file.
 """
 from __future__ import annotations
 
@@ -16,10 +19,11 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from agent_action_capsule.bundle import build_unproven_bundle
 from capsule_emit import LocalKeypairSigner, seal
 from capsule_emit.evidence_file import check_evidence_file
 from capsule_emit.ledger import read_ledger
-from evidence_report_helpers import frozen_check, no_link_or_script
+from evidence_report_helpers import exported_bundle, frozen_check, no_link_or_script
 
 from capsule_viewer.evidence_report import BundleMismatch
 from capsule_viewer.kit.contract import check_fragment, check_module_renders
@@ -28,7 +32,6 @@ from capsule_viewer.ledger import (
     LedgerModule,
     check_and_render,
     context_from_check,
-    ledger_bundle,
     ledger_page,
     row,
 )
@@ -59,6 +62,16 @@ def ledger(tmp_path) -> Path:
     return path
 
 
+def _bundle(records: list[dict]) -> dict:
+    """The evidence file of a ledger with no checkpoint, as its producer makes
+    one: every record, the last as the root, with no log proof."""
+    return build_unproven_bundle(records, root=records[-1]["capsule_id"])
+
+
+def _file(ledger: Path) -> dict:
+    return _bundle(read_ledger(ledger))
+
+
 def _outcome(page: str) -> str:
     return re.search(r'data-outcome="([a-z_]+)">', page).group(1)
 
@@ -73,7 +86,7 @@ def _rows(page: str) -> int:
 
 def test_every_record_is_a_row_with_its_id_action_and_actor(ledger):
     records = read_ledger(ledger)
-    check, page = check_and_render(records, source="demo.jsonl")
+    check, page = check_and_render(_bundle(records), source="demo.jsonl")
     assert check.verdict == "INCOMPLETE"  # no signed checkpoint: not tied to any log
     assert _outcome(page) == "incomplete"
     assert _rows(page) == 3
@@ -86,7 +99,7 @@ def test_every_record_is_a_row_with_its_id_action_and_actor(ledger):
 
 
 def test_a_refusal_is_marked_and_counted_and_a_normal_record_is_not(ledger):
-    _, page = check_and_render(read_ledger(ledger), source="demo.jsonl")
+    _, page = check_and_render(_file(ledger), source="demo.jsonl")
     assert page.count('data-refusal="true"') == 1 and page.count('data-refusal="false"') == 2
     assert "REFUSED (over-authority)" in page
     assert re.search(r'<dt class="cv-metric__label">Records</dt><dd class="cv-metric__value">3</dd>', page)
@@ -95,7 +108,7 @@ def test_a_refusal_is_marked_and_counted_and_a_normal_record_is_not(ledger):
 
 
 def test_gate_checks_show_with_their_reasons(ledger):
-    _, page = check_and_render(read_ledger(ledger))
+    _, page = check_and_render(_file(ledger))
     assert '<span class="cv-muted" data-gate="pass">✓ AmountUnderCap</span>' in page
     assert '<span class="cv-tone--negative" data-gate="fail">✗ VendorKnown (unknown vendor)</span>' in page
     assert "over cap" in page
@@ -103,7 +116,7 @@ def test_gate_checks_show_with_their_reasons(ledger):
 
 def test_each_records_identity_and_signature_are_the_verifiers(ledger):
     records = read_ledger(ledger)
-    check, page = check_and_render(records)
+    check, page = check_and_render(_bundle(records))
     for record in records:
         assert f"Record {record['capsule_id']}" in page
     assert page.count("intact; signature authored") == 3
@@ -111,25 +124,27 @@ def test_each_records_identity_and_signature_are_the_verifiers(ledger):
 
 
 def test_a_tampered_record_is_the_refusal_with_no_row(ledger):
-    records = read_ledger(ledger)
+    bundle = _file(ledger)
+    records = bundle["records"]
     records[1]["timestamp"] = "1999-01-01T00:00:00Z"
-    check, page = check_and_render(records)
+    check, page = check_and_render(bundle)
     assert check.verdict == "INVALID" and _outcome(page) == "failed"
     assert REFUSAL in page and _rows(page) == 0 and "REFUSED" not in page
     assert f"Record {records[1]['capsule_id']}" in page and "does not match its id" in page
 
 
 def test_a_tampered_signature_is_the_refusal(ledger):
-    records = read_ledger(ledger)
+    bundle = _file(ledger)
+    records = bundle["records"]
     sig = records[0]["signature"]
     records[0]["signature"] = sig[:-4] + ("1111" if sig.endswith("0000") else "0000")
-    check, page = check_and_render(records)
+    check, page = check_and_render(bundle)
     assert check.verdict == "INVALID" and REFUSAL in page and _rows(page) == 0
     assert "producer_signature_invalid:" in page and "signature invalid" in page
 
 
 def test_the_page_is_offline(ledger):
-    _, page = check_and_render(read_ledger(ledger))
+    _, page = check_and_render(_file(ledger))
     csp = re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', page).group(1)
     assert "default-src &#x27;none&#x27;" in csp and "connect-src &#x27;none&#x27;" in csp
     assert not re.search(r"\s(src|href)=|<script|https?://|@import|url\(", page)
@@ -139,20 +154,58 @@ def test_the_page_is_offline(ledger):
 
 
 def test_the_cli_writes_the_page_and_exits_with_the_verdict(ledger, tmp_path, capsys):
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps(_file(ledger)), encoding="utf-8")
     out = tmp_path / "out.html"
-    assert main([str(ledger), "-o", str(out)]) == 2  # INCOMPLETE
+    assert main([str(path), "-o", str(out)]) == 2  # INCOMPLETE
     assert "ledger: INCOMPLETE — wrote 3 record(s)" in capsys.readouterr().out
     page = out.read_text(encoding="utf-8")
     assert _rows(page) == 3 and "AmountUnderCap" in page
 
 
-def test_the_cli_refuses_an_empty_or_missing_ledger(tmp_path, capsys):
-    empty = tmp_path / "empty.jsonl"
-    empty.write_text("")
-    assert main([str(empty), "-o", str(tmp_path / "out.html")]) == 1
-    assert main([str(tmp_path / "absent.jsonl")]) == 1
-    assert "empty or not found" in capsys.readouterr().err
+def test_the_cli_draws_a_bundle_capsule_emit_proved_as_verified(tmp_path, capsys):
+    """``capsule-emit bundle --all`` proves the whole log under its signed
+    checkpoint: the page is verified and the command exits 0."""
+    path, _ = exported_bundle(tmp_path)
+    capsys.readouterr()
+    out = tmp_path / "out.html"
+    assert main([str(path), "-o", str(out)]) == 0  # VALID
+    assert "ledger: VALID — wrote 3 record(s)" in capsys.readouterr().out
+    page = out.read_text(encoding="utf-8")
+    assert _outcome(page) == "verified" and _rows(page) == 3
+    assert "claimed log position" not in page and "log position 1;" in page
+
+
+def test_the_cli_exits_1_on_a_tampered_bundle(ledger, tmp_path):
+    bundle = _file(ledger)
+    bundle["records"][1]["timestamp"] = "1999-01-01T00:00:00Z"
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+    assert main([str(path), "-o", str(tmp_path / "out.html")]) == 1
+
+
+@pytest.mark.parametrize("content, words", [("", "not a readable JSON file"), (None, "not a readable JSON file"),
+                                            ("[]", "not a JSON object")])
+def test_the_cli_refuses_a_file_that_is_not_an_evidence_file(tmp_path, capsys, content, words):
+    path = tmp_path / "bundle.json"
+    if content is not None:
+        path.write_text(content, encoding="utf-8")
+    assert main([str(path), "-o", str(tmp_path / "out.html")]) == 1
+    assert words in capsys.readouterr().err
     assert not (tmp_path / "out.html").exists()
+
+
+@pytest.mark.parametrize("records", [None, 5, "abc", {"a": 1}])
+def test_the_cli_draws_the_refusal_for_malformed_records(tmp_path, capsys, records):
+    """A file whose ``records`` is not a list fails the check; the page still
+    shows that refusal instead of the command crashing."""
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps({"bundle_kind": "evidence-bundle/v2", "bundle_version": "2", "records": records}))
+    out = tmp_path / "out.html"
+    assert main([str(path), "-o", str(out)]) == 1  # INVALID
+    assert "ledger: INVALID — wrote 0 record(s)" in capsys.readouterr().out
+    page = out.read_text(encoding="utf-8")
+    assert _rows(page) == 0
 
 
 # -- the contract --------------------------------------------------------------
@@ -160,14 +213,14 @@ def test_the_cli_refuses_an_empty_or_missing_ledger(tmp_path, capsys):
 
 def test_a_result_for_another_ledger_is_refused(ledger, tmp_path):
     records = read_ledger(ledger)
-    bundle = ledger_bundle(records)
-    other = ledger_bundle(records[:2])
+    bundle = _bundle(records)
+    other = _bundle(records[:2])
     with pytest.raises(BundleMismatch):
         ledger_page(bundle, check_evidence_file(other))
 
 
 def test_a_module_failure_leaves_the_verification_as_it_was(ledger, monkeypatch):
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     check = check_evidence_file(bundle)
     good = ledger_page(bundle, check)
 
@@ -185,7 +238,7 @@ def test_a_module_failure_leaves_the_verification_as_it_was(ledger, monkeypatch)
 def test_an_altered_result_shows_as_altered(ledger):
     """The page shows the verifier's result, not one of its own: a VALID-looking
     result is never upgraded, a failed one never softened."""
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     check = check_evidence_file(bundle)
     failed = dataclasses.replace(check, checks=[*check.checks[:2], dataclasses.replace(check.checks[2], status="fail")])
     assert REFUSAL in ledger_page(bundle, failed)
@@ -193,10 +246,10 @@ def test_an_altered_result_shows_as_altered(ledger):
 
 
 def test_a_valid_result_is_verified_with_every_row(ledger):
-    """A ledger's file carries no signed checkpoint, so capsule-emit calls it
-    INCOMPLETE at best; a VALID result (as for a file built with one) draws
+    """This ledger's file carries no signed checkpoint, so capsule-emit calls
+    it INCOMPLETE at best; a VALID result (as for a file built with one) draws
     as verified, with the rows."""
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     check = check_evidence_file(bundle)
     valid = dataclasses.replace(check, checks=[dataclasses.replace(c, status="pass", findings=()) for c in check.checks])
     assert valid.verdict == "VALID"
@@ -210,21 +263,21 @@ def test_hostile_record_text_and_ledger_name_are_text(tmp_path):
     hostile = '<script>alert(1)</script><a href="javascript:alert(1)">x</a>'
     _seal(path, signer, 0, action="write_po", developer=hostile, operator=hostile,
           extra_compute={"gate_checks": [{"name": hostile, "passed": False, "reason": hostile}]})
-    _, page = check_and_render(read_ledger(path), source=hostile)
+    _, page = check_and_render(_file(path), source=hostile)
     no_link_or_script(page)
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
 
 
 @pytest.mark.parametrize("outcome, gate", [("verified", True), ("incomplete", True), ("failed", False), ("not_checked", False)])
 def test_the_gate_passes_only_a_result_where_nothing_failed(ledger, outcome, gate):
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     context = context_from_check(bundle, check_evidence_file(bundle))
     altered = dataclasses.replace(context, verification=dataclasses.replace(context.verification, outcome=outcome))
     assert altered.verified is gate
 
 
 def test_the_module_conforms_and_its_output_is_on_the_allowlist(ledger):
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     context = context_from_check(bundle, check_evidence_file(bundle))
     fragment = check_module_renders(LedgerModule("demo.jsonl"), context)
     assert check_fragment(fragment) == []
@@ -234,7 +287,7 @@ def test_the_module_conforms_and_its_output_is_on_the_allowlist(ledger):
 
 @pytest.mark.parametrize("depth, rows_open", [("L0", False), ("L1", True), ("L2", True)])
 def test_depth_opens_the_rows_and_never_hides_a_check(ledger, depth, rows_open):
-    check, page = check_and_render(read_ledger(ledger), depth=depth)
+    check, page = check_and_render(_file(ledger), depth=depth)
     assert ('<details class="cv-drilldown" data-cv="drilldown" open>' in page) is rows_open
     assert _rows(page) == 3  # every level is in the document at every depth
     for record in check.records:
@@ -244,14 +297,14 @@ def test_depth_opens_the_rows_and_never_hides_a_check(ledger, depth, rows_open):
 
 
 def test_a_module_that_draws_nothing_still_leaves_the_checks(ledger, monkeypatch):
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     monkeypatch.setattr(LedgerModule, "render", lambda self, model, services: "")
     page = ledger_page(bundle, check_evidence_file(bundle))
     assert "intact; signature authored" in page and _outcome(page) == "incomplete"
 
 
 def test_what_the_file_carries_unchecked_is_listed(ledger):
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     check = dataclasses.replace(
         check_evidence_file(bundle), countersignatures=2, extensions=("x-a",), missing=("ab" * 32,)
     )
@@ -266,7 +319,7 @@ def test_what_the_file_carries_unchecked_is_listed(ledger):
 @pytest.mark.parametrize("membership, words", [("pass", "log position 7;"), ("withheld", "claimed log position 7, not proven"),
                                                 ("fail", "claimed log position 7, not proven")])
 def test_a_log_position_is_claimed_until_membership_is_proven(ledger, membership, words):
-    bundle = ledger_bundle(read_ledger(ledger))
+    bundle = _file(ledger)
     check = check_evidence_file(bundle)
     check = dataclasses.replace(
         check,
@@ -280,9 +333,8 @@ def test_a_log_position_is_claimed_until_membership_is_proven(ledger, membership
 
 
 def test_an_unverified_context_is_never_rendered(ledger):
-    records = read_ledger(ledger)
-    records[0]["operator"] = "edited"
-    bundle = ledger_bundle(records)
+    bundle = _file(ledger)
+    bundle["records"][0]["operator"] = "edited"
     context = context_from_check(bundle, check_evidence_file(bundle))
     assert not context.verified and LedgerModule().canRender(context) is False
     with pytest.raises(ValueError):

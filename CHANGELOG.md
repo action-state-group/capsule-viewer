@@ -10,6 +10,17 @@ here. The format follows
 
 ## Unreleased
 
+### Breaking
+
+- Python `capsule_viewer.ledger`: the page is drawn over an evidence file the
+  ledger's producer wrote, such as `capsule-emit bundle LEDGER --all`; the
+  viewer no longer builds one. `ledger_bundle()` is removed,
+  `check_and_render(bundle, *, source, depth)` takes that bundle instead of
+  the ledger's records, and `python -m capsule_viewer.ledger BUNDLE.json`
+  reads a bundle file instead of a JSONL ledger. Requires capsule-emit 0.12
+  (`capsule-emit>=0.12,<0.13` in the `evidence` and `dev` extras), which
+  removes the `permalink.build_bundle` this used (capsule-emit#338).
+
 ### Fixed
 
 - The outcome report counts the criteria each conversation was judged on
