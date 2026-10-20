@@ -326,10 +326,11 @@ refusals are marked and counted.
   Padding lines (the Mesh-LLM capsules plugin pads before every checkpoint)
   and a `ledger.jsonl`'s checkpoint stamps are leaves too, so with one at or
   below the newest checkpoint the file carries no range proof and reads
-  INCOMPLETE, until agent-action-capsule#339 lets a range cover them. The
-  page shows the records the file carries:
-  with `--all`, every record up to the newest checkpoint, so records appended
-  since then appear once the next checkpoint covers them.
+  INCOMPLETE. agent-action-capsule#339 will let a range cover padding;
+  stamps stay uncovered until a draft defines the stamp record. The page
+  shows the records the file carries: with `--all`, every record up to the
+  newest checkpoint, so records appended since then appear once the next
+  checkpoint covers them.
   `check_and_render(bundle)` runs capsule-emit's `check_evidence_file` on it;
   `ledger_page(bundle, check)` binds that result to the file as the report
   does, builds the context from it, and draws the page through the shell
