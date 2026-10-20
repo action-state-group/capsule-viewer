@@ -8,6 +8,11 @@ evidence_report (0.9.1):
 Each case is a directory holding bundle.json, check.json and page.html, where
 page.html is capsule_emit.evidence_report.render_report_html (or, for a bundle
 with no digest, the page `capsule-emit report` wrote) for that bundle and check.
+
+The exported, tampered-record and no-digest cases were frozen when
+exported_bundle ran `capsule-emit export --all` (tests/evidence_report_helpers.py
+at df334fc). It now runs `capsule-emit bundle --all` (capsule-emit 0.12), which
+0.9.1 does not have, so a rerun takes the helper from that commit.
 """
 import base64
 import dataclasses

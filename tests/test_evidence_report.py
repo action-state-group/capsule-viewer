@@ -61,12 +61,12 @@ def test_a_whole_log_bundle_renders_the_verifiers_valid_result(tmp_path):
 def test_an_exported_bundle_renders_exactly_what_the_verifier_reported(exported):
     path, bundle = exported
     check, page = check_and_render(bundle, source=path.name)
-    # agent-action-capsule 0.7 cannot check a producer-selected interval, so
-    # the verifier withholds it; the page says so rather than claiming VALID.
-    assert check.verdict == "INCOMPLETE"
-    assert _verdict_class(page) == "withheld"
+    # `capsule-emit bundle --all` proves the whole log, seq 1 to the
+    # checkpoint tip, so every check passes, interval coverage included.
+    assert check.verdict == "VALID"
+    assert _verdict_class(page) == "pass"
     statuses = {c.name: c.status for c in check.checks}
-    assert statuses["interval_coverage"] == "withheld"
+    assert statuses["interval_coverage"] == "pass"
     for c in check.checks:
         assert f'<li class="{c.status}">' in page and html.escape(c.plain) in page
     assert "example-org/node-1" in page
@@ -187,9 +187,9 @@ def test_the_page_is_offline_and_escapes_what_it_shows(exported):
 def test_the_cli_writes_the_page_and_exits_with_the_verifiers_verdict(exported, tmp_path, capsys):
     path, _ = exported
     out = tmp_path / "report.html"
-    assert main([str(path), "-o", str(out)]) == 2  # INCOMPLETE, as capsule-emit exits
-    assert "report: INCOMPLETE" in capsys.readouterr().out
-    assert _verdict_class(out.read_text(encoding="utf-8")) == "withheld"
+    assert main([str(path), "-o", str(out)]) == 0  # VALID, as capsule-emit exits
+    assert "report: VALID" in capsys.readouterr().out
+    assert _verdict_class(out.read_text(encoding="utf-8")) == "pass"
     tampered = tmp_path / "tampered.json"
     tampered.write_text(json.dumps(_tamper(json.loads(path.read_text()))))
     assert main([str(tampered), "-o", str(out)]) == 1

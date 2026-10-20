@@ -269,8 +269,12 @@ renderer is byte-identical to capsule-emit main `35b2b42`). `freeze.py` there
 is the script that wrote them, kept as their provenance: it needs a
 capsule-emit checkout for the `_stub_receipt` test helper and the
 `test-vectors/evidence-file` vector, and a capsule-emit that still ships
-`evidence_report`. The `witnessed` case also carries the witness directory
-its receipt checks under.
+`evidence_report`. The `exported`, `tampered-record` and `no-digest` cases
+come from `capsule-emit export --all`, which the shared
+`tests/evidence_report_helpers.py` ran at `df334fc`; the helper now runs
+`capsule-emit bundle --all`, so a rerun takes it from that commit. The
+`witnessed` case also carries the witness directory its receipt checks under.
 
 `ledger/<case>/` holds the Ledger page's own goldens, written by
-`ledger/freeze.py` with this package.
+`ledger/freeze.py` with this package over agent-action-capsule's unproven
+bundle of each ledger.
