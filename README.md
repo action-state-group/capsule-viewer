@@ -321,7 +321,12 @@ refusals are marked and counted.
   producer makes the file (`evidence-bundle/v2`), for example `capsule-emit
   bundle LEDGER --all -o bundle.json`, which proves every record under the
   log's signed checkpoint (and refuses a log with none); this package never
-  builds one and holds no key. The page shows the records the file carries:
+  builds one and holds no key. That file reads VALID only when every leaf up
+  to the checkpoint is a record, as in a mesh ledger directory. A
+  `ledger.jsonl`'s checkpoint stamps are leaves too, so once a stamp lies
+  below its newest checkpoint the file carries no range proof and reads
+  INCOMPLETE, until agent-action-capsule#339 lets a range cover them. The
+  page shows the records the file carries:
   with `--all`, every record up to the newest checkpoint, so records appended
   since then appear once the next checkpoint covers them.
   `check_and_render(bundle)` runs capsule-emit's `check_evidence_file` on it;
