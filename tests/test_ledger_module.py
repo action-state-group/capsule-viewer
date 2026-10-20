@@ -195,6 +195,19 @@ def test_the_cli_refuses_a_file_that_is_not_an_evidence_file(tmp_path, capsys, c
     assert not (tmp_path / "out.html").exists()
 
 
+@pytest.mark.parametrize("records", [None, 5, "abc", {"a": 1}])
+def test_the_cli_draws_the_refusal_for_malformed_records(tmp_path, capsys, records):
+    """A file whose ``records`` is not a list fails the check; the page still
+    shows that refusal instead of the command crashing."""
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps({"bundle_kind": "evidence-bundle/v2", "bundle_version": "2", "records": records}))
+    out = tmp_path / "out.html"
+    assert main([str(path), "-o", str(out)]) == 1  # INVALID
+    assert "ledger: INVALID — wrote 0 record(s)" in capsys.readouterr().out
+    page = out.read_text(encoding="utf-8")
+    assert _rows(page) == 0
+
+
 # -- the contract --------------------------------------------------------------
 
 

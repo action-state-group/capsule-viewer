@@ -15,8 +15,9 @@ registry; the module fills only the records, and the shell follows them with
 the verifier's checks.
 
 So the banner is the verifier's verdict, never the module's: VALID shows as
-verified, INCOMPLETE as incomplete (a file with no signed checkpoint is not
-tied to any log), and INVALID as the contract's refusal, with the checks that
+verified, INCOMPLETE as incomplete (something the file claims is not proven:
+a file with no signed checkpoint is not tied to any log, and one without a
+range proof does not prove that no record is missing), and INVALID as the contract's refusal, with the checks that
 failed and no record shown. A module that throws, or draws nothing, leaves the
 banner and checks as they were; one that throws shows that the presentation
 failed.

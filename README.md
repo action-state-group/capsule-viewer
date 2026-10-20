@@ -313,23 +313,28 @@ It exits as `capsule-emit verify --bundle` does: 0 VALID, 2 INCOMPLETE,
 ## Ledger module (`capsuleviewer.ledger/v0`)
 
 `capsule_viewer.ledger` is the page capsule-emit's `ledger view --html` wrote:
-every record of a capsule ledger as one row, with the actor's lineage label, the
-verdict, the effect, the chain label, each gate check and the time; refusals
-are marked and counted.
+every record of a ledger's evidence file as one row, with the actor's lineage
+label, the verdict, the effect, the chain label, each gate check and the time;
+refusals are marked and counted.
 
 - **The page is drawn over the ledger's evidence file.** The ledger's
   producer makes the file (`evidence-bundle/v2`), for example `capsule-emit
   bundle LEDGER --all -o bundle.json`, which proves every record under the
   log's signed checkpoint (and refuses a log with none); this package never
-  builds one and holds no key.
+  builds one and holds no key. The page shows the records the file carries:
+  with `--all`, every record up to the newest checkpoint, so records appended
+  since then appear once the next checkpoint covers them.
   `check_and_render(bundle)` runs capsule-emit's `check_evidence_file` on it;
   `ledger_page(bundle, check)` binds that result to the file as the report
   does, builds the context from it, and draws the page through the shell
   (`capsule_viewer.shell.present`) with the module resolved from its
   manifest.
 - **The banner is the verifier's verdict.** VALID shows as verified,
-  INCOMPLETE as incomplete (the kit's `incomplete` outcome: a file with no
-  signed checkpoint is not tied to any committed log), INVALID as the
+  INCOMPLETE as incomplete (the kit's `incomplete` outcome: something the
+  file claims is not proven; a file with no signed checkpoint is not tied to
+  any committed log, and a `--all` file whose log has a leaf that is not a
+  record, such as an earlier checkpoint stamp, proves each record alone but
+  not that none is missing), INVALID as the
   contract's refusal with the failing checks and no row. The shell follows the
   module with the verifier's checks on every path (`present(...,
   core_checks=True)`): every check, the witness check, what the file carries

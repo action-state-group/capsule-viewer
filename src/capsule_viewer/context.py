@@ -141,9 +141,12 @@ def build_context(
     own = freeze(copy.deepcopy(dict(bundle)))
     if not isinstance(own, Mapping):
         raise TypeError("bundle must be a JSON object")
+    # A malformed file's records may be anything; the verifier has already
+    # failed it, and the page still shows that result, so read no records.
+    carried = own.get("records")
     records = tuple(
         record["capsule_id"]
-        for record in own.get("records", ())
+        for record in (carried if isinstance(carried, tuple) else ())
         if isinstance(record, Mapping) and isinstance(record.get("capsule_id"), str)
     )
     supplied = own.get("disclosures")
