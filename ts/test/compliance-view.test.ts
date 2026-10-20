@@ -412,3 +412,137 @@ it("a test or obligation with no result at all never falls through to a pass wor
     text: "Could not be checked",
   });
 });
+
+// ---------------------------------------------------------------------------
+// dating: the obligations card dates a session the way the outcome card does
+// (a backfilled case record by its source's own time, labelled "source
+// says"), never by the day its reports were sealed alone
+// ---------------------------------------------------------------------------
+
+/** Cites one case record per conversation, as the outcome card's tests do. */
+function withCaseRecords(
+  source: Obj,
+  fields: (conversationId: string, index: number) => Obj,
+): void {
+  const result = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const records = source.records as Obj[];
+  const root = records.find((r) => r.capsule_id === "result")!;
+  const references = root.references as Obj[] | undefined;
+  const seen = new Map<string, string>();
+  for (const claim of result.claims as Obj[]) {
+    const id = claim.id as string;
+    const sep = id.indexOf("::");
+    if (sep === -1) continue;
+    const conversationId = id.slice(0, sep);
+    let alias = seen.get(conversationId);
+    if (alias === undefined) {
+      alias = `case:${conversationId}`;
+      seen.set(conversationId, alias);
+      records.push({
+        capsule_id: alias,
+        ...fields(conversationId, seen.size - 1),
+      });
+      references?.push({
+        type: "agent-action-capsule",
+        citation_purpose: "acted_on",
+        digest: alias,
+      });
+    }
+    (claim.evidence as Obj[]).push({ digest_alg: "SHA-256", digest: alias });
+  }
+  for (const entry of Object.values(source.disclosures as Obj)) {
+    const input = (entry as Obj).agent_input as Obj | undefined;
+    if (input !== undefined && typeof input.case_id === "string")
+      input.source_capsule_id = `case:${input.case_id}`;
+  }
+}
+
+const BACKFILLED = (sourceAssertedAt: string): Obj => ({
+  timestamp: "2026-10-20T10:00:00Z",
+  provenance_mode: {
+    mode: "backfilled",
+    source_ref: {
+      type: "tau2-simulation",
+      digest_alg: "SHA-256",
+      digest: "0".repeat(64),
+    },
+    source_asserted_at: sourceAssertedAt,
+    import_batch: "tau2-airline-replay-2025-09",
+    imported_at: "2026-10-20T10:00:00Z",
+    time_rung: "self_attested",
+  },
+});
+
+/** The first session's level-2 proofs, opened, and the report's proofs, opened. */
+function datingParts(root: HTMLElement): {
+  header: string;
+  sessionProofs: HTMLElement;
+  method: HTMLElement;
+} {
+  expand(root);
+  const session = root.querySelector<HTMLElement>("article[data-session]")!;
+  const sessionProofs = open(session.querySelector('details[data-level="2"]')!);
+  const reportProofs = open(
+    root.querySelector(
+      '[data-section="report-proofs"] details[data-level="2"]',
+    )!,
+  );
+  return {
+    header: root.querySelector(".sub")!.textContent!,
+    sessionProofs,
+    method: reportProofs.querySelector<HTMLElement>(
+      '[data-section="methodology"]',
+    )!,
+  };
+}
+
+it("dating: a backfilled session is dated by its source's own time, labelled 'source says', with the import and sealed days beside it", async () => {
+  const { bundle } = await sealedComplianceBundle((source) =>
+    withCaseRecords(source, (_, i) =>
+      BACKFILLED(`2025-09-0${i + 3}T16:06:37Z`),
+    ),
+  );
+  const root = await render(bundle);
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const { header, sessionProofs, method } = datingParts(root);
+  // the header's period is the sessions' own dates, never "judged" on them
+  expect(header).toMatch(/ · 2025-09-03( – 2025-09-0\d)?$/);
+  expect(header).not.toContain("judged 2025");
+  const dated = sessionProofs.querySelector<HTMLElement>("[data-dated]")!;
+  expect(dated.dataset.dated).toBe("source");
+  expect(dated.textContent).toMatch(
+    /^2025-09-0\dT16:06:37Z: source says \(backfilled record; the source's own timestamp, self-attested\)$/,
+  );
+  expect(sessionProofs.querySelector("[data-imported]")!.textContent).toBe(
+    "2026-10-20T10:00:00Z",
+  );
+  expect(sessionProofs.querySelector("[data-sealed]")!.textContent).toBe(
+    "2026-09-23",
+  );
+  expect(method.querySelector("[data-period]")!.textContent).toMatch(
+    /^2025-09-03( – 2025-09-0\d)?$/,
+  );
+  expect(method.querySelector("[data-sealed]")!.textContent).toBe("2026-09-23");
+  const note = method.querySelector<HTMLElement>("[data-date-note]")!;
+  expect(note.dataset.dateNote).toBe("source");
+  expect(note.textContent).toContain(
+    'Dates are the source\'s own timestamps for backfilled records ("source says")',
+  );
+  expect(note.textContent).toContain(
+    "self-attested: carrying it does not make it witnessed",
+  );
+});
+
+it("dating: with no case record cited, a session keeps the day its reports were sealed under and the page adds no date note", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const root = await render(bundle);
+  const { header, sessionProofs, method } = datingParts(root);
+  expect(header).toMatch(/ · judged 2026-09-23$/);
+  expect(sessionProofs.querySelector("[data-dated]")).toBeNull();
+  expect(sessionProofs.querySelector("[data-sealed]")!.textContent).toBe(
+    "2026-09-23",
+  );
+  expect(method.querySelector("[data-period]")!.textContent).toBe("2026-09-23");
+  expect(method.querySelector("[data-sealed]")).toBeNull();
+  expect(method.querySelector("[data-date-note]")).toBeNull();
+});

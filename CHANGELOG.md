@@ -78,6 +78,14 @@ here. The format follows
   Ported from agent-action-capsule#323. The Go emitter's CSP hash for
   `OUTCOME_REPORT_CSS` (`go/emitter/runtime-style-hashes.txt`) follows, so a
   page whose runtime carries the new stylesheet is not blocked.
+- The EU AI Act obligations card dates each session by its cited case record,
+  as the outcome card does, instead of by the day its reports were sealed: a
+  backfilled record by its `source_asserted_at` ("source says",
+  self-attested), with the import time and sealed day in the session's proofs;
+  a plain record by its own timestamp; otherwise the sealed day. The header
+  says "judged" only for sealed days, and What ran shows the period, the
+  sealed days and the outcome card's dating note. Ported from
+  agent-action-capsule#193. No style changes, so no CSP hash moves.
 
 ## ts 0.1.0 and go 0.1.0 (2026-10-16)
 

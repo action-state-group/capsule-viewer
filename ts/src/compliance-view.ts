@@ -12,6 +12,7 @@ import {
 } from "./compliance.js";
 import type { CompliancePresentation } from "./compliance-presentation.js";
 import { COMPLIANCE_CSS } from "./compliance-styles.js";
+import { BASIS_TEXT, datingStatement, span } from "./outcome-report-view.js";
 import { NOT_STATED } from "@action-state-group/agent-action-capsule";
 import {
   caseParts,
@@ -186,7 +187,7 @@ function renderHeader(host: HTMLElement, model: ComplianceModel): void {
     el(
       "div",
       "sub",
-      `${pack} · ${plural(model.obligations.length, "obligation", "obligations")} · ${plural(model.totalSessions, "session", "sessions")}${period === undefined ? "" : ` · judged ${period}`}`,
+      `${pack} · ${plural(model.obligations.length, "obligation", "obligations")} · ${plural(model.totalSessions, "session", "sessions")}${period === undefined ? "" : model.dating.basis === "judged" ? ` · judged ${period}` : ` · ${period}`}`,
     ),
   );
   host.append(hd);
@@ -575,16 +576,41 @@ function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
   const names = testNames(model);
   const box = el("div", "pf-b");
   box.dataset.proofsFor = session.conversationId;
-  const rows: [string, string][] = [
-    ["Session", session.conversationId],
-    ["Judged on", session.day],
+  // Which date the session is counted under, verbatim, beside the sealed day:
+  // the outcome card's rule, so a backfilled session never reads as if it
+  // happened on the day it was sealed.
+  const dated = session.dated;
+  const dating: [string, string, Record<string, string>][] =
+    dated.basis === "judged"
+      ? []
+      : [
+          [
+            "Dated",
+            `${dated.stated ?? dated.date}${dated.zone === "not-stated" ? " (timezone not stated)" : ""}: ${BASIS_TEXT[dated.basis]}`,
+            { dated: dated.basis },
+          ],
+          ...(dated.importedAt === undefined
+            ? []
+            : [
+                ["Imported", dated.importedAt, { imported: "" }] as [
+                  string,
+                  string,
+                  Record<string, string>,
+                ],
+              ]),
+        ];
+  const rows: ([string, string] | [string, string, Record<string, string>])[] =
     [
-      "Case record",
-      session.sourceCapsuleId === undefined
-        ? "not stated by the reports"
-        : `${session.sourceCapsuleId}${session.caseFrom === "claims" ? " (cited by every claim of this session; the reports that name it are withheld)" : ""}`,
-    ],
-  ];
+      ["Session", session.conversationId],
+      ...dating,
+      ["Judged and sealed", session.judgedDay, { sealed: "" }],
+      [
+        "Case record",
+        session.sourceCapsuleId === undefined
+          ? "not stated by the reports"
+          : `${session.sourceCapsuleId}${session.caseFrom === "claims" ? " (cited by every claim of this session; the reports that name it are withheld)" : ""}`,
+      ],
+    ];
   const t = session.transcript;
   if (t.state === "verified") {
     rows.push(["Transcript record", t.transcriptRecordId!]);
@@ -802,10 +828,34 @@ function renderWhatRan(host: HTMLElement, model: ComplianceModel): void {
     ],
     ["Judge pin digest", pinText(model)],
     ["Sessions", fmt(model.totalSessions)],
+    ...(model.dating.from === undefined || model.dating.to === undefined
+      ? []
+      : [
+          [
+            "Period",
+            span([model.dating.from, model.dating.to]),
+            { period: "" },
+          ] as [string, string, Record<string, string>],
+        ]),
+    ...(model.dating.basis === "judged"
+      ? []
+      : [
+          ["Sealed", span(model.dating.judgedDays), { sealed: "" }] as [
+            string,
+            string,
+            Record<string, string>,
+          ],
+        ]),
     ["Result capsule", model.capsuleId],
   ]);
   dl.dataset.ran = "true";
   part.append(dl);
+  const note = datingStatement(model.dating, model.totalSessions);
+  if (note !== undefined) {
+    const p = el("p", "na", note);
+    p.dataset.dateNote = model.dating.basis;
+    part.append(p);
+  }
   host.append(part);
 }
 
