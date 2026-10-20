@@ -322,9 +322,10 @@ refusals are marked and counted.
   bundle LEDGER --all -o bundle.json`, which proves every record under the
   log's signed checkpoint (and refuses a log with none); this package never
   builds one and holds no key. That file reads VALID only when every leaf up
-  to the checkpoint is a record, as in a mesh ledger directory. A
-  `ledger.jsonl`'s checkpoint stamps are leaves too, so once a stamp lies
-  below its newest checkpoint the file carries no range proof and reads
+  to the checkpoint is a record, as in an unpadded mesh ledger directory.
+  Padding lines (the Mesh-LLM capsules plugin pads before every checkpoint)
+  and a `ledger.jsonl`'s checkpoint stamps are leaves too, so with one at or
+  below the newest checkpoint the file carries no range proof and reads
   INCOMPLETE, until agent-action-capsule#339 lets a range cover them. The
   page shows the records the file carries:
   with `--all`, every record up to the newest checkpoint, so records appended
@@ -338,9 +339,9 @@ refusals are marked and counted.
   INCOMPLETE as incomplete (the kit's `incomplete` outcome: something the
   file claims is not proven; a file with no signed checkpoint is not tied to
   any committed log, and a `--all` file whose log has a leaf that is not a
-  record, such as an earlier checkpoint stamp, proves each record alone but
-  not that none is missing), INVALID as the
-  contract's refusal with the failing checks and no row. The shell follows the
+  record, such as a padding line or an earlier checkpoint stamp, proves each
+  record alone but not that none is missing), INVALID as the contract's
+  refusal with the failing checks and no row. The shell follows the
   module with the verifier's checks on every path (`present(...,
   core_checks=True)`): every check, the witness check, what the file carries
   unchecked, and each record's log position, identity and signature. The
