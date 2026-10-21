@@ -383,7 +383,7 @@ it("a pack entry must carry exactly the placeholders of the entry it replaces: a
     "lines.drill.show.other uses {}; it must use exactly {n}",
   );
   expect(problems.join("\n")).toContain("lines.share uses {count}");
-  expect(problems.join("\n")).toContain("prov.of uses {count} {extra} {total}");
+  expect(problems.join("\n")).toContain("prov.of uses {count} {total} {extra}");
 });
 
 it("a pack cannot fold two verdicts into one word, or change the grouping", () => {
@@ -403,16 +403,24 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
       { id: "test/read@1", locale: "en", entries },
       DEFAULT_PACKS.lines,
     ).join("\n");
-  // case, spacing and invisible characters do not make two words
+  // case, spacing and punctuation do not make two words
   expect(check({ "verdict.not_met": "Met" })).toMatch(/read alike/u);
-  expect(check({ "verdict.not_met": " met\u200b " })).toMatch(/read alike/u);
-  expect(check({ "verdict.not_met": "\u200b" })).toContain(
+  expect(check({ "verdict.not_met": " (met). " })).toMatch(/read alike/u);
+  expect(check({ "verdict.not_met": "..." })).toContain(
     "verdict.not_met has no visible word",
   );
   expect(check({ "verdict.not_met": "m\u0435t" })).toContain(
     "verdict.not_met mixes Latin, Greek and Cyrillic letters",
   );
-  expect(check({ "verdict.not_met": "met\u2060" })).toMatch(/read alike/u);
+  // bidi and other invisible format controls are refused outright, not
+  // merely stripped for the comparison: the checked string and the
+  // rendered string must be the same string.
+  expect(check({ "verdict.not_met": " met\u200b " })).toContain(
+    "verdict.not_met carries a bidi or other invisible format character",
+  );
+  expect(check({ "verdict.not_met": "\u202etem\u202c" })).toContain(
+    "verdict.not_met carries a bidi or other invisible format character",
+  );
   // met and not met swapped: no word is shared, and still refused
   const swapped = check({ "verdict.met": "not met", "verdict.not_met": "met" });
   expect(swapped).toContain(

@@ -115,9 +115,14 @@ export async function checkWordingPackInput(
   return readWordingPack(parsed);
 }
 
-/** The `{placeholders}` an entry uses, sorted and de-duplicated. */
+/**
+ * Every `{placeholder}` `text` uses, in the order it uses them, repeats and
+ * all: a count and a denominator in one entry are two placeholders, not one,
+ * and a replacement that reorders or drops a repeat changes what the
+ * sentence can say with them.
+ */
 export function placeholders(text: string): string[] {
-  return [...new Set([...text.matchAll(PLACEHOLDER)].map((m) => m[1]!))].sort();
+  return [...text.matchAll(PLACEHOLDER)].map((m) => m[1]!);
 }
 
 // ---------------------------------------------------------------------------
@@ -324,15 +329,19 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.vd.note",
 ]);
 
+/** Bidi and other invisible format controls: refused outright, never merely stripped for comparison, so the string this module checks is the string the browser renders. */
+const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+
 /**
- * A word as a reader tells it apart: compatibility forms folded, invisible
- * format characters dropped, whitespace collapsed, case ignored. "Met",
- * "met " and "met" with a zero-width space are one word to a reader.
+ * A word as a reader tells it apart: compatibility forms folded, whitespace
+ * collapsed, case ignored, punctuation and symbols dropped. "Met", "met " and
+ * "(met)." are one word to a reader; "✓ met" reads as "met" too, not as a
+ * decorated word distinct from it.
  */
 function asRead(word: string): string {
   return word
     .normalize("NFKC")
-    .replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "")
+    .replace(/[\p{P}\p{S}]/gu, "")
     .replace(/\s+/gu, " ")
     .trim()
     .toLowerCase();
@@ -362,6 +371,10 @@ export function wordingProblems(
 ): string[] {
   const problems: string[] = [];
   for (const [key, text] of Object.entries(pack.entries)) {
+    if (INVISIBLE.test(text))
+      problems.push(
+        `${key} carries a bidi or other invisible format character, never only stripped for a check: refused outright`,
+      );
     if (!Object.hasOwn(defaults.entries, key)) continue;
     const base = defaults.entries[key]!;
     if (LOCKED_ENTRIES.has(key)) {
