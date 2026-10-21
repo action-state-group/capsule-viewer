@@ -499,17 +499,22 @@ export function verifierLine(
   const ran =
     build === null
       ? w.t("prov.verifier.ran.not-stated")
-      : w.t(`prov.verifier.ran${build.cllVersion === undefined ? "" : ".cll"}`, {
-          viewer: build.viewer,
-          viewerVersion: build.viewerVersion,
-          commit:
-            build.commit === undefined
-              ? w.t("prov.verifier.commit.not-stated")
-              : build.commit,
-          verifier: build.verifier,
-          verifierVersion: build.verifierVersion,
-          ...(build.cllVersion === undefined ? {} : { cll: build.cllVersion }),
-        });
+      : w.t(
+          `prov.verifier.ran${build.cllVersion === undefined ? "" : ".cll"}`,
+          {
+            viewer: build.viewer,
+            viewerVersion: build.viewerVersion,
+            commit:
+              build.commit === undefined
+                ? w.t("prov.verifier.commit.not-stated")
+                : build.commit,
+            verifier: build.verifier,
+            verifierVersion: build.verifierVersion,
+            ...(build.cllVersion === undefined
+              ? {}
+              : { cll: build.cllVersion }),
+          },
+        );
   const report =
     isObject(bundle) && isObject(bundle.verification)
       ? bundle.verification
