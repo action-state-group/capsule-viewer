@@ -195,11 +195,15 @@ export function judgedOf(
  * rule nobody could decide: "inconclusive" when a judge ran and could not
  * decide, "not checked" when none ran, "could not decide (report withheld)"
  * when the bundle withholds the report that would say which, and "could not
- * decide (report not readable)" when the report is supplied but cannot be
- * read as sealed -- never "withheld" for a report that is in the bundle. A
- * failed or unsupported claim reads the same on both word sets: it failed
- * verification, or its evidence is missing, in the neutral tone; it is
- * neither "not met" nor "not checked", since its verdict was never drawn.
+ * decide (report not available)" when a judge's report is cited but this
+ * bundle does not carry a readable copy of it (mismatched, unreadable,
+ * invalid, or simply not carried) -- never "withheld" for a report that is
+ * in the bundle, and never "not readable", which would claim more than some
+ * of those states show (a report this bundle never carried was never
+ * supplied to call unreadable). A failed or unsupported claim reads the
+ * same on both word sets: it failed verification, or its evidence is
+ * missing, in the neutral tone; it is neither "not met" nor "not checked",
+ * since its verdict was never drawn.
  */
 export function ruleWord(
   verdict: RuleVerdict,
@@ -237,7 +241,7 @@ export function ruleWord(
           ? { word: "not checked", tone: "ne" }
           : judged === "withheld"
             ? { word: "could not decide (report withheld)", tone: "ne" }
-            : { word: "could not decide (report not readable)", tone: "ne" };
+            : { word: "could not decide (report not available)", tone: "ne" };
   }
 }
 

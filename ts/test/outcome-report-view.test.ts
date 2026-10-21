@@ -5,7 +5,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
-import { conversationStatus } from "../src/outcome-report-view.js";
+import {
+  conversationStatus,
+  groupMissedReasons,
+  statusWord,
+} from "../src/outcome-report-view.js";
 import { jsonDigest } from "@action-state-group/agent-action-capsule";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -1529,6 +1533,43 @@ it("a conversation with no rule result is undecided, never 'no rule applied'", (
       criteria: [],
     } as unknown as Parameters<typeof conversationStatus>[0]),
   ).toBe("undecided");
+});
+
+it("a conversation with no not_evaluable criterion to point to says the plain 'could not decide', on both word sets, never a report-specific claim", () => {
+  const conversation = {
+    criteria: [],
+  } as unknown as Parameters<typeof statusWord>[1];
+  expect(statusWord("undecided", conversation, false)).toEqual({
+    word: "could not decide",
+    tone: "ne",
+  });
+  expect(statusWord("undecided", conversation, true)).toEqual({
+    word: "could not decide",
+    tone: "ne",
+  });
+});
+
+it("a conversation missed for c2's not_met is filed under c2, never under c1's earlier failed criterion", () => {
+  const terms = {
+    checks: [
+      { id: "c1", question: "Q1", criteria: [{ id: "a", label: "A" }] },
+      { id: "c2", question: "Q2", criteria: [{ id: "b", label: "B" }] },
+    ],
+    reasonCodes: {},
+  } as unknown as Parameters<typeof groupMissedReasons>[1];
+  const conversation = {
+    conversationId: "conv-1",
+    verdict: "not_met",
+    criteria: [
+      { checkId: "c1", criterionId: "a", verdict: "failed" },
+      { checkId: "c2", criterionId: "b", verdict: "not_met" },
+    ],
+  } as unknown as Parameters<typeof groupMissedReasons>[0][number];
+  const groups = groupMissedReasons([conversation], terms);
+  expect(groups).toHaveLength(1);
+  expect(groups[0]!.key).toBe("c2.b");
+  expect(groups[0]!.label).toBe("B (Q2)");
+  expect(groups[0]!.conversations).toEqual([conversation]);
 });
 
 /** Sets every claim of the conversations `pick` selects to `verdict`, with sufficiency and presentation status taken from a claim already sealed that way, and rebuilds the buckets. */

@@ -10,7 +10,7 @@ import { levelCss } from "./report-levels.js";
 
 export const COMPLIANCE_CSS =
   `
-.cc{--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;
+.cc{--navy:#232F42;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;
   font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;display:block;max-width:1080px;margin:26px auto;padding:0 28px}
 .cc *{box-sizing:border-box}
 .cc h1,.cc h2,.cc h3{font-family:Georgia,"Iowan Old Style",Cambria,serif;color:var(--navy);margin:0}
@@ -35,7 +35,7 @@ export const COMPLIANCE_CSS =
 .cc .tx code{font-size:12px;color:var(--slate)}
 .cc .hd .na{color:var(--ink)}
 .cc .st{font-weight:700;font-size:13px}
-.cc .st.ok{color:var(--ok)}.cc .st.exc{color:var(--bad)}.cc .st.ne{color:#8A93A6}.cc .st.future{color:var(--gold)}
+.cc .st.ok{color:var(--ok)}.cc .st.exc{color:var(--bad)}.cc .st.ne{color:#8A93A6}
 .cc .fnd{border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:12px}
 .cc .fnd .fh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .cc .fnd .fh b{color:var(--navy)}

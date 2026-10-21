@@ -291,7 +291,7 @@ function ladderOn(): boolean {
   return LADDER_WORDS;
 }
 
-function statusWord(
+export function statusWord(
   status: ConversationStatus,
   conversation: Conversation,
   ladder: boolean,
@@ -318,12 +318,16 @@ function statusWord(
   if (judged.includes("yes")) return { word: "inconclusive", tone: "ne" };
   if (judged.length > 0 && judged.every((j) => j === "no"))
     return { word: "not checked", tone: "ne" };
+  // No rule result at all for this conversation (no not_evaluable criterion
+  // to point to a report state): the plain word set's own bare "could not
+  // decide", never a report-specific claim this conversation's records
+  // don't support.
+  if (judged.length === 0) return { word: "could not decide", tone: "ne" };
   // "withheld" only when every report that would say is withheld; a report
   // in the bundle that cannot be read as sealed is never called withheld.
-  return judged.length > 0 &&
-    judged.every((j) => j === "withheld" || j === "no")
+  return judged.every((j) => j === "withheld" || j === "no")
     ? { word: "could not decide (report withheld)", tone: "ne" }
-    : { word: "could not decide (report not readable)", tone: "ne" };
+    : { word: "could not decide (report not available)", tone: "ne" };
 }
 
 function criterionWord(c: DrawnCriterion, ladder: boolean): Worded {
@@ -818,6 +822,66 @@ function conversationsDrill(
   );
 }
 
+/** A criterion's label for a missed-reason group, from the terms; the id itself when the terms don't name it. */
+function missedReasonLabel(
+  terms: OutcomeReportModel["terms"],
+  checkId: string,
+  criterionId: string,
+): string {
+  const check = terms.checks.find((c) => c.id === checkId);
+  const criterion = check?.criteria.find((c) => c.id === criterionId);
+  return criterion === undefined
+    ? `${checkId}.${criterionId}`
+    : `${criterion.label} (${check.question})`;
+}
+
+/**
+ * Group missed conversations by THIS view's own reason: the first criterion
+ * where `isMiss` is true -- never AAC's `missedReasonGroups`, whose notion of
+ * "missed" still includes `failed`/`unsupported` (0.5.0's `missedReasonGroups`
+ * picks the first not_met/failed/unsupported criterion in criteria order, so
+ * a conversation with [c1 failed, c2 not_met] files under c1, though this
+ * view counts it missed only for c2's sake -- see `isMiss`, `isUnverified`).
+ * A reason is the producer's sealed reason code when the terms give it a
+ * label (`terms.reasonCodes`), else the first rule not met; a raw code is
+ * never shown.
+ */
+export function groupMissedReasons(
+  missed: readonly Conversation[],
+  terms: OutcomeReportModel["terms"],
+): readonly MissedReasonGroup[] {
+  const labelledReasonCode = (code: string | undefined): string | undefined =>
+    code === undefined ? undefined : terms.reasonCodes[code];
+  const groups = new Map<string, Conversation[]>();
+  const structured = new Map<string, boolean>();
+  const labels = new Map<string, string>();
+  for (const conversation of missed) {
+    const first = conversation.criteria.find((c) => isMiss(c.verdict));
+    if (first === undefined) continue;
+    const label = labelledReasonCode(first.reasonCode);
+    const key =
+      label !== undefined
+        ? first.reasonCode!
+        : `${first.checkId}.${first.criterionId}`;
+    const list = groups.get(key) ?? [];
+    list.push(conversation);
+    groups.set(key, list);
+    structured.set(key, label !== undefined);
+    labels.set(
+      key,
+      label ?? missedReasonLabel(terms, first.checkId, first.criterionId),
+    );
+  }
+  return [...groups.entries()]
+    .map(([key, conversations]) => ({
+      key,
+      label: labels.get(key)!,
+      structured: structured.get(key)!,
+      conversations,
+    }))
+    .sort((a, b) => b.conversations.length - a.conversations.length);
+}
+
 /**
  * The missed line's toggle: why conversations missed, then the missed
  * conversations under each reason, in place. A reason is the producer's
@@ -832,15 +896,7 @@ function whyMissed(
 ): HTMLElement {
   const box = el("div", "why-missed");
   box.dataset.section = "why-missed";
-  const missedIds = new Set(missed.map((c) => c.conversationId));
-  const groups = model.missedReasons
-    .map((g) => ({
-      ...g,
-      conversations: g.conversations.filter((c) =>
-        missedIds.has(c.conversationId),
-      ),
-    }))
-    .filter((g) => g.conversations.length > 0);
+  const groups = groupMissedReasons(missed, model.terms);
   box.dataset.reasons = String(groups.length);
   box.append(el("h5", "", "Why conversations missed"));
   const table = element("table");

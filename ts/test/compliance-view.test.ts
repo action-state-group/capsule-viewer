@@ -483,6 +483,15 @@ it("'No exceptions' in the ok tone only when every test was met by some session:
   });
 });
 
+it("a test every session failed is an exception, not 'could not be checked': metCount===0 alone never means unchecked", () => {
+  const allNotMet = row({ criterionId: "x.a", notMetCount: 2 });
+  const met = row({ criterionId: "x.b", metCount: 1 });
+  expect(obligationStatus(obligationOf([allNotMet, met]))).toEqual({
+    cls: "exc",
+    text: "2 exceptions",
+  });
+});
+
 it("a claim that failed verification or whose evidence is missing is never an exception, and never lets a test read clean in the ok tone", () => {
   const unverifiedOnly = row({ unverifiedCount: 2 });
   for (const ladder of [false, true]) {

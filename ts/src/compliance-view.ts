@@ -236,7 +236,7 @@ export function obligationStatus(obligation: ObligationModel): {
   text: string;
 } {
   const exceptions = obligation.rows.reduce((sum, r) => sum + r.notMetCount, 0);
-  const unchecked = obligation.rows.filter((r) => r.metCount === 0).length;
+  const unchecked = obligation.rows.filter((r) => noneDecided(r)).length;
   const unverified = obligation.rows.reduce(
     (sum, r) => sum + r.unverifiedCount,
     0,
