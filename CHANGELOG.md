@@ -37,7 +37,9 @@ here. The format follows
     Placeholder entries and entries that cannot be read are counted, never
     named as witnesses. Then the checkpoint's log id, size and root, and
     whether this page could check its signature.
-  - **Verified by:** this page's code, by package name and version, with the
+  - **Verified by:** this page's code, by package name and version, at the
+    commit the build was made from (the first 12 hex characters), or
+    "commit not stated" when the build didn't supply one, with the
     verifier and its version (`ts/src/viewer-build.ts`, held to the
     installed packages by a test and by the page runtime build), and the
     tool that built the bundle as the bundle's own report names it, which

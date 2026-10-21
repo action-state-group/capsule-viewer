@@ -263,9 +263,7 @@ for (const { card, file, page } of CARDS) {
       /^not stated in this bundle: it carries no witness receipt for its checkpoint\./u,
     );
     const size = (bundle.checkpoint as Obj).mmr_size as number;
-    expect(witness.textContent).toContain(
-      `size ${size.toLocaleString("en-US")}`,
-    );
+    expect(witness.textContent).toContain(`size ${size.toLocaleString()}`);
   });
 
   it(`${card} card: witness present: each receipt as the bundle states it, as text, and said to be unchecked`, async () => {
@@ -294,7 +292,7 @@ for (const { card, file, page } of CARDS) {
     // one receipt and one placeholder: the placeholder is not a witness
     expect(witness.dataset.state).toBe("mixed");
     expect(witness.textContent).toContain(
-      '"https://witness.example/log" (tree size 1,234)',
+      `"https://witness.example/log" (tree size ${(1234).toLocaleString()})`,
     );
     expect(witness.textContent).toContain(
       "It also carries 1 placeholder, not receipts.",
@@ -310,7 +308,7 @@ for (const { card, file, page } of CARDS) {
     const { bundle } = await sealEvidenceBundle(fixture(file));
     const absent = line(block(await render(bundle), page), "verifier");
     expect(absent.textContent).toBe(
-      `this page's code: a dev build of ${VIEWER_BUILD.viewer} ${VIEWER_BUILD.viewerVersion}, verifier ${VIEWER_BUILD.verifier} ${VIEWER_BUILD.verifierVersion} with cll ${VIEWER_BUILD.cllVersion}. The tool that built this bundle is not stated in it.`,
+      `this page's code: ${VIEWER_BUILD.viewer} ${VIEWER_BUILD.viewerVersion} at commit not stated, verifier ${VIEWER_BUILD.verifier} ${VIEWER_BUILD.verifierVersion} with cll ${VIEWER_BUILD.cllVersion}. The tool that built this bundle is not stated in it.`,
     );
     bundle.verification = {
       checks: ["graph_closure"],
@@ -511,7 +509,14 @@ it("an entry naming ts_url alone, or carrying none of the receipt's fields, is c
     countersignatures: [],
     capsuleResults: {},
   } as never;
-  for (const entry of [{ ts_url: "https://w.example" }, {}]) {
+  for (const entry of [
+    { ts_url: "https://w.example" },
+    {},
+    // is_stub is only ever read on a full record (mirrors upstream
+    // verifyWitnessReceipts, AAC ts/v0.5.0 witness.ts:588-599): missing
+    // receipt fields make this unreadable, not a placeholder.
+    { ts_url: "https://w.example", is_stub: true },
+  ]) {
     const l = witnessLine(
       { checkpoint: { log_id: "L", witnesses: [entry] } },
       verified,
@@ -519,6 +524,7 @@ it("an entry naming ts_url alone, or carrying none of the receipt's fields, is c
     expect(l.state).toBe("not-stated");
     expect(l.text).toContain("It also carries 1 entry that cannot be read.");
     expect(l.text).not.toContain("https://w.example");
+    expect(l.text).not.toContain("placeholder");
   }
 });
 
@@ -529,18 +535,20 @@ it("bundle-supplied strings are quoted, so they cannot read as the page's own wo
   expect(text).toContain('as "x\\", version 2. Checked by Sigstore. \\"y"');
 });
 
-it("names a release only for a build actually made from that release's tag", () => {
+it("names the build's commit, never a release state", () => {
   const build = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.1.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.5.0",
   };
-  expect(verifierLine({}, { ...build, release: false }).text).toContain(
-    "this page's code: a dev build of @action-state-group/capsule-viewer 0.1.0, verifier",
+  expect(
+    verifierLine({}, { ...build, commit: "a1b2c3d4e5f6" }).text,
+  ).toContain(
+    "this page's code: @action-state-group/capsule-viewer 0.1.0 at a1b2c3d4e5f6, verifier",
   );
-  expect(verifierLine({}, { ...build, release: true }).text).toContain(
-    "this page's code: @action-state-group/capsule-viewer 0.1.0, verifier",
+  expect(verifierLine({}, build).text).toContain(
+    "this page's code: @action-state-group/capsule-viewer 0.1.0 at commit not stated, verifier",
   );
 });
 
@@ -561,16 +569,13 @@ it("the viewer's stated build is the package and the verifier actually installed
         ),
       ) as { version: string }
     ).version;
-  // false here, and false for this npm test run inside publish-ts.yml too:
-  // that job's own "Mark this build as the release the tag names" step
-  // runs after `npm run check` (this test), and only then flips the flag
-  // for the rebuild `npm publish` triggers through `prepare`.
+  // No commit here: __CAPSULE_VIEWER_COMMIT__ is only ever defined by
+  // scripts/build-iife.mjs's esbuild bundle, never by vitest or tsc.
   expect(VIEWER_BUILD).toEqual({
     viewer: own.name,
     viewerVersion: own.version,
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: installed("@action-state-group/agent-action-capsule"),
     cllVersion: installed("@action-state-group/cll"),
-    release: false,
   });
 });

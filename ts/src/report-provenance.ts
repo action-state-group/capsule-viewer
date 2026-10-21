@@ -58,7 +58,7 @@ export interface JudgeTally {
   readonly withheld: number;
   /** Reports supplied but not matching their commitment, not an object, or whose capsule is missing or does not check out (`reportState` mismatch, unreadable, invalid). */
   readonly unread: number;
-  /** Disclosed reports from a checker (`checker_ref`) rather than a judge, by checker. */
+  /** Recomputed (`recomputed_determination`) reports that name a checker (`checker_ref`), by checker; a bare `checker_ref` alone no longer puts a report here. */
   readonly checkers: readonly {
     readonly ref: string;
     readonly count: number;
@@ -363,11 +363,12 @@ function isReceipt(
 function witnessEntries(checkpoint: unknown): WitnessEntry[] {
   if (!isObject(checkpoint) || !Array.isArray(checkpoint.witnesses)) return [];
   return checkpoint.witnesses.map((w: unknown): WitnessEntry => {
-    // A stub is a declared placeholder, not a claimed receipt: it is never
-    // "malformed", whatever other fields it happens to carry.
-    if (isObject(w) && w.is_stub === true)
-      return { stub: true, malformed: false };
+    // Mirrors upstream verifyWitnessReceipts (AAC ts/v0.5.0 witness.ts:588-599):
+    // isReceipt (its isRecord) runs first, and is_stub is only ever checked
+    // on a full record. A stub is a declared placeholder on an otherwise
+    // complete record, never a licence to omit the other receipt fields.
     if (!isReceipt(w)) return { stub: false, malformed: true };
+    if (w.is_stub === true) return { stub: true, malformed: false };
     const size = w.tree_size;
     return {
       url: w.ts_url,
@@ -450,10 +451,8 @@ export function verifierLine(
   const ran =
     build === null
       ? `this page's code; its viewer and verifier versions are ${NOT_STATED}`
-      : `this page's code: ${
-          build.release
-            ? `${build.viewer} ${build.viewerVersion}`
-            : `a dev build of ${build.viewer} ${build.viewerVersion}`
+      : `this page's code: ${build.viewer} ${build.viewerVersion} at ${
+          build.commit === undefined ? `commit ${NOT_STATED}` : build.commit
         }, verifier ${build.verifier} ${build.verifierVersion}${build.cllVersion === undefined ? "" : ` with cll ${build.cllVersion}`}`;
   const report =
     isObject(bundle) && isObject(bundle.verification)

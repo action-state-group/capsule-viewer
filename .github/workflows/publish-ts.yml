@@ -65,18 +65,6 @@ jobs:
           grep -q E404 view-error.txt || { cat view-error.txt >&2; exit 1; }
       - run: npm ci
       - run: npm run check
-      - name: Mark this build as the release the tag names
-        # After the check, not before: npm test's VIEWER_BUILD fixture
-        # holds `release: false`, the honest state for every build up to
-        # and including this one's own test run. Only this job checks out
-        # the exact ts/v<version> tag, and only now, right before the
-        # `npm publish` below re-triggers `npm run build` through the
-        # package's `prepare` script, does the artifact that actually
-        # ships need `release: true` baked in. src/viewer-build.ts stays
-        # `release: false` in source control; every other build -- a
-        # branch, a pull request, a local checkout -- says so.
-        run: |
-          sed -i 's/release: false,/release: true,/' src/viewer-build.ts
       - name: Choose the dist-tag
         # npm refuses a prerelease without an explicit dist-tag, and `latest`
         # must never move backward: a stable version older than npm's current

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Bundles src/browser.ts as dist/evidence-graph.iife.js, the in-browser
 // renderer an emitted page runs (`npm run emitter:iife`).
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,11 +33,27 @@ for (const [field, actual] of [
     );
 }
 
+// The "Verified by" line names the exact commit this build was made from,
+// never a release flag. Only this build step can state it: tsc's ESM
+// output (dist/) has no step like this one, so it reads VIEWER_BUILD.commit
+// as not stated.
+const commitSha = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: tsRoot,
+  encoding: "utf8",
+}).trim();
+if (!/^[0-9a-f]{40}$/u.test(commitSha))
+  throw new Error(
+    `git rev-parse HEAD did not return a 40-hex commit sha: ${JSON.stringify(commitSha)}`,
+  );
+
 await build({
   entryPoints: ["src/browser.ts"],
   bundle: true,
   format: "iife",
   globalName: "EvidenceGraph",
+  define: {
+    __CAPSULE_VIEWER_COMMIT__: JSON.stringify(commitSha),
+  },
   footer: {
     js: "globalThis.renderEvidenceGraph = EvidenceGraph.renderEvidenceGraph;",
   },

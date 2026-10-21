@@ -16,16 +16,34 @@ export interface ViewerBuild {
   readonly verifierVersion: string;
   readonly cllVersion?: string;
   /**
-   * Whether this exact build was made from the ts/v<viewerVersion> release
-   * tag, so the "Verified by" line can say so only when it is actually
-   * true. False here in source control; .github/workflows/publish-ts.yml
-   * flips it to true as a build step, only in the job that checks out that
-   * tag to publish it. Every other build -- including this file read
-   * as-is, and CI's own `ts` job on a branch or pull request -- is a dev
-   * build of viewerVersion, not that release.
+   * The first 12 hex characters of the commit this exact build was made
+   * from, when the build supplied one; undefined when none did, so the
+   * "Verified by" line says the commit is not stated. Never a release
+   * flag: the line names what the build actually was.
    */
-  readonly release: boolean;
+  readonly commit?: string;
 }
+
+/**
+ * esbuild's `define` for __CAPSULE_VIEWER_COMMIT__ (scripts/build-iife.mjs)
+ * is the only source of this value; it is declared here only so tsc accepts
+ * the reference. tsc's own ESM output (dist/) never defines it, so every
+ * read goes behind `typeof ... === "string"`, which is safe on an
+ * undeclared global.
+ */
+declare const __CAPSULE_VIEWER_COMMIT__: string;
+
+const COMMIT_SHA = /^[0-9a-f]{40}$/u;
+
+/** The 12-hex prefix of a build-supplied commit; undefined for anything else, including a value that isn't a full 40-hex sha. */
+function builtCommit(): string | undefined {
+  if (typeof __CAPSULE_VIEWER_COMMIT__ !== "string") return undefined;
+  return COMMIT_SHA.test(__CAPSULE_VIEWER_COMMIT__)
+    ? __CAPSULE_VIEWER_COMMIT__.slice(0, 12)
+    : undefined;
+}
+
+const commit = builtCommit();
 
 export const VIEWER_BUILD: ViewerBuild = {
   viewer: "@action-state-group/capsule-viewer",
@@ -33,5 +51,5 @@ export const VIEWER_BUILD: ViewerBuild = {
   verifier: "@action-state-group/agent-action-capsule",
   verifierVersion: "0.5.0",
   cllVersion: "0.2.1",
-  release: false,
+  ...(commit === undefined ? {} : { commit }),
 };
