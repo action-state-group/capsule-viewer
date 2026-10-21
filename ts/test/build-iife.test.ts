@@ -29,7 +29,10 @@ function freshRepo(): string {
   git(dir, ["config", "user.name", "Test"]);
   writeFileSync(join(dir, "tracked.txt"), "committed\n");
   git(dir, ["add", "tracked.txt"]);
-  git(dir, ["commit", "--quiet", "-m", "initial"]);
+  // Signing is irrelevant to this scratch repo and must not depend on the
+  // ambient git config (a machine with commit.gpgsign=true would otherwise
+  // fail this commit for reasons that have nothing to do with the test).
+  git(dir, ["commit", "--quiet", "--no-gpg-sign", "-m", "initial"]);
   return dir;
 }
 
