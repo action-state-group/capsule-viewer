@@ -162,14 +162,17 @@ export async function tallyJudges(
       pins.set(digest, entry);
       continue;
     }
-    const checker = asString(payload?.checker_ref);
-    if (checker !== undefined) {
-      checkers.set(checker, (checkers.get(checker) ?? 0) + 1);
+    // "Recomputed" is a claim about epistemic_type, not about carrying a
+    // checker_ref: a checker_ref on a semantic_judgment report would
+    // otherwise contradict the card's own tier for the same claim.
+    if (asString(payload?.epistemic_type) === "recomputed_determination") {
+      const checker = asString(payload?.checker_ref);
+      if (checker !== undefined)
+        checkers.set(checker, (checkers.get(checker) ?? 0) + 1);
+      else recomputedUnnamed += 1;
       continue;
     }
-    if (asString(payload?.epistemic_type) === "recomputed_determination")
-      recomputedUnnamed += 1;
-    else unnamed += 1;
+    unnamed += 1;
   }
   const counted: JudgePinCount[] = [];
   for (const [digest, entry] of pins) {
@@ -232,8 +235,20 @@ const fmt = (n: number): string => n.toLocaleString("en-US");
 /** A bundle-supplied string, quoted and capped, so it can never read as this page's own words. */
 const quoted = (value: string): string =>
   JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}…` : value);
+const HEX_DIGEST = /^[0-9a-f]+$/iu;
+/**
+ * The short form, but only for a value shaped like a hex digest: both
+ * pin.digest and checkpoint.root are bundle-supplied, and truncating
+ * anything else as though it were a digest would print it as this page's
+ * own text (e.g. the string "VERIFIED BY ") instead of quoting it as the
+ * bundle's.
+ */
 const short = (digest: string): string =>
-  digest.length > 12 ? `${digest.slice(0, 12)}…` : digest;
+  HEX_DIGEST.test(digest)
+    ? digest.length > 12
+      ? `${digest.slice(0, 12)}…`
+      : digest
+    : quoted(digest);
 
 /** "Judged by", from the tally alone. */
 export function judgeLine(tally: JudgeTally): ProvenanceLine {
@@ -314,18 +329,45 @@ interface WitnessEntry {
   readonly malformed: boolean;
 }
 
+/**
+ * Mirrors agent-action-capsule's witness.ts isRecord/RECORD_FIELDS (ts/v0.5.0;
+ * neither is exported from the package, so this is a local copy): an entry
+ * is a receipt only when it has every one of these fields, not merely when
+ * it is some object.
+ */
+const RECEIPT_FIELDS = [
+  "ts_url",
+  "entry_hash",
+  "receipt_b64",
+  "leaf_index",
+  "tree_size",
+] as const;
+
+function isReceipt(
+  value: unknown,
+): value is ObjectValue & { readonly ts_url: string } {
+  return (
+    isObject(value) &&
+    typeof value.ts_url === "string" &&
+    RECEIPT_FIELDS.every((name) => Object.hasOwn(value, name))
+  );
+}
+
 function witnessEntries(checkpoint: unknown): WitnessEntry[] {
   if (!isObject(checkpoint) || !Array.isArray(checkpoint.witnesses)) return [];
   return checkpoint.witnesses.map((w: unknown): WitnessEntry => {
-    if (!isObject(w)) return { stub: false, malformed: true };
-    const url = asString(w.ts_url);
+    // A stub is a declared placeholder, not a claimed receipt: it is never
+    // "malformed", whatever other fields it happens to carry.
+    if (isObject(w) && w.is_stub === true)
+      return { stub: true, malformed: false };
+    if (!isReceipt(w)) return { stub: false, malformed: true };
     const size = w.tree_size;
     return {
-      ...(url === undefined ? {} : { url }),
+      url: w.ts_url,
       ...(typeof size === "number" && Number.isSafeInteger(size)
         ? { treeSize: size }
         : {}),
-      stub: w.is_stub === true,
+      stub: false,
       malformed: false,
     };
   });
@@ -401,7 +443,11 @@ export function verifierLine(
   const ran =
     build === null
       ? `this page's code; its viewer and verifier versions are ${NOT_STATED}`
-      : `this page's code: ${build.viewer} ${build.viewerVersion}, verifier ${build.verifier} ${build.verifierVersion}${build.cllVersion === undefined ? "" : ` with cll ${build.cllVersion}`}`;
+      : `this page's code: ${
+          build.release
+            ? `${build.viewer} ${build.viewerVersion}`
+            : `a dev build of ${build.viewer} ${build.viewerVersion}`
+        }, verifier ${build.verifier} ${build.verifierVersion}${build.cllVersion === undefined ? "" : ` with cll ${build.cllVersion}`}`;
   const report =
     isObject(bundle) && isObject(bundle.verification)
       ? bundle.verification

@@ -15,6 +15,16 @@ export interface ViewerBuild {
   readonly verifier: string;
   readonly verifierVersion: string;
   readonly cllVersion?: string;
+  /**
+   * Whether this exact build was made from the ts/v<viewerVersion> release
+   * tag, so the "Verified by" line can say so only when it is actually
+   * true. False here in source control; .github/workflows/publish-ts.yml
+   * flips it to true as a build step, only in the job that checks out that
+   * tag to publish it. Every other build -- including this file read
+   * as-is, and CI's own `ts` job on a branch or pull request -- is a dev
+   * build of viewerVersion, not that release.
+   */
+  readonly release: boolean;
 }
 
 export const VIEWER_BUILD: ViewerBuild = {
@@ -23,4 +33,5 @@ export const VIEWER_BUILD: ViewerBuild = {
   verifier: "@action-state-group/agent-action-capsule",
   verifierVersion: "0.5.0",
   cllVersion: "0.2.1",
+  release: false,
 };

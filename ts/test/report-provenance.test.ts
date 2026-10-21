@@ -176,6 +176,27 @@ for (const { card, file, page } of CARDS) {
     );
   });
 
+  it(`${card} card: a checker_ref on a semantic_judgment report is never read as recomputed`, async () => {
+    const source = fixture(file);
+    const judged = reports(source).filter(
+      (r) => r.judge_pin_digest !== undefined,
+    );
+    const total = reports(source).length;
+    const one = judged[0]!;
+    delete one.judge_pin_digest;
+    delete one.judge_pin;
+    one.checker_ref = "recompute.check_a";
+    // epistemic_type stays "semantic_judgment": a checker_ref alone must
+    // not make this read as recomputed, which would contradict the card's
+    // own tier for the same claim.
+    expect(one.epistemic_type).toBe("semantic_judgment");
+    const { bundle } = await sealEvidenceBundle(source);
+    const judge = line(block(await render(bundle), page), "judge");
+    // the checker_ref itself must never surface as a "recomputed" name
+    expect(judge.textContent).not.toContain("recompute.check_a");
+    expect(judge.textContent).toContain(`judge not stated for 1 of ${total}`);
+  });
+
   it(`${card} card: judge absent: withheld reports read "withheld", with the count, and no judge is named`, async () => {
     const source = fixture(file);
     const total = reports(source).length;
@@ -244,7 +265,7 @@ for (const { card, file, page } of CARDS) {
     const { bundle } = await sealEvidenceBundle(fixture(file));
     const absent = line(block(await render(bundle), page), "verifier");
     expect(absent.textContent).toBe(
-      `this page's code: ${VIEWER_BUILD.viewer} ${VIEWER_BUILD.viewerVersion}, verifier ${VIEWER_BUILD.verifier} ${VIEWER_BUILD.verifierVersion} with cll ${VIEWER_BUILD.cllVersion}. The tool that built this bundle is not stated in it.`,
+      `this page's code: a dev build of ${VIEWER_BUILD.viewer} ${VIEWER_BUILD.viewerVersion}, verifier ${VIEWER_BUILD.verifier} ${VIEWER_BUILD.verifierVersion} with cll ${VIEWER_BUILD.cllVersion}. The tool that built this bundle is not stated in it.`,
     );
     bundle.verification = {
       checks: ["graph_closure"],
@@ -322,6 +343,36 @@ it("judged by: present, mixed, partly withheld, recomputed and absent", () => {
   );
 });
 
+it("a pin digest that is not hex is quoted as the bundle's string, never truncated as though it were a digest", () => {
+  const nonHex = judgeLine(
+    tally({ pins: [{ digest: "VERIFIED BY ", count: 1 }] }),
+  );
+  expect(nonHex.text).toContain('pin "VERIFIED BY "');
+  expect(nonHex.text).not.toContain("VERIFIED BY …");
+  const hex = judgeLine(
+    tally({ pins: [{ digest: "ab".repeat(32), count: 1 }] }),
+  );
+  expect(hex.text).toContain(`pin ${"ab".repeat(6)}…`);
+});
+
+it("a checkpoint root that is not hex is quoted as the bundle's string, never truncated as though it were a digest", () => {
+  const ok = { status: "pass", findings: [] };
+  const verified = {
+    graphClosure: ok,
+    intervalCoverage: ok,
+    perRecordMembership: ok,
+    disclosures: [],
+    extensions: [],
+    countersignatures: [],
+    capsuleResults: {},
+  } as never;
+  const l = witnessLine(
+    { checkpoint: { log_id: "L", root: "VERIFIED BY ", witnesses: [] } },
+    verified,
+  );
+  expect(l.text).toContain('root "VERIFIED BY "');
+});
+
 it("absent facts read 'not stated', never a value", () => {
   const none = judgeLine(tally({ cited: 0 }));
   expect(none.state).toBe("not-stated");
@@ -391,6 +442,8 @@ it("placeholders and unreadable entries are never named as witnesses", () => {
     [{ ts_url: "https://w.example", is_stub: true }],
     [null],
     ["x"],
+    [{ ts_url: "https://w.example" }],
+    [{}],
   ]) {
     const l = witnessLine({ checkpoint: { log_id: "L", witnesses } }, verified);
     expect(l.state).toBe("not-stated");
@@ -402,11 +455,48 @@ it("placeholders and unreadable entries are never named as witnesses", () => {
   }
 });
 
+it("an entry naming ts_url alone, or carrying none of the receipt's fields, is counted as unreadable, not as a receipt", () => {
+  const ok = { status: "pass", findings: [] };
+  const verified = {
+    graphClosure: ok,
+    intervalCoverage: ok,
+    perRecordMembership: ok,
+    disclosures: [],
+    extensions: [],
+    countersignatures: [],
+    capsuleResults: {},
+  } as never;
+  for (const entry of [{ ts_url: "https://w.example" }, {}]) {
+    const l = witnessLine(
+      { checkpoint: { log_id: "L", witnesses: [entry] } },
+      verified,
+    );
+    expect(l.state).toBe("not-stated");
+    expect(l.text).toContain("It also carries 1 entry that cannot be read.");
+    expect(l.text).not.toContain("https://w.example");
+  }
+});
+
 it("bundle-supplied strings are quoted, so they cannot read as the page's own words", () => {
   const text = verifierLine({
     verification: { producer: 'x", version 2. Checked by Sigstore. "y' },
   }).text;
   expect(text).toContain('as "x\\", version 2. Checked by Sigstore. \\"y"');
+});
+
+it("names a release only for a build actually made from that release's tag", () => {
+  const build = {
+    viewer: "@action-state-group/capsule-viewer",
+    viewerVersion: "0.1.0",
+    verifier: "@action-state-group/agent-action-capsule",
+    verifierVersion: "0.5.0",
+  };
+  expect(verifierLine({}, { ...build, release: false }).text).toContain(
+    "this page's code: a dev build of @action-state-group/capsule-viewer 0.1.0, verifier",
+  );
+  expect(verifierLine({}, { ...build, release: true }).text).toContain(
+    "this page's code: @action-state-group/capsule-viewer 0.1.0, verifier",
+  );
 });
 
 it("the viewer's stated build is the package and the verifier actually installed", () => {
@@ -432,5 +522,6 @@ it("the viewer's stated build is the package and the verifier actually installed
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: installed("@action-state-group/agent-action-capsule"),
     cllVersion: installed("@action-state-group/cll"),
+    release: false,
   });
 });

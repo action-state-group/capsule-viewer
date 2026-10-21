@@ -63,6 +63,13 @@ jobs:
             exit 1
           fi
           grep -q E404 view-error.txt || { cat view-error.txt >&2; exit 1; }
+      - name: Mark this build as the release the tag names
+        # Only this job checks out the exact ts/v<version> tag to build
+        # what gets published; src/viewer-build.ts stays `release: false`
+        # in source control so every other build (a branch, a pull
+        # request, a local checkout) says so on its "Verified by" line.
+        run: |
+          sed -i 's/release: false,/release: true,/' src/viewer-build.ts
       - run: npm ci
       - run: npm run check
       - name: Choose the dist-tag
