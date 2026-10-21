@@ -352,18 +352,25 @@ function countWord(n: number, w: Words): string {
 function unverifiedClause(
   model: OutcomeReportModel,
   list: readonly DrawnCriterion[],
+  w: Words,
   lower = false,
 ): string {
   const failed = list.filter((c) => c.verdict === "failed");
   const unsupported = list.filter((c) => c.verdict === "unsupported");
   const parts: string[] = [];
   if (failed.length > 0)
-    parts.push(`the claim for ${names(model, failed)} failed verification`);
+    parts.push(
+      w.t("lines.sentence.unverified.failed", {
+        names: names(model, failed),
+      }),
+    );
   if (unsupported.length > 0)
     parts.push(
-      `the evidence cited for ${names(model, unsupported)} is not in this bundle`,
+      w.t("lines.sentence.unverified.unsupported", {
+        names: names(model, unsupported),
+      }),
     );
-  const text = `${parts.join(", and ")}, so the records do not say whether ${list.length === 1 ? "that rule was" : "those rules were"} met.`;
+  const text = `${parts.join(", and ")}, so the records do not say whether ${w.p("lines.word.that-rule-was", list.length)} met.`;
   return lower ? text : text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -382,7 +389,7 @@ function resultSentence(
   const naText =
     na > 0 ? ` ${w.t("lines.sentence.na", { n: String(na) })}` : "";
   const unverifiedText =
-    unverified.length > 0 ? ` ${unverifiedClause(model, unverified)}` : "";
+    unverified.length > 0 ? ` ${unverifiedClause(model, unverified, w)}` : "";
   switch (conversationStatus(conversation)) {
     case "resolved":
       return `${w.p("lines.sentence.resolved", applied.length, { n: String(applied.length) })}${naText}`;
@@ -396,7 +403,7 @@ function resultSentence(
       })}${unverifiedText}${naText}`;
     case "unverified":
       return `${w.t("lines.sentence.unverified", {
-        clause: unverifiedClause(model, unverified, true),
+        clause: unverifiedClause(model, unverified, w, true),
         undecidedNote:
           undecided.length > 0
             ? w.t("lines.sentence.unverified.undecided-note", {
@@ -1310,7 +1317,7 @@ function renderRules(
     c.criteria.some((cr) => isUnverified(cr.verdict)),
   );
   if (anyUnverified)
-    headRow.append(el("th", "n", "failed verification or evidence missing"));
+    headRow.append(el("th", "n", w.t("lines.rules.col.unverified")));
   const columns = anyUnverified ? "6" : "5";
   thead.append(headRow);
   table.append(thead);
