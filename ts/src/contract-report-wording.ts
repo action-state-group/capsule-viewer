@@ -195,6 +195,34 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "lines.tier.mixed",
     "lines.tier.unknown",
   ],
+  // The Outcomes headline row labels.
+  [
+    "lines.line.resolved",
+    "lines.line.missed",
+    "lines.line.undecided",
+    "lines.line.unverified",
+    "lines.line.held",
+    "lines.line.added",
+  ],
+  // An obligation's summary pill (EU card): "could not be checked" must
+  // never read as "no exceptions" or the reverse.
+  [
+    "groups.ob.unchecked",
+    ["groups.ob.ok", "groups.ob.ok.found", "groups.ob.ok.unverified"],
+  ],
+  // A test row's summary pill (EU card).
+  [
+    "groups.row.nothing",
+    "groups.row.none-decided",
+    ["groups.row.ok", "groups.row.ok.all-decided"],
+  ],
+  // A session's pill inside a test's drill-down (EU card).
+  [
+    "groups.session.ok",
+    "groups.session.undecided",
+    "groups.session.unverified",
+    "groups.session.none",
+  ],
 ];
 
 /**
@@ -295,6 +323,11 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.no-note.invalid",
   "lines.no-note.none",
   "lines.line.unverified.help",
+  "lines.line.resolved.help",
+  "lines.line.missed.help",
+  "lines.line.undecided.help",
+  "lines.line.held.help",
+  "lines.line.added.help",
   "lines.gap.wording.mixed",
   "lines.gap.wording.none",
   "lines.pf.case-record.from-claims",
@@ -304,8 +337,10 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pf.not-cited",
   "lines.pf.derived",
   "lines.pf.sealed-rationale",
+  "lines.pf.recompute",
   "lines.pin.differs",
   "lines.pin.not-stated",
+  "lines.why-missed.structured",
   "lines.why-missed.unstructured",
   "lines.stamp",
   "lines.stamp.small",
@@ -322,19 +357,32 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.rp.tamper",
   "lines.cal.source-says",
   "lines.cal.tz",
+  "lines.cal.lede.dated",
+  "lines.cal.sealed",
+  "lines.tier.mixed",
+  "lines.meta.what-checked.text",
+  "lines.na-note.one",
+  "lines.na-note.other",
+  "lines.sentence.undecided.none",
+  "lines.why.undecided.none",
+  "lines.sentence.nothing-applied",
+  "lines.note.not-applicable",
   // The EU AI Act Results.
   "groups.producer.title",
   "groups.tier.unstated",
   "groups.tier.judged.title",
   "groups.tier.recomputed.title",
+  "groups.tier.mixed",
   "groups.pack.not-stated",
   "groups.row.nothing",
   "groups.summary.basis",
+  "groups.summary.lede",
   "groups.pf.case-record.from-claims",
   "groups.pf.no-claim",
   "groups.pf.rationale",
   "groups.pf.absent",
   "groups.pin.none",
+  "groups.pin.differs",
   "groups.od.mapped",
   "groups.od.unmapped",
   "groups.od.wording.sealed",
@@ -342,6 +390,8 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.od.wording.unstated",
   "groups.q.none",
   "groups.q.unspecified",
+  "groups.q.tail",
+  "groups.ran.contract.differs",
   "groups.vd.note",
 ]);
 

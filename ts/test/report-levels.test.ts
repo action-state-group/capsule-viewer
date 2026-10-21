@@ -311,7 +311,7 @@ it("the judge's synthesized rationale reads as how sure it was; any other note i
       "not_met",
       W,
     ),
-  ).toBe("The judge was 78% sure.");
+  ).toBe("The judge gave this verdict a probability of 78%.");
   expect(
     judgeNote(
       "first assistant turn is the runner's greeting",
@@ -319,7 +319,7 @@ it("the judge's synthesized rationale reads as how sure it was; any other note i
       W,
     ),
   ).toBe("first assistant turn is the runner's greeting");
-  // an exponent is not a probability: never "120% sure"
+  // an exponent is not a probability: never "a probability of 120%"
   const exponent = "jev choice: met (probabilities={'met': 1.2e2}).";
   expect(judgeNote(exponent, "met", W)).toBe(exponent);
   // the verdict is looked up as the parse's own key, never on the prototype

@@ -206,7 +206,7 @@ it("the front says witnessed by as stated by the bundle, not checked here (SEAMS
 // producer's text reads like. Every default entry that reads like this must
 // be locked, so a new honesty line cannot ship tunable by accident.
 const HONESTY =
-  /not checked|does not check|did not check|not evidence|not a sealed record|withheld|not stated|not shown|not in this bundle|this page|this card|as sealed|\(sealed\)|self-attested|as given|recomputed|absent|unknown|uncomputable|no signature|placeholder/iu;
+  /not (?:be )?checked|does not check|did not check|not evidence|not a sealed record|withheld|not stated|not shown|not in this bundle|this page|this card|as sealed|\(sealed\)|self-attested|as given|recomputed|absent|unknown|uncomputable|no signature|placeholder/iu;
 
 it("every locked line is a default entry, and every default line that states what the page checked is locked", () => {
   const all = {
@@ -218,10 +218,16 @@ it("every locked line is a default entry, and every default line that states wha
   const unlocked = Object.entries(all)
     .filter(([k, v]) => HONESTY.test(v) && !LOCKED_ENTRIES.has(k))
     .map(([k]) => k);
-  // The tier's name and the quality-sampling note: words about the method,
-  // which a pack may tune, not the page's account of its own checking.
+  // The tier's name (a word about the method, which a pack may tune, not
+  // the page's own account of its checking) and the EU card's "could not
+  // be checked" family: these are DISTINCT-protected instead of locked, so
+  // a legitimate style (the grade ladder's "Not checked or inconclusive")
+  // can still rephrase them without a pack being able to fold them into
+  // "no exceptions" and read clean.
   expect(unlocked.sort()).toEqual([
-    "groups.q.tail",
+    "groups.ob.unchecked",
+    "groups.ob.unchecked-of",
+    "groups.row.none-decided",
     "groups.tier.recomputed",
     "lines.tier.recomputed",
   ]);

@@ -111,7 +111,7 @@
     "status.undecided.none": "could not decide",
     "status.undecided.withheld": "could not decide (report withheld)",
     "status.undecided.unavailable": "could not decide (report not available)",
-    "judge.note.sure": "The judge was {p}% sure.",
+    "judge.note.sure": "The judge gave this verdict a probability of {p}%.",
     "case.label": "task {task}",
     "case.label.trial": "task {task}, trial {trial}",
     "chat.role.user": "User",

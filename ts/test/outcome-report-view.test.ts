@@ -812,7 +812,7 @@ it("two levels: the missed line opens (toggle 1) into every missed conversation,
     ).toBe(report.rationale);
     // level 1 says how sure the judge was, in plain words
     expect(row.querySelector(".sealed")!.textContent).toMatch(
-      /^The judge was \d+% sure\.$/u,
+      /^The judge gave this verdict a probability of \d+%\.$/u,
     );
     // P is read back from the sealed rationale's probabilities for the verdict returned
     const probs = /'([a-z_]+)': ([0-9.]+)/gu;
