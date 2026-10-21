@@ -407,6 +407,37 @@ it("a pack entry must carry exactly the placeholders of the entry it replaces: a
   expect(problems.join("\n")).toContain("prov.of uses {count} {total} {extra}");
 });
 
+it("placeholders are checked in order, with repeats: a pack cannot swap a count and a denominator, or run two numbers together", () => {
+  // same set of placeholders, reordered: {total} of {count} instead of
+  // {count} of {total} -- a set comparison would have missed this
+  const swapped = wordingProblems(
+    {
+      id: "test/swap@1",
+      locale: "en",
+      entries: { "lines.share": "{total} of {count}" },
+    },
+    DEFAULT_PACKS.lines,
+  );
+  expect(swapped).toEqual([
+    "test/swap@1: lines.share uses {total} {count}; it must use exactly {count} {total}",
+  ]);
+  // a repeated placeholder dropped to one use
+  const deduped = wordingProblems(
+    {
+      id: "test/dedup@1",
+      locale: "en",
+      entries: {
+        "lines.sentence.missed":
+          "Missed: {misses} of {applied} {rule} not met.",
+      },
+    },
+    DEFAULT_PACKS.lines,
+  );
+  expect(deduped).toEqual([
+    "test/dedup@1: lines.sentence.missed uses {misses} {applied} {rule}; it must use exactly {misses} {applied} {rule} {was} {names}",
+  ]);
+});
+
 it("a pack cannot fold two verdicts into one word, or change the grouping", () => {
   const fold: WordingPack = {
     id: "test/fold@1",
@@ -458,6 +489,21 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(check({ constructor: "x" })).toBe("");
   // the ladder pack still passes
   expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual([]);
+});
+
+it("the spelled-out numbers are locked: a pack must not make 2 read as one hundred", () => {
+  expect(
+    wordingProblems(
+      {
+        id: "test/count@1",
+        locale: "en",
+        entries: { "lines.count.2": "one hundred" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([
+    "test/count@1: lines.count.2: this line states what the page checked and can't be reworded",
+  ]);
 });
 
 it("the assurance tier words are a distinct, non-swappable set: a judgement must never read as a check anyone can repeat", () => {
