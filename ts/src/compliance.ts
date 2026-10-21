@@ -12,11 +12,19 @@ import type {
   ComplianceRow,
 } from "./compliance-presentation.js";
 import {
+  claimsCitedCase,
   findTranscript,
   NOT_STATED,
   readableId,
+  reportSealedDay,
+  reportState,
+  withheldReports,
+  type ConversationDate,
   type ConversationTranscript,
+  type OutcomeReportDating,
+  type ReportState,
 } from "@action-state-group/agent-action-capsule";
+import { buildDating, caseRecord, conversationDate } from "./record-dating.js";
 import {
   REQUIREMENT_CLAIM,
   type CitedRecord,
@@ -79,13 +87,21 @@ export interface SessionTest {
   readonly reportDigest?: string;
   readonly judgePinDigest?: string;
   readonly contract?: string;
+  /** What the bundle shows of the cited report (outcome-report.ts `reportState`); present whenever `claim` is. */
+  readonly reportState?: ReportState;
 }
 
 export interface Session {
   readonly conversationId: string;
+  /** The date this session is counted under (`dated.date`): the case record's own date when the bundle carries it verifiably, as on the outcome card (see `ConversationDate`). */
   readonly day: string;
+  readonly dated: ConversationDate;
+  /** The day its reports were sealed under (`period`), whatever `dated` says. */
+  readonly judgedDay: string;
   readonly tests: readonly SessionTest[];
   readonly sourceCapsuleId?: string;
+  /** Where `sourceCapsuleId` was read: the disclosed reports, or the claims' own citations when the reports are withheld. */
+  readonly caseFrom?: "reports" | "claims";
   readonly transcript: ConversationTranscript;
 }
 
@@ -93,6 +109,8 @@ export interface ObligationRowModel {
   readonly criterionId: string;
   /** The producer's short label when it maps this test, else the test id made readable. */
   readonly name: string;
+  /** True when `name` is the producer's label (unsigned), false when it is the sealed test id made readable. */
+  readonly producerName: boolean;
   /** The wording the test was run against: the sealed `clause_claim`, or not stated. */
   readonly wording: SealedText;
   readonly tier: TierReading;
@@ -102,9 +120,11 @@ export interface ObligationRowModel {
   readonly notMetCount: number;
   readonly notEvaluableCount: number;
   readonly notApplicableCount: number;
-  /** verdict bucket -> conversation ids, for the row's own drill-down. failed/unsupported fold into not_met here. */
+  /** Sessions whose claim for this test failed verification or cites evidence this bundle does not resolve: no verdict is drawn for them, so they are neither met nor not met. */
+  readonly unverifiedCount: number;
+  /** verdict bucket -> conversation ids, for the row's own drill-down. failed/unsupported are their own `unverified` bucket, never folded into not_met. */
   readonly sessionsByVerdict: ReadonlyMap<
-    "met" | "not_met" | "not_evaluable" | "not_applicable",
+    "met" | "not_met" | "not_evaluable" | "not_applicable" | "unverified",
     readonly string[]
   >;
 }
@@ -141,6 +161,12 @@ export interface ComplianceRunInfo {
   readonly contract?: string;
   readonly judgePinDigest?: string;
   readonly pinned: boolean;
+  /** Claims whose cited report the bundle carries but does not disclose, of `reportsCited` (see outcome-report.ts `withheldReports`). Mismatched or unreadable reports are counted apart, never as withheld. */
+  readonly reportsWithheld?: number;
+  readonly reportsMismatched?: number;
+  readonly reportsUnreadable?: number;
+  readonly reportsInvalid?: number;
+  readonly reportsCited?: number;
 }
 
 export interface CompliancePack {
@@ -150,6 +176,12 @@ export interface CompliancePack {
   readonly version: string;
 }
 
+export interface ComplianceDating extends OutcomeReportDating {
+  /** The first and last session date (`Session.day`), when any session is dated. */
+  readonly from?: string;
+  readonly to?: string;
+}
+
 export interface ComplianceModel {
   readonly regulation: string;
   readonly pack: CompliancePack;
@@ -157,6 +189,8 @@ export interface ComplianceModel {
   readonly sessions: readonly Session[];
   readonly findings: readonly ComplianceFindingModel[];
   readonly totalSessions: number;
+  /** How the sessions are dated, the same reading the outcome card uses. */
+  readonly dating: ComplianceDating;
   readonly runInfo: ComplianceRunInfo;
   readonly qualityProtocol: CompliancePresentation["qualityProtocol"];
   readonly capsuleId: string;
@@ -278,7 +312,7 @@ function buildSessions(
   for (const [conversationId, conversationClaims] of byConversation) {
     const tests: SessionTest[] = [];
     const sources = new Set<string>();
-    let day: string = NOT_STATED;
+    let judgedDay: string = NOT_STATED;
     for (const criterionId of testIds) {
       const claim = conversationClaims.find(
         (c) => c.requirementRef === criterionId,
@@ -305,30 +339,61 @@ function buildSessions(
       const judgePinDigest = asString(payload?.judge_pin_digest);
       const source = asString(payload?.source_capsule_id);
       if (source !== undefined) sources.add(source);
-      if (day === NOT_STATED) day = dayOf(payload);
+      if (judgedDay === NOT_STATED)
+        judgedDay = reportSealedDay(result.records, claim) ?? dayOf(payload);
       const reportDigest = claim.evidence[0]?.digest;
       tests.push({
         criterionId,
         verdict: drawnVerdict(claim),
-        tier: sealedTier(payload),
+        // The report's own epistemic_type when disclosed; when the report
+        // is withheld, the tier the Result's signed claim states.
+        tier: payload === undefined ? claim.tier : sealedTier(payload),
         claim,
         ...(reportDigest === undefined ? {} : { reportDigest }),
         ...(rationale === undefined ? {} : { rationale }),
         ...(contract === undefined ? {} : { contract }),
         ...(judgePinDigest === undefined ? {} : { judgePinDigest }),
+        reportState: reportState(result.records, claim),
       });
     }
+    // Only when every report of the session is withheld, and the one case
+    // record every claim cites declares itself this session's case
+    // (claimsCitedCase refuses otherwise): disclosed reports that name no
+    // case, or mismatched, unreadable or invalid ones, leave it unresolved.
+    let caseFrom: Session["caseFrom"] = "reports";
+    if (sources.size === 0) {
+      const cited = claimsCitedCase(
+        result.records,
+        conversationId,
+        conversationClaims,
+        result.claims,
+      );
+      if (cited !== undefined) {
+        sources.add(cited);
+        caseFrom = "claims";
+      }
+    }
     const sourceCapsuleId = sources.size === 1 ? [...sources][0]! : undefined;
+    // A backfilled case record is dated by its source's own time, a plain
+    // one by its own timestamp, else by the sealed day: the outcome card's
+    // rule (conversationDate), so the two cards never date a session apart.
+    const dated = conversationDate(
+      caseRecord(result, conversationClaims, sourceCapsuleId),
+      judgedDay,
+    );
     sessions.push({
       conversationId,
-      day,
+      day: dated.date,
+      dated,
+      judgedDay,
       tests,
-      ...(sourceCapsuleId === undefined ? {} : { sourceCapsuleId }),
+      ...(sourceCapsuleId === undefined ? {} : { sourceCapsuleId, caseFrom }),
       transcript: findTranscript(
         result,
         conversationId,
         conversationClaims,
         sourceCapsuleId,
+        caseFrom,
       ),
     });
   }
@@ -362,13 +427,14 @@ function buildRow(
   sessions: readonly Session[],
 ): ObligationRowModel {
   const byVerdict = new Map<
-    "met" | "not_met" | "not_evaluable" | "not_applicable",
+    "met" | "not_met" | "not_evaluable" | "not_applicable" | "unverified",
     string[]
   >([
     ["met", []],
     ["not_met", []],
     ["not_evaluable", []],
     ["not_applicable", []],
+    ["unverified", []],
   ]);
   const tiers: TierReading[] = [];
   for (const session of sessions) {
@@ -376,11 +442,12 @@ function buildRow(
     if (test === undefined) continue;
     tiers.push(test.tier);
     // failed/unsupported (a claim that failed verification, or cites
-    // evidence this bundle can't resolve) is never read as met: it folds
-    // into not_met.
+    // evidence this bundle can't resolve) is never read as met, and never
+    // as not met either: its verdict was never drawn, so it is its own
+    // bucket.
     const bucket =
       test.verdict === "failed" || test.verdict === "unsupported"
-        ? "not_met"
+        ? "unverified"
         : test.verdict;
     byVerdict.get(bucket)!.push(session.conversationId);
   }
@@ -389,6 +456,7 @@ function buildRow(
     name:
       mapping?.name ??
       readableId(criterionId.slice(criterionId.indexOf(".") + 1)),
+    producerName: mapping !== undefined,
     wording,
     tier: agree<TierReading>(tiers, "not stated", "mixed"),
     ...(mapping?.notEvaluableNote === undefined
@@ -399,6 +467,7 @@ function buildRow(
     notMetCount: byVerdict.get("not_met")!.length,
     notEvaluableCount: byVerdict.get("not_evaluable")!.length,
     notApplicableCount: byVerdict.get("not_applicable")!.length,
+    unverifiedCount: byVerdict.get("unverified")!.length,
     sessionsByVerdict: byVerdict,
   };
 }
@@ -433,7 +502,10 @@ function buildObligation(
   };
 }
 
-function buildRunInfo(sessions: readonly Session[]): ComplianceRunInfo {
+function buildRunInfo(
+  result: ResultRoot,
+  sessions: readonly Session[],
+): ComplianceRunInfo {
   const contracts = new Set<string>();
   const pins = new Set<string>();
   for (const session of sessions)
@@ -445,6 +517,42 @@ function buildRunInfo(sessions: readonly Session[]): ComplianceRunInfo {
     ...(contracts.size === 1 ? { contract: [...contracts][0]! } : {}),
     ...(pins.size === 1 ? { judgePinDigest: [...pins][0]! } : {}),
     pinned: contracts.size <= 1 && pins.size <= 1,
+    ...withheldOf(result, sessions),
+  };
+}
+
+function withheldOf(
+  result: ResultRoot,
+  sessions: readonly Session[],
+): {
+  reportsWithheld?: number;
+  reportsMismatched?: number;
+  reportsUnreadable?: number;
+  reportsInvalid?: number;
+  reportsCited?: number;
+} {
+  const counted = withheldReports(
+    result.records,
+    sessions.flatMap((s) =>
+      s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
+    ),
+  );
+  return {
+    ...(counted.withheld > 0 ? { reportsWithheld: counted.withheld } : {}),
+    ...(counted.mismatched > 0
+      ? { reportsMismatched: counted.mismatched }
+      : {}),
+    ...(counted.unreadable > 0
+      ? { reportsUnreadable: counted.unreadable }
+      : {}),
+    ...(counted.invalid > 0 ? { reportsInvalid: counted.invalid } : {}),
+    ...(counted.withheld +
+      counted.mismatched +
+      counted.unreadable +
+      counted.invalid >
+    0
+      ? { reportsCited: counted.total }
+      : {}),
   };
 }
 
@@ -471,6 +579,19 @@ function buildFindings(
       });
     }
   return findings;
+}
+
+function complianceDating(sessions: readonly Session[]): ComplianceDating {
+  const days = sessions
+    .map((s) => s.day)
+    .filter((d) => d !== NOT_STATED)
+    .sort();
+  return {
+    ...buildDating(sessions),
+    ...(days.length === 0
+      ? {}
+      : { from: days[0]!, to: days[days.length - 1]! }),
+  };
 }
 
 export function buildComplianceModel(
@@ -514,7 +635,8 @@ export function buildComplianceModel(
     sessions,
     findings: buildFindings(obligations),
     totalSessions: sessions.length,
-    runInfo: buildRunInfo(sessions),
+    dating: complianceDating(sessions),
+    runInfo: buildRunInfo(result, sessions),
     qualityProtocol: presentation.qualityProtocol,
     capsuleId: result.capsuleId,
   };

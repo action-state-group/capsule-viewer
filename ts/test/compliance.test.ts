@@ -230,3 +230,141 @@ it("without a transcript in the bundle, a session's transcript reads absent", as
   const m = await model();
   expect(m.sessions[0]!.transcript.state).toBe("absent");
 });
+
+it("with the reports withheld (no transcripts attached): each test keeps the tier its signed claim states, and run info says withheld, not 'no judged sessions'", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const result = await buildResultRoot(bundle);
+  const records = new Map(
+    [...result.records].map(([id, record]) => [
+      id,
+      { ...record, agentInput: { state: "withheld" as const } },
+    ]),
+  );
+  const m = buildComplianceModel(
+    { ...result, records },
+    readCompliancePresentation(bundle)!,
+  );
+  const judged = m.sessions[0]!.tests.find(
+    (t) => t.criterionId === "art5.no_manipulation_or_deception",
+  )!;
+  expect(judged.tier).toBe(judged.claim!.tier);
+  expect(judged.tier).not.toBe("not stated");
+  expect(m.runInfo.judgePinDigest).toBeUndefined();
+  expect(m.runInfo.reportsWithheld).toBeGreaterThan(0);
+  expect(m.runInfo.reportsWithheld).toBe(m.runInfo.reportsCited);
+});
+
+it("mismatched reports are counted apart, never as withheld, and give no case from the claims", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const result = await buildResultRoot(bundle);
+  const records = new Map(
+    [...result.records].map(([id, record]) => [
+      id,
+      { ...record, agentInput: { state: "disclosure_mismatch" as const } },
+    ]),
+  );
+  const m = buildComplianceModel(
+    { ...result, records },
+    readCompliancePresentation(bundle)!,
+  );
+  expect(m.runInfo.reportsWithheld).toBeUndefined();
+  expect(m.runInfo.reportsMismatched).toBeGreaterThan(0);
+  expect(m.runInfo.reportsMismatched).toBe(m.runInfo.reportsCited);
+  for (const session of m.sessions) {
+    expect(session.sourceCapsuleId).toBeUndefined();
+    expect(session.transcript.state).not.toBe("verified");
+    for (const test of session.tests)
+      if (test.claim !== undefined) expect(test.reportState).toBe("mismatch");
+  }
+});
+
+it("a book-form report whose capsule is missing or does not check out is invalid, never withheld, and gives no case from the claims", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const result = await buildResultRoot(bundle);
+  // resolveCarriedInput says "withheld" when the capsule bytes are absent or
+  // fail their digest; with no checked carried capsule (no carriedCapsuleId)
+  // the report is broken, not withheld.
+  const records = new Map(
+    [...result.records].map(([id, record]) => [
+      id,
+      {
+        ...record,
+        agentInput: {
+          state: "disclosed" as const,
+          payload: { record_type: "published_capsule", subject_ref: id },
+        },
+        carriedInput: { state: "withheld" as const },
+      },
+    ]),
+  );
+  const m = buildComplianceModel(
+    { ...result, records },
+    readCompliancePresentation(bundle)!,
+  );
+  expect(m.runInfo.reportsWithheld).toBeUndefined();
+  expect(m.runInfo.reportsInvalid).toBeGreaterThan(0);
+  expect(m.runInfo.reportsInvalid).toBe(m.runInfo.reportsCited);
+  for (const session of m.sessions) {
+    expect(session.sourceCapsuleId).toBeUndefined();
+    for (const test of session.tests)
+      if (test.claim !== undefined) expect(test.reportState).toBe("invalid");
+  }
+});
+
+it("with the reports withheld, the case every claim cites (a case record declaring the session) makes the transcript 'cited', never 'verified'", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const result = await buildResultRoot(bundle);
+  const records = new Map(
+    [...result.records].map(([id, record]) => [
+      id,
+      { ...record, agentInput: { state: "withheld" as const } },
+    ]),
+  ) as Map<string, unknown>;
+  const claims = result.claims.map((claim) => {
+    const sep = claim.id.indexOf("::");
+    if (sep === -1) return claim;
+    const session = claim.id.slice(0, sep);
+    const [benchmark, domain, task, trial] = session.split(":");
+    const key = `case:${session}`;
+    records.set(key, {
+      capsuleId: key,
+      agentInput: { state: "disclosed", payload: {} },
+      carriedInput: {
+        state: "disclosed",
+        payload: {
+          case: {
+            benchmark,
+            domain,
+            task_id: task?.replace("task-", ""),
+            trial: Number(trial?.replace("trial-", "")),
+          },
+          agent_interaction: { messages: [{ role: "user", content: "hi" }] },
+        },
+      },
+      // one case capsule id per session
+      carriedCapsuleId: [...session]
+        .map((ch) => ch.charCodeAt(0).toString(16))
+        .join("")
+        .slice(-64)
+        .padStart(64, "c"),
+      carriedInputDigest: "d".repeat(64),
+      carriedActionId: `urn:${session}`,
+      stated: { timestamp: "2025-06-05T16:09:32Z" },
+      agentOutput: { state: "absent" },
+      cites: [],
+    });
+    return {
+      ...claim,
+      evidence: [claim.evidence[0]!, { digest: key, resolved: true }],
+    };
+  });
+  const m = buildComplianceModel(
+    { ...result, claims, records } as unknown as typeof result,
+    readCompliancePresentation(bundle)!,
+  );
+  expect(m.sessions.length).toBeGreaterThan(0);
+  for (const session of m.sessions) {
+    expect(session.caseFrom).toBe("claims");
+    expect(session.transcript.state).toBe("cited");
+  }
+});

@@ -21,6 +21,81 @@ here. The format follows
   (`capsule-emit>=0.12,<0.13` in the `evidence` and `dev` extras), which
   removes the `permalink.build_bundle` this used (capsule-emit#338).
 
+### Changed
+
+- The outcome report and EU AI Act obligations cards have two levels and no
+  more. The summary states what was checked and the result per line in plain
+  words. A first toggle on a line lists the conversations behind it in place,
+  each one readable as it stands: the result, rule by rule or test by test
+  with the test names, and the conversation as a chat (User, Agent, tool calls
+  and tool results). A conversation is never a toggle of its own. The second
+  toggle is that conversation's proofs: record ids, digests, the judge pin and
+  how to recompute. One more second-level toggle at the foot of the page holds
+  the proofs for the whole report. No `<details>` sits inside more than one
+  other, and a first-level toggle never holds another. Toggle bodies are built
+  when first opened, and each conversation's body when it scrolls near the
+  view. Shared code is in `report-levels.ts`.
+- The missed line still says why conversations missed: the producer's sealed
+  reason code by its label in the terms, else the first rule not met, then
+  the missed conversations under each reason, inside the same toggle.
+- Tool results are shown exactly as sealed. JSON is indented only when that
+  changes nothing but whitespace; a number JSON cannot hold exactly, a
+  duplicate key or a differently written escape keeps the original text.
+  Tool arguments are shown as the outcome report model hands them over, and
+  the page says so: at agent-action-capsule 0.5.0 `transcriptTurns`
+  re-serialises them, so a number JSON cannot hold exactly may already be
+  rounded. They are never called verbatim.
+- A conversation that could not be decided, or where no rule applied, is no
+  longer counted as missed. One with no rule result at all reads "could not
+  decide", never "no rule applied".
+- Results are worded met, not met, did not apply and could not decide. No
+  bundle setting chooses the words (presentation contract section 6): the
+  grade-ladder set (established, failed, not present, inconclusive, not
+  checked) is the module's own vocabulary in `report-levels.ts`, off, for a
+  viewer-side wording pack to select once packs reach the modules. A failed
+  or unsupported claim reads "failed verification" or "evidence missing", in
+  a neutral tone. An undecided rule whose report is withheld reads "could
+  not decide" with the note that the report is withheld; one whose report is
+  in the bundle but cannot be read says that instead. Neither reads "not
+  checked". The ladder never says "established in every session".
+- A claim that failed verification, or whose cited evidence is not in the
+  bundle, is its own state, never counted as "not met": the outcome card
+  shows a "Could not verify" line and, when a bundle has any, its own column
+  in the rule table; the EU card counts such sessions apart from the
+  exceptions and draws no finding for them.
+- An undecided conversation says no rule result was "not met", never "no
+  rule was broken": the records do not show that an undecided rule was met.
+- An EU obligation reads "No exceptions", in the ok tone, only when every
+  one of its tests was met by at least one session. When none of its tests
+  could be checked it reads "Could not be checked"; when some could not, the
+  pill is neutral and says how many. A test with no result never reads as a
+  pass.
+- The EU card's obligation pill speaks only for the sealed counts. Whether
+  an obligation is in force is the producer's `applicability`, shown in the
+  producer's italic line beside the title, never in the pill. The regulation
+  named in the heading, finding ids and severities are set as the
+  producer's too; an unknown severity gets no colour of its own.
+- The proofs say the judge's note is derived from its probabilities only
+  when every rationale is the judge's probability line.
+- A conversation body built lazily holds no print listener of its own: one
+  `beforeprint` listener per page builds the bodies still in it, so a host
+  that re-renders the card keeps no old model alive.
+- Pages built from bundles that withhold the reports read the period, the
+  case record and the EU tiers from what the bundle does carry, and say the
+  judge pin is withheld rather than "not stated". Only withheld reports are
+  called withheld; a report that does not match what was sealed, cannot be
+  read, or whose capsule is missing or does not check out, is named as such.
+  A case taken from the claims (every report withheld) shows its conversation
+  as the case every claim cites, never as the conversation the judge read. "Terms locked" and "Agreed with the counterparty"
+  are drawn only when a bundle states them.
+- Both card stylesheets changed, so `go/emitter/runtime-style-hashes.txt`
+  and the Go goldens carry the new CSP hashes.
+- Requires `@action-state-group/agent-action-capsule` 0.5.0 (ts), which
+  carries the outcome report model change (model-named case ids,
+  `reportState` and the withheld-report helpers, the `cited` transcript
+  state). `ts/src/record-dating.ts` repeats three of its unexported
+  functions until a release exports them.
+
 ### Fixed
 
 - The outcome report counts the criteria each conversation was judged on
@@ -29,6 +104,14 @@ here. The format follows
   Ported from agent-action-capsule#323. The Go emitter's CSP hash for
   `OUTCOME_REPORT_CSS` (`go/emitter/runtime-style-hashes.txt`) follows, so a
   page whose runtime carries the new stylesheet is not blocked.
+- The EU AI Act obligations card dates each session by its cited case record,
+  as the outcome card does, instead of by the day its reports were sealed: a
+  backfilled record by its `source_asserted_at` ("source says",
+  self-attested), with the import time and sealed day in the session's proofs;
+  a plain record by its own timestamp; otherwise the sealed day. The header
+  says "judged" only for sealed days, and What ran shows the period, the
+  sealed days and the outcome card's dating note. Ported from
+  agent-action-capsule#193. No style changes, so no CSP hash moves.
 
 ## ts 0.1.0 and go 0.1.0 (2026-10-16)
 

@@ -12,8 +12,22 @@ import {
 } from "./compliance.js";
 import type { CompliancePresentation } from "./compliance-presentation.js";
 import { COMPLIANCE_CSS } from "./compliance-styles.js";
+import { BASIS_TEXT, datingStatement, span } from "./outcome-report-view.js";
 import { NOT_STATED } from "@action-state-group/agent-action-capsule";
+import {
+  caseParts,
+  judgedOf,
+  LADDER_WORDS,
+  judgeNote,
+  lazyBody,
+  levelToggle,
+  proofList,
+  renderChat,
+  ruleWord,
+  wordPill,
+} from "./report-levels.js";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
+import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 
 /**
  * The EU AI Act obligations-report card. Called from
@@ -25,9 +39,15 @@ import type { ResultRoot } from "@action-state-group/agent-action-capsule";
  * the sealed records (or "not stated"); the regulatory mapping from the
  * producer's extension, labelled as such.
  *
+ * Two levels and no more (report-levels.ts): the summary states what was
+ * checked and the result per obligation and test; toggle 1 on a test opens
+ * the sessions behind its exceptions, listed in place and each readable as
+ * it stands (every test's result by name, the conversation and its tool
+ * calls); toggle 2 in a session opens its proofs. The methodology, mapping and bundle checks sit
+ * in one proofs toggle at the foot of the page.
+ *
  * The whole card renders inside one `.cc`-classed wrapper with its own
- * `<style>` (`COMPLIANCE_CSS`) as its first child. Drill-down uses native
- * `<details>`/`<summary>`: keyboard-accessible, no script-driven modal.
+ * `<style>` (`COMPLIANCE_CSS`) as its first child.
  */
 
 function element(tag: string, text?: string): HTMLElement {
@@ -42,7 +62,36 @@ function el(tag: string, className: string, text?: string): HTMLElement {
   return value;
 }
 
+/**
+ * Producer text: the eu-ai-act-compliance/v1 mapping, carried beside the
+ * signed records and signed by no one. Set in italics (`<i>`, the browser's
+ * own style) and tagged `data-source="producer"`, so it never reads as a
+ * sealed finding; the summary's basis line says what the italics mean.
+ */
+function producerText(...content: (string | Node)[]): HTMLElement {
+  const value = element("i");
+  value.append(...content);
+  value.dataset.source = "producer";
+  value.title = "The producer's mapping, not a sealed record";
+  return value;
+}
+
+/** `text` in an element of its own, as producer text when `producer` is true. */
+function maybeProducer(
+  tag: string,
+  className: string,
+  text: string,
+  producer: boolean,
+): HTMLElement {
+  if (!producer) return el(tag, className, text);
+  const value = el(tag, className);
+  value.append(producerText(text));
+  return value;
+}
+
 const fmt = (n: number): string => n.toLocaleString();
+const plural = (n: number, one: string, many: string): string =>
+  `${fmt(n)} ${n === 1 ? one : many}`;
 
 const SEVERITY_CLASS: Record<string, string> = {
   High: "high",
@@ -50,9 +99,14 @@ const SEVERITY_CLASS: Record<string, string> = {
   Low: "low",
 };
 
+/** The producer's severity, as the producer's: an unknown value gets no colour of its own, never "medium". */
 function severityPill(severity: string): HTMLElement {
-  const cls = SEVERITY_CLASS[severity] ?? "medium";
-  return el("span", `sev ${cls}`, severity);
+  const cls = Object.hasOwn(SEVERITY_CLASS, severity)
+    ? SEVERITY_CLASS[severity]
+    : undefined;
+  const pill = el("span", cls === undefined ? "sev" : `sev ${cls}`);
+  pill.append(producerText(severity));
+  return pill;
 }
 
 function tierBadge(tier: TierReading): HTMLElement {
@@ -70,11 +124,54 @@ function tierBadge(tier: TierReading): HTMLElement {
     text,
   );
   badge.dataset.tier = tier;
+  badge.title =
+    tier === "judged"
+      ? "Decided by a pinned model applying a frozen rubric"
+      : tier === "recomputed"
+        ? "A fixed check anyone can repeat from the records"
+        : "";
   return badge;
 }
 
 function statusPill(statusClass: string, text: string): HTMLElement {
   return el("span", `st ${statusClass}`, text);
+}
+
+// Result words never come from the bundle (presentation contract section
+// 6): the card speaks its own word set, LADDER_WORDS (report-levels.ts).
+function ladderOn(): boolean {
+  return LADDER_WORDS;
+}
+
+/** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
+function testNames(
+  model: ComplianceModel,
+): (criterionId: string, tag: string, className: string) => HTMLElement {
+  const rows = new Map(
+    model.obligations.flatMap((o) =>
+      o.rows.map((r) => [r.criterionId, r] as const),
+    ),
+  );
+  return (criterionId, tag, className) => {
+    const row = rows.get(criterionId);
+    return maybeProducer(
+      tag,
+      className,
+      row?.name ?? criterionId,
+      row?.producerName === true,
+    );
+  };
+}
+
+function sessionSpan(model: ComplianceModel): string | undefined {
+  const days = model.sessions
+    .map((s) => s.day)
+    .filter((d) => d !== NOT_STATED)
+    .sort();
+  const first = days[0];
+  const last = days[days.length - 1];
+  if (first === undefined || last === undefined) return undefined;
+  return first === last ? first : `${first} – ${last}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,460 +182,761 @@ function renderHeader(host: HTMLElement, model: ComplianceModel): void {
   const hd = el("div", "hd");
   hd.dataset.section = "header";
   hd.append(el("div", "kicker", "EU AI Act obligations report"));
-  hd.append(el("h1", "", model.regulation));
+  hd.append(maybeProducer("h1", "", model.regulation, true));
   const pack =
     model.pack.id === NOT_STATED
       ? `Pack ${NOT_STATED}`
       : `Pack ${model.pack.id} v${model.pack.version}`;
+  const period = sessionSpan(model);
   hd.append(
     el(
       "div",
       "sub",
-      `${pack} · ${fmt(model.obligations.length)} obligations · ${fmt(model.totalSessions)} sessions · Result capsule ${model.capsuleId}`,
+      `${pack} · ${plural(model.obligations.length, "obligation", "obligations")} · ${plural(model.totalSessions, "session", "sessions")}${period === undefined ? "" : model.dating.basis === "judged" ? ` · judged ${period}` : ` · ${period}`}`,
+    ),
+  );
+  host.append(hd);
+}
+
+// ---------------------------------------------------------------------------
+// Summary: what was checked and what we found
+// ---------------------------------------------------------------------------
+
+/** A test no session has a met, not-met, undecided or unverified result for: nothing was checked. */
+function nothingChecked(row: ObligationRowModel): boolean {
+  return (
+    row.metCount +
+      row.notMetCount +
+      row.notEvaluableCount +
+      row.unverifiedCount ===
+    0
+  );
+}
+
+/** No session with a result for this test met it or did not: every one was undecided or could not be verified. */
+function noneDecided(row: ObligationRowModel): boolean {
+  return row.metCount === 0 && row.notMetCount === 0;
+}
+
+/**
+ * An obligation's status, from the sealed counts alone. Its applicability
+ * (in force, or from a later date) is the producer's mapping: it is never
+ * drawn in this pill, which speaks only for the records, and is shown
+ * instead in the producer's own italic line beside the title.
+ *
+ * "No exceptions", in the ok tone, only when every one of its tests was met
+ * by at least one session and no session's result for it was not met: an
+ * obligation one of whose tests no session met (every result undecided,
+ * unverified or absent) does not read clean. When none of its tests could
+ * be checked it reads "Could not be checked"; when some could not, the pill
+ * is neutral and says how many.
+ */
+export function obligationStatus(obligation: ObligationModel): {
+  cls: string;
+  text: string;
+} {
+  const exceptions = obligation.rows.reduce((sum, r) => sum + r.notMetCount, 0);
+  const unchecked = obligation.rows.filter((r) => noneDecided(r)).length;
+  const unverified = obligation.rows.reduce(
+    (sum, r) => sum + r.unverifiedCount,
+    0,
+  );
+  const total = obligation.rows.length;
+  const uncheckedText =
+    unchecked > 0
+      ? ` · ${fmt(unchecked)} of ${plural(total, "test", "tests")} could not be checked`
+      : "";
+  if (exceptions > 0)
+    return {
+      cls: "exc",
+      text: `${plural(exceptions, "exception", "exceptions")}${unchecked > 0 && unchecked < total ? uncheckedText : ""}`,
+    };
+  if (unchecked === total) return { cls: "ne", text: "Could not be checked" };
+  if (unchecked > 0)
+    return { cls: "ne", text: `No exceptions found${uncheckedText}` };
+  if (unverified > 0)
+    return {
+      cls: "ne",
+      text: `No exceptions found · ${plural(unverified, "result", "results")} could not be verified`,
+    };
+  return { cls: "ok", text: "No exceptions" };
+}
+
+/** A test's result in the summary: a status, and an optional note under it. */
+export function rowStatus(
+  row: ObligationRowModel,
+  ladder: boolean,
+): { cls: string; text: string; note?: string; producerNote?: true } {
+  if (nothingChecked(row))
+    return { cls: "ne", text: "Not checked: no session has a result" };
+  if (noneDecided(row))
+    return {
+      cls: "ne",
+      text: ladder ? "Not checked or inconclusive" : "Could not be checked",
+      ...(row.notEvaluableNote !== undefined && row.notEvaluableCount > 0
+        ? { note: row.notEvaluableNote, producerNote: true }
+        : row.unverifiedCount > 0
+          ? { note: unverifiedNote(row.unverifiedCount) }
+          : {}),
+    };
+  const notes = [
+    ...(row.notEvaluableCount > 0
+      ? [`${fmt(row.notEvaluableCount)} could not be decided`]
+      : []),
+    ...(row.unverifiedCount > 0 ? [unverifiedNote(row.unverifiedCount)] : []),
+  ];
+  const undecided = notes.length > 0 ? { note: notes.join("; ") } : {};
+  if (row.notMetCount > 0)
+    return {
+      cls: "exc",
+      text: plural(
+        row.notMetCount,
+        ladder ? "failed" : "exception",
+        ladder ? "failed" : "exceptions",
+      ),
+      ...undecided,
+    };
+  // Neither word set says more than "no exceptions": a session's result
+  // that was met is all the records show, never "established in every
+  // session".
+  return {
+    cls: row.unverifiedCount > 0 ? "ne" : "ok",
+    text: "No exceptions",
+    ...undecided,
+  };
+}
+
+/** How many sessions' claims for a test failed verification or cite evidence this bundle does not hold. */
+function unverifiedNote(n: number): string {
+  return `${fmt(n)} could not be verified (failed verification or evidence missing)`;
+}
+
+function rowResult(row: ObligationRowModel, ladder: boolean): HTMLElement {
+  const cell = document.createElement("td");
+  const status = rowStatus(row, ladder);
+  cell.append(statusPill(status.cls, status.text));
+  if (status.note !== undefined)
+    cell.append(
+      maybeProducer("div", "applic", status.note, status.producerNote === true),
+    );
+  return cell;
+}
+
+function renderSummary(
+  host: HTMLElement,
+  model: ComplianceModel,
+  presentation: CompliancePresentation,
+): void {
+  const section = el("section", "");
+  section.dataset.section = "summary";
+  section.append(el("h2", "", "What was checked and what we found"));
+  const tests = model.obligations.reduce((n, o) => n + o.rows.length, 0);
+  section.append(
+    el(
+      "p",
+      "lede",
+      `Each session (one conversation with the agent) was checked against ${plural(tests, "test", "tests")} under ${plural(model.obligations.length, "obligation", "obligations")}. Results are counts of sessions: there is no overall score. Open a test to read the sessions behind its exceptions.`,
     ),
   );
   const basis = el(
     "p",
     "na",
-    `Counts, verdicts, test wording, tiers and the pack are read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". The article, applicability, method and finding recommendations are the producer's mapping, carried on this bundle's eu-ai-act-compliance/v1 extension outside the signed records.`,
+    `Every count and result is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". The regulation named in the heading, obligation titles, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
   );
   basis.dataset.basis = "terms";
-  hd.append(basis);
-  host.append(hd);
-}
-
-// ---------------------------------------------------------------------------
-// Section 1: summary
-// ---------------------------------------------------------------------------
-
-function obligationStatus(obligation: ObligationModel): {
-  cls: string;
-  text: string;
-} {
-  const exceptions = obligation.rows.reduce((sum, r) => sum + r.notMetCount, 0);
-  if (obligation.applicability.status === "not stated")
-    return exceptions > 0
-      ? { cls: "exc", text: `Exceptions noted (${fmt(exceptions)})` }
-      : { cls: "ok", text: "No exceptions" };
-  if (obligation.applicability.status === "future")
-    return exceptions > 0
-      ? {
-          cls: "future",
-          text: `Not yet applicable · ${fmt(exceptions)} exceptions (readiness)`,
-        }
-      : { cls: "future", text: "Not yet applicable · no exceptions" };
-  return exceptions > 0
-    ? { cls: "exc", text: `Exceptions noted (${fmt(exceptions)})` }
-    : { cls: "ok", text: "No exceptions" };
-}
-
-function renderSummary(host: HTMLElement, model: ComplianceModel): void {
-  const section = el("section", "");
-  section.dataset.section = "summary";
-  section.append(el("h2", "", "1. Summary"));
-  section.append(
-    el(
-      "p",
-      "lede",
-      "Results are stated as counts of sessions; no overall compliance percentage is given.",
-    ),
-  );
+  section.append(basis);
+  const ladder = ladderOn();
   const table = document.createElement("table");
-  table.className = "grid";
+  table.className = "grid sum";
   table.dataset.rows = "summary";
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.append(
-    element("th", "Article"),
-    element("th", "Obligation"),
-    element("th", "Applicability"),
-    element("th", "Status"),
-  );
-  thead.append(headRow);
-  table.append(thead);
-  const tbody = document.createElement("tbody");
-  for (const obligation of model.obligations) {
-    const row = document.createElement("tr");
-    row.dataset.obligation = obligation.key;
-    const status = obligationStatus(obligation);
-    row.append(
-      el("td", "b", obligation.article),
-      element("td", obligation.title),
-      element("td", obligation.applicability.note),
-    );
-    const statusCell = document.createElement("td");
-    statusCell.append(statusPill(status.cls, status.text));
-    row.append(statusCell);
-    tbody.append(row);
-  }
-  table.append(tbody);
-  section.append(table);
-  host.append(section);
-}
-
-// ---------------------------------------------------------------------------
-// Sessions drill-down (shared by test rows and findings)
-// ---------------------------------------------------------------------------
-
-function checkItBlock(test: SessionTest): HTMLElement {
-  const box = el("div", "ck");
-  box.dataset.crit = test.criterionId;
-  box.dataset.critVerdict = test.verdict;
-  const head = el("div", "h");
-  const label =
-    test.verdict === "met"
-      ? "✓ met"
-      : test.verdict === "not_met"
-        ? "✗ not met"
-        : test.verdict === "not_applicable"
-          ? "— not applicable"
-          : test.verdict === "failed"
-            ? "✗ failed verification (counted as an exception)"
-            : test.verdict === "unsupported"
-              ? "✗ unsupported: its evidence is not in this bundle (counted as an exception)"
-              : "– not evaluable";
-  head.append(element("span", label));
-  head.append(tierBadge(test.tier));
-  box.append(head);
-  if (test.rationale !== undefined)
-    box.append(el("div", "why", test.rationale));
-  const ev = el("div", "ev");
-  ev.append(element("span", "Evidence: "));
-  if (test.reportDigest !== undefined)
-    ev.append(element("code", test.reportDigest));
-  if (test.contract !== undefined) ev.append(element("code", test.contract));
-  if (test.judgePinDigest !== undefined)
-    ev.append(element("code", test.judgePinDigest));
-  if (test.reportDigest === undefined) ev.append(element("span", "absent"));
-  box.append(ev);
-  return box;
-}
-
-function renderTranscript(session: Session): HTMLElement {
-  const t = session.transcript;
-  const wrap = el("div", "tx");
-  wrap.dataset.transcript = t.state;
-  if (t.state !== "verified") {
-    wrap.append(
-      el(
-        "div",
-        "ev",
-        t.state === "absent"
-          ? `Transcript: not in this bundle. The conversation is sealed in the case record ${session.sourceCapsuleId ?? "(not stated by the reports)"}; this page cannot show it and does not vouch for it.`
-          : `Transcript: not shown: ${t.reason ?? "the cited transcript does not check"}.`,
-      ),
-    );
-    return wrap;
-  }
-  wrap.append(
-    el(
-      "div",
-      "ev",
-      `Transcript: sealed in record ${t.transcriptRecordId}; its digest equals what the judged case capsule committed to (${t.inputDigest}), checked on this page. ${t.turns!.length} messages, in order.`,
-    ),
-  );
-  for (const turn of t.turns!) {
-    const line = el("div", `turn ${turn.role}`);
-    line.append(el("b", "", `${turn.role}: `));
-    if (turn.content !== undefined) line.append(element("span", turn.content));
-    for (const call of turn.toolCalls)
-      line.append(el("code", "", ` ${call.name}(${call.arguments})`));
-    wrap.append(line);
-  }
-  return wrap;
-}
-
-function renderSessionDetails(session: Session): HTMLElement {
-  const details = document.createElement("details");
-  details.className = "session";
-  details.dataset.session = session.conversationId;
-  const summary = document.createElement("summary");
-  summary.textContent = `${session.conversationId} · ${session.day}`;
-  details.append(summary);
-  for (const test of session.tests) details.append(checkItBlock(test));
-  details.append(renderTranscript(session));
-  return details;
-}
-
-function renderSessionList(
-  host: HTMLElement,
-  conversationIds: readonly string[],
-  sessions: readonly Session[],
-): void {
-  const byId = new Map(sessions.map((s) => [s.conversationId, s]));
-  const details = document.createElement("details");
-  details.dataset.records = "sessions";
-  const summary = document.createElement("summary");
-  summary.textContent = `${fmt(conversationIds.length)} sessions`;
-  details.append(summary);
-  for (const id of conversationIds) {
-    const session = byId.get(id);
-    if (session !== undefined) details.append(renderSessionDetails(session));
-  }
-  host.append(details);
-}
-
-// ---------------------------------------------------------------------------
-// Section 2: test results
-// ---------------------------------------------------------------------------
-
-function renderTests(host: HTMLElement, model: ComplianceModel): void {
-  const section = el("section", "");
-  section.dataset.section = "tests";
-  section.append(el("h2", "", "2. Test results"));
-  section.append(
-    el(
-      "p",
-      "lede",
-      "Population is the sessions a test has a sealed result for; a session with none for a test is not applicable to it and is not counted. Recomputed tests are deterministic checks anyone " +
-        "can repeat from the records. Judged tests apply a frozen rubric with a pinned model.",
-    ),
-  );
-  const table = document.createElement("table");
-  table.className = "grid";
-  table.dataset.rows = "tests";
-  const thead = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  headRow.append(
-    element("th", "Test"),
-    element("th", "Requirement"),
-    element("th", "Type"),
-    el("th", "n", "Population"),
-    el("th", "n", "Exceptions"),
-    el("th", "n", "Not evaluable"),
+    element("th", "Obligation and test"),
+    el("th", "n", "Checked in"),
     element("th", "Result"),
   );
   thead.append(headRow);
   table.append(thead);
-  const tbody = document.createElement("tbody");
-  for (const obligation of model.obligations)
-    for (const row of obligation.rows) {
-      const tr = document.createElement("tr");
-      tr.dataset.criterion = row.criterionId;
-      const typeCell = document.createElement("td");
-      typeCell.append(tierBadge(row.tier));
-      const resultCell = document.createElement("td");
-      const population = model.totalSessions - row.notApplicableCount;
-      if (
-        population > 0 &&
-        row.notEvaluableCount === population &&
-        row.notMetCount === 0 &&
-        row.metCount === 0
-      ) {
-        resultCell.append(statusPill("ne", "Not evaluable"));
-        if (row.notEvaluableNote !== undefined)
-          resultCell.append(el("div", "applic", row.notEvaluableNote));
-      } else {
-        resultCell.append(
-          statusPill(
-            row.notMetCount > 0 ? "exc" : "ok",
-            row.notMetCount > 0 ? "Exceptions" : "No exceptions",
-          ),
-        );
-      }
+  for (const obligation of model.obligations) {
+    const tbody = document.createElement("tbody");
+    tbody.dataset.obligationGroup = obligation.key;
+    const row = el("tr", "ob");
+    row.dataset.obligation = obligation.key;
+    const status = obligationStatus(obligation);
+    const title = el("td", "");
+    title.setAttribute("colspan", "2");
+    const name = el("div", "obn");
+    const article = el("b", "", obligation.article);
+    if (obligation.mapped)
+      name.append(producerText(article, ` · ${obligation.title}`));
+    else name.append(article, element("span", ` · ${obligation.title}`));
+    title.append(name);
+    if (obligation.plain !== NOT_STATED)
+      title.append(maybeProducer("div", "plain", obligation.plain, true));
+    title.append(
+      maybeProducer(
+        "div",
+        "applic",
+        obligation.applicability.note,
+        obligation.mapped,
+      ),
+    );
+    const statusCell = document.createElement("td");
+    statusCell.append(statusPill(status.cls, status.text));
+    row.append(title, statusCell);
+    tbody.append(row);
+    for (const test of obligation.rows) {
+      const tr = el("tr", "test");
+      tr.dataset.criterion = test.criterionId;
+      const population = model.totalSessions - test.notApplicableCount;
+      tr.dataset.population = String(population);
+      tr.dataset.exceptions = String(test.notMetCount);
+      tr.dataset.notEvaluable = String(test.notEvaluableCount);
+      const nameCell = el("td", "tn");
+      const head = el("div", "tnh");
+      head.append(
+        maybeProducer("b", "", test.name, test.producerName),
+        tierBadge(test.tier),
+      );
+      nameCell.append(head);
+      const finding = model.findings.find(
+        (f) => f.criterionId === test.criterionId,
+      );
+      if (finding !== undefined) nameCell.append(renderFinding(finding));
+      const sessionIds = [
+        ...(test.sessionsByVerdict.get("not_met") ?? []),
+        ...(test.sessionsByVerdict.get("unverified") ?? []),
+        ...(test.sessionsByVerdict.get("not_evaluable") ?? []),
+      ];
       tr.append(
-        el("td", "b", `${obligation.article}`),
-        element("td", row.name),
-        typeCell,
-        el("td", "n", fmt(population)),
-        el("td", "n", fmt(row.notMetCount)),
-        el("td", "n", fmt(row.notEvaluableCount)),
-        resultCell,
+        nameCell,
+        el("td", "n", plural(population, "session", "sessions")),
+        rowResult(test, ladder),
       );
       tbody.append(tr);
-      const drill = document.createElement("tr");
-      const drillCell = document.createElement("td");
-      drillCell.colSpan = 7;
-      const sessionIds = [
-        ...(row.sessionsByVerdict.get("not_met") ?? []),
-        ...(row.sessionsByVerdict.get("not_evaluable") ?? []),
-      ];
-      if (sessionIds.length > 0)
-        renderSessionList(drillCell, sessionIds, model.sessions);
-      drill.append(drillCell);
-      tbody.append(drill);
+      // The sessions behind a test open in a full-width row below it, so
+      // each one reads at the table's width.
+      if (sessionIds.length > 0) {
+        const toggle = levelToggle(
+          1,
+          `Show the ${plural(sessionIds.length, "session", "sessions")}${sessionListNote(test)}`,
+          () => renderSessionList(sessionIds, model, presentation),
+          { className: "line" },
+        );
+        toggle.dataset.records = "sessions";
+        toggle.dataset.drill = test.criterionId;
+        const drillRow = el("tr", "drill-row");
+        drillRow.dataset.drillFor = test.criterionId;
+        const cell = document.createElement("td");
+        cell.setAttribute("colspan", "3");
+        cell.append(toggle);
+        drillRow.append(cell);
+        tbody.append(drillRow);
+      }
     }
-  table.append(tbody);
+    table.append(tbody);
+  }
   section.append(table);
   host.append(section);
 }
 
-// ---------------------------------------------------------------------------
-// Section 3: findings
-// ---------------------------------------------------------------------------
+/** What the sessions behind a test are, in the order they are listed. */
+function sessionListNote(test: ObligationRowModel): string {
+  const kinds = [
+    ...(test.notMetCount > 0 ? ["exceptions"] : []),
+    ...(test.unverifiedCount > 0 ? ["could not be verified"] : []),
+    ...(test.notEvaluableCount > 0 ? ["undecided"] : []),
+  ];
+  if (kinds.length > 1) return ` (${kinds.join(", then ")})`;
+  if (test.notMetCount > 0) return " with exceptions";
+  if (test.unverifiedCount > 0) return " that could not be verified";
+  return " that could not be decided";
+}
 
-function renderFindings(host: HTMLElement, model: ComplianceModel): void {
-  const section = el("section", "");
-  section.dataset.section = "findings";
-  section.append(el("h2", "", "3. Findings"));
-  if (model.findings.length === 0) {
-    section.append(
-      el(
-        "p",
-        "lede",
-        "No findings: every test with a not-met session count above zero would have produced one.",
-      ),
-    );
-    host.append(section);
-    return;
-  }
-  for (const finding of model.findings) {
-    const box = el("div", "fnd");
-    box.dataset.finding = finding.id;
-    const fh = el("div", "fh");
-    fh.append(
-      el("b", "", finding.id),
-      severityPill(finding.severity),
-      element("span", finding.article),
-      el("span", "", finding.testName),
-    );
-    box.append(fh);
-    const table = document.createElement("table");
-    table.className = "fk";
-    const evRow = document.createElement("tr");
-    evRow.append(
-      element("th", "Evidence"),
-      element("td", `${fmt(finding.sessionIds.length)} sessions`),
-    );
-    const recRow = document.createElement("tr");
-    recRow.append(
-      element("th", "Recommendation"),
-      el("td", "", finding.recommendation),
-    );
-    const ownerRow = document.createElement("tr");
-    ownerRow.append(
-      element("th", "Owner · due"),
-      element("td", finding.ownerDue),
-    );
-    table.append(evRow, recRow, ownerRow);
-    box.append(table);
-    renderSessionList(box, finding.sessionIds, model.sessions);
-    section.append(box);
-  }
-  host.append(section);
+function renderFinding(finding: ComplianceFindingModel): HTMLElement {
+  const box = el("div", "fnd");
+  box.dataset.finding = finding.id;
+  const fh = el("div", "fh");
+  fh.append(
+    maybeProducer("b", "", `Finding ${finding.id}`, true),
+    severityPill(finding.severity),
+    element("span", plural(finding.sessionIds.length, "session", "sessions")),
+  );
+  box.append(fh);
+  box.append(maybeProducer("div", "rec", finding.recommendation, true));
+  const own = el("div", "own", "Owner · due: ");
+  own.append(producerText(finding.ownerDue));
+  box.append(own);
+  return box;
 }
 
 // ---------------------------------------------------------------------------
-// Section 4: quality of judged results
+// Level 1: sessions, listed in place, each readable as it stands
 // ---------------------------------------------------------------------------
 
-function renderQuality(host: HTMLElement, model: ComplianceModel): void {
-  const section = el("section", "");
-  section.dataset.section = "quality";
-  section.append(el("h2", "", "4. Quality of judged results"));
-  const protocol = model.qualityProtocol;
-  if (protocol === undefined) {
-    section.append(
-      el("p", "lede", "No quality protocol declared in this pack."),
-    );
-    host.append(section);
-    return;
+function renderSessionList(
+  conversationIds: readonly string[],
+  model: ComplianceModel,
+  presentation: CompliancePresentation,
+): HTMLElement {
+  const byId = new Map(model.sessions.map((s) => [s.conversationId, s]));
+  const list = el("div", "convs");
+  list.dataset.sessionCount = String(conversationIds.length);
+  for (const id of conversationIds) {
+    const session = byId.get(id);
+    if (session !== undefined)
+      list.append(renderSession(session, model, presentation));
   }
-  section.append(
-    el(
-      "p",
-      "lede",
-      `Protocol ${protocol.protocol ?? "unspecified"}${protocol.cadence === undefined ? "" : `, ${protocol.cadence}`}. Recomputed tests are not sampled.`,
-    ),
-  );
-  if (protocol.note !== undefined) section.append(el("p", "na", protocol.note));
-  host.append(section);
+  return list;
 }
 
-// ---------------------------------------------------------------------------
-// Section 5: methodology / what ran
-// ---------------------------------------------------------------------------
-
-function renderWhatRan(host: HTMLElement, model: ComplianceModel): void {
-  const section = el("section", "");
-  section.dataset.section = "methodology";
-  section.append(el("h2", "", "5. Methodology"));
-  const ran = el("div", "ran");
-  const field = (label: string, value: string): void => {
-    const it = el("div", "it");
-    it.append(el("div", "k", label), el("div", "v", value));
-    ran.append(it);
-  };
-  field(
-    "Contract",
-    model.runInfo.contract ??
-      (model.runInfo.pinned ? "no conversations" : "disagrees across sessions"),
-  );
-  field(
-    "Judge pin digest",
-    model.runInfo.judgePinDigest ??
-      (model.runInfo.pinned
-        ? "no judged sessions cited"
-        : "disagrees across sessions"),
-  );
-  field("Sessions", fmt(model.totalSessions));
-  section.append(ran);
-  host.append(section);
+function isException(test: SessionTest): boolean {
+  return test.verdict === "not_met";
 }
 
-// ---------------------------------------------------------------------------
-// Per-obligation detail (plain-language text, method, judged terms)
-// ---------------------------------------------------------------------------
+function isUnverified(test: SessionTest): boolean {
+  return test.verdict === "failed" || test.verdict === "unsupported";
+}
 
-function renderObligationDetail(
-  host: HTMLElement,
-  obligation: ObligationModel,
-): void {
-  const details = document.createElement("details");
-  details.dataset.obligationDetail = obligation.key;
-  const summary = document.createElement("summary");
-  summary.textContent = `${obligation.article} · ${obligation.title}`;
-  details.append(summary);
-  details.dataset.mapped = String(obligation.mapped);
-  details.append(
-    el(
-      "p",
-      "na",
-      obligation.mapped
-        ? "Article, summary and method: the producer's mapping, not a sealed record."
-        : `The producer's extension does not map this obligation: article, summary and method ${NOT_STATED}.`,
-    ),
+/** One session, in place inside a level-1 toggle: a header line and its body right below it, never a toggle of its own; the body is built when it scrolls near the view. */
+function renderSession(
+  session: Session,
+  model: ComplianceModel,
+  presentation: CompliancePresentation,
+): HTMLElement {
+  const names = testNames(model);
+  const exceptions = session.tests.filter(isException);
+  const unverified = session.tests.filter(isUnverified);
+  const undecided = session.tests.filter((t) => t.verdict === "not_evaluable");
+  const parts = caseParts(session.conversationId);
+  const item = el("article", "conv session");
+  item.dataset.session = session.conversationId;
+  const head = el("div", "conv-h");
+  head.append(el("span", "cid", parts.label));
+  head.append(
+    exceptions.length > 0
+      ? wordPill(
+          {
+            word: plural(exceptions.length, "exception", "exceptions"),
+            tone: "bad",
+          },
+          "exceptions",
+        )
+      : unverified.length > 0
+        ? wordPill({ word: "could not verify", tone: "ne" }, "unverified")
+        : undecided.length > 0
+          ? wordPill({ word: "could not decide", tone: "ne" }, "undecided")
+          : session.tests.some((t) => t.verdict === "met")
+            ? wordPill({ word: "no exceptions", tone: "ok" }, "ok")
+            : wordPill({ word: "no test applied", tone: "na" }, "none"),
   );
-  details.append(el("p", "", obligation.plain));
-  if (obligation.judgedTerms.length > 0)
-    details.append(
-      el("p", "applic", `Judged terms: ${obligation.judgedTerms.join(", ")}`),
-    );
-  details.append(el("p", "", obligation.method));
-  for (const row of obligation.rows) {
-    const rowBox = el("div", "ck");
-    rowBox.dataset.wording = row.wording.source;
+  const why = el("span", "cwhy");
+  (exceptions.length > 0
+    ? exceptions
+    : unverified.length > 0
+      ? unverified
+      : undecided
+  ).forEach((t, i) => {
+    if (i > 0) why.append(", ");
+    why.append(names(t.criterionId, "span", ""));
+  });
+  head.append(why);
+  head.append(el("span", "cmodel", parts.model ?? session.day));
+  item.append(head);
+  const body = el("div", "conv-slot");
+  item.append(body);
+  lazyBody(body, () => sessionBody(session, model, presentation));
+  return item;
+}
+
+function sessionBody(
+  session: Session,
+  model: ComplianceModel,
+  presentation: CompliancePresentation,
+): HTMLElement {
+  const names = testNames(model);
+  const ladder = ladderOn();
+  const body = el("div", "conv-b");
+  body.append(el("h4", "", "Test by test"));
+  for (const test of session.tests) {
+    const box = el("div", "ck");
+    box.dataset.crit = test.criterionId;
+    box.dataset.critVerdict = test.verdict;
     const h = el("div", "h");
-    h.append(element("span", row.name), tierBadge(row.tier));
-    rowBox.append(h);
-    rowBox.append(
-      el(
-        "div",
-        "why",
-        row.wording.source === "sealed"
-          ? `Wording run (sealed): ${row.wording.text}`
-          : row.wording.source === "mixed"
-            ? `Wording ${NOT_STATED}: the cited reports state different wordings.`
-            : `Wording ${NOT_STATED}: no cited report states it.`,
+    h.append(
+      wordPill(
+        ruleWord(
+          test.verdict,
+          ladder,
+          judgedOf(test.reportState, test.judgePinDigest),
+        ),
+        test.verdict,
       ),
     );
-    if (row.notEvaluableNote !== undefined)
-      rowBox.append(el("div", "ev", row.notEvaluableNote));
-    details.append(rowBox);
+    h.append(names(test.criterionId, "span", "tname"));
+    if (test.verdict !== "not_applicable") h.append(tierBadge(test.tier));
+    if (test.verdict === "failed" || test.verdict === "unsupported")
+      h.append(
+        el("span", "applic", "no verdict drawn: neither met nor an exception"),
+      );
+    box.append(h);
+    if (test.rationale !== undefined)
+      box.append(
+        el(
+          "div",
+          "why",
+          judgeNote(test.rationale, test.claim?.verdict ?? test.verdict),
+        ),
+      );
+    body.append(box);
   }
-  host.append(details);
+  if (session.tests.every((t) => t.rationale === undefined)) {
+    const states = new Set(
+      session.tests.flatMap((t) =>
+        t.claim === undefined ? [] : [t.reportState],
+      ),
+    );
+    const gap = el(
+      "p",
+      "small",
+      states.size === 1 && states.has("withheld")
+        ? "The judge's notes are not in this bundle: its reports are withheld."
+        : states.has("mismatch") ||
+            states.has("unreadable") ||
+            states.has("invalid")
+          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, cannot be read, or do not check out."
+          : states.has("withheld")
+            ? "The judge's notes are not in this bundle: some of its reports are withheld."
+            : "The judge left no notes.",
+    );
+    gap.dataset.gaps = "true";
+    body.append(gap);
+  }
+  body.append(el("h4", "", "The conversation"));
+  body.append(renderChat(session.transcript, session.sourceCapsuleId));
+  body.append(
+    levelToggle(
+      2,
+      "Proofs: record ids, digests and the judge pin",
+      () => sessionProofs(session, model),
+      { className: "proofs" },
+    ),
+  );
+  return body;
+}
+
+function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
+  const names = testNames(model);
+  const box = el("div", "pf-b");
+  box.dataset.proofsFor = session.conversationId;
+  // Which date the session is counted under, verbatim, beside the sealed day:
+  // the outcome card's rule, so a backfilled session never reads as if it
+  // happened on the day it was sealed.
+  const dated = session.dated;
+  const dating: [string, string, Record<string, string>][] =
+    dated.basis === "judged"
+      ? []
+      : [
+          [
+            "Dated",
+            `${dated.stated ?? dated.date}${dated.zone === "not-stated" ? " (timezone not stated)" : ""}: ${BASIS_TEXT[dated.basis]}`,
+            { dated: dated.basis },
+          ],
+          ...(dated.importedAt === undefined
+            ? []
+            : [
+                ["Imported", dated.importedAt, { imported: "" }] as [
+                  string,
+                  string,
+                  Record<string, string>,
+                ],
+              ]),
+        ];
+  const rows: ([string, string] | [string, string, Record<string, string>])[] =
+    [
+      ["Session", session.conversationId],
+      ...dating,
+      ["Judged and sealed", session.judgedDay, { sealed: "" }],
+      [
+        "Case record",
+        session.sourceCapsuleId === undefined
+          ? "not stated by the reports"
+          : `${session.sourceCapsuleId}${session.caseFrom === "claims" ? " (cited by every claim of this session; the reports that name it are withheld)" : ""}`,
+      ],
+    ];
+  const t = session.transcript;
+  if (t.state === "verified") {
+    rows.push(["Transcript record", t.transcriptRecordId!]);
+    rows.push([
+      "Case input digest",
+      `${t.inputDigest!} (the transcript's digest equals what the judged case committed to, checked on this page)`,
+    ]);
+  } else if (t.state === "cited") {
+    rows.push(["Transcript record", t.transcriptRecordId!]);
+    rows.push([
+      "Case input digest",
+      `${t.inputDigest!} (the case every claim cites; the judge's reports are withheld, so which conversation the judge read is not shown)`,
+    ]);
+  } else
+    rows.push([
+      "Transcript",
+      t.state === "absent"
+        ? "not in this bundle"
+        : `not shown: ${t.reason ?? "does not check"}`,
+    ]);
+  rows.push(["Result capsule", model.capsuleId]);
+  const dl = proofList(rows);
+  dl.dataset.checkIt = session.conversationId;
+  box.append(dl);
+  box.append(el("h5", "", "Each test's sealed report"));
+  for (const test of session.tests) {
+    const ev = el("div", "ev");
+    ev.dataset.proofCrit = test.criterionId;
+    const label = names(test.criterionId, "b", "");
+    label.append(": ");
+    ev.append(label);
+    if (test.verdict === "not_applicable") {
+      ev.append(
+        element(
+          "span",
+          "no claim: Result v0 carries none for a test that did not apply",
+        ),
+      );
+    } else {
+      if (test.reportDigest !== undefined)
+        ev.append(element("code", test.reportDigest));
+      if (test.contract !== undefined)
+        ev.append(element("code", test.contract));
+      if (test.judgePinDigest !== undefined)
+        ev.append(element("code", `judge pin ${test.judgePinDigest}`));
+      if (test.rationale !== undefined) {
+        const sealed = el(
+          "div",
+          "sealed",
+          `Rationale, as sealed: ${test.rationale}`,
+        );
+        sealed.dataset.rationale = "sealed";
+        ev.append(sealed);
+      }
+      if (test.reportDigest === undefined) ev.append(element("span", "absent"));
+    }
+    box.append(ev);
+  }
+  return box;
+}
+
+// ---------------------------------------------------------------------------
+// Proofs for the whole report
+// ---------------------------------------------------------------------------
+
+function pinText(model: ComplianceModel): string {
+  if (model.runInfo.judgePinDigest !== undefined)
+    return model.runInfo.judgePinDigest;
+  if (!model.runInfo.pinned) return "disagrees across sessions";
+  const info = model.runInfo;
+  const unread =
+    (info.reportsMismatched ?? 0) +
+    (info.reportsUnreadable ?? 0) +
+    (info.reportsInvalid ?? 0);
+  const cited = info.reportsCited ?? 0;
+  const parts: string[] = [];
+  if (info.reportsWithheld !== undefined)
+    parts.push(
+      `the judge's reports that state it are withheld (${fmt(info.reportsWithheld)} of ${fmt(cited)})`,
+    );
+  if (unread > 0)
+    parts.push(
+      `${fmt(unread)} of ${fmt(cited)} reports in this bundle do not match what was sealed, cannot be read, or do not check out`,
+    );
+  return parts.length === 0
+    ? "no judged sessions cited"
+    : `not in this bundle: ${parts.join("; ")}`;
+}
+
+function renderReportProofs(
+  host: HTMLElement,
+  model: ComplianceModel,
+  bundle: unknown,
+  verified: BundleVerificationResult,
+): void {
+  const section = el("section", "rp");
+  section.dataset.section = "report-proofs";
+  section.append(
+    levelToggle(
+      2,
+      "Proofs for this report: method, test wording, what ran, and how to verify the whole bundle",
+      () => {
+        const box = el("div", "pf-b");
+        renderObligationDetails(box, model);
+        renderQuality(box, model);
+        renderWhatRan(box, model);
+        renderVerificationDetails(box, bundle, verified);
+        return box;
+      },
+      { className: "proofs" },
+    ),
+  );
+  host.append(section);
 }
 
 function renderObligationDetails(
   host: HTMLElement,
   model: ComplianceModel,
 ): void {
-  const section = el("section", "");
-  section.dataset.section = "obligation-detail";
-  section.append(el("h2", "", "Obligation detail"));
-  for (const obligation of model.obligations)
-    renderObligationDetail(section, obligation);
-  host.append(section);
+  const part = el("div", "rp-s");
+  part.dataset.section = "obligation-detail";
+  part.append(el("h3", "", "Method and the wording each test ran"));
+  for (const obligation of model.obligations) {
+    const box = el("div", "obd");
+    box.dataset.obligationDetail = obligation.key;
+    box.dataset.mapped = String(obligation.mapped);
+    box.append(
+      maybeProducer(
+        "h5",
+        "",
+        `${obligation.article} · ${obligation.title}`,
+        obligation.mapped,
+      ),
+    );
+    box.append(
+      el(
+        "p",
+        "na",
+        obligation.mapped
+          ? "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record."
+          : `The producer's extension does not map this obligation: article, summary and method ${NOT_STATED}.`,
+      ),
+    );
+    if (obligation.judgedTerms.length > 0) {
+      const terms = el("p", "applic", "Judged terms: ");
+      terms.append(producerText(obligation.judgedTerms.join(", ")));
+      box.append(terms);
+    }
+    box.append(maybeProducer("p", "", obligation.method, obligation.mapped));
+    for (const row of obligation.rows) {
+      const rowBox = el("div", "ck");
+      rowBox.dataset.wording = row.wording.source;
+      const h = el("div", "h");
+      h.append(
+        maybeProducer("span", "", row.name, row.producerName),
+        tierBadge(row.tier),
+      );
+      rowBox.append(h);
+      rowBox.append(
+        el(
+          "div",
+          "why",
+          row.wording.source === "sealed"
+            ? `Wording run (sealed): ${row.wording.text}`
+            : row.wording.source === "mixed"
+              ? `Wording ${NOT_STATED}: the cited reports state different wordings.`
+              : `Wording ${NOT_STATED}: no cited report states it.`,
+        ),
+      );
+      if (row.notEvaluableNote !== undefined)
+        rowBox.append(maybeProducer("div", "ev", row.notEvaluableNote, true));
+      box.append(rowBox);
+    }
+    part.append(box);
+  }
+  host.append(part);
+}
+
+function renderQuality(host: HTMLElement, model: ComplianceModel): void {
+  const part = el("div", "rp-s");
+  part.dataset.section = "quality";
+  part.append(el("h3", "", "Quality of judged results"));
+  const protocol = model.qualityProtocol;
+  if (protocol === undefined) {
+    part.append(el("p", "", "No quality protocol declared in this pack."));
+    host.append(part);
+    return;
+  }
+  const line = el("p", "", "Protocol ");
+  line.append(
+    protocol.protocol === undefined
+      ? "unspecified"
+      : producerText(protocol.protocol),
+  );
+  if (protocol.cadence !== undefined)
+    line.append(", ", producerText(protocol.cadence));
+  line.append(". Recomputed tests are not sampled.");
+  part.append(line);
+  if (protocol.note !== undefined)
+    part.append(maybeProducer("p", "na", protocol.note, true));
+  host.append(part);
+}
+
+function renderWhatRan(host: HTMLElement, model: ComplianceModel): void {
+  const part = el("div", "rp-s");
+  part.dataset.section = "methodology";
+  part.append(el("h3", "", "What ran"));
+  const dl = proofList([
+    [
+      "Contract",
+      model.runInfo.contract ??
+        (model.runInfo.pinned
+          ? "no conversations"
+          : "disagrees across sessions"),
+    ],
+    ["Judge pin digest", pinText(model)],
+    ["Sessions", fmt(model.totalSessions)],
+    ...(model.dating.from === undefined || model.dating.to === undefined
+      ? []
+      : [
+          [
+            "Period",
+            span([model.dating.from, model.dating.to]),
+            { period: "" },
+          ] as [string, string, Record<string, string>],
+        ]),
+    ...(model.dating.basis === "judged"
+      ? []
+      : [
+          ["Sealed", span(model.dating.judgedDays), { sealed: "" }] as [
+            string,
+            string,
+            Record<string, string>,
+          ],
+        ]),
+    ["Result capsule", model.capsuleId],
+  ]);
+  dl.dataset.ran = "true";
+  part.append(dl);
+  const note = datingStatement(model.dating, model.totalSessions);
+  if (note !== undefined) {
+    const p = el("p", "na", note);
+    p.dataset.dateNote = model.dating.basis;
+    part.append(p);
+  }
+  host.append(part);
+}
+
+function renderVerificationDetails(
+  host: HTMLElement,
+  bundle: unknown,
+  verified: BundleVerificationResult,
+): void {
+  const part = el("div", "rp-s");
+  part.dataset.section = "verification-details";
+  part.append(el("h3", "", "Verification details"));
+  const model = buildVerificationPageModel(bundle, verified);
+  part.append(
+    proofList([
+      ["Bundle digest", model.bundleDigest ?? "uncomputable"],
+      ["Checkpoint root", model.checkpointRoot ?? "absent"],
+      ["Checkpoint size", String(model.checkpointSize ?? "absent")],
+    ]),
+  );
+  part.append(
+    el(
+      "p",
+      "",
+      "This bundle's own checkpoint, an append-only Merkle Mountain Range over the sealed records. Repeat every check on this page offline with the open-source verifier. This page only ever renders a bundle that already verified: tamper with any claim, record or checkpoint and the whole page is replaced by the verification-failed banner.",
+    ),
+  );
+  host.append(part);
 }
 
 // ---------------------------------------------------------------------------
@@ -548,24 +946,21 @@ function renderObligationDetails(
 export function renderCompliancePage(
   result: ResultRoot,
   presentation: CompliancePresentation,
-  _bundle: unknown,
-  _verified: BundleVerificationResult,
+  bundle: unknown,
+  verified: BundleVerificationResult,
   root: HTMLElement,
 ): void {
   const model = buildComplianceModel(result, presentation);
   const wrapper = el("div", "cc");
   wrapper.dataset.page = "compliance";
+  wrapper.dataset.levels = "2";
   const style = document.createElement("style");
   style.textContent = COMPLIANCE_CSS;
   wrapper.append(style);
 
   renderHeader(wrapper, model);
-  renderSummary(wrapper, model);
-  renderObligationDetails(wrapper, model);
-  renderTests(wrapper, model);
-  renderFindings(wrapper, model);
-  renderQuality(wrapper, model);
-  renderWhatRan(wrapper, model);
+  renderSummary(wrapper, model, presentation);
+  renderReportProofs(wrapper, model, bundle, verified);
   root.append(wrapper);
 }
 
