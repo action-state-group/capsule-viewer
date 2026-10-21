@@ -84,7 +84,8 @@ export function levelToggle(
  * The one nesting rule for every report page (SEAMS ruling 11): a level-2
  * toggle may sit inside a level-1 toggle, and nothing deeper. Returns every
  * breach in `root`, by the summary text of the offending toggle: a toggle
- * inside two others, or a level-1 toggle inside another level-1 toggle.
+ * inside two others, a level-1 toggle inside another toggle, or a level-2
+ * toggle inside anything but a level-1 toggle (another level 2, say).
  * Empty when the page keeps the rule. Run it over a page with every toggle
  * opened, so lazily built bodies are counted.
  */
@@ -103,12 +104,14 @@ export function nestingProblems(root: ParentNode): string[] {
     );
     if (outer.length > 1)
       problems.push(`${name} is nested ${outer.length + 1} toggles deep`);
-    else if (
-      outer.length === 1 &&
-      details.dataset.level !== "2" &&
-      outer[0]!.dataset.level !== undefined
-    )
-      problems.push(`${name} is not level 2 but sits inside a toggle`);
+    else if (outer.length === 1 && outer[0]!.dataset.level !== undefined) {
+      if (details.dataset.level !== "2")
+        problems.push(`${name} is not level 2 but sits inside a toggle`);
+      else if (outer[0]!.dataset.level !== "1")
+        problems.push(
+          `${name} is level 2 but sits inside a level-${outer[0]!.dataset.level} toggle, not a level-1 one`,
+        );
+    }
   }
   return problems;
 }

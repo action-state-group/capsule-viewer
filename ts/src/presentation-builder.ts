@@ -13,7 +13,10 @@ import {
 } from "./emitter.js";
 import {
   checkWordingPackInput,
+  DEFAULT_PACKS,
+  wordingProblems,
   WordingPackError,
+  type ContractReportGrouping,
 } from "./contract-report-wording.js";
 import {
   createPresentationRegistry,
@@ -25,6 +28,8 @@ import {
   sha256Hex,
 } from "@action-state-group/agent-action-capsule";
 import {
+  BUILTIN_MANIFEST_RESULT_COMPLIANCE,
+  BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT,
   bundleVerified,
   manifestProblems,
   PresentationAmbiguityError,
@@ -351,6 +356,44 @@ export async function checkWordingPack(
   }
 }
 
+/** The contract-report grouping each built-in report module draws, by module id. */
+const CONTRACT_REPORT_GROUPINGS: Readonly<
+  Record<string, ContractReportGrouping>
+> = {
+  [BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT.id]: "lines",
+  [BUILTIN_MANIFEST_RESULT_COMPLIANCE.id]: "groups",
+};
+
+/**
+ * Refuse a wording pack that does not fit the report the registry selected,
+ * naming every problem: the check `render-report.mjs` runs, and the one the
+ * page would otherwise fail on with no reason ("presentation-failed"). A
+ * module that is not a contract report takes no such check.
+ */
+async function checkWordingFits(
+  wording: WordingPackInput,
+  module: string | null,
+): Promise<void> {
+  const grouping =
+    module === null || !Object.hasOwn(CONTRACT_REPORT_GROUPINGS, module)
+      ? undefined
+      : CONTRACT_REPORT_GROUPINGS[module];
+  if (grouping === undefined) return;
+  let pack;
+  try {
+    pack = await checkWordingPackInput(wording);
+  } catch (e) {
+    if (e instanceof WordingPackError)
+      throw new PresentationBuildError(e.message);
+    throw e;
+  }
+  const problems = wordingProblems(pack, DEFAULT_PACKS[grouping]);
+  if (problems.length > 0)
+    throw new PresentationBuildError(
+      `wording pack does not fit ${module}: ${problems.join("; ")}`,
+    );
+}
+
 /** The offline file's settings: everything but the code. */
 interface OfflineSettings {
   readonly bundle: unknown;
@@ -534,6 +577,8 @@ async function resolveFor(
     throw new PresentationBuildError(
       `presentation ${options.presentation} was requested but the registry selected ${module ?? resolution.kind} for audience ${audience} and format ${format}`,
     );
+  if (options.wording !== undefined)
+    await checkWordingFits(options.wording, module);
   return {
     common: {
       audience,
@@ -557,7 +602,9 @@ const contractFormat = (target: PackagingTarget): PresentationFormat =>
  * is given, and never for a bundle that did not verify, since removing a
  * disclosure could hide the failure); verify the scoped bundle; resolve the
  * module through the registry (an ambiguity is an error; an explicit
- * `presentation` that the registry does not select is an error); package.
+ * `presentation` that the registry does not select is an error, and so is
+ * a wording pack that does not fit the selected report, with every
+ * problem named); package.
  *
  * A packaging that is unavailable throws: {@link FragmentTooLargeError} for
  * a fragment over its budget, {@link PackagingUnavailableError} otherwise.

@@ -8,7 +8,8 @@
 // this package's page runtime, and the pack, bound by its wording_sha256.
 // The pack is checked first against the contract-report module's default
 // pack for the bundle's report (same placeholders in every entry it
-// replaces, no two verdicts sharing a word, the same grouping); every
+// replaces, no two verdicts sharing a word, the same grouping, no locked
+// line reworded); every
 // problem is printed and nothing is written. A pack for a bundle that opts
 // into neither report, or into both, is refused too: there is no one
 // default to check it against. The bundle is never changed, so no judge

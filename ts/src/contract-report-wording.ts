@@ -31,8 +31,10 @@ import EU_AI_ACT_PACK from "./wording/contract-report-eu-ai-act.en.json" with { 
  * entry must carry exactly the placeholders of the entry it replaces, so a
  * pack can neither drop a count or a denominator nor invent one. The words
  * for two different verdicts must stay different words, so a pack cannot
- * fold one verdict into another. The raw verdict is always on the element
- * as data, whatever the words say.
+ * fold one verdict into another. The lines that say what the page checked,
+ * what the bundle withholds, and what is the producer's rather than evidence
+ * are locked (LOCKED_ENTRIES): a pack cannot reword them. The raw verdict is
+ * always on the element as data, whatever the words say.
  *
  * Plurals are two entries, `<key>.one` and `<key>.other`, chosen by count.
  */
@@ -177,6 +179,146 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
 ];
 
 /**
+ * Lines that state what this page checked or did not check, what the bundle
+ * does not carry or withholds, and which text is the producer's rather than
+ * sealed evidence. A pack may not reword them: they are the page's honesty,
+ * not its voice. A pack that carries one of these entries with any text but
+ * the default's is refused (a pack that repeats the default, as a copied
+ * file does, changes nothing and passes).
+ */
+export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
+  // The front block (report-provenance.ts): who judged, who witnessed, what verified.
+  "prov.judge.none",
+  "prov.judge.model.does-not-recompute",
+  "prov.judge.model.differs",
+  "prov.judge.model.partly-stated",
+  "prov.judge.model.not-stated",
+  "prov.judge.all-withheld",
+  "prov.judge.some-withheld",
+  "prov.judge.not-carried",
+  "prov.judge.unread",
+  "prov.judge.checker-not-stated",
+  "prov.judge.recomputed",
+  "prov.judge.unnamed",
+  "prov.judge.nothing",
+  "prov.witness.stated",
+  "prov.witness.none",
+  "prov.witness.receipt-not-stated",
+  "prov.witness.stubs.one",
+  "prov.witness.stubs.other",
+  "prov.witness.malformed.one",
+  "prov.witness.malformed.other",
+  "prov.witness.about.unchecked",
+  "prov.witness.about.unsigned",
+  "prov.verifier.ran",
+  "prov.verifier.ran.cll",
+  "prov.verifier.ran.not-stated",
+  "prov.verifier.commit.not-stated",
+  "prov.verifier.built",
+  "prov.verifier.built.not-stated",
+  "prov.verifier.version.not-stated",
+  // Both cards: dating, withheld reports, the conversation, the proofs.
+  "report.not-stated",
+  "report.span.unknown",
+  "report.basis.source",
+  "report.basis.record",
+  "report.basis.judged",
+  "report.dating.source",
+  "report.dating.record",
+  "report.dating.mixed",
+  "report.dating.mixed.source",
+  "report.dating.mixed.record",
+  "report.dating.mixed.judged",
+  "report.dating.self-attested",
+  "report.dating.tz",
+  "report.gap.notes.withheld",
+  "report.gap.notes.unread",
+  "report.gap.notes.some-withheld",
+  "report.gap.notes.none",
+  "report.pf.case-record.not-stated",
+  "report.pf.dated.no-zone",
+  "report.pf.input-digest.verified",
+  "report.pf.input-digest.cited",
+  "report.pf.transcript.absent",
+  "report.pf.transcript.not-shown",
+  "report.pf.transcript.default-reason",
+  "report.pf.wording.default",
+  "report.pf.wording.supplied",
+  "report.pin.withheld",
+  "report.pin.unread",
+  "report.pin.not-in-bundle",
+  "report.vd.uncomputable",
+  "report.vd.absent",
+  "chat.absent",
+  "chat.record.not-stated",
+  "chat.not-shown",
+  "chat.not-shown.default-reason",
+  "chat.state.cited",
+  "chat.state.verified",
+  "chat.lede",
+  // The Outcomes report.
+  "lines.tier.unknown",
+  "lines.wording.unstated",
+  "lines.wording.mixed",
+  "lines.wording-note.sealed",
+  "lines.wording-note.unstated",
+  "lines.wording-note.partly",
+  "lines.edited.title",
+  "lines.producer-note.kicker",
+  "lines.producer-note.source",
+  "lines.no-note.withheld",
+  "lines.no-note.mismatch",
+  "lines.no-note.unreadable",
+  "lines.no-note.invalid",
+  "lines.no-note.none",
+  "lines.gap.wording.mixed",
+  "lines.gap.wording.none",
+  "lines.pf.case-record.from-claims",
+  "lines.pf.judge-pin.recomputed",
+  "lines.pf.col.rationale",
+  "lines.pf.no-claim",
+  "lines.pf.not-cited",
+  "lines.pf.derived",
+  "lines.pin.differs",
+  "lines.pin.not-stated",
+  "lines.why-missed.unstructured",
+  "lines.stamp",
+  "lines.stamp.small",
+  "lines.hc.none",
+  "lines.terms.lede",
+  "lines.terms.lede.agreed",
+  "lines.terms.version.value",
+  "lines.ran.judge-pin.recomputed",
+  "lines.ran.agent.value",
+  "lines.ran.components-mismatch",
+  "lines.ran.lock",
+  "lines.ran.pin-mismatch",
+  "lines.vd.note",
+  "lines.rp.tamper",
+  "lines.cal.source-says",
+  "lines.cal.tz",
+  // The EU AI Act Results.
+  "groups.producer.title",
+  "groups.tier.unstated",
+  "groups.pack.not-stated",
+  "groups.row.nothing",
+  "groups.summary.basis",
+  "groups.pf.case-record.from-claims",
+  "groups.pf.no-claim",
+  "groups.pf.rationale",
+  "groups.pf.absent",
+  "groups.pin.none",
+  "groups.od.mapped",
+  "groups.od.unmapped",
+  "groups.od.wording.sealed",
+  "groups.od.wording.mixed",
+  "groups.od.wording.unstated",
+  "groups.q.none",
+  "groups.q.unspecified",
+  "groups.vd.note",
+]);
+
+/**
  * A word as a reader tells it apart: compatibility forms folded, invisible
  * format characters dropped, whitespace collapsed, case ignored. "Met",
  * "met " and "met" with a zero-width space are one word to a reader.
@@ -200,8 +342,9 @@ function mixesScripts(word: string): boolean {
 }
 
 /**
- * Every problem with `pack` as a replacement for `defaults`: an entry whose
- * placeholders differ from the entry it replaces, a `layout.grouping` that is
+ * Every problem with `pack` as a replacement for `defaults`: a locked line
+ * (LOCKED_ENTRIES) reworded, an entry whose placeholders differ from the
+ * entry it replaces, a `layout.grouping` that is
  * not the default's, verdict words two verdicts would share (as read), a
  * verdict worded as another verdict reads by default, and a verdict word with
  * nothing visible in it. Entries the defaults do not have are not this
@@ -215,6 +358,13 @@ export function wordingProblems(
   for (const [key, text] of Object.entries(pack.entries)) {
     if (!Object.hasOwn(defaults.entries, key)) continue;
     const base = defaults.entries[key]!;
+    if (LOCKED_ENTRIES.has(key)) {
+      if (text !== base)
+        problems.push(
+          `${key}: this line states what the page checked and can't be reworded`,
+        );
+      continue;
+    }
     if (key.startsWith("layout.")) {
       if (text !== base)
         problems.push(

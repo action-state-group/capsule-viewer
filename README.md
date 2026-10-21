@@ -147,9 +147,16 @@ or verdict moves, and nothing is re-judged.
   (`verdict.*`, `status.*`, `lines.pf.verdict.*`), as a reader reads it
   (case, spacing and invisible characters ignored), and no verdict may take
   another verdict's default word, so met and not met cannot be swapped.
-  `layout.grouping` is fixed. A pack that breaks
+  `layout.grouping` is fixed. The lines that say what the page checked or
+  didn't ("stated by the bundle, not checked here", "which this page does not
+  check", the withheld-report and "not stated" notices, the producer's-text
+  and "not evidence" labels; the list is `LOCKED_ENTRIES` in
+  `ts/src/contract-report-wording.ts`) are fixed, because they are the page's
+  account of its own checking, and a reworded one could claim a check that
+  never ran. A pack that breaks
   any of these, or does not hash to its `wording_sha256`, is refused before
-  anything is drawn; `render-report.mjs` prints every problem. The raw
+  anything is drawn; `render-report.mjs` and the presentation builder name
+  every problem. The raw
   verdict is on every element as data, whatever the words say.
 - The page's proofs name the pack that drew it ("Words": its id, and the
   `wording_sha256` of a supplied pack).
@@ -161,7 +168,8 @@ or verdict moves, and nothing is re-judged.
 
 One nesting rule holds on every report page (SEAMS ruling 11): a level-2
 toggle may sit inside a level-1 toggle, never deeper (`nestingProblems`,
-`capsule_viewer.kit.check_nesting`).
+`capsule_viewer.kit.check_nesting`). `nestingProblems` also reads each
+toggle's level, so a level-2 toggle inside another level-2 toggle fails.
 
 ## Rules module (`capsuleviewer.rules/v0`)
 

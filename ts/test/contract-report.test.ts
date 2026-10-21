@@ -14,6 +14,7 @@ import { sha256Hex } from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
   DEFAULT_PACKS,
+  LOCKED_ENTRIES,
   placeholders,
   readWordingPack,
   wordingProblems,
@@ -132,7 +133,7 @@ function skeleton(node: Element): string {
   return copy.outerHTML;
 }
 
-/** Every entry rewritten to a different word, keeping its placeholders. */
+/** Every entry a pack may reword rewritten to a different word, keeping its placeholders. */
 function scrambled(base: WordingPack): WordingPack {
   return {
     id: `test/scrambled-${base.entries["layout.grouping"]}@1`,
@@ -140,7 +141,7 @@ function scrambled(base: WordingPack): WordingPack {
     entries: Object.fromEntries(
       Object.entries(base.entries).map(([k, v]) => [
         k,
-        k.startsWith("layout.")
+        k.startsWith("layout.") || LOCKED_ENTRIES.has(k)
           ? v
           : `«${k}»${placeholders(v)
               .map((p) => ` {${p}}`)
@@ -198,6 +199,92 @@ it("the front says witnessed by as stated by the bundle, not checked here (SEAMS
 });
 
 // ---------------------------------------------------------------------------
+// The lines that say what the page checked are locked
+// ---------------------------------------------------------------------------
+
+// What a line that states the page's own checking, the bundle's gaps, or the
+// producer's text reads like. Every default entry that reads like this must
+// be locked, so a new honesty line cannot ship tunable by accident.
+const HONESTY =
+  /not checked|does not check|did not check|not evidence|not a sealed record|withheld|not stated|not shown|not in this bundle|this page|this card|as sealed|\(sealed\)|self-attested|as given|recomputed|absent|unknown|uncomputable|no signature|placeholder/iu;
+
+it("every locked line is a default entry, and every default line that states what the page checked is locked", () => {
+  const all = {
+    ...DEFAULT_PACKS.lines.entries,
+    ...DEFAULT_PACKS.groups.entries,
+  };
+  for (const key of LOCKED_ENTRIES)
+    expect(Object.hasOwn(all, key), key).toBe(true);
+  const unlocked = Object.entries(all)
+    .filter(([k, v]) => HONESTY.test(v) && !LOCKED_ENTRIES.has(k))
+    .map(([k]) => k);
+  // The tier's name and the quality-sampling note: words about the method,
+  // which a pack may tune, not the page's account of its own checking.
+  expect(unlocked.sort()).toEqual([
+    "groups.q.tail",
+    "groups.tier.recomputed",
+    "lines.tier.recomputed",
+  ]);
+});
+
+for (const grouping of ["lines", "groups"] as const)
+  it(`${grouping}: a pack rewording any locked line is refused, one line at a time`, () => {
+    const defaults = DEFAULT_PACKS[grouping];
+    const locked = Object.keys(defaults.entries).filter((k) =>
+      LOCKED_ENTRIES.has(k),
+    );
+    expect(locked.length).toBeGreaterThan(40);
+    for (const key of locked) {
+      const base = defaults.entries[key]!;
+      // the same placeholders, other words: only the lock refuses it
+      const reworded = `Checked and confirmed${placeholders(base)
+        .map((p) => ` {${p}}`)
+        .join("")}`;
+      expect(
+        wordingProblems(
+          { id: "test/locked@1", locale: "en", entries: { [key]: reworded } },
+          defaults,
+        ),
+        key,
+      ).toEqual([
+        `test/locked@1: ${key}: this line states what the page checked and can't be reworded`,
+      ]);
+      // a one-character change is a rewording too
+      expect(
+        wordingProblems(
+          { id: "test/locked@1", locale: "en", entries: { [key]: `${base} ` } },
+          defaults,
+        ),
+        key,
+      ).toHaveLength(1);
+      // repeating the default (a copied file) changes nothing and passes
+      expect(
+        wordingProblems(
+          { id: "test/locked@1", locale: "en", entries: { [key]: base } },
+          defaults,
+        ),
+        key,
+      ).toEqual([]);
+    }
+  });
+
+for (const { file, page } of CARDS)
+  it(`${page}: a pack rewording "stated by the bundle, not checked here" draws no card`, async () => {
+    const root = await render(
+      file,
+      await distributed({
+        id: "test/witness@1",
+        locale: "en",
+        entries: { "prov.witness.stated": "{witnesses}: checked." },
+      }),
+    );
+    expect(root.querySelector(`[data-page="${page}"]`)).toBeNull();
+    expect(
+      root.querySelector('[data-refusal="presentation-failed"]'),
+    ).not.toBeNull();
+  });
+
+// ---------------------------------------------------------------------------
 // A pack swap changes words, and only words
 // ---------------------------------------------------------------------------
 
@@ -241,11 +328,11 @@ it("the ladder pack's words reach the page: a resolved line reads Established (r
   expect(resolved.textContent).toBe("Established (resolved)");
 });
 
-it("two EU cards drawn at once, each with its own pack, keep their own producer tooltip", async () => {
-  const pack = (title: string): WordingPack => ({
-    id: `test/producer-${title}@1`,
+it("two EU cards drawn at once, each with its own pack, keep their own words, and the producer tooltip stays locked", async () => {
+  const pack = (name: string): WordingPack => ({
+    id: `test/kicker-${name}@1`,
     locale: "en",
-    entries: { "groups.producer.title": `producer ${title}` },
+    entries: { "groups.kicker": `kicker ${name}` },
   });
   const { bundle } = await sealEvidenceBundle(
     cut(fixture("compliance-bundle.json")),
@@ -261,12 +348,17 @@ it("two EU cards drawn at once, each with its own pack, keep their own producer 
       renderEvidenceGraph(bundle, roots[i]!, undefined, { wording }),
     ),
   );
-  for (const [i, title] of ["producer a", "producer b"].entries()) {
+  for (const [i, own] of ["kicker a", "kicker b"].entries()) {
+    const text = roots[i]!.textContent ?? "";
+    expect(text).toContain(own);
+    expect(text).not.toContain(own === "kicker a" ? "kicker b" : "kicker a");
     const producer = [
       ...roots[i]!.querySelectorAll<HTMLElement>('i[data-source="producer"]'),
     ];
     expect(producer.length).toBeGreaterThan(0);
-    expect(new Set(producer.map((e) => e.title))).toEqual(new Set([title]));
+    expect(new Set(producer.map((e) => e.title))).toEqual(
+      new Set([DEFAULT_PACKS.groups.entries["groups.producer.title"]]),
+    );
   }
 });
 
@@ -404,5 +496,26 @@ it("the nesting check fails on a toggle nested deeper than level 2, and on a lev
   );
   expect(nestingProblems(host)).toEqual([
     '"inner one" is not level 2 but sits inside a toggle',
+  ]);
+});
+
+it("the nesting check fails on a level-2 toggle directly inside another level-2 toggle", () => {
+  const host = document.createElement("div");
+  const outer = levelToggle(
+    2,
+    "outer two",
+    () => document.createElement("div"),
+    {
+      eager: true,
+    },
+  );
+  outer.append(
+    levelToggle(2, "inner two", () => document.createElement("p"), {
+      eager: true,
+    }),
+  );
+  host.append(outer);
+  expect(nestingProblems(host)).toEqual([
+    '"inner two" is level 2 but sits inside a level-2 toggle, not a level-1 one',
   ]);
 });

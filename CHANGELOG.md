@@ -32,11 +32,17 @@ here. The format follows
   presentation builder already carries); its entries replace the default
   pack's. A pack changes words only: every entry it replaces must keep the
   same `{placeholders}`, two verdicts may not share a word or take another
-  verdict's default word, and the grouping is fixed, or the pack is refused and no card is drawn. `ts/scripts/render-report.mjs`
+  verdict's default word, and the grouping is fixed, or the pack is refused and no card is drawn. The lines that say what the page checked
+  or didn't, what the bundle withholds or doesn't state, and which text is
+  the producer's rather than evidence are locked (`LOCKED_ENTRIES`): a pack
+  that rewords one is refused. The presentation builder refuses a pack that
+  doesn't fit the selected report, naming every problem, as
+  `ts/scripts/render-report.mjs` does; `render-report.mjs`
   draws a page from a bundle with a pack. The grade-ladder word set the cards
   kept behind a code flag (`LADDER_WORDS`, removed) is now just a pack.
 - One nesting rule for every report page (SEAMS ruling 11): a level-2 toggle
-  inside a level-1 toggle, never deeper. `nestingProblems` in
+  inside a level-1 toggle, never deeper (and, in `nestingProblems`, never
+  inside another level 2). `nestingProblems` in
   `ts/src/report-levels.ts` and `capsule_viewer.kit.check_nesting` check it;
   both cards pass with every toggle open. The receipts adopt it in #47.
 - Golden pages for both cards, closed and fully open
