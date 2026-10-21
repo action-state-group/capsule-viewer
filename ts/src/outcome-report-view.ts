@@ -830,7 +830,7 @@ function missedReasonLabel(
 ): string {
   const check = terms.checks.find((c) => c.id === checkId);
   const criterion = check?.criteria.find((c) => c.id === criterionId);
-  return criterion === undefined
+  return check === undefined || criterion === undefined
     ? `${checkId}.${criterionId}`
     : `${criterion.label} (${check.question})`;
 }
