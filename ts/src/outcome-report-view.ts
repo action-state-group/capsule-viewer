@@ -288,12 +288,13 @@ export function statusWord(
   w: Words,
 ): Worded {
   if (status === "resolved")
-    return { word: w.t("status.resolved"), tone: "ok" };
-  if (status === "missed") return { word: w.t("status.missed"), tone: "bad" };
+    return { word: w.t("lines.status.resolved"), tone: "ok" };
+  if (status === "missed")
+    return { word: w.t("lines.status.missed"), tone: "bad" };
   if (status === "unverified")
-    return { word: w.t("status.unverified"), tone: "ne" };
+    return { word: w.t("lines.status.unverified"), tone: "ne" };
   if (status === "nothing-applied")
-    return { word: w.t("status.nothing-applied"), tone: "na" };
+    return { word: w.t("lines.status.nothing-applied"), tone: "na" };
   // Three-valued: a judge ran on an undecided rule, none did, or the
   // withheld reports cannot say which. The default pack distinguishes all
   // of these.
@@ -301,20 +302,20 @@ export function statusWord(
     .filter((c) => c.verdict === "not_evaluable")
     .map((c) => judgedOf(c.reportState, c.judgePinDigest));
   if (judged.includes("yes"))
-    return { word: w.t("status.undecided.judged"), tone: "ne" };
+    return { word: w.t("lines.status.undecided.judged"), tone: "ne" };
   if (judged.length > 0 && judged.every((j) => j === "no"))
-    return { word: w.t("status.undecided.unjudged"), tone: "ne" };
+    return { word: w.t("lines.status.undecided.unjudged"), tone: "ne" };
   // No rule result at all for this conversation (no not_evaluable criterion
   // to point to a report state): the plain word set's own bare "could not
   // decide", never a report-specific claim this conversation's records
   // don't support.
   if (judged.length === 0)
-    return { word: w.t("status.undecided.none"), tone: "ne" };
+    return { word: w.t("lines.status.undecided.none"), tone: "ne" };
   // "withheld" only when every report that would say is withheld; a report
   // in the bundle that cannot be read as sealed is never called withheld.
   return judged.every((j) => j === "withheld" || j === "no")
-    ? { word: w.t("status.undecided.withheld"), tone: "ne" }
-    : { word: w.t("status.undecided.unavailable"), tone: "ne" };
+    ? { word: w.t("lines.status.undecided.withheld"), tone: "ne" }
+    : { word: w.t("lines.status.undecided.unavailable"), tone: "ne" };
 }
 
 function criterionWord(c: DrawnCriterion, w: Words): Worded {

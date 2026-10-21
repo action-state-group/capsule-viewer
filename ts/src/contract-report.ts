@@ -35,8 +35,22 @@ import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
  * The data a grouping reads still arrives by the two extension kinds
  * agent-action-capsule selects today (`outcome-report/v1` for `lines`,
  * `eu-ai-act-compliance/v1` for `groups`), so the registry keeps those two
- * manifests and both resolve to this one module. Registering one neutral
- * contract-report kind is upstream (SEAMS ruling 2).
+ * manifests and both resolve to this one module. One neutral
+ * `contract-report/v1` kind is registered upstream (SEAMS ruling 2;
+ * agent-action-capsule#352, 6f6c64a, spec/contract-report-v1.md), but not in
+ * a released agent-action-capsule yet (ts is pinned to 0.5.0): switching
+ * this module's manifest to require it, in place of the two deprecated
+ * aliases, waits on that release.
+ *
+ * This module's own verdict and tier words are not that kind's: its Result
+ * rows carry `failed`/`unsupported` claims and a judged/recomputed tier
+ * `contract-report/v1` §2/§3 does not define (its closed verdict enum is
+ * `met`/`not_met`/`not_evaluable` only). Until this module reads a plain
+ * Evidence Result's claims instead of these richer per-criterion rows, its
+ * `verdict.*`/`tier.*` keys stay this module's own, not that kind's shared
+ * namespace; `lines.status.*` (this grouping's own conversation outcome,
+ * never the kind's carrier `status.<EvidenceStatus>`) is kept under this
+ * grouping's own prefix for the same reason.
  */
 
 /** What a grouping draws from: the verified Result and the extension that opted it in. */

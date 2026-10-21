@@ -160,16 +160,16 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     ],
   ],
   [
-    "status.resolved",
-    "status.missed",
-    "status.nothing-applied",
-    "status.unverified",
+    "lines.status.resolved",
+    "lines.status.missed",
+    "lines.status.nothing-applied",
+    "lines.status.unverified",
     [
-      "status.undecided.judged",
-      "status.undecided.unjudged",
-      "status.undecided.none",
-      "status.undecided.withheld",
-      "status.undecided.unavailable",
+      "lines.status.undecided.judged",
+      "lines.status.undecided.unjudged",
+      "lines.status.undecided.none",
+      "lines.status.undecided.withheld",
+      "lines.status.undecided.unavailable",
     ],
   ],
   // The sealed verdicts as the Outcomes proofs name them.
@@ -265,9 +265,9 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.verifier.built.not-stated",
   "prov.verifier.version.not-stated",
   // Both cards: a rule or conversation nobody could decide, by why.
-  "status.undecided.unjudged",
-  "status.undecided.withheld",
-  "status.undecided.unavailable",
+  "lines.status.undecided.unjudged",
+  "lines.status.undecided.withheld",
+  "lines.status.undecided.unavailable",
   // Both cards: dating, withheld reports, the conversation, the proofs.
   "report.not-stated",
   "report.span.unknown",
