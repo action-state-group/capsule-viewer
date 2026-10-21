@@ -219,16 +219,9 @@ it("every locked line is a default entry, and every default line that states wha
   const unlocked = Object.entries(all)
     .filter(([k, v]) => HONESTY.test(v) && !LOCKED_ENTRIES.has(k))
     .map(([k]) => k);
-  // The tier's name (a word about the method, which a pack may tune, not
-  // the page's own account of its checking) and the EU card's "could not
-  // be checked" family: these are DISTINCT-protected instead of locked, so
-  // a legitimate style (the grade ladder's "Not checked or inconclusive")
-  // can still rephrase them without a pack being able to fold them into
-  // "no exceptions" and read clean.
+  // The tier's name: a word about the method, which a pack may tune, not
+  // the page's own account of its checking.
   expect(unlocked.sort()).toEqual([
-    "groups.ob.unchecked",
-    "groups.ob.unchecked-of",
-    "groups.row.none-decided",
     "groups.tier.recomputed",
     "lines.tier.recomputed",
   ]);

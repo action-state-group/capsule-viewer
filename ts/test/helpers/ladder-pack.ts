@@ -31,10 +31,8 @@ export const LADDER_ENTRIES: Readonly<Record<string, string>> = {
   "lines.line.missed": "Failed (missed)",
   "lines.line.undecided": "Inconclusive or not present",
   "lines.rules.col.undecided": "inconclusive / not checked",
-  "groups.row.none-decided": "Not checked or inconclusive",
   "groups.row.exceptions.one": "{n} failed",
   "groups.row.exceptions.other": "{n} failed",
-  "groups.row.ok.all-decided": "Established in every session",
 };
 
 export function ladderPack(

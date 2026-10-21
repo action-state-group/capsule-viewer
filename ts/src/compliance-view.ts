@@ -303,7 +303,7 @@ export function rowStatus(
     return {
       cls: "ne",
       text: w.t("groups.row.none-decided"),
-      ...(row.notEvaluableNote !== undefined
+      ...(row.notEvaluableNote !== undefined && row.notEvaluableCount > 0
         ? { note: row.notEvaluableNote, producerNote: true }
         : row.unverifiedCount > 0
           ? {

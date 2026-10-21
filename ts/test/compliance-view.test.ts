@@ -521,6 +521,24 @@ it("a claim that failed verification or whose evidence is missing is never an ex
   });
 });
 
+it("a producer's not-evaluable note never masks an actually-unverified row: the note is shown only when a test was really not evaluable", () => {
+  const unverifiedWithStaleNote = row({
+    unverifiedCount: 2,
+    notEvaluableNote: "Not evaluable against the agent on legacy data.",
+  });
+  const status = rowStatus(unverifiedWithStaleNote, DEFAULT_WORDS.groups);
+  expect(status.note).toContain("could not be verified");
+  expect(status.note).not.toContain("Not evaluable against the agent");
+  expect(status.producerNote).toBeUndefined();
+  const actuallyNotEvaluable = row({
+    notEvaluableCount: 2,
+    notEvaluableNote: "Not evaluable against the agent on legacy data.",
+  });
+  const real = rowStatus(actuallyNotEvaluable, DEFAULT_WORDS.groups);
+  expect(real.note).toBe("Not evaluable against the agent on legacy data.");
+  expect(real.producerNote).toBe(true);
+});
+
 it("a session whose claim cites evidence the bundle does not hold is counted apart from the exceptions, with no finding", async () => {
   const { bundle } = await sealedComplianceBundle((source) => {
     const result = (source.disclosures as Obj).result as Obj;
