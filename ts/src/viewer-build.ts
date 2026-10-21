@@ -35,12 +35,19 @@ declare const __CAPSULE_VIEWER_COMMIT__: string;
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 
+/**
+ * The 12-hex prefix of a full 40-hex commit sha; undefined for anything
+ * else, including "". Exported so a test can assert the rejection directly,
+ * without redefining the build-time global below.
+ */
+export function commitPrefix(value: string): string | undefined {
+  return COMMIT_SHA.test(value) ? value.slice(0, 12) : undefined;
+}
+
 /** The 12-hex prefix of a build-supplied commit; undefined for anything else, including a value that isn't a full 40-hex sha. */
 function builtCommit(): string | undefined {
   if (typeof __CAPSULE_VIEWER_COMMIT__ !== "string") return undefined;
-  return COMMIT_SHA.test(__CAPSULE_VIEWER_COMMIT__)
-    ? __CAPSULE_VIEWER_COMMIT__.slice(0, 12)
-    : undefined;
+  return commitPrefix(__CAPSULE_VIEWER_COMMIT__);
 }
 
 const commit = builtCommit();

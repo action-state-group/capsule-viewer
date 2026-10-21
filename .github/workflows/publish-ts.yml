@@ -58,11 +58,11 @@ jobs:
       - name: Refuse a version that is already published
         run: |
           spec="$(node -p "const p = require('./package.json'); p.name + '@' + p.version")"
-          if npm view "$spec" version >published.txt 2>view-error.txt; then
+          if npm view "$spec" version >"$RUNNER_TEMP/published.txt" 2>"$RUNNER_TEMP/view-error.txt"; then
             echo "::error::$spec is already published; release a new version" >&2
             exit 1
           fi
-          grep -q E404 view-error.txt || { cat view-error.txt >&2; exit 1; }
+          grep -q E404 "$RUNNER_TEMP/view-error.txt" || { cat "$RUNNER_TEMP/view-error.txt" >&2; exit 1; }
       - run: npm ci
       - run: npm run check
       - name: Choose the dist-tag
@@ -85,5 +85,15 @@ jobs:
             console.log(version.includes("-") ? "next" : latest && older(core(version), core(latest)) ? "backport" : "latest");
           ' "$version" "$latest")
           echo "DIST_TAG=$dist_tag" >> "$GITHUB_ENV"
+      - name: Confirm the built bundle names this release's commit
+        # The "Verified by" line is only as good as this check: a bundle
+        # that doesn't name the tagged commit would ship reading "commit
+        # not stated" instead, silently.
+        run: |
+          commit=$(git rev-parse HEAD | cut -c1-12)
+          grep -q "$commit" dist/evidence-graph.iife.js || {
+            echo "::error::dist/evidence-graph.iife.js does not name commit $commit" >&2
+            exit 1
+          }
       - name: Publish
         run: npm publish --tag "$DIST_TAG"
