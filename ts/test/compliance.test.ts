@@ -19,6 +19,9 @@ function fixture(name: string): Obj {
 // sessions, five eu-ai-act-obligations tests each) sealed by the test-only
 // sealEvidenceBundle helper. Only the art5 reports state a clause_claim, so
 // the other tests' wording reads "not stated".
+// It is a copy of agent-action-capsule ts/test/testdata/compliance-bundle.json at
+// 68ceb42 (finding owners are the neutral "Owner"). AAC's npm package does not
+// ship test data, so keep this copy in sync by hand.
 async function sealedComplianceBundle(
   mutate?: (source: Obj) => void,
 ): Promise<{ bundle: Obj; ids: Record<string, string> }> {
