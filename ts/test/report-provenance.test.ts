@@ -303,6 +303,13 @@ it("judged by: present, mixed, partly withheld, recomputed and absent", () => {
   expect(partly.text).toContain(
     "the reports for 3 of 10 results are withheld, so their judge is not in this bundle",
   );
+  // a mismatched, unreadable or invalid report (capsule missing or not
+  // checking out) is never called withheld
+  const unread = judgeLine(tally({ pins: [{ ...one, count: 8 }], unread: 2 }));
+  expect(unread.text).toContain(
+    "2 of 10 reports do not match what was sealed, cannot be read, or do not check out",
+  );
+  expect(unread.text).not.toContain("withheld");
   const recomputed = judgeLine(
     tally({
       pins: [{ ...one, count: 6 }],

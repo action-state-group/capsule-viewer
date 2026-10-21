@@ -55,7 +55,7 @@ export interface JudgeTally {
   readonly notCarried: number;
   readonly pins: readonly JudgePinCount[];
   readonly withheld: number;
-  /** Reports supplied but not matching their commitment, or not an object. */
+  /** Reports supplied but not matching their commitment, not an object, or whose capsule is missing or does not check out (`reportState` mismatch, unreadable, invalid). */
   readonly unread: number;
   /** Disclosed reports from a checker (`checker_ref`) rather than a judge, by checker. */
   readonly checkers: readonly {
@@ -273,7 +273,7 @@ export function judgeLine(tally: JudgeTally): ProvenanceLine {
     );
   if (tally.unread > 0)
     parts.push(
-      `${of(tally.unread)} reports do not match what was sealed or cannot be read`,
+      `${of(tally.unread)} reports do not match what was sealed, cannot be read, or do not check out`,
     );
   const recomputed =
     tally.checkers.reduce((n, c) => n + c.count, 0) + tally.recomputedUnnamed;
