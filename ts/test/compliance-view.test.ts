@@ -195,6 +195,15 @@ it("the summary states where the terms come from, and the regulatory mapping is 
 });
 
 it("every producer-supplied field is set in italics as the producer's, and no sealed value is", async () => {
+  const art5Finding = (
+    (
+      (fixture("compliance-bundle.json").extensions as Obj)[
+        "eu-ai-act-compliance/v1"
+      ] as Obj
+    ).obligations as Obj[]
+  ).find((o) => o.key === "art5")!;
+  const ownerDue = ((art5Finding.rows as Obj[])[0]!.finding as Obj)
+    .owner_due as string;
   const { bundle } = await sealedComplianceBundle((source) => {
     (
       (source.extensions as Obj)["eu-ai-act-compliance/v1"] as Obj
@@ -240,7 +249,7 @@ it("every producer-supplied field is set in italics as the producer's, and no se
     "No manipulative or deceptive technique", // test name
     "In force since 2 Feb 2025",
     "Review flagged sessions for manufactured urgency.",
-    "AirlineAgentsNow · 31 Oct 2026",
+    ownerDue,
     "Not evaluable against the agent on tau2 trial-0 data.",
     "Judged per session against a frozen rubric.",
     "spot-check",
