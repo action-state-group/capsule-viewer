@@ -542,9 +542,7 @@ it("names the build's commit, never a release state", () => {
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.5.0",
   };
-  expect(
-    verifierLine({}, { ...build, commit: "a1b2c3d4e5f6" }).text,
-  ).toContain(
+  expect(verifierLine({}, { ...build, commit: "a1b2c3d4e5f6" }).text).toContain(
     "this page's code: @action-state-group/capsule-viewer 0.1.0 at a1b2c3d4e5f6, verifier",
   );
   expect(verifierLine({}, build).text).toContain(
