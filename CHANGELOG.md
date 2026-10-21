@@ -24,8 +24,13 @@ here. The format follows
 ### Added
 
 - The contract-report module (`ts/src/contract-report.ts`): one view for the
-  Outcomes report and the EU AI Act Results, with every word a reader sees
-  taken from a wording pack (`aac.wording-pack/v0`). Two default packs ship
+  Outcomes report and the EU AI Act Results, with the module's own words
+  taken from a wording pack (`aac.wording-pack/v0`). Not in the pack: what
+  the bundle itself states (the producer's obligation titles and test
+  names, in italics; sealed rule wording) and two lines
+  agent-action-capsule's outcome model writes (the outcome statement and
+  the resolution rule); the module never takes its own words from a bundle
+  (presentation contract section 6). Two default packs ship
   with the viewer, never in a bundle: `ts/src/wording/contract-report-outcomes.en.json`
   and `ts/src/wording/contract-report-eu-ai-act.en.json`. A host passes its
   own pack as the page's `wording` (bound by `wording_sha256`, the pack the
@@ -84,9 +89,6 @@ here. The format follows
   witness addresses, log id, producer and version) are quoted and capped at
   120 characters, so they never read as the page's own words. New runtime
   style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
-
-### Changed
-
 - The outcome report and EU AI Act obligations cards have two levels and no
   more. The summary states what was checked and the result per line in plain
   words. A first toggle on a line lists the conversations behind it in place,

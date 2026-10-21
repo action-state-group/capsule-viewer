@@ -28,9 +28,13 @@ import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
  *           (compliance-view.ts); the EU AI Act Results
  *
  * A report is a grouping plus a wording pack. The pack names its grouping
- * (`layout.grouping`) and holds every word the reader sees; the module holds
- * no pack's words. A new report over the same Result shape is a new pack,
- * never a new module.
+ * (`layout.grouping`) and holds the module's own words; the module holds no
+ * pack's words of its own. Not every word on the page is the pack's: the
+ * bundle's own producer-supplied text (obligation titles, test names,
+ * sealed rule wording) and two lines agent-action-capsule's outcome model
+ * writes (the outcome statement, the resolution rule) are not pack entries.
+ * A new report over the same Result shape is a new pack, never a new
+ * module.
  *
  * The data a grouping reads still arrives by the two extension kinds
  * agent-action-capsule selects today (`outcome-report/v1` for `lines`,

@@ -10,11 +10,14 @@ import EU_AI_ACT_PACK from "./wording/contract-report-eu-ai-act.en.json" with { 
  * The words of the contract-report module (contract-report.ts), and the
  * wording packs they come from.
  *
- * Every word a reader sees on a contract report -- labels, headings, the
- * plain-language lines, the verdict words -- is an entry of an
- * `aac.wording-pack/v0` pack (presentation contract section 7.4). The
+ * The module's own words on a contract report -- labels, headings, the
+ * plain-language lines, the verdict words -- are each an entry of an
+ * `aac.wording-pack/v0` pack (presentation contract section 7.4). Not
+ * every word on the page is the pack's: the bundle's own producer-supplied
+ * text and two lines agent-action-capsule's outcome model writes are not
+ * (report-levels.ts's and compliance-view.ts's own docs say which). The
  * module ships two default packs, beside its code and never in a bundle
- * (section 6: wording never comes from the bundle):
+ * (section 6: this module's own wording never comes from the bundle):
  *
  *   wording/contract-report-outcomes.en.json   the Outcomes report
  *   wording/contract-report-eu-ai-act.en.json  the EU AI Act Results
