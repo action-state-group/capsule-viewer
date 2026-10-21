@@ -2,6 +2,7 @@
 import {
   asString,
   isObject,
+  jcs,
   NOT_STATED,
   reportState,
   verifyJudgePin,
@@ -148,6 +149,19 @@ export async function tallyJudges(
       continue;
     }
     const payload = reportPayload(records, claim);
+    // "Recomputed" is decided by epistemic_type alone, checked before any
+    // judge pin: a report can carry both a judge_pin_digest (kept for
+    // traceability) and epistemic_type: "recomputed_determination", and
+    // the card's own tier (keyed purely on epistemic_type) calls that
+    // recomputed, not judged. Checking the pin first would contradict it,
+    // the same way a bare checker_ref on a semantic_judgment report would.
+    if (asString(payload?.epistemic_type) === "recomputed_determination") {
+      const checker = asString(payload?.checker_ref);
+      if (checker !== undefined)
+        checkers.set(checker, (checkers.get(checker) ?? 0) + 1);
+      else recomputedUnnamed += 1;
+      continue;
+    }
     const digest = asString(payload?.judge_pin_digest);
     if (digest !== undefined) {
       const entry = pins.get(digest) ?? {
@@ -158,18 +172,11 @@ export async function tallyJudges(
       entry.count += 1;
       const parts = pinComponents(payload?.judge_pin);
       if (parts === undefined) entry.bare += 1;
-      else entry.parts.set(JSON.stringify(parts), parts);
+      // Keyed by jcs's canonical bytes, not JSON.stringify: two reports
+      // can state the same pin components with their keys in a different
+      // order and still recompute to the same digest.
+      else entry.parts.set(new TextDecoder().decode(jcs(parts)), parts);
       pins.set(digest, entry);
-      continue;
-    }
-    // "Recomputed" is a claim about epistemic_type, not about carrying a
-    // checker_ref: a checker_ref on a semantic_judgment report would
-    // otherwise contradict the card's own tier for the same claim.
-    if (asString(payload?.epistemic_type) === "recomputed_determination") {
-      const checker = asString(payload?.checker_ref);
-      if (checker !== undefined)
-        checkers.set(checker, (checkers.get(checker) ?? 0) + 1);
-      else recomputedUnnamed += 1;
       continue;
     }
     unnamed += 1;
@@ -231,7 +238,7 @@ export interface ProvenanceLine {
   readonly state: ProvenanceState;
 }
 
-const fmt = (n: number): string => n.toLocaleString("en-US");
+const fmt = (n: number): string => n.toLocaleString();
 /** A bundle-supplied string, quoted and capped, so it can never read as this page's own words. */
 const quoted = (value: string): string =>
   JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}…` : value);

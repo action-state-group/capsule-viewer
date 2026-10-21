@@ -154,6 +154,30 @@ for (const { card, file, page } of CARDS) {
     );
   });
 
+  it(`${card} card: the same pin stated with its components in a different key order is not read as a differing pin`, async () => {
+    const source = fixture(file);
+    const reordered = {
+      model_id: PIN.model_id,
+      prompt_digest: PIN.prompt_digest,
+      axes_digest: PIN.axes_digest,
+      sampling_params: { top_p: 1, temperature: 0 },
+    };
+    const twoKeyPin = { ...PIN, sampling_params: { temperature: 0, top_p: 1 } };
+    const digest = await pinDigest(twoKeyPin);
+    const judged = reports(source).filter(
+      (r) => r.judge_pin_digest !== undefined,
+    );
+    judged.forEach((r, i) => {
+      r.judge_pin_digest = digest;
+      r.judge_pin = i % 2 === 0 ? twoKeyPin : reordered;
+    });
+    const { bundle } = await sealEvidenceBundle(source);
+    const judge = line(block(await render(bundle), page), "judge");
+    expect(judge.dataset.state).toBe("stated");
+    expect(judge.textContent).toContain(`"${PIN.model_id}", pinned`);
+    expect(judge.textContent).not.toContain("different models");
+  });
+
   it(`${card} card: mixed judge pins: each distinct pin with its own count, never one picked`, async () => {
     const source = fixture(file);
     const judged = reports(source).filter(
@@ -195,6 +219,27 @@ for (const { card, file, page } of CARDS) {
     // the checker_ref itself must never surface as a "recomputed" name
     expect(judge.textContent).not.toContain("recompute.check_a");
     expect(judge.textContent).toContain(`judge not stated for 1 of ${total}`);
+  });
+
+  it(`${card} card: a report naming both a judge pin and recomputed_determination is counted as recomputed, not judged`, async () => {
+    const source = fixture(file);
+    const judged = reports(source).filter(
+      (r) => r.judge_pin_digest !== undefined,
+    );
+    const total = reports(source).length;
+    const pinned = judged.length;
+    const one = judged[0]!;
+    // the pin fields stay, kept for traceability, alongside the recomputed
+    // determination: epistemic_type alone decides the tier, so this must
+    // count as recomputed, not as one more judged result under that pin.
+    one.epistemic_type = "recomputed_determination";
+    one.checker_ref = "recompute.check_b";
+    const { bundle } = await sealEvidenceBundle(source);
+    const judge = line(block(await render(bundle), page), "judge");
+    // named by its own checker, distinct from any pre-existing recomputed
+    // reports this fixture already carries
+    expect(judge.textContent).toContain('"recompute.check_b" (1)');
+    expect(judge.textContent).toContain(`(${pinned - 1} of ${total} results)`);
   });
 
   it(`${card} card: judge absent: withheld reports read "withheld", with the count, and no judge is named`, async () => {
@@ -516,6 +561,10 @@ it("the viewer's stated build is the package and the verifier actually installed
         ),
       ) as { version: string }
     ).version;
+  // false here, and false for this npm test run inside publish-ts.yml too:
+  // that job's own "Mark this build as the release the tag names" step
+  // runs after `npm run check` (this test), and only then flips the flag
+  // for the rebuild `npm publish` triggers through `prepare`.
   expect(VIEWER_BUILD).toEqual({
     viewer: own.name,
     viewerVersion: own.version,
