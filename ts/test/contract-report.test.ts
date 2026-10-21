@@ -439,6 +439,48 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual([]);
 });
 
+it("the assurance tier words are a distinct, non-swappable set: a judgement must never read as a check anyone can repeat", () => {
+  expect(
+    wordingProblems(
+      {
+        id: "test/tier@1",
+        locale: "en",
+        entries: { "groups.tier.judged": "recomputed" },
+      },
+      DEFAULT_PACKS.groups,
+    ).join("\n"),
+  ).toContain(
+    'groups.tier.judged reads "recomputed", the word for groups.tier.recomputed',
+  );
+  expect(
+    wordingProblems(
+      {
+        id: "test/tier@1",
+        locale: "en",
+        entries: { "lines.tier.recomputed": "judged" },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toContain(
+    'lines.tier.recomputed reads "judged", the word for lines.tier.judged',
+  );
+  // the explanations behind the EU card's tier words are locked
+  expect(
+    wordingProblems(
+      {
+        id: "test/tier@1",
+        locale: "en",
+        entries: {
+          "groups.tier.judged.title": "A fixed check anyone can repeat",
+        },
+      },
+      DEFAULT_PACKS.groups,
+    ),
+  ).toEqual([
+    "test/tier@1: groups.tier.judged.title: this line states what the page checked and can't be reworded",
+  ]);
+});
+
 for (const { file, page } of CARDS) {
   it(`${page}: a refused pack draws no card, and the page says the presentation failed`, async () => {
     const bad = await distributed({

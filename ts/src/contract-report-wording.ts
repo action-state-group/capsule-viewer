@@ -181,6 +181,20 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "lines.pf.verdict.unsupported",
     "lines.pf.verdict.not_applicable",
   ],
+  // The assurance tier (judged vs. recomputed) must stay a non-swappable
+  // set too: a judgement must never read as a check anyone can repeat.
+  [
+    "groups.tier.judged",
+    "groups.tier.recomputed",
+    "groups.tier.mixed",
+    "groups.tier.unstated",
+  ],
+  [
+    "lines.tier.judged",
+    "lines.tier.recomputed",
+    "lines.tier.mixed",
+    "lines.tier.unknown",
+  ],
 ];
 
 /**
@@ -311,6 +325,8 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // The EU AI Act Results.
   "groups.producer.title",
   "groups.tier.unstated",
+  "groups.tier.judged.title",
+  "groups.tier.recomputed.title",
   "groups.pack.not-stated",
   "groups.row.nothing",
   "groups.summary.basis",
