@@ -120,6 +120,46 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
   is a local draft of the presentation contract being written in
   agent-action-capsule and is re-pointed at that contract when it lands.
 
+## Contract reports: one module, wording packs
+
+The Outcomes report and the EU AI Act Results are one module,
+`ts/src/contract-report.ts`, drawn with one of two wording packs. The module
+holds the layout (the front block, two levels of toggles, the proofs) and
+computes every count, verdict and digest; the pack holds every word.
+
+**How to tune the words.** Edit the pack, re-render. Outcomes:
+`ts/src/wording/contract-report-outcomes.en.json`; EU AI Act:
+`ts/src/wording/contract-report-eu-ai-act.en.json`. Either copy the file and
+change entries, or write a small pack with only the entries you change (keys
+the module does not know, such as `page.title`, are left to their owners).
+Then `cd ts && npm run build && node scripts/render-report.mjs BUNDLE.json
+--wording MY-PACK.json -o page.html`, or hand the pack to the presentation
+builder (`wording`). The bundle is not touched, so no judge pin, Result digest
+or verdict moves, and nothing is re-judged.
+
+- **What can change:** any label, heading, plain-language line, help text or
+  verdict word, and sentence order within an entry. `{name}` is where the
+  module puts a count, digest, date or list; plurals are `<key>.one` /
+  `<key>.other`.
+- **What can't:** a pack holds strings only. Each entry it replaces must use
+  exactly the placeholders of the default entry, so a count or denominator
+  can be neither dropped nor added. Two verdicts may not share a word
+  (`verdict.*`, `status.*`). `layout.grouping` is fixed. A pack that breaks
+  any of these, or does not hash to its `wording_sha256`, is refused before
+  anything is drawn; `render-report.mjs` prints every problem. The raw
+  verdict is on every element as data, whatever the words say.
+- The page's proofs name the pack that drew it ("Words": its id, and the
+  `wording_sha256` of a supplied pack).
+- Not in the pack: what the bundle itself states (the producer's obligation
+  titles and test names, in italics; sealed rule wording) and two lines
+  agent-action-capsule's outcome model writes (the outcome statement and the
+  resolution rule). The module never takes its own words from a bundle
+  (presentation contract section 6).
+
+One nesting rule holds on every report page (SEAMS ruling 11): a level-2
+toggle may sit inside a level-1 toggle, never deeper (`nestingProblems`,
+`capsule_viewer.kit.check_nesting`).
+
 ## Rules module (`capsuleviewer.rules/v0`)
 
 `capsule_viewer.rules` renders one page over a rules-comparison record: a

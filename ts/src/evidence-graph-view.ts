@@ -39,7 +39,7 @@ import {
   zoneStatement,
 } from "@action-state-group/agent-action-capsule";
 import { digestCapability } from "@action-state-group/agent-action-capsule";
-import { renderOutcomeReportPage } from "./outcome-report-view.js";
+import { renderContractReport } from "./contract-report.js";
 import type {
   PresentationDepth,
   WordingPackInput,
@@ -48,7 +48,6 @@ import {
   readOutcomeReportPresentation,
   type OutcomeReportPresentation,
 } from "@action-state-group/agent-action-capsule";
-import { renderCompliancePage } from "./compliance-view.js";
 import { composedSectionModule } from "./composed-view.js";
 import {
   readCompliancePresentation,
@@ -1537,6 +1536,13 @@ const reportRowsModule: PresentationModule<ReportRows> = {
   render: (model, host) => renderReportRowsTable(model, host.L1),
 };
 
+/**
+ * The host the page hands its module: the contract's host, plus the page's
+ * wording pack when one was given (`RenderEvidenceGraphOptions.wording`),
+ * which the contract-report module draws its words from.
+ */
+type WordedHost = PresentationHost & { readonly wording?: WordingPackInput };
+
 interface ResultCardModel<Card> {
   readonly result: ResultRoot;
   readonly card: Card;
@@ -1566,12 +1572,13 @@ const resultOutcomeReportModule: PresentationModule<
   render: async (model, host) => {
     // The banner and the verification page take the card's look.
     host.setChromeClass("oi");
-    await renderOutcomeReportPage(
+    await renderContractReport(
       model.result,
-      model.card,
+      { grouping: "lines", options: model.card },
       model.bundle,
       model.verification,
       host.L1,
+      (host as WordedHost).wording,
     );
   },
 };
@@ -1596,12 +1603,13 @@ const resultComplianceModule: PresentationModule<
     verification: context.verification,
   }),
   render: (model, host) =>
-    renderCompliancePage(
+    renderContractReport(
       model.result,
-      model.card,
+      { grouping: "groups", presentation: model.card },
       model.bundle,
       model.verification,
       host.L1,
+      (host as WordedHost).wording,
     ),
 };
 
@@ -1747,7 +1755,9 @@ export interface RenderEvidenceGraphOptions {
   /**
    * The wording pack the page was built with, carried so the page holds
    * the exact words it was built with (presentation only; contract I3).
-   * The built-in modules use the core's own labels and do not read it.
+   * The contract-report module (the outcome and EU AI Act reports) draws
+   * its words from it, over its default pack; the other built-in modules
+   * use the core's own labels and do not read it.
    */
   readonly wording?: WordingPackInput;
   /**
@@ -1952,11 +1962,12 @@ export async function renderEvidenceGraph(
   else delete root.dataset.presentationRefused;
   let chrome: string | undefined;
   if (selected !== undefined) {
-    const host: PresentationHost = {
+    const host: WordedHost = {
       L0: root,
       L1: root,
       L2: root,
       depth: options.depth ?? "L2",
+      ...(options.wording === undefined ? {} : { wording: options.wording }),
       setChromeClass(name: string): void {
         if (name !== OUTCOME_CHROME)
           throw new Error(`unknown chrome class ${JSON.stringify(name)}`);

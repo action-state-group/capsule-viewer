@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
 import { obligationStatus, rowStatus } from "../src/compliance-view.js";
+import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
+import { ladderWords } from "./helpers/ladder-pack.js";
 import type { ObligationModel, ObligationRowModel } from "../src/compliance.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -563,8 +565,8 @@ it("a test or obligation with no result at all never falls through to a pass wor
     unverifiedCount: 0,
     sessionsByVerdict: new Map(),
   };
-  for (const ladder of [false, true]) {
-    const status = rowStatus(empty, ladder);
+  for (const words of [DEFAULT_WORDS.groups, ladderWords("groups")]) {
+    const status = rowStatus(empty, words);
     expect(status.cls).toBe("ne");
     expect(status.text).not.toMatch(/No exceptions|Established/u);
   }

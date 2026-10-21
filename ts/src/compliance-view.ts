@@ -12,12 +12,21 @@ import {
 } from "./compliance.js";
 import type { CompliancePresentation } from "./compliance-presentation.js";
 import { COMPLIANCE_CSS } from "./compliance-styles.js";
-import { BASIS_TEXT, datingStatement, span } from "./outcome-report-view.js";
+import {
+  datedText,
+  datingStatement,
+  notesGap,
+  pinAbsence,
+  span,
+  transcriptRows,
+  verificationRows,
+  wordingRow,
+} from "./outcome-report-view.js";
 import { NOT_STATED } from "@action-state-group/agent-action-capsule";
+import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
 import {
   caseParts,
   judgedOf,
-  LADDER_WORDS,
   judgeNote,
   lazyBody,
   levelToggle,
@@ -31,9 +40,11 @@ import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 
 /**
- * The EU AI Act obligations-report card. Called from
- * `evidence-graph-view.ts` in place of `renderResultPage` when the bundle's
- * `eu-ai-act-compliance/v1` extension opts in, after the same verify-first
+ * The contract-report module's `groups` grouping (contract-report.ts): a
+ * report read as requirement groups and the tests under each. The EU AI Act
+ * Results are this grouping with the EU AI Act wording pack; every word on
+ * it is the pack's (`w`). Drawn by the module in place of `renderResultPage`
+ * when the bundle's `eu-ai-act-compliance/v1` extension opts in, after the same verify-first
  * gate every other root family goes through -- nothing here ever runs on a
  * bundle that did not verify. See compliance.ts for where every value on the
  * page comes from: counts, verdicts, test wording, tiers and the pack from
@@ -69,11 +80,14 @@ function el(tag: string, className: string, text?: string): HTMLElement {
  * own style) and tagged `data-source="producer"`, so it never reads as a
  * sealed finding; the summary's basis line says what the italics mean.
  */
+// The tooltip producer text carries; set once per card from its pack.
+let producerTitle = DEFAULT_WORDS.groups.t("groups.producer.title");
+
 function producerText(...content: (string | Node)[]): HTMLElement {
   const value = element("i");
   value.append(...content);
   value.dataset.source = "producer";
-  value.title = "The producer's mapping, not a sealed record";
+  value.title = producerTitle;
   return value;
 }
 
@@ -91,8 +105,9 @@ function maybeProducer(
 }
 
 const fmt = (n: number): string => n.toLocaleString();
-const plural = (n: number, one: string, many: string): string =>
-  `${fmt(n)} ${n === 1 ? one : many}`;
+/** `{n} <noun>` from the pack's `groups.count.<noun>.one|other`. */
+const count = (w: Words, noun: string, n: number): string =>
+  w.p(`groups.count.${noun}`, n, { n: fmt(n) });
 
 const SEVERITY_CLASS: Record<string, string> = {
   High: "high",
@@ -110,38 +125,26 @@ function severityPill(severity: string): HTMLElement {
   return pill;
 }
 
-function tierBadge(tier: TierReading): HTMLElement {
-  const text =
-    tier === "judged"
-      ? "judged"
-      : tier === "recomputed"
-        ? "recomputed"
-        : tier === "mixed"
-          ? "tier differs across reports"
-          : "tier not stated";
+function tierBadge(tier: TierReading, w: Words): HTMLElement {
+  const key =
+    tier === "judged" || tier === "recomputed" || tier === "mixed"
+      ? tier
+      : "unstated";
   const badge = el(
     "span",
     `kind ${tier === "judged" || tier === "recomputed" ? tier : "unstated"}`,
-    text,
+    w.t(`groups.tier.${key}`),
   );
   badge.dataset.tier = tier;
   badge.title =
-    tier === "judged"
-      ? "Decided by a pinned model applying a frozen rubric"
-      : tier === "recomputed"
-        ? "A fixed check anyone can repeat from the records"
-        : "";
+    tier === "judged" || tier === "recomputed"
+      ? w.t(`groups.tier.${tier}.title`)
+      : "";
   return badge;
 }
 
 function statusPill(statusClass: string, text: string): HTMLElement {
   return el("span", `st ${statusClass}`, text);
-}
-
-// Result words never come from the bundle (presentation contract section
-// 6): the card speaks its own word set, LADDER_WORDS (report-levels.ts).
-function ladderOn(): boolean {
-  return LADDER_WORDS;
 }
 
 /** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
@@ -164,7 +167,7 @@ function testNames(
   };
 }
 
-function sessionSpan(model: ComplianceModel): string | undefined {
+function sessionSpan(model: ComplianceModel, w: Words): string | undefined {
   const days = model.sessions
     .map((s) => s.day)
     .filter((d) => d !== NOT_STATED)
@@ -172,28 +175,44 @@ function sessionSpan(model: ComplianceModel): string | undefined {
   const first = days[0];
   const last = days[days.length - 1];
   if (first === undefined || last === undefined) return undefined;
-  return first === last ? first : `${first} – ${last}`;
+  return first === last ? first : w.t("report.span", { from: first, to: last });
 }
 
 // ---------------------------------------------------------------------------
 // Header
 // ---------------------------------------------------------------------------
 
-function renderHeader(host: HTMLElement, model: ComplianceModel): void {
+function renderHeader(
+  host: HTMLElement,
+  model: ComplianceModel,
+  w: Words,
+): void {
   const hd = el("div", "hd");
   hd.dataset.section = "header";
-  hd.append(el("div", "kicker", "EU AI Act obligations report"));
+  hd.append(el("div", "kicker", w.t("groups.kicker")));
   hd.append(maybeProducer("h1", "", model.regulation, true));
   const pack =
     model.pack.id === NOT_STATED
-      ? `Pack ${NOT_STATED}`
-      : `Pack ${model.pack.id} v${model.pack.version}`;
-  const period = sessionSpan(model);
+      ? w.t("groups.pack.not-stated")
+      : w.t("groups.pack", { id: model.pack.id, version: model.pack.version });
+  const period = sessionSpan(model, w);
+  const vars = {
+    pack,
+    obligations: count(w, "obligation", model.obligations.length),
+    sessions: count(w, "session", model.totalSessions),
+  };
   hd.append(
     el(
       "div",
       "sub",
-      `${pack} · ${plural(model.obligations.length, "obligation", "obligations")} · ${plural(model.totalSessions, "session", "sessions")}${period === undefined ? "" : model.dating.basis === "judged" ? ` · judged ${period}` : ` · ${period}`}`,
+      period === undefined
+        ? w.t("groups.sub", vars)
+        : w.t(
+            model.dating.basis === "judged"
+              ? "groups.sub.judged"
+              : "groups.sub.dated",
+            { ...vars, period },
+          ),
     ),
   );
   host.append(hd);
@@ -232,7 +251,10 @@ function noneDecided(row: ObligationRowModel): boolean {
  * be checked it reads "Could not be checked"; when some could not, the pill
  * is neutral and says how many.
  */
-export function obligationStatus(obligation: ObligationModel): {
+export function obligationStatus(
+  obligation: ObligationModel,
+  w: Words = DEFAULT_WORDS.groups,
+): {
   cls: string;
   text: string;
 } {
@@ -245,56 +267,65 @@ export function obligationStatus(obligation: ObligationModel): {
   const total = obligation.rows.length;
   const uncheckedText =
     unchecked > 0
-      ? ` · ${fmt(unchecked)} of ${plural(total, "test", "tests")} could not be checked`
+      ? w.t("groups.ob.unchecked-of", {
+          unchecked: fmt(unchecked),
+          total: count(w, "test", total),
+        })
       : "";
   if (exceptions > 0)
     return {
       cls: "exc",
-      text: `${plural(exceptions, "exception", "exceptions")}${unchecked > 0 && unchecked < total ? uncheckedText : ""}`,
+      text: `${count(w, "exception", exceptions)}${unchecked > 0 && unchecked < total ? uncheckedText : ""}`,
     };
-  if (unchecked === total) return { cls: "ne", text: "Could not be checked" };
+  if (unchecked === total) return { cls: "ne", text: w.t("groups.ob.unchecked") };
   if (unchecked > 0)
-    return { cls: "ne", text: `No exceptions found${uncheckedText}` };
+    return { cls: "ne", text: `${w.t("groups.ob.ok.found")}${uncheckedText}` };
   if (unverified > 0)
     return {
       cls: "ne",
-      text: `No exceptions found · ${plural(unverified, "result", "results")} could not be verified`,
+      text: w.t("groups.ob.ok.unverified", {
+        unverified: count(w, "result", unverified),
+      }),
     };
-  return { cls: "ok", text: "No exceptions" };
+  return { cls: "ok", text: w.t("groups.ob.ok") };
 }
 
 /** A test's result in the summary: a status, and an optional note under it. */
 export function rowStatus(
   row: ObligationRowModel,
-  ladder: boolean,
+  w: Words = DEFAULT_WORDS.groups,
 ): { cls: string; text: string; note?: string; producerNote?: true } {
   if (nothingChecked(row))
-    return { cls: "ne", text: "Not checked: no session has a result" };
+    return { cls: "ne", text: w.t("groups.row.nothing") };
   if (noneDecided(row))
     return {
       cls: "ne",
-      text: ladder ? "Not checked or inconclusive" : "Could not be checked",
-      ...(row.notEvaluableNote !== undefined && row.notEvaluableCount > 0
+      text: w.t("groups.row.none-decided"),
+      ...(row.notEvaluableNote !== undefined
         ? { note: row.notEvaluableNote, producerNote: true }
         : row.unverifiedCount > 0
-          ? { note: unverifiedNote(row.unverifiedCount) }
+          ? {
+              note: w.t("groups.row.unverified-note", {
+                n: fmt(row.unverifiedCount),
+              }),
+            }
           : {}),
     };
   const notes = [
     ...(row.notEvaluableCount > 0
-      ? [`${fmt(row.notEvaluableCount)} could not be decided`]
+      ? [w.t("groups.row.undecided-note", { n: fmt(row.notEvaluableCount) })]
       : []),
-    ...(row.unverifiedCount > 0 ? [unverifiedNote(row.unverifiedCount)] : []),
+    ...(row.unverifiedCount > 0
+      ? [w.t("groups.row.unverified-note", { n: fmt(row.unverifiedCount) })]
+      : []),
   ];
   const undecided = notes.length > 0 ? { note: notes.join("; ") } : {};
   if (row.notMetCount > 0)
     return {
       cls: "exc",
-      text: plural(
-        row.notMetCount,
-        ladder ? "failed" : "exception",
-        ladder ? "failed" : "exceptions",
-      ),
+      text: w.p("groups.row.exceptions", row.notMetCount, {
+        n: fmt(row.notMetCount),
+      }),
       ...undecided,
     };
   // Neither word set says more than "no exceptions": a session's result
@@ -302,19 +333,18 @@ export function rowStatus(
   // session".
   return {
     cls: row.unverifiedCount > 0 ? "ne" : "ok",
-    text: "No exceptions",
+    text: w.t(
+      row.notEvaluableCount === 0
+        ? "groups.row.ok.all-decided"
+        : "groups.row.ok",
+    ),
     ...undecided,
   };
 }
 
-/** How many sessions' claims for a test failed verification or cite evidence this bundle does not hold. */
-function unverifiedNote(n: number): string {
-  return `${fmt(n)} could not be verified (failed verification or evidence missing)`;
-}
-
-function rowResult(row: ObligationRowModel, ladder: boolean): HTMLElement {
+function rowResult(row: ObligationRowModel, w: Words): HTMLElement {
   const cell = document.createElement("td");
-  const status = rowStatus(row, ladder);
+  const status = rowStatus(row, w);
   cell.append(statusPill(status.cls, status.text));
   if (status.note !== undefined)
     cell.append(
@@ -327,35 +357,34 @@ function renderSummary(
   host: HTMLElement,
   model: ComplianceModel,
   presentation: CompliancePresentation,
+  w: Words,
 ): void {
   const section = el("section", "");
   section.dataset.section = "summary";
-  section.append(el("h2", "", "What was checked and what we found"));
+  section.append(el("h2", "", w.t("groups.summary.h")));
   const tests = model.obligations.reduce((n, o) => n + o.rows.length, 0);
   section.append(
     el(
       "p",
       "lede",
-      `Each session (one conversation with the agent) was checked against ${plural(tests, "test", "tests")} under ${plural(model.obligations.length, "obligation", "obligations")}. Results are counts of sessions: there is no overall score. Open a test to read the sessions behind its exceptions.`,
+      w.t("groups.summary.lede", {
+        tests: count(w, "test", tests),
+        obligations: count(w, "obligation", model.obligations.length),
+      }),
     ),
   );
-  const basis = el(
-    "p",
-    "na",
-    `Every count and result is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". The regulation named in the heading, obligation titles, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
-  );
+  const basis = el("p", "na", w.t("groups.summary.basis"));
   basis.dataset.basis = "terms";
   section.append(basis);
-  const ladder = ladderOn();
   const table = document.createElement("table");
   table.className = "grid sum";
   table.dataset.rows = "summary";
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.append(
-    element("th", "Obligation and test"),
-    el("th", "n", "Checked in"),
-    element("th", "Result"),
+    element("th", w.t("groups.summary.col.test")),
+    el("th", "n", w.t("groups.summary.col.checked-in")),
+    element("th", w.t("groups.summary.col.result")),
   );
   thead.append(headRow);
   table.append(thead);
@@ -364,7 +393,7 @@ function renderSummary(
     tbody.dataset.obligationGroup = obligation.key;
     const row = el("tr", "ob");
     row.dataset.obligation = obligation.key;
-    const status = obligationStatus(obligation);
+    const status = obligationStatus(obligation, w);
     const title = el("td", "");
     title.setAttribute("colspan", "2");
     const name = el("div", "obn");
@@ -398,13 +427,13 @@ function renderSummary(
       const head = el("div", "tnh");
       head.append(
         maybeProducer("b", "", test.name, test.producerName),
-        tierBadge(test.tier),
+        tierBadge(test.tier, w),
       );
       nameCell.append(head);
       const finding = model.findings.find(
         (f) => f.criterionId === test.criterionId,
       );
-      if (finding !== undefined) nameCell.append(renderFinding(finding));
+      if (finding !== undefined) nameCell.append(renderFinding(finding, w));
       const sessionIds = [
         ...(test.sessionsByVerdict.get("not_met") ?? []),
         ...(test.sessionsByVerdict.get("unverified") ?? []),
@@ -412,8 +441,8 @@ function renderSummary(
       ];
       tr.append(
         nameCell,
-        el("td", "n", plural(population, "session", "sessions")),
-        rowResult(test, ladder),
+        el("td", "n", count(w, "session", population)),
+        rowResult(test, w),
       );
       tbody.append(tr);
       // The sessions behind a test open in a full-width row below it, so
@@ -421,8 +450,8 @@ function renderSummary(
       if (sessionIds.length > 0) {
         const toggle = levelToggle(
           1,
-          `Show the ${plural(sessionIds.length, "session", "sessions")}${sessionListNote(test)}`,
-          () => renderSessionList(sessionIds, model, presentation),
+          sessionListNote(test, count(w, "session", sessionIds.length), w),
+          () => renderSessionList(sessionIds, model, presentation, w),
           { className: "line" },
         );
         toggle.dataset.records = "sessions";
@@ -443,30 +472,43 @@ function renderSummary(
 }
 
 /** What the sessions behind a test are, in the order they are listed. */
-function sessionListNote(test: ObligationRowModel): string {
+function sessionListNote(
+  test: ObligationRowModel,
+  sessions: string,
+  w: Words,
+): string {
   const kinds = [
-    ...(test.notMetCount > 0 ? ["exceptions"] : []),
-    ...(test.unverifiedCount > 0 ? ["could not be verified"] : []),
-    ...(test.notEvaluableCount > 0 ? ["undecided"] : []),
+    ...(test.notMetCount > 0 ? [w.t("groups.drill.kind.exceptions")] : []),
+    ...(test.unverifiedCount > 0
+      ? [w.t("groups.drill.kind.unverified")]
+      : []),
+    ...(test.notEvaluableCount > 0
+      ? [w.t("groups.drill.kind.undecided")]
+      : []),
   ];
-  if (kinds.length > 1) return ` (${kinds.join(", then ")})`;
-  if (test.notMetCount > 0) return " with exceptions";
-  if (test.unverifiedCount > 0) return " that could not be verified";
-  return " that could not be decided";
+  if (kinds.length > 1)
+    return w.t("groups.drill.mixed", {
+      sessions,
+      kinds: kinds.join(", then "),
+    });
+  if (test.notMetCount > 0) return w.t("groups.drill.exceptions", { sessions });
+  if (test.unverifiedCount > 0)
+    return w.t("groups.drill.unverified", { sessions });
+  return w.t("groups.drill.undecided", { sessions });
 }
 
-function renderFinding(finding: ComplianceFindingModel): HTMLElement {
+function renderFinding(finding: ComplianceFindingModel, w: Words): HTMLElement {
   const box = el("div", "fnd");
   box.dataset.finding = finding.id;
   const fh = el("div", "fh");
   fh.append(
-    maybeProducer("b", "", `Finding ${finding.id}`, true),
+    maybeProducer("b", "", w.t("groups.finding", { id: finding.id }), true),
     severityPill(finding.severity),
-    element("span", plural(finding.sessionIds.length, "session", "sessions")),
+    element("span", count(w, "session", finding.sessionIds.length)),
   );
   box.append(fh);
   box.append(maybeProducer("div", "rec", finding.recommendation, true));
-  const own = el("div", "own", "Owner · due: ");
+  const own = el("div", "own", w.t("groups.finding.owner"));
   own.append(producerText(finding.ownerDue));
   box.append(own);
   return box;
@@ -480,6 +522,7 @@ function renderSessionList(
   conversationIds: readonly string[],
   model: ComplianceModel,
   presentation: CompliancePresentation,
+  w: Words,
 ): HTMLElement {
   const byId = new Map(model.sessions.map((s) => [s.conversationId, s]));
   const list = el("div", "convs");
@@ -487,7 +530,7 @@ function renderSessionList(
   for (const id of conversationIds) {
     const session = byId.get(id);
     if (session !== undefined)
-      list.append(renderSession(session, model, presentation));
+      list.append(renderSession(session, model, presentation, w));
   }
   return list;
 }
@@ -505,12 +548,13 @@ function renderSession(
   session: Session,
   model: ComplianceModel,
   presentation: CompliancePresentation,
+  w: Words,
 ): HTMLElement {
   const names = testNames(model);
   const exceptions = session.tests.filter(isException);
   const unverified = session.tests.filter(isUnverified);
   const undecided = session.tests.filter((t) => t.verdict === "not_evaluable");
-  const parts = caseParts(session.conversationId);
+  const parts = caseParts(session.conversationId, w);
   const item = el("article", "conv session");
   item.dataset.session = session.conversationId;
   const head = el("div", "conv-h");
@@ -518,19 +562,25 @@ function renderSession(
   head.append(
     exceptions.length > 0
       ? wordPill(
-          {
-            word: plural(exceptions.length, "exception", "exceptions"),
-            tone: "bad",
-          },
+          { word: count(w, "exception", exceptions.length), tone: "bad" },
           "exceptions",
         )
       : unverified.length > 0
-        ? wordPill({ word: "could not verify", tone: "ne" }, "unverified")
+        ? wordPill(
+            { word: w.t("groups.session.unverified"), tone: "ne" },
+            "unverified",
+          )
         : undecided.length > 0
-          ? wordPill({ word: "could not decide", tone: "ne" }, "undecided")
+          ? wordPill(
+              { word: w.t("groups.session.undecided"), tone: "ne" },
+              "undecided",
+            )
           : session.tests.some((t) => t.verdict === "met")
-            ? wordPill({ word: "no exceptions", tone: "ok" }, "ok")
-            : wordPill({ word: "no test applied", tone: "na" }, "none"),
+            ? wordPill({ word: w.t("groups.session.ok"), tone: "ok" }, "ok")
+            : wordPill(
+                { word: w.t("groups.session.none"), tone: "na" },
+                "none",
+              ),
   );
   const why = el("span", "cwhy");
   (exceptions.length > 0
@@ -547,7 +597,7 @@ function renderSession(
   item.append(head);
   const body = el("div", "conv-slot");
   item.append(body);
-  lazyBody(body, () => sessionBody(session, model, presentation));
+  lazyBody(body, () => sessionBody(session, model, presentation, w));
   return item;
 }
 
@@ -555,11 +605,11 @@ function sessionBody(
   session: Session,
   model: ComplianceModel,
   presentation: CompliancePresentation,
+  w: Words,
 ): HTMLElement {
   const names = testNames(model);
-  const ladder = ladderOn();
   const body = el("div", "conv-b");
-  body.append(el("h4", "", "Test by test"));
+  body.append(el("h4", "", w.t("groups.h.test-by-test")));
   for (const test of session.tests) {
     const box = el("div", "ck");
     box.dataset.crit = test.criterionId;
@@ -569,65 +619,59 @@ function sessionBody(
       wordPill(
         ruleWord(
           test.verdict,
-          ladder,
           judgedOf(test.reportState, test.judgePinDigest),
+          w,
         ),
         test.verdict,
       ),
     );
     h.append(names(test.criterionId, "span", "tname"));
-    if (test.verdict !== "not_applicable") h.append(tierBadge(test.tier));
+    if (test.verdict !== "not_applicable") h.append(tierBadge(test.tier, w));
     if (test.verdict === "failed" || test.verdict === "unsupported")
-      h.append(
-        el("span", "applic", "no verdict drawn: neither met nor an exception"),
-      );
+      h.append(el("span", "applic", w.t("groups.unverified-note")));
     box.append(h);
     if (test.rationale !== undefined)
       box.append(
         el(
           "div",
           "why",
-          judgeNote(test.rationale, test.claim?.verdict ?? test.verdict),
+          judgeNote(test.rationale, test.claim?.verdict ?? test.verdict, w),
         ),
       );
     body.append(box);
   }
   if (session.tests.every((t) => t.rationale === undefined)) {
-    const states = new Set(
-      session.tests.flatMap((t) =>
-        t.claim === undefined ? [] : [t.reportState],
-      ),
-    );
     const gap = el(
       "p",
       "small",
-      states.size === 1 && states.has("withheld")
-        ? "The judge's notes are not in this bundle: its reports are withheld."
-        : states.has("mismatch") ||
-            states.has("unreadable") ||
-            states.has("invalid")
-          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, cannot be read, or do not check out."
-          : states.has("withheld")
-            ? "The judge's notes are not in this bundle: some of its reports are withheld."
-            : "The judge left no notes.",
+      notesGap(
+        session.tests.flatMap((t) =>
+          t.claim === undefined ? [] : [t.reportState],
+        ),
+        w,
+      ),
     );
     gap.dataset.gaps = "true";
     body.append(gap);
   }
-  body.append(el("h4", "", "The conversation"));
-  body.append(renderChat(session.transcript, session.sourceCapsuleId));
+  body.append(el("h4", "", w.t("report.h.conversation")));
+  body.append(renderChat(session.transcript, session.sourceCapsuleId, w));
   body.append(
     levelToggle(
       2,
-      "Proofs: record ids, digests and the judge pin",
-      () => sessionProofs(session, model),
+      w.t("report.proofs.toggle"),
+      () => sessionProofs(session, model, w),
       { className: "proofs" },
     ),
   );
   return body;
 }
 
-function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
+function sessionProofs(
+  session: Session,
+  model: ComplianceModel,
+  w: Words,
+): HTMLElement {
   const names = testNames(model);
   const box = el("div", "pf-b");
   box.dataset.proofsFor = session.conversationId;
@@ -639,58 +683,39 @@ function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
     dated.basis === "judged"
       ? []
       : [
-          [
-            "Dated",
-            `${dated.stated ?? dated.date}${dated.zone === "not-stated" ? " (timezone not stated)" : ""}: ${BASIS_TEXT[dated.basis]}`,
-            { dated: dated.basis },
-          ],
+          [w.t("groups.pf.dated"), datedText(dated, w), { dated: dated.basis }],
           ...(dated.importedAt === undefined
             ? []
             : [
-                ["Imported", dated.importedAt, { imported: "" }] as [
-                  string,
-                  string,
-                  Record<string, string>,
-                ],
+                [
+                  w.t("report.pf.imported"),
+                  dated.importedAt,
+                  { imported: "" },
+                ] as [string, string, Record<string, string>],
               ]),
         ];
   const rows: ([string, string] | [string, string, Record<string, string>])[] =
     [
-      ["Session", session.conversationId],
+      [w.t("groups.pf.session"), session.conversationId],
       ...dating,
-      ["Judged and sealed", session.judgedDay, { sealed: "" }],
+      [w.t("report.pf.judged-sealed"), session.judgedDay, { sealed: "" }],
       [
-        "Case record",
+        w.t("report.pf.case-record"),
         session.sourceCapsuleId === undefined
-          ? "not stated by the reports"
-          : `${session.sourceCapsuleId}${session.caseFrom === "claims" ? " (cited by every claim of this session; the reports that name it are withheld)" : ""}`,
+          ? w.t("report.pf.case-record.not-stated")
+          : session.caseFrom === "claims"
+            ? w.t("groups.pf.case-record.from-claims", {
+                record: session.sourceCapsuleId,
+              })
+            : session.sourceCapsuleId,
       ],
     ];
-  const t = session.transcript;
-  if (t.state === "verified") {
-    rows.push(["Transcript record", t.transcriptRecordId!]);
-    rows.push([
-      "Case input digest",
-      `${t.inputDigest!} (the transcript's digest equals what the judged case committed to, checked on this page)`,
-    ]);
-  } else if (t.state === "cited") {
-    rows.push(["Transcript record", t.transcriptRecordId!]);
-    rows.push([
-      "Case input digest",
-      `${t.inputDigest!} (the case every claim cites; the judge's reports are withheld, so which conversation the judge read is not shown)`,
-    ]);
-  } else
-    rows.push([
-      "Transcript",
-      t.state === "absent"
-        ? "not in this bundle"
-        : `not shown: ${t.reason ?? "does not check"}`,
-    ]);
-  rows.push(["Result capsule", model.capsuleId]);
+  rows.push(...transcriptRows(session.transcript, w));
+  rows.push([w.t("report.pf.result-capsule"), model.capsuleId]);
   const dl = proofList(rows);
   dl.dataset.checkIt = session.conversationId;
   box.append(dl);
-  box.append(el("h5", "", "Each test's sealed report"));
+  box.append(el("h5", "", w.t("groups.pf.h.each-report")));
   for (const test of session.tests) {
     const ev = el("div", "ev");
     ev.dataset.proofCrit = test.criterionId;
@@ -698,29 +723,30 @@ function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
     label.append(": ");
     ev.append(label);
     if (test.verdict === "not_applicable") {
-      ev.append(
-        element(
-          "span",
-          "no claim: Result v0 carries none for a test that did not apply",
-        ),
-      );
+      ev.append(element("span", w.t("groups.pf.no-claim")));
     } else {
       if (test.reportDigest !== undefined)
         ev.append(element("code", test.reportDigest));
       if (test.contract !== undefined)
         ev.append(element("code", test.contract));
       if (test.judgePinDigest !== undefined)
-        ev.append(element("code", `judge pin ${test.judgePinDigest}`));
+        ev.append(
+          element(
+            "code",
+            w.t("groups.pf.judge-pin", { digest: test.judgePinDigest }),
+          ),
+        );
       if (test.rationale !== undefined) {
         const sealed = el(
           "div",
           "sealed",
-          `Rationale, as sealed: ${test.rationale}`,
+          w.t("groups.pf.rationale", { rationale: test.rationale }),
         );
         sealed.dataset.rationale = "sealed";
         ev.append(sealed);
       }
-      if (test.reportDigest === undefined) ev.append(element("span", "absent"));
+      if (test.reportDigest === undefined)
+        ev.append(element("span", w.t("groups.pf.absent")));
     }
     box.append(ev);
   }
@@ -731,28 +757,11 @@ function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
 // Proofs for the whole report
 // ---------------------------------------------------------------------------
 
-function pinText(model: ComplianceModel): string {
+function pinText(model: ComplianceModel, w: Words): string {
   if (model.runInfo.judgePinDigest !== undefined)
     return model.runInfo.judgePinDigest;
-  if (!model.runInfo.pinned) return "disagrees across sessions";
-  const info = model.runInfo;
-  const unread =
-    (info.reportsMismatched ?? 0) +
-    (info.reportsUnreadable ?? 0) +
-    (info.reportsInvalid ?? 0);
-  const cited = info.reportsCited ?? 0;
-  const parts: string[] = [];
-  if (info.reportsWithheld !== undefined)
-    parts.push(
-      `the judge's reports that state it are withheld (${fmt(info.reportsWithheld)} of ${fmt(cited)})`,
-    );
-  if (unread > 0)
-    parts.push(
-      `${fmt(unread)} of ${fmt(cited)} reports in this bundle do not match what was sealed, cannot be read, or do not check out`,
-    );
-  return parts.length === 0
-    ? "no judged sessions cited"
-    : `not in this bundle: ${parts.join("; ")}`;
+  if (!model.runInfo.pinned) return w.t("groups.pin.differs");
+  return pinAbsence(model.runInfo, w) ?? w.t("groups.pin.none");
 }
 
 function renderReportProofs(
@@ -760,19 +769,20 @@ function renderReportProofs(
   model: ComplianceModel,
   bundle: unknown,
   verified: BundleVerificationResult,
+  w: Words,
 ): void {
   const section = el("section", "rp");
   section.dataset.section = "report-proofs";
   section.append(
     levelToggle(
       2,
-      "Proofs for this report: method, test wording, what ran, and how to verify the whole bundle",
+      w.t("groups.rp.toggle"),
       () => {
         const box = el("div", "pf-b");
-        renderObligationDetails(box, model);
-        renderQuality(box, model);
-        renderWhatRan(box, model);
-        renderVerificationDetails(box, bundle, verified);
+        renderObligationDetails(box, model, w);
+        renderQuality(box, model, w);
+        renderWhatRan(box, model, w);
+        renderVerificationDetails(box, bundle, verified, w);
         return box;
       },
       { className: "proofs" },
@@ -784,10 +794,11 @@ function renderReportProofs(
 function renderObligationDetails(
   host: HTMLElement,
   model: ComplianceModel,
+  w: Words,
 ): void {
   const part = el("div", "rp-s");
   part.dataset.section = "obligation-detail";
-  part.append(el("h3", "", "Method and the wording each test ran"));
+  part.append(el("h3", "", w.t("groups.od.h")));
   for (const obligation of model.obligations) {
     const box = el("div", "obd");
     box.dataset.obligationDetail = obligation.key;
@@ -804,13 +815,11 @@ function renderObligationDetails(
       el(
         "p",
         "na",
-        obligation.mapped
-          ? "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record."
-          : `The producer's extension does not map this obligation: article, summary and method ${NOT_STATED}.`,
+        w.t(obligation.mapped ? "groups.od.mapped" : "groups.od.unmapped"),
       ),
     );
     if (obligation.judgedTerms.length > 0) {
-      const terms = el("p", "applic", "Judged terms: ");
+      const terms = el("p", "applic", w.t("groups.od.judged-terms"));
       terms.append(producerText(obligation.judgedTerms.join(", ")));
       box.append(terms);
     }
@@ -821,7 +830,7 @@ function renderObligationDetails(
       const h = el("div", "h");
       h.append(
         maybeProducer("span", "", row.name, row.producerName),
-        tierBadge(row.tier),
+        tierBadge(row.tier, w),
       );
       rowBox.append(h);
       rowBox.append(
@@ -829,10 +838,12 @@ function renderObligationDetails(
           "div",
           "why",
           row.wording.source === "sealed"
-            ? `Wording run (sealed): ${row.wording.text}`
-            : row.wording.source === "mixed"
-              ? `Wording ${NOT_STATED}: the cited reports state different wordings.`
-              : `Wording ${NOT_STATED}: no cited report states it.`,
+            ? w.t("groups.od.wording.sealed", { text: row.wording.text })
+            : w.t(
+                row.wording.source === "mixed"
+                  ? "groups.od.wording.mixed"
+                  : "groups.od.wording.unstated",
+              ),
         ),
       );
       if (row.notEvaluableNote !== undefined)
@@ -844,68 +855,79 @@ function renderObligationDetails(
   host.append(part);
 }
 
-function renderQuality(host: HTMLElement, model: ComplianceModel): void {
+function renderQuality(
+  host: HTMLElement,
+  model: ComplianceModel,
+  w: Words,
+): void {
   const part = el("div", "rp-s");
   part.dataset.section = "quality";
-  part.append(el("h3", "", "Quality of judged results"));
+  part.append(el("h3", "", w.t("groups.q.h")));
   const protocol = model.qualityProtocol;
   if (protocol === undefined) {
-    part.append(el("p", "", "No quality protocol declared in this pack."));
+    part.append(el("p", "", w.t("groups.q.none")));
     host.append(part);
     return;
   }
-  const line = el("p", "", "Protocol ");
+  const line = el("p", "", w.t("groups.q.protocol"));
   line.append(
     protocol.protocol === undefined
-      ? "unspecified"
+      ? w.t("groups.q.unspecified")
       : producerText(protocol.protocol),
   );
   if (protocol.cadence !== undefined)
     line.append(", ", producerText(protocol.cadence));
-  line.append(". Recomputed tests are not sampled.");
+  line.append(w.t("groups.q.tail"));
   part.append(line);
   if (protocol.note !== undefined)
     part.append(maybeProducer("p", "na", protocol.note, true));
   host.append(part);
 }
 
-function renderWhatRan(host: HTMLElement, model: ComplianceModel): void {
+function renderWhatRan(
+  host: HTMLElement,
+  model: ComplianceModel,
+  w: Words,
+): void {
   const part = el("div", "rp-s");
   part.dataset.section = "methodology";
-  part.append(el("h3", "", "What ran"));
+  part.append(el("h3", "", w.t("groups.ran.h")));
   const dl = proofList([
     [
-      "Contract",
+      w.t("groups.ran.contract"),
       model.runInfo.contract ??
-        (model.runInfo.pinned
-          ? "no conversations"
-          : "disagrees across sessions"),
+        w.t(
+          model.runInfo.pinned
+            ? "groups.ran.contract.none"
+            : "groups.ran.contract.differs",
+        ),
     ],
-    ["Judge pin digest", pinText(model)],
-    ["Sessions", fmt(model.totalSessions)],
+    [w.t("groups.ran.judge-pin"), pinText(model, w)],
+    [w.t("groups.ran.sessions"), fmt(model.totalSessions)],
     ...(model.dating.from === undefined || model.dating.to === undefined
       ? []
       : [
           [
-            "Period",
-            span([model.dating.from, model.dating.to]),
+            w.t("groups.ran.period"),
+            span([model.dating.from, model.dating.to], w),
             { period: "" },
           ] as [string, string, Record<string, string>],
         ]),
     ...(model.dating.basis === "judged"
       ? []
       : [
-          ["Sealed", span(model.dating.judgedDays), { sealed: "" }] as [
-            string,
-            string,
-            Record<string, string>,
-          ],
+          [
+            w.t("groups.ran.sealed"),
+            span(model.dating.judgedDays, w),
+            { sealed: "" },
+          ] as [string, string, Record<string, string>],
         ]),
-    ["Result capsule", model.capsuleId],
+    [w.t("report.pf.result-capsule"), model.capsuleId],
+    wordingRow(w),
   ]);
   dl.dataset.ran = "true";
   part.append(dl);
-  const note = datingStatement(model.dating, model.totalSessions);
+  const note = datingStatement(model.dating, model.totalSessions, w);
   if (note !== undefined) {
     const p = el("p", "na", note);
     p.dataset.dateNote = model.dating.basis;
@@ -918,25 +940,14 @@ function renderVerificationDetails(
   host: HTMLElement,
   bundle: unknown,
   verified: BundleVerificationResult,
+  w: Words,
 ): void {
   const part = el("div", "rp-s");
   part.dataset.section = "verification-details";
-  part.append(el("h3", "", "Verification details"));
+  part.append(el("h3", "", w.t("report.vd.h")));
   const model = buildVerificationPageModel(bundle, verified);
-  part.append(
-    proofList([
-      ["Bundle digest", model.bundleDigest ?? "uncomputable"],
-      ["Checkpoint root", model.checkpointRoot ?? "absent"],
-      ["Checkpoint size", String(model.checkpointSize ?? "absent")],
-    ]),
-  );
-  part.append(
-    el(
-      "p",
-      "",
-      "This bundle's own checkpoint, an append-only Merkle Mountain Range over the sealed records. Repeat every check on this page offline with the open-source verifier. This page only ever renders a bundle that already verified: tamper with any claim, record or checkpoint and the whole page is replaced by the verification-failed banner.",
-    ),
-  );
+  part.append(proofList(verificationRows(model, w)));
+  part.append(el("p", "", w.t("groups.vd.note")));
   host.append(part);
 }
 
@@ -944,22 +955,29 @@ function renderVerificationDetails(
 // Assembly
 // ---------------------------------------------------------------------------
 
-export async function renderCompliancePage(
+/** The `groups` grouping's page wrapper: its element, class, page name and stylesheet. */
+export const GROUPS_FRAME = {
+  tag: "div",
+  className: "cc",
+  page: "compliance",
+  css: COMPLIANCE_CSS,
+} as const;
+
+/**
+ * Draw the `groups` grouping into `wrapper` (contract-report.ts made it and
+ * put its stylesheet in it). Every word is `w`'s.
+ */
+export async function drawGroups(
+  wrapper: HTMLElement,
   result: ResultRoot,
   presentation: CompliancePresentation,
   bundle: unknown,
   verified: BundleVerificationResult,
-  root: HTMLElement,
+  w: Words,
 ): Promise<void> {
   const model = buildComplianceModel(result, presentation);
-  const wrapper = el("div", "cc");
-  wrapper.dataset.page = "compliance";
-  wrapper.dataset.levels = "2";
-  const style = document.createElement("style");
-  style.textContent = COMPLIANCE_CSS;
-  wrapper.append(style);
-
-  renderHeader(wrapper, model);
+  producerTitle = w.t("groups.producer.title");
+  renderHeader(wrapper, model, w);
   // Who judged, who witnessed, what verified: on the front, never in a toggle.
   wrapper.append(
     renderProvenance(
@@ -970,12 +988,12 @@ export async function renderCompliancePage(
         ),
         bundle,
         verified,
+        w,
       ),
     ),
   );
-  renderSummary(wrapper, model, presentation);
-  renderReportProofs(wrapper, model, bundle, verified);
-  root.append(wrapper);
+  renderSummary(wrapper, model, presentation, w);
+  renderReportProofs(wrapper, model, bundle, verified, w);
 }
 
 export type {

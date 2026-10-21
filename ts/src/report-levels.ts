@@ -4,6 +4,7 @@ import {
   type ConversationTranscript,
   type ReportState,
 } from "@action-state-group/agent-action-capsule";
+import type { Words } from "./contract-report-wording.js";
 
 /**
  * The two levels every human-facing report card has, and nothing deeper:
@@ -21,9 +22,10 @@ import {
  * all. No <details> ever sits inside more than one other <details>, and a
  * level-1 toggle never holds another level-1 toggle.
  *
- * Shared by the outcome card (outcome-report-view.ts) and the EU obligations
- * card (compliance-view.ts). Everything here draws only from values the
- * callers already read from the verified bundle; it reads nothing itself.
+ * Shared by both groupings of the contract-report module (contract-report.ts:
+ * outcome-report-view.ts and compliance-view.ts). Everything here draws only
+ * from values the callers already read from the verified bundle; it reads
+ * nothing itself. Its words come from the card's wording pack (`Words`).
  * Toggles are native <details> (keyboard-accessible, no script-driven modal);
  * a toggle's body is built the first time it is opened, and inside an open
  * level-1 toggle each conversation's body is built when it scrolls near the
@@ -76,6 +78,39 @@ export function levelToggle(
       if (details.open) fill();
     });
   return details;
+}
+
+/**
+ * The one nesting rule for every report page (SEAMS ruling 11): a level-2
+ * toggle may sit inside a level-1 toggle, and nothing deeper. Returns every
+ * breach in `root`, by the summary text of the offending toggle: a toggle
+ * inside two others, or a level-1 toggle inside another level-1 toggle.
+ * Empty when the page keeps the rule. Run it over a page with every toggle
+ * opened, so lazily built bodies are counted.
+ */
+export function nestingProblems(root: ParentNode): string[] {
+  const problems: string[] = [];
+  for (const details of root.querySelectorAll("details")) {
+    const outer: HTMLDetailsElement[] = [];
+    for (
+      let at = details.parentElement?.closest("details");
+      at !== null && at !== undefined;
+      at = at.parentElement?.closest("details")
+    )
+      outer.push(at);
+    const name = JSON.stringify(
+      details.querySelector(":scope > summary")?.textContent ?? "",
+    );
+    if (outer.length > 1)
+      problems.push(`${name} is nested ${outer.length + 1} toggles deep`);
+    else if (
+      outer.length === 1 &&
+      details.dataset.level !== "2" &&
+      outer[0]!.dataset.level !== undefined
+    )
+      problems.push(`${name} is not level 2 but sits inside a toggle`);
+  }
+  return problems;
 }
 
 /** Opens a toggle and builds its body now (tests, print). */
@@ -142,19 +177,18 @@ function watchPrint(doc: Document): void {
 }
 
 // ---------------------------------------------------------------------------
-// Result words: the plain set; the grade ladder is the module's other set
+// Result words: from the card's wording pack
 // ---------------------------------------------------------------------------
 
 /**
- * Which of this module's two word sets the cards speak. Never read from the
- * bundle: presentation contract section 6 forbids a bundle-carried setting
- * from choosing wording, so there is no `result_words` flag. The grade
- * ladder (established, failed, not present, inconclusive, not checked) is
- * the module's own vocabulary, kept here for a viewer-side wording pack
- * (bound by `wording_sha256`, section 7.4) to select once packs reach the
- * modules; until then the cards speak the plain set.
+ * Result words never come from the bundle: presentation contract section 6
+ * forbids a bundle-carried setting from choosing wording. They come from the
+ * card's wording pack (contract-report-wording.ts), which ships with the
+ * viewer. The default packs speak the plain set (met, not met, did not
+ * apply, could not decide); a pack may speak the grade ladder (established,
+ * failed, not present, inconclusive, not checked) instead, and so tell the
+ * three undecided cases apart.
  */
-export const LADDER_WORDS: boolean = false;
 
 export type RuleVerdict =
   | "met"
@@ -191,68 +225,60 @@ export function judgedOf(
 }
 
 /**
- * One rule's result in words. `judged` matters only on the ladder, for a
- * rule nobody could decide: "inconclusive" when a judge ran and could not
- * decide, "not checked" when none ran, "could not decide (report withheld)"
- * when the bundle withholds the report that would say which, and "could not
- * decide (report not available)" when a judge's report is cited but this
- * bundle does not carry a readable copy of it (mismatched, unreadable,
- * invalid, or simply not carried) -- never "withheld" for a report that is
- * in the bundle, and never "not readable", which would claim more than some
- * of those states show (a report this bundle never carried was never
- * supplied to call unreadable). A failed or unsupported claim reads the
- * same on both word sets: it failed verification, or its evidence is
- * missing, in the neutral tone; it is neither "not met" nor "not checked",
- * since its verdict was never drawn.
+ * One rule's result in words. `judged` picks among the pack's four words
+ * for a rule nobody could decide: a judge ran and could not decide
+ * (`verdict.not_evaluable.judged`), none ran (`.unjudged`), the bundle
+ * withholds the report that would say which (`.withheld`), or a judge's
+ * report is cited but this bundle does not carry a readable copy of it --
+ * mismatched, unreadable, invalid, or simply not carried (`.unavailable`),
+ * never `.withheld`, which would claim more than those states show. A
+ * failed or unsupported claim failed verification, or its evidence is
+ * missing; it is never "not checked".
  */
 export function ruleWord(
   verdict: RuleVerdict,
-  ladder: boolean,
   judged: Judged,
+  w: Words,
 ): Worded {
   switch (verdict) {
     case "failed":
-      return { word: "failed verification", tone: "ne" };
+      return { word: w.t("verdict.failed"), tone: "bad" };
     case "unsupported":
-      return { word: "evidence missing", tone: "ne" };
-  }
-  if (!ladder)
-    switch (verdict) {
-      case "met":
-        return { word: "met", tone: "ok" };
-      case "not_met":
-        return { word: "not met", tone: "bad" };
-      case "not_applicable":
-        return { word: "did not apply", tone: "na" };
-      case "not_evaluable":
-        return { word: "could not decide", tone: "ne" };
-    }
-  switch (verdict) {
+      return { word: w.t("verdict.unsupported"), tone: "bad" };
     case "met":
-      return { word: "established", tone: "ok" };
+      return { word: w.t("verdict.met"), tone: "ok" };
     case "not_met":
-      return { word: "failed", tone: "bad" };
+      return { word: w.t("verdict.not_met"), tone: "bad" };
     case "not_applicable":
-      return { word: "not present", tone: "na" };
+      return { word: w.t("verdict.not_applicable"), tone: "na" };
     case "not_evaluable":
-      return judged === "yes"
-        ? { word: "inconclusive", tone: "ne" }
-        : judged === "no"
-          ? { word: "not checked", tone: "ne" }
-          : judged === "withheld"
-            ? { word: "could not decide (report withheld)", tone: "ne" }
-            : { word: "could not decide (report not available)", tone: "ne" };
+      return {
+        word: w.t(
+          judged === "yes"
+            ? "verdict.not_evaluable.judged"
+            : judged === "no"
+              ? "verdict.not_evaluable.unjudged"
+              : judged === "withheld"
+                ? "verdict.not_evaluable.withheld"
+                : "verdict.not_evaluable.unavailable",
+        ),
+        tone: "ne",
+      };
   }
 }
 
 /**
  * The judge's note in plain words. A sealed rationale that is the judge
  * backend's own synthesized line ("jev choice: not_met (probabilities={...},
- * confidence=...)") reads "The judge was 78% sure."; any other rationale (a
- * recomputed check's own explanation) is shown as sealed. Display only: the
- * proofs always carry the rationale exactly as sealed.
+ * confidence=...)") reads "The judge was 78% sure." (`judge.note.sure`); any
+ * other rationale (a recomputed check's own explanation) is shown as sealed.
+ * Display only: the proofs always carry the rationale exactly as sealed.
  */
-export function judgeNote(rationale: string, verdict: string): string {
+export function judgeNote(
+  rationale: string,
+  verdict: string,
+  w: Words,
+): string {
   if (!/^jev choice:/u.test(rationale)) return rationale;
   // The same parse the model uses for P (anchored on the probabilities
   // block, a value only in [0, 1]), so the note and the proofs agree.
@@ -262,7 +288,7 @@ export function judgeNote(rationale: string, verdict: string): string {
     : undefined;
   return p === undefined || !Number.isFinite(p) || p < 0 || p > 1
     ? rationale
-    : `The judge was ${Math.round(p * 100)}% sure.`;
+    : w.t("judge.note.sure", { p: Math.round(p * 100) });
 }
 
 export function wordPill(worded: Worded, key: string): HTMLElement {
@@ -276,7 +302,10 @@ export function wordPill(worded: Worded, key: string): HTMLElement {
  * model beside it; the older `tau2:airline:task-20:trial-0` reads "task 20,
  * trial 0"; any other id is shown whole.
  */
-export function caseParts(conversationId: string): {
+export function caseParts(
+  conversationId: string,
+  w: Words,
+): {
   label: string;
   model?: string;
 } {
@@ -287,7 +316,10 @@ export function caseParts(conversationId: string): {
   const trial = /^trial-([0-9]+)$/u.exec(parts[at + 1] ?? "")?.[1];
   const model = at > 2 ? parts.slice(2, at).join(":") : undefined;
   return {
-    label: `task ${task}${trial === undefined ? "" : `, trial ${trial}`}`,
+    label:
+      trial === undefined
+        ? w.t("case.label", { task })
+        : w.t("case.label.trial", { task, trial }),
     ...(model === undefined || model.length === 0 ? {} : { model }),
   };
 }
@@ -296,12 +328,15 @@ export function caseParts(conversationId: string): {
 // The conversation, readable
 // ---------------------------------------------------------------------------
 
-const ROLE_LABEL: ReadonlyMap<string, string> = new Map([
-  ["user", "User"],
-  ["assistant", "Agent"],
-  ["tool", "Tool result"],
-  ["system", "Instructions given to the agent"],
-]);
+/** The pack's label for a transcript role; an unknown role is shown as the transcript names it. */
+function roleLabel(role: string, w: Words): string {
+  return role === "user" ||
+    role === "assistant" ||
+    role === "tool" ||
+    role === "system"
+    ? w.t(`chat.role.${role}`)
+    : role;
+}
 
 /** The text with every whitespace character outside JSON strings removed. */
 function jsonWithoutSpace(text: string): string {
@@ -356,6 +391,7 @@ export function exactText(text: string): { text: string; indented: boolean } {
 export function renderChat(
   transcript: ConversationTranscript,
   caseRecord: string | undefined,
+  w: Words,
 ): HTMLElement {
   const wrap = el("div", "chat");
   wrap.dataset.transcript = transcript.state;
@@ -365,8 +401,12 @@ export function renderChat(
         "p",
         "absent",
         transcript.state === "absent"
-          ? `The conversation is not in this bundle. It is sealed in the case record ${caseRecord ?? "(not stated)"}, which this report does not disclose, so this page cannot show it.`
-          : `The conversation is not shown: ${transcript.reason ?? "the transcript in this bundle does not check against the case the judge read"}.`,
+          ? w.t("chat.absent", {
+              record: caseRecord ?? w.t("chat.record.not-stated"),
+            })
+          : w.t("chat.not-shown", {
+              reason: transcript.reason ?? w.t("chat.not-shown.default-reason"),
+            }),
       ),
     );
     return wrap;
@@ -377,7 +417,15 @@ export function renderChat(
     el(
       "p",
       "chat-k",
-      `${turns.length} messages, ${calls} tool call${calls === 1 ? "" : "s"}. ${transcript.state === "cited" ? "The conversation of the case every claim cites. The judge's reports are withheld, so which conversation the judge read is not shown." : "The exact conversation the judge read, checked on this page (see the proofs)."} Tool results are shown as sealed; JSON is only indented, and only where indenting changes nothing else. Tool arguments are shown as the report model hands them over, re-serialised, so a number JSON cannot hold exactly may already be rounded.`,
+      w.t("chat.lede", {
+        messages: String(turns.length),
+        calls: w.p("chat.calls", calls, { n: String(calls) }),
+        state: w.t(
+          transcript.state === "cited"
+            ? "chat.state.cited"
+            : "chat.state.verified",
+        ),
+      }),
     ),
   );
   const list = el("ol", "turns");
@@ -392,7 +440,7 @@ export function renderChat(
     const item = el("li", `turn ${role}`);
     item.dataset.turn = String(index);
     item.dataset.role = turn.role;
-    item.append(el("div", "who", ROLE_LABEL.get(turn.role) ?? turn.role));
+    item.append(el("div", "who", roleLabel(turn.role, w)));
     if (turn.content !== undefined && turn.content.length > 0) {
       if (role === "tool") {
         const shown = exactText(turn.content);
@@ -404,7 +452,7 @@ export function renderChat(
     for (const call of turn.toolCalls) {
       const line = el("div", "call");
       line.dataset.toolCall = call.name;
-      line.append(el("span", "call-k", "called "));
+      line.append(el("span", "call-k", w.t("chat.called")));
       line.append(el("b", "", call.name));
       // The arguments as the outcome report model hands them over. At
       // agent-action-capsule 0.5.0 `transcriptTurns` re-serialises them

@@ -3,7 +3,6 @@ import {
   asString,
   isObject,
   jcs,
-  NOT_STATED,
   reportState,
   verifyJudgePin,
   type BundleVerificationResult,
@@ -14,11 +13,14 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import { VIEWER_BUILD, type ViewerBuild } from "./viewer-build.js";
+import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
 
 /**
  * Who judged, who witnessed, and what verified: one plain block on the front
- * of the outcome and EU cards, so a reader does not have to open the proofs
- * to learn it.
+ * of every contract report, so a reader does not have to open the proofs to
+ * learn it. Its words are the card's wording pack's (`prov.*`); "Witnessed
+ * by" always says the witnesses are stated by the bundle and not checked
+ * here, because this page does not check witness receipts.
  *
  * Every value comes from the verified bundle, or, for "this page", from the
  * viewer's own build constants (viewer-build.ts). Nothing is inferred: a
@@ -258,57 +260,75 @@ const short = (digest: string): string =>
     : quoted(digest);
 
 /** "Judged by", from the tally alone. */
-export function judgeLine(tally: JudgeTally): ProvenanceLine {
-  const label = "Judged by";
-  const of = (n: number): string => `${fmt(n)} of ${fmt(tally.cited)}`;
+export function judgeLine(
+  tally: JudgeTally,
+  w: Words = DEFAULT_WORDS.lines,
+): ProvenanceLine {
+  const label = w.t("prov.judge.label");
+  const of = (n: number): string =>
+    w.t("prov.of", { count: fmt(n), total: fmt(tally.cited) });
   if (tally.cited === 0)
     return {
       key: "judge",
       label,
-      text: `${NOT_STATED}: no result in this bundle cites a report`,
+      text: w.t("prov.judge.none"),
       state: "not-stated",
     };
   const parts: string[] = [];
   for (const pin of tally.pins) {
     const model =
       pin.model ??
-      (pin.modelNotShown === "does_not_recompute"
-        ? "model not shown (the model the reports state does not recompute to the pin)"
-        : pin.modelNotShown === "differs"
-          ? "model not shown (the reports with this pin state different models)"
-          : pin.modelNotShown === "partly_stated"
-            ? "model not shown (some reports with this pin state no model)"
-            : `model ${NOT_STATED}`);
+      w.t(
+        pin.modelNotShown === "does_not_recompute"
+          ? "prov.judge.model.does-not-recompute"
+          : pin.modelNotShown === "differs"
+            ? "prov.judge.model.differs"
+            : pin.modelNotShown === "partly_stated"
+              ? "prov.judge.model.partly-stated"
+              : "prov.judge.model.not-stated",
+      );
     parts.push(
-      `${model}, pinned, pin ${short(pin.digest)} (${of(pin.count)} results)`,
+      w.t("prov.judge.pin", {
+        model,
+        pin: short(pin.digest),
+        of: of(pin.count),
+      }),
     );
   }
   if (tally.withheld > 0)
     parts.push(
-      tally.withheld === tally.cited
-        ? `not in this bundle: the judge's reports are withheld (${of(tally.withheld)})`
-        : `the reports for ${of(tally.withheld)} results are withheld, so their judge is not in this bundle`,
+      w.t(
+        tally.withheld === tally.cited
+          ? "prov.judge.all-withheld"
+          : "prov.judge.some-withheld",
+        { of: of(tally.withheld) },
+      ),
     );
   if (tally.notCarried > 0)
-    parts.push(
-      `the reports for ${of(tally.notCarried)} results are not in this bundle, so their judge is ${NOT_STATED}`,
-    );
+    parts.push(w.t("prov.judge.not-carried", { of: of(tally.notCarried) }));
   if (tally.unread > 0)
-    parts.push(
-      `${of(tally.unread)} reports do not match what was sealed, cannot be read, or do not check out`,
-    );
+    parts.push(w.t("prov.judge.unread", { of: of(tally.unread) }));
   const recomputed =
     tally.checkers.reduce((n, c) => n + c.count, 0) + tally.recomputedUnnamed;
   if (recomputed > 0) {
-    const by = tally.checkers.map((c) => `${quoted(c.ref)} (${fmt(c.count)})`);
+    const by = tally.checkers.map((c) =>
+      w.t("prov.judge.checker", {
+        checker: quoted(c.ref),
+        count: fmt(c.count),
+      }),
+    );
     if (tally.recomputedUnnamed > 0)
-      by.push(`checker ${NOT_STATED} (${fmt(tally.recomputedUnnamed)})`);
+      by.push(
+        w.t("prov.judge.checker-not-stated", {
+          count: fmt(tally.recomputedUnnamed),
+        }),
+      );
     parts.push(
-      `${of(recomputed)} results recomputed, not judged: ${by.join(", ")}`,
+      w.t("prov.judge.recomputed", { of: of(recomputed), by: by.join(", ") }),
     );
   }
   if (tally.unnamed > 0)
-    parts.push(`judge ${NOT_STATED} for ${of(tally.unnamed)} results`);
+    parts.push(w.t("prov.judge.unnamed", { of: of(tally.unnamed) }));
   const judged = tally.pins.length;
   const state: ProvenanceState =
     tally.withheld === tally.cited
@@ -324,7 +344,7 @@ export function judgeLine(tally: JudgeTally): ProvenanceLine {
           ? "stated"
           : "not-stated";
   // No pin at all, and nothing else to say: the plain absence.
-  if (parts.length === 0) parts.push(`${NOT_STATED} in this bundle`);
+  if (parts.length === 0) parts.push(w.t("prov.judge.nothing"));
   return { key: "judge", label, text: parts.join("; "), state };
 }
 
@@ -381,63 +401,90 @@ function witnessEntries(checkpoint: unknown): WitnessEntry[] {
   });
 }
 
-/** "Witnessed by": the bundle's witness receipts, and the checkpoint they would cover. */
+/**
+ * "Witnessed by": the bundle's witness receipts, and the checkpoint they
+ * would cover. The receipts are named as the bundle states them and said to
+ * be stated by the bundle, not checked here (`prov.witness.stated`): this
+ * page does not check witness receipts.
+ */
 export function witnessLine(
   bundle: unknown,
   verified: BundleVerificationResult,
+  w: Words = DEFAULT_WORDS.lines,
 ): ProvenanceLine {
   const checkpoint = isObject(bundle) ? bundle.checkpoint : undefined;
   const page = buildVerificationPageModel(bundle, verified);
   const logId = isObject(checkpoint) ? asString(checkpoint.log_id) : undefined;
   const facts: string[] = [];
-  if (logId !== undefined) facts.push(`log ${quoted(logId)}`);
+  if (logId !== undefined)
+    facts.push(w.t("prov.witness.log", { log: quoted(logId) }));
   if (page.checkpointSize !== undefined)
-    facts.push(`size ${fmt(page.checkpointSize)}`);
+    facts.push(w.t("prov.witness.size", { size: fmt(page.checkpointSize) }));
   if (page.checkpointRoot !== undefined)
-    facts.push(`root ${short(page.checkpointRoot)}`);
+    facts.push(w.t("prov.witness.root", { root: short(page.checkpointRoot) }));
   const unchecked = [
     verified.intervalCoverage,
     verified.perRecordMembership,
   ].some((claim) => claim.findings.includes("checkpoint_unverified"));
-  const signed =
-    isObject(checkpoint) && typeof checkpoint.cose === "string"
-      ? unchecked
-        ? "; this page did not check its signature"
-        : ""
-      : "; the bundle carries no signature for it";
   const about =
-    facts.length === 0 ? "" : ` The checkpoint: ${facts.join(", ")}${signed}.`;
+    facts.length === 0
+      ? []
+      : [
+          w.t(
+            isObject(checkpoint) && typeof checkpoint.cose === "string"
+              ? unchecked
+                ? "prov.witness.about.unchecked"
+                : "prov.witness.about"
+              : "prov.witness.about.unsigned",
+            { facts: facts.join(", ") },
+          ),
+        ];
   const all = witnessEntries(checkpoint);
   const entries = all.filter((e) => !e.stub && !e.malformed);
   const stubs = all.filter((e) => e.stub).length;
   const malformed = all.filter((e) => e.malformed).length;
   const others = [
-    stubs === 0
-      ? ""
-      : `${fmt(stubs)} placeholder${stubs === 1 ? "" : "s"}, not receipts`,
+    stubs === 0 ? "" : w.p("prov.witness.stubs", stubs, { n: fmt(stubs) }),
     malformed === 0
       ? ""
-      : `${fmt(malformed)} entr${malformed === 1 ? "y" : "ies"} that cannot be read`,
+      : w.p("prov.witness.malformed", malformed, { n: fmt(malformed) }),
   ].filter((t) => t !== "");
   const besides =
-    others.length === 0 ? "" : ` It also carries ${others.join(" and ")}.`;
+    others.length === 0
+      ? []
+      : [
+          w.t("prov.witness.besides", {
+            others:
+              others.length === 1
+                ? others[0]!
+                : w.t("prov.witness.both", { a: others[0]!, b: others[1]! }),
+          }),
+        ];
+  const label = w.t("prov.witness.label");
   if (entries.length === 0)
     return {
       key: "witness",
-      label: "Witnessed by",
-      text: `${NOT_STATED} in this bundle: it carries no witness receipt for its checkpoint.${besides}${about}`,
+      label,
+      text: [w.t("prov.witness.none"), ...besides, ...about].join(" "),
       state: "not-stated",
     };
-  const named = entries.map((e) =>
-    [
-      e.url === undefined ? `a receipt, witness ${NOT_STATED}` : quoted(e.url),
-      e.treeSize === undefined ? "" : ` (tree size ${fmt(e.treeSize)})`,
-    ].join(""),
-  );
+  const named = entries.map((e) => {
+    const url =
+      e.url === undefined
+        ? w.t("prov.witness.receipt-not-stated")
+        : quoted(e.url);
+    return e.treeSize === undefined
+      ? url
+      : w.t("prov.witness.entry", { witness: url, size: fmt(e.treeSize) });
+  });
   return {
     key: "witness",
-    label: "Witnessed by",
-    text: `${named.join("; ")}, as the bundle states; this page does not check witness receipts.${besides}${about}`,
+    label,
+    text: [
+      w.t("prov.witness.stated", { witnesses: named.join("; ") }),
+      ...besides,
+      ...about,
+    ].join(" "),
     state: others.length === 0 ? "stated" : "mixed",
   };
 }
@@ -447,13 +494,22 @@ export function verifierLine(
   bundle: unknown,
   /** The page's own build; `null` where a host's build states none. */
   build: ViewerBuild | null = VIEWER_BUILD,
+  w: Words = DEFAULT_WORDS.lines,
 ): ProvenanceLine {
   const ran =
     build === null
-      ? `this page's code; its viewer and verifier versions are ${NOT_STATED}`
-      : `this page's code: ${build.viewer} ${build.viewerVersion} at ${
-          build.commit === undefined ? `commit ${NOT_STATED}` : build.commit
-        }, verifier ${build.verifier} ${build.verifierVersion}${build.cllVersion === undefined ? "" : ` with cll ${build.cllVersion}`}`;
+      ? w.t("prov.verifier.ran.not-stated")
+      : w.t(`prov.verifier.ran${build.cllVersion === undefined ? "" : ".cll"}`, {
+          viewer: build.viewer,
+          viewerVersion: build.viewerVersion,
+          commit:
+            build.commit === undefined
+              ? w.t("prov.verifier.commit.not-stated")
+              : build.commit,
+          verifier: build.verifier,
+          verifierVersion: build.verifierVersion,
+          ...(build.cllVersion === undefined ? {} : { cll: build.cllVersion }),
+        });
   const report =
     isObject(bundle) && isObject(bundle.verification)
       ? bundle.verification
@@ -463,12 +519,18 @@ export function verifierLine(
     asString(report?.version) ?? asString(report?.producer_version);
   const built =
     producer === undefined
-      ? `The tool that built this bundle is ${NOT_STATED} in it.`
-      : `The bundle's own report, which this page does not check, names the tool that built it as ${quoted(producer)}, ${version === undefined ? `version ${NOT_STATED}` : `version ${quoted(version)}`}.`;
+      ? w.t("prov.verifier.built.not-stated")
+      : w.t("prov.verifier.built", {
+          producer: quoted(producer),
+          version:
+            version === undefined
+              ? w.t("prov.verifier.version.not-stated")
+              : w.t("prov.verifier.version", { version: quoted(version) }),
+        });
   return {
     key: "verifier",
-    label: "Verified by",
-    text: `${ran}. ${built}`,
+    label: w.t("prov.verifier.label"),
+    text: w.t("prov.verifier.text", { ran, built }),
     state: build === null ? "not-stated" : "stated",
   };
 }
@@ -478,11 +540,12 @@ export async function provenanceLines(
   claims: readonly ResultClaim[],
   bundle: unknown,
   verified: BundleVerificationResult,
+  w: Words = DEFAULT_WORDS.lines,
 ): Promise<ProvenanceLine[]> {
   return [
-    judgeLine(await tallyJudges(records, claims)),
-    witnessLine(bundle, verified),
-    verifierLine(bundle),
+    judgeLine(await tallyJudges(records, claims), w),
+    witnessLine(bundle, verified, w),
+    verifierLine(bundle, VIEWER_BUILD, w),
   ];
 }
 

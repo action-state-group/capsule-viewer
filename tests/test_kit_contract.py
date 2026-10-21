@@ -138,3 +138,27 @@ def test_a_module_whose_render_returns_a_non_string_is_rejected():
 
     with pytest.raises(ModuleContractError, match="render returned list, not str"):
         check_module_renders(NotHtml(), CONTEXT)
+
+
+# ---- One nesting rule (SEAMS ruling 11) -------------------------------------
+
+
+def test_nesting_rule_passes_level_two_inside_level_one():
+    from capsule_viewer.kit import check_nesting, drilldown
+
+    assert check_nesting(drilldown("one", drilldown("two", "body"))) == []
+    assert check_nesting(drilldown("one") + drilldown("sibling")) == []
+
+
+def test_nesting_rule_fails_a_toggle_deeper_than_level_two():
+    from capsule_viewer.kit import check_nesting, drilldown
+
+    problems = check_nesting(drilldown("one", drilldown("two", drilldown("three", "body"))))
+    assert problems == ["a toggle nested 3 deep (level 2 is the deepest)"]
+
+
+def test_the_kit_fixture_page_keeps_the_nesting_rule():
+    from capsule_viewer.kit import check_nesting
+    from capsule_viewer.kit.fixture import fixture_page
+
+    assert check_nesting(fixture_page()) == []
