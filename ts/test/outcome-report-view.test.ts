@@ -1531,6 +1531,157 @@ it("a conversation with no rule result is undecided, never 'no rule applied'", (
   ).toBe("undecided");
 });
 
+/** Sets every claim of the conversations `pick` selects to `verdict`, with sufficiency and presentation status taken from a claim already sealed that way, and rebuilds the buckets. */
+function setVerdicts(
+  source: Obj,
+  verdict: "met" | "not_evaluable",
+  pick: (conversationId: string) => boolean,
+): void {
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  const all = resultDoc.claims as Obj[];
+  const template =
+    verdict === "met"
+      ? { sufficiency: "SATISFIED", status: "SATISFIED" }
+      : (() => {
+          const t = all.find((c) => c.verdict === "not_evaluable")!;
+          return {
+            sufficiency: t.sufficiency,
+            status: (t.presentation as Obj).status,
+          };
+        })();
+  const claims = all.map((c) =>
+    pick((c.id as string).split("::")[0]!)
+      ? {
+          ...c,
+          verdict,
+          sufficiency: template.sufficiency,
+          presentation: {
+            ...(c.presentation as Obj),
+            status: template.status,
+          },
+        }
+      : c,
+  );
+  resultDoc.claims = claims;
+  resultDoc.aggregate = {
+    ...(resultDoc.aggregate as Obj),
+    buckets: rebuildBuckets(claims),
+  };
+}
+
+it("an undecided conversation never says 'no rule was broken': every result undecided, the page says no rule result was 'not met' and that the records do not show the rules met", async () => {
+  const { bundle } = await sealedOutcomeReportBundle((source) =>
+    setVerdicts(source, "not_evaluable", () => true),
+  );
+  const root = expand(await render(bundle));
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const page = root.querySelector<HTMLElement>('[data-page="outcome-report"]')!;
+  expect(page.textContent).not.toContain("no rule was broken");
+  expect(page.textContent).not.toContain("No rule was broken");
+  const line = page.querySelector<HTMLElement>('[data-line="undecided"]')!;
+  expect(line.textContent).toContain('No rule result was "not met"');
+  const sentence = open(
+    page.querySelector<HTMLElement>('[data-drill="undecided"] article.conv')!,
+  ).querySelector<HTMLElement>(".verdict-line")!;
+  expect(sentence.textContent).toContain('no rule result was "not met"');
+  expect(sentence.textContent).toContain("The records do not show whether");
+  expect(
+    page.querySelector<HTMLElement>('[data-line="missed"]')!.dataset.count,
+  ).toBe("0");
+});
+
+it("a claim whose cited evidence is not in the bundle is its own state: 'could not verify', never counted as missed or not met", async () => {
+  let first = "";
+  const { bundle } = await sealedOutcomeReportBundle((source) => {
+    const resultDoc = ((source.disclosures as Obj).result as Obj)
+      .agent_input as Obj;
+    first = ((resultDoc.claims as Obj[])[0]!.id as string).split("::")[0]!;
+    setVerdicts(source, "met", (id) => id === first);
+    const claim = (resultDoc.claims as Obj[]).find((c) =>
+      (c.id as string).startsWith(`${first}::`),
+    )!;
+    const missing = { digest_alg: "SHA-256", digest: "e".repeat(64) };
+    claim.evidence = [...(claim.evidence as Obj[]), missing];
+    (claim.presentation as Obj).evidence = claim.evidence;
+  });
+  const root = expand(await render(bundle));
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const line = root.querySelector<HTMLElement>('[data-line="unverified"]')!;
+  expect(line.dataset.count).toBe("1");
+  expect(line.textContent).toContain("Could not verify");
+  const conv = open(
+    root.querySelector<HTMLElement>(
+      `[data-drill="unverified"] article.conv[data-conversation="${first}"]`,
+    )!,
+  );
+  expect(conv.dataset.status).toBe("unverified");
+  const pill = conv.querySelector<HTMLElement>(".conv-h [data-pill]")!;
+  expect(pill.textContent).toBe("could not verify");
+  expect(pill.classList.contains("bad")).toBe(false);
+  expect(conv.querySelector(".verdict-line")!.textContent).toContain(
+    "is not in this bundle",
+  );
+  // never under the missed line
+  expect(
+    root.querySelector(
+      `[data-drill="missed"] article.conv[data-conversation="${first}"]`,
+    ),
+  ).toBeNull();
+  // the rule table gives it its own column, never "not met"
+  const rules = root.querySelector<HTMLElement>('[data-rows="rules"]')!;
+  const heads = [...rules.querySelectorAll("thead th")].map(
+    (th) => th.textContent,
+  );
+  expect(heads).toContain("failed verification or evidence missing");
+  const cells = [...rules.querySelectorAll<HTMLElement>("tr.rule")].map((tr) =>
+    [...tr.querySelectorAll("td.n")].map((td) => td.textContent),
+  );
+  expect(cells.some((c) => c[4] === "1")).toBe(true);
+});
+
+it("the proofs say the judge's note is derived from its probabilities only when every rationale is the judge's probability line", async () => {
+  // the fixture's rationales are all the judge's own probability lines
+  {
+    const { bundle } = await sealedOutcomeReportBundle();
+    const root = expand(await render(bundle));
+    const box = proofs(open(root.querySelector<HTMLElement>("article.conv")!));
+    expect(
+      box.querySelector<HTMLElement>("[data-rationale-label]")!.dataset
+        .rationaleLabel,
+    ).toBe("derived");
+  }
+  // one report with a free-text rationale: the paragraph no longer says
+  // every note is derived from probabilities
+  const { bundle } = await sealedOutcomeReportBundle((source) => {
+    for (const disclosed of Object.values(source.disclosures as Obj)) {
+      const report = (disclosed as Obj).agent_input as Obj | undefined;
+      if (report === undefined || typeof report.rationale !== "string")
+        continue;
+      report.rationale = "the checker found no confirmation turn";
+      break;
+    }
+  });
+  const root = expand(await render(bundle));
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const labels = [...root.querySelectorAll<HTMLElement>("article.conv")].map(
+    (conv) =>
+      proofs(open(conv)).querySelector<HTMLElement>("[data-rationale-label]")
+        ?.dataset.rationaleLabel,
+  );
+  expect(labels).toContain("sealed");
+  for (const conv of root.querySelectorAll<HTMLElement>("article.conv")) {
+    const box = conv.querySelector<HTMLElement>(".pf-b")!;
+    const free = [
+      ...box.querySelectorAll<HTMLElement>('[data-rationale="sealed"]'),
+    ].some((r) => !(r.textContent ?? "").startsWith("jev choice:"));
+    if (free)
+      expect(box.textContent).not.toContain(
+        "The judge's note is derived from its probabilities",
+      );
+  }
+});
+
 it("an undecided rule whose report is withheld reads 'could not decide', with the note that the report is withheld, never 'not checked'", async () => {
   const source = fixture("outcome-report-bundle.json");
   const resultDoc = ((source.disclosures as Obj).result as Obj)

@@ -92,31 +92,53 @@ export function openToggle(details: HTMLDetailsElement): void {
  */
 export function lazyBody(host: HTMLElement, build: () => Node): void {
   host.dataset.body = "pending";
-  const fill = (): void => {
-    if (host.dataset.body !== "pending") return;
-    host.dataset.body = "built";
-    host.append(build());
-  };
   const Observer = (
     globalThis as {
       IntersectionObserver?: typeof IntersectionObserver;
     }
   ).IntersectionObserver;
+  let observer: IntersectionObserver | undefined;
+  const fill = (): void => {
+    if (host.dataset.body !== "pending") return;
+    observer?.disconnect();
+    pendingBodies.delete(host);
+    host.dataset.body = "built";
+    host.append(build());
+  };
   if (Observer === undefined) {
     fill();
     return;
   }
-  const observer = new Observer(
+  observer = new Observer(
     (entries) => {
-      if (entries.some((e) => e.isIntersecting)) {
-        observer.disconnect();
-        fill();
-      }
+      if (entries.some((e) => e.isIntersecting)) fill();
     },
     { rootMargin: "1200px 0px" },
   );
   observer.observe(host);
-  globalThis.addEventListener?.("beforeprint", fill, { once: true });
+  // No listener per body: one `beforeprint` listener for the whole page
+  // fills the bodies still pending in the document. A body that was built,
+  // or whose card a host has since unmounted, holds no listener, so nothing
+  // keeps an old card's model alive.
+  pendingBodies.set(host, fill);
+  watchPrint(host.ownerDocument);
+}
+
+/** Each pending body's fill, keyed weakly by its host, so a host dropped from the page is collected with its model. */
+const pendingBodies = new WeakMap<HTMLElement, () => void>();
+const printWatched = new WeakSet<Document>();
+
+/** One `beforeprint` listener per document: builds every body still pending in it, and only those still in the page. */
+function watchPrint(doc: Document): void {
+  const view = doc.defaultView;
+  if (view === null || printWatched.has(doc)) return;
+  printWatched.add(doc);
+  view.addEventListener("beforeprint", () => {
+    for (const host of doc.querySelectorAll<HTMLElement>(
+      '[data-body="pending"]',
+    ))
+      pendingBodies.get(host)?.();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -152,15 +174,18 @@ export interface Worded {
 /**
  * Whether a judge ran on one rule, as far as the bundle shows: `yes` when
  * its disclosed report states a judge pin, `no` when the disclosed report
- * states none, `unknown` when the report is withheld (or supplied but not
- * readable), so the bundle cannot say.
+ * states none, `withheld` when the bundle withholds the report, `unknown`
+ * when the report is supplied but does not match what was sealed, cannot be
+ * read or does not check out, or is not carried at all. In every case but
+ * `yes` and `no` the bundle cannot say.
  */
-export type Judged = "yes" | "no" | "unknown";
+export type Judged = "yes" | "no" | "withheld" | "unknown";
 
 export function judgedOf(
   reportState: ReportState | undefined,
   judgePinDigest: string | undefined,
 ): Judged {
+  if (reportState === "withheld") return "withheld";
   if (reportState !== "disclosed") return "unknown";
   return judgePinDigest === undefined ? "no" : "yes";
 }
@@ -168,10 +193,13 @@ export function judgedOf(
 /**
  * One rule's result in words. `judged` matters only on the ladder, for a
  * rule nobody could decide: "inconclusive" when a judge ran and could not
- * decide, "not checked" when none ran, and "could not decide (report
- * withheld)" when the bundle withholds the report that would say which. A
+ * decide, "not checked" when none ran, "could not decide (report withheld)"
+ * when the bundle withholds the report that would say which, and "could not
+ * decide (report not readable)" when the report is supplied but cannot be
+ * read as sealed -- never "withheld" for a report that is in the bundle. A
  * failed or unsupported claim reads the same on both word sets: it failed
- * verification, or its evidence is missing; it is never "not checked".
+ * verification, or its evidence is missing, in the neutral tone; it is
+ * neither "not met" nor "not checked", since its verdict was never drawn.
  */
 export function ruleWord(
   verdict: RuleVerdict,
@@ -180,9 +208,9 @@ export function ruleWord(
 ): Worded {
   switch (verdict) {
     case "failed":
-      return { word: "failed verification", tone: "bad" };
+      return { word: "failed verification", tone: "ne" };
     case "unsupported":
-      return { word: "evidence missing", tone: "bad" };
+      return { word: "evidence missing", tone: "ne" };
   }
   if (!ladder)
     switch (verdict) {
@@ -207,7 +235,9 @@ export function ruleWord(
         ? { word: "inconclusive", tone: "ne" }
         : judged === "no"
           ? { word: "not checked", tone: "ne" }
-          : { word: "could not decide (report withheld)", tone: "ne" };
+          : judged === "withheld"
+            ? { word: "could not decide (report withheld)", tone: "ne" }
+            : { word: "could not decide (report not readable)", tone: "ne" };
   }
 }
 
@@ -289,7 +319,7 @@ function jsonWithoutSpace(text: string): string {
 }
 
 /**
- * A sealed tool argument or tool result, shown verbatim. It is indented for
+ * A sealed tool result, shown verbatim. It is indented for
  * reading only when doing so changes nothing but whitespace: JSON.parse then
  * JSON.stringify must give back exactly the original once whitespace outside
  * strings is set aside. A number JSON cannot hold exactly
@@ -343,7 +373,7 @@ export function renderChat(
     el(
       "p",
       "chat-k",
-      `${turns.length} messages, ${calls} tool call${calls === 1 ? "" : "s"}. ${transcript.state === "cited" ? "The conversation of the case every claim cites. The judge's reports are withheld, so which conversation the judge read is not shown." : "The exact conversation the judge read, checked on this page (see the proofs)."} Tool arguments and results are shown as sealed; JSON is only indented, and only where indenting changes nothing else.`,
+      `${turns.length} messages, ${calls} tool call${calls === 1 ? "" : "s"}. ${transcript.state === "cited" ? "The conversation of the case every claim cites. The judge's reports are withheld, so which conversation the judge read is not shown." : "The exact conversation the judge read, checked on this page (see the proofs)."} Tool results are shown as sealed; JSON is only indented, and only where indenting changes nothing else. Tool arguments are shown as the report model hands them over, re-serialised, so a number JSON cannot hold exactly may already be rounded.`,
     ),
   );
   const list = el("ol", "turns");
@@ -372,11 +402,14 @@ export function renderChat(
       line.dataset.toolCall = call.name;
       line.append(el("span", "call-k", "called "));
       line.append(el("b", "", call.name));
-      // The arguments exactly as the transcript gives them (compact JSON),
-      // never re-keyed or reworded.
+      // The arguments as the outcome report model hands them over. At
+      // agent-action-capsule 0.5.0 `transcriptTurns` re-serialises them
+      // with JSON.stringify, so they are not the sealed bytes: a number
+      // JSON cannot hold exactly is already rounded there. Never claimed
+      // verbatim; this page rewords nothing further.
       if (call.arguments.length > 0) {
         const args = el("code", "call-a", call.arguments);
-        args.dataset.exact = "verbatim";
+        args.dataset.exact = "as-modelled";
         line.append(" ", args);
       }
       item.append(line);

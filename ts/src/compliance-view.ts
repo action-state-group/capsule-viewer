@@ -99,9 +99,14 @@ const SEVERITY_CLASS: Record<string, string> = {
   Low: "low",
 };
 
+/** The producer's severity, as the producer's: an unknown value gets no colour of its own, never "medium". */
 function severityPill(severity: string): HTMLElement {
-  const cls = SEVERITY_CLASS[severity] ?? "medium";
-  return el("span", `sev ${cls}`, severity);
+  const cls = Object.hasOwn(SEVERITY_CLASS, severity)
+    ? SEVERITY_CLASS[severity]
+    : undefined;
+  const pill = el("span", cls === undefined ? "sev" : `sev ${cls}`);
+  pill.append(producerText(severity));
+  return pill;
 }
 
 function tierBadge(tier: TierReading): HTMLElement {
@@ -177,7 +182,7 @@ function renderHeader(host: HTMLElement, model: ComplianceModel): void {
   const hd = el("div", "hd");
   hd.dataset.section = "header";
   hd.append(el("div", "kicker", "EU AI Act obligations report"));
-  hd.append(el("h1", "", model.regulation));
+  hd.append(maybeProducer("h1", "", model.regulation, true));
   const pack =
     model.pack.id === NOT_STATED
       ? `Pack ${NOT_STATED}`
@@ -197,51 +202,64 @@ function renderHeader(host: HTMLElement, model: ComplianceModel): void {
 // Summary: what was checked and what we found
 // ---------------------------------------------------------------------------
 
-/** A test no session has a met, not-met or undecided result for: nothing was checked. */
+/** A test no session has a met, not-met, undecided or unverified result for: nothing was checked. */
 function nothingChecked(row: ObligationRowModel): boolean {
-  return row.metCount + row.notMetCount + row.notEvaluableCount === 0;
-}
-
-/** Every session with a result for this test could not be decided. */
-function noneDecided(row: ObligationRowModel): boolean {
   return (
-    row.metCount === 0 && row.notMetCount === 0 && row.notEvaluableCount > 0
+    row.metCount +
+      row.notMetCount +
+      row.notEvaluableCount +
+      row.unverifiedCount ===
+    0
   );
 }
 
+/** No session with a result for this test met it or did not: every one was undecided or could not be verified. */
+function noneDecided(row: ObligationRowModel): boolean {
+  return row.metCount === 0 && row.notMetCount === 0;
+}
+
 /**
- * An obligation's status. "No exceptions" only when at least one session
- * met one of its tests: an obligation whose tests no session met (every
- * result undecided, or no result at all) "could not be checked", in a
- * neutral tone, never a pass.
+ * An obligation's status, from the sealed counts alone. Its applicability
+ * (in force, or from a later date) is the producer's mapping: it is never
+ * drawn in this pill, which speaks only for the records, and is shown
+ * instead in the producer's own italic line beside the title.
+ *
+ * "No exceptions", in the ok tone, only when every one of its tests was met
+ * by at least one session and no session's result for it was not met: an
+ * obligation one of whose tests no session met (every result undecided,
+ * unverified or absent) does not read clean. When none of its tests could
+ * be checked it reads "Could not be checked"; when some could not, the pill
+ * is neutral and says how many.
  */
 export function obligationStatus(obligation: ObligationModel): {
   cls: string;
   text: string;
 } {
   const exceptions = obligation.rows.reduce((sum, r) => sum + r.notMetCount, 0);
-  const checked = obligation.rows.some((r) => r.metCount > 0);
-  const future = obligation.applicability.status === "future";
+  const unchecked = obligation.rows.filter((r) => r.metCount === 0).length;
+  const unverified = obligation.rows.reduce(
+    (sum, r) => sum + r.unverifiedCount,
+    0,
+  );
+  const total = obligation.rows.length;
+  const uncheckedText =
+    unchecked > 0
+      ? ` · ${fmt(unchecked)} of ${plural(total, "test", "tests")} could not be checked`
+      : "";
   if (exceptions > 0)
-    return future
-      ? {
-          cls: "future",
-          text: `Not yet in force · ${plural(exceptions, "exception", "exceptions")} (readiness)`,
-        }
-      : {
-          cls: "exc",
-          text: `${plural(exceptions, "exception", "exceptions")}`,
-        };
-  if (!checked)
+    return {
+      cls: "exc",
+      text: `${plural(exceptions, "exception", "exceptions")}${unchecked > 0 && unchecked < total ? uncheckedText : ""}`,
+    };
+  if (unchecked === total) return { cls: "ne", text: "Could not be checked" };
+  if (unchecked > 0)
+    return { cls: "ne", text: `No exceptions found${uncheckedText}` };
+  if (unverified > 0)
     return {
       cls: "ne",
-      text: future
-        ? "Not yet in force · could not be checked"
-        : "Could not be checked",
+      text: `No exceptions found · ${plural(unverified, "result", "results")} could not be verified`,
     };
-  return future
-    ? { cls: "future", text: "Not yet in force · no exceptions" }
-    : { cls: "ok", text: "No exceptions" };
+  return { cls: "ok", text: "No exceptions" };
 }
 
 /** A test's result in the summary: a status, and an optional note under it. */
@@ -255,14 +273,19 @@ export function rowStatus(
     return {
       cls: "ne",
       text: ladder ? "Not checked or inconclusive" : "Could not be checked",
-      ...(row.notEvaluableNote === undefined
-        ? {}
-        : { note: row.notEvaluableNote, producerNote: true }),
+      ...(row.notEvaluableNote !== undefined && row.notEvaluableCount > 0
+        ? { note: row.notEvaluableNote, producerNote: true }
+        : row.unverifiedCount > 0
+          ? { note: unverifiedNote(row.unverifiedCount) }
+          : {}),
     };
-  const undecided =
-    row.notEvaluableCount > 0
-      ? { note: `${fmt(row.notEvaluableCount)} could not be decided` }
-      : {};
+  const notes = [
+    ...(row.notEvaluableCount > 0
+      ? [`${fmt(row.notEvaluableCount)} could not be decided`]
+      : []),
+    ...(row.unverifiedCount > 0 ? [unverifiedNote(row.unverifiedCount)] : []),
+  ];
+  const undecided = notes.length > 0 ? { note: notes.join("; ") } : {};
   if (row.notMetCount > 0)
     return {
       cls: "exc",
@@ -273,14 +296,19 @@ export function rowStatus(
       ),
       ...undecided,
     };
+  // Neither word set says more than "no exceptions": a session's result
+  // that was met is all the records show, never "established in every
+  // session".
   return {
-    cls: "ok",
-    text:
-      ladder && row.notEvaluableCount === 0
-        ? "Established in every session"
-        : "No exceptions",
+    cls: row.unverifiedCount > 0 ? "ne" : "ok",
+    text: "No exceptions",
     ...undecided,
   };
+}
+
+/** How many sessions' claims for a test failed verification or cite evidence this bundle does not hold. */
+function unverifiedNote(n: number): string {
+  return `${fmt(n)} could not be verified (failed verification or evidence missing)`;
 }
 
 function rowResult(row: ObligationRowModel, ladder: boolean): HTMLElement {
@@ -313,7 +341,7 @@ function renderSummary(
   const basis = el(
     "p",
     "na",
-    `Every count and result is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". Obligation titles, test names, the article, the plain-language summary, applicability, method, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
+    `Every count and result is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". The regulation named in the heading, obligation titles, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
   );
   basis.dataset.basis = "terms";
   section.append(basis);
@@ -378,6 +406,7 @@ function renderSummary(
       if (finding !== undefined) nameCell.append(renderFinding(finding));
       const sessionIds = [
         ...(test.sessionsByVerdict.get("not_met") ?? []),
+        ...(test.sessionsByVerdict.get("unverified") ?? []),
         ...(test.sessionsByVerdict.get("not_evaluable") ?? []),
       ];
       tr.append(
@@ -391,7 +420,7 @@ function renderSummary(
       if (sessionIds.length > 0) {
         const toggle = levelToggle(
           1,
-          `Show the ${plural(sessionIds.length, "session", "sessions")}${test.notEvaluableCount > 0 && test.notMetCount > 0 ? " (exceptions, then undecided)" : test.notMetCount > 0 ? " with exceptions" : " that could not be decided"}`,
+          `Show the ${plural(sessionIds.length, "session", "sessions")}${sessionListNote(test)}`,
           () => renderSessionList(sessionIds, model, presentation),
           { className: "line" },
         );
@@ -412,12 +441,25 @@ function renderSummary(
   host.append(section);
 }
 
+/** What the sessions behind a test are, in the order they are listed. */
+function sessionListNote(test: ObligationRowModel): string {
+  const kinds = [
+    ...(test.notMetCount > 0 ? ["exceptions"] : []),
+    ...(test.unverifiedCount > 0 ? ["could not be verified"] : []),
+    ...(test.notEvaluableCount > 0 ? ["undecided"] : []),
+  ];
+  if (kinds.length > 1) return ` (${kinds.join(", then ")})`;
+  if (test.notMetCount > 0) return " with exceptions";
+  if (test.unverifiedCount > 0) return " that could not be verified";
+  return " that could not be decided";
+}
+
 function renderFinding(finding: ComplianceFindingModel): HTMLElement {
   const box = el("div", "fnd");
   box.dataset.finding = finding.id;
   const fh = el("div", "fh");
   fh.append(
-    el("b", "", `Finding ${finding.id}`),
+    maybeProducer("b", "", `Finding ${finding.id}`, true),
     severityPill(finding.severity),
     element("span", plural(finding.sessionIds.length, "session", "sessions")),
   );
@@ -450,11 +492,11 @@ function renderSessionList(
 }
 
 function isException(test: SessionTest): boolean {
-  return (
-    test.verdict === "not_met" ||
-    test.verdict === "failed" ||
-    test.verdict === "unsupported"
-  );
+  return test.verdict === "not_met";
+}
+
+function isUnverified(test: SessionTest): boolean {
+  return test.verdict === "failed" || test.verdict === "unsupported";
 }
 
 /** One session, in place inside a level-1 toggle: a header line and its body right below it, never a toggle of its own; the body is built when it scrolls near the view. */
@@ -465,6 +507,7 @@ function renderSession(
 ): HTMLElement {
   const names = testNames(model);
   const exceptions = session.tests.filter(isException);
+  const unverified = session.tests.filter(isUnverified);
   const undecided = session.tests.filter((t) => t.verdict === "not_evaluable");
   const parts = caseParts(session.conversationId);
   const item = el("article", "conv session");
@@ -480,12 +523,21 @@ function renderSession(
           },
           "exceptions",
         )
-      : undecided.length > 0
-        ? wordPill({ word: "could not decide", tone: "ne" }, "undecided")
-        : wordPill({ word: "no exceptions", tone: "ok" }, "ok"),
+      : unverified.length > 0
+        ? wordPill({ word: "could not verify", tone: "ne" }, "unverified")
+        : undecided.length > 0
+          ? wordPill({ word: "could not decide", tone: "ne" }, "undecided")
+          : session.tests.some((t) => t.verdict === "met")
+            ? wordPill({ word: "no exceptions", tone: "ok" }, "ok")
+            : wordPill({ word: "no test applied", tone: "na" }, "none"),
   );
   const why = el("span", "cwhy");
-  (exceptions.length > 0 ? exceptions : undecided).forEach((t, i) => {
+  (exceptions.length > 0
+    ? exceptions
+    : unverified.length > 0
+      ? unverified
+      : undecided
+  ).forEach((t, i) => {
     if (i > 0) why.append(", ");
     why.append(names(t.criterionId, "span", ""));
   });
@@ -525,7 +577,9 @@ function sessionBody(
     h.append(names(test.criterionId, "span", "tname"));
     if (test.verdict !== "not_applicable") h.append(tierBadge(test.tier));
     if (test.verdict === "failed" || test.verdict === "unsupported")
-      h.append(el("span", "applic", "counted as an exception"));
+      h.append(
+        el("span", "applic", "no verdict drawn: neither met nor an exception"),
+      );
     box.append(h);
     if (test.rationale !== undefined)
       box.append(

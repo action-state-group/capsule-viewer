@@ -246,16 +246,28 @@ const VERDICT_TEXT: Record<DrawnVerdict, string> = {
   not_applicable: "not applicable",
 };
 
+/** A rule result the judge returned as not met. A failed or unsupported claim is not one: its verdict was never drawn (see `isUnverified`). */
 function isMiss(verdict: DrawnVerdict): boolean {
-  return (
-    verdict === "not_met" || verdict === "failed" || verdict === "unsupported"
-  );
+  return verdict === "not_met";
 }
 
-/** A conversation's result. `nothing-applied`: it has rules and every one was not applicable, so nothing was checked -- never "missed". A conversation with no rule result at all is undecided, never "no rule applied". */
+/** A claim that failed verification, or whose cited evidence this bundle does not resolve: the records do not say whether the rule was met or not. */
+function isUnverified(verdict: DrawnVerdict): boolean {
+  return verdict === "failed" || verdict === "unsupported";
+}
+
+/**
+ * A conversation's result. `nothing-applied`: it has rules and every one was
+ * not applicable, so nothing was checked -- never "missed". A conversation
+ * with no rule result at all is undecided, never "no rule applied".
+ * `unverified`: the model rolls it up as not met only because a claim
+ * failed verification or its evidence is missing, with no rule result "not
+ * met" -- its own state, never counted as missed.
+ */
 export type ConversationStatus =
   | "resolved"
   | "missed"
+  | "unverified"
   | "undecided"
   | "nothing-applied";
 
@@ -263,6 +275,9 @@ export function conversationStatus(
   conversation: Conversation,
 ): ConversationStatus {
   if (conversation.verdict === "met") return "resolved";
+  if (conversation.criteria.some((c) => isMiss(c.verdict))) return "missed";
+  if (conversation.criteria.some((c) => isUnverified(c.verdict)))
+    return "unverified";
   if (conversation.verdict === "not_met") return "missed";
   return conversation.criteria.length > 0 &&
     conversation.criteria.every((c) => c.verdict === "not_applicable")
@@ -286,11 +301,14 @@ function statusWord(
       ? { word: "resolved", tone: "ok" }
       : status === "missed"
         ? { word: "missed", tone: "bad" }
-        : status === "undecided"
-          ? { word: "could not decide", tone: "ne" }
-          : { word: "no rule applied", tone: "na" };
+        : status === "unverified"
+          ? { word: "could not verify", tone: "ne" }
+          : status === "undecided"
+            ? { word: "could not decide", tone: "ne" }
+            : { word: "no rule applied", tone: "na" };
   if (status === "resolved") return { word: "established", tone: "ok" };
   if (status === "missed") return { word: "failed", tone: "bad" };
+  if (status === "unverified") return { word: "could not verify", tone: "ne" };
   if (status === "nothing-applied") return { word: "not present", tone: "na" };
   // Three-valued: a judge ran on an undecided rule, none did, or the
   // withheld reports cannot say which.
@@ -300,7 +318,12 @@ function statusWord(
   if (judged.includes("yes")) return { word: "inconclusive", tone: "ne" };
   if (judged.length > 0 && judged.every((j) => j === "no"))
     return { word: "not checked", tone: "ne" };
-  return { word: "could not decide (report withheld)", tone: "ne" };
+  // "withheld" only when every report that would say is withheld; a report
+  // in the bundle that cannot be read as sealed is never called withheld.
+  return judged.length > 0 &&
+    judged.every((j) => j === "withheld" || j === "no")
+    ? { word: "could not decide (report withheld)", tone: "ne" }
+    : { word: "could not decide (report not readable)", tone: "ne" };
 }
 
 function criterionWord(c: DrawnCriterion, ladder: boolean): Worded {
@@ -350,6 +373,25 @@ function countWord(n: number): string {
   return COUNT_WORDS[n] ?? String(n);
 }
 
+/** The rules whose claim failed verification or whose evidence is missing, as one sentence: their verdict was never drawn. */
+function unverifiedClause(
+  model: OutcomeReportModel,
+  list: readonly DrawnCriterion[],
+  lower = false,
+): string {
+  const failed = list.filter((c) => c.verdict === "failed");
+  const unsupported = list.filter((c) => c.verdict === "unsupported");
+  const parts: string[] = [];
+  if (failed.length > 0)
+    parts.push(`the claim for ${names(model, failed)} failed verification`);
+  if (unsupported.length > 0)
+    parts.push(
+      `the evidence cited for ${names(model, unsupported)} is not in this bundle`,
+    );
+  const text = `${parts.join(", and ")}, so the records do not say whether ${list.length === 1 ? "that rule was" : "those rules were"} met.`;
+  return lower ? text : text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** One plain sentence: the conversation's result and the rules behind it. */
 function resultSentence(
   conversation: Conversation,
@@ -359,19 +401,24 @@ function resultSentence(
   const applied = all.filter((c) => c.verdict !== "not_applicable");
   const na = all.length - applied.length;
   const misses = all.filter((c) => isMiss(c.verdict));
+  const unverified = all.filter((c) => isUnverified(c.verdict));
   const undecided = all.filter((c) => c.verdict === "not_evaluable");
   const naText = na > 0 ? ` ${na} did not apply.` : "";
+  const unverifiedText =
+    unverified.length > 0 ? ` ${unverifiedClause(model, unverified)}` : "";
   switch (conversationStatus(conversation)) {
     case "resolved":
       return applied.length === 1
         ? `Resolved: the 1 rule that applied was met.${naText}`
         : `Resolved: all ${applied.length} rules that applied were met.${naText}`;
     case "missed":
-      return `Missed: ${misses.length} of ${applied.length} ${applied.length === 1 ? "rule" : "rules"} that applied ${misses.length === 1 ? "was" : "were"} not met (${names(model, misses)}).${naText}`;
+      return `Missed: ${misses.length} of ${applied.length} ${applied.length === 1 ? "rule" : "rules"} that applied ${misses.length === 1 ? "was" : "were"} not met (${names(model, misses)}).${unverifiedText}${naText}`;
+    case "unverified":
+      return `Could not verify: no rule result was "not met", but ${unverifiedClause(model, unverified, true)}${undecided.length > 0 ? ` The judge could not decide ${names(model, undecided)}.` : ""}${naText}`;
     case "undecided":
       return undecided.length === 0
         ? "Could not decide: this bundle holds no rule result for this conversation."
-        : `Could not decide: no rule was broken, but the judge could not decide ${names(model, undecided)}.${naText}`;
+        : `Could not decide: no rule result was "not met", but the judge could not decide ${names(model, undecided)}. The records do not show whether ${undecided.length === 1 ? "that rule was" : "those rules were"} met.${naText}`;
     case "nothing-applied":
       return "No rule applied to this conversation, so nothing was checked. It is neither resolved nor missed.";
   }
@@ -397,6 +444,9 @@ function renderConversation(
   head.append(el("span", "cid", parts.label));
   head.append(wordPill(statusWord(status, conversation, ladderOn()), status));
   const misses = conversation.criteria.filter((c) => isMiss(c.verdict));
+  const unverified = conversation.criteria.filter((c) =>
+    isUnverified(c.verdict),
+  );
   const undecided = conversation.criteria.filter(
     (c) => c.verdict === "not_evaluable",
   );
@@ -406,13 +456,15 @@ function renderConversation(
       "cwhy",
       status === "missed"
         ? `not met: ${names(model, misses)}`
-        : status === "undecided"
-          ? undecided.length === 0
-            ? "no rule result in this bundle"
-            : `could not decide: ${names(model, undecided)}`
-          : status === "nothing-applied"
-            ? "no rule applied"
-            : "every rule that applied was met",
+        : status === "unverified"
+          ? `failed verification or evidence missing: ${names(model, unverified)}`
+          : status === "undecided"
+            ? undecided.length === 0
+              ? "no rule result in this bundle"
+              : `could not decide: ${names(model, undecided)}`
+            : status === "nothing-applied"
+              ? "no rule applied"
+              : "every rule that applied was met",
     ),
   );
   head.append(el("span", "cmodel", parts.model ?? ""));
@@ -666,13 +718,32 @@ function conversationProofs(
   const scroll = el("div", "tscroll");
   scroll.append(table);
   box.append(scroll);
-  const derived = el(
-    "p",
-    "",
-    "P is the probability the judge gave the verdict it returned. The judge's note is derived from its probabilities; the judge returns no free-text reasoning and cites no turn of the conversation.",
-  );
-  derived.dataset.rationaleLabel = "derived";
-  box.append(derived);
+  // "Derived from its probabilities" holds only when every sealed rationale
+  // is the judge backend's own synthesized line; any other rationale is
+  // shown as sealed, and `judgeNote` passes it through unchanged.
+  const rationales = conversation.criteria
+    .map((c) => c.rationale)
+    .filter((r): r is string => r !== undefined);
+  if (
+    rationales.length > 0 &&
+    rationales.every((r) => /^jev choice:/u.test(r))
+  ) {
+    const derived = el(
+      "p",
+      "",
+      "P is the probability the judge gave the verdict it returned. The judge's note is derived from its probabilities; the judge returns no free-text reasoning and cites no turn of the conversation.",
+    );
+    derived.dataset.rationaleLabel = "derived";
+    box.append(derived);
+  } else if (rationales.length > 0) {
+    const shown = el(
+      "p",
+      "",
+      "P is the probability the judge gave the verdict it returned, where its sealed rationale states one. A note that is not the judge's probability line is shown as sealed.",
+    );
+    shown.dataset.rationaleLabel = "sealed";
+    box.append(shown);
+  }
   box.append(
     el(
       "p",
@@ -983,6 +1054,7 @@ function renderLines(
     model.conversations.filter((c) => conversationStatus(c) === status);
   const resolved = byStatus("resolved");
   const missed = byStatus("missed");
+  const unverified = byStatus("unverified");
   const undecided = [...byStatus("undecided"), ...byStatus("nothing-applied")];
   const share = (n: number) =>
     fmtShare(n, model.totalCount, model.options.percentages);
@@ -1015,11 +1087,20 @@ function renderLines(
       behind: missed,
     },
   ];
+  if (unverified.length > 0)
+    lines.push({
+      key: "unverified",
+      label: "Could not verify",
+      help: 'No rule result was "not met", but a claim failed verification or the evidence it cites is not in this bundle, so the records do not say whether that rule was met. Neither resolved nor missed.',
+      count: unverified.length,
+      shown: share(unverified.length),
+      behind: unverified,
+    });
   if (undecided.length > 0)
     lines.push({
       key: "undecided",
       label: ladder ? "Inconclusive or not present" : "Could not decide",
-      help: "No rule was broken, but the judge could not decide a rule, or no rule applied. Neither resolved nor missed.",
+      help: 'No rule result was "not met", but the judge could not decide a rule, or no rule applied. The records do not show whether those rules were met. Neither resolved nor missed.',
       count: undecided.length,
       shown: share(undecided.length),
       behind: undecided,
@@ -1119,6 +1200,15 @@ function renderRules(
     el("th", "n", ruleWord("not_applicable", ladder, "yes").word),
     el("th", "n", ladder ? "inconclusive / not checked" : "could not decide"),
   );
+  // A claim that failed verification or whose evidence is missing has its
+  // own column, never folded into "not met"; drawn only when a bundle has
+  // one.
+  const anyUnverified = model.conversations.some((c) =>
+    c.criteria.some((cr) => isUnverified(cr.verdict)),
+  );
+  if (anyUnverified)
+    headRow.append(el("th", "n", "failed verification or evidence missing"));
+  const columns = anyUnverified ? "6" : "5";
   thead.append(headRow);
   table.append(thead);
   const tbody = element("tbody");
@@ -1127,7 +1217,7 @@ function renderRules(
     group.dataset.checkId = check.id;
     group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
     const cell = el("td", "", check.question);
-    cell.setAttribute("colspan", "5");
+    cell.setAttribute("colspan", columns);
     group.append(cell);
     tbody.append(group);
     for (const criterion of check.criteria) {
@@ -1143,6 +1233,7 @@ function renderRules(
         );
       const met = of((v) => v === "met");
       const notMet = of(isMiss);
+      const unverifiedHere = of(isUnverified);
       const na = of((v) => v === "not_applicable");
       const undecided = of((v) => v === "not_evaluable");
       const tr = el("tr", "rule");
@@ -1157,7 +1248,10 @@ function renderRules(
         nameCell.append(el("small", "", label.text));
       const problems = [
         ...notMet,
-        ...undecided.filter((c) => !notMet.includes(c)),
+        ...unverifiedHere.filter((c) => !notMet.includes(c)),
+        ...undecided.filter(
+          (c) => !notMet.includes(c) && !unverifiedHere.includes(c),
+        ),
       ];
       tr.append(
         nameCell,
@@ -1170,6 +1264,8 @@ function renderRules(
         el("td", "n", fmtCount(na.length)),
         el("td", "n", fmtCount(undecided.length)),
       );
+      if (anyUnverified)
+        tr.append(el("td", "n", fmtCount(unverifiedHere.length)));
       tbody.append(tr);
       // The conversations behind a rule open in a full-width row below it,
       // so each one reads at the table's width.
@@ -1177,10 +1273,10 @@ function renderRules(
         const drillRow = el("tr", "drill-row");
         drillRow.dataset.drillFor = ref;
         const cell = element("td");
-        cell.setAttribute("colspan", "5");
+        cell.setAttribute("colspan", columns);
         cell.append(
           conversationsDrill(
-            `${fmtCount(notMet.length)} not met${undecided.length > 0 ? `, ${fmtCount(undecided.length)} undecided` : ""}: show them`,
+            `${fmtCount(notMet.length)} not met${unverifiedHere.length > 0 ? `, ${fmtCount(unverifiedHere.length)} could not be verified` : ""}${undecided.length > 0 ? `, ${fmtCount(undecided.length)} undecided` : ""}: show them`,
             problems,
             model,
             runInfo,

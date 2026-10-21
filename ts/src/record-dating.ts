@@ -11,10 +11,13 @@ import {
 
 // The outcome card's record-dating rule (agent-action-capsule
 // ts/src/outcome-report.ts: caseRecord, conversationDate, buildDating),
-// repeated here so the obligations card dates a session the same way. The
-// published 0.5.0 package does not export these three; once a release does
-// (agent-action-capsule desk/backfill-occurrence-time exports them), import
-// them instead and delete this file.
+// repeated here so the obligations card dates a session the same way.
+// Copied from ts/v0.5.0, where the three are identical to these. Neither
+// the published 0.5.0 package nor agent-action-capsule's main exports them
+// (checked 2026-10-21), and no agent-action-capsule issue tracks exporting
+// them yet: this file tracks that export, listed as a follow-up on this
+// pull request. Once a release exports them, import them instead and
+// delete this file.
 
 const STATED_DAY = /^(\d{4}-\d{2}-\d{2})/u;
 

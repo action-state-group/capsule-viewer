@@ -211,7 +211,10 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   open(proofs);
   const basis = root.querySelector<HTMLElement>('[data-basis="terms"]')!;
   for (const field of [
-    "Obligation titles",
+    "The regulation named in the heading",
+    "obligation titles",
+    "finding ids",
+    "severities",
     "test names",
     "method",
     "notes on undecided tests and quality checks",
@@ -221,6 +224,17 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   const producer = [
     ...root.querySelectorAll<HTMLElement>('i[data-source="producer"]'),
   ].map((i) => i.textContent);
+  // the heading, finding ids and severities are the producer's too
+  expect(
+    root.querySelector('.hd h1 i[data-source="producer"]')!.textContent,
+  ).toBe("Regulation (EU) 2024/1689 (the EU AI Act)");
+  const finding = root.querySelector<HTMLElement>('[data-finding="F-01"]')!;
+  expect(
+    finding.querySelector('.fh b i[data-source="producer"]')!.textContent,
+  ).toBe("Finding F-01");
+  expect(
+    finding.querySelector('.sev i[data-source="producer"]')!.textContent,
+  ).toBe("Medium");
   for (const text of [
     "Art 5(1)(a) · No manipulative or deceptive techniques", // summary title
     "No manipulative or deceptive technique", // test name
@@ -371,11 +385,150 @@ it("an obligation no session met, every result undecided, reads 'Could not be ch
   expect(pill.textContent).toBe("Could not be checked");
   expect(pill.classList.contains("ne")).toBe(true);
   expect(row.textContent).not.toContain("No exceptions");
-  // an obligation with a met session still reads as before
+  // an obligation every test of which a session met still reads clean
   expect(
     root.querySelector<HTMLElement>('tr[data-obligation="art26"] .st')!
       .textContent,
-  ).toBe("Not yet in force · no exceptions");
+  ).toBe("No exceptions");
+});
+
+it("the obligation pill speaks only for the sealed counts: applicability is the producer's italic line, never the pill's", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const root = await render(bundle);
+  for (const pill of root.querySelectorAll<HTMLElement>(
+    '[data-rows="summary"] .st',
+  )) {
+    expect(pill.textContent).not.toMatch(/in force|applicable|readiness/iu);
+    expect(pill.classList.contains("future")).toBe(false);
+  }
+  const art26 = root.querySelector<HTMLElement>('tr[data-obligation="art26"]')!;
+  const note = art26.querySelector<HTMLElement>(
+    '.applic i[data-source="producer"]',
+  )!;
+  expect(note.textContent).toContain("Applies 2 Dec 2027");
+  // the basis line says applicability is in italics, and it is
+  expect(
+    root.querySelector<HTMLElement>('[data-basis="terms"]')!.textContent,
+  ).toContain("applicability");
+});
+
+it("an unknown severity gets no colour of its own, never 'medium'", async () => {
+  const { bundle } = await sealedComplianceBundle((source) => {
+    const ext = (source.extensions as Obj)["eu-ai-act-compliance/v1"] as Obj;
+    const art5 = (ext.obligations as Obj[]).find((o) => o.key === "art5")!;
+    ((art5.rows as Obj[])[0]!.finding as Obj).severity = "Critical";
+  });
+  const root = await render(bundle);
+  const sev = root.querySelector<HTMLElement>('[data-finding="F-01"] .sev')!;
+  expect(sev.className).toBe("sev");
+  expect(sev.textContent).toBe("Critical");
+});
+
+function row(over: Partial<ObligationRowModel>): ObligationRowModel {
+  return {
+    criterionId: "x.y",
+    name: "X",
+    producerName: false,
+    wording: { text: "", source: "unstated" },
+    tier: "not stated",
+    metCount: 0,
+    notMetCount: 0,
+    notEvaluableCount: 0,
+    notApplicableCount: 0,
+    unverifiedCount: 0,
+    sessionsByVerdict: new Map(),
+    ...over,
+  };
+}
+
+function obligationOf(rows: ObligationRowModel[]): ObligationModel {
+  return {
+    key: "x",
+    mapped: true,
+    article: "Art X",
+    title: "X",
+    plain: "",
+    judgedTerms: [],
+    applicability: { status: "in_force", note: "" },
+    method: "",
+    rows,
+  } as ObligationModel;
+}
+
+it("'No exceptions' in the ok tone only when every test was met by some session: one test met and one undecided everywhere is neutral, and says how many could not be checked", () => {
+  const met = row({ criterionId: "x.a", metCount: 3 });
+  const undecided = row({ criterionId: "x.b", notEvaluableCount: 3 });
+  expect(obligationStatus(obligationOf([met, undecided]))).toEqual({
+    cls: "ne",
+    text: "No exceptions found · 1 of 2 tests could not be checked",
+  });
+  expect(obligationStatus(obligationOf([met, met]))).toEqual({
+    cls: "ok",
+    text: "No exceptions",
+  });
+  // exceptions beside a test nobody could check say both
+  const exc = row({ criterionId: "x.c", metCount: 1, notMetCount: 2 });
+  expect(obligationStatus(obligationOf([exc, undecided]))).toEqual({
+    cls: "exc",
+    text: "2 exceptions · 1 of 2 tests could not be checked",
+  });
+  // a future obligation's pill says nothing about timing
+  const future = {
+    ...obligationOf([met]),
+    applicability: { status: "future", note: "Applies 2027" },
+  } as ObligationModel;
+  expect(obligationStatus(future)).toEqual({
+    cls: "ok",
+    text: "No exceptions",
+  });
+});
+
+it("a claim that failed verification or whose evidence is missing is never an exception, and never lets a test read clean in the ok tone", () => {
+  const unverifiedOnly = row({ unverifiedCount: 2 });
+  for (const ladder of [false, true]) {
+    const status = rowStatus(unverifiedOnly, ladder);
+    expect(status.cls).toBe("ne");
+    expect(status.text).not.toMatch(/exception|No exceptions/iu);
+    expect(status.note).toContain("could not be verified");
+  }
+  const metAndUnverified = row({ metCount: 2, unverifiedCount: 1 });
+  const status = rowStatus(metAndUnverified, false);
+  expect(status.cls).toBe("ne");
+  expect(status.note).toContain("1 could not be verified");
+  expect(obligationStatus(obligationOf([metAndUnverified]))).toEqual({
+    cls: "ne",
+    text: "No exceptions found · 1 result could not be verified",
+  });
+  // the ladder claims no more than the plain words
+  expect(rowStatus(row({ metCount: 2 }), true).text).toBe("No exceptions");
+});
+
+it("a session whose claim cites evidence the bundle does not hold is counted apart from the exceptions, with no finding", async () => {
+  const { bundle } = await sealedComplianceBundle((source) => {
+    const result = (source.disclosures as Obj).result as Obj;
+    const doc = result.agent_input as Obj;
+    for (const claim of doc.claims as Obj[])
+      if (
+        (claim.requirement_ref as string) ===
+          "art5.no_manipulation_or_deception" &&
+        claim.verdict === "not_met"
+      ) {
+        const missing = { digest_alg: "SHA-256", digest: "e".repeat(64) };
+        claim.evidence = [...(claim.evidence as Obj[]), missing];
+        (claim.presentation as Obj).evidence = claim.evidence;
+      }
+  });
+  const root = await render(bundle);
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const tr = root.querySelector<HTMLElement>(
+    'tr[data-criterion="art5.no_manipulation_or_deception"]',
+  )!;
+  expect(tr.dataset.exceptions).toBe("0");
+  expect(tr.querySelector("[data-finding]")).toBeNull();
+  const pill = tr.querySelector<HTMLElement>(".st")!;
+  expect(pill.textContent).not.toMatch(/^[0-9]+ exceptions?/u);
+  expect(pill.classList.contains("ne")).toBe(true);
+  expect(tr.textContent).toContain("could not be verified");
 });
 
 it("a test or obligation with no result at all never falls through to a pass wording", () => {
@@ -389,6 +542,7 @@ it("a test or obligation with no result at all never falls through to a pass wor
     notMetCount: 0,
     notEvaluableCount: 0,
     notApplicableCount: 2,
+    unverifiedCount: 0,
     sessionsByVerdict: new Map(),
   };
   for (const ladder of [false, true]) {

@@ -120,9 +120,11 @@ export interface ObligationRowModel {
   readonly notMetCount: number;
   readonly notEvaluableCount: number;
   readonly notApplicableCount: number;
-  /** verdict bucket -> conversation ids, for the row's own drill-down. failed/unsupported fold into not_met here. */
+  /** Sessions whose claim for this test failed verification or cites evidence this bundle does not resolve: no verdict is drawn for them, so they are neither met nor not met. */
+  readonly unverifiedCount: number;
+  /** verdict bucket -> conversation ids, for the row's own drill-down. failed/unsupported are their own `unverified` bucket, never folded into not_met. */
   readonly sessionsByVerdict: ReadonlyMap<
-    "met" | "not_met" | "not_evaluable" | "not_applicable",
+    "met" | "not_met" | "not_evaluable" | "not_applicable" | "unverified",
     readonly string[]
   >;
 }
@@ -425,13 +427,14 @@ function buildRow(
   sessions: readonly Session[],
 ): ObligationRowModel {
   const byVerdict = new Map<
-    "met" | "not_met" | "not_evaluable" | "not_applicable",
+    "met" | "not_met" | "not_evaluable" | "not_applicable" | "unverified",
     string[]
   >([
     ["met", []],
     ["not_met", []],
     ["not_evaluable", []],
     ["not_applicable", []],
+    ["unverified", []],
   ]);
   const tiers: TierReading[] = [];
   for (const session of sessions) {
@@ -439,11 +442,12 @@ function buildRow(
     if (test === undefined) continue;
     tiers.push(test.tier);
     // failed/unsupported (a claim that failed verification, or cites
-    // evidence this bundle can't resolve) is never read as met: it folds
-    // into not_met.
+    // evidence this bundle can't resolve) is never read as met, and never
+    // as not met either: its verdict was never drawn, so it is its own
+    // bucket.
     const bucket =
       test.verdict === "failed" || test.verdict === "unsupported"
-        ? "not_met"
+        ? "unverified"
         : test.verdict;
     byVerdict.get(bucket)!.push(session.conversationId);
   }
@@ -463,6 +467,7 @@ function buildRow(
     notMetCount: byVerdict.get("not_met")!.length,
     notEvaluableCount: byVerdict.get("not_evaluable")!.length,
     notApplicableCount: byVerdict.get("not_applicable")!.length,
+    unverifiedCount: byVerdict.get("unverified")!.length,
     sessionsByVerdict: byVerdict,
   };
 }

@@ -66,8 +66,12 @@ it("the conversation reads as a chat: who spoke, and each tool called with its a
   const call = chat.querySelector<HTMLElement>(
     '[data-tool-call="get_user_details"]',
   )!;
-  // the arguments exactly as the transcript gives them, never re-keyed
+  // the arguments as the model hands them over, never claimed verbatim
   expect(call.textContent).toBe('called get_user_details {"user_id":"u1"}');
+  expect(call.querySelector("code")!.dataset.exact).toBe("as-modelled");
+  expect(chat.textContent).toContain(
+    "Tool arguments are shown as the report model hands them over, re-serialised",
+  );
   // a JSON tool result is indented for reading, the words unchanged
   expect(turns[2]!.querySelector("pre")!.textContent).toBe(
     JSON.stringify({ user_id: "u1", flights: [] }, null, 2),
@@ -120,11 +124,16 @@ it("result words: plain by default; the grade ladder behind the flag, inconclusi
   expect(ruleWord("not_evaluable", true, "no").word).toBe("not checked");
 });
 
-it("judged is three-valued: a withheld report leaves it unknown, and the ladder says 'could not decide (report withheld)', never 'not checked'", () => {
+it("judged: a withheld report reads 'withheld', a report in the bundle that cannot be read is never called withheld, and neither says 'not checked'", () => {
   expect(judgedOf("disclosed", "f".repeat(64))).toBe("yes");
   expect(judgedOf("disclosed", undefined)).toBe("no");
-  expect(judgedOf("withheld", undefined)).toBe("unknown");
-  expect(judgedOf("mismatch", undefined)).toBe("unknown");
+  expect(judgedOf("withheld", undefined)).toBe("withheld");
+  for (const state of ["mismatch", "unreadable", "invalid"] as const) {
+    expect(judgedOf(state, undefined)).toBe("unknown");
+    const word = ruleWord("not_evaluable", true, judgedOf(state, undefined));
+    expect(word.word).toBe("could not decide (report not readable)");
+    expect(word.word).not.toContain("withheld");
+  }
   const withheld = ruleWord(
     "not_evaluable",
     true,
@@ -138,16 +147,16 @@ it("a failed or unsupported claim reads the same on both word sets, never 'not c
   for (const ladder of [false, true]) {
     expect(ruleWord("failed", ladder, "yes")).toEqual({
       word: "failed verification",
-      tone: "bad",
+      tone: "ne",
     });
     expect(ruleWord("unsupported", ladder, "unknown")).toEqual({
       word: "evidence missing",
-      tone: "bad",
+      tone: "ne",
     });
   }
 });
 
-it("tool arguments and results are shown exactly as sealed: indented only when that changes nothing but whitespace", () => {
+it("tool results are shown exactly as sealed: indented only when that changes nothing but whitespace", () => {
   // a number JSON cannot hold exactly: JSON.parse would print 12345678901234567000
   expect(exactText('{"id":12345678901234567890}')).toEqual({
     text: '{"id":12345678901234567890}',
@@ -231,6 +240,44 @@ it("a conversation body in place is built when it nears the view, or at once whe
     expect(lazy.dataset.body).toBe("built");
     expect(lazy.querySelectorAll("p")).toHaveLength(1);
   } finally {
+    delete g.IntersectionObserver;
+  }
+});
+
+it("printing builds only the bodies still pending in the page, with one listener for the page, none left behind per body", () => {
+  const g = globalThis as { IntersectionObserver?: unknown };
+  g.IntersectionObserver = class {
+    observe(): void {}
+    disconnect(): void {}
+  };
+  const added: string[] = [];
+  const realAdd = window.addEventListener.bind(window);
+  window.addEventListener = ((type: string, ...rest: unknown[]) => {
+    added.push(type);
+    return (realAdd as (...a: unknown[]) => void)(type, ...rest);
+  }) as typeof window.addEventListener;
+  try {
+    const attached = document.createElement("div");
+    const detached = document.createElement("div");
+    document.body.append(attached);
+    let detachedBuilds = 0;
+    lazyBody(attached, () => document.createElement("p"));
+    lazyBody(detached, () => {
+      detachedBuilds += 1;
+      return document.createElement("p");
+    });
+    lazyBody(document.createElement("div"), () => document.createElement("p"));
+    // at most one beforeprint listener, however many bodies are pending
+    expect(added.filter((t) => t === "beforeprint").length).toBeLessThanOrEqual(
+      1,
+    );
+    window.dispatchEvent(new Event("beforeprint"));
+    expect(attached.dataset.body).toBe("built");
+    // a body no longer in the page (its card unmounted) is not built
+    expect(detachedBuilds).toBe(0);
+    attached.remove();
+  } finally {
+    window.addEventListener = realAdd;
     delete g.IntersectionObserver;
   }
 });
