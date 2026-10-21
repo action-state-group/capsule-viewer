@@ -229,6 +229,73 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
 ];
 
 /**
+ * The entries that make a result read CLEAN: a rule was met, an obligation,
+ * test row or session has no exceptions, or a tier is a check anyone can
+ * repeat. Named here, and checked against NOT_CLEAN_WORD_KEYS below
+ * (4339689203), because that swap crosses a DISTINCT array's own boundary --
+ * DISTINCT only ever compares entries it lists together in the same array,
+ * so it would not catch an Outcomes "resolved" word reused for the EU
+ * card's "not met" verdict, or a judged-tier label reading like the other
+ * pack's recomputed one.
+ */
+const CLEAN_WORD_KEYS: readonly string[] = [
+  // States a rule's result was met.
+  "verdict.met",
+  "lines.pf.verdict.met",
+  "lines.line.resolved",
+  "lines.status.resolved",
+  // No exceptions: an obligation, a test row or a session read clean (the
+  // count/unverified-qualified variants still open on "no exceptions").
+  "groups.ob.ok",
+  "groups.ob.ok.found",
+  "groups.ob.ok.unverified",
+  "groups.row.ok",
+  "groups.row.ok.all-decided",
+  "groups.session.ok",
+  // A fixed check anyone can repeat from the records.
+  "lines.tier.recomputed",
+  "groups.tier.recomputed",
+];
+
+/**
+ * The entries that make a result read NOT-CLEAN: a rule was not met, nobody
+ * could decide it, a claim could not be verified, a row or session could
+ * not be checked at all, or a tier is a judgement -- which must never read
+ * like the recomputed tier above. Compared against CLEAN_WORD_KEYS only:
+ * two members of this same set may share a word (lines.status.undecided.*
+ * already do, by design), that is not this check's business.
+ */
+const NOT_CLEAN_WORD_KEYS: readonly string[] = [
+  // States a rule's result was not met.
+  "verdict.not_met",
+  "lines.pf.verdict.not_met",
+  // Nobody could decide.
+  "lines.line.undecided",
+  "lines.status.undecided.judged",
+  "lines.status.undecided.unjudged",
+  "lines.status.undecided.none",
+  "lines.status.undecided.withheld",
+  "lines.status.undecided.unavailable",
+  "verdict.not_evaluable.judged",
+  "verdict.not_evaluable.unjudged",
+  "verdict.not_evaluable.withheld",
+  "verdict.not_evaluable.unavailable",
+  "groups.session.undecided",
+  // A claim could not be verified.
+  "lines.line.unverified",
+  "lines.status.unverified",
+  "groups.session.unverified",
+  // Could not be checked at all.
+  "groups.ob.unchecked",
+  "groups.ob.unchecked-of",
+  "groups.row.nothing",
+  "groups.row.none-decided",
+  // A judgement: must never read like the recomputed tier.
+  "lines.tier.judged",
+  "groups.tier.judged",
+];
+
+/**
  * Lines that state what this page checked or did not check, what the bundle
  * does not carry or withholds, and which text is the producer's rather than
  * sealed evidence. A pack may not reword them: they are the page's honesty,
@@ -452,6 +519,33 @@ function mixesScripts(word: string): boolean {
 }
 
 /**
+ * Every CLEAN_WORD_KEYS entry that, as read, equals a NOT_CLEAN_WORD_KEYS
+ * entry, or the other way round (4339689203): a clean result must never
+ * read like a not-clean one. `merged` is the pack's entries over the
+ * defaults, the same lookup `wordingProblems` checks DISTINCT against, so a
+ * pack that rewords only one side of a pair is caught too.
+ */
+function cleanNotCleanCollisions(
+  merged: Readonly<Record<string, string>>,
+): string[] {
+  const wordOf = (key: string): string | undefined =>
+    Object.hasOwn(merged, key) ? asRead(merged[key]!) : undefined;
+  const problems: string[] = [];
+  for (const cleanKey of CLEAN_WORD_KEYS) {
+    const cleanWord = wordOf(cleanKey);
+    if (cleanWord === undefined || cleanWord === "") continue;
+    for (const notCleanKey of NOT_CLEAN_WORD_KEYS) {
+      const notCleanWord = wordOf(notCleanKey);
+      if (cleanWord === notCleanWord)
+        problems.push(
+          `${cleanKey} and ${notCleanKey} read alike (${JSON.stringify(cleanWord)}); a clean result must not read like a not-clean one, or the other way round`,
+        );
+    }
+  }
+  return problems;
+}
+
+/**
  * Every problem with `pack` as a replacement for `defaults`: a locked line
  * (LOCKED_ENTRIES) reworded, an entry whose placeholders differ from the
  * entry it replaces, a `layout.grouping` that is
@@ -532,6 +626,7 @@ export function wordingProblems(
       }
     }
   }
+  problems.push(...cleanNotCleanCollisions(merged));
   return problems.map((p) => `${pack.id}: ${p}`);
 }
 

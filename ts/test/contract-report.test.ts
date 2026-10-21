@@ -541,6 +541,34 @@ it("the assurance tier words are a distinct, non-swappable set: a judgement must
   ]);
 });
 
+it("a clean word and a not-clean word must not read alike, across any set (4339689203)", () => {
+  const check = (entries: Record<string, string>): string =>
+    wordingProblems(
+      { id: "test/clean@1", locale: "en", entries },
+      DEFAULT_PACKS.lines,
+    ).join("\n");
+  // "resolved" is a met-family (clean) word; DISTINCT never compares
+  // verdict.* against lines.status.*/lines.line.* (different arrays), so
+  // only this check catches a not-met verdict reading it -- and it names
+  // both keys.
+  expect(check({ "verdict.not_met": "resolved" })).toMatch(
+    /lines\.(line|status)\.resolved and verdict\.not_met read alike/u,
+  );
+  // case, spacing and punctuation still do not make it a different word
+  expect(check({ "verdict.not_met": "resolved." })).toMatch(
+    /lines\.(line|status)\.resolved and verdict\.not_met read alike/u,
+  );
+  // a judged-tier label set to the recomputed tier's label is refused too
+  expect(check({ "lines.tier.judged": "recomputed" })).toMatch(
+    /lines\.tier\.recomputed and lines\.tier\.judged read alike/u,
+  );
+  // the two shipped default packs carry no such collision
+  for (const grouping of ["lines", "groups"] as const)
+    expect(
+      wordingProblems(DEFAULT_PACKS[grouping], DEFAULT_PACKS[grouping]),
+    ).toEqual([]);
+});
+
 for (const { file, page } of CARDS) {
   it(`${page}: a refused pack draws no card, and the page says the presentation failed`, async () => {
     const bad = await distributed({
