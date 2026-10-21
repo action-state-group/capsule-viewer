@@ -15,6 +15,7 @@ import { renderEvidenceGraph } from "../src/browser.js";
 import {
   DEFAULT_PACKS,
   LOCKED_ENTRIES,
+  packSha256,
   placeholders,
   readWordingPack,
   wordingProblems,
@@ -315,15 +316,29 @@ for (const { grouping, file, page } of CARDS) {
       expect(skeleton(b)).toBe(skeleton(a));
       // the counts and digests the pack's sentences carry are the module's
       expect(digests(a).length).toBeGreaterThan(0);
-      // (the supplied pack's own wording_sha256 is named once, in the proofs)
-      expect(digests(b).filter((d) => d !== wording.sha256)).toEqual(
-        digests(a),
-      );
+      // (the supplied pack's own wording_sha256, and the built-in default's,
+      // are each named once, in the proofs -- every layer applied)
+      const baseSha256 = await packSha256(DEFAULT_PACKS[grouping]);
+      expect(
+        digests(b).filter((d) => d !== wording.sha256 && d !== baseSha256),
+      ).toEqual(digests(a));
       expect(digests(b)).toContain(wording.sha256);
+      expect(digests(b)).toContain(baseSha256);
       // and the proofs say which pack drew the page
       expect(b.textContent).toContain(make().id);
     });
 }
+
+it("the proofs name every wording layer by digest, not only the supplied one", async () => {
+  const wording = await distributed(ladderPack("lines"));
+  const root = await render("outcome-report-bundle.json", wording);
+  openAll(root);
+  const baseSha256 = await packSha256(DEFAULT_PACKS.lines);
+  const text = root.textContent ?? "";
+  expect(text).toContain(wording.sha256);
+  expect(text).toContain(baseSha256);
+  expect(text).toContain(DEFAULT_PACKS.lines.id);
+});
 
 it("the ladder pack's words reach the page: a resolved line reads Established (resolved)", async () => {
   const root = await render(
