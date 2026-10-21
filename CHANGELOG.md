@@ -45,26 +45,30 @@ here. The format follows
 - A conversation that could not be decided, or where no rule applied, is no
   longer counted as missed. One with no rule result at all reads "could not
   decide", never "no rule applied".
-- Results are worded met, not met, did not apply and could not decide.
-  `result_words: "ladder"` on `outcome-report/v1` or
-  `eu-ai-act-compliance/v1` words them on the grade ladder instead; it is off
-  by default. On either word set a failed or unsupported claim reads "failed
-  verification" or "evidence missing", and an undecided rule whose report is
-  withheld reads "could not decide (report withheld)", never "not checked".
+- Results are worded met, not met, did not apply and could not decide. No
+  bundle setting chooses the words (presentation contract section 6): the
+  grade-ladder set (established, failed, not present, inconclusive, not
+  checked) is the module's own vocabulary in `report-levels.ts`, off, for a
+  viewer-side wording pack to select once packs reach the modules. A failed
+  or unsupported claim reads "failed verification" or "evidence missing", and
+  an undecided rule whose report is withheld reads "could not decide" with
+  the note that the report is withheld, never "not checked".
 - An EU obligation that no session met, with every result undecided, reads
   "Could not be checked" in a neutral tone, never "No exceptions"; a test
   with no result never reads as a pass.
 - Pages built from bundles that withhold the reports read the period, the
   case record and the EU tiers from what the bundle does carry, and say the
   judge pin is withheld rather than "not stated". Only withheld reports are
-  called withheld; a report that does not match what was sealed, or cannot be
-  read, is named as such. "Terms locked" and "Agreed with the counterparty"
+  called withheld; a report that does not match what was sealed, cannot be
+  read, or whose capsule is missing or does not check out, is named as such.
+  A case taken from the claims (every report withheld) shows its conversation
+  as the case every claim cites, never as the conversation the judge read. "Terms locked" and "Agreed with the counterparty"
   are drawn only when a bundle states them.
 - Both card stylesheets changed, so `go/emitter/runtime-style-hashes.txt`
   and the Go goldens carry the new CSP hashes.
 - Needs the agent-action-capsule release with the outcome report model
   change (model-named case ids, `reportState` and the withheld-report
-  helpers, `result_words`).
+  helpers, the `cited` transcript state).
 
 ### Fixed
 

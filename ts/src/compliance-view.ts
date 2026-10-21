@@ -16,6 +16,7 @@ import { NOT_STATED } from "@action-state-group/agent-action-capsule";
 import {
   caseParts,
   judgedOf,
+  LADDER_WORDS,
   judgeNote,
   lazyBody,
   levelToggle,
@@ -130,8 +131,10 @@ function statusPill(statusClass: string, text: string): HTMLElement {
   return el("span", `st ${statusClass}`, text);
 }
 
-function ladderOn(presentation: CompliancePresentation): boolean {
-  return presentation.resultWords === "ladder";
+// Result words never come from the bundle (presentation contract section
+// 6): the card speaks its own word set, LADDER_WORDS (report-levels.ts).
+function ladderOn(): boolean {
+  return LADDER_WORDS;
 }
 
 /** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
@@ -313,7 +316,7 @@ function renderSummary(
   );
   basis.dataset.basis = "terms";
   section.append(basis);
-  const ladder = ladderOn(presentation);
+  const ladder = ladderOn();
   const table = document.createElement("table");
   table.className = "grid sum";
   table.dataset.rows = "summary";
@@ -500,7 +503,7 @@ function sessionBody(
   presentation: CompliancePresentation,
 ): HTMLElement {
   const names = testNames(model);
-  const ladder = ladderOn(presentation);
+  const ladder = ladderOn();
   const body = el("div", "conv-b");
   body.append(el("h4", "", "Test by test"));
   for (const test of session.tests) {
@@ -544,8 +547,10 @@ function sessionBody(
       "small",
       states.size === 1 && states.has("withheld")
         ? "The judge's notes are not in this bundle: its reports are withheld."
-        : states.has("mismatch") || states.has("unreadable")
-          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, or cannot be read."
+        : states.has("mismatch") ||
+            states.has("unreadable") ||
+            states.has("invalid")
+          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, cannot be read, or do not check out."
           : states.has("withheld")
             ? "The judge's notes are not in this bundle: some of its reports are withheld."
             : "The judge left no notes.",
@@ -586,6 +591,12 @@ function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
     rows.push([
       "Case input digest",
       `${t.inputDigest!} (the transcript's digest equals what the judged case committed to, checked on this page)`,
+    ]);
+  } else if (t.state === "cited") {
+    rows.push(["Transcript record", t.transcriptRecordId!]);
+    rows.push([
+      "Case input digest",
+      `${t.inputDigest!} (the case every claim cites; the judge's reports are withheld, so which conversation the judge read is not shown)`,
     ]);
   } else
     rows.push([
@@ -644,7 +655,10 @@ function pinText(model: ComplianceModel): string {
     return model.runInfo.judgePinDigest;
   if (!model.runInfo.pinned) return "disagrees across sessions";
   const info = model.runInfo;
-  const unread = (info.reportsMismatched ?? 0) + (info.reportsUnreadable ?? 0);
+  const unread =
+    (info.reportsMismatched ?? 0) +
+    (info.reportsUnreadable ?? 0) +
+    (info.reportsInvalid ?? 0);
   const cited = info.reportsCited ?? 0;
   const parts: string[] = [];
   if (info.reportsWithheld !== undefined)
@@ -653,7 +667,7 @@ function pinText(model: ComplianceModel): string {
     );
   if (unread > 0)
     parts.push(
-      `${fmt(unread)} of ${fmt(cited)} reports in this bundle do not match what was sealed or cannot be read`,
+      `${fmt(unread)} of ${fmt(cited)} reports in this bundle do not match what was sealed, cannot be read, or do not check out`,
     );
   return parts.length === 0
     ? "no judged sessions cited"
@@ -836,7 +850,6 @@ export function renderCompliancePage(
   const wrapper = el("div", "cc");
   wrapper.dataset.page = "compliance";
   wrapper.dataset.levels = "2";
-  if (ladderOn(presentation)) wrapper.dataset.resultWords = "ladder";
   const style = document.createElement("style");
   style.textContent = COMPLIANCE_CSS;
   wrapper.append(style);

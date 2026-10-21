@@ -75,6 +75,30 @@ it("the conversation reads as a chat: who spoke, and each tool called with its a
   expect(chat.textContent).toContain("3 messages, 1 tool call.");
 });
 
+it("a transcript read from the case the claims cite (the reports withheld) is drawn, and never called the conversation the judge read", () => {
+  const chat = renderChat(
+    {
+      state: "cited",
+      transcriptRecordId: "case",
+      caseRecordId: "case",
+      inputDigest: "d".repeat(64),
+      turns: [{ role: "user", content: "cancel my trip", toolCalls: [] }],
+    },
+    "case",
+  );
+  expect(chat.dataset.transcript).toBe("cited");
+  expect(chat.querySelectorAll("li.turn")).toHaveLength(1);
+  expect(chat.textContent).toContain(
+    "The judge's reports are withheld, so which conversation the judge read is not shown.",
+  );
+  expect(chat.textContent).not.toContain(
+    "the conversation the judge read, checked",
+  );
+  expect(chat.textContent).not.toContain(
+    "The exact conversation the judge read",
+  );
+});
+
 it("a missing or refused transcript says so in plain words and names the case record", () => {
   expect(renderChat({ state: "absent" }, "abc").textContent).toContain(
     "not in this bundle. It is sealed in the case record abc",

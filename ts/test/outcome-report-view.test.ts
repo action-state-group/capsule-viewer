@@ -1531,10 +1531,8 @@ it("a conversation with no rule result is undecided, never 'no rule applied'", (
   ).toBe("undecided");
 });
 
-it("ladder: an undecided rule whose report is withheld reads 'could not decide (report withheld)', never 'not checked'", async () => {
+it("an undecided rule whose report is withheld reads 'could not decide', with the note that the report is withheld, never 'not checked'", async () => {
   const source = fixture("outcome-report-bundle.json");
-  ((source.extensions as Obj)["outcome-report/v1"] as Obj).result_words =
-    "ladder";
   const resultDoc = ((source.disclosures as Obj).result as Obj)
     .agent_input as Obj;
   // withhold every report of the undecided rules
@@ -1556,45 +1554,39 @@ it("ladder: an undecided rule whose report is withheld reads 'could not decide (
     'article.conv tr[data-crit-verdict="not_evaluable"]',
   )!;
   const pill = row.querySelector<HTMLElement>("[data-pill]")!;
-  expect(pill.textContent).toBe("could not decide (report withheld)");
+  expect(pill.textContent).toBe("could not decide");
   expect(row.textContent).toContain("the judge's report is withheld");
   for (const p of root.querySelectorAll("article.conv [data-pill]"))
     expect(p.textContent).not.toBe("not checked");
 });
 
-it("result_words: 'ladder' words results on the grade ladder; the default stays plain", async () => {
-  const { bundle } = await sealedOutcomeReportBundle((source) => {
-    ((source.extensions as Obj)["outcome-report/v1"] as Obj).result_words =
-      "ladder";
-  });
-  const root = expand(await render(bundle));
-  expect(
-    root.querySelector<HTMLElement>('[data-page="outcome-report"]')!.dataset
-      .resultWords,
-  ).toBe("ladder");
-  expect(root.querySelector('[data-line="missed"] b')!.textContent).toBe(
-    "Failed (missed)",
-  );
-  const conv = open(
-    root.querySelector<HTMLElement>('[data-drill="missed"] article.conv')!,
-  );
-  expect(conv.querySelector(".conv-h [data-pill]")!.textContent).toBe("failed");
-  const words = new Set(
-    [...conv.querySelectorAll<HTMLElement>("tr[data-crit] [data-pill]")].map(
-      (p) => p.textContent,
-    ),
-  );
-  for (const word of words)
-    expect([
-      "established",
-      "failed",
-      "not present",
-      "inconclusive",
-      "not checked",
-    ]).toContain(word);
-  const { bundle: plain } = await sealedOutcomeReportBundle();
-  const plainRoot = await render(plain);
-  expect(plainRoot.querySelector('[data-line="missed"] b')!.textContent).toBe(
-    "Missed",
-  );
+it("chrome rule (presentation contract section 6): result wording never comes from the bundle -- result_words supplied, removed or altered draws the same card", async () => {
+  const page = async (mutate?: (block: Obj) => void): Promise<string> => {
+    const { bundle } = await sealedOutcomeReportBundle((source) => {
+      mutate?.((source.extensions as Obj)["outcome-report/v1"] as Obj);
+    });
+    const root = expand(await render(bundle));
+    for (const conv of root.querySelectorAll<HTMLElement>("article.conv"))
+      open(conv);
+    // The bundle digest covers the extensions, so it changes with them; it
+    // is evidence, not wording, and is masked here only.
+    return root
+      .querySelector<HTMLElement>('[data-page="outcome-report"]')!
+      .outerHTML.replace(
+        /(Bundle digest<\/div><div class="v">)[0-9a-f]{64}/u,
+        "$1<digest>",
+      );
+  };
+  const plain = await page();
+  expect(plain).toContain("Missed");
+  expect(plain).not.toContain("result-words");
+  for (const mutate of [
+    (block: Obj) => {
+      block.result_words = "ladder";
+    },
+    (block: Obj) => {
+      block.result_words = "LADDER established failed";
+    },
+  ])
+    expect(await page(mutate)).toBe(plain);
 });

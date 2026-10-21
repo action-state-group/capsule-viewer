@@ -156,6 +156,7 @@ export interface ComplianceRunInfo {
   readonly reportsWithheld?: number;
   readonly reportsMismatched?: number;
   readonly reportsUnreadable?: number;
+  readonly reportsInvalid?: number;
   readonly reportsCited?: number;
 }
 
@@ -338,12 +339,18 @@ function buildSessions(
         reportState: reportState(result.records, claim),
       });
     }
-    // Only when every report of the session is withheld (claimsCitedCase
-    // refuses otherwise): disclosed reports that name no case, or
-    // mismatched ones, leave the case unresolved.
+    // Only when every report of the session is withheld, and the one case
+    // record every claim cites declares itself this session's case
+    // (claimsCitedCase refuses otherwise): disclosed reports that name no
+    // case, or mismatched, unreadable or invalid ones, leave it unresolved.
     let caseFrom: Session["caseFrom"] = "reports";
     if (sources.size === 0) {
-      const cited = claimsCitedCase(result.records, conversationClaims);
+      const cited = claimsCitedCase(
+        result.records,
+        conversationId,
+        conversationClaims,
+        result.claims,
+      );
       if (cited !== undefined) {
         sources.add(cited);
         caseFrom = "claims";
@@ -360,6 +367,7 @@ function buildSessions(
         conversationId,
         conversationClaims,
         sourceCapsuleId,
+        caseFrom,
       ),
     });
   }
@@ -491,6 +499,7 @@ function withheldOf(
   reportsWithheld?: number;
   reportsMismatched?: number;
   reportsUnreadable?: number;
+  reportsInvalid?: number;
   reportsCited?: number;
 } {
   const counted = withheldReports(
@@ -507,7 +516,12 @@ function withheldOf(
     ...(counted.unreadable > 0
       ? { reportsUnreadable: counted.unreadable }
       : {}),
-    ...(counted.withheld + counted.mismatched + counted.unreadable > 0
+    ...(counted.invalid > 0 ? { reportsInvalid: counted.invalid } : {}),
+    ...(counted.withheld +
+      counted.mismatched +
+      counted.unreadable +
+      counted.invalid >
+    0
       ? { reportsCited: counted.total }
       : {}),
   };

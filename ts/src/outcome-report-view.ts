@@ -18,6 +18,7 @@ import {
 import { OUTCOME_REPORT_CSS } from "./outcome-report-styles.js";
 import {
   judgedOf,
+  LADDER_WORDS,
   lazyBody,
   levelToggle,
   proofList,
@@ -269,8 +270,10 @@ export function conversationStatus(
     : "undecided";
 }
 
-function ladderOn(model: OutcomeReportModel): boolean {
-  return model.options.resultWords === "ladder";
+// Result words never come from the bundle (presentation contract section
+// 6): the card speaks its own word set, LADDER_WORDS (report-levels.ts).
+function ladderOn(): boolean {
+  return LADDER_WORDS;
 }
 
 function statusWord(
@@ -313,6 +316,8 @@ function noNoteText(c: DrawnCriterion): string {
       return "Not shown: the report in this bundle does not match what was sealed.";
     case "unreadable":
       return "Not shown: the report in this bundle cannot be read.";
+    case "invalid":
+      return "Not shown: the report capsule in this bundle is missing or does not check out.";
     default:
       return "The judge left no note.";
   }
@@ -390,9 +395,7 @@ function renderConversation(
   const head = el("div", "conv-h");
   const parts = caseParts(conversation.conversationId);
   head.append(el("span", "cid", parts.label));
-  head.append(
-    wordPill(statusWord(status, conversation, ladderOn(model)), status),
-  );
+  head.append(wordPill(statusWord(status, conversation, ladderOn()), status));
   const misses = conversation.criteria.filter((c) => isMiss(c.verdict));
   const undecided = conversation.criteria.filter(
     (c) => c.verdict === "not_evaluable",
@@ -426,7 +429,7 @@ function conversationBody(
   runInfo: OutcomeReportRunInfo,
 ): HTMLElement {
   const body = el("div", "conv-b");
-  const ladder = ladderOn(model);
+  const ladder = ladderOn();
   const sentence = el("p", "verdict-line", resultSentence(conversation, model));
   sentence.dataset.why = conversationStatus(conversation);
   body.append(sentence);
@@ -522,8 +525,10 @@ function conversationBody(
     gaps.push(
       states.size === 1 && states.has("withheld")
         ? "The judge's notes are not in this bundle: its reports are withheld."
-        : states.has("mismatch") || states.has("unreadable")
-          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, or cannot be read."
+        : states.has("mismatch") ||
+            states.has("unreadable") ||
+            states.has("invalid")
+          ? "The judge's notes are not shown: some reports in this bundle do not match what was sealed, cannot be read, or do not check out."
           : states.has("withheld")
             ? "The judge's notes are not in this bundle: some of its reports are withheld."
             : "The judge left no notes.",
@@ -587,6 +592,12 @@ function conversationProofs(
     rows.push([
       "Case input digest",
       `${t.inputDigest!} (the transcript's digest equals what the judged case committed to, checked on this page)`,
+    ]);
+  } else if (t.state === "cited") {
+    rows.push(["Transcript record", t.transcriptRecordId!]);
+    rows.push([
+      "Case input digest",
+      `${t.inputDigest!} (the case every claim cites; the judge's reports are withheld, so which conversation the judge read is not shown)`,
     ]);
   } else
     rows.push([
@@ -677,7 +688,9 @@ function pinNotShown(runInfo: OutcomeReportRunInfo): string {
   if (!runInfo.pinned)
     return "differs across the cited reports, so none is shown";
   const unread =
-    (runInfo.reportsMismatched ?? 0) + (runInfo.reportsUnreadable ?? 0);
+    (runInfo.reportsMismatched ?? 0) +
+    (runInfo.reportsUnreadable ?? 0) +
+    (runInfo.reportsInvalid ?? 0);
   const cited = runInfo.reportsCited ?? 0;
   const parts: string[] = [];
   if (runInfo.reportsWithheld !== undefined)
@@ -686,7 +699,7 @@ function pinNotShown(runInfo: OutcomeReportRunInfo): string {
     );
   if (unread > 0)
     parts.push(
-      `${fmtCount(unread)} of ${fmtCount(cited)} reports in this bundle do not match what was sealed or cannot be read`,
+      `${fmtCount(unread)} of ${fmtCount(cited)} reports in this bundle do not match what was sealed, cannot be read, or do not check out`,
     );
   return parts.length === 0
     ? "not stated"
@@ -957,7 +970,7 @@ function renderLines(
   thead.append(headRow);
   table.append(thead);
   const tbody = document.createElement("tbody");
-  const ladder = ladderOn(model);
+  const ladder = ladderOn();
   const byStatus = (status: ConversationStatus) =>
     model.conversations.filter((c) => conversationStatus(c) === status);
   const resolved = byStatus("resolved");
@@ -1086,7 +1099,7 @@ function renderRules(
       "How many conversations met each rule. Open a rule to read the conversations where it was not met.",
     ),
   );
-  const ladder = ladderOn(model);
+  const ladder = ladderOn();
   const table = el("table", "rules");
   table.dataset.rows = "rules";
   const thead = element("thead");
@@ -1589,7 +1602,6 @@ export async function renderOutcomeReportPage(
   const wrapper = el("section", "oi");
   wrapper.dataset.page = "outcome-report";
   wrapper.dataset.levels = "2";
-  if (ladderOn(model)) wrapper.dataset.resultWords = "ladder";
   const style = document.createElement("style");
   style.textContent = OUTCOME_REPORT_CSS;
   wrapper.append(style);

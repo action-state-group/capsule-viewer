@@ -120,8 +120,19 @@ export function lazyBody(host: HTMLElement, build: () => Node): void {
 }
 
 // ---------------------------------------------------------------------------
-// Result words: plain by default, the grade ladder behind a flag
+// Result words: the plain set; the grade ladder is the module's other set
 // ---------------------------------------------------------------------------
+
+/**
+ * Which of this module's two word sets the cards speak. Never read from the
+ * bundle: presentation contract section 6 forbids a bundle-carried setting
+ * from choosing wording, so there is no `result_words` flag. The grade
+ * ladder (established, failed, not present, inconclusive, not checked) is
+ * the module's own vocabulary, kept here for a viewer-side wording pack
+ * (bound by `wording_sha256`, section 7.4) to select once packs reach the
+ * modules; until then the cards speak the plain set.
+ */
+export const LADDER_WORDS: boolean = false;
 
 export type RuleVerdict =
   | "met"
@@ -304,8 +315,9 @@ export function exactText(text: string): { text: string; indented: boolean } {
 /**
  * The conversation as a chat: who said what, and each tool the agent called
  * with its arguments. The words come from the transcript the caller has
- * already tied to the judged case by digest; nothing is reworded. Returns
- * the "not in this bundle" note when there is no verified transcript.
+ * already tied to the judged case by digest (`verified`), or to the case
+ * every claim cites when the reports are withheld (`cited`, said as such);
+ * nothing is reworded. Returns the "not in this bundle" note otherwise.
  */
 export function renderChat(
   transcript: ConversationTranscript,
@@ -313,7 +325,7 @@ export function renderChat(
 ): HTMLElement {
   const wrap = el("div", "chat");
   wrap.dataset.transcript = transcript.state;
-  if (transcript.state !== "verified") {
+  if (transcript.state !== "verified" && transcript.state !== "cited") {
     wrap.append(
       el(
         "p",
@@ -331,7 +343,7 @@ export function renderChat(
     el(
       "p",
       "chat-k",
-      `${turns.length} messages, ${calls} tool call${calls === 1 ? "" : "s"}. The exact conversation the judge read, checked on this page (see the proofs). Tool arguments and results are shown as sealed; JSON is only indented, and only where indenting changes nothing else.`,
+      `${turns.length} messages, ${calls} tool call${calls === 1 ? "" : "s"}. ${transcript.state === "cited" ? "The conversation of the case every claim cites. The judge's reports are withheld, so which conversation the judge read is not shown." : "The exact conversation the judge read, checked on this page (see the proofs)."} Tool arguments and results are shown as sealed; JSON is only indented, and only where indenting changes nothing else.`,
     ),
   );
   const list = el("ol", "turns");
