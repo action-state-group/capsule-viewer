@@ -241,6 +241,35 @@ it("the ladder pack's words reach the page: a resolved line reads Established (r
   expect(resolved.textContent).toBe("Established (resolved)");
 });
 
+it("two EU cards drawn at once, each with its own pack, keep their own producer tooltip", async () => {
+  const pack = (title: string): WordingPack => ({
+    id: `test/producer-${title}@1`,
+    locale: "en",
+    entries: { "groups.producer.title": `producer ${title}` },
+  });
+  const { bundle } = await sealEvidenceBundle(
+    cut(fixture("compliance-bundle.json")),
+  );
+  const packs = [
+    await distributed(pack("a")),
+    await distributed(pack("b")),
+  ] as const;
+  const roots = packs.map(() => document.createElement("main"));
+  // Both renders in flight at once, so their awaits interleave.
+  await Promise.all(
+    packs.map((wording, i) =>
+      renderEvidenceGraph(bundle, roots[i]!, undefined, { wording }),
+    ),
+  );
+  for (const [i, title] of ["producer a", "producer b"].entries()) {
+    const producer = [
+      ...roots[i]!.querySelectorAll<HTMLElement>('i[data-source="producer"]'),
+    ];
+    expect(producer.length).toBeGreaterThan(0);
+    expect(new Set(producer.map((e) => e.title))).toEqual(new Set([title]));
+  }
+});
+
 // ---------------------------------------------------------------------------
 // A pack that would change more than words is refused
 // ---------------------------------------------------------------------------
@@ -274,6 +303,40 @@ it("a pack cannot fold two verdicts into one word, or change the grouping", () =
   const problems = wordingProblems(fold, DEFAULT_PACKS.lines).join("\n");
   expect(problems).toMatch(/verdict\.not_met and verdict\.met read alike/u);
   expect(problems).toContain('layout.grouping is "groups"');
+});
+
+it("verdict words are told apart as a reader reads them, and a pack cannot swap two verdicts' words", () => {
+  const check = (entries: Record<string, string>): string =>
+    wordingProblems(
+      { id: "test/read@1", locale: "en", entries },
+      DEFAULT_PACKS.lines,
+    ).join("\n");
+  // case, spacing and invisible characters do not make two words
+  expect(check({ "verdict.not_met": "Met" })).toMatch(/read alike/u);
+  expect(check({ "verdict.not_met": " met\u200b " })).toMatch(/read alike/u);
+  expect(check({ "verdict.not_met": "\u200b" })).toContain(
+    "verdict.not_met has no visible word",
+  );
+  expect(check({ "verdict.not_met": "m\u0435t" })).toContain(
+    "verdict.not_met mixes Latin, Greek and Cyrillic letters",
+  );
+  expect(check({ "verdict.not_met": "met\u2060" })).toMatch(/read alike/u);
+  // met and not met swapped: no word is shared, and still refused
+  const swapped = check({ "verdict.met": "not met", "verdict.not_met": "met" });
+  expect(swapped).toContain(
+    'verdict.met reads "not met", the word for verdict.not_met',
+  );
+  expect(swapped).toContain(
+    'verdict.not_met reads "met", the word for verdict.met',
+  );
+  // the proofs' sealed-verdict words are verdict words too
+  expect(check({ "lines.pf.verdict.not_met": "met" })).toMatch(
+    /lines\.pf\.verdict\.not_met and lines\.pf\.verdict\.met read alike/u,
+  );
+  // a key Object.prototype has is not a default entry
+  expect(check({ constructor: "x" })).toBe("");
+  // the ladder pack still passes
+  expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual([]);
 });
 
 for (const { file, page } of CARDS) {

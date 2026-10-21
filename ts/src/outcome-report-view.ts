@@ -727,6 +727,8 @@ function conversationProofs(
   for (const criterion of conversation.criteria) {
     const tr = element("tr");
     tr.dataset.proofCrit = `${criterion.checkId}.${criterion.criterionId}`;
+    // The sealed verdict as data, whatever the pack's word for it.
+    tr.dataset.verdict = criterion.verdict;
     tr.append(
       element(
         "td",

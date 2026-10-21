@@ -9,8 +9,10 @@
 // The pack is checked first against the contract-report module's default
 // pack for the bundle's report (same placeholders in every entry it
 // replaces, no two verdicts sharing a word, the same grouping); every
-// problem is printed and nothing is written. The bundle is never changed,
-// so no judge pin, digest or verdict moves.
+// problem is printed and nothing is written. A pack for a bundle that opts
+// into neither report, or into both, is refused too: there is no one
+// default to check it against. The bundle is never changed, so no judge
+// pin, digest or verdict moves.
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,41 +24,62 @@ import {
   wordingProblems,
 } from "../dist/contract-report-wording.js";
 
+const USAGE =
+  "usage: node scripts/render-report.mjs BUNDLE.json [--wording PACK.json] -o PAGE.html";
+const usage = () => {
+  console.error(USAGE);
+  process.exit(2);
+};
+const refuse = (message) => {
+  console.error(message);
+  process.exit(1);
+};
 const args = process.argv.slice(2);
 const take = (flag) => {
   const at = args.indexOf(flag);
   if (at === -1) return undefined;
   const [, value] = args.splice(at, 2);
+  if (value === undefined || value.startsWith("-")) usage();
   return value;
 };
 const wordingPath = take("--wording");
 const out = take("-o");
-const [bundlePath] = args;
-if (bundlePath === undefined || out === undefined) {
-  console.error(
-    "usage: node scripts/render-report.mjs BUNDLE.json [--wording PACK.json] -o PAGE.html",
-  );
-  process.exit(2);
-}
+const [bundlePath, ...rest] = args;
+if (bundlePath === undefined || out === undefined || rest.length > 0) usage();
 
-const bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
+const readJson = (path, what) => {
+  const text = readFileSync(path, "utf8");
+  try {
+    return { text, value: JSON.parse(text) };
+  } catch (e) {
+    return refuse(`${path}: the ${what} is not JSON (${e.message})`);
+  }
+};
+
+const { value: bundle } = readJson(bundlePath, "bundle");
 const extensions = Object.keys(bundle?.extensions ?? {});
-const grouping = extensions.includes("eu-ai-act-compliance/v1")
-  ? "groups"
-  : extensions.includes("outcome-report/v1")
-    ? "lines"
-    : undefined;
+const opted = [
+  ...(extensions.includes("outcome-report/v1") ? ["lines"] : []),
+  ...(extensions.includes("eu-ai-act-compliance/v1") ? ["groups"] : []),
+];
 
 let wording;
 if (wordingPath !== undefined) {
-  const text = readFileSync(wordingPath, "utf8");
-  const pack = readWordingPack(JSON.parse(text));
-  if (grouping !== undefined) {
-    const problems = wordingProblems(pack, DEFAULT_PACKS[grouping]);
-    if (problems.length > 0) {
-      for (const p of problems) console.error(p);
-      process.exit(1);
-    }
+  if (opted.length !== 1)
+    refuse(
+      `${bundlePath}: opts into ${opted.length === 0 ? "neither report" : "both reports"}; a wording pack is checked against one report's defaults`,
+    );
+  const { text, value } = readJson(wordingPath, "wording pack");
+  let pack;
+  try {
+    pack = readWordingPack(value);
+  } catch (e) {
+    refuse(`${wordingPath}: ${e.message}`);
+  }
+  const problems = wordingProblems(pack, DEFAULT_PACKS[opted[0]]);
+  if (problems.length > 0) {
+    for (const p of problems) console.error(p);
+    process.exit(1);
   }
   wording = {
     pack: text,

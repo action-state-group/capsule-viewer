@@ -144,7 +144,10 @@ or verdict moves, and nothing is re-judged.
 - **What can't:** a pack holds strings only. Each entry it replaces must use
   exactly the placeholders of the default entry, so a count or denominator
   can be neither dropped nor added. Two verdicts may not share a word
-  (`verdict.*`, `status.*`). `layout.grouping` is fixed. A pack that breaks
+  (`verdict.*`, `status.*`, `lines.pf.verdict.*`), as a reader reads it
+  (case, spacing and invisible characters ignored), and no verdict may take
+  another verdict's default word, so met and not met cannot be swapped.
+  `layout.grouping` is fixed. A pack that breaks
   any of these, or does not hash to its `wording_sha256`, is refused before
   anything is drawn; `render-report.mjs` prints every problem. The raw
   verdict is on every element as data, whatever the words say.

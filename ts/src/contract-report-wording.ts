@@ -165,13 +165,47 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
       "status.undecided.unavailable",
     ],
   ],
+  // The sealed verdicts as the Outcomes proofs name them.
+  [
+    "lines.pf.verdict.met",
+    "lines.pf.verdict.not_met",
+    "lines.pf.verdict.not_evaluable",
+    "lines.pf.verdict.failed",
+    "lines.pf.verdict.unsupported",
+    "lines.pf.verdict.not_applicable",
+  ],
 ];
+
+/**
+ * A word as a reader tells it apart: compatibility forms folded, invisible
+ * format characters dropped, whitespace collapsed, case ignored. "Met",
+ * "met " and "met" with a zero-width space are one word to a reader.
+ */
+function asRead(word: string): string {
+  return word
+    .normalize("NFKC")
+    .replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/** Letters from more than one of Latin, Greek and Cyrillic: "mеt" with a Cyrillic е reads as "met". */
+function mixesScripts(word: string): boolean {
+  return (
+    [/\p{Script=Latin}/u, /\p{Script=Greek}/u, /\p{Script=Cyrillic}/u].filter(
+      (script) => script.test(word),
+    ).length > 1
+  );
+}
 
 /**
  * Every problem with `pack` as a replacement for `defaults`: an entry whose
  * placeholders differ from the entry it replaces, a `layout.grouping` that is
- * not the default's, and verdict words two verdicts would share. Entries the
- * defaults do not have are not this module's and are not checked.
+ * not the default's, verdict words two verdicts would share (as read), a
+ * verdict worded as another verdict reads by default, and a verdict word with
+ * nothing visible in it. Entries the defaults do not have are not this
+ * module's and are not checked.
  */
 export function wordingProblems(
   pack: WordingPack,
@@ -179,8 +213,8 @@ export function wordingProblems(
 ): string[] {
   const problems: string[] = [];
   for (const [key, text] of Object.entries(pack.entries)) {
-    const base = defaults.entries[key];
-    if (base === undefined) continue;
+    if (!Object.hasOwn(defaults.entries, key)) continue;
+    const base = defaults.entries[key]!;
     if (key.startsWith("layout.")) {
       if (text !== base)
         problems.push(
@@ -197,17 +231,40 @@ export function wordingProblems(
   }
   const merged = { ...defaults.entries, ...pack.entries };
   for (const set of DISTINCT) {
+    const members = set.map((m) => (typeof m === "string" ? [m] : [...m]));
+    // Each verdict's default words, as read: a pack may not give one verdict
+    // the word another verdict reads as by default (met and not met swapped).
+    const defaultOf = new Map<string, string>();
+    for (const keys of members)
+      for (const k of keys)
+        if (Object.hasOwn(defaults.entries, k))
+          defaultOf.set(asRead(defaults.entries[k]!), keys.join(" / "));
     const seen = new Map<string, string>();
-    for (const member of set) {
-      const keys = typeof member === "string" ? [member] : member;
-      const words = new Set(keys.map((k) => merged[k]!));
+    for (const keys of members) {
+      const name = keys.join(" / ");
+      const words = new Set<string>();
+      for (const k of keys) {
+        if (!Object.hasOwn(merged, k)) continue;
+        const word = asRead(merged[k]!);
+        if (word === "") problems.push(`${k} has no visible word`);
+        else if (mixesScripts(word))
+          problems.push(
+            `${k} mixes Latin, Greek and Cyrillic letters (${JSON.stringify(word)}); a verdict word is written in one script`,
+          );
+        else words.add(word);
+      }
       for (const word of words) {
         const other = seen.get(word);
         if (other !== undefined)
           problems.push(
-            `${keys.join(" / ")} and ${other} read alike (${JSON.stringify(word)}); two verdicts must not share a word`,
+            `${name} and ${other} read alike (${JSON.stringify(word)}); two verdicts must not share a word`,
           );
-        else seen.set(word, keys.join(" / "));
+        else seen.set(word, name);
+        const owner = defaultOf.get(word);
+        if (owner !== undefined && owner !== name)
+          problems.push(
+            `${name} reads ${JSON.stringify(word)}, the word for ${owner}; a verdict must not take another verdict's word`,
+          );
       }
     }
   }
@@ -263,7 +320,7 @@ export function wordsOf(
     key: string,
     vars: Readonly<Record<string, string | number>> = {},
   ): string => {
-    const text = entries[key];
+    const text = Object.hasOwn(entries, key) ? entries[key] : undefined;
     if (text === undefined)
       throw new WordingPackError(`${defaults.id}: no entry ${key}`);
     return fill(key, text, vars);

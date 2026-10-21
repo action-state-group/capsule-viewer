@@ -12,6 +12,10 @@ import {
   type EmitterModule,
 } from "./emitter.js";
 import {
+  checkWordingPackInput,
+  WordingPackError,
+} from "./contract-report-wording.js";
+import {
   createPresentationRegistry,
   renderEvidenceGraph,
 } from "./evidence-graph-view.js";
@@ -329,57 +333,22 @@ export type BuiltPresentation =
 
 /** The wording key the builder reads for the page title. */
 export const WORDING_TITLE_KEY = "page.title";
-const WORDING_PACK_VERSION = "aac.wording-pack/v0";
-const WORDING_KEY = /^[a-z0-9][a-z0-9._-]*$/u;
-const LOCALE = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/u;
 
 /**
  * Check a wording pack against its digest and its shape (contract 7.4) and
- * return its entries. The bytes are hashed exactly as given.
+ * return its entries. The bytes are hashed exactly as given, before they are
+ * parsed. One check for every path: contract-report-wording.ts holds it.
  */
 export async function checkWordingPack(
   wording: WordingPackInput,
 ): Promise<Readonly<Record<string, string>>> {
-  if (!isHex64(wording.sha256))
-    throw new PresentationBuildError(
-      "wording sha256 is not a lowercase hex SHA-256",
-    );
-  const digest = await sha256Hex(new TextEncoder().encode(wording.pack));
-  if (digest !== wording.sha256)
-    throw new PresentationBuildError(
-      "wording pack bytes do not hash to its wording_sha256",
-    );
-  let pack: unknown;
   try {
-    pack = JSON.parse(wording.pack);
-  } catch {
-    throw new PresentationBuildError("wording pack is not JSON");
+    return (await checkWordingPackInput(wording)).entries;
+  } catch (e) {
+    if (e instanceof WordingPackError)
+      throw new PresentationBuildError(e.message);
+    throw e;
   }
-  const p = pack as Record<string, unknown>;
-  const entries = p?.entries as Record<string, unknown> | undefined;
-  if (
-    pack === null ||
-    typeof pack !== "object" ||
-    Array.isArray(pack) ||
-    Object.keys(p).some(
-      (k) => !["wording_pack_version", "id", "locale", "entries"].includes(k),
-    ) ||
-    p.wording_pack_version !== WORDING_PACK_VERSION ||
-    typeof p.id !== "string" ||
-    typeof p.locale !== "string" ||
-    !LOCALE.test(p.locale) ||
-    entries === null ||
-    typeof entries !== "object" ||
-    Array.isArray(entries) ||
-    Object.keys(entries).length === 0 ||
-    Object.entries(entries).some(
-      ([k, v]) => !WORDING_KEY.test(k) || typeof v !== "string" || v === "",
-    )
-  )
-    throw new PresentationBuildError(
-      `wording pack is not an ${WORDING_PACK_VERSION} object`,
-    );
-  return entries as Record<string, string>;
 }
 
 /** The offline file's settings: everything but the code. */

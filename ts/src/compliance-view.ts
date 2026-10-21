@@ -80,19 +80,18 @@ function el(tag: string, className: string, text?: string): HTMLElement {
  * own style) and tagged `data-source="producer"`, so it never reads as a
  * sealed finding; the summary's basis line says what the italics mean.
  */
-// The tooltip producer text carries; set once per card from its pack.
-let producerTitle = DEFAULT_WORDS.groups.t("groups.producer.title");
-
-function producerText(...content: (string | Node)[]): HTMLElement {
+function producerText(w: Words, ...content: (string | Node)[]): HTMLElement {
   const value = element("i");
   value.append(...content);
   value.dataset.source = "producer";
-  value.title = producerTitle;
+  // The tooltip comes from the card's own pack, per render.
+  value.title = w.t("groups.producer.title");
   return value;
 }
 
 /** `text` in an element of its own, as producer text when `producer` is true. */
 function maybeProducer(
+  w: Words,
   tag: string,
   className: string,
   text: string,
@@ -100,7 +99,7 @@ function maybeProducer(
 ): HTMLElement {
   if (!producer) return el(tag, className, text);
   const value = el(tag, className);
-  value.append(producerText(text));
+  value.append(producerText(w, text));
   return value;
 }
 
@@ -150,6 +149,7 @@ function statusPill(statusClass: string, text: string): HTMLElement {
 /** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
 function testNames(
   model: ComplianceModel,
+  w: Words,
 ): (criterionId: string, tag: string, className: string) => HTMLElement {
   const rows = new Map(
     model.obligations.flatMap((o) =>
@@ -159,6 +159,7 @@ function testNames(
   return (criterionId, tag, className) => {
     const row = rows.get(criterionId);
     return maybeProducer(
+      w,
       tag,
       className,
       row?.name ?? criterionId,
@@ -348,7 +349,13 @@ function rowResult(row: ObligationRowModel, w: Words): HTMLElement {
   cell.append(statusPill(status.cls, status.text));
   if (status.note !== undefined)
     cell.append(
-      maybeProducer("div", "applic", status.note, status.producerNote === true),
+      maybeProducer(
+        w,
+        "div",
+        "applic",
+        status.note,
+        status.producerNote === true,
+      ),
     );
   return cell;
 }
@@ -399,13 +406,14 @@ function renderSummary(
     const name = el("div", "obn");
     const article = el("b", "", obligation.article);
     if (obligation.mapped)
-      name.append(producerText(article, ` · ${obligation.title}`));
+      name.append(producerText(w, article, ` · ${obligation.title}`));
     else name.append(article, element("span", ` · ${obligation.title}`));
     title.append(name);
     if (obligation.plain !== NOT_STATED)
-      title.append(maybeProducer("div", "plain", obligation.plain, true));
+      title.append(maybeProducer(w, "div", "plain", obligation.plain, true));
     title.append(
       maybeProducer(
+        w,
         "div",
         "applic",
         obligation.applicability.note,
@@ -426,7 +434,7 @@ function renderSummary(
       const nameCell = el("td", "tn");
       const head = el("div", "tnh");
       head.append(
-        maybeProducer("b", "", test.name, test.producerName),
+        maybeProducer(w, "b", "", test.name, test.producerName),
         tierBadge(test.tier, w),
       );
       nameCell.append(head);
@@ -507,9 +515,9 @@ function renderFinding(finding: ComplianceFindingModel, w: Words): HTMLElement {
     element("span", count(w, "session", finding.sessionIds.length)),
   );
   box.append(fh);
-  box.append(maybeProducer("div", "rec", finding.recommendation, true));
+  box.append(maybeProducer(w, "div", "rec", finding.recommendation, true));
   const own = el("div", "own", w.t("groups.finding.owner"));
-  own.append(producerText(finding.ownerDue));
+  own.append(producerText(w, finding.ownerDue));
   box.append(own);
   return box;
 }
@@ -550,7 +558,7 @@ function renderSession(
   presentation: CompliancePresentation,
   w: Words,
 ): HTMLElement {
-  const names = testNames(model);
+  const names = testNames(model, w);
   const exceptions = session.tests.filter(isException);
   const unverified = session.tests.filter(isUnverified);
   const undecided = session.tests.filter((t) => t.verdict === "not_evaluable");
@@ -607,7 +615,7 @@ function sessionBody(
   presentation: CompliancePresentation,
   w: Words,
 ): HTMLElement {
-  const names = testNames(model);
+  const names = testNames(model, w);
   const body = el("div", "conv-b");
   body.append(el("h4", "", w.t("groups.h.test-by-test")));
   for (const test of session.tests) {
@@ -672,7 +680,7 @@ function sessionProofs(
   model: ComplianceModel,
   w: Words,
 ): HTMLElement {
-  const names = testNames(model);
+  const names = testNames(model, w);
   const box = el("div", "pf-b");
   box.dataset.proofsFor = session.conversationId;
   // Which date the session is counted under, verbatim, beside the sealed day:
@@ -805,6 +813,7 @@ function renderObligationDetails(
     box.dataset.mapped = String(obligation.mapped);
     box.append(
       maybeProducer(
+        w,
         "h5",
         "",
         `${obligation.article} · ${obligation.title}`,
@@ -820,16 +829,16 @@ function renderObligationDetails(
     );
     if (obligation.judgedTerms.length > 0) {
       const terms = el("p", "applic", w.t("groups.od.judged-terms"));
-      terms.append(producerText(obligation.judgedTerms.join(", ")));
+      terms.append(producerText(w, obligation.judgedTerms.join(", ")));
       box.append(terms);
     }
-    box.append(maybeProducer("p", "", obligation.method, obligation.mapped));
+    box.append(maybeProducer(w, "p", "", obligation.method, obligation.mapped));
     for (const row of obligation.rows) {
       const rowBox = el("div", "ck");
       rowBox.dataset.wording = row.wording.source;
       const h = el("div", "h");
       h.append(
-        maybeProducer("span", "", row.name, row.producerName),
+        maybeProducer(w, "span", "", row.name, row.producerName),
         tierBadge(row.tier, w),
       );
       rowBox.append(h);
@@ -847,7 +856,9 @@ function renderObligationDetails(
         ),
       );
       if (row.notEvaluableNote !== undefined)
-        rowBox.append(maybeProducer("div", "ev", row.notEvaluableNote, true));
+        rowBox.append(
+          maybeProducer(w, "div", "ev", row.notEvaluableNote, true),
+        );
       box.append(rowBox);
     }
     part.append(box);
@@ -873,14 +884,14 @@ function renderQuality(
   line.append(
     protocol.protocol === undefined
       ? w.t("groups.q.unspecified")
-      : producerText(protocol.protocol),
+      : producerText(w, protocol.protocol),
   );
   if (protocol.cadence !== undefined)
-    line.append(", ", producerText(protocol.cadence));
+    line.append(", ", producerText(w, protocol.cadence));
   line.append(w.t("groups.q.tail"));
   part.append(line);
   if (protocol.note !== undefined)
-    part.append(maybeProducer("p", "na", protocol.note, true));
+    part.append(maybeProducer(w, "p", "na", protocol.note, true));
   host.append(part);
 }
 
@@ -976,7 +987,6 @@ export async function drawGroups(
   w: Words,
 ): Promise<void> {
   const model = buildComplianceModel(result, presentation);
-  producerTitle = w.t("groups.producer.title");
   renderHeader(wrapper, model, w);
   // Who judged, who witnessed, what verified: on the front, never in a toggle.
   wrapper.append(

@@ -31,8 +31,8 @@ here. The format follows
   own pack as the page's `wording` (bound by `wording_sha256`, the pack the
   presentation builder already carries); its entries replace the default
   pack's. A pack changes words only: every entry it replaces must keep the
-  same `{placeholders}`, two verdicts may not share a word, and the grouping
-  is fixed, or the pack is refused and no card is drawn. `ts/scripts/render-report.mjs`
+  same `{placeholders}`, two verdicts may not share a word or take another
+  verdict's default word, and the grouping is fixed, or the pack is refused and no card is drawn. `ts/scripts/render-report.mjs`
   draws a page from a bundle with a pack. The grade-ladder word set the cards
   kept behind a code flag (`LADDER_WORDS`, removed) is now just a pack.
 - One nesting rule for every report page (SEAMS ruling 11): a level-2 toggle
