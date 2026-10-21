@@ -194,6 +194,75 @@ it("the summary states where the terms come from, and the regulatory mapping is 
   );
 });
 
+it("every producer-supplied field is set in italics as the producer's, and no sealed value is", async () => {
+  const { bundle } = await sealedComplianceBundle((source) => {
+    (
+      (source.extensions as Obj)["eu-ai-act-compliance/v1"] as Obj
+    ).quality_protocol = {
+      protocol: "spot-check",
+      cadence: "weekly",
+      note: "Ten sessions a week.",
+    };
+  });
+  const root = expand(await render(bundle));
+  const proofs = root.querySelector<HTMLElement>(
+    '[data-section="report-proofs"] details[data-level="2"]',
+  )!;
+  open(proofs);
+  const basis = root.querySelector<HTMLElement>('[data-basis="terms"]')!;
+  for (const field of [
+    "Obligation titles",
+    "test names",
+    "method",
+    "notes on undecided tests and quality checks",
+    "set in italics",
+  ])
+    expect(basis.textContent).toContain(field);
+  const producer = [
+    ...root.querySelectorAll<HTMLElement>('i[data-source="producer"]'),
+  ].map((i) => i.textContent);
+  for (const text of [
+    "Art 5(1)(a) · No manipulative or deceptive techniques", // summary title
+    "No manipulative or deceptive technique", // test name
+    "In force since 2 Feb 2025",
+    "Review flagged sessions for manufactured urgency.",
+    "AirlineAgentsNow · 31 Oct 2026",
+    "Not evaluable against the agent on tau2 trial-0 data.",
+    "Judged per session against a frozen rubric.",
+    "spot-check",
+    "weekly",
+    "Ten sessions a week.",
+  ])
+    expect(producer).toContain(text);
+  const detail = root.querySelector<HTMLElement>(
+    '[data-obligation-detail="art5"]',
+  )!;
+  expect(detail.querySelector('h5 i[data-source="producer"]')).not.toBeNull();
+  expect(detail.querySelector(".na")!.textContent).toBe(
+    "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
+  );
+  // sealed values and the page's own words are never set as the producer's
+  for (const sealed of root.querySelectorAll(
+    '.st, td.n, [data-rationale="sealed"], [data-wording="sealed"] .why, [data-section="methodology"]',
+  ))
+    expect(sealed.querySelector('[data-source="producer"]')).toBeNull();
+});
+
+it("an obligation the producer does not map shows its sealed test id, not in italics", async () => {
+  const { bundle } = await sealedComplianceBundle((source) => {
+    const ext = (source.extensions as Obj)["eu-ai-act-compliance/v1"] as Obj;
+    ext.obligations = (ext.obligations as Obj[]).filter(
+      (o) => o.key !== "art5",
+    );
+  });
+  const root = await render(bundle);
+  const group = root.querySelector<HTMLElement>(
+    '[data-rows="summary"] tbody[data-obligation-group="art5"]',
+  )!;
+  expect(group).not.toBeNull();
+  expect(group.querySelector('[data-source="producer"]')).toBeNull();
+});
+
 it("a session without a transcript in the bundle says so, and names the case record", async () => {
   const { bundle } = await sealedComplianceBundle();
   const root = expand(await render(bundle));
@@ -313,6 +382,7 @@ it("a test or obligation with no result at all never falls through to a pass wor
   const empty: ObligationRowModel = {
     criterionId: "x.y",
     name: "X",
+    producerName: false,
     wording: { text: "", source: "unstated" },
     tier: "not stated",
     metCount: 0,

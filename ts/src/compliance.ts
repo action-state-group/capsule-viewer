@@ -102,6 +102,8 @@ export interface ObligationRowModel {
   readonly criterionId: string;
   /** The producer's short label when it maps this test, else the test id made readable. */
   readonly name: string;
+  /** True when `name` is the producer's label (unsigned), false when it is the sealed test id made readable. */
+  readonly producerName: boolean;
   /** The wording the test was run against: the sealed `clause_claim`, or not stated. */
   readonly wording: SealedText;
   readonly tier: TierReading;
@@ -418,6 +420,7 @@ function buildRow(
     name:
       mapping?.name ??
       readableId(criterionId.slice(criterionId.indexOf(".") + 1)),
+    producerName: mapping !== undefined,
     wording,
     tier: agree<TierReading>(tiers, "not stated", "mixed"),
     ...(mapping?.notEvaluableNote === undefined

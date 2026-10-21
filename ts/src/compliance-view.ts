@@ -60,6 +60,33 @@ function el(tag: string, className: string, text?: string): HTMLElement {
   return value;
 }
 
+/**
+ * Producer text: the eu-ai-act-compliance/v1 mapping, carried beside the
+ * signed records and signed by no one. Set in italics (`<i>`, the browser's
+ * own style) and tagged `data-source="producer"`, so it never reads as a
+ * sealed finding; the summary's basis line says what the italics mean.
+ */
+function producerText(...content: (string | Node)[]): HTMLElement {
+  const value = element("i");
+  value.append(...content);
+  value.dataset.source = "producer";
+  value.title = "The producer's mapping, not a sealed record";
+  return value;
+}
+
+/** `text` in an element of its own, as producer text when `producer` is true. */
+function maybeProducer(
+  tag: string,
+  className: string,
+  text: string,
+  producer: boolean,
+): HTMLElement {
+  if (!producer) return el(tag, className, text);
+  const value = el(tag, className);
+  value.append(producerText(text));
+  return value;
+}
+
 const fmt = (n: number): string => n.toLocaleString();
 const plural = (n: number, one: string, many: string): string =>
   `${fmt(n)} ${n === 1 ? one : many}`;
@@ -107,13 +134,24 @@ function ladderOn(presentation: CompliancePresentation): boolean {
   return presentation.resultWords === "ladder";
 }
 
-/** Each test's short name, by its criterion id. */
-function testNames(model: ComplianceModel): ReadonlyMap<string, string> {
-  return new Map(
+/** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
+function testNames(
+  model: ComplianceModel,
+): (criterionId: string, tag: string, className: string) => HTMLElement {
+  const rows = new Map(
     model.obligations.flatMap((o) =>
-      o.rows.map((r) => [r.criterionId, r.name] as const),
+      o.rows.map((r) => [r.criterionId, r] as const),
     ),
   );
+  return (criterionId, tag, className) => {
+    const row = rows.get(criterionId);
+    return maybeProducer(
+      tag,
+      className,
+      row?.name ?? criterionId,
+      row?.producerName === true,
+    );
+  };
 }
 
 function sessionSpan(model: ComplianceModel): string | undefined {
@@ -206,7 +244,7 @@ export function obligationStatus(obligation: ObligationModel): {
 export function rowStatus(
   row: ObligationRowModel,
   ladder: boolean,
-): { cls: string; text: string; note?: string } {
+): { cls: string; text: string; note?: string; producerNote?: true } {
   if (nothingChecked(row))
     return { cls: "ne", text: "Not checked: no session has a result" };
   if (noneDecided(row))
@@ -215,7 +253,7 @@ export function rowStatus(
       text: ladder ? "Not checked or inconclusive" : "Could not be checked",
       ...(row.notEvaluableNote === undefined
         ? {}
-        : { note: row.notEvaluableNote }),
+        : { note: row.notEvaluableNote, producerNote: true }),
     };
   const undecided =
     row.notEvaluableCount > 0
@@ -245,7 +283,10 @@ function rowResult(row: ObligationRowModel, ladder: boolean): HTMLElement {
   const cell = document.createElement("td");
   const status = rowStatus(row, ladder);
   cell.append(statusPill(status.cls, status.text));
-  if (status.note !== undefined) cell.append(el("div", "applic", status.note));
+  if (status.note !== undefined)
+    cell.append(
+      maybeProducer("div", "applic", status.note, status.producerNote === true),
+    );
   return cell;
 }
 
@@ -268,7 +309,7 @@ function renderSummary(
   const basis = el(
     "p",
     "na",
-    `Every count and result is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". The article, the plain-language summary, applicability and recommendations are the producer's mapping, carried beside the signed records, not in them.`,
+    `Every count and result is read from the sealed claims and reports in this bundle, or marked "${NOT_STATED}". Obligation titles, test names, the article, the plain-language summary, applicability, method, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
   );
   basis.dataset.basis = "terms";
   section.append(basis);
@@ -294,14 +335,21 @@ function renderSummary(
     const title = el("td", "");
     title.setAttribute("colspan", "2");
     const name = el("div", "obn");
-    name.append(
-      el("b", "", obligation.article),
-      element("span", ` · ${obligation.title}`),
-    );
+    const article = el("b", "", obligation.article);
+    if (obligation.mapped)
+      name.append(producerText(article, ` · ${obligation.title}`));
+    else name.append(article, element("span", ` · ${obligation.title}`));
     title.append(name);
     if (obligation.plain !== NOT_STATED)
-      title.append(el("div", "plain", obligation.plain));
-    title.append(el("div", "applic", obligation.applicability.note));
+      title.append(maybeProducer("div", "plain", obligation.plain, true));
+    title.append(
+      maybeProducer(
+        "div",
+        "applic",
+        obligation.applicability.note,
+        obligation.mapped,
+      ),
+    );
     const statusCell = document.createElement("td");
     statusCell.append(statusPill(status.cls, status.text));
     row.append(title, statusCell);
@@ -315,7 +363,10 @@ function renderSummary(
       tr.dataset.notEvaluable = String(test.notEvaluableCount);
       const nameCell = el("td", "tn");
       const head = el("div", "tnh");
-      head.append(el("b", "", test.name), tierBadge(test.tier));
+      head.append(
+        maybeProducer("b", "", test.name, test.producerName),
+        tierBadge(test.tier),
+      );
       nameCell.append(head);
       const finding = model.findings.find(
         (f) => f.criterionId === test.criterionId,
@@ -367,8 +418,10 @@ function renderFinding(finding: ComplianceFindingModel): HTMLElement {
     element("span", plural(finding.sessionIds.length, "session", "sessions")),
   );
   box.append(fh);
-  box.append(el("div", "rec", finding.recommendation));
-  box.append(el("div", "own", `Owner · due: ${finding.ownerDue}`));
+  box.append(maybeProducer("div", "rec", finding.recommendation, true));
+  const own = el("div", "own", "Owner · due: ");
+  own.append(producerText(finding.ownerDue));
+  box.append(own);
   return box;
 }
 
@@ -427,19 +480,12 @@ function renderSession(
         ? wordPill({ word: "could not decide", tone: "ne" }, "undecided")
         : wordPill({ word: "no exceptions", tone: "ok" }, "ok"),
   );
-  head.append(
-    el(
-      "span",
-      "cwhy",
-      exceptions.length > 0
-        ? exceptions
-            .map((t) => names.get(t.criterionId) ?? t.criterionId)
-            .join(", ")
-        : undecided
-            .map((t) => names.get(t.criterionId) ?? t.criterionId)
-            .join(", "),
-    ),
-  );
+  const why = el("span", "cwhy");
+  (exceptions.length > 0 ? exceptions : undecided).forEach((t, i) => {
+    if (i > 0) why.append(", ");
+    why.append(names(t.criterionId, "span", ""));
+  });
+  head.append(why);
   head.append(el("span", "cmodel", parts.model ?? session.day));
   item.append(head);
   const body = el("div", "conv-slot");
@@ -472,9 +518,7 @@ function sessionBody(
         test.verdict,
       ),
     );
-    h.append(
-      el("span", "tname", names.get(test.criterionId) ?? test.criterionId),
-    );
+    h.append(names(test.criterionId, "span", "tname"));
     if (test.verdict !== "not_applicable") h.append(tierBadge(test.tier));
     if (test.verdict === "failed" || test.verdict === "unsupported")
       h.append(el("span", "applic", "counted as an exception"));
@@ -558,9 +602,9 @@ function sessionProofs(session: Session, model: ComplianceModel): HTMLElement {
   for (const test of session.tests) {
     const ev = el("div", "ev");
     ev.dataset.proofCrit = test.criterionId;
-    ev.append(
-      el("b", "", `${names.get(test.criterionId) ?? test.criterionId}: `),
-    );
+    const label = names(test.criterionId, "b", "");
+    label.append(": ");
+    ev.append(label);
     if (test.verdict === "not_applicable") {
       ev.append(
         element(
@@ -653,26 +697,37 @@ function renderObligationDetails(
     const box = el("div", "obd");
     box.dataset.obligationDetail = obligation.key;
     box.dataset.mapped = String(obligation.mapped);
-    box.append(el("h5", "", `${obligation.article} · ${obligation.title}`));
+    box.append(
+      maybeProducer(
+        "h5",
+        "",
+        `${obligation.article} · ${obligation.title}`,
+        obligation.mapped,
+      ),
+    );
     box.append(
       el(
         "p",
         "na",
         obligation.mapped
-          ? "Article, summary and method: the producer's mapping, not a sealed record."
+          ? "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record."
           : `The producer's extension does not map this obligation: article, summary and method ${NOT_STATED}.`,
       ),
     );
-    if (obligation.judgedTerms.length > 0)
-      box.append(
-        el("p", "applic", `Judged terms: ${obligation.judgedTerms.join(", ")}`),
-      );
-    box.append(el("p", "", obligation.method));
+    if (obligation.judgedTerms.length > 0) {
+      const terms = el("p", "applic", "Judged terms: ");
+      terms.append(producerText(obligation.judgedTerms.join(", ")));
+      box.append(terms);
+    }
+    box.append(maybeProducer("p", "", obligation.method, obligation.mapped));
     for (const row of obligation.rows) {
       const rowBox = el("div", "ck");
       rowBox.dataset.wording = row.wording.source;
       const h = el("div", "h");
-      h.append(element("span", row.name), tierBadge(row.tier));
+      h.append(
+        maybeProducer("span", "", row.name, row.producerName),
+        tierBadge(row.tier),
+      );
       rowBox.append(h);
       rowBox.append(
         el(
@@ -686,7 +741,7 @@ function renderObligationDetails(
         ),
       );
       if (row.notEvaluableNote !== undefined)
-        rowBox.append(el("div", "ev", row.notEvaluableNote));
+        rowBox.append(maybeProducer("div", "ev", row.notEvaluableNote, true));
       box.append(rowBox);
     }
     part.append(box);
@@ -704,14 +759,18 @@ function renderQuality(host: HTMLElement, model: ComplianceModel): void {
     host.append(part);
     return;
   }
-  part.append(
-    el(
-      "p",
-      "",
-      `Protocol ${protocol.protocol ?? "unspecified"}${protocol.cadence === undefined ? "" : `, ${protocol.cadence}`}. Recomputed tests are not sampled.`,
-    ),
+  const line = el("p", "", "Protocol ");
+  line.append(
+    protocol.protocol === undefined
+      ? "unspecified"
+      : producerText(protocol.protocol),
   );
-  if (protocol.note !== undefined) part.append(el("p", "na", protocol.note));
+  if (protocol.cadence !== undefined)
+    line.append(", ", producerText(protocol.cadence));
+  line.append(". Recomputed tests are not sampled.");
+  part.append(line);
+  if (protocol.note !== undefined)
+    part.append(maybeProducer("p", "na", protocol.note, true));
   host.append(part);
 }
 
