@@ -37,14 +37,23 @@ for (const [field, actual] of [
 // never a release flag. Only this build step can state it: tsc's ESM
 // output (dist/) has no step like this one, so it reads VIEWER_BUILD.commit
 // as not stated.
-const commitSha = execFileSync("git", ["rev-parse", "HEAD"], {
+const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: tsRoot,
   encoding: "utf8",
 }).trim();
-if (!/^[0-9a-f]{40}$/u.test(commitSha))
+if (!/^[0-9a-f]{40}$/u.test(headSha))
   throw new Error(
-    `git rev-parse HEAD did not return a 40-hex commit sha: ${JSON.stringify(commitSha)}`,
+    `git rev-parse HEAD did not return a 40-hex commit sha: ${JSON.stringify(headSha)}`,
   );
+// Uncommitted changes under ts/ mean the bundle may not actually be HEAD's
+// code; the less-claiming choice is to say the commit is not stated, not to
+// name a commit the running bundle might not match.
+const dirty =
+  execFileSync("git", ["status", "--porcelain", "--", "."], {
+    cwd: tsRoot,
+    encoding: "utf8",
+  }).trim() !== "";
+const commitSha = dirty ? "" : headSha;
 
 await build({
   entryPoints: ["src/browser.ts"],
