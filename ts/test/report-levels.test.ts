@@ -137,7 +137,7 @@ it("judged: a withheld report reads 'withheld', a report in the bundle that cann
   expect(judgedOf("withheld", undefined)).toBe("withheld");
   for (const state of ["mismatch", "unreadable", "invalid"] as const) {
     expect(judgedOf(state, undefined)).toBe("unknown");
-    const word = ruleWord("not_evaluable", true, judgedOf(state, undefined));
+    const word = ruleWord("not_evaluable", judgedOf(state, undefined), L);
     expect(word.word).toBe("could not decide (report not available)");
     expect(word.word).not.toContain("withheld");
   }

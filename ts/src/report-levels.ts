@@ -245,9 +245,9 @@ export function ruleWord(
 ): Worded {
   switch (verdict) {
     case "failed":
-      return { word: w.t("verdict.failed"), tone: "bad" };
+      return { word: w.t("verdict.failed"), tone: "ne" };
     case "unsupported":
-      return { word: w.t("verdict.unsupported"), tone: "bad" };
+      return { word: w.t("verdict.unsupported"), tone: "ne" };
     case "met":
       return { word: w.t("verdict.met"), tone: "ok" };
     case "not_met":

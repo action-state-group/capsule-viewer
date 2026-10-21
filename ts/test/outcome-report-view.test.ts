@@ -11,7 +11,9 @@ import {
   statusWord,
 } from "../src/outcome-report-view.js";
 import { jsonDigest } from "@action-state-group/agent-action-capsule";
+import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
+import { ladderWords } from "./helpers/ladder-pack.js";
 
 type Obj = Record<string, unknown>;
 
@@ -1539,11 +1541,11 @@ it("a conversation with no not_evaluable criterion to point to says the plain 'c
   const conversation = {
     criteria: [],
   } as unknown as Parameters<typeof statusWord>[1];
-  expect(statusWord("undecided", conversation, false)).toEqual({
+  expect(statusWord("undecided", conversation, DEFAULT_WORDS.lines)).toEqual({
     word: "could not decide",
     tone: "ne",
   });
-  expect(statusWord("undecided", conversation, true)).toEqual({
+  expect(statusWord("undecided", conversation, ladderWords("lines"))).toEqual({
     word: "could not decide",
     tone: "ne",
   });

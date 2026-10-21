@@ -115,12 +115,12 @@ const SEVERITY_CLASS: Record<string, string> = {
 };
 
 /** The producer's severity, as the producer's: an unknown value gets no colour of its own, never "medium". */
-function severityPill(severity: string): HTMLElement {
+function severityPill(severity: string, w: Words): HTMLElement {
   const cls = Object.hasOwn(SEVERITY_CLASS, severity)
     ? SEVERITY_CLASS[severity]
     : undefined;
   const pill = el("span", cls === undefined ? "sev" : `sev ${cls}`);
-  pill.append(producerText(severity));
+  pill.append(producerText(w, severity));
   return pill;
 }
 
@@ -191,7 +191,7 @@ function renderHeader(
   const hd = el("div", "hd");
   hd.dataset.section = "header";
   hd.append(el("div", "kicker", w.t("groups.kicker")));
-  hd.append(maybeProducer("h1", "", model.regulation, true));
+  hd.append(maybeProducer(w, "h1", "", model.regulation, true));
   const pack =
     model.pack.id === NOT_STATED
       ? w.t("groups.pack.not-stated")
@@ -278,7 +278,8 @@ export function obligationStatus(
       cls: "exc",
       text: `${count(w, "exception", exceptions)}${unchecked > 0 && unchecked < total ? uncheckedText : ""}`,
     };
-  if (unchecked === total) return { cls: "ne", text: w.t("groups.ob.unchecked") };
+  if (unchecked === total)
+    return { cls: "ne", text: w.t("groups.ob.unchecked") };
   if (unchecked > 0)
     return { cls: "ne", text: `${w.t("groups.ob.ok.found")}${uncheckedText}` };
   if (unverified > 0)
@@ -487,12 +488,8 @@ function sessionListNote(
 ): string {
   const kinds = [
     ...(test.notMetCount > 0 ? [w.t("groups.drill.kind.exceptions")] : []),
-    ...(test.unverifiedCount > 0
-      ? [w.t("groups.drill.kind.unverified")]
-      : []),
-    ...(test.notEvaluableCount > 0
-      ? [w.t("groups.drill.kind.undecided")]
-      : []),
+    ...(test.unverifiedCount > 0 ? [w.t("groups.drill.kind.unverified")] : []),
+    ...(test.notEvaluableCount > 0 ? [w.t("groups.drill.kind.undecided")] : []),
   ];
   if (kinds.length > 1)
     return w.t("groups.drill.mixed", {
@@ -510,8 +507,8 @@ function renderFinding(finding: ComplianceFindingModel, w: Words): HTMLElement {
   box.dataset.finding = finding.id;
   const fh = el("div", "fh");
   fh.append(
-    maybeProducer("b", "", w.t("groups.finding", { id: finding.id }), true),
-    severityPill(finding.severity),
+    maybeProducer(w, "b", "", w.t("groups.finding", { id: finding.id }), true),
+    severityPill(finding.severity, w),
     element("span", count(w, "session", finding.sessionIds.length)),
   );
   box.append(fh);

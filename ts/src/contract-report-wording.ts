@@ -217,6 +217,10 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.verifier.built",
   "prov.verifier.built.not-stated",
   "prov.verifier.version.not-stated",
+  // Both cards: a rule or conversation nobody could decide, by why.
+  "status.undecided.unjudged",
+  "status.undecided.withheld",
+  "status.undecided.unavailable",
   // Both cards: dating, withheld reports, the conversation, the proofs.
   "report.not-stated",
   "report.span.unknown",
@@ -271,6 +275,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.no-note.unreadable",
   "lines.no-note.invalid",
   "lines.no-note.none",
+  "lines.line.unverified.help",
   "lines.gap.wording.mixed",
   "lines.gap.wording.none",
   "lines.pf.case-record.from-claims",
@@ -279,6 +284,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pf.no-claim",
   "lines.pf.not-cited",
   "lines.pf.derived",
+  "lines.pf.sealed-rationale",
   "lines.pin.differs",
   "lines.pin.not-stated",
   "lines.why-missed.unstructured",

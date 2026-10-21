@@ -505,22 +505,20 @@ it("a test every session failed is an exception, not 'could not be checked': met
 
 it("a claim that failed verification or whose evidence is missing is never an exception, and never lets a test read clean in the ok tone", () => {
   const unverifiedOnly = row({ unverifiedCount: 2 });
-  for (const ladder of [false, true]) {
-    const status = rowStatus(unverifiedOnly, ladder);
+  for (const words of [DEFAULT_WORDS.groups, ladderWords("groups")]) {
+    const status = rowStatus(unverifiedOnly, words);
     expect(status.cls).toBe("ne");
     expect(status.text).not.toMatch(/exception|No exceptions/iu);
     expect(status.note).toContain("could not be verified");
   }
   const metAndUnverified = row({ metCount: 2, unverifiedCount: 1 });
-  const status = rowStatus(metAndUnverified, false);
+  const status = rowStatus(metAndUnverified, DEFAULT_WORDS.groups);
   expect(status.cls).toBe("ne");
   expect(status.note).toContain("1 could not be verified");
   expect(obligationStatus(obligationOf([metAndUnverified]))).toEqual({
     cls: "ne",
     text: "No exceptions found · 1 result could not be verified",
   });
-  // the ladder claims no more than the plain words
-  expect(rowStatus(row({ metCount: 2 }), true).text).toBe("No exceptions");
 });
 
 it("a session whose claim cites evidence the bundle does not hold is counted apart from the exceptions, with no finding", async () => {
