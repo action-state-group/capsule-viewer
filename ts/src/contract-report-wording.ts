@@ -153,6 +153,7 @@ function placeholderGaps(text: string): string[] {
 }
 
 const HAS_NON_SPACE = /\S/u;
+const HAS_LETTER = /\p{L}/u;
 
 // ---------------------------------------------------------------------------
 // The default packs, and which grouping each is for
@@ -642,19 +643,18 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
 const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
 
 /**
- * A word as a reader tells it apart: every `{placeholder}` dropped (a count
- * the page fills in is not part of the word itself: "{n} met" reads as
- * "met"), a Cyrillic or Greek homoglyph folded to the Latin letter it reads
- * as (CONFUSABLES), compatibility forms folded, punctuation and symbols
- * turned into a space (so internal punctuation still separates words:
- * "not-met" reads as "not met", never "notmet"), whitespace collapsed, case
- * ignored. "Met", "met " and "(met)." are one word to a reader; "✓ met"
- * reads as "met" too, not as a decorated word distinct from it.
+ * `word` with every `{placeholder}` dropped (a count the page fills in is
+ * not part of the word itself: "{n} met" reads as "met"), compatibility
+ * forms folded, punctuation and symbols turned into a space (so internal
+ * punctuation still separates words: "not-met" reads as "not met", never
+ * "notmet"), whitespace collapsed, case ignored -- but no homoglyph folded,
+ * so a genuine Cyrillic or Greek word still reads as the one script it is
+ * written in. Used only for `mixesScripts`: a real word must be judged by
+ * the letters it actually has, not by what CONFUSABLES maps some of them to.
  */
-function asRead(word: string): string {
+function asReadUnfolded(word: string): string {
   return word
     .replace(PLACEHOLDER, "")
-    .replace(CONFUSABLE, (c) => CONFUSABLES[c]!)
     .normalize("NFKC")
     .replace(/[\p{P}\p{S}]/gu, " ")
     .replace(/\s+/gu, " ")
@@ -662,7 +662,20 @@ function asRead(word: string): string {
     .toLowerCase();
 }
 
-/** Letters from more than one of Latin, Greek and Cyrillic, after any homoglyph is folded (CONFUSABLES) to the Latin letter it reads as: a script this module does not fold mixed with Latin still reads as decorated, not a different word. */
+/**
+ * A word as a reader tells it apart: `asReadUnfolded`, with every Cyrillic
+ * or Greek homoglyph also folded to the Latin letter it reads as
+ * (CONFUSABLES). "Met", "met " and "(met)." are one word to a reader; "✓
+ * met" reads as "met" too, not as a decorated word distinct from it. Used
+ * for every comparison (DISTINCT, the clean/not-clean check): an all-
+ * Cyrillic "мет" must still collide with "met". Never used for
+ * `mixesScripts`, which needs the word before this folding.
+ */
+function asRead(word: string): string {
+  return asReadUnfolded(word).replace(CONFUSABLE, (c) => CONFUSABLES[c]!);
+}
+
+/** Letters from more than one of Latin, Greek and Cyrillic in `word` as actually written (`asReadUnfolded`, no homoglyph folded): a genuine word in one script never mixes, however many of its letters CONFUSABLES would fold; a spoof mixing a real Latin letter with a lookalike still does. */
 function mixesScripts(word: string): boolean {
   return (
     [/\p{Script=Latin}/u, /\p{Script=Greek}/u, /\p{Script=Cyrillic}/u].filter(
@@ -742,14 +755,17 @@ export function wordingProblems(
     else {
       const baseGaps = placeholderGaps(base);
       const gotGaps = placeholderGaps(text);
-      for (let i = 0; i < gotGaps.length; i++)
-        if (
-          !HAS_NON_SPACE.test(gotGaps[i]!) &&
-          HAS_NON_SPACE.test(baseGaps[i]!)
-        )
+      for (let i = 0; i < gotGaps.length; i++) {
+        const baseGap = baseGaps[i]!;
+        const gotGap = gotGaps[i]!;
+        const runsTogether = HAS_LETTER.test(baseGap)
+          ? !HAS_LETTER.test(gotGap)
+          : HAS_NON_SPACE.test(baseGap) && !HAS_NON_SPACE.test(gotGap);
+        if (runsTogether)
           problems.push(
             `${key} runs {${got[i]}} and {${got[i + 1]}} together with no word between them; two counts the page computes separately must not be able to read as one`,
           );
+      }
     }
   }
   const merged = { ...defaults.entries, ...pack.entries };
@@ -768,13 +784,13 @@ export function wordingProblems(
       const words = new Set<string>();
       for (const k of keys) {
         if (!Object.hasOwn(merged, k)) continue;
-        const word = asRead(merged[k]!);
-        if (word === "") problems.push(`${k} has no visible word`);
-        else if (mixesScripts(word))
+        const unfolded = asReadUnfolded(merged[k]!);
+        if (unfolded === "") problems.push(`${k} has no visible word`);
+        else if (mixesScripts(unfolded))
           problems.push(
-            `${k} mixes Latin, Greek and Cyrillic letters (${JSON.stringify(word)}); a verdict word is written in one script`,
+            `${k} mixes Latin, Greek and Cyrillic letters (${JSON.stringify(unfolded)}); a verdict word is written in one script`,
           );
-        else words.add(word);
+        else words.add(asRead(merged[k]!));
       }
       for (const word of words) {
         const other = seen.get(word);

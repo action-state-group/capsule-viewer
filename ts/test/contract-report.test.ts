@@ -522,6 +522,33 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
       DEFAULT_PACKS.lines,
     ),
   ).toEqual([]);
+  // a separator alone is not a word either: "59,768" reads as fifty-nine
+  // thousand, not "59 of 768"
+  expect(
+    wordingProblems(
+      {
+        id: "test/comma@1",
+        locale: "en",
+        entries: { "lines.share": "{count},{total}" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([
+    "test/comma@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
+  ]);
+  // a digit alone is not a word either: "59" + "0" + "768" reads as "590768"
+  expect(
+    wordingProblems(
+      {
+        id: "test/digit@1",
+        locale: "en",
+        entries: { "lines.share": "{count}0{total}" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([
+    "test/digit@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
+  ]);
 });
 
 it("a pack cannot fold two verdicts into one word, or change the grouping", () => {
@@ -601,6 +628,30 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(check({ constructor: "x" })).toBe("");
   // the ladder pack still passes
   expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual([]);
+});
+
+it("a genuine Cyrillic or Greek verdict word is not refused as mixing scripts (4344085081)", () => {
+  const check = (entries: Record<string, string>): string =>
+    wordingProblems(
+      { id: "test/script@1", locale: "en", entries },
+      DEFAULT_PACKS.lines,
+    ).join("\n");
+  // a real Russian word: some letters fold under CONFUSABLES (е, о, н), some
+  // don't (ы, п, л) -- the folded form would mix scripts, but the word as
+  // actually written is wholly Cyrillic and must not be refused
+  expect(check({ "lines.verdict.not_met": "не выполнено" })).toBe("");
+  // a real Greek word, likewise mixed under folding but wholly Greek as written
+  expect(check({ "lines.verdict.not_met": "δεν πληρούται" })).toBe("");
+  // an all-Cyrillic homoglyph of "met" is still caught: it folds to "met"
+  // and collides with lines.verdict.met's default word
+  expect(check({ "lines.verdict.not_met": "мет" })).toContain(
+    'lines.verdict.not_met reads "met", the word for lines.verdict.met',
+  );
+  // a spoof mixing a real Latin letter with a Cyrillic lookalike is still
+  // refused as mixing scripts, not accepted as a genuine word
+  expect(check({ "lines.verdict.not_met": "mдt" })).toContain(
+    "lines.verdict.not_met mixes Latin, Greek and Cyrillic letters",
+  );
 });
 
 it("the spelled-out numbers are locked: a pack must not make 2 read as one hundred", () => {
