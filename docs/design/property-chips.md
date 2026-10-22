@@ -185,7 +185,9 @@ It accepts Sherlock2's review
 `buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=b75f7ea4b3b4737cf915edc7ce5a62ea642be6825d84ca6fdfaf2cbf336cf4a3&thread=c686c8798e7b9bce80d143cd4b242c11655780911c67036939075f6e907f419e`
 (item 2), which agreed with the set put to Steven in
 `buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=6b9ea3e765ae9d195042fa5a0291115004f6e1ca84c3a526c6e690435e37bed4&thread=e324e0f89031e0bfa52cb138a209bf748f34de2cb73be01f54c4e8781f375b78`
-(item 2). The ruling is recorded on capsule-viewer#39. It gates the build,
+(item 2). The ruling is recorded on capsule-viewer#39 and in the ops queue
+as u538 (action-state-ops @ `a0f4ed7`, `company-oss/inbox.md` line 770). It
+gates the build,
 not this note. "As proposed" means the full proposal in the table below.
 
 | # | Ruling |
