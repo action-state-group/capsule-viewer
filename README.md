@@ -125,7 +125,8 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
 The Outcomes report and the EU AI Act Results are one module,
 `ts/src/contract-report.ts`, drawn with one of two wording packs. The module
 holds the layout (the front block, two levels of toggles, the proofs) and
-computes every count, verdict and digest; the pack holds every word.
+computes every count, verdict and digest; the pack holds the module's own
+words, not every word on the page (see "Not in the pack" below).
 
 **How to tune the words.** Edit the pack, re-render. Outcomes:
 `ts/src/wording/contract-report-outcomes.en.json`; EU AI Act:
