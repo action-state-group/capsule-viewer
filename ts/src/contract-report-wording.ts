@@ -154,6 +154,12 @@ function placeholderGaps(text: string): string[] {
 
 const HAS_NON_SPACE = /\S/u;
 const HAS_LETTER = /\p{L}/u;
+/**
+ * Latin letters (after `asRead` folds case and Cyrillic/Greek look-alikes)
+ * that read as a digit between two counts: "{count}O{total}" reads as one
+ * number, so a gap that has only these has no word in it.
+ */
+const DIGIT_LIKE = /[oil]/gu;
 
 // ---------------------------------------------------------------------------
 // The default packs, and which grouping each is for
@@ -293,7 +299,8 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
  * The semantic category of every entry a card's skeleton relies on reading
  * one way: a result is clean, an exception, something nobody could decide,
  * something that could not be verified, something that could not be checked
- * at all, or one of the two assurance tiers. Defined once, so every guarded
+ * at all, something nothing applied to, a result held for a person or added
+ * by one, or one of the two assurance tiers. Defined once, so every guarded
  * key is in exactly one category and `categoryCollisions` below has a single
  * map to walk, not two separate lists (4344180862, 4344180866, 4344180870:
  * the old CLEAN_WORD_KEYS / NOT_CLEAN_WORD_KEYS split only ever compared a
@@ -310,6 +317,9 @@ type GuardedCategory =
   | "undecided"
   | "unverifiable"
   | "unchecked"
+  | "not-applicable"
+  | "held"
+  | "added"
   | "tier.recomputed"
   | "tier.judged";
 
@@ -346,6 +356,7 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "lines.status.undecided.none": "undecided",
   "lines.status.undecided.withheld": "undecided",
   "lines.status.undecided.unavailable": "undecided",
+  "lines.pf.verdict.not_evaluable": "undecided",
   "lines.verdict.not_evaluable.judged": "undecided",
   "lines.verdict.not_evaluable.unjudged": "undecided",
   "lines.verdict.not_evaluable.withheld": "undecided",
@@ -376,6 +387,22 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "groups.row.nothing": "unchecked",
   "groups.row.none-decided": "unchecked",
 
+  // did-not-apply: no rule or test applied, so nothing was checked; never
+  // a met or a missed result.
+  "lines.verdict.not_applicable": "not-applicable",
+  "groups.verdict.not_applicable": "not-applicable",
+  "lines.pf.verdict.not_applicable": "not-applicable",
+  "lines.status.nothing-applied": "not-applicable",
+  "groups.session.none": "not-applicable",
+
+  // held: a person's spot check disagreed with a resolved result, which is
+  // held back for a person to decide.
+  "lines.line.held": "held",
+
+  // added: a person's spot check graded a missed result as resolved; it must
+  // not read as a plain resolved result, which no person overrode.
+  "lines.line.added": "added",
+
   // recomputed tier: a fixed check anyone can repeat from the records.
   "lines.tier.recomputed": "tier.recomputed",
   "groups.tier.recomputed": "tier.recomputed",
@@ -393,6 +420,9 @@ const CATEGORY_LABEL: Readonly<Record<GuardedCategory, string>> = {
   undecided: "something nobody could decide",
   unverifiable: "something that could not be verified",
   unchecked: "something that could not be checked at all",
+  "not-applicable": "something nothing applied to",
+  held: "a result held for a person to decide",
+  added: "a result a person's check added",
   "tier.recomputed": "the recomputed tier",
   "tier.judged": "the judged tier",
 };
@@ -630,6 +660,13 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   т: "t",
   у: "y",
   х: "x",
+  і: "i",
+  ј: "j",
+  ѕ: "s",
+  һ: "h",
+  ԁ: "d",
+  ԛ: "q",
+  ԝ: "w",
   А: "A",
   В: "B",
   Е: "E",
@@ -643,6 +680,11 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   Т: "T",
   У: "Y",
   Х: "X",
+  І: "I",
+  Ј: "J",
+  Ѕ: "S",
+  Ԛ: "Q",
+  Ԝ: "W",
   α: "a",
   β: "b",
   ι: "i",
@@ -653,8 +695,11 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   τ: "t",
   υ: "y",
   χ: "x",
+  ϲ: "c",
+  ϳ: "j",
   Α: "A",
   Β: "B",
+  Ε: "E",
   Ζ: "Z",
   Η: "H",
   Ι: "I",
@@ -666,6 +711,8 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   Τ: "T",
   Υ: "Y",
   Χ: "X",
+  Ϲ: "C",
+  Ϳ: "J",
 };
 const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
 
@@ -814,7 +861,7 @@ export function wordingProblems(
         const baseGap = baseGaps[i]!;
         const gotGap = gotGaps[i]!;
         const runsTogether = HAS_LETTER.test(baseGap)
-          ? !HAS_LETTER.test(gotGap)
+          ? !HAS_LETTER.test(asRead(gotGap).replace(DIGIT_LIKE, ""))
           : HAS_NON_SPACE.test(baseGap) && !HAS_NON_SPACE.test(gotGap);
         if (runsTogether)
           problems.push(
@@ -823,7 +870,11 @@ export function wordingProblems(
       }
     }
   }
-  const merged = { ...defaults.entries, ...pack.entries };
+  // Only entries the defaults have: a key this module does not own changes
+  // nothing on the page, so it must not take part in any comparison either.
+  const merged = { ...defaults.entries };
+  for (const [key, text] of Object.entries(pack.entries))
+    if (Object.hasOwn(defaults.entries, key)) merged[key] = text;
   for (const set of DISTINCT) {
     const members = set.map((m) => (typeof m === "string" ? [m] : [...m]));
     // Each verdict's default words, as read: a pack may not give one verdict

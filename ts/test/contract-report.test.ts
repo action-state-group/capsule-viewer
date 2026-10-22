@@ -549,6 +549,35 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
   ).toEqual([
     "test/digit@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
   ]);
+  // a letter that reads as a digit is no word either: "59O768" reads as one
+  // number, whether the O is Latin or a Cyrillic look-alike
+  for (const gap of ["O", " l ", "\u043e", " I "])
+    expect(
+      wordingProblems(
+        {
+          id: "test/digit-like@1",
+          locale: "en",
+          entries: { "lines.share": `{count}${gap}{total}` },
+        },
+        DEFAULT_PACKS.lines,
+      ),
+      JSON.stringify(gap),
+    ).toEqual([
+      "test/digit-like@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
+    ]);
+  // a real word between the counts still passes, in any script
+  for (const gap of [" out of ", " из ", " από "])
+    expect(
+      wordingProblems(
+        {
+          id: "test/word-gap@1",
+          locale: "en",
+          entries: { "lines.share": `{count}${gap}{total}` },
+        },
+        DEFAULT_PACKS.lines,
+      ),
+      JSON.stringify(gap),
+    ).toEqual([]);
 });
 
 it("a pack cannot fold two verdicts into one word, or change the grouping", () => {
@@ -648,6 +677,16 @@ it("a genuine Cyrillic or Greek verdict word is not refused as mixing scripts (4
   expect(check({ "lines.verdict.not_met": "мет" })).toContain(
     'lines.verdict.not_met reads "met", the word for lines.verdict.met',
   );
+  // all-Greek capitals that read as "MET" (Μ U+039C, Ε U+0395, Τ U+03A4)
+  // fold to "met" too, so they collide rather than pass as a Greek word
+  expect(check({ "lines.verdict.not_met": "\u039c\u0395\u03a4" })).toContain(
+    'lines.verdict.not_met reads "met", the word for lines.verdict.met',
+  );
+  // and Cyrillic i, dze and komi de, which read as i, s and d, fold as well:
+  // an all-Cyrillic "міѕѕеԁ" is "missed" to a reader
+  expect(
+    check({ "lines.status.resolved": "\u043c\u0456\u0455\u0455\u0435\u0501" }),
+  ).toMatch(/read alike \("missed"\)/u);
   // a spoof mixing a real Latin letter with a Cyrillic lookalike is still
   // refused as mixing scripts, not accepted as a genuine word
   expect(check({ "lines.verdict.not_met": "mдt" })).toContain(
@@ -819,14 +858,24 @@ it("a pack word of one GUARDED_CATEGORY must not read like a word of a different
     ["lines", "lines.pf.verdict.failed"],
     ["lines", "lines.pf.verdict.unsupported"],
   ] as const;
+  // each given a clean word from a DIFFERENT set ("met" would already collide
+  // with its own set's met verdict in DISTINCT), so only the category check
+  // can catch it
+  const CLEAN_WORD = { lines: "resolved", groups: "no exceptions" } as const;
   for (const [grouping, key] of SIX_KEYS)
     expect(
       wordingProblems(
-        { id: "test/category@1", locale: "en", entries: { [key]: "met" } },
+        {
+          id: "test/category@1",
+          locale: "en",
+          entries: { [key]: CLEAN_WORD[grouping] },
+        },
         DEFAULT_PACKS[grouping],
       ).join("\n"),
       key,
-    ).toMatch(/read alike/u);
+    ).toMatch(
+      /read alike .*a met\/clean result must not read like something that could not be verified/u,
+    );
   // 4344180866: renaming the clean side frees its old default word for a
   // not-clean verdict -- comparing only the merged words would miss this,
   // since the clean side no longer reads "resolved" in the merged pack, but
@@ -845,6 +894,61 @@ it("a pack word of one GUARDED_CATEGORY must not read like a word of a different
       DEFAULT_PACKS.lines,
     ).join("\n"),
   ).toMatch(/read alike/u);
+  // the other way round: a clean entry taking a renamed not-clean entry's
+  // old default word ("failed verification") is refused just the same
+  expect(
+    wordingProblems(
+      {
+        id: "test/category@1",
+        locale: "en",
+        entries: {
+          "lines.verdict.failed": "verification failed",
+          "lines.pf.verdict.failed": "verification failed",
+          "lines.line.resolved": "failed verification",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(
+    /lines\.line\.resolved and lines\.(pf\.)?verdict\.failed read alike/u,
+  );
+  // the proofs' undecided verdict, the did-not-apply entries and the
+  // held/added headline rows are guarded too: none may read clean
+  const MORE_KEYS = [
+    ["lines", "lines.pf.verdict.not_evaluable"],
+    ["lines", "lines.verdict.not_applicable"],
+    ["lines", "lines.pf.verdict.not_applicable"],
+    ["lines", "lines.status.nothing-applied"],
+    ["lines", "lines.line.held"],
+    ["lines", "lines.line.added"],
+    ["groups", "groups.verdict.not_applicable"],
+    ["groups", "groups.session.none"],
+  ] as const;
+  for (const [grouping, key] of MORE_KEYS)
+    expect(
+      wordingProblems(
+        {
+          id: "test/category@1",
+          locale: "en",
+          entries: { [key]: CLEAN_WORD[grouping] },
+        },
+        DEFAULT_PACKS[grouping],
+      ).join("\n"),
+      key,
+    ).toMatch(/read alike .*a met\/clean result must not read like/u);
+  // an entry the defaults don't have changes nothing on this page, so it is
+  // not compared either: an EU key in a pack checked against the Outcomes
+  // defaults passes
+  expect(
+    wordingProblems(
+      {
+        id: "test/category@1",
+        locale: "en",
+        entries: { "groups.verdict.failed": "resolved" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([]);
   // 4344180870: an exceptions count sharing the undecided note's word --
   // both NOT_CLEAN by the old check, so it let them share a word
   expect(
