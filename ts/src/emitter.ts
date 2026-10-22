@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { COMPLIANCE_CSS } from "./compliance-styles.js";
 import { jcs } from "@action-state-group/agent-action-capsule";
 import { OUTCOME_REPORT_CSS } from "./outcome-report-styles.js";
+import { SHELL_CSS } from "./shell-styles.js";
 
 const cspSlot = "__CSP_SLOT__";
 const titleSlot = "__TITLE_SLOT__";
@@ -37,6 +38,7 @@ export const DEFAULT_EVIDENCE_GRAPH_BOOTSTRAP =
 export const CORE_RUNTIME_STYLES: readonly string[] = [
   OUTCOME_REPORT_CSS,
   COMPLIANCE_CSS,
+  SHELL_CSS,
 ];
 
 const shell = readFileSync(

@@ -84,7 +84,7 @@ it("renders the outcome-report card, not the generic Result page, when outcome-r
   expect(root.querySelector('[data-page="result"]')).toBeNull();
   // verification page still runs last, same chrome as every other root family
   expect(root.lastElementChild).toBe(
-    root.querySelector('[data-page="verification"]'),
+    root.querySelector('[data-page="verification"]')!.closest("[data-checked]"),
   );
 });
 
@@ -582,7 +582,7 @@ it("draws the verification banner and the verification page in the card's look -
   const verification = root.querySelector<HTMLElement>(
     '[data-page="verification"]',
   )!;
-  expect(root.lastElementChild).toBe(verification);
+  expect(root.lastElementChild).toBe(verification.closest("[data-checked]"));
   expect(verification.classList.contains("oi")).toBe(true);
   expect(verification.classList.contains("oi-vp")).toBe(true);
   const panel = verification.querySelector<HTMLElement>(":scope > .sec")!;
@@ -602,7 +602,9 @@ it("leaves the banner and verification page unstyled for every other root family
     ((source.extensions as Obj)["outcome-report/v1"] as Obj).enabled = false;
   });
   const root = await render(bundle);
-  expect(root.querySelector<HTMLElement>("[data-verify]")!.className).toBe("");
+  expect(root.querySelector<HTMLElement>("[data-verify]")!.className).toBe(
+    "cv-pill",
+  );
   const verification = root.querySelector<HTMLElement>(
     '[data-page="verification"]',
   )!;
@@ -647,7 +649,7 @@ it("tamper demo: a tampered claim fails verification -- no outcome-report page, 
   expect(root.querySelectorAll("[data-day]")).toHaveLength(0);
   expect(root.textContent).not.toContain("Outcome statement");
   expect(root.lastElementChild).toBe(
-    root.querySelector('[data-page="verification"]'),
+    root.querySelector('[data-page="verification"]')!.closest("[data-checked]"),
   );
 });
 

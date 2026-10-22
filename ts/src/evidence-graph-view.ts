@@ -39,6 +39,7 @@ import {
   zoneStatement,
 } from "@action-state-group/agent-action-capsule";
 import { digestCapability } from "@action-state-group/agent-action-capsule";
+import { SHELL_CSS } from "./shell-styles.js";
 import { renderContractReport } from "./contract-report.js";
 import type {
   PresentationDepth,
@@ -163,24 +164,46 @@ const recordsWord = (count: number): string =>
 // The banner is drawn from the verification result alone and precedes every
 // row in the DOM; an unverified bundle gets the refusal line here and no
 // rows at all, so a reader never meets a payload before the verdict on the
-// bundle that carries it. It says what IS proven: a verified bundle with
-// records outside the checkpoint names their count up front.
+// bundle that carries it. It is a pill at the top of the page ("Checked", or
+// "Not verified"), whose accessible name is the full verdict; a verified
+// bundle with records outside the checkpoint says their count beside it.
+export const BANNER_LINES = {
+  verified: "Checked",
+  failed: "Not verified",
+  verifiedTitle: "Bundle verification passed",
+  failedTitle: "Bundle verification failed",
+} as const;
+
 function renderVerificationBanner(
   root: HTMLElement,
   verified: boolean,
   coverage: { uncheckpointed: number; total: number },
 ): HTMLElement {
+  const bar = element("div");
+  bar.className = "cv-shell-bar";
   const banner = element(
-    "p",
-    verified
-      ? coverage.uncheckpointed === 0
-        ? "Bundle verification passed"
-        : `Bundle verification passed; ${coverage.uncheckpointed} of ${recordsWord(coverage.total)} uncheckpointed`
-      : "Bundle verification failed",
+    "span",
+    verified ? BANNER_LINES.verified : BANNER_LINES.failed,
   );
+  banner.className = "cv-pill";
   banner.dataset.verify = verified ? "verified" : "failed";
   banner.dataset.uncheckpointed = String(coverage.uncheckpointed);
-  root.append(banner);
+  const title = verified
+    ? BANNER_LINES.verifiedTitle
+    : BANNER_LINES.failedTitle;
+  banner.title = title;
+  banner.setAttribute("aria-label", title);
+  bar.append(banner);
+  if (verified && coverage.uncheckpointed > 0) {
+    const note = element(
+      "span",
+      `${coverage.uncheckpointed} of ${recordsWord(coverage.total)} uncheckpointed`,
+    );
+    note.className = "cv-shell-note";
+    note.dataset.uncheckpointedNote = "";
+    bar.append(note);
+  }
+  root.append(bar);
   if (verified) return banner;
   const refusal = element(
     "p",
@@ -233,6 +256,62 @@ export function renderUnableToVerify(
 // Drawn in the outcome-report card's own look when that card renders
 // (OUTCOME_REPORT_CSS's .oi-banner rules); the words and data attributes are
 // identical either way -- the class is presentation only.
+// The shell's stylesheet (SHELL_CSS), the first child of the page root.
+function shellStyle(): HTMLStyleElement {
+  const style = document.createElement("style");
+  style.textContent = SHELL_CSS;
+  return style;
+}
+
+/**
+ * The one line a closed "How this page was checked" section shows, so what
+ * this page did not check stays in view with it folded: how many of the
+ * checks passed (or failed), how many records the file carries, and the
+ * signatures or other checks this page did not run.
+ */
+export function checkedSummaryLine(model: {
+  readonly checks: readonly { readonly status: string }[];
+  readonly records: readonly unknown[];
+  readonly checkLists: {
+    readonly failed: readonly string[];
+    readonly notChecked: readonly string[];
+  };
+}): string {
+  const total = model.checks.length;
+  const failed = model.checks.filter((c) => c.status === "fail").length;
+  const passed = model.checks.filter((c) => c.status === "pass").length;
+  // A failure can sit outside the numbered checks (a disclosure that does not
+  // match its digest, say): the line then never reads as all passed.
+  const pageFailed = model.checkLists.failed.length;
+  const lead =
+    failed > 0
+      ? `${failed} of ${total} checks failed`
+      : pageFailed > 0
+        ? `${pageFailed} ${pageFailed === 1 ? "check" : "checks"} on this page failed`
+        : `${passed} of ${total} checks passed`;
+  const parts = [lead, recordsWord(model.records.length)];
+  const signatures = model.checkLists.notChecked.filter((id) =>
+    SIGNATURE_CHECKS.has(id),
+  ).length;
+  const others = model.checkLists.notChecked.length - signatures;
+  if (signatures > 0) parts.push("signatures not checked here");
+  if (others > 0)
+    parts.push(
+      `${others} other ${others === 1 ? "check" : "checks"} not run here`,
+    );
+  return parts.join(" · ");
+}
+
+const SIGNATURE_CHECKS: ReadonlySet<string> = new Set([
+  "checkpoint-signature",
+  "producer-signatures",
+  "cited-signers",
+  "countersignatures",
+]);
+
+/** The folded verification section's heading. */
+export const CHECKED_SECTION_TITLE = "How this page was checked";
+
 function styleBanner(banner: HTMLElement, verified: boolean): void {
   banner.className = `oi oi-banner ${verified ? "oi-banner-ok" : "oi-banner-failed"}`;
 }
@@ -662,7 +741,19 @@ async function renderVerificationPage(
   renderExtensions(page, model.extensions, model.presentationRefusals);
   renderCheckLists(page, model.checkLists, verifierHint);
   page.append(element("p", model.verifyIndependentlyLine));
-  root.append(section);
+  // Folded into one section, closed for a bundle that verified; its summary
+  // line keeps the counts and what was not checked in view.
+  const folded = document.createElement("details");
+  folded.className = "cv-checked";
+  folded.dataset.checked = "";
+  folded.open = !bundleVerified(verified);
+  const heading = element("summary");
+  heading.append(
+    element("strong", CHECKED_SECTION_TITLE),
+    document.createTextNode(` · ${checkedSummaryLine(model)}`),
+  );
+  folded.append(heading, section);
+  root.append(folded);
 }
 
 function metRate(report: ReportNode): string {
@@ -1952,9 +2043,12 @@ export async function renderEvidenceGraph(
   };
 
   const drawFrame = (): HTMLElement => {
-    root.replaceChildren();
+    root.replaceChildren(shellStyle());
+    root.classList.add("cv-shell");
+    root.classList.remove("cv-shell-chrome");
+    const pill = renderVerificationBanner(root, verified, coverage);
     renderPresentationHeader(root, bundle);
-    return renderVerificationBanner(root, verified, coverage);
+    return pill;
   };
   let banner = drawFrame();
   if (refused.length > 0)
@@ -1972,6 +2066,7 @@ export async function renderEvidenceGraph(
         if (name !== OUTCOME_CHROME)
           throw new Error(`unknown chrome class ${JSON.stringify(name)}`);
         chrome = name;
+        root.classList.add("cv-shell-chrome");
         styleBanner(banner, verified);
       },
     };
