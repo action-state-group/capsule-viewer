@@ -777,6 +777,102 @@ it("a clean word and a not-clean word must not read alike, across any set (43396
     ).toEqual([]);
 });
 
+it("a pack word of one GUARDED_CATEGORY must not read like a word of a different one (4344180862, 4344180866, 4344180870)", () => {
+  // 4344180862: the failed/unsupported verdicts were not guarded at all --
+  // each of the six keys, given a clean word, is now caught
+  expect(
+    wordingProblems(
+      {
+        id: "test/category@1",
+        locale: "en",
+        entries: { "lines.verdict.failed": "resolved" },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(
+    /lines\.(line|status)\.resolved and lines\.verdict\.failed read alike/u,
+  );
+  const SIX_KEYS = [
+    ["lines", "lines.verdict.failed"],
+    ["lines", "lines.verdict.unsupported"],
+    ["groups", "groups.verdict.failed"],
+    ["groups", "groups.verdict.unsupported"],
+    ["lines", "lines.pf.verdict.failed"],
+    ["lines", "lines.pf.verdict.unsupported"],
+  ] as const;
+  for (const [grouping, key] of SIX_KEYS)
+    expect(
+      wordingProblems(
+        { id: "test/category@1", locale: "en", entries: { [key]: "met" } },
+        DEFAULT_PACKS[grouping],
+      ).join("\n"),
+      key,
+    ).toMatch(/read alike/u);
+  // 4344180866: renaming the clean side frees its old default word for a
+  // not-clean verdict -- comparing only the merged words would miss this,
+  // since the clean side no longer reads "resolved" in the merged pack, but
+  // the gap it left at the clean side's default word is still open
+  expect(
+    wordingProblems(
+      {
+        id: "test/category@1",
+        locale: "en",
+        entries: {
+          "lines.line.resolved": "Completed",
+          "lines.status.resolved": "completed",
+          "lines.verdict.not_met": "resolved",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/read alike/u);
+  // 4344180870: an exceptions count sharing the undecided note's word --
+  // both NOT_CLEAN by the old check, so it let them share a word
+  expect(
+    wordingProblems(
+      {
+        id: "test/category@1",
+        locale: "en",
+        entries: {
+          "groups.row.exceptions.other": "{n} could not be decided",
+          "groups.count.exception.other": "{n} could not be decided",
+        },
+      },
+      DEFAULT_PACKS.groups,
+    ).join("\n"),
+  ).toMatch(/read alike/u);
+  // the two shipped default packs carry no cross-category collision
+  for (const grouping of ["lines", "groups"] as const)
+    expect(
+      wordingProblems(DEFAULT_PACKS[grouping], DEFAULT_PACKS[grouping]),
+    ).toEqual([]);
+  // the grade-ladder pack carries none either
+  expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual(
+    [],
+  );
+  // nor do the real Russian and Greek verdict words from 4344085081
+  expect(
+    wordingProblems(
+      {
+        id: "test/script@1",
+        locale: "en",
+        entries: { "lines.verdict.not_met": "не выполнено" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([]);
+  expect(
+    wordingProblems(
+      {
+        id: "test/script@1",
+        locale: "en",
+        entries: { "lines.verdict.not_met": "δεν πληρούται" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([]);
+});
+
 it("sibling verdict and count surfaces outside the main verdict sets are still distinct (4343133993)", () => {
   // a missed conversation's reason swapped for an undecided one's
   expect(

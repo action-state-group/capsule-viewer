@@ -290,85 +290,112 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
 ];
 
 /**
- * The entries that make a result read CLEAN: a rule was met, an obligation,
- * test row or session has no exceptions, or a tier is a check anyone can
- * repeat. Named here, and checked against NOT_CLEAN_WORD_KEYS below
- * (4339689203), because that swap crosses a DISTINCT array's own boundary --
- * DISTINCT only ever compares entries it lists together in the same array,
- * so it would not catch an Outcomes "resolved" word reused for the EU
- * card's "not met" verdict, or a judged-tier label reading like the other
- * pack's recomputed one.
+ * The semantic category of every entry a card's skeleton relies on reading
+ * one way: a result is clean, an exception, something nobody could decide,
+ * something that could not be verified, something that could not be checked
+ * at all, or one of the two assurance tiers. Defined once, so every guarded
+ * key is in exactly one category and `categoryCollisions` below has a single
+ * map to walk, not two separate lists (4344180862, 4344180866, 4344180870:
+ * the old CLEAN_WORD_KEYS / NOT_CLEAN_WORD_KEYS split only ever compared a
+ * "clean" set against one catch-all "not-clean" set, so it missed the
+ * failed/unsupported verdicts entirely, missed a pack that renames the
+ * clean side and reopens its old default word on the not-clean side, and
+ * missed two not-clean ideas -- an exceptions count and an undecided note --
+ * reading alike). Words shared within one category stay allowed by design:
+ * the undecided variants' default is one plain word.
  */
-const CLEAN_WORD_KEYS: readonly string[] = [
-  // States a rule's result was met.
-  "lines.verdict.met",
-  "groups.verdict.met",
-  "lines.pf.verdict.met",
-  "lines.line.resolved",
-  "lines.status.resolved",
-  // No exceptions: an obligation, a test row or a session read clean (the
-  // count/unverified-qualified variants still open on "no exceptions").
-  "groups.ob.ok",
-  "groups.ob.ok.found",
-  "groups.ob.ok.unverified",
-  "groups.row.ok",
-  "groups.row.ok.all-decided",
-  "groups.session.ok",
-  // A fixed check anyone can repeat from the records.
-  "lines.tier.recomputed",
-  "groups.tier.recomputed",
-];
+type GuardedCategory =
+  | "clean"
+  | "exception"
+  | "undecided"
+  | "unverifiable"
+  | "unchecked"
+  | "tier.recomputed"
+  | "tier.judged";
 
-/**
- * The entries that make a result read NOT-CLEAN: a rule was not met, nobody
- * could decide it, a claim could not be verified, a row or session could
- * not be checked at all, or a tier is a judgement -- which must never read
- * like the recomputed tier above. Compared against CLEAN_WORD_KEYS only:
- * two members of this same set may share a word (lines.status.undecided.*
- * already do, by design), that is not this check's business.
- */
-const NOT_CLEAN_WORD_KEYS: readonly string[] = [
-  // States a rule's result was not met.
-  "lines.verdict.not_met",
-  "groups.verdict.not_met",
-  "lines.pf.verdict.not_met",
-  "lines.line.missed",
-  "lines.status.missed",
-  // Nobody could decide.
-  "lines.line.undecided",
-  "lines.status.undecided.judged",
-  "lines.status.undecided.unjudged",
-  "lines.status.undecided.none",
-  "lines.status.undecided.withheld",
-  "lines.status.undecided.unavailable",
-  "lines.verdict.not_evaluable.judged",
-  "lines.verdict.not_evaluable.unjudged",
-  "lines.verdict.not_evaluable.withheld",
-  "lines.verdict.not_evaluable.unavailable",
-  "groups.verdict.not_evaluable.judged",
-  "groups.verdict.not_evaluable.unjudged",
-  "groups.verdict.not_evaluable.withheld",
-  "groups.verdict.not_evaluable.unavailable",
-  "groups.session.undecided",
-  // A claim could not be verified.
-  "lines.line.unverified",
-  "lines.status.unverified",
-  "groups.session.unverified",
-  // Could not be checked at all.
-  "groups.ob.unchecked",
-  "groups.ob.unchecked-of",
-  "groups.row.nothing",
-  "groups.row.none-decided",
-  // A judgement: must never read like the recomputed tier.
-  "lines.tier.judged",
-  "groups.tier.judged",
-  // A test row's or an obligation's exceptions count: this is the red
-  // count, and must never read as the clean "met" or "no exceptions".
-  "groups.row.exceptions.one",
-  "groups.row.exceptions.other",
-  "groups.count.exception.one",
-  "groups.count.exception.other",
-];
+const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
+  // met/clean: a rule was met, a row resolved, or nothing exceptioned.
+  "lines.verdict.met": "clean",
+  "groups.verdict.met": "clean",
+  "lines.pf.verdict.met": "clean",
+  "lines.line.resolved": "clean",
+  "lines.status.resolved": "clean",
+  "groups.ob.ok": "clean",
+  "groups.ob.ok.found": "clean",
+  "groups.ob.ok.unverified": "clean",
+  "groups.row.ok": "clean",
+  "groups.row.ok.all-decided": "clean",
+  "groups.session.ok": "clean",
+
+  // not-met/exception: a rule was not met or missed, or a row's or an
+  // obligation's red exceptions count.
+  "lines.verdict.not_met": "exception",
+  "groups.verdict.not_met": "exception",
+  "lines.pf.verdict.not_met": "exception",
+  "lines.line.missed": "exception",
+  "lines.status.missed": "exception",
+  "groups.row.exceptions.one": "exception",
+  "groups.row.exceptions.other": "exception",
+  "groups.count.exception.one": "exception",
+  "groups.count.exception.other": "exception",
+
+  // could-not-decide: nobody could decide.
+  "lines.line.undecided": "undecided",
+  "lines.status.undecided.judged": "undecided",
+  "lines.status.undecided.unjudged": "undecided",
+  "lines.status.undecided.none": "undecided",
+  "lines.status.undecided.withheld": "undecided",
+  "lines.status.undecided.unavailable": "undecided",
+  "lines.verdict.not_evaluable.judged": "undecided",
+  "lines.verdict.not_evaluable.unjudged": "undecided",
+  "lines.verdict.not_evaluable.withheld": "undecided",
+  "lines.verdict.not_evaluable.unavailable": "undecided",
+  "groups.verdict.not_evaluable.judged": "undecided",
+  "groups.verdict.not_evaluable.unjudged": "undecided",
+  "groups.verdict.not_evaluable.withheld": "undecided",
+  "groups.verdict.not_evaluable.unavailable": "undecided",
+  "groups.session.undecided": "undecided",
+  "groups.row.undecided-note": "undecided",
+
+  // could-not-verify: a claim is unverified, or its verification failed or
+  // is unsupported -- all six failed/unsupported verdict keys included.
+  "lines.line.unverified": "unverifiable",
+  "lines.status.unverified": "unverifiable",
+  "groups.session.unverified": "unverifiable",
+  "lines.verdict.failed": "unverifiable",
+  "lines.verdict.unsupported": "unverifiable",
+  "groups.verdict.failed": "unverifiable",
+  "groups.verdict.unsupported": "unverifiable",
+  "lines.pf.verdict.failed": "unverifiable",
+  "lines.pf.verdict.unsupported": "unverifiable",
+  "groups.row.unverified-note": "unverifiable",
+
+  // could-not-check: nothing could be checked at all.
+  "groups.ob.unchecked": "unchecked",
+  "groups.ob.unchecked-of": "unchecked",
+  "groups.row.nothing": "unchecked",
+  "groups.row.none-decided": "unchecked",
+
+  // recomputed tier: a fixed check anyone can repeat from the records.
+  "lines.tier.recomputed": "tier.recomputed",
+  "groups.tier.recomputed": "tier.recomputed",
+
+  // judged tier: a judgement, which must never read like the recomputed
+  // tier above.
+  "lines.tier.judged": "tier.judged",
+  "groups.tier.judged": "tier.judged",
+};
+
+/** A human-readable noun phrase for each GuardedCategory, for problem messages. */
+const CATEGORY_LABEL: Readonly<Record<GuardedCategory, string>> = {
+  clean: "a met/clean result",
+  exception: "a not-met/exception result",
+  undecided: "something nobody could decide",
+  unverifiable: "something that could not be verified",
+  unchecked: "something that could not be checked at all",
+  "tier.recomputed": "the recomputed tier",
+  "tier.judged": "the judged tier",
+};
 
 /**
  * Lines that state what this page checked or did not check, what the bundle
@@ -685,27 +712,49 @@ function mixesScripts(word: string): boolean {
 }
 
 /**
- * Every CLEAN_WORD_KEYS entry that, as read, equals a NOT_CLEAN_WORD_KEYS
- * entry, or the other way round (4339689203): a clean result must never
- * read like a not-clean one. `merged` is the pack's entries over the
- * defaults, the same lookup `wordingProblems` checks DISTINCT against, so a
- * pack that rewords only one side of a pair is caught too.
+ * Every pair of GUARDED_CATEGORY entries from two DIFFERENT categories that,
+ * as read, are the same word (4344180862, 4344180866, 4344180870): a result
+ * of one category must never read like a result of another. Compared are
+ * both the merged word (`merged`, the pack's entries over the defaults --
+ * the same lookup `wordingProblems` checks DISTINCT against) and each
+ * entry's own shipped default, in both directions: comparing only the
+ * merged words would miss a pack that renames its own clean-side entries
+ * away from "resolved" while giving a not-clean entry the word "resolved"
+ * -- the clean side no longer reads "resolved" in the merged pack, but the
+ * gap it left at the clean side's default word is still open for the other
+ * category to walk into. Two entries of the SAME category may share a word
+ * (the undecided variants' shared "could not decide" by design): that is
+ * not this check's business.
  */
-function cleanNotCleanCollisions(
+function categoryCollisions(
   merged: Readonly<Record<string, string>>,
+  defaults: WordingPack,
 ): string[] {
-  const wordOf = (key: string): string | undefined =>
-    Object.hasOwn(merged, key) ? asRead(merged[key]!) : undefined;
+  const occurrences: {
+    key: string;
+    category: GuardedCategory;
+    word: string;
+  }[] = [];
+  for (const [key, category] of Object.entries(GUARDED_CATEGORY)) {
+    for (const source of [merged, defaults.entries]) {
+      if (!Object.hasOwn(source, key)) continue;
+      const word = asRead(source[key]!);
+      if (word !== "") occurrences.push({ key, category, word });
+    }
+  }
   const problems: string[] = [];
-  for (const cleanKey of CLEAN_WORD_KEYS) {
-    const cleanWord = wordOf(cleanKey);
-    if (cleanWord === undefined || cleanWord === "") continue;
-    for (const notCleanKey of NOT_CLEAN_WORD_KEYS) {
-      const notCleanWord = wordOf(notCleanKey);
-      if (cleanWord === notCleanWord)
-        problems.push(
-          `${cleanKey} and ${notCleanKey} read alike (${JSON.stringify(cleanWord)}); a clean result must not read like a not-clean one, or the other way round`,
-        );
+  const reported = new Set<string>();
+  for (let i = 0; i < occurrences.length; i++) {
+    const a = occurrences[i]!;
+    for (let j = i + 1; j < occurrences.length; j++) {
+      const b = occurrences[j]!;
+      if (a.category === b.category || a.word !== b.word) continue;
+      const dedupeKey = [a.key, b.key].sort().join("\0");
+      if (reported.has(dedupeKey)) continue;
+      reported.add(dedupeKey);
+      problems.push(
+        `${a.key} and ${b.key} read alike (${JSON.stringify(a.word)}); ${CATEGORY_LABEL[a.category]} must not read like ${CATEGORY_LABEL[b.category]}, or the other way round`,
+      );
     }
   }
   return problems;
@@ -716,9 +765,11 @@ function cleanNotCleanCollisions(
  * (LOCKED_ENTRIES) reworded, an entry whose placeholders differ from the
  * entry it replaces, a `layout.grouping` that is
  * not the default's, verdict words two verdicts would share (as read), a
- * verdict worded as another verdict reads by default, and a verdict word with
- * nothing visible in it. Entries the defaults do not have are not this
- * module's and are not checked.
+ * verdict worded as another verdict reads by default, a verdict word with
+ * nothing visible in it, and an entry of one GUARDED_CATEGORY reading like an
+ * entry of a different one (a met result like a missed one, an exceptions
+ * count like an undecided note, and so on). Entries the defaults do not have
+ * are not this module's and are not checked.
  */
 export function wordingProblems(
   pack: WordingPack,
@@ -807,7 +858,7 @@ export function wordingProblems(
       }
     }
   }
-  problems.push(...cleanNotCleanCollisions(merged));
+  problems.push(...categoryCollisions(merged, defaults));
   return problems.map((p) => `${pack.id}: ${p}`);
 }
 
