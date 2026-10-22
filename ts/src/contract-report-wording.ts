@@ -245,6 +245,23 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "groups.session.unverified",
     "groups.session.none",
   ],
+  // A conversation's "why" line (Outcomes card): the same {names} signature
+  // on all three, so a pack could otherwise swap a missed conversation's
+  // reason for an undecided one's, or the reverse.
+  ["lines.why.missed", "lines.why.unverified", "lines.why.undecided"],
+  // The rules-table drill-down link's count suffixes (Outcomes card).
+  ["lines.rules.drill.unverified-suffix", "lines.rules.drill.undecided-suffix"],
+  // The rules table's column header for a rule nobody could decide, and for
+  // one whose claim could not be verified (Outcomes card).
+  ["lines.rules.col.undecided", "lines.rules.col.unverified"],
+  // A test row's undecided and unverified counts (EU card).
+  ["groups.row.undecided-note", "groups.row.unverified-note"],
+  // The three kinds of session a test's drill-down can list (EU card).
+  [
+    "groups.drill.kind.exceptions",
+    "groups.drill.kind.unverified",
+    "groups.drill.kind.undecided",
+  ],
 ];
 
 /**
@@ -314,6 +331,12 @@ const NOT_CLEAN_WORD_KEYS: readonly string[] = [
   // A judgement: must never read like the recomputed tier.
   "lines.tier.judged",
   "groups.tier.judged",
+  // A test row's or an obligation's exceptions count: this is the red
+  // count, and must never read as the clean "met" or "no exceptions".
+  "groups.row.exceptions.one",
+  "groups.row.exceptions.other",
+  "groups.count.exception.one",
+  "groups.count.exception.other",
 ];
 
 /**
@@ -519,15 +542,17 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
 const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 
 /**
- * A word as a reader tells it apart: compatibility forms folded, punctuation
- * and symbols turned into a space (so internal punctuation still separates
- * words: "not-met" reads as "not met", never "notmet"), whitespace
- * collapsed, case ignored. "Met", "met " and "(met)." are one word to a
- * reader; "✓ met" reads as "met" too, not as a decorated word distinct
- * from it.
+ * A word as a reader tells it apart: every `{placeholder}` dropped (a count
+ * the page fills in is not part of the word itself: "{n} met" reads as
+ * "met"), compatibility forms folded, punctuation and symbols turned into a
+ * space (so internal punctuation still separates words: "not-met" reads as
+ * "not met", never "notmet"), whitespace collapsed, case ignored. "Met",
+ * "met " and "(met)." are one word to a reader; "✓ met" reads as "met" too,
+ * not as a decorated word distinct from it.
  */
 function asRead(word: string): string {
   return word
+    .replace(PLACEHOLDER, "")
     .normalize("NFKC")
     .replace(/[\p{P}\p{S}]/gu, " ")
     .replace(/\s+/gu, " ")

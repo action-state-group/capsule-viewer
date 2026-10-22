@@ -621,11 +621,71 @@ it("a clean word and a not-clean word must not read alike, across any set (43396
       DEFAULT_PACKS.groups,
     ).join("\n"),
   ).toMatch(/groups\.ob\.ok\.found and groups\.session\.undecided read alike/u);
+  // "{n} met" on the red exceptions count would read as the clean verdict,
+  // the count itself notwithstanding
+  expect(
+    wordingProblems(
+      {
+        id: "test/clean@1",
+        locale: "en",
+        entries: { "groups.row.exceptions.other": "{n} met" },
+      },
+      DEFAULT_PACKS.groups,
+    ).join("\n"),
+  ).toMatch(/verdict\.met and groups\.row\.exceptions\.other read alike/u);
   // the two shipped default packs carry no such collision
   for (const grouping of ["lines", "groups"] as const)
     expect(
       wordingProblems(DEFAULT_PACKS[grouping], DEFAULT_PACKS[grouping]),
     ).toEqual([]);
+});
+
+it("sibling verdict and count surfaces outside the main verdict sets are still distinct (4343133993)", () => {
+  // a missed conversation's reason swapped for an undecided one's
+  expect(
+    wordingProblems(
+      {
+        id: "test/why@1",
+        locale: "en",
+        entries: {
+          "lines.why.missed": "could not decide: {names}",
+          "lines.why.undecided": "not met: {names}",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.why\.missed reads .*the word for lines\.why\.undecided/u);
+  // the drill-down suffixes, the rules column heads, a test row's counts
+  // and a drill-down's session kinds each stay a non-swappable set too
+  for (const [a, b] of [
+    [
+      "lines.rules.drill.unverified-suffix",
+      "lines.rules.drill.undecided-suffix",
+    ],
+    ["lines.rules.col.undecided", "lines.rules.col.unverified"],
+  ] as const) {
+    const base = DEFAULT_PACKS.lines.entries[b]!;
+    expect(
+      wordingProblems(
+        { id: "test/swap@1", locale: "en", entries: { [a]: base } },
+        DEFAULT_PACKS.lines,
+      ).join("\n"),
+      `${a} as ${b}'s word`,
+    ).toMatch(/read alike/u);
+  }
+  for (const [a, b] of [
+    ["groups.row.undecided-note", "groups.row.unverified-note"],
+    ["groups.drill.kind.exceptions", "groups.drill.kind.undecided"],
+  ] as const) {
+    const base = DEFAULT_PACKS.groups.entries[b]!;
+    expect(
+      wordingProblems(
+        { id: "test/swap@1", locale: "en", entries: { [a]: base } },
+        DEFAULT_PACKS.groups,
+      ).join("\n"),
+      `${a} as ${b}'s word`,
+    ).toMatch(/read alike/u);
+  }
 });
 
 for (const { file, page } of CARDS) {
