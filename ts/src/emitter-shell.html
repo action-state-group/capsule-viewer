@@ -56,7 +56,9 @@
       }
       /* A module with its own frame (the outcome and compliance cards) keeps
          it; a module's own .cv-page drops its width and padding here, so no
-         page is padded twice (capsule-viewer#60). */
+         page is padded twice (capsule-viewer#60). These two rules use #app
+         so they win over a module's own stylesheet; a theme overrides them
+         with an #app selector of its own. */
       #app.cv-shell-chrome {
         max-width: none;
         padding: 0;

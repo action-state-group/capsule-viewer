@@ -163,9 +163,10 @@ const recordsWord = (count: number): string =>
 // The banner is drawn from the verification result alone and precedes every
 // row in the DOM; an unverified bundle gets the refusal line here and no
 // rows at all, so a reader never meets a payload before the verdict on the
-// bundle that carries it. It is a pill at the top of the page ("Checked", or
-// "Not verified"), whose accessible name is the full verdict; a verified
-// bundle with records outside the checkpoint says their count beside it.
+// bundle that carries it. It is a pill at the top of the page ("Contents
+// checked", or "Check failed"), whose accessible name starts with those words
+// and says the full verdict; a verified bundle with records outside the
+// checkpoint says their count beside it.
 export const BANNER_LINES = {
   verified: "Contents checked",
   failed: "Check failed",

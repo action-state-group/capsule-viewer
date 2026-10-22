@@ -19,10 +19,13 @@ here. The format follows
     and `--aac-page-pad-block` is new. A module's own `.cv-page` drops its
     width and padding inside it. The outcome and compliance cards keep their
     own frame (`#app.cv-shell-chrome`).
-  - The verdict is a pill at the top of the page, "Checked" or "Not
-    verified", with the full verdict as its accessible name. The visible
-    text "Bundle verification passed" / "failed" is gone; `data-verify` and
-    `data-uncheckpointed` are unchanged.
+  - The verdict is a pill at the top of the page, "Contents checked" or
+    "Check failed", whose accessible name starts with those words and gives
+    the full verdict. The visible text "Bundle verification passed" /
+    "failed" is gone; `data-verify` and `data-uncheckpointed` are unchanged.
+    An embedded mount (`mountPresentation`) draws the same elements
+    (`.cv-shell-bar`, `.cv-pill`, `details.cv-checked`) and leaves their
+    styling to its host page.
   - The verification page is folded into one `<details data-checked>`
     section, "How this page was checked", closed when the bundle verified.
     It is now the rendering's last element, with the
