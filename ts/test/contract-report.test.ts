@@ -566,6 +566,13 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(check({ "lines.verdict.not_met": "m\u0434t" })).toContain(
     "lines.verdict.not_met mixes Latin, Greek and Cyrillic letters",
   );
+  // "\u03bd" (Greek nu) is a homoglyph of Latin "v" (lowercase nu is shaped
+  // like a v), not "n" -- folds into the plain collision below
+  expect(
+    check({ "lines.verdict.unsupported": "failed \u03bderification" }),
+  ).toContain(
+    'lines.verdict.unsupported reads "failed verification", the word for lines.verdict.failed',
+  );
   // bidi and other invisible format controls are refused outright, not
   // merely stripped for the comparison: the checked string and the
   // rendered string must be the same string.

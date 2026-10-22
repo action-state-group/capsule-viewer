@@ -619,7 +619,7 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   β: "b",
   ι: "i",
   κ: "k",
-  ν: "n",
+  ν: "v",
   ο: "o",
   ρ: "p",
   τ: "t",
