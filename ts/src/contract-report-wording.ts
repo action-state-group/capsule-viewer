@@ -799,6 +799,8 @@ function categoryCollisions(
   // first key to read a given word claims it, and any later key with a
   // different category reading the same word is refused against that owner.
   const seen = new Map<string, { key: string; category: GuardedCategory }>();
+  // One problem per pair of keys, however many of their readings collide.
+  const reported = new Set<string>();
   const visit = (
     key: string,
     category: GuardedCategory,
@@ -809,11 +811,14 @@ function categoryCollisions(
       if (word === "") continue;
       const owner = seen.get(word);
       if (owner === undefined) seen.set(word, { key, category });
-      else if (owner.category !== category) {
+      else if (
+        owner.category !== category &&
+        !reported.has(`${owner.key}\n${key}`)
+      ) {
+        reported.add(`${owner.key}\n${key}`);
         problems.push(
           `${owner.key} and ${key} read alike (${JSON.stringify(word)}); ${CATEGORY_LABEL[owner.category]} must not read like ${CATEGORY_LABEL[category]}, or the other way round`,
         );
-        return;
       }
     }
   };

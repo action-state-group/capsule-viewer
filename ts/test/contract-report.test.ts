@@ -571,6 +571,8 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
     " \u041e\u041e\u041e ",
     " lOO ",
     "\u202fOOO\u202f",
+    " O.O ",
+    " i i ",
   ])
     expect(
       wordingProblems(
@@ -800,6 +802,41 @@ it("CONFUSABLES folds a word the same in any case (Greek eta; ΕΤΣΙ and ετ�
       ).join("\n"),
       met,
     ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // sentence case is the same word too
+  expect(
+    wordingProblems(
+      {
+        id: "test/greek-case@1",
+        locale: "el",
+        entries: {
+          "lines.verdict.met": "\u039d\u03b1\u03b9",
+          "lines.verdict.not_met": "\u03bd\u03b1\u03b9",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // the case-fold reading counts across categories too, outside any DISTINCT
+  // set, and one key's collisions with two different keys are both named:
+  // "nai" (clean) vs "ΝΑΙ" (exception) vs "ναι" (undecided)
+  const across = wordingProblems(
+    {
+      id: "test/greek-category@1",
+      locale: "el",
+      entries: {
+        "lines.status.resolved": "nai",
+        "lines.verdict.not_met": "\u039d\u0391\u0399",
+        "lines.pf.verdict.not_evaluable": "\u03bd\u03b1\u03b9",
+      },
+    },
+    DEFAULT_PACKS.lines,
+  ).join("\n");
+  expect(across).toMatch(
+    /lines\.status\.resolved and lines\.verdict\.not_met read alike .*a met\/clean result must not read like a not-met\/exception result/u,
+  );
+  expect(across).toMatch(
+    /lines\.verdict\.not_met and lines\.pf\.verdict\.not_evaluable read alike .*a not-met\/exception result must not read like something nobody could decide/u,
+  );
   // lowercase eta reads as Latin n: an all-Greek "ηοτ ΜΕΤ" is "not met"
   expect(
     wordingProblems(
