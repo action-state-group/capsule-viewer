@@ -156,10 +156,10 @@ const HAS_NON_SPACE = /\S/u;
 const HAS_LETTER = /\p{L}/u;
 /**
  * Latin letters (after `asRead` folds case and Cyrillic/Greek look-alikes)
- * that read as a digit between two counts with no space around them:
- * "{count}O{total}" reads as one number, so an unspaced gap that has only
- * these has no word in it. A spaced one does ("59 o 768" is Welsh for
- * "59 of 768").
+ * that read as a digit between two counts unless a space stands on both
+ * sides: "{count}O{total}" or "{count}O {total}" reads as one number
+ * ("59O 768" as 590 768), so such a gap with only these has no word in it.
+ * One spaced on both sides does ("59 o 768" is Welsh for "59 of 768").
  */
 const DIGIT_LIKE = /[oil]/gu;
 
@@ -693,6 +693,21 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
 const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
 
 /**
+ * Lowercase Greek letters that read as a different Latin letter than their
+ * capital does (ν is "v" but Ν is "N"), folded before case is touched so
+ * the capital's reading never stands in for theirs.
+ */
+const LOWER_CONFUSABLES: Readonly<Record<string, string>> = {
+  ν: "v",
+  η: "n",
+  μ: "u",
+};
+const LOWER_CONFUSABLE = new RegExp(
+  `[${Object.keys(LOWER_CONFUSABLES).join("")}]`,
+  "gu",
+);
+
+/**
  * `word` with every `{placeholder}` dropped (a count the page fills in is
  * not part of the word itself: "{n} met" reads as "met"), compatibility
  * forms folded, punctuation and symbols turned into a space (so internal
@@ -715,11 +730,13 @@ function asReadUnfolded(word: string): string {
 }
 
 /**
- * A word as a reader tells it apart: `asReadUnfolded`, uppercased, with
- * every Cyrillic or Greek homoglyph folded to the Latin letter it reads as
- * (CONFUSABLES, keyed by capital letter), then case ignored. Uppercasing
- * first means case never decides whether a letter folds: "ΕΤΣΙ" and "ετσι"
- * read alike, as do "Η" and "H". "Met", "met " and "(met)." are one
+ * A word as a reader tells it apart: `asReadUnfolded`, with the lowercase
+ * letters that read unlike their capital folded first (LOWER_CONFUSABLES),
+ * then lowercased and uppercased (so ß and ẞ both become SS), every
+ * Cyrillic or Greek homoglyph folded to the Latin letter it reads as
+ * (CONFUSABLES, keyed by capital letter), and case ignored. Uppercasing
+ * before the fold means case never decides whether a letter folds: "ΕΤΣΙ"
+ * and "ετσι" read alike, as do "Η" and "H", and "ν" still reads as "v". "Met", "met " and "(met)." are one
  * word to a reader; "✓ met" reads as "met" too, not as a decorated word
  * distinct from it. Used for every comparison (DISTINCT, categoryCollisions):
  * an all-Cyrillic "мет" must still collide with "met". Never used for
@@ -727,6 +744,8 @@ function asReadUnfolded(word: string): string {
  */
 function asRead(word: string): string {
   return asReadUnfolded(word)
+    .replace(LOWER_CONFUSABLE, (c) => LOWER_CONFUSABLES[c]!)
+    .toLowerCase()
     .toUpperCase()
     .replace(CONFUSABLE, (c) => CONFUSABLES[c]!)
     .toLowerCase();
@@ -838,7 +857,7 @@ export function wordingProblems(
         const gotGap = gotGaps[i]!;
         const runsTogether = HAS_LETTER.test(baseGap)
           ? !HAS_LETTER.test(gotGap) ||
-            (!/\s/u.test(gotGap) &&
+            (!/^\s[^]*\s$/u.test(gotGap) &&
               !HAS_LETTER.test(asRead(gotGap).replace(DIGIT_LIKE, "")))
           : HAS_NON_SPACE.test(baseGap) && !HAS_NON_SPACE.test(gotGap);
         if (runsTogether)

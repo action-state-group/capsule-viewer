@@ -552,7 +552,21 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
   // an unspaced letter that reads as a digit is no word either: "59O768"
   // reads as one number, whether the O is Latin or a look-alike (Cyrillic o,
   // Cyrillic palochka, the dental click, dotless i)
-  for (const gap of ["O", "l", "I", "\u043e", "\u04cf", "\u01c0", "\u0131"])
+  // -- and so is one with a space on only one side ("59O 768" reads as
+  // 590 768 where a space groups thousands, a narrow one included)
+  for (const gap of [
+    "O",
+    "l",
+    "I",
+    "\u043e",
+    "\u04cf",
+    "\u01c0",
+    "\u0131",
+    "O ",
+    " O",
+    "\u202fO",
+    "l\u2009",
+  ])
     expect(
       wordingProblems(
         {
@@ -568,7 +582,8 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
     ]);
   // a real word between the counts still passes, in any script
   // (Welsh "o" is "of": spaced, it is a word between two counts)
-  for (const gap of [" out of ", " из ", " από ", " o "])
+  // (a one-letter word spaced on both sides is a word: " l " and " I " too)
+  for (const gap of [" out of ", " из ", " από ", " o ", " l ", " I "])
     expect(
       wordingProblems(
         {
@@ -736,6 +751,34 @@ it("CONFUSABLES folds a word the same in any case (Greek eta; ΕΤΣΙ and ετ�
         entries: {
           "lines.verdict.met": "\u04ba\u0410",
           "lines.verdict.not_met": "\u04bb\u0430",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // German sharp s in either case (ß uppercases to SS, ẞ lowercases to ß)
+  expect(
+    wordingProblems(
+      {
+        id: "test/german-case@1",
+        locale: "de",
+        entries: {
+          "lines.verdict.met": "ordnungsgem\u00e4\u00df",
+          "lines.verdict.not_met": "ORDNUNGSGEM\u00c4\u1e9e",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // lowercase Greek nu reads as Latin v, not as its capital's N
+  expect(
+    wordingProblems(
+      {
+        id: "test/greek-nu@1",
+        locale: "el",
+        entries: {
+          "lines.verdict.met": "V",
+          "lines.verdict.not_met": "\u03bd",
         },
       },
       DEFAULT_PACKS.lines,
