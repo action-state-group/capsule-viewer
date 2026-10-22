@@ -140,7 +140,10 @@ function placeholderGaps(text: string): string[] {
   const gaps: string[] = [];
   for (let i = 1; i < matches.length; i++)
     gaps.push(
-      text.slice(matches[i - 1]!.index + matches[i - 1]![0].length, matches[i]!.index),
+      text.slice(
+        matches[i - 1]!.index + matches[i - 1]![0].length,
+        matches[i]!.index,
+      ),
     );
   return gaps;
 }
@@ -168,17 +171,34 @@ export const DEFAULT_PACKS: Readonly<
  * the default plain set does.
  */
 const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
+  // This module's own rule verdict words (contract-report.ts: the bare
+  // `verdict.*` namespace stays contract-report/v1 §3's), one set per
+  // grouping -- the Outcomes card's and the EU card's prefixes never
+  // compare against each other, each pack names only its own.
   [
-    "verdict.met",
-    "verdict.not_met",
-    "verdict.not_applicable",
-    "verdict.failed",
-    "verdict.unsupported",
+    "lines.verdict.met",
+    "lines.verdict.not_met",
+    "lines.verdict.not_applicable",
+    "lines.verdict.failed",
+    "lines.verdict.unsupported",
     [
-      "verdict.not_evaluable.judged",
-      "verdict.not_evaluable.unjudged",
-      "verdict.not_evaluable.withheld",
-      "verdict.not_evaluable.unavailable",
+      "lines.verdict.not_evaluable.judged",
+      "lines.verdict.not_evaluable.unjudged",
+      "lines.verdict.not_evaluable.withheld",
+      "lines.verdict.not_evaluable.unavailable",
+    ],
+  ],
+  [
+    "groups.verdict.met",
+    "groups.verdict.not_met",
+    "groups.verdict.not_applicable",
+    "groups.verdict.failed",
+    "groups.verdict.unsupported",
+    [
+      "groups.verdict.not_evaluable.judged",
+      "groups.verdict.not_evaluable.unjudged",
+      "groups.verdict.not_evaluable.withheld",
+      "groups.verdict.not_evaluable.unavailable",
     ],
   ],
   [
@@ -276,7 +296,8 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
  */
 const CLEAN_WORD_KEYS: readonly string[] = [
   // States a rule's result was met.
-  "verdict.met",
+  "lines.verdict.met",
+  "groups.verdict.met",
   "lines.pf.verdict.met",
   "lines.line.resolved",
   "lines.status.resolved",
@@ -303,7 +324,8 @@ const CLEAN_WORD_KEYS: readonly string[] = [
  */
 const NOT_CLEAN_WORD_KEYS: readonly string[] = [
   // States a rule's result was not met.
-  "verdict.not_met",
+  "lines.verdict.not_met",
+  "groups.verdict.not_met",
   "lines.pf.verdict.not_met",
   "lines.line.missed",
   "lines.status.missed",
@@ -314,10 +336,14 @@ const NOT_CLEAN_WORD_KEYS: readonly string[] = [
   "lines.status.undecided.none",
   "lines.status.undecided.withheld",
   "lines.status.undecided.unavailable",
-  "verdict.not_evaluable.judged",
-  "verdict.not_evaluable.unjudged",
-  "verdict.not_evaluable.withheld",
-  "verdict.not_evaluable.unavailable",
+  "lines.verdict.not_evaluable.judged",
+  "lines.verdict.not_evaluable.unjudged",
+  "lines.verdict.not_evaluable.withheld",
+  "lines.verdict.not_evaluable.unavailable",
+  "groups.verdict.not_evaluable.judged",
+  "groups.verdict.not_evaluable.unjudged",
+  "groups.verdict.not_evaluable.withheld",
+  "groups.verdict.not_evaluable.unavailable",
   "groups.session.undecided",
   // A claim could not be verified.
   "lines.line.unverified",

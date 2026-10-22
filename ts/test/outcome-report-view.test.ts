@@ -1559,9 +1559,7 @@ it("a conversation with no not_evaluable criterion to point to says the plain 'c
 // pack -- not even the ladder pack -- can bring that split back.
 it("a judge ran on this conversation's rule but did not decide it, disclosed with no pin: 'could not decide', on both word sets", () => {
   const conversation = {
-    criteria: [
-      { verdict: "not_evaluable", reportState: "disclosed" },
-    ],
+    criteria: [{ verdict: "not_evaluable", reportState: "disclosed" }],
   } as unknown as Parameters<typeof statusWord>[1];
   for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
     expect(statusWord("undecided", conversation, w)).toEqual({

@@ -11,13 +11,21 @@ import {
  * the cards used to keep behind a code flag (LADDER_WORDS), now only words.
  */
 export const LADDER_ENTRIES: Readonly<Record<string, string>> = {
-  "verdict.met": "established",
-  "verdict.not_met": "failed",
-  "verdict.not_applicable": "not present",
-  "verdict.not_evaluable.judged": "inconclusive",
-  "verdict.not_evaluable.unjudged": "not checked",
-  "verdict.not_evaluable.withheld": "could not decide (report withheld)",
-  "verdict.not_evaluable.unavailable":
+  "lines.verdict.met": "established",
+  "lines.verdict.not_met": "failed",
+  "lines.verdict.not_applicable": "not present",
+  "lines.verdict.not_evaluable.judged": "inconclusive",
+  "lines.verdict.not_evaluable.unjudged": "not checked",
+  "lines.verdict.not_evaluable.withheld": "could not decide (report withheld)",
+  "lines.verdict.not_evaluable.unavailable":
+    "could not decide (report not available)",
+  "groups.verdict.met": "established",
+  "groups.verdict.not_met": "failed",
+  "groups.verdict.not_applicable": "not present",
+  "groups.verdict.not_evaluable.judged": "inconclusive",
+  "groups.verdict.not_evaluable.unjudged": "not checked",
+  "groups.verdict.not_evaluable.withheld": "could not decide (report withheld)",
+  "groups.verdict.not_evaluable.unavailable":
     "could not decide (report not available)",
   "lines.status.resolved": "established",
   "lines.status.missed": "failed",

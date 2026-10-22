@@ -499,9 +499,10 @@ describe("theme, wording, locale and depth", () => {
         audience: "*",
         runtime: { code: "/*IIFE_MARKER*/" },
       } as const;
+      const grouping = module === "compliance" ? "groups" : "lines";
       const misfit = await pack(
         {
-          "verdict.not_met": "met",
+          [`${grouping}.verdict.not_met`]: "met",
           "prov.witness.stated": "{witnesses}: checked.",
         },
         "en",
@@ -514,7 +515,10 @@ describe("theme, wording, locale and depth", () => {
         });
         await expect(built, format).rejects.toThrow(PresentationBuildError);
         await expect(built, format).rejects.toThrow(
-          /wording pack does not fit .*verdict\.not_met and verdict\.met read alike/u,
+          new RegExp(
+            `wording pack does not fit .*${grouping}\\.verdict\\.not_met and ${grouping}\\.verdict\\.met read alike`,
+            "u",
+          ),
         );
         await expect(built, format).rejects.toThrow(
           /prov\.witness\.stated: this line states what the page checked and can't be reworded/u,
@@ -527,7 +531,10 @@ describe("theme, wording, locale and depth", () => {
       const fits = await buildPresentation(bundle, {
         ...options,
         format: "html",
-        wording: await pack({ "verdict.met": "established" }, "en"),
+        wording: await pack(
+          { [`${grouping}.verdict.met`]: "established" },
+          "en",
+        ),
       });
       expect(fits.format).toBe("html");
     });

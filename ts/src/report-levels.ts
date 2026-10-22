@@ -228,9 +228,11 @@ export function judgedOf(
 }
 
 /**
- * One rule's result in words. `judged` picks among the pack's four words
- * for a rule nobody could decide: a judge ran and could not decide
- * (`verdict.not_evaluable.judged`), none ran (`.unjudged`), the bundle
+ * One rule's result in words, from the card's own grouping prefix
+ * (`lines.verdict.*` or `groups.verdict.*`: the bare `verdict.*` namespace
+ * stays contract-report/v1 §3's). `judged` picks among the pack's four
+ * words for a rule nobody could decide: a judge ran and could not decide
+ * (`.not_evaluable.judged`), none ran (`.unjudged`), the bundle
  * withholds the report that would say which (`.withheld`), or a judge's
  * report is cited but this bundle does not carry a readable copy of it --
  * mismatched, unreadable, invalid, or simply not carried (`.unavailable`),
@@ -243,27 +245,28 @@ export function ruleWord(
   judged: Judged,
   w: Words,
 ): Worded {
+  const v = (key: string): string => w.t(`${w.grouping}.verdict.${key}`);
   switch (verdict) {
     case "failed":
-      return { word: w.t("verdict.failed"), tone: "ne" };
+      return { word: v("failed"), tone: "ne" };
     case "unsupported":
-      return { word: w.t("verdict.unsupported"), tone: "ne" };
+      return { word: v("unsupported"), tone: "ne" };
     case "met":
-      return { word: w.t("verdict.met"), tone: "ok" };
+      return { word: v("met"), tone: "ok" };
     case "not_met":
-      return { word: w.t("verdict.not_met"), tone: "bad" };
+      return { word: v("not_met"), tone: "bad" };
     case "not_applicable":
-      return { word: w.t("verdict.not_applicable"), tone: "na" };
+      return { word: v("not_applicable"), tone: "na" };
     case "not_evaluable":
       return {
-        word: w.t(
+        word: v(
           judged === "yes"
-            ? "verdict.not_evaluable.judged"
+            ? "not_evaluable.judged"
             : judged === "no"
-              ? "verdict.not_evaluable.unjudged"
+              ? "not_evaluable.unjudged"
               : judged === "withheld"
-                ? "verdict.not_evaluable.withheld"
-                : "verdict.not_evaluable.unavailable",
+                ? "not_evaluable.withheld"
+                : "not_evaluable.unavailable",
         ),
         tone: "ne",
       };

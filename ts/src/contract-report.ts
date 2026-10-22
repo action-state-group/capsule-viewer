@@ -46,15 +46,18 @@ import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
  * this module's manifest to require it, in place of the two deprecated
  * aliases, waits on that release.
  *
- * This module's own verdict and tier words are not that kind's: its Result
- * rows carry `failed`/`unsupported` claims and a judged/recomputed tier
- * `contract-report/v1` §2/§3 does not define (its closed verdict enum is
- * `met`/`not_met`/`not_evaluable` only). Until this module reads a plain
- * Evidence Result's claims instead of these richer per-criterion rows, its
- * `verdict.*`/`tier.*` keys stay this module's own, not that kind's shared
- * namespace; `lines.status.*` (this grouping's own conversation outcome,
- * never the kind's carrier `status.<EvidenceStatus>`) is kept under this
- * grouping's own prefix for the same reason.
+ * This module's own verdict words are its own, under its grouping prefix
+ * (`lines.verdict.*`, `groups.verdict.*`), never that kind's shared
+ * `verdict.*`: its Result rows carry `failed`/`unsupported` claims
+ * `contract-report/v1` §3's closed verdict enum does not define (`met`/
+ * `not_met`/`not_evaluable` only), so a pack naming the bare §3 keys is
+ * left to whichever module reads them, not silently absorbed here. The
+ * judged/recomputed tier is different: §3 does define `tier.<value>`
+ * (`recomputed`, `judged`), but this module does not read those keys yet
+ * (tracked in #52, for the switch to `contract-report/v1`), so `tier.*`
+ * stays under this grouping's own prefix too, for now -- the same reason
+ * `lines.status.*` (this grouping's own conversation outcome, never the
+ * kind's carrier `status.<EvidenceStatus>`) does.
  */
 
 /** What a grouping draws from: the verified Result and the extension that opted it in. */

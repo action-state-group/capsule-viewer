@@ -227,6 +227,12 @@ it("every locked line is a default entry, and every default line that states wha
   expect(unlocked.sort()).toEqual([
     "groups.session.undecided",
     "groups.tier.recomputed",
+    "groups.verdict.failed",
+    "groups.verdict.not_evaluable.judged",
+    "groups.verdict.not_evaluable.unavailable",
+    "groups.verdict.not_evaluable.unjudged",
+    "groups.verdict.not_evaluable.withheld",
+    "groups.verdict.unsupported",
     "lines.pf.verdict.failed",
     "lines.rules.col.undecided",
     "lines.rules.col.unverified",
@@ -234,13 +240,13 @@ it("every locked line is a default entry, and every default line that states wha
     "lines.status.undecided.judged",
     "lines.status.undecided.none",
     "lines.tier.recomputed",
+    "lines.verdict.failed",
+    "lines.verdict.not_evaluable.judged",
+    "lines.verdict.not_evaluable.unavailable",
+    "lines.verdict.not_evaluable.unjudged",
+    "lines.verdict.not_evaluable.withheld",
+    "lines.verdict.unsupported",
     "lines.why.undecided",
-    "verdict.failed",
-    "verdict.not_evaluable.judged",
-    "verdict.not_evaluable.unavailable",
-    "verdict.not_evaluable.unjudged",
-    "verdict.not_evaluable.withheld",
-    "verdict.unsupported",
   ]);
 });
 
@@ -489,10 +495,12 @@ it("a pack cannot fold two verdicts into one word, or change the grouping", () =
   const fold: WordingPack = {
     id: "test/fold@1",
     locale: "en",
-    entries: { "verdict.not_met": "met", "layout.grouping": "groups" },
+    entries: { "lines.verdict.not_met": "met", "layout.grouping": "groups" },
   };
   const problems = wordingProblems(fold, DEFAULT_PACKS.lines).join("\n");
-  expect(problems).toMatch(/verdict\.not_met and verdict\.met read alike/u);
+  expect(problems).toMatch(
+    /lines\.verdict\.not_met and lines\.verdict\.met read alike/u,
+  );
   expect(problems).toContain('layout.grouping is "groups"');
 });
 
@@ -503,35 +511,38 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
       DEFAULT_PACKS.lines,
     ).join("\n");
   // case, spacing and punctuation do not make two words
-  expect(check({ "verdict.not_met": "Met" })).toMatch(/read alike/u);
-  expect(check({ "verdict.not_met": " (met). " })).toMatch(/read alike/u);
-  expect(check({ "verdict.not_met": "..." })).toContain(
-    "verdict.not_met has no visible word",
+  expect(check({ "lines.verdict.not_met": "Met" })).toMatch(/read alike/u);
+  expect(check({ "lines.verdict.not_met": " (met). " })).toMatch(/read alike/u);
+  expect(check({ "lines.verdict.not_met": "..." })).toContain(
+    "lines.verdict.not_met has no visible word",
   );
   // internal punctuation becomes a space, not nothing: "not-met" reads as
-  // "not met", verdict.not_met's own word, not as the unbroken "notmet"
-  expect(check({ "verdict.met": "not-met" })).toMatch(
-    /verdict\.met and verdict\.not_met read alike/u,
+  // "not met", lines.verdict.not_met's own word, not as the unbroken "notmet"
+  expect(check({ "lines.verdict.met": "not-met" })).toMatch(
+    /lines\.verdict\.met and lines\.verdict\.not_met read alike/u,
   );
-  expect(check({ "verdict.not_met": "m\u0435t" })).toContain(
-    "verdict.not_met mixes Latin, Greek and Cyrillic letters",
+  expect(check({ "lines.verdict.not_met": "m\u0435t" })).toContain(
+    "lines.verdict.not_met mixes Latin, Greek and Cyrillic letters",
   );
   // bidi and other invisible format controls are refused outright, not
   // merely stripped for the comparison: the checked string and the
   // rendered string must be the same string.
-  expect(check({ "verdict.not_met": " met\u200b " })).toContain(
-    "verdict.not_met carries a bidi or other invisible format character",
+  expect(check({ "lines.verdict.not_met": " met\u200b " })).toContain(
+    "lines.verdict.not_met carries a bidi or other invisible format character",
   );
-  expect(check({ "verdict.not_met": "\u202etem\u202c" })).toContain(
-    "verdict.not_met carries a bidi or other invisible format character",
+  expect(check({ "lines.verdict.not_met": "\u202etem\u202c" })).toContain(
+    "lines.verdict.not_met carries a bidi or other invisible format character",
   );
   // met and not met swapped: no word is shared, and still refused
-  const swapped = check({ "verdict.met": "not met", "verdict.not_met": "met" });
+  const swapped = check({
+    "lines.verdict.met": "not met",
+    "lines.verdict.not_met": "met",
+  });
   expect(swapped).toContain(
-    'verdict.met reads "not met", the word for verdict.not_met',
+    'lines.verdict.met reads "not met", the word for lines.verdict.not_met',
   );
   expect(swapped).toContain(
-    'verdict.not_met reads "met", the word for verdict.met',
+    'lines.verdict.not_met reads "met", the word for lines.verdict.met',
   );
   // the proofs' sealed-verdict words are verdict words too
   expect(check({ "lines.pf.verdict.not_met": "met" })).toMatch(
@@ -607,24 +618,24 @@ it("a clean word and a not-clean word must not read alike, across any set (43396
       DEFAULT_PACKS.lines,
     ).join("\n");
   // "resolved" is a met-family (clean) word; DISTINCT never compares
-  // verdict.* against lines.status.*/lines.line.* (different arrays), so
-  // only this check catches a not-met verdict reading it -- and it names
+  // lines.verdict.* against lines.status.*/lines.line.* (different arrays),
+  // so only this check catches a not-met verdict reading it -- and it names
   // both keys.
-  expect(check({ "verdict.not_met": "resolved" })).toMatch(
-    /lines\.(line|status)\.resolved and verdict\.not_met read alike/u,
+  expect(check({ "lines.verdict.not_met": "resolved" })).toMatch(
+    /lines\.(line|status)\.resolved and lines\.verdict\.not_met read alike/u,
   );
   // case, spacing and punctuation still do not make it a different word
-  expect(check({ "verdict.not_met": "resolved." })).toMatch(
-    /lines\.(line|status)\.resolved and verdict\.not_met read alike/u,
+  expect(check({ "lines.verdict.not_met": "resolved." })).toMatch(
+    /lines\.(line|status)\.resolved and lines\.verdict\.not_met read alike/u,
   );
   // a judged-tier label set to the recomputed tier's label is refused too
   expect(check({ "lines.tier.judged": "recomputed" })).toMatch(
     /lines\.tier\.recomputed and lines\.tier\.judged read alike/u,
   );
-  // "met" is verdict.met's (clean) word; a missed headline row given it
-  // would read as resolved
+  // "met" is lines.verdict.met's (clean) word; a missed headline row given
+  // it would read as resolved
   expect(check({ "lines.line.missed": "met" })).toMatch(
-    /verdict\.met and lines\.line\.missed read alike/u,
+    /lines\.verdict\.met and lines\.line\.missed read alike/u,
   );
   // an undecided session's pill given the EU card's own "no exceptions
   // found" word would read clean
@@ -649,7 +660,9 @@ it("a clean word and a not-clean word must not read alike, across any set (43396
       },
       DEFAULT_PACKS.groups,
     ).join("\n"),
-  ).toMatch(/verdict\.met and groups\.row\.exceptions\.other read alike/u);
+  ).toMatch(
+    /groups\.verdict\.met and groups\.row\.exceptions\.other read alike/u,
+  );
   // the two shipped default packs carry no such collision
   for (const grouping of ["lines", "groups"] as const)
     expect(
@@ -705,12 +718,12 @@ it("sibling verdict and count surfaces outside the main verdict sets are still d
   }
 });
 
-for (const { file, page } of CARDS) {
+for (const { grouping, file, page } of CARDS) {
   it(`${page}: a refused pack draws no card, and the page says the presentation failed`, async () => {
     const bad = await distributed({
       id: "test/bad@1",
       locale: "en",
-      entries: { "verdict.not_met": "met" },
+      entries: { [`${grouping}.verdict.not_met`]: "met" },
     });
     const root = await render(file, bad);
     expect(root.querySelector(`[data-page="${page}"]`)).toBeNull();
@@ -728,7 +741,7 @@ it("a pack's entries for other modules (a page title) are left alone", () => {
   const pack: WordingPack = {
     id: "test/title@1",
     locale: "en",
-    entries: { "page.title": "September", "verdict.met": "kept" },
+    entries: { "page.title": "September", "lines.verdict.met": "kept" },
   };
   expect(wordingProblems(pack, DEFAULT_PACKS.lines)).toEqual([]);
 });
