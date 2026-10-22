@@ -145,7 +145,7 @@ function scrambled(base: WordingPack): WordingPack {
         k.startsWith("layout.") || LOCKED_ENTRIES.has(k)
           ? v
           : `«${k}»${placeholders(v)
-              .map((p) => ` {${p}}`)
+              .map((p, i) => (i === 0 ? ` {${p}}` : ` is {${p}}`))
               .join("")}`,
       ]),
     ),
@@ -429,6 +429,43 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
   expect(deduped).toEqual([
     "test/dedup@1: lines.sentence.missed uses {misses} {applied} {rule}; it must use exactly {misses} {applied} {rule} {was} {names}",
   ]);
+  // the same two placeholders, same order, but with the word between them
+  // dropped: "2 of 10" would read as "210"
+  const ranTogether = wordingProblems(
+    {
+      id: "test/together@1",
+      locale: "en",
+      entries: { "lines.share": "{count}{total}" },
+    },
+    DEFAULT_PACKS.lines,
+  );
+  expect(ranTogether).toEqual([
+    "test/together@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
+  ]);
+  // a space alone is not a word between them either: still refused
+  expect(
+    wordingProblems(
+      {
+        id: "test/spaced@1",
+        locale: "en",
+        entries: { "lines.share": "{count} {total}" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([
+    "test/spaced@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
+  ]);
+  // a real word between them, even a short one, passes
+  expect(
+    wordingProblems(
+      {
+        id: "test/worded@1",
+        locale: "en",
+        entries: { "lines.share": "{count} of {total}" },
+      },
+      DEFAULT_PACKS.lines,
+    ),
+  ).toEqual([]);
 });
 
 it("a pack cannot fold two verdicts into one word, or change the grouping", () => {
@@ -453,6 +490,11 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(check({ "verdict.not_met": " (met). " })).toMatch(/read alike/u);
   expect(check({ "verdict.not_met": "..." })).toContain(
     "verdict.not_met has no visible word",
+  );
+  // internal punctuation becomes a space, not nothing: "not-met" reads as
+  // "not met", verdict.not_met's own word, not as the unbroken "notmet"
+  expect(check({ "verdict.met": "not-met" })).toMatch(
+    /verdict\.met and verdict\.not_met read alike/u,
   );
   expect(check({ "verdict.not_met": "m\u0435t" })).toContain(
     "verdict.not_met mixes Latin, Greek and Cyrillic letters",

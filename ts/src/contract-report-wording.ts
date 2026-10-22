@@ -128,6 +128,25 @@ export function placeholders(text: string): string[] {
   return [...text.matchAll(PLACEHOLDER)].map((m) => m[1]!);
 }
 
+/**
+ * The text between each pair of consecutive `{placeholder}`s in `text`, in
+ * order: one entry fewer than `placeholders(text)`. Used to catch a pack
+ * that keeps a sentence's placeholder order but drops the word between two
+ * of them, so two counts the sentence computed separately (a count and its
+ * denominator) could run together on the page ("2 of 10" read as "210").
+ */
+function placeholderGaps(text: string): string[] {
+  const matches = [...text.matchAll(PLACEHOLDER)];
+  const gaps: string[] = [];
+  for (let i = 1; i < matches.length; i++)
+    gaps.push(
+      text.slice(matches[i - 1]!.index + matches[i - 1]![0].length, matches[i]!.index),
+    );
+  return gaps;
+}
+
+const HAS_NON_SPACE = /\S/u;
+
 // ---------------------------------------------------------------------------
 // The default packs, and which grouping each is for
 // ---------------------------------------------------------------------------
@@ -451,6 +470,9 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.count.10",
   "lines.count.11",
   "lines.count.12",
+  // Has no placeholder of its own: a pack could otherwise make "1 verdict"
+  // read as any count it likes ("one hundred verdicts").
+  "lines.pf.verdicts.one",
   "lines.na-note.one",
   "lines.na-note.other",
   "lines.sentence.undecided.none",
@@ -497,15 +519,17 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
 const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 
 /**
- * A word as a reader tells it apart: compatibility forms folded, whitespace
- * collapsed, case ignored, punctuation and symbols dropped. "Met", "met " and
- * "(met)." are one word to a reader; "✓ met" reads as "met" too, not as a
- * decorated word distinct from it.
+ * A word as a reader tells it apart: compatibility forms folded, punctuation
+ * and symbols turned into a space (so internal punctuation still separates
+ * words: "not-met" reads as "not met", never "notmet"), whitespace
+ * collapsed, case ignored. "Met", "met " and "(met)." are one word to a
+ * reader; "✓ met" reads as "met" too, not as a decorated word distinct
+ * from it.
  */
 function asRead(word: string): string {
   return word
     .normalize("NFKC")
-    .replace(/[\p{P}\p{S}]/gu, "")
+    .replace(/[\p{P}\p{S}]/gu, " ")
     .replace(/\s+/gu, " ")
     .trim()
     .toLowerCase();
@@ -588,6 +612,18 @@ export function wordingProblems(
       problems.push(
         `${key} uses {${got.join("} {")}}; it must use exactly {${want.join("} {")}}`,
       );
+    else {
+      const baseGaps = placeholderGaps(base);
+      const gotGaps = placeholderGaps(text);
+      for (let i = 0; i < gotGaps.length; i++)
+        if (
+          !HAS_NON_SPACE.test(gotGaps[i]!) &&
+          HAS_NON_SPACE.test(baseGaps[i]!)
+        )
+          problems.push(
+            `${key} runs {${got[i]}} and {${got[i + 1]}} together with no word between them; two counts the page computes separately must not be able to read as one`,
+          );
+    }
   }
   const merged = { ...defaults.entries, ...pack.entries };
   for (const set of DISTINCT) {
