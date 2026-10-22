@@ -12,6 +12,22 @@ here. The format follows
 
 ### Breaking
 
+- The page shell (`renderEvidenceGraph`, the emitter shell and the Go
+  emitter's `shell.html`; capsule-viewer#60):
+  - Every page has a width and padding: the theme's `--aac-page-width` and
+    `--aac-gutter` now default to 60rem and 1rem (they were `none` and `0`),
+    and `--aac-page-pad-block` is new. A module's own `.cv-page` drops its
+    width and padding inside it. The outcome and compliance cards keep their
+    own frame (`#app.cv-shell-chrome`).
+  - The verdict is a pill at the top of the page, "Checked" or "Not
+    verified", with the full verdict as its accessible name. The visible
+    text "Bundle verification passed" / "failed" is gone; `data-verify` and
+    `data-uncheckpointed` are unchanged.
+  - The verification page is folded into one `<details data-checked>`
+    section, "How this page was checked", closed when the bundle verified.
+    It is now the rendering's last element, with the
+    `[data-page="verification"]` section inside it.
+
 - Python `capsule_viewer.ledger`: the page is drawn over an evidence file the
   ledger's producer wrote, such as `capsule-emit bundle LEDGER --all`; the
   viewer no longer builds one. `ledger_bundle()` is removed,
