@@ -296,8 +296,9 @@ export function statusWord(
   if (status === "nothing-applied")
     return { word: w.t("lines.status.nothing-applied"), tone: "na" };
   // Three-valued: a judge ran on an undecided rule, none did, or the
-  // withheld reports cannot say which. The default pack distinguishes all
-  // of these.
+  // withheld reports cannot say which. Since e1a44e0 the default pack gives
+  // all of these the same plain word ("could not decide"); only the key
+  // tells them apart.
   const judged = conversation.criteria
     .filter((c) => c.verdict === "not_evaluable")
     .map((c) => judgedOf(c.reportState, c.judgePinDigest));
