@@ -837,6 +837,24 @@ it("CONFUSABLES folds a word the same in any case (Greek eta; ΕΤΣΙ and ετ�
   expect(across).toMatch(
     /lines\.verdict\.not_met and lines\.pf\.verdict\.not_evaluable read alike .*a not-met\/exception result must not read like something nobody could decide/u,
   );
+  // two keys whose words share both readings are still one problem per
+  // check, not one per reading
+  const twice = wordingProblems(
+    {
+      id: "test/greek-once@1",
+      locale: "el",
+      entries: {
+        "lines.status.resolved": "\u039d\u0391\u0399",
+        "lines.verdict.not_met": "\u039d\u0391\u0399",
+      },
+    },
+    DEFAULT_PACKS.lines,
+  );
+  expect(
+    twice.filter((p) =>
+      p.includes("lines.status.resolved and lines.verdict.not_met read alike"),
+    ),
+  ).toHaveLength(1);
   // lowercase eta reads as Latin n: an all-Greek "ηοτ ΜΕΤ" is "not met"
   expect(
     wordingProblems(
