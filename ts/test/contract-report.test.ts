@@ -847,9 +847,7 @@ it("a pack word of one GUARDED_CATEGORY must not read like a word of a different
       wordingProblems(DEFAULT_PACKS[grouping], DEFAULT_PACKS[grouping]),
     ).toEqual([]);
   // the grade-ladder pack carries none either
-  expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual(
-    [],
-  );
+  expect(wordingProblems(ladderPack("lines"), DEFAULT_PACKS.lines)).toEqual([]);
   // nor do the real Russian and Greek verdict words from 4344085081
   expect(
     wordingProblems(
