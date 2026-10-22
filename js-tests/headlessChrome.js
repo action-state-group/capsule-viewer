@@ -85,6 +85,9 @@ async function launchOnce(chromePath) {
     // /dev/shm is small in containers and on some runners; use /tmp instead.
     "--disable-dev-shm-usage",
     "--hide-scrollbars",
+    // Keep macOS from prompting for a "Chrome" keychain the throwaway profile lacks.
+    "--use-mock-keychain",
+    "--password-store=basic",
     "about:blank",
   ];
   // GitHub's Ubuntu runners refuse Chromium's user-namespace sandbox.
