@@ -287,18 +287,24 @@ export function checkedSummaryLine(
   const pageFailed = model.checkLists.failed.filter(
     (id) => !NUMBERED_CHECK_GROUND.has(id),
   ).length;
+  // Numbered checks that did not run are always said, so none reads as
+  // passed or failed.
+  const notRunNote = notRun > 0 ? `, ${notRun} not run` : "";
   const leads: string[] = [];
-  if (failed > 0) leads.push(`${failed} of ${total} checks failed`);
+  if (failed > 0)
+    leads.push(`${failed} of ${total} checks failed${notRunNote}`);
   if (pageFailed > 0)
     leads.push(
       `${pageFailed} ${pageFailed === 1 ? "check" : "checks"} on this page failed`,
     );
-  if (leads.length === 0)
+  if (failed === 0 && pageFailed === 0)
     leads.push(
       verified
-        ? `${passed} of ${total} checks passed${notRun > 0 ? `, ${notRun} not run` : ""}`
+        ? `${passed} of ${total} checks passed${notRunNote}`
         : SUMMARY_NOT_VERIFIED,
     );
+  if (failed === 0 && (pageFailed > 0 || !verified) && notRun > 0)
+    leads.push(`${notRun} of ${total} checks not run`);
   const parts = [...leads, recordsWord(model.records.length)];
   const signatures = model.checkLists.notChecked.filter((id) =>
     SIGNATURE_CHECKS.has(id),

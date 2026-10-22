@@ -25,7 +25,8 @@ here. The format follows
     "failed" is gone; `data-verify` and `data-uncheckpointed` are unchanged.
     An embedded mount (`mountPresentation`) draws the same elements
     (`.cv-shell-bar`, `.cv-pill`, `details.cv-checked`) and leaves their
-    styling to its host page.
+    styling to its host page: the viewer sets no page-level style on a page
+    it does not own.
   - The verification page is folded into one `<details data-checked>`
     section, "How this page was checked", closed when the bundle verified.
     It is now the rendering's last element, with the

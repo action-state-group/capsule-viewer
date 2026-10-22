@@ -71,7 +71,7 @@ describe("the page shell", () => {
     );
   });
 
-  it("opens the section, says Not verified and keeps the refusal for a bundle that did not verify", async () => {
+  it("opens the section, says Check failed and keeps the refusal for a bundle that did not verify", async () => {
     const edited = JSON.parse(
       JSON.stringify(bundle()).replace(
         '"verdict":"not_met"',
@@ -199,6 +199,33 @@ describe("checkedSummaryLine", () => {
         checkLists: { failed: ["disclosures"], notChecked: [] },
       }),
     ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 records");
+    // A page-list failure on a numbered check's ground is counted once.
+    expect(
+      checkedSummaryLine(false, {
+        checks: checks(8, 2),
+        records: [1, 2],
+        checkLists: { failed: ["closure", "disclosures"], notChecked: [] },
+      }),
+    ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 records");
+    // Checks that did not run are said with a failure too.
+    expect(
+      checkedSummaryLine(false, {
+        checks: [
+          ...checks(7, 1),
+          { status: "withheld" },
+          { status: "withheld" },
+        ],
+        records: [1, 2],
+        checkLists: { failed: [], notChecked: [] },
+      }),
+    ).toBe("1 of 10 checks failed, 2 not run · 2 records");
+    expect(
+      checkedSummaryLine(false, {
+        checks: [...checks(8), { status: "withheld" }, { status: "withheld" }],
+        records: [1, 2],
+        checkLists: { failed: [], notChecked: [] },
+      }),
+    ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 of 10 checks not run · 2 records`);
     // A failure outside both counts (a provenance error, say).
     expect(
       checkedSummaryLine(false, {
