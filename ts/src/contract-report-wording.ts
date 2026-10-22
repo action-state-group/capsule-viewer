@@ -156,10 +156,11 @@ const HAS_NON_SPACE = /\S/u;
 const HAS_LETTER = /\p{L}/u;
 /**
  * Latin letters (after `asRead` folds case and Cyrillic/Greek look-alikes)
- * that read as a digit between two counts unless a space stands on both
- * sides: "{count}O{total}" or "{count}O {total}" reads as one number
- * ("59O 768" as 590 768), so such a gap with only these has no word in it.
- * One spaced on both sides does ("59 o 768" is Welsh for "59 of 768").
+ * that read as a digit between two counts: "{count}O{total}" or
+ * "{count}O {total}" reads as one number ("59O 768" as 590 768), and
+ * "{count} OOO {total}" as a thousands group (59 000 768), so a gap with
+ * only these has no word in it -- unless it is one letter with a space on
+ * both sides ("59 o 768" is Welsh for "59 of 768").
  */
 const DIGIT_LIKE = /[oil]/gu;
 
@@ -730,17 +731,14 @@ function asReadUnfolded(word: string): string {
 }
 
 /**
- * A word as a reader tells it apart: `asReadUnfolded`, with the lowercase
+ * A word as its homoglyph reading: `asReadUnfolded`, with the lowercase
  * letters that read unlike their capital folded first (LOWER_CONFUSABLES),
  * then lowercased and uppercased (so ß and ẞ both become SS), every
  * Cyrillic or Greek homoglyph folded to the Latin letter it reads as
- * (CONFUSABLES, keyed by capital letter), and case ignored. Uppercasing
- * before the fold means case never decides whether a letter folds: "ΕΤΣΙ"
- * and "ετσι" read alike, as do "Η" and "H", and "ν" still reads as "v". "Met", "met " and "(met)." are one
- * word to a reader; "✓ met" reads as "met" too, not as a decorated word
- * distinct from it. Used for every comparison (DISTINCT, categoryCollisions):
- * an all-Cyrillic "мет" must still collide with "met". Never used for
- * `mixesScripts`, which needs the word before this folding.
+ * (CONFUSABLES, keyed by capital letter), and case ignored. An
+ * all-Cyrillic "мет" reads as "met", as does "ΜΕΤ"; "ν" reads as "v".
+ * Because ν and Ν read as different Latin letters, this reading alone can
+ * tell "ναι" from "ΝΑΙ": `readings` pairs it with a plain case fold.
  */
 function asRead(word: string): string {
   return asReadUnfolded(word)
@@ -749,6 +747,23 @@ function asRead(word: string): string {
     .toUpperCase()
     .replace(CONFUSABLE, (c) => CONFUSABLES[c]!)
     .toLowerCase();
+}
+
+/**
+ * Every way a reader may read `word`, for comparisons (DISTINCT,
+ * categoryCollisions): its homoglyph reading (`asRead`) and its case fold in
+ * its own script, so "Met", "met " and "(met)." are one word, as are "ναι"
+ * and "ΝΑΙ" or "ordnungsgemäß" and "ORDNUNGSGEMÄẞ", and "мет" is "met". Two
+ * words read alike when any reading of one is a reading of the other. Never
+ * used for `mixesScripts`, which needs the word before any folding.
+ */
+function readings(word: string): string[] {
+  const caseFolded = asReadUnfolded(word)
+    .toLowerCase()
+    .toUpperCase()
+    .toLowerCase();
+  const read = asRead(word);
+  return read === caseFolded ? [read] : [read, caseFolded];
 }
 
 /** Letters from more than one of Latin, Greek and Cyrillic in `word` as actually written (`asReadUnfolded`, no homoglyph folded): a genuine word in one script never mixes, however many of its letters CONFUSABLES would fold; a spoof mixing a real Latin letter with a lookalike still does. */
@@ -790,14 +805,17 @@ function categoryCollisions(
     source: Readonly<Record<string, string>>,
   ): void => {
     if (!Object.hasOwn(source, key)) return;
-    const word = asRead(source[key]!);
-    if (word === "") return;
-    const owner = seen.get(word);
-    if (owner === undefined) seen.set(word, { key, category });
-    else if (owner.category !== category)
-      problems.push(
-        `${owner.key} and ${key} read alike (${JSON.stringify(word)}); ${CATEGORY_LABEL[owner.category]} must not read like ${CATEGORY_LABEL[category]}, or the other way round`,
-      );
+    for (const word of readings(source[key]!)) {
+      if (word === "") continue;
+      const owner = seen.get(word);
+      if (owner === undefined) seen.set(word, { key, category });
+      else if (owner.category !== category) {
+        problems.push(
+          `${owner.key} and ${key} read alike (${JSON.stringify(word)}); ${CATEGORY_LABEL[owner.category]} must not read like ${CATEGORY_LABEL[category]}, or the other way round`,
+        );
+        return;
+      }
+    }
   };
   for (const [key, category] of Object.entries(GUARDED_CATEGORY)) {
     visit(key, category, merged);
@@ -857,8 +875,8 @@ export function wordingProblems(
         const gotGap = gotGaps[i]!;
         const runsTogether = HAS_LETTER.test(baseGap)
           ? !HAS_LETTER.test(gotGap) ||
-            (!/^\s[^]*\s$/u.test(gotGap) &&
-              !HAS_LETTER.test(asRead(gotGap).replace(DIGIT_LIKE, "")))
+            (!HAS_LETTER.test(asRead(gotGap).replace(DIGIT_LIKE, "")) &&
+              !(/^\s[^]*\s$/u.test(gotGap) && [...asRead(gotGap)].length === 1))
           : HAS_NON_SPACE.test(baseGap) && !HAS_NON_SPACE.test(gotGap);
         if (runsTogether)
           problems.push(
@@ -880,7 +898,8 @@ export function wordingProblems(
     for (const keys of members)
       for (const k of keys)
         if (Object.hasOwn(defaults.entries, k))
-          defaultOf.set(asRead(defaults.entries[k]!), keys.join(" / "));
+          for (const word of readings(defaults.entries[k]!))
+            defaultOf.set(word, keys.join(" / "));
     const seen = new Map<string, string>();
     for (const keys of members) {
       const name = keys.join(" / ");
@@ -893,20 +912,27 @@ export function wordingProblems(
           problems.push(
             `${k} mixes Latin, Greek and Cyrillic letters (${JSON.stringify(unfolded)}); a verdict word is written in one script`,
           );
-        else words.add(asRead(merged[k]!));
+        else for (const word of readings(merged[k]!)) words.add(word);
       }
+      // One problem per pair of verdicts, however many readings collide.
+      const shared = new Set<string>();
+      const taken = new Set<string>();
       for (const word of words) {
         const other = seen.get(word);
-        if (other !== undefined)
-          problems.push(
-            `${name} and ${other} read alike (${JSON.stringify(word)}); two verdicts must not share a word`,
-          );
-        else seen.set(word, name);
+        if (other !== undefined) {
+          if (!shared.has(other))
+            problems.push(
+              `${name} and ${other} read alike (${JSON.stringify(word)}); two verdicts must not share a word`,
+            );
+          shared.add(other);
+        } else seen.set(word, name);
         const owner = defaultOf.get(word);
-        if (owner !== undefined && owner !== name)
+        if (owner !== undefined && owner !== name && !taken.has(owner)) {
           problems.push(
             `${name} reads ${JSON.stringify(word)}, the word for ${owner}; a verdict must not take another verdict's word`,
           );
+          taken.add(owner);
+        }
       }
     }
   }

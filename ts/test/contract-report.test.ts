@@ -566,6 +566,11 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
     " O",
     "\u202fO",
     "l\u2009",
+    // a spaced run of them reads as a thousands group ("59 OOO 768")
+    " OOO ",
+    " \u041e\u041e\u041e ",
+    " lOO ",
+    "\u202fOOO\u202f",
   ])
     expect(
       wordingProblems(
@@ -770,6 +775,44 @@ it("CONFUSABLES folds a word the same in any case (Greek eta; ΕΤΣΙ and ετ�
       DEFAULT_PACKS.lines,
     ).join("\n"),
   ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // the same Greek word in two cases is one word even when it has a letter
+  // (ν, η, μ) whose lowercase reads as a different Latin letter than its
+  // capital: "ναι" and "ΝΑΙ" are both "yes"
+  for (const [met, notMet] of [
+    ["\u03bd\u03b1\u03b9", "\u039d\u0391\u0399"],
+    ["\u03bc\u03b7", "\u039c\u0397"],
+    [
+      "\u03b9\u03ba\u03b1\u03bd\u03bf\u03c0\u03bf\u03b9\u03b5\u03af\u03c4\u03b1\u03b9",
+      "\u0399\u039a\u0391\u039d\u039f\u03a0\u039f\u0399\u0395\u038a\u03a4\u0391\u0399",
+    ],
+  ])
+    expect(
+      wordingProblems(
+        {
+          id: "test/greek-case@1",
+          locale: "el",
+          entries: {
+            "lines.verdict.met": met!,
+            "lines.verdict.not_met": notMet!,
+          },
+        },
+        DEFAULT_PACKS.lines,
+      ).join("\n"),
+      met,
+    ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // lowercase eta reads as Latin n: an all-Greek "ηοτ ΜΕΤ" is "not met"
+  expect(
+    wordingProblems(
+      {
+        id: "test/greek-eta@1",
+        locale: "en",
+        entries: {
+          "lines.verdict.met": "\u03b7\u03bf\u03c4 \u039c\u0395\u03a4",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/read alike/u);
   // lowercase Greek nu reads as Latin v, not as its capital's N
   expect(
     wordingProblems(
