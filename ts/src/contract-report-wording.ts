@@ -674,10 +674,15 @@ const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
  * not part of the word itself: "{n} met" reads as "met"), compatibility
  * forms folded, punctuation and symbols turned into a space (so internal
  * punctuation still separates words: "not-met" reads as "not met", never
- * "notmet"), whitespace collapsed, case ignored -- but no homoglyph folded,
- * so a genuine Cyrillic or Greek word still reads as the one script it is
- * written in. Used only for `mixesScripts`: a real word must be judged by
- * the letters it actually has, not by what CONFUSABLES maps some of them to.
+ * "notmet"), whitespace collapsed -- but case and homoglyphs both left
+ * alone, so a genuine Cyrillic or Greek word still reads as the one script
+ * it is written in (case does not affect which script a letter belongs to,
+ * so leaving it be does not weaken `mixesScripts`). Used only for
+ * `mixesScripts` and the "no visible word" check, both case-insensitive by
+ * nature: a real word must be judged by the letters it actually has, not by
+ * what CONFUSABLES maps some of them to, and CONFUSABLES must run before
+ * case folding -- some entries (Greek Ζ, Η, Μ) are keyed by uppercase only,
+ * so folding after lowercasing would miss them.
  */
 function asReadUnfolded(word: string): string {
   return word
@@ -685,21 +690,23 @@ function asReadUnfolded(word: string): string {
     .normalize("NFKC")
     .replace(/[\p{P}\p{S}]/gu, " ")
     .replace(/\s+/gu, " ")
-    .trim()
-    .toLowerCase();
+    .trim();
 }
 
 /**
  * A word as a reader tells it apart: `asReadUnfolded`, with every Cyrillic
- * or Greek homoglyph also folded to the Latin letter it reads as
- * (CONFUSABLES). "Met", "met " and "(met)." are one word to a reader; "✓
- * met" reads as "met" too, not as a decorated word distinct from it. Used
- * for every comparison (DISTINCT, the clean/not-clean check): an all-
- * Cyrillic "мет" must still collide with "met". Never used for
+ * or Greek homoglyph folded to the Latin letter it reads as (CONFUSABLES,
+ * matched before case is folded, so an uppercase-only entry such as Greek
+ * Η still folds), then case ignored. "Met", "met " and "(met)." are one
+ * word to a reader; "✓ met" reads as "met" too, not as a decorated word
+ * distinct from it. Used for every comparison (DISTINCT, categoryCollisions):
+ * an all-Cyrillic "мет" must still collide with "met". Never used for
  * `mixesScripts`, which needs the word before this folding.
  */
 function asRead(word: string): string {
-  return asReadUnfolded(word).replace(CONFUSABLE, (c) => CONFUSABLES[c]!);
+  return asReadUnfolded(word)
+    .replace(CONFUSABLE, (c) => CONFUSABLES[c]!)
+    .toLowerCase();
 }
 
 /** Letters from more than one of Latin, Greek and Cyrillic in `word` as actually written (`asReadUnfolded`, no homoglyph folded): a genuine word in one script never mixes, however many of its letters CONFUSABLES would fold; a spoof mixing a real Latin letter with a lookalike still does. */

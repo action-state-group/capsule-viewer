@@ -655,6 +655,25 @@ it("a genuine Cyrillic or Greek verdict word is not refused as mixing scripts (4
   );
 });
 
+it("a CONFUSABLES entry keyed only by its uppercase form still folds (Greek zeta, eta, mu)", () => {
+  // CONFUSABLES maps Greek Ζ/Η/Μ by their uppercase form only (no lowercase
+  // ζ/η/μ entry); folding must run before case is dropped, or an uppercase
+  // Η is already the lowercase η -- not a key -- by the time the fold runs
+  expect(
+    wordingProblems(
+      {
+        id: "test/greek-case@1",
+        locale: "en",
+        entries: {
+          "lines.status.resolved": "Η",
+          "lines.verdict.not_met": "H",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.status\.resolved and lines\.verdict\.not_met read alike/u);
+});
+
 it("the spelled-out numbers are locked: a pack must not make 2 read as one hundred", () => {
   expect(
     wordingProblems(
