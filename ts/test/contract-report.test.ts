@@ -207,7 +207,7 @@ it("the front says witnessed by as stated by the bundle, not checked here (SEAMS
 // producer's text reads like. Every default entry that reads like this must
 // be locked, so a new honesty line cannot ship tunable by accident.
 const HONESTY =
-  /not (?:be )?checked|does not check|did not check|not evidence|not a sealed record|withheld|not stated|not shown|not in this bundle|this page|this card|as sealed|\(sealed\)|self-attested|as given|recomputed|absent|unknown|uncomputable|no signature|placeholder/iu;
+  /not (?:be )?checked|does not check|did not check|not evidence|not a sealed record|withheld|not stated|not shown|not in this bundle|this page|this card|as sealed|\(sealed\)|self-attested|as given|recomputed|absent|unknown|uncomputable|no signature|placeholder|failed verification|evidence missing|could not decide|no verdict drawn/iu;
 
 it("every locked line is a default entry, and every default line that states what the page checked is locked", () => {
   const all = {
@@ -219,11 +219,28 @@ it("every locked line is a default entry, and every default line that states wha
   const unlocked = Object.entries(all)
     .filter(([k, v]) => HONESTY.test(v) && !LOCKED_ENTRIES.has(k))
     .map(([k]) => k);
-  // The tier's name: a word about the method, which a pack may tune, not
-  // the page's own account of its checking.
+  // Verdict and status words a pack may tune (DISTINCT keeps them from
+  // reading like a different verdict; LOCKED_ENTRIES is not their guard),
+  // not the page's own account of its checking -- even though the words
+  // for "not evaluable", "not met" and the tier's name read, in English,
+  // like an honesty line.
   expect(unlocked.sort()).toEqual([
+    "groups.session.undecided",
     "groups.tier.recomputed",
+    "lines.pf.verdict.failed",
+    "lines.rules.col.undecided",
+    "lines.rules.col.unverified",
+    "lines.sentence.unverified.undecided-note",
+    "lines.status.undecided.judged",
+    "lines.status.undecided.none",
     "lines.tier.recomputed",
+    "lines.why.undecided",
+    "verdict.failed",
+    "verdict.not_evaluable.judged",
+    "verdict.not_evaluable.unavailable",
+    "verdict.not_evaluable.unjudged",
+    "verdict.not_evaluable.withheld",
+    "verdict.unsupported",
   ]);
 });
 
