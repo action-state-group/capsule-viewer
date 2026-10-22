@@ -7,15 +7,16 @@
 // word, or does not hash to its wording_sha256 is refused before anything is
 // drawn. The nesting rule (SEAMS ruling 11) holds on both pages.
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import { sha256Hex } from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
+  DEFAULT_PACK_SHA256,
   DEFAULT_PACKS,
   LOCKED_ENTRIES,
-  packSha256,
   placeholders,
   readWordingPack,
   wordingProblems,
@@ -332,13 +333,15 @@ for (const { grouping, file, page } of CARDS) {
       expect(skeleton(b)).toBe(skeleton(a));
       // the counts and digests the pack's sentences carry are the module's
       expect(digests(a).length).toBeGreaterThan(0);
-      // (the supplied pack's own wording_sha256, and the built-in default's,
-      // are each named once, in the proofs -- every layer applied)
-      const baseSha256 = await packSha256(DEFAULT_PACKS[grouping]);
-      expect(
-        digests(b).filter((d) => d !== wording.sha256 && d !== baseSha256),
-      ).toEqual(digests(a));
+      // (the supplied pack's own wording_sha256 is named once more than the
+      // default-only page names; the built-in default's digest is named on
+      // both -- every layer applied, even a default-only page's one layer)
+      const baseSha256 = DEFAULT_PACK_SHA256[grouping];
+      expect(digests(b).filter((d) => d !== wording.sha256)).toEqual(
+        digests(a),
+      );
       expect(digests(b)).toContain(wording.sha256);
+      expect(digests(a)).toContain(baseSha256);
       expect(digests(b)).toContain(baseSha256);
       // and the proofs say which pack drew the page
       expect(b.textContent).toContain(make().id);
@@ -349,11 +352,29 @@ it("the proofs name every wording layer by digest, not only the supplied one", a
   const wording = await distributed(ladderPack("lines"));
   const root = await render("outcome-report-bundle.json", wording);
   openAll(root);
-  const baseSha256 = await packSha256(DEFAULT_PACKS.lines);
   const text = root.textContent ?? "";
   expect(text).toContain(wording.sha256);
-  expect(text).toContain(baseSha256);
+  expect(text).toContain(DEFAULT_PACK_SHA256.lines);
   expect(text).toContain(DEFAULT_PACKS.lines.id);
+});
+
+it("the proofs name the base layer's digest on a default-only page too (4343134014)", async () => {
+  const root = await render("outcome-report-bundle.json");
+  openAll(root);
+  const text = root.textContent ?? "";
+  expect(text).toContain(DEFAULT_PACK_SHA256.lines);
+  expect(text).toContain(DEFAULT_PACKS.lines.id);
+});
+
+it("the default packs' digests are the sha256 of the files as this package ships them, not a re-serialized form (4343134014)", () => {
+  for (const [grouping, file] of [
+    ["lines", "contract-report-outcomes.en.json"],
+    ["groups", "contract-report-eu-ai-act.en.json"],
+  ] as const) {
+    const bytes = readFileSync(resolve(process.cwd(), "src", "wording", file));
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    expect(hash, file).toBe(DEFAULT_PACK_SHA256[grouping]);
+  }
 });
 
 it("the ladder pack's words reach the page: a resolved line reads Established (resolved)", async () => {

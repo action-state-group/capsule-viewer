@@ -1811,23 +1811,26 @@ export function verificationRows(
   ];
 }
 
-/** Which wording pack drew this card, in its report proofs: every layer applied, by digest, not only the final one. */
+/**
+ * Which wording pack drew this card, in its report proofs: every layer
+ * applied, by digest, not only the final one -- the base layer's digest is
+ * named even on a default-only page (contract-report/v1 §3 records every
+ * layer applied).
+ */
 export function wordingRow(w: Words): [string, string] {
   return [
     w.t("report.pf.wording"),
-    w.source.sha256 === undefined
-      ? w.t("report.pf.wording.default", { id: w.source.id })
-      : w.source.base === undefined
-        ? w.t("report.pf.wording.supplied", {
-            id: w.source.id,
-            sha256: w.source.sha256,
-          })
-        : w.t("report.pf.wording.supplied.layered", {
-            id: w.source.id,
-            sha256: w.source.sha256,
-            baseId: w.source.base.id,
-            baseSha256: w.source.base.sha256,
-          }),
+    w.source.base === undefined
+      ? w.t("report.pf.wording.default", {
+          id: w.source.id,
+          sha256: w.source.sha256 ?? "",
+        })
+      : w.t("report.pf.wording.supplied.layered", {
+          id: w.source.id,
+          sha256: w.source.sha256 ?? "",
+          baseId: w.source.base.id,
+          baseSha256: w.source.base.sha256,
+        }),
   ];
 }
 

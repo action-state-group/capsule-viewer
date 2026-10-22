@@ -436,7 +436,6 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "report.pf.transcript.not-shown",
   "report.pf.transcript.default-reason",
   "report.pf.wording.default",
-  "report.pf.wording.supplied",
   "report.pf.wording.supplied.layered",
   "report.pin.withheld",
   "report.pin.unread",
@@ -732,33 +731,38 @@ export function wordingProblems(
 // The words a card is drawn with
 // ---------------------------------------------------------------------------
 
-/** Where a card's words came from, for its proofs. */
+/**
+ * Where a card's words came from, for its proofs. `base` is this viewer's
+ * own default pack -- present whether or not a host supplied one, since
+ * contract-report/v1 §3 records every wording layer applied, including
+ * the one layer a default-only page still has; `sha256` is the digest of
+ * the pack actually named by `id`, absent only when a caller (a test) built
+ * `Words` from a pack it never hashed.
+ */
 export interface WordingSource {
   readonly id: string;
-  /** The supplied pack's `wording_sha256`; absent for the default pack built into this viewer. */
   readonly sha256?: string;
-  /**
-   * The built-in default pack a supplied pack's entries replaced words in,
-   * by its own id and digest -- contract-report/v1 §3 records every
-   * wording layer applied, not only the final one. Absent when no pack was
-   * supplied: there is then only the one layer, already named by `id`.
-   */
   readonly base?: { readonly id: string; readonly sha256: string };
 }
 
-/** `pack`'s own canonical bytes, hashed the same way a distributed pack's are: the digest this viewer's built-in pack would carry if it were supplied as one. */
-export async function packSha256(pack: WordingPack): Promise<string> {
-  return sha256Hex(
-    new TextEncoder().encode(
-      JSON.stringify({
-        wording_pack_version: WORDING_PACK_VERSION,
-        id: pack.id,
-        locale: pack.locale,
-        entries: pack.entries,
-      }),
-    ),
-  );
-}
+/**
+ * sha256 of each default pack exactly as this package ships it --
+ * `wording/contract-report-outcomes.en.json` and
+ * `wording/contract-report-eu-ai-act.en.json`, the literal file bytes, not
+ * a re-serialized form -- so the proofs line's digest is the one a reader
+ * who downloads this package and hashes the file themselves actually gets,
+ * the same canonical form a supplied pack's `wording_sha256` already uses
+ * (`checkWordingPackInput` hashes the bytes as given, never a re-encoding).
+ * contract-report.test.ts hashes the real files on disk and checks these
+ * still match; regenerate with `sha256sum ts/src/wording/*.en.json` after
+ * editing either file.
+ */
+export const DEFAULT_PACK_SHA256: Readonly<
+  Record<ContractReportGrouping, string>
+> = Object.freeze({
+  lines: "a40030f29980786b229f817d906dc60d661a61e1703d0d85290bcbb3b7fc3571",
+  groups: "c00f7be097975f23ce22414630f80239dd9546a6bde8d2282f7439006119ab92",
+});
 
 export interface Words {
   /** Entry `key`, its `{placeholders}` filled from `vars`. */
@@ -791,7 +795,6 @@ export function wordsOf(
   supplied?: {
     readonly pack: WordingPack;
     readonly sha256?: string;
-    readonly defaultsSha256?: string;
   },
 ): Words {
   const entries: Readonly<Record<string, string>> =
@@ -812,6 +815,7 @@ export function wordsOf(
     throw new WordingPackError(
       `${defaults.id}: layout.grouping is ${JSON.stringify(grouping)}`,
     );
+  const base = { id: defaults.id, sha256: DEFAULT_PACK_SHA256[grouping] };
   return {
     t,
     p: (key, count, vars = {}) =>
@@ -822,17 +826,13 @@ export function wordsOf(
     grouping,
     source:
       supplied === undefined
-        ? { id: defaults.id }
+        ? { id: base.id, sha256: base.sha256 }
         : {
             id: supplied.pack.id,
             ...(supplied.sha256 === undefined
               ? {}
               : { sha256: supplied.sha256 }),
-            ...(supplied.defaultsSha256 === undefined
-              ? {}
-              : {
-                  base: { id: defaults.id, sha256: supplied.defaultsSha256 },
-                }),
+            base,
           },
   };
 }
@@ -852,11 +852,7 @@ export async function contractReportWords(
   const pack = await checkWordingPackInput(wording);
   const problems = wordingProblems(pack, defaults);
   if (problems.length > 0) throw new WordingPackError(problems.join("; "));
-  return wordsOf(defaults, {
-    pack,
-    sha256: wording.sha256,
-    defaultsSha256: await packSha256(defaults),
-  });
+  return wordsOf(defaults, { pack, sha256: wording.sha256 });
 }
 
 /** The default words of one grouping, for the shared parts' callers that are handed none. */
