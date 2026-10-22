@@ -113,7 +113,10 @@ describe.skipIf(executablePath === undefined)(
       });
       const url = `${pathToFileURL(path).href}${hash}`;
       await page.goto(url);
-      await page.waitForSelector('[data-page="verification"]');
+      await page.waitForSelector('[data-page="verification"]', {
+        // The section is folded, so it is drawn but not visible.
+        state: "attached",
+      });
       await page.waitForTimeout(200);
       const shown = await page.evaluate(() => {
         const app = document.getElementById("app")!;

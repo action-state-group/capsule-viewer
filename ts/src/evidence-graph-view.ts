@@ -163,24 +163,51 @@ const recordsWord = (count: number): string =>
 // The banner is drawn from the verification result alone and precedes every
 // row in the DOM; an unverified bundle gets the refusal line here and no
 // rows at all, so a reader never meets a payload before the verdict on the
-// bundle that carries it. It says what IS proven: a verified bundle with
-// records outside the checkpoint names their count up front.
+// bundle that carries it. It is a pill at the top of the page ("Contents
+// checked", or "Check failed"), whose accessible name starts with those words
+// and says the full verdict; a verified bundle with records outside the
+// checkpoint says their count beside it.
+export const BANNER_LINES = {
+  verified: "Contents checked",
+  failed: "Check failed",
+  // The accessible name starts with the visible words (WCAG 2.5.3).
+  verifiedTitle: "Contents checked: bundle verification passed",
+  failedTitle: "Check failed: bundle verification failed",
+} as const;
+
 function renderVerificationBanner(
   root: HTMLElement,
   verified: boolean,
   coverage: { uncheckpointed: number; total: number },
 ): HTMLElement {
+  const bar = element("div");
+  bar.className = "cv-shell-bar";
   const banner = element(
-    "p",
-    verified
-      ? coverage.uncheckpointed === 0
-        ? "Bundle verification passed"
-        : `Bundle verification passed; ${coverage.uncheckpointed} of ${recordsWord(coverage.total)} uncheckpointed`
-      : "Bundle verification failed",
+    "span",
+    verified ? BANNER_LINES.verified : BANNER_LINES.failed,
   );
+  banner.className = "cv-pill";
   banner.dataset.verify = verified ? "verified" : "failed";
   banner.dataset.uncheckpointed = String(coverage.uncheckpointed);
-  root.append(banner);
+  const title = verified
+    ? BANNER_LINES.verifiedTitle
+    : BANNER_LINES.failedTitle;
+  // role="img" lets the pill carry the full verdict as its accessible name
+  // (aria-label on a bare span is not announced).
+  banner.setAttribute("role", "img");
+  banner.setAttribute("aria-label", title);
+  banner.title = title;
+  bar.append(banner);
+  if (verified && coverage.uncheckpointed > 0) {
+    const note = element(
+      "span",
+      `${coverage.uncheckpointed} of ${recordsWord(coverage.total)} not in the checkpoint`,
+    );
+    note.className = "cv-shell-note";
+    note.dataset.uncheckpointedNote = "";
+    bar.append(note);
+  }
+  root.append(bar);
   if (verified) return banner;
   const refusal = element(
     "p",
@@ -230,12 +257,87 @@ export function renderUnableToVerify(
   root.append(element("p", UNABLE_TO_VERIFY_LINES.command), block);
 }
 
-// Drawn in the outcome-report card's own look when that card renders
-// (OUTCOME_REPORT_CSS's .oi-banner rules); the words and data attributes are
-// identical either way -- the class is presentation only.
-function styleBanner(banner: HTMLElement, verified: boolean): void {
-  banner.className = `oi oi-banner ${verified ? "oi-banner-ok" : "oi-banner-failed"}`;
+/**
+ * The one line a closed "How this page was checked" section shows, so what
+ * this page did not check stays in view with it folded: how many of the
+ * checks passed (or failed), how many records the file carries, and the
+ * signatures or other checks this page did not run.
+ */
+export function checkedSummaryLine(
+  verified: boolean,
+  model: {
+    readonly checks: readonly { readonly status: string }[];
+    readonly records: readonly unknown[];
+    readonly checkLists: {
+      readonly failed: readonly string[];
+      readonly notChecked: readonly string[];
+    };
+  },
+): string {
+  const total = model.checks.length;
+  const failed = model.checks.filter((c) => c.status === "fail").length;
+  const passed = model.checks.filter((c) => c.status === "pass").length;
+  const notRun = total - failed - passed;
+  // A failure can sit outside the numbered checks (a disclosure that does not
+  // match its digest, say, or a provenance error outside both counts): a
+  // bundle that did not verify never reads as passed.
+  // The page's own lists repeat the numbered checks' ground (digests,
+  // record rules, closure, range, membership); a failure there is counted
+  // only once, as the numbered check it shows up in.
+  const pageFailed = model.checkLists.failed.filter(
+    (id) => !NUMBERED_CHECK_GROUND.has(id),
+  ).length;
+  // Numbered checks that did not run are always said, so none reads as
+  // passed or failed.
+  const notRunNote = notRun > 0 ? `, ${notRun} not run` : "";
+  const leads: string[] = [];
+  if (failed > 0)
+    leads.push(`${failed} of ${total} checks failed${notRunNote}`);
+  if (pageFailed > 0)
+    leads.push(
+      `${pageFailed} ${pageFailed === 1 ? "check" : "checks"} on this page failed`,
+    );
+  if (failed === 0 && pageFailed === 0)
+    leads.push(
+      verified
+        ? `${passed} of ${total} checks passed${notRunNote}`
+        : SUMMARY_NOT_VERIFIED,
+    );
+  if (failed === 0 && (pageFailed > 0 || !verified) && notRun > 0)
+    leads.push(`${notRun} of ${total} checks not run`);
+  const parts = [...leads, recordsWord(model.records.length)];
+  const signatures = model.checkLists.notChecked.filter((id) =>
+    SIGNATURE_CHECKS.has(id),
+  ).length;
+  const others = model.checkLists.notChecked.length - signatures;
+  if (signatures > 0) parts.push("signatures not checked here");
+  if (others > 0)
+    parts.push(
+      `${others} other ${others === 1 ? "check" : "checks"} not run here`,
+    );
+  return parts.join(" · ");
 }
+
+/** The summary's lead for a bundle that failed outside every counted check. */
+export const SUMMARY_NOT_VERIFIED = "the bundle did not verify";
+
+const NUMBERED_CHECK_GROUND: ReadonlySet<string> = new Set([
+  "record-digests",
+  "record-rules",
+  "closure",
+  "range",
+  "membership",
+]);
+
+const SIGNATURE_CHECKS: ReadonlySet<string> = new Set([
+  "checkpoint-signature",
+  "producer-signatures",
+  "cited-signers",
+  "countersignatures",
+]);
+
+/** The folded verification section's heading. */
+export const CHECKED_SECTION_TITLE = "How this page was checked";
 
 // presentation/v1 is rendered here, in the header only, and nowhere else in
 // this module. Only readPresentationBlock's three known fields ever reach
@@ -662,7 +764,21 @@ async function renderVerificationPage(
   renderExtensions(page, model.extensions, model.presentationRefusals);
   renderCheckLists(page, model.checkLists, verifierHint);
   page.append(element("p", model.verifyIndependentlyLine));
-  root.append(section);
+  // Folded into one section, closed for a bundle that verified; its summary
+  // line keeps the counts and what was not checked in view.
+  const folded = document.createElement("details");
+  folded.className = "cv-checked";
+  folded.dataset.checked = "";
+  folded.open = !bundleVerified(verified);
+  const heading = element("summary");
+  heading.append(
+    element("strong", CHECKED_SECTION_TITLE),
+    document.createTextNode(
+      ` · ${checkedSummaryLine(bundleVerified(verified), model)}`,
+    ),
+  );
+  folded.append(heading, section);
+  root.append(folded);
 }
 
 function metRate(report: ReportNode): string {
@@ -1602,15 +1718,18 @@ const resultComplianceModule: PresentationModule<
     bundle: context.bundle,
     verification: context.verification,
   }),
-  render: (model, host) =>
-    renderContractReport(
+  render: async (model, host) => {
+    // The card draws its own frame inside the page.
+    host.setChromeClass(COMPLIANCE_CHROME);
+    await renderContractReport(
       model.result,
       { grouping: "groups", presentation: model.card },
       model.bundle,
       model.verification,
       host.L1,
       (host as WordedHost).wording,
-    ),
+    );
+  },
 };
 
 const resultModule: PresentationModule<ResultRoot> = {
@@ -1794,6 +1913,7 @@ function citesCheckedSigners(
 }
 
 const OUTCOME_CHROME = "oi";
+const COMPLIANCE_CHROME = "cc";
 
 function presentationServices(
   context: VerifiedBundleContext,
@@ -1951,12 +2071,13 @@ export async function renderEvidenceGraph(
     total: Array.isArray(records) ? records.length : 0,
   };
 
-  const drawFrame = (): HTMLElement => {
+  const drawFrame = (): void => {
     root.replaceChildren();
+    root.classList.remove("cv-shell-chrome");
+    renderVerificationBanner(root, verified, coverage);
     renderPresentationHeader(root, bundle);
-    return renderVerificationBanner(root, verified, coverage);
   };
-  let banner = drawFrame();
+  drawFrame();
   if (refused.length > 0)
     root.dataset.presentationRefused = refused.map((r) => r.id).join(" ");
   else delete root.dataset.presentationRefused;
@@ -1969,10 +2090,11 @@ export async function renderEvidenceGraph(
       depth: options.depth ?? "L2",
       ...(options.wording === undefined ? {} : { wording: options.wording }),
       setChromeClass(name: string): void {
-        if (name !== OUTCOME_CHROME)
+        if (name !== OUTCOME_CHROME && name !== COMPLIANCE_CHROME)
           throw new Error(`unknown chrome class ${JSON.stringify(name)}`);
         chrome = name;
-        styleBanner(banner, verified);
+        // The card keeps its own frame; the pill keeps its look.
+        root.classList.add("cv-shell-chrome");
       },
     };
     try {
@@ -1984,7 +2106,7 @@ export async function renderEvidenceGraph(
     } catch {
       // Everything the module wrote is discarded; no other module is tried.
       chrome = undefined;
-      banner = drawFrame();
+      drawFrame();
       refusal = "presentation-failed";
     }
   }
@@ -2015,7 +2137,7 @@ export async function renderEvidenceGraph(
       );
     } catch {
       chrome = undefined;
-      banner = drawFrame();
+      drawFrame();
       refusal = "presentation-failed";
     }
   }

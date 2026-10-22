@@ -44,9 +44,11 @@ it("renders the compliance card, not the generic Result page, when eu-ai-act-com
   const page = root.querySelector<HTMLElement>('[data-page="compliance"]')!;
   expect(page).not.toBeNull();
   expect(page.classList.contains("cc")).toBe(true);
+  // The card keeps its own frame inside the page (capsule-viewer#60).
+  expect(root.classList.contains("cv-shell-chrome")).toBe(true);
   expect(root.querySelector('[data-page="result"]')).toBeNull();
   expect(root.lastElementChild).toBe(
-    root.querySelector('[data-page="verification"]'),
+    root.querySelector('[data-page="verification"]')!.closest("[data-checked]"),
   );
 });
 
