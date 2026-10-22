@@ -730,32 +730,29 @@ function categoryCollisions(
   merged: Readonly<Record<string, string>>,
   defaults: WordingPack,
 ): string[] {
-  const occurrences: {
-    key: string;
-    category: GuardedCategory;
-    word: string;
-  }[] = [];
-  for (const [key, category] of Object.entries(GUARDED_CATEGORY)) {
-    for (const source of [merged, defaults.entries]) {
-      if (!Object.hasOwn(source, key)) continue;
-      const word = asRead(source[key]!);
-      if (word !== "") occurrences.push({ key, category, word });
-    }
-  }
   const problems: string[] = [];
-  const reported = new Set<string>();
-  for (let i = 0; i < occurrences.length; i++) {
-    const a = occurrences[i]!;
-    for (let j = i + 1; j < occurrences.length; j++) {
-      const b = occurrences[j]!;
-      if (a.category === b.category || a.word !== b.word) continue;
-      const dedupeKey = [a.key, b.key].sort().join("\0");
-      if (reported.has(dedupeKey)) continue;
-      reported.add(dedupeKey);
+  // Single pass, the same owner-map style the DISTINCT loop above uses: the
+  // first key to read a given word claims it, and any later key with a
+  // different category reading the same word is refused against that owner.
+  const seen = new Map<string, { key: string; category: GuardedCategory }>();
+  const visit = (
+    key: string,
+    category: GuardedCategory,
+    source: Readonly<Record<string, string>>,
+  ): void => {
+    if (!Object.hasOwn(source, key)) return;
+    const word = asRead(source[key]!);
+    if (word === "") return;
+    const owner = seen.get(word);
+    if (owner === undefined) seen.set(word, { key, category });
+    else if (owner.category !== category)
       problems.push(
-        `${a.key} and ${b.key} read alike (${JSON.stringify(a.word)}); ${CATEGORY_LABEL[a.category]} must not read like ${CATEGORY_LABEL[b.category]}, or the other way round`,
+        `${owner.key} and ${key} read alike (${JSON.stringify(word)}); ${CATEGORY_LABEL[owner.category]} must not read like ${CATEGORY_LABEL[category]}, or the other way round`,
       );
-    }
+  };
+  for (const [key, category] of Object.entries(GUARDED_CATEGORY)) {
+    visit(key, category, merged);
+    visit(key, category, defaults.entries);
   }
   return problems;
 }
