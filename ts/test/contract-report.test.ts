@@ -581,24 +581,25 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(check({ "lines.verdict.met": "not-met" })).toMatch(
     /lines\.verdict\.met and lines\.verdict\.not_met read alike/u,
   );
-  // "\u0435" (Cyrillic) is a known homoglyph of Latin "e" (CONFUSABLES), folded
-  // before comparison, so this reads as the plain collision below, not a
-  // mixed-script word
+  // "\u0435" (Cyrillic) is a known homoglyph of Latin "e" (CONFUSABLES), but
+  // mixesScripts judges the word before folding: a real Latin "m" and "t"
+  // mixed with one genuine Cyrillic letter is still a mixed-script spoof,
+  // never a folded collision
   expect(check({ "lines.verdict.not_met": "m\u0435t" })).toContain(
-    'lines.verdict.not_met reads "met", the word for lines.verdict.met',
+    "lines.verdict.not_met mixes Latin, Greek and Cyrillic letters",
   );
-  // "\u0434" (Cyrillic de) has no Latin homoglyph in CONFUSABLES, so mixing it
-  // with Latin letters is still caught as a mixed-script word, not folded
-  // into a false collision
+  // "\u0434" (Cyrillic de) has no Latin homoglyph in CONFUSABLES either, so
+  // mixing it with Latin letters is caught the same way
   expect(check({ "lines.verdict.not_met": "m\u0434t" })).toContain(
     "lines.verdict.not_met mixes Latin, Greek and Cyrillic letters",
   );
-  // "\u03bd" (Greek nu) is a homoglyph of Latin "v" (lowercase nu is shaped
-  // like a v), not "n" -- folds into the plain collision below
+  // "\u03bd" (Greek nu) is a homoglyph of Latin "v", but the same applies: a
+  // real Latin word with one genuine Greek letter in it is a mixed-script
+  // spoof, not a folded collision with "failed verification"
   expect(
     check({ "lines.verdict.unsupported": "failed \u03bderification" }),
   ).toContain(
-    'lines.verdict.unsupported reads "failed verification", the word for lines.verdict.failed',
+    "lines.verdict.unsupported mixes Latin, Greek and Cyrillic letters",
   );
   // bidi and other invisible format controls are refused outright, not
   // merely stripped for the comparison: the checked string and the
