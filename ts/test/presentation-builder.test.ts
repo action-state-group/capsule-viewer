@@ -538,6 +538,51 @@ describe("theme, wording, locale and depth", () => {
       });
       expect(fits.format).toBe("html");
     });
+
+  // The same check, on the contract-report/v1 resolution path (the module
+  // registered in place of the built-in, not the deprecated built-in the
+  // loop above exercises): checkWordingFits's CONTRACT_REPORT_MANIFEST
+  // branch reads the grouping from the bundle's data, not from a static
+  // module-id table.
+  for (const [file, module, grouping] of [
+    ["outcome-report-bundle.json", "outcome-report", "lines"],
+    ["compliance-bundle.json", "compliance", "groups"],
+  ] as const)
+    it(`a wording pack that does not fit is refused on the contract-report/v1 path too (${module})`, async () => {
+      const source = fixture(file);
+      (source.extensions as Obj)["contract-report/v1"] = {};
+      const { bundle } = await sealEvidenceBundle(source);
+      const options = {
+        presentation: "auto",
+        audience: "*",
+        runtime: { code: "/*IIFE_MARKER*/" },
+      } as const;
+      const misfit = await pack(
+        { [`${grouping}.verdict.not_met`]: "met" },
+        "en",
+      );
+      const built = buildPresentation(bundle, {
+        ...options,
+        format: "html",
+        wording: misfit,
+      });
+      await expect(built).rejects.toThrow(PresentationBuildError);
+      await expect(built).rejects.toThrow(
+        new RegExp(
+          `wording pack does not fit .*${grouping}\\.verdict\\.not_met and ${grouping}\\.verdict\\.met read alike`,
+          "u",
+        ),
+      );
+      const fits = await buildPresentation(bundle, {
+        ...options,
+        format: "html",
+        wording: await pack(
+          { [`${grouping}.verdict.met`]: "established" },
+          "en",
+        ),
+      });
+      expect(fits.format).toBe("html");
+    });
 });
 
 // ---------------------------------------------------------------------------

@@ -20,6 +20,17 @@ here. The format follows
   reads a bundle file instead of a JSONL ledger. Requires capsule-emit 0.12
   (`capsule-emit>=0.12,<0.13` in the `evidence` and `dev` extras), which
   removes the `permalink.build_bundle` this used (capsule-emit#338).
+- The contract-report module's own words moved off the `report.*` prefix
+  onto `card.*`: `report.*` is reserved by agent-action-capsule
+  spec/contract-report-v1.md section 3 (`report.title`, `report.summary`),
+  and the module's own words must stay off every section 3 prefix. A pack
+  carrying the old `report.*` keys for the module's own concepts no longer
+  reaches them.
+- Both default wording packs bump to `@2`
+  (`capsule-viewer/contract-report/outcomes@2`,
+  `capsule-viewer/contract-report/eu-ai-act@2`); their `wording_sha256`
+  changes (#52 adds section 3 enum defaults and the resolved-conversation
+  out-of-scope header split). A pinned `@1` digest no longer matches.
 
 ### Added
 
@@ -79,6 +90,31 @@ here. The format follows
   witness addresses, log id, producer and version) are quoted and capped at
   120 characters, so they never read as the page's own words. New runtime
   style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+- The contract-report module resolves on `contract-report/v1`
+  (agent-action-capsule#352), registered in place of
+  `aac.builtin.result-contract-report/v0`, never beside it
+  (spec/contract-report-v1.md section 4). It reads section 3's keys
+  (`report.title`, `report.summary`, `group.<segment>.title`,
+  `row.<requirement_ref>.label`/`.detail`/`.not_evaluable`,
+  `verdict.<value>`, `sufficiency.<value>`, `tier.<value>`,
+  `grade.<value>`, `status.<value>`), layered over the module's own
+  default pack entry by entry: a host layer that does not check (digest,
+  shape or fit) is refused and contributes no words, and the card draws
+  with the default layer and a visible notice. `row.*`/`group.*` apply
+  only when every claim cites one `contract_ref`; a Result citing more
+  than one shows raw identifiers. Tuning details in `ts/README.md`.
+- Pinned `@action-state-group/agent-action-capsule` to
+  `main@db9de0f` (`ts/vendor/agent-action-capsule-db9de0f.tgz`, an
+  `npm pack` of that commit), which carries the `contract-report/v1`
+  registration (#352), `out_of_scope`/`applies_from` (#368, #363,
+  8732264) this release also ports onto `compliance.ts`,
+  `compliance-view.ts`, `outcome-report-view.ts` and the generic Result
+  page: a judged-out-of-scope claim is its own count, in the population,
+  never "met" and never "not applicable"; a claim not yet in force is
+  readiness only, outside the population, unless it failed verification.
+  Needs an agent-action-capsule ts release carrying #352 (and #368,
+  8732264) to drop the vendored tgz for a normal dependency; until then
+  this is a one-line `package.json` swap.
 
 ### Changed
 

@@ -19,7 +19,10 @@ import {
   LOCKED_ENTRIES,
   placeholders,
   readWordingPack,
+  SECTION3_ENUMS,
+  SECTION3_PREFIXES,
   wordingProblems,
+  wordsOf,
   WordingPackError,
   type WordingPack,
 } from "../src/contract-report-wording.js";
@@ -238,6 +241,7 @@ it("every locked line is a default entry, and every default line that states wha
   // for "not evaluable", "not met" and the tier's name read, in English,
   // like an honesty line.
   expect(unlocked.sort()).toEqual([
+    "grade.self-attested",
     "groups.session.undecided",
     "groups.tier.recomputed",
     "groups.verdict.failed",
@@ -260,6 +264,9 @@ it("every locked line is a default entry, and every default line that states wha
     "lines.verdict.not_evaluable.withheld",
     "lines.verdict.unsupported",
     "lines.why.undecided",
+    "status.unknown",
+    "status.withheld",
+    "sufficiency.unknown",
   ]);
 });
 
@@ -304,8 +311,13 @@ for (const grouping of ["lines", "groups"] as const)
     }
   });
 
+// contract-report/v1 section 3: "each layer is checked on its own, and a
+// refused layer contributes no words" -- a host pack that rewords a locked
+// line is refused, but the card still draws, with the built-in words and a
+// visible notice (report-levels.ts refusedWordingNotice); only the offline
+// builder (presentation-builder.test.ts) refuses to write the page.
 for (const { file, page } of CARDS)
-  it(`${page}: a pack rewording "stated by the bundle, not checked here" draws no card`, async () => {
+  it(`${page}: a pack rewording "stated by the bundle, not checked here" is refused, and the card draws with the built-in words`, async () => {
     const root = await render(
       file,
       await distributed({
@@ -314,10 +326,14 @@ for (const { file, page } of CARDS)
         entries: { "prov.witness.stated": "{witnesses}: checked." },
       }),
     );
-    expect(root.querySelector(`[data-page="${page}"]`)).toBeNull();
-    expect(
-      root.querySelector('[data-refusal="presentation-failed"]'),
-    ).not.toBeNull();
+    const card = root.querySelector(`[data-page="${page}"]`);
+    expect(card).not.toBeNull();
+    const notice = card!.querySelector('[data-wording="refused"]');
+    expect(notice).not.toBeNull();
+    expect(notice!.getAttribute("data-refusal")).toBe("fit");
+    expect(root.textContent).not.toContain("{witnesses}: checked.");
+    openAll(root);
+    expect(root.textContent).toMatch(/was refused.*does not fit this card/u);
   });
 
 // ---------------------------------------------------------------------------
@@ -1213,22 +1229,34 @@ it("sibling verdict and count surfaces outside the main verdict sets are still d
   }
 });
 
+// contract-report/v1 section 3: a refused layer (a fit failure such as
+// verdict.met: "not met", or a digest mismatch) draws the default words with
+// the refused notice and the proofs line naming the refused digest and the
+// base; the presentation builder, not the live render, still refuses to
+// write such a page (presentation-builder.test.ts).
 for (const { grouping, file, page } of CARDS) {
-  it(`${page}: a refused pack draws no card, and the page says the presentation failed`, async () => {
+  it(`${page}: a refused pack draws with the built-in words and the refused notice`, async () => {
     const bad = await distributed({
       id: "test/bad@1",
       locale: "en",
       entries: { [`${grouping}.verdict.not_met`]: "met" },
     });
     const root = await render(file, bad);
-    expect(root.querySelector(`[data-page="${page}"]`)).toBeNull();
-    expect(
-      root.querySelector('[data-refusal="presentation-failed"]'),
-    ).not.toBeNull();
+    const card = root.querySelector(`[data-page="${page}"]`);
+    expect(card).not.toBeNull();
+    const notice = card!.querySelector('[data-wording="refused"]');
+    expect(notice).not.toBeNull();
+    expect(notice!.getAttribute("data-refusal")).toBe("fit");
     // bytes that do not hash to the pack's wording_sha256: refused the same way
     const good = await distributed(ladderPack("lines"));
     const tampered = await render(file, { ...good, sha256: "0".repeat(64) });
-    expect(tampered.querySelector(`[data-page="${page}"]`)).toBeNull();
+    const tamperedCard = tampered.querySelector(`[data-page="${page}"]`);
+    expect(tamperedCard).not.toBeNull();
+    const tamperedNotice = tamperedCard!.querySelector(
+      '[data-wording="refused"]',
+    );
+    expect(tamperedNotice).not.toBeNull();
+    expect(tamperedNotice!.getAttribute("data-refusal")).toBe("digest");
   });
 }
 
@@ -1300,4 +1328,269 @@ it("the nesting check fails on a level-2 toggle directly inside another level-2 
   expect(nestingProblems(host)).toEqual([
     '"inner two" is level 2 but sits inside a level-2 toggle, not a level-1 one',
   ]);
+});
+
+// ---------------------------------------------------------------------------
+// contract-report/v1 section 3: the keys this kind defines
+// ---------------------------------------------------------------------------
+
+/** Render a bundle built from an already-mutated fixture source, with no
+ * cut() trimming: `cut()` rebuilds buckets assuming only met/not_met/
+ * not_evaluable, so it cannot carry a fixture this section mutates to add
+ * an out_of_scope claim. */
+async function renderSource(
+  source: Obj,
+  wording?: { pack: string; sha256: string },
+): Promise<HTMLElement> {
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = document.createElement("main");
+  await renderEvidenceGraph(
+    bundle,
+    root,
+    undefined,
+    wording === undefined ? {} : { wording },
+  );
+  return root;
+}
+
+it("every default-pack key either is an exact section 3 key or starts with none of SECTION3_PREFIXES", () => {
+  const exact = new Set<string>();
+  for (const [family, values] of Object.entries(SECTION3_ENUMS))
+    for (const value of values) exact.add(`${family}.${value}`);
+  for (const grouping of ["lines", "groups"] as const) {
+    const keys = Object.keys(DEFAULT_PACKS[grouping].entries);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      const prefixed = SECTION3_PREFIXES.some((p) => key.startsWith(p));
+      if (prefixed) expect(exact.has(key), `${grouping}: ${key}`).toBe(true);
+    }
+  }
+});
+
+it("a section 3 alias word is refused exactly where the grouping key would be (verdict.met: 'not met'; tier.judged equal to the recomputed word)", () => {
+  // The bare section 3 key, once expandSection3 copies it onto the
+  // grouping's own key, must be checked exactly as that grouping key would
+  // be: the same problems, modulo the id the message quotes.
+  const viaAlias = (
+    grouping: "lines" | "groups",
+    aliasKey: string,
+    directKey: string,
+    value: string,
+  ): [string[], string[]] => {
+    const alias = wordingProblems(
+      { id: "test/pack@1", locale: "en", entries: { [aliasKey]: value } },
+      DEFAULT_PACKS[grouping],
+    );
+    const direct = wordingProblems(
+      { id: "test/pack@1", locale: "en", entries: { [directKey]: value } },
+      DEFAULT_PACKS[grouping],
+    );
+    return [alias, direct];
+  };
+  for (const grouping of ["lines", "groups"] as const) {
+    const [alias, direct] = viaAlias(
+      grouping,
+      "verdict.met",
+      `${grouping}.verdict.met`,
+      "not met",
+    );
+    expect(alias.length).toBeGreaterThan(0);
+    expect(alias).toEqual(direct);
+    expect(alias.join("\n")).toContain(
+      `${grouping}.verdict.met reads "not met", the word for ${grouping}.verdict.not_met`,
+    );
+  }
+  for (const grouping of ["lines", "groups"] as const) {
+    const [alias, direct] = viaAlias(
+      grouping,
+      "tier.judged",
+      `${grouping}.tier.judged`,
+      "recomputed",
+    );
+    expect(alias.length).toBeGreaterThan(0);
+    expect(alias).toEqual(direct);
+    expect(alias.join("\n")).toContain(
+      `${grouping}.tier.judged reads "recomputed", the word for ${grouping}.tier.recomputed`,
+    );
+  }
+});
+
+it("an invalid assembled key (a requirement_ref with an uppercase letter) is never resolved: the pack's entry is never found, and the caller falls back to its own name, never a guess", () => {
+  const w = wordsOf(
+    DEFAULT_PACKS.groups,
+    {
+      pack: {
+        id: "test/case@1",
+        locale: "en",
+        entries: { "row.art5.foo.label": "SHOULD NEVER SHOW" },
+      },
+    },
+    { singleContract: true },
+  );
+  // the pack's own (lowercase) entry key is valid and is found for the
+  // matching lowercase ref
+  expect(w.row("art5.foo", "label")).toBe("SHOULD NEVER SHOW");
+  // but a Result claim's requirement_ref with an uppercase letter assembles
+  // row.Art5.foo.label, not a valid WordingKey (contract-report/v1 section
+  // 3): the lookup finds nothing, even though the lowercase entry exists
+  expect(w.row("Art5.foo", "label")).toBeUndefined();
+  expect(w.group("Art5")).toBeUndefined();
+});
+
+it("a multi-contract Result shows no row or group word, even from a pack that sets them: row.* and group.* apply only when every claim cites one contract_ref", async () => {
+  const source = fixture("compliance-bundle.json");
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const claims = doc.claims as Obj[];
+  // every claim of art5 now cites a second contract: the Result cites more
+  // than one contract_ref (contract-report/v1 section 2's "several
+  // contracts" rule; section 3's row.*/group.* gate on citesOneContract).
+  for (const claim of claims)
+    if ((claim.requirement_ref as string).startsWith("art5."))
+      claim.contract_ref = "ec:other-pack:2026-09-23@1";
+  const pack = await distributed({
+    id: "test/multi@1",
+    locale: "en",
+    entries: {
+      "row.art5.no_manipulation_or_deception.label": "SHOULD NEVER SHOW (row)",
+      "group.art5.title": "SHOULD NEVER SHOW (group)",
+    },
+  });
+  const root = await renderSource(source, pack);
+  openAll(root);
+  expect(root.textContent).not.toContain("SHOULD NEVER SHOW");
+});
+
+/** A §3 pack setting every key family this module reads, with markers
+ * unique enough not to collide with any other text on the page. */
+function section3Pack(groupKey: string, rowRef: string): WordingPack {
+  return {
+    id: "test/section3@1",
+    locale: "en",
+    entries: {
+      "report.title": "S3-TITLE",
+      "report.summary": "S3-SUMMARY",
+      [`group.${groupKey}.title`]: "S3-GROUP",
+      [`row.${rowRef}.label`]: "S3-ROW-LABEL",
+      [`row.${rowRef}.detail`]: "S3-ROW-DETAIL",
+      [`row.${rowRef}.not_evaluable`]: "S3-ROW-NE",
+      "verdict.met": "S3-VERDICT-MET",
+      "verdict.not_met": "S3-VERDICT-NOTMET",
+      "verdict.not_evaluable": "S3-VERDICT-NE",
+      "verdict.out_of_scope": "S3-VERDICT-OOS",
+      "tier.recomputed": "S3-TIER-RECOMPUTED",
+      "tier.judged": "S3-TIER-JUDGED",
+      "grade.self-attested": "S3-GRADE-SELF",
+      "grade.witnessed": "S3-GRADE-WITNESSED",
+      "grade.countersigned": "S3-GRADE-COUNTERSIGNED",
+      "sufficiency.satisfied": "S3-SUFF-SATISFIED",
+      "sufficiency.gap": "S3-SUFF-GAP",
+      "sufficiency.insufficient": "S3-SUFF-INSUFFICIENT",
+      "sufficiency.unknown": "S3-SUFF-UNKNOWN",
+      "status.satisfied": "S3-STATUS-SATISFIED",
+      "status.insufficient": "S3-STATUS-INSUFFICIENT",
+      "status.not_found": "S3-STATUS-NOTFOUND",
+      "status.not_committed": "S3-STATUS-NOTCOMMITTED",
+      "status.withheld": "S3-STATUS-WITHHELD",
+      "status.contradicted": "S3-STATUS-CONTRADICTED",
+      "status.not_applicable": "S3-STATUS-NOTAPPLICABLE",
+      "status.unknown": "S3-STATUS-UNKNOWN",
+    },
+  };
+}
+
+const SECTION3_MARKERS_PRESENT = [
+  "S3-TITLE",
+  "S3-GROUP",
+  "S3-ROW-LABEL",
+  "S3-VERDICT-MET",
+  "S3-VERDICT-NOTMET",
+  "S3-VERDICT-NE",
+  "S3-VERDICT-OOS",
+  "S3-TIER-RECOMPUTED",
+  "S3-TIER-JUDGED",
+  "S3-GRADE-SELF",
+  "S3-GRADE-WITNESSED",
+  "S3-SUFF-SATISFIED",
+  "S3-SUFF-GAP",
+  "S3-STATUS-SATISFIED",
+  "S3-STATUS-INSUFFICIENT",
+];
+
+function rebuildOutcomeBuckets(claims: Obj[]): Obj {
+  const buckets: Record<string, string[]> = {
+    met: [],
+    not_met: [],
+    not_evaluable: [],
+    out_of_scope: [],
+  };
+  for (const claim of claims)
+    buckets[claim.verdict as string]!.push(claim.id as string);
+  if (buckets.out_of_scope!.length === 0) delete buckets.out_of_scope;
+  return buckets;
+}
+
+it("a host pack that sets every section 3 key family shows each word: compliance (groups)", async () => {
+  const source = fixture("compliance-bundle.json");
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const claims = doc.claims as Obj[];
+  // task-0's art5 claim is judged out of scope, with a tier/grade/
+  // sufficiency/status this row would not otherwise exercise; art5's other
+  // claim stays not_met (naturally present), and
+  // art50.disclosure_before_first_turn stays not_evaluable (naturally
+  // present) -- met/not_met/not_evaluable/out_of_scope all land somewhere.
+  const art5 = claims.filter((c) =>
+    (c.requirement_ref as string).startsWith("art5."),
+  );
+  for (const c of art5) c.out_of_scope_allowed = true;
+  const target = art5.find((c) =>
+    (c.id as string).startsWith("tau2:airline:task-0"),
+  )!;
+  target.verdict = "out_of_scope";
+  target.tier = "recomputed";
+  target.grade = "witnessed";
+  target.sufficiency = "SATISFIED";
+  (target.presentation as Obj).status = "SATISFIED";
+  const aggregate = doc.aggregate as Obj;
+  (aggregate.buckets as Obj).met = [
+    "tau2:airline:task-0:trial-0::art26.allowed_action_rules",
+    "tau2:airline:task-0:trial-0::art26.consequential_actions_vs_instructions",
+    "tau2:airline:task-1:trial-0::art50.disclosure_clear_or_obvious",
+    "tau2:airline:task-1:trial-0::art26.consequential_actions_vs_instructions",
+  ];
+  (aggregate.buckets as Obj).out_of_scope = [
+    "tau2:airline:task-0:trial-0::art5.no_manipulation_or_deception",
+  ];
+  const pack = await distributed(
+    section3Pack("art5", "art5.no_manipulation_or_deception"),
+  );
+  const root = await renderSource(source, pack);
+  openAll(root);
+  const text = root.textContent ?? "";
+  for (const marker of SECTION3_MARKERS_PRESENT)
+    expect(text, marker).toContain(marker);
+});
+
+it("a host pack that sets every section 3 key family shows each word: outcome-report (lines)", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const claims = doc.claims as Obj[];
+  const ref = "policy_compliance.confirmed_before_acting";
+  const refClaims = claims.filter((c) => c.requirement_ref === ref);
+  for (const c of refClaims) c.out_of_scope_allowed = true;
+  const target = refClaims.find((c) => c.verdict === "met")!;
+  target.verdict = "out_of_scope";
+  target.tier = "recomputed";
+  target.grade = "witnessed";
+  target.sufficiency = "SATISFIED";
+  (target.presentation as Obj).status = "SATISFIED";
+  doc.aggregate = {
+    ...(doc.aggregate as Obj),
+    buckets: rebuildOutcomeBuckets(claims),
+  };
+  const pack = await distributed(section3Pack("policy_compliance", ref));
+  const root = await renderSource(source, pack);
+  openAll(root);
+  const text = root.textContent ?? "";
+  for (const marker of SECTION3_MARKERS_PRESENT)
+    expect(text, marker).toContain(marker);
 });

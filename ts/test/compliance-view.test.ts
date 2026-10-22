@@ -446,6 +446,8 @@ function row(over: Partial<ObligationRowModel>): ObligationRowModel {
     notMetCount: 0,
     notEvaluableCount: 0,
     notApplicableCount: 0,
+    outOfScopeCount: 0,
+    notYetInForceCount: 0,
     unverifiedCount: 0,
     sessionsByVerdict: new Map(),
     ...over,
@@ -521,6 +523,15 @@ it("a claim that failed verification or whose evidence is missing is never an ex
   });
 });
 
+it("an obligation whose rows mix all-later and all-unverified claims still reads 'Not yet in force', never 'Could not be checked' (Result v0 section 4.3: 'evaluated' excludes unverifiedCount)", () => {
+  const allLater = row({ criterionId: "x.a", notYetInForceCount: 2 });
+  const allUnverified = row({ criterionId: "x.b", unverifiedCount: 2 });
+  expect(obligationStatus(obligationOf([allLater, allUnverified]))).toEqual({
+    cls: "na",
+    text: "Not yet in force",
+  });
+});
+
 it("a producer's not-evaluable note never masks an actually-unverified row: the note is shown only when a test was really not evaluable", () => {
   const unverifiedWithStaleNote = row({
     unverifiedCount: 2,
@@ -578,6 +589,8 @@ it("a test or obligation with no result at all never falls through to a pass wor
     notMetCount: 0,
     notEvaluableCount: 0,
     notApplicableCount: 2,
+    outOfScopeCount: 0,
+    notYetInForceCount: 0,
     unverifiedCount: 0,
     sessionsByVerdict: new Map(),
   };

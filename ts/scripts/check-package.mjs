@@ -4,13 +4,22 @@
 // map fails here rather than on the registry.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const { name } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const { name, dependencies } = JSON.parse(
+  readFileSync(join(root, "package.json"), "utf8"),
+);
 const temporary = mkdtempSync(join(tmpdir(), "capsule-viewer-package-"));
 const run = (command, args, cwd = temporary) =>
   execFileSync(command, args, {
@@ -48,6 +57,21 @@ try {
     join(temporary, "package.json"),
     JSON.stringify({ private: true, type: "module" }),
   );
+  // A `file:` dependency inside a tarball-installed package resolves
+  // relative to the CONSUMER's own directory, not the packed package's
+  // (there is no real directory for it on disk once installed from a
+  // tarball): the vendored agent-action-capsule tgz has to exist at the
+  // same relative path here before npm installs the packed tarball, or
+  // the install fails with ENOENT on it.
+  for (const [dep, spec] of Object.entries(dependencies ?? {}))
+    if (spec.startsWith("file:")) {
+      const relative = spec.slice("file:".length);
+      mkdirSync(dirname(join(temporary, relative)), { recursive: true });
+      copyFileSync(join(root, relative), join(temporary, relative));
+      console.log(
+        `${dep}: copied its file: dependency (${relative}) into the consumer first`,
+      );
+    }
   run("npm", [
     "install",
     "--ignore-scripts",

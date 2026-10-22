@@ -67,6 +67,8 @@ export type TestVerdict =
   | "not_met"
   | "not_evaluable"
   | "not_applicable"
+  | "out_of_scope"
+  | "not_yet_in_force"
   | "failed"
   | "unsupported";
 
@@ -120,11 +122,21 @@ export interface ObligationRowModel {
   readonly notMetCount: number;
   readonly notEvaluableCount: number;
   readonly notApplicableCount: number;
+  /** Judged out_of_scope (Result v0 section 4.2): its own count, in the population, never an exception and never met. */
+  readonly outOfScopeCount: number;
+  /** Sessions whose claim is not yet in force (Result v0 section 4.3): readiness only, outside the population. */
+  readonly notYetInForceCount: number;
   /** Sessions whose claim for this test failed verification or cites evidence this bundle does not resolve: no verdict is drawn for them, so they are neither met nor not met. */
   readonly unverifiedCount: number;
   /** verdict bucket -> conversation ids, for the row's own drill-down. failed/unsupported are their own `unverified` bucket, never folded into not_met. */
   readonly sessionsByVerdict: ReadonlyMap<
-    "met" | "not_met" | "not_evaluable" | "not_applicable" | "unverified",
+    | "met"
+    | "not_met"
+    | "not_evaluable"
+    | "not_applicable"
+    | "out_of_scope"
+    | "not_yet_in_force"
+    | "unverified",
     readonly string[]
   >;
 }
@@ -328,6 +340,19 @@ function buildSessions(
         });
         continue;
       }
+      // Result v0 section 4.3: a claim not yet in force is readiness only,
+      // outside the population, unless it failed verification: a failure is
+      // still an exception.
+      if (claim.later && !claim.failed) {
+        tests.push({
+          criterionId,
+          verdict: "not_yet_in_force",
+          tier: "not stated",
+          claim,
+          reportState: reportState(result.records, claim),
+        });
+        continue;
+      }
       const payload = reportPayload(result.records, claim);
       const rationale = asString(payload?.rationale);
       // The Result's own schema-checked contract_ref first, then what the
@@ -427,13 +452,21 @@ function buildRow(
   sessions: readonly Session[],
 ): ObligationRowModel {
   const byVerdict = new Map<
-    "met" | "not_met" | "not_evaluable" | "not_applicable" | "unverified",
+    | "met"
+    | "not_met"
+    | "not_evaluable"
+    | "not_applicable"
+    | "out_of_scope"
+    | "not_yet_in_force"
+    | "unverified",
     string[]
   >([
     ["met", []],
     ["not_met", []],
     ["not_evaluable", []],
     ["not_applicable", []],
+    ["out_of_scope", []],
+    ["not_yet_in_force", []],
     ["unverified", []],
   ]);
   const tiers: TierReading[] = [];
@@ -467,6 +500,10 @@ function buildRow(
     notMetCount: byVerdict.get("not_met")!.length,
     notEvaluableCount: byVerdict.get("not_evaluable")!.length,
     notApplicableCount: byVerdict.get("not_applicable")!.length,
+    // Result v0 section 4.2: judged, in the population, counted on its own,
+    // never as not applicable and never as met.
+    outOfScopeCount: byVerdict.get("out_of_scope")!.length,
+    notYetInForceCount: byVerdict.get("not_yet_in_force")!.length,
     unverifiedCount: byVerdict.get("unverified")!.length,
     sessionsByVerdict: byVerdict,
   };

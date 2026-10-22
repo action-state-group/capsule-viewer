@@ -4,6 +4,7 @@ import {
   disclosureOf,
   isVerifiedBundleContext,
   type ExtensionInterpreterId,
+  type PresentationManifest,
   withCountersigners,
   type BundleVerificationResult,
   type VerifiedBundleContext,
@@ -15,6 +16,7 @@ import {
   BUILTIN_MANIFEST_REPORT_ROWS,
   BUILTIN_MANIFEST_RESULT,
   BUILTIN_MANIFEST_RESULT_COMPLIANCE,
+  BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT,
   BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT,
 } from "@action-state-group/agent-action-capsule";
 import {
@@ -39,7 +41,10 @@ import {
   zoneStatement,
 } from "@action-state-group/agent-action-capsule";
 import { digestCapability } from "@action-state-group/agent-action-capsule";
-import { renderContractReport } from "./contract-report.js";
+import {
+  renderContractReport,
+  type ContractReportInput,
+} from "./contract-report.js";
 import type {
   PresentationDepth,
   WordingPackInput,
@@ -79,6 +84,8 @@ import {
   buildResultRoot,
   isResultRoot,
   UNVERIFIED_KEY_LABEL,
+  utcDateOf,
+  type CountField,
   type CountMismatch,
   type ResultClose,
   type CitedRecord,
@@ -159,6 +166,10 @@ function appendTime(
 
 const recordsWord = (count: number): string =>
   `${count} ${count === 1 ? "record" : "records"}`;
+const evaluationsWord = (count: number): string =>
+  `${count} ${count === 1 ? "evaluation" : "evaluations"}`;
+const requirementsWord = (count: number): string =>
+  `${count} ${count === 1 ? "requirement" : "requirements"}`;
 
 // The banner is drawn from the verification result alone and precedes every
 // row in the DOM; an unverified bundle gets the refusal line here and no
@@ -1176,15 +1187,27 @@ function renderClose(
 // `failed` -- never `met`, never its stated verdict, which is kept on
 // `data-stated-verdict` only. Otherwise an unresolved citation reads
 // `unsupported`. The row stays in every case.
-function appendVerdict(parent: HTMLElement, claim: ResultClaim): HTMLElement {
-  const shown = claim.failed
+// The verdict a reader may see: never the producer's word for a claim that
+// failed verification or whose evidence is not in the bundle.
+function shownVerdict(claim: ResultClaim): string {
+  return claim.failed
     ? "failed"
     : claim.support === "supported"
       ? claim.verdict
       : "unsupported";
-  const cell = element(parent.tagName === "TR" ? "td" : "dd", shown);
+}
+
+function appendVerdict(parent: HTMLElement, claim: ResultClaim): HTMLElement {
+  const shown = shownVerdict(claim);
+  // A later claim's verdict is readiness only (ER section 4.3): never read
+  // as a result that counts.
+  const cell = element(
+    parent.tagName === "TR" ? "td" : "dd",
+    claim.later ? `${shown} (readiness)` : shown,
+  );
   cell.dataset.verdict = shown;
   cell.dataset.support = claim.support;
+  if (claim.later) cell.dataset.later = "true";
   if (claim.failed) {
     cell.dataset.statedVerdict = claim.verdict;
     cell.className = "claim-failed";
@@ -1297,14 +1320,18 @@ function renderClaim(
   }
 }
 
-const BUCKETS: ReadonlyArray<readonly [keyof ResultRoot["buckets"], string]> = [
-  ["met", "met"],
-  ["notMet", "not met"],
-  ["notEvaluable", "not evaluable"],
+const BUCKETS: ReadonlyArray<
+  readonly [keyof ResultRoot["buckets"], string, CountField]
+> = [
+  ["met", "met", "buckets.met"],
+  ["notMet", "not met", "buckets.not_met"],
+  ["notEvaluable", "not evaluable", "buckets.not_evaluable"],
+  // ER section 4.2: drawn only when the Result carries the fourth bucket.
+  ["outOfScope", "out of scope", "buckets.out_of_scope"],
 ];
 
 // Coverage is the first thing in the Result section after its heading, and
-// no number precedes it within the section; then the three buckets, never a
+// no number precedes it within the section; then the buckets, never a
 // single figure; then one row per claim with its own tier and grade. The
 // bundle-level verification banner, drawn before every section, is the one
 // thing above coverage that can carry digits ("N of M records
@@ -1312,45 +1339,86 @@ const BUCKETS: ReadonlyArray<readonly [keyof ResultRoot["buckets"], string]> = [
 // (`result.coverage`, `result.bucketCounts`); a producer figure the claims
 // do not bear out shows as a `count mismatch` marker beside the recomputed
 // value. `excluded as not applicable` is the one figure carried as stated:
-// no claim backs it, by construction.
+// no claim backs it, by construction. Coverage counts evaluations (one per
+// claim, ER §3), so the line also names how many distinct requirements the
+// claims cite, and an UNKNOWN count is never called unresolved requirements.
 function renderResultPage(result: ResultRoot, root: HTMLElement): void {
   const section = element("section");
   section.dataset.page = "result";
   section.append(element("h1", "Evidence result"));
+  // The requirements the in-force evaluations cover: every claim of one
+  // requirement carries the same applies_from, so a requirement is in force
+  // or later as a whole (ER section 4.3).
+  const requirements = new Set(
+    result.claims
+      .filter((claim) => !claim.later)
+      .map((claim) =>
+        JSON.stringify([claim.contractRef, claim.requirementRef]),
+      ),
+  ).size;
   const coverage = element("p");
   coverage.append(
-    `coverage: ${result.coverage.evaluatedPopulation} requirements evaluated`,
+    `coverage: ${evaluationsWord(result.coverage.evaluatedPopulation)} of ${requirementsWord(requirements)}`,
   );
   const evaluatedMarker = countMismatchMarker(result, "evaluated_population");
   if (evaluatedMarker !== undefined) coverage.append(" ", evaluatedMarker);
   coverage.append(
-    ` · ${result.coverage.excludedNotApplicable} excluded as not applicable · ${result.coverage.unknownCount} unresolved`,
+    ` · ${result.coverage.excludedNotApplicable} excluded as not applicable · ${result.coverage.unknownCount} with an unknown result`,
   );
   const unknownMarker = countMismatchMarker(result, "unknown_count");
   if (unknownMarker !== undefined) coverage.append(" ", unknownMarker);
+  const later = result.claims.filter((claim) => claim.later);
+  const laterMarker = countMismatchMarker(result, "not_yet_in_force");
+  if (later.length > 0 || laterMarker !== undefined) {
+    coverage.append(` · ${evaluationsWord(later.length)} not yet in force`);
+    if (laterMarker !== undefined) coverage.append(" ", laterMarker);
+    coverage.dataset.notYetInForce = String(later.length);
+  }
   coverage.dataset.coverage = "result";
   coverage.dataset.evaluated = String(result.coverage.evaluatedPopulation);
+  coverage.dataset.requirements = String(requirements);
   coverage.dataset.excluded = String(result.coverage.excludedNotApplicable);
   coverage.dataset.excludedBasis = "stated";
   coverage.dataset.unknown = String(result.coverage.unknownCount);
   section.append(coverage);
+  // ER sections 4.2 and 4.3: whenever a claim is dated, the date "in force"
+  // is relative to; and whenever a claim is dated or the out-of-scope switch
+  // is on, that these are the producer's copy of the contract, never checked
+  // here.
+  const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
+  if (dated || result.buckets.outOfScope !== undefined) {
+    const copied = element("p");
+    if (dated) {
+      // A dated Result passed validation, so generated_at parses.
+      const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
+      copied.append(`In force as of ${date}. `);
+      copied.dataset.asOf = date;
+    }
+    copied.append(
+      dated && result.buckets.outOfScope !== undefined
+        ? "The dates and the out-of-scope switch are copied from the contract, not re-checked here."
+        : dated
+          ? "The dates are copied from the contract, not re-checked here."
+          : "The out-of-scope switch is copied from the contract, not re-checked here.",
+    );
+    copied.dataset.copiedFacts = "contract";
+    section.append(copied);
+  }
 
   const byId = new Map(result.claims.map((claim) => [claim.id, claim]));
   const buckets = element("section");
   buckets.dataset.buckets = "verdict";
   buckets.append(element("h2", "Claims by verdict"));
-  for (const [key, label] of BUCKETS) {
-    const count = result.bucketCounts[key];
+  for (const [key, label, field] of BUCKETS) {
+    const ids = result.buckets[key];
+    if (ids === undefined) continue;
+    const count = result.bucketCounts[key] ?? 0;
     const heading = element("h3", `${label}: ${count === 0 ? "none" : count}`);
     heading.dataset.bucketCount = String(count);
     heading.dataset.bucketOf = key;
-    const marker = countMismatchMarker(
-      result,
-      `buckets.${key === "notMet" ? "not_met" : key === "notEvaluable" ? "not_evaluable" : "met"}`,
-    );
+    const marker = countMismatchMarker(result, field);
     if (marker !== undefined) heading.append(" ", marker);
     buckets.append(heading);
-    const ids = result.buckets[key];
     if (ids.length === 0) {
       buckets.append(element("p", "none"));
       continue;
@@ -1375,7 +1443,7 @@ function renderResultPage(result: ResultRoot, root: HTMLElement): void {
     }
     buckets.append(list);
   }
-  // The verifier's own state, after the producer's three buckets: claims
+  // The verifier's own state, after the producer's buckets: claims
   // that failed verification (a close state the links contradict). Drawn
   // always, `none` when empty, so a reader never has to infer from an
   // absent heading that nothing failed. Not a verdict bucket: a failed
@@ -1399,6 +1467,28 @@ function renderResultPage(result: ResultRoot, root: HTMLElement): void {
       const item = element("li", id);
       item.dataset.claimRef = id;
       item.className = "claim-failed";
+      list.append(item);
+    }
+    buckets.append(list);
+  }
+  // ER section 4.3: claims not yet in force, their verdicts readiness only,
+  // in no bucket above.
+  if (later.length > 0) {
+    const heading = element("h3", `not yet in force: ${later.length}`);
+    heading.dataset.bucketOf = "notYetInForce";
+    heading.dataset.bucketCount = String(later.length);
+    buckets.append(heading);
+    const list = element("ul");
+    list.dataset.bucket = "notYetInForce";
+    for (const claim of later) {
+      const item = element(
+        "li",
+        `${claim.id} · applies from ${claim.appliesFrom ?? ""} · readiness: ${shownVerdict(claim)}`,
+      );
+      item.dataset.claimRef = claim.id;
+      if (claim.failed) item.className = "claim-failed";
+      else if (claim.support === "unsupported")
+        item.className = "claim-unsupported";
       list.append(item);
     }
     buckets.append(list);
@@ -1613,6 +1703,85 @@ const resultComplianceModule: PresentationModule<
     ),
 };
 
+/**
+ * The contract-report module's manifest (agent-action-capsule
+ * spec/contract-report-v1.md section 4): the same match as
+ * `aac.builtin.result-contract-report/v0`, which it replaces in this
+ * registry. Registering both would be an ambiguity error (presentation
+ * contract section 4.5). It carries no `executable.wording_sha256`: the pack
+ * is a builder input, recorded as provenance.
+ */
+export const CONTRACT_REPORT_MANIFEST: PresentationManifest = Object.freeze({
+  ...BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT,
+  id: "capsuleviewer.contract-report/v0",
+}) as PresentationManifest;
+
+interface ContractReportModel {
+  readonly result: ResultRoot;
+  /** The grouping the bundle's sealed data supports, or none: the generic Result page. */
+  readonly input?: ContractReportInput;
+  readonly bundle: unknown;
+  readonly verification: BundleVerificationResult;
+}
+
+/**
+ * The data a contract report draws from, beside the empty
+ * `contract-report/v1` block: an earlier kind's block, read by its own
+ * reader (section 5), the outcome block first, as the built-in manifests'
+ * precedence has it (the compliance card forbids `outcome-report/v1`).
+ */
+/** The grouping the contract-report module draws for `bundle`, or undefined when it draws the generic Result page. */
+export function contractReportGroupingOf(
+  bundle: unknown,
+): ContractReportInput["grouping"] | undefined {
+  return contractReportInput(bundle)?.grouping;
+}
+
+function contractReportInput(bundle: unknown): ContractReportInput | undefined {
+  const options = readOutcomeReportPresentation(bundle);
+  if (options !== undefined) return { grouping: "lines", options };
+  const presentation = readCompliancePresentation(bundle);
+  if (presentation !== undefined) return { grouping: "groups", presentation };
+  return undefined;
+}
+
+/**
+ * The contract-report module (contract-report.ts), resolved on
+ * `contract-report/v1`. `canRender` is the generic Result page's, whatever
+ * the pack or the number of contracts (section 4), so every Result root that
+ * opts in reaches it. A Result that carries neither grouping's data draws
+ * the generic Result page, exactly as the built-in it replaces.
+ */
+const contractReportModule: PresentationModule<ContractReportModel> = {
+  manifest: CONTRACT_REPORT_MANIFEST,
+  canRender: (context) => isResultRoot(context),
+  buildModel: async (context) => {
+    const input = contractReportInput(context.bundle);
+    return {
+      result: defined(await resultRootOf(context), CONTRACT_REPORT_MANIFEST.id),
+      ...(input === undefined ? {} : { input }),
+      bundle: context.bundle,
+      verification: context.verification,
+    };
+  },
+  render: async (model, host) => {
+    if (model.input === undefined) {
+      renderResultPage(model.result, host.L1);
+      return;
+    }
+    // The outcome report's banner and verification page take its look.
+    if (model.input.grouping === "lines") host.setChromeClass("oi");
+    await renderContractReport(
+      model.result,
+      model.input,
+      model.bundle,
+      model.verification,
+      host.L1,
+      (host as WordedHost).wording,
+    );
+  },
+};
+
 const resultModule: PresentationModule<ResultRoot> = {
   manifest: BUILTIN_MANIFEST_RESULT,
   canRender: (context) => isResultRoot(context),
@@ -1671,10 +1840,38 @@ const BUILTIN_MODULE_INTERPRETERS: Readonly<
   [BUILTIN_MANIFEST_COMPOSED.id]: ["aac.builtin.composed/v0"],
 });
 
-/** The six built-in modules, registered by default. */
+/**
+ * The extension interpreters a module ran on `bundle`. The contract-report
+ * module runs the Result reader, and the one earlier kind's reader whose
+ * data it drew (contractReportInput), never both.
+ */
+function moduleInterpreters(
+  id: string,
+  bundle: unknown,
+): readonly ExtensionInterpreterId[] {
+  if (id === CONTRACT_REPORT_MANIFEST.id) {
+    const input = contractReportInput(bundle);
+    return input === undefined
+      ? ["result-root"]
+      : [
+          "result-root",
+          input.grouping === "lines"
+            ? "outcome-report-card"
+            : "compliance-card",
+        ];
+  }
+  return BUILTIN_MODULE_INTERPRETERS[id] ?? [];
+}
+
+/**
+ * The seven built-in modules, registered by default: agent-action-capsule's
+ * seven built-in shapes, with the contract-report module in place of
+ * `aac.builtin.result-contract-report/v0` (contract-report/v1 section 4).
+ */
 export const BUILTIN_PRESENTATIONS: readonly PresentationModule[] =
   Object.freeze([
     reportRowsModule,
+    contractReportModule,
     resultOutcomeReportModule,
     resultComplianceModule,
     resultModule,
@@ -1682,7 +1879,7 @@ export const BUILTIN_PRESENTATIONS: readonly PresentationModule[] =
     noAggregateModule,
   ] as PresentationModule[]);
 
-/** A fresh registry holding the six built-in modules. */
+/** A fresh registry holding the seven built-in modules. */
 export function createPresentationRegistry(): PresentationRegistry {
   const registry = new PresentationRegistry();
   for (const module of BUILTIN_PRESENTATIONS) registry.register(module);
@@ -2034,8 +2231,10 @@ export async function renderEvidenceGraph(
   if (refusal === undefined)
     for (const ran of [selected, section])
       if (ran !== undefined)
-        for (const id of BUILTIN_MODULE_INTERPRETERS[ran.module.manifest.id] ??
-          [])
+        for (const id of moduleInterpreters(
+          ran.module.manifest.id,
+          context.bundle,
+        ))
           applied.add(id);
   await renderVerificationPage(
     root,

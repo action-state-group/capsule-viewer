@@ -49,6 +49,9 @@ function rebuildBuckets(claims: Obj[]): Obj {
     met: [],
     not_met: [],
     not_evaluable: [],
+    ...(claims.some((c) => c.out_of_scope_allowed === true)
+      ? { out_of_scope: [] }
+      : {}),
   };
   for (const claim of claims)
     buckets[claim.verdict as string]!.push(claim.id as string);
@@ -1017,6 +1020,65 @@ it("a resolved conversation counts the criteria its pack judged, not a fixed nin
   proofs(conv);
   expect(conv.textContent).toContain("take the AND of the four verdicts");
   expect(conv.textContent).not.toContain("nine");
+});
+
+it("a resolved conversation with an out_of_scope criterion splits the header count, and never says that criterion was met", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  const claims = resultDoc.claims as Obj[];
+  const refs = [
+    ...new Set(claims.map((c) => c.requirement_ref as string)),
+  ].slice(0, 4);
+  const first = (claims[0]!.id as string).split("::")[0]!;
+  // out_of_scope_allowed is a per-requirement switch: every claim of
+  // refs[0] carries it, but only the first conversation's claim is
+  // actually judged out of scope.
+  const oosRef = refs[0]!;
+  const kept = claims
+    .filter((c) => refs.includes(c.requirement_ref as string))
+    .map((c) => {
+      const mine = (c.id as string).startsWith(`${first}::`);
+      const isOosRef = c.requirement_ref === oosRef;
+      if (!mine) return isOosRef ? { ...c, out_of_scope_allowed: true } : c;
+      return isOosRef
+        ? {
+            ...c,
+            verdict: "out_of_scope",
+            sufficiency: "SATISFIED",
+            out_of_scope_allowed: true,
+            presentation: { ...(c.presentation as Obj), status: "SATISFIED" },
+          }
+        : {
+            ...c,
+            verdict: "met",
+            sufficiency: "SATISFIED",
+            presentation: { ...(c.presentation as Obj), status: "SATISFIED" },
+          };
+    });
+  (source.disclosures as Obj).result = {
+    agent_input: {
+      ...resultDoc,
+      claims: kept,
+      aggregate: {
+        ...(resultDoc.aggregate as Obj),
+        buckets: rebuildBuckets(kept),
+      },
+    },
+  };
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  expand(root);
+  const conv = root.querySelector<HTMLElement>(
+    `[data-drill="resolved"] article.conv[data-conversation="${first}"]`,
+  )!;
+  expect(conv.querySelector(".cwhy")!.textContent).toBe(
+    "3 criteria met or not applicable and 1 out of scope",
+  );
+  open(conv);
+  expect(conv.querySelector('[data-why="resolved"]')!.textContent).toBe(
+    "Resolved: all 3 rules that applied were met. 1 judged out of scope (did not arise).",
+  );
 });
 
 it("a conversation judged on one criterion says so in the singular", async () => {

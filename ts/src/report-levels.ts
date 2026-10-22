@@ -3,6 +3,7 @@ import {
   parseJudgeProbabilities,
   type ConversationTranscript,
   type ReportState,
+  type ResultClaim,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
 
@@ -199,7 +200,12 @@ export type RuleVerdict =
   | "not_evaluable"
   | "failed"
   | "unsupported"
-  | "not_applicable";
+  | "not_applicable"
+  // Result v0 section 4.2: judged, its own count, never met.
+  | "out_of_scope"
+  // Result v0 section 4.3: readiness only, never counted (EU card only:
+  // the outcome card draws no criterion for a later claim).
+  | "not_yet_in_force";
 
 export type Tone = "ok" | "bad" | "na" | "ne";
 
@@ -257,6 +263,10 @@ export function ruleWord(
       return { word: v("not_met"), tone: "bad" };
     case "not_applicable":
       return { word: v("not_applicable"), tone: "na" };
+    case "out_of_scope":
+      return { word: v("out_of_scope"), tone: "na" };
+    case "not_yet_in_force":
+      return { word: v("not_yet_in_force"), tone: "na" };
     case "not_evaluable":
       return {
         word: v(
@@ -476,6 +486,62 @@ export function renderChat(
   });
   wrap.append(list);
   return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// contract-report/v1 section 3 words shared by both groupings
+// ---------------------------------------------------------------------------
+
+/**
+ * The pack's `report.summary` line under the card's title, or nothing: the
+ * module has no summary of its own, so a pack that sets none shows none.
+ */
+export function reportSummary(w: Words): HTMLElement | undefined {
+  const text = w.section3("report.summary");
+  if (text === undefined) return undefined;
+  const p = el("p", "rsum", text);
+  p.dataset.reportSummary = "";
+  return p;
+}
+
+/**
+ * One claim's assurance, as sealed on it (contract-report/v1 section 2:
+ * assurance stays on the claim): its tier, grade, sufficiency and carrier
+ * status, each in the layered section 3 word, or its raw value when no layer
+ * has one. The raw values ride on the element as data.
+ */
+export function assuranceRow(
+  claim: ResultClaim,
+  w: Words,
+): [string, string, Record<string, string>] {
+  return [
+    w.t("card.pf.assurance"),
+    w.t("card.pf.assurance.line", {
+      tier: w.enumWord("tier", claim.tier),
+      grade: w.enumWord("grade", claim.grade),
+      sufficiency: w.enumWord("sufficiency", claim.sufficiency),
+      status: w.enumWord("status", claim.presentation.status),
+    }),
+    {
+      tier: claim.tier,
+      grade: claim.grade,
+      sufficiency: claim.sufficiency,
+      status: claim.presentation.status,
+    },
+  ];
+}
+
+/**
+ * A wording layer the host supplied was refused (contract-report/v1 section
+ * 3): one line at the top of the card, so a reader never takes the default
+ * words for the ones the page was built to show.
+ */
+export function refusedWordingNotice(w: Words): HTMLElement | undefined {
+  if (w.source.refused === undefined) return undefined;
+  const p = el("p", "wref", w.t("card.wording.refused"));
+  p.dataset.wording = "refused";
+  p.dataset.refusal = w.source.refused.reason;
+  return p;
 }
 
 // ---------------------------------------------------------------------------

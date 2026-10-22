@@ -12,10 +12,20 @@ import {
   type ContractReportGrouping,
 } from "./contract-report-wording.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
+import { refusedWordingNotice } from "./report-levels.js";
 
 /**
  * The contract-report module: one view for every report that is an Evidence
  * Result over a contract, with its words from a wording pack.
+ *
+ * It resolves on `contract-report/v1` (agent-action-capsule
+ * spec/contract-report-v1.md, registered in agent-action-capsule#352): its
+ * manifest (CONTRACT_REPORT_MANIFEST, evidence-graph-view.ts) has section
+ * 4's match and is registered in place of
+ * `aac.builtin.result-contract-report/v0`, never beside it. The two earlier
+ * display kinds keep their own built-in manifests until their removal
+ * (section 5); a Result root that opts into `contract-report/v1` reaches
+ * this module whether or not it also carries one of them.
  *
  * The module has one page frame (a wrapper with its own scoped stylesheet,
  * `data-levels="2"`), the front block (who judged, who witnessed, what
@@ -36,28 +46,38 @@ import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
  * A new report over the same Result shape is a new pack, never a new
  * module.
  *
- * The data a grouping reads still arrives by the two extension kinds
- * agent-action-capsule selects today (`outcome-report/v1` for `lines`,
- * `eu-ai-act-compliance/v1` for `groups`), so the registry keeps those two
- * manifests and both resolve to this one module. One neutral
- * `contract-report/v1` kind is registered upstream (SEAMS ruling 2;
- * agent-action-capsule#352, 6f6c64a, spec/contract-report-v1.md), but not in
- * a released agent-action-capsule yet (ts is pinned to 0.5.0): switching
- * this module's manifest to require it, in place of the two deprecated
- * aliases, waits on that release.
+ * The block itself is empty (section 1): the data a grouping reads still
+ * comes from the sealed records the bundle carries beside it, the earlier
+ * kinds' blocks (`outcome-report/v1` for `lines`,
+ * `eu-ai-act-compliance/v1` for `groups`), read by their own readers,
+ * unchanged (section 5). A Result that opts in and carries neither draws
+ * the generic Result page, as the built-in this module replaces does
+ * (capsule-viewer#56 tracks a view of its own for it).
  *
- * This module's own verdict words are its own, under its grouping prefix
- * (`lines.verdict.*`, `groups.verdict.*`), never that kind's shared
- * `verdict.*`: its Result rows carry `failed`/`unsupported` claims
- * `contract-report/v1` §3's closed verdict enum does not define (`met`/
- * `not_met`/`not_evaluable` only), so a pack naming the bare §3 keys is
- * left to whichever module reads them, not silently absorbed here. The
- * judged/recomputed tier is different: §3 does define `tier.<value>`
- * (`recomputed`, `judged`), but this module does not read those keys yet
- * (tracked in #52, for the switch to `contract-report/v1`), so `tier.*`
- * stays under this grouping's own prefix too, for now -- the same reason
- * `lines.status.*` (this grouping's own conversation outcome, never the
- * kind's carrier `status.<EvidenceStatus>`) does.
+ * Words (section 3). The module reads the keys `contract-report/v1`
+ * defines, layered over its default pack entry by entry, each layer bound
+ * by its own `wording_sha256` and named in the proofs:
+ *
+ *   report.title, report.summary      the card's title, its one-line summary
+ *   group.<segment>.title             a group's heading
+ *   row.<requirement_ref>.label, .detail, .not_evaluable
+ *   verdict.<value>, tier.<value>     the verdict and tier words
+ *   grade.<value>, sufficiency.<value>, status.<value>
+ *                                     each claim's assurance, in its proofs
+ *
+ * `row.*` and `group.*` apply only when every claim cites one
+ * `contract_ref`; otherwise rows and groups keep what they show without a
+ * pack. A word no layer has, or whose assembled key is not a valid
+ * WordingKey, shows its raw token; a missing `report.summary` shows none.
+ * A host layer that does not check is refused and contributes no words: the
+ * card is drawn with the default layer and says so. The module's own keys
+ * stay off section 3's prefixes (`card.`, `lines.`, `groups.` and the
+ * shared `prov.`, `chat.`, `case.`, `judge.`), and its own verdict words
+ * stay under its grouping prefix (`lines.verdict.*`, `groups.verdict.*`):
+ * its rows also draw `failed`, `unsupported`, `not_applicable` and
+ * `not_yet_in_force`, which section 3's verdict enum does not define. A
+ * section 3 `verdict.*` or `tier.*` word sets the grouping's word for the
+ * same value, and is checked exactly as that word would be.
  */
 
 /** What a grouping draws from: the verified Result and the extension that opted it in. */
@@ -72,11 +92,18 @@ const FRAMES: Readonly<
   Record<ContractReportGrouping, typeof LINES_FRAME | typeof GROUPS_FRAME>
 > = { lines: LINES_FRAME, groups: GROUPS_FRAME };
 
+/** Every claim cites the same `contract_ref` (contract-report/v1 section 3: only then do `row.*` and `group.*` apply). */
+export function citesOneContract(result: ResultRoot): boolean {
+  return new Set(result.claims.map((claim) => claim.contractRef)).size <= 1;
+}
+
 /**
  * Render a contract report into `root`. `wording` is the host's pack (the
- * page's `wording`, bound by `wording_sha256`); omitted, the grouping's
- * default pack. A pack that does not check, or does not fit this module,
- * throws before anything is drawn.
+ * page's `wording`, bound by `wording_sha256`), layered over the grouping's
+ * default pack; omitted, the default pack alone. A pack that does not check,
+ * or does not fit this module, is refused: it contributes no words, and the
+ * card is drawn with the default pack and says so (contract-report/v1
+ * section 3). The presentation builder refuses to write such a page.
  */
 export async function renderContractReport(
   result: ResultRoot,
@@ -86,7 +113,9 @@ export async function renderContractReport(
   root: HTMLElement,
   wording?: WordingPackInput,
 ): Promise<void> {
-  const w = await contractReportWords(input.grouping, wording);
+  const w = await contractReportWords(input.grouping, wording, {
+    singleContract: citesOneContract(result),
+  });
   const frame = FRAMES[input.grouping];
   const wrapper = document.createElement(frame.tag);
   wrapper.className = frame.className;
@@ -95,6 +124,8 @@ export async function renderContractReport(
   const style = document.createElement("style");
   style.textContent = frame.css;
   wrapper.append(style);
+  const refused = refusedWordingNotice(w);
+  if (refused !== undefined) wrapper.append(refused);
   if (input.grouping === "lines")
     await drawLines(wrapper, result, input.options, bundle, verified, w);
   else
