@@ -85,7 +85,8 @@ async function launchOnce(chromePath) {
     // /dev/shm is small in containers and on some runners; use /tmp instead.
     "--disable-dev-shm-usage",
     "--hide-scrollbars",
-    // Keep macOS from prompting for a "Chrome" keychain the throwaway profile lacks.
+    // Keep the OS keychain out of the throwaway profile: a mock keychain on macOS
+    // (no "Keychain Not Found" dialog), the basic password store on Linux.
     "--use-mock-keychain",
     "--password-store=basic",
     "about:blank",
