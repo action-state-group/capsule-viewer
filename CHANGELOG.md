@@ -21,6 +21,36 @@ here. The format follows
   (`capsule-emit>=0.12,<0.13` in the `evidence` and `dev` extras), which
   removes the `permalink.build_bundle` this used (capsule-emit#338).
 
+### Added
+
+- The outcome report and EU AI Act obligations cards carry a short block on
+  their front, outside every toggle, that says who judged, who witnessed and
+  what verified:
+  - **Judged by:** each distinct judge pin the cited reports state, with its
+    count (never one picked for all); the model only where every report with
+    that pin states the same components and they recompute to it, else why
+    no model is shown. Withheld reports read "withheld" with their count,
+    reports the bundle does not carry are counted with their judge "not
+    stated", and results recomputed by a checker are named as such.
+  - **Witnessed by:** the witness receipts in `checkpoint.witnesses` as the
+    bundle states them (this page does not check them), else "not stated".
+    Placeholder entries and entries that cannot be read are counted, never
+    named as witnesses. Then the checkpoint's log id, size and root, and
+    whether this page could check its signature.
+  - **Verified by:** this page's code, by package name and version, at the
+    commit the build was made from (the first 12 hex characters), or
+    "commit not stated" when the build didn't supply one, with the
+    verifier and its version (`ts/src/viewer-build.ts`, held to the
+    installed packages by a test and by the page runtime build), and the
+    tool that built the bundle as the bundle's own report names it, which
+    this page does not check, with its version or "version not stated".
+
+  Every value comes from the verified bundle or the viewer's build constants
+  and is set as text only. Strings from the bundle (model ids, checker refs,
+  witness addresses, log id, producer and version) are quoted and capped at
+  120 characters, so they never read as the page's own words. New runtime
+  style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+
 ### Changed
 
 - The outcome report and EU AI Act obligations cards have two levels and no

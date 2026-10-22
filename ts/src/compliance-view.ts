@@ -27,6 +27,7 @@ import {
   wordPill,
 } from "./report-levels.js";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
+import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 
 /**
@@ -943,13 +944,13 @@ function renderVerificationDetails(
 // Assembly
 // ---------------------------------------------------------------------------
 
-export function renderCompliancePage(
+export async function renderCompliancePage(
   result: ResultRoot,
   presentation: CompliancePresentation,
   bundle: unknown,
   verified: BundleVerificationResult,
   root: HTMLElement,
-): void {
+): Promise<void> {
   const model = buildComplianceModel(result, presentation);
   const wrapper = el("div", "cc");
   wrapper.dataset.page = "compliance";
@@ -959,6 +960,19 @@ export function renderCompliancePage(
   wrapper.append(style);
 
   renderHeader(wrapper, model);
+  // Who judged, who witnessed, what verified: on the front, never in a toggle.
+  wrapper.append(
+    renderProvenance(
+      await provenanceLines(
+        result.records,
+        model.sessions.flatMap((s) =>
+          s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
+        ),
+        bundle,
+        verified,
+      ),
+    ),
+  );
   renderSummary(wrapper, model, presentation);
   renderReportProofs(wrapper, model, bundle, verified);
   root.append(wrapper);

@@ -501,6 +501,9 @@ ${s} .pill.ok{background:var(--ok-l);color:var(--ok)}
 ${s} .pill.bad{background:var(--bad-l);color:var(--bad)}
 ${s} .pill.na{background:#EEF0F3;color:var(--slate);border:1px dashed #BFC4CC}
 ${s} .pill.ne{background:var(--gold-l);color:#8A5A12}
-@media (max-width:760px){${s} dl.pf{grid-template-columns:1fr}${s} .chat li.turn{max-width:100%}${s} .conv-h{grid-template-columns:1fr auto}${s} .conv-h .cmodel{display:none}}
+${s} dl.prov{display:grid;grid-template-columns:110px 1fr;gap:4px 12px;margin:14px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12.5px}
+${s} dl.prov dt{color:var(--slate);font-weight:600}
+${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
+@media (max-width:760px){${s} dl.pf,${s} dl.prov{grid-template-columns:1fr}${s} .chat li.turn{max-width:100%}${s} .conv-h{grid-template-columns:1fr auto}${s} .conv-h .cmodel{display:none}}
 `;
 }
