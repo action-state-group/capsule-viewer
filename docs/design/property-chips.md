@@ -3,9 +3,10 @@
 Status: mapping only. No viewer code, no wording pack and no golden change.
 This note maps the nine property rows and the five chip states of the proposed
 per-property chip strip onto what the verifiers and the Evidence Result
-contract say today. The build follows only after this mapping is reviewed.
-Rows that need a product decision before anything is built are marked
-**DECISION** and collected in section 6.
+contract say today. Rows that needed a product decision are marked
+**DECISION** and collected in section 6. Steven ruled all twelve on
+2026-10-19 (section 6). The build is not scheduled: it waits until an
+MVP-bar row names the chips.
 
 The chip strip would show one row per property, each with one chip state:
 
@@ -31,11 +32,11 @@ note changes them.
 | [aac-verify] | agent-action-capsule @ `a726b9f` | `ts/src/verify.ts` (line 68: `signature` and `key_id` are left out of the id; nothing in the file checks a signature) |
 | [aac-page] | agent-action-capsule @ `a726b9f` | `ts/src/verification-page.ts` (`CheckStatus` line 15; `RECEIPT_GRADE_DISPLAY` lines 32-36; `FULL_VERIFIER_LINE` / `CHECKS_SCOPE_LINE` lines 394-398; `CHECKPOINT_NOT_CHECKED_NOTE` line 434; `producer-signatures` and `witness-receipts` always `notChecked`, lines 556-566) |
 | [emit-file] | capsule-emit @ `16586f4c2989312bf4d392cd022a21c1df2000df` | `python/capsule_emit/evidence_file.py` (`_PLAIN` lines 67-102; `selection_not_checkable` line 279; `_witness_check` lines 319-383; `_unanchored` lines 390-395; `_checkpoint_check` lines 398-429; `_signature_check` lines 432-441) |
-| [report] | capsule-viewer @ `7b9d53bc95f1195ae71232ecbcc3ed91e522933c` | `src/capsule_viewer/evidence_report.py` (`_MARK`/`_WORD` lines 46-47; `_overall` line 116; "not shown" list lines 224-246) |
-| [vreport] | capsule-viewer @ `7b9d53b` | `src/capsule_viewer/verifier_report.py` (`CLAIMS` and `_OUTCOME`, lines 37-38) |
-| [kit] | capsule-viewer @ `7b9d53b` | `src/capsule_viewer/kit/components.py` (`verdict_pill` refuses `not_applicable`, line 205; `VERIFICATION_OUTCOMES` line 288) |
-| [receipt-words] | capsule-viewer @ `7b9d53b` | `src/capsule_viewer/receipt/wording-en.json` (`rung.*` keys) |
-| [composed] | capsule-viewer @ `7b9d53b` | `src/capsule_viewer/composed.py` (`Corroboration.result`, line 102) |
+| [report] | capsule-viewer @ `c4f6dfd539da1ee2a5274feca9d3391fe837d8dc` | `src/capsule_viewer/evidence_report.py` (`_MARK`/`_WORD` lines 46-47; `_overall` line 116; "not shown" list lines 224-246) |
+| [vreport] | capsule-viewer @ `c4f6dfd` | `src/capsule_viewer/verifier_report.py` (`CLAIMS` and `_OUTCOME`, lines 37-38) |
+| [kit] | capsule-viewer @ `c4f6dfd` | `src/capsule_viewer/kit/components.py` (`verdict_pill` refuses `not_applicable`, line 205; `VERIFICATION_OUTCOMES` line 288) |
+| [receipt-words] | capsule-viewer @ `c4f6dfd` | `src/capsule_viewer/receipt/wording-en.json` (`rung.*` keys) |
+| [composed] | capsule-viewer @ `c4f6dfd` | `src/capsule_viewer/composed.py` (`Corroboration.result`, line 102) |
 | [cli-composed] | capsule-cli @ `1f734d2246666b498ebf8b8301a1f547a4a370b5` | `internal/cli/composed_test.go` lines 228-230 (a one-sided join gives corroboration `not_applicable`) |
 | [anchor] | capsule-anchor @ `b7e45df227d7e80fad4a46c300032b1374c632ef` | `README.md` lines 151-156 (the witness checks a checkpoint's consistency claim when it registers it) |
 
@@ -43,9 +44,9 @@ note changes them.
 
 **A chip is presentation, never a verdict.** Each chip renders the result of
 one verifier check over one exact bundle (bound by `bundle_digest`, as
-[report] `_bind` and [vreport] already require). None of the five chip states
-is a value of the Evidence Result `verdict` or `sufficiency` vocabularies, and
-no chip state may be read as one.
+[report] `bind_result` and [vreport] already require). None of the five chip
+states is a value of the Evidence Result `verdict` or `sufficiency`
+vocabularies, and no chip state may be read as one.
 
 The Evidence Result layer is separate and keeps its own surfaces:
 
@@ -123,7 +124,9 @@ no witness directory unless one is stated.
 ## 4. The five-nothings panel and registration lag: what can be said today
 
 Two reworded lines are named in the source item. The other three are not
-named in any public source this note could find (D10).
+named in any public source this note could find. Per the D10 ruling, no
+panel is built until those three lines have a source. The two lines below
+are the wording for when it is.
 
 **"Nothing missing from the committed range."** This can be drawn only when
 `checkpoint` is `PASS` and `interval_coverage` is `PASS`. It must name the
@@ -170,7 +173,33 @@ original item is a CLI surface, not this viewer (D11).
 6. The rendered words keep the repository's prose discipline
    (`tests/test_prose_word_discipline.py`).
 
-## 6. Open decisions
+## 6. Decisions
+
+### Rulings (Steven, 2026-10-19)
+
+Steven ruled all twelve decisions in one signed Buzz message:
+`buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=ac2c1c5ff8e72b62234bd329525b451b5a93ce8bdb8b738939ffe35ab46cee92&thread=c686c8798e7b9bce80d143cd4b242c11655780911c67036939075f6e907f419e`.
+He accepted the recommended set put to him in
+`buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=6b9ea3e765ae9d195042fa5a0291115004f6e1ca84c3a526c6e690435e37bed4&thread=e324e0f89031e0bfa52cb138a209bf748f34de2cb73be01f54c4e8781f375b78`
+(item 2), recorded on capsule-viewer#39. The ruling gates the build, not
+this note.
+
+| # | Ruling |
+| --- | --- |
+| D1 | As proposed: keep `INCONCLUSIVE`. |
+| D2 | As proposed: `NOT_PRESENT` with "n of m records unsigned". |
+| D3 | Name the checker that actually ran: capsulectl on product pages, capsule-emit on the Python runtime pages. Never name the AAC page. "The AAC page" means AAC's presentation shell wherever it lives, as it moves to capsule-viewer. This replaces the proposal below. |
+| D4 | As proposed: yes, as a separate verifier item. Until it lands, section 4's wording holds. |
+| D5 | As proposed: `NOT_PRESENT`, with the grade word shown as claimed. |
+| D6 | As proposed: ship the row as a permanent `NOT_PRESENT`. |
+| D7 | As proposed: `NOT_CHECKED`. |
+| D8 | As proposed: keep the row, renamed to say whose copy agrees. |
+| D9 | As proposed: a sub-line of Content binding. |
+| D10 | No panel until the three missing lines have a source. |
+| D11 | As proposed: out of scope here. |
+| D12 | As proposed: show the witness directory's digest beside the chip. |
+
+### Questions and proposals as reviewed
 
 | # | Row or state | Question | This note's proposal |
 | --- | --- | --- | --- |
