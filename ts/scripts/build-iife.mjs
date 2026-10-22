@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Bundles src/browser.ts as dist/evidence-graph.iife.js, the in-browser
 // renderer an emitted page runs (`npm run emitter:iife`).
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { aacBrowser } from "./aac-browser.mjs";
+import { builtCommitSha } from "./built-commit.mjs";
 
 const tsRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -15,34 +15,6 @@ function installed(name) {
   const dist = dirname(fileURLToPath(import.meta.resolve(name)));
   return JSON.parse(readFileSync(join(dist, "..", "package.json"), "utf8"))
     .version;
-}
-
-/**
- * The commit cwd's tree was built from, or "" when cwd's tracked files
- * carry uncommitted changes the running bundle might not match. Untracked
- * files (a stray log, an editor swap file) are not HEAD's code either way,
- * so they don't count: only tracked changes can make the running bundle
- * disagree with HEAD. Exported standalone so a test can exercise it against
- * a throwaway git repo, without bundling.
- */
-export function builtCommitSha(cwd) {
-  function git(args) {
-    try {
-      return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
-    } catch (error) {
-      throw new Error(
-        `could not run \`git ${args.join(" ")}\` in ${cwd}: ${error.message}`,
-      );
-    }
-  }
-  const headSha = git(["rev-parse", "HEAD"]);
-  if (!/^[0-9a-f]{40}$/u.test(headSha))
-    throw new Error(
-      `git rev-parse HEAD did not return a 40-hex commit sha: ${JSON.stringify(headSha)}`,
-    );
-  const dirty =
-    git(["status", "--porcelain", "--untracked-files=no", "--", "."]) !== "";
-  return dirty ? "" : headSha;
 }
 
 async function main() {
@@ -86,6 +58,4 @@ async function main() {
   });
 }
 
-// Run only when invoked directly (`npm run emitter:iife`), not when a test
-// imports builtCommitSha above: importing this module must not also bundle.
-if (process.argv[1] === fileURLToPath(import.meta.url)) await main();
+await main();

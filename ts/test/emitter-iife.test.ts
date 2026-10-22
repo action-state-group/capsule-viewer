@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
-import { builtCommitSha } from "../scripts/build-iife.mjs";
+import { builtCommitSha } from "../scripts/built-commit.mjs";
 import { commitPrefix } from "../src/viewer-build.js";
 
 const tsRoot = new URL("../", import.meta.url);

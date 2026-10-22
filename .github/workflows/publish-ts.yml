@@ -96,4 +96,4 @@ jobs:
             exit 1
           }
       - name: Publish
-        run: npm publish --tag "$DIST_TAG"
+        run: npm publish --ignore-scripts --tag "$DIST_TAG"
