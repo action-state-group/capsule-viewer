@@ -103,18 +103,14 @@ here. The format follows
   with the default layer and a visible notice. `row.*`/`group.*` apply
   only when every claim cites one `contract_ref`; a Result citing more
   than one shows raw identifiers. Tuning details in `ts/README.md`.
-- Pinned `@action-state-group/agent-action-capsule` to
-  `main@db9de0f` (`ts/vendor/agent-action-capsule-db9de0f.tgz`, an
-  `npm pack` of that commit), which carries the `contract-report/v1`
+- Requires `@action-state-group/agent-action-capsule` 0.6.0 (it was
+  0.5.0), which carries the `contract-report/v1`
   registration (#352), `out_of_scope`/`applies_from` (#368, #363,
   8732264) this release also ports onto `compliance.ts`,
   `compliance-view.ts`, `outcome-report-view.ts` and the generic Result
   page: a judged-out-of-scope claim is its own count, in the population,
   never "met" and never "not applicable"; a claim not yet in force is
   readiness only, outside the population, unless it failed verification.
-  Needs an agent-action-capsule ts release carrying #352 (and #368,
-  8732264) to drop the vendored tgz for a normal dependency; until then
-  this is a one-line `package.json` swap.
 
 ### Changed
 
