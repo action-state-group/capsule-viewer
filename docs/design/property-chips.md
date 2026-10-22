@@ -5,7 +5,7 @@ This note maps the nine property rows and the five chip states of the proposed
 per-property chip strip onto what the verifiers and the Evidence Result
 contract say today. Rows that needed a product decision are marked
 **DECISION** and collected in section 6. Steven ruled all twelve on
-2026-10-19. One case under D3 is still open (section 6). The build is not
+2026-10-19. Two cases under D3 are still open (section 6). The build is not
 scheduled: capsule-viewer#39 holds it until an MVP-bar row names the chips.
 
 The chip strip would show one row per property, each with one chip state:
