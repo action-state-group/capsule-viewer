@@ -22,11 +22,7 @@ import {
   createPresentationRegistry,
   renderEvidenceGraph,
 } from "./evidence-graph-view.js";
-import {
-  isHex64,
-  jcs,
-  sha256Hex,
-} from "@action-state-group/agent-action-capsule";
+import { jcs, sha256Hex } from "@action-state-group/agent-action-capsule";
 import {
   BUILTIN_MANIFEST_RESULT_COMPLIANCE,
   BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT,
