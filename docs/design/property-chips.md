@@ -69,7 +69,8 @@ chip for "the Result" would be the rollup that [er] section 3 forbids.
 ## 2. The five chip states
 
 Every source status maps to exactly one chip state. Each chip names its
-checker, so a reader can see who ran it.
+checker, so a reader can see who ran it. Whether the AAC page's statuses
+may produce chips at all is open under D3 (section 6).
 
 | Chip state | Meaning (render-only) | Source statuses that produce it |
 | --- | --- | --- |
@@ -114,7 +115,7 @@ no witness directory unless one is stated.
 | Content binding | capsule-emit `records` (id recomputes); capsulectl record identity; AAC `record-digests`; this viewer's in-browser recompute | as reported | never: a bundle with no records is `FAIL` (`no_records`) | never | never | runs: `page` or `failed` | `PASS` or `FAIL`. Disclosed values against their committed digest (AAC `disclosures`) are a sub-line of this row, not a tenth row. |
 | Producer signature | capsule-emit `signatures`; capsulectl `producer_signatures` | as reported | every record unsigned | never from capsule-emit | never | always `notChecked` when any record carries a signature: [aac-verify] checks no signature | From capsule-emit or capsulectl: as reported. On the AAC page alone: `NOT_CHECKED`, "checked by the full verifier, not by this page" (wording: open under D3, section 6). Mixed signed and unsigned: D2. |
 | Local inclusion | capsule-emit `per_record_membership`; AAC `membership` | as reported, only under a `PASS` checkpoint | no membership entry for the record (AAC `membership_record_unbound`) | `membership_verifier_unavailable`; AAC `notChecked` | proof checks against an unsigned root (`checkpoint_unverified`) | runs when a certificate and checkpoint are carried | Unsigned checkpoint: `INCONCLUSIVE`, never `PASS`. |
-| Checkpoint signature | capsule-emit `checkpoint`; AAC `checkpoint-signature` | as reported | no `checkpoint.cose` | verifier unavailable; AAC `notChecked` | never | may pass the bundle without it (`CHECKPOINT_NOT_CHECKED_NOTE`) | As reported. When the AAC page passed the bundle without it, the chip is `NOT_CHECKED` and the page's own note stays beside it. |
+| Checkpoint signature | capsule-emit `checkpoint`; AAC `checkpoint-signature` | as reported | no `checkpoint.cose` | verifier unavailable; AAC `notChecked` | never | may pass the bundle without it (`CHECKPOINT_NOT_CHECKED_NOTE`) | As reported. When the AAC page passed the bundle without it, the chip is `NOT_CHECKED` and the page's own note stays beside it (AAC page results as chip sources: open under D3, section 6). |
 | External registration | capsule-emit `witnesses` (only under a caller-supplied witness directory; no witness is trusted by default) | `PASS`: one receipt verifies under a directory key. `FAIL`: one receipt does not verify. | `witness_receipt_absent` | no key for the witness, or checkpoint not authenticated; the AAC page always (`witness-receipts`) | never | always `notChecked`; a receipt's grade word is shown as "claimed (not checked here)" | With no directory supplied, every receipt is `NOT_CHECKED`. A `PASS` must name the directory it was checked under (D12). No registration time is surfaced (section 4, D4). |
 | Continuity | none. No verifier in the bundle path checks consistency between this checkpoint and an earlier one. | never today | **always today**: evidence-bundle/v2 carries the checkpoint's signed `prev_size`/`prev_root` but no consistency proof and no earlier checkpoint for a verifier to check | never today | never today | no check | **`NOT_PRESENT`.** The witness does check a checkpoint's consistency claim when it registers it [anchor], but no verifier result reports that to a page. This is the honest result, not a defect. A receipt grade word `consistency-verified` is a claim: D5. |
 | Identity/authority | none. A key shows one holder signed; naming the holder needs a directory or a witness ([report] line 226; AAC `CHECKS_SCOPE_LINE`). | never today | **always today** | never | never | "None of these checks says who produced the records" | **`NOT_PRESENT`.** `signer_matches_checkpoint` (every record names the checkpoint's key) is a fact line under the row, not a chip state. A handle, an Agent Card or a connection is never shown as identity. D6. |
@@ -191,7 +192,7 @@ not this note. "As proposed" means the full proposal in the table below.
 | --- | --- |
 | D1 | As proposed: keep `INCONCLUSIVE`. |
 | D2 | As proposed: `NOT_PRESENT` with "n of m records unsigned". |
-| D3 | Name the checker that actually ran: capsulectl on product pages, capsule-emit on the Python runtime pages. Never name the AAC page. |
+| D3 | Name the checker that actually ran: capsulectl on product pages, capsule-emit on the Python runtime pages (the PM's wording in the capsule-viewer#39 body, which the accepted set names). Never name the AAC page. |
 | D4 | As proposed: yes, as a separate verifier item. Until it lands, section 4's wording holds. |
 | D5 | As proposed: `NOT_PRESENT`, with the grade word shown as claimed. |
 | D6 | As proposed: ship the row as a permanent `NOT_PRESENT`. |
