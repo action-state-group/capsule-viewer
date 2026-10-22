@@ -573,8 +573,10 @@ it("draws the verification banner and the verification page in the card's look -
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
   const banner = root.querySelector<HTMLElement>('[data-verify="verified"]')!;
-  expect(banner.classList.contains("oi-banner")).toBe(true);
-  expect(banner.classList.contains("oi-banner-ok")).toBe(true);
+  // The pill keeps its look on the card (capsule-viewer#60); the page root
+  // takes the card's own frame.
+  expect(banner.className).toBe("cv-pill");
+  expect(root.classList.contains("cv-shell-chrome")).toBe(true);
   const card = root.querySelector('[data-page="outcome-report"]')!;
   expect(
     banner.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -594,7 +596,6 @@ it("draws the verification banner and the verification page in the card's look -
     '[data-page="outcome-report"] style',
   )!.textContent!;
   expect(style).toContain(".oi.oi-vp");
-  expect(style).toContain(".oi.oi-banner-ok");
 });
 
 it("leaves the banner and verification page unstyled for every other root family", async () => {

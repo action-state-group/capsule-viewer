@@ -831,7 +831,13 @@ async function packageStatic(
     `<p>Verification result when this page was built: <strong>${verification === "verified" ? "verified" : "did not verify"}</strong>.</p>` +
     `</aside>`;
   const html = emitStaticEvidenceGraphHtml(
-    { appHtml: root.innerHTML, appStyles, appStyleAttributes, noticeHtml },
+    {
+      appHtml: root.innerHTML,
+      appClass: root.className,
+      appStyles,
+      appStyleAttributes,
+      noticeHtml,
+    },
     {
       ...(title === undefined ? {} : { title }),
       ...(options.themeCss === undefined ? {} : { themeCss: options.themeCss }),

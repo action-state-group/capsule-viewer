@@ -5,4 +5,3 @@
 # recomputes these from the TypeScript constants and fails on any drift.
 sha256-1KXd2ucsnvgG/vW16/7JI/wa2D4RcDB0RyYtAXfyDPE= OUTCOME_REPORT_CSS
 sha256-9h2da9s2yfTKaR6tPUgoI0jv/BwM3sBnJS5E2Nk+5i0= COMPLIANCE_CSS
-sha256-0/uBI/eYSAUXlJNWc+2wB3l7tcU3muA86e4OAkY96sc= SHELL_CSS

@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 import { COMPLIANCE_CSS } from "./compliance-styles.js";
 import { jcs } from "@action-state-group/agent-action-capsule";
 import { OUTCOME_REPORT_CSS } from "./outcome-report-styles.js";
-import { SHELL_CSS } from "./shell-styles.js";
 
 const cspSlot = "__CSP_SLOT__";
 const titleSlot = "__TITLE_SLOT__";
@@ -38,7 +37,6 @@ export const DEFAULT_EVIDENCE_GRAPH_BOOTSTRAP =
 export const CORE_RUNTIME_STYLES: readonly string[] = [
   OUTCOME_REPORT_CSS,
   COMPLIANCE_CSS,
-  SHELL_CSS,
 ];
 
 const shell = readFileSync(
@@ -95,6 +93,14 @@ export function escapeJsonForHtmlScript(json: string): string {
     .replaceAll("&", "\\u0026")
     .replaceAll("\u2028", "\\u2028")
     .replaceAll("\u2029", "\\u2029");
+}
+
+/** A value for a double-quoted HTML attribute. */
+function escapeAttribute(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;");
 }
 
 function escapeHtmlText(value: string): string {
@@ -276,6 +282,8 @@ export const STATIC_NOTICE_CSS =
 export interface StaticPageInput {
   /** The rendered page: the children of `#app`, serialized as HTML. */
   readonly appHtml: string;
+  /** The classes the rendering put on its root (a module's own chrome). */
+  readonly appClass?: string;
   /** The text of every `<style>` element in `appHtml`. */
   readonly appStyles: readonly string[];
   /** The value of every `style` attribute in `appHtml`. */
@@ -358,6 +366,6 @@ export function emitStaticEvidenceGraphHtml(
   }
   const html =
     `${head}<body>\n    ${input.noticeHtml}\n    ` +
-    `<div id="app">${input.appHtml}</div>\n  ${page.slice(bodyEnd)}`;
+    `<div id="app"${input.appClass ? ` class="${escapeAttribute(input.appClass)}"` : ""}>${input.appHtml}</div>\n  ${page.slice(bodyEnd)}`;
   return html;
 }

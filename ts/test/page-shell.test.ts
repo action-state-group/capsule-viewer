@@ -7,13 +7,12 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
-import { CORE_RUNTIME_STYLES } from "../src/emitter.js";
 import {
   BANNER_LINES,
   CHECKED_SECTION_TITLE,
   checkedSummaryLine,
+  SUMMARY_NOT_VERIFIED,
 } from "../src/evidence-graph-view.js";
-import { SHELL_CSS } from "../src/shell-styles.js";
 
 const dom = new JSDOM();
 globalThis.document = dom.window.document;
@@ -34,6 +33,11 @@ const bundle = (): Obj =>
     ),
   ) as Obj;
 
+const shell = readFileSync(
+  resolve(process.cwd(), "src", "emitter-shell.html"),
+  "utf8",
+);
+
 async function render(input: Obj): Promise<HTMLElement> {
   const root = document.createElement("main");
   await renderEvidenceGraph(input, root);
@@ -41,22 +45,20 @@ async function render(input: Obj): Promise<HTMLElement> {
 }
 
 describe("the page shell", () => {
-  it("pads every page and puts a Checked pill above everything else", async () => {
+  it("puts a Checked pill above everything else, named with the full verdict", async () => {
     const root = await render(bundle());
-    expect(root.classList.contains("cv-shell")).toBe(true);
-    const style = root.firstElementChild!;
-    expect(style.tagName).toBe("STYLE");
-    expect(style.textContent).toBe(SHELL_CSS);
-    const bar = style.nextElementSibling as HTMLElement;
+    const bar = root.firstElementChild as HTMLElement;
     expect(bar.className).toBe("cv-shell-bar");
     const pill = bar.querySelector<HTMLElement>("[data-verify]")!;
     expect(pill.dataset.verify).toBe("verified");
+    expect(pill.className).toBe("cv-pill");
     expect(pill.textContent).toBe(BANNER_LINES.verified);
+    expect(pill.getAttribute("role")).toBe("img");
     expect(pill.getAttribute("aria-label")).toBe(BANNER_LINES.verifiedTitle);
     expect(root.querySelector("[data-uncheckpointed-note]")).toBeNull();
   });
 
-  it("folds the verification page into one closed section whose line keeps the caveat in view", async () => {
+  it("folds the verification page into one closed section whose line keeps the counts in view", async () => {
     const root = await render(bundle());
     const folded = root.lastElementChild as HTMLDetailsElement;
     expect(folded.tagName).toBe("DETAILS");
@@ -64,9 +66,7 @@ describe("the page shell", () => {
     expect(
       folded.querySelector(':scope > [data-page="verification"]'),
     ).not.toBeNull();
-    const summary = folded.querySelector(":scope > summary")!.textContent!;
-    expect(summary.startsWith(`${CHECKED_SECTION_TITLE} · `)).toBe(true);
-    expect(summary).toBe(
+    expect(folded.querySelector(":scope > summary")!.textContent).toBe(
       `${CHECKED_SECTION_TITLE} · 10 of 10 checks passed · 5 records`,
     );
   });
@@ -93,15 +93,40 @@ describe("the page shell", () => {
       `${CHECKED_SECTION_TITLE} · 1 check on this page failed · 5 records`,
     );
   });
+});
 
-  it("drops a module's own .cv-page width and padding inside it, and lists its stylesheet in the CSP", () => {
-    expect(SHELL_CSS).toContain(
-      ".cv-shell .cv-page{max-width:none;margin:0;padding:0}",
+describe("the emitter shell's page styles", () => {
+  it("gives every page a width and padding through the theme's own tokens", () => {
+    expect(shell).toContain("--aac-page-width: 60rem;");
+    expect(shell).toContain("--aac-gutter: 1rem;");
+    expect(shell).toContain("padding-block: var(--aac-page-pad-block);");
+  });
+
+  it("drops a module's own .cv-page width and padding, and lets a card with its own frame keep it", () => {
+    expect(shell).toMatch(
+      /#app \.cv-page \{\s*max-width: none;\s*margin: 0;\s*padding: 0;\s*\}/u,
     );
-    expect(SHELL_CSS).toContain(
-      ".cv-shell.cv-shell-chrome{max-width:none;padding:0}",
+    expect(shell).toMatch(
+      /#app\.cv-shell-chrome \{\s*max-width: none;\s*padding: 0;\s*\}/u,
     );
-    expect(CORE_RUNTIME_STYLES).toContain(SHELL_CSS);
+  });
+
+  it("colours the pill and the section from the theme's tokens", () => {
+    expect(shell).toMatch(
+      /:where\(\.cv-pill\[data-verify="verified"\]\) \{\s*color: var\(--aac-ok\);\s*background: var\(--aac-ok-bg\);/u,
+    );
+    expect(shell).toMatch(
+      /:where\(details\.cv-checked\) \{[^}]*border-top: 1px solid var\(--aac-line\);/u,
+    );
+  });
+
+  it("is the Go emitter's shell byte for byte", () => {
+    expect(
+      readFileSync(
+        resolve(process.cwd(), "..", "go", "emitter", "shell.html"),
+        "utf8",
+      ),
+    ).toBe(shell);
   });
 });
 
@@ -113,7 +138,7 @@ describe("checkedSummaryLine", () => {
 
   it("counts the checks and records and names the signatures not checked", () => {
     expect(
-      checkedSummaryLine({
+      checkedSummaryLine(true, {
         checks: checks(10),
         records: [1, 2, 3, 4, 5, 6, 7],
         checkLists: {
@@ -126,7 +151,7 @@ describe("checkedSummaryLine", () => {
 
   it("says one record, and counts other checks not run here", () => {
     expect(
-      checkedSummaryLine({
+      checkedSummaryLine(true, {
         checks: checks(10),
         records: [1],
         checkLists: { failed: [], notChecked: ["witness-receipts"] },
@@ -134,20 +159,28 @@ describe("checkedSummaryLine", () => {
     ).toBe("10 of 10 checks passed · 1 record · 1 other check not run here");
   });
 
-  it("leads with the failed count when a check failed, and adds nothing when everything ran", () => {
+  it("leads with what failed, and never says passed for a bundle that did not verify", () => {
     expect(
-      checkedSummaryLine({
-        checks: checks(10),
-        records: [1, 2],
-        checkLists: { failed: ["disclosures", "closure"], notChecked: [] },
-      }),
-    ).toBe("2 checks on this page failed · 2 records");
-    expect(
-      checkedSummaryLine({
+      checkedSummaryLine(false, {
         checks: checks(8, 2),
         records: [1, 2],
         checkLists: { failed: ["closure"], notChecked: [] },
       }),
     ).toBe("2 of 10 checks failed · 2 records");
+    expect(
+      checkedSummaryLine(false, {
+        checks: checks(10),
+        records: [1, 2],
+        checkLists: { failed: ["disclosures", "closure"], notChecked: [] },
+      }),
+    ).toBe("2 checks on this page failed · 2 records");
+    // A failure outside both counts (a provenance error, say).
+    expect(
+      checkedSummaryLine(false, {
+        checks: checks(10),
+        records: [1, 2],
+        checkLists: { failed: [], notChecked: [] },
+      }),
+    ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 records`);
   });
 });

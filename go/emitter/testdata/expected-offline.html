@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-WnQkBpIjYeHhlrunvbZyDfvH9yX86dQ6KdDo0Dpy7JU=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-9TIS+PbGYnPbDh+G0LHr/N2oxv+VANvL0rl9BQrsqko='; style-src 'sha256-ZGx2jpoJlDefSM2vZzACsjIIO+39oeIWYKrKuHni+Lw=' 'sha256-XmFqc+CxMWUpbibSyc2S7fDO533QlrMya73eX5pc3Kc=' 'sha256-1KXd2ucsnvgG/vW16/7JI/wa2D4RcDB0RyYtAXfyDPE=' 'sha256-9h2da9s2yfTKaR6tPUgoI0jv/BwM3sBnJS5E2Nk+5i0=' 'sha256-0/uBI/eYSAUXlJNWc+2wB3l7tcU3muA86e4OAkY96sc='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-WnQkBpIjYeHhlrunvbZyDfvH9yX86dQ6KdDo0Dpy7JU=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-9TIS+PbGYnPbDh+G0LHr/N2oxv+VANvL0rl9BQrsqko='; style-src 'sha256-4anj/cwFci26Xk5aSQp67tddJQJYuWXAvVtrsDN5OjU=' 'sha256-XmFqc+CxMWUpbibSyc2S7fDO533QlrMya73eX5pc3Kc=' 'sha256-1KXd2ucsnvgG/vW16/7JI/wa2D4RcDB0RyYtAXfyDPE=' 'sha256-9h2da9s2yfTKaR6tPUgoI0jv/BwM3sBnJS5E2Nk+5i0='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Résumé &lt;/script&gt; &amp; co</title>
     <style>
@@ -30,8 +30,9 @@
         --aac-font: system-ui, sans-serif;
         --aac-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         --aac-line-height: 1.5;
-        --aac-page-width: none;
-        --aac-gutter: 0;
+        --aac-page-width: 60rem;
+        --aac-gutter: 1rem;
+        --aac-page-pad-block: 1.5rem 2.5rem;
         --aac-radius: 10px;
       }
       :where(html) {
@@ -51,6 +52,66 @@
         max-width: var(--aac-page-width);
         margin-inline: auto;
         padding-inline: var(--aac-gutter);
+        padding-block: var(--aac-page-pad-block);
+      }
+      /* A module with its own frame (the outcome and compliance cards) keeps
+         it; a module's own .cv-page drops its width and padding here, so no
+         page is padded twice (capsule-viewer#60). */
+      #app.cv-shell-chrome {
+        max-width: none;
+        padding: 0;
+      }
+      #app .cv-page {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+      :where(.cv-shell-bar) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin: 0 0 0.75rem;
+      }
+      #app.cv-shell-chrome :where(.cv-shell-bar) {
+        padding: 1rem var(--aac-gutter) 0;
+      }
+      :where(.cv-pill) {
+        display: inline-block;
+        padding: 0.0625rem 0.625rem;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+      :where(.cv-pill[data-verify="verified"]) {
+        color: var(--aac-ok);
+        background: var(--aac-ok-bg);
+      }
+      :where(.cv-pill[data-verify="failed"]) {
+        color: var(--aac-bad);
+        background: var(--aac-bad-bg);
+      }
+      :where(.cv-shell-note) {
+        font-size: 0.8125rem;
+        color: var(--aac-muted);
+      }
+      :where(details.cv-checked) {
+        margin: 2rem 0 0;
+        padding: 0.75rem 0 0;
+        border-top: 1px solid var(--aac-line);
+      }
+      #app.cv-shell-chrome > :where(details.cv-checked) {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 1rem var(--aac-gutter) 2.5rem;
+        border-top: 0;
+      }
+      :where(details.cv-checked > summary) {
+        font-size: 0.875rem;
+        color: var(--aac-muted);
       }
       :where(img, svg, video, canvas) {
         max-width: 100%;
