@@ -562,6 +562,23 @@ it("a clean word and a not-clean word must not read alike, across any set (43396
   expect(check({ "lines.tier.judged": "recomputed" })).toMatch(
     /lines\.tier\.recomputed and lines\.tier\.judged read alike/u,
   );
+  // "met" is verdict.met's (clean) word; a missed headline row given it
+  // would read as resolved
+  expect(check({ "lines.line.missed": "met" })).toMatch(
+    /verdict\.met and lines\.line\.missed read alike/u,
+  );
+  // an undecided session's pill given the EU card's own "no exceptions
+  // found" word would read clean
+  expect(
+    wordingProblems(
+      {
+        id: "test/clean@1",
+        locale: "en",
+        entries: { "groups.session.undecided": "No exceptions found" },
+      },
+      DEFAULT_PACKS.groups,
+    ).join("\n"),
+  ).toMatch(/groups\.ob\.ok\.found and groups\.session\.undecided read alike/u);
   // the two shipped default packs carry no such collision
   for (const grouping of ["lines", "groups"] as const)
     expect(

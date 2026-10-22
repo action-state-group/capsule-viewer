@@ -269,6 +269,8 @@ const NOT_CLEAN_WORD_KEYS: readonly string[] = [
   // States a rule's result was not met.
   "verdict.not_met",
   "lines.pf.verdict.not_met",
+  "lines.line.missed",
+  "lines.status.missed",
   // Nobody could decide.
   "lines.line.undecided",
   "lines.status.undecided.judged",
