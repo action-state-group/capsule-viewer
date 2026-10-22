@@ -11,7 +11,9 @@ import {
   statusWord,
 } from "../src/outcome-report-view.js";
 import { jsonDigest } from "@action-state-group/agent-action-capsule";
+import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
+import { ladderWords } from "./helpers/ladder-pack.js";
 
 type Obj = Record<string, unknown>;
 
@@ -810,7 +812,7 @@ it("two levels: the missed line opens (toggle 1) into every missed conversation,
     ).toBe(report.rationale);
     // level 1 says how sure the judge was, in plain words
     expect(row.querySelector(".sealed")!.textContent).toMatch(
-      /^The judge was \d+% sure\.$/u,
+      /^The judge gave this verdict a probability of \d+%\.$/u,
     );
     // P is read back from the sealed rationale's probabilities for the verdict returned
     const probs = /'([a-z_]+)': ([0-9.]+)/gu;
@@ -1539,14 +1541,53 @@ it("a conversation with no not_evaluable criterion to point to says the plain 'c
   const conversation = {
     criteria: [],
   } as unknown as Parameters<typeof statusWord>[1];
-  expect(statusWord("undecided", conversation, false)).toEqual({
+  expect(statusWord("undecided", conversation, DEFAULT_WORDS.lines)).toEqual({
     word: "could not decide",
     tone: "ne",
   });
-  expect(statusWord("undecided", conversation, true)).toEqual({
+  expect(statusWord("undecided", conversation, ladderWords("lines"))).toEqual({
     word: "could not decide",
     tone: "ne",
   });
+});
+
+// A regression of #42 (4343133967): the default pack once gave the
+// disclosed-no-pin, withheld and unavailable paths the grade ladder's own
+// four-way split ("not checked", "(report withheld)", "(report not
+// available)") instead of the plain set's single "could not decide". The
+// three keys are locked (contract-report-wording.ts LOCKED_ENTRIES), so no
+// pack -- not even the ladder pack -- can bring that split back.
+it("a judge ran on this conversation's rule but did not decide it, disclosed with no pin: 'could not decide', on both word sets", () => {
+  const conversation = {
+    criteria: [{ verdict: "not_evaluable", reportState: "disclosed" }],
+  } as unknown as Parameters<typeof statusWord>[1];
+  for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
+    expect(statusWord("undecided", conversation, w)).toEqual({
+      word: "could not decide",
+      tone: "ne",
+    });
+});
+
+it("every report that would say is withheld: 'could not decide', on both word sets", () => {
+  const conversation = {
+    criteria: [{ verdict: "not_evaluable", reportState: "withheld" }],
+  } as unknown as Parameters<typeof statusWord>[1];
+  for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
+    expect(statusWord("undecided", conversation, w)).toEqual({
+      word: "could not decide",
+      tone: "ne",
+    });
+});
+
+it("a cited report this bundle does not carry a readable copy of: 'could not decide', on both word sets", () => {
+  const conversation = {
+    criteria: [{ verdict: "not_evaluable", reportState: "mismatch" }],
+  } as unknown as Parameters<typeof statusWord>[1];
+  for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
+    expect(statusWord("undecided", conversation, w)).toEqual({
+      word: "could not decide",
+      tone: "ne",
+    });
 });
 
 it("a conversation missed for c2's not_met is filed under c2, never under c1's earlier failed criterion", () => {

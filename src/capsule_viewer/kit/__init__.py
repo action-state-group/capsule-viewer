@@ -37,6 +37,7 @@ from .contract import (
     ModuleManifest,
     check_module,
     check_module_renders,
+    check_nesting,
 )
 from .tokens import TOKENS, TokenDriftError, check_token_sync, kit_css
 
@@ -60,6 +61,7 @@ __all__ = [
     "calendar_grid",
     "check_module",
     "check_module_renders",
+    "check_nesting",
     "check_token_sync",
     "citation_list",
     "data_table",

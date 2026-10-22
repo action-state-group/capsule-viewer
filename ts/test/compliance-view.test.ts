@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
 import { obligationStatus, rowStatus } from "../src/compliance-view.js";
+import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
+import { ladderWords } from "./helpers/ladder-pack.js";
 import type { ObligationModel, ObligationRowModel } from "../src/compliance.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -503,22 +505,38 @@ it("a test every session failed is an exception, not 'could not be checked': met
 
 it("a claim that failed verification or whose evidence is missing is never an exception, and never lets a test read clean in the ok tone", () => {
   const unverifiedOnly = row({ unverifiedCount: 2 });
-  for (const ladder of [false, true]) {
-    const status = rowStatus(unverifiedOnly, ladder);
+  for (const words of [DEFAULT_WORDS.groups, ladderWords("groups")]) {
+    const status = rowStatus(unverifiedOnly, words);
     expect(status.cls).toBe("ne");
     expect(status.text).not.toMatch(/exception|No exceptions/iu);
     expect(status.note).toContain("could not be verified");
   }
   const metAndUnverified = row({ metCount: 2, unverifiedCount: 1 });
-  const status = rowStatus(metAndUnverified, false);
+  const status = rowStatus(metAndUnverified, DEFAULT_WORDS.groups);
   expect(status.cls).toBe("ne");
   expect(status.note).toContain("1 could not be verified");
   expect(obligationStatus(obligationOf([metAndUnverified]))).toEqual({
     cls: "ne",
     text: "No exceptions found · 1 result could not be verified",
   });
-  // the ladder claims no more than the plain words
-  expect(rowStatus(row({ metCount: 2 }), true).text).toBe("No exceptions");
+});
+
+it("a producer's not-evaluable note never masks an actually-unverified row: the note is shown only when a test was really not evaluable", () => {
+  const unverifiedWithStaleNote = row({
+    unverifiedCount: 2,
+    notEvaluableNote: "Not evaluable against the agent on legacy data.",
+  });
+  const status = rowStatus(unverifiedWithStaleNote, DEFAULT_WORDS.groups);
+  expect(status.note).toContain("could not be verified");
+  expect(status.note).not.toContain("Not evaluable against the agent");
+  expect(status.producerNote).toBeUndefined();
+  const actuallyNotEvaluable = row({
+    notEvaluableCount: 2,
+    notEvaluableNote: "Not evaluable against the agent on legacy data.",
+  });
+  const real = rowStatus(actuallyNotEvaluable, DEFAULT_WORDS.groups);
+  expect(real.note).toBe("Not evaluable against the agent on legacy data.");
+  expect(real.producerNote).toBe(true);
 });
 
 it("a session whose claim cites evidence the bundle does not hold is counted apart from the exceptions, with no finding", async () => {
@@ -563,8 +581,8 @@ it("a test or obligation with no result at all never falls through to a pass wor
     unverifiedCount: 0,
     sessionsByVerdict: new Map(),
   };
-  for (const ladder of [false, true]) {
-    const status = rowStatus(empty, ladder);
+  for (const words of [DEFAULT_WORDS.groups, ladderWords("groups")]) {
+    const status = rowStatus(empty, words);
     expect(status.cls).toBe("ne");
     expect(status.text).not.toMatch(/No exceptions|Established/u);
   }

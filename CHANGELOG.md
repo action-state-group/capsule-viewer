@@ -23,6 +23,35 @@ here. The format follows
 
 ### Added
 
+- The contract-report module (`ts/src/contract-report.ts`): one view for the
+  Outcomes report and the EU AI Act Results, with the module's own words
+  taken from a wording pack (`aac.wording-pack/v0`). Not in the pack: what
+  the bundle itself states (the producer's obligation titles and test
+  names, in italics; sealed rule wording) and two lines
+  agent-action-capsule's outcome model writes (the outcome statement and
+  the resolution rule); the module never takes its own words from a bundle
+  (presentation contract section 6). Two default packs ship
+  with the viewer, never in a bundle: `ts/src/wording/contract-report-outcomes.en.json`
+  and `ts/src/wording/contract-report-eu-ai-act.en.json`. A host passes its
+  own pack as the page's `wording` (bound by `wording_sha256`, the pack the
+  presentation builder already carries); its entries replace the default
+  pack's. A pack changes words only: every entry it replaces must keep the
+  same `{placeholders}`, two verdicts may not share a word or take another
+  verdict's default word, and the grouping is fixed, or the pack is refused and no card is drawn. The lines that say what the page checked
+  or didn't, what the bundle withholds or doesn't state, and which text is
+  the producer's rather than evidence are locked (`LOCKED_ENTRIES`): a pack
+  that rewords one is refused. The presentation builder refuses a pack that
+  doesn't fit the selected report, naming every problem, as
+  `ts/scripts/render-report.mjs` does; `render-report.mjs`
+  draws a page from a bundle with a pack. The grade-ladder word set the cards
+  kept behind a code flag (`LADDER_WORDS`, removed) is now just a pack.
+- One nesting rule for every report page (SEAMS ruling 11): a level-2 toggle
+  inside a level-1 toggle, never deeper (and, in `nestingProblems`, never
+  inside another level 2). `nestingProblems` in
+  `ts/src/report-levels.ts` and `capsule_viewer.kit.check_nesting` check it;
+  both cards pass with every toggle open. The receipts adopt it in #47.
+- Golden pages for both cards, closed and fully open
+  (`ts/test/goldens/contract-report/`).
 - The outcome report and EU AI Act obligations cards carry a short block on
   their front, outside every toggle, that says who judged, who witnessed and
   what verified:
@@ -53,6 +82,14 @@ here. The format follows
 
 ### Changed
 
+- "Witnessed by" on the front of both cards says the witnesses are "stated by
+  the bundle, not checked here" (SEAMS ruling 12), in place of "as the bundle
+  states; this page does not check witness receipts".
+- The report proofs name the wording pack that drew the card ("Words"), and
+  now every wording layer applied, by digest -- the built-in default's too,
+  even on a default-only page. A few default words moved with the rewrite:
+  `judge.note.sure`, `lines.hc.lede`, `lines.line.added.help` and
+  `lines.line.undecided`; no style changed, so no CSP hash moves.
 - The outcome report and EU AI Act obligations cards have two levels and no
   more. The summary states what was checked and the result per line in plain
   words. A first toggle on a line lists the conversations behind it in place,

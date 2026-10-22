@@ -184,6 +184,41 @@ def check_fragment(html: str) -> list[str]:
     return audit.problems
 
 
+# The one nesting rule for every report page (SEAMS ruling 11): a toggle
+# (``<details>``) may sit inside one other toggle, and never deeper. The
+# TypeScript report cards hold the same rule (``nestingProblems`` in
+# ts/src/report-levels.ts).
+MAX_TOGGLE_DEPTH = 2
+
+
+class _NestingAudit(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.depth = 0
+        self.problems: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "details":
+            self.depth += 1
+            if self.depth > MAX_TOGGLE_DEPTH:
+                self.problems.append(f"a toggle nested {self.depth} deep (level 2 is the deepest)")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "details" and self.depth > 0:
+            self.depth -= 1
+
+
+def check_nesting(html: str) -> list[str]:
+    """Every toggle in *html* nested deeper than level 2 (SEAMS ruling 11):
+    level 2 inside level 1, never deeper. Empty when the fragment keeps the
+    rule. Not yet part of ``check_module_renders``: the receipts adopt it in
+    capsule-viewer#47."""
+    audit = _NestingAudit()
+    audit.feed(html)
+    audit.close()
+    return audit.problems
+
+
 def check_module_renders(module: HtmlPresentationModule[ModelT], context: Context) -> str:
     """Behavioural conformance over one context the module claims it can render:
     ``canRender`` says yes, and ``buildModel`` then ``render`` with the kit

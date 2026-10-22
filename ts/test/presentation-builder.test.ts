@@ -487,6 +487,57 @@ describe("theme, wording, locale and depth", () => {
       }),
     ).rejects.toThrow(/aac.wording-pack\/v0/u);
   });
+
+  for (const [file, module] of [
+    ["outcome-report-bundle.json", "outcome-report"],
+    ["compliance-bundle.json", "compliance"],
+  ] as const)
+    it(`a wording pack that does not fit the selected report (${module}) is refused with its reasons, not drawn as presentation-failed`, async () => {
+      const { bundle } = await sealEvidenceBundle(fixture(file));
+      const options = {
+        presentation: "auto",
+        audience: "*",
+        runtime: { code: "/*IIFE_MARKER*/" },
+      } as const;
+      const grouping = module === "compliance" ? "groups" : "lines";
+      const misfit = await pack(
+        {
+          [`${grouping}.verdict.not_met`]: "met",
+          "prov.witness.stated": "{witnesses}: checked.",
+        },
+        "en",
+      );
+      for (const format of ["html", "embedded", "fragment"] as const) {
+        const built = buildPresentation(bundle, {
+          ...options,
+          format,
+          wording: misfit,
+        });
+        await expect(built, format).rejects.toThrow(PresentationBuildError);
+        await expect(built, format).rejects.toThrow(
+          new RegExp(
+            `wording pack does not fit .*${grouping}\\.verdict\\.not_met and ${grouping}\\.verdict\\.met read alike`,
+            "u",
+          ),
+        );
+        await expect(built, format).rejects.toThrow(
+          /prov\.witness\.stated: this line states what the page checked and can't be reworded/u,
+        );
+      }
+      await expect(
+        availablePackagings(bundle, { ...options, wording: misfit }),
+      ).rejects.toThrow(/wording pack does not fit/u);
+      // a pack that fits is built
+      const fits = await buildPresentation(bundle, {
+        ...options,
+        format: "html",
+        wording: await pack(
+          { [`${grouping}.verdict.met`]: "established" },
+          "en",
+        ),
+      });
+      expect(fits.format).toBe("html");
+    });
 });
 
 // ---------------------------------------------------------------------------

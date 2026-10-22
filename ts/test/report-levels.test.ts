@@ -13,6 +13,11 @@ import {
   renderChat,
   ruleWord,
 } from "../src/report-levels.js";
+import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
+import { ladderWords } from "./helpers/ladder-pack.js";
+
+const W = DEFAULT_WORDS.lines;
+const L = ladderWords();
 
 it("a toggle is level-tagged and builds its body only when first opened", () => {
   let builds = 0;
@@ -56,6 +61,7 @@ it("the conversation reads as a chat: who spoke, and each tool called with its a
       ],
     },
     "case",
+    W,
   );
   const turns = [...chat.querySelectorAll<HTMLElement>("li.turn")];
   expect(turns.map((t) => t.querySelector(".who")!.textContent)).toEqual([
@@ -89,6 +95,7 @@ it("a transcript read from the case the claims cite (the reports withheld) is dr
       turns: [{ role: "user", content: "cancel my trip", toolCalls: [] }],
     },
     "case",
+    W,
   );
   expect(chat.dataset.transcript).toBe("cited");
   expect(chat.querySelectorAll("li.turn")).toHaveLength(1);
@@ -104,24 +111,24 @@ it("a transcript read from the case the claims cite (the reports withheld) is dr
 });
 
 it("a missing or refused transcript says so in plain words and names the case record", () => {
-  expect(renderChat({ state: "absent" }, "abc").textContent).toContain(
+  expect(renderChat({ state: "absent" }, "abc", W).textContent).toContain(
     "not in this bundle. It is sealed in the case record abc",
   );
   expect(
-    renderChat({ state: "mismatch", reason: "it does not check" }, "abc")
+    renderChat({ state: "mismatch", reason: "it does not check" }, "abc", W)
       .textContent,
   ).toContain("not shown: it does not check");
 });
 
-it("result words: plain by default; the grade ladder behind the flag, inconclusive only when a judge ran", () => {
-  expect(ruleWord("met", false, "yes").word).toBe("met");
-  expect(ruleWord("not_applicable", false, "yes").word).toBe("did not apply");
-  expect(ruleWord("not_evaluable", false, "yes").word).toBe("could not decide");
-  expect(ruleWord("met", true, "yes").word).toBe("established");
-  expect(ruleWord("not_met", true, "yes").word).toBe("failed");
-  expect(ruleWord("not_applicable", true, "yes").word).toBe("not present");
-  expect(ruleWord("not_evaluable", true, "yes").word).toBe("inconclusive");
-  expect(ruleWord("not_evaluable", true, "no").word).toBe("not checked");
+it("result words: plain in the default pack; the grade ladder is a pack, inconclusive only when a judge ran", () => {
+  expect(ruleWord("met", "yes", W).word).toBe("met");
+  expect(ruleWord("not_applicable", "yes", W).word).toBe("did not apply");
+  expect(ruleWord("not_evaluable", "yes", W).word).toBe("could not decide");
+  expect(ruleWord("met", "yes", L).word).toBe("established");
+  expect(ruleWord("not_met", "yes", L).word).toBe("failed");
+  expect(ruleWord("not_applicable", "yes", L).word).toBe("not present");
+  expect(ruleWord("not_evaluable", "yes", L).word).toBe("inconclusive");
+  expect(ruleWord("not_evaluable", "no", L).word).toBe("not checked");
 });
 
 it("judged: a withheld report reads 'withheld', a report in the bundle that cannot be read is never called withheld, and neither says 'not checked'", () => {
@@ -130,26 +137,26 @@ it("judged: a withheld report reads 'withheld', a report in the bundle that cann
   expect(judgedOf("withheld", undefined)).toBe("withheld");
   for (const state of ["mismatch", "unreadable", "invalid"] as const) {
     expect(judgedOf(state, undefined)).toBe("unknown");
-    const word = ruleWord("not_evaluable", true, judgedOf(state, undefined));
+    const word = ruleWord("not_evaluable", judgedOf(state, undefined), L);
     expect(word.word).toBe("could not decide (report not available)");
     expect(word.word).not.toContain("withheld");
   }
   const withheld = ruleWord(
     "not_evaluable",
-    true,
     judgedOf("withheld", undefined),
+    L,
   );
   expect(withheld.word).toBe("could not decide (report withheld)");
   expect(withheld.word).not.toBe("not checked");
 });
 
 it("a failed or unsupported claim reads the same on both word sets, never 'not checked'", () => {
-  for (const ladder of [false, true]) {
-    expect(ruleWord("failed", ladder, "yes")).toEqual({
+  for (const words of [W, L]) {
+    expect(ruleWord("failed", "yes", words)).toEqual({
       word: "failed verification",
       tone: "ne",
     });
-    expect(ruleWord("unsupported", ladder, "unknown")).toEqual({
+    expect(ruleWord("unsupported", "unknown", words)).toEqual({
       word: "evidence missing",
       tone: "ne",
     });
@@ -188,6 +195,7 @@ it("tool results are shown exactly as sealed: indented only when that changes no
       ],
     },
     "case",
+    W,
   );
   const pre = chat.querySelector<HTMLElement>("li.turn pre")!;
   expect(pre.textContent).toBe('{"id":12345678901234567890,"id":1}');
@@ -204,6 +212,7 @@ it("a role named like an object property is shown as written, never looked up on
       ],
     },
     "case",
+    W,
   );
   expect([...chat.querySelectorAll(".who")].map((w) => w.textContent)).toEqual([
     "constructor",
@@ -284,15 +293,15 @@ it("printing builds only the bodies still pending in the page, with one listener
 
 it("case labels name the task and trial, with the agent model beside them", () => {
   expect(
-    caseParts("tau2:airline:claude-3-7-sonnet-20250219:task-13:trial-2"),
+    caseParts("tau2:airline:claude-3-7-sonnet-20250219:task-13:trial-2", W),
   ).toEqual({
     label: "task 13, trial 2",
     model: "claude-3-7-sonnet-20250219",
   });
-  expect(caseParts("tau2:airline:task-20:trial-0")).toEqual({
+  expect(caseParts("tau2:airline:task-20:trial-0", W)).toEqual({
     label: "task 20, trial 0",
   });
-  expect(caseParts("something-else")).toEqual({ label: "something-else" });
+  expect(caseParts("something-else", W)).toEqual({ label: "something-else" });
 });
 
 it("the judge's synthesized rationale reads as how sure it was; any other note is shown as sealed", () => {
@@ -300,15 +309,20 @@ it("the judge's synthesized rationale reads as how sure it was; any other note i
     judgeNote(
       "jev choice: not_met (probabilities={'met': 0.22, 'not_met': 0.78, 'not_evaluable': 0.0}, confidence=0.67). No free-text reasoning.",
       "not_met",
+      W,
     ),
-  ).toBe("The judge was 78% sure.");
+  ).toBe("The judge gave this verdict a probability of 78%.");
   expect(
-    judgeNote("first assistant turn is the runner's greeting", "not_evaluable"),
+    judgeNote(
+      "first assistant turn is the runner's greeting",
+      "not_evaluable",
+      W,
+    ),
   ).toBe("first assistant turn is the runner's greeting");
-  // an exponent is not a probability: never "120% sure"
+  // an exponent is not a probability: never "a probability of 120%"
   const exponent = "jev choice: met (probabilities={'met': 1.2e2}).";
-  expect(judgeNote(exponent, "met")).toBe(exponent);
+  expect(judgeNote(exponent, "met", W)).toBe(exponent);
   // the verdict is looked up as the parse's own key, never on the prototype
   const plain = "jev choice: met (probabilities={'met': 0.5}).";
-  expect(judgeNote(plain, "constructor")).toBe(plain);
+  expect(judgeNote(plain, "constructor", W)).toBe(plain);
 });

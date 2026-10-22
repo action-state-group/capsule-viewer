@@ -120,6 +120,68 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
   is a local draft of the presentation contract being written in
   agent-action-capsule and is re-pointed at that contract when it lands.
 
+## Contract reports: one module, wording packs
+
+The Outcomes report and the EU AI Act Results are one module,
+`ts/src/contract-report.ts`, drawn with one of two wording packs. The module
+holds the layout (the front block, two levels of toggles, the proofs) and
+computes every count, verdict and digest; the pack holds the module's own
+words, not every word on the page (see "Not in the pack" below).
+
+**How to tune the words.** Edit the pack, re-render. Outcomes:
+`ts/src/wording/contract-report-outcomes.en.json`; EU AI Act:
+`ts/src/wording/contract-report-eu-ai-act.en.json`. Either copy the file and
+change entries, or write a small pack with only the entries you change (keys
+the module does not know, such as `page.title`, are left to their owners).
+Then `cd ts && npm run build && node scripts/render-report.mjs BUNDLE.json
+--wording MY-PACK.json -o page.html`, or hand the pack to the presentation
+builder (`wording`). The bundle is not touched, so no judge pin, Result digest
+or verdict moves, and nothing is re-judged.
+
+- **What can change:** any label, heading, plain-language line, help text or
+  verdict word. `{name}` is where the module puts a count, digest, date or
+  list; plurals are `<key>.one` / `<key>.other`.
+- **What can't:** a pack holds strings only. Each entry it replaces must use
+  exactly the placeholders of the default entry, in the same order, with at
+  least one word between any two of them, so a count or denominator can be
+  neither dropped, reordered, nor run into another on the page. Two verdicts
+  may not share a word (the module's own `lines.verdict.*` and
+  `groups.verdict.*`, each card's own prefix -- `verdict.*` itself is
+  `contract-report/v1` §3's -- plus `lines.status.*`, `lines.pf.verdict.*`
+  and the other sibling sets `contract-report-wording.ts` lists), as a
+  reader reads it (case, spacing and punctuation ignored); no verdict may
+  take another verdict's default word, nor may a count that should read as
+  an exception or a miss read as the clean "met" or "no exceptions" instead,
+  so met and not met cannot be swapped and an exceptions count cannot be
+  relabelled clean. `layout.grouping` is fixed. A bidi or other invisible
+  character anywhere in a pack's text, or in its `id`, is refused outright,
+  never merely stripped for a check. The lines that say what the page
+  checked or didn't ("stated by the bundle, not checked here", "which this
+  page does not check", the withheld-report and "not stated" notices, the
+  producer's-text and "not evidence" labels; the list is `LOCKED_ENTRIES` in
+  `ts/src/contract-report-wording.ts`) are fixed, because they are the page's
+  account of its own checking, and a reworded one could claim a check that
+  never ran. A pack that breaks
+  any of these, or does not hash to its `wording_sha256`, is refused before
+  anything is drawn; `render-report.mjs` and the presentation builder name
+  every problem. The raw
+  verdict is on every element as data, whatever the words say.
+- The page's proofs name every wording layer applied, by digest: a supplied
+  pack's own id and `wording_sha256`, and the built-in default pack's id and
+  digest underneath it -- named on a default-only page too, since
+  `contract-report/v1` §3 records every layer applied, not only a supplied
+  one.
+- Not in the pack: what the bundle itself states (the producer's obligation
+  titles and test names, in italics; sealed rule wording) and two lines
+  agent-action-capsule's outcome model writes (the outcome statement and the
+  resolution rule). The module never takes its own words from a bundle
+  (presentation contract section 6).
+
+One nesting rule holds on every report page (SEAMS ruling 11): a level-2
+toggle may sit inside a level-1 toggle, never deeper (`nestingProblems`,
+`capsule_viewer.kit.check_nesting`). `nestingProblems` also reads each
+toggle's level, so a level-2 toggle inside another level-2 toggle fails.
+
 ## Rules module (`capsuleviewer.rules/v0`)
 
 `capsule_viewer.rules` renders one page over a rules-comparison record: a

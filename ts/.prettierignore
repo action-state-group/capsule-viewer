@@ -1,3 +1,4 @@
 dist/
 node_modules/
 test/testdata/
+test/goldens/

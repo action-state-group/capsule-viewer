@@ -298,8 +298,9 @@ for (const { card, file, page } of CARDS) {
       "It also carries 1 placeholder, not receipts.",
     );
     expect(witness.textContent).not.toContain("onerror");
+    // SEAMS ruling 12: stated by the bundle, not checked here
     expect(witness.textContent).toContain(
-      "this page does not check witness receipts",
+      '"https://witness.example/log" (tree size 1,234): stated by the bundle, not checked here.',
     );
     expect(b.querySelectorAll("img")).toHaveLength(0);
   });

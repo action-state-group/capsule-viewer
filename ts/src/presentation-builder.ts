@@ -12,15 +12,20 @@ import {
   type EmitterModule,
 } from "./emitter.js";
 import {
+  checkWordingPackInput,
+  DEFAULT_PACKS,
+  wordingProblems,
+  WordingPackError,
+  type ContractReportGrouping,
+} from "./contract-report-wording.js";
+import {
   createPresentationRegistry,
   renderEvidenceGraph,
 } from "./evidence-graph-view.js";
+import { jcs, sha256Hex } from "@action-state-group/agent-action-capsule";
 import {
-  isHex64,
-  jcs,
-  sha256Hex,
-} from "@action-state-group/agent-action-capsule";
-import {
+  BUILTIN_MANIFEST_RESULT_COMPLIANCE,
+  BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT,
   bundleVerified,
   manifestProblems,
   PresentationAmbiguityError,
@@ -329,57 +334,60 @@ export type BuiltPresentation =
 
 /** The wording key the builder reads for the page title. */
 export const WORDING_TITLE_KEY = "page.title";
-const WORDING_PACK_VERSION = "aac.wording-pack/v0";
-const WORDING_KEY = /^[a-z0-9][a-z0-9._-]*$/u;
-const LOCALE = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/u;
 
 /**
  * Check a wording pack against its digest and its shape (contract 7.4) and
- * return its entries. The bytes are hashed exactly as given.
+ * return its entries. The bytes are hashed exactly as given, before they are
+ * parsed. One check for every path: contract-report-wording.ts holds it.
  */
 export async function checkWordingPack(
   wording: WordingPackInput,
 ): Promise<Readonly<Record<string, string>>> {
-  if (!isHex64(wording.sha256))
-    throw new PresentationBuildError(
-      "wording sha256 is not a lowercase hex SHA-256",
-    );
-  const digest = await sha256Hex(new TextEncoder().encode(wording.pack));
-  if (digest !== wording.sha256)
-    throw new PresentationBuildError(
-      "wording pack bytes do not hash to its wording_sha256",
-    );
-  let pack: unknown;
   try {
-    pack = JSON.parse(wording.pack);
-  } catch {
-    throw new PresentationBuildError("wording pack is not JSON");
+    return (await checkWordingPackInput(wording)).entries;
+  } catch (e) {
+    if (e instanceof WordingPackError)
+      throw new PresentationBuildError(e.message);
+    throw e;
   }
-  const p = pack as Record<string, unknown>;
-  const entries = p?.entries as Record<string, unknown> | undefined;
-  if (
-    pack === null ||
-    typeof pack !== "object" ||
-    Array.isArray(pack) ||
-    Object.keys(p).some(
-      (k) => !["wording_pack_version", "id", "locale", "entries"].includes(k),
-    ) ||
-    p.wording_pack_version !== WORDING_PACK_VERSION ||
-    typeof p.id !== "string" ||
-    typeof p.locale !== "string" ||
-    !LOCALE.test(p.locale) ||
-    entries === null ||
-    typeof entries !== "object" ||
-    Array.isArray(entries) ||
-    Object.keys(entries).length === 0 ||
-    Object.entries(entries).some(
-      ([k, v]) => !WORDING_KEY.test(k) || typeof v !== "string" || v === "",
-    )
-  )
+}
+
+/** The contract-report grouping each built-in report module draws, by module id. */
+const CONTRACT_REPORT_GROUPINGS: Readonly<
+  Record<string, ContractReportGrouping>
+> = {
+  [BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT.id]: "lines",
+  [BUILTIN_MANIFEST_RESULT_COMPLIANCE.id]: "groups",
+};
+
+/**
+ * Refuse a wording pack that does not fit the report the registry selected,
+ * naming every problem: the check `render-report.mjs` runs, and the one the
+ * page would otherwise fail on with no reason ("presentation-failed"). A
+ * module that is not a contract report takes no such check.
+ */
+async function checkWordingFits(
+  wording: WordingPackInput,
+  module: string | null,
+): Promise<void> {
+  const grouping =
+    module === null || !Object.hasOwn(CONTRACT_REPORT_GROUPINGS, module)
+      ? undefined
+      : CONTRACT_REPORT_GROUPINGS[module];
+  if (grouping === undefined) return;
+  let pack;
+  try {
+    pack = await checkWordingPackInput(wording);
+  } catch (e) {
+    if (e instanceof WordingPackError)
+      throw new PresentationBuildError(e.message);
+    throw e;
+  }
+  const problems = wordingProblems(pack, DEFAULT_PACKS[grouping]);
+  if (problems.length > 0)
     throw new PresentationBuildError(
-      `wording pack is not an ${WORDING_PACK_VERSION} object`,
+      `wording pack does not fit ${module}: ${problems.join("; ")}`,
     );
-  return entries as Record<string, string>;
 }
 
 /** The offline file's settings: everything but the code. */
@@ -565,6 +573,8 @@ async function resolveFor(
     throw new PresentationBuildError(
       `presentation ${options.presentation} was requested but the registry selected ${module ?? resolution.kind} for audience ${audience} and format ${format}`,
     );
+  if (options.wording !== undefined)
+    await checkWordingFits(options.wording, module);
   return {
     common: {
       audience,
@@ -588,7 +598,9 @@ const contractFormat = (target: PackagingTarget): PresentationFormat =>
  * is given, and never for a bundle that did not verify, since removing a
  * disclosure could hide the failure); verify the scoped bundle; resolve the
  * module through the registry (an ambiguity is an error; an explicit
- * `presentation` that the registry does not select is an error); package.
+ * `presentation` that the registry does not select is an error, and so is
+ * a wording pack that does not fit the selected report, with every
+ * problem named); package.
  *
  * A packaging that is unavailable throws: {@link FragmentTooLargeError} for
  * a fragment over its budget, {@link PackagingUnavailableError} otherwise.
