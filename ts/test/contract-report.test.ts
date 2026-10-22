@@ -20,6 +20,7 @@ import {
   placeholders,
   readWordingPack,
   wordingProblems,
+  WordingPackError,
   type WordingPack,
 } from "../src/contract-report-wording.js";
 import { nestingProblems, levelToggle } from "../src/report-levels.js";
@@ -189,6 +190,17 @@ it("the two default packs are aac.wording-pack/v0, one per grouping, and share e
     expect(
       wordingProblems(DEFAULT_PACKS[grouping], DEFAULT_PACKS[grouping]),
     ).toEqual([]);
+});
+
+it("a supplied pack's id carrying a bidi or other invisible format character is refused outright (4343134020)", () => {
+  const pack = (id: string): unknown => ({
+    wording_pack_version: "aac.wording-pack/v0",
+    id,
+    locale: "en",
+    entries: { "page.title": "x" },
+  });
+  expect(() => readWordingPack(pack("test/bad@1"))).not.toThrow();
+  expect(() => readWordingPack(pack("test/‮bad‬@1"))).toThrow(WordingPackError);
 });
 
 it("the front says witnessed by as stated by the bundle, not checked here (SEAMS ruling 12)", () => {

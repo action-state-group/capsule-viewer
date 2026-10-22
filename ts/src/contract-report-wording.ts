@@ -47,6 +47,9 @@ const WORDING_KEY = /^[a-z0-9][a-z0-9._-]*$/u;
 const LOCALE = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/u;
 const PLACEHOLDER = /\{([a-zA-Z][a-zA-Z0-9_]*)\}/gu;
 
+/** Bidi and other invisible format controls: refused outright, never merely stripped for comparison, so the string this module checks is the string the browser renders. */
+const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+
 /** A wording pack, read and shape-checked. */
 export interface WordingPack {
   readonly id: string;
@@ -75,6 +78,7 @@ export function readWordingPack(pack: unknown): WordingPack {
     ) ||
     p.wording_pack_version !== WORDING_PACK_VERSION ||
     typeof p.id !== "string" ||
+    INVISIBLE.test(p.id) ||
     typeof p.locale !== "string" ||
     !LOCALE.test(p.locale) ||
     entries === null ||
@@ -571,9 +575,6 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.ran.contract.differs",
   "groups.vd.note",
 ]);
-
-/** Bidi and other invisible format controls: refused outright, never merely stripped for comparison, so the string this module checks is the string the browser renders. */
-const INVISIBLE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 
 /**
  * A word as a reader tells it apart: every `{placeholder}` dropped (a count
