@@ -88,9 +88,8 @@ here. The format follows
 - The report proofs name the wording pack that drew the card ("Words"), and
   now every wording layer applied, by digest -- the built-in default's too,
   even on a default-only page. A few default words moved with the rewrite:
-  `judge.note.sure`, `lines.hc.lede`, `lines.line.added.help`,
-  `lines.line.undecided` and the undecided status words read differently
-  than they did before this stack; no style changed, so no CSP hash moves.
+  `judge.note.sure`, `lines.hc.lede`, `lines.line.added.help` and
+  `lines.line.undecided`; no style changed, so no CSP hash moves.
 - The outcome report and EU AI Act obligations cards have two levels and no
   more. The summary states what was checked and the result per line in plain
   words. A first toggle on a line lists the conversations behind it in place,
