@@ -167,10 +167,11 @@ const recordsWord = (count: number): string =>
 // "Not verified"), whose accessible name is the full verdict; a verified
 // bundle with records outside the checkpoint says their count beside it.
 export const BANNER_LINES = {
-  verified: "Checked",
-  failed: "Not verified",
-  verifiedTitle: "Bundle verification passed",
-  failedTitle: "Bundle verification failed",
+  verified: "Contents checked",
+  failed: "Check failed",
+  // The accessible name starts with the visible words (WCAG 2.5.3).
+  verifiedTitle: "Contents checked: bundle verification passed",
+  failedTitle: "Check failed: bundle verification failed",
 } as const;
 
 function renderVerificationBanner(
@@ -199,7 +200,7 @@ function renderVerificationBanner(
   if (verified && coverage.uncheckpointed > 0) {
     const note = element(
       "span",
-      `${coverage.uncheckpointed} of ${recordsWord(coverage.total)} uncheckpointed`,
+      `${coverage.uncheckpointed} of ${recordsWord(coverage.total)} not in the checkpoint`,
     );
     note.className = "cv-shell-note";
     note.dataset.uncheckpointedNote = "";
@@ -275,19 +276,29 @@ export function checkedSummaryLine(
   const total = model.checks.length;
   const failed = model.checks.filter((c) => c.status === "fail").length;
   const passed = model.checks.filter((c) => c.status === "pass").length;
+  const notRun = total - failed - passed;
   // A failure can sit outside the numbered checks (a disclosure that does not
   // match its digest, say, or a provenance error outside both counts): a
   // bundle that did not verify never reads as passed.
-  const pageFailed = model.checkLists.failed.length;
-  const lead =
-    failed > 0
-      ? `${failed} of ${total} checks failed`
-      : pageFailed > 0
-        ? `${pageFailed} ${pageFailed === 1 ? "check" : "checks"} on this page failed`
-        : verified
-          ? `${passed} of ${total} checks passed`
-          : SUMMARY_NOT_VERIFIED;
-  const parts = [lead, recordsWord(model.records.length)];
+  // The page's own lists repeat the numbered checks' ground (digests,
+  // record rules, closure, range, membership); a failure there is counted
+  // only once, as the numbered check it shows up in.
+  const pageFailed = model.checkLists.failed.filter(
+    (id) => !NUMBERED_CHECK_GROUND.has(id),
+  ).length;
+  const leads: string[] = [];
+  if (failed > 0) leads.push(`${failed} of ${total} checks failed`);
+  if (pageFailed > 0)
+    leads.push(
+      `${pageFailed} ${pageFailed === 1 ? "check" : "checks"} on this page failed`,
+    );
+  if (leads.length === 0)
+    leads.push(
+      verified
+        ? `${passed} of ${total} checks passed${notRun > 0 ? `, ${notRun} not run` : ""}`
+        : SUMMARY_NOT_VERIFIED,
+    );
+  const parts = [...leads, recordsWord(model.records.length)];
   const signatures = model.checkLists.notChecked.filter((id) =>
     SIGNATURE_CHECKS.has(id),
   ).length;
@@ -302,6 +313,14 @@ export function checkedSummaryLine(
 
 /** The summary's lead for a bundle that failed outside every counted check. */
 export const SUMMARY_NOT_VERIFIED = "the bundle did not verify";
+
+const NUMBERED_CHECK_GROUND: ReadonlySet<string> = new Set([
+  "record-digests",
+  "record-rules",
+  "closure",
+  "range",
+  "membership",
+]);
 
 const SIGNATURE_CHECKS: ReadonlySet<string> = new Set([
   "checkpoint-signature",

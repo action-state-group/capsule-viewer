@@ -149,6 +149,20 @@ describe("checkedSummaryLine", () => {
     ).toBe("10 of 10 checks passed · 7 records · signatures not checked here");
   });
 
+  it("says how many of the numbered checks did not run, so none reads as failed", () => {
+    expect(
+      checkedSummaryLine(true, {
+        checks: [
+          ...checks(8),
+          { status: "withheld" },
+          { status: "not_checked" },
+        ],
+        records: [1, 2],
+        checkLists: { failed: [], notChecked: [] },
+      }),
+    ).toBe("8 of 10 checks passed, 2 not run · 2 records");
+  });
+
   it("says one record, and counts other checks not run here", () => {
     expect(
       checkedSummaryLine(true, {
@@ -171,9 +185,20 @@ describe("checkedSummaryLine", () => {
       checkedSummaryLine(false, {
         checks: checks(10),
         records: [1, 2],
-        checkLists: { failed: ["disclosures", "closure"], notChecked: [] },
+        checkLists: {
+          failed: ["disclosures", "countersignatures"],
+          notChecked: [],
+        },
       }),
     ).toBe("2 checks on this page failed · 2 records");
+    // Both kinds of failure are named.
+    expect(
+      checkedSummaryLine(false, {
+        checks: checks(8, 2),
+        records: [1, 2],
+        checkLists: { failed: ["disclosures"], notChecked: [] },
+      }),
+    ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 records");
     // A failure outside both counts (a provenance error, say).
     expect(
       checkedSummaryLine(false, {
