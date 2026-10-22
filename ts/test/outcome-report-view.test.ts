@@ -1551,6 +1551,47 @@ it("a conversation with no not_evaluable criterion to point to says the plain 'c
   });
 });
 
+// A regression of #42 (4343133967): the default pack once gave the
+// disclosed-no-pin, withheld and unavailable paths the grade ladder's own
+// four-way split ("not checked", "(report withheld)", "(report not
+// available)") instead of the plain set's single "could not decide". The
+// three keys are locked (contract-report-wording.ts LOCKED_ENTRIES), so no
+// pack -- not even the ladder pack -- can bring that split back.
+it("a judge ran on this conversation's rule but did not decide it, disclosed with no pin: 'could not decide', on both word sets", () => {
+  const conversation = {
+    criteria: [
+      { verdict: "not_evaluable", reportState: "disclosed" },
+    ],
+  } as unknown as Parameters<typeof statusWord>[1];
+  for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
+    expect(statusWord("undecided", conversation, w)).toEqual({
+      word: "could not decide",
+      tone: "ne",
+    });
+});
+
+it("every report that would say is withheld: 'could not decide', on both word sets", () => {
+  const conversation = {
+    criteria: [{ verdict: "not_evaluable", reportState: "withheld" }],
+  } as unknown as Parameters<typeof statusWord>[1];
+  for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
+    expect(statusWord("undecided", conversation, w)).toEqual({
+      word: "could not decide",
+      tone: "ne",
+    });
+});
+
+it("a cited report this bundle does not carry a readable copy of: 'could not decide', on both word sets", () => {
+  const conversation = {
+    criteria: [{ verdict: "not_evaluable", reportState: "mismatch" }],
+  } as unknown as Parameters<typeof statusWord>[1];
+  for (const w of [DEFAULT_WORDS.lines, ladderWords("lines")])
+    expect(statusWord("undecided", conversation, w)).toEqual({
+      word: "could not decide",
+      tone: "ne",
+    });
+});
+
 it("a conversation missed for c2's not_met is filed under c2, never under c1's earlier failed criterion", () => {
   const terms = {
     checks: [

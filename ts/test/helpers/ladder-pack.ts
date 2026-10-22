@@ -23,10 +23,6 @@ export const LADDER_ENTRIES: Readonly<Record<string, string>> = {
   "lines.status.missed": "failed",
   "lines.status.nothing-applied": "not present",
   "lines.status.undecided.judged": "inconclusive",
-  "lines.status.undecided.unjudged": "not checked",
-  "lines.status.undecided.withheld": "could not decide (report withheld)",
-  "lines.status.undecided.unavailable":
-    "could not decide (report not available)",
   "lines.line.resolved": "Established (resolved)",
   "lines.line.missed": "Failed (missed)",
   "lines.line.undecided": "Inconclusive or not present",
