@@ -156,8 +156,10 @@ const HAS_NON_SPACE = /\S/u;
 const HAS_LETTER = /\p{L}/u;
 /**
  * Latin letters (after `asRead` folds case and Cyrillic/Greek look-alikes)
- * that read as a digit between two counts: "{count}O{total}" reads as one
- * number, so a gap that has only these has no word in it.
+ * that read as a digit between two counts with no space around them:
+ * "{count}O{total}" reads as one number, so an unspaced gap that has only
+ * these has no word in it. A spaced one does ("59 o 768" is Welsh for
+ * "59 of 768").
  */
 const DIGIT_LIKE = /[oil]/gu;
 
@@ -644,29 +646,11 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
  * checks, which only compare the normalized text. Covers the letters
  * actually used in common script-spoofing lists, not a full confusables
  * table (uts39's is thousands of entries across every script, not only
- * these two).
+ * these two). Keyed by capital (or caseless) letter only: `asRead`
+ * uppercases before it folds, so a word and the same word in another case
+ * always fold alike ("ΕΤΣΙ" and "ετσι" are one word to a reader).
  */
 const CONFUSABLES: Readonly<Record<string, string>> = {
-  а: "a",
-  в: "b",
-  е: "e",
-  з: "z",
-  к: "k",
-  м: "m",
-  н: "h",
-  о: "o",
-  р: "p",
-  с: "c",
-  т: "t",
-  у: "y",
-  х: "x",
-  і: "i",
-  ј: "j",
-  ѕ: "s",
-  һ: "h",
-  ԁ: "d",
-  ԛ: "q",
-  ԝ: "w",
   А: "A",
   В: "B",
   Е: "E",
@@ -685,18 +669,6 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   Ѕ: "S",
   Ԛ: "Q",
   Ԝ: "W",
-  α: "a",
-  β: "b",
-  ι: "i",
-  κ: "k",
-  ν: "v",
-  ο: "o",
-  ρ: "p",
-  τ: "t",
-  υ: "y",
-  χ: "x",
-  ϲ: "c",
-  ϳ: "j",
   Α: "A",
   Β: "B",
   Ε: "E",
@@ -713,6 +685,10 @@ const CONFUSABLES: Readonly<Record<string, string>> = {
   Χ: "X",
   Ϲ: "C",
   Ϳ: "J",
+  Һ: "H",
+  Ԁ: "D",
+  Ӏ: "I",
+  ǀ: "l",
 };
 const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
 
@@ -727,9 +703,7 @@ const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
  * so leaving it be does not weaken `mixesScripts`). Used only for
  * `mixesScripts` and the "no visible word" check, both case-insensitive by
  * nature: a real word must be judged by the letters it actually has, not by
- * what CONFUSABLES maps some of them to, and CONFUSABLES must run before
- * case folding -- some entries (Greek Ζ, Η, Μ) are keyed by uppercase only,
- * so folding after lowercasing would miss them.
+ * what CONFUSABLES maps some of them to.
  */
 function asReadUnfolded(word: string): string {
   return word
@@ -741,10 +715,11 @@ function asReadUnfolded(word: string): string {
 }
 
 /**
- * A word as a reader tells it apart: `asReadUnfolded`, with every Cyrillic
- * or Greek homoglyph folded to the Latin letter it reads as (CONFUSABLES,
- * matched before case is folded, so an uppercase-only entry such as Greek
- * Η still folds), then case ignored. "Met", "met " and "(met)." are one
+ * A word as a reader tells it apart: `asReadUnfolded`, uppercased, with
+ * every Cyrillic or Greek homoglyph folded to the Latin letter it reads as
+ * (CONFUSABLES, keyed by capital letter), then case ignored. Uppercasing
+ * first means case never decides whether a letter folds: "ΕΤΣΙ" and "ετσι"
+ * read alike, as do "Η" and "H". "Met", "met " and "(met)." are one
  * word to a reader; "✓ met" reads as "met" too, not as a decorated word
  * distinct from it. Used for every comparison (DISTINCT, categoryCollisions):
  * an all-Cyrillic "мет" must still collide with "met". Never used for
@@ -752,6 +727,7 @@ function asReadUnfolded(word: string): string {
  */
 function asRead(word: string): string {
   return asReadUnfolded(word)
+    .toUpperCase()
     .replace(CONFUSABLE, (c) => CONFUSABLES[c]!)
     .toLowerCase();
 }
@@ -861,7 +837,9 @@ export function wordingProblems(
         const baseGap = baseGaps[i]!;
         const gotGap = gotGaps[i]!;
         const runsTogether = HAS_LETTER.test(baseGap)
-          ? !HAS_LETTER.test(asRead(gotGap).replace(DIGIT_LIKE, ""))
+          ? !HAS_LETTER.test(gotGap) ||
+            (!/\s/u.test(gotGap) &&
+              !HAS_LETTER.test(asRead(gotGap).replace(DIGIT_LIKE, "")))
           : HAS_NON_SPACE.test(baseGap) && !HAS_NON_SPACE.test(gotGap);
         if (runsTogether)
           problems.push(

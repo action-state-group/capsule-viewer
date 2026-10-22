@@ -549,9 +549,10 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
   ).toEqual([
     "test/digit@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
   ]);
-  // a letter that reads as a digit is no word either: "59O768" reads as one
-  // number, whether the O is Latin or a Cyrillic look-alike
-  for (const gap of ["O", " l ", "\u043e", " I "])
+  // an unspaced letter that reads as a digit is no word either: "59O768"
+  // reads as one number, whether the O is Latin or a look-alike (Cyrillic o,
+  // Cyrillic palochka, the dental click, dotless i)
+  for (const gap of ["O", "l", "I", "\u043e", "\u04cf", "\u01c0", "\u0131"])
     expect(
       wordingProblems(
         {
@@ -566,7 +567,8 @@ it("placeholders are checked in order, with repeats: a pack cannot swap a count 
       "test/digit-like@1: lines.share runs {count} and {total} together with no word between them; two counts the page computes separately must not be able to read as one",
     ]);
   // a real word between the counts still passes, in any script
-  for (const gap of [" out of ", " из ", " από "])
+  // (Welsh "o" is "of": spaced, it is a word between two counts)
+  for (const gap of [" out of ", " из ", " από ", " o "])
     expect(
       wordingProblems(
         {
@@ -694,10 +696,9 @@ it("a genuine Cyrillic or Greek verdict word is not refused as mixing scripts (4
   );
 });
 
-it("a CONFUSABLES entry keyed only by its uppercase form still folds (Greek zeta, eta, mu)", () => {
-  // CONFUSABLES maps Greek Ζ/Η/Μ by their uppercase form only (no lowercase
-  // ζ/η/μ entry); folding must run before case is dropped, or an uppercase
-  // Η is already the lowercase η -- not a key -- by the time the fold runs
+it("CONFUSABLES folds a word the same in any case (Greek eta; ΕΤΣΙ and ετσι)", () => {
+  // CONFUSABLES is keyed by capital letter and asRead uppercases before it
+  // folds, so an uppercase Η folds to H however it was written
   expect(
     wordingProblems(
       {
@@ -711,6 +712,35 @@ it("a CONFUSABLES entry keyed only by its uppercase form still folds (Greek zeta
       DEFAULT_PACKS.lines,
     ).join("\n"),
   ).toMatch(/lines\.status\.resolved and lines\.verdict\.not_met read alike/u);
+  // the same Greek word in capitals and in lowercase is one word: a met and a
+  // not-met verdict must not differ only in case
+  expect(
+    wordingProblems(
+      {
+        id: "test/greek-case@1",
+        locale: "el",
+        entries: {
+          "lines.verdict.met": "\u0395\u03a4\u03a3\u0399",
+          "lines.verdict.not_met": "\u03b5\u03c4\u03c3\u03b9",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
+  // likewise Cyrillic shha, whose capital is in CONFUSABLES only as a capital
+  expect(
+    wordingProblems(
+      {
+        id: "test/cyrillic-case@1",
+        locale: "ru",
+        entries: {
+          "lines.verdict.met": "\u04ba\u0410",
+          "lines.verdict.not_met": "\u04bb\u0430",
+        },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toMatch(/lines\.verdict\.not_met and lines\.verdict\.met read alike/u);
 });
 
 it("the spelled-out numbers are locked: a pack must not make 2 read as one hundred", () => {
