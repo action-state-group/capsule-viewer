@@ -577,17 +577,84 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Cyrillic and Greek letters that are visual homoglyphs of a Latin letter,
+ * folded to that Latin letter before any word comparison: a verdict word
+ * written wholly in one of these scripts -- never mixing scripts, so
+ * `mixesScripts` below would not catch it -- can otherwise read exactly
+ * like a different verdict's Latin word (an all-Cyrillic "мет" is "met" to
+ * a reader, letter for letter) and pass the DISTINCT and clean/not-clean
+ * checks, which only compare the normalized text. Covers the letters
+ * actually used in common script-spoofing lists, not a full confusables
+ * table (uts39's is thousands of entries across every script, not only
+ * these two).
+ */
+const CONFUSABLES: Readonly<Record<string, string>> = {
+  а: "a",
+  в: "b",
+  е: "e",
+  з: "z",
+  к: "k",
+  м: "m",
+  н: "h",
+  о: "o",
+  р: "p",
+  с: "c",
+  т: "t",
+  у: "y",
+  х: "x",
+  А: "A",
+  В: "B",
+  Е: "E",
+  З: "Z",
+  К: "K",
+  М: "M",
+  Н: "H",
+  О: "O",
+  Р: "P",
+  С: "C",
+  Т: "T",
+  У: "Y",
+  Х: "X",
+  α: "a",
+  β: "b",
+  ι: "i",
+  κ: "k",
+  ν: "n",
+  ο: "o",
+  ρ: "p",
+  τ: "t",
+  υ: "y",
+  χ: "x",
+  Α: "A",
+  Β: "B",
+  Ζ: "Z",
+  Η: "H",
+  Ι: "I",
+  Κ: "K",
+  Μ: "M",
+  Ν: "N",
+  Ο: "O",
+  Ρ: "P",
+  Τ: "T",
+  Υ: "Y",
+  Χ: "X",
+};
+const CONFUSABLE = new RegExp(`[${Object.keys(CONFUSABLES).join("")}]`, "gu");
+
+/**
  * A word as a reader tells it apart: every `{placeholder}` dropped (a count
  * the page fills in is not part of the word itself: "{n} met" reads as
- * "met"), compatibility forms folded, punctuation and symbols turned into a
- * space (so internal punctuation still separates words: "not-met" reads as
- * "not met", never "notmet"), whitespace collapsed, case ignored. "Met",
- * "met " and "(met)." are one word to a reader; "✓ met" reads as "met" too,
- * not as a decorated word distinct from it.
+ * "met"), a Cyrillic or Greek homoglyph folded to the Latin letter it reads
+ * as (CONFUSABLES), compatibility forms folded, punctuation and symbols
+ * turned into a space (so internal punctuation still separates words:
+ * "not-met" reads as "not met", never "notmet"), whitespace collapsed, case
+ * ignored. "Met", "met " and "(met)." are one word to a reader; "✓ met"
+ * reads as "met" too, not as a decorated word distinct from it.
  */
 function asRead(word: string): string {
   return word
     .replace(PLACEHOLDER, "")
+    .replace(CONFUSABLE, (c) => CONFUSABLES[c]!)
     .normalize("NFKC")
     .replace(/[\p{P}\p{S}]/gu, " ")
     .replace(/\s+/gu, " ")
@@ -595,7 +662,7 @@ function asRead(word: string): string {
     .toLowerCase();
 }
 
-/** Letters from more than one of Latin, Greek and Cyrillic: "mеt" with a Cyrillic е reads as "met". */
+/** Letters from more than one of Latin, Greek and Cyrillic, after any homoglyph is folded (CONFUSABLES) to the Latin letter it reads as: a script this module does not fold mixed with Latin still reads as decorated, not a different word. */
 function mixesScripts(word: string): boolean {
   return (
     [/\p{Script=Latin}/u, /\p{Script=Greek}/u, /\p{Script=Cyrillic}/u].filter(

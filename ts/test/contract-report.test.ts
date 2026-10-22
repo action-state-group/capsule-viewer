@@ -554,7 +554,16 @@ it("verdict words are told apart as a reader reads them, and a pack cannot swap 
   expect(check({ "lines.verdict.met": "not-met" })).toMatch(
     /lines\.verdict\.met and lines\.verdict\.not_met read alike/u,
   );
+  // "\u0435" (Cyrillic) is a known homoglyph of Latin "e" (CONFUSABLES), folded
+  // before comparison, so this reads as the plain collision below, not a
+  // mixed-script word
   expect(check({ "lines.verdict.not_met": "m\u0435t" })).toContain(
+    'lines.verdict.not_met reads "met", the word for lines.verdict.met',
+  );
+  // "\u0434" (Cyrillic de) has no Latin homoglyph in CONFUSABLES, so mixing it
+  // with Latin letters is still caught as a mixed-script word, not folded
+  // into a false collision
+  expect(check({ "lines.verdict.not_met": "m\u0434t" })).toContain(
     "lines.verdict.not_met mixes Latin, Greek and Cyrillic letters",
   );
   // bidi and other invisible format controls are refused outright, not
@@ -664,6 +673,12 @@ it("a clean word and a not-clean word must not read alike, across any set (43396
   // a judged-tier label set to the recomputed tier's label is refused too
   expect(check({ "lines.tier.judged": "recomputed" })).toMatch(
     /lines\.tier\.recomputed and lines\.tier\.judged read alike/u,
+  );
+  // an all-Cyrillic homoglyph of "met" ("мет": U+043C U+0435 U+0442) is
+  // "met" to a reader, letter for letter, but mixes no script -- only
+  // CONFUSABLES folding catches it, not mixesScripts
+  expect(check({ "lines.verdict.not_met": "мет" })).toMatch(
+    /lines\.verdict\.met and lines\.verdict\.not_met read alike/u,
   );
   // "met" is lines.verdict.met's (clean) word; a missed headline row given
   // it would read as resolved
