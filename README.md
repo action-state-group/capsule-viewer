@@ -138,19 +138,26 @@ builder (`wording`). The bundle is not touched, so no judge pin, Result digest
 or verdict moves, and nothing is re-judged.
 
 - **What can change:** any label, heading, plain-language line, help text or
-  verdict word, and sentence order within an entry. `{name}` is where the
-  module puts a count, digest, date or list; plurals are `<key>.one` /
-  `<key>.other`.
+  verdict word. `{name}` is where the module puts a count, digest, date or
+  list; plurals are `<key>.one` / `<key>.other`.
 - **What can't:** a pack holds strings only. Each entry it replaces must use
-  exactly the placeholders of the default entry, so a count or denominator
-  can be neither dropped nor added. Two verdicts may not share a word
-  (`verdict.*`, `status.*`, `lines.pf.verdict.*`), as a reader reads it
-  (case, spacing and invisible characters ignored), and no verdict may take
-  another verdict's default word, so met and not met cannot be swapped.
-  `layout.grouping` is fixed. The lines that say what the page checked or
-  didn't ("stated by the bundle, not checked here", "which this page does not
-  check", the withheld-report and "not stated" notices, the producer's-text
-  and "not evidence" labels; the list is `LOCKED_ENTRIES` in
+  exactly the placeholders of the default entry, in the same order, with at
+  least one word between any two of them, so a count or denominator can be
+  neither dropped, reordered, nor run into another on the page. Two verdicts
+  may not share a word (the module's own `lines.verdict.*` and
+  `groups.verdict.*`, each card's own prefix -- `verdict.*` itself is
+  `contract-report/v1` §3's -- plus `lines.status.*`, `lines.pf.verdict.*`
+  and the other sibling sets `contract-report-wording.ts` lists), as a
+  reader reads it (case, spacing and punctuation ignored); no verdict may
+  take another verdict's default word, nor may a count that should read as
+  an exception or a miss read as the clean "met" or "no exceptions" instead,
+  so met and not met cannot be swapped and an exceptions count cannot be
+  relabelled clean. `layout.grouping` is fixed. A bidi or other invisible
+  character anywhere in a pack's text, or in its `id`, is refused outright,
+  never merely stripped for a check. The lines that say what the page
+  checked or didn't ("stated by the bundle, not checked here", "which this
+  page does not check", the withheld-report and "not stated" notices, the
+  producer's-text and "not evidence" labels; the list is `LOCKED_ENTRIES` in
   `ts/src/contract-report-wording.ts`) are fixed, because they are the page's
   account of its own checking, and a reworded one could claim a check that
   never ran. A pack that breaks
@@ -158,8 +165,11 @@ or verdict moves, and nothing is re-judged.
   anything is drawn; `render-report.mjs` and the presentation builder name
   every problem. The raw
   verdict is on every element as data, whatever the words say.
-- The page's proofs name the pack that drew it ("Words": its id, and the
-  `wording_sha256` of a supplied pack).
+- The page's proofs name every wording layer applied, by digest: a supplied
+  pack's own id and `wording_sha256`, and the built-in default pack's id and
+  digest underneath it -- named on a default-only page too, since
+  `contract-report/v1` §3 records every layer applied, not only a supplied
+  one.
 - Not in the pack: what the bundle itself states (the producer's obligation
   titles and test names, in italics; sealed rule wording) and two lines
   agent-action-capsule's outcome model writes (the outcome statement and the

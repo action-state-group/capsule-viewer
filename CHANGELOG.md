@@ -52,16 +52,6 @@ here. The format follows
   both cards pass with every toggle open. The receipts adopt it in #47.
 - Golden pages for both cards, closed and fully open
   (`ts/test/goldens/contract-report/`).
-
-### Changed
-
-- "Witnessed by" on the front of both cards says the witnesses are "stated by
-  the bundle, not checked here" (SEAMS ruling 12), in place of "as the bundle
-  states; this page does not check witness receipts".
-- The report proofs name the wording pack that drew the card ("Words").
-  Otherwise both cards render byte for byte as before with the default packs.
-  No style changed, so no CSP hash moves.
-
 - The outcome report and EU AI Act obligations cards carry a short block on
   their front, outside every toggle, that says who judged, who witnessed and
   what verified:
@@ -89,6 +79,18 @@ here. The format follows
   witness addresses, log id, producer and version) are quoted and capped at
   120 characters, so they never read as the page's own words. New runtime
   style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+
+### Changed
+
+- "Witnessed by" on the front of both cards says the witnesses are "stated by
+  the bundle, not checked here" (SEAMS ruling 12), in place of "as the bundle
+  states; this page does not check witness receipts".
+- The report proofs name the wording pack that drew the card ("Words"), and
+  now every wording layer applied, by digest -- the built-in default's too,
+  even on a default-only page. A few default words moved with the rewrite:
+  `judge.note.sure`, `lines.hc.lede`, `lines.line.added.help`,
+  `lines.line.undecided` and the undecided status words read differently
+  than they did before this stack; no style changed, so no CSP hash moves.
 - The outcome report and EU AI Act obligations cards have two levels and no
   more. The summary states what was checked and the result per line in plain
   words. A first toggle on a line lists the conversations behind it in place,
