@@ -1495,35 +1495,27 @@ function renderRules(
       const cell = element("td");
       cell.setAttribute("colspan", columns);
       drillRow.append(cell);
+      // The not-applicable count is drawn now, so a static page (which runs
+      // no script to build a body) still shows it when the row opens.
+      if (na.length > 0) {
+        const naLine = el(
+          "p",
+          "rule-na",
+          w.p("lines.rules.expand.na", na.length, {
+            n: fmtCount(na.length),
+          }),
+        );
+        naLine.dataset.count = String(na.length);
+        cell.append(naLine);
+      }
       const toggle = expandableRow(
         tr,
         ruleName,
         drillRow,
-        () => {
-          const body = el("div", "rule-x");
-          if (na.length > 0) {
-            const naLine = el(
-              "p",
-              "rule-na",
-              w.p("lines.rules.expand.na", na.length, {
-                n: fmtCount(na.length),
-              }),
-            );
-            naLine.dataset.count = String(na.length);
-            body.append(naLine);
-          }
-          if (problems.length > 0)
-            body.append(
-              renderConversationList(
-                problems,
-                model,
-                runInfo,
-                `rule:${ref}`,
-                w,
-              ),
-            );
-          return body;
-        },
+        () =>
+          problems.length > 0
+            ? renderConversationList(problems, model, runInfo, `rule:${ref}`, w)
+            : document.createDocumentFragment(),
         `rule-${ref}`,
       );
       toggle.dataset.drill = `rule:${ref}`;

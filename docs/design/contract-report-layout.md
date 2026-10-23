@@ -272,13 +272,21 @@ replace the stamp with a callout):
   the verification section's counts and a link to it, and on a report frame
   is a full-width callout.
 - The aggregate is a compact box: the sealed coverage line and bucket
-  counts, with a marker where the claims give another number.
+  counts, with a marker where the claims give another number. This is
+  the reverse of the generic Result page, which leads with the
+  recomputed number and keeps the stated one on its marker. Both show the
+  disagreement ([pc] §3); here [cr] §2 has the sealed number lead. Keep
+  it that way.
 - The assurance line is one folded line opening L1; the full Judged,
   Witnessed and Verified lines are inside.
 - Rule and test rows open in place through a button in the row. Outcomes
   leads with not met and puts "did not apply" in the expansion; an EU
   obligation heading opens to its plain-language text with its
-  applicability (D3). Notes that explain a figure sit in a footnote block.
+  applicability. Notes that explain a figure sit in a footnote block.
+- D3 in the session detail: a date not yet in force carries the pack's
+  `row.<ref>.detail` beside it, never the presentation block's hint, and
+  a locked line saying the conditions are not stated when the pack sets
+  none.
 - Not yet built, still phase 1: the `report.*`, `group.*` and `row.*`
   wording migration, and per-row claim tallies ("n of m claims").
 - Held for a ruling (they conflict with [er] §3 and [cr] §2): headline

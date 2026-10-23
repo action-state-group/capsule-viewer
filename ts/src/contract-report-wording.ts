@@ -802,6 +802,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.oos-note.one",
   "lines.oos-note.other",
   "groups.later.note",
+  "groups.later.conditions-not-stated",
   "groups.row.later-note",
   // A refused wording layer (contract-report/v1 section 3): the page says
   // so, and which layer drew it.
@@ -1178,7 +1179,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
   lines: "06244cb985e97d44bdf934dcac5a3bf899925865adf11f9d18bc093973906390",
-  groups: "8c1d3cc77c3c1f6ca3c2f7db2ff410f5e8326e6e140d98c5074f5a5c9bcaf92f",
+  groups: "216cb297398d8b6fcc3c00f9ba270265858adacfb0106d034705e023bcadbe8a",
 });
 
 export interface Words {

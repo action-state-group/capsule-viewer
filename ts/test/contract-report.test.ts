@@ -1800,7 +1800,7 @@ it("depth L2 opens every toggle, including those built after the page was drawn"
   }
 });
 
-it("a date not yet in force is drawn with its obligation's condition beside it (D3)", async () => {
+it("a date not yet in force is never drawn without its conditions (D3)", async () => {
   const source = fixture("compliance-bundle.json");
   const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
   const claims = doc.claims as Obj[];
@@ -1834,8 +1834,39 @@ it("a date not yet in force is drawn with its obligation's condition beside it (
     ...root.querySelectorAll<HTMLElement>("article.session .applic"),
   ].filter((n) => n.textContent!.startsWith("Applies from"));
   expect(notes.length).toBeGreaterThan(0);
-  for (const note of notes)
-    expect(
-      note.querySelector('i[data-source="producer"]')?.textContent ?? "",
-    ).not.toBe("");
+  // the conditions are the pack's words (row.<ref>.detail), never the
+  // presentation block's hint with its own dates; the default pack sets
+  // none for this test, so the line says so rather than drawing the date
+  // alone
+  for (const note of notes) {
+    expect(note.querySelector('i[data-source="producer"]')).toBeNull();
+    expect(note.textContent).toContain(
+      "Its conditions (to whom and when it binds) are not stated in this report's wording.",
+    );
+    expect(note.textContent).not.toContain("2 Dec 2027");
+  }
+});
+
+it("a rule's not-applicable count is in its detail row before the row opens, so a static page shows it", async () => {
+  // one rule check that did not apply: its claim is absent (no claim, by
+  // construction), and the buckets no longer name it
+  const source = cut(fixture("outcome-report-bundle.json"));
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const dropped = (doc.claims as Obj[])[0]!.id as string;
+  doc.claims = (doc.claims as Obj[]).slice(1);
+  const buckets = (doc.aggregate as Obj).buckets as Record<string, string[]>;
+  for (const key of Object.keys(buckets))
+    buckets[key] = buckets[key]!.filter((id) => id !== dropped);
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = document.createElement("main");
+  await renderEvidenceGraph(bundle, root, undefined, { depth: "L0" });
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const lines = root.querySelectorAll<HTMLElement>("tr.x-detail .rule-na");
+  expect(lines.length).toBeGreaterThan(0);
+  for (const line of lines) {
+    const row = line.closest("tr")!.previousElementSibling!;
+    expect(row.querySelector<HTMLDetailsElement>("details.rx")!.open).toBe(
+      false,
+    );
+  }
 });

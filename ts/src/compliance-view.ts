@@ -679,35 +679,25 @@ function renderSessionList(
 /**
  * A claim not yet in force, in words: its date as the producer copied it
  * from the contract, never checked here, and never counted; beside it, the
- * obligation's applicability (its narrowing condition) as the producer's
- * text, so the date never shows without its condition (decision D3).
+ * conditions that narrow when or to whom the obligation binds, in the
+ * pack's words (`row.<ref>.detail`), never the presentation block's (a
+ * hint with dates of its own). The date is never drawn alone (decision
+ * D3): with no such words, the line says the conditions are not stated.
  */
-function laterNote(
-  test: SessionTest,
-  model: ComplianceModel,
-  w: Words,
-  tag: string,
-): HTMLElement {
+function laterNote(test: SessionTest, w: Words, tag: string): HTMLElement {
   // A claim is later only when it carries applies_from (Result v0 4.3).
   const note = el(
     tag,
     "applic",
     w.t("groups.later.note", { date: test.claim?.appliesFrom ?? "" }),
   );
-  const obligation = model.obligations.find((o) =>
-    o.rows.some((r) => r.criterionId === test.criterionId),
+  const conditions = w.row(test.criterionId, "detail");
+  note.append(
+    " ",
+    conditions === undefined
+      ? w.t("groups.later.conditions-not-stated")
+      : packWord("span", "", conditions),
   );
-  if (obligation !== undefined && obligation.applicability.note !== NOT_STATED)
-    note.append(
-      " ",
-      maybeProducer(
-        w,
-        "span",
-        "",
-        obligation.applicability.note,
-        obligation.mapped,
-      ),
-    );
   return note;
 }
 
@@ -810,7 +800,7 @@ function sessionBody(
     if (test.verdict === "failed" || test.verdict === "unsupported")
       h.append(el("span", "applic", w.t("groups.unverified-note")));
     if (test.verdict === "not_yet_in_force")
-      h.append(laterNote(test, model, w, "span"));
+      h.append(laterNote(test, w, "span"));
     box.append(h);
     if (test.rationale !== undefined)
       box.append(
@@ -907,7 +897,7 @@ function sessionProofs(
     if (test.verdict === "not_applicable") {
       ev.append(element("span", w.t("groups.pf.no-claim")));
     } else if (test.verdict === "not_yet_in_force") {
-      ev.append(laterNote(test, model, w, "span"));
+      ev.append(laterNote(test, w, "span"));
     } else {
       if (test.reportDigest !== undefined)
         ev.append(element("code", test.reportDigest));
