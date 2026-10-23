@@ -474,7 +474,6 @@ export function renderChat(
   transcript: ConversationTranscript,
   caseRecord: string | undefined,
   w: Words,
-  stateKey?: string,
 ): HTMLElement {
   const wrap = el("div", "chat");
   wrap.dataset.transcript = transcript.state;
@@ -504,14 +503,27 @@ export function renderChat(
         messages: String(turns.length),
         calls: w.p("chat.calls", calls, { n: String(calls) }),
         state: w.t(
-          stateKey ??
-            (transcript.state === "cited"
-              ? "chat.state.cited"
-              : "chat.state.verified"),
+          transcript.state === "cited"
+            ? "chat.state.cited"
+            : "chat.state.verified",
         ),
       }),
     ),
   );
+  wrap.append(renderTurns(turns, w));
+  return wrap;
+}
+
+/**
+ * The turns of a conversation as a chat, and nothing else: who said what,
+ * each tool call with its arguments, each tool result as sealed. It states
+ * nothing about where the turns came from or what was checked; its caller
+ * does (renderChat for a card, the core's record entry for a record).
+ */
+export function renderTurns(
+  turns: NonNullable<ConversationTranscript["turns"]>,
+  w: Words,
+): HTMLElement {
   const list = el("ol", "turns");
   turns.forEach((turn, index) => {
     const role =
@@ -552,8 +564,7 @@ export function renderChat(
     }
     list.append(item);
   });
-  wrap.append(list);
-  return wrap;
+  return list;
 }
 
 /** The address of a record in the core's records section (evidence-graph-view.ts). */
@@ -657,8 +668,15 @@ export function revealRecordsByHash(doc: Document): void {
   if (view === null) return;
   const go = (): void => {
     const hash = view.location.hash;
-    if (hash.startsWith("#record-"))
-      revealRecord(doc, decodeURIComponent(hash.slice("#record-".length)));
+    if (!hash.startsWith("#record-")) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(hash.slice("#record-".length));
+    } catch {
+      // A fragment that does not decode names no record.
+      return;
+    }
+    revealRecord(doc, id);
   };
   go();
   if (hashWatched.has(doc)) return;
@@ -695,6 +713,12 @@ export function linkConversations(root: ParentNode): number {
     toggle.remove();
     linked++;
   }
+  // A conversation kept in place (no record to link to) shows its state
+  // note: the page runs no script, so its body is built now.
+  for (const toggle of root.querySelectorAll<HTMLDetailsElement>(
+    'details[data-section="conversation"][data-body="pending"]',
+  ))
+    pendingToggles.get(toggle)?.();
   // A page that runs no script cannot close a toggle from a control.
   for (const close of root.querySelectorAll(".chat-close")) close.remove();
   return linked;

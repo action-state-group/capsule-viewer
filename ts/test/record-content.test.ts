@@ -84,12 +84,10 @@ it("a conversation goes to the conversation module; anything else is shown as re
   expect(chat.dataset.contentModule).toBe("conversation");
   expect(chat.querySelectorAll("li.turn")).toHaveLength(4);
   expect(chat.textContent).toContain("Hi! How can I help you today?");
-  // the core states only what it established: the content matches the
-  // record's digest; never "on this page", never which case a judge read
-  expect(chat.textContent).toContain(
-    "the content shown matches the digest the record seals",
-  );
-  expect(chat.textContent).not.toContain("on this page");
+  // a content module draws content only: no statement of what was checked
+  // (that is the core's, beside the block), never which case a judge read
+  expect(chat.querySelector(".chat-k")).toBeNull();
+  expect(chat.textContent).not.toMatch(/digest|checked|judge/u);
   expect(chat.textContent).not.toContain("the judge read");
   // tool arguments in canonical member order, so every packaging agrees
   expect(chat.querySelector(".call-a")!.textContent).toBe(
@@ -183,7 +181,8 @@ it("a carried input that does not match its commitment is never drawn, and the b
     "agent_input",
     "agent_input of the capsule it carries",
   ]);
-  const header = entry.querySelector("h5")!.nextElementSibling!;
+  // the header's content block follows its heading and the core's line
+  const header = entry.querySelector("h5 ~ .cv-content")!;
   expect(header.textContent).toContain("published_capsule");
   expect(entry.querySelector("li.turn")).toBeNull();
   expect(entry.querySelector('[data-disclosure="withheld"]')).not.toBeNull();
@@ -432,4 +431,99 @@ it("where script runs: a page opened at a record's address, a later address chan
     root.remove();
     window.location.hash = "";
   }
+});
+
+it("the core, not the content module, states once beside each content block that the content matches the record's digest", async () => {
+  const { bundle, id } = await withConversation();
+  const root = await render(bundle);
+  const entry = root
+    .querySelector(`#${recordAddress(id)}`)!
+    .closest<HTMLDetailsElement>("details.cv-record")!;
+  openToggle(entry);
+  const blocks = entry.querySelectorAll(".cv-content");
+  const lines = entry.querySelectorAll('[data-content-check="digest"]');
+  expect(blocks.length).toBeGreaterThan(0);
+  expect(lines).toHaveLength(blocks.length);
+  for (const line of lines) {
+    expect(line.nextElementSibling!.classList.contains("cv-content")).toBe(
+      true,
+    );
+    expect(line.textContent).not.toContain("on this page");
+  }
+  expect(entry.querySelector(".cv-content")!.textContent).not.toMatch(
+    /matches the digest/u,
+  );
+});
+
+it("a record no claim cites shows its own seal status and exact log position", async () => {
+  const { bundle } = await withConversation();
+  const root = await render(bundle);
+  const memberships = (bundle.completeness_certificate as Obj)
+    .memberships as Record<string, Obj>;
+  const rootId = (bundle.records as Obj[])
+    .map((r) => r.capsule_id as string)
+    .find((id) => root.querySelector(`[data-capsule-id="${id}"]`) !== null)!;
+  for (const id of [rootId, ...Object.keys(memberships)]) {
+    const coordinates = memberships[id]!.log_coordinates as Obj;
+    const entry = root
+      .querySelector(`#${recordAddress(id)}`)!
+      .closest<HTMLDetailsElement>("details.cv-record")!;
+    openToggle(entry);
+    const values = new Map(
+      [...entry.querySelectorAll(".cv-record-body dt")].map((dt) => [
+        dt.textContent,
+        dt.nextElementSibling!.textContent,
+      ]),
+    );
+    expect(values.get("seal status"), id).toBe("checkpointed");
+    expect(values.get("log ID"), id).toBe(JSON.stringify(coordinates.log_id));
+    expect(values.get("sequence"), id).toBe(String(coordinates.seq));
+    expect(values.get("leaf"), id).toBe(String(coordinates.leaf_index));
+  }
+});
+
+it("a fragment that does not decode names no record: neither the first render nor a later address change fails", async () => {
+  const { bundle } = await withConversation();
+  const root = document.createElement("main");
+  document.body.append(root);
+  try {
+    for (const bad of ["#record-%", "#record-%E0"]) {
+      window.location.hash = bad;
+      await expect(renderEvidenceGraph(bundle, root)).resolves.toBeUndefined();
+      window.location.hash = "#record-%E0%A4";
+      expect(() =>
+        window.dispatchEvent(new HashChangeEvent("hashchange")),
+      ).not.toThrow();
+      expect(
+        [
+          ...root.querySelectorAll<HTMLDetailsElement>("details.cv-record"),
+        ].some((entry) => entry.open),
+      ).toBe(false);
+    }
+  } finally {
+    root.remove();
+    window.location.hash = "";
+  }
+});
+
+it("a record's own id outranks a carried capsule's: a book record listed before the capsule it carries never takes that capsule's address", async () => {
+  const source = fixture();
+  const { alias, carriedId } = await withCarriedCapsule(source, CONVERSATION, {
+    capsuleAsRecord: true,
+  });
+  const { bundle, ids } = await sealEvidenceBundle(source);
+  const order = (bundle.records as Obj[]).map((r) => r.capsule_id);
+  expect(order.indexOf(ids[alias])).toBeLessThan(order.indexOf(carriedId));
+  const root = await render(bundle);
+  expect(
+    root
+      .querySelector(`#${recordAddress(carriedId)}`)!
+      .closest<HTMLElement>("details.cv-record")!.dataset.record,
+  ).toBe(carriedId);
+  const book = root
+    .querySelector(`#${recordAddress(ids[alias]!)}`)!
+    .closest<HTMLElement>("details.cv-record")!;
+  expect(book.querySelectorAll(".cv-record-anchor")).toHaveLength(1);
+  const all = [...root.querySelectorAll("[id]")].map((e) => e.id);
+  expect(new Set(all).size).toBe(all.length);
 });

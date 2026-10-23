@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-import type {
-  ConversationTranscript,
-  TranscriptTurn,
-} from "@action-state-group/agent-action-capsule";
+import type { TranscriptTurn } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
-import { renderChat } from "./report-levels.js";
+import { renderTurns } from "./report-levels.js";
 
 /**
  * How the core draws a record's disclosed content: the core checks it
@@ -123,14 +120,13 @@ export function conversationTurns(
 export const conversationModule: ContentModule = {
   id: "conversation",
   matches: (content) => conversationTurns(content) !== undefined,
+  // Content only: what was checked is the core's to say, beside the block
+  // (presentation contract section 6.1).
   render(content, w) {
-    const transcript: ConversationTranscript = {
-      state: "verified",
-      turns: conversationTurns(content) ?? [],
-    };
-    // The record view states only what the core checked: the content
-    // against this record's own digest, never which case a judge read.
-    return renderChat(transcript, undefined, w, "chat.state.record");
+    const wrap = document.createElement("div");
+    wrap.className = "chat";
+    wrap.append(renderTurns(conversationTurns(content) ?? [], w));
+    return wrap;
   },
 };
 

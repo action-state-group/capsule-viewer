@@ -595,10 +595,30 @@ function renderRecordsList(
   }
   const list = element("ul");
   list.dataset.records = "coverage";
+  // Addresses in two passes, as AAC's Result reader resolves ids: every
+  // record's own id first, then a carried capsule's id only where no record
+  // has that id (and only once), so a book record listed before the capsule
+  // it carries never takes that capsule's address.
+  const owners = new Map<string, string>();
+  for (const record of records)
+    if (entries.verified && entries.read.has(record.capsuleId))
+      if (!owners.has(record.capsuleId))
+        owners.set(record.capsuleId, record.capsuleId);
+  const own = new Set(records.map((record) => record.capsuleId));
+  for (const record of records) {
+    const carried = entries.read.get(record.capsuleId)?.carriedCapsuleId;
+    if (
+      entries.verified &&
+      carried !== undefined &&
+      !own.has(carried) &&
+      !owners.has(carried)
+    )
+      owners.set(carried, record.capsuleId);
+  }
   const used = new Set<string>();
-  const address = (id: string): HTMLElement | undefined => {
+  const address = (id: string, holder: string): HTMLElement | undefined => {
     const name = recordAddress(id);
-    if (used.has(name)) return undefined;
+    if (owners.get(id) !== holder || used.has(name)) return undefined;
     used.add(name);
     const anchor = element("span");
     anchor.className = "cv-record-anchor";
@@ -627,7 +647,7 @@ function renderRecordsList(
     fold.append(head);
     const anchors = [record.capsuleId, read.carriedCapsuleId]
       .filter((id): id is string => id !== undefined)
-      .map(address)
+      .map((id) => address(id, record.capsuleId))
       .filter((a): a is HTMLElement => a !== undefined);
     fold.append(...anchors);
     deferBody(fold, () => entries.build(record.capsuleId, read));
@@ -663,7 +683,7 @@ async function recordEntries(
     if (!read.has(id)) read.set(id, record);
   }
   const bundle = object(context.bundle);
-  const memberships = object(bundle.memberships);
+  const memberships = context.completeness.memberships;
   const extensions = object(bundle.extensions);
   const payloads = object(extensions[BOOK_PAYLOADS_EXTENSION]);
   const originals = object(extensions[AGENT_INPUT_ORIGINALS_EXTENSION]);
@@ -1328,7 +1348,17 @@ function renderCitedMember(
     return;
   host.append(element("h5", label));
   if (resolution.state === "disclosed") {
-    host.append(renderContent(resolution.payload, DEFAULT_WORDS.lines));
+    // The core states what it established, once, beside the block; the
+    // content module only draws the content (presentation contract 6.1).
+    const checked = element(
+      "p",
+      "The content shown matches the digest the record commits to.",
+    );
+    checked.dataset.contentCheck = "digest";
+    host.append(
+      checked,
+      renderContent(resolution.payload, DEFAULT_WORDS.lines),
+    );
     return;
   }
   // A withheld member shows the digest the record committed to; a supplied

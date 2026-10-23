@@ -16,13 +16,14 @@ type Obj = Record<string, unknown>;
  * its own id, so the record is reached through `bookRecordId`. Modelled on
  * agent-action-capsule ts/test/result-root.test.ts `carried`.
  *
- * Returns the alias of the book record (sealing gives it its id) and the
- * carried capsule's id.
+ * With `capsuleAsRecord` the carried capsule is also a record of the bundle,
+ * listed after the book record. Returns the alias of the book record
+ * (sealing gives it its id) and the carried capsule's id.
  */
 export async function withCarriedCapsule(
   source: Obj,
   original: unknown,
-  options: { withOriginal?: boolean } = {},
+  options: { withOriginal?: boolean; capsuleAsRecord?: boolean } = {},
 ): Promise<{ alias: string; carriedId: string }> {
   const enc = new TextEncoder();
   const b64url = (bytes: Uint8Array): string =>
@@ -64,6 +65,10 @@ export async function withCarriedCapsule(
   }
   const alias = "book-case";
   (source.records as Obj[]).push({ capsule_id: alias });
+  // The carried capsule as a record of its own too, listed after the book
+  // record that carries it.
+  if (options.capsuleAsRecord === true)
+    (source.records as Obj[]).push({ ...capsule });
   (source.disclosures as Obj)[alias] = {
     agent_input: {
       v: 1,

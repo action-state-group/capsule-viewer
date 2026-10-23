@@ -210,7 +210,6 @@
     "chat.state.cited": "The conversation of the case every claim cites. The judge's reports are withheld, so which conversation the judge read is not shown.",
     "chat.state.verified": "The exact conversation the judge read, checked on this page (see the proofs).",
     "chat.called": "called ",
-    "chat.state.record": "The conversation this record seals: the content shown matches the digest the record seals.",
     "chat.close": "Close the conversation",
     "chat.in-records": "In the records",
     "chat.read": "Read the conversation",

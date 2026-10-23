@@ -129,7 +129,7 @@ function snapshot(root: Element): Snapshot {
 function openEveryBody(root: Element): void {
   const view = root.ownerDocument.defaultView!;
   for (const entry of root.querySelectorAll<HTMLDetailsElement>(
-    'details.cv-record[data-body="pending"]',
+    'details.cv-record[data-body="pending"], details[data-section="conversation"][data-body="pending"]',
   )) {
     entry.open = true;
     entry.dispatchEvent(new view.Event("toggle"));
@@ -1647,4 +1647,45 @@ it("the static page: a record carrying a capsule has an address under both ids, 
   expect(
     page.body.innerHTML.split("CARRIED-CONVERSATION-LINE").length - 1,
   ).toBe(1);
+});
+
+it("a static page at depth L1 shows an absent or mismatched conversation's state note in place, with no toggle opened by hand", async () => {
+  const absent = await sealEvidenceBundle(fixture("compliance-bundle.json"));
+  const source = fixture("compliance-bundle.json");
+  // A transcript the session's claims cite that is not the case the
+  // judge's reports name: the card says it is not shown.
+  await withCarriedCapsule(source, {
+    case: { benchmark: "tau2", domain: "airline", task_id: "9", trial: 9 },
+    agent_interaction: { messages: [{ role: "user", content: "OTHER-CASE" }] },
+  });
+  const mismatch = await sealEvidenceBundle(source);
+  for (const [name, { bundle }, state] of [
+    ["absent", absent, "absent"],
+    ["mismatch", mismatch, "mismatch"],
+  ] as const) {
+    const built = await buildPresentation(bundle, {
+      presentation: "auto",
+      audience: "*",
+      format: "static",
+      depth: "L1",
+      runtime: { code: runtime },
+    });
+    if (built.format !== "static") throw new Error("static expected");
+    const page = new JSDOM(built.html).window.document;
+    const folds = [
+      ...page.querySelectorAll<HTMLElement>(
+        'details[data-section="conversation"]',
+      ),
+    ];
+    expect(folds.length, name).toBeGreaterThan(0);
+    for (const fold of folds)
+      expect(fold.getAttribute("data-body"), name).toBe("built");
+    expect(
+      page.querySelector(`[data-transcript="${state}"]`),
+      name,
+    ).not.toBeNull();
+    // the carried conversation is drawn only in its record's entry
+    for (const turn of page.querySelectorAll(".chat li.turn"))
+      expect(turn.closest("details.cv-record"), name).not.toBeNull();
+  }
 });

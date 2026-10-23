@@ -141,7 +141,7 @@ describe.skipIf(executablePath === undefined)(
       // pending and nothing left to link, so this changes nothing there.
       await page.evaluate(() => {
         for (const entry of document.querySelectorAll<HTMLDetailsElement>(
-          '#app details.cv-record[data-body="pending"]',
+          '#app details.cv-record[data-body="pending"], #app details[data-section="conversation"][data-body="pending"]',
         )) {
           entry.open = true;
           entry.dispatchEvent(new Event("toggle"));
