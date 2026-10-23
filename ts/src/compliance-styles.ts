@@ -79,7 +79,6 @@ export const COMPLIANCE_CSS =
 .cc .fnd .own{font-size:12.5px;color:var(--slate);margin-top:2px}
 .cc .ck .h .tname{color:var(--navy)}
 .cc .ck .h .applic{font-weight:400}
-.cc section.rp{padding:16px 24px;border-radius:0 0 var(--r) var(--r)}
 .cc .rp-s{margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
 .cc .rp-s h3{font-size:17px;margin:0 0 8px}
 .cc .pf-b .ev{font-size:12px;color:var(--slate);margin:4px 0;word-break:break-all}

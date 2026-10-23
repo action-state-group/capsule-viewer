@@ -49,6 +49,6 @@ ${s} .anchor{background:var(--cream);border-radius:8px;padding:8px 10px;font-siz
 ${s} .anchor .k{display:block;color:var(--slate);margin-bottom:2px}
 ${s} .anchor code{font-size:11px;word-break:break-all}
 ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.6}
-@media (max-width:640px){${s} .front-card{padding:14px 16px}${s} .agg-buckets{grid-template-columns:minmax(0,1fr)}${s} .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}${s} .agg-bucket b{font-size:22px}}
+@media (max-width:640px){${s} .front-card{padding:24px var(--inset)}${s} .agg-buckets{grid-template-columns:minmax(0,1fr)}${s} .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}${s} .agg-bucket b{font-size:22px}}
 `;
 }
