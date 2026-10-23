@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
- * Styles for the pieces report-front.ts draws (the mock-judge line, the
+ * Styles for the pieces report-front.ts draws (the mock-judge mark, the
  * sealed aggregate, the footnotes, the folded provenance line, rows that
- * open, "Check this report yourself", and the card that holds
- * the L1 provenance), scoped under a grouping's frame class (`.oi` for
+ * open, "Check this report yourself", the provenance row that opens
+ * L1, and the card that holds it when no section does), scoped under a grouping's frame class (`.oi` for
  * Outcomes, `.cc` for the EU AI Act). Each frame's stylesheet appends this,
  * so the CSP hashes of the frame stylesheets cover it.
  */
 export function frontCss(scope: string): string {
   const s = scope;
   return `
-${s} .mockline{max-width:1080px;margin:18px auto 0;padding:9px 14px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:10px;font-weight:600;font-size:14px}
-${s} .front-card{background:#fff;max-width:1080px;margin:14px auto;border:1px solid var(--line);border-radius:var(--r);padding:16px 24px}
+${s}{--inset:clamp(20px,5vw,56px)}
+${s} .mockmark{display:inline-block;margin:8px 0 0;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45;text-align:left}
+${s} .front-card{background:#fff;max-width:1080px;margin:0 auto 16px;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset)}
+${s} .prov-row{padding-bottom:16px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+${s} .front-card > .prov-row:last-child{padding-bottom:0;margin-bottom:0;border-bottom:0}
 ${s} .agg{margin:8px 0 28px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4}
 ${s} .agg-line{font-size:14px;margin:0 0 12px;color:var(--ink)}
 ${s} .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -23,10 +26,10 @@ ${s} .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
 ${s} .agg-bucket.met b{color:var(--ok)}
 ${s} .agg-bucket.not_met b{color:var(--bad)}
 ${s} .agg-bucket.not_evaluable b{color:#5F6672}
-${s} .findings{border-left:4px solid var(--gold,#E8A33D);background:#FFFBF2;border-radius:var(--r);padding:16px 20px;margin:16px 0}
+${s} .findings{border:1px solid var(--line);border-left:4px solid var(--gold,#E8A33D);background:#FFFBF2;border-radius:var(--r);padding:32px calc(var(--inset) - 3px);margin:0 0 16px}
 ${s} .findings h2{font-size:19px;margin:4px 0 10px}
 ${s} .plabel{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A0B}
-${s} .footnotes{margin:22px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--slate);display:grid;gap:4px}
+${s} .footnotes{margin:22px 0 0;font-size:12.5px;color:var(--slate);display:grid;gap:4px}
 ${s} details.prov-fold{border:0;margin:0;background:transparent}
 ${s} details.prov-fold > summary{padding:2px 0;font-weight:500;color:var(--ink)}
 ${s} details.prov-fold .prov-brief{font-size:13.5px}

@@ -88,4 +88,18 @@ export const COMPLIANCE_CSS =
 @media (max-width:760px){.cc .ran{grid-template-columns:1fr}}
 ` +
   levelCss("cc") +
-  frontCss(".cc");
+  frontCss(".cc") +
+  // The page layout (one left edge, bordered cards 16px apart, the header
+  // on white like the Outcomes report's): last, so it wins over the rules
+  // above. The page colour is the shell's (emitter-shell.html).
+  `
+.cc{background:transparent;padding:0;margin:0 auto;display:flow-root}
+.cc .l0-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:40px var(--inset);margin:16px 0}
+.cc .l0-card .hd{background:transparent;color:var(--ink);padding:0;margin:0 0 24px;border-radius:0}
+.cc .l0-card .hd h1{color:var(--navy);font-size:30px;margin:0}
+.cc .l0-card .hd .sub{color:var(--slate);margin-top:8px}
+.cc .l0-card section.agg{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0}
+.cc > section{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset);margin:0 0 16px}
+.cc > section.findings{padding:32px calc(var(--inset) - 3px)}
+@media (min-width:821px){.cc table.grid th{white-space:nowrap}}
+`;

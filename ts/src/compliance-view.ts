@@ -47,7 +47,8 @@ import {
   renderAggregate,
   renderCheckYourself,
   expandableRow,
-  frontCard,
+  leadWithProvenance,
+  placeMockMark,
   renderMockJudgeLine,
 } from "./report-front.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
@@ -1160,25 +1161,30 @@ export async function drawGroups(
     s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
   );
 
-  // L0, what matters: the mock-judge line (D5 b), the header, the sealed
-  // aggregate.
+  // L0, what matters: the header with the mock-judge mark (D5 b), the
+  // sealed aggregate.
   const mock = renderMockJudgeLine(
     await tallyJudges(result.records, claims),
     w,
   );
-  if (mock !== undefined) levels.L0.append(mock);
-  renderHeader(levels.L0, model, w);
-  levels.L0.append(renderAggregate(result, w));
+  // One L0 card: the header (with the mark) and the aggregate.
+  const sheet = el("div", "l0-card");
+  renderHeader(sheet, model, w);
+  const header = sheet.querySelector<HTMLElement>(".hd");
+  if (header !== null) placeMockMark(header, mock);
+  else if (mock !== undefined) sheet.prepend(mock);
+  sheet.append(renderAggregate(result, w));
+  levels.L0.append(sheet);
 
-  // L1, why: who judged, who witnessed, what verified, then the tests.
-  levels.L1.append(
-    frontCard(
-      renderProvenance(
-        await provenanceLines(result.records, claims, bundle, verified, w),
-      ),
+  // L1, why: the tests, led by who judged, who witnessed, what verified.
+  renderSummary(levels.L1, model, presentation, w);
+  leadWithProvenance(
+    levels.L1,
+    levels.L1.querySelector('[data-section="summary"]'),
+    renderProvenance(
+      await provenanceLines(result.records, claims, bundle, verified, w),
     ),
   );
-  renderSummary(levels.L1, model, presentation, w);
   renderFindings(levels.L1, model, w);
 
   // L2, module detail after the core's verification section.

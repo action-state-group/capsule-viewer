@@ -3,7 +3,7 @@
  * The pieces of a contract report that every grouping shares, placed by the
  * contract-report layout note (docs/design/contract-report-layout.md):
  *
- * - L0: the mock-judge line (decision D5 (b)) and the sealed aggregate,
+ * - L0: the mock-judge mark in the header (decision D5 (b)) and the sealed aggregate,
  *   coverage first, then the buckets (contract-report/v1 section 2,
  *   evidence-result-v0 section 3).
  * - Rows that open in place (expandableRow).
@@ -66,15 +66,47 @@ function mismatchMarker(
   return marker;
 }
 
-/** Decision D5 (b): one L0 line, drawn only when the judge was a mock. */
+/**
+ * Decision D5 (b): one L0 mark, drawn only when the judge was a mock. It
+ * sits in the report's header right under the title (`placeMockMark`), so
+ * a reader meets it before any figure; the folded provenance line then
+ * leaves the judge out of its brief (report-provenance.ts).
+ */
 export function renderMockJudgeLine(
   tally: JudgeTally,
   w: Words,
 ): HTMLElement | undefined {
   if (!judgedByMock(tally)) return undefined;
-  const line = el("p", "mockline", w.t("front.mock"));
+  const line = el("p", "mockmark", w.t("front.mock"));
   line.dataset.section = "mock-judge";
   return line;
+}
+
+/** Put the mock-judge mark right under the header's title; a header without one takes it first. */
+export function placeMockMark(
+  header: HTMLElement,
+  mark: HTMLElement | undefined,
+): void {
+  if (mark === undefined) return;
+  const title = header.querySelector("h1");
+  if (title === null) header.prepend(mark);
+  else title.after(mark);
+}
+
+/**
+ * The folded provenance line opens L1: it becomes the first row of the
+ * section card that holds the report's rows, ruled off from them. Without
+ * that section it keeps a card of its own.
+ */
+export function leadWithProvenance(
+  host: HTMLElement,
+  section: Element | null,
+  provenance: HTMLElement,
+): void {
+  const row = el("div", "prov-row");
+  row.append(provenance);
+  if (section === null) host.prepend(frontCard(row));
+  else section.prepend(row);
 }
 
 /**
