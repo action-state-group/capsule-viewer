@@ -21,7 +21,7 @@ import {
   lazyBody,
   levelToggle,
   proofList,
-  renderChat,
+  conversationFold,
   ruleWord,
   wordPill,
   caseParts,
@@ -648,9 +648,8 @@ function conversationBody(
   }
 
   // The conversation itself
-  body.append(el("h4", "", w.t("card.h.conversation")));
   body.append(
-    renderChat(conversation.transcript, conversation.sourceCapsuleId, w),
+    conversationFold(conversation.transcript, conversation.sourceCapsuleId, w),
   );
 
   // Toggle 2: the proofs

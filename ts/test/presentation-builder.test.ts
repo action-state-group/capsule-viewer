@@ -7,6 +7,7 @@ import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { JSDOM } from "jsdom";
 import { beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
+import { linkConversations, recordAddress } from "../src/report-levels.js";
 import {
   BUILTIN_PRESENTATIONS,
   createPresentationRegistry,
@@ -46,6 +47,7 @@ import {
   type PresentationResolver,
 } from "@action-state-group/agent-action-capsule";
 import { monthlyComplianceFixture } from "./helpers/monthly-fixtures.js";
+import { withCarriedCapsule } from "./helpers/carried-capsule.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 // The builder runs in node (the emitter reads its shell with node:fs), so
@@ -119,6 +121,23 @@ function snapshot(root: Element): Snapshot {
   };
 }
 
+/**
+ * The scripted page as the static page is built to show it: the core's
+ * record entries built (closed), and each conversation kept once, in the
+ * records section (capsule-viewer#67).
+ */
+function openEveryBody(root: Element): void {
+  const view = root.ownerDocument.defaultView!;
+  for (const entry of root.querySelectorAll<HTMLDetailsElement>(
+    'details.cv-record[data-body="pending"], details[data-section="conversation"][data-body="pending"]',
+  )) {
+    entry.open = true;
+    entry.dispatchEvent(new view.Event("toggle"));
+    entry.open = false;
+  }
+  linkConversations(root);
+}
+
 const done = (root: Element): boolean =>
   root.querySelector('[data-page="verification"]') !== null ||
   root.querySelector('[data-refusal="fragment-unreadable"]') !== null;
@@ -133,7 +152,10 @@ async function settled(root: Element): Promise<Snapshot> {
     const now = root.innerHTML;
     stable = done(root) && now === last ? stable + 1 : 0;
     last = now;
-    if (stable >= 3) return snapshot(root);
+    if (stable >= 3) {
+      openEveryBody(root);
+      return snapshot(root);
+    }
   }
   throw new Error("page did not settle");
 }
@@ -234,6 +256,7 @@ async function showAll(
     else {
       const element = document.createElement("main");
       await built.mount(element);
+      openEveryBody(element);
       shown = snapshot(element);
     }
     out[format] = { kind: "shown", built, snapshot: shown };
@@ -359,9 +382,11 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
         }
         expect(shown.length).toBeGreaterThanOrEqual(3);
         const [first, ...rest] = shown;
-        for (const [, s] of rest) {
+        for (const [name, s] of rest) {
           expect(s.built.module).toBe(first![1].built.module);
-          expect(s.snapshot).toEqual(first![1].snapshot);
+          expect(s.snapshot, `${name} against ${first![0]}`).toEqual(
+            first![1].snapshot,
+          );
         }
         const snap = first![1].snapshot;
         expect(snap.verify).toEqual([verifies ? "verified" : "failed"]);
@@ -1249,6 +1274,7 @@ describe("packaging availability", () => {
         throw new Error("unexpected format");
       const element = document.createElement("main");
       await embedded.mount(element);
+      openEveryBody(element);
       const fromEmbedded = snapshot(element);
       const fromStatic = openStatic(statik.html).snapshot;
       expect(fromStatic).toEqual(fromEmbedded);
@@ -1490,4 +1516,176 @@ describe("the Go twin's goldens", () => {
       readFileSync(goTestdata("offline-fragment.txt"), "utf8"),
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+// The static page keeps one copy of each conversation (capsule-viewer#67)
+// ---------------------------------------------------------------------------
+
+it("the static page: each record's entry is built, and a conversation's link target holds the chat", async () => {
+  const source = fixture("result-root-bundle.json");
+  const caseInput = ((source.disclosures as Obj)["case-1"] as Obj)
+    .agent_input as Obj;
+  caseInput.agent_interaction = {
+    messages: [
+      { role: "assistant", content: "Hi! How can I help you today?" },
+      { role: "user", content: "Please cancel EHGLP3." },
+      { role: "assistant", content: "Let me check it." },
+      { role: "tool", content: '{"reservation_id":"EHGLP3"}' },
+    ],
+  };
+  const { bundle, ids } = await sealEvidenceBundle(source);
+  const id = ids["case-1"]!;
+  const built = await buildPresentation(bundle, {
+    presentation: "auto",
+    audience: "*",
+    format: "static",
+    runtime: { code: runtime },
+  });
+  if (built.format !== "static") throw new Error("static expected");
+  const page = new JSDOM(built.html).window.document;
+  // only the record entries are built ahead; nothing else changes (#67)
+  expect(
+    page.querySelectorAll('details.cv-record[data-body="pending"]'),
+  ).toHaveLength(0);
+  const anchor = page.getElementById(recordAddress(id))!;
+  expect(anchor).not.toBeNull();
+  const target = anchor.closest("details")!;
+  expect(target.classList.contains("cv-record")).toBe(true);
+  // the content, not only an open attribute: the chat is in the page
+  expect(target.querySelectorAll("li.turn")).toHaveLength(4);
+  expect(target.textContent).toContain("Please cancel EHGLP3.");
+  // closed until a link lands on it
+  expect(target.hasAttribute("open")).toBe(false);
+  // one copy: the conversation's words appear once in the whole page
+  expect(
+    page.body.innerHTML.split("Hi! How can I help you today?").length - 1,
+  ).toBe(1);
+});
+
+it("the static page holds each transcript at most once, and no transcript outside the records section, at every depth", async () => {
+  const sealedConversation = async (): Promise<{ bundle: Obj; id: string }> => {
+    const source = fixture("result-root-bundle.json");
+    const caseInput = ((source.disclosures as Obj)["case-1"] as Obj)
+      .agent_input as Obj;
+    caseInput.agent_interaction = {
+      messages: [{ role: "user", content: "UNIQUE-TRANSCRIPT-LINE" }],
+    };
+    const { bundle, ids } = await sealEvidenceBundle(source);
+    return { bundle, id: ids["case-1"]! };
+  };
+  const { bundle: compliance } = await sealEvidenceBundle(
+    fixture("compliance-bundle.json"),
+  );
+  const { bundle: result } = await sealedConversation();
+  for (const bundle of [compliance, result])
+    for (const depth of ["L0", "L1", "L2"] as const) {
+      const built = await buildPresentation(bundle, {
+        presentation: "auto",
+        audience: "*",
+        format: "static",
+        depth,
+        runtime: { code: runtime },
+      });
+      if (built.format !== "static") throw new Error("static expected");
+      const page = new JSDOM(built.html).window.document;
+      // no transcript outside the records section: a card keeps only its
+      // link, or, with no record to link to, its state note
+      const outside = [...page.querySelectorAll(".chat li.turn")].filter(
+        (turn) => turn.closest("details.cv-record") === null,
+      );
+      expect(outside, depth).toHaveLength(0);
+      expect(
+        page.body.innerHTML.split("UNIQUE-TRANSCRIPT-LINE").length - 1,
+        depth,
+      ).toBeLessThanOrEqual(1);
+      // a card's conversation toggle keeps at most a state note
+      for (const fold of page.querySelectorAll(
+        'details[data-section="conversation"]',
+      ))
+        expect(fold.querySelector("li.turn"), depth).toBeNull();
+    }
+  // at L2 the compliance cards are drawn, so the check above saw their folds
+  const l2 = await buildPresentation(compliance, {
+    presentation: "auto",
+    audience: "*",
+    format: "static",
+    depth: "L2",
+    runtime: { code: runtime },
+  });
+  if (l2.format !== "static") throw new Error("static expected");
+  expect(
+    new JSDOM(l2.html).window.document.querySelectorAll(
+      'details[data-section="conversation"]',
+    ).length,
+  ).toBeGreaterThan(0);
+});
+
+it("the static page: a record carrying a capsule has an address under both ids, and its entry holds the carried conversation", async () => {
+  const source = fixture("result-root-bundle.json");
+  const { alias, carriedId } = await withCarriedCapsule(source, {
+    agent_interaction: {
+      messages: [{ role: "user", content: "CARRIED-CONVERSATION-LINE" }],
+    },
+  });
+  const { bundle, ids } = await sealEvidenceBundle(source);
+  const built = await buildPresentation(bundle, {
+    presentation: "auto",
+    audience: "*",
+    format: "static",
+    runtime: { code: runtime },
+  });
+  if (built.format !== "static") throw new Error("static expected");
+  const page = new JSDOM(built.html).window.document;
+  const entry = page
+    .getElementById(recordAddress(carriedId))!
+    .closest("details.cv-record")!;
+  expect(
+    page.getElementById(recordAddress(ids[alias]!))!.closest("details"),
+  ).toBe(entry);
+  expect(entry.querySelectorAll("li.turn")).toHaveLength(1);
+  expect(
+    page.body.innerHTML.split("CARRIED-CONVERSATION-LINE").length - 1,
+  ).toBe(1);
+});
+
+it("a static page at depth L1 shows an absent or mismatched conversation's state note in place, with no toggle opened by hand", async () => {
+  const absent = await sealEvidenceBundle(fixture("compliance-bundle.json"));
+  const source = fixture("compliance-bundle.json");
+  // A transcript the session's claims cite that is not the case the
+  // judge's reports name: the card says it is not shown.
+  await withCarriedCapsule(source, {
+    case: { benchmark: "tau2", domain: "airline", task_id: "9", trial: 9 },
+    agent_interaction: { messages: [{ role: "user", content: "OTHER-CASE" }] },
+  });
+  const mismatch = await sealEvidenceBundle(source);
+  for (const [name, { bundle }, state] of [
+    ["absent", absent, "absent"],
+    ["mismatch", mismatch, "mismatch"],
+  ] as const) {
+    const built = await buildPresentation(bundle, {
+      presentation: "auto",
+      audience: "*",
+      format: "static",
+      depth: "L1",
+      runtime: { code: runtime },
+    });
+    if (built.format !== "static") throw new Error("static expected");
+    const page = new JSDOM(built.html).window.document;
+    const folds = [
+      ...page.querySelectorAll<HTMLElement>(
+        'details[data-section="conversation"]',
+      ),
+    ];
+    expect(folds.length, name).toBeGreaterThan(0);
+    for (const fold of folds)
+      expect(fold.getAttribute("data-body"), name).toBe("built");
+    expect(
+      page.querySelector(`[data-transcript="${state}"]`),
+      name,
+    ).not.toBeNull();
+    // the carried conversation is drawn only in its record's entry
+    for (const turn of page.querySelectorAll(".chat li.turn"))
+      expect(turn.closest("details.cv-record"), name).not.toBeNull();
+  }
 });

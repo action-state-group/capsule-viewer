@@ -838,10 +838,11 @@ it("two levels: the missed line opens (toggle 1) into every missed conversation,
       .map((r) => Number(r.dataset.count))
       .reduce((a, b) => a + b, 0),
   ).toBe(48);
-  // no third level: the conversation holds exactly one toggle, the proofs
+  // no third level: the conversation holds two level-2 toggles, side by
+  // side, and nothing deeper: the conversation itself and the proofs
   const nested = conv.querySelectorAll<HTMLElement>("details");
-  expect(nested).toHaveLength(1);
-  expect(nested[0]!.dataset.level).toBe("2");
+  expect([...nested].map((d) => d.dataset.level)).toEqual(["2", "2"]);
+  expect(nested[0]!.dataset.section).toBe("conversation");
   const proofBox = proofs(conv);
   const rows = conv.querySelectorAll<HTMLElement>("tr[data-crit]");
   expect(rows).toHaveLength(9);
@@ -896,6 +897,9 @@ it("drill-down: says plainly the transcript is absent, and gives the record ids 
   const anyReport = [...reports.entries()].find(([claimId]) =>
     claimId.startsWith(`${id}::`),
   )![1];
+  open(
+    conv.querySelector<HTMLElement>('details[data-section="conversation"]')!,
+  );
   const absent = conv.querySelector<HTMLElement>('[data-transcript="absent"]')!;
   expect(absent.textContent).toContain("not in this bundle");
   expect(absent.textContent).toContain(anyReport.source_capsule_id as string);
@@ -1642,11 +1646,15 @@ it("lazy: a closed line builds nothing, the report's proofs build on first open,
     const convs = drill.querySelectorAll<HTMLElement>("article.conv");
     expect(convs).toHaveLength(48);
     // listed in place, every body still pending until it nears the view
-    expect(drill.querySelectorAll('[data-body="pending"]')).toHaveLength(48);
+    expect(
+      drill.querySelectorAll('.conv-slot[data-body="pending"]'),
+    ).toHaveLength(48);
     expect(drill.querySelector("tr[data-crit]")).toBeNull();
     observed[0]!([{ isIntersecting: true }]);
     expect(convs[0]!.querySelectorAll("tr[data-crit]")).toHaveLength(9);
-    expect(drill.querySelectorAll('[data-body="pending"]')).toHaveLength(47);
+    expect(
+      drill.querySelectorAll('.conv-slot[data-body="pending"]'),
+    ).toHaveLength(47);
   } finally {
     delete g.IntersectionObserver;
   }

@@ -18,7 +18,7 @@ import {
   type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
-import { openBuiltToDepth, openToggle } from "./report-levels.js";
+import { deferBody, openToggle } from "./report-levels.js";
 import {
   judgedByMock,
   witnessEntries,
@@ -322,18 +322,7 @@ export function expandableRow(
   name.replaceWith(toggle);
   summary.append(name);
   toggle.append(summary);
-  let built = false;
-  const fill = (): void => {
-    if (built) return;
-    built = true;
-    cell.append(build());
-    openBuiltToDepth(cell);
-  };
-  if (eager) fill();
-  else
-    toggle.addEventListener("toggle", () => {
-      if (toggle.open) fill();
-    });
+  deferBody(toggle, build, eager, cell);
   // The summary's own click toggles natively; anywhere else on the row
   // does the same.
   row.addEventListener("click", (event) => {

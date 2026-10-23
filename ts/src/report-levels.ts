@@ -67,20 +67,68 @@ export function levelToggle(
   if (typeof summary === "string") head.textContent = summary;
   else head.append(summary);
   details.append(head);
-  let built = false;
-  const fill = (): void => {
-    if (built) return;
-    built = true;
-    const body = build();
-    details.append(body);
-    openBuiltToDepth(details);
-  };
-  if (options.eager === true) fill();
-  else
-    details.addEventListener("toggle", () => {
-      if (details.open) fill();
-    });
+  deferBody(details, build, options.eager === true);
   return details;
+}
+
+/**
+ * A <details> whose body is built the first time it opens, or at once with
+ * `eager`, into the toggle itself or into `into` (a table row's detail cell). Until then it is marked `data-body="pending"`, and
+ * `fillPendingBodies` can build it without opening it.
+ */
+export function deferBody(
+  details: HTMLDetailsElement,
+  build: () => Node,
+  eager = false,
+  into: HTMLElement = details,
+): void {
+  const fill = (): void => {
+    if (details.dataset.body !== "pending") return;
+    pendingToggles.delete(details);
+    details.dataset.body = "built";
+    into.append(build());
+    openBuiltToDepth(into);
+  };
+  details.dataset.body = "pending";
+  if (eager) {
+    fill();
+    return;
+  }
+  pendingToggles.set(details, fill);
+  details.addEventListener("toggle", () => {
+    if (details.open) fill();
+  });
+}
+
+/** Each toggle's pending fill, keyed weakly by the toggle. */
+const pendingToggles = new WeakMap<HTMLDetailsElement, () => void>();
+
+/**
+ * Builds every body under `root` that `selector` names and is still
+ * pending -- toggle bodies and conversation bodies alike, and the ones those
+ * bodies bring -- leaving every toggle open or closed as it was. The static
+ * package (presentation-builder.ts) builds the core's record entries this
+ * way, so a record a link lands on is not empty on a page that runs no
+ * script. Returns how many bodies it built.
+ */
+export function fillPendingBodies(
+  root: ParentNode,
+  selector = '[data-body="pending"]',
+): number {
+  let built = 0;
+  for (;;) {
+    const pending = [...root.querySelectorAll<HTMLElement>(selector)];
+    const fills = pending
+      .map((host) =>
+        host.localName === "details"
+          ? pendingToggles.get(host as HTMLDetailsElement)
+          : pendingBodies.get(host),
+      )
+      .filter((fill): fill is () => void => fill !== undefined);
+    if (fills.length === 0) return built;
+    for (const fill of fills) fill();
+    built += fills.length;
+  }
 }
 
 /**
@@ -462,6 +510,20 @@ export function renderChat(
       }),
     ),
   );
+  wrap.append(renderTurns(turns, w));
+  return wrap;
+}
+
+/**
+ * The turns of a conversation as a chat, and nothing else: who said what,
+ * each tool call with its arguments, each tool result as sealed. It states
+ * nothing about where the turns came from or what was checked; its caller
+ * does (renderChat for a card, the core's record entry for a record).
+ */
+export function renderTurns(
+  turns: NonNullable<ConversationTranscript["turns"]>,
+  w: Words,
+): HTMLElement {
   const list = el("ol", "turns");
   turns.forEach((turn, index) => {
     const role =
@@ -502,8 +564,164 @@ export function renderChat(
     }
     list.append(item);
   });
-  wrap.append(list);
+  return list;
+}
+
+/** The address of a record in the core's records section (evidence-graph-view.ts). */
+export function recordAddress(recordId: string): string {
+  return `record-${recordId}`;
+}
+
+/**
+ * A conversation in place in its card: a level-2 toggle whose body is the
+ * chat, built when it opens, with a close control and a link to the record
+ * in the core's records section above and below it. The in-place copy
+ * carries no address; only the records section's entry does.
+ *
+ * Beside the toggle sits the same link worded for a page that runs no
+ * script, hidden: the static package (presentation-builder.ts) keeps one
+ * copy of each conversation, in the records section, and swaps the toggle
+ * for that link when the record is there (`linkConversations`).
+ */
+export function conversationFold(
+  transcript: ConversationTranscript,
+  caseRecord: string | undefined,
+  w: Words,
+): HTMLElement {
+  const wrap = el("div", "chat-fold");
+  const record =
+    (transcript.state === "verified" || transcript.state === "cited") &&
+    transcript.transcriptRecordId !== undefined
+      ? transcript.transcriptRecordId
+      : undefined;
+  let toggle: HTMLDetailsElement;
+  const bar = (): HTMLElement => {
+    const line = el("div", "chat-bar");
+    // A link, not a button: the card stays a page of links and native
+    // toggles. With script it closes the conversation; a page that runs no
+    // script drops it (linkConversations).
+    const close = el("a", "chat-close", w.t("chat.close"));
+    close.setAttribute("href", "#");
+    close.setAttribute("role", "button");
+    close.addEventListener("click", (event) => {
+      event.preventDefault();
+      toggle.open = false;
+      toggle.querySelector(":scope > summary")?.scrollIntoView?.({
+        block: "nearest",
+      });
+    });
+    line.append(close);
+    if (record !== undefined) {
+      const link = el("a", "chat-records", w.t("chat.in-records"));
+      link.setAttribute("href", `#${recordAddress(record)}`);
+      link.addEventListener("click", () => revealRecord(link, record));
+      line.append(link);
+    }
+    return line;
+  };
+  toggle = levelToggle(2, w.t("card.h.conversation"), () => {
+    const body = el("div", "chat-body");
+    body.append(bar(), renderChat(transcript, caseRecord, w), bar());
+    return body;
+  });
+  toggle.dataset.section = "conversation";
+  if (record !== undefined) {
+    toggle.dataset.record = record;
+    const link = el("a", "chat-static", w.t("chat.read"));
+    link.setAttribute("href", `#${recordAddress(record)}`);
+    link.hidden = true;
+    wrap.append(link);
+  }
+  wrap.append(toggle);
   return wrap;
+}
+
+/**
+ * Opens a record's entry in the core's records section, and every toggle
+ * around it, so the link's target is in view when the browser scrolls to
+ * it. A browser that opens a closed <details> for a fragment does the same
+ * on a page that runs no script.
+ */
+export function revealRecord(from: Node, recordId: string): void {
+  const doc = from.nodeType === 9 ? (from as Document) : from.ownerDocument!;
+  const target = doc.getElementById(recordAddress(recordId));
+  if (target === null) return;
+  for (
+    let at: Element | null = target.parentElement?.closest("details") ?? null;
+    at !== null;
+    at = at.parentElement?.closest("details") ?? null
+  )
+    if (!(at as HTMLDetailsElement).open) openToggle(at as HTMLDetailsElement);
+  target.scrollIntoView?.();
+}
+
+const hashWatched = new WeakSet<Document>();
+
+/**
+ * Where script runs: a page opened at a record's address (`#record-<id>`),
+ * or whose address changes to one, opens that record's entry and every
+ * fold around it, as a link to it does (`revealRecord`). One listener per
+ * document.
+ */
+export function revealRecordsByHash(doc: Document): void {
+  const view = doc.defaultView;
+  if (view === null) return;
+  const go = (): void => {
+    const hash = view.location.hash;
+    if (!hash.startsWith("#record-")) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(hash.slice("#record-".length));
+    } catch {
+      // A fragment that does not decode names no record.
+      return;
+    }
+    revealRecord(doc, id);
+  };
+  go();
+  if (hashWatched.has(doc)) return;
+  hashWatched.add(doc);
+  view.addEventListener("hashchange", go);
+}
+
+/**
+ * For a page that runs no script: every in-place conversation whose record
+ * the core's records section holds becomes a link to it, so the page keeps
+ * one copy of each conversation however many cards cite it, built or not.
+ * A conversation whose record is not there (none is stated, or its
+ * transcript is absent or does not check) keeps its toggle and its state
+ * note. Returns how many it linked.
+ */
+export function linkConversations(root: ParentNode): number {
+  let linked = 0;
+  const ids = new Set(
+    [
+      ...root.querySelectorAll<HTMLElement>(
+        "details.cv-record > .cv-record-anchor[id]",
+      ),
+    ].map((e) => e.id),
+  );
+  for (const toggle of root.querySelectorAll<HTMLDetailsElement>(
+    'details[data-section="conversation"][data-record]',
+  )) {
+    const link = toggle.parentElement?.querySelector<HTMLElement>(
+      ":scope > a.chat-static",
+    );
+    if (!ids.has(recordAddress(toggle.dataset.record!)) || link == null)
+      continue;
+    link.hidden = false;
+    toggle.remove();
+    linked++;
+  }
+  // A conversation kept in place (no record to link to) shows its state
+  // note: the page runs no script, so its body is built now.
+  for (const toggle of root.querySelectorAll<HTMLDetailsElement>(
+    'details[data-section="conversation"][data-body="pending"]',
+  ))
+    pendingToggles.get(toggle)?.();
+  // A page that runs no script cannot close a toggle from a control.
+  for (const close of root.querySelectorAll(".chat-close")) close.remove();
+  return linked;
 }
 
 // ---------------------------------------------------------------------------
@@ -622,6 +840,11 @@ ${s} .chat li.turn.user{justify-self:end;background:var(--person-l);border-color
 ${s} .chat li.turn.assistant{justify-self:start}
 ${s} .chat li.turn.tool,${s} .chat li.turn.system{justify-self:center;max-width:96%;border-style:dashed;background:#fff}
 ${s} .chat li.turn .who{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-bottom:2px}
+${s} .chat-body{padding:4px 12px 12px}
+${s} .chat-bar{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px}
+${s} .chat-bar .chat-close{font-weight:600}
+${s} .chat-bar .chat-records{margin-left:auto}
+${s} a.chat-static:not([hidden]){display:inline-block;margin-top:8px;font-size:13.5px;font-weight:600}
 ${s} .chat li.turn .say{white-space:pre-wrap;word-break:break-word}
 ${s} .chat li.turn pre.say{margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;max-height:180px;overflow:auto;color:var(--slate)}
 ${s} .chat li.turn.system .say{max-height:120px;overflow:auto;font-size:12px;color:var(--slate)}

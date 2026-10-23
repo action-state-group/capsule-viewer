@@ -55,6 +55,7 @@ import {
   type WordingPackInput,
 } from "@action-state-group/agent-action-capsule";
 import { mountPresentation } from "./presentation-mount.js";
+import { fillPendingBodies, linkConversations } from "./report-levels.js";
 
 /**
  * One builder, four packagings (spec/presentation-builder-v0.md):
@@ -795,6 +796,12 @@ async function packageStatic(
     ...(options.wording === undefined ? {} : { wording: options.wording }),
     registry,
   });
+  // The page runs no script. Each conversation is kept once, in the core's
+  // records section: every card's conversation becomes a link to it, and the
+  // record entries (only those) are built now, so a link lands on content.
+  // Other toggles keep their bodies unbuilt (capsule-viewer#67).
+  linkConversations(root);
+  fillPendingBodies(root, 'details.cv-record[data-body="pending"]');
   const verification = bundleVerified(context.verification)
     ? "verified"
     : "failed";

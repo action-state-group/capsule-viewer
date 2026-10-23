@@ -139,6 +139,13 @@ here. The format follows
   never "met" and never "not applicable"; a claim not yet in force is
   readiness only, outside the population, unless it failed verification.
 
+- One record view in the core (capsule-viewer#76): the check section's
+  "Records in this bundle" lists every record once, each with its own
+  address `#record-<capsule id>`, its times, seal status and disclosed
+  content. Content modules (`ts/src/record-content.ts`) draw content they
+  recognise; the conversation module draws chats, and content no module
+  recognises is shown as recorded, indented.
+
 ### Changed
 
 - "Witnessed by" on the front of both cards says the witnesses are "stated by
@@ -221,6 +228,16 @@ here. The format follows
   `reportState` and the withheld-report helpers, the `cited` transcript
   state). `ts/src/record-dating.ts` repeats three of its unexported
   functions until a release exports them.
+
+- The contract-report page layout (capsule-viewer#75): the mock-judge line
+  is a mark under the report title; the provenance line opens the L1 card
+  and no longer names the mock judge; every panel starts at one inset
+  (`--aac-inset`); count headers stay on one line on wide screens; the EU
+  report has the same white header as the outcome report.
+- A conversation opens in place inside its card, with close controls at
+  both ends and a link to its record (capsule-viewer#76). On a static page
+  the card links to the record instead, so each conversation is in the page
+  once.
 
 ### Fixed
 
