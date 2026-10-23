@@ -4,9 +4,8 @@ Status: design only. No module code, no wording pack and no golden change.
 This note fixes the information hierarchy and visual clarity of the two
 contract-report pages, Outcomes and EU AI Act. It maps every page element to
 the evidencebook record it comes from, ranks the elements into the three
-levels the presentation contract defines, and phases the work. Code waits on
-two gates: capsule-viewer#58 must merge, and Steven sees this layout direction
-first.
+levels the presentation contract defines, and phases the work. Its three
+decisions were made on 2026-10-23 (§5). Code waits on capsule-viewer#58.
 
 Ethan's direction: separate primary from secondary information, and make the
 visual design clear. The earlier invoice-style statement mocks predate
@@ -100,7 +99,7 @@ sets the depth; the module fills L0 and L1 and appends to L2 after the core.
    (#58 already draws those lists); EU "29 / 30 sessions with at least one
    test not met", from phase 2, when the session grid exists to trace it to.
 
-Under D5 option (b), one more L0 line, drawn only when the judge is mock:
+Per D5 (b), one more L0 line, drawn only when the judge is mock:
 "Verdicts are from a mock judge and are placeholders."
 
 No assurance strip in L0. [er] §3 is Steven's ruling: "Nothing above the fold
@@ -190,9 +189,13 @@ Rules come before the case grid, as in v2.
 
 ## 5. Decisions and one-way doors
 
-- **D1, door, for Steven: statement header fields.** The header shows the
-  issuer and the contract, and nothing for "prepared for" or a statement
-  number. **Recommendation: keep both closed for now.**
+D1, D3 and D5 were decided by Ethan on 2026-10-23, as recommended, in the
+ruling thread (buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=27b243c318d98b7ddb138fee10dc16713fd420ccb7df3f44eae7a7695d6cef7c&thread=187508cba40e3e501dd41d3d09568ab6c4bc3d5a3ab64ca34c5a50684a8070ad). D5 touches Steven's 2026-09-22 ruling, and he may still
+object there.
+
+- **D1, statement header fields. Decided: keep closed.** The header shows
+  the issuer and the contract, and nothing for "prepared for" or a statement
+  number.
   - "Prepared for" has a two-way route. An evidencebook Close names a
     counterparty book ([book]). [cr] §2 already lets a module "show other
     sealed records of the bundle", so showing a disclosed Close's
@@ -212,13 +215,12 @@ Rules come before the case grid, as in v2.
   the sealed Result says ([er] §4.3: absent means in force), with no split
   and no in-force figures. The work is in evidencebook-skills: the contract
   gains `clause.effective_from`, which is a new contract version after
-  0.2.1, and the claims copy it into `applies_from`. One question for Steven:
-  the block's conditions ("Annex III high-risk systems only", "contested" for
-  Art 86) don't fit a single date. Copying 2 Dec 2027 alone would say those
-  obligations bind this system from that date. The note proposes the date in
-  the contract clause and the condition in the pack's `row.<ref>.detail`,
-  and wherever the date shows, its condition shows beside it: "from 2 Dec
-  2027" is never drawn without "Annex III high-risk systems only".
+  0.2.1, and the claims copy it into `applies_from`. **Decided:** the date
+  goes in the contract clause (pinned), and every condition that narrows
+  when or to whom an obligation binds is drawn beside it: "Annex III
+  high-risk systems only", and "contested" for Art 86. The date is never
+  drawn alone. A single date can't carry those conditions, so they live in
+  the pack's `row.<ref>.detail`.
   When D3 lands, the split ships as [cr] §2 defines it: its own section,
   readiness labels on every tally, nothing in the buckets, the as-of date and
   the copied-fact note.
@@ -226,7 +228,7 @@ Rules come before the case grid, as in v2.
   string, because it weakens the claim. "Live" is never drawn from that
   string. Until evidencebook-skills#26 records the judge mode, the page shows
   the model id under "producer-stated".
-- **D5, for Steven: the v2 assurance strip.** v2, which Steven saw, puts
+- **D5, the v2 assurance strip. Decided: (b).** v2, which Steven saw, puts
   "Mock judge · No witness · No human review" above the fold. His
   2026-09-22 ruling ([er] §3) says nothing above the fold summarizes
   assurance. But with a mock judge, L0 says "0 resolved · 29 missed" and
@@ -237,8 +239,7 @@ Rules come before the case grid, as in v2.
     as D4 does: a mock judge isn't an assurance summary, it means the
     verdicts aren't real.
 
-  **Recommendation: (b)** (Sherlock2's recommendation too). The sketches
-  draw it.
+  Decided (b), as Sherlock2 also recommended. The sketches draw it.
 
 ## 6. Phases
 
@@ -250,8 +251,8 @@ go to Sherlock2 for copy review.
 - Moves the module onto the host's L0, L1 and L2 regions, takes open state
   from `host.depth`, and appends its L2 detail after the core's section
   ([pc] §9.1). Rebased on #61.
-- L0: header, sealed aggregate, the Outcomes per-case line; the D5 (b) mock
-  line only if Steven picks (b).
+- L0: header, the D5 (b) mock-judge line, sealed aggregate, the Outcomes
+  per-case line.
 - L1: the assurance line, the rule and test tables with per-row claim
   tallies, the EU findings under the producer label.
 - L2: anchors and steps (step 3 conditional), the producer note, the proofs.
@@ -259,8 +260,7 @@ go to Sherlock2 for copy review.
   `lines.title`, and with no fallback the title would vanish), and the EU
   pack gains `group.*` and `row.*`, so test names stop coming from the
   presentation block. Plus the new keys for the aggregate line, the
-  assurance line and the steps, and the D5 (b) line only if Steven picks
-  (b).
+  assurance line, the D5 (b) line and the steps.
 - Goldens for both pages change.
 - In the shell, not the module: the core's verification section opens at
   depth L2, as [pc] §9.1 requires.
@@ -272,8 +272,9 @@ go to Sherlock2 for copy review.
 - In the core, not the module: each record in the core's list gets a stable
   element id, and the core opens its section when the page is navigated to
   one of its records. The module never opens the core's section itself.
-  Until this lands, the drill-down shows record ids as text. With the mock judge the note is a probability, shown
-  as the record holds it.
+  Until this lands, the drill-down shows record ids as text.
+- With the mock judge, the judge's note is a probability, shown as the
+  record holds it.
 - For the Outcomes demo to show conversations, its bundle must be built
   with `--attach-input-originals` (the EU demo already is). That discloses
   the raw conversations, which is the producer's choice; the page only shows
@@ -284,8 +285,7 @@ go to Sherlock2 for copy review.
 - Day by day from the judgments' `period`.
 - Human re-grades from `calibration-summary/v1`, with #62's wording.
 
-**Gated separately:** the EU in-force split (D3), the header fields (D1), the
-L0 mock line and any assurance strip (D5).
+**Gated separately:** the EU in-force split, on D3's contract change.
 
 ## 7. Sketches
 
