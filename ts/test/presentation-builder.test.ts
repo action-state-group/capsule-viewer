@@ -47,6 +47,7 @@ import {
   type PresentationResolver,
 } from "@action-state-group/agent-action-capsule";
 import { monthlyComplianceFixture } from "./helpers/monthly-fixtures.js";
+import { withCarriedCapsule } from "./helpers/carried-capsule.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 // The builder runs in node (the emitter reads its shell with node:fs), so
@@ -1562,7 +1563,7 @@ it("the static page: each record's entry is built, and a conversation's link tar
   ).toBe(1);
 });
 
-it("the static page holds each transcript at most once, and no chat outside the records section, at every depth", async () => {
+it("the static page holds each transcript at most once, and no transcript outside the records section, at every depth", async () => {
   const sealedConversation = async (): Promise<{ bundle: Obj; id: string }> => {
     const source = fixture("result-root-bundle.json");
     const caseInput = ((source.disclosures as Obj)["case-1"] as Obj)
@@ -1588,19 +1589,21 @@ it("the static page holds each transcript at most once, and no chat outside the 
       });
       if (built.format !== "static") throw new Error("static expected");
       const page = new JSDOM(built.html).window.document;
-      const outside = [...page.querySelectorAll(".chat")].filter(
-        (chat) => chat.closest("details.cv-record") === null,
+      // no transcript outside the records section: a card keeps only its
+      // link, or, with no record to link to, its state note
+      const outside = [...page.querySelectorAll(".chat li.turn")].filter(
+        (turn) => turn.closest("details.cv-record") === null,
       );
       expect(outside, depth).toHaveLength(0);
       expect(
         page.body.innerHTML.split("UNIQUE-TRANSCRIPT-LINE").length - 1,
         depth,
       ).toBeLessThanOrEqual(1);
-      // every card that kept its conversation toggle has no body to show
+      // a card's conversation toggle keeps at most a state note
       for (const fold of page.querySelectorAll(
         'details[data-section="conversation"]',
       ))
-        expect(fold.querySelector(".chat-body"), depth).toBeNull();
+        expect(fold.querySelector("li.turn"), depth).toBeNull();
     }
   // at L2 the compliance cards are drawn, so the check above saw their folds
   const l2 = await buildPresentation(compliance, {
@@ -1616,4 +1619,32 @@ it("the static page holds each transcript at most once, and no chat outside the 
       'details[data-section="conversation"]',
     ).length,
   ).toBeGreaterThan(0);
+});
+
+it("the static page: a record carrying a capsule has an address under both ids, and its entry holds the carried conversation", async () => {
+  const source = fixture("result-root-bundle.json");
+  const { alias, carriedId } = await withCarriedCapsule(source, {
+    agent_interaction: {
+      messages: [{ role: "user", content: "CARRIED-CONVERSATION-LINE" }],
+    },
+  });
+  const { bundle, ids } = await sealEvidenceBundle(source);
+  const built = await buildPresentation(bundle, {
+    presentation: "auto",
+    audience: "*",
+    format: "static",
+    runtime: { code: runtime },
+  });
+  if (built.format !== "static") throw new Error("static expected");
+  const page = new JSDOM(built.html).window.document;
+  const entry = page
+    .getElementById(recordAddress(carriedId))!
+    .closest("details.cv-record")!;
+  expect(
+    page.getElementById(recordAddress(ids[alias]!))!.closest("details"),
+  ).toBe(entry);
+  expect(entry.querySelectorAll("li.turn")).toHaveLength(1);
+  expect(
+    page.body.innerHTML.split("CARRIED-CONVERSATION-LINE").length - 1,
+  ).toBe(1);
 });

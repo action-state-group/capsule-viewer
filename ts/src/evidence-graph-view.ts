@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import {
+  AGENT_INPUT_ORIGINALS_EXTENSION,
+  BOOK_PAYLOADS_EXTENSION,
   buildVerifiedBundleContext,
+  carriedCapsuleCommitment,
+  committedDigest,
   disclosureOf,
+  logCoordinates,
+  PUBLISHED_CAPSULE_RECORD_TYPE,
+  recordTimes,
+  resolveCarriedInput,
   isVerifiedBundleContext,
   REQUIREMENT_CLAIM,
   readOutcomeReportTerms,
@@ -57,8 +65,13 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import { composedSectionModule } from "./composed-view.js";
 import { DEFAULT_WORDS } from "./contract-report-wording.js";
-import { renderContent } from "./record-content.js";
-import { deferBody, recordAddress } from "./report-levels.js";
+import { RECORD_CONTENT_CSS, renderContent } from "./record-content.js";
+import {
+  deferBody,
+  recordAddress,
+  revealRecord,
+  revealRecordsByHash,
+} from "./report-levels.js";
 import {
   readCompliancePresentation,
   type CompliancePresentation,
@@ -502,13 +515,16 @@ const COVERAGE_LABEL: Readonly<Record<RecordCoverageStatus, string>> =
 // stated in words above the list. When it did not, the line says so and
 // names the verifier's reason -- never "0 records uncheckpointed" on a
 // bundle whose memberships were never verified -- and when the claim was
-// withheld (no checkpoint to stand under) there is no list at all.
+// withheld (no checkpoint to stand under) there are no counts by status.
+// The records list follows either way: it is where every link to a record
+// lands.
 function renderCheckpointCoverage(
   host: HTMLElement,
   records: readonly RecordCoverage[],
   uncheckpointed: number,
   coverage: CoverageStatement,
-  entry: (capsuleId: string) => Node,
+  entries: RecordEntries,
+  depth: "L0" | "L1" | "L2",
 ): void {
   host.append(element("h4", "Checkpoint coverage"));
   if (coverage.status === "established") {
@@ -524,58 +540,192 @@ function renderCheckpointCoverage(
     line.dataset.coverage = "not-established";
     line.dataset.claim = coverage.status;
     host.append(line);
-    if (coverage.status === "withheld") return;
   }
-  host.append(renderCoverageStatusCounts(records));
-  // Records in this bundle: one entry per record, each with its own address
-  // (`record-<capsule id>`, from the id alone, so every packaging of the
-  // page gives the same one). Closed until a link lands on it or the reader
-  // opens it; its body is built when it opens, or before a static page is
-  // written (fillPendingBodies). Other parts of the page link here and never
-  // draw a record themselves.
-  const details = element("details");
+  if (coverage.status !== "withheld")
+    host.append(renderCoverageStatusCounts(records));
+  host.append(renderRecordsList(records, entries, depth));
+}
+
+/** What the records list draws each record from (see `recordEntries`). */
+interface RecordEntries {
+  /** False for a bundle that did not verify: no record content is drawn. */
+  readonly verified: boolean;
+  /** Each record's reading, by bundle record id; empty when not verified. */
+  readonly read: ReadonlyMap<string, CitedRecord>;
+  /** Each record's kind, as the record (or its disclosed book header) names it. */
+  readonly kind: (capsuleId: string) => string | undefined;
+  readonly build: (capsuleId: string, record: CitedRecord) => Node;
+}
+
+// Records in this bundle: one entry per record, each with its own address
+// (`record-<capsule id>`, from the id alone, so every packaging of the page
+// gives the same one), and, for an evidence-book record, a second address
+// under the id of the capsule it carries, so a link by either id lands
+// here. An id the bundle repeats gets its address once. The address sits
+// inside the entry, not on it: a browser following a link opens every
+// closed <details> around its target, so the entry itself opens too, with
+// no script (and, where script runs, its body is built on that toggle).
+// Closed until a link lands on it or the reader opens it; its body is built
+// when it opens, or before a static page is written. At depth L2 the list
+// is open, but not its entries: there are hundreds, and each opens when a
+// link lands on it or the reader opens it. Other parts of the page link
+// here and never draw a record themselves. For a bundle that did not
+// verify, the list names each record, its kind and its standing, and draws
+// no content.
+function renderRecordsList(
+  records: readonly RecordCoverage[],
+  entries: RecordEntries,
+  depth: "L0" | "L1" | "L2",
+): HTMLElement {
+  const details = document.createElement("details");
   details.dataset.records = "coverage-detail";
+  details.open = depth === "L2";
   const summary = element(
     "summary",
     `Records in this bundle: ${recordsWord(records.length)}, by capsule id`,
   );
   details.append(summary);
+  if (!entries.verified) {
+    const note = element(
+      "p",
+      "Record content is not shown: this bundle did not verify.",
+    );
+    note.dataset.records = "not-shown";
+    details.append(note);
+  }
   const list = element("ul");
   list.dataset.records = "coverage";
+  const used = new Set<string>();
+  const address = (id: string): HTMLElement | undefined => {
+    const name = recordAddress(id);
+    if (used.has(name)) return undefined;
+    used.add(name);
+    const anchor = element("span");
+    anchor.className = "cv-record-anchor";
+    anchor.id = name;
+    return anchor;
+  };
   for (const record of records) {
     const item = element("li");
     item.dataset.capsuleId = record.capsuleId;
-    const fold = document.createElement("details");
-    fold.className = "cv-record";
-    fold.dataset.record = record.capsuleId;
-    const head = element("summary", `${record.capsuleId} · `);
+    const kind = entries.kind(record.capsuleId);
     const status = element("span", COVERAGE_LABEL[record.status]);
     status.dataset.recordStatus = record.status;
     status.className = `seal-${record.status}`;
+    const label = `${record.capsuleId} · ${kind ?? "kind not stated"} · `;
+    const read = entries.read.get(record.capsuleId);
+    if (!entries.verified || read === undefined) {
+      item.append(document.createTextNode(label), status);
+      list.append(item);
+      continue;
+    }
+    const fold = document.createElement("details");
+    fold.className = "cv-record";
+    fold.dataset.record = record.capsuleId;
+    const head = element("summary", label);
     head.append(status);
-    // The address sits inside the entry, not on it: a browser following a
-    // link opens every closed <details> around its target, so the entry
-    // itself opens too, with no script (and, where script runs, its body is
-    // built on that toggle).
-    const anchor = element("span");
-    anchor.className = "cv-record-anchor";
-    anchor.id = recordAddress(record.capsuleId);
-    fold.append(head, anchor);
-    deferBody(fold, () => entry(record.capsuleId));
+    fold.append(head);
+    const anchors = [record.capsuleId, read.carriedCapsuleId]
+      .filter((id): id is string => id !== undefined)
+      .map(address)
+      .filter((a): a is HTMLElement => a !== undefined);
+    fold.append(...anchors);
+    deferBody(fold, () => entries.build(record.capsuleId, read));
     // Where script runs, the body is built after the browser scrolled to
     // the address; bring it back into view once the body is in place.
     fold.addEventListener("toggle", () => {
-      if (
-        fold.open &&
-        fold.ownerDocument.defaultView?.location.hash === `#${anchor.id}`
-      )
-        anchor.scrollIntoView?.();
+      const hash = fold.ownerDocument.defaultView?.location.hash;
+      const target = anchors.find((a) => hash === `#${a.id}`);
+      if (fold.open && target !== undefined) target.scrollIntoView?.();
     });
     item.append(fold);
     list.append(item);
   }
   details.append(list);
-  host.append(details);
+  return details;
+}
+
+/**
+ * Each record's reading for the records list, from the verifier's resolved
+ * context: the Result's reading where a claim reaches the record, otherwise
+ * the record's own times, log position, committed digests and disclosed
+ * members, and, for an evidence-book record, the capsule it carries,
+ * checked as the Result reader checks it (`carriedCapsuleCommitment`,
+ * `resolveCarriedInput`).
+ */
+async function recordEntries(
+  context: VerifiedBundleContext,
+  result: ResultRoot | undefined,
+): Promise<Map<string, CitedRecord>> {
+  const read = new Map<string, CitedRecord>();
+  for (const record of result?.records.values() ?? []) {
+    const id = record.bookRecordId ?? record.capsuleId;
+    if (!read.has(id)) read.set(id, record);
+  }
+  const bundle = object(context.bundle);
+  const memberships = object(bundle.memberships);
+  const extensions = object(bundle.extensions);
+  const payloads = object(extensions[BOOK_PAYLOADS_EXTENSION]);
+  const originals = object(extensions[AGENT_INPUT_ORIGINALS_EXTENSION]);
+  for (const raw of context.records) {
+    const id = raw.capsule_id;
+    if (read.has(id)) continue;
+    const agentInput = disclosureOf(context, id, "agent_input");
+    const header =
+      agentInput.state === "disclosed" &&
+      object(agentInput.payload).record_type === PUBLISHED_CAPSULE_RECORD_TYPE
+        ? agentInput.payload
+        : undefined;
+    const carried =
+      header === undefined
+        ? undefined
+        : await carriedCapsuleCommitment(header, payloads);
+    const carriedInput =
+      header === undefined
+        ? undefined
+        : await resolveCarriedInput(header, payloads, originals);
+    const references = Array.isArray(raw.references) ? raw.references : [];
+    const agentInputDigest = committedDigest(raw, "agent_input");
+    const agentOutputDigest = committedDigest(raw, "agent_output");
+    const coordinates = logCoordinates(memberships, id);
+    read.set(id, {
+      ...recordTimes(raw),
+      capsuleId: id,
+      agentInput,
+      agentOutput: disclosureOf(context, id, "agent_output"),
+      ...(agentInputDigest === undefined ? {} : { agentInputDigest }),
+      ...(agentOutputDigest === undefined ? {} : { agentOutputDigest }),
+      ...(coordinates === undefined ? {} : { logCoordinates: coordinates }),
+      ...(carriedInput === undefined ? {} : { carriedInput }),
+      ...(carried === undefined
+        ? {}
+        : {
+            carriedCapsuleId: carried.capsuleId,
+            carriedInputDigest: carried.inputDigest,
+          }),
+      cites: references.flatMap((ref) => {
+        const r = object(ref);
+        return r.citation_purpose === "acted_on" && typeof r.digest === "string"
+          ? [r.digest]
+          : [];
+      }),
+    });
+  }
+  return read;
+}
+
+/** A record's kind: its disclosed book header's `record_type`, else its own `action_type`. */
+function recordKind(
+  raw: unknown,
+  read: CitedRecord | undefined,
+): string | undefined {
+  const header =
+    read?.agentInput.state === "disclosed"
+      ? object(read.agentInput.payload).record_type
+      : undefined;
+  if (typeof header === "string") return header;
+  const own = object(raw).action_type;
+  return typeof own === "string" ? own : undefined;
 }
 
 // Counts by seal status -- the line a reader actually needs (how many of
@@ -819,23 +969,38 @@ async function renderVerificationPage(
     witness.dataset.witness = "self";
     page.append(witness);
   }
+  // The content block's own styles: the records list is the core's, inside
+  // no module's frame (record-content.ts RECORD_CONTENT_CSS).
+  const contentStyle = element("style");
+  contentStyle.textContent = RECORD_CONTENT_CSS;
+  page.append(contentStyle);
   let result: ResultRoot | undefined;
   try {
     result = bundleVerified(verified) ? await resultRootOf(context) : undefined;
   } catch {
     result = undefined;
   }
-  const cited = new Map<string, CitedRecord>();
-  for (const record of result?.records.values() ?? []) {
-    cited.set(record.bookRecordId ?? record.capsuleId, record);
-    if (!cited.has(record.capsuleId)) cited.set(record.capsuleId, record);
-  }
+  const read = bundleVerified(verified)
+    ? await recordEntries(context, result)
+    : new Map<string, CitedRecord>();
+  const rawRecords = new Map<string, unknown>();
+  for (const raw of Array.isArray(object(bundle).records)
+    ? (object(bundle).records as unknown[])
+    : [])
+    if (typeof object(raw).capsule_id === "string")
+      rawRecords.set(object(raw).capsule_id as string, raw);
   renderCheckpointCoverage(
     page,
     model.records,
     model.uncheckpointedCount,
     model.coverage,
-    (capsuleId) => renderRecordEntry(context, capsuleId, cited.get(capsuleId)),
+    {
+      verified: bundleVerified(verified),
+      read,
+      kind: (id) => recordKind(rawRecords.get(id), read.get(id)),
+      build: (id, record) => renderRecordEntry(id, record),
+    },
+    depth,
   );
   renderStamps(page, stamps);
   renderCompletenessStatement(page, model.completeness);
@@ -1151,6 +1316,7 @@ function renderCitedMember(
   field: "agent_input" | "agent_output",
   resolution: CitedRecord["agentInput"],
   committed: string | undefined,
+  label: string = field,
 ): void {
   // A value that does not match its commitment is always noted, even where
   // the caller has no committed digest to name (a record no claim reaches).
@@ -1160,7 +1326,7 @@ function renderCitedMember(
     committed === undefined
   )
     return;
-  host.append(element("h5", field));
+  host.append(element("h5", label));
   if (resolution.state === "disclosed") {
     host.append(renderContent(resolution.payload, DEFAULT_WORDS.lines));
     return;
@@ -1218,56 +1384,42 @@ function renderCarriedInput(host: HTMLElement, record: CitedRecord): void {
     "agent_input",
     record.carriedInput,
     record.carriedInputDigest,
+    "agent_input of the capsule it carries",
   );
-  const heading = host.lastElementChild?.previousElementSibling;
-  if (heading?.localName === "h5")
-    heading.textContent = "agent_input of the capsule it carries";
 }
 
-// A record's entry in the records section: drawn from the Result's reading
-// of it when a claim reaches it (provenance, members, carried input, and
-// the records it cites as links to their entries), otherwise from the
-// verifier's resolution of its members alone.
+// A record's entry in the records section: its provenance (times, seal
+// status, log position), each committed member as disclosed or withheld,
+// the capsule it carries, and the records it cites as links to their
+// entries.
 function renderRecordEntry(
-  context: VerifiedBundleContext,
   capsuleId: string,
-  cited: CitedRecord | undefined,
+  record: CitedRecord,
 ): HTMLElement {
   const body = element("div");
   body.className = "cv-record-body";
-  if (cited === undefined) {
-    for (const field of ["agent_input", "agent_output"] as const)
-      renderCitedMember(
-        body,
-        field,
-        disclosureOf(context, capsuleId, field),
-        undefined,
-      );
-    if (body.childElementCount === 0)
-      body.append(element("p", "no disclosed member"));
-    return body;
-  }
-  body.append(renderProvenance(capsuleId, cited.logCoordinates, cited));
+  body.append(renderProvenance(capsuleId, record.logCoordinates, record));
   renderCitedMember(
     body,
     "agent_input",
-    cited.agentInput,
-    cited.agentInputDigest,
+    record.agentInput,
+    record.agentInputDigest,
   );
   renderCitedMember(
     body,
     "agent_output",
-    cited.agentOutput,
-    cited.agentOutputDigest,
+    record.agentOutput,
+    record.agentOutputDigest,
   );
-  renderCarriedInput(body, cited);
-  if (cited.cites.length > 0) {
+  renderCarriedInput(body, record);
+  if (record.cites.length > 0) {
     body.append(element("h5", "Cites"));
     const list = element("ul");
-    for (const id of cited.cites) {
+    for (const id of record.cites) {
       const item = element("li");
       const link = element("a", id);
       link.setAttribute("href", `#${recordAddress(id)}`);
+      link.addEventListener("click", () => revealRecord(link, id));
       item.append(link);
       list.append(item);
     }
@@ -2634,4 +2786,6 @@ export async function renderEvidenceGraph(
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
   if (summary !== null) summary.textContent = checkedLine;
+  // A page opened at a record's address shows that record.
+  revealRecordsByHash(root.ownerDocument);
 }

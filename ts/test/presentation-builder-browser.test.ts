@@ -67,6 +67,7 @@ describe.skipIf(executablePath === undefined)(
     let browser: Browser;
     let directory = "";
     let runtime: string;
+    let linkConversationsCode: string;
 
     beforeAll(async () => {
       directory = mkdtempSync(join(tmpdir(), "aac-builder-"));
@@ -83,6 +84,21 @@ describe.skipIf(executablePath === undefined)(
         write: false,
       });
       runtime = result.outputFiles[0]!.text;
+      // The real linkConversations, bundled to run in the page.
+      const links = await build({
+        stdin: {
+          contents:
+            'export { linkConversations } from "./src/report-levels.ts";',
+          resolveDir: process.cwd(),
+          loader: "ts",
+        },
+        plugins: [aacBrowser],
+        bundle: true,
+        format: "iife",
+        globalName: "CvLinks",
+        write: false,
+      });
+      linkConversationsCode = links.outputFiles[0]!.text;
     }, BROWSER_HOOK_TIMEOUT_MS);
 
     afterAll(async () => {
@@ -118,44 +134,25 @@ describe.skipIf(executablePath === undefined)(
         state: "attached",
       });
       await page.waitForTimeout(200);
-      const shown = await page.evaluate(() => {
-        const app = document.getElementById("app")!;
-        // The scripted page as the static page is built to show it: the
-        // core's record entries built (closed), and each conversation kept
-        // once, in the records section (capsule-viewer#67). The static page
-        // has nothing pending there, so this changes nothing on it.
-        // (report-levels.ts linkConversations, inlined: this runs in the
-        // page.)
-        for (const entry of app.querySelectorAll<HTMLDetailsElement>(
-          'details.cv-record[data-body="pending"]',
+      // The scripted page as the static page is built to show it: the
+      // core's record entries built (closed), and each conversation kept
+      // once, in the records section, by the same linkConversations the
+      // static build runs (capsule-viewer#67). The static page has nothing
+      // pending and nothing left to link, so this changes nothing there.
+      await page.evaluate(() => {
+        for (const entry of document.querySelectorAll<HTMLDetailsElement>(
+          '#app details.cv-record[data-body="pending"]',
         )) {
           entry.open = true;
           entry.dispatchEvent(new Event("toggle"));
           entry.open = false;
         }
-        const records = new Set(
-          [
-            ...app.querySelectorAll(
-              "details.cv-record > .cv-record-anchor[id]",
-            ),
-          ].map((e) => e.id),
-        );
-        for (const toggle of app.querySelectorAll<HTMLDetailsElement>(
-          'details[data-section="conversation"][data-record]',
-        )) {
-          const link = toggle.parentElement?.querySelector<HTMLElement>(
-            ":scope > a.chat-static",
-          );
-          if (!records.has(`record-${toggle.dataset.record}`) || link == null)
-            continue;
-          link.hidden = false;
-          toggle.remove();
-        }
-        for (const body of app.querySelectorAll(
-          'details[data-section="conversation"] > .chat-body',
-        ))
-          body.remove();
-        for (const close of app.querySelectorAll(".chat-close")) close.remove();
+      });
+      await page.evaluate(
+        `${linkConversationsCode};CvLinks.linkConversations(document.getElementById("app"));`,
+      );
+      const shown = await page.evaluate(() => {
+        const app = document.getElementById("app")!;
         // The markup as parsing reads it (a script-drawn table row gets the
         // implied tbody), so a static page and a drawn page compare.
         const holder = document.createElement("div");

@@ -631,22 +631,48 @@ export function conversationFold(
  * it. A browser that opens a closed <details> for a fragment does the same
  * on a page that runs no script.
  */
-export function revealRecord(from: Element, recordId: string): void {
-  const target = from.ownerDocument.getElementById(recordAddress(recordId));
+export function revealRecord(from: Node, recordId: string): void {
+  const doc = from.nodeType === 9 ? (from as Document) : from.ownerDocument!;
+  const target = doc.getElementById(recordAddress(recordId));
+  if (target === null) return;
   for (
-    let at: Element | null = target;
+    let at: Element | null = target.parentElement?.closest("details") ?? null;
     at !== null;
     at = at.parentElement?.closest("details") ?? null
   )
-    if (at.localName === "details" && !(at as HTMLDetailsElement).open)
-      openToggle(at as HTMLDetailsElement);
+    if (!(at as HTMLDetailsElement).open) openToggle(at as HTMLDetailsElement);
+  target.scrollIntoView?.();
+}
+
+const hashWatched = new WeakSet<Document>();
+
+/**
+ * Where script runs: a page opened at a record's address (`#record-<id>`),
+ * or whose address changes to one, opens that record's entry and every
+ * fold around it, as a link to it does (`revealRecord`). One listener per
+ * document.
+ */
+export function revealRecordsByHash(doc: Document): void {
+  const view = doc.defaultView;
+  if (view === null) return;
+  const go = (): void => {
+    const hash = view.location.hash;
+    if (hash.startsWith("#record-"))
+      revealRecord(doc, decodeURIComponent(hash.slice("#record-".length)));
+  };
+  go();
+  if (hashWatched.has(doc)) return;
+  hashWatched.add(doc);
+  view.addEventListener("hashchange", go);
 }
 
 /**
  * For a page that runs no script: every in-place conversation whose record
  * the core's records section holds becomes a link to it, so the page keeps
  * one copy of each conversation however many cards cite it, built or not.
- * Returns how many it linked.
+ * A conversation whose record is not there (none is stated, or its
+ * transcript is absent or does not check) keeps its toggle and its state
+ * note. Returns how many it linked.
  */
 export function linkConversations(root: ParentNode): number {
   let linked = 0;
@@ -669,13 +695,6 @@ export function linkConversations(root: ParentNode): number {
     toggle.remove();
     linked++;
   }
-  // A conversation whose record is not on the page keeps its toggle, but a
-  // page that runs no script holds no chat outside the records section: a
-  // body already built (at depth L1 or L2) is dropped.
-  for (const body of root.querySelectorAll(
-    'details[data-section="conversation"] > .chat-body',
-  ))
-    body.remove();
   // A page that runs no script cannot close a toggle from a control.
   for (const close of root.querySelectorAll(".chat-close")) close.remove();
   return linked;
@@ -801,7 +820,7 @@ ${s} .chat-body{padding:4px 12px 12px}
 ${s} .chat-bar{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px}
 ${s} .chat-bar .chat-close{font-weight:600}
 ${s} .chat-bar .chat-records{margin-left:auto}
-${s} a.chat-static{display:inline-block;margin-top:8px;font-size:13.5px;font-weight:600}
+${s} a.chat-static:not([hidden]){display:inline-block;margin-top:8px;font-size:13.5px;font-weight:600}
 ${s} .chat li.turn .say{white-space:pre-wrap;word-break:break-word}
 ${s} .chat li.turn pre.say{margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;max-height:180px;overflow:auto;color:var(--slate)}
 ${s} .chat li.turn.system .say{max-height:120px;overflow:auto;font-size:12px;color:var(--slate)}
