@@ -2060,8 +2060,10 @@ const BUILTIN_MODULE_INTERPRETERS: Readonly<
 
 /**
  * The extension interpreters a module ran on `bundle`. The contract-report
- * module runs the Result reader, and the one earlier kind's reader whose
- * data it drew (contractReportInput), never both.
+ * module applies the `contract-report/v1` block it resolved on
+ * (contract-report/v1 section 4) and runs the Result reader, plus the one
+ * earlier kind's reader whose data it drew (contractReportInput), never both:
+ * until their removal, earlier blocks are read by their own readers (section 5).
  */
 function moduleInterpreters(
   id: string,
@@ -2075,8 +2077,9 @@ function moduleInterpreters(
     const input =
       drawn === undefined ? contractReportInput(bundle) : (drawn ?? undefined);
     return input === undefined
-      ? ["result-root"]
+      ? ["contract-report", "result-root"]
       : [
+          "contract-report",
           "result-root",
           input.grouping === "lines"
             ? "outcome-report-card"
