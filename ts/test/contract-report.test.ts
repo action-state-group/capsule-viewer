@@ -1841,7 +1841,7 @@ it("a date not yet in force is never drawn without its conditions (D3)", async (
   for (const note of notes) {
     expect(note.querySelector('i[data-source="producer"]')).toBeNull();
     expect(note.textContent).toContain(
-      "Its conditions (to whom and when it binds) are not stated in this report's wording.",
+      "The conditions on when and to whom this applies are not stated in this report.",
     );
     expect(note.textContent).not.toContain("2 Dec 2027");
   }

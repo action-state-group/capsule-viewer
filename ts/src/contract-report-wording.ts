@@ -1179,7 +1179,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
   lines: "06244cb985e97d44bdf934dcac5a3bf899925865adf11f9d18bc093973906390",
-  groups: "216cb297398d8b6fcc3c00f9ba270265858adacfb0106d034705e023bcadbe8a",
+  groups: "f6698171c64d097348b9053874b7e7042d2cbef9b55c6f7d2028448305a9dbd8",
 });
 
 export interface Words {

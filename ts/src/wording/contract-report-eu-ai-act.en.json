@@ -222,7 +222,7 @@
     "groups.row.out-of-scope": "Out of scope: did not arise",
     "groups.row.out-of-scope-note": "{n} judged out of scope (did not arise)",
     "groups.later.note": "Applies from {date}, as the producer copied it from the contract, not re-checked here: readiness only, not counted.",
-    "groups.later.conditions-not-stated": "Its conditions (to whom and when it binds) are not stated in this report's wording.",
+    "groups.later.conditions-not-stated": "The conditions on when and to whom this applies are not stated in this report.",
     "grade.self-attested": "self-attested",
     "grade.witnessed": "witnessed",
     "grade.countersigned": "countersigned",
