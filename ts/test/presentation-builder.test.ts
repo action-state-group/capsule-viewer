@@ -7,7 +7,7 @@ import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { JSDOM } from "jsdom";
 import { beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
-import { linkConversations } from "../src/report-levels.js";
+import { linkConversations, recordAddress } from "../src/report-levels.js";
 import {
   BUILTIN_PRESENTATIONS,
   createPresentationRegistry,
@@ -1538,4 +1538,44 @@ describe("the Go twin's goldens", () => {
       readFileSync(goTestdata("offline-fragment.txt"), "utf8"),
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+// The static page keeps one copy of each conversation (capsule-viewer#67)
+// ---------------------------------------------------------------------------
+
+it("the static page: each record's entry is built, and a conversation's link target holds the chat", async () => {
+  const source = fixture("result-root-bundle.json");
+  const caseInput = ((source.disclosures as Obj)["case-1"] as Obj)
+    .agent_input as Obj;
+  caseInput.agent_interaction = {
+    messages: [
+      { role: "assistant", content: "Hi! How can I help you today?" },
+      { role: "user", content: "Please cancel EHGLP3." },
+      { role: "assistant", content: "Let me check it." },
+      { role: "tool", content: '{"reservation_id":"EHGLP3"}' },
+    ],
+  };
+  const { bundle, ids } = await sealEvidenceBundle(source);
+  const id = ids["case-1"]!;
+  const built = await buildPresentation(bundle, {
+    presentation: "auto",
+    audience: "*",
+    format: "static",
+    runtime: { code: runtime },
+  });
+  if (built.format !== "static") throw new Error("static expected");
+  const page = new JSDOM(built.html).window.document;
+  expect(page.querySelectorAll('[data-body="pending"]')).toHaveLength(0);
+  const target = page.getElementById(recordAddress(id))!;
+  expect(target).not.toBeNull();
+  // the content, not only an open attribute: the chat is in the page
+  expect(target.querySelectorAll("li.turn")).toHaveLength(4);
+  expect(target.textContent).toContain("Please cancel EHGLP3.");
+  // closed until a link lands on it
+  expect(target.hasAttribute("open")).toBe(false);
+  // one copy: the conversation's words appear once in the whole page
+  expect(
+    page.body.innerHTML.split("Hi! How can I help you today?").length - 1,
+  ).toBe(1);
 });

@@ -673,8 +673,7 @@ export function linkConversations(root: ParentNode): number {
     linked++;
   }
   // A page that runs no script cannot close a toggle from a button.
-  for (const close of root.querySelectorAll(".chat-close"))
-    close.remove();
+  for (const close of root.querySelectorAll(".chat-close")) close.remove();
   return linked;
 }
 
@@ -794,6 +793,11 @@ ${s} .chat li.turn.user{justify-self:end;background:var(--person-l);border-color
 ${s} .chat li.turn.assistant{justify-self:start}
 ${s} .chat li.turn.tool,${s} .chat li.turn.system{justify-self:center;max-width:96%;border-style:dashed;background:#fff}
 ${s} .chat li.turn .who{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-bottom:2px}
+${s} .chat-body{padding:4px 12px 12px}
+${s} .chat-bar{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px}
+${s} .chat-bar .chat-close{font-weight:600}
+${s} .chat-bar .chat-records{margin-left:auto}
+${s} a.chat-static{display:inline-block;margin-top:8px;font-size:13.5px;font-weight:600}
 ${s} .chat li.turn .say{white-space:pre-wrap;word-break:break-word}
 ${s} .chat li.turn pre.say{margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;max-height:180px;overflow:auto;color:var(--slate)}
 ${s} .chat li.turn.system .say{max-height:120px;overflow:auto;font-size:12px;color:var(--slate)}

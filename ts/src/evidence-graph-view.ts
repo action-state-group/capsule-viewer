@@ -1136,7 +1136,14 @@ function renderCitedMember(
   resolution: CitedRecord["agentInput"],
   committed: string | undefined,
 ): void {
-  if (resolution.state !== "disclosed" && committed === undefined) return;
+  // A value that does not match its commitment is always noted, even where
+  // the caller has no committed digest to name (a record no claim reaches).
+  if (
+    resolution.state !== "disclosed" &&
+    resolution.state !== "disclosure_mismatch" &&
+    committed === undefined
+  )
+    return;
   host.append(element("h5", field));
   if (resolution.state === "disclosed") {
     host.append(renderContent(resolution.payload, DEFAULT_WORDS.lines));
@@ -1147,7 +1154,9 @@ function renderCitedMember(
   const note = element(
     "p",
     resolution.state === "disclosure_mismatch"
-      ? `withheld · ${committed}: the disclosed value does not match the committed digest`
+      ? committed === undefined
+        ? "withheld: the disclosed value does not match the committed digest"
+        : `withheld · ${committed}: the disclosed value does not match the committed digest`
       : `withheld · ${committed}`,
   );
   note.dataset.disclosure = resolution.state;
