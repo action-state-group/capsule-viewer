@@ -1686,3 +1686,39 @@ it("a Result whose claims the card cannot place one by one is drawn as the gener
   // every claim is listed, the re-judged one too
   expect(root.textContent).toContain(again.id);
 });
+
+for (const [name, file, change] of [
+  [
+    "an Outcomes claim whose requirement the terms do not place",
+    "outcome-report-bundle.json",
+    (claim: Obj) => {
+      claim.requirement_ref = "extra";
+    },
+  ],
+  [
+    "a claim of a type the card does not know",
+    "compliance-bundle.json",
+    (claim: Obj) => {
+      claim.type = "x-example";
+    },
+  ],
+  [
+    "a claim under a second contract",
+    "compliance-bundle.json",
+    (claim: Obj) => {
+      claim.contract_ref = `${claim.contract_ref as string}-other`;
+    },
+  ],
+] as const)
+  it(`${name} sends the Result to the generic Result page, every claim listed`, async () => {
+    const source = fixture(file);
+    (source.extensions as Obj)["contract-report/v1"] = {};
+    const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+    const claim = (doc.claims as Obj[])[0]!;
+    change(claim);
+    const root = await renderSource(source);
+    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-notice="card-unfit"]')).not.toBeNull();
+    expect(root.querySelector('[data-page="result"]')).not.toBeNull();
+    expect(root.textContent).toContain(claim.id as string);
+  });

@@ -57,11 +57,11 @@ claim's ordinary tier / grade / sufficiency / verdict lines, under three
 rules that are pinned by negative fixtures and tests, never by styling:
 
 - **A reconcile row shows the six states as counts** (`MATCHED · A_ONLY ·
-B_ONLY · CONFLICTING · INSUFFICIENT · UNRESOLVED`, read from the claim's
+  B_ONLY · CONFLICTING · INSUFFICIENT · UNRESOLVED`, read from the claim's
   `tallies`, keyed lowercase as `schemas/judge/close-v1.json` keys them),
   one row each, always all six, never a ratio or a percentage. `A_ONLY` / `B_ONLY` render as
-  _one side missing_ (`rv0-rs-one-sided`); `CONFLICTING` renders as _both
-  sides disagree_ (`rv0-rs-finding`). The two share no class and no
+  *one side missing* (`rv0-rs-one-sided`); `CONFLICTING` renders as *both
+  sides disagree* (`rv0-rs-finding`). The two share no class and no
   wording -- "one side missing isn't a finding; both sides disagreeing
   is." A `tallies` object missing any state is refused, never read as zero.
 - **A close row renders the three Close states differently** --
@@ -253,7 +253,7 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   (sections 3.2 and 4), with the static ambiguity test at registration and a hard error,
   never first-wins, at resolution (`tests/test_receipt_registry.py`).
 - **The module never verifies.** Its context is built from what `capsulectl verify
---bundle` reported (`verifier_report.py`), and that report is refused unless its
+  --bundle` reported (`verifier_report.py`), and that report is refused unless its
   `bundle_digest` is the digest of the exact bundle supplied (`digest.py`), so an
   edited copy never renders under the original's verdict. Committed words are shown
   only when the core's `sha256-jcs-nonce256` service (`binding.py`) opens them.
@@ -385,7 +385,7 @@ refusals are marked and counted.
 
 - **The page is drawn over the ledger's evidence file.** The ledger's
   producer makes the file (`evidence-bundle/v2`), for example `capsule-emit
-bundle LEDGER --all -o bundle.json`, which proves every record under the
+  bundle LEDGER --all -o bundle.json`, which proves every record under the
   log's signed checkpoint (and refuses a log with none); this package never
   builds one and holds no key. That file reads VALID only when every leaf up
   to the checkpoint is a record, as in an unpadded mesh ledger directory.
@@ -410,7 +410,7 @@ bundle LEDGER --all -o bundle.json`, which proves every record under the
   record alone but not that none is missing), INVALID as the contract's
   refusal with the failing checks and no row. The shell follows the
   module with the verifier's checks on every path (`present(...,
-core_checks=True)`): every check, the witness check, what the file carries
+  core_checks=True)`): every check, the witness check, what the file carries
   unchecked, and each record's log position, identity and signature. The
   module never verifies; if it throws or draws nothing, the verification is
   shown as it was.

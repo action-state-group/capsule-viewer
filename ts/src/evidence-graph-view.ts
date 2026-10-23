@@ -4,6 +4,7 @@ import {
   disclosureOf,
   isVerifiedBundleContext,
   REQUIREMENT_CLAIM,
+  readOutcomeReportTerms,
   type ExtensionInterpreterId,
   type PresentationManifest,
   withCountersigners,
@@ -1345,7 +1346,7 @@ const BUCKETS: ReadonlyArray<
 // claims cite, and an UNKNOWN count is never called unresolved requirements.
 /** Said above the generic Result page when a Result opted into a card whose layout cannot hold its claims (`claimsFitCard`). */
 export const CARD_UNFIT_NOTE =
-  "This Result's claims do not fit the report card (a requirement judged more than once in one conversation, claims under more than one contract, or claims the card cannot place), so every claim is listed below instead.";
+  "This Result's claims don't fit the report layout, so every claim is listed below instead.";
 
 function renderResultPage(result: ResultRoot, root: HTMLElement): void {
   const section = element("section");
@@ -1763,23 +1764,34 @@ function contractReportInput(bundle: unknown): ContractReportInput | undefined {
  * Whether every claim has a place of its own on the outcome or EU card. The
  * cards lay a Result out one conversation by one requirement, so they can
  * show a claim only when it is a requirement claim whose id names its
- * conversation (`<conversation>::…`), the EU card's also with a grouped
- * requirement (`<group>.<test>`), no two claims share a conversation and a
- * requirement (a re-judged requirement), and all cite one contract. Any
- * other Result is drawn as the generic Result page, which lists every claim:
- * a card never merges a claim into another or leaves one out
- * (contract-report/v1 section 2).
+ * conversation (`<conversation>::…`), no two claims share a conversation
+ * and a requirement (a re-judged requirement), and all cite one contract.
+ * The EU card also needs a grouped requirement (`<group>.<test>`); the
+ * Outcomes card needs one of the terms' check and criterion pairs
+ * (`readOutcomeReportTerms`), since agent-action-capsule's outcome model
+ * leaves out any other. Any other Result is drawn as the generic Result
+ * page, which lists every claim: a card never merges a claim into another
+ * or leaves one out (contract-report/v1 section 2).
  */
 function claimsFitCard(
   result: ResultRoot,
   grouping: ContractReportInput["grouping"],
 ): boolean {
   if (new Set(result.claims.map((c) => c.contractRef)).size > 1) return false;
+  const placed =
+    grouping === "lines"
+      ? new Set(
+          readOutcomeReportTerms(result).checks.flatMap((check) =>
+            check.criteria.map((criterion) => `${check.id}.${criterion.id}`),
+          ),
+        )
+      : undefined;
   const seen = new Set<string>();
   for (const claim of result.claims) {
     if (claim.type !== REQUIREMENT_CLAIM) return false;
     const sep = claim.id.indexOf("::");
     if (sep <= 0) return false;
+    if (placed !== undefined && !placed.has(claim.requirementRef)) return false;
     if (grouping === "groups") {
       const dot = claim.requirementRef.indexOf(".");
       if (dot <= 0 || dot === claim.requirementRef.length - 1) return false;
