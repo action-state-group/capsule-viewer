@@ -243,12 +243,14 @@ here. The format follows
 
 - The two report notes on tampering (`groups.vd.note`, `lines.rp.tamper`) say
   what a bundle that did not verify now gets: no report, the red "Check
-  failed" callout, the checks that failed and no record content. They said
+  failed" callout, the checks that failed and each record's id and status,
+  with no record content. They said
   the whole page was replaced by a banner, which stopped being true with
   capsule-viewer#74 and #76.
 - A capsule id the bundle lists more than once has one entry in "Records in
-  this bundle", with one address and a note of how many times it is listed;
-  it had an entry per listing and only one address.
+  this bundle", with one address and a note of how many times it is listed,
+  and the summary counts ids, naming listings when they differ; it had an
+  entry per listing and only one address.
 
 - The verification page lists `contract-report/v1` as interpreted, shown by
   the page's module, when the contract-report module drew the page; the

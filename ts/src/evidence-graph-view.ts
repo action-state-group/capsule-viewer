@@ -557,11 +557,11 @@ interface RecordEntries {
   readonly build: (capsuleId: string, record: CitedRecord) => Node;
 }
 
-// Records in this bundle: one entry per record, each with its own address
+// Records in this bundle: one entry per capsule id, each with its own address
 // (`record-<capsule id>`, from the id alone, so every packaging of the page
 // gives the same one), and, for an evidence-book record, a second address
 // under the id of the capsule it carries, so a link by either id lands
-// here. An id the bundle repeats gets its address once. The address sits
+// here. An id the bundle repeats is one entry with one address. The address sits
 // inside the entry, not on it: a browser following a link opens every
 // closed <details> around its target, so the entry itself opens too, with
 // no script (and, where script runs, its body is built on that toggle).
@@ -580,9 +580,22 @@ function renderRecordsList(
   const details = document.createElement("details");
   details.dataset.records = "coverage-detail";
   details.open = depth === "L2";
+  // One entry per capsule id, in first-listed order: a repeated id is one
+  // record listed more than once, so it gets one entry, one address and a
+  // note of how many times the bundle lists it, with each listing's status.
+  const listings = new Map<string, RecordCoverage[]>();
+  for (const record of records)
+    listings.set(record.capsuleId, [
+      ...(listings.get(record.capsuleId) ?? []),
+      record,
+    ]);
+  const count =
+    listings.size === records.length
+      ? recordsWord(listings.size)
+      : `${recordsWord(listings.size)} (${records.length} listings)`;
   const summary = element(
     "summary",
-    `Records in this bundle: ${recordsWord(records.length)}, by capsule id`,
+    `Records in this bundle: ${count}, by capsule id`,
   );
   details.append(summary);
   if (!entries.verified) {
@@ -625,15 +638,6 @@ function renderRecordsList(
     anchor.id = name;
     return anchor;
   };
-  // One entry per capsule id, in first-listed order: a repeated id is one
-  // record listed more than once, so it gets one entry, one address and a
-  // note of how many times the bundle lists it, with each listing's status.
-  const listings = new Map<string, RecordCoverage[]>();
-  for (const record of records)
-    listings.set(record.capsuleId, [
-      ...(listings.get(record.capsuleId) ?? []),
-      record,
-    ]);
   for (const [capsuleId, listed] of listings) {
     const record = listed[0]!;
     const item = element("li");

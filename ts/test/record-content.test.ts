@@ -164,6 +164,12 @@ it("a bundle that did not verify: the records list names each record, its kind a
   const repeated = items.filter((i) => i.dataset.listed === "2");
   expect(repeated).toHaveLength(1);
   expect(repeated[0]!.textContent).toContain("listed 2 times in this bundle");
+  expect(
+    root.querySelector('[data-records="coverage-detail"] > summary')!
+      .textContent,
+  ).toBe(
+    `Records in this bundle: ${listed.size} records (${(bundle.records as Obj[]).length} listings), by capsule id`,
+  );
   expect(repeated[0]!.querySelectorAll("[data-record-status]")).toHaveLength(2);
   for (const item of items) {
     expect(item.textContent).toContain(item.dataset.capsuleId!);
