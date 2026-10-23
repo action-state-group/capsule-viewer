@@ -227,8 +227,8 @@ here. The format follows
   the page's module, when the contract-report module drew the page; the
   earlier `outcome-report/v1` or `eu-ai-act-compliance/v1` block it drew its
   card from is still listed as interpreted beside it. It read "not
-  interpreted" before. Needs agent-action-capsule's `contract-report`
-  interpreter id (agent-action-capsule#377). (#72)
+  interpreted" before. Takes agent-action-capsule 0.6.1, which adds the
+  `contract-report` interpreter id (agent-action-capsule#377). (#72)
 
 - The outcome report counts the criteria each conversation was judged on
   instead of always saying "nine", and fits a 390px viewport: the header
