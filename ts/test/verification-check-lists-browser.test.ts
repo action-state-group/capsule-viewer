@@ -94,7 +94,10 @@ describe.skipIf(executablePath === undefined)(
       const context = await browser.newContext();
       const page = await context.newPage();
       await page.goto(pathToFileURL(file).href);
-      await page.waitForSelector('[data-checks="scope"]');
+      await page.waitForSelector('[data-checks="scope"]', {
+        // The section is folded, so it is drawn but not visible.
+        state: "attached",
+      });
       const shown = await page.evaluate(() => {
         const ids = (which: string): string[] =>
           Array.from(

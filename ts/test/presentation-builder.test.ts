@@ -1372,6 +1372,8 @@ describe("the static page", () => {
       await openPage(html.html, "file:///themed.html"),
     );
     expectStaticPage(statik.html, "verified");
+    // The card's own frame survives the static page too (capsule-viewer#60).
+    expect(statik.html).toContain('<div id="app" class="cv-shell-chrome">');
   });
 
   it("every style it carries is in its CSP, by hash", async () => {

@@ -288,9 +288,11 @@ describe("resolution and rendering (spec section 4.3)", () => {
     // The chrome class the module set is discarded with its content.
     const banner = page.querySelector<HTMLElement>("[data-verify]")!;
     expect(banner.dataset.verify).toBe("verified");
-    expect(banner.className).toBe("");
+    expect(banner.className).toBe("cv-pill");
     expect(page.lastElementChild).toBe(
-      page.querySelector('[data-page="verification"]'),
+      page
+        .querySelector('[data-page="verification"]')!
+        .closest("[data-checked]"),
     );
   });
 

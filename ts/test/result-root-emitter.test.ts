@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
@@ -61,17 +61,17 @@ describe("Result-root bundle through the emitter", () => {
       fixture("result-root-bundle.sealed.json"),
       IIFE,
     );
-    const expected = readFileSync(
-      resolve(
-        process.cwd(),
-        "..",
-        "go",
-        "emitter",
-        "testdata",
-        "expected-result-root.html",
-      ),
-      "utf8",
+    const golden = resolve(
+      process.cwd(),
+      "..",
+      "go",
+      "emitter",
+      "testdata",
+      "expected-result-root.html",
     );
+    // Regenerate with AAC_WRITE_GOLDEN=1, as the emitter-csp twin does.
+    if (process.env.AAC_WRITE_GOLDEN === "1") writeFileSync(golden, html);
+    const expected = readFileSync(golden, "utf8");
     expect(html).toBe(expected);
   });
 
