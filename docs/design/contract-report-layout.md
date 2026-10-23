@@ -292,7 +292,8 @@ replace the stamp with a callout):
 - Dropped: headline numbers in conversations or obligations, with the
   aggregate moved to L1. Ethan agreed on 2026-10-23 with Steven's ruling
   that coverage leads and the claim buckets follow ([er] §3), so the order
-  stays: the compact coverage line, then the per-case table.
+  stays as built: the compact aggregate (coverage line, then the buckets),
+  then the Outcomes per-case lines or the EU test table.
 - Undecided by Ethan: one row per EU obligation with a worst result. It
   conflicts with [cr] §2 (one row per requirement, no single score).
 
