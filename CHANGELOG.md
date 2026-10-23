@@ -129,8 +129,9 @@ here. The format follows
   claims of another type or id shape) is drawn as the generic Result page
   with a note, so no claim is merged or left out. Tuning details in
   `ts/README.md`. By Jody Edmondson (#58), completed by Ethan Zhang.
-- Requires `@action-state-group/agent-action-capsule` 0.6.0 (it was
-  0.5.0), which carries the `contract-report/v1`
+- Requires `@action-state-group/agent-action-capsule` 0.6.1 (it was
+  0.5.0; 0.6.1 adds the `contract-report` interpreter id, #72), which
+  carries the `contract-report/v1`
   registration (#352), `out_of_scope`/`applies_from` (#368, #363,
   8732264) this release also ports onto `compliance.ts`,
   `compliance-view.ts`, `outcome-report-view.ts` and the generic Result
@@ -222,6 +223,13 @@ here. The format follows
   functions until a release exports them.
 
 ### Fixed
+
+- The verification page lists `contract-report/v1` as interpreted, shown by
+  the page's module, when the contract-report module drew the page; the
+  earlier `outcome-report/v1` or `eu-ai-act-compliance/v1` block it drew its
+  card from is still listed as interpreted beside it. It read "not
+  interpreted" before. Takes agent-action-capsule 0.6.1, which adds the
+  `contract-report` interpreter id (agent-action-capsule#377). (#72)
 
 - The outcome report counts the criteria each conversation was judged on
   instead of always saying "nine", and fits a 390px viewport: the header

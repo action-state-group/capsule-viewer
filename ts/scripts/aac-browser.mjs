@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // An esbuild plugin for bundling src/browser.ts. Under the `browser`
-// condition, @action-state-group/agent-action-capsule 0.6.0 resolves to its
+// condition, @action-state-group/agent-action-capsule 0.6.1 resolves to its
 // browser entry, which does not re-export four browser-safe modules the moved
 // views import (evidence-graph, outcome-report, outcome-report-presentation,
 // report-rows), and which also carries AAC's own copy of the views. This
@@ -39,8 +39,8 @@ export const aacBrowser = {
     const { version } = JSON.parse(
       readFileSync(join(dist, "..", "package.json"), "utf8"),
     );
-    if (version !== "0.6.0")
-      throw new Error(`aac-browser expects ${name} 0.6.0, found ${version}`);
+    if (version !== "0.6.1")
+      throw new Error(`aac-browser expects ${name} 0.6.1, found ${version}`);
     build.onResolve(
       { filter: /^@action-state-group\/agent-action-capsule$/ },
       () => ({
