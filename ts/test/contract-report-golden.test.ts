@@ -222,10 +222,13 @@ for (const c of CASES)
     const root = document.createElement("main");
     await renderEvidenceGraph(await sealed(c), root);
     expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
-    // The card only: the verification page after it is the core's, and no
-    // change to the cards' code or words reaches it.
+    // The card only, in its three host regions (L0, L1, L2): the
+    // verification section in L2 is the core's, and no change to the cards'
+    // code or words reaches it.
     const card = (): string =>
-      root.querySelector<HTMLElement>(`[data-page="${c.page}"]`)!.outerHTML;
+      [...root.querySelectorAll<HTMLElement>(`[data-page="${c.page}"]`)]
+        .map((region) => region.outerHTML)
+        .join("\n");
     check(`${c.name}.closed`, card());
     openAll(root);
     check(`${c.name}.open`, card());

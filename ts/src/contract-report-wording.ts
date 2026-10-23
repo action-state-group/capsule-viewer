@@ -577,6 +577,15 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   ...SECTION3_ENUMS.status.map((v) => `status.${v}`),
   ...SECTION3_ENUMS.grade.map((v) => `grade.${v}`),
   ...SECTION3_ENUMS.sufficiency.map((v) => `sufficiency.${v}`),
+  // The shared front (report-front.ts): the mock-judge line, what the
+  // aggregate's unknown count is, what the page and the bundle carry, and
+  // the producer's findings label.
+  "front.mock",
+  "front.agg.unknown",
+  "front.check.s1",
+  "front.check.s3.receipt",
+  "front.check.s3.none",
+  "front.findings.label",
   // The front block (report-provenance.ts): who judged, who witnessed, what verified.
   "prov.judge.none",
   "prov.judge.model.does-not-recompute",
@@ -695,8 +704,12 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pin.not-stated",
   "lines.why-missed.structured",
   "lines.why-missed.unstructured",
-  "lines.stamp",
-  "lines.stamp.small",
+  "prov.brief.judge.not-stated",
+  "prov.brief.judge.mock",
+  "prov.brief.judge.withheld",
+  "prov.brief.verifier.stated",
+  "prov.brief.witness.not-stated",
+  "prov.brief.verifier.not-stated",
   "lines.hc.none",
   "lines.terms.lede",
   "lines.terms.lede.agreed",
@@ -1154,8 +1167,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "38c9d49249bfee5d67cdc9efff909a47b691eb7119dbacb965ae0f4e0669388b",
-  groups: "26945fd1a5f98c86281913e42f57510db88be3b6bd6c71581728f179cb20c7d9",
+  lines: "7d4cbc9b0625e0beac32b09db348016217f61a0d22dd1cb81f5aa04710ba7765",
+  groups: "f443ccbc8399695255fa786679cbce8b2913f74d0870e9d4dcf20caae9777e20",
 });
 
 export interface Words {

@@ -449,8 +449,23 @@ describe("theme, wording, locale and depth", () => {
       if (built.format !== "html") throw new Error("html expected");
       expect(built.html, name).not.toBe(base.html);
       const shown = await openPage(built.html, "file:///b.html");
-      expect(shown.evidence_ids, name).toEqual(baseline.evidence_ids);
-      expect(shown, name).toEqual(baseline);
+      if (name.startsWith("depth")) {
+        // Depth only opens levels (presentation contract section 9.1): the
+        // verdicts, pages and refusals are the same, and an opened level
+        // only adds what its toggle builds, never drops an identifier.
+        const { html: _h, text: _t, evidence_ids: ids, ...rest } = shown;
+        const {
+          html: _bh,
+          text: _bt,
+          evidence_ids: baseIds,
+          ...baseRest
+        } = baseline;
+        expect(rest, name).toEqual(baseRest);
+        expect(ids, name).toEqual(expect.arrayContaining(baseIds));
+      } else {
+        expect(shown.evidence_ids, name).toEqual(baseline.evidence_ids);
+        expect(shown, name).toEqual(baseline);
+      }
     }
   }, 120_000);
 

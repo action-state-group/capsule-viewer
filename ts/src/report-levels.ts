@@ -120,7 +120,10 @@ export function nestingProblems(root: ParentNode): string[] {
 /** Opens a toggle and builds its body now (tests, print). */
 export function openToggle(details: HTMLDetailsElement): void {
   details.open = true;
-  details.dispatchEvent(new Event("toggle"));
+  // The event of the element's own window: a static page is drawn into a
+  // document that is not the global one.
+  const view = details.ownerDocument.defaultView;
+  details.dispatchEvent(new (view === null ? Event : view.Event)("toggle"));
 }
 
 /**

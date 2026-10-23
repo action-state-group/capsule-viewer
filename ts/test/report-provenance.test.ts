@@ -94,29 +94,32 @@ const line = (b: HTMLElement, key: string): HTMLElement =>
 // ---------------------------------------------------------------------------
 
 for (const { card, file, page } of CARDS) {
-  it(`${card} card: the block sits on the front, outside every toggle, with the three lines in order`, async () => {
+  it(`${card} card: the block opens L1 as one folded line, with the three lines in order inside`, async () => {
     const { bundle } = await sealEvidenceBundle(fixture(file));
     const root = await render(bundle);
     const b = block(root, page);
-    expect(b.closest("details")).toBeNull();
+    // One level-1 toggle: a few words per line, the whole lines inside.
+    expect(b.tagName).toBe("DETAILS");
+    expect(b.dataset.level).toBe("1");
+    expect(b.parentElement!.closest("details")).toBeNull();
     expect(b.querySelectorAll("details")).toHaveLength(0);
+    expect(b.querySelector(":scope > summary")!.textContent).toMatch(
+      /^[^·]+ · [^·]+ · [^·]+$/u,
+    );
     expect([...b.querySelectorAll("dt")].map((d) => d.textContent)).toEqual([
       "Judged by",
       "Witnessed by",
       "Verified by",
     ]);
-    // on the front: in the outcome card's summary sheet; on the EU card
-    // between its header and its summary
-    if (card === "outcome")
-      expect(b.parentElement!.matches(".oi > .sheet > .pad")).toBe(true);
-    else {
-      expect(b.previousElementSibling!.matches('[data-section="header"]')).toBe(
-        true,
-      );
-      expect(b.nextElementSibling!.matches('[data-section="summary"]')).toBe(
-        true,
-      );
-    }
+    // It opens L1, above the rows, never in L0: nothing above the fold
+    // summarizes assurance (evidence-result-v0 section 3).
+    const level = b.closest<HTMLElement>("[data-page]")!;
+    expect(level.dataset.level).toBe("L1");
+    const first = [...level.children].find((c) => c.tagName !== "STYLE")!;
+    expect(first.contains(b)).toBe(true);
+    expect(
+      root.querySelector('[data-level="L0"] [data-section="provenance"]'),
+    ).toBeNull();
     expect(b.textContent).not.toMatch(/customer/iu);
   });
 
@@ -347,8 +350,15 @@ it("judged by: present, mixed, partly withheld, recomputed and absent", () => {
     key: "judge",
     label: "Judged by",
     text: `jev-1.13.0, pinned, pin ${"ab".repeat(6)}… (10 of 10 results)`,
+    brief: "judge pinned",
     state: "stated",
   });
+  // The folded line names a mock judge as one, whatever else it states.
+  expect(
+    judgeLine(tally({ pins: [{ ...one, model: "jev-1.13.0 (mock backend)" }] }))
+      .brief,
+  ).toBe("mock judge");
+  expect(judgeLine(tally({ cited: 0 })).brief).toBe("judge not stated");
   const mixed = judgeLine(
     tally({
       pins: [

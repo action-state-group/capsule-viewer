@@ -32,7 +32,18 @@ import {
 } from "./report-levels.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
-import { provenanceLines, renderProvenance } from "./report-provenance.js";
+import {
+  provenanceLines,
+  renderProvenance,
+  tallyJudges,
+} from "./report-provenance.js";
+import {
+  expandableRow,
+  frontCard,
+  renderAggregate,
+  renderCheckYourself,
+  renderMockJudgeLine,
+} from "./report-front.js";
 import type { Words } from "./contract-report-wording.js";
 
 /**
@@ -1152,6 +1163,7 @@ function renderMeta(
   host: HTMLElement,
   model: OutcomeReportModel,
   w: Words,
+  notes: HTMLElement,
 ): void {
   const section = el("section", "");
   section.dataset.section = "meta";
@@ -1221,7 +1233,7 @@ function renderMeta(
   if (note !== undefined) {
     const label = el("p", "date-note", note);
     label.dataset.dateNote = model.dating.basis;
-    section.append(label);
+    notes.append(label);
   }
   host.append(section);
 }
@@ -1235,6 +1247,7 @@ function renderLines(
   model: OutcomeReportModel,
   runInfo: OutcomeReportRunInfo,
   w: Words,
+  notes: HTMLElement,
 ): void {
   const section = el("section", "");
   section.dataset.section = "lines";
@@ -1299,10 +1312,12 @@ function renderLines(
     lines.push(
       line("undecided", undecided.length, share(undecided.length), undecided),
     );
-  lines.push(
-    line("held", model.heldCount, fmtCount(model.heldCount)),
-    line("added", model.addedCount, fmtCount(model.addedCount)),
-  );
+  // A person's re-grades are lines only when this bundle has one; their
+  // absence is said where the re-grade records are (renderHumanChecks).
+  if (model.heldCount > 0)
+    lines.push(line("held", model.heldCount, fmtCount(model.heldCount)));
+  if (model.addedCount > 0)
+    lines.push(line("added", model.addedCount, fmtCount(model.addedCount)));
   for (const line of lines) {
     const tr = document.createElement("tr");
     tr.dataset.line = line.key;
@@ -1335,7 +1350,7 @@ function renderLines(
   );
   na.dataset.line = "not-applicable";
   na.dataset.count = String(model.notApplicableCount);
-  section.append(na);
+  notes.append(na);
   // Result v0 section 4.2: out of scope is counted on its own, never as not
   // applicable and never as met; said only when a bundle has one.
   if (model.outOfScopeCount > 0) {
@@ -1348,15 +1363,9 @@ function renderLines(
     );
     oos.dataset.line = "out-of-scope";
     oos.dataset.count = String(model.outOfScopeCount);
-    section.append(oos);
+    notes.append(oos);
   }
   host.append(section);
-
-  const stamps = el("div", "stamps inl");
-  const stamp = el("div", "stamp rec", w.t("lines.stamp"));
-  stamp.append(el("small", "", w.t("lines.stamp.small")));
-  stamps.append(stamp);
-  host.append(stamps);
 }
 
 // ---------------------------------------------------------------------------
@@ -1377,11 +1386,12 @@ function renderRules(
   table.dataset.rows = "rules";
   const thead = element("thead");
   const headRow = element("tr");
+  // Not met leads; "did not apply" is in each row's expansion, and "could
+  // not decide" stays on the row as its own count (Result v0 section 3).
   headRow.append(
     element("th", w.t("lines.col.rule")),
-    el("th", "n", ruleWord("met", "yes", w).word),
     el("th", "n", ruleWord("not_met", "yes", w).word),
-    el("th", "n", ruleWord("not_applicable", "yes", w).word),
+    el("th", "n", ruleWord("met", "yes", w).word),
     el("th", "n", w.t("lines.rules.col.undecided")),
   );
   // A claim that failed verification or whose evidence is missing has its
@@ -1397,7 +1407,7 @@ function renderRules(
   const anyOutOfScope = model.outOfScopeCount > 0;
   if (anyOutOfScope)
     headRow.append(el("th", "n", ruleWord("out_of_scope", "yes", w).word));
-  const columns = String(5 + (anyUnverified ? 1 : 0) + (anyOutOfScope ? 1 : 0));
+  const columns = String(4 + (anyUnverified ? 1 : 0) + (anyOutOfScope ? 1 : 0));
   thead.append(headRow);
   table.append(thead);
   const tbody = element("tbody");
@@ -1460,13 +1470,12 @@ function renderRules(
       ];
       tr.append(
         nameCell,
-        el("td", "n ok", fmtCount(met.length)),
         el(
           "td",
           `n${notMet.length > 0 ? " bad" : ""}`,
           fmtCount(notMet.length),
         ),
-        el("td", "n", fmtCount(na.length)),
+        el("td", "n ok", fmtCount(met.length)),
         el("td", "n", fmtCount(undecided.length)),
       );
       if (anyUnverified)
@@ -1474,40 +1483,60 @@ function renderRules(
       if (anyOutOfScope)
         tr.append(el("td", "n", fmtCount(outOfScopeHere.length)));
       tbody.append(tr);
-      // The conversations behind a rule open in a full-width row below it,
-      // so each one reads at the table's width.
-      if (problems.length > 0) {
-        const drillRow = el("tr", "drill-row");
-        drillRow.dataset.drillFor = ref;
-        const cell = element("td");
-        cell.setAttribute("colspan", columns);
-        cell.append(
-          conversationsDrill(
-            w.t("lines.rules.drill", {
-              notMet: fmtCount(notMet.length),
-              unverified:
-                unverifiedHere.length > 0
-                  ? w.t("lines.rules.drill.unverified-suffix", {
-                      n: fmtCount(unverifiedHere.length),
-                    })
-                  : "",
-              undecided:
-                undecided.length > 0
-                  ? w.t("lines.rules.drill.undecided-suffix", {
-                      n: fmtCount(undecided.length),
-                    })
-                  : "",
+      // The row itself opens: a full-width row below it holds how many
+      // conversations the rule did not apply to and the conversations
+      // behind its problems, each read at the table's width.
+      const drillRow = el("tr", "drill-row");
+      drillRow.dataset.drillFor = ref;
+      drillRow.hidden = true;
+      const cell = element("td");
+      cell.setAttribute("colspan", columns);
+      const drillLabel = w.t("lines.rules.drill", {
+        notMet: fmtCount(notMet.length),
+        unverified:
+          unverifiedHere.length > 0
+            ? w.t("lines.rules.drill.unverified-suffix", {
+                n: fmtCount(unverifiedHere.length),
+              })
+            : "",
+        undecided:
+          undecided.length > 0
+            ? w.t("lines.rules.drill.undecided-suffix", {
+                n: fmtCount(undecided.length),
+              })
+            : "",
+      });
+      const toggle = drill(
+        drillLabel,
+        () => {
+          const body = el("div", "rule-x");
+          const naLine = el(
+            "p",
+            "rule-na",
+            w.p("lines.rules.expand.na", na.length, {
+              n: fmtCount(na.length),
             }),
-            problems,
-            model,
-            runInfo,
-            `rule:${ref}`,
-            w,
-          ),
-        );
-        drillRow.append(cell);
-        tbody.append(drillRow);
-      }
+          );
+          naLine.dataset.count = String(na.length);
+          body.append(naLine);
+          if (problems.length > 0)
+            body.append(
+              renderConversationList(
+                problems,
+                model,
+                runInfo,
+                `rule:${ref}`,
+                w,
+              ),
+            );
+          return body;
+        },
+        `rule:${ref}`,
+      );
+      cell.append(toggle);
+      drillRow.append(cell);
+      expandableRow(tr, drillRow, toggle, drillLabel);
+      tbody.append(drillRow);
     }
   }
   table.append(tbody);
@@ -1537,11 +1566,7 @@ function renderCalendar(
       w.t(note === undefined ? "lines.cal.lede" : "lines.cal.lede.dated"),
     ),
   );
-  if (note !== undefined) {
-    const label = el("p", "date-note", note);
-    label.dataset.dateNote = model.dating.basis;
-    section.append(label);
-  }
+  // The dating note itself is said once, in the sheet's footnotes.
   const list = el("div", "cal");
   list.dataset.days = String(model.days.length);
   for (const day of model.days) {
@@ -1989,7 +2014,11 @@ export const LINES_FRAME = {
  * put its stylesheet in it). Every word is `w`'s.
  */
 export async function drawLines(
-  wrapper: HTMLElement,
+  levels: {
+    readonly L0: HTMLElement;
+    readonly L1: HTMLElement;
+    readonly L2: HTMLElement;
+  },
   result: ResultRoot,
   options: OutcomeReportOptions,
   bundle: unknown,
@@ -1998,34 +2027,46 @@ export async function drawLines(
 ): Promise<void> {
   const model = buildOutcomeReportModel(result, options);
   const runInfo = await verifyJudgePin(model.runInfo);
-  renderProducerNote(wrapper, model, w);
+  const claims = model.conversations.flatMap((c) =>
+    c.criteria.flatMap((cr) => (cr.claim === undefined ? [] : [cr.claim])),
+  );
+
+  // L0, what matters: the mock-judge line (D5 b), the header, the sealed
+  // aggregate, then the per-conversation lines, each opening its list.
+  const mock = renderMockJudgeLine(
+    await tallyJudges(result.records, claims),
+    w,
+  );
+  if (mock !== undefined) levels.L0.append(mock);
   const sheet = el("div", "sheet");
   const pad = el("div", "pad");
-  renderMeta(pad, model, w);
-  renderLines(pad, model, runInfo, w);
-  // Who judged, who witnessed, what verified: on the front, never in a toggle.
-  pad.append(
-    renderProvenance(
-      await provenanceLines(
-        result.records,
-        model.conversations.flatMap((c) =>
-          c.criteria.flatMap((cr) =>
-            cr.claim === undefined ? [] : [cr.claim],
-          ),
-        ),
-        bundle,
-        verified,
-        w,
+  // Notes that explain a figure sit under the sheet, in small type, never
+  // between the reader and the figures.
+  const notes = el("aside", "footnotes");
+  notes.dataset.section = "footnotes";
+  renderMeta(pad, model, w, notes);
+  pad.append(renderAggregate(result, w));
+  renderLines(pad, model, runInfo, w, notes);
+  if (notes.childElementCount > 0) pad.append(notes);
+  sheet.append(pad);
+  levels.L0.append(sheet);
+
+  // L1, why: who judged, who witnessed, what verified, then rule by rule.
+  levels.L1.append(
+    frontCard(
+      renderProvenance(
+        await provenanceLines(result.records, claims, bundle, verified, w),
       ),
     ),
   );
-  sheet.append(pad);
-  wrapper.append(sheet);
+  renderRules(levels.L1, model, runInfo, w);
 
-  renderRules(wrapper, model, runInfo, w);
-  renderCalendar(wrapper, model, w);
-  renderHumanChecks(wrapper, model.calibration, w);
-  renderReportProofs(wrapper, model, runInfo, bundle, verified, w);
+  // L2, module detail after the core's verification section.
+  levels.L2.append(renderCheckYourself(bundle, w));
+  renderCalendar(levels.L2, model, w);
+  renderHumanChecks(levels.L2, model.calibration, w);
+  renderProducerNote(levels.L2, model, w);
+  renderReportProofs(levels.L2, model, runInfo, bundle, verified, w);
 }
 
 export type {

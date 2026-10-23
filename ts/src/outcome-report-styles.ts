@@ -15,6 +15,7 @@
  * elements anywhere on the page).
  */
 import { levelCss } from "./report-levels.js";
+import { frontCss } from "./report-front-styles.js";
 
 export const OUTCOME_REPORT_CSS =
   `
@@ -42,17 +43,13 @@ export const OUTCOME_REPORT_CSS =
 .oi table.lines th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);border-bottom:2px solid var(--navy);padding:8px 10px}
 .oi table.lines td{border-bottom:1px solid var(--line);padding:16px 10px;vertical-align:top}
 .oi table.lines td.n,.oi table.lines th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.oi table.lines td.n{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:24px;font-weight:700;line-height:1.1;color:var(--navy)}
 .oi table.lines .desc b{color:var(--navy)}
 .oi table.lines .desc small{display:block;color:var(--slate);font-size:12.5px}
 .oi table.lines .src{font-size:11.5px;color:var(--slate);white-space:normal}
 .oi .notes{font-size:13px;color:var(--slate);margin-top:44px;max-width:640px}
 .oi .notes p{margin:0 0 8px;font-size:14px;color:var(--ink)}
 .oi .notes .nh{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-bottom:6px}
-.oi .stamps.inl{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;margin-top:24px;gap:14px}
-.oi .stamp{border:3px solid;border-radius:8px;padding:6px 12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:13px;transform:rotate(-6deg)}
-.oi .stamp.rec{color:var(--ok);border-color:var(--ok)}
-.oi .stamp.hollow{color:#9AA1AC;border:3px dashed #BFC4CC;transform:rotate(-3deg);font-size:11.5px}
-.oi .stamp small{display:block;font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
 .oi .tamper-note{margin-top:24px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#FAF8F4;font-size:13.5px;color:var(--slate)}
 .oi .sec{background:#fff;max-width:1080px;margin:0 auto 22px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:30px 42px}
 .oi .sec h2{font-size:22px}
@@ -68,8 +65,7 @@ export const OUTCOME_REPORT_CSS =
 .oi .day .sealed{font-size:11px;color:var(--slate);margin-top:6px}
 .oi .day .src-says{display:inline-block;font-size:10.5px;font-weight:700;color:var(--navy);background:var(--gold-l);border:1px solid var(--gold);border-radius:999px;padding:0 6px;margin-top:2px}
 .oi .day .tz{font-size:11px;color:var(--bad);margin-top:2px}
-.oi p.date-note{font-size:13.5px;color:var(--ink);background:#FAF8F4;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;padding:10px 14px;margin:14px 0 0}
-.oi .sec p.date-note{margin:0 0 14px}
+.oi p.date-note{margin:0}
 .oi .flag{position:absolute;top:7px;right:8px;font-size:11px;color:var(--gold)}
 .oi .flag:before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;background:var(--gold);transform:rotate(45deg);vertical-align:1px}
 .oi .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--slate);margin-top:12px}
@@ -175,7 +171,7 @@ export const OUTCOME_REPORT_CSS =
 .oi li.turn pre.call{color:var(--navy);background:var(--gold-l);padding:3px 6px;border-radius:6px}
 .oi p.verdict-line{font-size:14.5px;color:var(--ink);margin:12px 0 4px;font-weight:600}
 .oi table.lines .desc small{margin-top:2px}
-.oi p.na-note{font-size:13px;color:var(--slate);margin:12px 0 0}
+.oi p.na-note{margin:0}
 .oi table.rules{width:100%;border-collapse:collapse;font-size:14px}
 .oi table.rules th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);border-bottom:2px solid var(--navy);padding:7px 10px}
 .oi table.rules th.n{text-align:right}
@@ -212,4 +208,6 @@ export const OUTCOME_REPORT_CSS =
   .oi{background:#fff}
   .oi .sheet,.oi .sec{box-shadow:none;margin:0 0 12px}
 }
-` + levelCss("oi");
+` +
+  levelCss("oi") +
+  frontCss(".oi");

@@ -38,7 +38,18 @@ import {
   reportSummary,
 } from "./report-levels.js";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
-import { provenanceLines, renderProvenance } from "./report-provenance.js";
+import {
+  provenanceLines,
+  renderProvenance,
+  tallyJudges,
+} from "./report-provenance.js";
+import {
+  renderAggregate,
+  renderCheckYourself,
+  expandableRow,
+  frontCard,
+  renderMockJudgeLine,
+} from "./report-front.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 
 /**
@@ -229,8 +240,10 @@ function renderHeader(
 ): void {
   const hd = el("div", "hd");
   hd.dataset.section = "header";
-  hd.append(el("div", "kicker", w.t("groups.kicker")));
-  hd.append(maybeProducer(w, "h1", "", model.regulation, true));
+  // The report's name is the pack's (report.title); the regulation is the
+  // producer's mapping, shown beneath it as the producer's text.
+  hd.append(el("h1", "", w.t("groups.kicker")));
+  hd.append(maybeProducer(w, "div", "kicker", model.regulation, true));
   const summary = reportSummary(w);
   if (summary !== undefined) hd.append(summary);
   const pack =
@@ -481,9 +494,6 @@ function renderSummary(
       }),
     ),
   );
-  const basis = el("p", "na", w.t("groups.summary.basis"));
-  basis.dataset.basis = "terms";
-  section.append(basis);
   const table = document.createElement("table");
   table.className = "grid sum";
   table.dataset.rows = "summary";
@@ -501,29 +511,49 @@ function renderSummary(
     tbody.dataset.obligationGroup = obligation.key;
     const row = el("tr", "ob");
     row.dataset.obligation = obligation.key;
-    const status = obligationStatus(obligation, w);
+    // A group heading (contract-report/v1 section 2): its tests are the
+    // rows. No tally sums the tests' sessions here. The heading opens to
+    // the obligation's plain-language text and when it applies, kept
+    // together (decision D3).
     const title = el("td", "");
-    title.setAttribute("colspan", "2");
-    const name = el("div", "obn");
+    title.setAttribute("colspan", "3");
+    const name = el("b", "obn");
     name.append(
-      ...obligationName(w, obligation, el("b", "", obligation.article)),
+      ...obligationName(w, obligation, el("span", "", obligation.article)),
     );
     title.append(name);
-    if (obligation.plain !== NOT_STATED)
-      title.append(maybeProducer(w, "div", "plain", obligation.plain, true));
-    title.append(
-      maybeProducer(
-        w,
-        "div",
-        "applic",
-        obligation.applicability.note,
-        obligation.mapped,
-      ),
-    );
-    const statusCell = document.createElement("td");
-    statusCell.append(statusPill(status.cls, status.text));
-    row.append(title, statusCell);
+    row.append(title);
     tbody.append(row);
+    const about = el("tr", "drill-row ob-about");
+    about.dataset.aboutFor = obligation.key;
+    about.hidden = true;
+    const aboutCell = el("td", "");
+    aboutCell.setAttribute("colspan", "3");
+    const aboutLabel = w.t("groups.ob.about", { article: obligation.article });
+    const aboutToggle = levelToggle(
+      1,
+      aboutLabel,
+      () => {
+        const body = el("div", "ob-x");
+        if (obligation.plain !== NOT_STATED)
+          body.append(maybeProducer(w, "div", "plain", obligation.plain, true));
+        body.append(
+          maybeProducer(
+            w,
+            "div",
+            "applic",
+            obligation.applicability.note,
+            obligation.mapped,
+          ),
+        );
+        return body;
+      },
+      { className: "line", eager: true },
+    );
+    aboutCell.append(aboutToggle);
+    about.append(aboutCell);
+    expandableRow(row, about, aboutToggle, aboutLabel);
+    tbody.append(about);
     for (const test of obligation.rows) {
       const tr = el("tr", "test");
       tr.dataset.criterion = test.criterionId;
@@ -540,10 +570,6 @@ function renderSummary(
       const detail = w.row(test.criterionId, "detail");
       if (detail !== undefined)
         nameCell.append(packWord("div", "plain", detail));
-      const finding = model.findings.find(
-        (f) => f.criterionId === test.criterionId,
-      );
-      if (finding !== undefined) nameCell.append(renderFinding(finding, w));
       const sessionIds = [
         ...(test.sessionsByVerdict.get("not_met") ?? []),
         ...(test.sessionsByVerdict.get("unverified") ?? []),
@@ -555,12 +581,17 @@ function renderSummary(
         rowResult(test, w),
       );
       tbody.append(tr);
-      // The sessions behind a test open in a full-width row below it, so
-      // each one reads at the table's width.
+      // The row itself opens the sessions behind it, in a full-width row
+      // below it, so each one reads at the table's width.
       if (sessionIds.length > 0) {
+        const label = sessionListNote(
+          test,
+          count(w, "session", sessionIds.length),
+          w,
+        );
         const toggle = levelToggle(
           1,
-          sessionListNote(test, count(w, "session", sessionIds.length), w),
+          label,
           () => renderSessionList(sessionIds, model, presentation, w),
           { className: "line" },
         );
@@ -568,16 +599,48 @@ function renderSummary(
         toggle.dataset.drill = test.criterionId;
         const drillRow = el("tr", "drill-row");
         drillRow.dataset.drillFor = test.criterionId;
+        drillRow.hidden = true;
         const cell = document.createElement("td");
         cell.setAttribute("colspan", "3");
         cell.append(toggle);
         drillRow.append(cell);
+        expandableRow(tr, drillRow, toggle, label);
         tbody.append(drillRow);
       }
     }
     table.append(tbody);
   }
   section.append(table);
+  const notes = el("aside", "footnotes");
+  notes.dataset.section = "footnotes";
+  const basis = el("p", "", w.t("groups.summary.basis"));
+  basis.dataset.basis = "terms";
+  notes.append(basis);
+  section.append(notes);
+  host.append(section);
+}
+
+/**
+ * The producer's findings (severity, recommendation), in one block under a
+ * fixed label: presentation text, not evidence (presentation contract
+ * section 6). Each finding's session count is the claims'; nothing here
+ * tallies the findings themselves.
+ */
+function renderFindings(
+  host: HTMLElement,
+  model: ComplianceModel,
+  w: Words,
+): void {
+  if (model.findings.length === 0) return;
+  const section = el("section", "findings");
+  section.dataset.section = "findings";
+  section.dataset.producer = "";
+  section.append(
+    el("div", "plabel", w.t("front.findings.label")),
+    el("h2", "", w.t("front.findings.h")),
+  );
+  for (const finding of model.findings)
+    section.append(renderFinding(finding, w));
   host.append(section);
 }
 
@@ -1090,7 +1153,11 @@ export const GROUPS_FRAME = {
  * put its stylesheet in it). Every word is `w`'s.
  */
 export async function drawGroups(
-  wrapper: HTMLElement,
+  levels: {
+    readonly L0: HTMLElement;
+    readonly L1: HTMLElement;
+    readonly L2: HTMLElement;
+  },
   result: ResultRoot,
   presentation: CompliancePresentation,
   bundle: unknown,
@@ -1098,23 +1165,34 @@ export async function drawGroups(
   w: Words,
 ): Promise<void> {
   const model = buildComplianceModel(result, presentation);
-  renderHeader(wrapper, model, w);
-  // Who judged, who witnessed, what verified: on the front, never in a toggle.
-  wrapper.append(
-    renderProvenance(
-      await provenanceLines(
-        result.records,
-        model.sessions.flatMap((s) =>
-          s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
-        ),
-        bundle,
-        verified,
-        w,
+  const claims = model.sessions.flatMap((s) =>
+    s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
+  );
+
+  // L0, what matters: the mock-judge line (D5 b), the header, the sealed
+  // aggregate.
+  const mock = renderMockJudgeLine(
+    await tallyJudges(result.records, claims),
+    w,
+  );
+  if (mock !== undefined) levels.L0.append(mock);
+  renderHeader(levels.L0, model, w);
+  levels.L0.append(renderAggregate(result, w));
+
+  // L1, why: who judged, who witnessed, what verified, then the tests.
+  levels.L1.append(
+    frontCard(
+      renderProvenance(
+        await provenanceLines(result.records, claims, bundle, verified, w),
       ),
     ),
   );
-  renderSummary(wrapper, model, presentation, w);
-  renderReportProofs(wrapper, model, bundle, verified, w);
+  renderSummary(levels.L1, model, presentation, w);
+  renderFindings(levels.L1, model, w);
+
+  // L2, module detail after the core's verification section.
+  levels.L2.append(renderCheckYourself(bundle, w));
+  renderReportProofs(levels.L2, model, bundle, verified, w);
 }
 
 export type {

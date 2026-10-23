@@ -7,6 +7,7 @@
  * page or any other card on the same document.
  */
 import { levelCss } from "./report-levels.js";
+import { frontCss } from "./report-front-styles.js";
 
 export const COMPLIANCE_CSS =
   `
@@ -65,7 +66,7 @@ export const COMPLIANCE_CSS =
 .cc .applic{font-size:13px;color:var(--slate)}
 .cc table.sum tbody tr.ob td{background:var(--cream);border-top:2px solid var(--navy);padding:12px 10px}
 .cc table.sum .obn{font-size:16px;color:var(--navy)}
-.cc table.sum .obn b{font-family:Georgia,Cambria,serif}
+.cc table.sum .obn > span:first-child{font-family:Georgia,Cambria,serif}
 .cc table.sum .plain{font-size:13.5px;color:var(--ink);margin-top:4px;max-width:720px}
 .cc table.sum tr.test td.tn{padding-left:22px}
 .cc table.sum .tnh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -84,4 +85,6 @@ export const COMPLIANCE_CSS =
 .cc .pf-b .ev code{background:var(--cream);padding:1px 6px;border-radius:5px;margin-right:4px;font-size:11.5px}
 .cc .obd{margin:10px 0 16px}
 @media (max-width:760px){.cc .ran{grid-template-columns:1fr}}
-` + levelCss("cc");
+` +
+  levelCss("cc") +
+  frontCss(".cc");

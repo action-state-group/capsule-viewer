@@ -289,7 +289,10 @@ describe("resolution and rendering (spec section 4.3)", () => {
     const banner = page.querySelector<HTMLElement>("[data-verify]")!;
     expect(banner.dataset.verify).toBe("verified");
     expect(banner.className).toBe("cv-pill");
-    expect(page.lastElementChild).toBe(
+    expect(page.lastElementChild!.getAttribute("data-region")).toBe("L2");
+    expect(
+      page.querySelector('[data-region="L2-core"]')!.firstElementChild,
+    ).toBe(
       page
         .querySelector('[data-page="verification"]')!
         .closest("[data-checked]"),

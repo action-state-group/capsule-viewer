@@ -136,6 +136,9 @@ function skeleton(node: Element): string {
   for (const t of texts)
     if (t.parentElement?.tagName !== "STYLE") t.textContent = "";
   for (const e of copy.querySelectorAll("[title]")) e.removeAttribute("title");
+  // An expandable row's accessible name is its words, like a title.
+  for (const e of copy.querySelectorAll("[aria-label]"))
+    e.removeAttribute("aria-label");
   return copy.outerHTML;
 }
 
@@ -336,6 +339,17 @@ for (const { file, page } of CARDS)
 // A pack swap changes words, and only words
 // ---------------------------------------------------------------------------
 
+/** The whole card: its three host regions (L0, L1, L2), copied in order into one element. */
+function wholeCard(root: ParentNode, page: string): HTMLElement {
+  const regions = [
+    ...root.querySelectorAll<HTMLElement>(`[data-page="${page}"]`),
+  ];
+  expect(regions.map((r) => r.dataset.level)).toEqual(["L0", "L1", "L2"]);
+  const card = document.createElement("div");
+  for (const region of regions) card.append(region.cloneNode(true));
+  return card;
+}
+
 for (const { grouping, file, page } of CARDS) {
   for (const [name, make] of [
     ["the grade ladder", () => ladderPack(grouping)],
@@ -349,8 +363,8 @@ for (const { grouping, file, page } of CARDS) {
         expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
         openAll(root);
       }
-      const a = plain.querySelector(`[data-page="${page}"]`)!;
-      const b = swapped.querySelector(`[data-page="${page}"]`)!;
+      const a = wholeCard(plain, page);
+      const b = wholeCard(swapped, page);
       expect(b).not.toBeNull();
       expect(b.textContent).not.toBe(a.textContent);
       // same elements, classes, verdicts, counts and record ids, in order
@@ -1273,7 +1287,7 @@ for (const { file, page } of CARDS)
   it(`${page}: no toggle is nested deeper than level 2, every toggle opened`, async () => {
     const root = await render(file);
     openAll(root);
-    const card = root.querySelector<HTMLElement>(`[data-page="${page}"]`)!;
+    const card = wholeCard(root, page);
     expect(card.querySelectorAll("details").length).toBeGreaterThan(0);
     expect(nestingProblems(card)).toEqual([]);
   });
