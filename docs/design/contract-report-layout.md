@@ -55,14 +55,14 @@ holds it. **Gap**: nothing sealed holds it today; a producer change fills it.
 
 | Element | Source | State |
 | --- | --- | --- |
-| Report name | wording pack `report.title`, chosen by the claims' `contract_ref` ([cr] §3). No fallback: a missing `report.title` shows no title. The EU default pack has no `report.*` entry yet ([m58]) | Exists for Outcomes; Gap in the EU pack |
+| Report name | wording pack `report.title`, chosen by the claims' `contract_ref` ([cr] §3). No fallback: a missing `report.title` shows no title. Neither default pack has a `report.*` entry yet; Outcomes has only `lines.title` ([m58]) | Gap in both packs (phase 1 wording migration) |
 | Contract id and version | every claim's `contract_ref` (`eu-ai-act-obligations@0.2.1`) | Exists |
 | Period | the judgment records' `period` (`day:2026-10-02`), first to last; the Result's `generated_at` as the as-of date | Exists |
 | Population | the case records the claims' evidence cites. Claim ids aren't used: [er] §4 defines `id` only as unique | Exists |
 | Issuer | each record's `operator` (`tau2-demo`) and `producer-key/v1`. `presentation/v1` defines `producer_name` ([er] §8), but evidencebook-skills doesn't emit it | Exists (operator); Gap (`producer_name`) |
 | Subject line ("Airline support agent") | nothing sealed. Words describing a contract belong in the wording pack (`report.summary`) | Gap (pack wording, no door) |
 | "Prepared for" | an evidencebook Close names a `counterparty` book id ([book]). The AAC `close/v1` schema has no counterparty field. In this bundle the value is a placeholder and the Close isn't disclosed | Gap (§5, D1) |
-| Statement number | nothing | Gap → Door (§5, D1) |
+| Statement number | nothing sealed | Gap (§5, D1) |
 | Sealed aggregate | the Result's `aggregate`: coverage, then the met, not met and not evaluable buckets | Exists |
 | Requirement count | distinct `requirement_ref` in the claims | Exists |
 | Per-case status (resolved, missed, undecided) | claims grouped per case, with `conversationStatus` ([m58]), which also has `unverified` and `nothing-applied` | Exists (derived) |
@@ -90,13 +90,17 @@ sets the depth; the module fills L0 and L1 and appends to L2 after the core.
    period, population, requirement count, and the issuer (`operator` and the
    producer key's short id).
 2. The sealed aggregate, as is: "216 evaluations of 9 requirements · 54
-   excluded as not applicable · 0 unresolved", then the met, not met and not
-   evaluable buckets, each labelled with its unit (evaluations). Never
-   recomputed.
+   excluded as not applicable · 0 evaluations with an unknown result", then
+   the met, not met and not evaluable buckets, each labelled with its unit
+   (evaluations). Never recomputed. `unknown_count` is never called
+   "unresolved" ([cr] §2, [er] §3).
 3. One derived line, with its own unit: Outcomes "30 conversations: 0
    resolved · 29 missed · 1 undecided", where each count opens its list in L1
    (#58 already draws those lists); EU "29 / 30 sessions with at least one
    test not met", from phase 2, when the session grid exists to trace it to.
+
+Under D5 option (b), one more L0 line, drawn only when the judge is mock:
+"Verdicts are from a mock judge and are placeholders."
 
 No assurance strip in L0. [er] §3 is Steven's ruling: "Nothing above the fold
 summarizes assurance". No "Verified" pill: the core's banner and #61's
@@ -112,25 +116,33 @@ anyway.
    grade and status stay in its row and drill-down.
 5. The rule table (Outcomes) or test table (EU): one row per requirement,
    grouped. EU groups are obligations (article and title), and each test is
-   its own row. Every row shows the four counts as "n / N" and a distribution
-   bar. No pass rate, no percentage ([cr] §2).
+   its own row. Every row's tally counts that row's claims by verdict, each
+   with its denominator ("4 / 24 claims"), and a bar over those claims. The
+   cases where the rule did not apply aren't claims: they show beside the
+   tally as a count of conversations or sessions, never inside it. When the
+   Result carries an `out_of_scope` bucket, it is its own count. No pass rate,
+   no percentage ([cr] §2).
 6. EU only: the producer's findings, as text under a fixed label, "Producer's
    findings, presentation text, not evidence". No tally, no severity column in
    the test table, no owner or due column.
 7. Phase 2: the case grid, cases by rules, grouped by day, on both pages. A
-   drill-down per case shows, per rule: verdict, tier, grade, carrier status,
-   the judge's note as the record holds it, the sealed record ids, and the
+   drill-down per case shows, per rule: verdict, tier, grade, the carrier
+   status labelled as the record's evidence status (not the verdict, so a
+   SATISFIED status beside not_met doesn't read as a contradiction), the
+   judge's note as the record holds it, the sealed record ids, and the
    transcript when disclosed.
 
 **L2, verify.**
 
-8. The core's verification section, first and unchanged ([pc] §9.1), folded
-   or open only by `host.depth`.
+8. The core's verification section, first and unchanged ([pc] §9.1). The
+   core sets its open state: #61 opens it when verification fails. Only the
+   module's own disclosures take their open state from `host.depth`.
 9. Then module detail: "Check this report yourself", four anchor cells
    (producer key, log, checkpoint root and size, record count) and the steps.
-   The step "compare the root with the log's published checkpoint" shows only
-   when a witness receipt exists. Otherwise it says there is no outside
-   checkpoint to compare against.
+   With a witness receipt, a step compares the root with the receipted
+   checkpoint. Without one, the step says only that the bundle carries no
+   witness receipt, and that a reader who gets the log's checkpoint for this
+   size can compare roots. It never says no outside checkpoint exists.
 10. Day by day and human re-grades (phase 3), the producer note under its
     label, and the proofs.
 
@@ -173,9 +185,10 @@ Rules come before the case grid, as in v2.
     counterparty as the producer's statement (a Close is a `producer_claim`).
     It gives a book id, not a display name.
   - A statement number, or a display name for the counterparty, has no
-    sealed source. It would need a new `presentation/v1` header field, an
-    [er] §8 change. A header field can't be withdrawn once published. That is
-    the one door here.
+    sealed source today. That is a data gap. Another sealed record could
+    carry it, which would again be a view rule. Only if it goes into
+    `presentation/v1` as a new header field is it a door: an [er] §8 change,
+    and a header field can't be withdrawn once published.
 - **D2: issuer name.** evidencebook-skills could emit `presentation/v1`
   `producer_name` ([er] §8). No door. Small follow-up.
 - **D3: applicability, a hard gate for the EU in-force split.** Until the
@@ -187,7 +200,9 @@ Rules come before the case grid, as in v2.
   the block's conditions ("Annex III high-risk systems only", "contested" for
   Art 86) don't fit a single date. Copying 2 Dec 2027 alone would say those
   obligations bind this system from that date. The note proposes the date in
-  the contract clause and the condition in the pack's `row.<ref>.detail`.
+  the contract clause and the condition in the pack's `row.<ref>.detail`,
+  and wherever the date shows, its condition shows beside it: "from 2 Dec
+  2027" is never drawn without "Annex III high-risk systems only".
   When D3 lands, the split ships as [cr] §2 defines it: its own section,
   readiness labels on every tally, nothing in the buckets, the as-of date and
   the copied-fact note.
@@ -198,8 +213,22 @@ Rules come before the case grid, as in v2.
 - **D5, for Steven: the v2 assurance strip.** v2, which Steven saw, puts
   "Mock judge · No witness · No human review" above the fold. His
   2026-09-22 ruling ([er] §3) says nothing above the fold summarizes
-  assurance. **Recommendation: keep the ruling**, with the strip as the first
-  line of L1.
+  assurance. But with a mock judge, L0 says "0 resolved · 29 missed" and
+  only L1 says those verdicts are placeholders. Two options:
+  - (a) Keep the ruling as written. The strip is the first line of L1.
+  - (b) Keep the ruling, plus one L0 line drawn only when the judge is mock:
+    "Verdicts are from a mock judge and are placeholders." It fails closed
+    as D4 does: a mock judge isn't an assurance summary, it means the
+    verdicts aren't real.
+
+  **Recommendation: (b)** (Sherlock2's recommendation too). The sketches
+  draw it.
+- **Dependency: findings stay producer annotations.** The findings label
+  assumes u553 as it stands: the presentation block is sealed in the bundle.
+  The proposal to move the view into a Terms Pack view file was withdrawn
+  when Ethan kept u553, so the label holds. If it comes back, severities and
+  recommendations move into the pinned contract, and this block's label and
+  source change with them.
 
 ## 6. Phases
 
@@ -211,13 +240,16 @@ go to Sherlock2 for copy review.
 - Moves the module onto the host's L0, L1 and L2 regions, takes open state
   from `host.depth`, and appends its L2 detail after the core's section
   ([pc] §9.1). Rebased on #61.
-- L0: header, sealed aggregate, the Outcomes per-case line.
-- L1: the assurance line, the rule and test tables with "n / N" counts, the
-  EU findings under the producer label.
+- L0: header, the D5 (b) mock line, sealed aggregate, the Outcomes per-case
+  line.
+- L1: the assurance line, the rule and test tables with per-row claim
+  tallies, the EU findings under the producer label.
 - L2: anchors and steps (step 3 conditional), the producer note, the proofs.
-- Wording migration: the EU pack gains `report.*`, `group.*` and `row.*`
-  entries, so test names stop coming from the presentation block, plus the
-  new keys for the aggregate line, the assurance line and the steps.
+- Wording migration: both packs gain `report.*` entries (Outcomes has only
+  `lines.title`, and with no fallback the title would vanish), and the EU
+  pack gains `group.*` and `row.*`, so test names stop coming from the
+  presentation block. Plus the new keys for the aggregate line, the
+  assurance line, the D5 (b) line and the steps.
 - Goldens for both pages change.
 
 **Phase 2, case-first rows.**
@@ -230,8 +262,8 @@ go to Sherlock2 for copy review.
 - Day by day from the judgments' `period`.
 - Human re-grades from `calibration-summary/v1`, with #62's wording.
 
-**Gated separately:** the EU in-force split (D3), the header fields (D1), an
-L0 assurance strip (D5).
+**Gated separately:** the EU in-force split (D3), the header fields (D1), the
+L0 mock line and any assurance strip (D5).
 
 ## 7. Sketches
 
@@ -259,6 +291,7 @@ the EU sketch come from the presentation block only because the EU pack has no
 - The core's verification section is first in L2 and untouched.
 - Producer annotations only under their fixed label, never in L0, and
   without claiming a binding the page didn't check.
-- No percentage, no single score, a denominator on every count.
+- No percentage, no single score, a denominator on every count; a row's
+  denominator is its claims.
 - Each claim keeps its tier, grade and status.
 - An absence is stated and scoped to the bundle, never hidden.
