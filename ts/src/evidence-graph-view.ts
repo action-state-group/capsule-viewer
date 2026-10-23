@@ -625,15 +625,34 @@ function renderRecordsList(
     anchor.id = name;
     return anchor;
   };
-  for (const record of records) {
+  // One entry per capsule id, in first-listed order: a repeated id is one
+  // record listed more than once, so it gets one entry, one address and a
+  // note of how many times the bundle lists it, with each listing's status.
+  const listings = new Map<string, RecordCoverage[]>();
+  for (const record of records)
+    listings.set(record.capsuleId, [
+      ...(listings.get(record.capsuleId) ?? []),
+      record,
+    ]);
+  for (const [capsuleId, listed] of listings) {
+    const record = listed[0]!;
     const item = element("li");
-    item.dataset.capsuleId = record.capsuleId;
-    const kind = entries.kind(record.capsuleId);
-    const status = element("span", COVERAGE_LABEL[record.status]);
-    status.dataset.recordStatus = record.status;
-    status.className = `seal-${record.status}`;
-    const label = `${record.capsuleId} · ${kind ?? "kind not stated"} · `;
-    const read = entries.read.get(record.capsuleId);
+    item.dataset.capsuleId = capsuleId;
+    const kind = entries.kind(capsuleId);
+    const status = element("span");
+    listed.forEach((one, i) => {
+      if (i > 0) status.append(" / ");
+      const word = element("span", COVERAGE_LABEL[one.status]);
+      word.dataset.recordStatus = one.status;
+      word.className = `seal-${one.status}`;
+      status.append(word);
+    });
+    if (listed.length > 1) {
+      item.dataset.listed = String(listed.length);
+      status.append(` · listed ${listed.length} times in this bundle`);
+    }
+    const label = `${capsuleId} · ${kind ?? "kind not stated"} · `;
+    const read = entries.read.get(capsuleId);
     if (!entries.verified || read === undefined) {
       item.append(document.createTextNode(label), status);
       list.append(item);
