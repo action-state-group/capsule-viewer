@@ -77,7 +77,7 @@ holds it. **Gap**: nothing sealed holds it today; a producer change fills it.
 | Finding owner and due date | `finding.owner_due` holds "Sample placeholder" only | Gap |
 | Judge's reasoning | the judgment record's `rationale`. With the mock judge it is a probability sentence | Exists (thin on mock) |
 | Conversation turns | the case capsule's input original in `capsulectl/agent-input-originals/v1`, keyed by the case capsule id (`agent_interaction.messages`). Only when the bundle was built with `--attach-input-originals`. The EU demo bundle carries all 30; the Outcomes demo bundle carries none. #58 draws it with `renderChat` ([m58] `report-levels.ts`), or says it isn't in this bundle | Exists when attached |
-| Capsules behind a case | each judgment record's `source_capsule_id` names the case capsule; the bundle's record for it is the book entry whose `subject_ref` names that capsule; the completeness certificate gives that entry's leaf under the bundle checkpoint. The core's record list gives every record its capsule id as an element id, so the page can link to it | Exists |
+| Capsules behind a case | each judgment record's `source_capsule_id` names the case capsule, and every claim's `evidence` cites it too (since evidencebook-skills#11; all 216 Outcomes claims do); the bundle's record for it is the book entry whose `subject_ref` names that capsule; the completeness certificate gives that entry's leaf under the bundle checkpoint. The case capsule itself isn't a bundle record. The core's record list marks each record with a `data-capsule-id` attribute only, no element id, inside a section the core folds, so nothing can link into it yet | Exists (data); Gap (link targets, phase 2 core item) |
 | Verification anchors | bundle `checkpoint` (`log_id`, `root`, `mmr_size`), `producer-key/v1`, record count | Exists |
 
 ## 3. The hierarchy
@@ -134,8 +134,12 @@ anyway.
      is still sealed).
    - **Capsules behind it:** the case capsule; its book record; every
      judgment record for this case, one per rule; and the checkpoint, as the
-     book record's leaf under the bundle checkpoint's root and size. Each id
-     links to that record in the core's verification section.
+     book record's leaf under the bundle checkpoint's root and size. The book
+     and judgment records link to their entries in the core's record list
+     once the core provides targets (phase 2 core item); until then, and
+     always for the case capsule, which isn't a record of its own, the ids
+     show as text. The case capsule is reached through the book record that
+     names it.
    - **Per rule:** verdict, tier, grade, the carrier status labelled as the
      record's evidence status (not the verdict, so a SATISFIED status beside
      not_met doesn't read as a contradiction), and the judge's note as the
@@ -264,8 +268,11 @@ go to Sherlock2 for copy review.
 **Phase 2, case-first rows.**
 - The case grid in L1 on both pages, cases by rules, grouped by day.
 - The drill-down per case (§3, item 7): conversation turns when attached,
-  the capsules behind the case with links into the core's record list, and
-  the per-rule detail. With the mock judge the note is a probability, shown
+  the capsules behind the case, and the per-rule detail.
+- In the core, not the module: each record in the core's list gets a stable
+  element id, and the core opens its section when the page is navigated to
+  one of its records. The module never opens the core's section itself.
+  Until this lands, the drill-down shows record ids as text. With the mock judge the note is a probability, shown
   as the record holds it.
 - For the Outcomes demo to show conversations, its bundle must be built
   with `--attach-input-originals` (the EU demo already is). That discloses
