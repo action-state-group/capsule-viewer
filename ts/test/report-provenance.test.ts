@@ -123,6 +123,46 @@ for (const { card, file, page } of CARDS) {
     expect(b.textContent).not.toMatch(/customer/iu);
   });
 
+  it(`${card} card: a mock judge is a mark under the header's title, said once; the provenance row opens the rows' card`, async () => {
+    const source = fixture(file);
+    const mockPin = { ...PIN, model_id: "jev-1.13.0 (mock backend)" };
+    const digest = await pinDigest(mockPin);
+    for (const r of reports(source).filter(
+      (r) => r.judge_pin_digest !== undefined,
+    )) {
+      r.judge_pin = mockPin;
+      r.judge_pin_digest = digest;
+    }
+    const { bundle } = await sealEvidenceBundle(source);
+    const root = await render(bundle);
+    const marks = root.querySelectorAll<HTMLElement>(
+      '[data-section="mock-judge"]',
+    );
+    expect(marks).toHaveLength(1);
+    const mark = marks[0]!;
+    expect(mark.textContent).toBe(
+      "Verdicts are from a mock judge and are placeholders.",
+    );
+    // In L0, inside the header, right under the title: no bar above the card.
+    expect(mark.closest<HTMLElement>("[data-page]")!.dataset.level).toBe("L0");
+    expect(mark.previousElementSibling!.tagName).toBe("H1");
+    // The folded line does not say it again; the opened line still does.
+    const b = block(root, page);
+    const brief = b.querySelector(":scope > summary")!.textContent!;
+    expect(brief).not.toMatch(/mock/iu);
+    expect(brief).toMatch(/^[^·]+ · [^·]+$/u);
+    expect(line(b, "judge").textContent).toContain("mock backend");
+    // The provenance row is the first row of the section that holds the
+    // report's rows, not a card of its own.
+    const row = b.closest<HTMLElement>(".prov-row")!;
+    expect(row).not.toBeNull();
+    const section = row.parentElement!;
+    expect(section.tagName).toBe("SECTION");
+    expect(section.firstElementChild).toBe(row);
+    expect(section.querySelector("table")).not.toBeNull();
+    expect(root.querySelector(".front-card > .prov-row")).toBeNull();
+  });
+
   it(`${card} card: judge present: the model the reports state, pinned, with its short pin and count`, async () => {
     const source = fixture(file);
     const digest = await pinDigest(PIN);
@@ -353,11 +393,13 @@ it("judged by: present, mixed, partly withheld, recomputed and absent", () => {
     brief: "judge pinned",
     state: "stated",
   });
-  // The folded line names a mock judge as one, whatever else it states.
-  expect(
-    judgeLine(tally({ pins: [{ ...one, model: "jev-1.13.0 (mock backend)" }] }))
-      .brief,
-  ).toBe("mock judge");
+  // A mock judge is said once, by the L0 mark (decision D5 (b)): the
+  // folded line leaves the judge out, and the opened line still names it.
+  const mock = judgeLine(
+    tally({ pins: [{ ...one, model: "jev-1.13.0 (mock backend)" }] }),
+  );
+  expect(mock.brief).toBe("");
+  expect(mock.text).toContain("mock backend");
   expect(judgeLine(tally({ cited: 0 })).brief).toBe("judge not stated");
   // one pin with some results withheld is not "several judge pins"
   expect(

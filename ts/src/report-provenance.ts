@@ -366,13 +366,16 @@ export function judgeLine(
     text: parts.join("; "),
     // "mixed" with one pin means some results name no pin; only two or
     // more pins are "several".
-    brief: w.t(
-      judgedByMock(tally)
-        ? "prov.brief.judge.mock"
-        : state === "mixed" && judged === 1
-          ? "prov.brief.judge.partial"
-          : `prov.brief.judge.${state}`,
-    ),
+    // A mock judge is said once, by the L0 mark (report-front.ts,
+    // decision D5 (b)); the brief leaves the judge out rather than say it
+    // again. The judge's full line stays in the opened block.
+    brief: judgedByMock(tally)
+      ? ""
+      : w.t(
+          state === "mixed" && judged === 1
+            ? "prov.brief.judge.partial"
+            : `prov.brief.judge.${state}`,
+        ),
     state,
   };
 }
@@ -603,7 +606,10 @@ export function renderProvenance(
 ): HTMLElement {
   const brief = document.createElement("span");
   brief.className = "prov-brief";
-  brief.textContent = lines.map((line) => line.brief).join(" · ");
+  brief.textContent = lines
+    .map((line) => line.brief)
+    .filter((text) => text !== "")
+    .join(" · ");
   const toggle = levelToggle(
     1,
     brief,

@@ -142,7 +142,21 @@ describe("the emitter shell's page styles", () => {
       /#app \.cv-page \{\s*max-width: none;\s*margin: 0;\s*padding: 0;\s*\}/u,
     );
     expect(shell).toMatch(
-      /#app\.cv-shell-chrome \{\s*max-width: none;\s*padding: 0;\s*\}/u,
+      /#app\.cv-shell-chrome \{\s*max-width: none;\s*padding: 0 var\(--aac-gutter\);\s*\}/u,
+    );
+  });
+
+  it("puts a report's cards on the page colour, every card's content at one inset", () => {
+    expect(shell).toMatch(
+      /:where\(body:has\(> #app\.cv-shell-chrome\)\) \{\s*background: var\(--aac-page-bg\);/u,
+    );
+    // The callout's 6px left border counts toward the inset.
+    expect(shell).toMatch(
+      /#app\.cv-shell-chrome :where\(\.cv-shell-bar\) \{[^}]*padding: 0\.75rem calc\(var\(--aac-inset\) - 1px\) 0\.75rem\s+calc\(var\(--aac-inset\) - 5px\);/u,
+    );
+    // The folded check section is a card like the report's own.
+    expect(shell).toMatch(
+      /#app\.cv-shell-chrome :where\(details\.cv-checked\) \{[^}]*padding: 18px var\(--aac-inset\);[^}]*border: 1px solid var\(--aac-line\);/u,
     );
   });
 

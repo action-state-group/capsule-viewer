@@ -39,7 +39,8 @@ import {
 } from "./report-provenance.js";
 import {
   expandableRow,
-  frontCard,
+  leadWithProvenance,
+  placeMockMark,
   renderAggregate,
   renderCheckYourself,
   renderMockJudgeLine,
@@ -2014,13 +2015,12 @@ export async function drawLines(
     c.criteria.flatMap((cr) => (cr.claim === undefined ? [] : [cr.claim])),
   );
 
-  // L0, what matters: the mock-judge line (D5 b), the header, the sealed
-  // aggregate, then the per-conversation lines, each opening its list.
+  // L0, what matters: the header with the mock-judge mark (D5 b), the
+  // sealed aggregate, then the per-conversation lines, each opening its list.
   const mock = renderMockJudgeLine(
     await tallyJudges(result.records, claims),
     w,
   );
-  if (mock !== undefined) levels.L0.append(mock);
   const sheet = el("div", "sheet");
   const pad = el("div", "pad");
   // Notes that explain a figure sit under the sheet, in small type, never
@@ -2028,21 +2028,24 @@ export async function drawLines(
   const notes = el("aside", "footnotes");
   notes.dataset.section = "footnotes";
   renderMeta(pad, model, w, notes);
+  const title = pad.querySelector<HTMLElement>(".ih-title");
+  if (title !== null) placeMockMark(title, mock);
+  else if (mock !== undefined) pad.prepend(mock);
   pad.append(renderAggregate(result, w));
   renderLines(pad, model, runInfo, w, notes);
   if (notes.childElementCount > 0) pad.append(notes);
   sheet.append(pad);
   levels.L0.append(sheet);
 
-  // L1, why: who judged, who witnessed, what verified, then rule by rule.
-  levels.L1.append(
-    frontCard(
-      renderProvenance(
-        await provenanceLines(result.records, claims, bundle, verified, w),
-      ),
+  // L1, why: rule by rule, led by who judged, who witnessed, what verified.
+  renderRules(levels.L1, model, runInfo, w);
+  leadWithProvenance(
+    levels.L1,
+    levels.L1.querySelector('[data-section="rules"]'),
+    renderProvenance(
+      await provenanceLines(result.records, claims, bundle, verified, w),
     ),
   );
-  renderRules(levels.L1, model, runInfo, w);
 
   // L2, module detail after the core's verification section.
   levels.L2.append(renderCheckYourself(bundle, w));

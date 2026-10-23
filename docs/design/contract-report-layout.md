@@ -101,7 +101,10 @@ sets the depth; the module fills L0 and L1 and appends to L2 after the core.
    test not met", from phase 2, when the session grid exists to trace it to.
 
 Per D5 (b), one more L0 line, drawn only when the judge is mock:
-"Verdicts are from a mock judge and are placeholders."
+"Verdicts are from a mock judge and are placeholders." As built since
+2026-10-23 it is a mark in the report's header, right under the title,
+and the folded assurance line in L1 then leaves the judge out, so the
+page says it once.
 
 No assurance strip in L0. [er] §3 is Steven's ruling: "Nothing above the fold
 summarizes assurance". No "Verified" pill: the core's banner and #61's
@@ -252,10 +255,11 @@ go to Sherlock2 for copy review.
 - Moves the module onto the host's L0, L1 and L2 regions, takes open state
   from `host.depth`, and appends its L2 detail after the core's section
   ([pc] §9.1). Rebased on #61.
-- L0: header, the D5 (b) mock-judge line, sealed aggregate, the Outcomes
-  per-case line.
-- L1: the assurance line, the rule and test tables with per-row claim
-  tallies, the EU findings under the producer label.
+- L0: header with the D5 (b) mock-judge mark under its title, sealed
+  aggregate, the Outcomes per-case line.
+- L1: the assurance line as the first row of the card that holds the rule
+  or test table, the tables with per-row claim tallies, the EU findings
+  under the producer label.
 - L2: anchors and steps (step 3 conditional), the producer note, the proofs.
 - Wording migration: both packs gain `report.*` entries (Outcomes has only
   `lines.title`, and with no fallback the title would vanish), and the EU

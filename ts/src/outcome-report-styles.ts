@@ -210,4 +210,18 @@ export const OUTCOME_REPORT_CSS =
 }
 ` +
   levelCss("oi") +
-  frontCss(".oi");
+  frontCss(".oi") +
+  // The page layout (one left edge, bordered cards 16px apart): last, so
+  // it wins over the card's older rules above. The page colour is the
+  // shell's (emitter-shell.html), so the frame itself stays transparent.
+  `
+.oi{background:transparent;display:flow-root}
+.oi .sheet{margin:16px auto;border:1px solid var(--line);border-radius:var(--r);box-shadow:none}
+.oi .sheet .pad{padding:40px var(--inset)}
+.oi .sec{margin:0 auto 16px;padding:32px var(--inset);border:1px solid var(--line);border-radius:var(--r);box-shadow:none}
+.oi .sec.rp{padding:32px var(--inset)}
+.oi .pnote{margin:0 auto 16px;padding:24px calc(var(--inset) - 5px);border-radius:var(--r)}
+@media (min-width:821px){.oi table.rules th{white-space:nowrap}}
+.oi table.rules tr.grp td{font-family:inherit;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--slate);padding-top:22px;border-bottom:1px solid var(--line)}
+@media (max-width:820px){.oi .sheet .pad,.oi .sec,.oi .sec.rp{padding:24px var(--inset)}}
+`;
