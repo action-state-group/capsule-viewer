@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import {
+  EVIDENCE_STATUSES,
+  GRADES,
   sha256Hex,
+  SUFFICIENCIES,
+  TIERS,
   type WordingPackInput,
 } from "@action-state-group/agent-action-capsule";
 import OUTCOMES_PACK from "./wording/contract-report-outcomes.en.json" with { type: "json" };
@@ -165,6 +169,112 @@ const HAS_LETTER = /\p{L}/u;
 const DIGIT_LIKE = /[oil]/gu;
 
 // ---------------------------------------------------------------------------
+// contract-report/v1 section 3: the keys the kind defines
+// ---------------------------------------------------------------------------
+
+/**
+ * The enum values contract-report/v1 section 3 gives a word each, lowercased
+ * (agent-action-capsule's TIERS, GRADES, SUFFICIENCIES and EVIDENCE_STATUSES).
+ * The verdicts are the four Result v0 defines; this module's own extra drawn
+ * verdicts (failed, unsupported, not applicable) keep their grouping keys.
+ */
+export const SECTION3_ENUMS = Object.freeze({
+  verdict: ["met", "not_met", "not_evaluable", "out_of_scope"],
+  tier: TIERS.map((v) => v.toLowerCase()),
+  grade: GRADES.map((v) => v.toLowerCase()),
+  sufficiency: SUFFICIENCIES.map((v) => v.toLowerCase()),
+  status: EVIDENCE_STATUSES.map((v) => v.toLowerCase()),
+} as const);
+
+/**
+ * A key whose meaning contract-report/v1 section 3 fixes. The module's own
+ * keys never use these prefixes (`report.`, `group.`, `row.`, `verdict.`,
+ * `sufficiency.`, `tier.`, `grade.`, `status.`, `applicability.`,
+ * `contract_fact.`); its own words sit under `card.`, `lines.`, `groups.`
+ * and the shared prefixes (`prov.`, `chat.`, `case.`, `judge.`).
+ */
+export const SECTION3_PREFIXES: readonly string[] = Object.freeze([
+  "report.",
+  "group.",
+  "row.",
+  "verdict.",
+  "sufficiency.",
+  "tier.",
+  "grade.",
+  "status.",
+  "applicability.",
+  "contract_fact.",
+]);
+
+/**
+ * The section 3 keys that name the same thing a grouping already has a word
+ * for, and that grouping's keys for it. A host pack's section 3 entry sets
+ * each of them unless the same pack also sets the grouping's own key, which
+ * is more specific and wins. The section 3 entry is then checked exactly as
+ * that grouping key would be (placeholders, DISTINCT, the clean/not-clean
+ * categories, locks): a section 3 word can never say what the grouping's own
+ * key could not.
+ */
+const SECTION3_ALIASES: Readonly<
+  Record<ContractReportGrouping, Readonly<Record<string, readonly string[]>>>
+> = Object.freeze({
+  lines: {
+    "report.title": ["lines.title"],
+    // The rule table's pill and the proofs table's cell both name the
+    // verdict, so a section 3 word reaches both.
+    "verdict.met": ["lines.verdict.met", "lines.pf.verdict.met"],
+    "verdict.not_met": ["lines.verdict.not_met", "lines.pf.verdict.not_met"],
+    "verdict.not_evaluable": [
+      "lines.verdict.not_evaluable.judged",
+      "lines.verdict.not_evaluable.unjudged",
+      "lines.verdict.not_evaluable.withheld",
+      "lines.verdict.not_evaluable.unavailable",
+      "lines.pf.verdict.not_evaluable",
+    ],
+    "verdict.out_of_scope": [
+      "lines.verdict.out_of_scope",
+      "lines.pf.verdict.out_of_scope",
+    ],
+    "tier.recomputed": ["lines.tier.recomputed"],
+    "tier.judged": ["lines.tier.judged"],
+  },
+  groups: {
+    "report.title": ["groups.kicker"],
+    "verdict.met": ["groups.verdict.met"],
+    "verdict.not_met": ["groups.verdict.not_met"],
+    "verdict.not_evaluable": [
+      "groups.verdict.not_evaluable.judged",
+      "groups.verdict.not_evaluable.unjudged",
+      "groups.verdict.not_evaluable.withheld",
+      "groups.verdict.not_evaluable.unavailable",
+    ],
+    "verdict.out_of_scope": ["groups.verdict.out_of_scope"],
+    "tier.recomputed": ["groups.tier.recomputed"],
+    "tier.judged": ["groups.tier.judged"],
+  },
+});
+
+/**
+ * `pack` with each section 3 alias it carries copied onto the grouping keys
+ * it names (SECTION3_ALIASES), where the pack does not set them itself.
+ * Every check and every lookup reads this expanded form, so a section 3
+ * word and a grouping word are one entry to the rest of this module.
+ */
+function expandSection3(
+  pack: WordingPack,
+  grouping: ContractReportGrouping,
+): WordingPack {
+  const aliases = SECTION3_ALIASES[grouping];
+  const entries: Record<string, string> = { ...pack.entries };
+  for (const [key, targets] of Object.entries(aliases))
+    if (Object.hasOwn(pack.entries, key))
+      for (const target of targets)
+        if (!Object.hasOwn(pack.entries, target))
+          entries[target] = pack.entries[key]!;
+  return { ...pack, entries };
+}
+
+// ---------------------------------------------------------------------------
 // The default packs, and which grouping each is for
 // ---------------------------------------------------------------------------
 
@@ -195,6 +305,7 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "lines.verdict.not_applicable",
     "lines.verdict.failed",
     "lines.verdict.unsupported",
+    "lines.verdict.out_of_scope",
     [
       "lines.verdict.not_evaluable.judged",
       "lines.verdict.not_evaluable.unjudged",
@@ -208,6 +319,8 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "groups.verdict.not_applicable",
     "groups.verdict.failed",
     "groups.verdict.unsupported",
+    "groups.verdict.out_of_scope",
+    "groups.verdict.not_yet_in_force",
     [
       "groups.verdict.not_evaluable.judged",
       "groups.verdict.not_evaluable.unjudged",
@@ -236,6 +349,7 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "lines.pf.verdict.failed",
     "lines.pf.verdict.unsupported",
     "lines.pf.verdict.not_applicable",
+    "lines.pf.verdict.out_of_scope",
   ],
   // The assurance tier (judged vs. recomputed) must stay a non-swappable
   // set too: a judgement must never read as a check anyone can repeat.
@@ -264,12 +378,15 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
   // never read as "no exceptions" or the reverse.
   [
     "groups.ob.unchecked",
+    "groups.ob.later",
     ["groups.ob.ok", "groups.ob.ok.found", "groups.ob.ok.unverified"],
   ],
   // A test row's summary pill (EU card).
   [
     "groups.row.nothing",
     "groups.row.none-decided",
+    "groups.row.out-of-scope",
+    "groups.row.later",
     ["groups.row.ok", "groups.row.ok.all-decided"],
   ],
   // A session's pill inside a test's drill-down (EU card).
@@ -323,6 +440,7 @@ type GuardedCategory =
   | "not-applicable"
   | "held"
   | "added"
+  | "later"
   | "tier.recomputed"
   | "tier.judged";
 
@@ -397,6 +515,18 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "lines.pf.verdict.not_applicable": "not-applicable",
   "lines.status.nothing-applied": "not-applicable",
   "groups.session.none": "not-applicable",
+  // Judged out of scope (Result v0 section 4.2): it did not arise. Its own
+  // count, never met, so it reads with did-not-apply, never with clean.
+  "lines.verdict.out_of_scope": "not-applicable",
+  "groups.verdict.out_of_scope": "not-applicable",
+  "lines.pf.verdict.out_of_scope": "not-applicable",
+  "groups.row.out-of-scope": "not-applicable",
+
+  // later: a claim not yet in force (Result v0 section 4.3), readiness
+  // only; never a result that counts.
+  "groups.verdict.not_yet_in_force": "later",
+  "groups.ob.later": "later",
+  "groups.row.later": "later",
 
   // held: a person's spot check disagreed with a resolved result, which is
   // held back for a person to decide.
@@ -426,6 +556,7 @@ const CATEGORY_LABEL: Readonly<Record<GuardedCategory, string>> = {
   "not-applicable": "something nothing applied to",
   held: "a result held for a person to decide",
   added: "a result a person's check added",
+  later: "a claim not yet in force",
   "tier.recomputed": "the recomputed tier",
   "tier.judged": "the judged tier",
 };
@@ -439,6 +570,13 @@ const CATEGORY_LABEL: Readonly<Record<GuardedCategory, string>> = {
  * file does, changes nothing and passes).
  */
 export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
+  // contract-report/v1 section 3: the assurance words each claim shows (its
+  // carrier status, grade and sufficiency). They state what the sealed claim
+  // says about its own evidence, so a pack cannot make WITHHELD read as
+  // clean or a self-attested grade read as witnessed.
+  ...SECTION3_ENUMS.status.map((v) => `status.${v}`),
+  ...SECTION3_ENUMS.grade.map((v) => `grade.${v}`),
+  ...SECTION3_ENUMS.sufficiency.map((v) => `sufficiency.${v}`),
   // The front block (report-provenance.ts): who judged, who witnessed, what verified.
   "prov.judge.none",
   "prov.judge.model.does-not-recompute",
@@ -475,38 +613,39 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.status.undecided.withheld",
   "lines.status.undecided.unavailable",
   // Both cards: dating, withheld reports, the conversation, the proofs.
-  "report.not-stated",
-  "report.span.unknown",
-  "report.basis.source",
-  "report.basis.record",
-  "report.basis.judged",
-  "report.dating.source",
-  "report.dating.record",
-  "report.dating.mixed",
-  "report.dating.mixed.source",
-  "report.dating.mixed.record",
-  "report.dating.mixed.judged",
-  "report.dating.self-attested",
-  "report.dating.tz",
-  "report.gap.notes.withheld",
-  "report.gap.notes.unread",
-  "report.gap.notes.some-withheld",
-  "report.gap.notes.none",
-  "report.pf.case-record.not-stated",
-  "report.pf.dated",
-  "report.pf.dated.no-zone",
-  "report.pf.input-digest.verified",
-  "report.pf.input-digest.cited",
-  "report.pf.transcript.absent",
-  "report.pf.transcript.not-shown",
-  "report.pf.transcript.default-reason",
-  "report.pf.wording.default",
-  "report.pf.wording.supplied.layered",
-  "report.pin.withheld",
-  "report.pin.unread",
-  "report.pin.not-in-bundle",
-  "report.vd.uncomputable",
-  "report.vd.absent",
+  "card.not-stated",
+  "card.span.unknown",
+  "card.basis.source",
+  "card.basis.record",
+  "card.basis.judged",
+  "card.dating.source",
+  "card.dating.record",
+  "card.dating.mixed",
+  "card.dating.mixed.source",
+  "card.dating.mixed.record",
+  "card.dating.mixed.judged",
+  "card.dating.self-attested",
+  "card.dating.tz",
+  "card.gap.notes.withheld",
+  "card.gap.notes.unread",
+  "card.gap.notes.some-withheld",
+  "card.gap.notes.none",
+  "card.pf.case-record.not-stated",
+  "card.pf.dated",
+  "card.pf.dated.no-zone",
+  "card.pf.input-digest.verified",
+  "card.pf.input-digest.cited",
+  "card.pf.transcript.absent",
+  "card.pf.transcript.not-shown",
+  "card.pf.transcript.default-reason",
+  "card.pf.wording.default",
+  "card.pf.wording.supplied.layered",
+  "card.pf.assurance",
+  "card.pin.withheld",
+  "card.pin.unread",
+  "card.pin.not-in-bundle",
+  "card.vd.uncomputable",
+  "card.vd.absent",
   "chat.absent",
   "chat.record.not-stated",
   "chat.not-shown",
@@ -635,6 +774,19 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.q.tail",
   "groups.ran.contract.differs",
   "groups.vd.note",
+  // Out of scope and not yet in force (Result v0 sections 4.2, 4.3): what
+  // they count and what is copied from the contract, not checked here.
+  "lines.oos-note.one",
+  "lines.oos-note.other",
+  "groups.later.note",
+  "groups.row.later-note",
+  // A refused wording layer (contract-report/v1 section 3): the page says
+  // so, and which layer drew it.
+  "card.wording.refused",
+  "card.wording.refused.digest",
+  "card.wording.refused.shape",
+  "card.wording.refused.fit",
+  "card.pf.wording.refused",
 ]);
 
 /**
@@ -841,10 +993,26 @@ function categoryCollisions(
  * are not this module's and are not checked.
  */
 export function wordingProblems(
-  pack: WordingPack,
+  supplied: WordingPack,
   defaults: WordingPack,
 ): string[] {
+  const grouping = defaults.entries["layout.grouping"];
+  const pack =
+    grouping === "lines" || grouping === "groups"
+      ? expandSection3(supplied, grouping)
+      : supplied;
   const problems: string[] = [];
+  if (grouping === "lines" || grouping === "groups")
+    for (const [key, targets] of Object.entries(SECTION3_ALIASES[grouping]))
+      if (Object.hasOwn(supplied.entries, key))
+        for (const target of targets)
+          if (
+            Object.hasOwn(supplied.entries, target) &&
+            supplied.entries[target] !== supplied.entries[key]
+          )
+            problems.push(
+              `${key} and ${target} name the same thing and must say the same; this pack gives them different words`,
+            );
   for (const [key, text] of Object.entries(pack.entries)) {
     if (INVISIBLE.test(text))
       problems.push(
@@ -955,12 +1123,20 @@ export function wordingProblems(
  * contract-report/v1 §3 records every wording layer applied, including
  * the one layer a default-only page still has; `sha256` is the digest of
  * the pack actually named by `id`, absent only when a caller (a test) built
- * `Words` from a pack it never hashed.
+ * `Words` from a pack it never hashed. `refused` is a host layer that did
+ * not check (§3: a refused layer contributes no words): the card is drawn
+ * with the base layer alone, and says so.
  */
 export interface WordingSource {
   readonly id: string;
   readonly sha256?: string;
   readonly base?: { readonly id: string; readonly sha256: string };
+  readonly refused?: {
+    /** The digest the host gave the layer, as given. */
+    readonly sha256: string;
+    /** Why, as a reason code, never the pack's own text. */
+    readonly reason: "digest" | "shape" | "fit";
+  };
 }
 
 /**
@@ -978,8 +1154,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "a40030f29980786b229f817d906dc60d661a61e1703d0d85290bcbb3b7fc3571",
-  groups: "c00f7be097975f23ce22414630f80239dd9546a6bde8d2282f7439006119ab92",
+  lines: "38c9d49249bfee5d67cdc9efff909a47b691eb7119dbacb965ae0f4e0669388b",
+  groups: "26945fd1a5f98c86281913e42f57510db88be3b6bd6c71581728f179cb20c7d9",
 });
 
 export interface Words {
@@ -991,8 +1167,35 @@ export interface Words {
     count: number,
     vars?: Readonly<Record<string, string | number>>,
   ): string;
+  /**
+   * A contract-report/v1 section 3 word, after layering: the entry for the
+   * key `family` + `value` assemble to, or undefined when no layer has it or
+   * the assembled key is not a valid WordingKey (§3: the caller then shows
+   * the raw token or identifier, never a guess). `row` and `group` words
+   * apply only when every claim cites the same `contract_ref`: otherwise
+   * undefined, so a multi-contract Result shows raw identifiers.
+   */
+  section3(key: string): string | undefined;
+  /** A section 3 enum word (`status`, `grade`, `sufficiency`, `tier`, `verdict`): the layered word for the lowercased value, or the raw value itself. */
+  enumWord(
+    family: "status" | "grade" | "sufficiency" | "tier" | "verdict",
+    value: string,
+  ): string;
+  /** The `row.<ref>.<part>` word for this Result, or undefined (see `section3`). */
+  row(
+    requirementRef: string,
+    part: "label" | "detail" | "not_evaluable",
+  ): string | undefined;
+  /** The `group.<segment>.title` word for this Result, or undefined (see `section3`). */
+  group(segment: string): string | undefined;
   readonly grouping: ContractReportGrouping;
   readonly source: WordingSource;
+}
+
+/** How the Result a card draws bears on its words: whether the per-contract keys (`row.*`, `group.*`) apply. */
+export interface WordsContext {
+  /** True when every claim cites the same `contract_ref` (contract-report/v1 §3). */
+  readonly singleContract: boolean;
 }
 
 function fill(
@@ -1007,18 +1210,33 @@ function fill(
   });
 }
 
-/** The words over `defaults`, with `supplied`'s entries in place of the defaults' where it has them. */
+/**
+ * The words over `defaults`, with `supplied`'s entries in place of the
+ * defaults' where it has them. `context` defaults closed
+ * (`singleContract: false`): a caller that has not checked
+ * `citesOneContract` itself gets raw identifiers for `row`/`group`, never a
+ * guess that a multi-contract Result is safe to label per-contract.
+ */
 export function wordsOf(
   defaults: WordingPack,
   supplied?: {
     readonly pack: WordingPack;
     readonly sha256?: string;
   },
+  context: WordsContext = { singleContract: false },
+  refused?: WordingSource["refused"],
 ): Words {
+  const declared = defaults.entries["layout.grouping"];
   const entries: Readonly<Record<string, string>> =
     supplied === undefined
       ? defaults.entries
-      : { ...defaults.entries, ...supplied.pack.entries };
+      : {
+          ...defaults.entries,
+          ...(declared === "lines" || declared === "groups"
+            ? expandSection3(supplied.pack, declared)
+            : supplied.pack
+          ).entries,
+        };
   const t = (
     key: string,
     vars: Readonly<Record<string, string | number>> = {},
@@ -1028,6 +1246,10 @@ export function wordsOf(
       throw new WordingPackError(`${defaults.id}: no entry ${key}`);
     return fill(key, text, vars);
   };
+  const section3 = (key: string): string | undefined =>
+    WORDING_KEY.test(key) && Object.hasOwn(entries, key)
+      ? entries[key]
+      : undefined;
   const grouping = entries["layout.grouping"];
   if (grouping !== "lines" && grouping !== "groups")
     throw new WordingPackError(
@@ -1041,10 +1263,29 @@ export function wordsOf(
         n: count.toLocaleString(),
         ...vars,
       }),
+    section3,
+    // A section 3 word that names what the grouping already has a word
+    // for (SECTION3_ALIASES) is read through the grouping's own key, the
+    // one every check covers, so the two can never disagree on the page.
+    enumWord: (family, value) => {
+      const key = `${family}.${value.toLowerCase()}`;
+      const target = SECTION3_ALIASES[grouping][key]?.[0];
+      return target !== undefined ? t(target) : (section3(key) ?? value);
+    },
+    row: (requirementRef, part) =>
+      context.singleContract
+        ? section3(`row.${requirementRef}.${part}`)
+        : undefined,
+    group: (segment) =>
+      context.singleContract ? section3(`group.${segment}.title`) : undefined,
     grouping,
     source:
       supplied === undefined
-        ? { id: base.id, sha256: base.sha256 }
+        ? {
+            id: base.id,
+            sha256: base.sha256,
+            ...(refused === undefined ? {} : { base, refused }),
+          }
         : {
             id: supplied.pack.id,
             ...(supplied.sha256 === undefined
@@ -1056,21 +1297,39 @@ export function wordsOf(
 }
 
 /**
- * The words for a card laid out as `grouping`: the default pack, or the
- * host's pack over it once it checks against its digest and fits this
- * module. Throws `WordingPackError` naming every problem; a card is never
- * drawn with words that did not check.
+ * The words for a card laid out as `grouping`: the default pack, with the
+ * host's pack over it entry by entry once it checks against its digest and
+ * fits this module (contract-report/v1 §3 layering). A host layer that does
+ * not check is refused and contributes no words: the card is drawn with the
+ * default layer alone, and `source.refused` says why, so the page says so.
+ * A builder that must refuse to write such a page (§3 allows it) checks the
+ * pack itself first (`presentation-builder.ts` `checkWordingFits`), before
+ * this function ever runs.
  */
 export async function contractReportWords(
   grouping: ContractReportGrouping,
   wording?: WordingPackInput,
+  context: WordsContext = { singleContract: false },
 ): Promise<Words> {
   const defaults = DEFAULT_PACKS[grouping];
-  if (wording === undefined) return wordsOf(defaults);
-  const pack = await checkWordingPackInput(wording);
+  if (wording === undefined) return wordsOf(defaults, undefined, context);
+  const refuse = (reason: "digest" | "shape" | "fit"): Words =>
+    wordsOf(defaults, undefined, context, {
+      sha256: /^[0-9a-f]{64}$/u.test(wording.sha256)
+        ? wording.sha256
+        : "(not a SHA-256)",
+      reason,
+    });
+  let pack: WordingPack;
+  try {
+    pack = await checkWordingPackInput(wording);
+  } catch (e) {
+    if (!(e instanceof WordingPackError)) throw e;
+    return refuse(/hash|sha256/u.test(e.message) ? "digest" : "shape");
+  }
   const problems = wordingProblems(pack, defaults);
-  if (problems.length > 0) throw new WordingPackError(problems.join("; "));
-  return wordsOf(defaults, { pack, sha256: wording.sha256 });
+  if (problems.length > 0) return refuse("fit");
+  return wordsOf(defaults, { pack, sha256: wording.sha256 }, context);
 }
 
 /** The default words of one grouping, for the shared parts' callers that are handed none. */

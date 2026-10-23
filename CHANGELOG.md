@@ -40,6 +40,17 @@ here. The format follows
   reads a bundle file instead of a JSONL ledger. Requires capsule-emit 0.12
   (`capsule-emit>=0.12,<0.13` in the `evidence` and `dev` extras), which
   removes the `permalink.build_bundle` this used (capsule-emit#338).
+- The contract-report module's own words moved off the `report.*` prefix
+  onto `card.*`: `report.*` is reserved by agent-action-capsule
+  spec/contract-report-v1.md section 3 (`report.title`, `report.summary`),
+  and the module's own words must stay off every section 3 prefix. A pack
+  carrying the old `report.*` keys for the module's own concepts no longer
+  reaches them.
+- Both default wording packs bump to `@2`
+  (`capsule-viewer/contract-report/outcomes@2`,
+  `capsule-viewer/contract-report/eu-ai-act@2`); their `wording_sha256`
+  changes (#52 adds section 3 enum defaults and the resolved-conversation
+  out-of-scope header split). A pinned `@1` digest no longer matches.
 
 ### Added
 
@@ -99,6 +110,33 @@ here. The format follows
   witness addresses, log id, producer and version) are quoted and capped at
   120 characters, so they never read as the page's own words. New runtime
   style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+- The contract-report module resolves on `contract-report/v1`
+  (agent-action-capsule#352), registered in place of
+  `aac.builtin.result-contract-report/v0`, never beside it
+  (spec/contract-report-v1.md section 4). It reads section 3's keys
+  (`report.title`, `report.summary`, `group.<segment>.title`,
+  `row.<requirement_ref>.label`/`.detail`/`.not_evaluable`,
+  `verdict.<value>`, `sufficiency.<value>`, `tier.<value>`,
+  `grade.<value>`, `status.<value>`), layered over the module's own
+  default pack entry by entry: a host layer that does not check (digest,
+  shape or fit) is refused and contributes no words, and the card draws
+  with the default layer and a visible notice. A `verdict.*` or `tier.*`
+  word is read through the layout's own key and checked as it is, and may
+  not differ from that key in the same pack; the claims' assurance words
+  (`status.*`, `grade.*`, `sufficiency.*`) are locked. A Result whose
+  claims the card cannot place one by one (claims under more than one
+  `contract_ref`, a requirement judged more than once in one conversation,
+  claims of another type or id shape) is drawn as the generic Result page
+  with a note, so no claim is merged or left out. Tuning details in
+  `ts/README.md`. By Jody Edmondson (#58), completed by Ethan Zhang.
+- Requires `@action-state-group/agent-action-capsule` 0.6.0 (it was
+  0.5.0), which carries the `contract-report/v1`
+  registration (#352), `out_of_scope`/`applies_from` (#368, #363,
+  8732264) this release also ports onto `compliance.ts`,
+  `compliance-view.ts`, `outcome-report-view.ts` and the generic Result
+  page: a judged-out-of-scope claim is its own count, in the population,
+  never "met" and never "not applicable"; a claim not yet in force is
+  readiness only, outside the population, unless it failed verification.
 
 ### Changed
 

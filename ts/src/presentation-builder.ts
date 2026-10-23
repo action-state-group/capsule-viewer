@@ -19,6 +19,8 @@ import {
   type ContractReportGrouping,
 } from "./contract-report-wording.js";
 import {
+  CONTRACT_REPORT_MANIFEST,
+  contractReportGroupingOf,
   createPresentationRegistry,
   renderEvidenceGraph,
 } from "./evidence-graph-view.js";
@@ -352,7 +354,11 @@ export async function checkWordingPack(
   }
 }
 
-/** The contract-report grouping each built-in report module draws, by module id. */
+/**
+ * The contract-report grouping each earlier display card draws, by module
+ * id. The contract-report module (CONTRACT_REPORT_MANIFEST) draws the
+ * grouping its bundle's data supports (`contractReportGroupingOf`).
+ */
 const CONTRACT_REPORT_GROUPINGS: Readonly<
   Record<string, ContractReportGrouping>
 > = {
@@ -369,11 +375,14 @@ const CONTRACT_REPORT_GROUPINGS: Readonly<
 async function checkWordingFits(
   wording: WordingPackInput,
   module: string | null,
+  bundle: unknown,
 ): Promise<void> {
   const grouping =
-    module === null || !Object.hasOwn(CONTRACT_REPORT_GROUPINGS, module)
-      ? undefined
-      : CONTRACT_REPORT_GROUPINGS[module];
+    module === CONTRACT_REPORT_MANIFEST.id
+      ? contractReportGroupingOf(bundle)
+      : module === null || !Object.hasOwn(CONTRACT_REPORT_GROUPINGS, module)
+        ? undefined
+        : CONTRACT_REPORT_GROUPINGS[module];
   if (grouping === undefined) return;
   let pack;
   try {
@@ -574,7 +583,7 @@ async function resolveFor(
       `presentation ${options.presentation} was requested but the registry selected ${module ?? resolution.kind} for audience ${audience} and format ${format}`,
     );
   if (options.wording !== undefined)
-    await checkWordingFits(options.wording, module);
+    await checkWordingFits(options.wording, module, context.bundle);
   return {
     common: {
       audience,

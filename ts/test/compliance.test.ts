@@ -368,3 +368,61 @@ it("with the reports withheld, the case every claim cites (a case record declari
     expect(session.transcript.state).toBe("cited");
   }
 });
+
+it("out_of_scope is its own count, in the population, never met and never not_applicable; a not-yet-in-force claim is readiness only, outside the population (Result v0 sections 4.2, 4.3)", async () => {
+  const m = await model((source) => {
+    const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+    const claims = doc.claims as Obj[];
+    for (const claim of claims) {
+      if (claim.requirement_ref === "art5.no_manipulation_or_deception") {
+        claim.out_of_scope_allowed = true;
+        if ((claim.id as string).startsWith("tau2:airline:task-0")) {
+          claim.verdict = "out_of_scope";
+          claim.sufficiency = "SATISFIED";
+        }
+      }
+      if (claim.requirement_ref === "art50.disclosure_before_first_turn")
+        claim.applies_from = "2027-01-01";
+    }
+    doc.aggregate = {
+      coverage: {
+        evaluated_population: 7,
+        excluded_not_applicable: 1,
+        unknown_count: 0,
+        not_yet_in_force: 2,
+      },
+      buckets: {
+        met: [
+          "tau2:airline:task-0:trial-0::art26.allowed_action_rules",
+          "tau2:airline:task-0:trial-0::art26.consequential_actions_vs_instructions",
+          "tau2:airline:task-1:trial-0::art50.disclosure_clear_or_obvious",
+          "tau2:airline:task-1:trial-0::art26.consequential_actions_vs_instructions",
+        ],
+        not_met: [
+          "tau2:airline:task-0:trial-0::art50.disclosure_clear_or_obvious",
+          "tau2:airline:task-1:trial-0::art5.no_manipulation_or_deception",
+        ],
+        not_evaluable: [],
+        out_of_scope: [
+          "tau2:airline:task-0:trial-0::art5.no_manipulation_or_deception",
+        ],
+      },
+    };
+  });
+  const rows = m.obligations.flatMap((o) => o.rows);
+  const art5 = rows.find(
+    (r) => r.criterionId === "art5.no_manipulation_or_deception",
+  )!;
+  expect(art5.metCount).toBe(0);
+  expect(art5.notMetCount).toBe(1);
+  expect(art5.notApplicableCount).toBe(0);
+  expect(art5.outOfScopeCount).toBe(1);
+  expect(art5.notYetInForceCount).toBe(0);
+  const art50Before = rows.find(
+    (r) => r.criterionId === "art50.disclosure_before_first_turn",
+  )!;
+  expect(art50Before.metCount).toBe(0);
+  expect(art50Before.notMetCount).toBe(0);
+  expect(art50Before.notEvaluableCount).toBe(0);
+  expect(art50Before.notYetInForceCount).toBe(2);
+});

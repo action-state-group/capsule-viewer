@@ -9,10 +9,12 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import {
   BUILTIN_MANIFEST_NO_AGGREGATE,
+  BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT,
   BUILTIN_MANIFESTS,
 } from "@action-state-group/agent-action-capsule";
 import {
   BUILTIN_PRESENTATIONS,
+  CONTRACT_REPORT_MANIFEST,
   createPresentationRegistry,
   registerPresentation,
   renderEvidenceGraph,
@@ -130,13 +132,27 @@ async function render(
 }
 
 describe("registration (spec section 4.5)", () => {
-  it("registers the six built-ins without a co-matchable pair", () => {
+  it("registers the seven built-ins without a co-matchable pair, the contract-report module in place of the AAC built-in (contract-report/v1 section 4)", () => {
     const registry = createPresentationRegistry();
+    // The same seven ids agent-action-capsule's own built-ins resolve, with
+    // this viewer's contract-report module standing in for
+    // aac.builtin.result-contract-report/v0 -- never beside it.
     expect(registry.list().map((m) => m.manifest.id)).toEqual(
-      BUILTIN_MANIFESTS.map((m) => m.id),
+      BUILTIN_MANIFESTS.map((m) =>
+        m.id === BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT.id
+          ? CONTRACT_REPORT_MANIFEST.id
+          : m.id,
+      ),
+    );
+    expect(registry.list().map((m) => m.manifest.id)).not.toContain(
+      BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT.id,
     );
     expect(BUILTIN_PRESENTATIONS.map((m) => m.manifest)).toEqual(
-      BUILTIN_MANIFESTS,
+      BUILTIN_MANIFESTS.map((m) =>
+        m.id === BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT.id
+          ? CONTRACT_REPORT_MANIFEST
+          : m,
+      ),
     );
   });
 
@@ -161,7 +177,7 @@ describe("registration (spec section 4.5)", () => {
   it("accepts a specific module whose forbids exclude every built-in specific", () => {
     const registry = createPresentationRegistry();
     registry.register(spyModule(manifest()).module);
-    expect(registry.list()).toHaveLength(7);
+    expect(registry.list()).toHaveLength(8);
   });
 });
 
@@ -458,7 +474,7 @@ describe("the presentation ABI (spec section 3.2)", () => {
     expect(later.register(newer.module)).toEqual({ status: "registered" });
   });
 
-  it("a runtime that implements none of the built-ins' API refuses all six and renders no module", async () => {
+  it("a runtime that implements none of the built-ins' API refuses all seven and renders no module", async () => {
     const registry = new PresentationRegistry({
       presentationApis: ["aac.presentation-api/v1"],
       runtimeVersion: "1.0.0",

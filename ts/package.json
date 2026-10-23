@@ -6,6 +6,7 @@
   "type": "module",
   "files": [
     "dist",
+    "vendor",
     "README.md",
     "LICENSE",
     "LICENSE-BSD-3-Clause"
@@ -31,7 +32,7 @@
     "emitter:iife": "node scripts/build-iife.mjs"
   },
   "dependencies": {
-    "@action-state-group/agent-action-capsule": "0.5.0",
+    "@action-state-group/agent-action-capsule": "0.6.0",
     "@action-state-group/cll": "0.2.1"
   },
   "devDependencies": {

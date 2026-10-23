@@ -1,0 +1,728 @@
+{
+  "source": {
+    "repo": "https://github.com/action-state-group/agent-action-capsule",
+    "path": "vectors/presentation-resolution/registration.json",
+    "commit": "db9de0f",
+    "sha256": "dcd9ca8dffe92b9cee8399ed1b522b3d3fe0f2ef526857b5906227f8c20dcdb4"
+  },
+  "cases": [
+    {
+      "id": "contract-report-module-beside-builtin",
+      "description": "spec/contract-report-v1.md section 4: a contract-report module with the same match as aac.builtin.result-contract-report/v0, registered beside it, is co-matchable: section 4.5 rejects the set.",
+      "runtime": {
+        "presentation_apis": [
+          "aac.presentation-api/v0"
+        ],
+        "runtime_version": "0.1.0"
+      },
+      "register": true,
+      "manifests": [
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.report-rows/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "spec_version:report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result-contract-report/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "contract-report/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result-outcome-report/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "outcome-report/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result-compliance/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "eu-ai-act-compliance/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1",
+              "outcome-report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ]
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1",
+              "outcome-report/v1",
+              "eu-ai-act-compliance/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.evaluation-summary-graph/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "spec_version:evaluation-summary/v1"
+            ]
+          },
+          "forbids": {
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.no-aggregate/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2"
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": true,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "org.example.contract-report/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "contract-report/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        }
+      ],
+      "expect": {
+        "registrations": [
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          }
+        ],
+        "error": {
+          "kind": "ambiguity",
+          "ids": [
+            "aac.builtin.result-contract-report/v0",
+            "org.example.contract-report/v0"
+          ],
+          "message": "manifests aac.builtin.result-contract-report/v0 and org.example.contract-report/v0 are both specific and one descriptor can match both; state precedence with forbids"
+        },
+        "list": null,
+        "refused": null
+      },
+      "probes": []
+    },
+    {
+      "id": "contract-report-module-in-place-of-builtin",
+      "description": "spec/contract-report-v1.md section 4: the same module registered in place of aac.builtin.result-contract-report/v0 registers, and every Result root that opts in resolves to it, alone or beside a deprecated alias; a report/v1 root still resolves to the rows table.",
+      "runtime": {
+        "presentation_apis": [
+          "aac.presentation-api/v0"
+        ],
+        "runtime_version": "0.1.0"
+      },
+      "register": true,
+      "manifests": [
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.report-rows/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "spec_version:report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result-outcome-report/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "outcome-report/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result-compliance/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "eu-ai-act-compliance/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1",
+              "outcome-report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.result/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ]
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1",
+              "outcome-report/v1",
+              "eu-ai-act-compliance/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.evaluation-summary-graph/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "spec_version:evaluation-summary/v1"
+            ]
+          },
+          "forbids": {
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "aac.builtin.no-aggregate/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2"
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": true,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        },
+        {
+          "spec_version": "aac.presentation-manifest/v0",
+          "id": "org.example.contract-report/v0",
+          "presentation_api": "aac.presentation-api/v0",
+          "runtime_min": "0.1.0",
+          "trust_class": "trusted-executable",
+          "requires": {
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": {
+              "required": [
+                "contract-report/v1"
+              ]
+            }
+          },
+          "forbids": {
+            "profiles": [
+              "spec_version:report/v1"
+            ]
+          },
+          "audiences": [
+            "*"
+          ],
+          "formats": [
+            "html",
+            "fragment",
+            "embedded"
+          ],
+          "fallback": false,
+          "priority": 1,
+          "executable": {
+            "carrier": "core-runtime"
+          }
+        }
+      ],
+      "expect": {
+        "registrations": [
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          },
+          {
+            "status": "registered"
+          }
+        ],
+        "error": null,
+        "list": [
+          "aac.builtin.report-rows/v0",
+          "aac.builtin.result-outcome-report/v0",
+          "aac.builtin.result-compliance/v0",
+          "aac.builtin.result/v0",
+          "aac.builtin.evaluation-summary-graph/v0",
+          "aac.builtin.no-aggregate/v0",
+          "org.example.contract-report/v0"
+        ],
+        "refused": []
+      },
+      "probes": [
+        {
+          "descriptor": {
+            "verified": true,
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": [
+              "contract-report/v1"
+            ]
+          },
+          "audience": "*",
+          "format": "html",
+          "declines": [],
+          "expect": {
+            "kind": "module",
+            "module": "org.example.contract-report/v0",
+            "refused": []
+          }
+        },
+        {
+          "descriptor": {
+            "verified": true,
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": [
+              "contract-report/v1",
+              "outcome-report/v1"
+            ]
+          },
+          "audience": "*",
+          "format": "html",
+          "declines": [],
+          "expect": {
+            "kind": "module",
+            "module": "org.example.contract-report/v0",
+            "refused": []
+          }
+        },
+        {
+          "descriptor": {
+            "verified": true,
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": [
+              "contract-report/v1",
+              "eu-ai-act-compliance/v1"
+            ]
+          },
+          "audience": "*",
+          "format": "html",
+          "declines": [],
+          "expect": {
+            "kind": "module",
+            "module": "org.example.contract-report/v0",
+            "refused": []
+          }
+        },
+        {
+          "descriptor": {
+            "verified": true,
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": [
+              "composed/v1",
+              "contract-report/v1"
+            ]
+          },
+          "audience": "*",
+          "format": "html",
+          "declines": [],
+          "expect": {
+            "kind": "module",
+            "module": "org.example.contract-report/v0",
+            "refused": []
+          }
+        },
+        {
+          "descriptor": {
+            "verified": true,
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0",
+              "spec_version:report/v1"
+            ],
+            "extensions": [
+              "contract-report/v1"
+            ]
+          },
+          "audience": "*",
+          "format": "html",
+          "declines": [],
+          "expect": {
+            "kind": "module",
+            "module": "aac.builtin.report-rows/v0",
+            "refused": []
+          }
+        },
+        {
+          "descriptor": {
+            "verified": true,
+            "bundle_kind": "evidence-bundle/v2",
+            "profiles": [
+              "result_version:evidence-result-v0"
+            ],
+            "extensions": []
+          },
+          "audience": "*",
+          "format": "html",
+          "declines": [],
+          "expect": {
+            "kind": "module",
+            "module": "aac.builtin.result/v0",
+            "refused": []
+          }
+        }
+      ]
+    }
+  ]
+}

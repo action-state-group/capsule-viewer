@@ -34,6 +34,8 @@ import {
   renderChat,
   ruleWord,
   wordPill,
+  assuranceRow,
+  reportSummary,
 } from "./report-levels.js";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
 import { provenanceLines, renderProvenance } from "./report-provenance.js";
@@ -146,6 +148,45 @@ function statusPill(statusClass: string, text: string): HTMLElement {
   return el("span", `st ${statusClass}`, text);
 }
 
+/**
+ * A word a host pack sets for this contract (contract-report/v1 section 3:
+ * `group.<segment>.title`, `row.<requirement_ref>.label` and the rest),
+ * drawn in the page's own voice and tagged `data-wording="pack"`: never
+ * producer text, never a sealed record.
+ */
+function packWord(tag: string, className: string, text: string): HTMLElement {
+  const value = el(tag, className, text);
+  value.dataset.wording = "pack";
+  return value;
+}
+
+/** A test's name: the pack's `row.<ref>.label` when it sets one, else the producer's label or the test id made readable. */
+function rowName(
+  w: Words,
+  tag: string,
+  className: string,
+  row: Pick<ObligationRowModel, "criterionId" | "name" | "producerName">,
+): HTMLElement {
+  const label = w.row(row.criterionId, "label");
+  return label !== undefined
+    ? packWord(tag, className, label)
+    : maybeProducer(w, tag, className, row.name, row.producerName);
+}
+
+/** An obligation's heading after its article: the pack's `group.<segment>.title` when it sets one, else the producer's title. */
+function obligationName(
+  w: Words,
+  obligation: ObligationModel,
+  article: HTMLElement,
+): (string | Node)[] {
+  const title = w.group(obligation.key);
+  if (title !== undefined)
+    return [article, packWord("span", "", ` · ${title}`)];
+  return obligation.mapped
+    ? [producerText(w, article, ` · ${obligation.title}`)]
+    : [article, element("span", ` · ${obligation.title}`)];
+}
+
 /** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
 function testNames(
   model: ComplianceModel,
@@ -158,13 +199,11 @@ function testNames(
   );
   return (criterionId, tag, className) => {
     const row = rows.get(criterionId);
-    return maybeProducer(
-      w,
-      tag,
-      className,
-      row?.name ?? criterionId,
-      row?.producerName === true,
-    );
+    return rowName(w, tag, className, {
+      criterionId,
+      name: row?.name ?? criterionId,
+      producerName: row?.producerName === true,
+    });
   };
 }
 
@@ -176,7 +215,7 @@ function sessionSpan(model: ComplianceModel, w: Words): string | undefined {
   const first = days[0];
   const last = days[days.length - 1];
   if (first === undefined || last === undefined) return undefined;
-  return first === last ? first : w.t("report.span", { from: first, to: last });
+  return first === last ? first : w.t("card.span", { from: first, to: last });
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +231,8 @@ function renderHeader(
   hd.dataset.section = "header";
   hd.append(el("div", "kicker", w.t("groups.kicker")));
   hd.append(maybeProducer(w, "h1", "", model.regulation, true));
+  const summary = reportSummary(w);
+  if (summary !== undefined) hd.append(summary);
   const pack =
     model.pack.id === NOT_STATED
       ? w.t("groups.pack.not-stated")
@@ -229,14 +270,27 @@ function nothingChecked(row: ObligationRowModel): boolean {
     row.metCount +
       row.notMetCount +
       row.notEvaluableCount +
+      row.outOfScopeCount +
       row.unverifiedCount ===
     0
   );
 }
 
-/** No session with a result for this test met it or did not: every one was undecided or could not be verified. */
+/** No session with a result for this test met it, did not, or was judged out of scope: every one was undecided or could not be verified. */
 function noneDecided(row: ObligationRowModel): boolean {
-  return row.metCount === 0 && row.notMetCount === 0;
+  return (
+    row.metCount === 0 && row.notMetCount === 0 && row.outOfScopeCount === 0
+  );
+}
+
+/** The sessions a test's population counts: not the ones it did not apply to, and not the ones whose claim is not yet in force (Result v0 section 4.3). */
+function population(row: ObligationRowModel, totalSessions: number): number {
+  return totalSessions - row.notApplicableCount - row.notYetInForceCount;
+}
+
+/** Every claim for this test is not yet in force: readiness only, nothing in force to count (Result v0 section 4.3). */
+function allLater(row: ObligationRowModel): boolean {
+  return nothingChecked(row) && row.notYetInForceCount > 0;
 }
 
 /**
@@ -260,12 +314,21 @@ export function obligationStatus(
   text: string;
 } {
   const exceptions = obligation.rows.reduce((sum, r) => sum + r.notMetCount, 0);
-  const unchecked = obligation.rows.filter((r) => noneDecided(r)).length;
+  // Result v0 section 4.3: only when every test is wholly later is there no
+  // population to have no exceptions in. A test in force whose claims all
+  // failed verification is still in force: its failure is never hidden
+  // behind "Not yet in force".
+  if (obligation.rows.length > 0 && obligation.rows.every(allLater))
+    return { cls: "na", text: w.t("groups.ob.later") };
+  // A wholly later test was not "could not be checked": it is not in force
+  // yet, so it is left out of both counts.
+  const inForce = obligation.rows.filter((r) => !allLater(r));
+  const unchecked = inForce.filter((r) => noneDecided(r)).length;
   const unverified = obligation.rows.reduce(
     (sum, r) => sum + r.unverifiedCount,
     0,
   );
-  const total = obligation.rows.length;
+  const total = inForce.length;
   const uncheckedText =
     unchecked > 0
       ? w.t("groups.ob.unchecked-of", {
@@ -297,28 +360,61 @@ export function rowStatus(
   row: ObligationRowModel,
   w: Words = DEFAULT_WORDS.groups,
 ): { cls: string; text: string; note?: string; producerNote?: true } {
+  if (allLater(row))
+    return {
+      cls: "na",
+      text: w.t("groups.row.later"),
+      note: w.t("groups.row.later-note", { n: fmt(row.notYetInForceCount) }),
+    };
   if (nothingChecked(row))
     return { cls: "ne", text: w.t("groups.row.nothing") };
-  if (noneDecided(row))
+  if (noneDecided(row)) {
+    const packNotEvaluable =
+      row.notEvaluableCount > 0
+        ? w.row(row.criterionId, "not_evaluable")
+        : undefined;
+    // Module-only notes a producer or pack word never speaks for: unverified
+    // and not-yet-in-force claims can coexist with an undecided row, and
+    // both must still be said, whichever of the two branches below applies.
+    const moduleNotes = [
+      ...(row.unverifiedCount > 0
+        ? [w.t("groups.row.unverified-note", { n: fmt(row.unverifiedCount) })]
+        : []),
+      ...(row.notYetInForceCount > 0
+        ? [w.t("groups.row.later-note", { n: fmt(row.notYetInForceCount) })]
+        : []),
+    ];
+    if (packNotEvaluable !== undefined)
+      return {
+        cls: "ne",
+        text: w.t("groups.row.none-decided"),
+        note: [packNotEvaluable, ...moduleNotes].join("; "),
+      };
+    if (row.notEvaluableNote !== undefined && row.notEvaluableCount > 0)
+      return {
+        cls: "ne",
+        text: w.t("groups.row.none-decided"),
+        note: row.notEvaluableNote,
+        producerNote: true,
+      };
     return {
       cls: "ne",
       text: w.t("groups.row.none-decided"),
-      ...(row.notEvaluableNote !== undefined && row.notEvaluableCount > 0
-        ? { note: row.notEvaluableNote, producerNote: true }
-        : row.unverifiedCount > 0
-          ? {
-              note: w.t("groups.row.unverified-note", {
-                n: fmt(row.unverifiedCount),
-              }),
-            }
-          : {}),
+      ...(moduleNotes.length > 0 ? { note: moduleNotes.join("; ") } : {}),
     };
+  }
   const notes = [
     ...(row.notEvaluableCount > 0
       ? [w.t("groups.row.undecided-note", { n: fmt(row.notEvaluableCount) })]
       : []),
     ...(row.unverifiedCount > 0
       ? [w.t("groups.row.unverified-note", { n: fmt(row.unverifiedCount) })]
+      : []),
+    ...(row.outOfScopeCount > 0
+      ? [w.t("groups.row.out-of-scope-note", { n: fmt(row.outOfScopeCount) })]
+      : []),
+    ...(row.notYetInForceCount > 0
+      ? [w.t("groups.row.later-note", { n: fmt(row.notYetInForceCount) })]
       : []),
   ];
   const undecided = notes.length > 0 ? { note: notes.join("; ") } : {};
@@ -330,6 +426,10 @@ export function rowStatus(
       }),
       ...undecided,
     };
+  // Every decided result was judged out of scope: it did not arise, which
+  // is never met (Result v0 section 4.2), so never "no exceptions" either.
+  if (row.metCount === 0)
+    return { cls: "na", text: w.t("groups.row.out-of-scope"), ...undecided };
   // Neither word set says more than "no exceptions": a session's result
   // that was met is all the records show, never "established in every
   // session".
@@ -405,10 +505,9 @@ function renderSummary(
     const title = el("td", "");
     title.setAttribute("colspan", "2");
     const name = el("div", "obn");
-    const article = el("b", "", obligation.article);
-    if (obligation.mapped)
-      name.append(producerText(w, article, ` · ${obligation.title}`));
-    else name.append(article, element("span", ` · ${obligation.title}`));
+    name.append(
+      ...obligationName(w, obligation, el("b", "", obligation.article)),
+    );
     title.append(name);
     if (obligation.plain !== NOT_STATED)
       title.append(maybeProducer(w, "div", "plain", obligation.plain, true));
@@ -428,17 +527,19 @@ function renderSummary(
     for (const test of obligation.rows) {
       const tr = el("tr", "test");
       tr.dataset.criterion = test.criterionId;
-      const population = model.totalSessions - test.notApplicableCount;
-      tr.dataset.population = String(population);
+      const counted = population(test, model.totalSessions);
+      tr.dataset.population = String(counted);
+      tr.dataset.outOfScope = String(test.outOfScopeCount);
+      tr.dataset.notYetInForce = String(test.notYetInForceCount);
       tr.dataset.exceptions = String(test.notMetCount);
       tr.dataset.notEvaluable = String(test.notEvaluableCount);
       const nameCell = el("td", "tn");
       const head = el("div", "tnh");
-      head.append(
-        maybeProducer(w, "b", "", test.name, test.producerName),
-        tierBadge(test.tier, w),
-      );
+      head.append(rowName(w, "b", "", test), tierBadge(test.tier, w));
       nameCell.append(head);
+      const detail = w.row(test.criterionId, "detail");
+      if (detail !== undefined)
+        nameCell.append(packWord("div", "plain", detail));
       const finding = model.findings.find(
         (f) => f.criterionId === test.criterionId,
       );
@@ -450,7 +551,7 @@ function renderSummary(
       ];
       tr.append(
         nameCell,
-        el("td", "n", count(w, "session", population)),
+        el("td", "n", count(w, "session", counted)),
         rowResult(test, w),
       );
       tbody.append(tr);
@@ -538,6 +639,12 @@ function renderSessionList(
       list.append(renderSession(session, model, presentation, w));
   }
   return list;
+}
+
+/** A claim not yet in force, in words: its date as the producer copied it from the contract, never checked here, and never counted. */
+function laterNote(test: SessionTest, w: Words): string {
+  // A claim is later only when it carries applies_from (Result v0 4.3).
+  return w.t("groups.later.note", { date: test.claim?.appliesFrom ?? "" });
 }
 
 function isException(test: SessionTest): boolean {
@@ -631,9 +738,15 @@ function sessionBody(
       ),
     );
     h.append(names(test.criterionId, "span", "tname"));
-    if (test.verdict !== "not_applicable") h.append(tierBadge(test.tier, w));
+    if (
+      test.verdict !== "not_applicable" &&
+      test.verdict !== "not_yet_in_force"
+    )
+      h.append(tierBadge(test.tier, w));
     if (test.verdict === "failed" || test.verdict === "unsupported")
       h.append(el("span", "applic", w.t("groups.unverified-note")));
+    if (test.verdict === "not_yet_in_force")
+      h.append(el("span", "applic", laterNote(test, w)));
     box.append(h);
     if (test.rationale !== undefined)
       box.append(
@@ -659,12 +772,12 @@ function sessionBody(
     gap.dataset.gaps = "true";
     body.append(gap);
   }
-  body.append(el("h4", "", w.t("report.h.conversation")));
+  body.append(el("h4", "", w.t("card.h.conversation")));
   body.append(renderChat(session.transcript, session.sourceCapsuleId, w));
   body.append(
     levelToggle(
       2,
-      w.t("report.proofs.toggle"),
+      w.t("card.proofs.toggle"),
       () => sessionProofs(session, model, w),
       { className: "proofs" },
     ),
@@ -693,7 +806,7 @@ function sessionProofs(
             ? []
             : [
                 [
-                  w.t("report.pf.imported"),
+                  w.t("card.pf.imported"),
                   dated.importedAt,
                   { imported: "" },
                 ] as [string, string, Record<string, string>],
@@ -703,11 +816,11 @@ function sessionProofs(
     [
       [w.t("groups.pf.session"), session.conversationId],
       ...dating,
-      [w.t("report.pf.judged-sealed"), session.judgedDay, { sealed: "" }],
+      [w.t("card.pf.judged-sealed"), session.judgedDay, { sealed: "" }],
       [
-        w.t("report.pf.case-record"),
+        w.t("card.pf.case-record"),
         session.sourceCapsuleId === undefined
-          ? w.t("report.pf.case-record.not-stated")
+          ? w.t("card.pf.case-record.not-stated")
           : session.caseFrom === "claims"
             ? w.t("groups.pf.case-record.from-claims", {
                 record: session.sourceCapsuleId,
@@ -716,7 +829,7 @@ function sessionProofs(
       ],
     ];
   rows.push(...transcriptRows(session.transcript, w));
-  rows.push([w.t("report.pf.result-capsule"), model.capsuleId]);
+  rows.push([w.t("card.pf.result-capsule"), model.capsuleId]);
   const dl = proofList(rows);
   dl.dataset.checkIt = session.conversationId;
   box.append(dl);
@@ -729,6 +842,8 @@ function sessionProofs(
     ev.append(label);
     if (test.verdict === "not_applicable") {
       ev.append(element("span", w.t("groups.pf.no-claim")));
+    } else if (test.verdict === "not_yet_in_force") {
+      ev.append(element("span", laterNote(test, w)));
     } else {
       if (test.reportDigest !== undefined)
         ev.append(element("code", test.reportDigest));
@@ -753,6 +868,9 @@ function sessionProofs(
       if (test.reportDigest === undefined)
         ev.append(element("span", w.t("groups.pf.absent")));
     }
+    // contract-report/v1 section 2: assurance stays on the claim.
+    if (test.claim !== undefined)
+      ev.append(proofList([assuranceRow(test.claim, w)]));
     box.append(ev);
   }
   return box;
@@ -808,15 +926,11 @@ function renderObligationDetails(
     const box = el("div", "obd");
     box.dataset.obligationDetail = obligation.key;
     box.dataset.mapped = String(obligation.mapped);
-    box.append(
-      maybeProducer(
-        w,
-        "h5",
-        "",
-        `${obligation.article} · ${obligation.title}`,
-        obligation.mapped,
-      ),
+    const heading = element("h5");
+    heading.append(
+      ...obligationName(w, obligation, element("span", obligation.article)),
     );
+    box.append(heading);
     box.append(
       el(
         "p",
@@ -834,10 +948,7 @@ function renderObligationDetails(
       const rowBox = el("div", "ck");
       rowBox.dataset.wording = row.wording.source;
       const h = el("div", "h");
-      h.append(
-        maybeProducer(w, "span", "", row.name, row.producerName),
-        tierBadge(row.tier, w),
-      );
+      h.append(rowName(w, "span", "", row), tierBadge(row.tier, w));
       rowBox.append(h);
       rowBox.append(
         el(
@@ -852,7 +963,10 @@ function renderObligationDetails(
               ),
         ),
       );
-      if (row.notEvaluableNote !== undefined)
+      const packNote = w.row(row.criterionId, "not_evaluable");
+      if (packNote !== undefined)
+        rowBox.append(packWord("div", "ev", packNote));
+      else if (row.notEvaluableNote !== undefined)
         rowBox.append(
           maybeProducer(w, "div", "ev", row.notEvaluableNote, true),
         );
@@ -930,7 +1044,7 @@ function renderWhatRan(
             { sealed: "" },
           ] as [string, string, Record<string, string>],
         ]),
-    [w.t("report.pf.result-capsule"), model.capsuleId],
+    [w.t("card.pf.result-capsule"), model.capsuleId],
     wordingRow(w),
   ]);
   dl.dataset.ran = "true";
@@ -952,7 +1066,7 @@ function renderVerificationDetails(
 ): void {
   const part = el("div", "rp-s");
   part.dataset.section = "verification-details";
-  part.append(el("h3", "", w.t("report.vd.h")));
+  part.append(el("h3", "", w.t("card.vd.h")));
   const model = buildVerificationPageModel(bundle, verified);
   part.append(proofList(verificationRows(model, w)));
   part.append(el("p", "", w.t("groups.vd.note")));

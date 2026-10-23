@@ -26,6 +26,8 @@ import {
   wordPill,
   caseParts,
   judgeNote,
+  assuranceRow,
+  reportSummary,
   type Worded,
 } from "./report-levels.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
@@ -144,10 +146,15 @@ function fmtShare(
 const tierLabel = (tier: CriterionTierReading, w: Words): string =>
   w.t(`lines.tier.${tier}`);
 
+/**
+ * A rule's name and wording. The name is the pack's `row.<check>.<rule>.label`
+ * when it sets one (contract-report/v1 section 3), else the contract's label.
+ */
 function criterionLabel(
   model: OutcomeReportModel,
   checkId: string,
   criterionId: string,
+  w: Words,
 ): {
   label: string;
   text: string;
@@ -158,7 +165,10 @@ function criterionLabel(
   const criterion = check?.criteria.find((c) => c.id === criterionId);
   const wording = model.criterionWording.get(`${checkId}.${criterionId}`);
   return {
-    label: criterion?.label ?? `${checkId}.${criterionId}`,
+    label:
+      w.row(`${checkId}.${criterionId}`, "label") ??
+      criterion?.label ??
+      `${checkId}.${criterionId}`,
     text: wording?.text ?? criterion?.text ?? "",
     question: check?.question ?? checkId,
     source: wording?.source ?? "unstated",
@@ -266,6 +276,11 @@ export type ConversationStatus =
   | "undecided"
   | "nothing-applied";
 
+/** A rule that did not apply: not applicable, or judged out of scope ("did not arise", Result v0 section 4.2). Never met; out of scope is still counted on its own. */
+function notApplying(verdict: DrawnVerdict): boolean {
+  return verdict === "not_applicable" || verdict === "out_of_scope";
+}
+
 export function conversationStatus(
   conversation: Conversation,
 ): ConversationStatus {
@@ -275,7 +290,7 @@ export function conversationStatus(
     return "unverified";
   if (conversation.verdict === "not_met") return "missed";
   return conversation.criteria.length > 0 &&
-    conversation.criteria.every((c) => c.verdict === "not_applicable")
+    conversation.criteria.every((c) => notApplying(c.verdict))
     ? "nothing-applied"
     : "undecided";
 }
@@ -336,9 +351,13 @@ function noNoteText(c: DrawnCriterion, w: Words): string {
   }
 }
 
-function names(model: OutcomeReportModel, list: readonly DrawnCriterion[]) {
+function names(
+  model: OutcomeReportModel,
+  list: readonly DrawnCriterion[],
+  w: Words,
+) {
   return list
-    .map((c) => criterionLabel(model, c.checkId, c.criterionId).label)
+    .map((c) => criterionLabel(model, c.checkId, c.criterionId, w).label)
     .join(", ");
 }
 
@@ -362,13 +381,13 @@ function unverifiedClause(
   if (failed.length > 0)
     parts.push(
       w.t("lines.sentence.unverified.failed", {
-        names: names(model, failed),
+        names: names(model, failed, w),
       }),
     );
   if (unsupported.length > 0)
     parts.push(
       w.t("lines.sentence.unverified.unsupported", {
-        names: names(model, unsupported),
+        names: names(model, unsupported, w),
       }),
     );
   const text = `${parts.join(", and ")}, so the records do not say whether ${w.p("lines.word.that-rule-was", list.length)} met.`;
@@ -382,13 +401,19 @@ function resultSentence(
   w: Words,
 ): string {
   const all = conversation.criteria;
-  const applied = all.filter((c) => c.verdict !== "not_applicable");
-  const na = all.length - applied.length;
+  const applied = all.filter((c) => !notApplying(c.verdict));
+  const outOfScope = all.filter((c) => c.verdict === "out_of_scope").length;
+  const na = all.length - applied.length - outOfScope;
   const misses = all.filter((c) => isMiss(c.verdict));
   const unverified = all.filter((c) => isUnverified(c.verdict));
   const undecided = all.filter((c) => c.verdict === "not_evaluable");
-  const naText =
-    na > 0 ? ` ${w.t("lines.sentence.na", { n: String(na) })}` : "";
+  const naText = `${
+    na > 0 ? ` ${w.t("lines.sentence.na", { n: String(na) })}` : ""
+  }${
+    outOfScope > 0
+      ? ` ${w.t("lines.sentence.out-of-scope", { n: String(outOfScope) })}`
+      : ""
+  }`;
   const unverifiedText =
     unverified.length > 0 ? ` ${unverifiedClause(model, unverified, w)}` : "";
   switch (conversationStatus(conversation)) {
@@ -400,7 +425,7 @@ function resultSentence(
         applied: String(applied.length),
         rule: w.p("lines.word.rule", applied.length),
         was: w.p("lines.word.was", misses.length),
-        names: names(model, misses),
+        names: names(model, misses, w),
       })}${unverifiedText}${naText}`;
     case "unverified":
       return `${w.t("lines.sentence.unverified", {
@@ -408,7 +433,7 @@ function resultSentence(
         undecidedNote:
           undecided.length > 0
             ? w.t("lines.sentence.unverified.undecided-note", {
-                names: names(model, undecided),
+                names: names(model, undecided, w),
               })
             : "",
       })}${naText}`;
@@ -416,7 +441,7 @@ function resultSentence(
       return undecided.length === 0
         ? w.t("lines.sentence.undecided.none")
         : `${w.t("lines.sentence.undecided", {
-            names: names(model, undecided),
+            names: names(model, undecided, w),
             thatRuleWas: w.p("lines.word.that-rule-was", undecided.length),
           })}${naText}`;
     case "nothing-applied":
@@ -451,21 +476,37 @@ function renderConversation(
   const undecided = conversation.criteria.filter(
     (c) => c.verdict === "not_evaluable",
   );
+  const outOfScope = conversation.criteria.filter(
+    (c) => c.verdict === "out_of_scope",
+  );
   head.append(
     el(
       "span",
       "cwhy",
       status === "missed"
-        ? w.t("lines.why.missed", { names: names(model, misses) })
+        ? w.t("lines.why.missed", { names: names(model, misses, w) })
         : status === "unverified"
-          ? w.t("lines.why.unverified", { names: names(model, unverified) })
+          ? w.t("lines.why.unverified", { names: names(model, unverified, w) })
           : status === "undecided"
             ? undecided.length === 0
               ? w.t("lines.why.undecided.none")
-              : w.t("lines.why.undecided", { names: names(model, undecided) })
+              : w.t("lines.why.undecided", {
+                  names: names(model, undecided, w),
+                })
             : status === "nothing-applied"
               ? w.t("lines.why.nothing-applied")
-              : w.t("lines.why.resolved"),
+              : outOfScope.length === 0
+                ? w.t("lines.why.resolved")
+                : w.p(
+                    "lines.why.resolved-out-of-scope",
+                    conversation.criteria.length - outOfScope.length,
+                    {
+                      n: fmtCount(
+                        conversation.criteria.length - outOfScope.length,
+                      ),
+                      oos: fmtCount(outOfScope.length),
+                    },
+                  ),
     ),
   );
   head.append(el("span", "cmodel", parts.model ?? ""));
@@ -497,9 +538,9 @@ function conversationBody(
   // bundle carries them; otherwise one line says so, not one per rule.
   const hasNotes = conversation.criteria.some((c) => c.rationale !== undefined);
   const wordings = conversation.criteria.map(
-    (c) => criterionLabel(model, c.checkId, c.criterionId).source,
+    (c) => criterionLabel(model, c.checkId, c.criterionId, w).source,
   );
-  const anyWording = wordings.some((w) => w === "sealed");
+  const anyWording = wordings.some((source) => source === "sealed");
   const table = el("table", "crit");
   table.dataset.criteriaTable = conversation.conversationId;
   const head = element("thead");
@@ -521,6 +562,7 @@ function conversationBody(
       model,
       criterion.checkId,
       criterion.criterionId,
+      w,
     );
     const nameCell = el("td", "cn");
     nameCell.append(el("b", "", label.label));
@@ -593,7 +635,7 @@ function conversationBody(
   }
 
   // The conversation itself
-  body.append(el("h4", "", w.t("report.h.conversation")));
+  body.append(el("h4", "", w.t("card.h.conversation")));
   body.append(
     renderChat(conversation.transcript, conversation.sourceCapsuleId, w),
   );
@@ -602,7 +644,7 @@ function conversationBody(
   body.append(
     levelToggle(
       2,
-      w.t("report.proofs.toggle"),
+      w.t("card.proofs.toggle"),
       () => conversationProofs(conversation, model, runInfo, w),
       { className: "proofs" },
     ),
@@ -618,12 +660,12 @@ export function notesGap(
   const set = new Set(states);
   return w.t(
     set.size === 1 && set.has("withheld")
-      ? "report.gap.notes.withheld"
+      ? "card.gap.notes.withheld"
       : set.has("mismatch") || set.has("unreadable") || set.has("invalid")
-        ? "report.gap.notes.unread"
+        ? "card.gap.notes.unread"
         : set.has("withheld")
-          ? "report.gap.notes.some-withheld"
-          : "report.gap.notes.none",
+          ? "card.gap.notes.some-withheld"
+          : "card.gap.notes.none",
   );
 }
 
@@ -634,27 +676,27 @@ export function transcriptRows(
 ): [string, string][] {
   if (t.state === "verified")
     return [
-      [w.t("report.pf.transcript-record"), t.transcriptRecordId!],
+      [w.t("card.pf.transcript-record"), t.transcriptRecordId!],
       [
-        w.t("report.pf.input-digest"),
-        w.t("report.pf.input-digest.verified", { digest: t.inputDigest! }),
+        w.t("card.pf.input-digest"),
+        w.t("card.pf.input-digest.verified", { digest: t.inputDigest! }),
       ],
     ];
   if (t.state === "cited")
     return [
-      [w.t("report.pf.transcript-record"), t.transcriptRecordId!],
+      [w.t("card.pf.transcript-record"), t.transcriptRecordId!],
       [
-        w.t("report.pf.input-digest"),
-        w.t("report.pf.input-digest.cited", { digest: t.inputDigest! }),
+        w.t("card.pf.input-digest"),
+        w.t("card.pf.input-digest.cited", { digest: t.inputDigest! }),
       ],
     ];
   return [
     [
-      w.t("report.pf.transcript"),
+      w.t("card.pf.transcript"),
       t.state === "absent"
-        ? w.t("report.pf.transcript.absent")
-        : w.t("report.pf.transcript.not-shown", {
-            reason: t.reason ?? w.t("report.pf.transcript.default-reason"),
+        ? w.t("card.pf.transcript.absent")
+        : w.t("card.pf.transcript.not-shown", {
+            reason: t.reason ?? w.t("card.pf.transcript.default-reason"),
           }),
     ],
   ];
@@ -663,7 +705,7 @@ export function transcriptRows(
 /** How a case is dated, in the proofs: the date as given, its zone, and the basis. */
 export function datedText(dated: ConversationDate, w: Words): string {
   return w.t(
-    dated.zone === "not-stated" ? "report.pf.dated.no-zone" : "report.pf.dated",
+    dated.zone === "not-stated" ? "card.pf.dated.no-zone" : "card.pf.dated",
     { date: dated.stated ?? dated.date, basis: basisText(dated.basis, w) },
   );
 }
@@ -680,9 +722,9 @@ function conversationProofs(
     [];
   rows.push([w.t("lines.pf.case"), conversation.conversationId]);
   rows.push([
-    w.t("report.pf.case-record"),
+    w.t("card.pf.case-record"),
     conversation.sourceCapsuleId === undefined
-      ? w.t("report.pf.case-record.not-stated")
+      ? w.t("card.pf.case-record.not-stated")
       : conversation.caseFrom === "claims"
         ? w.t("lines.pf.case-record.from-claims", {
             record: conversation.sourceCapsuleId,
@@ -697,10 +739,10 @@ function conversationProofs(
       { dated: dated.basis },
     ]);
     if (dated.importedAt !== undefined)
-      rows.push([w.t("report.pf.imported"), dated.importedAt]);
-    rows.push([w.t("report.pf.judged-sealed"), conversation.judgedDay]);
+      rows.push([w.t("card.pf.imported"), dated.importedAt]);
+    rows.push([w.t("card.pf.judged-sealed"), conversation.judgedDay]);
   }
-  rows.push([w.t("report.pf.result-capsule"), model.capsuleId]);
+  rows.push([w.t("card.pf.result-capsule"), model.capsuleId]);
   rows.push(...transcriptRows(conversation.transcript, w));
   rows.push([
     w.t("lines.pf.judge-pin"),
@@ -729,6 +771,7 @@ function conversationProofs(
     el("th", "n", w.t("lines.pf.col.p")),
     element("th", w.t("lines.pf.col.report")),
     element("th", w.t("lines.pf.col.rationale")),
+    element("th", w.t("card.pf.assurance")),
   );
   head.append(headRow);
   table.append(head);
@@ -741,7 +784,8 @@ function conversationProofs(
     tr.append(
       element(
         "td",
-        criterionLabel(model, criterion.checkId, criterion.criterionId).label,
+        criterionLabel(model, criterion.checkId, criterion.criterionId, w)
+          .label,
       ),
       element("td", verdictText(criterion.verdict, w)),
     );
@@ -765,6 +809,15 @@ function conversationProofs(
       rationale.append(sealed);
     } else rationale.append(el("span", "muted", "–"));
     tr.append(rationale);
+    // contract-report/v1 section 2: assurance stays on the claim.
+    if (criterion.claim === undefined) tr.append(el("td", "muted", "–"));
+    else {
+      const [, text, data] = assuranceRow(criterion.claim, w);
+      const cell = element("td", text);
+      for (const [key, value] of Object.entries(data))
+        cell.dataset[key] = value;
+      tr.append(cell);
+    }
     tbody.append(tr);
   }
   table.append(tbody);
@@ -826,18 +879,18 @@ export function pinAbsence(
   const parts: string[] = [];
   if (info.reportsWithheld !== undefined)
     parts.push(
-      w.t("report.pin.withheld", {
+      w.t("card.pin.withheld", {
         count: fmtCount(info.reportsWithheld),
         total: cited,
       }),
     );
   if (unread > 0)
     parts.push(
-      w.t("report.pin.unread", { count: fmtCount(unread), total: cited }),
+      w.t("card.pin.unread", { count: fmtCount(unread), total: cited }),
     );
   return parts.length === 0
     ? undefined
-    : w.t("report.pin.not-in-bundle", { reasons: parts.join("; ") });
+    : w.t("card.pin.not-in-bundle", { reasons: parts.join("; ") });
 }
 
 /** What a page says when no judge pin is drawn. */
@@ -894,12 +947,21 @@ function missedReasonLabel(
   terms: OutcomeReportModel["terms"],
   checkId: string,
   criterionId: string,
+  w?: Words,
 ): string {
   const check = terms.checks.find((c) => c.id === checkId);
   const criterion = check?.criteria.find((c) => c.id === criterionId);
   return check === undefined || criterion === undefined
     ? `${checkId}.${criterionId}`
-    : `${criterion.label} (${check.question})`;
+    : `${w?.row(`${checkId}.${criterionId}`, "label") ?? criterion.label} (${w === undefined ? check.question : groupTitle(check, w)})`;
+}
+
+/** A rule group's heading: the pack's `group.<check>.title` when it sets one (contract-report/v1 section 3), else the contract's question. */
+function groupTitle(
+  check: OutcomeReportModel["terms"]["checks"][number],
+  w: Words,
+): string {
+  return w.group(check.id) ?? check.question;
 }
 
 /**
@@ -916,6 +978,7 @@ function missedReasonLabel(
 export function groupMissedReasons(
   missed: readonly Conversation[],
   terms: OutcomeReportModel["terms"],
+  w?: Words,
 ): readonly MissedReasonGroup[] {
   const labelledReasonCode = (code: string | undefined): string | undefined =>
     code === undefined ? undefined : terms.reasonCodes[code];
@@ -936,7 +999,7 @@ export function groupMissedReasons(
     structured.set(key, label !== undefined);
     labels.set(
       key,
-      label ?? missedReasonLabel(terms, first.checkId, first.criterionId),
+      label ?? missedReasonLabel(terms, first.checkId, first.criterionId, w),
     );
   }
   return [...groups.entries()]
@@ -964,7 +1027,7 @@ function whyMissed(
 ): HTMLElement {
   const box = el("div", "why-missed");
   box.dataset.section = "why-missed";
-  const groups = groupMissedReasons(missed, model.terms);
+  const groups = groupMissedReasons(missed, model.terms, w);
   box.dataset.reasons = String(groups.length);
   box.append(el("h5", "", w.t("lines.why-missed.h")));
   const table = element("table");
@@ -1026,7 +1089,7 @@ function whyMissed(
 function packLine(model: OutcomeReportModel, w: Words): string {
   const { id, version } = model.terms.pack;
   return id === NOT_STATED
-    ? w.t("report.not-stated")
+    ? w.t("card.not-stated")
     : w.t("lines.pack-line", { id, version });
 }
 
@@ -1039,13 +1102,13 @@ export function span(days: readonly string[], w: Words): string {
   const first = days[0];
   const last = days[days.length - 1];
   if (first === undefined || last === undefined)
-    return w.t("report.span.unknown");
-  return first === last ? first : w.t("report.span", { from: first, to: last });
+    return w.t("card.span.unknown");
+  return first === last ? first : w.t("card.span", { from: first, to: last });
 }
 
 /** What a case's date is, in words. */
 export const basisText = (basis: ConversationDate["basis"], w: Words): string =>
-  w.t(`report.basis.${basis}`);
+  w.t(`card.basis.${basis}`);
 
 /** The page's one plain statement of what its dates are, or undefined when every conversation is dated by the day it was judged (the card's behaviour before record dating). */
 function datingNote(model: OutcomeReportModel, w: Words): string | undefined {
@@ -1060,30 +1123,24 @@ export function datingStatement(
 ): string | undefined {
   const { basis, counts, judgedDays, zoneNotStated } = dating;
   if (basis === "judged") return undefined;
-  const sealed = w.t("report.dating.sealed", { span: span(judgedDays, w) });
+  const sealed = w.t("card.dating.sealed", { span: span(judgedDays, w) });
   const parts: string[] = [];
-  if (basis === "source") parts.push(w.t("report.dating.source"));
-  else if (basis === "record") parts.push(w.t("report.dating.record"));
+  if (basis === "source") parts.push(w.t("card.dating.source"));
+  else if (basis === "record") parts.push(w.t("card.dating.record"));
   else {
-    parts.push(w.t("report.dating.mixed"));
+    parts.push(w.t("card.dating.mixed"));
     if (counts.source > 0)
-      parts.push(
-        w.t("report.dating.mixed.source", { n: String(counts.source) }),
-      );
+      parts.push(w.t("card.dating.mixed.source", { n: String(counts.source) }));
     if (counts.record > 0)
-      parts.push(
-        w.t("report.dating.mixed.record", { n: String(counts.record) }),
-      );
+      parts.push(w.t("card.dating.mixed.record", { n: String(counts.record) }));
     if (counts.judged > 0)
-      parts.push(
-        w.t("report.dating.mixed.judged", { n: String(counts.judged) }),
-      );
+      parts.push(w.t("card.dating.mixed.judged", { n: String(counts.judged) }));
   }
   parts.push(sealed);
-  if (counts.source > 0) parts.push(w.t("report.dating.self-attested"));
+  if (counts.source > 0) parts.push(w.t("card.dating.self-attested"));
   if (zoneNotStated > 0)
     parts.push(
-      w.t("report.dating.tz", {
+      w.t("card.dating.tz", {
         count: String(zoneNotStated),
         total: String(total),
       }),
@@ -1106,6 +1163,8 @@ function renderMeta(
   row1.append(bill);
   const title = el("div", "ih-title");
   title.append(el("h1", "inv-title", w.t("lines.title")));
+  const summary = reportSummary(w);
+  if (summary !== undefined) title.append(summary);
   // No Evidence Contract field states when the terms were locked; the line
   // is drawn only when one does, never as a standing "not stated".
   if (model.terms.pack.locked !== NOT_STATED)
@@ -1134,7 +1193,7 @@ function renderMeta(
       ? w.t("lines.meta.no-conversations")
       : first === last
         ? first
-        : w.t("report.span", { from: first, to: last }),
+        : w.t("card.span", { from: first, to: last }),
   );
   const note = datingNote(model, w);
   if (note !== undefined) {
@@ -1152,7 +1211,7 @@ function renderMeta(
     w.t("lines.meta.what-checked.text", {
       rules: w.p("lines.meta.rules", rules, { n: String(rules) }),
       groups: w.p("lines.meta.groups", groups, { n: String(groups) }),
-      questions: model.terms.checks.map((c) => c.question).join(" · "),
+      questions: model.terms.checks.map((c) => groupTitle(c, w)).join(" · "),
     }),
   );
   what.dataset.whatChecked = String(rules);
@@ -1277,6 +1336,20 @@ function renderLines(
   na.dataset.line = "not-applicable";
   na.dataset.count = String(model.notApplicableCount);
   section.append(na);
+  // Result v0 section 4.2: out of scope is counted on its own, never as not
+  // applicable and never as met; said only when a bundle has one.
+  if (model.outOfScopeCount > 0) {
+    const oos = el(
+      "p",
+      "na-note",
+      w.p("lines.oos-note", model.outOfScopeCount, {
+        n: fmtCount(model.outOfScopeCount),
+      }),
+    );
+    oos.dataset.line = "out-of-scope";
+    oos.dataset.count = String(model.outOfScopeCount);
+    section.append(oos);
+  }
   host.append(section);
 
   const stamps = el("div", "stamps inl");
@@ -1319,7 +1392,12 @@ function renderRules(
   );
   if (anyUnverified)
     headRow.append(el("th", "n", w.t("lines.rules.col.unverified")));
-  const columns = anyUnverified ? "6" : "5";
+  // Judged out of scope (Result v0 section 4.2) is its own column, never
+  // folded into "did not apply" or "met"; drawn only when a bundle has one.
+  const anyOutOfScope = model.outOfScopeCount > 0;
+  if (anyOutOfScope)
+    headRow.append(el("th", "n", ruleWord("out_of_scope", "yes", w).word));
+  const columns = String(5 + (anyUnverified ? 1 : 0) + (anyOutOfScope ? 1 : 0));
   thead.append(headRow);
   table.append(thead);
   const tbody = element("tbody");
@@ -1327,7 +1405,7 @@ function renderRules(
     const group = el("tr", "grp");
     group.dataset.checkId = check.id;
     group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
-    const cell = el("td", "", check.question);
+    const cell = el("td", "", groupTitle(check, w));
     cell.setAttribute("colspan", columns);
     group.append(cell);
     tbody.append(group);
@@ -1346,17 +1424,33 @@ function renderRules(
       const notMet = of(isMiss);
       const unverifiedHere = of(isUnverified);
       const na = of((v) => v === "not_applicable");
+      const outOfScopeHere = of((v) => v === "out_of_scope");
       const undecided = of((v) => v === "not_evaluable");
       const tr = el("tr", "rule");
       tr.dataset.rule = ref;
       tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
-      const label = criterionLabel(model, check.id, criterion.id);
+      const label = criterionLabel(model, check.id, criterion.id, w);
       const nameCell = el("td", "cn");
       nameCell.append(el("b", "", label.label));
       const badge = editedBadge(model, ref, w);
       if (badge !== undefined) nameCell.append(badge);
       if (label.source === "sealed")
         nameCell.append(el("small", "", label.text));
+      // contract-report/v1 section 3: the pack's explanation of the rule,
+      // and its note for a rule whose claims could not be decided.
+      const detail = w.row(ref, "detail");
+      if (detail !== undefined) {
+        const line = el("small", "rdet", detail);
+        line.dataset.wording = "pack";
+        nameCell.append(line);
+      }
+      const undecidedNote = w.row(ref, "not_evaluable");
+      if (undecidedNote !== undefined && undecided.length > 0) {
+        const line = el("small", "rdet", undecidedNote);
+        line.dataset.wording = "pack";
+        line.dataset.note = "not-evaluable";
+        nameCell.append(line);
+      }
       const problems = [
         ...notMet,
         ...unverifiedHere.filter((c) => !notMet.includes(c)),
@@ -1377,6 +1471,8 @@ function renderRules(
       );
       if (anyUnverified)
         tr.append(el("td", "n", fmtCount(unverifiedHere.length)));
+      if (anyOutOfScope)
+        tr.append(el("td", "n", fmtCount(outOfScopeHere.length)));
       tbody.append(tr);
       // The conversations behind a rule open in a full-width row below it,
       // so each one reads at the table's width.
@@ -1610,7 +1706,7 @@ function renderTerms(
   packField(
     w.t("lines.terms.version"),
     model.terms.pack.version === NOT_STATED
-      ? w.t("report.not-stated")
+      ? w.t("card.not-stated")
       : w.t("lines.terms.version.value", {
           version: model.terms.pack.version,
         }),
@@ -1639,7 +1735,7 @@ function renderTerms(
     const drawn = icon(check.icon);
     if (drawn !== undefined) checkIcon.append(drawn);
     card.append(checkIcon);
-    card.append(el("div", "q", check.question));
+    card.append(el("div", "q", groupTitle(check, w)));
     card.append(el("div", "d", check.description));
     const criteria = el("ul", "subs");
     for (const criterion of check.criteria) {
@@ -1653,7 +1749,7 @@ function renderTerms(
         source: "unstated" as const,
       };
       item.dataset.wording = wording.source;
-      const label = el("b", "", criterion.label);
+      const label = el("b", "", w.row(ref, "label") ?? criterion.label);
       const termsBadge = editedBadge(model, ref, w);
       if (termsBadge !== undefined) label.append(termsBadge);
       item.append(label);
@@ -1709,7 +1805,7 @@ function renderWhatRan(
   // beside a digest they do not produce.
   const pin =
     runInfo.judgePinRecomputes === true ? runInfo.judgePin : undefined;
-  const notStated = w.t("report.not-stated");
+  const notStated = w.t("card.not-stated");
   box(w.t("lines.ran.contract"), runInfo.contract ?? notStated, "contract");
   box(
     w.t("lines.ran.judge-model"),
@@ -1770,7 +1866,7 @@ function renderVerificationDetails(
 ): void {
   const section = el("div", "rp-s");
   section.dataset.section = "verification-details";
-  section.append(el("h3", "", w.t("report.vd.h")));
+  section.append(el("h3", "", w.t("card.vd.h")));
   section.append(el("p", "lede", w.t("lines.vd.lede")));
   const model = buildVerificationPageModel(bundle, verified);
   const tech = el("div", "tech");
@@ -1796,17 +1892,17 @@ export function verificationRows(
 ): [string, string][] {
   return [
     [
-      w.t("report.vd.bundle-digest"),
-      model.bundleDigest ?? w.t("report.vd.uncomputable"),
+      w.t("card.vd.bundle-digest"),
+      model.bundleDigest ?? w.t("card.vd.uncomputable"),
     ],
     [
-      w.t("report.vd.checkpoint-root"),
-      model.checkpointRoot ?? w.t("report.vd.absent"),
+      w.t("card.vd.checkpoint-root"),
+      model.checkpointRoot ?? w.t("card.vd.absent"),
     ],
     [
-      w.t("report.vd.checkpoint-size"),
+      w.t("card.vd.checkpoint-size"),
       model.checkpointSize === undefined
-        ? w.t("report.vd.absent")
+        ? w.t("card.vd.absent")
         : String(model.checkpointSize),
     ],
   ];
@@ -1819,19 +1915,27 @@ export function verificationRows(
  * layer applied).
  */
 export function wordingRow(w: Words): [string, string] {
+  const refused = w.source.refused;
   return [
-    w.t("report.pf.wording"),
-    w.source.base === undefined
-      ? w.t("report.pf.wording.default", {
-          id: w.source.id,
-          sha256: w.source.sha256 ?? "",
+    w.t("card.pf.wording"),
+    refused !== undefined
+      ? w.t("card.pf.wording.refused", {
+          sha256: refused.sha256,
+          reason: w.t(`card.wording.refused.${refused.reason}`),
+          baseId: w.source.base?.id ?? w.source.id,
+          baseSha256: w.source.base?.sha256 ?? w.source.sha256 ?? "",
         })
-      : w.t("report.pf.wording.supplied.layered", {
-          id: w.source.id,
-          sha256: w.source.sha256 ?? "",
-          baseId: w.source.base.id,
-          baseSha256: w.source.base.sha256,
-        }),
+      : w.source.base === undefined
+        ? w.t("card.pf.wording.default", {
+            id: w.source.id,
+            sha256: w.source.sha256 ?? "",
+          })
+        : w.t("card.pf.wording.supplied.layered", {
+            id: w.source.id,
+            sha256: w.source.sha256 ?? "",
+            baseId: w.source.base.id,
+            baseSha256: w.source.base.sha256,
+          }),
   ];
 }
 
@@ -1852,7 +1956,7 @@ function renderReportProofs(
     () => {
       const box = el("div", "pf-b");
       const ids = proofList([
-        [w.t("report.pf.result-capsule"), model.capsuleId],
+        [w.t("card.pf.result-capsule"), model.capsuleId],
         [w.t("lines.meta.pack"), packLine(model, w)],
         wordingRow(w),
       ]);

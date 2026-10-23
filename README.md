@@ -146,9 +146,11 @@ or verdict moves, and nothing is re-judged.
   least one word between any two of them, so a count or denominator can be
   neither dropped, reordered, nor run into another on the page. Two verdicts
   may not share a word (the module's own `lines.verdict.*` and
-  `groups.verdict.*`, each card's own prefix -- `verdict.*` itself is
-  `contract-report/v1` §3's -- plus `lines.status.*`, `lines.pf.verdict.*`
-  and the other sibling sets `contract-report-wording.ts` lists), as a
+  `groups.verdict.*`, each card's own prefix, plus `lines.status.*`,
+  `lines.pf.verdict.*` and the other sibling sets
+  `contract-report-wording.ts` lists; a `contract-report/v1` §3
+  `verdict.*` or `tier.*` word is read through those keys and checked as
+  they are, and may not differ from one the same pack also sets), as a
   reader reads it (case, spacing and punctuation ignored); no verdict may
   take another verdict's default word, nor may a count that should read as
   an exception or a miss read as the clean "met" or "no exceptions" instead,
@@ -161,10 +163,11 @@ or verdict moves, and nothing is re-judged.
   producer's-text and "not evidence" labels; the list is `LOCKED_ENTRIES` in
   `ts/src/contract-report-wording.ts`) are fixed, because they are the page's
   account of its own checking, and a reworded one could claim a check that
-  never ran. A pack that breaks
-  any of these, or does not hash to its `wording_sha256`, is refused before
-  anything is drawn; `render-report.mjs` and the presentation builder name
-  every problem. The raw
+  never ran. So are each claim's assurance words (`status.*`, `grade.*`,
+  `sufficiency.*`). A pack that breaks any of these, or does not hash to
+  its `wording_sha256`, is refused: the live page draws the card with the
+  built-in words and a visible notice, and `render-report.mjs` and the
+  presentation builder refuse to write the page, naming every problem. The raw
   verdict is on every element as data, whatever the words say.
 - The page's proofs name every wording layer applied, by digest: a supplied
   pack's own id and `wording_sha256`, and the built-in default pack's id and
@@ -172,7 +175,8 @@ or verdict moves, and nothing is re-judged.
   `contract-report/v1` §3 records every layer applied, not only a supplied
   one.
 - Not in the pack: what the bundle itself states (the producer's obligation
-  titles and test names, in italics; sealed rule wording) and two lines
+  titles and test names, in italics, unless a pack's `group.*` / `row.*`
+  words replace them; sealed rule wording) and two lines
   agent-action-capsule's outcome model writes (the outcome statement and the
   resolution rule). The module never takes its own words from a bundle
   (presentation contract section 6).
