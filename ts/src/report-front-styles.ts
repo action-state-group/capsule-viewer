@@ -12,12 +12,12 @@ export function frontCss(scope: string): string {
   return `
 ${s} .mockline{max-width:1080px;margin:18px auto 0;padding:9px 14px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:10px;font-weight:600;font-size:14px}
 ${s} .front-card{background:#fff;max-width:1080px;margin:14px auto;border:1px solid var(--line);border-radius:var(--r);padding:16px 24px}
-${s} .agg{margin:8px 0 22px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4}
-${s} .agg-line{font-size:13.5px;margin:0 0 6px;color:var(--ink)}
-${s} .agg-buckets{display:flex;flex-wrap:wrap;gap:6px 18px}
-${s} .agg-bucket{display:flex;align-items:baseline;gap:6px}
-${s} .agg-bucket b{font-size:16px;font-variant-numeric:tabular-nums}
-${s} .agg-bucket span{font-size:12.5px;color:var(--slate)}
+${s} .agg{margin:8px 0 28px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4}
+${s} .agg-line{font-size:14px;margin:0 0 12px;color:var(--ink)}
+${s} .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+${s} .agg-bucket{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff}
+${s} .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+${s} .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
 ${s} .agg .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
 ${s} .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
 ${s} .agg-bucket.met b{color:var(--ok)}
@@ -46,6 +46,6 @@ ${s} .anchor{background:var(--cream);border-radius:8px;padding:8px 10px;font-siz
 ${s} .anchor .k{display:block;color:var(--slate);margin-bottom:2px}
 ${s} .anchor code{font-size:11px;word-break:break-all}
 ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.6}
-@media (max-width:640px){${s} .front-card{padding:14px 16px}}
+@media (max-width:640px){${s} .front-card{padding:14px 16px}${s} .agg-buckets{grid-template-columns:minmax(0,1fr)}${s} .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}${s} .agg-bucket b{font-size:22px}}
 `;
 }
