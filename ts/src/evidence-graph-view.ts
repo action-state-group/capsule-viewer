@@ -194,7 +194,9 @@ function renderVerificationBanner(
   coverage: { uncheckpointed: number; total: number },
 ): HTMLElement {
   const bar = element("div");
-  bar.className = "cv-shell-bar";
+  // A failed bundle's bar is a callout on every page, with or without a
+  // report's frame (the shell's .cv-failed); data-verify stays the banner's.
+  bar.className = verified ? "cv-shell-bar" : "cv-shell-bar cv-failed";
   const banner = element(
     "span",
     verified ? BANNER_LINES.verified : BANNER_LINES.failed,

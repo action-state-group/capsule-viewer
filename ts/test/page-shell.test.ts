@@ -49,6 +49,7 @@ describe("the page shell", () => {
     const root = await render(bundle());
     const bar = root.firstElementChild as HTMLElement;
     expect(bar.className).toBe("cv-shell-bar");
+    expect(bar.classList.contains("cv-failed")).toBe(false);
     const pill = bar.querySelector<HTMLElement>("[data-verify]")!;
     expect(pill.dataset.verify).toBe("verified");
     expect(pill.className).toBe("cv-pill");
@@ -104,6 +105,14 @@ describe("the page shell", () => {
     const pill = root.querySelector<HTMLElement>("[data-verify]")!;
     expect(pill.dataset.verify).toBe("failed");
     expect(pill.textContent).toBe(BANNER_LINES.failed);
+    // the bar is the core's red callout on any page, with no report's frame,
+    // and says the check section's counts beside the verdict
+    const bar = root.firstElementChild as HTMLElement;
+    expect(bar.className).toBe("cv-shell-bar cv-failed");
+    expect(root.classList.contains("cv-shell-chrome")).toBe(false);
+    expect(
+      bar.querySelector<HTMLElement>("[data-verify-summary]")!.textContent,
+    ).toBe("1 check on this page failed · 5 records");
     expect(pill.getAttribute("aria-label")).toBe(BANNER_LINES.failedTitle);
     expect(
       root.querySelector('[data-refusal="unverified-bundle"]'),
@@ -134,6 +143,12 @@ describe("the emitter shell's page styles", () => {
     );
     expect(shell).toMatch(
       /#app\.cv-shell-chrome \{\s*max-width: none;\s*padding: 0;\s*\}/u,
+    );
+  });
+
+  it("draws a failed bundle's bar as a red callout on every page", () => {
+    expect(shell).toMatch(
+      /:where\(\.cv-shell-bar\.cv-failed\) \{[^}]*border: 1px solid var\(--aac-bad\);[^}]*background: var\(--aac-bad-bg\);/u,
     );
   });
 

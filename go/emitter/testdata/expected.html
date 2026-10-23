@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DPnDF7tBlSxnLgdXIM0DHixqxL7MkuliRjIwDxMqZhw=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-AFG9jl8n4fyrxkOkQg8ZaLKsLTDLPtEL+voR1wspDE4='; style-src 'sha256-ilBRkm9wDzE9AtN3BFRzmcUf0L1EeHbcejOPj1q4+Yo=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-lLLNCifs95B0qPAIVcKPWccZ1IA0O6Sr6n1pSnXDBK0=' 'sha256-B5j5rq6EVXY8l9wTMYcuYV6earnyDu/nwn+uJr6klrY='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DPnDF7tBlSxnLgdXIM0DHixqxL7MkuliRjIwDxMqZhw=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-AFG9jl8n4fyrxkOkQg8ZaLKsLTDLPtEL+voR1wspDE4='; style-src 'sha256-d70YVfGCF6v/oi1xELDS9/aF9J0iHo+PxYkPv7N7rps=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-lLLNCifs95B0qPAIVcKPWccZ1IA0O6Sr6n1pSnXDBK0=' 'sha256-B5j5rq6EVXY8l9wTMYcuYV6earnyDu/nwn+uJr6klrY='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Evidence Graph</title>
     <style>
@@ -131,6 +131,36 @@
         color: inherit;
       }
       #app.cv-shell-chrome :where(.cv-shell-link) {
+        margin-left: auto;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      /* A bundle that did not verify: on every page the core draws the
+         bar as a red callout, the verdict first, then the check section's
+         counts and the link to it (open on such a page). No report renders
+         on a failed bundle, so this does not wait for a report's frame. */
+      :where(.cv-shell-bar.cv-failed) {
+        box-sizing: border-box;
+        padding: 0.75rem 1rem;
+        justify-content: flex-start;
+        gap: 0.375rem 0.75rem;
+        border: 1px solid var(--aac-bad);
+        border-left-width: 6px;
+        border-radius: 10px;
+        background: var(--aac-bad-bg);
+      }
+      :where(.cv-shell-bar.cv-failed .cv-pill) {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      :where(.cv-shell-bar.cv-failed .cv-shell-detail) {
+        font-size: 0.875rem;
+        color: var(--aac-fg);
+      }
+      :where(.cv-shell-bar.cv-failed .cv-shell-link) {
         margin-left: auto;
         font-size: 0.875rem;
         font-weight: 600;

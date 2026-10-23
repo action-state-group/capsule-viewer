@@ -135,6 +135,36 @@
         font-size: 0.875rem;
         font-weight: 600;
       }
+      /* A bundle that did not verify: on every page the core draws the
+         bar as a red callout, the verdict first, then the check section's
+         counts and the link to it (open on such a page). No report renders
+         on a failed bundle, so this does not wait for a report's frame. */
+      :where(.cv-shell-bar.cv-failed) {
+        box-sizing: border-box;
+        padding: 0.75rem 1rem;
+        justify-content: flex-start;
+        gap: 0.375rem 0.75rem;
+        border: 1px solid var(--aac-bad);
+        border-left-width: 6px;
+        border-radius: 10px;
+        background: var(--aac-bad-bg);
+      }
+      :where(.cv-shell-bar.cv-failed .cv-pill) {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      :where(.cv-shell-bar.cv-failed .cv-shell-detail) {
+        font-size: 0.875rem;
+        color: var(--aac-fg);
+      }
+      :where(.cv-shell-bar.cv-failed .cv-shell-link) {
+        margin-left: auto;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
       :where(details.cv-checked) {
         margin: 2rem 0 0;
         padding: 0.75rem 0 0;
