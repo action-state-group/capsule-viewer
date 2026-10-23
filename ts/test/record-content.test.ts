@@ -140,7 +140,8 @@ it("a bundle that did not verify: the records list names each record, its kind a
     ((tampered.agent_input as Obj).agent_interaction as Obj).messages as Obj[]
   )[0]!.content = "SECRET-TAMPERED";
   disclosures[id] = tampered;
-  // a repeated record: its id gets an entry each time, never two addresses
+  // a repeated record: one entry for its id, which says how many times the
+  // bundle lists it
   (bundle.records as Obj[]).push(
     structuredClone((bundle.records as Obj[])[0]!),
   );
@@ -153,7 +154,23 @@ it("a bundle that did not verify: the records list names each record, its kind a
   const items = [
     ...root.querySelectorAll<HTMLElement>('[data-records="coverage"] > li'),
   ];
-  expect(items).toHaveLength((bundle.records as Obj[]).length);
+  const listed = new Set(
+    (bundle.records as Obj[]).map((r) => r.capsule_id as string),
+  );
+  expect(items).toHaveLength(listed.size);
+  expect(new Set(items.map((i) => i.dataset.capsuleId)).size).toBe(
+    items.length,
+  );
+  const repeated = items.filter((i) => i.dataset.listed === "2");
+  expect(repeated).toHaveLength(1);
+  expect(repeated[0]!.textContent).toContain("listed 2 times in this bundle");
+  expect(
+    root.querySelector('[data-records="coverage-detail"] > summary')!
+      .textContent,
+  ).toBe(
+    `Records in this bundle: ${listed.size} records (${(bundle.records as Obj[]).length} listings), by capsule id`,
+  );
+  expect(repeated[0]!.querySelectorAll("[data-record-status]")).toHaveLength(2);
   for (const item of items) {
     expect(item.textContent).toContain(item.dataset.capsuleId!);
     expect(item.querySelector("[data-record-status]")).not.toBeNull();
