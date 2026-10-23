@@ -665,6 +665,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "chat.state.cited",
   "chat.state.verified",
   "chat.lede",
+  "chat.state.record",
   // The Outcomes report.
   "lines.tier.unknown",
   "lines.wording.unstated",
@@ -1178,8 +1179,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "06244cb985e97d44bdf934dcac5a3bf899925865adf11f9d18bc093973906390",
-  groups: "f6698171c64d097348b9053874b7e7042d2cbef9b55c6f7d2028448305a9dbd8",
+  lines: "86ac534b86254b9f4a31ac42fa6cbd7f4d588b3bdb95686ca412d2f155848c37",
+  groups: "bd165cd653972df940a620317cea03260ebeb5964e1fbd9b14d33fc0a6ca3580",
 });
 
 export interface Words {

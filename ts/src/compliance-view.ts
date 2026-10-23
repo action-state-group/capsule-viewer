@@ -31,7 +31,7 @@ import {
   lazyBody,
   levelToggle,
   proofList,
-  renderChat,
+  conversationFold,
   ruleWord,
   wordPill,
   assuranceRow,
@@ -827,8 +827,7 @@ function sessionBody(
     gap.dataset.gaps = "true";
     body.append(gap);
   }
-  body.append(el("h4", "", w.t("card.h.conversation")));
-  body.append(renderChat(session.transcript, session.sourceCapsuleId, w));
+  body.append(conversationFold(session.transcript, session.sourceCapsuleId, w));
   body.append(
     levelToggle(
       2,

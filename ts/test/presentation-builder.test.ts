@@ -7,6 +7,7 @@ import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { JSDOM } from "jsdom";
 import { beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
+import { linkConversations } from "../src/report-levels.js";
 import {
   BUILTIN_PRESENTATIONS,
   createPresentationRegistry,
@@ -119,6 +120,30 @@ function snapshot(root: Element): Snapshot {
   };
 }
 
+/**
+ * What a reader of the scripted page sees once every toggle has been opened
+ * and closed again, with each conversation kept once, in the records
+ * section: what the static page is built to show (capsule-viewer#67).
+ */
+function openEveryBody(root: Element): void {
+  const view = root.ownerDocument.defaultView!;
+  for (let pass = 0; pass < 100; pass++) {
+    const pending = [
+      ...root.querySelectorAll<HTMLDetailsElement>(
+        'details[data-body="pending"]',
+      ),
+    ];
+    if (pending.length === 0) break;
+    for (const toggle of pending) {
+      const was = toggle.open;
+      toggle.open = true;
+      toggle.dispatchEvent(new view.Event("toggle"));
+      toggle.open = was;
+    }
+  }
+  linkConversations(root);
+}
+
 const done = (root: Element): boolean =>
   root.querySelector('[data-page="verification"]') !== null ||
   root.querySelector('[data-refusal="fragment-unreadable"]') !== null;
@@ -133,7 +158,10 @@ async function settled(root: Element): Promise<Snapshot> {
     const now = root.innerHTML;
     stable = done(root) && now === last ? stable + 1 : 0;
     last = now;
-    if (stable >= 3) return snapshot(root);
+    if (stable >= 3) {
+      openEveryBody(root);
+      return snapshot(root);
+    }
   }
   throw new Error("page did not settle");
 }
@@ -234,6 +262,7 @@ async function showAll(
     else {
       const element = document.createElement("main");
       await built.mount(element);
+      openEveryBody(element);
       shown = snapshot(element);
     }
     out[format] = { kind: "shown", built, snapshot: shown };
@@ -359,9 +388,11 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
         }
         expect(shown.length).toBeGreaterThanOrEqual(3);
         const [first, ...rest] = shown;
-        for (const [, s] of rest) {
+        for (const [name, s] of rest) {
           expect(s.built.module).toBe(first![1].built.module);
-          expect(s.snapshot).toEqual(first![1].snapshot);
+          expect(s.snapshot, `${name} against ${first![0]}`).toEqual(
+            first![1].snapshot,
+          );
         }
         const snap = first![1].snapshot;
         expect(snap.verify).toEqual([verifies ? "verified" : "failed"]);
@@ -462,6 +493,22 @@ describe("theme, wording, locale and depth", () => {
         } = baseline;
         expect(rest, name).toEqual(baseRest);
         expect(ids, name).toEqual(expect.arrayContaining(baseIds));
+      } else if (change.wording !== undefined) {
+        // With every toggle opened, a supplied pack is named in the proofs
+        // by its own digest, and its words are the page's: neither is
+        // evidence. Everything else is unchanged.
+        const { html: _h, text: _t, evidence_ids: ids, ...rest } = shown;
+        const {
+          html: _bh,
+          text: _bt,
+          evidence_ids: baseIds,
+          ...baseRest
+        } = baseline;
+        expect(rest, name).toEqual(baseRest);
+        expect(
+          ids.filter((id) => id !== change.wording!.sha256),
+          name,
+        ).toEqual(baseIds);
       } else {
         expect(shown.evidence_ids, name).toEqual(baseline.evidence_ids);
         expect(shown, name).toEqual(baseline);
@@ -1249,6 +1296,7 @@ describe("packaging availability", () => {
         throw new Error("unexpected format");
       const element = document.createElement("main");
       await embedded.mount(element);
+      openEveryBody(element);
       const fromEmbedded = snapshot(element);
       const fromStatic = openStatic(statik.html).snapshot;
       expect(fromStatic).toEqual(fromEmbedded);

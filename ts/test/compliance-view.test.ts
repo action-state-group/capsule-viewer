@@ -194,11 +194,12 @@ it("two levels: a test opens (toggle 1) into its sessions, each naming every tes
     '[data-crit="art50.disclosure_before_first_turn"]',
   )!;
   expect(recomputedBlock.textContent).toContain("recomputed");
+  // two level-2 toggles, side by side: the conversation and the proofs
   const inner = session.querySelectorAll<HTMLElement>("details");
-  expect(inner).toHaveLength(1);
-  expect(inner[0]!.dataset.level).toBe("2");
-  open(inner[0]!);
-  expect(inner[0]!.querySelector("[data-check-it]")!.textContent).toContain(
+  expect([...inner].map((d) => d.dataset.level)).toEqual(["2", "2"]);
+  expect(inner[0]!.dataset.section).toBe("conversation");
+  open(inner[1]!);
+  expect(inner[1]!.querySelector("[data-check-it]")!.textContent).toContain(
     "tau2:airline:task-0:trial-0",
   );
 });
@@ -331,6 +332,7 @@ it("a session without a transcript in the bundle says so, and names the case rec
   const { bundle } = await sealedComplianceBundle();
   const root = expand(await render(bundle));
   expect(root.querySelector("article[data-session]")).not.toBeNull();
+  open(root.querySelector('details[data-section="conversation"]')!);
   const tx = root.querySelector<HTMLElement>('[data-transcript="absent"]')!;
   expect(tx.textContent).toContain("not in this bundle");
 });
@@ -748,7 +750,11 @@ function datingParts(root: HTMLElement): {
 } {
   expand(root);
   const session = root.querySelector<HTMLElement>("article[data-session]")!;
-  const sessionProofs = open(session.querySelector('details[data-level="2"]')!);
+  const sessionProofs = open(
+    session.querySelector(
+      'details[data-level="2"]:not([data-section="conversation"])',
+    )!,
+  );
   const reportProofs = open(
     root.querySelector(
       '[data-section="report-proofs"] details[data-level="2"]',

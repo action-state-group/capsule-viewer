@@ -55,6 +55,7 @@ import {
   type WordingPackInput,
 } from "@action-state-group/agent-action-capsule";
 import { mountPresentation } from "./presentation-mount.js";
+import { fillPendingBodies, linkConversations } from "./report-levels.js";
 
 /**
  * One builder, four packagings (spec/presentation-builder-v0.md):
@@ -795,6 +796,10 @@ async function packageStatic(
     ...(options.wording === undefined ? {} : { wording: options.wording }),
     registry,
   });
+  // The page runs no script: build every body a reader could open, keeping
+  // one copy of each conversation, in the core's records section, linked
+  // from every card that shows it (capsule-viewer#67).
+  fillPendingBodies(root, linkConversations);
   const verification = bundleVerified(context.verification)
     ? "verified"
     : "failed";

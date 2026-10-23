@@ -56,6 +56,9 @@ import {
   type OutcomeReportPresentation,
 } from "@action-state-group/agent-action-capsule";
 import { composedSectionModule } from "./composed-view.js";
+import { DEFAULT_WORDS } from "./contract-report-wording.js";
+import { renderContent } from "./record-content.js";
+import { deferBody, recordAddress } from "./report-levels.js";
 import {
   readCompliancePresentation,
   type CompliancePresentation,
@@ -505,6 +508,7 @@ function renderCheckpointCoverage(
   records: readonly RecordCoverage[],
   uncheckpointed: number,
   coverage: CoverageStatement,
+  entry: (capsuleId: string) => Node,
 ): void {
   host.append(element("h4", "Checkpoint coverage"));
   if (coverage.status === "established") {
@@ -523,22 +527,35 @@ function renderCheckpointCoverage(
     if (coverage.status === "withheld") return;
   }
   host.append(renderCoverageStatusCounts(records));
+  // Records in this bundle: one entry per record, each with its own address
+  // (`record-<capsule id>`, from the id alone, so every packaging of the
+  // page gives the same one). Closed until a link lands on it or the reader
+  // opens it; its body is built when it opens, or before a static page is
+  // written (fillPendingBodies). Other parts of the page link here and never
+  // draw a record themselves.
   const details = element("details");
   details.dataset.records = "coverage-detail";
   const summary = element(
     "summary",
-    `${recordsWord(records.length)}, by capsule id`,
+    `Records in this bundle: ${recordsWord(records.length)}, by capsule id`,
   );
   details.append(summary);
   const list = element("ul");
   list.dataset.records = "coverage";
   for (const record of records) {
-    const item = element("li", `${record.capsuleId} · `);
+    const item = element("li");
+    item.dataset.capsuleId = record.capsuleId;
+    const fold = document.createElement("details");
+    fold.className = "cv-record";
+    fold.id = recordAddress(record.capsuleId);
+    const head = element("summary", `${record.capsuleId} · `);
     const status = element("span", COVERAGE_LABEL[record.status]);
     status.dataset.recordStatus = record.status;
     status.className = `seal-${record.status}`;
-    item.dataset.capsuleId = record.capsuleId;
-    item.append(status);
+    head.append(status);
+    fold.append(head);
+    deferBody(fold, () => entry(record.capsuleId));
+    item.append(fold);
     list.append(item);
   }
   details.append(list);
@@ -786,11 +803,23 @@ async function renderVerificationPage(
     witness.dataset.witness = "self";
     page.append(witness);
   }
+  let result: ResultRoot | undefined;
+  try {
+    result = bundleVerified(verified) ? await resultRootOf(context) : undefined;
+  } catch {
+    result = undefined;
+  }
+  const cited = new Map<string, CitedRecord>();
+  for (const record of result?.records.values() ?? []) {
+    cited.set(record.bookRecordId ?? record.capsuleId, record);
+    if (!cited.has(record.capsuleId)) cited.set(record.capsuleId, record);
+  }
   renderCheckpointCoverage(
     page,
     model.records,
     model.uncheckpointedCount,
     model.coverage,
+    (capsuleId) => renderRecordEntry(context, capsuleId, cited.get(capsuleId)),
   );
   renderStamps(page, stamps);
   renderCompletenessStatement(page, model.completeness);
@@ -1110,7 +1139,7 @@ function renderCitedMember(
   if (resolution.state !== "disclosed" && committed === undefined) return;
   host.append(element("h5", field));
   if (resolution.state === "disclosed") {
-    host.append(element("pre", display(resolution.payload)));
+    host.append(renderContent(resolution.payload, DEFAULT_WORDS.lines));
     return;
   }
   // A withheld member shows the digest the record committed to; a supplied
@@ -1147,11 +1176,79 @@ function renderCitedRecord(
     record.agentOutput,
     record.agentOutputDigest,
   );
+  renderCarriedInput(section, record);
   if (record.cites.length > 0) {
     section.append(element("h5", "Cites"));
     renderCitationList(record.cites, records, section);
   }
   host.append(section);
+}
+
+// An evidence-book record's agent_input is the book's header; what the
+// capsule it carries sealed is the carried input, drawn the same way.
+function renderCarriedInput(host: HTMLElement, record: CitedRecord): void {
+  if (record.carriedInput === undefined) return;
+  renderCitedMember(
+    host,
+    "agent_input",
+    record.carriedInput,
+    record.carriedInputDigest,
+  );
+  const heading = host.lastElementChild?.previousElementSibling;
+  if (heading?.localName === "h5")
+    heading.textContent = "agent_input of the capsule it carries";
+}
+
+// A record's entry in the records section: drawn from the Result's reading
+// of it when a claim reaches it (provenance, members, carried input, and
+// the records it cites as links to their entries), otherwise from the
+// verifier's resolution of its members alone.
+function renderRecordEntry(
+  context: VerifiedBundleContext,
+  capsuleId: string,
+  cited: CitedRecord | undefined,
+): HTMLElement {
+  const body = element("div");
+  body.className = "cv-record-body";
+  if (cited === undefined) {
+    for (const field of ["agent_input", "agent_output"] as const)
+      renderCitedMember(
+        body,
+        field,
+        disclosureOf(context, capsuleId, field),
+        undefined,
+      );
+    if (body.childElementCount === 0)
+      body.append(element("p", "no disclosed member"));
+    return body;
+  }
+  body.append(renderProvenance(capsuleId, cited.logCoordinates, cited));
+  renderCitedMember(
+    body,
+    "agent_input",
+    cited.agentInput,
+    cited.agentInputDigest,
+  );
+  renderCitedMember(
+    body,
+    "agent_output",
+    cited.agentOutput,
+    cited.agentOutputDigest,
+  );
+  renderCarriedInput(body, cited);
+  if (cited.cites.length > 0) {
+    body.append(element("h5", "Cites"));
+    const list = element("ul");
+    for (const id of cited.cites) {
+      const item = element("li");
+      const link = element("a", id);
+      link.setAttribute("href", `#${recordAddress(id)}`);
+      item.append(link);
+      list.append(item);
+    }
+    body.append(list);
+  }
+  return body;
 }
 
 // One row per cited id, in citation order: a record supplied in this bundle
