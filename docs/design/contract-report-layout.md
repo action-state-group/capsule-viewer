@@ -76,7 +76,8 @@ holds it. **Gap**: nothing sealed holds it today; a producer change fills it.
 | EU findings: severity, recommendation | the presentation block's per-row `finding`. That's a producer annotation. Its digest sits in the Result's `x-presentation-digest`, but a module never reads `x-` members ([cr] §2), so the page can't claim the binding | Exists (producer annotation) |
 | Finding owner and due date | `finding.owner_due` holds "Sample placeholder" only | Gap |
 | Judge's reasoning | the judgment record's `rationale`. With the mock judge it is a probability sentence | Exists (thin on mock) |
-| Transcript | `capsulectl/agent-input-originals/v1`, only when the bundle was built with `--attach-input-originals` | Optional |
+| Conversation turns | the case capsule's input original in `capsulectl/agent-input-originals/v1`, keyed by the case capsule id (`agent_interaction.messages`). Only when the bundle was built with `--attach-input-originals`. The EU demo bundle carries all 30; the Outcomes demo bundle carries none. #58 draws it with `renderChat` ([m58] `report-levels.ts`), or says it isn't in this bundle | Exists when attached |
+| Capsules behind a case | each judgment record's `source_capsule_id` names the case capsule; the bundle's record for it is the book entry whose `subject_ref` names that capsule; the completeness certificate gives that entry's leaf under the bundle checkpoint. The core's record list gives every record its capsule id as an element id, so the page can link to it | Exists |
 | Verification anchors | bundle `checkpoint` (`log_id`, `root`, `mmr_size`), `producer-key/v1`, record count | Exists |
 
 ## 3. The hierarchy
@@ -125,18 +126,29 @@ anyway.
 6. EU only: the producer's findings, as text under a fixed label, "Producer's
    findings, presentation text, not evidence". No tally, no severity column in
    the test table, no owner or due column.
-7. Phase 2: the case grid, cases by rules, grouped by day, on both pages. A
-   drill-down per case shows, per rule: verdict, tier, grade, the carrier
-   status labelled as the record's evidence status (not the verdict, so a
-   SATISFIED status beside not_met doesn't read as a contradiction), the
-   judge's note as the record holds it, the sealed record ids, and the
-   transcript when disclosed.
+7. Phase 2: the case grid, cases by rules, grouped by day, on both pages.
+   Opening one case answers "can I see the chat and the capsules behind it?":
+   - **Conversation:** the turns from the case capsule's input original,
+     when the bundle carries it. Otherwise the page says the conversation
+     isn't in this bundle and shows nothing else (the case capsule's digest
+     is still sealed).
+   - **Capsules behind it:** the case capsule; its book record; every
+     judgment record for this case, one per rule; and the checkpoint, as the
+     book record's leaf under the bundle checkpoint's root and size. Each id
+     links to that record in the core's verification section.
+   - **Per rule:** verdict, tier, grade, the carrier status labelled as the
+     record's evidence status (not the verdict, so a SATISFIED status beside
+     not_met doesn't read as a contradiction), and the judge's note as the
+     record holds it.
 
 **L2, verify.**
 
 8. The core's verification section, first and unchanged ([pc] §9.1). The
-   core sets its open state: #61 opens it when verification fails. Only the
-   module's own disclosures take their open state from `host.depth`.
+   module never touches its open state. The core sets it: #61 opens it when
+   verification fails, but [pc] §9.1 also says that at depth L2 "everything
+   is open", and #61 keeps it folded on a verified bundle even then. That
+   gap is the core's to fix (the shell, not this module), listed in phase 1.
+   The module's own disclosures take their open state from `host.depth`.
 9. Then module detail: "Check this report yourself", four anchor cells
    (producer key, log, checkpoint root and size, record count) and the steps.
    With a witness receipt, a step compares the root with the receipted
@@ -223,12 +235,6 @@ Rules come before the case grid, as in v2.
 
   **Recommendation: (b)** (Sherlock2's recommendation too). The sketches
   draw it.
-- **Dependency: findings stay producer annotations.** The findings label
-  assumes u553 as it stands: the presentation block is sealed in the bundle.
-  The proposal to move the view into a Terms Pack view file was withdrawn
-  when Ethan kept u553, so the label holds. If it comes back, severities and
-  recommendations move into the pinned contract, and this block's label and
-  source change with them.
 
 ## 6. Phases
 
@@ -240,8 +246,8 @@ go to Sherlock2 for copy review.
 - Moves the module onto the host's L0, L1 and L2 regions, takes open state
   from `host.depth`, and appends its L2 detail after the core's section
   ([pc] §9.1). Rebased on #61.
-- L0: header, the D5 (b) mock line, sealed aggregate, the Outcomes per-case
-  line.
+- L0: header, sealed aggregate, the Outcomes per-case line; the D5 (b) mock
+  line only if Steven picks (b).
 - L1: the assurance line, the rule and test tables with per-row claim
   tallies, the EU findings under the producer label.
 - L2: anchors and steps (step 3 conditional), the producer note, the proofs.
@@ -249,13 +255,22 @@ go to Sherlock2 for copy review.
   `lines.title`, and with no fallback the title would vanish), and the EU
   pack gains `group.*` and `row.*`, so test names stop coming from the
   presentation block. Plus the new keys for the aggregate line, the
-  assurance line, the D5 (b) line and the steps.
+  assurance line and the steps, and the D5 (b) line only if Steven picks
+  (b).
 - Goldens for both pages change.
+- In the shell, not the module: the core's verification section opens at
+  depth L2, as [pc] §9.1 requires.
 
 **Phase 2, case-first rows.**
 - The case grid in L1 on both pages, cases by rules, grouped by day.
-- The drill-down per case (§3, item 7). With the mock judge the note is a
-  probability, shown as the record holds it, beside the "mock" judge line.
+- The drill-down per case (§3, item 7): conversation turns when attached,
+  the capsules behind the case with links into the core's record list, and
+  the per-rule detail. With the mock judge the note is a probability, shown
+  as the record holds it.
+- For the Outcomes demo to show conversations, its bundle must be built
+  with `--attach-input-originals` (the EU demo already is). That discloses
+  the raw conversations, which is the producer's choice; the page only shows
+  what the bundle carries.
 - The EU per-session line in L0, now traceable to the grid.
 
 **Phase 3, day and re-grades.**
@@ -273,6 +288,10 @@ verdicts are placeholders because the judge was a mock. The purple level tags
 mark this note's levels and aren't part of the design. Group and row names in
 the EU sketch come from the presentation block only because the EU pack has no
 `row.*` words yet; the build takes them from the pack.
+
+Each sketch opens one case. The EU bundle carries the conversations, so its
+sketch shows the first turns; the Outcomes bundle doesn't, so its sketch shows
+the "not in this bundle" state. Both list the capsules behind the case.
 
 **Outcomes** (`contract-report-layout/outcomes-sketch.html`):
 
