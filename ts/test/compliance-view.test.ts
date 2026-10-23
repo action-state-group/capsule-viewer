@@ -47,7 +47,10 @@ it("renders the compliance card, not the generic Result page, when eu-ai-act-com
   // The card keeps its own frame inside the page (capsule-viewer#60).
   expect(root.classList.contains("cv-shell-chrome")).toBe(true);
   expect(root.querySelector('[data-page="result"]')).toBeNull();
-  expect(root.lastElementChild).toBe(
+  // The core's verification section opens L2, the page's last region
+  // (presentation contract section 9.1).
+  expect(root.lastElementChild!.getAttribute("data-region")).toBe("L2");
+  expect(root.querySelector('[data-region="L2-core"]')!.firstElementChild).toBe(
     root.querySelector('[data-page="verification"]')!.closest("[data-checked]"),
   );
 });
@@ -100,7 +103,9 @@ function open(details: Element): HTMLElement {
 
 /** Toggle 1 on every test row: builds each session list. */
 function expand(root: HTMLElement): HTMLElement {
-  for (const line of root.querySelectorAll('details[data-level="1"].line'))
+  for (const line of root.querySelectorAll(
+    'details[data-level="1"].line, details[data-level="1"].rx',
+  ))
     open(line);
   return root;
 }
@@ -112,10 +117,27 @@ it("the summary shows one group per obligation with its article and status, and 
     '[data-rows="summary"] tr[data-obligation]',
   );
   expect(groups).toHaveLength(3);
+  // The heading row names the obligation; it opens to the plain-language
+  // text and when it applies, kept together in the row below it.
   const art26row = root.querySelector<HTMLElement>(
     'tr[data-obligation="art26"]',
   )!;
-  expect(art26row.textContent).toContain("Applies 2 Dec 2027");
+  expect(art26row.textContent).not.toContain("Applies 2 Dec 2027");
+  // the obligation's name is the summary of a closed disclosure that
+  // controls the row below; the stylesheet shows that row while it is open
+  const toggle = art26row.querySelector<HTMLDetailsElement>("details.rx")!;
+  expect(toggle.open).toBe(false);
+  expect(toggle.querySelector("summary")!.textContent).toContain("Art 26");
+  const about = root.querySelector<HTMLElement>('tr[data-about-for="art26"]')!;
+  expect(about.classList.contains("x-detail")).toBe(true);
+  expect(toggle.querySelector("summary")!.getAttribute("aria-controls")).toBe(
+    about.id,
+  );
+  expect(about.textContent).toContain("Applies 2 Dec 2027");
+  art26row.querySelector<HTMLElement>("td")!.click();
+  expect(toggle.open).toBe(true);
+  art26row.querySelector<HTMLElement>("td")!.click();
+  expect(toggle.open).toBe(false);
   expect(
     root.querySelectorAll('[data-rows="summary"] tr[data-criterion]'),
   ).toHaveLength(5);
@@ -145,7 +167,14 @@ it("two levels: a test opens (toggle 1) into its sessions, each naming every tes
   const session = root.querySelector<HTMLElement>(
     'article[data-session="tau2:airline:task-0:trial-0"]',
   )!;
-  expect(session.closest("details")!.dataset.level).toBe("1");
+  // its test row's level-1 disclosure controls the detail row it sits in
+  const detail = session.closest<HTMLElement>("tr.x-detail")!;
+  expect(session.closest("details")).toBeNull();
+  expect(
+    root.querySelector<HTMLDetailsElement>(
+      `details.rx:has(> summary[aria-controls="${detail.id}"])`,
+    )!.dataset.level,
+  ).toBe("1");
   const blocks = session.querySelectorAll<HTMLElement>("[data-crit]");
   expect(blocks).toHaveLength(5);
   const judgedBlock = session.querySelector<HTMLElement>(
@@ -224,7 +253,7 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   open(proofs);
   const basis = root.querySelector<HTMLElement>('[data-basis="terms"]')!;
   for (const field of [
-    "The regulation named in the heading",
+    "The regulation named above",
     "obligation titles",
     "finding ids",
     "severities",
@@ -237,10 +266,18 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   const producer = [
     ...root.querySelectorAll<HTMLElement>('i[data-source="producer"]'),
   ].map((i) => i.textContent);
-  // the heading, finding ids and severities are the producer's too
+  // the regulation above the summary, finding ids and severities are the
+  // producer's too; the heading itself is the pack's report title
+  expect(root.querySelector('.hd h1 i[data-source="producer"]')).toBeNull();
+  // the regulation is the producer's mapping: it opens L1, never L0
+  // (presentation contract section 6)
   expect(
-    root.querySelector('.hd h1 i[data-source="producer"]')!.textContent,
+    root.querySelector('[data-regulation] i[data-source="producer"]')!
+      .textContent,
   ).toBe("Regulation (EU) 2024/1689 (the EU AI Act)");
+  expect(
+    root.querySelector('[data-level="L0"] i[data-source="producer"]'),
+  ).toBeNull();
   const finding = root.querySelector<HTMLElement>('[data-finding="F-01"]')!;
   expect(
     finding.querySelector('.fh b i[data-source="producer"]')!.textContent,
@@ -385,7 +422,7 @@ function undecide(source: Obj, refs: readonly string[]): void {
   };
 }
 
-it("an obligation no session met, every result undecided, reads 'Could not be checked' in a neutral tone, never 'No exceptions'", async () => {
+it("an obligation is a group heading with no tally; its tests, every result undecided, read 'Could not be checked' in a neutral tone, never 'No exceptions'", async () => {
   const { bundle } = await sealedComplianceBundle((source) =>
     undecide(source, [
       "art50.disclosure_before_first_turn",
@@ -393,16 +430,27 @@ it("an obligation no session met, every result undecided, reads 'Could not be ch
     ]),
   );
   const root = await render(bundle);
-  const row = root.querySelector<HTMLElement>('tr[data-obligation="art50"]')!;
-  const pill = row.querySelector<HTMLElement>(".st")!;
-  expect(pill.textContent).toBe("Could not be checked");
-  expect(pill.classList.contains("ne")).toBe(true);
-  expect(row.textContent).not.toContain("No exceptions");
-  // an obligation every test of which a session met still reads clean
-  expect(
-    root.querySelector<HTMLElement>('tr[data-obligation="art26"] .st')!
-      .textContent,
-  ).toBe("No exceptions");
+  // contract-report/v1 section 2: the obligation is a group heading, and
+  // no tally sums its tests' sessions
+  const group = root.querySelector<HTMLElement>(
+    'tbody[data-obligation-group="art50"]',
+  )!;
+  expect(group.querySelector('tr[data-obligation="art50"] .st')).toBeNull();
+  const tests = [...group.querySelectorAll<HTMLElement>("tr.test")];
+  expect(tests).toHaveLength(2);
+  for (const test of tests) {
+    const pill = test.querySelector<HTMLElement>(".st")!;
+    expect(pill.textContent).toBe("Could not be checked");
+    expect(pill.classList.contains("ne")).toBe(true);
+  }
+  expect(group.textContent).not.toContain("No exceptions");
+  // a test every session met still reads clean
+  const clean = [
+    ...root.querySelectorAll<HTMLElement>(
+      'tbody[data-obligation-group="art26"] tr.test .st',
+    ),
+  ].map((pill) => pill.textContent);
+  expect(clean).toContain("No exceptions");
 });
 
 it("the obligation pill speaks only for the sealed counts: applicability is the producer's italic line, never the pill's", async () => {
@@ -414,7 +462,7 @@ it("the obligation pill speaks only for the sealed counts: applicability is the 
     expect(pill.textContent).not.toMatch(/in force|applicable|readiness/iu);
     expect(pill.classList.contains("future")).toBe(false);
   }
-  const art26 = root.querySelector<HTMLElement>('tr[data-obligation="art26"]')!;
+  const art26 = root.querySelector<HTMLElement>('tr[data-about-for="art26"]')!;
   const note = art26.querySelector<HTMLElement>(
     '.applic i[data-source="producer"]',
   )!;

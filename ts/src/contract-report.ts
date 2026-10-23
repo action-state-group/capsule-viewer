@@ -13,6 +13,7 @@ import {
 } from "./contract-report-wording.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
 import { refusedWordingNotice } from "./report-levels.js";
+import { applyDepth, type ReportLevels } from "./report-front.js";
 
 /**
  * The contract-report module: one view for every report that is an Evidence
@@ -110,27 +111,42 @@ export async function renderContractReport(
   input: ContractReportInput,
   bundle: unknown,
   verified: BundleVerificationResult,
-  root: HTMLElement,
+  host: ReportLevels | HTMLElement,
   wording?: WordingPackInput,
 ): Promise<void> {
   const w = await contractReportWords(input.grouping, wording, {
     singleContract: citesOneContract(result),
   });
   const frame = FRAMES[input.grouping];
-  const wrapper = document.createElement(frame.tag);
-  wrapper.className = frame.className;
-  wrapper.dataset.page = frame.page;
-  wrapper.dataset.levels = "2";
+  // One frame per host region, so the frame's scoped stylesheet applies in
+  // each; the stylesheet itself is written once, in L0. A bare element (an
+  // old caller) stands for all three regions at depth L0.
+  const regions: ReportLevels =
+    // By shape, not instanceof: a host element may come from another
+    // window (a static page drawn into its own document).
+    "L0" in host ? host : { L0: host, L1: host, L2: host, depth: "L0" };
+  const wrap = (level: "L0" | "L1" | "L2"): HTMLElement => {
+    const wrapper = document.createElement(frame.tag);
+    wrapper.className = frame.className;
+    wrapper.dataset.page = frame.page;
+    wrapper.dataset.level = level;
+    wrapper.dataset.levels = "2";
+    return wrapper;
+  };
+  const levels = { L0: wrap("L0"), L1: wrap("L1"), L2: wrap("L2") };
   const style = document.createElement("style");
   style.textContent = frame.css;
-  wrapper.append(style);
+  levels.L0.append(style);
   const refused = refusedWordingNotice(w);
-  if (refused !== undefined) wrapper.append(refused);
+  if (refused !== undefined) levels.L0.append(refused);
   if (input.grouping === "lines")
-    await drawLines(wrapper, result, input.options, bundle, verified, w);
+    await drawLines(levels, result, input.options, bundle, verified, w);
   else
-    await drawGroups(wrapper, result, input.presentation, bundle, verified, w);
-  root.append(wrapper);
+    await drawGroups(levels, result, input.presentation, bundle, verified, w);
+  regions.L0.append(levels.L0);
+  regions.L1.append(levels.L1);
+  regions.L2.append(levels.L2);
+  applyDepth({ ...levels, depth: regions.depth });
 }
 
 /** The Outcomes report: the contract-report module, `lines`, default pack. Kept for callers of the card's old entry point. */

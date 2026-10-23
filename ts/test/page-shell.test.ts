@@ -58,9 +58,31 @@ describe("the page shell", () => {
     expect(root.querySelector("[data-uncheckpointed-note]")).toBeNull();
   });
 
+  it("says the verification section's counts beside the pill and links down to that section", async () => {
+    const root = await render(bundle());
+    const bar = root.firstElementChild as HTMLElement;
+    const folded =
+      root.querySelector<HTMLDetailsElement>("details.cv-checked")!;
+    expect(
+      bar.querySelector<HTMLElement>("[data-verify-summary]")!.textContent,
+    ).toBe("10 of 10 checks passed · 5 records");
+    expect(folded.querySelector(":scope > summary")!.textContent).toContain(
+      "10 of 10 checks passed · 5 records",
+    );
+    const link = bar.querySelector<HTMLAnchorElement>("a.cv-shell-link")!;
+    expect(link.textContent).toBe(CHECKED_SECTION_TITLE);
+    expect(link.getAttribute("href")).toBe(`#${folded.id}`);
+    document.body.append(root);
+    expect(folded.open).toBe(false);
+    link.click();
+    expect(folded.open).toBe(true);
+    root.remove();
+  });
+
   it("folds the verification page into one closed section whose line keeps the counts in view", async () => {
     const root = await render(bundle());
-    const folded = root.lastElementChild as HTMLDetailsElement;
+    const folded = root.querySelector('[data-region="L2-core"]')!
+      .firstElementChild as HTMLDetailsElement;
     expect(folded.tagName).toBe("DETAILS");
     expect(folded.open).toBe(false);
     expect(
@@ -86,7 +108,11 @@ describe("the page shell", () => {
     expect(
       root.querySelector('[data-refusal="unverified-bundle"]'),
     ).not.toBeNull();
-    const folded = root.lastElementChild as HTMLDetailsElement;
+    // presentation contract section 9.1, I1: no L0 or L1 on a failed bundle
+    expect(root.querySelector('[data-region="L0"]')).toBeNull();
+    expect(root.querySelector('[data-region="L1"]')).toBeNull();
+    const folded = root.querySelector('[data-region="L2-core"]')!
+      .firstElementChild as HTMLDetailsElement;
     expect(folded.open).toBe(true);
     // The ten numbered checks pass; the edited disclosure fails on its own.
     expect(folded.querySelector("summary")!.textContent).toBe(

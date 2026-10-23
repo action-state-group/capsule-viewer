@@ -136,6 +136,9 @@ function skeleton(node: Element): string {
   for (const t of texts)
     if (t.parentElement?.tagName !== "STYLE") t.textContent = "";
   for (const e of copy.querySelectorAll("[title]")) e.removeAttribute("title");
+  // An expandable row's accessible name is its words, like a title.
+  for (const e of copy.querySelectorAll("[aria-label]"))
+    e.removeAttribute("aria-label");
   return copy.outerHTML;
 }
 
@@ -336,6 +339,17 @@ for (const { file, page } of CARDS)
 // A pack swap changes words, and only words
 // ---------------------------------------------------------------------------
 
+/** The whole card: its three host regions (L0, L1, L2), copied in order into one element. */
+function wholeCard(root: ParentNode, page: string): HTMLElement {
+  const regions = [
+    ...root.querySelectorAll<HTMLElement>(`[data-page="${page}"]`),
+  ];
+  expect(regions.map((r) => r.dataset.level)).toEqual(["L0", "L1", "L2"]);
+  const card = document.createElement("div");
+  for (const region of regions) card.append(region.cloneNode(true));
+  return card;
+}
+
 for (const { grouping, file, page } of CARDS) {
   for (const [name, make] of [
     ["the grade ladder", () => ladderPack(grouping)],
@@ -349,8 +363,8 @@ for (const { grouping, file, page } of CARDS) {
         expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
         openAll(root);
       }
-      const a = plain.querySelector(`[data-page="${page}"]`)!;
-      const b = swapped.querySelector(`[data-page="${page}"]`)!;
+      const a = wholeCard(plain, page);
+      const b = wholeCard(swapped, page);
       expect(b).not.toBeNull();
       expect(b.textContent).not.toBe(a.textContent);
       // same elements, classes, verdicts, counts and record ids, in order
@@ -1192,13 +1206,9 @@ it("sibling verdict and count surfaces outside the main verdict sets are still d
       DEFAULT_PACKS.lines,
     ).join("\n"),
   ).toMatch(/lines\.why\.missed reads .*the word for lines\.why\.undecided/u);
-  // the drill-down suffixes, the rules column heads, a test row's counts
-  // and a drill-down's session kinds each stay a non-swappable set too
+  // the rules column heads and a test row's counts each stay a
+  // non-swappable set too
   for (const [a, b] of [
-    [
-      "lines.rules.drill.unverified-suffix",
-      "lines.rules.drill.undecided-suffix",
-    ],
     ["lines.rules.col.undecided", "lines.rules.col.unverified"],
   ] as const) {
     const base = DEFAULT_PACKS.lines.entries[b]!;
@@ -1212,7 +1222,6 @@ it("sibling verdict and count surfaces outside the main verdict sets are still d
   }
   for (const [a, b] of [
     ["groups.row.undecided-note", "groups.row.unverified-note"],
-    ["groups.drill.kind.exceptions", "groups.drill.kind.undecided"],
   ] as const) {
     const base = DEFAULT_PACKS.groups.entries[b]!;
     expect(
@@ -1273,7 +1282,7 @@ for (const { file, page } of CARDS)
   it(`${page}: no toggle is nested deeper than level 2, every toggle opened`, async () => {
     const root = await render(file);
     openAll(root);
-    const card = root.querySelector<HTMLElement>(`[data-page="${page}"]`)!;
+    const card = wholeCard(root, page);
     expect(card.querySelectorAll("details").length).toBeGreaterThan(0);
     expect(nestingProblems(card)).toEqual([]);
   });
@@ -1722,3 +1731,142 @@ for (const [name, file, change] of [
     expect(root.querySelector('[data-page="result"]')).not.toBeNull();
     expect(root.textContent).toContain(claim.id as string);
   });
+
+// ---------------------------------------------------------------------------
+// The sealed aggregate, the host's depth, and dates with their conditions
+// ---------------------------------------------------------------------------
+
+it("the aggregate is drawn as sealed; a number the claims disagree with carries a visible marker saying what they give", async () => {
+  // cut() keeps three conversations' claims under the producer's coverage
+  const root = await render("outcome-report-bundle.json");
+  const line = root.querySelector<HTMLElement>(
+    '[data-section="aggregate"] .agg-line',
+  )!;
+  const marker = line.querySelector<HTMLElement>(
+    '[data-count-mismatch="evaluated_population"]',
+  )!;
+  expect(line.dataset.evaluated).toBe(marker.dataset.stated);
+  expect(marker.dataset.recomputed).not.toBe(marker.dataset.stated);
+  expect(marker.textContent).toBe(
+    `count mismatch: the claims give ${Number(marker.dataset.recomputed).toLocaleString("en-US")}`,
+  );
+});
+
+it("the generic Result page keeps its own visible count mismatch marker", async () => {
+  const source = fixture("result-root-bundle.json");
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  ((doc.aggregate as Obj).coverage as Obj).evaluated_population = 99;
+  const root = await renderSource(source);
+  const marker = root.querySelector<HTMLElement>(
+    '[data-count-mismatch="evaluated_population"]',
+  )!;
+  expect(marker.textContent).toBe("count mismatch");
+  expect(marker.dataset.stated).toBe("99");
+});
+
+async function renderAt(
+  file: string,
+  depth: "L0" | "L1" | "L2",
+): Promise<HTMLElement> {
+  const { bundle } = await sealEvidenceBundle(cut(fixture(file)));
+  const root = document.createElement("main");
+  await renderEvidenceGraph(bundle, root, undefined, { depth });
+  return root;
+}
+
+it("depth L1 opens the L1 region's toggles and none in L0", async () => {
+  const root = await renderAt("outcome-report-bundle.json", "L1");
+  const L0 = root.querySelector('[data-region="L0"]')!;
+  const L1 = root.querySelector('[data-region="L1"]')!;
+  expect(L0.querySelectorAll("details.lv").length).toBeGreaterThan(0);
+  expect(L0.querySelectorAll("details.lv[open]")).toHaveLength(0);
+  const rows = L1.querySelectorAll<HTMLDetailsElement>("details.rx");
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) expect(row.open).toBe(true);
+});
+
+it("depth L2 opens every toggle, including those built after the page was drawn", async () => {
+  for (const file of ["outcome-report-bundle.json", "compliance-bundle.json"]) {
+    const root = await renderAt(file, "L2");
+    const all = root.querySelectorAll<HTMLDetailsElement>(
+      '[data-region="L0"] details, [data-region="L1"] details, [data-region="L2-module"] details',
+    );
+    // the level-2 proofs exist only once a level-1 body is built
+    expect(
+      root.querySelectorAll('details[data-level="2"]').length,
+      file,
+    ).toBeGreaterThan(0);
+    for (const toggle of all) expect(toggle.open, file).toBe(true);
+  }
+});
+
+it("a date not yet in force is never drawn without its conditions (D3)", async () => {
+  const source = fixture("compliance-bundle.json");
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const claims = doc.claims as Obj[];
+  const later = "art50.disclosure_before_first_turn";
+  for (const claim of claims)
+    if (claim.requirement_ref === later) claim.applies_from = "2099-01-01";
+  // a later claim is in no bucket and outside the population (ER 4.3)
+  const aggregate = doc.aggregate as Obj;
+  const coverage = aggregate.coverage as Obj;
+  const buckets = aggregate.buckets as Record<string, string[]>;
+  const laterIds = new Set(
+    claims.filter((c) => c.requirement_ref === later).map((c) => c.id),
+  );
+  let moved = 0;
+  for (const key of Object.keys(buckets)) {
+    const kept = buckets[key]!.filter((id) => !laterIds.has(id));
+    moved += buckets[key]!.length - kept.length;
+    buckets[key] = kept;
+  }
+  coverage.evaluated_population =
+    (coverage.evaluated_population as number) - moved;
+  coverage.unknown_count = claims.filter(
+    (c) => !laterIds.has(c.id) && c.sufficiency === "UNKNOWN",
+  ).length;
+  coverage.not_yet_in_force = laterIds.size;
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = document.createElement("main");
+  await renderEvidenceGraph(bundle, root, undefined, { depth: "L2" });
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const notes = [
+    ...root.querySelectorAll<HTMLElement>("article.session .applic"),
+  ].filter((n) => n.textContent!.startsWith("Applies from"));
+  expect(notes.length).toBeGreaterThan(0);
+  // the conditions are the pack's words (row.<ref>.detail), never the
+  // presentation block's hint with its own dates; the default pack sets
+  // none for this test, so the line says so rather than drawing the date
+  // alone
+  for (const note of notes) {
+    expect(note.querySelector('i[data-source="producer"]')).toBeNull();
+    expect(note.textContent).toContain(
+      "The conditions on when and to whom this applies are not stated in this report.",
+    );
+    expect(note.textContent).not.toContain("2 Dec 2027");
+  }
+});
+
+it("a rule's not-applicable count is in its detail row before the row opens, so a static page shows it", async () => {
+  // one rule check that did not apply: its claim is absent (no claim, by
+  // construction), and the buckets no longer name it
+  const source = cut(fixture("outcome-report-bundle.json"));
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const dropped = (doc.claims as Obj[])[0]!.id as string;
+  doc.claims = (doc.claims as Obj[]).slice(1);
+  const buckets = (doc.aggregate as Obj).buckets as Record<string, string[]>;
+  for (const key of Object.keys(buckets))
+    buckets[key] = buckets[key]!.filter((id) => id !== dropped);
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = document.createElement("main");
+  await renderEvidenceGraph(bundle, root, undefined, { depth: "L0" });
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  const lines = root.querySelectorAll<HTMLElement>("tr.x-detail .rule-na");
+  expect(lines.length).toBeGreaterThan(0);
+  for (const line of lines) {
+    const row = line.closest("tr")!.previousElementSibling!;
+    expect(row.querySelector<HTMLDetailsElement>("details.rx")!.open).toBe(
+      false,
+    );
+  }
+});

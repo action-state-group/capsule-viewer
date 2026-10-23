@@ -400,19 +400,11 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
   // on all three, so a pack could otherwise swap a missed conversation's
   // reason for an undecided one's, or the reverse.
   ["lines.why.missed", "lines.why.unverified", "lines.why.undecided"],
-  // The rules-table drill-down link's count suffixes (Outcomes card).
-  ["lines.rules.drill.unverified-suffix", "lines.rules.drill.undecided-suffix"],
   // The rules table's column header for a rule nobody could decide, and for
   // one whose claim could not be verified (Outcomes card).
   ["lines.rules.col.undecided", "lines.rules.col.unverified"],
   // A test row's undecided and unverified counts (EU card).
   ["groups.row.undecided-note", "groups.row.unverified-note"],
-  // The three kinds of session a test's drill-down can list (EU card).
-  [
-    "groups.drill.kind.exceptions",
-    "groups.drill.kind.unverified",
-    "groups.drill.kind.undecided",
-  ],
 ];
 
 /**
@@ -577,6 +569,26 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   ...SECTION3_ENUMS.status.map((v) => `status.${v}`),
   ...SECTION3_ENUMS.grade.map((v) => `grade.${v}`),
   ...SECTION3_ENUMS.sufficiency.map((v) => `sufficiency.${v}`),
+  // The shared front (report-front.ts): the mock-judge line, what the
+  // aggregate's unknown count is, what the page and the bundle carry, and
+  // the producer's findings label.
+  "front.mock",
+  "front.agg.unknown.one",
+  "front.agg.unknown.other",
+  "front.agg.mismatch",
+  "front.agg.as-of",
+  "front.agg.copied.both",
+  "front.agg.copied.dates",
+  "front.agg.copied.switch",
+  // The bucket labels name a verdict: a pack cannot make one read as another.
+  "front.agg.bucket.met",
+  "front.agg.bucket.not_met",
+  "front.agg.bucket.not_evaluable",
+  "front.agg.bucket.out_of_scope",
+  "front.check.s1",
+  "front.check.s3.receipt",
+  "front.check.s3.none",
+  "front.findings.label",
   // The front block (report-provenance.ts): who judged, who witnessed, what verified.
   "prov.judge.none",
   "prov.judge.model.does-not-recompute",
@@ -695,8 +707,19 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pin.not-stated",
   "lines.why-missed.structured",
   "lines.why-missed.unstructured",
-  "lines.stamp",
-  "lines.stamp.small",
+  // The folded provenance line is the only provenance a reader sees
+  // without opening it: every entry is the page's own account.
+  "prov.brief.judge.stated",
+  "prov.brief.judge.mixed",
+  "prov.brief.judge.partial",
+  "prov.brief.judge.withheld",
+  "prov.brief.judge.not-stated",
+  "prov.brief.judge.mock",
+  "prov.brief.witness.stated",
+  "prov.brief.witness.mixed",
+  "prov.brief.witness.not-stated",
+  "prov.brief.verifier.stated",
+  "prov.brief.verifier.not-stated",
   "lines.hc.none",
   "lines.terms.lede",
   "lines.terms.lede.agreed",
@@ -779,6 +802,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.oos-note.one",
   "lines.oos-note.other",
   "groups.later.note",
+  "groups.later.conditions-not-stated",
   "groups.row.later-note",
   // A refused wording layer (contract-report/v1 section 3): the page says
   // so, and which layer drew it.
@@ -1154,8 +1178,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "38c9d49249bfee5d67cdc9efff909a47b691eb7119dbacb965ae0f4e0669388b",
-  groups: "26945fd1a5f98c86281913e42f57510db88be3b6bd6c71581728f179cb20c7d9",
+  lines: "06244cb985e97d44bdf934dcac5a3bf899925865adf11f9d18bc093973906390",
+  groups: "f6698171c64d097348b9053874b7e7042d2cbef9b55c6f7d2028448305a9dbd8",
 });
 
 export interface Words {

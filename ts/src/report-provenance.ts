@@ -14,11 +14,12 @@ import {
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import { VIEWER_BUILD, type ViewerBuild } from "./viewer-build.js";
 import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
+import { levelToggle } from "./report-levels.js";
 
 /**
- * Who judged, who witnessed, and what verified: one plain block on the front
- * of every contract report, so a reader does not have to open the proofs to
- * learn it. Its words are the card's wording pack's (`prov.*`); "Witnessed
+ * Who judged, who witnessed, and what verified: one folded line at the top
+ * of L1 of every contract report (a few words per entry), with the full
+ * lines inside, so a reader does not have to open the proofs to learn it. Its words are the card's wording pack's (`prov.*`); "Witnessed
  * by" always says the witnesses are stated by the bundle and not checked
  * here, because this page does not check witness receipts.
  *
@@ -237,6 +238,8 @@ export interface ProvenanceLine {
   readonly key: "judge" | "witness" | "verifier";
   readonly label: string;
   readonly text: string;
+  /** A few words for the folded one-line summary; `text` is the whole line. */
+  readonly brief: string;
   readonly state: ProvenanceState;
 }
 
@@ -259,6 +262,17 @@ const short = (digest: string): string =>
       : digest
     : quoted(digest);
 
+/**
+ * Whether any judge pin the cited reports state names a mock backend. It
+ * fails closed (decision D4): a model id that says "mock" may weaken the
+ * page, but nothing here ever reads a model id as proof of a live judge.
+ */
+export function judgedByMock(tally: JudgeTally): boolean {
+  return tally.pins.some(
+    (pin) => pin.model !== undefined && /\bmock\b/i.test(pin.model),
+  );
+}
+
 /** "Judged by", from the tally alone. */
 export function judgeLine(
   tally: JudgeTally,
@@ -272,6 +286,7 @@ export function judgeLine(
       key: "judge",
       label,
       text: w.t("prov.judge.none"),
+      brief: w.t("prov.brief.judge.not-stated"),
       state: "not-stated",
     };
   const parts: string[] = [];
@@ -345,10 +360,24 @@ export function judgeLine(
           : "not-stated";
   // No pin at all, and nothing else to say: the plain absence.
   if (parts.length === 0) parts.push(w.t("prov.judge.nothing"));
-  return { key: "judge", label, text: parts.join("; "), state };
+  return {
+    key: "judge",
+    label,
+    text: parts.join("; "),
+    // "mixed" with one pin means some results name no pin; only two or
+    // more pins are "several".
+    brief: w.t(
+      judgedByMock(tally)
+        ? "prov.brief.judge.mock"
+        : state === "mixed" && judged === 1
+          ? "prov.brief.judge.partial"
+          : `prov.brief.judge.${state}`,
+    ),
+    state,
+  };
 }
 
-interface WitnessEntry {
+export interface WitnessEntry {
   readonly url?: string;
   readonly treeSize?: number;
   readonly stub: boolean;
@@ -380,7 +409,7 @@ function isReceipt(
   );
 }
 
-function witnessEntries(checkpoint: unknown): WitnessEntry[] {
+export function witnessEntries(checkpoint: unknown): WitnessEntry[] {
   if (!isObject(checkpoint) || !Array.isArray(checkpoint.witnesses)) return [];
   return checkpoint.witnesses.map((w: unknown): WitnessEntry => {
     // Mirrors upstream verifyWitnessReceipts (AAC ts/v0.5.0 witness.ts:588-599):
@@ -466,6 +495,7 @@ export function witnessLine(
       key: "witness",
       label,
       text: [w.t("prov.witness.none"), ...besides, ...about].join(" "),
+      brief: w.t("prov.brief.witness.not-stated"),
       state: "not-stated",
     };
   const named = entries.map((e) => {
@@ -485,6 +515,11 @@ export function witnessLine(
       ...besides,
       ...about,
     ].join(" "),
+    brief: w.t(
+      others.length === 0
+        ? "prov.brief.witness.stated"
+        : "prov.brief.witness.mixed",
+    ),
     state: others.length === 0 ? "stated" : "mixed",
   };
 }
@@ -536,6 +571,11 @@ export function verifierLine(
     key: "verifier",
     label: w.t("prov.verifier.label"),
     text: w.t("prov.verifier.text", { ran, built }),
+    brief: w.t(
+      build === null
+        ? "prov.brief.verifier.not-stated"
+        : "prov.brief.verifier.stated",
+    ),
     state: build === null ? "not-stated" : "stated",
   };
 }
@@ -554,21 +594,35 @@ export async function provenanceLines(
   ];
 }
 
-/** The block itself: a short list, text only, at summary level (no toggle). */
+/**
+ * The block itself: one folded line of a few words per entry, and the full
+ * list (pins, versions, checkpoint) inside, at level 1.
+ */
 export function renderProvenance(
   lines: readonly ProvenanceLine[],
 ): HTMLElement {
-  const block = document.createElement("dl");
-  block.className = "prov";
-  block.dataset.section = "provenance";
-  for (const line of lines) {
-    const dt = document.createElement("dt");
-    dt.textContent = line.label;
-    const dd = document.createElement("dd");
-    dd.textContent = line.text;
-    dd.dataset.prov = line.key;
-    dd.dataset.state = line.state;
-    block.append(dt, dd);
-  }
-  return block;
+  const brief = document.createElement("span");
+  brief.className = "prov-brief";
+  brief.textContent = lines.map((line) => line.brief).join(" · ");
+  const toggle = levelToggle(
+    1,
+    brief,
+    () => {
+      const block = document.createElement("dl");
+      block.className = "prov";
+      for (const line of lines) {
+        const dt = document.createElement("dt");
+        dt.textContent = line.label;
+        const dd = document.createElement("dd");
+        dd.textContent = line.text;
+        dd.dataset.prov = line.key;
+        dd.dataset.state = line.state;
+        block.append(dt, dd);
+      }
+      return block;
+    },
+    { className: "prov-fold", eager: true },
+  );
+  toggle.dataset.section = "provenance";
+  return toggle;
 }

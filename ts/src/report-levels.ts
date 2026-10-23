@@ -71,7 +71,9 @@ export function levelToggle(
   const fill = (): void => {
     if (built) return;
     built = true;
-    details.append(build());
+    const body = build();
+    details.append(body);
+    openBuiltToDepth(details);
   };
   if (options.eager === true) fill();
   else
@@ -117,10 +119,25 @@ export function nestingProblems(root: ParentNode): string[] {
   return problems;
 }
 
+/**
+ * At depth L2 everything is open (presentation contract section 9.1),
+ * including the toggles a body holds when it is built after the page was
+ * drawn: inside a region the host opened to L2 (`data-open-all`), a newly
+ * built body's toggles open too.
+ */
+export function openBuiltToDepth(body: HTMLElement): void {
+  if (body.closest("[data-open-all]") === null) return;
+  for (const toggle of body.querySelectorAll<HTMLDetailsElement>("details.lv"))
+    if (!toggle.open) openToggle(toggle);
+}
+
 /** Opens a toggle and builds its body now (tests, print). */
 export function openToggle(details: HTMLDetailsElement): void {
   details.open = true;
-  details.dispatchEvent(new Event("toggle"));
+  // The event of the element's own window: a static page is drawn into a
+  // document that is not the global one.
+  const view = details.ownerDocument.defaultView;
+  details.dispatchEvent(new (view === null ? Event : view.Event)("toggle"));
 }
 
 /**
@@ -143,6 +160,7 @@ export function lazyBody(host: HTMLElement, build: () => Node): void {
     pendingBodies.delete(host);
     host.dataset.body = "built";
     host.append(build());
+    openBuiltToDepth(host);
   };
   if (Observer === undefined) {
     fill();

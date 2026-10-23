@@ -86,7 +86,10 @@ it("renders the outcome-report card, not the generic Result page, when outcome-r
   expect(page.classList.contains("oi")).toBe(true);
   expect(root.querySelector('[data-page="result"]')).toBeNull();
   // verification page still runs last, same chrome as every other root family
-  expect(root.lastElementChild).toBe(
+  // The core's verification section opens L2, the page's last region
+  // (presentation contract section 9.1).
+  expect(root.lastElementChild!.getAttribute("data-region")).toBe("L2");
+  expect(root.querySelector('[data-region="L2-core"]')!.firstElementChild).toBe(
     root.querySelector('[data-page="verification"]')!.closest("[data-checked]"),
   );
 });
@@ -164,7 +167,7 @@ it("renders the header meta: pack id/version, period, conversation count, result
 // report lines
 // ---------------------------------------------------------------------------
 
-it("renders report lines with counts recomputed from the claims, and held/added from calibration (zero when none is cited)", async () => {
+it("renders report lines with counts recomputed from the claims, and held/added only when calibration cites one", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
   const table = root.querySelector<HTMLElement>('[data-rows="report-lines"]')!;
@@ -174,8 +177,9 @@ it("renders report lines with counts recomputed from the claims, and held/added 
   // a conversation the judge could not decide is never counted as missed
   expect(line("missed").dataset.count).toBe("48");
   expect(line("undecided").dataset.count).toBe("2");
-  expect(line("held").dataset.count).toBe("0");
-  expect(line("added").dataset.count).toBe("0");
+  // No re-grade is cited: no held or added line (renderHumanChecks says so).
+  expect(table.querySelector('[data-line="held"]')).toBeNull();
+  expect(table.querySelector('[data-line="added"]')).toBeNull();
   expect(line("resolved").textContent).toContain("0 of 50");
 });
 
@@ -197,10 +201,12 @@ it("shows counts by default, never a percentage, unless the presentation flag as
   );
 });
 
-it("renders a static verified stamp and the verify-first tamper note, never an interactive tamper control", async () => {
+it("draws no verified stamp of its own and keeps the verify-first tamper note, never an interactive tamper control", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
-  expect(root.querySelector(".stamp.rec")).not.toBeNull();
+  // Verification is the core banner's alone (presentation contract 6.1).
+  expect(root.querySelector(".stamp")).toBeNull();
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
   const note = root.querySelector<HTMLElement>("[data-tamper-note]")!;
   expect(note.dataset.tamperNote).toBe("verify-first");
   expect(root.querySelectorAll("button")).toHaveLength(0);
@@ -228,15 +234,16 @@ it("renders one tile per day, resolved of total", async () => {
 // human spot checks
 // ---------------------------------------------------------------------------
 
-it("renders 'no calibration-summary/v1 records cited' when the bundle cites none -- the real pipeline's own shape today", async () => {
+it("says the bundle carries no re-grade records when it cites none, without naming the schema (capsule-viewer#62) -- the real pipeline's own shape today", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
   const section = root.querySelector<HTMLElement>(
     '[data-section="human-checks"]',
   )!;
   expect(section.textContent).toContain(
-    "no calibration-summary/v1 records cited",
+    "No human re-grade records in this bundle.",
   );
+  expect(section.textContent).not.toContain("calibration-summary");
   expect(section.querySelector("[data-weeks]")).toBeNull();
 });
 
@@ -324,19 +331,40 @@ it("summarises results rule by rule: per-check pass counts, every rule's counts 
     const counts = [...row.querySelectorAll<HTMLElement>("td.n")].map((td) =>
       Number(td.textContent),
     );
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(50);
-    const [, notMet, , undecided] = counts;
-    // the conversations open in a full-width row right below the rule
-    const drillRow = row.nextElementSibling as HTMLElement | null;
-    const drill =
-      drillRow !== null && drillRow.dataset.drillFor === row.dataset.rule
-        ? drillRow.querySelector<HTMLElement>('details[data-level="1"]')
-        : null;
-    if (notMet! + undecided! === 0) {
-      expect(drill).toBeNull();
+    // Not met leads; "did not apply" is in the row's expansion.
+    const [notMet, , undecided] = counts;
+    // the rule's name is the summary of a level-1 disclosure that controls
+    // a full-width row right below it; a rule with nothing behind it (no
+    // problem, nothing not applicable) has none
+    const toggle = row.querySelector<HTMLDetailsElement>("details.rx");
+    const next = row.nextElementSibling as HTMLElement | null;
+    if (toggle === null) {
+      expect(counts[0]! + counts[2]!).toBe(0);
+      expect(counts.reduce((a, b) => a + b, 0)).toBe(50);
+      expect(next?.dataset.drillFor).not.toBe(row.dataset.rule);
       continue;
     }
-    open(drill!);
+    expect(toggle.dataset.level).toBe("1");
+    expect(toggle.querySelector("summary")!.textContent).toContain(
+      row.querySelector("b")!.textContent,
+    );
+    const drillRow = next!;
+    expect(drillRow.dataset.drillFor).toBe(row.dataset.rule);
+    expect(toggle.querySelector("summary")!.getAttribute("aria-controls")).toBe(
+      drillRow.id,
+    );
+    expect(toggle.open).toBe(false);
+    row.querySelector<HTMLElement>("td.n")!.click();
+    expect(toggle.open).toBe(true);
+    const drill = drillRow;
+    const na = Number(
+      drill.querySelector<HTMLElement>(".rule-na")?.dataset.count ?? "0",
+    );
+    expect(counts.reduce((a, b) => a + b, 0) + na).toBe(50);
+    if (notMet! + undecided! === 0) {
+      expect(drill.querySelector("article.conv")).toBeNull();
+      continue;
+    }
     const convs = drill!.querySelectorAll<HTMLElement>("article.conv");
     expect(convs).toHaveLength(notMet! + undecided!);
     // each one really did not meet this rule
@@ -533,8 +561,15 @@ it("renders the judge model and prompt/axes digests only when they recompute to 
 it("draws every icon as inline SVG and puts no emoji or pictographic glyph anywhere on the page", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
-  const page = root.querySelector<HTMLElement>('[data-page="outcome-report"]')!;
-  const icons = Array.from(page.querySelectorAll<SVGElement>("svg[data-icon]"));
+  // The card spans the three host regions; its icons sit in the terms (L2).
+  const regions = [
+    ...root.querySelectorAll<HTMLElement>('[data-page="outcome-report"]'),
+  ];
+  expect(regions.map((r) => r.dataset.level)).toEqual(["L0", "L1", "L2"]);
+  const page = regions[0]!;
+  const icons = regions.flatMap((r) => [
+    ...r.querySelectorAll<SVGElement>("svg[data-icon]"),
+  ]);
   // one target for the outcome, then one generic check mark per check: no
   // sealed record says which picture fits a check, so none is chosen
   expect(icons.map((svg) => svg.dataset.icon)).toEqual([
@@ -587,7 +622,10 @@ it("draws the verification banner and the verification page in the card's look -
   const verification = root.querySelector<HTMLElement>(
     '[data-page="verification"]',
   )!;
-  expect(root.lastElementChild).toBe(verification.closest("[data-checked]"));
+  expect(root.lastElementChild!.getAttribute("data-region")).toBe("L2");
+  expect(root.querySelector('[data-region="L2-core"]')!.firstElementChild).toBe(
+    verification.closest("[data-checked]"),
+  );
   expect(verification.classList.contains("oi")).toBe(true);
   expect(verification.classList.contains("oi-vp")).toBe(true);
   const panel = verification.querySelector<HTMLElement>(":scope > .sec")!;
@@ -652,7 +690,10 @@ it("tamper demo: a tampered claim fails verification -- no outcome-report page, 
   expect(root.querySelector('[data-rows="report-lines"]')).toBeNull();
   expect(root.querySelectorAll("[data-day]")).toHaveLength(0);
   expect(root.textContent).not.toContain("Outcome statement");
-  expect(root.lastElementChild).toBe(
+  // The core's verification section opens L2, the page's last region
+  // (presentation contract section 9.1).
+  expect(root.lastElementChild!.getAttribute("data-region")).toBe("L2");
+  expect(root.querySelector('[data-region="L2-core"]')!.firstElementChild).toBe(
     root.querySelector('[data-page="verification"]')!.closest("[data-checked]"),
   );
 });
@@ -905,8 +946,14 @@ it("drill-down: a not_applicable criterion is its own state -- no claim, no P, n
   const ruleRow = root.querySelector<HTMLElement>(
     'tr[data-rule="grounded_communication.refunds_match_payment_records"]',
   )!;
-  // one conversation where the rule did not apply: counted in its own column
-  expect(ruleRow.querySelectorAll("td.n")[2]!.textContent).toBe("1");
+  // one conversation where the rule did not apply: counted on its own, in
+  // the row's expansion
+  ruleRow.click();
+  expect(
+    root.querySelector<HTMLElement>(
+      '[data-drill-for="grounded_communication.refunds_match_payment_records"] .rule-na',
+    )!.dataset.count,
+  ).toBe("1");
   expand(root);
   const conv = [...root.querySelectorAll<HTMLElement>("article.conv")]
     .map((c) => open(c))
@@ -1197,10 +1244,11 @@ it("producer note and edited badges: rendered from outcome-report/v1 as presenta
   });
   const root = await render(bundle);
   expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
-  const page = root.querySelector<HTMLElement>('[data-page="outcome-report"]')!;
-  const note = page.querySelector<HTMLElement>("[data-producer-note]")!;
-  // first thing after the card's own <style>: directly under the banner
-  expect(page.children[1]).toBe(note);
+  const note = root.querySelector<HTMLElement>("[data-producer-note]")!;
+  // Producer text, never in L0 (presentation contract section 6): it sits
+  // in the card's L2 detail, after the core's verification section.
+  expect(note.closest<HTMLElement>("[data-page]")!.dataset.level).toBe("L2");
+  expect(note.closest('[data-region="L2-module"]')).not.toBeNull();
   expect(note.textContent).toContain("not evidence");
   expect(note.querySelector("h2")!.textContent).toBe(
     "What changed in this run",
@@ -1424,7 +1472,11 @@ it("dating: backfilled case records put the calendar and period on the source's 
   expect(
     tiles[0]!.querySelector('[data-tz-marker="not-stated"]'),
   ).not.toBeNull();
-  const note = calendar.querySelector<HTMLElement>("[data-date-note]")!;
+  // said once, in the sheet's footnotes, never again in the calendar
+  expect(calendar.querySelector("[data-date-note]")).toBeNull();
+  const note = root.querySelector<HTMLElement>(
+    '[data-section="footnotes"] [data-date-note]',
+  )!;
   expect(note.dataset.dateNote).toBe("source");
   expect(note.textContent).toContain(
     'Dates are the source\'s own timestamps for backfilled records ("source says"), as given, not when the records were sealed. Sealed 2026-09-23.',
@@ -1435,7 +1487,10 @@ it("dating: backfilled case records put the calendar and period on the source's 
   expect(meta.querySelector<HTMLElement>("[data-sealed]")!.textContent).toBe(
     "Sealed2026-09-23",
   );
-  expect(meta.querySelector("[data-date-note]")).not.toBeNull();
+  // the period's note sits in the sheet's footnotes, under the figures
+  expect(
+    root.querySelector('[data-section="footnotes"] [data-date-note]'),
+  ).not.toBeNull();
   // the drill-down says which date it used, verbatim, and the sealed day
   expand(root);
   const conv = open(root.querySelector<HTMLElement>("article.conv")!);
@@ -1468,7 +1523,11 @@ it("dating: case records with no backfill are dated by their own timestamp, as g
   ]);
   expect(calendar.querySelector("[data-source-says]")).toBeNull();
   expect(calendar.querySelector('[data-tz-marker="not-stated"]')).toBeNull();
-  const note = calendar.querySelector<HTMLElement>("[data-date-note]")!;
+  // said once, in the sheet's footnotes, never again in the calendar
+  expect(calendar.querySelector("[data-date-note]")).toBeNull();
+  const note = root.querySelector<HTMLElement>(
+    '[data-section="footnotes"] [data-date-note]',
+  )!;
   expect(note.dataset.dateNote).toBe("record");
   expect(note.textContent).toBe(
     "The period is when the conversations happened (each case record's own time, as given), not when they were judged. Sealed 2026-09-23.",
@@ -1784,7 +1843,8 @@ it("a claim whose cited evidence is not in the bundle is its own state: 'could n
   const cells = [...rules.querySelectorAll<HTMLElement>("tr.rule")].map((tr) =>
     [...tr.querySelectorAll("td.n")].map((td) => td.textContent),
   );
-  expect(cells.some((c) => c[4] === "1")).toBe(true);
+  // not met, met, could not decide, then this column
+  expect(cells.some((c) => c[3] === "1")).toBe(true);
 });
 
 it("the proofs say the judge's note is derived from its probabilities only when every rationale is the judge's probability line", async () => {

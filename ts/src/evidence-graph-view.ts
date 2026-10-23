@@ -211,6 +211,13 @@ function renderVerificationBanner(
   banner.setAttribute("aria-label", title);
   banner.title = title;
   bar.append(banner);
+  // The verification section's own summary line, filled in once that
+  // section is drawn (at the end of renderEvidenceGraph), and a link down
+  // to the section.
+  const detail = element("span");
+  detail.className = "cv-shell-detail";
+  detail.dataset.verifySummary = "";
+  bar.append(detail);
   if (verified && coverage.uncheckpointed > 0) {
     const note = element(
       "span",
@@ -220,6 +227,15 @@ function renderVerificationBanner(
     note.dataset.uncheckpointedNote = "";
     bar.append(note);
   }
+  const link = element("a", CHECKED_SECTION_TITLE);
+  link.className = "cv-shell-link";
+  link.setAttribute("href", `#${CHECKED_SECTION_ID}`);
+  link.addEventListener("click", () => {
+    const section = root.ownerDocument.getElementById(CHECKED_SECTION_ID);
+    if (section instanceof root.ownerDocument.defaultView!.HTMLDetailsElement)
+      section.open = true;
+  });
+  bar.append(link);
   root.append(bar);
   if (verified) return banner;
   const refusal = element(
@@ -351,6 +367,8 @@ const SIGNATURE_CHECKS: ReadonlySet<string> = new Set([
 
 /** The folded verification section's heading. */
 export const CHECKED_SECTION_TITLE = "How this page was checked";
+/** The folded verification section's id, the banner link's target. */
+const CHECKED_SECTION_ID = "cv-checked";
 
 // presentation/v1 is rendered here, in the header only, and nowhere else in
 // this module. Only readPresentationBlock's three known fields ever reach
@@ -727,7 +745,8 @@ async function renderVerificationPage(
   refused: readonly PresentationRefusal[],
   citedSigners: boolean,
   verifierHint: string | undefined,
-): Promise<void> {
+  depth: "L0" | "L1" | "L2",
+): Promise<string> {
   const { bundle, verification: verified, countersigners } = context;
   const section = element("section");
   section.dataset.page = "verification";
@@ -781,17 +800,20 @@ async function renderVerificationPage(
   // line keeps the counts and what was not checked in view.
   const folded = document.createElement("details");
   folded.className = "cv-checked";
+  folded.id = CHECKED_SECTION_ID;
   folded.dataset.checked = "";
-  folded.open = !bundleVerified(verified);
+  // Open when the bundle did not verify, and at depth L2, where everything
+  // is open (presentation contract section 9.1).
+  folded.open = !bundleVerified(verified) || depth === "L2";
+  const line = checkedSummaryLine(bundleVerified(verified), model);
   const heading = element("summary");
   heading.append(
     element("strong", CHECKED_SECTION_TITLE),
-    document.createTextNode(
-      ` · ${checkedSummaryLine(bundleVerified(verified), model)}`,
-    ),
+    document.createTextNode(` · ${line}`),
   );
   folded.append(heading, section);
   root.append(folded);
+  return line;
 }
 
 function metRate(report: ReportNode): string {
@@ -1789,7 +1811,7 @@ const resultOutcomeReportModule: PresentationModule<
       { grouping: "lines", options: model.card },
       model.bundle,
       model.verification,
-      host.L1,
+      { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
     );
   },
@@ -1822,7 +1844,7 @@ const resultComplianceModule: PresentationModule<
       { grouping: "groups", presentation: model.card },
       model.bundle,
       model.verification,
-      host.L1,
+      { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
     );
   },
@@ -1960,14 +1982,17 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
       renderResultPage(model.result, host.L1);
       return;
     }
-    // The outcome report's banner and verification page take its look.
-    if (model.input.grouping === "lines") host.setChromeClass("oi");
+    // The report's banner takes its frame's look (a callout at the top);
+    // the outcome report's verification page takes its look too.
+    host.setChromeClass(
+      model.input.grouping === "lines" ? OUTCOME_CHROME : COMPLIANCE_CHROME,
+    );
     await renderContractReport(
       model.result,
       model.input,
       model.bundle,
       model.verification,
-      host.L1,
+      { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
     );
   },
@@ -2143,7 +2168,7 @@ export interface RenderEvidenceGraphOptions {
   readonly sections?: PresentationResolver;
   readonly audience?: string;
   readonly format?: PresentationFormat;
-  /** The opening depth handed to the module's host; "L2" when omitted. */
+  /** The opening depth handed to the module's host; "L0" when omitted. */
   readonly depth?: PresentationDepth;
   /**
    * The wording pack the page was built with, carried so the page holds
@@ -2345,11 +2370,45 @@ export async function renderEvidenceGraph(
     total: Array.isArray(records) ? records.length : 0,
   };
 
+  // The host's three regions, in order after the banner and the header
+  // (presentation contract section 9.1). L2 opens with the core's
+  // verification section, drawn last but placed first; a module's L2 detail
+  // follows it.
+  const depth = options.depth ?? "L0";
+  const region = (name: string): HTMLElement => {
+    const node = document.createElement("div");
+    node.dataset.region = name;
+    return node;
+  };
+  let regions = {
+    L0: root,
+    L1: root,
+    L2: root,
+    core: root,
+  };
   const drawFrame = (): void => {
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
     renderVerificationBanner(root, verified, coverage);
     renderPresentationHeader(root, bundle);
+    const L2 = region("L2");
+    const core = region("L2-core");
+    const L2module = region("L2-module");
+    L2.append(core, L2module);
+    // On a failed bundle L0 and L1 are not created (presentation contract
+    // section 9.1, I1): no module renders, and a notice goes before L2.
+    if (verified) {
+      regions = { L0: region("L0"), L1: region("L1"), L2: L2module, core };
+      root.append(regions.L0, regions.L1, L2);
+    } else {
+      regions = { L0: root, L1: root, L2: L2module, core };
+      root.append(L2);
+    }
+  };
+  /** A page-level notice: first in L1, or before L2 on a failed bundle. */
+  const notice = (note: HTMLElement): void => {
+    if (verified) regions.L1.append(note);
+    else root.insertBefore(note, regions.core.parentElement);
   };
   drawFrame();
   if (refused.length > 0)
@@ -2358,10 +2417,10 @@ export async function renderEvidenceGraph(
   let chrome: string | undefined;
   if (selected !== undefined) {
     const host: WordedHost = {
-      L0: root,
-      L1: root,
-      L2: root,
-      depth: options.depth ?? "L2",
+      L0: regions.L0,
+      L1: regions.L1,
+      L2: regions.L2,
+      depth,
       ...(options.wording === undefined ? {} : { wording: options.wording }),
       setChromeClass(name: string): void {
         if (name !== OUTCOME_CHROME && name !== COMPLIANCE_CHROME)
@@ -2390,7 +2449,7 @@ export async function renderEvidenceGraph(
       "No presentation is available for this bundle, audience and format. The records and their verification are below.",
     );
     note.dataset.notice = "no-presentation";
-    root.append(note);
+    notice(note);
   }
   // The section renders after the page module, into the same regions. If it
   // throws, everything any module wrote is discarded for the refusal.
@@ -2399,10 +2458,10 @@ export async function renderEvidenceGraph(
       await section.module.render(
         section.model,
         {
-          L0: root,
-          L1: root,
-          L2: root,
-          depth: "L2",
+          L0: regions.L0,
+          L1: regions.L1,
+          L2: regions.L2,
+          depth,
           setChromeClass(): void {
             throw new Error("a section has no chrome");
           },
@@ -2418,7 +2477,7 @@ export async function renderEvidenceGraph(
   if (refusal !== undefined) {
     const note = element("p", PRESENTATION_REFUSALS[refusal]);
     note.dataset.refusal = refusal;
-    root.append(note);
+    notice(note);
   }
   // The interpreters this rendering actually ran (see extension-interpreters.ts):
   // the presentation header and the countersignature stamp always run; a
@@ -2435,13 +2494,17 @@ export async function renderEvidenceGraph(
           context.bundle,
         ))
           applied.add(id);
-  await renderVerificationPage(
-    root,
+  const checkedLine = await renderVerificationPage(
+    regions.core,
     context,
     chrome === OUTCOME_CHROME,
     applied,
     refused,
     refusal === undefined && citesCheckedSigners(selected),
     options.verifierHint,
+    depth,
   );
+  // The banner says the same counts as the section it links to.
+  const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
+  if (summary !== null) summary.textContent = checkedLine;
 }
