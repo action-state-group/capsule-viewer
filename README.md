@@ -57,11 +57,11 @@ claim's ordinary tier / grade / sufficiency / verdict lines, under three
 rules that are pinned by negative fixtures and tests, never by styling:
 
 - **A reconcile row shows the six states as counts** (`MATCHED · A_ONLY ·
-  B_ONLY · CONFLICTING · INSUFFICIENT · UNRESOLVED`, read from the claim's
+B_ONLY · CONFLICTING · INSUFFICIENT · UNRESOLVED`, read from the claim's
   `tallies`, keyed lowercase as `schemas/judge/close-v1.json` keys them),
   one row each, always all six, never a ratio or a percentage. `A_ONLY` / `B_ONLY` render as
-  *one side missing* (`rv0-rs-one-sided`); `CONFLICTING` renders as *both
-  sides disagree* (`rv0-rs-finding`). The two share no class and no
+  _one side missing_ (`rv0-rs-one-sided`); `CONFLICTING` renders as _both
+  sides disagree_ (`rv0-rs-finding`). The two share no class and no
   wording -- "one side missing isn't a finding; both sides disagreeing
   is." A `tallies` object missing any state is refused, never read as zero.
 - **A close row renders the three Close states differently** --
@@ -146,9 +146,11 @@ or verdict moves, and nothing is re-judged.
   least one word between any two of them, so a count or denominator can be
   neither dropped, reordered, nor run into another on the page. Two verdicts
   may not share a word (the module's own `lines.verdict.*` and
-  `groups.verdict.*`, each card's own prefix -- `verdict.*` itself is
-  `contract-report/v1` §3's -- plus `lines.status.*`, `lines.pf.verdict.*`
-  and the other sibling sets `contract-report-wording.ts` lists), as a
+  `groups.verdict.*`, each card's own prefix, plus `lines.status.*`,
+  `lines.pf.verdict.*` and the other sibling sets
+  `contract-report-wording.ts` lists; a `contract-report/v1` §3
+  `verdict.*` or `tier.*` word is read through those keys and checked as
+  they are, and may not differ from one the same pack also sets), as a
   reader reads it (case, spacing and punctuation ignored); no verdict may
   take another verdict's default word, nor may a count that should read as
   an exception or a miss read as the clean "met" or "no exceptions" instead,
@@ -161,10 +163,11 @@ or verdict moves, and nothing is re-judged.
   producer's-text and "not evidence" labels; the list is `LOCKED_ENTRIES` in
   `ts/src/contract-report-wording.ts`) are fixed, because they are the page's
   account of its own checking, and a reworded one could claim a check that
-  never ran. A pack that breaks
-  any of these, or does not hash to its `wording_sha256`, is refused before
-  anything is drawn; `render-report.mjs` and the presentation builder name
-  every problem. The raw
+  never ran. So are each claim's assurance words (`status.*`, `grade.*`,
+  `sufficiency.*`). A pack that breaks any of these, or does not hash to
+  its `wording_sha256`, is refused: the live page draws the card with the
+  built-in words and a visible notice, and `render-report.mjs` and the
+  presentation builder refuse to write the page, naming every problem. The raw
   verdict is on every element as data, whatever the words say.
 - The page's proofs name every wording layer applied, by digest: a supplied
   pack's own id and `wording_sha256`, and the built-in default pack's id and
@@ -172,7 +175,8 @@ or verdict moves, and nothing is re-judged.
   `contract-report/v1` §3 records every layer applied, not only a supplied
   one.
 - Not in the pack: what the bundle itself states (the producer's obligation
-  titles and test names, in italics; sealed rule wording) and two lines
+  titles and test names, in italics, unless a pack's `group.*` / `row.*`
+  words replace them; sealed rule wording) and two lines
   agent-action-capsule's outcome model writes (the outcome statement and the
   resolution rule). The module never takes its own words from a bundle
   (presentation contract section 6).
@@ -249,7 +253,7 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   (sections 3.2 and 4), with the static ambiguity test at registration and a hard error,
   never first-wins, at resolution (`tests/test_receipt_registry.py`).
 - **The module never verifies.** Its context is built from what `capsulectl verify
-  --bundle` reported (`verifier_report.py`), and that report is refused unless its
+--bundle` reported (`verifier_report.py`), and that report is refused unless its
   `bundle_digest` is the digest of the exact bundle supplied (`digest.py`), so an
   edited copy never renders under the original's verdict. Committed words are shown
   only when the core's `sha256-jcs-nonce256` service (`binding.py`) opens them.
@@ -381,7 +385,7 @@ refusals are marked and counted.
 
 - **The page is drawn over the ledger's evidence file.** The ledger's
   producer makes the file (`evidence-bundle/v2`), for example `capsule-emit
-  bundle LEDGER --all -o bundle.json`, which proves every record under the
+bundle LEDGER --all -o bundle.json`, which proves every record under the
   log's signed checkpoint (and refuses a log with none); this package never
   builds one and holds no key. That file reads VALID only when every leaf up
   to the checkpoint is a record, as in an unpadded mesh ledger directory.
@@ -406,7 +410,7 @@ refusals are marked and counted.
   record alone but not that none is missing), INVALID as the contract's
   refusal with the failing checks and no row. The shell follows the
   module with the verifier's checks on every path (`present(...,
-  core_checks=True)`): every check, the witness check, what the file carries
+core_checks=True)`): every check, the witness check, what the file carries
   unchecked, and each record's log position, identity and signature. The
   module never verifies; if it throws or draws nothing, the verification is
   shown as it was.

@@ -314,29 +314,21 @@ export function obligationStatus(
   text: string;
 } {
   const exceptions = obligation.rows.reduce((sum, r) => sum + r.notMetCount, 0);
-  // Result v0 section 4.3: when nothing in force was evaluated and some
-  // claims are later, there is no population to have no exceptions in.
-  // "Evaluated" excludes unverifiedCount on purpose: an obligation whose
-  // rows are a mix of all-later and all-unverified still reads "Not yet in
-  // force", never "Could not be checked" (matches agent-action-capsule's
-  // own compliance-view.ts obligationStatus).
-  const evaluated = obligation.rows.reduce(
-    (sum, r) =>
-      sum +
-      r.metCount +
-      r.notMetCount +
-      r.notEvaluableCount +
-      r.outOfScopeCount,
-    0,
-  );
-  if (evaluated === 0 && obligation.rows.some((r) => r.notYetInForceCount > 0))
+  // Result v0 section 4.3: only when every test is wholly later is there no
+  // population to have no exceptions in. A test in force whose claims all
+  // failed verification is still in force: its failure is never hidden
+  // behind "Not yet in force".
+  if (obligation.rows.length > 0 && obligation.rows.every(allLater))
     return { cls: "na", text: w.t("groups.ob.later") };
-  const unchecked = obligation.rows.filter((r) => noneDecided(r)).length;
+  // A wholly later test was not "could not be checked": it is not in force
+  // yet, so it is left out of both counts.
+  const inForce = obligation.rows.filter((r) => !allLater(r));
+  const unchecked = inForce.filter((r) => noneDecided(r)).length;
   const unverified = obligation.rows.reduce(
     (sum, r) => sum + r.unverifiedCount,
     0,
   );
-  const total = obligation.rows.length;
+  const total = inForce.length;
   const uncheckedText =
     unchecked > 0
       ? w.t("groups.ob.unchecked-of", {

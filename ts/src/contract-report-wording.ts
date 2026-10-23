@@ -220,15 +220,21 @@ const SECTION3_ALIASES: Readonly<
 > = Object.freeze({
   lines: {
     "report.title": ["lines.title"],
-    "verdict.met": ["lines.verdict.met"],
-    "verdict.not_met": ["lines.verdict.not_met"],
+    // The rule table's pill and the proofs table's cell both name the
+    // verdict, so a section 3 word reaches both.
+    "verdict.met": ["lines.verdict.met", "lines.pf.verdict.met"],
+    "verdict.not_met": ["lines.verdict.not_met", "lines.pf.verdict.not_met"],
     "verdict.not_evaluable": [
       "lines.verdict.not_evaluable.judged",
       "lines.verdict.not_evaluable.unjudged",
       "lines.verdict.not_evaluable.withheld",
       "lines.verdict.not_evaluable.unavailable",
+      "lines.pf.verdict.not_evaluable",
     ],
-    "verdict.out_of_scope": ["lines.verdict.out_of_scope"],
+    "verdict.out_of_scope": [
+      "lines.verdict.out_of_scope",
+      "lines.pf.verdict.out_of_scope",
+    ],
     "tier.recomputed": ["lines.tier.recomputed"],
     "tier.judged": ["lines.tier.judged"],
   },
@@ -407,12 +413,6 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "groups.drill.kind.unverified",
     "groups.drill.kind.undecided",
   ],
-  // contract-report/v1 section 3: the assurance words each claim shows in
-  // its proofs (the carrier status, the grade, the sufficiency), one set
-  // per enum, so a pack cannot make WITHHELD read as SATISFIED.
-  SECTION3_ENUMS.status.map((v) => `status.${v}`),
-  SECTION3_ENUMS.grade.map((v) => `grade.${v}`),
-  SECTION3_ENUMS.sufficiency.map((v) => `sufficiency.${v}`),
 ];
 
 /**
@@ -570,6 +570,13 @@ const CATEGORY_LABEL: Readonly<Record<GuardedCategory, string>> = {
  * file does, changes nothing and passes).
  */
 export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
+  // contract-report/v1 section 3: the assurance words each claim shows (its
+  // carrier status, grade and sufficiency). They state what the sealed claim
+  // says about its own evidence, so a pack cannot make WITHHELD read as
+  // clean or a self-attested grade read as witnessed.
+  ...SECTION3_ENUMS.status.map((v) => `status.${v}`),
+  ...SECTION3_ENUMS.grade.map((v) => `grade.${v}`),
+  ...SECTION3_ENUMS.sufficiency.map((v) => `sufficiency.${v}`),
   // The front block (report-provenance.ts): who judged, who witnessed, what verified.
   "prov.judge.none",
   "prov.judge.model.does-not-recompute",
@@ -995,6 +1002,17 @@ export function wordingProblems(
       ? expandSection3(supplied, grouping)
       : supplied;
   const problems: string[] = [];
+  if (grouping === "lines" || grouping === "groups")
+    for (const [key, targets] of Object.entries(SECTION3_ALIASES[grouping]))
+      if (Object.hasOwn(supplied.entries, key))
+        for (const target of targets)
+          if (
+            Object.hasOwn(supplied.entries, target) &&
+            supplied.entries[target] !== supplied.entries[key]
+          )
+            problems.push(
+              `${key} and ${target} name the same thing and must say the same; this pack gives them different words`,
+            );
   for (const [key, text] of Object.entries(pack.entries)) {
     if (INVISIBLE.test(text))
       problems.push(
@@ -1246,8 +1264,14 @@ export function wordsOf(
         ...vars,
       }),
     section3,
-    enumWord: (family, value) =>
-      section3(`${family}.${value.toLowerCase()}`) ?? value,
+    // A section 3 word that names what the grouping already has a word
+    // for (SECTION3_ALIASES) is read through the grouping's own key, the
+    // one every check covers, so the two can never disagree on the page.
+    enumWord: (family, value) => {
+      const key = `${family}.${value.toLowerCase()}`;
+      const target = SECTION3_ALIASES[grouping][key]?.[0];
+      return target !== undefined ? t(target) : (section3(key) ?? value);
+    },
     row: (requirementRef, part) =>
       context.singleContract
         ? section3(`row.${requirementRef}.${part}`)

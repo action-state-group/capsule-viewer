@@ -3,6 +3,7 @@ import {
   buildVerifiedBundleContext,
   disclosureOf,
   isVerifiedBundleContext,
+  REQUIREMENT_CLAIM,
   type ExtensionInterpreterId,
   type PresentationManifest,
   withCountersigners,
@@ -1342,6 +1343,10 @@ const BUCKETS: ReadonlyArray<
 // no claim backs it, by construction. Coverage counts evaluations (one per
 // claim, ER §3), so the line also names how many distinct requirements the
 // claims cite, and an UNKNOWN count is never called unresolved requirements.
+/** Said above the generic Result page when a Result opted into a card whose layout cannot hold its claims (`claimsFitCard`). */
+export const CARD_UNFIT_NOTE =
+  "This Result's claims do not fit the report card (a requirement judged more than once in one conversation, claims under more than one contract, or claims the card cannot place), so every claim is listed below instead.";
+
 function renderResultPage(result: ResultRoot, root: HTMLElement): void {
   const section = element("section");
   section.dataset.page = "result";
@@ -1720,6 +1725,8 @@ interface ContractReportModel {
   readonly result: ResultRoot;
   /** The grouping the bundle's sealed data supports, or none: the generic Result page. */
   readonly input?: ContractReportInput;
+  /** A grouping was supported, but the claims do not fit its card (see `claimsFitCard`). */
+  readonly unfit?: true;
   readonly bundle: unknown;
   readonly verification: BundleVerificationResult;
 }
@@ -1752,20 +1759,73 @@ function contractReportInput(bundle: unknown): ContractReportInput | undefined {
  * opts in reaches it. A Result that carries neither grouping's data draws
  * the generic Result page, exactly as the built-in it replaces.
  */
+/**
+ * Whether every claim has a place of its own on the outcome or EU card. The
+ * cards lay a Result out one conversation by one requirement, so they can
+ * show a claim only when it is a requirement claim whose id names its
+ * conversation (`<conversation>::…`), the EU card's also with a grouped
+ * requirement (`<group>.<test>`), no two claims share a conversation and a
+ * requirement (a re-judged requirement), and all cite one contract. Any
+ * other Result is drawn as the generic Result page, which lists every claim:
+ * a card never merges a claim into another or leaves one out
+ * (contract-report/v1 section 2).
+ */
+function claimsFitCard(
+  result: ResultRoot,
+  grouping: ContractReportInput["grouping"],
+): boolean {
+  if (new Set(result.claims.map((c) => c.contractRef)).size > 1) return false;
+  const seen = new Set<string>();
+  for (const claim of result.claims) {
+    if (claim.type !== REQUIREMENT_CLAIM) return false;
+    const sep = claim.id.indexOf("::");
+    if (sep <= 0) return false;
+    if (grouping === "groups") {
+      const dot = claim.requirementRef.indexOf(".");
+      if (dot <= 0 || dot === claim.requirementRef.length - 1) return false;
+    }
+    const key = JSON.stringify([claim.id.slice(0, sep), claim.requirementRef]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+  }
+  return true;
+}
+
+/** Which interpreters a contract-report render ran, by the bundle it drew: set when its model is built. */
+const contractReportDrawn = new WeakMap<object, ContractReportInput | null>();
+
 const contractReportModule: PresentationModule<ContractReportModel> = {
   manifest: CONTRACT_REPORT_MANIFEST,
   canRender: (context) => isResultRoot(context),
   buildModel: async (context) => {
-    const input = contractReportInput(context.bundle);
+    const result = defined(
+      await resultRootOf(context),
+      CONTRACT_REPORT_MANIFEST.id,
+    );
+    const supported = contractReportInput(context.bundle);
+    const input =
+      supported !== undefined && claimsFitCard(result, supported.grouping)
+        ? supported
+        : undefined;
+    if (typeof context.bundle === "object" && context.bundle !== null)
+      contractReportDrawn.set(context.bundle, input ?? null);
     return {
-      result: defined(await resultRootOf(context), CONTRACT_REPORT_MANIFEST.id),
+      result,
       ...(input === undefined ? {} : { input }),
+      ...(supported !== undefined && input === undefined
+        ? { unfit: true as const }
+        : {}),
       bundle: context.bundle,
       verification: context.verification,
     };
   },
   render: async (model, host) => {
     if (model.input === undefined) {
+      if (model.unfit === true) {
+        const note = element("p", CARD_UNFIT_NOTE);
+        note.dataset.notice = "card-unfit";
+        host.L1.append(note);
+      }
       renderResultPage(model.result, host.L1);
       return;
     }
@@ -1850,7 +1910,12 @@ function moduleInterpreters(
   bundle: unknown,
 ): readonly ExtensionInterpreterId[] {
   if (id === CONTRACT_REPORT_MANIFEST.id) {
-    const input = contractReportInput(bundle);
+    const drawn =
+      typeof bundle === "object" && bundle !== null
+        ? contractReportDrawn.get(bundle)
+        : undefined;
+    const input =
+      drawn === undefined ? contractReportInput(bundle) : (drawn ?? undefined);
     return input === undefined
       ? ["result-root"]
       : [

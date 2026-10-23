@@ -523,12 +523,26 @@ it("a claim that failed verification or whose evidence is missing is never an ex
   });
 });
 
-it("an obligation whose rows mix all-later and all-unverified claims still reads 'Not yet in force', never 'Could not be checked' (Result v0 section 4.3: 'evaluated' excludes unverifiedCount)", () => {
+it("an obligation reads 'Not yet in force' only when every test is wholly later; a failed verification in force is never hidden behind it (Result v0 section 4.3)", () => {
   const allLater = row({ criterionId: "x.a", notYetInForceCount: 2 });
   const allUnverified = row({ criterionId: "x.b", unverifiedCount: 2 });
-  expect(obligationStatus(obligationOf([allLater, allUnverified]))).toEqual({
+  expect(obligationStatus(obligationOf([allLater]))).toEqual({
     cls: "na",
     text: "Not yet in force",
+  });
+  // the in-force test whose claims all failed verification is the status
+  expect(obligationStatus(obligationOf([allLater, allUnverified]))).toEqual({
+    cls: "ne",
+    text: "Could not be checked",
+  });
+});
+
+it("a wholly later test is not counted as one that could not be checked", () => {
+  const allLater = row({ criterionId: "x.a", notYetInForceCount: 2 });
+  const clean = row({ criterionId: "x.b", metCount: 2 });
+  expect(obligationStatus(obligationOf([allLater, clean]))).toEqual({
+    cls: "ok",
+    text: "No exceptions",
   });
 });
 

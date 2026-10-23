@@ -241,7 +241,6 @@ it("every locked line is a default entry, and every default line that states wha
   // for "not evaluable", "not met" and the tier's name read, in English,
   // like an honesty line.
   expect(unlocked.sort()).toEqual([
-    "grade.self-attested",
     "groups.session.undecided",
     "groups.tier.recomputed",
     "groups.verdict.failed",
@@ -264,9 +263,6 @@ it("every locked line is a default entry, and every default line that states wha
     "lines.verdict.not_evaluable.withheld",
     "lines.verdict.unsupported",
     "lines.why.undecided",
-    "status.unknown",
-    "status.withheld",
-    "sufficiency.unknown",
   ]);
 });
 
@@ -1374,7 +1370,7 @@ it("a section 3 alias word is refused exactly where the grouping key would be (v
   const viaAlias = (
     grouping: "lines" | "groups",
     aliasKey: string,
-    directKey: string,
+    directKey: string | readonly string[],
     value: string,
   ): [string[], string[]] => {
     const alias = wordingProblems(
@@ -1382,16 +1378,29 @@ it("a section 3 alias word is refused exactly where the grouping key would be (v
       DEFAULT_PACKS[grouping],
     );
     const direct = wordingProblems(
-      { id: "test/pack@1", locale: "en", entries: { [directKey]: value } },
+      {
+        id: "test/pack@1",
+        locale: "en",
+        entries: Object.fromEntries(
+          (typeof directKey === "string" ? [directKey] : directKey).map((k) => [
+            k,
+            value,
+          ]),
+        ),
+      },
       DEFAULT_PACKS[grouping],
     );
     return [alias, direct];
   };
   for (const grouping of ["lines", "groups"] as const) {
+    // On the Outcomes card verdict.met words both the rule pill and the
+    // proofs cell.
     const [alias, direct] = viaAlias(
       grouping,
       "verdict.met",
-      `${grouping}.verdict.met`,
+      grouping === "lines"
+        ? ["lines.verdict.met", "lines.pf.verdict.met"]
+        : "groups.verdict.met",
       "not met",
     );
     expect(alias.length).toBeGreaterThan(0);
@@ -1479,21 +1488,8 @@ function section3Pack(groupKey: string, rowRef: string): WordingPack {
       "verdict.out_of_scope": "S3-VERDICT-OOS",
       "tier.recomputed": "S3-TIER-RECOMPUTED",
       "tier.judged": "S3-TIER-JUDGED",
-      "grade.self-attested": "S3-GRADE-SELF",
-      "grade.witnessed": "S3-GRADE-WITNESSED",
-      "grade.countersigned": "S3-GRADE-COUNTERSIGNED",
-      "sufficiency.satisfied": "S3-SUFF-SATISFIED",
-      "sufficiency.gap": "S3-SUFF-GAP",
-      "sufficiency.insufficient": "S3-SUFF-INSUFFICIENT",
-      "sufficiency.unknown": "S3-SUFF-UNKNOWN",
-      "status.satisfied": "S3-STATUS-SATISFIED",
-      "status.insufficient": "S3-STATUS-INSUFFICIENT",
-      "status.not_found": "S3-STATUS-NOTFOUND",
-      "status.not_committed": "S3-STATUS-NOTCOMMITTED",
-      "status.withheld": "S3-STATUS-WITHHELD",
-      "status.contradicted": "S3-STATUS-CONTRADICTED",
-      "status.not_applicable": "S3-STATUS-NOTAPPLICABLE",
-      "status.unknown": "S3-STATUS-UNKNOWN",
+      // grade.*, sufficiency.* and status.* are locked (the claim's own
+      // account of its evidence): a pack that rewords them is refused.
     },
   };
 }
@@ -1508,12 +1504,8 @@ const SECTION3_MARKERS_PRESENT = [
   "S3-VERDICT-OOS",
   "S3-TIER-RECOMPUTED",
   "S3-TIER-JUDGED",
-  "S3-GRADE-SELF",
-  "S3-GRADE-WITNESSED",
-  "S3-SUFF-SATISFIED",
-  "S3-SUFF-GAP",
-  "S3-STATUS-SATISFIED",
-  "S3-STATUS-INSUFFICIENT",
+  "S3-SUMMARY",
+  "S3-ROW-DETAIL",
 ];
 
 function rebuildOutcomeBuckets(claims: Obj[]): Obj {
@@ -1593,4 +1585,104 @@ it("a host pack that sets every section 3 key family shows each word: outcome-re
   const text = root.textContent ?? "";
   for (const marker of SECTION3_MARKERS_PRESENT)
     expect(text, marker).toContain(marker);
+});
+
+it("a host pack's row.<ref>.not_evaluable note shows on a row whose claims could not be decided", async () => {
+  const pack = await distributed(
+    section3Pack("art50", "art50.disclosure_before_first_turn"),
+  );
+  const root = await renderSource(fixture("compliance-bundle.json"), pack);
+  openAll(root);
+  expect(root.textContent).toContain("S3-ROW-NE");
+});
+
+// ---------------------------------------------------------------------------
+// Review findings on #58: guards, the card's fit, verdict words in proofs
+// ---------------------------------------------------------------------------
+
+it("a pack that gives a section 3 word and its grouping key different words is refused", () => {
+  for (const grouping of ["lines", "groups"] as const) {
+    const problems = wordingProblems(
+      {
+        id: "test/pack@1",
+        locale: "en",
+        entries: {
+          "tier.judged": "recomputed",
+          [`${grouping}.tier.judged`]: "judged",
+        },
+      },
+      DEFAULT_PACKS[grouping],
+    );
+    expect(problems.join("\n"), grouping).toContain(
+      `tier.judged and ${grouping}.tier.judged name the same thing`,
+    );
+  }
+});
+
+it("a section 3 tier word is read through the grouping's own key", () => {
+  const words = wordsOf(DEFAULT_PACKS.lines, {
+    pack: {
+      id: "test/pack@1",
+      locale: "en",
+      entries: { "lines.tier.judged": "S3-OWN" },
+    },
+  });
+  expect(words.enumWord("tier", "JUDGED")).toBe("S3-OWN");
+});
+
+it("a claim's assurance words are locked: a pack cannot make WITHHELD read clean or self-attested read witnessed", () => {
+  for (const [key, word] of [
+    ["status.withheld", "clean"],
+    ["grade.self-attested", "independently witnessed"],
+    ["sufficiency.gap", "satisfied"],
+  ] as const)
+    for (const grouping of ["lines", "groups"] as const)
+      expect(
+        wordingProblems(
+          { id: "test/pack@1", locale: "en", entries: { [key]: word } },
+          DEFAULT_PACKS[grouping],
+        ).join("\n"),
+        `${grouping} ${key}`,
+      ).toContain(`${key}: this line states what the page checked`);
+});
+
+it("a section 3 verdict word reaches the Outcomes proofs table as well as the rule pills", async () => {
+  const pack = await distributed({
+    id: "test/verdict@1",
+    locale: "en",
+    entries: { "verdict.met": "S3-MET" },
+  });
+  const root = await render("outcome-report-bundle.json", pack);
+  openAll(root);
+  const cells = [
+    ...root.querySelectorAll<HTMLElement>(
+      'tr[data-proof-crit][data-verdict="met"]',
+    ),
+  ];
+  expect(cells.length).toBeGreaterThan(0);
+  for (const cell of cells) expect(cell.textContent).toContain("S3-MET");
+});
+
+it("a Result whose claims the card cannot place one by one is drawn as the generic Result page, with a note", async () => {
+  // a requirement judged twice in one conversation: the card would keep one
+  const source = fixture("compliance-bundle.json");
+  // opted into contract-report/v1, so the contract-report module draws it
+  (source.extensions as Obj)["contract-report/v1"] = {};
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const claims = doc.claims as Obj[];
+  const first = claims[0]!;
+  const again = {
+    ...structuredClone(first),
+    id: `${first.id as string}::again`,
+  };
+  claims.push(again);
+  const buckets = (doc.aggregate as Obj).buckets as Record<string, string[]>;
+  buckets[first.verdict as string]!.push(again.id);
+  const root = await renderSource(source);
+  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-notice="card-unfit"]')).not.toBeNull();
+  expect(root.querySelector('[data-page="compliance"]')).toBeNull();
+  expect(root.querySelector('[data-page="result"]')).not.toBeNull();
+  // every claim is listed, the re-judged one too
+  expect(root.textContent).toContain(again.id);
 });

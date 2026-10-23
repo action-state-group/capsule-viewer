@@ -46,30 +46,38 @@ the visible notice a refused host layer draws.
 
 **The section 3 keys this module reads**, and where each shows:
 
-| Key                                                          | Shows                                                                                                                                                         |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `report.title`                                               | The card's heading (aliased onto `lines.title` / `groups.kicker`).                                                                                            |
-| `report.summary`                                             | One line under the title, drawn only when set (`reportSummary`, `report-levels.ts`).                                                                          |
-| `group.<segment>.title`                                      | A group's heading -- the part of a row's `requirement_ref` before its first `.` (EU AI Act obligation headings; the Outcomes report's check groups).          |
-| `row.<requirement_ref>.label`                                | A row's name, in place of the producer's label or the id made readable.                                                                                       |
-| `row.<requirement_ref>.detail`                               | A row's explanation, drawn beside its name when set.                                                                                                          |
-| `row.<requirement_ref>.not_evaluable`                        | The note shown when a row's claims are not evaluable, in place of the module's own note.                                                                      |
-| `verdict.met`, `.not_met`, `.not_evaluable`, `.out_of_scope` | Aliased onto the layout's own verdict words (`lines.verdict.*` / `groups.verdict.*`): every pill, column heading and rule-table cell that draws that verdict. |
-| `tier.recomputed`, `.judged`                                 | Aliased onto the layout's own tier badge words.                                                                                                               |
-| `grade.self-attested`, `.witnessed`, `.countersigned`        | Each claim's assurance line in its proofs (`assuranceRow`).                                                                                                   |
-| `sufficiency.satisfied`, `.gap`, `.insufficient`, `.unknown` | The same assurance line.                                                                                                                                      |
-| `status.<value>`                                             | The same assurance line (the claim's carrier status, lowercased).                                                                                             |
+| Key                                                          | Shows                                                                                                                                                                             |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report.title`                                               | The card's heading (aliased onto `lines.title` / `groups.kicker`).                                                                                                                |
+| `report.summary`                                             | One line under the title, drawn only when set (`reportSummary`, `report-levels.ts`).                                                                                              |
+| `group.<segment>.title`                                      | A group's heading -- the part of a row's `requirement_ref` before its first `.` (EU AI Act obligation headings; the Outcomes report's check groups).                              |
+| `row.<requirement_ref>.label`                                | A row's name, in place of the producer's label or the id made readable.                                                                                                           |
+| `row.<requirement_ref>.detail`                               | A row's explanation, drawn beside its name when set.                                                                                                                              |
+| `row.<requirement_ref>.not_evaluable`                        | The note shown when a row's claims are not evaluable, in place of the module's own note.                                                                                          |
+| `verdict.met`, `.not_met`, `.not_evaluable`, `.out_of_scope` | Aliased onto the layout's own verdict words (`lines.verdict.*` / `groups.verdict.*`, and the Outcomes proofs' `lines.pf.verdict.*`): every pill and cell that draws that verdict. |
+| `tier.recomputed`, `.judged`                                 | Aliased onto the layout's own tier badge words.                                                                                                                                   |
+| `grade.self-attested`, `.witnessed`, `.countersigned`        | Each claim's assurance line in its proofs (`assuranceRow`); locked, like `sufficiency.*` and `status.*`.                                                                          |
+| `sufficiency.satisfied`, `.gap`, `.insufficient`, `.unknown` | The same assurance line.                                                                                                                                                          |
+| `status.<value>`                                             | The same assurance line (the claim's carrier status, lowercased).                                                                                                                 |
 
 A word with no entry, in any layer, is shown as its raw token or
-identifier -- nothing is guessed, and a missing `report.title` shows no
-title at all.
+identifier -- nothing is guessed. The default layer always words the
+title (`lines.title` / `groups.kicker`, which `report.title` aliases). Until
+the default EU pack carries `group.*` and `row.*` words, the EU card names
+obligations and tests with the producer's labels, in italics as the
+producer's text.
+
+A Result whose claims the card cannot place one by one (a requirement
+judged more than once in one conversation, claims under more than one
+contract, claims of another type or id shape) is drawn as the generic
+Result page, with a note, so no claim is merged or left out.
 
 **The single-contract rule.** `row.*` and `group.*` apply only when every
 claim in the Result cites the same `contract_ref` (`citesOneContract`,
 contract-report.ts): a pack is written for one contract, and two contracts
 can reuse one `requirement_ref` for different requirements. A Result that
-cites more than one contract shows raw identifiers for every row and group,
-whatever the pack sets.
+cites more than one contract is drawn as the generic Result page (see
+above), so the rule is a second guard for callers that draw a card directly.
 
 **The refused-layer rule.** Each wording layer is checked on its own
 (digest, shape, then fit against this module's words). A layer that does

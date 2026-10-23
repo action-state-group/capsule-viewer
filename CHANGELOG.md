@@ -100,9 +100,15 @@ here. The format follows
   `grade.<value>`, `status.<value>`), layered over the module's own
   default pack entry by entry: a host layer that does not check (digest,
   shape or fit) is refused and contributes no words, and the card draws
-  with the default layer and a visible notice. `row.*`/`group.*` apply
-  only when every claim cites one `contract_ref`; a Result citing more
-  than one shows raw identifiers. Tuning details in `ts/README.md`.
+  with the default layer and a visible notice. A `verdict.*` or `tier.*`
+  word is read through the layout's own key and checked as it is, and may
+  not differ from that key in the same pack; the claims' assurance words
+  (`status.*`, `grade.*`, `sufficiency.*`) are locked. A Result whose
+  claims the card cannot place one by one (claims under more than one
+  `contract_ref`, a requirement judged more than once in one conversation,
+  claims of another type or id shape) is drawn as the generic Result page
+  with a note, so no claim is merged or left out. Tuning details in
+  `ts/README.md`. By Jody Edmondson (#58), completed by Ethan Zhang.
 - Requires `@action-state-group/agent-action-capsule` 0.6.0 (it was
   0.5.0), which carries the `contract-report/v1`
   registration (#352), `out_of_scope`/`applies_from` (#368, #363,
