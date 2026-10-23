@@ -289,9 +289,13 @@ replace the stamp with a callout):
   none.
 - Not yet built, still phase 1: the `report.*`, `group.*` and `row.*`
   wording migration, and per-row claim tallies ("n of m claims").
-- Held for a ruling (they conflict with [er] §3 and [cr] §2): headline
-  numbers in conversations or obligations, with the aggregate moved to L1,
-  and one row per EU obligation with a worst result.
+- Dropped: headline numbers in conversations or obligations, with the
+  aggregate moved to L1. Ethan agreed on 2026-10-23 with Steven's ruling
+  that coverage leads and the claim buckets follow ([er] §3), so the order
+  stays as built: the compact aggregate (coverage line, then the buckets),
+  then the Outcomes per-case lines or the EU test table.
+- Undecided by Ethan: one row per EU obligation with a worst result. It
+  conflicts with [cr] §2 (one row per requirement, no single score).
 
 **Phase 2, case-first rows.**
 - The case grid in L1 on both pages, cases by rules, grouped by day.
