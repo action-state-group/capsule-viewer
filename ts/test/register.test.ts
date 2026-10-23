@@ -111,10 +111,31 @@ it("a Result carrying only contract-report/v1 lists it as interpreted: the contr
   const source = fixture("result-root-bundle.json");
   source.extensions = { "contract-report/v1": {} };
   const { bundle } = await sealEvidenceBundle(source);
-  const row = (await render(bundle)).querySelector<HTMLElement>(
+  const root = await render(bundle);
+  expect(root.querySelector('[data-page="result"]')).not.toBeNull();
+  const row = root.querySelector<HTMLElement>(
     '[data-extensions] [data-extension-id="contract-report/v1"]',
   )!;
   expect(row.dataset.semantics).toBe("interpreted");
+});
+
+it("when the claims do not fit the card, contract-report/v1 is interpreted and the earlier block is not: the module drew the generic Result page", async () => {
+  const source = fixture("compliance-bundle.json");
+  (source.extensions as Obj)["contract-report/v1"] = {};
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  // a claim under a second contract: the card cannot place it
+  const claim = (doc.claims as Obj[])[0]!;
+  claim.contract_ref = `${claim.contract_ref as string}-other`;
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  expect(root.querySelector('[data-notice="card-unfit"]')).not.toBeNull();
+  expect(root.querySelector('[data-page="result"]')).not.toBeNull();
+  const semantics = (kind: string) =>
+    root.querySelector<HTMLElement>(
+      `[data-extensions] [data-extension-id="${kind}"]`,
+    )?.dataset.semantics;
+  expect(semantics("contract-report/v1")).toBe("interpreted");
+  expect(semantics("eu-ai-act-compliance/v1")).toBe("uninterpreted");
 });
 
 it("a declined contract-report/v1 block is listed as not interpreted", async () => {
