@@ -359,6 +359,10 @@ it("judged by: present, mixed, partly withheld, recomputed and absent", () => {
       .brief,
   ).toBe("mock judge");
   expect(judgeLine(tally({ cited: 0 })).brief).toBe("judge not stated");
+  // one pin with some results withheld is not "several judge pins"
+  expect(
+    judgeLine(tally({ pins: [{ ...one, count: 6 }], withheld: 4 })).brief,
+  ).toBe("judge pinned for some results");
   const mixed = judgeLine(
     tally({
       pins: [

@@ -18,6 +18,8 @@ ${s} .agg-buckets{display:flex;flex-wrap:wrap;gap:6px 18px}
 ${s} .agg-bucket{display:flex;align-items:baseline;gap:6px}
 ${s} .agg-bucket b{font-size:16px;font-variant-numeric:tabular-nums}
 ${s} .agg-bucket span{font-size:12.5px;color:var(--slate)}
+${s} .agg .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
+${s} .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
 ${s} .agg-bucket.met b{color:var(--ok)}
 ${s} .agg-bucket.not_met b{color:var(--bad)}
 ${s} .agg-bucket.not_evaluable b{color:#5F6672}
@@ -30,11 +32,13 @@ ${s} details.prov-fold > summary{padding:2px 0;font-weight:500;color:var(--ink)}
 ${s} details.prov-fold .prov-brief{font-size:13.5px}
 ${s} tr.x{cursor:pointer}
 ${s} tr.x:hover > td{background:#FAF8F4}
-${s} tr.x:focus-visible{outline:2px solid var(--navy);outline-offset:-2px}
-${s} tr.x > td:first-child b:before{content:"";display:inline-block;width:0;height:0;border-left:5px solid var(--navy);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:8px;vertical-align:1px;transition:transform .1s}
-${s} tr.x[aria-expanded="true"] > td:first-child b:before{transform:rotate(90deg)}
-${s} tr.drill-row > td > details.lv > summary{display:none}
-${s} tr.drill-row > td > details.lv{margin-top:0}
+${s} tr.x-detail{display:none}
+${s} tr.x:has(details.rx[open]) + tr.x-detail{display:table-row}
+${s} tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
+${s} details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
+${s} details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}
+${s} table tr.x td details.rx > summary > *{display:inline}
+${s} details.rx > summary:focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:3px}
 ${s} .rule-na{font-size:12.5px;color:var(--slate);margin:4px 0 8px}
 ${s} .check h2{font-size:19px;margin:0 0 10px}
 ${s} .anchors{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
@@ -42,6 +46,6 @@ ${s} .anchor{background:var(--cream);border-radius:8px;padding:8px 10px;font-siz
 ${s} .anchor .k{display:block;color:var(--slate);margin-bottom:2px}
 ${s} .anchor code{font-size:11px;word-break:break-all}
 ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.6}
-@media (max-width:640px){${s} .front-card{padding:14px 16px}${s} .agg-buckets{grid-template-columns:1fr 1fr 1fr}}
+@media (max-width:640px){${s} .front-card{padding:14px 16px}}
 `;
 }

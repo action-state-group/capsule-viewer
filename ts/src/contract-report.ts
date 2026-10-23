@@ -122,9 +122,9 @@ export async function renderContractReport(
   // each; the stylesheet itself is written once, in L0. A bare element (an
   // old caller) stands for all three regions at depth L0.
   const regions: ReportLevels =
-    host instanceof HTMLElement
-      ? { L0: host, L1: host, L2: host, depth: "L0" }
-      : host;
+    // By shape, not instanceof: a host element may come from another
+    // window (a static page drawn into its own document).
+    "L0" in host ? host : { L0: host, L1: host, L2: host, depth: "L0" };
   const wrap = (level: "L0" | "L1" | "L2"): HTMLElement => {
     const wrapper = document.createElement(frame.tag);
     wrapper.className = frame.className;

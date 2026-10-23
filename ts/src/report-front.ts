@@ -6,24 +6,24 @@
  * - L0: the mock-judge line (decision D5 (b)) and the sealed aggregate,
  *   coverage first, then the buckets (contract-report/v1 section 2,
  *   evidence-result-v0 section 3).
+ * - Rows that open in place (expandableRow).
  * - L2, after the core's verification section: "Check this report
  *   yourself", the bundle's anchors and the steps to re-check them.
  * - The host's depth applied to the module's own toggles (presentation
  *   contract section 9.1). The core's section is never touched here.
  */
-import type {
-  CountMismatch,
-  ResultRoot,
+import {
+  utcDateOf,
+  type CountMismatch,
+  type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
-import { openToggle } from "./report-levels.js";
+import { openBuiltToDepth, openToggle } from "./report-levels.js";
 import {
   judgedByMock,
   witnessEntries,
   type JudgeTally,
 } from "./report-provenance.js";
-
-export { judgedByMock };
 
 /** The three host regions a contract report writes into, and the host's depth. */
 export interface ReportLevels {
@@ -42,19 +42,24 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 
 const fmt = (n: number): string => n.toLocaleString("en-US");
 
-// A recomputed headline number never wears the producer's value. When the
-// two disagree the recomputed value is drawn and a `count mismatch` marker
-// sits beside it; the stated value is kept on the marker's data attribute,
-// never in the text a reader takes as the number.
-export function countMismatchMarker(
+// The aggregate is drawn as sealed (contract-report/v1 section 2). Where
+// the claims give another number (`countMismatches`), a marker beside the
+// sealed one says what the claims give, so a disagreement reads as one and
+// neither number is silently preferred (presentation contract section 3).
+function mismatchMarker(
   result: ResultRoot,
   field: CountMismatch["field"],
+  w: Words,
 ): HTMLElement | undefined {
   const mismatch = result.countMismatches.find(
     (entry) => entry.field === field,
   );
   if (mismatch === undefined) return undefined;
-  const marker = el("span", "count mismatch");
+  const marker = el(
+    "span",
+    "count mismatch",
+    w.t("front.agg.mismatch", { recomputed: fmt(mismatch.recomputed) }),
+  );
   marker.dataset.countMismatch = field;
   marker.dataset.stated = String(mismatch.stated);
   marker.dataset.recomputed = String(mismatch.recomputed);
@@ -73,15 +78,18 @@ export function renderMockJudgeLine(
 }
 
 /**
- * The Result's aggregate, coverage first and then the buckets, each count
- * with its unit (evaluations). `unknown_count` is "evaluations with an
- * unknown result", never "unresolved". The numbers are the claims'
- * (`coverage`, `bucketCounts`); where the producer stated another number
- * the count-mismatch marker sits beside it, as on the generic Result page.
+ * The Result's sealed aggregate, coverage first and then the buckets, each
+ * count with its unit (evaluations); `unknown_count` is "evaluations with
+ * an unknown result", never "unresolved". The numbers are the producer's
+ * (`statedCoverage`, the `buckets` lists), with a marker wherever the
+ * claims give another. When a claim is dated, or the out-of-scope switch
+ * is on, a line says the date "in force" is relative to and that these are
+ * the producer's copy of the contract (ER sections 4.2 and 4.3).
  */
 export function renderAggregate(result: ResultRoot, w: Words): HTMLElement {
   const section = el("section", "agg");
   section.dataset.section = "aggregate";
+  const stated = result.statedCoverage;
   const requirements = new Set(
     result.claims
       .filter((claim) => !claim.later)
@@ -90,64 +98,99 @@ export function renderAggregate(result: ResultRoot, w: Words): HTMLElement {
       ),
   ).size;
   const line = el("p", "agg-line");
-  line.append(
+  const marked = (text: string, field: CountMismatch["field"]): void => {
+    line.append(text);
+    const marker = mismatchMarker(result, field, w);
+    if (marker !== undefined) line.append(" ", marker);
+  };
+  marked(
     w.t("front.agg.evaluated", {
-      evaluated: fmt(result.coverage.evaluatedPopulation),
-      requirements: fmt(requirements),
+      evaluations: w.p("front.agg.evaluations", stated.evaluatedPopulation, {
+        n: fmt(stated.evaluatedPopulation),
+      }),
+      requirements: w.p("front.agg.requirements", requirements, {
+        n: fmt(requirements),
+      }),
     }),
+    "evaluated_population",
   );
-  const evaluated = countMismatchMarker(result, "evaluated_population");
-  if (evaluated !== undefined) line.append(" ", evaluated);
   line.append(
     " · ",
     w.t("front.agg.excluded", {
-      excluded: fmt(result.coverage.excludedNotApplicable),
+      excluded: fmt(stated.excludedNotApplicable),
     }),
     " · ",
-    w.t("front.agg.unknown", { unknown: fmt(result.coverage.unknownCount) }),
   );
-  const unknown = countMismatchMarker(result, "unknown_count");
-  if (unknown !== undefined) line.append(" ", unknown);
-  const later = result.claims.filter((claim) => claim.later).length;
-  if (later > 0) {
-    line.append(" · ", w.t("front.agg.later", { later: fmt(later) }));
-    line.dataset.notYetInForce = String(later);
+  marked(
+    w.p("front.agg.unknown", stated.unknownCount, {
+      n: fmt(stated.unknownCount),
+    }),
+    "unknown_count",
+  );
+  const later = stated.notYetInForce;
+  if (
+    later !== undefined ||
+    result.countMismatches.some((m) => m.field === "not_yet_in_force")
+  ) {
+    line.append(" · ");
+    marked(
+      w.p("front.agg.later", later ?? 0, { n: fmt(later ?? 0) }),
+      "not_yet_in_force",
+    );
+    line.dataset.notYetInForce = String(later ?? 0);
   }
-  line.dataset.evaluated = String(result.coverage.evaluatedPopulation);
+  line.dataset.evaluated = String(stated.evaluatedPopulation);
   line.dataset.requirements = String(requirements);
-  line.dataset.excluded = String(result.coverage.excludedNotApplicable);
-  line.dataset.excludedBasis = "stated";
-  line.dataset.unknown = String(result.coverage.unknownCount);
+  line.dataset.excluded = String(stated.excludedNotApplicable);
+  line.dataset.unknown = String(stated.unknownCount);
   section.append(line);
 
   const buckets = el("div", "agg-buckets");
   const entries: readonly [
     string,
-    number | undefined,
+    readonly string[] | undefined,
     CountMismatch["field"],
   ][] = [
-    ["met", result.bucketCounts.met, "buckets.met"],
-    ["not_met", result.bucketCounts.notMet, "buckets.not_met"],
-    [
-      "not_evaluable",
-      result.bucketCounts.notEvaluable,
-      "buckets.not_evaluable",
-    ],
-    ["out_of_scope", result.bucketCounts.outOfScope, "buckets.out_of_scope"],
+    ["met", result.buckets.met, "buckets.met"],
+    ["not_met", result.buckets.notMet, "buckets.not_met"],
+    ["not_evaluable", result.buckets.notEvaluable, "buckets.not_evaluable"],
+    ["out_of_scope", result.buckets.outOfScope, "buckets.out_of_scope"],
   ];
-  for (const [verdict, count, field] of entries) {
-    if (count === undefined) continue;
+  for (const [verdict, ids, field] of entries) {
+    if (ids === undefined) continue;
     const box = el("div", `agg-bucket ${verdict}`);
     box.dataset.bucket = verdict;
-    box.dataset.count = String(count);
-    const n = el("b", "", fmt(count));
-    box.append(n);
-    const marker = countMismatchMarker(result, field);
-    if (marker !== undefined) box.append(" ", marker);
+    box.dataset.count = String(ids.length);
+    box.append(el("b", "", fmt(ids.length)));
     box.append(el("span", "", w.t(`front.agg.bucket.${verdict}`)));
+    const marker = mismatchMarker(result, field, w);
+    if (marker !== undefined) box.append(marker);
     buckets.append(box);
   }
   section.append(buckets);
+
+  const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
+  const switched = result.buckets.outOfScope !== undefined;
+  if (dated || switched) {
+    const copied = el("p", "agg-note");
+    if (dated) {
+      // A dated Result passed validation, so generated_at parses.
+      const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
+      copied.append(w.t("front.agg.as-of", { date }), " ");
+      copied.dataset.asOf = date;
+    }
+    copied.append(
+      w.t(
+        dated && switched
+          ? "front.agg.copied.both"
+          : dated
+            ? "front.agg.copied.dates"
+            : "front.agg.copied.switch",
+      ),
+    );
+    copied.dataset.copiedFacts = "contract";
+    section.append(copied);
+  }
   return section;
 }
 
@@ -156,9 +199,6 @@ function bundleObject(bundle: unknown): Record<string, unknown> {
     ? (bundle as Record<string, unknown>)
     : {};
 }
-
-const short = (value: string): string =>
-  value.length > 32 ? `${value.slice(0, 32)}…` : value;
 
 /**
  * "Check this report yourself": the bundle's own anchors (producer key,
@@ -183,7 +223,7 @@ export function renderCheckYourself(bundle: unknown, w: Words): HTMLElement {
   const extensions = bundleObject(b.extensions);
   const producerKey = bundleObject(extensions["producer-key/v1"]).public_key;
   if (typeof producerKey === "string")
-    cell(w.t("front.check.key"), short(producerKey), "producer-key");
+    cell(w.t("front.check.key"), producerKey, "producer-key");
   const checkpoint = bundleObject(b.checkpoint);
   if (typeof checkpoint.log_id === "string")
     cell(w.t("front.check.log"), checkpoint.log_id, "log");
@@ -193,7 +233,7 @@ export function renderCheckYourself(bundle: unknown, w: Words): HTMLElement {
   )
     cell(
       w.t("front.check.root"),
-      `${short(checkpoint.root)} · ${fmt(checkpoint.mmr_size)}`,
+      `${checkpoint.root} · ${fmt(checkpoint.mmr_size)}`,
       "checkpoint",
     );
   if (Array.isArray(b.records))
@@ -220,38 +260,56 @@ export function renderCheckYourself(bundle: unknown, w: Words): HTMLElement {
 }
 
 /**
- * A table row that opens and closes its full-width detail row: the row is
- * the control (a click, or Enter or Space on it), and the detail row shows
- * only while its toggle is open, whoever opened it (the host's depth, print).
+ * A table row that opens its full-width detail row, with no script needed:
+ * the row's name (the rule, test or obligation it opens) becomes the
+ * summary of a level-1 disclosure in its first cell, and the stylesheet
+ * shows the detail row while that disclosure is open. The row stays a
+ * table row and the disclosure takes its name from the row's own words.
+ * The detail's body is built when it first opens (or at once with
+ * `eager`); a click anywhere on the row opens it too. `key` names the
+ * detail row's id from what the row is, so every packaging of one bundle
+ * draws the same ids.
  */
 export function expandableRow(
   row: HTMLElement,
+  name: HTMLElement,
   detail: HTMLElement,
-  toggle: HTMLDetailsElement,
-  label: string,
-): void {
+  build: () => Node,
+  key: string,
+  eager = false,
+): HTMLDetailsElement {
   row.classList.add("x");
-  row.tabIndex = 0;
-  row.setAttribute("role", "button");
-  row.setAttribute("aria-expanded", "false");
-  row.setAttribute("aria-label", label);
-  const sync = (): void => {
-    detail.hidden = !toggle.open;
-    row.setAttribute("aria-expanded", String(toggle.open));
+  detail.classList.add("x-detail");
+  detail.id = `cr-x-${key.replace(/[^A-Za-z0-9_.-]/gu, "_")}`;
+  const cell = detail.firstElementChild as HTMLElement;
+  const toggle = document.createElement("details");
+  toggle.className = "lv lv1 rx";
+  toggle.dataset.level = "1";
+  const summary = document.createElement("summary");
+  summary.setAttribute("aria-controls", detail.id);
+  name.replaceWith(toggle);
+  summary.append(name);
+  toggle.append(summary);
+  let built = false;
+  const fill = (): void => {
+    if (built) return;
+    built = true;
+    cell.append(build());
+    openBuiltToDepth(cell);
   };
-  toggle.addEventListener("toggle", sync);
-  const flip = (): void => {
-    if (toggle.open) {
-      toggle.open = false;
-      sync();
-    } else openToggle(toggle);
-  };
-  row.addEventListener("click", flip);
-  row.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    flip();
+  if (eager) fill();
+  else
+    toggle.addEventListener("toggle", () => {
+      if (toggle.open) fill();
+    });
+  // The summary's own click toggles natively; anywhere else on the row
+  // does the same.
+  row.addEventListener("click", (event) => {
+    if ((event.target as Element).closest("summary") !== null) return;
+    if (toggle.open) toggle.open = false;
+    else openToggle(toggle);
   });
+  return toggle;
 }
 
 /** A front card: the frame's centred white card, for blocks outside the sheet. */
@@ -262,16 +320,20 @@ export function frontCard(...children: HTMLElement[]): HTMLElement {
 }
 
 /**
- * Open the module's own toggles to the host's depth: at L0 none, at L1 the
- * level-1 toggles, at L2 every toggle (presentation contract section 9.1).
- * Only the module's regions are walked; the core's section is the core's.
+ * Open the module's own toggles to the host's depth (presentation contract
+ * section 9.1): at L0 none; at L1 the toggles in the L1 region; at L2 every
+ * toggle in every region, including the ones a toggle builds when it opens
+ * (see `openBuiltToDepth`). The core's section is the core's.
  */
 export function applyDepth(levels: ReportLevels): void {
   if (levels.depth === "L0") return;
-  for (const region of [levels.L0, levels.L1, levels.L2])
+  const regions =
+    levels.depth === "L1" ? [levels.L1] : [levels.L0, levels.L1, levels.L2];
+  for (const region of regions) {
+    if (levels.depth === "L2") region.dataset.openAll = "";
     for (const toggle of region.querySelectorAll<HTMLDetailsElement>(
       "details.lv",
     ))
-      if (levels.depth === "L2" || toggle.dataset.level === "1")
-        openToggle(toggle);
+      openToggle(toggle);
+  }
 }

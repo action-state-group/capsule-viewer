@@ -1,6 +1,7 @@
-# Contract-report pages: information hierarchy and layout (design note, not built)
+# Contract-report pages: information hierarchy and layout (design note)
 
-Status: design only. No module code, no wording pack and no golden change.
+Status: phase 1 is built in capsule-viewer#66 (see "As built" under
+Phase 1); phases 2 and 3 are design only.
 This note fixes the information hierarchy and visual clarity of the two
 contract-report pages, Outcomes and EU AI Act. It maps every page element to
 the evidencebook record it comes from, ranks the elements into the three
@@ -264,6 +265,25 @@ go to Sherlock2 for copy review.
 - Goldens for both pages change.
 - In the shell, not the module: the core's verification section opens at
   depth L2, as [pc] §9.1 requires.
+
+As built (#66), after Ethan's review of the first render ("too much text";
+replace the stamp with a callout):
+- The module draws no "Verified" stamp ([pc] §6.1). The core banner carries
+  the verification section's counts and a link to it, and on a report frame
+  is a full-width callout.
+- The aggregate is a compact box: the sealed coverage line and bucket
+  counts, with a marker where the claims give another number.
+- The assurance line is one folded line opening L1; the full Judged,
+  Witnessed and Verified lines are inside.
+- Rule and test rows open in place through a button in the row. Outcomes
+  leads with not met and puts "did not apply" in the expansion; an EU
+  obligation heading opens to its plain-language text with its
+  applicability (D3). Notes that explain a figure sit in a footnote block.
+- Not yet built, still phase 1: the `report.*`, `group.*` and `row.*`
+  wording migration, and per-row claim tallies ("n of m claims").
+- Held for a ruling (they conflict with [er] §3 and [cr] §2): headline
+  numbers in conversations or obligations, with the aggregate moved to L1,
+  and one row per EU obligation with a worst result.
 
 **Phase 2, case-first rows.**
 - The case grid in L1 on both pages, cases by rules, grouped by day.

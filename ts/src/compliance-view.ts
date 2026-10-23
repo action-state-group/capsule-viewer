@@ -240,10 +240,10 @@ function renderHeader(
 ): void {
   const hd = el("div", "hd");
   hd.dataset.section = "header";
-  // The report's name is the pack's (report.title); the regulation is the
-  // producer's mapping, shown beneath it as the producer's text.
+  // The report's name is the pack's (`groups.kicker`). The regulation is
+  // the producer's mapping, so it opens L1 (renderSummary), never L0
+  // (presentation contract section 6).
   hd.append(el("h1", "", w.t("groups.kicker")));
-  hd.append(maybeProducer(w, "div", "kicker", model.regulation, true));
   const summary = reportSummary(w);
   if (summary !== undefined) hd.append(summary);
   const pack =
@@ -482,7 +482,9 @@ function renderSummary(
 ): void {
   const section = el("section", "");
   section.dataset.section = "summary";
-  section.append(el("h2", "", w.t("groups.summary.h")));
+  const regulation = maybeProducer(w, "p", "kicker", model.regulation, true);
+  regulation.dataset.regulation = "";
+  section.append(regulation, el("h2", "", w.t("groups.summary.h")));
   const tests = model.obligations.reduce((n, o) => n + o.rows.length, 0);
   section.append(
     el(
@@ -519,20 +521,20 @@ function renderSummary(
     title.setAttribute("colspan", "3");
     const name = el("b", "obn");
     name.append(
-      ...obligationName(w, obligation, el("span", "", obligation.article)),
+      ...obligationName(w, obligation, el("span", "art", obligation.article)),
     );
     title.append(name);
     row.append(title);
     tbody.append(row);
     const about = el("tr", "drill-row ob-about");
     about.dataset.aboutFor = obligation.key;
-    about.hidden = true;
     const aboutCell = el("td", "");
     aboutCell.setAttribute("colspan", "3");
-    const aboutLabel = w.t("groups.ob.about", { article: obligation.article });
-    const aboutToggle = levelToggle(
-      1,
-      aboutLabel,
+    about.append(aboutCell);
+    expandableRow(
+      row,
+      name,
+      about,
       () => {
         const body = el("div", "ob-x");
         if (obligation.plain !== NOT_STATED)
@@ -548,11 +550,9 @@ function renderSummary(
         );
         return body;
       },
-      { className: "line", eager: true },
+      `ob-${obligation.key}`,
+      true,
     );
-    aboutCell.append(aboutToggle);
-    about.append(aboutCell);
-    expandableRow(row, about, aboutToggle, aboutLabel);
     tbody.append(about);
     for (const test of obligation.rows) {
       const tr = el("tr", "test");
@@ -565,7 +565,8 @@ function renderSummary(
       tr.dataset.notEvaluable = String(test.notEvaluableCount);
       const nameCell = el("td", "tn");
       const head = el("div", "tnh");
-      head.append(rowName(w, "b", "", test), tierBadge(test.tier, w));
+      const testName = rowName(w, "b", "", test);
+      head.append(testName, tierBadge(test.tier, w));
       nameCell.append(head);
       const detail = w.row(test.criterionId, "detail");
       if (detail !== undefined)
@@ -584,27 +585,20 @@ function renderSummary(
       // The row itself opens the sessions behind it, in a full-width row
       // below it, so each one reads at the table's width.
       if (sessionIds.length > 0) {
-        const label = sessionListNote(
-          test,
-          count(w, "session", sessionIds.length),
-          w,
-        );
-        const toggle = levelToggle(
-          1,
-          label,
+        const drillRow = el("tr", "drill-row");
+        drillRow.dataset.drillFor = test.criterionId;
+        const cell = document.createElement("td");
+        cell.setAttribute("colspan", "3");
+        drillRow.append(cell);
+        const toggle = expandableRow(
+          tr,
+          testName,
+          drillRow,
           () => renderSessionList(sessionIds, model, presentation, w),
-          { className: "line" },
+          `test-${obligation.key}-${test.criterionId}`,
         );
         toggle.dataset.records = "sessions";
         toggle.dataset.drill = test.criterionId;
-        const drillRow = el("tr", "drill-row");
-        drillRow.dataset.drillFor = test.criterionId;
-        drillRow.hidden = true;
-        const cell = document.createElement("td");
-        cell.setAttribute("colspan", "3");
-        cell.append(toggle);
-        drillRow.append(cell);
-        expandableRow(tr, drillRow, toggle, label);
         tbody.append(drillRow);
       }
     }
@@ -642,28 +636,6 @@ function renderFindings(
   for (const finding of model.findings)
     section.append(renderFinding(finding, w));
   host.append(section);
-}
-
-/** What the sessions behind a test are, in the order they are listed. */
-function sessionListNote(
-  test: ObligationRowModel,
-  sessions: string,
-  w: Words,
-): string {
-  const kinds = [
-    ...(test.notMetCount > 0 ? [w.t("groups.drill.kind.exceptions")] : []),
-    ...(test.unverifiedCount > 0 ? [w.t("groups.drill.kind.unverified")] : []),
-    ...(test.notEvaluableCount > 0 ? [w.t("groups.drill.kind.undecided")] : []),
-  ];
-  if (kinds.length > 1)
-    return w.t("groups.drill.mixed", {
-      sessions,
-      kinds: kinds.join(", then "),
-    });
-  if (test.notMetCount > 0) return w.t("groups.drill.exceptions", { sessions });
-  if (test.unverifiedCount > 0)
-    return w.t("groups.drill.unverified", { sessions });
-  return w.t("groups.drill.undecided", { sessions });
 }
 
 function renderFinding(finding: ComplianceFindingModel, w: Words): HTMLElement {
@@ -704,10 +676,39 @@ function renderSessionList(
   return list;
 }
 
-/** A claim not yet in force, in words: its date as the producer copied it from the contract, never checked here, and never counted. */
-function laterNote(test: SessionTest, w: Words): string {
+/**
+ * A claim not yet in force, in words: its date as the producer copied it
+ * from the contract, never checked here, and never counted; beside it, the
+ * obligation's applicability (its narrowing condition) as the producer's
+ * text, so the date never shows without its condition (decision D3).
+ */
+function laterNote(
+  test: SessionTest,
+  model: ComplianceModel,
+  w: Words,
+  tag: string,
+): HTMLElement {
   // A claim is later only when it carries applies_from (Result v0 4.3).
-  return w.t("groups.later.note", { date: test.claim?.appliesFrom ?? "" });
+  const note = el(
+    tag,
+    "applic",
+    w.t("groups.later.note", { date: test.claim?.appliesFrom ?? "" }),
+  );
+  const obligation = model.obligations.find((o) =>
+    o.rows.some((r) => r.criterionId === test.criterionId),
+  );
+  if (obligation !== undefined && obligation.applicability.note !== NOT_STATED)
+    note.append(
+      " ",
+      maybeProducer(
+        w,
+        "span",
+        "",
+        obligation.applicability.note,
+        obligation.mapped,
+      ),
+    );
+  return note;
 }
 
 function isException(test: SessionTest): boolean {
@@ -809,7 +810,7 @@ function sessionBody(
     if (test.verdict === "failed" || test.verdict === "unsupported")
       h.append(el("span", "applic", w.t("groups.unverified-note")));
     if (test.verdict === "not_yet_in_force")
-      h.append(el("span", "applic", laterNote(test, w)));
+      h.append(laterNote(test, model, w, "span"));
     box.append(h);
     if (test.rationale !== undefined)
       box.append(
@@ -906,7 +907,7 @@ function sessionProofs(
     if (test.verdict === "not_applicable") {
       ev.append(element("span", w.t("groups.pf.no-claim")));
     } else if (test.verdict === "not_yet_in_force") {
-      ev.append(element("span", laterNote(test, w)));
+      ev.append(laterNote(test, model, w, "span"));
     } else {
       if (test.reportDigest !== undefined)
         ev.append(element("code", test.reportDigest));

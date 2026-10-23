@@ -60,7 +60,6 @@ import {
   readCompliancePresentation,
   type CompliancePresentation,
 } from "./compliance-presentation.js";
-import { countMismatchMarker } from "./report-front.js";
 import { readPresentationBlock } from "@action-state-group/agent-action-capsule";
 import {
   bundleVerified,
@@ -213,7 +212,8 @@ function renderVerificationBanner(
   banner.title = title;
   bar.append(banner);
   // The verification section's own summary line, filled in once that
-  // section is drawn (fillBannerSummary), and a link down to the section.
+  // section is drawn (at the end of renderEvidenceGraph), and a link down
+  // to the section.
   const detail = element("span");
   detail.className = "cv-shell-detail";
   detail.dataset.verifySummary = "";
@@ -1186,6 +1186,25 @@ function renderCitationList(
 const CLAIM_TYPE_LABEL = (claim: ResultClaim): string =>
   claim.recognized ? claim.type : `unrecognized (${claim.type})`;
 
+// A recomputed headline number never wears the producer's value. When the
+// two disagree the recomputed value is drawn and a `count mismatch` marker
+// sits beside it; the stated value is kept on the marker's data attribute,
+// never in the text a reader takes as the number.
+function countMismatchMarker(
+  result: ResultRoot,
+  field: CountMismatch["field"],
+): HTMLElement | undefined {
+  const mismatch = result.countMismatches.find(
+    (entry) => entry.field === field,
+  );
+  if (mismatch === undefined) return undefined;
+  const marker = element("span", "count mismatch");
+  marker.dataset.countMismatch = field;
+  marker.dataset.stated = String(mismatch.stated);
+  marker.dataset.recomputed = String(mismatch.recomputed);
+  return marker;
+}
+
 // The close state a reader sees is the one this bundle's links read
 // whenever the cited Close is supplied; the Result's own value is drawn
 // only when it is not, and then under a `producer-asserted` marker. When
@@ -2149,7 +2168,7 @@ export interface RenderEvidenceGraphOptions {
   readonly sections?: PresentationResolver;
   readonly audience?: string;
   readonly format?: PresentationFormat;
-  /** The opening depth handed to the module's host; "L2" when omitted. */
+  /** The opening depth handed to the module's host; "L0" when omitted. */
   readonly depth?: PresentationDepth;
   /**
    * The wording pack the page was built with, carried so the page holds
@@ -2376,8 +2395,20 @@ export async function renderEvidenceGraph(
     const core = region("L2-core");
     const L2module = region("L2-module");
     L2.append(core, L2module);
-    regions = { L0: region("L0"), L1: region("L1"), L2: L2module, core };
-    root.append(regions.L0, regions.L1, L2);
+    // On a failed bundle L0 and L1 are not created (presentation contract
+    // section 9.1, I1): no module renders, and a notice goes before L2.
+    if (verified) {
+      regions = { L0: region("L0"), L1: region("L1"), L2: L2module, core };
+      root.append(regions.L0, regions.L1, L2);
+    } else {
+      regions = { L0: root, L1: root, L2: L2module, core };
+      root.append(L2);
+    }
+  };
+  /** A page-level notice: first in L1, or before L2 on a failed bundle. */
+  const notice = (note: HTMLElement): void => {
+    if (verified) regions.L1.append(note);
+    else root.insertBefore(note, regions.core.parentElement);
   };
   drawFrame();
   if (refused.length > 0)
@@ -2418,7 +2449,7 @@ export async function renderEvidenceGraph(
       "No presentation is available for this bundle, audience and format. The records and their verification are below.",
     );
     note.dataset.notice = "no-presentation";
-    regions.L1.append(note);
+    notice(note);
   }
   // The section renders after the page module, into the same regions. If it
   // throws, everything any module wrote is discarded for the refusal.
@@ -2446,7 +2477,7 @@ export async function renderEvidenceGraph(
   if (refusal !== undefined) {
     const note = element("p", PRESENTATION_REFUSALS[refusal]);
     note.dataset.refusal = refusal;
-    regions.L1.append(note);
+    notice(note);
   }
   // The interpreters this rendering actually ran (see extension-interpreters.ts):
   // the presentation header and the countersignature stamp always run; a

@@ -400,19 +400,11 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
   // on all three, so a pack could otherwise swap a missed conversation's
   // reason for an undecided one's, or the reverse.
   ["lines.why.missed", "lines.why.unverified", "lines.why.undecided"],
-  // The rules-table drill-down link's count suffixes (Outcomes card).
-  ["lines.rules.drill.unverified-suffix", "lines.rules.drill.undecided-suffix"],
   // The rules table's column header for a rule nobody could decide, and for
   // one whose claim could not be verified (Outcomes card).
   ["lines.rules.col.undecided", "lines.rules.col.unverified"],
   // A test row's undecided and unverified counts (EU card).
   ["groups.row.undecided-note", "groups.row.unverified-note"],
-  // The three kinds of session a test's drill-down can list (EU card).
-  [
-    "groups.drill.kind.exceptions",
-    "groups.drill.kind.unverified",
-    "groups.drill.kind.undecided",
-  ],
 ];
 
 /**
@@ -581,7 +573,18 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // aggregate's unknown count is, what the page and the bundle carry, and
   // the producer's findings label.
   "front.mock",
-  "front.agg.unknown",
+  "front.agg.unknown.one",
+  "front.agg.unknown.other",
+  "front.agg.mismatch",
+  "front.agg.as-of",
+  "front.agg.copied.both",
+  "front.agg.copied.dates",
+  "front.agg.copied.switch",
+  // The bucket labels name a verdict: a pack cannot make one read as another.
+  "front.agg.bucket.met",
+  "front.agg.bucket.not_met",
+  "front.agg.bucket.not_evaluable",
+  "front.agg.bucket.out_of_scope",
   "front.check.s1",
   "front.check.s3.receipt",
   "front.check.s3.none",
@@ -704,11 +707,18 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pin.not-stated",
   "lines.why-missed.structured",
   "lines.why-missed.unstructured",
+  // The folded provenance line is the only provenance a reader sees
+  // without opening it: every entry is the page's own account.
+  "prov.brief.judge.stated",
+  "prov.brief.judge.mixed",
+  "prov.brief.judge.partial",
+  "prov.brief.judge.withheld",
   "prov.brief.judge.not-stated",
   "prov.brief.judge.mock",
-  "prov.brief.judge.withheld",
-  "prov.brief.verifier.stated",
+  "prov.brief.witness.stated",
+  "prov.brief.witness.mixed",
   "prov.brief.witness.not-stated",
+  "prov.brief.verifier.stated",
   "prov.brief.verifier.not-stated",
   "lines.hc.none",
   "lines.terms.lede",
@@ -1167,8 +1177,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "7d4cbc9b0625e0beac32b09db348016217f61a0d22dd1cb81f5aa04710ba7765",
-  groups: "f443ccbc8399695255fa786679cbce8b2913f74d0870e9d4dcf20caae9777e20",
+  lines: "06244cb985e97d44bdf934dcac5a3bf899925865adf11f9d18bc093973906390",
+  groups: "8c1d3cc77c3c1f6ca3c2f7db2ff410f5e8326e6e140d98c5074f5a5c9bcaf92f",
 });
 
 export interface Words {

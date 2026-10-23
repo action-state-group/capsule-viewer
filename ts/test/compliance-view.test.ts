@@ -103,7 +103,9 @@ function open(details: Element): HTMLElement {
 
 /** Toggle 1 on every test row: builds each session list. */
 function expand(root: HTMLElement): HTMLElement {
-  for (const line of root.querySelectorAll('details[data-level="1"].line'))
+  for (const line of root.querySelectorAll(
+    'details[data-level="1"].line, details[data-level="1"].rx',
+  ))
     open(line);
   return root;
 }
@@ -121,15 +123,21 @@ it("the summary shows one group per obligation with its article and status, and 
     'tr[data-obligation="art26"]',
   )!;
   expect(art26row.textContent).not.toContain("Applies 2 Dec 2027");
-  expect(art26row.getAttribute("aria-expanded")).toBe("false");
+  // the obligation's name is the summary of a closed disclosure that
+  // controls the row below; the stylesheet shows that row while it is open
+  const toggle = art26row.querySelector<HTMLDetailsElement>("details.rx")!;
+  expect(toggle.open).toBe(false);
+  expect(toggle.querySelector("summary")!.textContent).toContain("Art 26");
   const about = root.querySelector<HTMLElement>('tr[data-about-for="art26"]')!;
-  expect(about.hidden).toBe(true);
+  expect(about.classList.contains("x-detail")).toBe(true);
+  expect(toggle.querySelector("summary")!.getAttribute("aria-controls")).toBe(
+    about.id,
+  );
   expect(about.textContent).toContain("Applies 2 Dec 2027");
-  art26row.click();
-  expect(about.hidden).toBe(false);
-  expect(art26row.getAttribute("aria-expanded")).toBe("true");
-  art26row.click();
-  expect(about.hidden).toBe(true);
+  art26row.querySelector<HTMLElement>("td")!.click();
+  expect(toggle.open).toBe(true);
+  art26row.querySelector<HTMLElement>("td")!.click();
+  expect(toggle.open).toBe(false);
   expect(
     root.querySelectorAll('[data-rows="summary"] tr[data-criterion]'),
   ).toHaveLength(5);
@@ -159,7 +167,14 @@ it("two levels: a test opens (toggle 1) into its sessions, each naming every tes
   const session = root.querySelector<HTMLElement>(
     'article[data-session="tau2:airline:task-0:trial-0"]',
   )!;
-  expect(session.closest("details")!.dataset.level).toBe("1");
+  // its test row's level-1 disclosure controls the detail row it sits in
+  const detail = session.closest<HTMLElement>("tr.x-detail")!;
+  expect(session.closest("details")).toBeNull();
+  expect(
+    root.querySelector<HTMLDetailsElement>(
+      `details.rx:has(> summary[aria-controls="${detail.id}"])`,
+    )!.dataset.level,
+  ).toBe("1");
   const blocks = session.querySelectorAll<HTMLElement>("[data-crit]");
   expect(blocks).toHaveLength(5);
   const judgedBlock = session.querySelector<HTMLElement>(
@@ -238,7 +253,7 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   open(proofs);
   const basis = root.querySelector<HTMLElement>('[data-basis="terms"]')!;
   for (const field of [
-    "The regulation named under the heading",
+    "The regulation named above",
     "obligation titles",
     "finding ids",
     "severities",
@@ -251,12 +266,18 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   const producer = [
     ...root.querySelectorAll<HTMLElement>('i[data-source="producer"]'),
   ].map((i) => i.textContent);
-  // the regulation under the heading, finding ids and severities are the
+  // the regulation above the summary, finding ids and severities are the
   // producer's too; the heading itself is the pack's report title
   expect(root.querySelector('.hd h1 i[data-source="producer"]')).toBeNull();
+  // the regulation is the producer's mapping: it opens L1, never L0
+  // (presentation contract section 6)
   expect(
-    root.querySelector('.hd .kicker i[data-source="producer"]')!.textContent,
+    root.querySelector('[data-regulation] i[data-source="producer"]')!
+      .textContent,
   ).toBe("Regulation (EU) 2024/1689 (the EU AI Act)");
+  expect(
+    root.querySelector('[data-level="L0"] i[data-source="producer"]'),
+  ).toBeNull();
   const finding = root.querySelector<HTMLElement>('[data-finding="F-01"]')!;
   expect(
     finding.querySelector('.fh b i[data-source="producer"]')!.textContent,

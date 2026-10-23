@@ -58,11 +58,12 @@ import type { Words } from "./contract-report-wording.js";
  *
  * Every word on it is the wording pack's (`w`); nothing here chooses a word.
  *
- * The whole card renders inside one `.oi`-classed wrapper, with its own
- * `<style>` (`OUTCOME_REPORT_CSS`) as its first child -- every selector in
- * that stylesheet is scoped under `.oi` so it can never affect, or be
- * affected by, the rest of the emitted page (the verification page that
- * always follows it, or the generic Result page this bundle opted out of).
+ * The card renders into the host's three regions, one `.oi`-classed
+ * wrapper in each; the L0 wrapper holds its `<style>` (`OUTCOME_REPORT_CSS`)
+ * as its first child. Every selector in that stylesheet is scoped under
+ * `.oi`, so it can never affect, or be affected by, the rest of the page
+ * (the core's verification section, which opens L2 before the card's own
+ * L2 detail, or the generic Result page this bundle opted out of).
  * No external reference of any kind: no `<link>`, no web font, no image.
  */
 
@@ -1441,7 +1442,8 @@ function renderRules(
       tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
       const label = criterionLabel(model, check.id, criterion.id, w);
       const nameCell = el("td", "cn");
-      nameCell.append(el("b", "", label.label));
+      const ruleName = el("b", "", label.label);
+      nameCell.append(ruleName);
       const badge = editedBadge(model, ref, w);
       if (badge !== undefined) nameCell.append(badge);
       if (label.source === "sealed")
@@ -1483,42 +1485,33 @@ function renderRules(
       if (anyOutOfScope)
         tr.append(el("td", "n", fmtCount(outOfScopeHere.length)));
       tbody.append(tr);
-      // The row itself opens: a full-width row below it holds how many
+      // The row opens: a full-width row below it holds how many
       // conversations the rule did not apply to and the conversations
-      // behind its problems, each read at the table's width.
+      // behind its problems, each read at the table's width. A rule with
+      // neither has nothing to open.
+      if (problems.length === 0 && na.length === 0) continue;
       const drillRow = el("tr", "drill-row");
       drillRow.dataset.drillFor = ref;
-      drillRow.hidden = true;
       const cell = element("td");
       cell.setAttribute("colspan", columns);
-      const drillLabel = w.t("lines.rules.drill", {
-        notMet: fmtCount(notMet.length),
-        unverified:
-          unverifiedHere.length > 0
-            ? w.t("lines.rules.drill.unverified-suffix", {
-                n: fmtCount(unverifiedHere.length),
-              })
-            : "",
-        undecided:
-          undecided.length > 0
-            ? w.t("lines.rules.drill.undecided-suffix", {
-                n: fmtCount(undecided.length),
-              })
-            : "",
-      });
-      const toggle = drill(
-        drillLabel,
+      drillRow.append(cell);
+      const toggle = expandableRow(
+        tr,
+        ruleName,
+        drillRow,
         () => {
           const body = el("div", "rule-x");
-          const naLine = el(
-            "p",
-            "rule-na",
-            w.p("lines.rules.expand.na", na.length, {
-              n: fmtCount(na.length),
-            }),
-          );
-          naLine.dataset.count = String(na.length);
-          body.append(naLine);
+          if (na.length > 0) {
+            const naLine = el(
+              "p",
+              "rule-na",
+              w.p("lines.rules.expand.na", na.length, {
+                n: fmtCount(na.length),
+              }),
+            );
+            naLine.dataset.count = String(na.length);
+            body.append(naLine);
+          }
           if (problems.length > 0)
             body.append(
               renderConversationList(
@@ -1531,11 +1524,9 @@ function renderRules(
             );
           return body;
         },
-        `rule:${ref}`,
+        `rule-${ref}`,
       );
-      cell.append(toggle);
-      drillRow.append(cell);
-      expandableRow(tr, drillRow, toggle, drillLabel);
+      toggle.dataset.drill = `rule:${ref}`;
       tbody.append(drillRow);
     }
   }

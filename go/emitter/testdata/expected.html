@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DPnDF7tBlSxnLgdXIM0DHixqxL7MkuliRjIwDxMqZhw=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-AFG9jl8n4fyrxkOkQg8ZaLKsLTDLPtEL+voR1wspDE4='; style-src 'sha256-qjfwWMsjlOxlJJ1806st4ouE14dzGGENiQpI1fAwES0=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-5PqlNWjrYxJ3hHzM6SUxcLRXwQEs0e+Om6IBeF90mns=' 'sha256-bPskru/Krkyy9mRYeEWo74a0RAp4ePavWQMpGFPuces='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DPnDF7tBlSxnLgdXIM0DHixqxL7MkuliRjIwDxMqZhw=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-AFG9jl8n4fyrxkOkQg8ZaLKsLTDLPtEL+voR1wspDE4='; style-src 'sha256-ilBRkm9wDzE9AtN3BFRzmcUf0L1EeHbcejOPj1q4+Yo=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-ZwVZajDCaAbF9zL/Z0ojEX/3Lpk8eZZ6Kfrs49zrao8=' 'sha256-eR2/C5MsbfUoV9HTpIN4nLziZ3fh1eNP0QTqKrF51fg='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Evidence Graph</title>
     <style>
@@ -105,7 +105,8 @@
         display: none;
       }
       /* A report's frame: the bar becomes one full-width callout at the
-         top of the page, the verdict first, then the counts and the link. */
+         top of the page, the verdict first, then the counts and the link.
+         A report only renders on a verified bundle, so it is green. */
       #app.cv-shell-chrome :where(.cv-shell-bar) {
         max-width: 1080px;
         box-sizing: border-box;
@@ -117,11 +118,6 @@
         border-left-width: 6px;
         border-radius: 10px;
         background: var(--aac-ok-bg);
-      }
-      #app.cv-shell-chrome
-        :where(.cv-shell-bar:has(.cv-pill[data-verify="failed"])) {
-        border-color: var(--aac-bad);
-        background: var(--aac-bad-bg);
       }
       #app.cv-shell-chrome :where(.cv-pill) {
         padding: 0;

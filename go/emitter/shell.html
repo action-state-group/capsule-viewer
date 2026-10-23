@@ -105,7 +105,8 @@
         display: none;
       }
       /* A report's frame: the bar becomes one full-width callout at the
-         top of the page, the verdict first, then the counts and the link. */
+         top of the page, the verdict first, then the counts and the link.
+         A report only renders on a verified bundle, so it is green. */
       #app.cv-shell-chrome :where(.cv-shell-bar) {
         max-width: 1080px;
         box-sizing: border-box;
@@ -117,11 +118,6 @@
         border-left-width: 6px;
         border-radius: 10px;
         background: var(--aac-ok-bg);
-      }
-      #app.cv-shell-chrome
-        :where(.cv-shell-bar:has(.cv-pill[data-verify="failed"])) {
-        border-color: var(--aac-bad);
-        background: var(--aac-bad-bg);
       }
       #app.cv-shell-chrome :where(.cv-pill) {
         padding: 0;

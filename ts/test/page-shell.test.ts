@@ -108,6 +108,9 @@ describe("the page shell", () => {
     expect(
       root.querySelector('[data-refusal="unverified-bundle"]'),
     ).not.toBeNull();
+    // presentation contract section 9.1, I1: no L0 or L1 on a failed bundle
+    expect(root.querySelector('[data-region="L0"]')).toBeNull();
+    expect(root.querySelector('[data-region="L1"]')).toBeNull();
     const folded = root.querySelector('[data-region="L2-core"]')!
       .firstElementChild as HTMLDetailsElement;
     expect(folded.open).toBe(true);

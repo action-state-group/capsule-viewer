@@ -333,20 +333,32 @@ it("summarises results rule by rule: per-check pass counts, every rule's counts 
     );
     // Not met leads; "did not apply" is in the row's expansion.
     const [notMet, , undecided] = counts;
-    // the row itself opens a full-width row right below it
-    const drillRow = row.nextElementSibling as HTMLElement;
+    // the rule's name is the summary of a level-1 disclosure that controls
+    // a full-width row right below it; a rule with nothing behind it (no
+    // problem, nothing not applicable) has none
+    const toggle = row.querySelector<HTMLDetailsElement>("details.rx");
+    const next = row.nextElementSibling as HTMLElement | null;
+    if (toggle === null) {
+      expect(counts[0]! + counts[2]!).toBe(0);
+      expect(counts.reduce((a, b) => a + b, 0)).toBe(50);
+      expect(next?.dataset.drillFor).not.toBe(row.dataset.rule);
+      continue;
+    }
+    expect(toggle.dataset.level).toBe("1");
+    expect(toggle.querySelector("summary")!.textContent).toContain(
+      row.querySelector("b")!.textContent,
+    );
+    const drillRow = next!;
     expect(drillRow.dataset.drillFor).toBe(row.dataset.rule);
-    expect(drillRow.hidden).toBe(true);
-    expect(row.getAttribute("role")).toBe("button");
-    row.click();
-    expect(drillRow.hidden).toBe(false);
-    expect(row.getAttribute("aria-expanded")).toBe("true");
-    const drill = drillRow.querySelector<HTMLDetailsElement>(
-      'details[data-level="1"]',
-    )!;
-    expect(drill.open).toBe(true);
+    expect(toggle.querySelector("summary")!.getAttribute("aria-controls")).toBe(
+      drillRow.id,
+    );
+    expect(toggle.open).toBe(false);
+    row.querySelector<HTMLElement>("td.n")!.click();
+    expect(toggle.open).toBe(true);
+    const drill = drillRow;
     const na = Number(
-      drill.querySelector<HTMLElement>(".rule-na")!.dataset.count,
+      drill.querySelector<HTMLElement>(".rule-na")?.dataset.count ?? "0",
     );
     expect(counts.reduce((a, b) => a + b, 0) + na).toBe(50);
     if (notMet! + undecided! === 0) {

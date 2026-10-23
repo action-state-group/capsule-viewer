@@ -18,6 +18,7 @@ export const COMPLIANCE_CSS =
 .cc a{color:var(--navy);cursor:pointer}
 .cc .hd{background:var(--navy);color:#fff;padding:28px 32px;border-radius:var(--r) var(--r) 0 0;margin-top:20px}
 .cc .hd .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#C9CED6}
+.cc p.kicker[data-regulation]{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:0 0 6px}
 .cc .hd h1{color:#fff;font-size:28px;margin:6px 0 4px}
 .cc .hd .sub{color:#DDE1E7;font-size:15px}
 .cc section{padding:28px 32px;border:1px solid var(--line);border-top:0}
@@ -66,7 +67,7 @@ export const COMPLIANCE_CSS =
 .cc .applic{font-size:13px;color:var(--slate)}
 .cc table.sum tbody tr.ob td{background:var(--cream);border-top:2px solid var(--navy);padding:12px 10px}
 .cc table.sum .obn{font-size:16px;color:var(--navy)}
-.cc table.sum .obn > span:first-child{font-family:Georgia,Cambria,serif}
+.cc table.sum .obn .art{font-family:Georgia,Cambria,serif}
 .cc table.sum .plain{font-size:13.5px;color:var(--ink);margin-top:4px;max-width:720px}
 .cc table.sum tr.test td.tn{padding-left:22px}
 .cc table.sum .tnh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}

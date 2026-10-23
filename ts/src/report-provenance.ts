@@ -17,9 +17,9 @@ import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
 import { levelToggle } from "./report-levels.js";
 
 /**
- * Who judged, who witnessed, and what verified: one plain block on the front
- * of every contract report, so a reader does not have to open the proofs to
- * learn it. Its words are the card's wording pack's (`prov.*`); "Witnessed
+ * Who judged, who witnessed, and what verified: one folded line at the top
+ * of L1 of every contract report (a few words per entry), with the full
+ * lines inside, so a reader does not have to open the proofs to learn it. Its words are the card's wording pack's (`prov.*`); "Witnessed
  * by" always says the witnesses are stated by the bundle and not checked
  * here, because this page does not check witness receipts.
  *
@@ -364,10 +364,14 @@ export function judgeLine(
     key: "judge",
     label,
     text: parts.join("; "),
+    // "mixed" with one pin means some results name no pin; only two or
+    // more pins are "several".
     brief: w.t(
       judgedByMock(tally)
         ? "prov.brief.judge.mock"
-        : `prov.brief.judge.${state}`,
+        : state === "mixed" && judged === 1
+          ? "prov.brief.judge.partial"
+          : `prov.brief.judge.${state}`,
     ),
     state,
   };
