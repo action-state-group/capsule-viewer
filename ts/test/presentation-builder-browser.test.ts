@@ -120,29 +120,25 @@ describe.skipIf(executablePath === undefined)(
       await page.waitForTimeout(200);
       const shown = await page.evaluate(() => {
         const app = document.getElementById("app")!;
-        // What a reader sees once every toggle has been opened and closed
-        // again, with each conversation kept once, in the records section:
-        // what the static page is built to show (capsule-viewer#67). The
-        // static page has nothing pending, so this changes nothing there.
+        // The scripted page as the static page is built to show it: the
+        // core's record entries built (closed), and each conversation kept
+        // once, in the records section (capsule-viewer#67). The static page
+        // has nothing pending there, so this changes nothing on it.
         // (report-levels.ts linkConversations, inlined: this runs in the
         // page.)
-        for (let pass = 0; pass < 100; pass++) {
-          window.dispatchEvent(new Event("beforeprint"));
-          const pending = [
-            ...app.querySelectorAll<HTMLDetailsElement>(
-              'details[data-body="pending"]',
-            ),
-          ];
-          if (pending.length === 0) break;
-          for (const toggle of pending) {
-            const was = toggle.open;
-            toggle.open = true;
-            toggle.dispatchEvent(new Event("toggle"));
-            toggle.open = was;
-          }
+        for (const entry of app.querySelectorAll<HTMLDetailsElement>(
+          'details.cv-record[data-body="pending"]',
+        )) {
+          entry.open = true;
+          entry.dispatchEvent(new Event("toggle"));
+          entry.open = false;
         }
         const records = new Set(
-          [...app.querySelectorAll("details.cv-record[id]")].map((e) => e.id),
+          [
+            ...app.querySelectorAll(
+              "details.cv-record > .cv-record-anchor[id]",
+            ),
+          ].map((e) => e.id),
         );
         for (const toggle of app.querySelectorAll<HTMLDetailsElement>(
           'details[data-section="conversation"][data-record]',
@@ -155,6 +151,10 @@ describe.skipIf(executablePath === undefined)(
           link.hidden = false;
           toggle.remove();
         }
+        for (const body of app.querySelectorAll(
+          'details[data-section="conversation"] > .chat-body',
+        ))
+          body.remove();
         for (const close of app.querySelectorAll(".chat-close")) close.remove();
         // The markup as parsing reads it (a script-drawn table row gets the
         // implied tbody), so a static page and a drawn page compare.

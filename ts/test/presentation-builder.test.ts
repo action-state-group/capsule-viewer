@@ -121,25 +121,18 @@ function snapshot(root: Element): Snapshot {
 }
 
 /**
- * What a reader of the scripted page sees once every toggle has been opened
- * and closed again, with each conversation kept once, in the records
- * section: what the static page is built to show (capsule-viewer#67).
+ * The scripted page as the static page is built to show it: the core's
+ * record entries built (closed), and each conversation kept once, in the
+ * records section (capsule-viewer#67).
  */
 function openEveryBody(root: Element): void {
   const view = root.ownerDocument.defaultView!;
-  for (let pass = 0; pass < 100; pass++) {
-    const pending = [
-      ...root.querySelectorAll<HTMLDetailsElement>(
-        'details[data-body="pending"]',
-      ),
-    ];
-    if (pending.length === 0) break;
-    for (const toggle of pending) {
-      const was = toggle.open;
-      toggle.open = true;
-      toggle.dispatchEvent(new view.Event("toggle"));
-      toggle.open = was;
-    }
+  for (const entry of root.querySelectorAll<HTMLDetailsElement>(
+    'details.cv-record[data-body="pending"]',
+  )) {
+    entry.open = true;
+    entry.dispatchEvent(new view.Event("toggle"));
+    entry.open = false;
   }
   linkConversations(root);
 }
@@ -493,22 +486,6 @@ describe("theme, wording, locale and depth", () => {
         } = baseline;
         expect(rest, name).toEqual(baseRest);
         expect(ids, name).toEqual(expect.arrayContaining(baseIds));
-      } else if (change.wording !== undefined) {
-        // With every toggle opened, a supplied pack is named in the proofs
-        // by its own digest, and its words are the page's: neither is
-        // evidence. Everything else is unchanged.
-        const { html: _h, text: _t, evidence_ids: ids, ...rest } = shown;
-        const {
-          html: _bh,
-          text: _bt,
-          evidence_ids: baseIds,
-          ...baseRest
-        } = baseline;
-        expect(rest, name).toEqual(baseRest);
-        expect(
-          ids.filter((id) => id !== change.wording!.sha256),
-          name,
-        ).toEqual(baseIds);
       } else {
         expect(shown.evidence_ids, name).toEqual(baseline.evidence_ids);
         expect(shown, name).toEqual(baseline);
@@ -1566,9 +1543,14 @@ it("the static page: each record's entry is built, and a conversation's link tar
   });
   if (built.format !== "static") throw new Error("static expected");
   const page = new JSDOM(built.html).window.document;
-  expect(page.querySelectorAll('[data-body="pending"]')).toHaveLength(0);
-  const target = page.getElementById(recordAddress(id))!;
-  expect(target).not.toBeNull();
+  // only the record entries are built ahead; nothing else changes (#67)
+  expect(
+    page.querySelectorAll('details.cv-record[data-body="pending"]'),
+  ).toHaveLength(0);
+  const anchor = page.getElementById(recordAddress(id))!;
+  expect(anchor).not.toBeNull();
+  const target = anchor.closest("details")!;
+  expect(target.classList.contains("cv-record")).toBe(true);
   // the content, not only an open attribute: the chat is in the page
   expect(target.querySelectorAll("li.turn")).toHaveLength(4);
   expect(target.textContent).toContain("Please cancel EHGLP3.");
@@ -1578,4 +1560,60 @@ it("the static page: each record's entry is built, and a conversation's link tar
   expect(
     page.body.innerHTML.split("Hi! How can I help you today?").length - 1,
   ).toBe(1);
+});
+
+it("the static page holds each transcript at most once, and no chat outside the records section, at every depth", async () => {
+  const sealedConversation = async (): Promise<{ bundle: Obj; id: string }> => {
+    const source = fixture("result-root-bundle.json");
+    const caseInput = ((source.disclosures as Obj)["case-1"] as Obj)
+      .agent_input as Obj;
+    caseInput.agent_interaction = {
+      messages: [{ role: "user", content: "UNIQUE-TRANSCRIPT-LINE" }],
+    };
+    const { bundle, ids } = await sealEvidenceBundle(source);
+    return { bundle, id: ids["case-1"]! };
+  };
+  const { bundle: compliance } = await sealEvidenceBundle(
+    fixture("compliance-bundle.json"),
+  );
+  const { bundle: result } = await sealedConversation();
+  for (const bundle of [compliance, result])
+    for (const depth of ["L0", "L1", "L2"] as const) {
+      const built = await buildPresentation(bundle, {
+        presentation: "auto",
+        audience: "*",
+        format: "static",
+        depth,
+        runtime: { code: runtime },
+      });
+      if (built.format !== "static") throw new Error("static expected");
+      const page = new JSDOM(built.html).window.document;
+      const outside = [...page.querySelectorAll(".chat")].filter(
+        (chat) => chat.closest("details.cv-record") === null,
+      );
+      expect(outside, depth).toHaveLength(0);
+      expect(
+        page.body.innerHTML.split("UNIQUE-TRANSCRIPT-LINE").length - 1,
+        depth,
+      ).toBeLessThanOrEqual(1);
+      // every card that kept its conversation toggle has no body to show
+      for (const fold of page.querySelectorAll(
+        'details[data-section="conversation"]',
+      ))
+        expect(fold.querySelector(".chat-body"), depth).toBeNull();
+    }
+  // at L2 the compliance cards are drawn, so the check above saw their folds
+  const l2 = await buildPresentation(compliance, {
+    presentation: "auto",
+    audience: "*",
+    format: "static",
+    depth: "L2",
+    runtime: { code: runtime },
+  });
+  if (l2.format !== "static") throw new Error("static expected");
+  expect(
+    new JSDOM(l2.html).window.document.querySelectorAll(
+      'details[data-section="conversation"]',
+    ).length,
+  ).toBeGreaterThan(0);
 });

@@ -104,25 +104,20 @@ export function deferBody(
 const pendingToggles = new WeakMap<HTMLDetailsElement, () => void>();
 
 /**
- * Builds every body still pending under `root` -- toggle bodies and
- * conversation bodies alike, and the ones those bodies bring -- leaving
- * every toggle open or closed as it was. A page that runs no script (the
- * static package) calls this before it is written, so a closed toggle a
- * reader opens there is not empty (capsule-viewer#67). `beforeEachPass`
- * runs before each round of building, so a caller can drop a pending body
- * it will not keep (linkConversations) before it is built. Returns how many
- * bodies it built.
+ * Builds every body under `root` that `selector` names and is still
+ * pending -- toggle bodies and conversation bodies alike, and the ones those
+ * bodies bring -- leaving every toggle open or closed as it was. The static
+ * package (presentation-builder.ts) builds the core's record entries this
+ * way, so a record a link lands on is not empty on a page that runs no
+ * script. Returns how many bodies it built.
  */
 export function fillPendingBodies(
   root: ParentNode,
-  beforeEachPass?: (root: ParentNode) => void,
+  selector = '[data-body="pending"]',
 ): number {
   let built = 0;
   for (;;) {
-    beforeEachPass?.(root);
-    const pending = [
-      ...root.querySelectorAll<HTMLElement>('[data-body="pending"]'),
-    ];
+    const pending = [...root.querySelectorAll<HTMLElement>(selector)];
     const fills = pending
       .map((host) =>
         host.localName === "details"
@@ -650,15 +645,17 @@ export function revealRecord(from: Element, recordId: string): void {
 /**
  * For a page that runs no script: every in-place conversation whose record
  * the core's records section holds becomes a link to it, so the page keeps
- * one copy of each conversation however many cards cite it. A conversation
- * whose record is not there stays in place. Returns how many it linked.
+ * one copy of each conversation however many cards cite it, built or not.
+ * Returns how many it linked.
  */
 export function linkConversations(root: ParentNode): number {
   let linked = 0;
   const ids = new Set(
-    [...root.querySelectorAll<HTMLElement>("details.cv-record[id]")].map(
-      (e) => e.id,
-    ),
+    [
+      ...root.querySelectorAll<HTMLElement>(
+        "details.cv-record > .cv-record-anchor[id]",
+      ),
+    ].map((e) => e.id),
   );
   for (const toggle of root.querySelectorAll<HTMLDetailsElement>(
     'details[data-section="conversation"][data-record]',
@@ -672,7 +669,14 @@ export function linkConversations(root: ParentNode): number {
     toggle.remove();
     linked++;
   }
-  // A page that runs no script cannot close a toggle from a button.
+  // A conversation whose record is not on the page keeps its toggle, but a
+  // page that runs no script holds no chat outside the records section: a
+  // body already built (at depth L1 or L2) is dropped.
+  for (const body of root.querySelectorAll(
+    'details[data-section="conversation"] > .chat-body',
+  ))
+    body.remove();
+  // A page that runs no script cannot close a toggle from a control.
   for (const close of root.querySelectorAll(".chat-close")) close.remove();
   return linked;
 }

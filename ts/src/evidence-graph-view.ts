@@ -547,14 +547,30 @@ function renderCheckpointCoverage(
     item.dataset.capsuleId = record.capsuleId;
     const fold = document.createElement("details");
     fold.className = "cv-record";
-    fold.id = recordAddress(record.capsuleId);
+    fold.dataset.record = record.capsuleId;
     const head = element("summary", `${record.capsuleId} · `);
     const status = element("span", COVERAGE_LABEL[record.status]);
     status.dataset.recordStatus = record.status;
     status.className = `seal-${record.status}`;
     head.append(status);
-    fold.append(head);
+    // The address sits inside the entry, not on it: a browser following a
+    // link opens every closed <details> around its target, so the entry
+    // itself opens too, with no script (and, where script runs, its body is
+    // built on that toggle).
+    const anchor = element("span");
+    anchor.className = "cv-record-anchor";
+    anchor.id = recordAddress(record.capsuleId);
+    fold.append(head, anchor);
     deferBody(fold, () => entry(record.capsuleId));
+    // Where script runs, the body is built after the browser scrolled to
+    // the address; bring it back into view once the body is in place.
+    fold.addEventListener("toggle", () => {
+      if (
+        fold.open &&
+        fold.ownerDocument.defaultView?.location.hash === `#${anchor.id}`
+      )
+        anchor.scrollIntoView?.();
+    });
     item.append(fold);
     list.append(item);
   }

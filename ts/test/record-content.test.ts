@@ -107,18 +107,20 @@ it("every record has one entry with its own address, closed and built only when 
     ...root.querySelectorAll<HTMLDetailsElement>("details.cv-record"),
   ];
   const records = (bundle.records as Obj[]).map((r) => r.capsule_id);
-  expect(entries.map((e) => e.id)).toEqual(
-    records.map((r) => recordAddress(r as string)),
+  expect(
+    entries.map((e) => e.querySelector(":scope > .cv-record-anchor")!.id),
+  ).toEqual(records.map((r) => recordAddress(r as string)));
+  expect(new Set(root.querySelectorAll(".cv-record-anchor[id]")).size).toBe(
+    entries.length,
   );
-  expect(new Set(entries.map((e) => e.id)).size).toBe(entries.length);
   for (const entry of entries) {
     expect(entry.open).toBe(false);
     expect(entry.dataset.body).toBe("pending");
     expect(entry.querySelector(".cv-record-body")).toBeNull();
   }
-  const entry = root.querySelector<HTMLDetailsElement>(
-    `#${recordAddress(id)}`,
-  )!;
+  const entry = root
+    .querySelector(`#${recordAddress(id)}`)!
+    .closest("details")!;
   openToggle(entry);
   expect(entry.dataset.body).toBe("built");
   const body = entry.querySelector(".cv-record-body")!;
@@ -137,9 +139,9 @@ it("a disclosed value that does not match its record's digest is never drawn, in
     "SECRET-TAMPERED";
   disclosures[id] = tampered;
   const root = await render(bundle);
-  const entry = root.querySelector<HTMLDetailsElement>(
-    `#${recordAddress(id)}`,
-  )!;
+  const entry = root
+    .querySelector(`#${recordAddress(id)}`)!
+    .closest("details")!;
   openToggle(entry);
   expect(root.textContent).not.toContain("SECRET-TAMPERED");
   expect(entry.querySelector("li.turn")).toBeNull();
@@ -192,7 +194,10 @@ it("with no script, a conversation whose record entry is on the page becomes a l
   const elsewhere = "b".repeat(64);
   const entry = document.createElement("details");
   entry.className = "cv-record";
-  entry.id = recordAddress(here);
+  const anchor = document.createElement("span");
+  anchor.className = "cv-record-anchor";
+  anchor.id = recordAddress(here);
+  entry.append(anchor);
   page.append(entry);
   for (const record of [here, here, elsewhere])
     page.append(
