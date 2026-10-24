@@ -2,11 +2,13 @@
 
 Byte copies of files under `vectors/` in agent-action-capsule at
 `f1545157f3cedfd752c80c37c0682b9459f1af07`, kept at the same path below
-`aac-vectors/`. Both were last changed there in `7204edc`. Copy a newer
+`aac-vectors/`. The producer-key and minimum-necessary files were last
+changed there in `7204edc`, the composed vectors in `a726b9f`. Copy a newer
 version over the file rather than editing it here.
 
 | File | Read by | SHA-256 |
 | --- | --- | --- |
+| `bundle/composed/vectors.json` | `test/composed-view.test.ts` | `205b72141a12169b8b53b2e4dd5725d3b14029c0f8b7ee9803114545553fa22e` |
 | `bundle/producer-key/vectors.json` | `test/presentation-registry.test.ts` | `979cc32898e30f4a961870c48e5766d022fb49e38040da20fdcd5e443896c433` |
 | `minimum-necessary/bundle-internal-audit/input.json` | `test/verification-check-lists-browser.test.ts` | `632ffa74d1e724495bebfcc37a39494601866979748670e132e7eb5c7f45e96f` |
 

@@ -339,6 +339,67 @@ describe("check-list lines", () => {
   });
 });
 
+// Ported from agent-action-capsule's test/verification-check-lists.test.ts
+// at cd68af7 (agent-action-capsule#398 deletes its renderer).
+describe("the host's verifier hint", () => {
+  const sealed = async (name: string): Promise<Obj> =>
+    (
+      await sealEvidenceBundle(
+        JSON.parse(
+          readFileSync(
+            resolvePath(process.cwd(), "test", "testdata", name),
+            "utf8",
+          ),
+        ) as Obj,
+      )
+    ).bundle;
+  async function show(
+    bundle: unknown,
+    options: { verifierHint?: string } = {},
+  ): Promise<{ root: HTMLElement; lists: string[][] }> {
+    const root = document.createElement("main");
+    await renderEvidenceGraph(bundle, root, undefined, options);
+    const ids = (which: string): string[] =>
+      Array.from(
+        root.querySelectorAll<HTMLElement>(
+          `[data-page="verification"] ul[data-checks="${which}"] > li`,
+        ),
+        (item) => item.dataset.check!,
+      );
+    return { root, lists: ["page", "failed", "not-checked"].map(ids) };
+  }
+
+  it("is shown as text after the neutral pointer, under the not-checked list", async () => {
+    const hint = "example-verifier check <b>FILE</b>";
+    const { root } = await show(await sealed("result-root-close-bundle.json"), {
+      verifierHint: hint,
+    });
+    const pointer = root.querySelector('[data-checks="full-verifier"]')!;
+    const shown = root.querySelector<HTMLElement>("[data-verifier-hint]")!;
+    expect(shown.tagName).toBe("PRE");
+    expect(shown.textContent).toBe(hint);
+    expect(shown.querySelector("b")).toBeNull();
+    expect(pointer.nextElementSibling).toBe(shown);
+  });
+
+  it("changes no list", async () => {
+    const bundle = await sealed("result-root-close-bundle.json");
+    const plain = await show(bundle);
+    const hinted = await show(bundle, { verifierHint: "example-verifier" });
+    expect(plain.lists[2]).not.toEqual([]);
+    expect(hinted.lists).toEqual(plain.lists);
+  });
+
+  it("is not shown, nor the pointer, when every called-for check ran", async () => {
+    const { root } = await show(await sealed("week-bundle.json"), {
+      verifierHint: "example-verifier",
+    });
+    expect(root.querySelector('[data-checks="not-checked"]')).toBeNull();
+    expect(root.querySelector('[data-checks="full-verifier"]')).toBeNull();
+    expect(root.querySelector("[data-verifier-hint]")).toBeNull();
+  });
+});
+
 describe("checking", () => {
   // A slow hash: every SHA-256 waits on `release`, so the page is held in
   // the checking state until the test lets the digests through.
@@ -540,6 +601,39 @@ describe("a module that alters the banner is discarded for the refusal", () => {
         root.prepend("Verified ✓");
       },
     ],
+    [
+      "puts its own row before the banner",
+      (root) => {
+        const row = document.createElement("p");
+        row.textContent = "a row first";
+        root.prepend(row);
+      },
+    ],
+    [
+      "moves the banner after its own content",
+      (root) => {
+        root.append(
+          root.querySelector(".cv-shell-bar")!,
+          root.querySelector("[data-banner-detail]")!,
+        );
+      },
+    ],
+    [
+      "wraps the banner's words in a hidden child",
+      (root) => {
+        const banner = root.querySelector("[data-verify]")!;
+        const span = document.createElement("span");
+        span.hidden = true;
+        span.textContent = banner.textContent;
+        banner.replaceChildren(span);
+      },
+    ],
+    [
+      "removes the banner",
+      (root) => {
+        root.querySelector("[data-verify]")!.remove();
+      },
+    ],
   ];
   for (const [name, tamper] of cases)
     it(`one that ${name}`, async () => {
@@ -555,6 +649,33 @@ describe("a module that alters the banner is discarded for the refusal", () => {
       expectState(root, state("incomplete-no-list"));
       expect(root.querySelectorAll("[data-banner-detail]")).toHaveLength(1);
     });
+
+  it("one that puts content before the producer's header", async () => {
+    const { bundle } = await sealEvidenceBundle({
+      ...SOURCE(),
+      extensions: {
+        "presentation/v1": { producer_display_name: "Example Producer" },
+      },
+    });
+    const registry = new PresentationRegistry();
+    registry.register(
+      testModule((root) => {
+        const row = document.createElement("p");
+        row.textContent = "a row first";
+        root.prepend(row);
+      }),
+    );
+    const root = await render(bundle, registry);
+    expect(root.querySelectorAll("[data-test-module]")).toHaveLength(0);
+    expect(
+      root.querySelector('[data-refusal="presentation-failed"]'),
+    ).not.toBeNull();
+    expect(root.firstElementChild!.getAttribute("data-presentation")).toBe(
+      "header",
+    );
+    expect(root.textContent).not.toContain("a row first");
+    expectState(root, state("incomplete-no-list"));
+  });
 
   it("one whose stylesheet hides the banner, on a page in a document", async () => {
     const { bundle } = await sealEvidenceBundle(SOURCE());
