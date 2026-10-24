@@ -5,8 +5,8 @@ import {
   sha256Hex,
   SUFFICIENCIES,
   TIERS,
-  type WordingPackInput,
 } from "@action-state-group/agent-action-capsule";
+import { type WordingPackInput } from "./presentation-fragment.js";
 import OUTCOMES_PACK from "./wording/contract-report-outcomes.en.json" with { type: "json" };
 import EU_AI_ACT_PACK from "./wording/contract-report-eu-ai-act.en.json" with { type: "json" };
 

@@ -1,0 +1,70 @@
+{
+  "description": "Wording packs for the reserved core. key prefix (spec/presentation-contract-v0.md section 7.4), from agent-action-capsule PR #356's refusal cases: `schema_valid` is the pack's result under $defs/WordingPack. A pack that carries a key beginning core. is rejected; a key that only contains core, or starts corel, is the module's own. schemas/check_presentation_manifest_examples.py checks every case.",
+  "packs": [
+    {
+      "id": "module-keys-only",
+      "pack": {
+        "wording_pack_version": "aac.wording-pack/v0",
+        "id": "org.example.view.wording/v0",
+        "locale": "en",
+        "entries": {
+          "heading.l0": "What the comparison found",
+          "page.title": "Comparison",
+          "module.title": "Rules comparison"
+        }
+      },
+      "schema_valid": true
+    },
+    {
+      "id": "core-banner-key",
+      "pack": {
+        "wording_pack_version": "aac.wording-pack/v0",
+        "id": "org.example.view.wording/v0",
+        "locale": "en",
+        "entries": {
+          "heading.l0": "What the comparison found",
+          "core.banner.verified": "All good"
+        }
+      },
+      "schema_valid": false
+    },
+    {
+      "id": "core-check-line-key",
+      "pack": {
+        "wording_pack_version": "aac.wording-pack/v0",
+        "id": "org.example.view.wording/v0",
+        "locale": "en",
+        "entries": {
+          "core.check.record-digests": "Each record is fine."
+        }
+      },
+      "schema_valid": false
+    },
+    {
+      "id": "bare-core-prefix",
+      "pack": {
+        "wording_pack_version": "aac.wording-pack/v0",
+        "id": "org.example.view.wording/v0",
+        "locale": "en",
+        "entries": {
+          "heading.l0": "Findings",
+          "core.": "x"
+        }
+      },
+      "schema_valid": false
+    },
+    {
+      "id": "prefix-without-dot-is-the-module-s",
+      "pack": {
+        "wording_pack_version": "aac.wording-pack/v0",
+        "id": "org.example.view.wording/v0",
+        "locale": "en",
+        "entries": {
+          "corel.title": "Core findings",
+          "score.core.total": "Total"
+        }
+      },
+      "schema_valid": true
+    }
+  ]
+}

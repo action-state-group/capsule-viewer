@@ -37,7 +37,7 @@ import {
   FragmentTooLargeError,
   type DisclosureScope,
   type WordingPackInput,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-fragment.js";
 import {
   PresentationRegistry,
   REFERENCE_PRESENTATION_RUNTIME,
@@ -45,7 +45,7 @@ import {
   type PresentationManifest,
   type PresentationModule,
   type PresentationResolver,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-registry.js";
 import { monthlyComplianceFixture } from "./helpers/monthly-fixtures.js";
 import { withCarriedCapsule } from "./helpers/carried-capsule.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";

@@ -31,6 +31,8 @@ import { jcs, sha256Hex } from "@action-state-group/agent-action-capsule";
 import {
   BUILTIN_MANIFEST_RESULT_COMPLIANCE,
   BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT,
+} from "./builtin-manifests.js";
+import {
   bundleVerified,
   manifestProblems,
   PresentationAmbiguityError,
@@ -43,7 +45,7 @@ import {
   type PresentationResolution,
   type PresentationResolver,
   type PresentationRuntime,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-registry.js";
 import {
   decodePresentationFragment,
   encodePresentationFragment,
@@ -56,7 +58,7 @@ import {
   type PresentationDepth,
   type PresentationFragment,
   type WordingPackInput,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-fragment.js";
 import { mountPresentation } from "./presentation-mount.js";
 import { fillPendingBodies, linkConversations } from "./report-levels.js";
 

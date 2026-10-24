@@ -41,7 +41,7 @@ describe.skipIf(executablePath === undefined)(
         stdin: {
           contents: [
             'export { renderEvidenceGraph } from "./src/evidence-graph-view.ts";',
-            'export { PresentationRegistry } from "@action-state-group/agent-action-capsule";',
+            'export { PresentationRegistry } from "./src/presentation-registry.ts";',
           ].join("\n"),
           resolveDir: process.cwd(),
           loader: "ts",

@@ -11,7 +11,7 @@ import {
   BUILTIN_MANIFEST_NO_AGGREGATE,
   BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT,
   BUILTIN_MANIFESTS,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/builtin-manifests.js";
 import {
   BUILTIN_PRESENTATIONS,
   CONTRACT_REPORT_MANIFEST,
@@ -30,7 +30,7 @@ import {
   type PresentationModule,
   type PresentationResolver,
   REFERENCE_PRESENTATION_RUNTIME,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-registry.js";
 
 type Obj = Record<string, unknown>;
 const json = (path: string): Obj =>

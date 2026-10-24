@@ -1,21 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-// agent-action-capsule's own presentation-resolution conformance vectors
-// (vectors/presentation-resolution/registration.json, copied below with
-// their source sha256 since the npm package ships no test data): the two
-// cases contract-report/v1 section 4 names,
-// contract-report-module-in-place-of-builtin and -beside-builtin. They are
-// generic (a stand-in module id, org.example.contract-report/v0) and state
-// the rule this viewer's registration follows: in place of the AAC
-// built-in, never beside it (section 4.5's ambiguity test).
-//
-// test/helpers/presentation-resolution-vectors.ts is agent-action-capsule's
-// own generator for this corpus, vendored here, but it reads schema example
-// files (schemas/examples/presentation-manifest-v0/...) this package does
-// not ship, so importing it throws at module load (confirmed: ENOENT on
-// example-unilateral.json). These two cases need none of that -- just
-// PresentationRegistry and resolveModules, both exported by the package --
-// so this file runs them directly rather than fixing the unrelated helper.
+// The two presentation-resolution cases contract-report/v1 section 4 names,
+// contract-report-module-in-place-of-builtin and -beside-builtin, read from
+// the corpus (vectors/presentation-resolution/registration.json, moved
+// here from agent-action-capsule; presentation-resolution-vectors.test.ts
+// runs every case of it). They are generic (a stand-in module id,
+// org.example.contract-report/v0) and state the rule this viewer's
+// registration follows: in place of the AAC built-in, never beside it
+// (section 4.5's ambiguity test). This file runs them directly, by
+// PresentationRegistry and resolveModules alone.
 
 import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
@@ -31,7 +24,7 @@ import {
   type PresentationRefusal,
   type PresentationResolution,
   type PresentationRuntime,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-registry.js";
 
 type Obj = Record<string, unknown>;
 
@@ -79,7 +72,6 @@ function wireRefusal(r: PresentationRefusal): Obj {
 }
 
 interface VectorFile {
-  readonly source: { readonly sha256: string; readonly commit: string };
   readonly cases: readonly VectorCase[];
 }
 
@@ -108,24 +100,24 @@ interface VectorCase {
 
 const path = resolvePath(
   process.cwd(),
-  "test",
-  "testdata",
-  "aac-vectors",
+  "..",
+  "vectors",
   "presentation-resolution",
   "registration.json",
 );
-const vectors = JSON.parse(readFileSync(path, "utf8")) as VectorFile;
+const NAMED = [
+  "contract-report-module-beside-builtin",
+  "contract-report-module-in-place-of-builtin",
+];
+const cases = (
+  JSON.parse(readFileSync(path, "utf8")) as VectorFile
+).cases.filter((c) => NAMED.includes(c.id));
 
-it("the copied vector file's source sha256 is recorded and the copy is exactly those two cases", () => {
-  expect(vectors.cases.map((c) => c.id).sort()).toEqual([
-    "contract-report-module-beside-builtin",
-    "contract-report-module-in-place-of-builtin",
-  ]);
-  expect(vectors.source.sha256).toMatch(/^[0-9a-f]{64}$/u);
-  expect(vectors.source.commit).toBe("db9de0f");
+it("the corpus carries both named cases", () => {
+  expect(cases.map((c) => c.id).sort()).toEqual(NAMED);
 });
 
-for (const c of vectors.cases)
+for (const c of cases)
   it(`agent-action-capsule vector: ${c.id}`, async () => {
     const runtime: PresentationRuntime = {
       presentationApis: c.runtime.presentation_apis,

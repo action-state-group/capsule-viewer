@@ -3,8 +3,8 @@ import type {
   BundleVerificationResult,
   OutcomeReportOptions,
   ResultRoot,
-  WordingPackInput,
 } from "@action-state-group/agent-action-capsule";
+import type { WordingPackInput } from "./presentation-fragment.js";
 import type { CompliancePresentation } from "./compliance-presentation.js";
 import { drawGroups, GROUPS_FRAME } from "./compliance-view.js";
 import {

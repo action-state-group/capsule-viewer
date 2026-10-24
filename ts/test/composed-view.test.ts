@@ -14,10 +14,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  BUILTIN_MANIFEST_COMPOSED,
   buildVerifiedBundleContext,
   EXTENSION_NOT_INTERPRETED,
 } from "@action-state-group/agent-action-capsule";
+import { BUILTIN_MANIFEST_COMPOSED } from "../src/builtin-manifests.js";
 import {
   createSectionRegistry,
   renderEvidenceGraph,

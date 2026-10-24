@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import type { VerifiedBundleContext } from "@action-state-group/agent-action-capsule";
-import { BUILTIN_MANIFEST_COMPOSED } from "@action-state-group/agent-action-capsule";
+import { BUILTIN_MANIFEST_COMPOSED } from "./builtin-manifests.js";
 import {
   COMPOSED_KIND,
   type ComposedClaim,
@@ -12,7 +12,7 @@ import type {
   PresentationHost,
   PresentationModule,
   PresentationServices,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-registry.js";
 
 /**
  * The composition section: a generic view of the `composed/v1` block's

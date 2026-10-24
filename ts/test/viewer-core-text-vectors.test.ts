@@ -17,12 +17,14 @@ import {
   FAILED_ON_THIS_PAGE,
   FULL_VERIFIER_LINE,
   NOT_CHECKED_ON_THIS_PAGE,
-  PresentationRegistry,
   setSha256FallbackForTesting,
   VERIFICATION_CHECK_TECHNICAL_NAMES,
+} from "@action-state-group/agent-action-capsule";
+import {
+  PresentationRegistry,
   type PresentationManifest,
   type PresentationModule,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-registry.js";
 import {
   renderEvidenceGraph,
   UNABLE_TO_VERIFY_LINES,
