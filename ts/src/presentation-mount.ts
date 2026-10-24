@@ -2,14 +2,14 @@
 import type {
   PresentationFormat,
   PresentationResolver,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-registry.js";
 import { renderEvidenceGraph } from "./evidence-graph-view.js";
 import {
   decodePresentationFragment,
   FRAGMENT_TOKEN_MAX_LENGTH,
   type PresentationDepth,
   type WordingPackInput,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-fragment.js";
 
 /** What a host element is given: an already scoped bundle and its settings. */
 export interface MountPresentationInput {

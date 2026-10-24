@@ -18,7 +18,7 @@ import {
   type PresentationManifest,
   type PresentationModule,
   resolveModules,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-registry.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 /**

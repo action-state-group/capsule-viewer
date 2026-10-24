@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   encodePresentationFragment,
   PRESENTATION_FRAGMENT_VERSION,
-} from "@action-state-group/agent-action-capsule";
+} from "../src/presentation-fragment.js";
 import {
   mountPresentation,
   mountPresentationFragment,

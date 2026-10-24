@@ -14,11 +14,11 @@ import {
   REQUIREMENT_CLAIM,
   readOutcomeReportTerms,
   type ExtensionInterpreterId,
-  type PresentationManifest,
   withCountersigners,
   type BundleVerificationResult,
   type VerifiedBundleContext,
 } from "@action-state-group/agent-action-capsule";
+import type { PresentationManifest } from "./presentation-registry.js";
 import {
   BUILTIN_MANIFEST_COMPOSED,
   BUILTIN_MANIFEST_EVALUATION_SUMMARY_GRAPH,
@@ -28,7 +28,7 @@ import {
   BUILTIN_MANIFEST_RESULT_COMPLIANCE,
   BUILTIN_MANIFEST_RESULT_CONTRACT_REPORT,
   BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT,
-} from "@action-state-group/agent-action-capsule";
+} from "./builtin-manifests.js";
 import {
   classifyCountersignatures,
   declaredProducerKeys,
@@ -58,7 +58,7 @@ import {
 import type {
   PresentationDepth,
   WordingPackInput,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-fragment.js";
 import {
   readOutcomeReportPresentation,
   type OutcomeReportPresentation,
@@ -91,7 +91,7 @@ import {
   type PresentationResolver,
   type PresentationRuntime,
   type PresentationServices,
-} from "@action-state-group/agent-action-capsule";
+} from "./presentation-registry.js";
 import {
   buildReportRows,
   type ReportRow,
