@@ -2680,6 +2680,37 @@ export async function renderEvidenceGraph(
   }
 }
 
+// The computed properties of the banner frame a module's stylesheet must not
+// change (see looks in renderVerifiedContext): what decides whether the
+// banner and its details line are shown, where, and whether their words can
+// be read. Layout sizes are left out, since a module's content can change
+// them without touching the frame.
+const FRAME_LOOK = [
+  "display",
+  "visibility",
+  "opacity",
+  "color",
+  "background-color",
+  "background-image",
+  "font-size",
+  "text-indent",
+  "position",
+  "top",
+  "left",
+  "right",
+  "bottom",
+  "transform",
+  "clip",
+  "clip-path",
+  "filter",
+  "mix-blend-mode",
+  "overflow",
+  "max-height",
+  "max-width",
+  "z-index",
+  "content-visibility",
+] as const;
+
 // By root, the renders still verifying on it: their `checking` bars, and
 // what the root held before the first of them began.
 const checkingRenders = new WeakMap<
@@ -2818,6 +2849,30 @@ async function renderVerifiedContext(
   // verification section fills it, after every module has rendered.
   const snapshot = (parts: readonly Element[]): string =>
     JSON.stringify(parts.map((part) => part.outerHTML));
+  // How the frame looks: the computed properties that decide whether its
+  // words can be read, for every element of each part and the root, with
+  // the root's chrome class as given (the one restyling a module may ask
+  // for, setChromeClass). A stylesheet a module adds that changes any of
+  // them is caught by comparing with this. Empty off a document, where no
+  // styles apply.
+  const looks = (parts: readonly Element[], chromed: boolean): string => {
+    const view = root.ownerDocument.defaultView;
+    if (!root.isConnected || view === null) return "";
+    const had = root.classList.contains("cv-shell-chrome");
+    root.classList.toggle("cv-shell-chrome", chromed);
+    const elements = [
+      root,
+      ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")]),
+    ];
+    const seen = JSON.stringify(
+      elements.map((element) => {
+        const style = view.getComputedStyle(element);
+        return FRAME_LOOK.map((name) => style.getPropertyValue(name));
+      }),
+    );
+    root.classList.toggle("cv-shell-chrome", had);
+    return seen;
+  };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
     const parts = [
@@ -2828,6 +2883,10 @@ async function renderVerifiedContext(
       parts,
       header: bar.previousElementSibling,
       words: snapshot(parts),
+      looks: {
+        plain: looks(parts, false),
+        chrome: looks(parts, true),
+      },
     };
   };
   let frame = frameOf();
@@ -2876,7 +2935,11 @@ async function renderVerifiedContext(
       top.parentNode !== root ||
       top.hidden ||
       !frameShown([top, pill, ...(detail === undefined ? [] : [detail])]) ||
-      snapshot(frame.parts) !== frame.words
+      snapshot(frame.parts) !== frame.words ||
+      looks(frame.parts, root.classList.contains("cv-shell-chrome")) !==
+        (root.classList.contains("cv-shell-chrome")
+          ? frame.looks.chrome
+          : frame.looks.plain)
     )
       throw new Error("a module altered the verification banner");
   };

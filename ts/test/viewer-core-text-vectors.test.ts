@@ -582,6 +582,69 @@ describe("a module that alters the banner is discarded for the refusal", () => {
     }
   });
 
+  for (const rule of [
+    ".cv-pill,[data-banner-detail]{color:transparent!important}",
+    "[data-verify]{font-size:0!important}",
+    "[data-verify]{opacity:0.01!important}",
+    "[data-banner-detail]{transform:scale(0)!important}",
+    ".cv-shell-bar{position:absolute!important;left:-99999px!important}",
+    ".cv-shell-bar{overflow:hidden!important;max-height:0!important}",
+  ])
+    it(`one whose stylesheet restyles the banner (${rule}), in a document`, async () => {
+      const { bundle } = await sealEvidenceBundle(SOURCE());
+      const registry = new PresentationRegistry();
+      registry.register(
+        testModule((root) => {
+          const style = document.createElement("style");
+          style.textContent = rule;
+          root.querySelector('[data-region="L1"]')!.append(style);
+        }),
+      );
+      const root = document.createElement("main");
+      document.body.append(root);
+      try {
+        await renderEvidenceGraph(bundle, root, undefined, { registry });
+        expect(root.querySelectorAll("[data-test-module]")).toHaveLength(0);
+        expect(
+          root.querySelector('[data-refusal="presentation-failed"]'),
+        ).not.toBeNull();
+      } finally {
+        root.remove();
+      }
+    });
+
+  it("one that asks for its chrome and styles only its own content renders, in a document", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    const module = testModule((root) => {
+      const style = document.createElement("style");
+      style.textContent = "[data-test-module]{color:red;font-size:30px}";
+      root.querySelector('[data-region="L1"]')!.append(style);
+    });
+    const render = module.render;
+    registry.register({
+      ...module,
+      render: (model, host, services) => {
+        host.setChromeClass("oi");
+        return render(model, host, services);
+      },
+    });
+    // The page's own chrome rule restyles the bar; that is not the module's.
+    const core = document.createElement("style");
+    core.textContent = "main.cv-shell-chrome .cv-shell-bar{color:blue}";
+    document.head.append(core);
+    const root = document.createElement("main");
+    document.body.append(root);
+    try {
+      await renderEvidenceGraph(bundle, root, undefined, { registry });
+      expect(root.querySelectorAll("[data-test-module]")).toHaveLength(1);
+      expect(root.classList.contains("cv-shell-chrome")).toBe(true);
+    } finally {
+      root.remove();
+      core.remove();
+    }
+  });
+
   it("one whose stylesheet hides the page root, on a page in a document", async () => {
     const { bundle } = await sealEvidenceBundle(SOURCE());
     const registry = new PresentationRegistry();
