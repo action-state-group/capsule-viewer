@@ -143,8 +143,9 @@ here. The format follows
   claims of another type or id shape) is drawn as the generic Result page
   with a note, so no claim is merged or left out. Tuning details in
   `ts/README.md`. By Jody Edmondson (#58), completed by Ethan Zhang.
-- Requires `@action-state-group/agent-action-capsule` 0.6.1 (it was
-  0.5.0; 0.6.1 adds the `contract-report` interpreter id, #72), which
+- Requires `@action-state-group/agent-action-capsule` 0.7.0 (it was
+  0.5.0; 0.6.1 adds the `contract-report` interpreter id, #72, and 0.7.0
+  exports `verificationBanner`, capsule-viewer#79), which
   carries the `contract-report/v1`
   registration (#352), `out_of_scope`/`applies_from` (#368, #363,
   8732264) this release also ports onto `compliance.ts`,
