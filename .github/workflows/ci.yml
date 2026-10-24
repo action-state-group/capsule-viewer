@@ -23,18 +23,21 @@ jobs:
         run: python schemas/check_presentation_manifest_examples.py
       - name: Contract-report wording pack and vendored AAC files
         run: python schemas/check_contract_report_examples.py
-      - name: Moved spec text changed only as declared
+      - name: Moved spec text and vendored AAC files, against the pinned AAC revision
         run: |
           rev="$(python scripts/check-moved-spec.py --rev)"
           git init -q "$RUNNER_TEMP/aac"
           git -C "$RUNNER_TEMP/aac" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$rev"
           python scripts/check-moved-spec.py --aac "$RUNNER_TEMP/aac"
-      # A vendored agent-action-capsule file that AAC's main has changed fails
-      # here, so it is re-vendored with the change that adapts to it.
-      - name: Vendored agent-action-capsule files match its main
+          python scripts/check-vendored-aac.py --aac "$RUNNER_TEMP/aac" --rev "$rev"
+      # Warns, never fails: a vendored agent-action-capsule file that AAC's
+      # main has since changed is due to be re-vendored, with the AAC release
+      # capsule-viewer pins.
+      - name: Vendored agent-action-capsule files against its main (warning)
+        continue-on-error: true
         run: |
           git clone -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$RUNNER_TEMP/aac-main"
-          python scripts/check-vendored-aac.py --aac "$RUNNER_TEMP/aac-main"
+          python scripts/check-vendored-aac.py --aac "$RUNNER_TEMP/aac-main" || echo "::warning::vendored agent-action-capsule files differ from its main; re-vendor them with the next AAC pin bump"
       - name: Release helper
         run: pytest -q .github/test_release.py
 

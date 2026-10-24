@@ -11,19 +11,26 @@ checkers read (AAC#379):
 - schemas/vendor/agent-action-capsule/: AAC files at their AAC path, each a
   row of schemas/README.md's vendor table.
 
-Each copy is compared with the same file in an agent-action-capsule checkout
-(its working tree, normally a fresh clone of main). A file that differs, or is
-missing there, fails the check: re-vendor it (copy the new bytes, update its
-row) in the same change that adapts to it.
+Each copy is compared with the same file in agent-action-capsule:
+
+- with --rev REV, at that revision of the checkout (CI passes the revision
+  scripts/check-moved-spec.py pins, the one the copies were taken at): a
+  difference fails, since the copy is not what it says it is;
+- without it, in the checkout's working tree (CI uses a fresh clone of main,
+  in a step that only warns): a difference means AAC has moved on, so the
+  copy is due to be re-vendored with the change that adapts to it. That waits
+  for the AAC release capsule-viewer pins, since the pinned package's words
+  and these copies must agree.
 
 Usage:
-    python3 scripts/check-vendored-aac.py --aac PATH
+    python3 scripts/check-vendored-aac.py --aac PATH [--rev REV]
 """
 
 from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -53,23 +60,37 @@ def inventory() -> list[tuple[Path, str]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--aac", required=True, type=Path, help="an agent-action-capsule checkout")
+    parser.add_argument("--rev", help="compare with this revision instead of the working tree")
     args = parser.parse_args()
+
+    def theirs(aac_path: str) -> bytes | None:
+        if args.rev is None:
+            path = args.aac / aac_path
+            return path.read_bytes() if path.is_file() else None
+        shown = subprocess.run(
+            ["git", "-C", str(args.aac), "show", f"{args.rev}:{aac_path}"],
+            capture_output=True,
+            check=False,
+        )
+        return shown.stdout if shown.returncode == 0 else None
+
     stale = []
     pairs = inventory()
     for local, aac_path in pairs:
-        theirs = args.aac / aac_path
-        if not theirs.is_file():
-            stale.append(f"{aac_path}: gone from agent-action-capsule")
+        upstream = theirs(aac_path)
+        if upstream is None:
+            stale.append(f"{aac_path}: not in agent-action-capsule")
         elif not local.is_file():
             stale.append(f"{local.relative_to(REPO)}: listed but missing here")
-        elif local.read_bytes() != theirs.read_bytes():
+        elif local.read_bytes() != upstream:
             stale.append(f"{local.relative_to(REPO)}: differs from agent-action-capsule {aac_path}")
     if stale:
         print("Vendored agent-action-capsule files are stale; re-vendor them:", file=sys.stderr)
         for line in stale:
             print(f"  {line}", file=sys.stderr)
         return 1
-    print(f"OK: {len(pairs)} vendored agent-action-capsule files match {args.aac}")
+    where = f"{args.aac} at {args.rev}" if args.rev else str(args.aac)
+    print(f"OK: {len(pairs)} vendored agent-action-capsule files match {where}")
     return 0
 
 
