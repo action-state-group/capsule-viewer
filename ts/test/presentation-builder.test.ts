@@ -216,7 +216,7 @@ function expectStaticPage(html: string, verify: string): void {
       verify === "verified"
         ? "verified"
         : verify === "incomplete"
-          ? "incomplete: none of the bundle's checks failed, but some were not run"
+          ? "incomplete (none of the bundle's checks failed, but some were not run)"
           : "did not verify"
     }.`,
   );

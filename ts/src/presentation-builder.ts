@@ -349,7 +349,7 @@ const STATIC_VERIFICATION_WORDS: Readonly<Record<StaticVerification, string>> =
   {
     verified: "verified",
     incomplete:
-      "incomplete: none of the bundle's checks failed, but some were not run",
+      "incomplete (none of the bundle's checks failed, but some were not run)",
     failed: "did not verify",
   };
 
