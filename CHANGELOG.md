@@ -31,9 +31,10 @@ here. The format follows
     and `data-checkpoint`, and a `[data-banner-detail]` line under the bar
     names the verifier's findings. The words "Contents checked" and "Check
     failed" are gone, as are the pill's `role="img"` and `aria-label`: its
-    visible line is the whole verdict. A module that changes, moves or
-    hides the banner or its details line while it renders is discarded for
-    the `presentation-failed` refusal. The static builder's `verification`
+    visible line is the whole verdict. A module that changes, moves, hides
+    or restyles the banner or its details line while it renders, by its
+    nodes or by a stylesheet, is discarded for the `presentation-failed`
+    refusal, on the live page and when the static page is built. The static builder's `verification`
     is the same state (`"verified" | "incomplete" | "failed"`, type
     `StaticVerification`), as is its notice's `data-built-verification`.
     An embedded mount (`mountPresentation`) draws the same elements
