@@ -311,6 +311,80 @@ describe("resolution and rendering (spec section 4.3)", () => {
     expect(root.textContent).toBe("untouched");
   });
 
+  it("a render that rejects after another render on the same root finished leaves that page, never its own or the other's checking", async () => {
+    let fail!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      fail = resolve;
+    });
+    const failing = spyModule(manifest());
+    const registry = new PresentationRegistry();
+    registry.register({
+      ...failing.module,
+      buildModel: async () => {
+        await gate;
+        throw new Error("late model failure");
+      },
+    });
+    const root = document.createElement("main");
+    const first = renderEvidenceGraph(producerKeyBundle(), root);
+    const second = renderEvidenceGraph(producerKeyBundle(), root, undefined, {
+      registry,
+    });
+    await first;
+    fail();
+    await expect(second).rejects.toThrow("late model failure");
+    const banners = root.querySelectorAll<HTMLElement>("[data-verify]");
+    expect(banners).toHaveLength(1);
+    expect(banners[0]!.dataset.verify).toBe("incomplete");
+    expect(root.querySelector('[data-page="verification"]')).not.toBeNull();
+  });
+
+  it("a render that rejects while another on the same root is still checking puts that render's checking back", async () => {
+    let failSecond!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      failSecond = resolve;
+    });
+    let finishFirst!: () => void;
+    const held = new Promise<void>((resolve) => {
+      finishFirst = resolve;
+    });
+    const slow = new PresentationRegistry();
+    slow.register({
+      ...spyModule(manifest()).module,
+      buildModel: async () => {
+        await held;
+        return { id: "org.example.view/v0" };
+      },
+    });
+    const failing = new PresentationRegistry();
+    failing.register({
+      ...spyModule(manifest()).module,
+      buildModel: async () => {
+        await gate;
+        throw new Error("late model failure");
+      },
+    });
+    const root = document.createElement("main");
+    const first = renderEvidenceGraph(producerKeyBundle(), root, undefined, {
+      registry: slow,
+    });
+    const second = renderEvidenceGraph(producerKeyBundle(), root, undefined, {
+      registry: failing,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    failSecond();
+    await expect(second).rejects.toThrow("late model failure");
+    // The first render is still checking, and the page says so.
+    expect(
+      root.querySelector<HTMLElement>("[data-verify]")?.dataset.verify,
+    ).toBe("checking");
+    finishFirst();
+    await first;
+    expect(root.querySelector('[data-verify="checking"]')).toBeNull();
+    expect(root.querySelectorAll("[data-verify]")).toHaveLength(1);
+    expect(root.querySelectorAll("[data-test-module]")).toHaveLength(1);
+  });
+
   it("an ambiguity met at resolution shows the refusal and no module content", async () => {
     const a = spyModule(manifest({ id: "org.example.a/v0" }));
     const b = spyModule(manifest({ id: "org.example.b/v0" }));

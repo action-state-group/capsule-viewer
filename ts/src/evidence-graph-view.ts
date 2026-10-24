@@ -900,6 +900,8 @@ function renderExtensionTable(
         : row.interpreter === undefined
           ? "uninterpreted"
           : "interpreted";
+    // The interpreter that showed the block, as AAC's renderer wrote it.
+    if (row.interpreter !== undefined) tr.dataset.interpreter = row.interpreter;
     if (row.refusal !== undefined) {
       tr.dataset.refusedModule = row.refusal.id;
       tr.dataset.refusal = row.refusal.reason;

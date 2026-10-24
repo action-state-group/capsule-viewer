@@ -68,6 +68,9 @@ here. The format follows
 
 ### Added
 
+- The verification page's extension rows carry `data-interpreter`, the id of
+  the interpreter that showed the block, when one did, as
+  agent-action-capsule's renderer wrote it (agent-action-capsule#379).
 - The contract-report module (`ts/src/contract-report.ts`): one view for the
   Outcomes report and the EU AI Act Results, with the module's own words
   taken from a wording pack (`aac.wording-pack/v0`). Not in the pack: what
