@@ -136,7 +136,9 @@ describe.skipIf(executablePath === undefined)(
         "input.json",
       ).bundle;
       const shown = await open(bundle);
-      expect(shown.verify).toBe("verified");
+      // The browser build cannot check the checkpoint signature, so no
+      // check fails but one was not run (presentation contract 6.2).
+      expect(shown.verify).toBe("incomplete");
       expect(shown.page).toEqual([
         "record-digests",
         "record-rules",

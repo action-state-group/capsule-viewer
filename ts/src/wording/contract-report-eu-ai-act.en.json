@@ -85,7 +85,7 @@
     "groups.ran.sessions": "Sessions",
     "groups.ran.period": "Period",
     "groups.ran.sealed": "Sealed",
-    "groups.vd.note": "This bundle's own checkpoint, an append-only Merkle Mountain Range over the sealed records. Repeat every check on this page offline with the open-source verifier. This report is drawn only for a bundle that verified: tamper with any claim, record or checkpoint and the report is not drawn. The page then shows the red \"Check failed\" callout, the checks that failed and each record's id and status, with no record content.",
+    "groups.vd.note": "This bundle's own checkpoint, an append-only Merkle Mountain Range over the sealed records. Repeat every check on this page offline with the open-source verifier. This report is drawn only when this page's checks let the records be shown: tamper with any sealed claim, record or checkpoint and the report is not drawn. The page then shows the red \"✗ This bundle did not verify: do not rely on it\" callout, the checks that failed and each record's id and status, with no record content.",
     "groups.verdict.met": "met",
     "groups.verdict.not_met": "not met",
     "groups.verdict.not_applicable": "did not apply",

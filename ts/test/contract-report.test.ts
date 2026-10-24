@@ -360,7 +360,7 @@ for (const { grouping, file, page } of CARDS) {
       const wording = await distributed(make());
       const swapped = await render(file, wording);
       for (const root of [plain, swapped]) {
-        expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+        expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
         openAll(root);
       }
       const a = wholeCard(plain, page);
@@ -1688,7 +1688,7 @@ it("a Result whose claims the card cannot place one by one is drawn as the gener
   const buckets = (doc.aggregate as Obj).buckets as Record<string, string[]>;
   buckets[first.verdict as string]!.push(again.id);
   const root = await renderSource(source);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   expect(root.querySelector('[data-notice="card-unfit"]')).not.toBeNull();
   expect(root.querySelector('[data-page="compliance"]')).toBeNull();
   expect(root.querySelector('[data-page="result"]')).not.toBeNull();
@@ -1726,7 +1726,7 @@ for (const [name, file, change] of [
     const claim = (doc.claims as Obj[])[0]!;
     change(claim);
     const root = await renderSource(source);
-    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
     expect(root.querySelector('[data-notice="card-unfit"]')).not.toBeNull();
     expect(root.querySelector('[data-page="result"]')).not.toBeNull();
     expect(root.textContent).toContain(claim.id as string);
@@ -1829,7 +1829,7 @@ it("a date not yet in force is never drawn without its conditions (D3)", async (
   const { bundle } = await sealEvidenceBundle(source);
   const root = document.createElement("main");
   await renderEvidenceGraph(bundle, root, undefined, { depth: "L2" });
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const notes = [
     ...root.querySelectorAll<HTMLElement>("article.session .applic"),
   ].filter((n) => n.textContent!.startsWith("Applies from"));
@@ -1860,7 +1860,7 @@ it("a rule's not-applicable count is in its detail row before the row opens, so 
   const { bundle } = await sealEvidenceBundle(source);
   const root = document.createElement("main");
   await renderEvidenceGraph(bundle, root, undefined, { depth: "L0" });
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const lines = root.querySelectorAll<HTMLElement>("tr.x-detail .rule-na");
   expect(lines.length).toBeGreaterThan(0);
   for (const line of lines) {

@@ -227,7 +227,7 @@ describe.skipIf(executablePath === undefined)(
       if (built.format !== "html") throw new Error("html expected");
       const opened = await open("styled.html", built.html);
       expect(opened.violations).toEqual([]);
-      expect(opened.verify).toBe("verified");
+      expect(opened.verify).toBe("incomplete");
       expect(opened.probeColor).toBe("rgb(1, 2, 3)");
       expect(opened.requests).toEqual([opened.document]);
     }, 60_000);
@@ -267,7 +267,7 @@ describe.skipIf(executablePath === undefined)(
           // fragment: the browser kept the permalink's data to itself.
           expect(opened.requests).toEqual([opened.document]);
           expect(opened.violations).toEqual([]);
-          expect(opened.verify).toBe("verified");
+          expect(opened.verify).toBe("incomplete");
         }
         expect(b.page).toBe(a.page);
       }, 60_000);
@@ -306,7 +306,7 @@ describe.skipIf(executablePath === undefined)(
         for (const opened of [a, b]) {
           expect(opened.requests).toEqual([opened.document]);
           expect(opened.violations).toEqual([]);
-          expect(opened.verify).toBe("verified");
+          expect(opened.verify).toBe("incomplete");
         }
         expect(b.parsed).toBe(a.parsed);
         expect(b.text).toBe(a.text);

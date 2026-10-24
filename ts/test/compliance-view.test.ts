@@ -40,7 +40,7 @@ async function sealedComplianceBundle(
 it("renders the compliance card, not the generic Result page, when eu-ai-act-compliance/v1 opts in", async () => {
   const { bundle } = await sealedComplianceBundle();
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const page = root.querySelector<HTMLElement>('[data-page="compliance"]')!;
   expect(page).not.toBeNull();
   expect(page.classList.contains("cc")).toBe(true);
@@ -632,7 +632,7 @@ it("a session whose claim cites evidence the bundle does not hold is counted apa
       }
   });
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const tr = root.querySelector<HTMLElement>(
     'tr[data-criterion="art5.no_manipulation_or_deception"]',
   )!;
@@ -776,7 +776,7 @@ it("dating: a backfilled session is dated by its source's own time, labelled 'so
     ),
   );
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const { header, sessionProofs, method } = datingParts(root);
   // the header's period is the sessions' own dates, never "judged" on them
   expect(header).toMatch(/ · 2025-09-03( – 2025-09-0\d)?$/);

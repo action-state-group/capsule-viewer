@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import {
   buildVerifiedBundleContext,
+  classifyCountersignatures,
+  declaredProducerKeys,
   isVerifiedBundleContext,
+  verificationBanner,
   type VerifiedBundleContext,
 } from "@action-state-group/agent-action-capsule";
 import {
@@ -331,9 +334,24 @@ export type BuiltPresentation =
   | (BuiltCommon & {
       readonly format: "static";
       readonly html: string;
-      /** The verification result the builder computed and the page states. */
-      readonly verification: "verified" | "failed";
+      /**
+       * The verification state the builder computed and the page states:
+       * the banner's state (presentation contract section 6.2).
+       */
+      readonly verification: StaticVerification;
     });
+
+/** The banner states a page built from a finished check can show. */
+export type StaticVerification = "verified" | "incomplete" | "failed";
+
+// The static notice's words for each state.
+const STATIC_VERIFICATION_WORDS: Readonly<Record<StaticVerification, string>> =
+  {
+    verified: "verified",
+    incomplete:
+      "incomplete (none of the bundle's checks failed, but some were not run)",
+    failed: "did not verify",
+  };
 
 /** The wording key the builder reads for the page title. */
 export const WORDING_TITLE_KEY = "page.title";
@@ -778,7 +796,7 @@ const escapeText = (value: string): string =>
 async function packageStatic(
   prepared: Prepared,
   options: Omit<BuildPresentationOptions, "format">,
-): Promise<{ html: string; verification: "verified" | "failed" }> {
+): Promise<{ html: string; verification: StaticVerification }> {
   if (typeof document === "undefined")
     throw new PackagingUnavailableError({
       code: "no-document",
@@ -789,22 +807,38 @@ async function packageStatic(
   const root = document.createElement("div");
   // From the bundle, as the offline file does: the page there verifies the
   // bundle it carries and names no countersigner, so this does the same.
-  await renderEvidenceGraph(common.bundle, root, undefined, {
-    audience: common.audience,
-    format: "html",
-    ...(options.depth === undefined ? {} : { depth: options.depth }),
-    ...(options.wording === undefined ? {} : { wording: options.wording }),
-    registry,
-  });
+  // The root is in the document while it renders, as the page's #app it
+  // becomes, so the core's frame check sees the styles a module adds as
+  // they apply in the reader's browser: a module stylesheet that hides or
+  // restyles the banner is discarded, not packaged.
+  root.id = "app";
+  (document.body ?? document.documentElement).append(root);
+  try {
+    await renderEvidenceGraph(common.bundle, root, undefined, {
+      audience: common.audience,
+      format: "html",
+      ...(options.depth === undefined ? {} : { depth: options.depth }),
+      ...(options.wording === undefined ? {} : { wording: options.wording }),
+      registry,
+    });
+  } finally {
+    root.remove();
+  }
   // The page runs no script. Each conversation is kept once, in the core's
   // records section: every card's conversation becomes a link to it, and the
   // record entries (only those) are built now, so a link lands on content.
   // Other toggles keep their bodies unbuilt (capsule-viewer#67).
   linkConversations(root);
   fillPendingBodies(root, 'details.cv-record[data-body="pending"]');
-  const verification = bundleVerified(context.verification)
-    ? "verified"
-    : "failed";
+  // The banner state the page must show (presentation contract section
+  // 6.2), from the same verification and, like the page, no countersigner.
+  const stamps = await classifyCountersignatures(
+    context.countersignatures.map((entry) => entry.value),
+    context.verification.bundleDigest,
+    declaredProducerKeys(context.bundle),
+    undefined,
+  );
+  const verification = verificationBanner(context, stamps).state;
   const shown = [...root.querySelectorAll("[data-verify]")].map((e) =>
     e.getAttribute("data-verify"),
   );
@@ -844,7 +878,7 @@ async function packageStatic(
     `<aside class="aac-static-notice" data-static-notice="not-self-verifying" data-built-verification="${verification}">` +
     `<p><strong>${escapeText(STATIC_NOT_SELF_VERIFYING)}</strong></p>` +
     `<p>${escapeText(STATIC_BUILD_TIME_STATEMENT)}</p>` +
-    `<p>Verification result when this page was built: <strong>${verification === "verified" ? "verified" : "did not verify"}</strong>.</p>` +
+    `<p>Verification result when this page was built: <strong>${escapeText(STATIC_VERIFICATION_WORDS[verification])}</strong>.</p>` +
     `</aside>`;
   const html = emitStaticEvidenceGraphHtml(
     {

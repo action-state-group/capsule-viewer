@@ -6,9 +6,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
+import { VERIFICATION_BANNER_LINES } from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
-  BANNER_LINES,
   CHECKED_SECTION_TITLE,
   checkedSummaryLine,
   SUMMARY_NOT_VERIFIED,
@@ -45,17 +45,24 @@ async function render(input: Obj): Promise<HTMLElement> {
 }
 
 describe("the page shell", () => {
-  it("puts a Checked pill above everything else, named with the full verdict", async () => {
+  it("puts the banner pill above everything else, in the contract's words for the state", async () => {
+    // Nothing in this bundle is signed, so its checks pass but some were
+    // not run: incomplete, never verified (presentation contract 6.2).
     const root = await render(bundle());
     const bar = root.firstElementChild as HTMLElement;
-    expect(bar.className).toBe("cv-shell-bar");
-    expect(bar.classList.contains("cv-failed")).toBe(false);
+    expect(bar.className).toBe("cv-shell-bar cv-incomplete");
     const pill = bar.querySelector<HTMLElement>("[data-verify]")!;
-    expect(pill.dataset.verify).toBe("verified");
+    expect(pill.dataset.verify).toBe("incomplete");
+    expect(pill.dataset.verdict).toBe("incomplete");
     expect(pill.className).toBe("cv-pill");
-    expect(pill.textContent).toBe(BANNER_LINES.verified);
-    expect(pill.getAttribute("role")).toBe("img");
-    expect(pill.getAttribute("aria-label")).toBe(BANNER_LINES.verifiedTitle);
+    expect([
+      VERIFICATION_BANNER_LINES.incomplete,
+      VERIFICATION_BANNER_LINES.incompleteNoList,
+    ]).toContain(pill.textContent);
+    // The details line names what was not run, right after the bar.
+    const detail = bar.nextElementSibling as HTMLElement;
+    expect(detail.hasAttribute("data-banner-detail")).toBe(true);
+    expect(detail.textContent).not.toBe("");
     expect(root.querySelector("[data-uncheckpointed-note]")).toBeNull();
   });
 
@@ -94,7 +101,7 @@ describe("the page shell", () => {
     );
   });
 
-  it("opens the section, says Check failed and keeps the refusal for a bundle that did not verify", async () => {
+  it("opens the section, says the bundle did not verify and keeps the refusal for a bundle that did not verify", async () => {
     const edited = JSON.parse(
       JSON.stringify(bundle()).replace(
         '"verdict":"not_met"',
@@ -104,7 +111,8 @@ describe("the page shell", () => {
     const root = await render(edited);
     const pill = root.querySelector<HTMLElement>("[data-verify]")!;
     expect(pill.dataset.verify).toBe("failed");
-    expect(pill.textContent).toBe(BANNER_LINES.failed);
+    expect(pill.dataset.verdict).toBe("invalid");
+    expect(pill.textContent).toBe(VERIFICATION_BANNER_LINES.refused);
     // the bar is the core's red callout on any page, with no report's frame,
     // and says the check section's counts beside the verdict
     const bar = root.firstElementChild as HTMLElement;
@@ -113,7 +121,6 @@ describe("the page shell", () => {
     expect(
       bar.querySelector<HTMLElement>("[data-verify-summary]")!.textContent,
     ).toBe("1 check on this page failed · 5 records");
-    expect(pill.getAttribute("aria-label")).toBe(BANNER_LINES.failedTitle);
     expect(
       root.querySelector('[data-refusal="unverified-bundle"]'),
     ).not.toBeNull();

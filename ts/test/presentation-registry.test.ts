@@ -287,7 +287,7 @@ describe("resolution and rendering (spec section 4.3)", () => {
     ).not.toBeNull();
     // The chrome class the module set is discarded with its content.
     const banner = page.querySelector<HTMLElement>("[data-verify]")!;
-    expect(banner.dataset.verify).toBe("verified");
+    expect(banner.dataset.verify).toBe("incomplete");
     expect(banner.className).toBe("cv-pill");
     expect(page.lastElementChild!.getAttribute("data-region")).toBe("L2");
     expect(

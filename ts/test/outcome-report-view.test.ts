@@ -80,7 +80,7 @@ async function sealedOutcomeReportBundle(
 it("renders the outcome-report card, not the generic Result page, when outcome-report/v1 opts in", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const page = root.querySelector<HTMLElement>('[data-page="outcome-report"]')!;
   expect(page).not.toBeNull();
   expect(page.classList.contains("oi")).toBe(true);
@@ -206,7 +206,7 @@ it("draws no verified stamp of its own and keeps the verify-first tamper note, n
   const root = await render(bundle);
   // Verification is the core banner's alone (presentation contract 6.1).
   expect(root.querySelector(".stamp")).toBeNull();
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const note = root.querySelector<HTMLElement>("[data-tamper-note]")!;
   expect(note.dataset.tamperNote).toBe("verify-first");
   expect(root.querySelectorAll("button")).toHaveLength(0);
@@ -610,7 +610,7 @@ it("renders verification details: bundle digest, checkpoint root/size, and names
 it("draws the verification banner and the verification page in the card's look -- banner first, verification page still last", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
-  const banner = root.querySelector<HTMLElement>('[data-verify="verified"]')!;
+  const banner = root.querySelector<HTMLElement>('[data-verify="incomplete"]')!;
   // The pill keeps its look on the card (capsule-viewer#60); the page root
   // takes the card's own frame.
   expect(banner.className).toBe("cv-pill");
@@ -1247,7 +1247,7 @@ it("producer note and edited badges: rendered from outcome-report/v1 as presenta
     ];
   });
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const note = root.querySelector<HTMLElement>("[data-producer-note]")!;
   // Producer text, never in L0 (presentation contract section 6): it sits
   // in the card's L2 detail, after the core's verification section.
@@ -1296,7 +1296,7 @@ it("wording: each criterion prints the clause_claim its sealed reports carry, no
     ),
   );
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const terms = root.querySelector<HTMLElement>('[data-section="terms"]')!;
   const item = terms.querySelector<HTMLElement>(
     'li[data-criterion-id="within_fare_rules"]',
@@ -1458,7 +1458,7 @@ it("dating: backfilled case records put the calendar and period on the source's 
     withCaseRecords(source, () => BACKFILLED("2025-06-05T16:06:37.787845")),
   );
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const calendar = root.querySelector<HTMLElement>(
     '[data-section="calendar"]',
   )!;
@@ -1789,7 +1789,7 @@ it("an undecided conversation never says 'no rule was broken': every result unde
     setVerdicts(source, "not_evaluable", () => true),
   );
   const root = expand(await render(bundle));
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const page = root.querySelector<HTMLElement>('[data-page="outcome-report"]')!;
   expect(page.textContent).not.toContain("no rule was broken");
   expect(page.textContent).not.toContain("No rule was broken");
@@ -1820,7 +1820,7 @@ it("a claim whose cited evidence is not in the bundle is its own state: 'could n
     (claim.presentation as Obj).evidence = claim.evidence;
   });
   const root = expand(await render(bundle));
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const line = root.querySelector<HTMLElement>('[data-line="unverified"]')!;
   expect(line.dataset.count).toBe("1");
   expect(line.textContent).toContain("Could not verify");
@@ -1878,7 +1878,7 @@ it("the proofs say the judge's note is derived from its probabilities only when 
     }
   });
   const root = expand(await render(bundle));
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const labels = [...root.querySelectorAll<HTMLElement>("article.conv")].map(
     (conv) =>
       proofs(open(conv)).querySelector<HTMLElement>("[data-rationale-label]")
