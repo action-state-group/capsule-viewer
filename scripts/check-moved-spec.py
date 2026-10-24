@@ -218,6 +218,19 @@ CONTRACT = Move(
             "not a row of\n   agent-action-capsule's `spec/REGISTRY.md` section 14.",
         ),
     ],
+    amendments=[
+        # Section 7.4: the reserved core. key prefix, from Steven Mih's closed
+        # agent-action-capsule PR #356, with the schema rule, its negative and
+        # its mutant. #356's renderer refusal and its words are not carried.
+        (
+            "neither ever comes from the bundle, and the manifest still carries no title (section 4.1).",
+            "neither ever comes from the bundle, and the manifest still carries no title (section 4.1).\n\n"
+            "**Reserved prefix.** Every key that begins `core.` is reserved for the core's own text, which\n"
+            "no pack supplies. A pack MUST NOT carry such a key, and the schema rejects one\n"
+            "(`neg-wording-pack-core-key.json`).",
+            "agent-action-capsule#356, carried with the moved schema (AAC#379)",
+        ),
+    ],
 )
 
 CONTRACT_REPORT_MODULE = Move(

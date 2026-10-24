@@ -265,14 +265,17 @@
           "pattern": "^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$"
         },
         "entries": {
-          "description": "Wording key to string. Two keys are reserved with one meaning in every pack (spec section 7.4): page.title, the text of the page's <title>, read by the builder; module.title, the presentation's own human-readable name for list and choice UIs. Every other key is the module's own.",
+          "description": "Wording key to string. Two keys are reserved with one meaning in every pack (spec section 7.4): page.title, the text of the page's <title>, read by the builder; module.title, the presentation's own human-readable name for list and choice UIs. Every key that begins core. is reserved for the core's own text and rejected (spec section 7.4). Every other key is the module's own.",
           "type": "object",
           "minProperties": 1,
           "properties": {
             "page.title": { "description": "Reserved: the page's <title> (TITLE_SLOT).", "type": "string", "minLength": 1 },
             "module.title": { "description": "Reserved: the presentation's own name, for list and choice UIs. Distinct from page.title.", "type": "string", "minLength": 1 }
           },
-          "propertyNames": { "$ref": "#/$defs/WordingKey" },
+          "propertyNames": {
+            "$ref": "#/$defs/WordingKey",
+            "not": { "description": "The prefix core. is reserved for the core's own fixed text, which no pack supplies (spec section 7.4).", "pattern": "^core\\." }
+          },
           "additionalProperties": { "type": "string", "minLength": 1 }
         }
       }

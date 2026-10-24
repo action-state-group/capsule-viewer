@@ -620,6 +620,10 @@ no `module.title` shows the module `id`, never the `page.title`; a builder that 
 `page.title` never uses `module.title` for the page. Both are presentation words (section 7.3):
 neither ever comes from the bundle, and the manifest still carries no title (section 4.1).
 
+**Reserved prefix.** Every key that begins `core.` is reserved for the core's own text, which
+no pack supplies. A pack MUST NOT carry such a key, and the schema rejects one
+(`neg-wording-pack-core-key.json`).
+
 `wording_sha256` is the lowercase hex SHA-256 of the pack's **exact bytes as distributed**. The
 bytes are hashed as they are; a consumer MUST NOT re-serialize a pack before hashing it. A
 producer SHOULD distribute the JCS form of the pack, so that independent producers of the same

@@ -34,10 +34,16 @@ mechanical half):
          from the pack `wording_sha256` binds (spec section 6).
        - neg-declarative-member.json: a declarative field whose `member` is
          neither agent_input nor agent_output (spec section 5.2).
+       - neg-wording-pack-core-key.json (a wording pack, against
+         $defs/WordingPack): example-wording-pack.json plus a key under the
+         reserved `core.` prefix, which no pack may carry (spec section
+         7.4).
      MUTANT CHECK: each rejection is re-tested with the one schema rule it
      depends on removed (in memory; the committed schema is never modified).
      The same fixture MUST then validate, and the restored schema MUST
-     reject it again.
+     reject it again. Each wording pack in wording-pack-core-key-cases.json
+     validates exactly when the case says so: the rejected ones carry a
+     reserved `core.` key.
   3. WORDING BINDING: each declarative example's `wording_sha256` equals the
      SHA-256 of its pack's exact bytes, every `label_key` names an entry in
      that pack, and every `value_key_prefix` prefixes at least one entry.
@@ -136,6 +142,7 @@ SCHEMAS_DIR = (
 )
 EXAMPLES_DIR = SCHEMAS_DIR / "examples" / "presentation-manifest-v0"
 SCHEMA_PATH = SCHEMAS_DIR / "presentation-manifest-v0.json"
+CORE_KEY_CASES = EXAMPLES_DIR / "wording-pack-core-key-cases.json"
 
 BUILTINS = [
     "builtin-report-rows",
@@ -209,6 +216,10 @@ def _strip_member_enum(schema: dict) -> None:
     schema["$defs"]["DeclarativeField"]["properties"]["member"] = {"type": "string"}
 
 
+def _strip_core_prefix(schema: dict) -> None:
+    del schema["$defs"]["WordingPack"]["properties"]["entries"]["propertyNames"]["not"]
+
+
 # (fixture, the rule it depends on, how to remove that rule in memory)
 SCHEMA_NEGATIVES = [
     ("neg-unknown-field", "additionalProperties: false", _strip_additional),
@@ -218,6 +229,10 @@ SCHEMA_NEGATIVES = [
     ("neg-missing-presentation-api", "presentation_api required", _strip_presentation_api_required),
     ("neg-hint-wording-source", "declarative closed", _strip_declarative_additional),
     ("neg-declarative-member", "member enum", _strip_member_enum),
+]
+# The same, for wording packs against $defs/WordingPack.
+PACK_NEGATIVES = [
+    ("neg-wording-pack-core-key", "core. prefix reserved", _strip_core_prefix),
 ]
 
 
@@ -603,17 +618,20 @@ def main() -> int:
             print(f"OK  WordingPack          {WORDING_PACKS[name]}.json")
 
     # --- 2. SCHEMA NEGATIVES + MUTANTS ---
-    for name, rule, strip in SCHEMA_NEGATIVES:
+    for name, rule, strip, defn in [(*n, "PresentationManifest") for n in SCHEMA_NEGATIVES] + [
+        (*n, "WordingPack") for n in PACK_NEGATIVES
+    ]:
         instance = _load(name)
-        errors = list(manifest_validator.iter_errors(instance))
+        validator = manifest_validator if defn == "PresentationManifest" else pack_validator
+        errors = list(validator.iter_errors(instance))
         if not errors:
             findings.append(f"NEGATIVE-DID-NOT-FAIL {name}: validated clean")
             continue
-        print(f"OK  PresentationManifest {name}.json correctly REJECTED "
+        print(f"OK  {defn:<20} {name}.json correctly REJECTED "
               f"(e.g. {errors[0].message!r})")
         mutant = copy.deepcopy(schema)
         strip(mutant)
-        mutant_errors = list(_validator_for(mutant, "PresentationManifest").iter_errors(instance))
+        mutant_errors = list(_validator_for(mutant, defn).iter_errors(instance))
         if mutant_errors:
             findings.append(
                 f"MUTANT-DID-NOT-FLIP {name}: with '{rule}' removed it still fails "
@@ -621,8 +639,22 @@ def main() -> int:
             )
         else:
             print(f"OK  MUTANT        '{rule}' removed: {name}.json VALIDATES CLEAN")
-        if not list(manifest_validator.iter_errors(instance)):
+        if not list(validator.iter_errors(instance)):
             findings.append(f"MUTANT-RESTORE-FAILED {name}")
+
+    # The wording packs of wording-pack-core-key-cases.json: a pack that
+    # carries a reserved core. key is rejected here, and every other one
+    # validates.
+    for case in json.loads(CORE_KEY_CASES.read_text(encoding="utf-8"))["packs"]:
+        valid = not list(pack_validator.iter_errors(case["pack"]))
+        if valid != case["schema_valid"]:
+            findings.append(
+                f"CORE-KEY-PACK {case['id']}: the schema says valid={valid}, "
+                f"the case says {case['schema_valid']}"
+            )
+        else:
+            print(f"OK  WordingPack          core-key case {case['id']}: "
+                  f"{'validates' if valid else 'REJECTED'}")
 
     # --- 3. WORDING BINDING ---
     declaratives = [m for m in examples if m["trust_class"] == "declarative"]
@@ -822,7 +854,7 @@ def main() -> int:
             print(f"  {f}")
         return 1
     print(f"\nOK — {len(BUILTINS)} built-in and {len(EXAMPLES)} example manifests, "
-          f"{len(SCHEMA_NEGATIVES)} schema negatives with mutants, the wording binding, "
+          f"{len(SCHEMA_NEGATIVES) + len(PACK_NEGATIVES)} schema negatives with mutants, the wording binding, "
           "the static and runtime ambiguity tests, behaviour preservation, the "
           "presentation ABI refusal and the declarative source rule all passed.")
     return 0

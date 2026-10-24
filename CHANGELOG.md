@@ -85,6 +85,11 @@ here. The format follows
   BSD-3-Clause licence (`LICENSE-BSD-3-Clause`). `scripts/check-moved-spec.py`
   checks that the text changed only by its declared edits, and CI runs it and
   both checkers on every pull request.
+- A wording pack may not carry a key that begins `core.`: the prefix is
+  reserved for the core's own text (presentation contract section 7.4), and
+  `$defs/WordingPack` rejects such a pack (`neg-wording-pack-core-key.json`,
+  with its mutant, and `wording-pack-core-key-cases.json`). Carried from
+  Steven Mih's agent-action-capsule#356, with thanks.
 - The verification page's extension rows carry `data-interpreter`, the id of
   the interpreter that showed the block, when one did, as
   agent-action-capsule's renderer wrote it (agent-action-capsule#379).
