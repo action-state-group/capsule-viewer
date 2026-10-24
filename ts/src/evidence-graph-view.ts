@@ -2700,6 +2700,16 @@ const FRAME_LOOK = [
   "right",
   "bottom",
   "transform",
+  "scale",
+  "translate",
+  "rotate",
+  "zoom",
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
+  "font-family",
+  "-webkit-text-fill-color",
   "clip",
   "clip-path",
   "filter",
@@ -2853,8 +2863,11 @@ async function renderVerifiedContext(
   // words can be read, for every element of each part and the root, with
   // the root's chrome class as given (the one restyling a module may ask
   // for, setChromeClass). A stylesheet a module adds that changes any of
-  // them is caught by comparing with this. Empty off a document, where no
-  // styles apply.
+  // them, hiding the banner included, is caught by comparing with this as it
+  // was before the module rendered, so a host that was already hidden (an
+  // inactive tab) is no module's doing. Empty off a document, where no
+  // styles apply; the static builder renders on a root in its document for
+  // this reason.
   const looks = (parts: readonly Element[], chromed: boolean): string => {
     const view = root.ownerDocument.defaultView;
     if (!root.isConnected || view === null) return "";
@@ -2864,11 +2877,21 @@ async function renderVerifiedContext(
       root,
       ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")]),
     ];
+    // A browser also computes each element's ::before and ::after, whose
+    // content can add words to the banner; jsdom computes no pseudo-element.
+    const pseudos = view.navigator.userAgent.includes("jsdom")
+      ? [null]
+      : [null, "::before", "::after"];
     const seen = JSON.stringify(
-      elements.map((element) => {
-        const style = view.getComputedStyle(element);
-        return FRAME_LOOK.map((name) => style.getPropertyValue(name));
-      }),
+      elements.flatMap((element) =>
+        pseudos.map((pseudo) => {
+          const style = view.getComputedStyle(element, pseudo);
+          return [
+            ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
+            ...(pseudo === null ? [] : [style.getPropertyValue("content")]),
+          ];
+        }),
+      ),
     );
     root.classList.toggle("cv-shell-chrome", had);
     return seen;
@@ -2890,31 +2913,6 @@ async function renderVerifiedContext(
     };
   };
   let frame = frameOf();
-  // A stylesheet can hide the banner without touching its nodes: on a page
-  // in a document, each part and every element above it up to the root must
-  // still be displayed, visible and opaque. (A detached root has no styles
-  // applied, so there is nothing to check; the static builder renders on a
-  // root in its document for this reason.)
-  const frameShown = (parts: readonly Element[]): boolean => {
-    const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null) return true;
-    const shown = (element: Element): boolean => {
-      const style = view.getComputedStyle(element);
-      return (
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        style.visibility !== "collapse" &&
-        style.opacity !== "0"
-      );
-    };
-    return parts.every((part) => {
-      for (let at: Element | null = part; at !== null; at = at.parentElement) {
-        if (!shown(at)) return false;
-        if (at === root) return true;
-      }
-      return true;
-    });
-  };
   const assertFrameIntact = (): void => {
     const [top, detail] = frame.parts as [HTMLElement, Element?];
     const pill = top.querySelector("[data-verify]");
@@ -2934,7 +2932,6 @@ async function renderVerifiedContext(
       (detail !== undefined && detail.previousElementSibling !== top) ||
       top.parentNode !== root ||
       top.hidden ||
-      !frameShown([top, pill, ...(detail === undefined ? [] : [detail])]) ||
       snapshot(frame.parts) !== frame.words ||
       looks(frame.parts, root.classList.contains("cv-shell-chrome")) !==
         (root.classList.contains("cv-shell-chrome")

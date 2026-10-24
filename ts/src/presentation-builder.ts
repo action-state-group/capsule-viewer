@@ -807,9 +807,11 @@ async function packageStatic(
   const root = document.createElement("div");
   // From the bundle, as the offline file does: the page there verifies the
   // bundle it carries and names no countersigner, so this does the same.
-  // The root is in the document while it renders, so the core's frame check
-  // sees the styles a module adds, as it does in the reader's browser: a
-  // module stylesheet that hides the banner is discarded, not packaged.
+  // The root is in the document while it renders, as the page's #app it
+  // becomes, so the core's frame check sees the styles a module adds as
+  // they apply in the reader's browser: a module stylesheet that hides or
+  // restyles the banner is discarded, not packaged.
+  root.id = "app";
   (document.body ?? document.documentElement).append(root);
   try {
     await renderEvidenceGraph(common.bundle, root, undefined, {

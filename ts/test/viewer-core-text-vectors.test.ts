@@ -668,6 +668,47 @@ describe("a module that alters the banner is discarded for the refusal", () => {
     }
   });
 
+  it("one whose stylesheet hides the banner through the page's #app, on the static page", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    registry.register(
+      testModule((root) => {
+        const style = document.createElement("style");
+        style.textContent =
+          "#app [data-verify],#app [data-banner-detail]{display:none!important}";
+        root.querySelector('[data-region="L1"]')!.append(style);
+      }),
+    );
+    const built = await buildPresentation(bundle, {
+      presentation: "auto",
+      audience: "*",
+      format: "static",
+      registry,
+    });
+    if (built.format !== "static") throw new Error("static expected");
+    expect(built.html).not.toContain("data-test-module");
+    expect(built.html).not.toContain("display:none!important");
+    expect(built.html).toContain('data-refusal="presentation-failed"');
+  });
+
+  it("one that leaves the banner alone renders on a root that was already hidden", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    registry.register(testModule(() => {}));
+    const root = document.createElement("main");
+    root.style.display = "none";
+    document.body.append(root);
+    try {
+      await renderEvidenceGraph(bundle, root, undefined, { registry });
+      expect(root.querySelectorAll("[data-test-module]")).toHaveLength(1);
+      expect(
+        root.querySelector('[data-refusal="presentation-failed"]'),
+      ).toBeNull();
+    } finally {
+      root.remove();
+    }
+  });
+
   it("one whose stylesheet hides the banner, on the static page", async () => {
     const { bundle } = await sealEvidenceBundle(SOURCE());
     const registry = new PresentationRegistry();
