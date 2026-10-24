@@ -9,6 +9,10 @@
 > that stays there was. It is BSD-3-Clause, as it was there (agent-action-capsule's
 > `LICENSING.md` section 2; the text is `LICENSE-BSD-3-Clause`), not Apache-2.0 like the rest
 > of this repository.
+>
+> Until agent-action-capsule's `spec/verification-display-v0.md` lands (AAC#379), the text
+> cited there is in agent-action-capsule's `spec/presentation-contract-v0.md` at the revision
+> above, under the same section number as the section here that cites it.
 
 **Status.** Design specification, pre-Internet-Draft, beside agent-action-capsule's `spec/evidence-result-v0.md` and
 `spec/evidence-plan-ir-v0.md`. This document defines how a verified Evidence Bundle becomes a

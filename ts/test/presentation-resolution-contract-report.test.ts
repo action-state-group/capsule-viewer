@@ -2,7 +2,7 @@
 
 // The two presentation-resolution cases contract-report/v1 section 4 names,
 // contract-report-module-in-place-of-builtin and -beside-builtin, read from
-// the corpus (test/testdata/presentation-resolution/registration.json, moved
+// the corpus (vectors/presentation-resolution/registration.json, moved
 // here from agent-action-capsule; presentation-resolution-vectors.test.ts
 // runs every case of it). They are generic (a stand-in module id,
 // org.example.contract-report/v0) and state the rule this viewer's
@@ -100,8 +100,8 @@ interface VectorCase {
 
 const path = resolvePath(
   process.cwd(),
-  "test",
-  "testdata",
+  "..",
+  "vectors",
   "presentation-resolution",
   "registration.json",
 );

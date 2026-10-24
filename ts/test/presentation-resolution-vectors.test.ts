@@ -49,11 +49,17 @@ import {
 } from "./helpers/presentation-resolution-vectors.js";
 
 type Obj = Record<string, unknown>;
-// The corpus lives here; the bundle vectors its descriptor cases read are
+// The bundle vectors the corpus's descriptor cases read are
 // agent-action-capsule's, vendored under aac-vectors/ at their vectors/ paths.
 const TESTDATA = resolvePath(process.cwd(), "test", "testdata");
 const VECTORS = resolvePath(TESTDATA, "aac-vectors");
-const DIR = resolvePath(TESTDATA, "presentation-resolution");
+// The corpus is this repository's, at its top level beside spec/.
+const DIR = resolvePath(
+  process.cwd(),
+  "..",
+  "vectors",
+  "presentation-resolution",
+);
 const read = (name: string): Obj =>
   JSON.parse(readFileSync(resolvePath(DIR, name), "utf8")) as Obj;
 const sha256 = (bytes: Buffer | string): string =>

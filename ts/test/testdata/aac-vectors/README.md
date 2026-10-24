@@ -17,7 +17,7 @@ or a file has no row.
 | `minimum-necessary/bundle-internal-audit/input.json` | `f154515` | `7204edc` | `test/verification-check-lists-browser.test.ts` | `632ffa74d1e724495bebfcc37a39494601866979748670e132e7eb5c7f45e96f` |
 
 `viewer-core-text/` (not in the table) is a byte copy of agent-action-capsule's
-`vectors/viewer-core-text/` at `b76697d78dfe9d1f9a76a8d1a21dacba174c53a6`
-(last changed there in `5e2c4d4`), with its own `SHA256SUMS`. It is read by
+`vectors/viewer-core-text/` at `60a5b119a1a979b1970d22caec8577eac0bb59e8`
+(last changed there in `60a5b11`), with its own `SHA256SUMS`. It is read by
 `test/viewer-core-text-vectors.test.ts`, which also checks every file
 against those sums.

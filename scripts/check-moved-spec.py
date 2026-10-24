@@ -47,7 +47,7 @@ VD = "agent-action-capsule `spec/verification-display-v0.md` (AAC#379)"
 LICENCE_LINE = "<!-- SPDX-License-Identifier: BSD-3-Clause -->"
 
 
-def move_note(source: str) -> str:
+def move_note(source: str, interim: bool = False) -> str:
     return (
         "> **Moved.** This document moved here from agent-action-capsule's\n"
         f"> `{source}` at `{AAC_REV}`\n"
@@ -56,6 +56,14 @@ def move_note(source: str) -> str:
         "> that stays there was. It is BSD-3-Clause, as it was there (agent-action-capsule's\n"
         "> `LICENSING.md` section 2; the text is `LICENSE-BSD-3-Clause`), not Apache-2.0 like the rest\n"
         "> of this repository."
+        + (
+            "\n>\n"
+            "> Until agent-action-capsule's `spec/verification-display-v0.md` lands (AAC#379), the text\n"
+            "> cited there is in agent-action-capsule's `spec/presentation-contract-v0.md` at the revision\n"
+            "> above, under the same section number as the section here that cites it."
+            if interim
+            else ""
+        )
     )
 
 
@@ -74,7 +82,7 @@ CONTRACT = Move(
     target="spec/presentation-contract-v0.md",
     inserts=[
         (0, LICENCE_LINE),
-        (1, move_note("spec/presentation-contract-v0.md")),
+        (1, move_note("spec/presentation-contract-v0.md", interim=True)),
     ],
     removals=[
         # Section 4.2: the deprecation table goes to AAC REGISTRY section 14.
@@ -267,6 +275,13 @@ CONTRACT_REPORT_MODULE = Move(
         (
             "Its companion schema is\n`schemas/contract-report-v1.json`.",
             "The block's schema is\nagent-action-capsule's `schemas/contract-report-v1.json`.",
+        ),
+        # The block and its schema are agent-action-capsule's; this document governs only how a
+        # module draws it.
+        (
+            "Where the schema and this document disagree, this document\ngoverns.",
+            "agent-action-capsule's `spec/contract-report-v1.md` governs the block and its\n"
+            "schema; this document governs only how a module draws it.",
         ),
         (
             "**Owns:** the block (§1), how a contract-report module reads the Result (§2), the wording keys the\n"

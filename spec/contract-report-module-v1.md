@@ -15,8 +15,8 @@ draws the Evidence Bundle extension kind `contract-report/v1`, which agent-actio
 `spec/contract-report-v1.md` §1 defines and its `spec/REGISTRY.md` §14 registers. The block
 is a producer's opt-in to a **contract-report view** of a verified Evidence Result: any Evidence
 Contract's Result, shown grouped by row and by status. The block's schema is
-agent-action-capsule's `schemas/contract-report-v1.json`. Where the schema and this document disagree, this document
-governs.
+agent-action-capsule's `schemas/contract-report-v1.json`. agent-action-capsule's `spec/contract-report-v1.md` governs the block and its
+schema; this document governs only how a module draws it.
 
 ## Dependency boundary
 
