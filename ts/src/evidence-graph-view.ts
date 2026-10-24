@@ -2832,19 +2832,28 @@ async function renderVerifiedContext(
   };
   let frame = frameOf();
   // A stylesheet can hide the banner without touching its nodes: on a page
-  // in a document, each part must still be displayed, visible and opaque.
-  // (A detached root has no styles applied, so there is nothing to check.)
+  // in a document, each part and every element above it up to the root must
+  // still be displayed, visible and opaque. (A detached root has no styles
+  // applied, so there is nothing to check; the static builder renders on a
+  // root in its document for this reason.)
   const frameShown = (parts: readonly Element[]): boolean => {
     const view = root.ownerDocument.defaultView;
     if (!root.isConnected || view === null) return true;
-    return parts.every((part) => {
-      const style = view.getComputedStyle(part);
+    const shown = (element: Element): boolean => {
+      const style = view.getComputedStyle(element);
       return (
         style.display !== "none" &&
         style.visibility !== "hidden" &&
         style.visibility !== "collapse" &&
         style.opacity !== "0"
       );
+    };
+    return parts.every((part) => {
+      for (let at: Element | null = part; at !== null; at = at.parentElement) {
+        if (!shown(at)) return false;
+        if (at === root) return true;
+      }
+      return true;
     });
   };
   const assertFrameIntact = (): void => {

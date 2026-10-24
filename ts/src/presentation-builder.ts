@@ -807,13 +807,21 @@ async function packageStatic(
   const root = document.createElement("div");
   // From the bundle, as the offline file does: the page there verifies the
   // bundle it carries and names no countersigner, so this does the same.
-  await renderEvidenceGraph(common.bundle, root, undefined, {
-    audience: common.audience,
-    format: "html",
-    ...(options.depth === undefined ? {} : { depth: options.depth }),
-    ...(options.wording === undefined ? {} : { wording: options.wording }),
-    registry,
-  });
+  // The root is in the document while it renders, so the core's frame check
+  // sees the styles a module adds, as it does in the reader's browser: a
+  // module stylesheet that hides the banner is discarded, not packaged.
+  (document.body ?? document.documentElement).append(root);
+  try {
+    await renderEvidenceGraph(common.bundle, root, undefined, {
+      audience: common.audience,
+      format: "html",
+      ...(options.depth === undefined ? {} : { depth: options.depth }),
+      ...(options.wording === undefined ? {} : { wording: options.wording }),
+      registry,
+    });
+  } finally {
+    root.remove();
+  }
   // The page runs no script. Each conversation is kept once, in the core's
   // records section: every card's conversation becomes a link to it, and the
   // record entries (only those) are built now, so a link lands on content.

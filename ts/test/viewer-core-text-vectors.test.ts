@@ -27,6 +27,7 @@ import {
   renderEvidenceGraph,
   UNABLE_TO_VERIFY_LINES,
 } from "../src/evidence-graph-view.js";
+import { buildPresentation } from "../src/presentation-builder.js";
 import { sealEvidenceBundle, TEST_KEYS } from "./helpers/sealed-bundle.js";
 
 // A DOM constructed directly with jsdom rather than a whole-file environment
@@ -579,6 +580,53 @@ describe("a module that alters the banner is discarded for the refusal", () => {
     } finally {
       root.remove();
     }
+  });
+
+  it("one whose stylesheet hides the page root, on a page in a document", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    registry.register(
+      testModule((root) => {
+        const style = document.createElement("style");
+        style.textContent = "main{display:none!important}";
+        root.querySelector('[data-region="L1"]')!.append(style);
+      }),
+    );
+    const root = document.createElement("main");
+    document.body.append(root);
+    try {
+      await renderEvidenceGraph(bundle, root, undefined, { registry });
+      expect(root.querySelectorAll("[data-test-module]")).toHaveLength(0);
+      expect(
+        root.querySelector('[data-refusal="presentation-failed"]'),
+      ).not.toBeNull();
+    } finally {
+      root.remove();
+    }
+  });
+
+  it("one whose stylesheet hides the banner, on the static page", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    registry.register(
+      testModule((root) => {
+        const style = document.createElement("style");
+        style.textContent =
+          "[data-verify],[data-banner-detail]{display:none!important}";
+        root.querySelector('[data-region="L1"]')!.append(style);
+      }),
+    );
+    const built = await buildPresentation(bundle, {
+      presentation: "auto",
+      audience: "*",
+      format: "static",
+      registry,
+    });
+    if (built.format !== "static") throw new Error("static expected");
+    expect(built.html).not.toContain("data-test-module");
+    expect(built.html).not.toContain("display:none!important");
+    expect(built.html).toContain('data-refusal="presentation-failed"');
+    expect(built.verification).toBe("incomplete");
   });
 
   it("one that leaves the banner alone renders, in a document too", async () => {
