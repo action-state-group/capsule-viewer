@@ -71,10 +71,12 @@ here. The format follows
 - The presentation contract's text, schema, examples and checkers, moved from
   agent-action-capsule at `60a5b11` (agent-action-capsule#379), with every
   public name unchanged: `spec/presentation-contract-v0.md` (without the
-  parts that stay in agent-action-capsule, which it cites: the "Verified"
-  gate, the check lists and banner words, the refusal sentence, evidentiary
-  words and `sha256-jcs-nonce256`, I3, and the deprecation table, now in
-  agent-action-capsule's `spec/REGISTRY.md` section 14),
+  parts that stay in agent-action-capsule, which it cites where they are
+  until agent-action-capsule#379 moves them: the "Verified" gate, the check
+  lists and banner words, the refusal sentence, evidentiary words and
+  `sha256-jcs-nonce256`, and I3, moving to agent-action-capsule's
+  `spec/verification-display-v0.md`, and the deprecation table, moving to
+  its `spec/REGISTRY.md` section 14),
   `spec/contract-report-module-v1.md` (sections 2 to 4 of
   agent-action-capsule's `spec/contract-report-v1.md`, which keeps the block),
   `spec/presentation-builder-v0.md`, `schemas/presentation-manifest-v0.json`

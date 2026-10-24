@@ -137,7 +137,8 @@ A) requires `result_version:evidence-result-v0` and `contract-report/v1` and for
 `spec_version:report/v1`. It draws the generic Result page: the core runtime has no
 contract-report module. The built-in Result page and the two earlier display cards forbid
 `contract-report/v1`, so a Result root that opts in resolves to this manifest, whether or not it
-also carries an earlier kind (agent-action-capsule's `spec/REGISTRY.md` §14). The verification page lists the
+also carries an earlier kind (agent-action-capsule's `spec/presentation-contract-v0.md` §4.2 at `60a5b11`, moving to its
+`spec/REGISTRY.md` §14 (AAC#379)). The verification page lists the
 engaged block as not interpreted, because the core applies no report view.
 
 **A runtime with a contract-report module** registers that module **in place of**
@@ -164,4 +165,5 @@ pins both registrations (`contract-report-module-beside-builtin`,
 ## 5. Earlier kinds
 
 The earlier kinds are in agent-action-capsule's `spec/contract-report-v1.md` §5, and their
-deprecation in its `spec/REGISTRY.md` §14 (AAC#379).
+deprecation in agent-action-capsule's `spec/presentation-contract-v0.md` §4.2 at `60a5b11`, moving to its
+`spec/REGISTRY.md` §14 (AAC#379).

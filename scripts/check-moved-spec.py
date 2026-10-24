@@ -42,12 +42,25 @@ from pathlib import Path
 AAC_REV = "60a5b119a1a979b1970d22caec8577eac0bb59e8"
 REPO = Path(__file__).resolve().parent.parent
 
-# Citations to text that stays in agent-action-capsule.
-VD = "agent-action-capsule `spec/verification-display-v0.md` (AAC#379)"
+# Citations to text that stays in agent-action-capsule. Until AAC#379's
+# spec/verification-display-v0.md and its REGISTRY.md section 14 table land,
+# they cite where the text is now, at AAC_REV; the next change after those
+# lands switches them.
+def vd(section: str) -> str:
+    return (
+        f"agent-action-capsule's `spec/presentation-contract-v0.md` {section} at `60a5b11`\n"
+        "(moving to its `spec/verification-display-v0.md`, AAC#379)"
+    )
+
+
+DEPRECATION = (
+    "agent-action-capsule's `spec/presentation-contract-v0.md` §4.2 at `60a5b11`, moving to its\n"
+    "`spec/REGISTRY.md` §14 (AAC#379)"
+)
 LICENCE_LINE = "<!-- SPDX-License-Identifier: BSD-3-Clause -->"
 
 
-def move_note(source: str, interim: bool = False) -> str:
+def move_note(source: str) -> str:
     return (
         "> **Moved.** This document moved here from agent-action-capsule's\n"
         f"> `{source}` at `{AAC_REV}`\n"
@@ -56,14 +69,6 @@ def move_note(source: str, interim: bool = False) -> str:
         "> that stays there was. It is BSD-3-Clause, as it was there (agent-action-capsule's\n"
         "> `LICENSING.md` section 2; the text is `LICENSE-BSD-3-Clause`), not Apache-2.0 like the rest\n"
         "> of this repository."
-        + (
-            "\n>\n"
-            "> Until agent-action-capsule's `spec/verification-display-v0.md` lands (AAC#379), the text\n"
-            "> cited there is in agent-action-capsule's `spec/presentation-contract-v0.md` at the revision\n"
-            "> above, under the same section number as the section here that cites it."
-            if interim
-            else ""
-        )
     )
 
 
@@ -82,7 +87,7 @@ CONTRACT = Move(
     target="spec/presentation-contract-v0.md",
     inserts=[
         (0, LICENCE_LINE),
-        (1, move_note("spec/presentation-contract-v0.md", interim=True)),
+        (1, move_note("spec/presentation-contract-v0.md")),
     ],
     removals=[
         # Section 4.2: the deprecation table goes to AAC REGISTRY section 14.
@@ -90,35 +95,35 @@ CONTRACT = Move(
             325,
             333,
             "  The deprecated aliases `outcome-report/v1` and `eu-ai-act-compliance/v1`, and the releases\n"
-            "  that deprecate and remove them, are in agent-action-capsule's `spec/REGISTRY.md` section 14\n"
-            "  (AAC#379).",
+            "  that deprecate and remove them, are in agent-action-capsule's `spec/presentation-contract-v0.md`\n"
+            "  §4.2 at `60a5b11`, moving to its `spec/REGISTRY.md` §14 (AAC#379).",
         ),
         # Section 6.1: the check lists, their words and the word rules.
         (
             542,
             576,
             "The verification page's check lists, their words and the word rules for the verification\n"
-            f"page's own text are in {VD},\nsection \"The verification page's check lists\".",
+            f"page's own text are in {vd('§6.1')}.",
         ),
         # Section 6.2: the banner's purpose, its states and the states table.
         (
             586,
             602,
             "The verification banner, its states, its line for each state and the details line under it\n"
-            f"are in {VD},\nsection \"The verification banner\". The rules below bind a module.",
+            f"are in {vd('§6.2')}. The rules below bind a module.",
         ),
         # Section 7.1: evidentiary words.
         (
             633,
             659,
             "Evidentiary words, the three mechanisms that bind them and the placements that are forbidden\n"
-            f"are in {VD},\nsection \"Evidentiary words\".",
+            f"are in {vd('§7.1')}.",
         ),
         # Section 7.2: the sha256-jcs-nonce256 construction.
         (
             663,
             683,
-            f"The `sha256-jcs-nonce256` construction is in\n{VD}, section \"`sha256-jcs-nonce256`\".",
+            f"The `sha256-jcs-nonce256` construction is in\n{vd('§7.2')}.",
         ),
     ],
     rewrites=[
@@ -142,8 +147,8 @@ CONTRACT = Move(
             "- **Verified**: the bundle passed the viewer's verification gate (graph closure, interval\n"
             "  coverage, per-record membership proven or unbound, every record's identity, every disclosure\n"
             "  a match or withheld). Today this is `bundleVerified` in `ts/src/presentation-registry.ts`.",
-            "- **Verified**: the bundle passed the viewer's verification gate, as\n"
-            f"  {VD} defines it.",
+            "- **Verified**: the bundle passed the viewer's verification gate, defined in\n"
+            f"  {vd('§1').replace(chr(10), chr(10) + '  ')}.",
         ),
         # Section 4.2: the block is AAC's.
         (
@@ -187,7 +192,7 @@ CONTRACT = Move(
             "The refusal's text is the core's:\n"
             "  \"This bundle did not verify. Its records, rows and payloads are not shown; the verification\n"
             "  page below lists which checks failed.\" An ambiguity error",
-            f"The refusal's text is the core's, in\n  {VD}.\n  An ambiguity error",
+            f"The refusal's text is the core's, in\n  {vd('section 8, I1').replace(chr(10), chr(10) + '  ')}.\n  An ambiguity error",
         ),
         # I3: the evidence-identifier clause is AAC's.
         (
@@ -196,12 +201,13 @@ CONTRACT = Move(
             "  inside a payload are the same whatever theme, wording pack, locale or depth renders them.\n"
             "  None of those four is ever inside a digest-committed payload of the evidence.",
             "- **I3. Theme, wording, locale and depth never change evidence identifiers.** Stated in\n"
-            f"  {VD}.",
+            f"  {vd('section 8, I3').replace(chr(10), chr(10) + '  ')}.",
         ),
         # Section 10: conformance also needs the AAC document.
         (
             "- A viewer conforms when it satisfies section 8.",
-            f"- A viewer conforms when it satisfies section 8 and\n  {VD}.",
+            "- A viewer conforms when it satisfies section 8 and the rules in\n"
+            f"  {vd('§1, §6.1, §6.2, §7.1, §7.2, I1 and I3').replace(chr(10), chr(10) + '  ')}.",
         ),
         # Appendix A: the view is in this repository.
         (
@@ -260,7 +266,7 @@ CONTRACT_REPORT_MODULE = Move(
             164,
             169,
             "The earlier kinds are in agent-action-capsule's `spec/contract-report-v1.md` §5, and their\n"
-            "deprecation in its `spec/REGISTRY.md` §14 (AAC#379).",
+            f"deprecation in {DEPRECATION}.",
         ),
     ],
     rewrites=[
@@ -296,7 +302,7 @@ CONTRACT_REPORT_MODULE = Move(
         ),
         (
             "(PC §4.2's deprecation table)",
-            "(agent-action-capsule's `spec/REGISTRY.md` §14)",
+            f"({DEPRECATION})",
         ),
     ],
 )
