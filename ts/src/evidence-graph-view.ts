@@ -118,7 +118,10 @@ import {
   FULL_VERIFIER_LINE,
   NOT_CHECKED_ON_THIS_PAGE,
   RECEIPT_GRADE_DISPLAY,
+  VERIFICATION_BANNER_LINES,
+  verificationBanner,
   verificationCheckWords,
+  type VerificationBanner,
   type VerificationCheckLists,
   type CheckSummary,
   type CompletenessStatement,
@@ -128,7 +131,6 @@ import {
   type ReceiptEntry,
   type RecordCoverage,
   type RecordCoverageStatus,
-  unboundRecordIds,
 } from "@action-state-group/agent-action-capsule";
 
 function element(tag: string, text?: string): HTMLElement {
@@ -189,54 +191,47 @@ const evaluationsWord = (count: number): string =>
 const requirementsWord = (count: number): string =>
   `${count} ${count === 1 ? "requirement" : "requirements"}`;
 
-// The banner is drawn from the verification result alone and precedes every
-// row in the DOM; an unverified bundle gets the refusal line here and no
-// rows at all, so a reader never meets a payload before the verdict on the
-// bundle that carries it. It is a pill at the top of the page ("Contents
-// checked", or "Check failed"), whose accessible name starts with those words
-// and says the full verdict; a verified bundle with records outside the
-// checkpoint says their count beside it.
-export const BANNER_LINES = {
-  verified: "Contents checked",
-  failed: "Check failed",
-  // The accessible name starts with the visible words (WCAG 2.5.3).
-  verifiedTitle: "Contents checked: bundle verification passed",
-  failedTitle: "Check failed: bundle verification failed",
-} as const;
-
+// The banner is drawn from AAC's banner model alone (presentation contract
+// section 6.2) and precedes every row in the DOM; a bundle that fails the
+// page's own checks gets the refusal line here and no rows at all, so a
+// reader never meets a payload before the verdict on the bundle that carries
+// it. It is a pill in the page's top bar: `data-verify` is the state the
+// reader is told (`verified` only for a `valid` verdict), `data-verdict` the
+// strict verdict and `data-checkpoint` what became of the checkpoint
+// signature. Its line is the core's fixed text for the state; the details
+// line under the bar names the findings. The bar also says, from the
+// verification section, how many checks passed, and links down to it.
 function renderVerificationBanner(
   root: HTMLElement,
-  verified: boolean,
+  model: VerificationBanner,
   coverage: { uncheckpointed: number; total: number },
 ): HTMLElement {
   const bar = element("div");
   // A failed bundle's bar is a callout on every page, with or without a
-  // report's frame (the shell's .cv-failed); data-verify stays the banner's.
-  bar.className = verified ? "cv-shell-bar" : "cv-shell-bar cv-failed";
-  const banner = element(
-    "span",
-    verified ? BANNER_LINES.verified : BANNER_LINES.failed,
-  );
+  // report's frame (the shell's .cv-failed); in a report's frame an
+  // incomplete one takes its own colours (.cv-incomplete). data-verify
+  // stays the banner's.
+  bar.className =
+    model.state === "failed"
+      ? "cv-shell-bar cv-failed"
+      : model.state === "incomplete"
+        ? "cv-shell-bar cv-incomplete"
+        : "cv-shell-bar";
+  const banner = element("span", model.line);
   banner.className = "cv-pill";
-  banner.dataset.verify = verified ? "verified" : "failed";
-  banner.dataset.uncheckpointed = String(coverage.uncheckpointed);
-  const title = verified
-    ? BANNER_LINES.verifiedTitle
-    : BANNER_LINES.failedTitle;
-  // role="img" lets the pill carry the full verdict as its accessible name
-  // (aria-label on a bare span is not announced).
-  banner.setAttribute("role", "img");
-  banner.setAttribute("aria-label", title);
-  banner.title = title;
+  banner.dataset.verify = model.state;
+  banner.dataset.verdict = model.verdict;
+  banner.dataset.checkpoint = model.checkpoint;
+  banner.dataset.uncheckpointed = String(model.uncheckpointed);
   bar.append(banner);
   // The verification section's own summary line, filled in once that
   // section is drawn (at the end of renderEvidenceGraph), and a link down
   // to the section.
-  const detail = element("span");
-  detail.className = "cv-shell-detail";
-  detail.dataset.verifySummary = "";
-  bar.append(detail);
-  if (verified && coverage.uncheckpointed > 0) {
+  const summary = element("span");
+  summary.className = "cv-shell-detail";
+  summary.dataset.verifySummary = "";
+  bar.append(summary);
+  if (model.refusal === undefined && coverage.uncheckpointed > 0) {
     const note = element(
       "span",
       `${coverage.uncheckpointed} of ${recordsWord(coverage.total)} not in the checkpoint`,
@@ -255,19 +250,38 @@ function renderVerificationBanner(
   });
   bar.append(link);
   root.append(bar);
-  if (verified) return banner;
-  const refusal = element(
-    "p",
-    "This bundle did not verify. Its records, rows and payloads are not shown; the verification page below lists which checks failed.",
-  );
+  if (model.detail !== "") {
+    const detail = element("p", model.detail);
+    detail.className = "cv-banner-detail";
+    detail.dataset.bannerDetail = "";
+    root.append(detail);
+  }
+  if (model.refusal === undefined) return bar;
+  const refusal = element("p", model.refusal);
   refusal.dataset.refusal = "unverified-bundle";
   root.append(refusal);
-  return banner;
+  return bar;
+}
+
+/**
+ * Draw the `checking` state into `root`, replacing what it held: the
+ * banner alone, with no verdict and no row, until the checks finish
+ * (presentation contract section 6.2). Returns that banner's bar.
+ */
+export function renderChecking(root: HTMLElement): HTMLElement {
+  const bar = element("div");
+  bar.className = "cv-shell-bar";
+  const banner = element("span", VERIFICATION_BANNER_LINES.checking);
+  banner.className = "cv-pill";
+  banner.dataset.verify = "checking";
+  bar.append(banner);
+  root.replaceChildren(bar);
+  return bar;
 }
 
 /** The words a page says when this viewer cannot verify the bundle at all. */
 export const UNABLE_TO_VERIFY_LINES = {
-  banner: "Unable to verify in this viewer",
+  banner: VERIFICATION_BANNER_LINES.unable,
   reason:
     "This viewer cannot compute the SHA-256 digests the checks need, so nothing was checked and no records are shown. This is not a failed check: the file may well be valid.",
   command: "To check this file, run:",
@@ -974,8 +988,9 @@ async function renderVerificationPage(
   citedSigners: boolean,
   verifierHint: string | undefined,
   depth: "L0" | "L1" | "L2",
+  stamps: readonly CountersignatureStamp[],
 ): Promise<string> {
-  const { bundle, verification: verified, countersigners } = context;
+  const { bundle, verification: verified } = context;
   const section = element("section");
   section.dataset.page = "verification";
   let page = section;
@@ -986,15 +1001,12 @@ async function renderVerificationPage(
     section.append(page);
   }
   page.append(element("h2", "Verification"));
-  const stamps = await classifyCountersignatures(
-    context.countersignatures.map((entry) => entry.value),
-    verified.bundleDigest,
-    declaredProducerKeys(bundle),
-    countersigners,
-  );
+  // The strict result too, so these lists are the ones the banner's line
+  // points at (verificationBanner reads the same lists).
   const model = buildVerificationPageModel(bundle, verified, applied, refused, {
     stamps,
     citedSigners,
+    ...(context.strict === undefined ? {} : { strict: context.strict }),
   });
   const summary = element("dl");
   appendValue(summary, "bundle digest", model.bundleDigest ?? "uncomputable");
@@ -2624,15 +2636,63 @@ export async function renderEvidenceGraph(
     );
     return;
   }
-  // Verify first. Nothing reaches the DOM until the verification result is
-  // in hand, and no module is consulted for a bundle that did not verify.
-  const context = isVerifiedBundleContext(input)
-    ? countersigners === undefined
-      ? input
-      : withCountersigners(input, countersigners)
-    : await buildVerifiedBundleContext(input, {
+  if (isVerifiedBundleContext(input))
+    return renderVerifiedContext(
+      countersigners === undefined
+        ? input
+        : withCountersigners(input, countersigners),
+      root,
+      options,
+    );
+  // Verify first. Until the verification result is in hand the page shows
+  // `checking` and nothing else, and no module is consulted for a bundle
+  // that did not verify. A render that rejects while its own `checking` is
+  // still shown puts back what `root` held, so it still draws nothing. When
+  // another render on the same root is still checking, its `checking` is
+  // put back instead; another render's `checking` that has ended never is.
+  const before = [...root.childNodes];
+  const checking = renderChecking(root);
+  const active = checkingRenders.get(root) ?? new Set<HTMLElement>();
+  checkingRenders.set(root, active);
+  active.add(checking);
+  try {
+    await renderVerifiedContext(
+      await buildVerifiedBundleContext(input, {
         ...(countersigners === undefined ? {} : { countersigners }),
-      });
+      }),
+      root,
+      options,
+    );
+  } catch (err) {
+    if (checking.parentNode === root) {
+      const other = [...active].find((node) => node !== checking);
+      if (other !== undefined) root.replaceChildren(other);
+      else
+        root.replaceChildren(
+          ...before.filter(
+            (node) =>
+              !(
+                node.nodeType === 1 &&
+                (node as Element).querySelector('[data-verify="checking"]') !==
+                  null
+              ),
+          ),
+        );
+    }
+    throw err;
+  } finally {
+    active.delete(checking);
+  }
+}
+
+// The `checking` bars of the renders still verifying, by root.
+const checkingRenders = new WeakMap<HTMLElement, Set<HTMLElement>>();
+
+async function renderVerifiedContext(
+  context: VerifiedBundleContext,
+  root: HTMLElement,
+  options: RenderEvidenceGraphOptions,
+): Promise<void> {
   const { bundle, verification } = context;
   const verified = bundleVerified(verification);
   const registry = options.registry ?? defaultRegistry;
@@ -2696,9 +2756,16 @@ export async function renderEvidenceGraph(
         model: await sectionResolution.module.buildModel(context),
       };
   }
+  const stamps = await classifyCountersignatures(
+    context.countersignatures.map((entry) => entry.value),
+    verification.bundleDigest,
+    declaredProducerKeys(bundle),
+    context.countersigners,
+  );
+  const bannerModel = verificationBanner(context, stamps);
   const records = object(bundle).records;
   const coverage = {
-    uncheckpointed: unboundRecordIds(verification).length,
+    uncheckpointed: bannerModel.uncheckpointed,
     total: Array.isArray(records) ? records.length : 0,
   };
 
@@ -2718,11 +2785,12 @@ export async function renderEvidenceGraph(
     L2: root,
     core: root,
   };
+  let bar!: HTMLElement;
   const drawFrame = (): void => {
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
-    renderVerificationBanner(root, verified, coverage);
     renderPresentationHeader(root, bundle);
+    bar = renderVerificationBanner(root, bannerModel, coverage);
     const L2 = region("L2");
     const core = region("L2-core");
     const L2module = region("L2-module");
@@ -2743,6 +2811,50 @@ export async function renderEvidenceGraph(
     else root.insertBefore(note, regions.core.parentElement);
   };
   drawFrame();
+  // The banner and its details line are the core's (contract sections 3 and
+  // 6.2). A module that, while it renders, changes their words, structure or
+  // attributes, hides or moves them, puts anything before them but the
+  // core's own header, or draws a second banner, is discarded for the
+  // refusal like one that throws. The bar's summary line is empty until the
+  // verification section fills it, after every module has rendered.
+  const snapshot = (parts: readonly Element[]): string =>
+    JSON.stringify(parts.map((part) => part.outerHTML));
+  const frameOf = () => {
+    const detail = bar.nextElementSibling;
+    const parts = [
+      bar,
+      ...(detail?.hasAttribute("data-banner-detail") ? [detail] : []),
+    ];
+    return {
+      parts,
+      header: bar.previousElementSibling,
+      words: snapshot(parts),
+    };
+  };
+  let frame = frameOf();
+  const assertFrameIntact = (): void => {
+    const [top, detail] = frame.parts as [HTMLElement, Element?];
+    const pill = top.querySelector("[data-verify]");
+    const banners = root.querySelectorAll(
+      "[data-verify], [data-banner-detail]",
+    );
+    const expected = [pill, ...(detail === undefined ? [] : [detail])];
+    if (
+      pill === null ||
+      banners.length !== expected.length ||
+      expected.some((part, i) => banners[i] !== part) ||
+      // Nodes, not elements: a bare text node before the banner is words
+      // too. The core draws no text node at the root.
+      root.firstChild !== (frame.header ?? top) ||
+      top.previousSibling !== frame.header ||
+      (frame.header !== null && frame.header.parentNode !== root) ||
+      (detail !== undefined && detail.previousElementSibling !== top) ||
+      top.parentNode !== root ||
+      top.hidden ||
+      snapshot(frame.parts) !== frame.words
+    )
+      throw new Error("a module altered the verification banner");
+  };
   if (refused.length > 0)
     root.dataset.presentationRefused = refused.map((r) => r.id).join(" ");
   else delete root.dataset.presentationRefused;
@@ -2768,10 +2880,12 @@ export async function renderEvidenceGraph(
         host,
         presentationServices(context),
       );
+      assertFrameIntact();
     } catch {
       // Everything the module wrote is discarded; no other module is tried.
       chrome = undefined;
       drawFrame();
+      frame = frameOf();
       refusal = "presentation-failed";
     }
   }
@@ -2800,6 +2914,7 @@ export async function renderEvidenceGraph(
         },
         presentationServices(context),
       );
+      assertFrameIntact();
     } catch {
       chrome = undefined;
       drawFrame();
@@ -2835,6 +2950,7 @@ export async function renderEvidenceGraph(
     refusal === undefined && citesCheckedSigners(selected),
     options.verifierHint,
     depth,
+    stamps,
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");

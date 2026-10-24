@@ -172,13 +172,13 @@ describe("without SubtleCrypto", () => {
     expect(await probeEd25519()).toBe(true);
   });
 
-  it("renders a verified bundle as verified", async () => {
+  it("renders a bundle whose checks pass as it does with WebCrypto: incomplete, since nothing in it is signed", async () => {
     withoutWebCrypto();
     const root = document.createElement("main");
     await renderEvidenceGraph(fixture("week-bundle.json"), root);
     expect(
       root.querySelector("[data-verify]")?.getAttribute("data-verify"),
-    ).toBe("verified");
+    ).toBe("incomplete");
     expect(root.querySelector('[data-refusal="unverified-bundle"]')).toBeNull();
   });
 });

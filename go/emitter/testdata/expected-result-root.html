@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-W3rKGYDX6UUkUucE8wfaXrk2gyUysBhWVcQFqnxo1Hs=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-AFG9jl8n4fyrxkOkQg8ZaLKsLTDLPtEL+voR1wspDE4='; style-src 'sha256-6hz7oMtShj7RlVtF3VZaTU93NGKUBUb91j1dhm7bI4U=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-b2dM/3sYIGrujD09GUSiw7b/J3PcfmL4SOeXw388dGI=' 'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I=' 'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-W3rKGYDX6UUkUucE8wfaXrk2gyUysBhWVcQFqnxo1Hs=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-AFG9jl8n4fyrxkOkQg8ZaLKsLTDLPtEL+voR1wspDE4='; style-src 'sha256-S6W6G0Am3tx7eMxzGS4Em7l0IRxw912GSEcck2M3Njo=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-b2dM/3sYIGrujD09GUSiw7b/J3PcfmL4SOeXw388dGI=' 'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I=' 'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Evidence Graph</title>
     <style>
@@ -100,6 +100,20 @@
         color: var(--aac-bad);
         background: var(--aac-bad-bg);
       }
+      :where(.cv-pill[data-verify="incomplete"]) {
+        color: var(--aac-warn);
+        background: var(--aac-warn-bg);
+      }
+      :where(.cv-pill[data-verify="checking"]) {
+        color: var(--aac-muted);
+      }
+      /* The details line under the bar: the findings behind an incomplete
+         or failed verdict, in the core's words. */
+      :where(.cv-banner-detail) {
+        margin: 0 0 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--aac-muted);
+      }
       :where(.cv-shell-note) {
         font-size: 0.8125rem;
         color: var(--aac-muted);
@@ -113,7 +127,10 @@
       }
       /* A report's frame: the bar becomes one full-width callout at the
          top of the page, the verdict first, then the counts and the link.
-         A report only renders on a verified bundle, so it is green. */
+         It is green for a verified bundle; a report also renders when no
+         check failed but some were not run, or when a check failed and the
+         records are still shown, and the bar then takes that state's
+         colours (below). */
       #app.cv-shell-chrome :where(.cv-shell-bar) {
         max-width: 1080px;
         box-sizing: border-box;
@@ -128,6 +145,20 @@
         border-left-width: 6px;
         border-radius: 10px;
         background: var(--aac-ok-bg);
+      }
+      #app.cv-shell-chrome :where(.cv-shell-bar.cv-incomplete) {
+        border-color: var(--aac-warn);
+        background: var(--aac-warn-bg);
+      }
+      #app.cv-shell-chrome :where(.cv-shell-bar.cv-failed) {
+        border-color: var(--aac-bad);
+        background: var(--aac-bad-bg);
+      }
+      #app.cv-shell-chrome :where(.cv-banner-detail) {
+        max-width: 1080px;
+        box-sizing: border-box;
+        margin: 0.375rem auto 0;
+        padding: 0 var(--aac-inset);
       }
       #app.cv-shell-chrome :where(.cv-pill) {
         padding: 0;
@@ -145,10 +176,10 @@
         font-size: 0.875rem;
         font-weight: 600;
       }
-      /* A bundle that did not verify: on every page the core draws the
+      /* A bundle with a failed check: on every page the core draws the
          bar as a red callout, the verdict first, then the check section's
-         counts and the link to it (open on such a page). No report renders
-         on a failed bundle, so this does not wait for a report's frame. */
+         counts and the link to it. It does not wait for a report's frame:
+         no report renders on a bundle the page refuses. */
       :where(.cv-shell-bar.cv-failed) {
         box-sizing: border-box;
         padding: 0.75rem 1rem;

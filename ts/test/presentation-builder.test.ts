@@ -212,7 +212,13 @@ function expectStaticPage(html: string, verify: string): void {
   expect(text).toContain(STATIC_NOT_SELF_VERIFYING);
   expect(text).toContain(STATIC_BUILD_TIME_STATEMENT);
   expect(text).toContain(
-    `when this page was built: ${verify === "verified" ? "verified" : "did not verify"}.`,
+    `when this page was built: ${
+      verify === "verified"
+        ? "verified"
+        : verify === "incomplete"
+          ? "incomplete: none of the bundle's checks failed, but some were not run"
+          : "did not verify"
+    }.`,
   );
 }
 
@@ -389,7 +395,9 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
           );
         }
         const snap = first![1].snapshot;
-        expect(snap.verify).toEqual([verifies ? "verified" : "failed"]);
+        // Nothing in these fixtures is signed: a bundle whose checks pass is
+        // incomplete, never verified (presentation contract 6.2).
+        expect(snap.verify).toEqual([verifies ? "incomplete" : "failed"]);
         if (verifies) expect(snap.evidence_ids.length).toBeGreaterThan(0);
 
         // The static page: no script, the statement, the build-time state.
@@ -1281,9 +1289,9 @@ describe("packaging availability", () => {
       expect(await openPage(html.html, "file:///monthly.html")).toEqual(
         fromStatic,
       );
-      expect(fromStatic.verify).toEqual(["verified"]);
+      expect(fromStatic.verify).toEqual(["incomplete"]);
       expect(fromStatic.pages).toContain("verification");
-      expectStaticPage(statik.html, "verified");
+      expectStaticPage(statik.html, "incomplete");
     }, 180_000);
 
   it("reports a missing runtime for html and fragment, and a missing DOM for static", async () => {
@@ -1412,7 +1420,7 @@ describe("the static page", () => {
     expect(openStatic(statik.html).snapshot).toEqual(
       await openPage(html.html, "file:///themed.html"),
     );
-    expectStaticPage(statik.html, "verified");
+    expectStaticPage(statik.html, "incomplete");
     // The card's own frame survives the static page too (capsule-viewer#60).
     expect(statik.html).toContain('<div id="app" class="cv-shell-chrome">');
   });

@@ -74,7 +74,8 @@ async function verifiedBanner(html: string): Promise<string | undefined> {
 describe("report.html tamper test (rows are data, never prose)", () => {
   it("passes verification on the untampered report", async () => {
     const html = emitReport(bundle());
-    expect(await verifiedBanner(html)).toBe("verified");
+    // Nothing is signed: no check fails, some were not run.
+    expect(await verifiedBanner(html)).toBe("incomplete");
   });
 
   it("catches editing a number: the recomputed row disagrees", async () => {

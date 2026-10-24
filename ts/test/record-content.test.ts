@@ -186,7 +186,7 @@ it("a carried input that does not match its commitment is never drawn, and the b
   });
   const { bundle, ids } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+  expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
   const entry = root
     .querySelector(`#${recordAddress(carriedId)}`)!
     .closest<HTMLDetailsElement>("details.cv-record")!;

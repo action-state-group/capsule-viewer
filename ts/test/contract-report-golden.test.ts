@@ -221,7 +221,7 @@ for (const c of CASES)
   it(`golden: ${c.name}, closed and fully open`, async () => {
     const root = document.createElement("main");
     await renderEvidenceGraph(await sealed(c), root);
-    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
     // The card only, in its three host regions (L0, L1, L2): the
     // verification section in L2 is the core's, and no change to the cards'
     // code or words reaches it.

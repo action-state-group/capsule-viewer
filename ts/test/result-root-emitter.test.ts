@@ -81,7 +81,7 @@ describe("Result-root bundle through the emitter", () => {
       IIFE,
     );
     const root = await renderHtml(html);
-    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
     expect(root.querySelector('[data-page="result"]')).not.toBeNull();
     expect(root.querySelectorAll("[data-claim-row]")).toHaveLength(3);
   });
@@ -93,7 +93,7 @@ describe("Result-root bundle through the emitter", () => {
     const html = emitEvidenceGraphHtml(bundle, IIFE);
     expect(html).toContain('"record_type":"evidence_result"');
     const root = await renderHtml(html);
-    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
     expect(root.querySelector('[data-page="result"]')).not.toBeNull();
     expect(root.querySelectorAll("[data-claim-row]")).toHaveLength(3);
   });
@@ -119,7 +119,7 @@ describe("Result-root bundle with a close claim through the emitter", () => {
     );
     const html = emitEvidenceGraphHtml(bundle, IIFE);
     const root = await renderHtml(html);
-    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
     expect(root.querySelectorAll("[data-claim-row]")).toHaveLength(2);
     const state = root.querySelector<HTMLElement>(
       '[data-claim-row="close-1"] [data-close-state]',

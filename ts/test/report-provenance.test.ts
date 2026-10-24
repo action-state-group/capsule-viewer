@@ -329,7 +329,7 @@ for (const { card, file, page } of CARDS) {
       },
     ];
     const root = await render(bundle);
-    expect(root.querySelector('[data-verify="verified"]')).not.toBeNull();
+    expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
     const b = block(root, page);
     const witness = line(b, "witness");
     // one receipt and one placeholder: the placeholder is not a witness

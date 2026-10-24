@@ -19,10 +19,23 @@ here. The format follows
     and `--aac-page-pad-block` is new. A module's own `.cv-page` drops its
     width and padding inside it. The outcome and compliance cards keep their
     own frame (`#app.cv-shell-chrome`).
-  - The verdict is a pill at the top of the page, "Contents checked" or
-    "Check failed", whose accessible name starts with those words and gives
-    the full verdict. The visible text "Bundle verification passed" /
-    "failed" is gone; `data-verify` and `data-uncheckpointed` are unchanged.
+  - The verdict is a pill at the top of the page, after the presentation
+    header, in the words of agent-action-capsule's presentation contract
+    section 6.2 (capsule-viewer#79): one of its five states, drawn from
+    AAC's `verificationBanner`, with each line exactly
+    `vectors/viewer-core-text/core-text.json`. `data-verify` is `checking`
+    while the checks run, then `verified` only for a `valid` verdict,
+    `incomplete` when no check failed but some were not run (a bundle with
+    unsigned records or an unsigned checkpoint, which earlier read as
+    verified), `failed`, or `unable`; the pill also carries `data-verdict`
+    and `data-checkpoint`, and a `[data-banner-detail]` line under the bar
+    names the verifier's findings. The words "Contents checked" and "Check
+    failed" are gone, as are the pill's `role="img"` and `aria-label`: its
+    visible line is the whole verdict. A module that changes, moves or
+    hides the banner or its details line while it renders is discarded for
+    the `presentation-failed` refusal. The static builder's `verification`
+    is the same state (`"verified" | "incomplete" | "failed"`, type
+    `StaticVerification`), as is its notice's `data-built-verification`.
     An embedded mount (`mountPresentation`) draws the same elements
     (`.cv-shell-bar`, `.cv-pill`, `details.cv-checked`) and leaves their
     styling to its host page: the viewer sets no page-level style on a page
