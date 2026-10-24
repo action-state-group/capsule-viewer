@@ -14,6 +14,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  BUILTIN_MANIFEST_COMPOSED,
   buildVerifiedBundleContext,
   EXTENSION_NOT_INTERPRETED,
 } from "@action-state-group/agent-action-capsule";
@@ -151,13 +152,10 @@ describe("the composition section", () => {
           "Shown by the page's module; covered by the file's fingerprint",
         ],
       ]);
-      // capsule-viewer marks the row interpreted (data-semantics) rather
-      // than naming the interpreter as AAC's renderer did (data-interpreter);
-      // the semantics cell above names the module that showed it.
       expect(
         root.querySelector<HTMLElement>('tr[data-extension-id="composed/v1"]')
-          ?.dataset.semantics,
-      ).toBe("interpreted");
+          ?.dataset.interpreter,
+      ).toBe(BUILTIN_MANIFEST_COMPOSED.id);
     },
   );
 
