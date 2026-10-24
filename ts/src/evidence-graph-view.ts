@@ -2647,13 +2647,17 @@ export async function renderEvidenceGraph(
   // Verify first. Until the verification result is in hand the page shows
   // `checking` and nothing else, and no module is consulted for a bundle
   // that did not verify. A render that rejects while its own `checking` is
-  // still shown puts back what `root` held, so it still draws nothing. When
-  // another render on the same root is still checking, its `checking` is
-  // put back instead; another render's `checking` that has ended never is.
-  const before = [...root.childNodes];
+  // still shown puts back what `root` held before the first of the renders
+  // still checking on it began, so it still draws nothing. When another
+  // render on the same root is still checking, its `checking` is put back
+  // instead; another render's `checking` that has ended never is.
+  const group = checkingRenders.get(root) ?? {
+    before: [...root.childNodes],
+    active: new Set<HTMLElement>(),
+  };
+  checkingRenders.set(root, group);
+  const { active } = group;
   const checking = renderChecking(root);
-  const active = checkingRenders.get(root) ?? new Set<HTMLElement>();
-  checkingRenders.set(root, active);
   active.add(checking);
   try {
     await renderVerifiedContext(
@@ -2667,26 +2671,21 @@ export async function renderEvidenceGraph(
     if (checking.parentNode === root) {
       const other = [...active].find((node) => node !== checking);
       if (other !== undefined) root.replaceChildren(other);
-      else
-        root.replaceChildren(
-          ...before.filter(
-            (node) =>
-              !(
-                node.nodeType === 1 &&
-                (node as Element).querySelector('[data-verify="checking"]') !==
-                  null
-              ),
-          ),
-        );
+      else root.replaceChildren(...group.before);
     }
     throw err;
   } finally {
     active.delete(checking);
+    if (active.size === 0) checkingRenders.delete(root);
   }
 }
 
-// The `checking` bars of the renders still verifying, by root.
-const checkingRenders = new WeakMap<HTMLElement, Set<HTMLElement>>();
+// By root, the renders still verifying on it: their `checking` bars, and
+// what the root held before the first of them began.
+const checkingRenders = new WeakMap<
+  HTMLElement,
+  { readonly before: readonly ChildNode[]; readonly active: Set<HTMLElement> }
+>();
 
 async function renderVerifiedContext(
   context: VerifiedBundleContext,
@@ -2832,6 +2831,22 @@ async function renderVerifiedContext(
     };
   };
   let frame = frameOf();
+  // A stylesheet can hide the banner without touching its nodes: on a page
+  // in a document, each part must still be displayed, visible and opaque.
+  // (A detached root has no styles applied, so there is nothing to check.)
+  const frameShown = (parts: readonly Element[]): boolean => {
+    const view = root.ownerDocument.defaultView;
+    if (!root.isConnected || view === null) return true;
+    return parts.every((part) => {
+      const style = view.getComputedStyle(part);
+      return (
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        style.visibility !== "collapse" &&
+        style.opacity !== "0"
+      );
+    });
+  };
   const assertFrameIntact = (): void => {
     const [top, detail] = frame.parts as [HTMLElement, Element?];
     const pill = top.querySelector("[data-verify]");
@@ -2851,6 +2866,7 @@ async function renderVerifiedContext(
       (detail !== undefined && detail.previousElementSibling !== top) ||
       top.parentNode !== root ||
       top.hidden ||
+      !frameShown([top, pill, ...(detail === undefined ? [] : [detail])]) ||
       snapshot(frame.parts) !== frame.words
     )
       throw new Error("a module altered the verification banner");

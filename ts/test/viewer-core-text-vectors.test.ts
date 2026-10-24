@@ -412,6 +412,44 @@ describe("checking", () => {
     expect(seen).toEqual(["checking", "failed"]);
   });
 
+  // Two renders on one root whose module models wait on `gates`, then fail.
+  async function overlapping(order: readonly ("a" | "b")[]): Promise<string> {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const gates: Record<string, () => void> = {};
+    const registryFor = (name: string): PresentationRegistry => {
+      const registry = new PresentationRegistry();
+      registry.register({
+        ...testModule(() => {}),
+        buildModel: () =>
+          new Promise((_, reject) => {
+            gates[name] = () => reject(new Error(`${name} failed`));
+          }),
+      });
+      return registry;
+    };
+    const root = document.createElement("main");
+    root.append("previous page");
+    const a = renderEvidenceGraph(bundle, root, undefined, {
+      registry: registryFor("a"),
+    }).catch(() => {});
+    const b = renderEvidenceGraph(bundle, root, undefined, {
+      registry: registryFor("b"),
+    }).catch(() => {});
+    while (gates.a === undefined || gates.b === undefined)
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    const done = { a, b };
+    for (const name of order) {
+      gates[name]!();
+      await done[name];
+    }
+    return root.textContent ?? "";
+  }
+
+  it("puts back what the root held when two overlapping renders both reject, in either order", async () => {
+    expect(await overlapping(["a", "b"])).toBe("previous page");
+    expect(await overlapping(["b", "a"])).toBe("previous page");
+  });
+
   it("puts back what the root held when rendering rejects", async () => {
     const { bundle } = await sealEvidenceBundle(SOURCE());
     const registry = new PresentationRegistry();
@@ -516,6 +554,46 @@ describe("a module that alters the banner is discarded for the refusal", () => {
       expectState(root, state("incomplete-no-list"));
       expect(root.querySelectorAll("[data-banner-detail]")).toHaveLength(1);
     });
+
+  it("one whose stylesheet hides the banner, on a page in a document", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    registry.register(
+      testModule((root) => {
+        const style = document.createElement("style");
+        style.textContent =
+          "[data-verify],[data-banner-detail]{display:none!important}";
+        root.querySelector('[data-region="L1"]')!.append(style);
+      }),
+    );
+    const root = document.createElement("main");
+    document.body.append(root);
+    try {
+      await renderEvidenceGraph(bundle, root, undefined, { registry });
+      expect(root.querySelectorAll("[data-test-module]")).toHaveLength(0);
+      expect(root.querySelector("style:not([data-page] style)")).toBeNull();
+      expect(
+        root.querySelector('[data-refusal="presentation-failed"]'),
+      ).not.toBeNull();
+      expectState(root, state("incomplete-no-list"));
+    } finally {
+      root.remove();
+    }
+  });
+
+  it("one that leaves the banner alone renders, in a document too", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE());
+    const registry = new PresentationRegistry();
+    registry.register(testModule(() => {}));
+    const root = document.createElement("main");
+    document.body.append(root);
+    try {
+      await renderEvidenceGraph(bundle, root, undefined, { registry });
+      expect(root.querySelectorAll("[data-test-module]")).toHaveLength(1);
+    } finally {
+      root.remove();
+    }
+  });
 
   it("one that leaves the banner alone renders", async () => {
     const { bundle } = await sealEvidenceBundle(SOURCE());
