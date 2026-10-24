@@ -16,6 +16,19 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check src tests
       - run: pytest -q
+      # The presentation contract's schema, examples and checkers, moved from
+      # agent-action-capsule (AAC#379), and the moved spec text compared with
+      # AAC at the revision the script pins.
+      - name: Presentation manifest fixtures (schema, negatives, mutants, resolution)
+        run: python schemas/check_presentation_manifest_examples.py
+      - name: Contract-report wording pack and vendored AAC files
+        run: python schemas/check_contract_report_examples.py
+      - name: Moved spec text changed only as declared
+        run: |
+          rev="$(python scripts/check-moved-spec.py --rev)"
+          git init -q "$RUNNER_TEMP/aac"
+          git -C "$RUNNER_TEMP/aac" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$rev"
+          python scripts/check-moved-spec.py --aac "$RUNNER_TEMP/aac"
       - name: Release helper
         run: pytest -q .github/test_release.py
 

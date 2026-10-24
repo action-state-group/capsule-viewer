@@ -68,6 +68,23 @@ here. The format follows
 
 ### Added
 
+- The presentation contract's text, schema, examples and checkers, moved from
+  agent-action-capsule at `60a5b11` (agent-action-capsule#379), with every
+  public name unchanged: `spec/presentation-contract-v0.md` (without the
+  parts that stay in agent-action-capsule, which it cites: the "Verified"
+  gate, the check lists and banner words, the refusal sentence, evidentiary
+  words and `sha256-jcs-nonce256`, I3, and the deprecation table, now in
+  agent-action-capsule's `spec/REGISTRY.md` section 14),
+  `spec/contract-report-module-v1.md` (sections 2 to 4 of
+  agent-action-capsule's `spec/contract-report-v1.md`, which keeps the block),
+  `spec/presentation-builder-v0.md`, `schemas/presentation-manifest-v0.json`
+  and its examples, `schemas/check_presentation_manifest_examples.py`, and the
+  wording-pack half of `schemas/check_contract_report_examples.py`, which
+  reads byte copies of agent-action-capsule's Result schema and rendering
+  cases pinned by SHA-256 (`schemas/README.md`). The moved text keeps its
+  BSD-3-Clause licence (`LICENSE-BSD-3-Clause`). `scripts/check-moved-spec.py`
+  checks that the text changed only by its declared edits, and CI runs it and
+  both checkers on every pull request.
 - The verification page's extension rows carry `data-interpreter`, the id of
   the interpreter that showed the block, when one did, as
   agent-action-capsule's renderer wrote it (agent-action-capsule#379).
