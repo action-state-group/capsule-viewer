@@ -49,11 +49,13 @@ export const VECTOR_FILES = [
 ] as const;
 
 const TESTDATA = resolvePath(process.cwd(), "test", "testdata");
-// agent-action-capsule's vectors/ (bundle vectors) and schema examples, as
-// vendored byte copies (test/testdata/aac-vectors/README.md).
+// agent-action-capsule's vectors/ (bundle vectors), as vendored byte copies
+// (test/testdata/aac-vectors/README.md).
 const AAC_VECTORS = resolvePath(TESTDATA, "aac-vectors");
+// The presentation contract's manifest examples, this repository's own.
 const MANIFESTS = resolvePath(
-  AAC_VECTORS,
+  process.cwd(),
+  "..",
   "schemas",
   "examples",
   "presentation-manifest-v0",

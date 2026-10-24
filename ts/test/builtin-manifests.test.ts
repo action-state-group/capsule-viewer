@@ -31,9 +31,7 @@ const dir =
   process.env.AAC_PRESENTATION_MANIFESTS_DIR ??
   resolve(
     process.cwd(),
-    "test",
-    "testdata",
-    "aac-vectors",
+    "..",
     "schemas",
     "examples",
     "presentation-manifest-v0",

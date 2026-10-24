@@ -14,7 +14,7 @@ import (
 
 // The embedded page manifests are the contract's files, byte for byte.
 func TestBuiltinManifestsAreTheContractFiles(t *testing.T) {
-	dir := filepath.Join(aacVectorsDir(t), "schemas", "examples", "presentation-manifest-v0")
+	dir := filepath.Join(vectorsDir(t), "..", "..", "..", "schemas", "examples", "presentation-manifest-v0")
 	for _, name := range builtinPageFiles {
 		want, err := os.ReadFile(filepath.Join(dir, name))
 		require.NoError(t, err)

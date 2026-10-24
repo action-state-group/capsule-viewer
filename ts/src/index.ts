@@ -4,3 +4,8 @@
 // verification stays in @action-state-group/agent-action-capsule.
 export * from "./emitter.js";
 export * from "./presentation-builder.js";
+// The presentation registry runtime, the built-in manifests and the fragment
+// packaging, moved from agent-action-capsule (agent-action-capsule#379).
+export * from "./presentation-registry.js";
+export * from "./builtin-manifests.js";
+export * from "./presentation-fragment.js";

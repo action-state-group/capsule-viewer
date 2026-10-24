@@ -16,8 +16,7 @@ is the reference that generates them:
 cd ts && AAC_WRITE_VECTORS=1 npx vitest run test/presentation-resolution-vectors.test.ts
 ```
 
-(`python3 python/scripts/generate_all_vectors.py` runs the same command when
-`ts/node_modules` is present.) Without `AAC_WRITE_VECTORS` the same test
+Without `AAC_WRITE_VECTORS` the same test
 checks that the committed files are exactly what the generator writes.
 
 ## Shared encodings
