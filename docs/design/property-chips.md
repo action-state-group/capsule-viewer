@@ -5,7 +5,7 @@ This note maps the nine property rows and the five chip states of the proposed
 per-property chip strip onto what the verifiers and the Evidence Result
 contract say today. Rows that needed a product decision are marked
 **DECISION** and collected in section 6. Steven ruled all twelve on
-2026-10-19. Two cases under D3 are still open (section 6). The build is not
+2026-10-19. The two cases the D3 ruling left open were decided non-stop on 2026-10-25 (section 6). The build is not
 scheduled: capsule-viewer#39 holds it until an MVP-bar row names the chips.
 
 The chip strip would show one row per property, each with one chip state:
@@ -68,7 +68,7 @@ chip for "the Result" would be the rollup that [er] section 3 forbids.
 
 ## 2. The five chip states
 
-Every source status maps to exactly one chip state. Each chip names its
+Every source status maps to exactly one chip state. Each chip with a held result names its
 checker, so a reader can see who ran it. The AAC page's own statuses
 produce no chips (D3, section 6).
 
@@ -77,7 +77,7 @@ produce no chips (D3, section 6).
 | `PASS` | A named verifier ran this check over this exact bundle, and it passed. | capsule-emit `pass` [emit-file]; capsulectl `pass` [vreport] |
 | `FAIL` | A named verifier ran this check over this exact bundle, and it did not pass. | capsule-emit `fail`; capsulectl `fail` |
 | `NOT_PRESENT` | The bundle carries nothing for this check to run on. | capsule-emit `withheld` with an absence finding (table below) |
-| `NOT_CHECKED` | The bundle carries what the check needs, but no verifier whose result this page holds ran it. | capsule-emit `withheld` with a "could not run" finding (table below); no capsulectl or capsule-emit result held for the check (D3) |
+| `NOT_CHECKED` | The bundle carries what the check needs, but no verifier whose result the viewer holds ran it. | capsule-emit `withheld` with a "could not run" finding (table below); no capsulectl or capsule-emit result held for the check (D3) |
 | `INCONCLUSIVE` | The check ran and its own arithmetic holds, but it rests on something that is not itself checked. So the result cannot stand either way. | capsule-emit `withheld` with `checkpoint_unverified` on a proof claim (`_unanchored`) |
 
 **`withheld` is not a chip state.** capsule-emit and capsulectl use one word,
@@ -112,15 +112,15 @@ no witness directory unless one is stated.
 
 | Row | Source check | PASS / FAIL | NOT_PRESENT | NOT_CHECKED | INCONCLUSIVE | AAC page reality [aac-page] | Today |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Content binding | capsule-emit `records` (id recomputes); capsulectl record identity; AAC `record-digests`; this viewer's in-browser recompute | as reported | never: a bundle with no records is `FAIL` (`no_records`) | never | never | runs: `page` or `failed` | `PASS` or `FAIL`. Disclosed values against their committed digest (AAC `disclosures`) are a sub-line of this row, not a tenth row. |
+| Content binding | capsule-emit `records` (id recomputes); capsulectl record identity | as reported | never: a bundle with no records is `FAIL` (`no_records`) | no capsule-emit or capsulectl result held (D3) | never | runs: `page` or `failed`; not a chip source (D3) | As reported. With only the page or the viewer's in-browser recompute, `NOT_CHECKED` with no "checked by" line. Disclosed values against their committed digest are a sub-line of this row, not a tenth row. |
 | Producer signature | capsule-emit `signatures`; capsulectl `producer_signatures` | as reported | every record unsigned | never from capsule-emit | never | always `notChecked` when any record carries a signature: [aac-verify] checks no signature | From capsule-emit or capsulectl: as reported. On the AAC page alone: `NOT_CHECKED` with no "checked by" line, since nothing ran (D3, section 6). Mixed signed and unsigned: D2. |
-| Local inclusion | capsule-emit `per_record_membership`; AAC `membership` | as reported, only under a `PASS` checkpoint | no membership entry for the record (AAC `membership_record_unbound`) | `membership_verifier_unavailable`; AAC `notChecked` | proof checks against an unsigned root (`checkpoint_unverified`) | runs when a certificate and checkpoint are carried | Unsigned checkpoint: `INCONCLUSIVE`, never `PASS`. |
+| Local inclusion | capsule-emit `per_record_membership` | as reported, only under a `PASS` checkpoint | no membership entry for the record | `membership_verifier_unavailable`; no verifier result held | proof checks against an unsigned root (`checkpoint_unverified`) | runs when a certificate and checkpoint are carried | Unsigned checkpoint: `INCONCLUSIVE`, never `PASS`. |
 | Checkpoint signature | capsule-emit `checkpoint` | as reported | no `checkpoint.cose` | verifier unavailable; no verifier result held | never | may pass the bundle without it (`CHECKPOINT_NOT_CHECKED_NOTE`) | As reported. When only the AAC page ran, the chip is `NOT_CHECKED` and the page's `CHECKPOINT_NOT_CHECKED_NOTE` stays beside it; the page's `checkpoint-signature` result is not a chip source (D3, section 6). |
 | External registration | capsule-emit `witnesses` (only under a caller-supplied witness directory; no witness is trusted by default) | `PASS`: one receipt verifies under a directory key. `FAIL`: one receipt does not verify. | `witness_receipt_absent` | no key for the witness, or checkpoint not authenticated; no verifier result held | never | always `notChecked`; a receipt's grade word is shown as "claimed (not checked here)" | With no directory supplied, every receipt is `NOT_CHECKED`. A `PASS` must name the directory it was checked under (D12). No registration time is surfaced (section 4, D4). |
 | Continuity | none. No verifier in the bundle path checks consistency between this checkpoint and an earlier one. | never today | **always today**: evidence-bundle/v2 carries the checkpoint's signed `prev_size`/`prev_root` but no consistency proof and no earlier checkpoint for a verifier to check | never today | never today | no check | **`NOT_PRESENT`.** The witness does check a checkpoint's consistency claim when it registers it [anchor], but no verifier result reports that to a page. This is the honest result, not a defect. A receipt grade word `consistency-verified` is a claim: D5. |
 | Identity/authority | none. A key shows one holder signed; naming the holder needs a directory or a witness ([report] line 226; AAC `CHECKS_SCOPE_LINE`). | never today | **always today** | never | never | "None of these checks says who produced the records" | **`NOT_PRESENT`.** `signer_matches_checkpoint` (every record names the checkpoint's key) is a fact line under the row, not a chip state. A handle, an Agent Card or a connection is never shown as identity. D6. |
 | Capture coverage | none. No verifier can check from the file whether the capture boundary saw every action. | never today | no capture boundary declared: render "capture: unknown", visibly | a producer-declared boundary or completeness statement (a claim nobody can check from the file) | never | not checked | `NOT_PRESENT` ("capture: unknown") or `NOT_CHECKED`, never `PASS`. D7. |
-| Outcome corroboration | countersignatures (AAC `countersignatures`); composed corroboration (capsulectl, [composed]). Never Evidence Result verdicts (section 1). | AAC page runs countersignatures it can type; capsulectl `corroborating` | no countersignature and no second party's copy; capsulectl corroboration `not_applicable` (one-sided join [cli-composed]) maps here, and the words "not applicable" are never drawn on the chip | countersignature carried but not verified ([report]: "carried, not verified") | never | runs for typed countersignatures | Single-party bundle: `NOT_PRESENT`. `redundant` (same declared custody) is not `PASS`. D8: the row ships, renamed to say whose copy agrees. |
+| Outcome corroboration | composed corroboration (capsulectl, [composed]). Never Evidence Result verdicts (section 1). | capsulectl `corroborating` | no countersignature and no second party's copy; capsulectl corroboration `not_applicable` (one-sided join [cli-composed]) maps here, and the words "not applicable" are never drawn on the chip | countersignature carried but not verified ([report]: "carried, not verified"), or no verifier result held | never | runs for typed countersignatures; not a chip source | Single-party bundle: `NOT_PRESENT`. `redundant` (same declared custody) is not `PASS`. D8: the row ships, renamed to say whose copy agrees. |
 
 ## 4. The five-nothings panel and registration lag: what can be said today
 
@@ -167,8 +167,9 @@ original item is a CLI surface, not this viewer (D11).
 2. No chip renders an Evidence Result verdict, and no single figure
    summarizes the nine rows: no count of passes and no badge for the whole
    strip.
-3. Every chip names its checker (capsule-emit or capsulectl), and is drawn only from a result bound to
-   this bundle's digest. The AAC page is never a checker, and where no
+3. Every chip with a held result names its checker (capsule-emit or
+   capsulectl), and is drawn only from a result bound to this bundle's
+   digest. The AAC page is never a checker, and where no
    capsule-emit or capsulectl result is held the chip shows no "checked by"
    line (D3, section 6).
 4. `withheld` is split by finding (section 2), never drawn as one state.
@@ -220,7 +221,8 @@ Steven can override.
   fallback line would name a check that did not happen.
 - The AAC page's own results (section 2: `page`, `failed`, `notChecked`,
   `passedWithoutCheckpoint`) produce no chips, and rule 3 in section 5 drops
-  "this page" as a checker. The page checks digests only, never signatures.
+  "this page" as a checker. The page never checks producer signatures, and its other results are
+  not chip sources.
 
 ### Questions and proposals as reviewed
 
