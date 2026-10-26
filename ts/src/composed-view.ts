@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import type { VerifiedBundleContext } from "@action-state-group/agent-action-capsule";
 import { BUILTIN_MANIFEST_COMPOSED } from "./builtin-manifests.js";
+import { COMPOSED_CSS } from "./composed-styles.js";
 import {
   COMPOSED_KIND,
   type ComposedClaim,
@@ -67,7 +68,10 @@ function table(
   const body = element("tbody");
   body.append(...rows);
   node.append(head, body);
-  return node;
+  const frame = element("div");
+  frame.className = "cv-composed-table";
+  frame.append(node);
+  return frame;
 }
 
 const NOT_APPLICABLE = "—";
@@ -123,6 +127,9 @@ function renderComposed(
   const section = element("section");
   section.dataset.section = "composition";
   section.dataset.module = BUILTIN_MANIFEST_COMPOSED.id;
+  const style = element("style");
+  style.textContent = COMPOSED_CSS;
+  section.append(style);
   section.append(element("h2", "Composition"));
 
   const status = element("p", `composed/v1 check: ${result.status}`);

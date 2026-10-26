@@ -350,6 +350,14 @@ here. The format follows
 
 ### Fixed
 
+- The composition section (`composed/v1`) fits the page at 1280px and in
+  print (capsule-viewer#57). Its tables were wider than the page because the
+  ten-column members table, and the joins and agreement tables, carry
+  unbroken 64-hex ids. A value cell may now break anywhere, with the full id
+  still the cell's text, and on screen each table sits in a container that
+  scrolls sideways instead of widening the page. The section inserts its own
+  scoped stylesheet (`COMPOSED_CSS`), so the emitters' CSP lists one more
+  core runtime style hash (`go/emitter/runtime-style-hashes.txt`).
 - The two report notes on tampering (`groups.vd.note`, `lines.rp.tamper`) say
   what a bundle that did not verify now gets: no report, the red "Check
   failed" callout, the checks that failed and each record's id and status,
