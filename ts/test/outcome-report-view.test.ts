@@ -2085,3 +2085,84 @@ it("chrome rule (presentation contract section 6): result wording never comes fr
   ])
     expect(await page(mutate)).toBe(plain);
 });
+
+// ---------------------------------------------------------------------------
+// requirements_covered (Result v0 section 3): a cited contract's requirement
+// the run did not cover is drawn as a "not run" row, in no count.
+// ---------------------------------------------------------------------------
+
+const NOT_RUN_REF = "task_resolution.extra_check";
+
+/** The fixture with a cited contract that lists one requirement more than the
+ * claims name, and a Result whose `requirements_covered` leaves it out. */
+function coveringAllButOne(source: Obj): void {
+  const records = source.records as Obj[];
+  const result = records.find((r) => r.capsule_id === "result")!;
+  const resultInput = (source.disclosures as Record<string, Obj>).result!
+    .agent_input as Obj;
+  const refs = [
+    ...new Set(
+      (resultInput.claims as Obj[]).map((c) => c.requirement_ref as string),
+    ),
+  ];
+  records.push({ capsule_id: "contract-rec" });
+  (source.disclosures as Record<string, Obj>)["contract-rec"] = {
+    agent_input: {
+      id: "tau2-airline-outcomes/v1",
+      version: "1",
+      requirements: [...refs, NOT_RUN_REF].map((id) => ({
+        id,
+        profile: "outcome",
+        statement: id,
+      })),
+    },
+  };
+  // The contract is cited by a record the Result's claims rest on, as a
+  // judge's record cites the contract it judged under.
+  const judged = records.find(
+    (r) => r !== result && r.references === undefined,
+  )!;
+  judged.references = [
+    {
+      type: "agent-action-capsule",
+      citation_purpose: "acted_on",
+      digest: "contract-rec",
+    },
+  ];
+  ((resultInput.aggregate as Obj).coverage as Obj).requirements_covered =
+    refs.map((requirement_ref) => ({
+      contract_ref: "tau2-airline-outcomes/v1@1",
+      requirement_ref,
+    }));
+}
+
+it("draws a requirement the run did not cover as a 'not run' row, in no conversation, count or column", async () => {
+  const baseline = await render((await sealedOutcomeReportBundle()).bundle);
+  const { bundle } = await sealedOutcomeReportBundle(coveringAllButOne);
+  const root = await render(bundle);
+  const rows = root.querySelectorAll<HTMLElement>('tr[data-not-run="true"]');
+  expect(Array.from(rows, (r) => r.dataset.rule)).toEqual([NOT_RUN_REF]);
+  expect(rows[0]!.textContent).toContain("not run");
+  // Nothing else on the page moves: not the rule rows, nor the headline.
+  expect(root.querySelectorAll("tr.rule:not([data-not-run])").length).toBe(
+    baseline.querySelectorAll("tr.rule").length,
+  );
+  expect(root.querySelector('[data-section="rules"] thead')!.textContent).toBe(
+    baseline.querySelector('[data-section="rules"] thead')!.textContent,
+  );
+  expect(root.querySelector('[data-rows="report-lines"]')!.textContent).toBe(
+    baseline.querySelector('[data-rows="report-lines"]')!.textContent,
+  );
+});
+
+it("a Result that does not list requirements_covered draws no 'not run' row", async () => {
+  const { bundle } = await sealedOutcomeReportBundle((source) => {
+    coveringAllButOne(source);
+    const input = (source.disclosures as Record<string, Obj>).result!
+      .agent_input as Obj;
+    delete ((input.aggregate as Obj).coverage as Obj).requirements_covered;
+  });
+  const root = await render(bundle);
+  expect(root.querySelectorAll('tr[data-not-run="true"]')).toHaveLength(0);
+  expect(root.textContent).not.toContain("this run did not cover");
+});

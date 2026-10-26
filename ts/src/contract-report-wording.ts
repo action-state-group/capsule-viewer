@@ -500,6 +500,8 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "groups.ob.unchecked-of": "unchecked",
   "groups.row.nothing": "unchecked",
   "groups.row.none-decided": "unchecked",
+  // Not run: the run did not cover the rule (Result v0 section 3).
+  "lines.rules.not-run": "unchecked",
 
   // did-not-apply: no rule or test applied, so nothing was checked; never
   // a met or a missed result.
@@ -1181,7 +1183,7 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "4c91c135548e7c82c22ab180b6c6168cd2827e22cd404d2e5ee10c75398f6241",
+  lines: "5b225328e52c9f60034ebcd09c95416fd6abc6cc76245a95b56b73c8337602f5",
   groups: "09224353431aadb2573218a0ea644ec31438b959028b7808ba41c36aaec1a2d7",
 });
 

@@ -139,6 +139,8 @@
     "lines.rules.col.unverified": "failed verification or evidence missing",
     "lines.rules.expand.na.one": "Did not apply to {n} conversation.",
     "lines.rules.expand.na.other": "Did not apply to {n} conversations.",
+    "lines.rules.not-run.h": "Not run: this run did not cover these rules",
+    "lines.rules.not-run": "not run",
     "lines.cal.h": "Day by day",
     "lines.cal.lede": "Resolved conversations per day, cited by this bundle's claims.",
     "lines.cal.lede.dated": "Resolved conversations per day, by each conversation's own date, cited by this bundle's claims.",

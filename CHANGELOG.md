@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Changelog
 
 All notable changes to capsule-viewer's published packages, the npm package
@@ -68,6 +69,13 @@ here. The format follows
 
 ### Added
 
+- The Outcomes rule table draws each requirement of the cited contract that the
+  Result's `requirements_covered` leaves out as a "not run" row, in a group of
+  its own (capsule-viewer#96; agent-action-capsule#355). It is in no
+  conversation, count, column or sentence on the page, and a card without
+  `requirements_covered` is unchanged. New wording keys
+  `lines.rules.not-run` and `lines.rules.not-run.h` in the Outcomes pack
+  (`@2`, still unreleased).
 - The presentation contract's text, schema, examples and checkers, moved from
   agent-action-capsule at `60a5b11` (agent-action-capsule#379), with every
   public name unchanged: `spec/presentation-contract-v0.md` (without the
@@ -164,6 +172,7 @@ here. The format follows
   witness addresses, log id, producer and version) are quoted and capped at
   120 characters, so they never read as the page's own words. New runtime
   style hashes in `go/emitter/runtime-style-hashes.txt` and the Go goldens.
+
 - The contract-report module resolves on `contract-report/v1`
   (agent-action-capsule#352), registered in place of
   `aac.builtin.result-contract-report/v0`, never beside it
@@ -189,8 +198,7 @@ here. The format follows
   presentation registry and the page renderers that moved here,
   agent-action-capsule#379), which
   carries the `contract-report/v1`
-  registration (#352), `out_of_scope`/`applies_from` (#368, #363,
-  8732264) this release also ports onto `compliance.ts`,
+  registration (#352), `out_of_scope`/`applies_from` (#368, #363, 8732264) this release also ports onto `compliance.ts`,
   `compliance-view.ts`, `outcome-report-view.ts` and the generic Result
   page: a judged-out-of-scope claim is its own count, in the population,
   never "met" and never "not applicable"; a claim not yet in force is

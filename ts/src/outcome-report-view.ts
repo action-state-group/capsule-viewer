@@ -1548,6 +1548,31 @@ function renderRules(
       tbody.append(drillRow);
     }
   }
+  // Requirements of the cited contract the run did not cover (Result v0
+  // section 3, `requirements_covered`): one row each, "not run", under a group
+  // of their own. They are in no conversation, count or column above: the
+  // run never judged them, so no number on this page speaks for them.
+  if (model.notRun.length > 0) {
+    const group = el("tr", "grp");
+    group.dataset.group = "not-run";
+    const heading = el("td", "", w.t("lines.rules.not-run.h"));
+    heading.setAttribute("colspan", columns);
+    group.append(heading);
+    tbody.append(group);
+    for (const ref of model.notRun) {
+      const [checkId = "", ...rest] = ref.split(".");
+      const label = criterionLabel(model, checkId, rest.join("."), w);
+      const tr = el("tr", "rule not-run");
+      tr.dataset.rule = ref;
+      tr.dataset.notRun = "true";
+      const nameCell = el("td", "cn");
+      nameCell.append(el("b", "", label.label));
+      const status = el("td", "nr", w.t("lines.rules.not-run"));
+      status.setAttribute("colspan", String(Number(columns) - 1));
+      tr.append(nameCell, status);
+      tbody.append(tr);
+    }
+  }
   table.append(tbody);
   const scroll = el("div", "tscroll");
   scroll.append(table);
