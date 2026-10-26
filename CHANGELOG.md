@@ -104,7 +104,7 @@ here. The format follows
   its generator in `npm test` and run in full by both languages, with the
   agent-action-capsule bundle vectors and manifest examples it reads
   vendored under `ts/test/testdata/aac-vectors/`. The Go module now
-  requires agent-action-capsule Go v0.13.1.
+  requires agent-action-capsule Go v0.14.0.
 - The verification page's extension rows carry `data-interpreter`, the id of
   the interpreter that showed the block, when one did, as
   agent-action-capsule's renderer wrote it (agent-action-capsule#379).
@@ -205,6 +205,12 @@ here. The format follows
 
 ### Changed
 
+- Go: `presentation` takes the page's verification gate and its reading of
+  a producer selection from agent-action-capsule's `go/bundle`
+  (`bundle.Verified`, `bundle.VerifyBundleForPage`, in AAC Go v0.14.0)
+  instead of carrying copies, so AAC owns the one verification reading
+  (agent-action-capsule#379). `presentation.Verified` is removed; use
+  `bundle.Verified`. `DescribeBundle` is unchanged.
 - With agent-action-capsule 0.8.0 (agent-action-capsule#379), with no
   change on the page:
   - The verification gate is AAC's own `bundleVerified`, which

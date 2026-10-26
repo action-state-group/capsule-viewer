@@ -3,7 +3,7 @@ module github.com/action-state-group/capsule-viewer/go
 go 1.27.0
 
 require (
-	github.com/action-state-group/agent-action-capsule/go v0.13.1
+	github.com/action-state-group/agent-action-capsule/go v0.14.0
 	github.com/stretchr/testify v1.12.1
 )
 
