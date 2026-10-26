@@ -228,8 +228,13 @@ here. The format follows
   applicable only when the Result's `excluded_not_applicable` accounts for
   every missing claim, and otherwise as the new verdict `no_claim`, a gap
   (agent-action-capsule#355). The outcome card draws a `no_claim` criterion
-  in the words of one that could not be decided, so such a Result's page
-  changes: those criteria no longer read as not applicable.
+  in the words of one no judge decided ("could not decide"), counts it with
+  the rule's undecided conversations, and names it in the conversation's
+  sentence without a judge: "this bundle holds no rule result for {names}"
+  (new keys `lines.sentence.undecided.gaps`,
+  `lines.sentence.undecided.gap-note` and `lines.pf.verdict.no_claim`, "no
+  claim", in the proofs). Such a Result's page changes: those criteria no
+  longer read as not applicable.
 - The moved spec text cites agent-action-capsule's
   `spec/verification-display-v0.md` and `spec/REGISTRY.md` section 14, now
   that they exist (agent-action-capsule#400), in place of the presentation

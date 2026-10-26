@@ -1027,10 +1027,15 @@ it("drill-down: a missing claim the Result's exclusions do not account for is a 
     'tr[data-crit="grounded_communication.refunds_match_payment_records"]',
   )!;
   const pill = row.querySelector<HTMLElement>('[data-pill="no_claim"]')!;
+  // no claim, so no report: no judge ran on it (the unjudged key)
   expect(pill.textContent).toBe(
-    DEFAULT_WORDS.lines.t("lines.verdict.not_evaluable.unavailable"),
+    DEFAULT_WORDS.lines.t("lines.verdict.not_evaluable.unjudged"),
   );
   expect(pill.textContent).not.toBe("did not apply");
+  // Its proofs open and name it.
+  expect(proofs(conv).textContent).toContain(
+    DEFAULT_WORDS.lines.t("lines.pf.verdict.no_claim"),
+  );
 });
 
 it("drill-down: the resolved line opens into exactly its conversations, and a resolved conversation says why in one sentence", async () => {
@@ -1074,6 +1079,77 @@ it("drill-down: the resolved line opens into exactly its conversations, and a re
 
 /** The fixture judged on only its first n criteria, with its first
  * conversation flipped to resolved. */
+it("a conversation with one rule met and one missing claim is undecided, and its sentence names the gap without a judge", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  const claims = resultDoc.claims as Obj[];
+  const refs = [
+    ...new Set(claims.map((c) => c.requirement_ref as string)),
+  ].slice(0, 2);
+  const first = (claims[0]!.id as string).split("::")[0]!;
+  const kept = claims
+    .filter((c) => refs.includes(c.requirement_ref as string))
+    // the first conversation keeps only its claim for refs[0], met; its
+    // claim for refs[1] is dropped with no exclusion: no_claim
+    .filter(
+      (c) =>
+        !(
+          (c.id as string).startsWith(`${first}::`) &&
+          c.requirement_ref === refs[1]
+        ),
+    )
+    .map((c) =>
+      (c.id as string).startsWith(`${first}::`)
+        ? {
+            ...c,
+            verdict: "met",
+            sufficiency: "SATISFIED",
+            presentation: { ...(c.presentation as Obj), status: "SATISFIED" },
+          }
+        : c,
+    );
+  (source.disclosures as Obj).result = {
+    agent_input: {
+      ...resultDoc,
+      claims: kept,
+      aggregate: {
+        ...(resultDoc.aggregate as Obj),
+        buckets: rebuildBuckets(kept),
+      },
+    },
+  };
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  expand(root);
+  const conv = open(
+    root.querySelector<HTMLElement>(
+      `article.conv[data-conversation="${first}"]`,
+    )!,
+  );
+  expect(conv.dataset.status).toBe("undecided");
+  expect(conv.querySelector(`tr[data-crit-verdict="no_claim"]`)).not.toBeNull();
+  const sentence = conv.querySelector<HTMLElement>('[data-why="undecided"]')!;
+  expect(sentence.textContent).not.toBe(
+    DEFAULT_WORDS.lines.t("lines.sentence.undecided.none"),
+  );
+  expect(sentence.textContent).not.toContain("judge");
+  expect(sentence.textContent).toMatch(
+    /^Could not decide: no rule result was "not met", and this bundle holds no rule result for .+\.$/u,
+  );
+  expect(conv.querySelector(".cwhy")!.textContent).not.toBe(
+    DEFAULT_WORDS.lines.t("lines.why.undecided.none"),
+  );
+  // The rule table counts the gap with the rule's undecided conversations.
+  const undecidedElsewhere = kept.filter(
+    (c) => c.requirement_ref === refs[1] && c.verdict === "not_evaluable",
+  ).length;
+  const cells = [
+    ...root.querySelectorAll<HTMLElement>(`tr[data-rule="${refs[1]}"] > td`),
+  ];
+  expect(cells[3]!.textContent).toBe(String(undecidedElsewhere + 1));
+});
+
 async function resolvedWithCriteria(
   n: number,
 ): Promise<{ root: HTMLElement; first: string }> {
