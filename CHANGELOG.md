@@ -70,7 +70,7 @@ here. The format follows
 ### Added
 
 - The Outcomes rule table draws each requirement of the cited contract that the
-  Result's `requirements_covered` leaves out as a "not run" row, in a group of
+  Result's `requirements_covered` leaves out as a "not covered" row, in a group of
   its own (capsule-viewer#96; agent-action-capsule#355). It is in no
   conversation, count, column or sentence on the page, and a card without
   `requirements_covered` is unchanged. New wording keys

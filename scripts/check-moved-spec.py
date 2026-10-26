@@ -266,9 +266,9 @@ CONTRACT_REPORT_MODULE = Move(
         # from agent-action-capsule#355) is drawn as a not-run row.
         (
             "- **Copied facts are labelled as copied.**",
-            '- **Requirements not run** (ER §3, `requirements_covered`). When the Result lists what it covered\n' +
+            '- **Requirements not covered** (ER §3, `requirements_covered`). When the Result lists what it covered\n' +
             '  and a cited contract record names other requirements, a module that draws the rules (the Outcomes\n' +
-            '  card) MAY show each of those in a group of its own as a row marked not run. Such a row has no\n' +
+            '  card) MAY show each of those in a group of its own as a row marked not covered. Such a row has no\n' +
             '  claims and no tally, and counts in no conversation, bucket, summary or sentence: the run never\n' +
             "  judged it. The word is the pack's own key (§3), not a core one.\n" +
             "- **Copied facts are labelled as copied.**",

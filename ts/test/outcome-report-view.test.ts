@@ -2136,13 +2136,13 @@ function coveringAllButOne(source: Obj): void {
     }));
 }
 
-it("draws a requirement the run did not cover as a 'not run' row, in no conversation, count or column", async () => {
+it("draws a requirement the run did not cover as a 'not covered' row, in no conversation, count or column", async () => {
   const baseline = await render((await sealedOutcomeReportBundle()).bundle);
   const { bundle } = await sealedOutcomeReportBundle(coveringAllButOne);
   const root = await render(bundle);
   const rows = root.querySelectorAll<HTMLElement>('tr[data-not-run="true"]');
   expect(Array.from(rows, (r) => r.dataset.rule)).toEqual([NOT_RUN_REF]);
-  expect(rows[0]!.textContent).toContain("not run");
+  expect(rows[0]!.textContent).toContain("not covered");
   // Nothing else on the page moves: not the rule rows, nor the headline.
   expect(root.querySelectorAll("tr.rule:not([data-not-run])").length).toBe(
     baseline.querySelectorAll("tr.rule").length,
@@ -2164,5 +2164,5 @@ it("a Result that does not list requirements_covered draws no 'not run' row", as
   });
   const root = await render(bundle);
   expect(root.querySelectorAll('tr[data-not-run="true"]')).toHaveLength(0);
-  expect(root.textContent).not.toContain("this run did not cover");
+  expect(root.textContent).not.toContain("Not covered by this run");
 });
