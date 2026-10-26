@@ -63,8 +63,7 @@ contract and is not described here beyond its manifest.
   (`disclosed`, `withheld` or `disclosure_mismatch`), the records whose identity verified, the
   countersignature results, the caller's countersigner source and the extension results.
 - **Verified**: the bundle passed the viewer's verification gate, defined in
-  agent-action-capsule's `spec/presentation-contract-v0.md` §1 at `60a5b11`
-  (moving to its `spec/verification-display-v0.md`, AAC#379).
+  agent-action-capsule's `spec/verification-display-v0.md` §1.
 - **Descriptor**: the resolution inputs derived from a context (section 4.2).
 - **Module**: a presentation, from a single panel to a whole report application, selected by
   its manifest.
@@ -333,8 +332,7 @@ Resolution reads a **descriptor** derived from the context and nothing else:
     obligation is recognizable.
 
   The deprecated aliases `outcome-report/v1` and `eu-ai-act-compliance/v1`, and the releases
-  that deprecate and remove them, are in agent-action-capsule's `spec/presentation-contract-v0.md`
-  §4.2 at `60a5b11`, moving to its `spec/REGISTRY.md` §14 (AAC#379).
+  that deprecate and remove them, are in agent-action-capsule's `spec/REGISTRY.md` §14.
 
   A present block that its reader declines counts as absent for resolution, in `requires` and
   in `forbids` alike. Every extension, engaged or not, is still reported on the verification
@@ -544,8 +542,7 @@ its chrome code path, never where a label, heading, notice or depth is chosen.
 ### 6.1 The verification page's check lists
 
 The verification page's check lists, their words and the word rules for the verification
-page's own text are in agent-action-capsule's `spec/presentation-contract-v0.md` §6.1 at `60a5b11`
-(moving to its `spec/verification-display-v0.md`, AAC#379).
+page's own text are in agent-action-capsule's `spec/verification-display-v0.md` §6.1.
 
 **Modules MUST NOT restate verification.** A module does not draw its own list of which checks
 ran, passed, failed or were not run, and does not re-derive one from the verification result;
@@ -556,8 +553,7 @@ restating the lists.
 ### 6.2 The verification banner
 
 The verification banner, its states, its line for each state and the details line under it
-are in agent-action-capsule's `spec/presentation-contract-v0.md` §6.2 at `60a5b11`
-(moving to its `spec/verification-display-v0.md`, AAC#379). The rules below bind a module.
+are in agent-action-capsule's `spec/verification-display-v0.md` §6.2. The rules below bind a module.
 
 - A presentation refusal (section 4.3: an
   ambiguity, or a module's `render` failure) still discards every module's content under a
@@ -574,14 +570,12 @@ Words on a page are of two kinds, and each has one place to live.
 ### 7.1 Evidentiary words
 
 Evidentiary words, the three mechanisms that bind them and the placements that are forbidden
-are in agent-action-capsule's `spec/presentation-contract-v0.md` §7.1 at `60a5b11`
-(moving to its `spec/verification-display-v0.md`, AAC#379).
+are in agent-action-capsule's `spec/verification-display-v0.md` §7.1.
 
 ### 7.2 `sha256-jcs-nonce256`
 
 The `sha256-jcs-nonce256` construction is in
-agent-action-capsule's `spec/presentation-contract-v0.md` §7.2 at `60a5b11`
-(moving to its `spec/verification-display-v0.md`, AAC#379).
+agent-action-capsule's `spec/verification-display-v0.md` §7.2.
 
 ### 7.3 Presentation words
 
@@ -637,8 +631,7 @@ pack arrive at the same digest. A renderer MUST refuse a pack whose bytes do not
 - **I1. Failure collapses to the refusal, never to Level 0.** A bundle that did not verify gets
   the banner, the refusal and the core's verification checks, and nothing else from any module:
   no headline, no summary, no "what matters", no softened L0. The refusal's text is the core's, in
-  agent-action-capsule's `spec/presentation-contract-v0.md` section 8, I1 at `60a5b11`
-  (moving to its `spec/verification-display-v0.md`, AAC#379).
+  agent-action-capsule's `spec/verification-display-v0.md` section 8, I1.
   An ambiguity error or a module's `render` failure
   (section 4.3) collapses the same way; a `buildModel` failure rejects the render and draws
   nothing (section 4.3).
@@ -646,8 +639,7 @@ pack arrive at the same digest. A renderer MUST refuse a pack whose bytes do not
   verified context. Changing the depth opens or closes levels; it never adds content the
   context does not hold, never removes the banner or the refusal, and never hides a finding.
 - **I3. Theme, wording, locale and depth never change evidence identifiers.** Stated in
-  agent-action-capsule's `spec/presentation-contract-v0.md` section 8, I3 at `60a5b11`
-  (moving to its `spec/verification-display-v0.md`, AAC#379).
+  agent-action-capsule's `spec/verification-display-v0.md` section 8, I3.
 - **I4. Acceptance is over (bundle, audience) pairs, for every supported packaging target.**
   For one bundle and one audience, every packaging target (`html`, `fragment`, `embedded`)
   that is **supported** for that bundle MUST show identical semantic content and identical
@@ -731,8 +723,7 @@ stylesheet owns the module's layout.
   module that reads a bundle-carried presentation setting for wording or depth does not
   conform; section 6 says how that is detected.
 - A viewer conforms when it satisfies section 8 and the rules in
-  agent-action-capsule's `spec/presentation-contract-v0.md` §1, §6.1, §6.2, §7.1, §7.2, I1 and I3 at `60a5b11`
-  (moving to its `spec/verification-display-v0.md`, AAC#379).
+  agent-action-capsule's `spec/verification-display-v0.md` §1, §6.1, §6.2, §7.1, §7.2, I1 and I3.
 - `schemas/check_presentation_manifest_examples.py` checks the committed manifests: each
   schema negative is proven load-bearing by a mutant, the static and runtime ambiguity tests
   are run over the built-ins, the examples and an ambiguous pair, the built-in manifests are

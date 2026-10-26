@@ -13,8 +13,8 @@ checkers read (AAC#379):
 
 Each copy is compared with the same file in agent-action-capsule:
 
-- with --rev REV, at that revision of the checkout (CI passes the revision
-  scripts/check-moved-spec.py pins, the one the copies were taken at): a
+- with --rev REV, at that revision of the checkout (CI passes VENDORED_REV,
+  the revision the copies were last taken at, printed by --print-rev): a
   difference fails, since the copy is not what it says it is;
 - without it, in the checkout's working tree (CI uses a fresh clone of main,
   in a step that only warns): a difference means AAC has moved on, so the
@@ -22,8 +22,14 @@ Each copy is compared with the same file in agent-action-capsule:
   for the AAC release capsule-viewer pins, since the pinned package's words
   and these copies must agree.
 
+VENDORED_REV is this script's own pin, not scripts/check-moved-spec.py's
+AAC_REV: the moved spec text is compared with the revision it moved from,
+which never changes, while the copies are re-vendored with each AAC release
+capsule-viewer pins, so their revision moves with that pin.
+
 Usage:
     python3 scripts/check-vendored-aac.py --aac PATH [--rev REV]
+    python3 scripts/check-vendored-aac.py --print-rev    # print VENDORED_REV
 """
 
 from __future__ import annotations
@@ -35,6 +41,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+# agent-action-capsule main at the ts 0.8.0 release (#400's merge, b646f94).
+VENDORED_REV = "b646f94aaad7c9fdabc553c458fabd7e28619c65"
 ROW = re.compile(r"^\| `([^`]+)` \|")
 
 
@@ -59,9 +67,15 @@ def inventory() -> list[tuple[Path, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--aac", required=True, type=Path, help="an agent-action-capsule checkout")
+    parser.add_argument("--aac", type=Path, help="an agent-action-capsule checkout")
     parser.add_argument("--rev", help="compare with this revision instead of the working tree")
+    parser.add_argument("--print-rev", action="store_true", help="print VENDORED_REV and exit (CI fetches it)")
     args = parser.parse_args()
+    if args.print_rev:
+        print(VENDORED_REV)
+        return 0
+    if args.aac is None:
+        parser.error("--aac is required")
 
     def theirs(aac_path: str) -> bytes | None:
         if args.rev is None:

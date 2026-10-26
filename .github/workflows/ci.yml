@@ -23,13 +23,17 @@ jobs:
         run: python schemas/check_presentation_manifest_examples.py
       - name: Contract-report wording pack and vendored AAC files
         run: python schemas/check_contract_report_examples.py
-      - name: Moved spec text and vendored AAC files, against the pinned AAC revision
+      # The moved spec text is compared with the AAC revision it moved from;
+      # the vendored copies with the revision they were last taken at, which
+      # moves with each AAC pin bump.
+      - name: Moved spec text and vendored AAC files, against their pinned AAC revisions
         run: |
           rev="$(python scripts/check-moved-spec.py --rev)"
+          vendored="$(python scripts/check-vendored-aac.py --print-rev)"
           git init -q "$RUNNER_TEMP/aac"
-          git -C "$RUNNER_TEMP/aac" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$rev"
+          git -C "$RUNNER_TEMP/aac" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$rev" "$vendored"
           python scripts/check-moved-spec.py --aac "$RUNNER_TEMP/aac"
-          python scripts/check-vendored-aac.py --aac "$RUNNER_TEMP/aac" --rev "$rev"
+          python scripts/check-vendored-aac.py --aac "$RUNNER_TEMP/aac" --rev "$vendored"
       # Warns, never fails: a vendored agent-action-capsule file that AAC's
       # main has since changed is due to be re-vendored, with the AAC release
       # capsule-viewer pins.

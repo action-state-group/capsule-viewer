@@ -42,21 +42,14 @@ from pathlib import Path
 AAC_REV = "60a5b119a1a979b1970d22caec8577eac0bb59e8"
 REPO = Path(__file__).resolve().parent.parent
 
-# Citations to text that stays in agent-action-capsule. Until AAC#379's
-# spec/verification-display-v0.md and its REGISTRY.md section 14 table land,
-# they cite where the text is now, at AAC_REV; the next change after those
-# lands switches them.
+# Citations to text that stays in agent-action-capsule: its
+# spec/verification-display-v0.md, which keeps the presentation contract's
+# section numbers, and its REGISTRY.md section 14 deprecation table (AAC#379).
 def vd(section: str) -> str:
-    return (
-        f"agent-action-capsule's `spec/presentation-contract-v0.md` {section} at `60a5b11`\n"
-        "(moving to its `spec/verification-display-v0.md`, AAC#379)"
-    )
+    return f"agent-action-capsule's `spec/verification-display-v0.md` {section}"
 
 
-DEPRECATION = (
-    "agent-action-capsule's `spec/presentation-contract-v0.md` §4.2 at `60a5b11`, moving to its\n"
-    "`spec/REGISTRY.md` §14 (AAC#379)"
-)
+DEPRECATION = "agent-action-capsule's `spec/REGISTRY.md` §14"
 LICENCE_LINE = "<!-- SPDX-License-Identifier: BSD-3-Clause -->"
 
 
@@ -95,8 +88,7 @@ CONTRACT = Move(
             325,
             333,
             "  The deprecated aliases `outcome-report/v1` and `eu-ai-act-compliance/v1`, and the releases\n"
-            "  that deprecate and remove them, are in agent-action-capsule's `spec/presentation-contract-v0.md`\n"
-            "  §4.2 at `60a5b11`, moving to its `spec/REGISTRY.md` §14 (AAC#379).",
+            f"  that deprecate and remove them, are in {DEPRECATION}.",
         ),
         # Section 6.1: the check lists, their words and the word rules.
         (

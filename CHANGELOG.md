@@ -71,12 +71,11 @@ here. The format follows
 - The presentation contract's text, schema, examples and checkers, moved from
   agent-action-capsule at `60a5b11` (agent-action-capsule#379), with every
   public name unchanged: `spec/presentation-contract-v0.md` (without the
-  parts that stay in agent-action-capsule, which it cites where they are
-  until agent-action-capsule#379 moves them: the "Verified" gate, the check
-  lists and banner words, the refusal sentence, evidentiary words and
-  `sha256-jcs-nonce256`, and I3, moving to agent-action-capsule's
-  `spec/verification-display-v0.md`, and the deprecation table, moving to
-  its `spec/REGISTRY.md` section 14),
+  parts that stay in agent-action-capsule, which it cites there: the
+  "Verified" gate, the check lists and banner words, the refusal sentence,
+  evidentiary words and `sha256-jcs-nonce256`, and I3, in
+  agent-action-capsule's `spec/verification-display-v0.md`, and the
+  deprecation table, in its `spec/REGISTRY.md` section 14),
   `spec/contract-report-module-v1.md` (sections 2 to 4 of
   agent-action-capsule's `spec/contract-report-v1.md`, which keeps the block),
   `spec/presentation-builder-v0.md`, `schemas/presentation-manifest-v0.json`
@@ -231,6 +230,13 @@ here. The format follows
   (agent-action-capsule#355). The outcome card draws a `no_claim` criterion
   in the words of one that could not be decided, so such a Result's page
   changes: those criteria no longer read as not applicable.
+- The moved spec text cites agent-action-capsule's
+  `spec/verification-display-v0.md` and `spec/REGISTRY.md` section 14, now
+  that they exist (agent-action-capsule#400), in place of the presentation
+  contract sections they came from. The vendored agent-action-capsule files
+  are re-copied at `b646f94`, and `scripts/check-vendored-aac.py` pins that
+  revision itself (`--print-rev`), apart from the revision the spec text
+  moved from.
 
 - "Witnessed by" on the front of both cards says the witnesses are "stated by
   the bundle, not checked here" (SEAMS ruling 12), in place of "as the bundle
