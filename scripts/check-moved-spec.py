@@ -335,6 +335,37 @@ BUILDER = Move(
             "shared vectors are agent-action-capsule's `vectors/bundle/fragment/vectors.json`",
         ),
     ],
+    amendments=[
+        # Section 1.1 and section 2's static page: every toggle's body is
+        # built, and the page's size is reported and checked against a
+        # budget (capsule-viewer#67).
+        (
+            "| `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |",
+            "| `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |\n"
+            "| `static-body-unbuilt` | `static` | A toggle's body could not be built at build time, so it would open empty. | `unbuilt` (each such toggle's summary text) |\n"
+            "| `static-too-large` | `static` | The page, with every toggle's body built, is over its size budget. | `bytes`, `limit` |",
+            "capsule-viewer#67",
+        ),
+        (
+            "an event-handler attribute, which the CSP would block anyway.",
+            "an event-handler attribute, which the CSP would block anyway.\n"
+            "\n"
+            "**Every body is built.** Where script runs, a toggle's body is built the first time it opens.\n"
+            "The static page runs none, so before it is written the builder builds every body still pending,\n"
+            "with the same builders the toggles run, and leaves every toggle open or closed as the depth left\n"
+            "it: a reader who opens any toggle sees what the offline file shows there. Each conversation is\n"
+            "kept once, in the core's records section, and the cards link to it. A body the builder cannot\n"
+            "build is refused (`static-body-unbuilt`), never written as an empty toggle.\n"
+            "\n"
+            "**Size.** The result returns the page's size in UTF-8 bytes (`bytes`) and the budget it was\n"
+            "checked against (`limit`). The budget is 16 MiB by default (`STATIC_PAGE_DEFAULT_BUDGET`); a\n"
+            "caller MAY lower or raise it (`maxStaticBytes`, a positive integer). A page over it is refused\n"
+            "(`static-too-large`, naming the size and the budget), never written with bodies left out. A\n"
+            "monthly report is a few megabytes: the 451-record outcome fixture builds to about 6.0 MB and\n"
+            "the 80-session compliance fixture to about 2.2 MB, the same at every depth.",
+            "capsule-viewer#67",
+        ),
+    ],
 )
 
 MOVES = [CONTRACT, CONTRACT_REPORT_MODULE, BUILDER]

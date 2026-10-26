@@ -131,22 +131,31 @@ describe.skipIf(executablePath === undefined)(
         state: "attached",
       });
       await page.waitForTimeout(200);
-      // The scripted page as the static page is built to show it: the
-      // core's record entries built (closed), and each conversation kept
+      // The scripted page as the static page is built to show it: every
+      // body built, by the page's own toggles and its print hook, with each
+      // toggle left open or closed as it was, and each conversation kept
       // once, in the records section, by the same linkConversations the
       // static build runs (capsule-viewer#67). The static page has nothing
       // pending and nothing left to link, so this changes nothing there.
-      await page.evaluate(() => {
-        for (const entry of document.querySelectorAll<HTMLDetailsElement>(
-          '#app details.cv-record[data-body="pending"], #app details[data-section="conversation"][data-body="pending"]',
-        )) {
-          entry.open = true;
-          entry.dispatchEvent(new Event("toggle"));
-          entry.open = false;
-        }
-      });
       await page.evaluate(
-        `${linkConversationsCode};CvLinks.linkConversations(document.getElementById("app"));`,
+        `${linkConversationsCode};(() => {
+          const app = document.getElementById("app");
+          const tried = new Set();
+          for (;;) {
+            CvLinks.linkConversations(app);
+            window.dispatchEvent(new Event("beforeprint"));
+            const pending = [...app.querySelectorAll('details[data-body="pending"]')];
+            if (pending.length === 0) return;
+            for (const toggle of pending) {
+              if (tried.has(toggle)) throw new Error("a toggle's body did not build");
+              tried.add(toggle);
+              const was = toggle.open;
+              toggle.open = true;
+              toggle.dispatchEvent(new Event("toggle"));
+              toggle.open = was;
+            }
+          }
+        })();`,
       );
       const shown = await page.evaluate(() => {
         const app = document.getElementById("app")!;

@@ -358,6 +358,16 @@ here. The format follows
   scrolls sideways instead of widening the page. The section inserts its own
   scoped stylesheet (`COMPOSED_CSS`), so the emitters' CSP lists one more
   core runtime style hash (`go/emitter/runtime-style-hashes.txt`).
+- A static page shows every toggle's content when a reader opens it
+  (capsule-viewer#67). The builder builds every body still pending before
+  it writes the page (rule rows, test rows and their sessions, proofs),
+  with the toggles' own builders, keeping each toggle open or closed as
+  the depth left it; before, only the records section was built and a
+  closed toggle at L0 or L1 opened empty. The static result now returns
+  the page's size (`bytes`) and its budget (`limit`): 16 MiB by default
+  (`STATIC_PAGE_DEFAULT_BUDGET`), changed with `maxStaticBytes`. A page
+  over it is refused as `static-too-large`, and a body the builder cannot
+  build as `static-body-unbuilt`; `availablePackagings` reports both.
 - The two report notes on tampering (`groups.vd.note`, `lines.rp.tamper`) say
   what a bundle that did not verify now gets: no report, the red "Check
   failed" callout, the checks that failed and each record's id and status,

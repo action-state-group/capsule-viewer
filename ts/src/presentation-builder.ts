@@ -60,7 +60,7 @@ import {
   type WordingPackInput,
 } from "./presentation-fragment.js";
 import { mountPresentation } from "./presentation-mount.js";
-import { fillPendingBodies, linkConversations } from "./report-levels.js";
+import { fillForNoScript } from "./report-levels.js";
 
 /**
  * One builder, four packagings (spec/presentation-builder-v0.md):
@@ -123,6 +123,24 @@ export type PackagingUnavailableReason =
       /** The rendered page carries a script, so it cannot be static. */
       readonly code: "static-carries-script";
       readonly message: string;
+    }
+  | {
+      /**
+       * A toggle's body could not be built at build time, so opening it on
+       * the static page would show nothing.
+       */
+      readonly code: "static-body-unbuilt";
+      /** The summary text of each toggle (or the tag of each body) left unbuilt. */
+      readonly unbuilt: readonly string[];
+      readonly message: string;
+    }
+  | {
+      /** The static page, with every body built, is over its size budget. */
+      readonly code: "static-too-large";
+      /** The page's size in UTF-8 bytes. */
+      readonly bytes: number;
+      readonly limit: number;
+      readonly message: string;
     };
 
 /** One target's availability: available, or unavailable with its reason. */
@@ -153,6 +171,15 @@ export class PackagingUnavailableError extends PresentationBuildError {
  */
 export const STATIC_NOT_SELF_VERIFYING =
   "Not self-verifying; verify the bundle separately.";
+/**
+ * The default size budget of a static page, in UTF-8 bytes (16 MiB). A
+ * static page carries every toggle's body, built at build time, so its size
+ * grows with the report; a page over the budget is refused
+ * (`static-too-large`), never written with bodies left out. A caller may
+ * lower or raise it (`maxStaticBytes`).
+ */
+export const STATIC_PAGE_DEFAULT_BUDGET = 16 * 1024 * 1024;
+
 /** The static page's second statement, before the build-time result. */
 export const STATIC_BUILD_TIME_STATEMENT =
   "This page runs no code. It shows the verification result computed when it was built and cannot re-verify anything in your browser.";
@@ -310,6 +337,11 @@ export interface BuildPresentationOptions {
   readonly maxFragmentLength?: number;
   /** `fragment` only: the viewer address the token is appended to. */
   readonly viewerUrl?: string;
+  /**
+   * `static` only: the page's size budget in UTF-8 bytes. Omitted, it is
+   * STATIC_PAGE_DEFAULT_BUDGET.
+   */
+  readonly maxStaticBytes?: number;
 }
 
 interface BuiltCommon {
@@ -341,6 +373,10 @@ export type BuiltPresentation =
        * the banner's state (presentation contract section 6.2).
        */
       readonly verification: StaticVerification;
+      /** The page's size in UTF-8 bytes, every body built. */
+      readonly bytes: number;
+      /** The size budget the page was checked against. */
+      readonly limit: number;
     });
 
 /** The banner states a page built from a finished check can show. */
@@ -798,7 +834,17 @@ const escapeText = (value: string): string =>
 async function packageStatic(
   prepared: Prepared,
   options: Omit<BuildPresentationOptions, "format">,
-): Promise<{ html: string; verification: StaticVerification }> {
+): Promise<{
+  html: string;
+  verification: StaticVerification;
+  bytes: number;
+  limit: number;
+}> {
+  const limit = options.maxStaticBytes ?? STATIC_PAGE_DEFAULT_BUDGET;
+  if (!Number.isSafeInteger(limit) || limit <= 0)
+    throw new PresentationBuildError(
+      `maxStaticBytes must be a positive integer, not ${String(limit)}`,
+    );
   if (typeof document === "undefined")
     throw new PackagingUnavailableError({
       code: "no-document",
@@ -826,12 +872,26 @@ async function packageStatic(
   } finally {
     root.remove();
   }
-  // The page runs no script. Each conversation is kept once, in the core's
-  // records section: every card's conversation becomes a link to it, and the
-  // record entries (only those) are built now, so a link lands on content.
-  // Other toggles keep their bodies unbuilt (capsule-viewer#67).
-  linkConversations(root);
-  fillPendingBodies(root, 'details.cv-record[data-body="pending"]');
+  // The page runs no script, so every toggle's body is built now, with the
+  // same builders the toggle runs where script runs, and every toggle stays
+  // open or closed as the depth left it: a toggle the reader opens shows
+  // what the offline file shows (capsule-viewer#67). Each conversation is
+  // kept once, in the core's records section, and every card's conversation
+  // becomes a link to it.
+  fillForNoScript(root);
+  const unbuilt = [
+    ...root.querySelectorAll<HTMLElement>('[data-body="pending"]'),
+  ].map((body) =>
+    body.localName === "details"
+      ? (body.querySelector(":scope > summary")?.textContent ?? "").trim()
+      : `<${body.localName}${body.className === "" ? "" : ` class="${body.className}"`}>`,
+  );
+  if (unbuilt.length > 0)
+    throw new PackagingUnavailableError({
+      code: "static-body-unbuilt",
+      unbuilt,
+      message: `${unbuilt.length} toggle ${unbuilt.length === 1 ? "body" : "bodies"} could not be built for a page that runs no script (${unbuilt.map((u) => JSON.stringify(u)).join(", ")}), so the static page is not written`,
+    });
   // The banner state the page must show (presentation contract section
   // 6.2), from the same verification and, like the page, no countersigner.
   const stamps = await classifyCountersignatures(
@@ -895,7 +955,15 @@ async function packageStatic(
       ...(options.themeCss === undefined ? {} : { themeCss: options.themeCss }),
     },
   );
-  return { html, verification };
+  const bytes = new TextEncoder().encode(html).length;
+  if (bytes > limit)
+    throw new PackagingUnavailableError({
+      code: "static-too-large",
+      bytes,
+      limit,
+      message: `the static page, with every toggle's body built, is ${bytes} bytes, over the ${limit}-byte budget; share the offline file instead, or raise maxStaticBytes`,
+    });
+  return { html, verification, bytes, limit };
 }
 
 /**
