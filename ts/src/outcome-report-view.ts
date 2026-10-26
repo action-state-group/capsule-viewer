@@ -1549,7 +1549,7 @@ function renderRules(
     }
   }
   // Requirements of the cited contract the run did not cover (Result v0
-  // section 3, `requirements_covered`): one row each, "not run", under a group
+  // section 3, `requirements_covered`): one row each, "not covered", under a group
   // of their own. They are in no conversation, count or column above: the
   // run never judged them, so no number on this page speaks for them.
   if (model.notRun.length > 0) {

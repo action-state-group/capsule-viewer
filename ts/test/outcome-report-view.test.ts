@@ -2088,7 +2088,7 @@ it("chrome rule (presentation contract section 6): result wording never comes fr
 
 // ---------------------------------------------------------------------------
 // requirements_covered (Result v0 section 3): a cited contract's requirement
-// the run did not cover is drawn as a "not run" row, in no count.
+// the run did not cover is drawn as a "not covered" row, in no count.
 // ---------------------------------------------------------------------------
 
 const NOT_RUN_REF = "task_resolution.extra_check";
@@ -2155,7 +2155,7 @@ it("draws a requirement the run did not cover as a 'not covered' row, in no conv
   );
 });
 
-it("a Result that does not list requirements_covered draws no 'not run' row", async () => {
+it("a Result that does not list requirements_covered draws no 'not covered' row", async () => {
   const { bundle } = await sealedOutcomeReportBundle((source) => {
     coveringAllButOne(source);
     const input = (source.disclosures as Record<string, Obj>).result!

@@ -500,7 +500,7 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "groups.ob.unchecked-of": "unchecked",
   "groups.row.nothing": "unchecked",
   "groups.row.none-decided": "unchecked",
-  // Not run: the run did not cover the rule (Result v0 section 3).
+  // Not covered: the run did not cover the rule (Result v0 section 3).
   "lines.rules.not-run": "unchecked",
 
   // did-not-apply: no rule or test applied, so nothing was checked; never
