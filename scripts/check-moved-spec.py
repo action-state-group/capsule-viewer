@@ -261,6 +261,20 @@ CONTRACT_REPORT_MODULE = Move(
             f"deprecation in {DEPRECATION}.",
         ),
     ],
+    amendments=[
+        # Section 2: a requirement the run did not cover (capsule-viewer#96,
+        # from agent-action-capsule#355) is drawn as a not-run row.
+        (
+            "- **Copied facts are labelled as copied.**",
+            '- **Requirements not covered** (ER §3, `requirements_covered`). When the Result lists what it covered\n' +
+            '  and a cited contract record names other requirements, a module that draws the rules (the Outcomes\n' +
+            '  card) MAY show each of those in a group of its own as a row marked not covered. Such a row has no\n' +
+            '  claims and no tally, and counts in no conversation, bucket, summary or sentence: the run never\n' +
+            "  judged it. The word is the pack's own key (§3), not a core one.\n" +
+            "- **Copied facts are labelled as copied.**",
+            "capsule-viewer#96: rows for requirements the run did not cover",
+        ),
+    ],
     rewrites=[
         ("# The contract-report/v1 Extension — v1", "# The contract-report/v1 Module — v1"),
         (
