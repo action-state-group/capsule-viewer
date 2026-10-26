@@ -75,7 +75,7 @@ here. The format follows
   conversation, count, column or sentence on the page, and a card without
   `requirements_covered` is unchanged. New wording keys
   `lines.rules.not-run` and `lines.rules.not-run.h` in the Outcomes pack
-  (`@2`, still unreleased).
+  (`@2`, still unreleased). `spec/contract-report-module-v1.md` §2 gains a bullet for it.
 - The presentation contract's text, schema, examples and checkers, moved from
   agent-action-capsule at `60a5b11` (agent-action-capsule#379), with every
   public name unchanged: `spec/presentation-contract-v0.md` (without the

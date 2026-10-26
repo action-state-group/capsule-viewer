@@ -80,6 +80,11 @@ rules bind it:
   later `not_met` never reads as a violation, and none of it counts in the summary's buckets.
   Whenever any claim carries `applies_from`, later or not, the summary shows the as-of date, the
   `YYYY-MM-DD` UTC date of `generated_at`, through `applicability.as_of`.
+- **Requirements not run** (ER §3, `requirements_covered`). When the Result lists what it covered
+  and a cited contract record names other requirements, a module that draws the rules (the Outcomes
+  card) MAY show each of those in a group of its own as a row marked not run. Such a row has no
+  claims and no tally, and counts in no conversation, bucket, summary or sentence: the run never
+  judged it. The word is the pack's own key (§3), not a core one.
 - **Copied facts are labelled as copied.** A claim's `applies_from` and `out_of_scope_allowed` are
   the producer's copy of the contract, and nothing here checks them against it (ER §4.2). The module
   shows `contract_fact.note` with the as-of date and beside the `out_of_scope` count, and never
