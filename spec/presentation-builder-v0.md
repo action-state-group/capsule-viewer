@@ -150,7 +150,7 @@ capsule-viewer's fragment codec (`src/capsule_viewer/fragment.py`: base64url of 
 no padding). For a payload whose JSON text is ASCII, read in JCS member order, the two write the
 same token. For non-ASCII text, `fragment.py` writes `\uXXXX` escapes (Python's
 `ensure_ascii`) where the bundle codec writes UTF-8; each decoder reads the other's token. The
-shared vectors are agent-action-capsule's `ts/test/testdata/presentation-fragment-vectors.json`. The decoder here is
+shared vectors are agent-action-capsule's `vectors/bundle/fragment/vectors.json`. The decoder here is
 stricter than `fragment.py` in one way: a character outside the base64url alphabet is an error,
 where Python drops it.
 

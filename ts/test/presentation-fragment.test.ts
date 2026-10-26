@@ -31,7 +31,10 @@ const vectors = (
       resolve(
         import.meta.dirname,
         "testdata",
-        "presentation-fragment-vectors.json",
+        "aac-vectors",
+        "bundle",
+        "fragment",
+        "vectors.json",
       ),
       "utf8",
     ),

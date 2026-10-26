@@ -318,7 +318,7 @@ BUILDER = Move(
         ("(`ts/src/bundle.ts`)", "(agent-action-capsule's `ts/src/bundle.ts`)"),
         (
             "shared vectors are `ts/test/testdata/presentation-fragment-vectors.json`",
-            "shared vectors are agent-action-capsule's `ts/test/testdata/presentation-fragment-vectors.json`",
+            "shared vectors are agent-action-capsule's `vectors/bundle/fragment/vectors.json`",
         ),
     ],
 )

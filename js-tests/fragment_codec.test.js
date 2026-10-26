@@ -1,7 +1,7 @@
 // The shipped decoder (capsule_viewer.js decodeFragment) reads tokens from
 // Agent Action Capsule's Fragment Codec, which writes UTF-8, and tokens from
 // this package's earlier encoder, which wrote \uXXXX escapes. Vectors:
-// tests/testdata/aac-presentation-fragment-vectors.json and
+// agent-action-capsule's fragment vectors (ts/test/testdata/aac-vectors/bundle/fragment/) and
 // tests/testdata/fragment-codec-utf8-vectors.json (see that README).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -11,8 +11,26 @@ import { loadViewer } from "./loadViewer.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TESTDATA = resolve(HERE, "..", "tests", "testdata");
-const read = (name) => JSON.parse(readFileSync(resolve(TESTDATA, name), "utf8"));
-const AAC = read("aac-presentation-fragment-vectors.json");
+const read = (name) =>
+  JSON.parse(readFileSync(resolve(TESTDATA, name), "utf8"));
+// agent-action-capsule's vectors/bundle/fragment/vectors.json, vendored once
+// for every language (ts/test/testdata/aac-vectors/README.md).
+const AAC = JSON.parse(
+  readFileSync(
+    resolve(
+      HERE,
+      "..",
+      "ts",
+      "test",
+      "testdata",
+      "aac-vectors",
+      "bundle",
+      "fragment",
+      "vectors.json",
+    ),
+    "utf8",
+  ),
+);
 const UTF8 = read("fragment-codec-utf8-vectors.json");
 
 describe("fragment decode", () => {
@@ -23,7 +41,9 @@ describe("fragment decode", () => {
     });
     if (!c.ascii_json) {
       it(`reads the UTF-8 token: ${c.name}`, () => {
-        expect(decodeFragment(`#${UTF8.aac_tokens[c.name]}`)).toEqual(c.payload);
+        expect(decodeFragment(`#${UTF8.aac_tokens[c.name]}`)).toEqual(
+          c.payload,
+        );
       });
     }
   }
