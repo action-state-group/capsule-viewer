@@ -10,7 +10,6 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { chromium, type Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
@@ -62,7 +61,6 @@ describe.skipIf(executablePath === undefined)(
       directory = mkdtempSync(join(tmpdir(), "aac-checks-"));
       const result = await build({
         entryPoints: [resolve(process.cwd(), "src", "browser.ts")],
-        plugins: [aacBrowser],
         bundle: true,
         format: "iife",
         globalName: "EvidenceGraph",

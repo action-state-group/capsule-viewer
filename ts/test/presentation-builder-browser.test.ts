@@ -11,7 +11,6 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
-import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { JSDOM } from "jsdom";
 import { chromium, type Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -74,7 +73,6 @@ describe.skipIf(executablePath === undefined)(
       browser = await chromium.launch({ executablePath: executablePath! });
       const result = await build({
         entryPoints: [resolve(process.cwd(), "src", "browser.ts")],
-        plugins: [aacBrowser],
         bundle: true,
         format: "iife",
         globalName: "EvidenceGraph",
@@ -92,7 +90,6 @@ describe.skipIf(executablePath === undefined)(
           resolveDir: process.cwd(),
           loader: "ts",
         },
-        plugins: [aacBrowser],
         bundle: true,
         format: "iife",
         globalName: "CvLinks",

@@ -10,7 +10,6 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "esbuild";
-import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
@@ -186,7 +185,6 @@ describe.skipIf(executablePath === undefined)(
       beforeAll(async () => {
         const result = await build({
           entryPoints: [resolve(process.cwd(), "src", "browser.ts")],
-          plugins: [aacBrowser],
           bundle: true,
           format: "iife",
           globalName: "EvidenceGraph",

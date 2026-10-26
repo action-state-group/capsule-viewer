@@ -3,8 +3,9 @@
 Fragment Codec (base64url, no padding, over UTF-8 JCS bytes), and still reads
 tokens from this package's earlier encoder, which escaped non-ASCII and DEL.
 
-``aac-presentation-fragment-vectors.json`` is copied byte-for-byte from
-agent-action-capsule ``main`` (PR #209, merged at 4d26845); ``fragment-codec-utf8-vectors.json`` carries
+agent-action-capsule's fragment vectors are vendored byte for byte, once for
+every language, at ``ts/test/testdata/aac-vectors/bundle/fragment/vectors.json``
+(its README names the revision); ``fragment-codec-utf8-vectors.json`` carries
 that repo's encoder output for the non-ASCII cases (see testdata/README.md).
 The vectors are the arbiter, and they hold only strings, integers, booleans
 and null: numbers keep ``json.dumps`` formatting, which is JCS for integers
@@ -22,7 +23,10 @@ from capsule_viewer import encode_fragment
 from capsule_viewer.fragment import decode_fragment
 
 TESTDATA = Path(__file__).parent / "testdata"
-AAC = json.loads((TESTDATA / "aac-presentation-fragment-vectors.json").read_text(encoding="utf-8"))
+# agent-action-capsule's vectors/bundle/fragment/vectors.json, vendored once for
+# every language (ts/test/testdata/aac-vectors/README.md).
+AAC_FRAGMENT = Path(__file__).parent.parent / "ts" / "test" / "testdata" / "aac-vectors" / "bundle" / "fragment" / "vectors.json"
+AAC = json.loads(AAC_FRAGMENT.read_text(encoding="utf-8"))
 UTF8 = json.loads((TESTDATA / "fragment-codec-utf8-vectors.json").read_text(encoding="utf-8"))
 
 # (name, payload, the token AAC's encoder writes) for all nine cases.

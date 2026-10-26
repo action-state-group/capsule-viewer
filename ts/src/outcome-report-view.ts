@@ -327,9 +327,15 @@ export function statusWord(
   // withheld reports cannot say which. Since e1a44e0 the default pack gives
   // all of these the same plain word ("could not decide"); only the key
   // tells them apart.
+  // A `no_claim` rule is undecided with no judge run on it (no claim, so no
+  // report): it counts as unjudged.
   const judged = conversation.criteria
-    .filter((c) => c.verdict === "not_evaluable")
-    .map((c) => judgedOf(c.reportState, c.judgePinDigest));
+    .filter((c) => c.verdict === "not_evaluable" || c.verdict === "no_claim")
+    .map((c) =>
+      c.verdict === "no_claim"
+        ? "no"
+        : judgedOf(c.reportState, c.judgePinDigest),
+    );
   if (judged.includes("yes"))
     return { word: w.t("lines.status.undecided.judged"), tone: "ne" };
   if (judged.length > 0 && judged.every((j) => j === "no"))
@@ -348,7 +354,13 @@ export function statusWord(
 }
 
 function criterionWord(c: DrawnCriterion, w: Words): Worded {
-  return ruleWord(c.verdict, judgedOf(c.reportState, c.judgePinDigest), w);
+  // agent-action-capsule 0.8.0's `no_claim` (a missing claim the Result's
+  // exclusions do not account for) is a gap that rolls up as not_evaluable,
+  // so it takes not_evaluable's words. It carries no claim and so no report:
+  // no judge ran on it, which is not_evaluable's unjudged word.
+  return c.verdict === "no_claim"
+    ? ruleWord("not_evaluable", "no", w)
+    : ruleWord(c.verdict, judgedOf(c.reportState, c.judgePinDigest), w);
 }
 
 /** The plain note for a rule whose report carries no rationale: why there is none. */
@@ -419,7 +431,16 @@ function resultSentence(
   const na = all.length - applied.length - outOfScope;
   const misses = all.filter((c) => isMiss(c.verdict));
   const unverified = all.filter((c) => isUnverified(c.verdict));
+  // Undecided rules a judge could not decide, and gaps (`no_claim`): rules
+  // the Result holds no claim for, which no judge ran on.
   const undecided = all.filter((c) => c.verdict === "not_evaluable");
+  const gaps = all.filter((c) => c.verdict === "no_claim");
+  const gapNote =
+    gaps.length > 0
+      ? w.t("lines.sentence.undecided.gap-note", {
+          names: names(model, gaps, w),
+        })
+      : "";
   const naText = `${
     na > 0 ? ` ${w.t("lines.sentence.na", { n: String(na) })}` : ""
   }${
@@ -443,20 +464,25 @@ function resultSentence(
     case "unverified":
       return `${w.t("lines.sentence.unverified", {
         clause: unverifiedClause(model, unverified, w, true),
-        undecidedNote:
+        undecidedNote: `${
           undecided.length > 0
             ? w.t("lines.sentence.unverified.undecided-note", {
                 names: names(model, undecided, w),
               })
-            : "",
+            : ""
+        }${gapNote}`,
       })}${naText}`;
     case "undecided":
-      return undecided.length === 0
-        ? w.t("lines.sentence.undecided.none")
-        : `${w.t("lines.sentence.undecided", {
+      return undecided.length > 0
+        ? `${w.t("lines.sentence.undecided", {
             names: names(model, undecided, w),
             thatRuleWas: w.p("lines.word.that-rule-was", undecided.length),
-          })}${naText}`;
+          })}${gapNote}${naText}`
+        : gaps.length > 0
+          ? `${w.t("lines.sentence.undecided.gaps", {
+              names: names(model, gaps, w),
+            })}${naText}`
+          : w.t("lines.sentence.undecided.none");
     case "nothing-applied":
       return w.t("lines.sentence.nothing-applied");
   }
@@ -487,7 +513,7 @@ function renderConversation(
     isUnverified(c.verdict),
   );
   const undecided = conversation.criteria.filter(
-    (c) => c.verdict === "not_evaluable",
+    (c) => c.verdict === "not_evaluable" || c.verdict === "no_claim",
   );
   const outOfScope = conversation.criteria.filter(
     (c) => c.verdict === "out_of_scope",
@@ -1436,7 +1462,7 @@ function renderRules(
       const unverifiedHere = of(isUnverified);
       const na = of((v) => v === "not_applicable");
       const outOfScopeHere = of((v) => v === "out_of_scope");
-      const undecided = of((v) => v === "not_evaluable");
+      const undecided = of((v) => v === "not_evaluable" || v === "no_claim");
       const tr = el("tr", "rule");
       tr.dataset.rule = ref;
       tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";

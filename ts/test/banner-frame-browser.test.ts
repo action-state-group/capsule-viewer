@@ -4,7 +4,6 @@ import { resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 // The banner frame check in a real browser, which computes what jsdom does
@@ -46,7 +45,6 @@ describe.skipIf(executablePath === undefined)(
           resolveDir: process.cwd(),
           loader: "ts",
         },
-        plugins: [aacBrowser],
         bundle: true,
         format: "iife",
         globalName: "Frame",

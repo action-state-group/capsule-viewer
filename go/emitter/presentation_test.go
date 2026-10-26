@@ -138,7 +138,7 @@ func TestCheckWordingPack(t *testing.T) {
 // The fragment codec agrees with capsule-viewer's fragment.py on the shared
 // vectors: the same token for ASCII JSON, and each reads the other's.
 func TestFragmentCodecMatchesFragmentPyVectors(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "ts", "test", "testdata", "presentation-fragment-vectors.json"))
+	raw, err := os.ReadFile(filepath.Join("..", "..", "ts", "test", "testdata", "aac-vectors", "bundle", "fragment", "vectors.json"))
 	require.NoError(t, err)
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	decoder.UseNumber()

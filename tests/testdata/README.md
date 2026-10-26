@@ -232,16 +232,10 @@ wrote `\uXXXX` escapes for non-ASCII and DEL, so its token differed from
 AAC's for any such text. The decoder is unchanged and still reads those older
 tokens.
 
-- `aac-presentation-fragment-vectors.json` -- copied byte-for-byte
-  (`cmp`-verified) from `agent-action-capsule`'s
-  `ts/test/testdata/presentation-fragment-vectors.json` at
-  `main` after PR #209 merged (`4d26845`); it was first copied from that PR's
-  head `cf08c3e9fd98b57396fae2d26401c163c3726f77`, and the file, `encodeFragment`,
-  `decodeFragment` and the `jcs` they call are unchanged between the two.
-  Its `fragment_py` tokens were written by this repo's earlier encoder at
-  `7592055`: for the five `ascii_json: true` cases they
-  are also AAC's token; for `delete-character` and `non-ascii` they are the
-  escaped tokens the decoder must keep reading.
+- agent-action-capsule's fragment codec vectors are no longer copied here: the
+  one vendored copy every language reads is
+  `ts/test/testdata/aac-vectors/bundle/fragment/vectors.json` (agent-action-capsule's
+  `vectors/bundle/fragment/vectors.json`, listed in that directory's README).
 - `fragment-codec-utf8-vectors.json` -- viewer-owned. `aac_tokens` holds
   AAC's token for those two non-ASCII cases, and `cases` adds two new
   non-ASCII payloads (accented Latin, CJK). Every token in it was produced by

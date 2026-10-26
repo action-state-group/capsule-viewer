@@ -13,7 +13,6 @@ import {
   isVerifiedBundleContext,
   REQUIREMENT_CLAIM,
   readOutcomeReportTerms,
-  type ExtensionInterpreterId,
   withCountersigners,
   type BundleVerificationResult,
   type VerifiedBundleContext,
@@ -62,7 +61,7 @@ import type {
 import {
   readOutcomeReportPresentation,
   type OutcomeReportPresentation,
-} from "@action-state-group/agent-action-capsule";
+} from "./outcome-report-presentation.js";
 import { composedSectionModule } from "./composed-view.js";
 import { DEFAULT_WORDS } from "./contract-report-wording.js";
 import { RECORD_CONTENT_CSS, renderContent } from "./record-content.js";
@@ -91,7 +90,16 @@ import {
   type PresentationResolver,
   type PresentationRuntime,
   type PresentationServices,
+  presentationExtensionRows,
+  presentationRefusalNotices,
+  type PresentationExtensionRow,
+  type PresentationRefusalNotice,
 } from "./presentation-registry.js";
+import {
+  aacInterpreters,
+  aliasExtensionRows,
+  type PageInterpreterId,
+} from "./alias-interpreters.js";
 import {
   buildReportRows,
   type ReportRow,
@@ -126,8 +134,6 @@ import {
   type CheckSummary,
   type CompletenessStatement,
   type CoverageStatement,
-  type ExtensionRow,
-  type PresentationRefusalNotice,
   type ReceiptEntry,
   type RecordCoverage,
   type RecordCoverageStatus,
@@ -864,7 +870,7 @@ function renderChecks(
 // is drawn for a bundle with no extensions and no refusal.
 function renderExtensions(
   host: HTMLElement,
-  rows: readonly ExtensionRow[],
+  rows: readonly PresentationExtensionRow[],
   refusals: readonly PresentationRefusalNotice[],
 ): void {
   renderExtensionTable(host, rows);
@@ -878,7 +884,7 @@ function renderExtensions(
 
 function renderExtensionTable(
   host: HTMLElement,
-  rows: readonly ExtensionRow[],
+  rows: readonly PresentationExtensionRow[],
 ): void {
   if (rows.length === 0) return;
   host.append(element("h4", "Extensions"));
@@ -985,7 +991,7 @@ async function renderVerificationPage(
   root: HTMLElement,
   context: VerifiedBundleContext,
   styled: boolean,
-  applied: ReadonlySet<ExtensionInterpreterId>,
+  applied: ReadonlySet<PageInterpreterId>,
   refused: readonly PresentationRefusal[],
   citedSigners: boolean,
   verifierHint: string | undefined,
@@ -1005,11 +1011,25 @@ async function renderVerificationPage(
   page.append(element("h2", "Verification"));
   // The strict result too, so these lists are the ones the banner's line
   // points at (verificationBanner reads the same lists).
-  const model = buildVerificationPageModel(bundle, verified, applied, refused, {
-    stamps,
-    citedSigners,
-    ...(context.strict === undefined ? {} : { strict: context.strict }),
-  });
+  const model = buildVerificationPageModel(
+    bundle,
+    verified,
+    aacInterpreters(applied),
+    {
+      stamps,
+      citedSigners,
+      ...(context.strict === undefined ? {} : { strict: context.strict }),
+    },
+  );
+  // AAC's page model carries no presentation refusals: this registry lays
+  // its refusal rows over AAC's extension rows (the integrity words from
+  // each row's own integrity) and adds a notice for each refused module
+  // with no row (presentation contract section 3.2). The deprecated cards'
+  // interpreters, which AAC 0.8.0 no longer reports, are applied first.
+  const extensions = presentationExtensionRows(
+    aliasExtensionRows(bundle, model.extensions, applied),
+    refused,
+  );
   const summary = element("dl");
   appendValue(summary, "bundle digest", model.bundleDigest ?? "uncomputable");
   appendValue(summary, "checkpoint root", model.checkpointRoot ?? "absent");
@@ -1062,7 +1082,7 @@ async function renderVerificationPage(
   renderStamps(page, stamps);
   renderCompletenessStatement(page, model.completeness);
   renderChecks(page, model.checks);
-  renderExtensions(page, model.extensions, model.presentationRefusals);
+  renderExtensions(page, extensions, presentationRefusalNotices(refused));
   renderCheckLists(page, model.checkLists, verifierHint);
   page.append(element("p", model.verifyIndependentlyLine));
   // Folded into one section, closed for a bundle that verified; its summary
@@ -2388,7 +2408,7 @@ const noAggregateModule: PresentationModule<null> = {
 // Result page reads the book payload extensions, and each card reads its own
 // block. The rows table, the graph and the no-aggregate note read none.
 const BUILTIN_MODULE_INTERPRETERS: Readonly<
-  Record<string, readonly ExtensionInterpreterId[]>
+  Record<string, readonly PageInterpreterId[]>
 > = Object.freeze({
   [BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT.id]: [
     "result-root",
@@ -2409,7 +2429,7 @@ const BUILTIN_MODULE_INTERPRETERS: Readonly<
 function moduleInterpreters(
   id: string,
   bundle: unknown,
-): readonly ExtensionInterpreterId[] {
+): readonly PageInterpreterId[] {
   if (id === CONTRACT_REPORT_MANIFEST.id) {
     const drawn =
       typeof bundle === "object" && bundle !== null
@@ -3016,7 +3036,7 @@ async function renderVerifiedContext(
   // The interpreters this rendering actually ran (see extension-interpreters.ts):
   // the presentation header and the countersignature stamp always run; a
   // module's own interpreters only when that module rendered.
-  const applied = new Set<ExtensionInterpreterId>([
+  const applied = new Set<PageInterpreterId>([
     "presentation-header",
     "countersignature-stamp",
   ]);
