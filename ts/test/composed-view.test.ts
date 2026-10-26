@@ -34,6 +34,7 @@ import {
 import {
   PresentationAmbiguityError,
   PresentationRegistry,
+  presentationExtensionRows,
   type PresentationManifest,
   type PresentationModule,
 } from "../src/presentation-registry.js";
@@ -550,19 +551,19 @@ describe("the presentation ABI on the composition section and the extension rows
     ).toEqual(["org.example.composition-page/v0"]);
   });
 
-  // AAC's extensionRows, which builds the rows this viewer draws: a page
-  // shows no such row, since an uncovered block means the bundle did not
-  // verify and no module is resolved for it, so none is refused.
-  it("extensionRows: an uncovered block's refusal row begins 'Integrity not verified;'", () => {
-    const [row] = extensionRows(
-      [
+  // The registry's refusal overlay on AAC's extension rows, which builds the
+  // rows this viewer draws: a page shows no such row, since an uncovered
+  // block means the bundle did not verify and no module is resolved for it,
+  // so none is refused.
+  it("presentationExtensionRows: an uncovered block's refusal row begins 'Integrity not verified;'", () => {
+    const [row] = presentationExtensionRows(
+      extensionRows([
         {
           kind: "composed/v1",
           integrityCovered: false,
           status: "uninterpreted",
         },
-      ],
-      undefined,
+      ]),
       [
         {
           id: "org.example.x/v0",

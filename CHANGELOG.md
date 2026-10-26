@@ -184,9 +184,11 @@ here. The format follows
   claims of another type or id shape) is drawn as the generic Result page
   with a note, so no claim is merged or left out. Tuning details in
   `ts/README.md`. By Jody Edmondson (#58), completed by Ethan Zhang.
-- Requires `@action-state-group/agent-action-capsule` 0.7.0 (it was
-  0.5.0; 0.6.1 adds the `contract-report` interpreter id, #72, and 0.7.0
-  exports `verificationBanner`, capsule-viewer#79), which
+- Requires `@action-state-group/agent-action-capsule` 0.8.0 (it was
+  0.5.0; 0.6.1 adds the `contract-report` interpreter id, #72, 0.7.0
+  exports `verificationBanner`, capsule-viewer#79, and 0.8.0 removes the
+  presentation registry and the page renderers that moved here,
+  agent-action-capsule#379), which
   carries the `contract-report/v1`
   registration (#352), `out_of_scope`/`applies_from` (#368, #363,
   8732264) this release also ports onto `compliance.ts`,
@@ -203,6 +205,32 @@ here. The format follows
   recognises is shown as recorded, indented.
 
 ### Changed
+
+- With agent-action-capsule 0.8.0 (agent-action-capsule#379), with no
+  change on the page:
+  - The verification gate is AAC's own `bundleVerified`, which
+    `ts/src/presentation-registry.ts` re-exports in place of its copy.
+  - AAC's verification page model no longer carries presentation refusals.
+    The registry lays them over it: `presentationExtensionRows` replaces the
+    row of an extension a refused module requires with its refusal row,
+    taking the integrity words from the row's own `integrity`, and
+    `presentationRefusalNotices` gives the line for each refused module with
+    no row. `PresentationExtensionRow` and `PresentationRefusalNotice` are
+    capsule-viewer's own types for them.
+  - The deprecated aliases `outcome-report/v1` and `eu-ai-act-compliance/v1`
+    keep their reader and their rows: `ts/src/outcome-report-presentation.ts`
+    is AAC 0.7.0's reader, and `ts/src/alias-interpreters.ts` defines the
+    `outcome-report-card` and `compliance-card` interpreters AAC removed,
+    until the alias path is removed here.
+  - The page runtime (`dist/evidence-graph.iife.js`) bundles AAC through
+    its own browser entry, so the esbuild plugin `ts/scripts/aac-browser.mjs`
+    is removed.
+- AAC 0.8.0's outcome-report model reads a criterion with no claim as not
+  applicable only when the Result's `excluded_not_applicable` accounts for
+  every missing claim, and otherwise as the new verdict `no_claim`, a gap
+  (agent-action-capsule#355). The outcome card draws a `no_claim` criterion
+  in the words of one that could not be decided, so such a Result's page
+  changes: those criteria no longer read as not applicable.
 
 - "Witnessed by" on the front of both cards says the witnesses are "stated by
   the bundle, not checked here" (SEAMS ruling 12), in place of "as the bundle

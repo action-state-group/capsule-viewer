@@ -348,7 +348,14 @@ export function statusWord(
 }
 
 function criterionWord(c: DrawnCriterion, w: Words): Worded {
-  return ruleWord(c.verdict, judgedOf(c.reportState, c.judgePinDigest), w);
+  // agent-action-capsule 0.8.0's `no_claim` (a missing claim the Result's
+  // exclusions do not account for) is a gap that rolls up as not_evaluable,
+  // so it takes not_evaluable's words; it carries no claim, so no report.
+  return ruleWord(
+    c.verdict === "no_claim" ? "not_evaluable" : c.verdict,
+    judgedOf(c.reportState, c.judgePinDigest),
+    w,
+  );
 }
 
 /** The plain note for a rule whose report carries no rationale: why there is none. */

@@ -923,7 +923,9 @@ it("drill-down: a not_applicable criterion is its own state -- no claim, no P, n
   const resultDoc = ((source.disclosures as Obj).result as Obj)
     .agent_input as Obj;
   // drop this criterion's claim in ONE conversation: the other 49 still name
-  // it, so it is a term, and in that conversation it reads not_applicable
+  // it, so it is a term, and in that conversation it reads not_applicable,
+  // since the Result's exclusions account for it (Result v0 section 3:
+  // otherwise a missing claim is a gap)
   const all = resultDoc.claims as Obj[];
   const dropped = all.find(
     (c) =>
@@ -937,6 +939,10 @@ it("drill-down: a not_applicable criterion is its own state -- no claim, no P, n
       claims: kept,
       aggregate: {
         ...(resultDoc.aggregate as Obj),
+        coverage: {
+          ...((resultDoc.aggregate as Obj).coverage as Obj),
+          excluded_not_applicable: 1,
+        },
         buckets: rebuildBuckets(kept),
       },
     },
@@ -978,6 +984,53 @@ it("drill-down: a not_applicable criterion is its own state -- no claim, no P, n
   )!;
   expect(proofRow.querySelector("[data-p]")).toBeNull();
   expect(proofRow.textContent).toContain("no claim");
+});
+
+it("drill-down: a missing claim the Result's exclusions do not account for is a gap, drawn as undecided, never as did not apply", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  // the same dropped claim, with excluded_not_applicable left at 0: AAC
+  // reads it as no_claim (Result v0 section 3)
+  const all = resultDoc.claims as Obj[];
+  const dropped = all.find(
+    (c) =>
+      (c.requirement_ref as string) ===
+      "grounded_communication.refunds_match_payment_records",
+  )!;
+  const kept = all.filter((c) => c !== dropped);
+  (source.disclosures as Obj).result = {
+    agent_input: {
+      ...resultDoc,
+      claims: kept,
+      aggregate: {
+        ...(resultDoc.aggregate as Obj),
+        buckets: rebuildBuckets(kept),
+      },
+    },
+  };
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  expect(
+    root.querySelector<HTMLElement>('[data-line="not-applicable"]')!.dataset
+      .count,
+  ).toBe("0");
+  expand(root);
+  const conv = [...root.querySelectorAll<HTMLElement>("article.conv")]
+    .map((c) => open(c))
+    .find((c) =>
+      c.querySelector(
+        'tr[data-crit="grounded_communication.refunds_match_payment_records"][data-crit-verdict="no_claim"]',
+      ),
+    )!;
+  const row = conv.querySelector<HTMLElement>(
+    'tr[data-crit="grounded_communication.refunds_match_payment_records"]',
+  )!;
+  const pill = row.querySelector<HTMLElement>('[data-pill="no_claim"]')!;
+  expect(pill.textContent).toBe(
+    DEFAULT_WORDS.lines.t("lines.verdict.not_evaluable.unavailable"),
+  );
+  expect(pill.textContent).not.toBe("did not apply");
 });
 
 it("drill-down: the resolved line opens into exactly its conversations, and a resolved conversation says why in one sentence", async () => {

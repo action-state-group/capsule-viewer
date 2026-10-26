@@ -19,7 +19,7 @@ import {
   EvidenceGraphError,
   type EvidenceGraph,
 } from "@action-state-group/agent-action-capsule";
-import { readOutcomeReportPresentation } from "@action-state-group/agent-action-capsule";
+import { readOutcomeReportPresentation } from "../../src/outcome-report-presentation.js";
 import { buildReportRows } from "@action-state-group/agent-action-capsule";
 import {
   buildResultRoot,

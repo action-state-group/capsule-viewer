@@ -5,7 +5,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
-import { aacBrowser } from "./aac-browser.mjs";
 import { builtCommitSha } from "./built-commit.mjs";
 
 const tsRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -54,7 +53,6 @@ async function main() {
       js: "globalThis.renderEvidenceGraph = EvidenceGraph.renderEvidenceGraph;",
     },
     outfile: "dist/evidence-graph.iife.js",
-    plugins: [aacBrowser],
   });
 }
 

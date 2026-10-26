@@ -2,12 +2,12 @@
 // Moved from agent-action-capsule ts/src/presentation-registry.ts at 60a5b11
 // (agent-action-capsule#379), unchanged except imports: AAC verification
 // and its extension readers come from @action-state-group/agent-action-capsule.
-import type {
-  BundleVerificationResult,
-  VerifiedBundleContext,
-} from "@action-state-group/agent-action-capsule";
+// With agent-action-capsule 0.8.0, `bundleVerified` is AAC's (re-exported),
+// and the refusal rows and notices AAC's page model dropped are laid over it
+// here (`presentationExtensionRows`, `presentationRefusalNotices`).
+import type { VerifiedBundleContext } from "@action-state-group/agent-action-capsule";
 import {
-  isProducerSelection,
+  bundleVerified,
   verifiedPayload,
 } from "@action-state-group/agent-action-capsule";
 import { readCompliancePresentation } from "./compliance-presentation.js";
@@ -16,12 +16,11 @@ import {
   readContractReport,
 } from "@action-state-group/agent-action-capsule";
 import type { DisclosureState } from "@action-state-group/agent-action-capsule";
-import { readOutcomeReportPresentation } from "@action-state-group/agent-action-capsule";
+import { readOutcomeReportPresentation } from "./outcome-report-presentation.js";
 import {
   carriesResultDocument,
   RESULT_VERSION,
 } from "@action-state-group/agent-action-capsule";
-import { unboundRecordIds } from "@action-state-group/agent-action-capsule";
 
 /**
  * The presentation registry of spec/presentation-contract-v0.md: module
@@ -229,6 +228,77 @@ export function presentationRefusalLine(refusal: PresentationRefusal): string {
   return `Presentation module ${refusal.id} was not used: it ${need(refusal)}`;
 }
 
+/**
+ * An extension row as this viewer's verification page draws it: AAC's row
+ * (`ExtensionRow`), or the refusal row of section 3.2 in its place. AAC's
+ * page model carries no refusals; this registry adds them on top of it.
+ */
+export interface PresentationExtensionRow {
+  readonly id: string;
+  readonly integrity: "covered" | "not covered";
+  /** The interpreter that applied the block; never set on a refusal row. */
+  readonly interpreter?: string;
+  /**
+   * Set when a presentation module that requires this extension matched and
+   * this runtime refused it (section 3.2). It takes precedence over
+   * `interpreter`: the refused module never ran.
+   */
+  readonly refusal?: PresentationRefusal;
+  /** AAC's semantics cell, or `presentationRefusalRow` exactly. */
+  readonly semantics: string;
+}
+
+/**
+ * The extension rows with the refusals laid over them: the first refused
+ * module (in resolution order) that requires a row's kind replaces that row
+ * with its refusal row, whose integrity words follow the row's own
+ * `integrity`. Every other row is returned unchanged.
+ */
+export function presentationExtensionRows(
+  rows: readonly PresentationExtensionRow[],
+  refused: readonly PresentationRefusal[],
+): readonly PresentationExtensionRow[] {
+  return rows.map((row): PresentationExtensionRow => {
+    const refusal = refused.find((r) => r.extensions.includes(row.id));
+    return refusal === undefined
+      ? row
+      : {
+          id: row.id,
+          integrity: row.integrity,
+          refusal,
+          semantics: presentationRefusalRow(
+            refusal,
+            row.integrity === "covered",
+          ),
+        };
+  });
+}
+
+/**
+ * A refused presentation module that requires no extension, so has no row
+ * of its own: the verification page shows `line` after the extension rows
+ * (section 3.2).
+ */
+export interface PresentationRefusalNotice {
+  readonly id: string;
+  readonly reason: PresentationRefusalReason;
+  /** `presentationRefusalLine`, exactly. */
+  readonly line: string;
+}
+
+/** The refused modules that have no extension row (section 3.2). */
+export function presentationRefusalNotices(
+  refused: readonly PresentationRefusal[],
+): readonly PresentationRefusalNotice[] {
+  return refused
+    .filter((refusal) => refusal.extensions.length === 0)
+    .map((refusal) => ({
+      id: refusal.id,
+      reason: refusal.reason,
+      line: presentationRefusalLine(refusal),
+    }));
+}
+
 const RUNTIME_VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u;
 const PRESENTATION_API = /^aac\.presentation-api\/v(0|[1-9][0-9]*)$/u;
 
@@ -301,47 +371,10 @@ export class PresentationRegistrationError extends Error {
 // The verification gate and the descriptor
 // ---------------------------------------------------------------------------
 
-// Per-record membership may fail solely because some supplied records are
-// bound to no log position (the verifier's `membership_record_unbound`): real
-// records that sit outside any checkpoint. That is coverage, not a broken
-// proof -- every other record's inclusion proof still verified -- so the
-// bundle renders, each such record carries its own `uncheckpointed` status,
-// and the banner and verification page state how many there are. Any other
-// membership finding (an invalid proof, bad coordinates, a missing sequence)
-// still fails the bundle as a whole: `unboundRecordIds` leaves out a record
-// whose supplied entry was rejected, so the counts below can only agree when
-// every finding is a clean unbound record.
-function membershipProvenOrUnbound(result: BundleVerificationResult): boolean {
-  return (
-    result.perRecordMembership.status === "pass" ||
-    (result.perRecordMembership.status === "fail" &&
-      result.perRecordMembership.findings.length > 0 &&
-      result.perRecordMembership.findings.length ===
-        unboundRecordIds(result).length)
-  );
-}
-
-// A producer-selected Bundle, as the context reads it (bundle.ts
-// readSelection, only when the strict verdict is not INVALID): no interval
-// to check, and each record's own inclusion proof read against the signed
-// checkpoint, gated like any Bundle's membership. Where the checkpoint
-// cannot be authenticated (the browser build) the strict checks withhold
-// those proofs, so the page refuses the Bundle there.
-/** The viewer's verification gate: what "verified" means for resolution. */
-export function bundleVerified(result: BundleVerificationResult): boolean {
-  const selected = isProducerSelection(result);
-  return (
-    result.graphClosure.status === "pass" &&
-    (selected || result.intervalCoverage.status === "pass") &&
-    membershipProvenOrUnbound(result) &&
-    Object.values(result.capsuleResults).every((capsule) => capsule.ok) &&
-    result.disclosures.every(
-      (disclosure) =>
-        disclosure.status === "disclosure_match" ||
-        disclosure.status === "withheld",
-    )
-  );
-}
+// The viewer's verification gate (agent-action-capsule's
+// spec/verification-display-v0.md section 1) is AAC's own `bundleVerified`,
+// re-exported so this package's API keeps the name.
+export { bundleVerified };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);

@@ -1849,11 +1849,14 @@ it("a date not yet in force is never drawn without its conditions (D3)", async (
 
 it("a rule's not-applicable count is in its detail row before the row opens, so a static page shows it", async () => {
   // one rule check that did not apply: its claim is absent (no claim, by
-  // construction), and the buckets no longer name it
+  // construction), the Result's exclusions account for it (Result v0
+  // section 3: otherwise a missing claim is a gap), and the buckets no
+  // longer name it
   const source = cut(fixture("outcome-report-bundle.json"));
   const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
   const dropped = (doc.claims as Obj[])[0]!.id as string;
   doc.claims = (doc.claims as Obj[]).slice(1);
+  ((doc.aggregate as Obj).coverage as Obj).excluded_not_applicable = 1;
   const buckets = (doc.aggregate as Obj).buckets as Record<string, string[]>;
   for (const key of Object.keys(buckets))
     buckets[key] = buckets[key]!.filter((id) => id !== dropped);

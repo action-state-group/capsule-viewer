@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { build } from "esbuild";
-import { aacBrowser } from "../scripts/aac-browser.mjs";
 import { JSDOM } from "jsdom";
 import { beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
@@ -69,7 +68,6 @@ let runtime: string;
 beforeAll(async () => {
   const result = await build({
     entryPoints: [resolve(process.cwd(), "src", "browser.ts")],
-    plugins: [aacBrowser],
     bundle: true,
     format: "iife",
     globalName: "EvidenceGraph",
