@@ -152,6 +152,7 @@ describe("real copies capsulectl cut, in jsdom", () => {
       move("journey.agent.couldnt", { reason: "other" }),
       move("journey.agent.couldnt", {}),
       move("journey.agent.no_such_key", {}),
+      { by: "agent", step, facts: {} },
       { ...move("journey.user.approved.share_contact", { classes: [] }), by: "user" },
       { ...move("journey.user.approved.share_contact", {}), by: "user" },
       move("journey.agent.told", { who: "Example Shop", classes: ["credential", "id_document", "other_contact"] }),
@@ -167,6 +168,7 @@ describe("real copies capsulectl cut, in jsdom", () => {
     expect(rows).toEqual([
       "Your agent · Couldn't ()",
       "Your agent · Couldn't (the site was down)",
+      "Your agent",
       "Your agent",
       "Your agent",
       "Your agent",

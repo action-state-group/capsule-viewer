@@ -388,10 +388,10 @@ def _told(t: Mapping[str, Frozen]) -> Item:
 def _journey(raw: Frozen) -> tuple[Move, ...]:
     out = []
     for entry in _seq(raw):
-        entry = _map(entry)
-        key = _str(entry.get("key"))
-        if key is None:
+        if not isinstance(entry, Mapping):
             continue
+        # A move with no key is still a move: capsulectl's page lists it as who moved, with no label.
+        key = _str(entry.get("key")) or ""
         facts = _map(entry.get("facts"))
         out.append(
             Move(

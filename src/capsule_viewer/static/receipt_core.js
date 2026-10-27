@@ -545,9 +545,10 @@
   function journeyOf(raw) {
     var out = [];
     seq(raw).forEach(function (e) {
+      if (!isMap(e)) return;
       var entry = map(e);
-      var key = str(get(entry, "key"));
-      if (key === null) return;
+      // A move with no key is still a move: capsulectl's page lists it as who moved, with no label.
+      var key = or(str(get(entry, "key")), "");
       var facts = map(get(entry, "facts"));
       var pairs = [];
       Object.keys(facts).forEach(function (name) {

@@ -97,3 +97,14 @@ def test_a_label_is_worded_only_from_what_is_sealed_and_the_pack():
     assert _label(Move("user", "journey.user.approved.share_contact", None, (), ())) == "OK'd sharing your "
     assert _label(Move("user", "journey.user.approved.share_contact", None, (), None)) == ""
     assert _label(Move("agent", "journey.agent.told", None, facts(who="Example Shop"), ("credential", "id_document", "other_contact"))) == "Told Example Shop your login, ID document and contact details"
+
+
+def test_a_move_with_no_key_is_still_a_row_that_says_who_moved():
+    def edit(bundle):
+        report = bundle["extensions"]["x-deal-report/v0"]["agent_input"]["report"]
+        report["journey"] = [{"by": "agent", "step": report["journey"][0]["step"], "facts": {}}, "not a move"]
+
+    model, context, assurance = _model(edit=edit)
+    assert [(m.by, m.key) for m in model.report.journey] == [("agent", "")]
+    page = receipt_page(context, assurance, PACK, PACK_SHA, audience="keep", depth="L2")
+    assert _rows(page) == [("Your agent", "")]
