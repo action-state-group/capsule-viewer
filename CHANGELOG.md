@@ -84,7 +84,6 @@ here. The format follows
   TypeScript builder byte for byte on seeded vectors that the TypeScript
   tests generate (`go/emitter/testdata/fragment-vectors.json`,
   `embedded-vectors.json`).
-
 - The deal receipt modules (unilateral and seller; Python and the module-slot
   scripts) show the errand's journey under "How it went" (capsule-viewer#53):
   one row per move in the sealed report's `journey`, in order, as who moved
