@@ -69,6 +69,18 @@ here. The format follows
 
 ### Added
 
+- The Go emitter writes the fragment and embedded packagings
+  (action-state-group/capsule-cli#254). `BuildPresentationFragment` and
+  `EncodePresentationFragment` write the `aac.presentation-fragment/v0`
+  token. They match TypeScript's `buildPresentation(..., {format: "fragment"})`
+  byte for byte on seeded vectors the TypeScript tests generate
+  (`go/emitter/testdata/fragment-vectors.json`), and refuse an over-long
+  token or URL with `*FragmentTooLargeError`. `BuildEmbeddedHTML` writes a
+  snippet a host page inlines: it calls `renderEvidenceGraph` with the
+  options TypeScript's `mount` passes and returns the CSP hash sources the
+  host must allow. A TypeScript test renders Go's snippet with the real
+  runtime and gets the same DOM as `mount`.
+
 - The Outcomes rule table draws each requirement of the cited contract that the
   Result's `requirements_covered` leaves out as a "not covered" row, in a group of
   its own (capsule-viewer#96; agent-action-capsule#355). It is in no

@@ -1,0 +1,238 @@
+{
+ "cases": [
+  {
+   "name": "0",
+   "settings": {
+    "audience": "*"
+   },
+   "options": "{\"audience\":\"*\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "1",
+   "settings": {
+    "audience": "*",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"*\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "2",
+   "settings": {
+    "audience": "*",
+    "depth": "L0"
+   },
+   "options": "{\"audience\":\"*\",\"depth\":\"L0\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "3",
+   "settings": {
+    "audience": "*",
+    "depth": "L0",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"*\",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "4",
+   "settings": {
+    "audience": "*",
+    "depth": "L1"
+   },
+   "options": "{\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "5",
+   "settings": {
+    "audience": "*",
+    "depth": "L1",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "6",
+   "settings": {
+    "audience": "*",
+    "depth": "L2"
+   },
+   "options": "{\"audience\":\"*\",\"depth\":\"L2\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "7",
+   "settings": {
+    "audience": "*",
+    "depth": "L2",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"*\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "8",
+   "settings": {
+    "audience": "counterparty"
+   },
+   "options": "{\"audience\":\"counterparty\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "9",
+   "settings": {
+    "audience": "counterparty",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"counterparty\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "10",
+   "settings": {
+    "audience": "counterparty",
+    "depth": "L0"
+   },
+   "options": "{\"audience\":\"counterparty\",\"depth\":\"L0\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "11",
+   "settings": {
+    "audience": "counterparty",
+    "depth": "L0",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"counterparty\",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "12",
+   "settings": {
+    "audience": "counterparty",
+    "depth": "L1"
+   },
+   "options": "{\"audience\":\"counterparty\",\"depth\":\"L1\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "13",
+   "settings": {
+    "audience": "counterparty",
+    "depth": "L1",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"counterparty\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "14",
+   "settings": {
+    "audience": "counterparty",
+    "depth": "L2"
+   },
+   "options": "{\"audience\":\"counterparty\",\"depth\":\"L2\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "15",
+   "settings": {
+    "audience": "counterparty",
+    "depth": "L2",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"counterparty\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "16",
+   "settings": {
+    "audience": "é<&> "
+   },
+   "options": "{\"audience\":\"é<&> \",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "17",
+   "settings": {
+    "audience": "é<&> ",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"é<&> \",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "18",
+   "settings": {
+    "audience": "é<&> ",
+    "depth": "L0"
+   },
+   "options": "{\"audience\":\"é<&> \",\"depth\":\"L0\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "19",
+   "settings": {
+    "audience": "é<&> ",
+    "depth": "L0",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"é<&> \",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "20",
+   "settings": {
+    "audience": "é<&> ",
+    "depth": "L1"
+   },
+   "options": "{\"audience\":\"é<&> \",\"depth\":\"L1\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "21",
+   "settings": {
+    "audience": "é<&> ",
+    "depth": "L1",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"é<&> \",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  },
+  {
+   "name": "22",
+   "settings": {
+    "audience": "é<&> ",
+    "depth": "L2"
+   },
+   "options": "{\"audience\":\"é<&> \",\"depth\":\"L2\",\"format\":\"embedded\"}"
+  },
+  {
+   "name": "23",
+   "settings": {
+    "audience": "é<&> ",
+    "depth": "L2",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    }
+   },
+   "options": "{\"audience\":\"é<&> \",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+  }
+ ]
+}
