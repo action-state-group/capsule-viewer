@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The kit's design tokens: ONE source, generated CSS, and a drift guard.
 
-``TOKENS`` below is the only place a token value is written by hand. The
+``TOKENS`` below is generated from ``tokens/tokens.json`` (the one token source
+for the kit, the emitter shell and the report frames; ``scripts/gen-tokens.py``
+rewrites it). The
 ``:root { --cv-* }`` block at the top of ``static/kit.css`` is GENERATED from
 it (``python -m capsule_viewer.kit tokens --write``) and checked in, so the
 stylesheet a page inlines is a plain file anyone can read. ``check_token_sync``
@@ -22,8 +24,10 @@ PREFIX = "--cv-"
 BEGIN_MARKER = "/* BEGIN GENERATED TOKENS (capsule_viewer.kit.tokens) -- do not edit by hand */"
 END_MARKER = "/* END GENERATED TOKENS */"
 
-# Name (without the prefix) -> CSS value. Order is the emitted order.
+# Name (without the prefix) -> CSS value. Order is the emitted order. The
+# entries are generated from tokens/tokens.json (scripts/gen-tokens.py).
 TOKENS: dict[str, str] = {
+# BEGIN GENERATED TOKENS (tokens/tokens.json) -- do not edit by hand
     "font-sans": "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
     "font-mono": "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
     "font-size-sm": "0.8125rem",
@@ -53,6 +57,7 @@ TOKENS: dict[str, str] = {
     "color-neutral-bg": "#eceef2",
     "color-info-fg": "#1f3c94",
     "color-info-bg": "#e7ecfb",
+# END GENERATED TOKENS
 }
 
 # (foreground token, background token): every pair the kit sets text in.
