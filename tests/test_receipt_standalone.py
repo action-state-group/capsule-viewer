@@ -89,20 +89,21 @@ def test_a_standalone_report_that_is_not_the_named_one_is_declined(edit):
         build_receipt(context, check_opening, assurance, "keep")
 
 
-def test_a_standalone_report_beside_a_report_record_on_the_log_is_declined():
+@pytest.mark.parametrize("disclosed", [False, True], ids=["withheld", "disclosed"])
+def test_a_standalone_report_beside_a_report_record_on_the_log_is_declined(disclosed):
     """Two reports in one copy are two texts: neither is shown, whether or not
-    the record on the log discloses its text."""
-
-    def add_report_record(bundle):
-        record = copy.deepcopy(bundle["records"][-1])
-        record["capsule_id"] = "f" * 64
-        record["action_id"] = "capsulectl-deal-report"
-        bundle["records"].append(record)
-
+    the record on the log discloses its text. The record is a real one: the
+    report record of another copy (main-buyer-keep)."""
+    other, other_output = load("main-buyer-keep")
+    report_id = other["extensions"]["x-deal-v0"]["sealed_report"]
     bundle, output = copy.deepcopy(load("main-standalone-keep"))
-    add_report_record(bundle)
+    bundle["records"].append(copy.deepcopy(next(r for r in other["records"] if r["capsule_id"] == report_id)))
     output = report_for(bundle, output)
-    output["record_identity"]["f" * 64] = "passed"
+    output["record_identity"][report_id] = "passed"
+    if disclosed:
+        bundle["disclosures"][report_id] = copy.deepcopy(other["disclosures"][report_id])
+        output = report_for(bundle, output)
+        output["disclosures"] = [*output["disclosures"], {"capsule_id": report_id, "member": "agent_input", "status": "disclosure_match"}]
     context, assurance = context_from_capsulectl(bundle, output)
     with pytest.raises(ReceiptUnavailable, match="both in the bundle"):
         build_receipt(context, check_opening, assurance, "keep")

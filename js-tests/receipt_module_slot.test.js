@@ -119,6 +119,26 @@ describe("real copies capsulectl cut, in jsdom", () => {
     expect(await unilateral.canRender(standInContext(bundle, { verify: readVerify("main-standalone-keep") }))).toBe(false);
   });
 
+  it("a standalone report beside a report record on the log is declined, disclosed or not, as in Python", async () => {
+    const unilateral = threeScripts().find((x) => x.kind === "unilateral").module;
+    const other = readBundle("main-buyer-keep");
+    const otherVerify = readVerify("main-buyer-keep");
+    const reportId = other.extensions["x-deal-v0"].sealed_report;
+    for (const disclosed of [false, true]) {
+      const bundle = readBundle("main-standalone-keep");
+      const verify = readVerify("main-standalone-keep");
+      bundle.records.push(other.records.find((r) => r.capsule_id === reportId));
+      verify.record_identity[reportId] = "passed";
+      if (disclosed) {
+        bundle.disclosures[reportId] = other.disclosures[reportId];
+        verify.disclosures.push(otherVerify.disclosures.find((d) => d.capsule_id === reportId));
+      }
+      expect(await unilateral.canRender(standInContext(bundle, { verify })), `disclosed ${disclosed}`).toBe(false);
+    }
+    // The same edit without the second report leaves the copy accepted: the decline is the second report's.
+    expect(await unilateral.canRender(standInContext(readBundle("main-standalone-keep"), { verify: readVerify("main-standalone-keep") }))).toBe(true);
+  });
+
   it("a seller copy whose kind was dropped is no module's, in the page as in Python", async () => {
     const bundle = readBundle("main-seller-keep");
     delete bundle.extensions["x-deal-seller/v0"];
