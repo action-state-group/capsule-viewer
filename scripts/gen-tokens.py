@@ -100,7 +100,7 @@ def main() -> int:
     }
     for shell in SHELLS:
         wanted[shell] = shell_html(shell.read_text(encoding="utf-8"), data)
-    stale = [p for p, text in wanted.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
+    stale = [p for p, text in wanted.items() if p.read_text(encoding="utf-8") != text]
     if check:
         for path in stale:
             print(f"out of date: {path.relative_to(ROOT)} (run python3 scripts/gen-tokens.py)")
