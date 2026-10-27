@@ -531,7 +531,8 @@ def test_every_bilateral_word_is_in_the_pack_and_takes_its_placeholders():
 
 
 def test_the_example_pack_never_claims_enforcement():
-    words = " ".join(WORDS.entries.values()).lower()
+    # journey.reason.blocked is capsulectl's word for why the agent could not go on (a captcha or a bot wall stopped it), not a claim about this page.
+    words = " ".join(v for k, v in WORDS.entries.items() if k != "journey.reason.blocked").lower()
     assert not re.search(r"\b(protect|protects|protected|block|blocks|blocked|stop|stops|stopped)\b", words)
 
 

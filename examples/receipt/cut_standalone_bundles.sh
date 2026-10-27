@@ -3,7 +3,7 @@
 # them today: the copy's report is a standalone record in x-deal-report/v0, on
 # no log (capsule-cli#294):
 #
-#   examples/receipt/cut_standalone_bundles.sh CAPSULECTL CAPSULECTL_DEAL
+#   examples/receipt/cut_standalone_bundles.sh CAPSULECTL CAPSULECTL_DEAL [KEEP_DIR]
 #
 # CAPSULECTL is a capsulectl built from capsule-cli main, CAPSULECTL_DEAL the
 # deal plugin built from evidencebook-deal main (`go build ./cmd/capsulectl-deal`).
@@ -15,13 +15,15 @@
 # * main-standalone-counterparty: the copy shared with the other party, whose
 #   sealed report carries none.
 # * <name>.verify.json: what `capsulectl verify --bundle` reports for each.
+# KEEP_DIR, when given, receives capsulectl's own deal pages (deal-view.js) for both copies.
 # Keys and capsule ids are fresh on every run. Needs bash, jq and perl.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-usage="usage: cut_standalone_bundles.sh CAPSULECTL CAPSULECTL_DEAL"
+usage="usage: cut_standalone_bundles.sh CAPSULECTL CAPSULECTL_DEAL [KEEP_DIR]"
 bin="$(cd "$(dirname "${1:?$usage}")" && pwd)/$(basename "$1")"
 plugin="$(cd "$(dirname "${2:?$usage}")" && pwd)/$(basename "$2")"
+keep_dir="${3:+$(mkdir -p "$3" && cd "$3" && pwd)}"
 out="$root/tests/testdata/receipt"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -65,6 +67,7 @@ deal note --deal "$id" --kind act --input act.json >/dev/null
 deal report --deal "$id" --html keep.html --bundle keep.json >/dev/null
 deal report --deal "$id" --share counterparty --to "the other party" --html counterparty.html >/dev/null
 perl -ne 'print "$1\n" if /^\s*<script>window\.__BUNDLE__ = (.*);<\/script>$/' counterparty.html >counterparty.json
+if [ -n "$keep_dir" ]; then mkdir -p "$keep_dir" && cp keep.html counterparty.html "$keep_dir/"; fi
 for name in keep counterparty; do
   jq -S . "$name.json" >"$out/main-standalone-$name.bundle.json"
   capsulectl verify --bundle "$out/main-standalone-$name.bundle.json" | jq -S . >"$out/main-standalone-$name.verify.json"

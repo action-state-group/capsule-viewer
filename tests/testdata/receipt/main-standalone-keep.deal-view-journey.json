@@ -1,0 +1,45 @@
+{
+  "source": "capsulectl's own deal page (deal-view.js, from capsule-cli main d8f58012 and evidencebook-deal main 37071b3) for main-standalone-keep, opened in a browser: the rows of 'How it went' (data-journey), who moved and the label. tests/test_receipt_journey.py holds the receipt's rows equal to these.",
+  "rows": [
+    {
+      "mover": "You",
+      "label": "Asked"
+    },
+    {
+      "mover": "Your agent",
+      "label": "Searched"
+    },
+    {
+      "mover": "Your agent",
+      "label": "Couldn't (Example Shop One out of stock)"
+    },
+    {
+      "mover": "Your agent",
+      "label": "Showed you 1 options"
+    },
+    {
+      "mover": "Your agent",
+      "label": "Recommended"
+    },
+    {
+      "mover": "You",
+      "label": "Picked"
+    },
+    {
+      "mover": "You",
+      "label": "Switched to Example Shop Three"
+    },
+    {
+      "mover": "Your agent",
+      "label": "Waited for your OK"
+    },
+    {
+      "mover": "You",
+      "label": "OK'd paying $35"
+    },
+    {
+      "mover": "Your agent",
+      "label": "Paid $35 within your $40 limit"
+    }
+  ]
+}

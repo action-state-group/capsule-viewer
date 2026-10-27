@@ -541,6 +541,25 @@
     return item(parts.join(" · "), strings(get(t, "steps")), null, get(t, "authority") === "none");
   }
 
+  // The errand's journey as the sealed report states it (model.py Move).
+  function journeyOf(raw) {
+    var out = [];
+    seq(raw).forEach(function (e) {
+      if (!isMap(e)) return;
+      var entry = map(e);
+      // A move with no key is still a move: capsulectl's page lists it as who moved, with no label.
+      var key = or(str(get(entry, "key")), "");
+      var facts = map(get(entry, "facts"));
+      var pairs = [];
+      Object.keys(facts).forEach(function (name) {
+        var value = str(facts[name]);
+        if (value !== null) pairs.push([name, value]);
+      });
+      out.push({ by: or(str(get(entry, "by")), ""), key: key, step: str(get(entry, "step")), facts: pairs, classes: Array.isArray(get(facts, "classes")) ? strings(get(facts, "classes")) : null });
+    });
+    return out;
+  }
+
   function report(capsuleId, raw) {
     var life = map(get(raw, "lifecycle"));
     var deadlines = seq(get(raw, "deadlines")).map(map);
@@ -573,6 +592,7 @@
       agent_anomalies: side("agent"),
       counterparty_anomalies: side("counterparty"),
       withheld: strings(get(raw, "withheld")),
+      journey: journeyOf(get(raw, "journey")),
     };
   }
 
@@ -1412,11 +1432,58 @@
     return this.note(w("summary.standalone", { status: model.report_checked }), { "data-sealed": "x-deal-report" });
   };
 
+  // The words for one move, as capsulectl's deal page words it (module.py
+  // _journey_label): a key the pack has no word for, or a placeholder with no
+  // value, words nothing.
+  P.journeyLabel = function (move) {
+    var template = word(move.key);
+    if (template === null) return "";
+    var facts = {};
+    move.facts.forEach(function (pair) { facts[pair[0]] = pair[1]; });
+    var values = {};
+    Object.keys(facts).forEach(function (name) { if (name !== "detail") values[name] = facts[name]; });
+    if (own(facts, "reason")) {
+      var reason = facts.reason === "other" ? (own(facts, "detail") ? facts.detail : null) : word("journey.reason." + facts.reason) || "";
+      delete values.reason;
+      if (reason !== null) values.reason = reason;
+    }
+    if (move.classes !== null) {
+      var named = move.classes.map(function (c) { return word("class." + c) || c.replace(/_/g, " "); });
+      values.classes = named.length < 2 ? named.join("") : named.slice(0, -1).join(", ") + " and " + named[named.length - 1];
+    }
+    var missing = false;
+    template.replace(PLACEHOLDER, function (_, name) { if (!own(values, name)) missing = true; return ""; });
+    if (missing) return "";
+    // A reason the pack has no word for is said as nothing: no empty "()" is left behind
+    // (capsulectl's page prints it; capsule-cli#465).
+    return template.replace(PLACEHOLDER, function (_, name) { return values[name]; })
+      .replace(/\s*\(\s*\)/g, "").replace(/\s+\)/g, ")");
+  };
+
+  // "How it went": the errand's moves in order, each opening to its sealed step.
+  P.journey = function (model) {
+    var r = model.report, self = this;
+    if (SHARED_AUDIENCES.indexOf(r.audience) >= 0 || !r.journey.length) return [];
+    var rows = [];
+    var said = null;
+    r.journey.forEach(function (move) {
+      var step = move.step ? model.steps.find(function (s) { return s.capsule_id === move.step; }) || null : null;
+      var when = step !== null && step.disclosure === "disclosed" ? step.at : null;
+      var shown = when && when !== said ? when : null;
+      said = when || said;
+      var mover = word("journey_by." + move.by) || w("journey_by.unknown");
+      var label = self.journeyLabel(move);
+      rows.push(self.item(model, item(label ? mover + " · " + label : mover, move.step ? [move.step] : [], shown, false)));
+    });
+    return [this.kit.section(w("section.journey"), rows.concat([this.note(w("journey_note"))]))];
+  };
+
   P.l1 = function (model) {
     var d = this.d, kit = this.kit, self = this;
     var r = model.report;
     var out = [this.sealedNote(model)];
     out.push(kit.section(w("section.authorized"), [this.committed(model.asked, "asked"), this.sectionSteps(model, "authorized")]));
+    out = out.concat(this.journey(model));
     out.push(kit.section(w("section.proposed"), this.sectionSteps(model, "proposed")));
     out.push(kit.section(w("section.approved"), this.sectionSteps(model, "approved")));
     out.push(kit.section(w("section.merchant"), this.merchant(model)));
@@ -1592,6 +1659,7 @@
     authorised.push(this.withheldRow(model.floor, "seller.floor", "floor"));
     authorised = authorised.concat(this.sectionSteps(r, "authorized"));
     out.push(kit.section(w(this.audienceKey("seller.section.authorised", model)), authorised));
+    out = out.concat(this.journey(r));
 
     var toldList = r.statements.map(function (c) { return self.committed(c, "statement"); });
     out.push(kit.section(w(this.audienceKey("seller.section.represented", model)), [

@@ -43,6 +43,7 @@ kit only for the render it is in.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from html import escape
@@ -54,8 +55,8 @@ from ..kit.components import EvidenceItem, Markup, Metric
 from ..kit.contract import KitServices, ModuleManifest
 from ..registry import Manifest
 from ..verifier_report import Assurance
-from ..wording import WordingPack
-from .model import Binder, Committed, Fact, Item, ReceiptModel, ReceiptUnavailable, Step, build_receipt
+from ..wording import PLACEHOLDER, WordingPack
+from .model import Binder, Committed, Fact, Item, Move, ReceiptModel, ReceiptUnavailable, Step, build_receipt
 from .role import SELLER_KIND, sealed_side, seller_kind_engaged
 
 DEPTHS = ("L0", "L1", "L2")
@@ -82,6 +83,18 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "party.heading": frozenset({"role", "member"}),
     "join.line": frozenset({"basis", "declared", "derived"}),
     "corroboration.redundant": frozenset({"reasons"}),
+    # The errand's journey: capsulectl's own keys, mirrored (tests/test_receipt_journey.py).
+    "journey.agent.act.pay": frozenset({"amount"}),
+    "journey.agent.act.pay.within": frozenset({"amount", "limit"}),
+    "journey.agent.chose.item": frozenset({"item"}),
+    "journey.agent.couldnt": frozenset({"reason"}),
+    "journey.agent.couldnt.who": frozenset({"reason", "who"}),
+    "journey.agent.options": frozenset({"count"}),
+    "journey.agent.told": frozenset({"classes", "who"}),
+    **{f"journey.user.{answer}.{kind}": frozenset({"amount"}) for answer in ("approved", "declined") for kind in ("commit", "offer", "pay")},
+    **{f"journey.user.{answer}.share_contact": frozenset({"classes"}) for answer in ("approved", "declined")},
+    "journey.user.switched": frozenset({"who"}),
+    "journey.user.switched.item": frozenset({"item"}),
 }
 SHARED_AUDIENCES = ("counterparty", "adjudicator")
 
@@ -379,6 +392,55 @@ class UnilateralReceiptModule:
 
     # ---- L1 -----------------------------------------------------------------
 
+    def _journey_label(self, move: Move) -> str:
+        """The words for one move, as capsulectl's deal page words it: a key
+        the pack has no word for, or a placeholder with no value, words
+        nothing. A reason and the classes told are sealed as tokens; the
+        pack's words for them are put in here. An "other" reason is its own
+        detail, never a placeholder."""
+        template = self.pack.get(move.key)
+        if template is None:
+            return ""
+        facts = dict(move.facts)
+        values = {name: value for name, value in facts.items() if name != "detail"}
+        if "reason" in facts:
+            worded = self.pack.get(f"journey.reason.{facts['reason']}")
+            # A reason with no word is said as nothing, as capsulectl's page says it; an "other" with no detail has no value.
+            reason = facts.get("detail") if facts["reason"] == "other" else worded or ""
+            values.pop("reason", None)
+            if reason is not None:
+                values["reason"] = reason
+        if move.classes is not None:
+            named = [self.pack.get(f"class.{c}") or c.replace("_", " ") for c in move.classes]
+            values["classes"] = "".join(named) if len(named) < 2 else f"{', '.join(named[:-1])} and {named[-1]}"
+        needed = PLACEHOLDER.findall(template)
+        if any(name not in values for name in needed):
+            return ""
+        text = PLACEHOLDER.sub(lambda m: values[m.group(1)], template)
+        # A reason the pack has no word for is said as nothing: no empty "()" is left behind
+        # (capsulectl's page prints it; capsule-cli#465).
+        return re.sub(r"\s+\)", ")", re.sub(r"\s*\(\s*\)", "", text))
+
+    def _journey(self, model: ReceiptModel, open_: bool) -> list[Markup]:
+        """"How it went": the errand's moves in order, each as who moved and
+        what, opening to the sealed step it was read from. A shared copy
+        carries none; a report sealed before journeys has none."""
+        r = model.report
+        if r.audience in SHARED_AUDIENCES or not r.journey:
+            return []
+        rows: list[Markup] = []
+        said = None
+        for move in r.journey:
+            step = model.step(move.step) if move.step else None
+            # A step this copy does not disclose gives no time: only its row says so.
+            when = step.at if step is not None and step.disclosure == "disclosed" else None
+            shown = when if when and when != said else None
+            said = when or said
+            mover = self.pack.get(f"journey_by.{move.by}") or self.w("journey_by.unknown")
+            label = self._journey_label(move)
+            rows.append(self._item(model, Item(f"{mover} · {label}" if label else mover, (move.step,) if move.step else (), shown), open_=open_))
+        return [self.kit.section(self.w("section.journey"), *rows, self._note(self.w("journey_note")))]
+
     def _committed(self, c: Committed, prefix: str) -> Markup:
         if c.state == "opened" and c.text is not None:
             label = ""
@@ -411,6 +473,7 @@ class UnilateralReceiptModule:
         out: list[str] = [self._sealed_note(model)]
 
         out.append(self.kit.section(self.w("section.authorized"), self._committed(model.asked, "asked"), *self._section_steps(model, "authorized")))
+        out.extend(self._journey(model, open_))
         out.append(self.kit.section(self.w("section.proposed"), *self._section_steps(model, "proposed")))
         out.append(self.kit.section(self.w("section.approved"), *self._section_steps(model, "approved")))
         out.append(self.kit.section(self.w("section.merchant"), *self._merchant(model, open_)))
