@@ -267,14 +267,17 @@ here. The format follows
   checked here, and it verifies". One AAC could not check keeps "stated by
   the bundle, not checked here". When AAC fails any entry, nothing on the
   line reads as witnessed: it says "not witnessed", and names each failing
-  receipt with AAC's reason and counts the entries it cannot read. A page's
+  receipt with AAC's reason and counts the entries it cannot read (or, for
+  any other failure, quotes AAC's findings). The folded line reads "witness
+  receipts partly checked here" when only some receipts passed. A page's
   context has no witness directory, so on today's pages a well-formed
   receipt reads as not checked. The line carries the state in
   `data-witness` (`verified`, `not-checked`, `invalid` or `absent`). New
   locked keys in both default packs: `prov.witness.verified`,
   `prov.witness.invalid`, `prov.witness.failed`, `prov.witness.failed-entry`,
   `prov.witness.invalid.unreadable.one` and `.other`,
-  `prov.brief.witness.verified` and `prov.brief.witness.invalid`. Both packs'
+  `prov.witness.invalid.findings`, `prov.brief.witness.verified`,
+  `prov.brief.witness.partly-checked` and `prov.brief.witness.invalid`. Both packs'
   digests change.
 - The report proofs name the wording pack that drew the card ("Words"), and
   now every wording layer applied, by digest -- the built-in default's too,

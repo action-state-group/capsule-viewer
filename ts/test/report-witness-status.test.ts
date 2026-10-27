@@ -86,7 +86,7 @@ for (const { card, file } of CARDS) {
     expect(banner.dataset.verify).toBe("failed");
     expect(witness.dataset.witness).toBe("invalid");
     expect(witness.textContent).toMatch(
-      /^not witnessed: the witness check failed on this page\. 1 entry in its witness list cannot be read\./u,
+      /^not witnessed: the witness check failed\. 1 entry in its witness list cannot be read\./u,
     );
     expect(witness.textContent).not.toContain("stated by the bundle");
     expect(witness.textContent).not.toContain("witness.example");

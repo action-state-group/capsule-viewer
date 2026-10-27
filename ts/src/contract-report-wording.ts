@@ -610,6 +610,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.witness.verified",
   "prov.witness.invalid",
   "prov.witness.failed",
+  "prov.witness.invalid.findings",
   "prov.witness.failed-entry",
   "prov.witness.invalid.unreadable.one",
   "prov.witness.invalid.unreadable.other",
@@ -728,6 +729,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.brief.judge.mock",
   "prov.brief.witness.stated",
   "prov.brief.witness.verified",
+  "prov.brief.witness.partly-checked",
   "prov.brief.witness.invalid",
   "prov.brief.witness.mixed",
   "prov.brief.witness.not-stated",
@@ -1191,8 +1193,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "d35063d2f47a01ca0c714c5e1afc0f971a48947b089acd58c043638065e093ae",
-  groups: "9aaf78ef4fe39425b58f5158fd164d4804a401256e7a3fa481873f781bbeb1ce",
+  lines: "7065032ca2818ad967a35eaa1dd8c6da43a84861c3babc6446afd24db488dbc0",
+  groups: "37f9e5df13bfb85f3c44ecd13fe0b19265e661e9e4c4e5f6d471c7f27c9d93c1",
 });
 
 export interface Words {
