@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/action-state-group/agent-action-capsule/go/bundle"
 	"github.com/action-state-group/agent-action-capsule/go/canonical"
@@ -30,6 +31,9 @@ const (
 	// FragmentTokenMaxLength is the URL limit less 2048 characters for the
 	// viewer's address and the '#'.
 	FragmentTokenMaxLength = FragmentURLMaxLength - 2_048
+	// FragmentTokenDefaultBudget is the builder's default token budget: the
+	// longest link it offers without being asked for more.
+	FragmentTokenDefaultBudget = 65_536
 	// WordingTitleKey is the wording key the builder reads for the page title.
 	WordingTitleKey = "page.title"
 
@@ -174,17 +178,12 @@ func checkModuleManifest(m Module) error {
 	return nil
 }
 
-// BuildOfflineHTML packages a (scoped) bundle as one self-contained offline
-// file with its per-page CSP. The default settings (audience "*", nothing
-// else) write exactly EmitEvidenceGraphHTML's page. Each module's script
-// and stylesheet pins reach the CSP; a module given with its manifest is
-// checked against it first (checkModuleManifest), and on a mismatch no page
-// is written.
-func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (string, error) {
-	bundleObject, ok := value.(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("bundle is not a JSON object")
-	}
+// checkSettings checks what every packaging checks before it writes
+// anything (buildPresentation's scopeAndVerify and refuseRefusedModules):
+// the audience, the depth, each module against its manifest, and the
+// wording pack. It returns the page title: the Title setting, else the
+// wording pack's page.title, else "".
+func checkSettings(o OfflineOptions) (string, error) {
 	if o.Audience == "" {
 		return "", fmt.Errorf("audience is required")
 	}
@@ -208,21 +207,49 @@ func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (stri
 			title = entries[WordingTitleKey]
 		}
 	}
+	return title, nil
+}
+
+// renderOptions is the options argument a bootstrap passes to
+// renderEvidenceGraph, as JCS text escaped for an inline script: the
+// audience, the format, and the depth and wording pack when set.
+func renderOptions(o OfflineOptions, format string) (string, error) {
+	options := map[string]interface{}{"audience": o.Audience, "format": format}
+	if o.Depth != "" {
+		options["depth"] = o.Depth
+	}
+	if o.Wording != nil {
+		options["wording"] = map[string]interface{}{"pack": o.Wording.Pack, "sha256": o.Wording.SHA256}
+	}
+	encoded, err := canonical.JCS(options)
+	if err != nil {
+		return "", err
+	}
+	return escapeJSONForHTMLScript(string(encoded)), nil
+}
+
+// BuildOfflineHTML packages a (scoped) bundle as one self-contained offline
+// file with its per-page CSP. The default settings (audience "*", nothing
+// else) write exactly EmitEvidenceGraphHTML's page. Each module's script
+// and stylesheet pins reach the CSP; a module given with its manifest is
+// checked against it first (checkModuleManifest), and on a mismatch no page
+// is written.
+func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (string, error) {
+	bundleObject, ok := value.(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("bundle is not a JSON object")
+	}
+	title, err := checkSettings(o)
+	if err != nil {
+		return "", err
+	}
 	bootstrap := DefaultBootstrap
 	if o.Audience != "*" || o.Depth != "" || o.Wording != nil {
-		options := map[string]interface{}{"audience": o.Audience, "format": "html"}
-		if o.Depth != "" {
-			options["depth"] = o.Depth
-		}
-		if o.Wording != nil {
-			options["wording"] = map[string]interface{}{"pack": o.Wording.Pack, "sha256": o.Wording.SHA256}
-		}
-		encoded, err := canonical.JCS(options)
+		options, err := renderOptions(o, "html")
 		if err != nil {
 			return "", err
 		}
-		bootstrap = `renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, ` +
-			escapeJSONForHTMLScript(string(encoded)) + `);`
+		bootstrap = `renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, ` + options + `);`
 	}
 	return EmitEvidenceGraphHTMLWithOptions(bundleObject, runtime, Options{
 		Title:             title,
@@ -261,6 +288,12 @@ func DecodePresentationFragment(token string, maxLength int) (*PresentationFragm
 	if err != nil {
 		return nil, err
 	}
+	return checkPresentationFragment(value)
+}
+
+// checkPresentationFragment checks a decoded fragment payload (TypeScript's
+// checkPresentationFragment) and returns it as a PresentationFragment.
+func checkPresentationFragment(value interface{}) (*PresentationFragment, error) {
 	object, ok := value.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("presentation fragment: not a JSON object")
@@ -340,6 +373,145 @@ func DecodePresentationFragment(token string, maxLength int) (*PresentationFragm
 	}
 	out.Bundle = bundleValue
 	return out, nil
+}
+
+// FragmentTooLargeError refuses a fragment token over its budget, or a
+// permalink URL over FragmentURLMaxLength. Nothing is truncated.
+type FragmentTooLargeError struct {
+	Length    int
+	MaxLength int
+	// Subject is "fragment token" or "permalink URL".
+	Subject string
+}
+
+func (e *FragmentTooLargeError) Error() string {
+	return fmt.Sprintf("%s is %d characters, over the %d-character maximum; it is refused, never truncated. Share the offline .html instead.",
+		e.Subject, e.Length, e.MaxLength)
+}
+
+// EncodePresentationFragment checks a payload and encodes it as a fragment
+// token with the Evidence Bundle permalink codec (TypeScript's
+// encodePresentationFragment). A token over maxLength (FragmentTokenMaxLength
+// when 0, never above it) is refused with *FragmentTooLargeError; with a
+// viewerURL, so is a URL "viewerURL#token" over FragmentURLMaxLength, counted
+// in UTF-16 code units as a browser counts it. Empty optional strings are
+// absent members.
+func EncodePresentationFragment(p PresentationFragment, maxLength int, viewerURL string) (token, url string, err error) {
+	if maxLength == 0 {
+		maxLength = FragmentTokenMaxLength
+	}
+	if maxLength < 1 || maxLength > FragmentTokenMaxLength {
+		return "", "", fmt.Errorf("maxLength must be an integer from 1 to %d", FragmentTokenMaxLength)
+	}
+	payload := map[string]interface{}{
+		"fragment_version":    PresentationFragmentVersion,
+		"audience":            p.Audience,
+		"presentation":        p.Presentation,
+		"core_runtime_sha256": p.CoreRuntimeSHA256,
+		"bundle":              p.Bundle,
+	}
+	for key, value := range map[string]string{"depth": p.Depth, "title": p.Title, "theme_css": p.ThemeCSS} {
+		if value != "" {
+			payload[key] = value
+		}
+	}
+	if p.Wording != nil {
+		payload["wording"] = map[string]interface{}{"pack": p.Wording.Pack, "sha256": p.Wording.SHA256}
+	}
+	pins := make([]interface{}, len(p.ModuleSHA256))
+	for i, pin := range p.ModuleSHA256 {
+		pins[i] = pin
+	}
+	payload["module_sha256"] = pins
+	if _, err := checkPresentationFragment(payload); err != nil {
+		return "", "", err
+	}
+	if token, err = bundle.EncodeFragment(payload); err != nil {
+		return "", "", err
+	}
+	if len(token) > maxLength {
+		return "", "", &FragmentTooLargeError{Length: len(token), MaxLength: maxLength, Subject: "fragment token"}
+	}
+	if viewerURL == "" {
+		return token, "", nil
+	}
+	if strings.Contains(viewerURL, "#") {
+		return "", "", fmt.Errorf("viewerUrl must not already carry a fragment")
+	}
+	url = viewerURL + "#" + token
+	if length := len(utf16.Encode([]rune(url))); length > FragmentURLMaxLength {
+		return "", "", &FragmentTooLargeError{Length: length, MaxLength: FragmentURLMaxLength, Subject: "permalink URL"}
+	}
+	return token, url, nil
+}
+
+// FragmentOptions are the fragment permalink's settings: the offline file's,
+// which the fragment carries so the hand-back rebuilds that file, and the
+// link's own.
+type FragmentOptions struct {
+	OfflineOptions
+	// Presentation is the module id the caller resolved; "" is "auto".
+	Presentation string
+	// MaxLength is the token budget: FragmentTokenDefaultBudget when 0, at
+	// most FragmentTokenMaxLength.
+	MaxLength int
+	// ViewerURL, when set, is the viewer address the token is appended to.
+	ViewerURL string
+}
+
+// BuiltFragment is a fragment permalink: the token, the URL when a viewer
+// address was given, and the payload the token carries.
+type BuiltFragment struct {
+	Fragment string
+	URL      string
+	Payload  PresentationFragment
+}
+
+// BuildPresentationFragment packages a (scoped) bundle as a fragment
+// permalink, the Go twin of buildPresentation's "fragment" format: for the
+// same bundle, runtime and settings the two write the same token. It
+// checks the settings as BuildOfflineHTML does, and the runtime and each
+// module against its pin, since the fragment carries the pins and not the
+// code. A token over the budget is *FragmentTooLargeError: the packaging
+// is unavailable, never truncated.
+func BuildPresentationFragment(value interface{}, runtime []byte, o FragmentOptions) (*BuiltFragment, error) {
+	if _, err := checkSettings(o.OfflineOptions); err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(runtime)
+	runtimePin := hex.EncodeToString(sum[:])
+	if o.CoreRuntimeSHA256 != "" && o.CoreRuntimeSHA256 != runtimePin {
+		return nil, fmt.Errorf("browser IIFE does not match its SHA-256 pin")
+	}
+	payload := PresentationFragment{
+		Audience:          o.Audience,
+		Presentation:      o.Presentation,
+		Depth:             o.Depth,
+		Title:             o.Title,
+		ThemeCSS:          o.ThemeCSS,
+		Wording:           o.Wording,
+		CoreRuntimeSHA256: runtimePin,
+		ModuleSHA256:      []string{},
+		Bundle:            value,
+	}
+	if payload.Presentation == "" {
+		payload.Presentation = "auto"
+	}
+	for index, module := range o.Modules {
+		if err := checkPin(fmt.Sprintf("module %d", index), module.SHA256, string(module.Code)); err != nil {
+			return nil, err
+		}
+		payload.ModuleSHA256 = append(payload.ModuleSHA256, module.SHA256)
+	}
+	maxLength := o.MaxLength
+	if maxLength == 0 {
+		maxLength = FragmentTokenDefaultBudget
+	}
+	token, url, err := EncodePresentationFragment(payload, maxLength, o.ViewerURL)
+	if err != nil {
+		return nil, err
+	}
+	return &BuiltFragment{Fragment: token, URL: url, Payload: payload}, nil
 }
 
 // OfflineHTMLFromFragment is the hand-back: it rebuilds the exact offline
