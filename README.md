@@ -24,15 +24,17 @@ supplies only the per-record card body. Two modules ship today:
 The Python Rules and Receipt carriers in this repository (`capsule_viewer.rules`
 and `capsule_viewer.receipt`) are **not the consumer product path**. The
 canonical Rules and Receipt implementations are `capsulectl`'s deal view
-(`capsulectl.deal-view/v0`) and the Muse JS modules. This repository keeps what
-those implementations are held to: the goldens and the wording packs.
+(`capsulectl.deal-view/v0`) together with the Muse JS modules. This repository
+keeps what those implementations are held to: the goldens and the wording packs
+it ships.
 
 Nothing here is deleted by this note. The JS receipt module-slot scripts
-(`static/receipt_*.js`) and the basic Rules module stay, and the Python receipt
-modules stay as the oracle the parity tests hold the scripts to until they are
-removed in a separate change. Two things have another owner: the S1-S7 surface
-forms are deferred to after launch, and the view-model JSON belongs to the Muse
-plugin, not to this repository.
+(`static/receipt_*.js`) and the Rules module (`capsule_viewer.rules`) stay as the
+basic rendering, and the Python receipt modules stay as the oracle the parity
+tests hold the scripts to until they are removed in a separate change. Two things
+have another owner: the S1-S7 surface forms (head seam, wordmark, image and text
+buckets, 1.91:1 share image) are deferred to after launch, and the view-model
+JSON a module draws from belongs to the Muse plugin, not to this repository.
 
 ## What "conforming" means for `result/v0`
 
