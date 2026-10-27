@@ -43,6 +43,7 @@ kit only for the render it is in.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from html import escape
@@ -415,7 +416,10 @@ class UnilateralReceiptModule:
         needed = PLACEHOLDER.findall(template)
         if any(name not in values for name in needed):
             return ""
-        return PLACEHOLDER.sub(lambda m: values[m.group(1)], template)
+        text = PLACEHOLDER.sub(lambda m: values[m.group(1)], template)
+        # A reason the pack has no word for is said as nothing: no empty "()" is left behind
+        # (capsulectl's page prints it; capsule-cli#465).
+        return re.sub(r"\s+\)", ")", re.sub(r"\s*\(\s*\)", "", text))
 
     def _journey(self, model: ReceiptModel, open_: bool) -> list[Markup]:
         """"How it went": the errand's moves in order, each as who moved and

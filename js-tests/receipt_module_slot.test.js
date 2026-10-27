@@ -148,6 +148,7 @@ describe("real copies capsulectl cut, in jsdom", () => {
     const move = (key, facts) => ({ by: "agent", move: "x", key, step, facts });
     report.journey = [
       move("journey.agent.couldnt", { reason: "new_reason" }),
+      move("journey.agent.couldnt.who", { reason: "new_reason", who: "Example Shop" }),
       move("journey.agent.couldnt", { reason: "other", detail: "the site was down" }),
       move("journey.agent.couldnt", { reason: "other" }),
       move("journey.agent.couldnt", {}),
@@ -166,7 +167,8 @@ describe("real copies capsulectl cut, in jsdom", () => {
     const heading = [...root.querySelectorAll("h2")].find((h) => h.textContent === "How it went");
     const rows = [...heading.closest("section").querySelectorAll(":scope > .cv-section__body > [data-item] > p")].map((p) => p.textContent.replace(/^\d{4}-[\d-]+T[\d:]+Z · /, ""));
     expect(rows).toEqual([
-      "Your agent · Couldn't ()",
+      "Your agent · Couldn't",
+      "Your agent · Couldn't (Example Shop)",
       "Your agent · Couldn't (the site was down)",
       "Your agent",
       "Your agent",

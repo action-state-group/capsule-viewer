@@ -92,8 +92,9 @@ def test_a_label_is_worded_only_from_what_is_sealed_and_the_pack():
     assert _label(Move("agent", "journey.agent.unknown", None, (), ())) == ""
     assert _label(Move("agent", "journey.agent.couldnt", None, (), ())) == ""
     assert _label(Move("agent", "journey.agent.couldnt", None, facts(reason="other"), ())) == ""
-    # As capsulectl's page words them: a reason with no word and an empty list of classes are said as nothing.
-    assert _label(Move("agent", "journey.agent.couldnt", None, facts(reason="new_reason"), None)) == "Couldn't ()"
+    # A reason with no word and an empty list of classes are said as nothing, without an empty "()" (capsulectl's page prints one: capsule-cli#465).
+    assert _label(Move("agent", "journey.agent.couldnt", None, facts(reason="new_reason"), None)) == "Couldn't"
+    assert _label(Move("agent", "journey.agent.couldnt.who", None, facts(reason="new_reason", who="Example Shop"), None)) == "Couldn't (Example Shop)"
     assert _label(Move("user", "journey.user.approved.share_contact", None, (), ())) == "OK'd sharing your "
     assert _label(Move("user", "journey.user.approved.share_contact", None, (), None)) == ""
     assert _label(Move("agent", "journey.agent.told", None, facts(who="Example Shop"), ("credential", "id_document", "other_contact"))) == "Told Example Shop your login, ID document and contact details"

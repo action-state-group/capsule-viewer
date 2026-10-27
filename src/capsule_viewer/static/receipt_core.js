@@ -1454,7 +1454,10 @@
     var missing = false;
     template.replace(PLACEHOLDER, function (_, name) { if (!own(values, name)) missing = true; return ""; });
     if (missing) return "";
-    return template.replace(PLACEHOLDER, function (_, name) { return values[name]; });
+    // A reason the pack has no word for is said as nothing: no empty "()" is left behind
+    // (capsulectl's page prints it; capsule-cli#465).
+    return template.replace(PLACEHOLDER, function (_, name) { return values[name]; })
+      .replace(/\s*\(\s*\)/g, "").replace(/\s+\)/g, ")");
   };
 
   // "How it went": the errand's moves in order, each opening to its sealed step.
