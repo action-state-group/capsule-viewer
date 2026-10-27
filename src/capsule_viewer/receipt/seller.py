@@ -522,6 +522,8 @@ class SellerReceiptModule(UnilateralReceiptModule):
         authorised += self._section_steps(r, "authorized")
         out.append(self.kit.section(self.w(self._audience_key("seller.section.authorised", model)), *authorised))
 
+        out.extend(self._journey(r, open_))
+
         told = [self._committed(c, "statement") for c in r.statements] or [self._note(self.w("seller.represented.none"))]
         out.append(self.kit.section(self.w(self._audience_key("seller.section.represented", model)), *told, *self._section_steps(r, "statements")))
 

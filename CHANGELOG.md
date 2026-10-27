@@ -85,6 +85,15 @@ here. The format follows
   tests generate (`go/emitter/testdata/fragment-vectors.json`,
   `embedded-vectors.json`).
 
+- The deal receipt modules (unilateral and seller; Python and the module-slot
+  scripts) show the errand's journey under "How it went" (capsule-viewer#53):
+  one row per move in the sealed report's `journey`, in order, as who moved
+  ("You", "Your agent", "The other side") and what, opening to the step it was
+  read from. A switch of merchant is the user's move. The words are the
+  receipt pack's `journey.*` keys, mirrored from capsulectl's by test, and
+  match capsulectl's own deal page for the same bundle. A shared copy and a
+  report with no journey show no section.
+
 - The Outcomes rule table draws each requirement of the cited contract that the
   Result's `requirements_covered` leaves out as a "not covered" row, in a group of
   its own (capsule-viewer#96; agent-action-capsule#355). It is in no

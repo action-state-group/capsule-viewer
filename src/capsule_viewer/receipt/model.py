@@ -140,6 +140,20 @@ class Item:
 
 
 @dataclass(frozen=True)
+class Move:
+    """One move of the errand's journey, as the sealed report states it
+    (capsule-cli#340): who made it, the wording key capsulectl gave it, the
+    step it was read from and its facts. The report seals no pack words: a
+    reason is its token and the classes told are tokens, in spoken order."""
+
+    by: str  # user | agent | other
+    key: str
+    step: str | None
+    facts: tuple[tuple[str, str], ...]  # the facts sealed as text, in the report's order
+    classes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Merchant:
     order_id: str | None
     verified: bool
@@ -184,6 +198,7 @@ class Report:
     agent_anomalies: tuple[Item, ...]
     counterparty_anomalies: tuple[Item, ...]
     withheld: tuple[str, ...]
+    journey: tuple[Move, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -370,6 +385,26 @@ def _told(t: Mapping[str, Frozen]) -> Item:
     return Item(" · ".join(p for p in parts if p), _strings(t.get("steps")), flagged=t.get("authority") == "none")
 
 
+def _journey(raw: Frozen) -> tuple[Move, ...]:
+    out = []
+    for entry in _seq(raw):
+        entry = _map(entry)
+        key = _str(entry.get("key"))
+        if key is None:
+            continue
+        facts = _map(entry.get("facts"))
+        out.append(
+            Move(
+                by=_str(entry.get("by")) or "",
+                key=key,
+                step=_str(entry.get("step")),
+                facts=tuple((name, value) for name, v in facts.items() if (value := _str(v)) is not None),
+                classes=_strings(facts.get("classes")),
+            )
+        )
+    return tuple(out)
+
+
 def _report(capsule_id: str, raw: Mapping[str, Frozen]) -> Report:
     life = _map(raw.get("lifecycle"))
     deadlines = [_map(d) for d in _seq(raw.get("deadlines"))]
@@ -403,6 +438,7 @@ def _report(capsule_id: str, raw: Mapping[str, Frozen]) -> Report:
         agent_anomalies=side("agent"),
         counterparty_anomalies=side("counterparty"),
         withheld=_strings(raw.get("withheld")),
+        journey=_journey(raw.get("journey")),
     )
 
 

@@ -309,7 +309,8 @@ def test_sealed_text_is_escaped():
 
 
 def test_the_example_pack_never_claims_enforcement():
-    words = PACK.decode("utf-8").lower()
+    # journey.reason.blocked is capsulectl's word for why the agent could not go on (a captcha or a bot wall stopped it), not a claim about this page.
+    words = " ".join(v for k, v in WORDS.entries.items() if k != "journey.reason.blocked").lower()
     # Consumer copy never says it protects, blocks or stops anything.
     for term in ("protect", "block", "stops"):
         assert term not in words, term
