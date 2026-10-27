@@ -19,6 +19,23 @@ supplies only the per-record card body. Two modules ship today:
   (`recomputed` / `judged`), `grade` (`self-attested` / `witnessed` /
   `countersigned`), and `<contract_id>@<version>` contract reference.
 
+## Module ownership: what is the product path
+
+The Python Rules and Receipt carriers in this repository (`capsule_viewer.rules`
+and `capsule_viewer.receipt`) are **not the consumer product path**. The
+canonical Rules and Receipt implementations are `capsulectl`'s deal view
+(`capsulectl.deal-view/v0`) together with the Muse JS modules. This repository
+keeps what those implementations are held to: the goldens and the wording packs
+it ships.
+
+Nothing here is deleted by this note. The JS receipt module-slot scripts
+(`static/receipt_*.js`) and the Rules module (`capsule_viewer.rules`) stay as the
+basic rendering, and the Python receipt modules stay as the oracle the parity
+tests hold the scripts to; removing them would be a separate decision. Two things
+are out of scope here: the S1-S7 surface forms (head seam, wordmark, image and text
+buckets, 1.91:1 share image) are deferred to after launch, and the view-model
+JSON a module draws from belongs to the Muse plugin, not to this repository.
+
 ## What "conforming" means for `result/v0`
 
 This viewer renders any document conforming to `agent-action-capsule`'s
