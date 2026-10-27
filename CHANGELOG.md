@@ -213,6 +213,12 @@ here. The format follows
 
 ### Changed
 
+- One token source (capsule-viewer#71, part 1): `tokens/tokens.json` now
+  generates the kit's `TOKENS` and `--cv-*` stylesheet block, the emitter
+  shell's `--aac-*` block (Go and TypeScript copies) and the outcome and
+  compliance frames' variables, and `tests/test_tokens_sync.py` fails when a
+  generated file differs. Emitted pages are byte-identical.
+
 - Go: `presentation` takes the page's verification gate and its reading of
   a producer selection from agent-action-capsule's `go/bundle`
   (`bundle.Verified`, `bundle.VerifyBundleForPage`, in AAC Go v0.14.0)

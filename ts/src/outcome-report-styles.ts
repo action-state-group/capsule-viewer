@@ -15,11 +15,12 @@
  * elements anywhere on the page).
  */
 import { levelCss } from "./report-levels.js";
+import { OUTCOME_FRAME_VARS } from "./frame-tokens.generated.js";
 import { frontCss } from "./report-front-styles.js";
 
 export const OUTCOME_REPORT_CSS =
   `
-.oi{--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;
+.oi{${OUTCOME_FRAME_VARS}
   font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#EEF0F3;display:block}
 .oi *{box-sizing:border-box}
 .oi h1,.oi h2,.oi h3{font-family:Georgia,"Iowan Old Style",Cambria,serif;color:var(--navy);margin:0}

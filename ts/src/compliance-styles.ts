@@ -7,11 +7,12 @@
  * page or any other card on the same document.
  */
 import { levelCss } from "./report-levels.js";
+import { COMPLIANCE_FRAME_VARS } from "./frame-tokens.generated.js";
 import { frontCss } from "./report-front-styles.js";
 
 export const COMPLIANCE_CSS =
   `
-.cc{--navy:#232F42;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;
+.cc{${COMPLIANCE_FRAME_VARS}
   font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;display:block;max-width:1080px;margin:26px auto;padding:0 28px}
 .cc *{box-sizing:border-box}
 .cc h1,.cc h2,.cc h3{font-family:Georgia,"Iowan Old Style",Cambria,serif;color:var(--navy);margin:0}
