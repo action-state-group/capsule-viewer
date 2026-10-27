@@ -287,7 +287,7 @@
     "journey_by.agent": "Your agent",
     "journey_by.other": "The other side",
     "journey_by.unknown": "Someone",
-    "journey_note": "Who moved, and the names, items and amounts in each row, are in the report sealed in this file; each row opens to the step it was read from. The other words in a row come from this page's wording pack, which is not sealed.",
+    "journey_note": "Who moved, and each row's names, items and amounts, come from the report sealed in this file; open a row to see the step it came from. The rest of the wording comes from this page and is not sealed.",
     "journey.agent.act.cancel": "Cancelled",
     "journey.agent.act.commit": "Booked",
     "journey.agent.act.offer": "Made an offer",
