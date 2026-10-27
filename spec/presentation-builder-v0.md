@@ -108,7 +108,7 @@ target with the same settings. Otherwise it is `available: false` with a `reason
 | `runtime-missing` | `html`, `fragment` | No core runtime was given. | |
 | `no-document` | `static` | No DOM `document` to render with at build time. | |
 | `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |
-| `static-body-unbuilt` | `static` | A toggle's body could not be built at build time, so it would open empty. | `unbuilt` (each such toggle's summary text) |
+| `static-body-unbuilt` | `static` | A toggle's body could not be built at build time, so it would open empty. | `unbuilt` (each such toggle's summary text, or the tag of a pending body that is not a toggle) |
 | `static-too-large` | `static` | The page, with every toggle's body built, is over its size budget. | `bytes`, `limit` |
 
 Every reason also carries a `message` in words. An error of the request itself (no audience, a

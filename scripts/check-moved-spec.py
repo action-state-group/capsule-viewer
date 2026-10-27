@@ -342,7 +342,7 @@ BUILDER = Move(
         (
             "| `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |",
             "| `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |\n"
-            "| `static-body-unbuilt` | `static` | A toggle's body could not be built at build time, so it would open empty. | `unbuilt` (each such toggle's summary text) |\n"
+            "| `static-body-unbuilt` | `static` | A toggle's body could not be built at build time, so it would open empty. | `unbuilt` (each such toggle's summary text, or the tag of a pending body that is not a toggle) |\n"
             "| `static-too-large` | `static` | The page, with every toggle's body built, is over its size budget. | `bytes`, `limit` |",
             "capsule-viewer#67",
         ),
