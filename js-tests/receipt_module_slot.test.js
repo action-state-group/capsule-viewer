@@ -139,6 +139,44 @@ describe("real copies capsulectl cut, in jsdom", () => {
     expect(await unilateral.canRender(standInContext(readBundle("main-standalone-keep"), { verify: readVerify("main-standalone-keep") }))).toBe(true);
   });
 
+  it("a journey row is worded as capsulectl's deal page words it, at its edges", async () => {
+    const all = threeScripts();
+    const { lib, module } = all.find((x) => x.kind === "unilateral");
+    const bundle = readBundle("main-standalone-keep");
+    const report = bundle.extensions["x-deal-report/v0"].agent_input.report;
+    const step = report.journey[0].step;
+    const move = (key, facts) => ({ by: "agent", move: "x", key, step, facts });
+    report.journey = [
+      move("journey.agent.couldnt", { reason: "new_reason" }),
+      move("journey.agent.couldnt", { reason: "other", detail: "the site was down" }),
+      move("journey.agent.couldnt", { reason: "other" }),
+      move("journey.agent.couldnt", {}),
+      move("journey.agent.no_such_key", {}),
+      { ...move("journey.user.approved.share_contact", { classes: [] }), by: "user" },
+      { ...move("journey.user.approved.share_contact", {}), by: "user" },
+      move("journey.agent.told", { who: "Example Shop", classes: ["credential", "id_document", "other_contact"] }),
+      { ...move("journey.agent.paused", {}), by: "somebody" },
+    ];
+    const context = standInContext(bundle, { verify: readVerify("main-standalone-keep") });
+    const model = await module.buildModel(context);
+    const root = lib.document.createElement("div");
+    lib.document.body.appendChild(root);
+    module.render(model, { L0: root, L1: root, L2: root, depth: "L2" });
+    const heading = [...root.querySelectorAll("h2")].find((h) => h.textContent === "How it went");
+    const rows = [...heading.closest("section").querySelectorAll(":scope > .cv-section__body > [data-item] > p")].map((p) => p.textContent.replace(/^\d{4}-[\d-]+T[\d:]+Z · /, ""));
+    expect(rows).toEqual([
+      "Your agent · Couldn't ()",
+      "Your agent · Couldn't (the site was down)",
+      "Your agent",
+      "Your agent",
+      "Your agent",
+      "You · OK'd sharing your ",
+      "You",
+      "Your agent · Told Example Shop your login, ID document and contact details",
+      "Someone · Waited for your OK",
+    ]);
+  });
+
   it("a seller copy whose kind was dropped is no module's, in the page as in Python", async () => {
     const bundle = readBundle("main-seller-keep");
     delete bundle.extensions["x-deal-seller/v0"];

@@ -23,7 +23,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 usage="usage: cut_standalone_bundles.sh CAPSULECTL CAPSULECTL_DEAL [KEEP_DIR]"
 bin="$(cd "$(dirname "${1:?$usage}")" && pwd)/$(basename "$1")"
 plugin="$(cd "$(dirname "${2:?$usage}")" && pwd)/$(basename "$2")"
-keep_dir="${3:-}"
+keep_dir="${3:+$(mkdir -p "$3" && cd "$3" && pwd)}"
 out="$root/tests/testdata/receipt"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

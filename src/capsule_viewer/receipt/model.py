@@ -150,7 +150,7 @@ class Move:
     key: str
     step: str | None
     facts: tuple[tuple[str, str], ...]  # the facts sealed as text, in the report's order
-    classes: tuple[str, ...]
+    classes: tuple[str, ...] | None  # the classes told, in spoken order; None when the move seals none
 
 
 @dataclass(frozen=True)
@@ -399,7 +399,7 @@ def _journey(raw: Frozen) -> tuple[Move, ...]:
                 key=key,
                 step=_str(entry.get("step")),
                 facts=tuple((name, value) for name, v in facts.items() if (value := _str(v)) is not None),
-                classes=_strings(facts.get("classes")),
+                classes=_strings(facts.get("classes")) if isinstance(facts.get("classes"), tuple) else None,
             )
         )
     return tuple(out)

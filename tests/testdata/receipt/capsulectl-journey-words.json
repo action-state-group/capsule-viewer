@@ -1,5 +1,5 @@
 {
-  "source": "action-state-group/capsule-cli cli/assets/wording/capsulectl-en.json at d8f58012f6557c6bfb6f852e1c052234efec33f1: the journey.* entries, copied. tests/test_receipt_journey.py holds the receipt wording pack's journey.* set equal to this one; nothing imports capsule-cli.",
+  "source": "action-state-group/capsule-cli cli/assets/wording/capsulectl-en.json at d8f58012f6557c6bfb6f852e1c052234efec33f1: the journey.* entries and the contact class.* entries a journey row puts into words, copied. tests/test_receipt_journey.py holds the receipt wording pack's journey.* set equal to the journey.* entries and carries each class.* entry equal; nothing imports capsule-cli.",
   "entries": {
     "journey.agent.act.cancel": "Cancelled",
     "journey.agent.act.commit": "Booked",
@@ -45,6 +45,18 @@
     "journey.user.picked": "Picked",
     "journey.user.raised": "Raised",
     "journey.user.switched": "Switched to {who}",
-    "journey.user.switched.item": "Switched to {item}"
+    "journey.user.switched.item": "Switched to {item}",
+    "class.address": "address",
+    "class.credential": "login",
+    "class.email": "email",
+    "class.home_address": "home address",
+    "class.id_document": "ID document",
+    "class.name": "name",
+    "class.other_contact": "contact details",
+    "class.payment_card": "payment card",
+    "class.phone": "phone",
+    "class.pickup_area": "pickup area",
+    "class.pickup_location": "pickup location",
+    "class.verification_code": "verification code"
   }
 }

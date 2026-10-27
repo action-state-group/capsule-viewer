@@ -404,11 +404,12 @@ class UnilateralReceiptModule:
         values = {name: value for name, value in facts.items() if name != "detail"}
         if "reason" in facts:
             worded = self.pack.get(f"journey.reason.{facts['reason']}")
-            reason = facts.get("detail") if facts["reason"] == "other" else worded
+            # A reason with no word is said as nothing, as capsulectl's page says it; an "other" with no detail has no value.
+            reason = facts.get("detail") if facts["reason"] == "other" else worded or ""
             values.pop("reason", None)
             if reason is not None:
                 values["reason"] = reason
-        if move.classes:
+        if move.classes is not None:
             named = [self.pack.get(f"class.{c}") or c.replace("_", " ") for c in move.classes]
             values["classes"] = "".join(named) if len(named) < 2 else f"{', '.join(named[:-1])} and {named[-1]}"
         needed = PLACEHOLDER.findall(template)

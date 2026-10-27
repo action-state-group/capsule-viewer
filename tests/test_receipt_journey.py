@@ -46,7 +46,11 @@ def _rows(html: str) -> list[tuple[str, str]]:
 
 def test_the_pack_holds_capsulectls_journey_words_exactly():
     mine = {k: v for k, v in WORDS.entries.items() if k.startswith("journey.")}
-    assert mine == MIRROR
+    assert mine == {k: v for k, v in MIRROR.items() if k.startswith("journey.")}
+    # The contact classes a row puts into words (capsulectl's, not a token with its underscores undone).
+    for key, text in MIRROR.items():
+        if key.startswith("class."):
+            assert WORDS.entries[key] == text, key
     # Every placeholder a journey word uses is one this module fills.
     for key, text in mine.items():
         assert set(re.findall(r"\{([a-z_]+)\}", text)) == set(PLACEHOLDERS.get(key, ())), key
@@ -88,3 +92,8 @@ def test_a_label_is_worded_only_from_what_is_sealed_and_the_pack():
     assert _label(Move("agent", "journey.agent.unknown", None, (), ())) == ""
     assert _label(Move("agent", "journey.agent.couldnt", None, (), ())) == ""
     assert _label(Move("agent", "journey.agent.couldnt", None, facts(reason="other"), ())) == ""
+    # As capsulectl's page words them: a reason with no word and an empty list of classes are said as nothing.
+    assert _label(Move("agent", "journey.agent.couldnt", None, facts(reason="new_reason"), None)) == "Couldn't ()"
+    assert _label(Move("user", "journey.user.approved.share_contact", None, (), ())) == "OK'd sharing your "
+    assert _label(Move("user", "journey.user.approved.share_contact", None, (), None)) == ""
+    assert _label(Move("agent", "journey.agent.told", None, facts(who="Example Shop"), ("credential", "id_document", "other_contact"))) == "Told Example Shop your login, ID document and contact details"

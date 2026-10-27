@@ -554,7 +554,7 @@
         var value = str(facts[name]);
         if (value !== null) pairs.push([name, value]);
       });
-      out.push({ by: or(str(get(entry, "by")), ""), key: key, step: str(get(entry, "step")), facts: pairs, classes: strings(get(facts, "classes")) });
+      out.push({ by: or(str(get(entry, "by")), ""), key: key, step: str(get(entry, "step")), facts: pairs, classes: Array.isArray(get(facts, "classes")) ? strings(get(facts, "classes")) : null });
     });
     return out;
   }
@@ -1442,11 +1442,11 @@
     var values = {};
     Object.keys(facts).forEach(function (name) { if (name !== "detail") values[name] = facts[name]; });
     if (own(facts, "reason")) {
-      var reason = facts.reason === "other" ? (own(facts, "detail") ? facts.detail : null) : word("journey.reason." + facts.reason);
+      var reason = facts.reason === "other" ? (own(facts, "detail") ? facts.detail : null) : word("journey.reason." + facts.reason) || "";
       delete values.reason;
       if (reason !== null) values.reason = reason;
     }
-    if (move.classes.length) {
+    if (move.classes !== null) {
       var named = move.classes.map(function (c) { return word("class." + c) || c.replace(/_/g, " "); });
       values.classes = named.length < 2 ? named.join("") : named.slice(0, -1).join(", ") + " and " + named[named.length - 1];
     }
