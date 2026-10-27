@@ -153,7 +153,10 @@ export function standInContext(bundle, { verify, claims = {} } = {}) {
     extensions: Object.keys(isObj(bundle.extensions) ? bundle.extensions : {}).sort().map((kind) => {
       const reported = verify ? (verify.extensions || []).find((e) => e.kind === kind) : undefined;
       const composed = kind === "composed/v1" && reported && isObj(reported.composed) ? { composed: aacComposed(reported.composed, bundle.extensions[kind]) } : {};
-      return { kind, status: "uninterpreted", integrityCovered: true, ...composed };
+      // capsulectl verify's own check of a standalone report (capsule-cli#294) is the one result AAC's
+      // verifier does not give for x-deal-v0; the receipt module reads it only when a runtime reports it.
+      const standalone = kind === "x-deal-v0" && reported && reported.report === "standalone" ? { status: reported.status, report: "standalone" } : {};
+      return { kind, status: "uninterpreted", integrityCovered: true, ...composed, ...standalone };
     }),
     countersignatures: [],
     capsuleResults,

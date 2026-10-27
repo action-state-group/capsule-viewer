@@ -52,7 +52,7 @@ PYTHON = {"unilateral": UNILATERAL_MANIFEST, "seller": SELLER_MANIFEST, "bilater
 # capsule-cli internal/cli/plugin_presentations.go presentationFileLimit.
 PRESENTATION_FILE_LIMIT = 1 << 20
 # Real copies capsulectl (capsule-cli main, e9b1f21) cut: examples/receipt/cut_main_bundles.sh.
-MAIN = ("main-buyer-keep", "main-buyer-counterparty", "main-seller-keep", "main-seller-counterparty")
+MAIN = ("main-buyer-keep", "main-buyer-counterparty", "main-standalone-keep", "main-standalone-counterparty", "main-seller-keep", "main-seller-counterparty")
 
 
 def _sha(path: Path) -> str:
@@ -143,7 +143,7 @@ def test_no_receipt_side_forbids_can_part_them():
     engaged = set()
     for name in MAIN:
         engaged |= set(load(name)[0]["extensions"])
-    assert engaged == {"x-cadence-witness/v0", "x-deal-v0", "x-deal-seller/v0"}
+    assert engaged == {"x-cadence-witness/v0", "x-deal-report/v0", "x-deal-v0", "x-deal-seller/v0"}
     for kind in ("unilateral", "seller"):
         for kind_token in ("x-deal-v0", "x-deal-seller/v0", "x-cadence-witness/v0", "x-some-other/v0"):
             m = copy.deepcopy(SLOT[kind])

@@ -64,6 +64,7 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "shared.counterparty": frozenset({"kinds"}),
     "shared.adjudicator": frozenset({"kinds"}),
     "countersign.some": frozenset({"statuses"}),
+    "summary.standalone": frozenset({"status"}),
     "merchant.order": frozenset({"order"}),
     "merchant.signature": frozenset({"text"}),
     "merchant.seal": frozenset({"text"}),
@@ -396,9 +397,18 @@ class UnilateralReceiptModule:
             return _join([self.kit.disclosure_badge(c.state), self._note(self.w(f"{prefix}.{c.state}"), data_committed=prefix, data_state=c.state)])
         return self._p(self.w(f"{prefix}.mismatch"), data_committed=prefix, data_state="mismatch")
 
+    def _sealed_note(self, model: ReceiptModel) -> Markup:
+        """How the report was sealed. A report carried outside the log is
+        described by what capsulectl verify reported of it and nothing more:
+        this page checks no signature, and does not say the record was
+        checked on its own authority."""
+        if model.report_checked is None:
+            return self._note(self.w("summary.sealed"), data_sealed="x-deal-v0")
+        return self._note(self.w("summary.standalone", status=model.report_checked), data_sealed="x-deal-report")
+
     def _l1(self, model: ReceiptModel, open_: bool) -> list[str]:
         r = model.report
-        out: list[str] = [self._note(self.w("summary.sealed"), data_sealed="x-deal-v0")]
+        out: list[str] = [self._sealed_note(model)]
 
         out.append(self.kit.section(self.w("section.authorized"), self._committed(model.asked, "asked"), *self._section_steps(model, "authorized")))
         out.append(self.kit.section(self.w("section.proposed"), *self._section_steps(model, "proposed")))

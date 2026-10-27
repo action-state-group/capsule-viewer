@@ -39,6 +39,8 @@ from ..kit.components import VerificationResult
 from ..verifier_report import Assurance
 
 EXTENSION = "x-deal-v0"
+# Where capsulectl carries a copy's report when it is on no log (capsule-cli#294).
+STANDALONE_EXTENSION = "x-deal-report/v0"
 REPORT_TYPE = "deal_report"
 # The action id capsulectl gives every report record; a withheld report is
 # recognised by it, since its payload is not in the copy.
@@ -208,6 +210,8 @@ class ReceiptModel:
     witnessed: str  # the verifier's witnesses claim, or "absent"
     countersignatures: tuple[str, ...]  # each countersignature result's status
     verification: VerificationResult
+    # The report is the standalone record in x-deal-report/v0, and capsulectl's reported status of its check.
+    report_checked: str | None = None
 
     def step(self, capsule_id: str) -> Step | None:
         return next((s for s in self.steps if s.capsule_id == capsule_id), None)
@@ -408,8 +412,9 @@ def _report(capsule_id: str, raw: Mapping[str, Frozen]) -> Report:
 class _Reader:
     """The context, read once: headers by id and disclosed deal payloads."""
 
-    def __init__(self, context: VerifiedBundleContext) -> None:
+    def __init__(self, context: VerifiedBundleContext, assurance: Assurance | None = None) -> None:
         self.context = context
+        self.assurance = assurance if assurance is not None else Assurance()
         records = _seq(_map(context.bundle).get("records"))
         self.headers: dict[str, Mapping[str, Frozen]] = {
             r["capsule_id"]: r for r in (_map(r) for r in records) if isinstance(r.get("capsule_id"), str)
@@ -440,6 +445,9 @@ class _Reader:
         named = _str(extension.get("sealed_report"))
         if named is None:
             raise ReceiptUnavailable("the x-deal-v0 extension names no sealed report")
+        standalone = self._standalone(named)
+        if standalone is not None:
+            return named, standalone
         disclosed = [cid for cid in self.context.records if self.is_report(cid) and self.payload(cid) is not None]
         if disclosed != [named]:
             raise ReceiptUnavailable(f"disclosed deal reports {disclosed} are not exactly the named one, {named}")
@@ -447,6 +455,35 @@ class _Reader:
         if not isinstance(report, Mapping):
             raise ReceiptUnavailable("the sealed report carries no report object")
         return named, report
+
+
+    def standalone(self) -> bool:
+        """The named report is the standalone record, not a record on the log."""
+        extension = _map(_map(_map(self.context.bundle).get("extensions")).get(EXTENSION))
+        named = _str(extension.get("sealed_report"))
+        return named is not None and named not in self.headers and STANDALONE_EXTENSION in _map(_map(self.context.bundle).get("extensions"))
+
+    def _standalone(self, named: str) -> Mapping[str, Frozen] | None:
+        """The report in ``x-deal-report/v0`` when it is the named one; None
+        when *named* is a record on the log. This package cannot check that
+        record's signature: it is read only when capsulectl verify reported
+        the check as passed (``Assurance.report_checked``), and it is shown
+        with that reported status and no other."""
+        if named in self.headers:
+            return None
+        block = _map(_map(_map(self.context.bundle).get("extensions")).get(STANDALONE_EXTENSION))
+        record = _map(block.get("record"))
+        if record.get("capsule_id") != named or set(block) != {"record", "agent_input"} or record.get("action_id") != REPORT_ACTION_ID:
+            raise ReceiptUnavailable(f"the named report {named} is neither a record in the bundle nor the one in {STANDALONE_EXTENSION}")
+        if self.assurance.report_checked != "pass":
+            raise ReceiptUnavailable("the verifier did not report a passing check of the standalone report")
+        if any(self.is_report(cid) for cid in self.context.records):
+            raise ReceiptUnavailable("a standalone report and a report record are both in the bundle")
+        content = _map(block.get("agent_input"))
+        report = content.get("report")
+        if content.get("type") != REPORT_TYPE or not isinstance(report, Mapping):
+            raise ReceiptUnavailable("the standalone report carries no report object")
+        return report
 
 
 def _step(reader: _Reader, capsule_id: str, entry: Mapping[str, Frozen]) -> Step:
@@ -567,16 +604,16 @@ def _headline(steps: tuple[Step, ...], root: str | None, report: Report) -> Head
     return Headline(_part(opened, "deal_type"), item, _part(acted, "amount"), report.state)
 
 
-def sealed_report(context: VerifiedBundleContext) -> tuple[str, Mapping[str, Frozen]]:
+def sealed_report(context: VerifiedBundleContext, assurance: Assurance | None = None) -> tuple[str, Mapping[str, Frozen]]:
     """The copy's sealed report: its record id and its report object, read as
     ``build_receipt`` reads it; ``ReceiptUnavailable`` when there is none."""
-    return _Reader(context).sealed_report()
+    return _Reader(context, assurance).sealed_report()
 
 
-def copy_audience(context: VerifiedBundleContext) -> str:
+def copy_audience(context: VerifiedBundleContext, assurance: Assurance | None = None) -> str:
     """The audience the copy in *context* was cut for, as its own sealed report
     names it; ``ReceiptUnavailable`` when it carries no readable sealed report."""
-    _, raw = _Reader(context).sealed_report()
+    _, raw = _Reader(context, assurance).sealed_report()
     audience = _str(raw.get("audience"))
     if audience is None:
         raise ReceiptUnavailable("the sealed report names no audience")
@@ -606,7 +643,7 @@ def build_receipt(context: VerifiedBundleContext, bind: Binder, assurance: Assur
     bundle digest, witness and countersignature results."""
     if not context.verified:
         raise ReceiptUnavailable("the bundle did not verify")
-    reader = _Reader(context)
+    reader = _Reader(context, assurance)
     report_id, raw = reader.sealed_report()
     report = _report(report_id, raw)
     if report.audience != audience:
@@ -646,4 +683,5 @@ def build_receipt(context: VerifiedBundleContext, bind: Binder, assurance: Assur
         witnessed=assurance.witnesses,
         countersignatures=assurance.countersignatures,
         verification=context.verification,
+        report_checked=assurance.report_checked if reader.standalone() else None,
     )

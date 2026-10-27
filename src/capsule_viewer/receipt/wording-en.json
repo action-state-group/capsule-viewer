@@ -7,6 +7,7 @@
     "badge.demo": "DEMO",
     "banner.private.label": "PRIVATE",
     "banner.private.text": "This is your own copy of this deal report, with everything this page shows. Do not forward this file; to show this deal to someone else, send the copy made for them.",
+    "summary.standalone": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: {status}. This page did not check the signature itself.",
     "depth.l1": "Why: what was asked, proposed, approved and done",
     "depth.l2": "Verify: the records, their places in the log and the checks",
     "l0.deal_type": "Deal",

@@ -47,6 +47,8 @@ import {
 const MAIN = [
   { name: "main-buyer-keep", module: "unilateral", keep: true },
   { name: "main-buyer-counterparty", module: "unilateral", keep: false },
+  { name: "main-standalone-keep", module: "unilateral", keep: true },
+  { name: "main-standalone-counterparty", module: "unilateral", keep: false },
   { name: "main-seller-keep", module: "seller", keep: true },
   { name: "main-seller-counterparty", module: "seller", keep: false },
 ];
@@ -97,6 +99,24 @@ describe("real copies capsulectl cut, in jsdom", () => {
       expect(lib.document.querySelectorAll("#cv-kit-css").length).toBe(1);
     });
   }
+
+  it("a standalone report is read only when the verifier reported its check as passed, as in Python", async () => {
+    const unilateral = threeScripts().find((x) => x.kind === "unilateral").module;
+    const edits = {
+      "no status": (verify) => { delete verify.extensions.find((e) => e.kind === "x-deal-v0").report; },
+      "a failed status": (verify) => { verify.extensions.find((e) => e.kind === "x-deal-v0").status = "fail"; },
+    };
+    for (const [why, edit] of Object.entries(edits)) {
+      const verify = readVerify("main-standalone-keep");
+      edit(verify);
+      expect(await unilateral.canRender(standInContext(readBundle("main-standalone-keep"), { verify })), why).toBe(false);
+    }
+    const asReported = standInContext(readBundle("main-standalone-keep"), { verify: readVerify("main-standalone-keep") });
+    expect(await unilateral.canRender(asReported)).toBe(true);
+    const bundle = readBundle("main-standalone-keep");
+    bundle.extensions["x-deal-report/v0"].record.capsule_id = "0".repeat(64);
+    expect(await unilateral.canRender(standInContext(bundle, { verify: readVerify("main-standalone-keep") }))).toBe(false);
+  });
 
   it("a seller copy whose kind was dropped is no module's, in the page as in Python", async () => {
     const bundle = readBundle("main-seller-keep");
