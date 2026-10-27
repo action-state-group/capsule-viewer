@@ -12,6 +12,7 @@ import { join, resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { composedDigest } from "@action-state-group/agent-action-capsule";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -215,6 +216,76 @@ describe.skipIf(executablePath === undefined)(
           expect(width).toBeLessThanOrEqual(390);
         });
       }
+
+      // capsule-viewer#57: a composed/v1 section whose member and observer
+      // ids are unbroken 64-hex strings, like the digests beside them, fits
+      // the page at 390px, 1280px and in print, and each id is still whole
+      // in the cell's text.
+      it("a composed/v1 section with 64-hex ids fits at 390px, 1280px and in print", async () => {
+        const vectors = fixture(
+          join("aac-vectors", "bundle", "composed", "vectors.json"),
+        ) as { cases: { id: string; container: Obj }[] };
+        // Sorted, so each pair keeps the order the block's rules require.
+        const [memberA, memberB] = [hex("member a"), hex("member b")].sort();
+        const [observerA, observerB] = [
+          hex("observer a"),
+          hex("observer b"),
+        ].sort();
+        const ids: Record<string, string> = {
+          "responder-a": memberA!,
+          "responder-b": memberB!,
+          "obs-a": observerA!,
+          "obs-b": observerB!,
+        };
+        const rename = (value: unknown): unknown =>
+          typeof value === "string"
+            ? (ids[value] ?? value)
+            : Array.isArray(value)
+              ? value.map(rename)
+              : value !== null && typeof value === "object"
+                ? Object.fromEntries(
+                    Object.entries(value).map(([k, v]) => [k, rename(v)]),
+                  )
+                : value;
+        const agree = vectors.cases.find((c) => c.id === "agree")!.container;
+        const extensions = agree.extensions as Obj;
+        const composed = rename(extensions["composed/v1"]) as Obj;
+        composed.composed_digest = await composedDigest(composed);
+        const { bundle } = await sealEvidenceBundle({
+          ...agree,
+          extensions: { ...extensions, "composed/v1": composed },
+        });
+        const html = emitEvidenceGraphHtml(bundle, runtime);
+        for (const [media, width] of [
+          ["screen", 390],
+          ["screen", 1280],
+          ["print", 794],
+        ] as const) {
+          const { page: loaded, violations } = await load(html, width);
+          await loaded.emulateMedia({ media });
+          await loaded.waitForSelector(
+            '[data-section="composition"] table[data-composition-members]',
+          );
+          expect(violations).toEqual([]);
+          const fit = await loaded.evaluate(() => ({
+            page: document.documentElement.scrollWidth,
+            tables: Array.from(
+              document.querySelectorAll('[data-section="composition"] table'),
+              (t) => t.getBoundingClientRect().right,
+            ),
+            members: Array.from(
+              document.querySelectorAll(
+                "table[data-composition-members] tbody tr",
+              ),
+              (tr) => tr.querySelector("td")?.textContent,
+            ),
+          }));
+          expect(fit.page, media).toBeLessThanOrEqual(width);
+          for (const right of fit.tables)
+            expect(right, media).toBeLessThanOrEqual(width);
+          expect(fit.members).toEqual([ids["responder-a"], ids["responder-b"]]);
+        }
+      });
     });
   },
   60_000,

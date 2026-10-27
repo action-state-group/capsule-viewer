@@ -38,6 +38,7 @@ import {
   type PresentationManifest,
   type PresentationModule,
 } from "../src/presentation-registry.js";
+import { COMPOSED_CSS } from "../src/composed-styles.js";
 import { stub } from "./helpers/presentation-resolution-vectors.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -261,6 +262,25 @@ describe("the composition section", () => {
       (el) => el.dataset.notice ?? el.dataset.section ?? el.dataset.page,
     );
     expect(order).toEqual(["no-aggregate", "composition", "verification"]);
+  });
+});
+
+// capsule-viewer#57: the layout itself is checked in a browser
+// (emitter-csp-browser.test.ts); here, that the section carries it.
+describe("the composition section's layout", () => {
+  it("brings its own stylesheet and wraps every table", async () => {
+    const root = await render(await sealed(container("agree")));
+    const section = root.querySelector<HTMLElement>(
+      '[data-section="composition"]',
+    )!;
+    const style = section.firstElementChild!;
+    expect(style.tagName).toBe("STYLE");
+    expect(style.textContent).toBe(COMPOSED_CSS);
+    expect(COMPOSED_CSS).toContain("overflow-wrap:anywhere");
+    const tables = Array.from(section.querySelectorAll("table"));
+    expect(tables.length).toBeGreaterThanOrEqual(3);
+    for (const table of tables)
+      expect(table.parentElement!.className).toBe("cv-composed-table");
   });
 });
 
