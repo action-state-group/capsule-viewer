@@ -31,8 +31,8 @@ it ships.
 Nothing here is deleted by this note. The JS receipt module-slot scripts
 (`static/receipt_*.js`) and the Rules module (`capsule_viewer.rules`) stay as the
 basic rendering, and the Python receipt modules stay as the oracle the parity
-tests hold the scripts to until they are removed in a separate change. Two things
-have another owner: the S1-S7 surface forms (head seam, wordmark, image and text
+tests hold the scripts to; removing them would be a separate decision. Two things
+are out of scope here: the S1-S7 surface forms (head seam, wordmark, image and text
 buckets, 1.91:1 share image) are deferred to after launch, and the view-model
 JSON a module draws from belongs to the Muse plugin, not to this repository.
 
