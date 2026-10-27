@@ -2140,6 +2140,18 @@ const reportRowsModule: PresentationModule<ReportRows> = {
  */
 type WordedHost = PresentationHost & { readonly wording?: WordingPackInput };
 
+/**
+ * The context's verification with AAC's strict result in its `strict`
+ * member, where this runtime reached one: the contract report's "Witnessed
+ * by" line reads AAC's witness status from it (report-provenance.ts), the
+ * same result the banner reads.
+ */
+function withStrict(context: VerifiedBundleContext): BundleVerificationResult {
+  return context.strict === undefined
+    ? context.verification
+    : { ...context.verification, strict: context.strict };
+}
+
 interface ResultCardModel<Card> {
   readonly result: ResultRoot;
   readonly card: Card;
@@ -2164,7 +2176,7 @@ const resultOutcomeReportModule: PresentationModule<
       BUILTIN_MANIFEST_RESULT_OUTCOME_REPORT.id,
     ),
     bundle: context.bundle,
-    verification: context.verification,
+    verification: withStrict(context),
   }),
   render: async (model, host) => {
     // The banner and the verification page take the card's look.
@@ -2197,7 +2209,7 @@ const resultComplianceModule: PresentationModule<
       BUILTIN_MANIFEST_RESULT_COMPLIANCE.id,
     ),
     bundle: context.bundle,
-    verification: context.verification,
+    verification: withStrict(context),
   }),
   render: async (model, host) => {
     // The card draws its own frame inside the page.
@@ -2332,7 +2344,7 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
         ? { unfit: true as const }
         : {}),
       bundle: context.bundle,
-      verification: context.verification,
+      verification: withStrict(context),
     };
   },
   render: async (model, host) => {

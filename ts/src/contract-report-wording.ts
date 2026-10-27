@@ -607,6 +607,13 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.judge.unnamed",
   "prov.judge.nothing",
   "prov.witness.stated",
+  "prov.witness.verified",
+  "prov.witness.invalid",
+  "prov.witness.failed",
+  "prov.witness.invalid.findings",
+  "prov.witness.failed-entry",
+  "prov.witness.invalid.unreadable.one",
+  "prov.witness.invalid.unreadable.other",
   "prov.witness.none",
   "prov.witness.receipt-not-stated",
   "prov.witness.stubs.one",
@@ -721,6 +728,9 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.brief.judge.not-stated",
   "prov.brief.judge.mock",
   "prov.brief.witness.stated",
+  "prov.brief.witness.verified",
+  "prov.brief.witness.partly-checked",
+  "prov.brief.witness.invalid",
   "prov.brief.witness.mixed",
   "prov.brief.witness.not-stated",
   "prov.brief.verifier.stated",
@@ -1183,8 +1193,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "504136c0a386938e4f3dbc68e7dc5b4dd395b8f93d083b48a0a6714161b5f378",
-  groups: "09224353431aadb2573218a0ea644ec31438b959028b7808ba41c36aaec1a2d7",
+  lines: "7065032ca2818ad967a35eaa1dd8c6da43a84861c3babc6446afd24db488dbc0",
+  groups: "37f9e5df13bfb85f3c44ecd13fe0b19265e661e9e4c4e5f6d471c7f27c9d93c1",
 });
 
 export interface Words {
