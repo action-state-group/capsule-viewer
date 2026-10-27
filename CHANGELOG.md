@@ -260,6 +260,22 @@ here. The format follows
 - "Witnessed by" on the front of both cards says the witnesses are "stated by
   the bundle, not checked here" (SEAMS ruling 12), in place of "as the bundle
   states; this page does not check witness receipts".
+- "Witnessed by" on the front of both cards follows agent-action-capsule's
+  strict witness status alone, as the banner already did (capsule-viewer#46,
+  from evidencebook#115). The contract-report modules now get AAC's strict
+  result as `verification.strict`. A receipt AAC passed reads "receipt
+  checked here, and it verifies". One AAC could not check keeps "stated by
+  the bundle, not checked here". When AAC fails any entry, nothing on the
+  line reads as witnessed: it says "not witnessed", and names each failing
+  receipt with AAC's reason and counts the entries it cannot read. A page's
+  context has no witness directory, so on today's pages a well-formed
+  receipt reads as not checked. The line carries the state in
+  `data-witness` (`verified`, `not-checked`, `invalid` or `absent`). New
+  locked keys in both default packs: `prov.witness.verified`,
+  `prov.witness.invalid`, `prov.witness.failed`, `prov.witness.failed-entry`,
+  `prov.witness.invalid.unreadable.one` and `.other`,
+  `prov.brief.witness.verified` and `prov.brief.witness.invalid`. Both packs'
+  digests change.
 - The report proofs name the wording pack that drew the card ("Words"), and
   now every wording layer applied, by digest -- the built-in default's too,
   even on a default-only page. A few default words moved with the rewrite:

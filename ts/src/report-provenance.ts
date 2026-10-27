@@ -20,8 +20,7 @@ import { levelToggle } from "./report-levels.js";
  * Who judged, who witnessed, and what verified: one folded line at the top
  * of L1 of every contract report (a few words per entry), with the full
  * lines inside, so a reader does not have to open the proofs to learn it. Its words are the card's wording pack's (`prov.*`); "Witnessed
- * by" always says the witnesses are stated by the bundle and not checked
- * here, because this page does not check witness receipts.
+ * by" follows AAC's strict witness status alone (`witnessLine`).
  *
  * Every value comes from the verified bundle, or, for "this page", from the
  * viewer's own build constants (viewer-build.ts). Nothing is inferred: a
@@ -241,6 +240,8 @@ export interface ProvenanceLine {
   /** A few words for the folded one-line summary; `text` is the whole line. */
   readonly brief: string;
   readonly state: ProvenanceState;
+  /** The witness line only: AAC's status for the bundle's receipts. */
+  readonly witness?: WitnessStatus;
 }
 
 const fmt = (n: number): string => n.toLocaleString();
@@ -434,10 +435,25 @@ export function witnessEntries(checkpoint: unknown): WitnessEntry[] {
 }
 
 /**
- * "Witnessed by": the bundle's witness receipts, and the checkpoint they
- * would cover. The receipts are named as the bundle states them and said to
- * be stated by the bundle, not checked here (`prov.witness.stated`): this
- * page does not check witness receipts.
+ * What AAC's strict verifier made of the bundle's witness receipts, and
+ * nothing else (evidencebook#115, Steven's ruling of 2026-10-25):
+ * `verified` when one passed and none failed (AAC `pass`), `invalid` when
+ * one failed or an entry is malformed (`fail`), `not-checked` when the
+ * receipts are carried but none could be checked here (`withheld`, or no
+ * strict result on this runtime), and `absent` when the bundle carries no
+ * receipt to check.
+ */
+export type WitnessStatus = "verified" | "not-checked" | "invalid" | "absent";
+
+/**
+ * "Witnessed by": the bundle's witness receipts, the status AAC's strict
+ * verifier gave each, and the checkpoint they would cover. A receipt reads
+ * as witnessed only when AAC passed it (`prov.witness.verified`). One AAC
+ * withheld keeps SEAMS ruling 12's "stated by the bundle, not checked here"
+ * (`prov.witness.stated`), and when AAC failed any entry nothing reads as
+ * witnessed and the failing receipts are named with AAC's reason
+ * (`prov.witness.invalid`, `prov.witness.failed`). Without `verified.strict` (this runtime reached
+ * no strict verdict) every receipt is not checked.
  */
 export function witnessLine(
   bundle: unknown,
@@ -471,8 +487,58 @@ export function witnessLine(
             { facts: facts.join(", ") },
           ),
         ];
+  const label = w.t("prov.witness.label");
+  const aac = verified.strict?.witnesses ?? undefined;
   const all = witnessEntries(checkpoint);
-  const entries = all.filter((e) => !e.stub && !e.malformed);
+
+  if (aac?.status === "fail") {
+    // AAC failed a receipt or found an entry it cannot read: nothing on
+    // this line reads as witnessed, whatever else passed.
+    const failed = aac.receipts
+      .filter((r) => r.status === "fail")
+      .map((r) =>
+        w.t("prov.witness.failed-entry", {
+          witness: quoted(r.tsUrl),
+          reason: quoted(r.reason),
+        }),
+      );
+    const unreadable = aac.findings.filter((f) =>
+      f.startsWith("witness_receipt_malformed:"),
+    ).length;
+    const parts = [
+      w.t("prov.witness.invalid"),
+      ...(failed.length === 0
+        ? []
+        : [w.t("prov.witness.failed", { witnesses: failed.join("; ") })]),
+      ...(unreadable === 0
+        ? []
+        : [
+            w.p("prov.witness.invalid.unreadable", unreadable, {
+              n: fmt(unreadable),
+            }),
+          ]),
+    ];
+    return {
+      key: "witness",
+      label,
+      text: [...parts, ...about].join(" "),
+      brief: w.t("prov.brief.witness.invalid"),
+      state: "mixed",
+      witness: "invalid",
+    };
+  }
+
+  // Not failed, so AAC read every entry as a receipt: its results, when it
+  // checked any, are the bundle's entries one for one and in order.
+  const results =
+    aac !== undefined && aac.receipts.length === all.length
+      ? aac.receipts
+      : undefined;
+  const entries = all.flatMap((e, i) =>
+    e.stub || e.malformed
+      ? []
+      : [{ ...e, passed: results?.[i]?.status === "pass" }],
+  );
   const stubs = all.filter((e) => e.stub).length;
   const malformed = all.filter((e) => e.malformed).length;
   const others = [
@@ -492,7 +558,6 @@ export function witnessLine(
                 : w.t("prov.witness.both", { a: others[0]!, b: others[1]! }),
           }),
         ];
-  const label = w.t("prov.witness.label");
   if (entries.length === 0)
     return {
       key: "witness",
@@ -500,8 +565,9 @@ export function witnessLine(
       text: [w.t("prov.witness.none"), ...besides, ...about].join(" "),
       brief: w.t("prov.brief.witness.not-stated"),
       state: "not-stated",
+      witness: "absent",
     };
-  const named = entries.map((e) => {
+  const name = (e: WitnessEntry): string => {
     const url =
       e.url === undefined
         ? w.t("prov.witness.receipt-not-stated")
@@ -509,21 +575,31 @@ export function witnessLine(
     return e.treeSize === undefined
       ? url
       : w.t("prov.witness.entry", { witness: url, size: fmt(e.treeSize) });
-  });
+  };
+  const passed = entries.filter((e) => e.passed).map(name);
+  const stated = entries.filter((e) => !e.passed).map(name);
   return {
     key: "witness",
     label,
     text: [
-      w.t("prov.witness.stated", { witnesses: named.join("; ") }),
+      ...(passed.length === 0
+        ? []
+        : [w.t("prov.witness.verified", { witnesses: passed.join("; ") })]),
+      ...(stated.length === 0
+        ? []
+        : [w.t("prov.witness.stated", { witnesses: stated.join("; ") })]),
       ...besides,
       ...about,
     ].join(" "),
     brief: w.t(
-      others.length === 0
-        ? "prov.brief.witness.stated"
-        : "prov.brief.witness.mixed",
+      passed.length > 0
+        ? "prov.brief.witness.verified"
+        : others.length === 0
+          ? "prov.brief.witness.stated"
+          : "prov.brief.witness.mixed",
     ),
     state: others.length === 0 ? "stated" : "mixed",
+    witness: passed.length > 0 ? "verified" : "not-checked",
   };
 }
 
@@ -623,6 +699,7 @@ export function renderProvenance(
         dd.textContent = line.text;
         dd.dataset.prov = line.key;
         dd.dataset.state = line.state;
+        if (line.witness !== undefined) dd.dataset.witness = line.witness;
         block.append(dt, dd);
       }
       return block;

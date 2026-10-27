@@ -5,7 +5,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
-import { jsonDigest } from "@action-state-group/agent-action-capsule";
+import {
+  jsonDigest,
+  verifyBundle,
+} from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
   judgeLine,
@@ -633,4 +636,77 @@ it("the viewer's stated build is the package and the verifier actually installed
     verifierVersion: installed("@action-state-group/agent-action-capsule"),
     cllVersion: installed("@action-state-group/cll"),
   });
+});
+
+// ---------------------------------------------------------------------------
+// "Witnessed by" follows AAC's witness status, one test per state
+// (evidencebook#115), over AAC's own strict vectors and witness directory
+// ---------------------------------------------------------------------------
+
+const STRICT = fixture("aac-vectors/bundle/strict/vectors.json") as {
+  readonly witness_directory: unknown;
+  readonly cases: readonly { readonly id: string; readonly bundle: Obj }[];
+};
+const strictCase = (id: string): Obj =>
+  structuredClone(STRICT.cases.find((c) => c.id === id)!.bundle);
+const underDirectory = {
+  strict: true,
+  witnessDirectory: STRICT.witness_directory,
+} as const;
+
+it("VERIFIED: a receipt AAC passed reads as witnessed, checked here", async () => {
+  const bundle = strictCase("pos-witness-cll");
+  const verified = await verifyBundle(bundle, underDirectory);
+  expect(verified.strict.witnesses?.status).toBe("pass");
+  const l = witnessLine(bundle, verified);
+  expect(l.witness).toBe("verified");
+  expect(l.text).toMatch(
+    /^"https:\/\/cll-witness\.example"( \(tree size [0-9,]+\))?: receipt checked here, and it verifies\./u,
+  );
+  expect(l.text).not.toContain("not checked here");
+  expect(l.brief).toBe("witness receipt checked here");
+});
+
+it("NOT_CHECKED: with no directory, an unlisted witness, or no strict result, the receipt keeps ruling 12's qualifier", async () => {
+  for (const [id, options] of [
+    ["pos-witness-cll-no-directory", { strict: true }],
+    ["pos-witness-unlisted", underDirectory],
+    ["pos-witness-cll", undefined],
+  ] as const) {
+    const bundle = strictCase(id);
+    const verified = await verifyBundle(bundle, options);
+    expect(verified.strict?.witnesses?.status ?? "none", id).not.toBe("pass");
+    const l = witnessLine(bundle, verified);
+    expect(l.witness, id).toBe("not-checked");
+    expect(l.text, id).toMatch(
+      /^"https:\/\/[a-z-]+\.example"( \(tree size [0-9,]+\))?: stated by the bundle, not checked here\./u,
+    );
+    expect(l.text, id).not.toContain("verifies");
+    expect(l.brief, id).toBe("witness receipt in this bundle");
+  }
+});
+
+it("a placeholder AAC withholds is not a witness, even when another receipt passes", async () => {
+  const bundle = strictCase("pos-witness-stub");
+  const l = witnessLine(bundle, await verifyBundle(bundle, underDirectory));
+  expect(l.witness).toBe("absent");
+  expect(l.text).toMatch(/^not stated in this bundle/u);
+});
+
+it("INVALID: a receipt AAC failed is never witnessed and is named with AAC's reason", async () => {
+  const bundle = strictCase("neg-witness-cll-wrong-key");
+  const verified = await verifyBundle(bundle, underDirectory);
+  const aac = verified.strict.witnesses!;
+  expect(aac.status).toBe("fail");
+  const l = witnessLine(bundle, verified);
+  expect(l.witness).toBe("invalid");
+  expect(l.text).toContain(
+    [
+      "not witnessed: the witness check failed on this page.",
+      `"https://cll-witness.example" (reason: ${JSON.stringify(aac.receipts[0]!.reason)}): checked here, and does not verify.`,
+    ].join(" "),
+  );
+  expect(l.text).not.toContain("stated by the bundle");
+  expect(l.text).not.toContain(": receipt checked here, and it verifies");
+  expect(l.brief).toBe("witness check failed");
 });
