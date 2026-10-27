@@ -1,8 +1,9 @@
 // The receipt modules' module-slot scripts as a page runs them.
 //
-// (1) jsdom, real copies: the four bundles capsulectl (capsule-cli main)
-//     cut, main-buyer-{keep,counterparty} and main-seller-{keep,counterparty}
-//     (examples/receipt/cut_main_bundles.sh), each through the three scripts as
+// (1) jsdom, real copies: the bundles capsulectl (capsule-cli main) cut,
+//     main-buyer-{keep,counterparty} and main-seller-{keep,counterparty}
+//     (examples/receipt/cut_main_bundles.sh) and main-standalone-{keep,counterparty}
+//     (cut_standalone_bundles.sh: the report is a standalone record), each through the three scripts as
 //     the page's runtime would load them (EvidenceGraph.registerPresentation),
 //     with the context the page's verifier gives (aacContext.js, capsulectl
 //     verify's verdicts on those bytes) and nothing else: no page audience, no
@@ -10,7 +11,7 @@
 //     unilateral receipt's, a seller's the seller receipt's); the owner's copy
 //     shows PRIVATE and the copy shared with the counterparty does not; one
 //     level of details; the kit stylesheet goes in once, as the manifest pins it.
-// (2) headless Chromium at 390px and 1280px: the same four, and no page
+// (2) headless Chromium at 390px and 1280px: the same six, and no page
 //     scrolls sideways.
 // (3) headless Chromium, the receipt goldens (tests/goldens/receipt-*.png):
 //     each page the Python module renders and the same page with the script
@@ -47,6 +48,8 @@ import {
 const MAIN = [
   { name: "main-buyer-keep", module: "unilateral", keep: true },
   { name: "main-buyer-counterparty", module: "unilateral", keep: false },
+  { name: "main-standalone-keep", module: "unilateral", keep: true },
+  { name: "main-standalone-counterparty", module: "unilateral", keep: false },
   { name: "main-seller-keep", module: "seller", keep: true },
   { name: "main-seller-counterparty", module: "seller", keep: false },
 ];
@@ -97,6 +100,44 @@ describe("real copies capsulectl cut, in jsdom", () => {
       expect(lib.document.querySelectorAll("#cv-kit-css").length).toBe(1);
     });
   }
+
+  it("a standalone report is read only when the verifier reported its check as passed, as in Python", async () => {
+    const unilateral = threeScripts().find((x) => x.kind === "unilateral").module;
+    const edits = {
+      "no status": (verify) => { delete verify.extensions.find((e) => e.kind === "x-deal-v0").report; },
+      "a failed status": (verify) => { verify.extensions.find((e) => e.kind === "x-deal-v0").status = "fail"; },
+    };
+    for (const [why, edit] of Object.entries(edits)) {
+      const verify = readVerify("main-standalone-keep");
+      edit(verify);
+      expect(await unilateral.canRender(standInContext(readBundle("main-standalone-keep"), { verify })), why).toBe(false);
+    }
+    const asReported = standInContext(readBundle("main-standalone-keep"), { verify: readVerify("main-standalone-keep") });
+    expect(await unilateral.canRender(asReported)).toBe(true);
+    const bundle = readBundle("main-standalone-keep");
+    bundle.extensions["x-deal-report/v0"].record.capsule_id = "0".repeat(64);
+    expect(await unilateral.canRender(standInContext(bundle, { verify: readVerify("main-standalone-keep") }))).toBe(false);
+  });
+
+  it("a standalone report beside a report record on the log is declined, disclosed or not, as in Python", async () => {
+    const unilateral = threeScripts().find((x) => x.kind === "unilateral").module;
+    const other = readBundle("main-buyer-keep");
+    const otherVerify = readVerify("main-buyer-keep");
+    const reportId = other.extensions["x-deal-v0"].sealed_report;
+    for (const disclosed of [false, true]) {
+      const bundle = readBundle("main-standalone-keep");
+      const verify = readVerify("main-standalone-keep");
+      bundle.records.push(other.records.find((r) => r.capsule_id === reportId));
+      verify.record_identity[reportId] = "passed";
+      if (disclosed) {
+        bundle.disclosures[reportId] = other.disclosures[reportId];
+        verify.disclosures.push(otherVerify.disclosures.find((d) => d.capsule_id === reportId));
+      }
+      expect(await unilateral.canRender(standInContext(bundle, { verify })), `disclosed ${disclosed}`).toBe(false);
+    }
+    // The same edit without the second report leaves the copy accepted: the decline is the second report's.
+    expect(await unilateral.canRender(standInContext(readBundle("main-standalone-keep"), { verify: readVerify("main-standalone-keep") }))).toBe(true);
+  });
 
   it("a seller copy whose kind was dropped is no module's, in the page as in Python", async () => {
     const bundle = readBundle("main-seller-keep");

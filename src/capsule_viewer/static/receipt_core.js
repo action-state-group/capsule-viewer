@@ -56,6 +56,8 @@
   var SELLER_KIND = ""; // @generated SELLER_KIND
 
   var EXTENSION = "x-deal-v0";
+  // Where capsulectl carries a copy's report when it is on no log (capsule-cli#294).
+  var STANDALONE_EXTENSION = "x-deal-report/v0";
   var COMPOSED_KIND = "composed/v1";
   var REPORT_TYPE = "deal_report";
   var REPORT_ACTION_ID = "capsulectl-deal-report";
@@ -320,6 +322,13 @@
     return { verifier: VERIFIER, outcome: bundleVerified(v) ? "verified" : "failed", checks: checks };
   }
 
+  // capsulectl's status for the x-deal-v0 check when it names the report as
+  // standalone. A page runtime that does not interpret x-deal-v0 reports none.
+  function reportChecked(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION && e.report === "standalone"; });
+    return entry !== undefined && typeof entry.status === "string" ? entry.status : null;
+  }
+
   function pageAssurance(context) {
     var c = map(context);
     var v = map(c.verification);
@@ -327,6 +336,7 @@
       bundle_digest: typeof v.bundleDigest === "string" ? v.bundleDigest : null,
       witnesses: "absent",
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
+      report_checked: reportChecked(v),
     };
   }
 
@@ -593,11 +603,38 @@
     var logId = str(get(coords, "log_id")), s = int(get(coords, "seq")), leaf = int(get(coords, "leaf_index"));
     return logId !== null && s !== null && leaf !== null ? { log_id: logId, seq: s, leaf_index: leaf } : null;
   };
+  // The named report is the standalone record, not a record on the log.
+  Reader.prototype.standalone = function () {
+    var extensions = map(get(this.v.bundle, "extensions"));
+    var named = str(get(map(get(extensions, EXTENSION)), "sealed_report"));
+    return named !== null && !this.headers.has(named) && own(extensions, STANDALONE_EXTENSION);
+  };
+  // The report in x-deal-report/v0 when it is the named one; null when `named`
+  // is a record on the log. This script cannot check that record's signature:
+  // it is read only when capsulectl verify reported the check as passed
+  // (assurance.report_checked), and shown with that reported status only.
+  Reader.prototype.standaloneReport = function (named) {
+    var self = this;
+    if (this.headers.has(named)) return null;
+    var block = map(get(map(get(this.v.bundle, "extensions")), STANDALONE_EXTENSION));
+    var record = map(get(block, "record"));
+    if (get(record, "capsule_id") !== named || Object.keys(block).sort().join() !== "agent_input,record" || get(record, "action_id") !== REPORT_ACTION_ID) {
+      throw new Unavailable("the named report " + named + " is neither a record in the bundle nor the one in " + STANDALONE_EXTENSION);
+    }
+    if (this.v.assurance.report_checked !== "pass") throw new Unavailable("the verifier did not report a passing check of the standalone report");
+    if (this.v.records.some(function (cid) { return self.isReport(cid); })) throw new Unavailable("a standalone report and a report record are both in the bundle");
+    var content = map(get(block, "agent_input"));
+    var rep = get(content, "report");
+    if (get(content, "type") !== REPORT_TYPE || !isMap(rep)) throw new Unavailable("the standalone report carries no report object");
+    return rep;
+  };
   Reader.prototype.sealedReport = function () {
     var self = this;
     var extension = map(get(map(get(this.v.bundle, "extensions")), EXTENSION));
     var named = str(get(extension, "sealed_report"));
     if (named === null) throw new Unavailable("the x-deal-v0 extension names no sealed report");
+    var standalone = this.standaloneReport(named);
+    if (standalone !== null) return [named, standalone];
     var disclosed = this.v.records.filter(function (cid) { return self.isReport(cid) && self.payload(cid) !== null; });
     if (!(disclosed.length === 1 && disclosed[0] === named)) {
       throw new Unavailable("disclosed deal reports are not exactly the named one, " + named);
@@ -766,6 +803,7 @@
       witnessed: v.assurance.witnesses,
       countersignatures: v.assurance.countersignatures,
       verification: v.verification,
+      report_checked: reader.standalone() ? or(str(v.assurance.report_checked), null) : null,
     };
   }
 
@@ -1367,10 +1405,17 @@
     return d.el("ul", {}, deadlines.map(function (x) { return d.el("li", { "data-flagged": x.flagged ? "true" : "false" }, [x.text]); }));
   };
 
+  // How the report was sealed. A report carried outside the log is described
+  // by what capsulectl verify reported of it and nothing more (module.py).
+  P.sealedNote = function (model) {
+    if (model.report_checked === null) return this.note(w("summary.sealed"), { "data-sealed": "x-deal-v0" });
+    return this.note(w("summary.standalone", { status: model.report_checked }), { "data-sealed": "x-deal-report" });
+  };
+
   P.l1 = function (model) {
     var d = this.d, kit = this.kit, self = this;
     var r = model.report;
-    var out = [this.note(w("summary.sealed"), { "data-sealed": "x-deal-v0" })];
+    var out = [this.sealedNote(model)];
     out.push(kit.section(w("section.authorized"), [this.committed(model.asked, "asked"), this.sectionSteps(model, "authorized")]));
     out.push(kit.section(w("section.proposed"), this.sectionSteps(model, "proposed")));
     out.push(kit.section(w("section.approved"), this.sectionSteps(model, "approved")));
@@ -1536,7 +1581,7 @@
   P.sellerL1 = function (model) {
     var d = this.d, kit = this.kit, self = this;
     var r = model.receipt;
-    var out = [this.note(w("summary.sealed"), { "data-sealed": "x-deal-v0" })].concat(this.leftOut(model));
+    var out = [this.sealedNote(r)].concat(this.leftOut(model));
 
     var authorised = [this.committed(r.asked, "seller.asked")];
     if (model.authority.length) {

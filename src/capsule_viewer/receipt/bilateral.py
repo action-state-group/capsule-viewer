@@ -166,7 +166,7 @@ def one_deal(named: Sequence[frozenset[str]]) -> tuple[str, tuple[str, ...]]:
 def _party(part: Part, bind: Binder) -> PartyCopy:
     """One carried copy, read as a single copy: by the sealed report its own
     ``x-deal-v0`` extension names (a copy without one is declined)."""
-    cut = copy_audience(part.context)
+    cut = copy_audience(part.context, part.assurance)
     observer = part.observer
     # A copy that engages the seller kind is read as a seller's; build_seller
     # declines it unless its opening record seals party_role seller. A copy

@@ -228,7 +228,7 @@ def build_seller(context: VerifiedBundleContext, bind: Binder, assurance: Assura
     if role != "seller":
         raise ReceiptUnavailable(f"the copy engages {SELLER_KIND} and its sealed records show side {role!r}, not 'seller'")
     receipt = build_receipt(context, bind, assurance, audience)
-    _, raw = sealed_report(context)
+    _, raw = sealed_report(context, assurance)
 
     payloads: dict[str, Mapping[str, Frozen]] = {}
     for step in receipt.steps:
@@ -511,7 +511,7 @@ class SellerReceiptModule(UnilateralReceiptModule):
 
     def _seller_l1(self, model: SellerModel, open_: bool) -> list[str]:
         r = model.receipt
-        out: list[str] = [self._note(self.w("summary.sealed"), data_sealed="x-deal-v0"), *self._left_out(model)]
+        out: list[str] = [self._sealed_note(r), *self._left_out(model)]
 
         authorised: list[str] = [self._committed(r.asked, "seller.asked")]
         if model.authority:

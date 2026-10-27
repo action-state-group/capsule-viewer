@@ -375,6 +375,14 @@ here. The format follows
 
 ### Fixed
 
+- The deal receipt modules (Python and the module-slot scripts) read a copy
+  whose report capsulectl seals as a standalone record in `x-deal-report/v0`,
+  on no log (capsule-cli#294; capsule-viewer#104). Earlier they matched no
+  module for any copy capsulectl cut since that change. The signature of that
+  record is checked by capsulectl verify, not by the module: the module reads
+  the report only when the verifier reported its check as passed, and says
+  only that reported status.
+
 - The composition section (`composed/v1`) fits the page at 1280px and in
   print (capsule-viewer#57). Its tables were wider than the page because the
   ten-column members table, and the joins and agreement tables, carry

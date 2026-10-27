@@ -48,6 +48,10 @@ class Assurance:
     bundle_digest: str | None = None
     witnesses: str = "absent"
     countersignatures: tuple[str, ...] = ()
+    # capsulectl's reported status of the ``x-deal-v0`` check when the copy's
+    # report is the standalone record in ``x-deal-report/v0`` (capsule-cli#294),
+    # else None. Only the verifier checks that record's signature.
+    report_checked: str | None = None
 
 
 class Claim(TypedDict, total=False):
@@ -95,6 +99,16 @@ def _record_ids(bundle: JsonObject) -> set[str]:
     if not isinstance(records, Sequence):
         return set()
     return {r["capsule_id"] for r in records if isinstance(r, Mapping) and isinstance(r.get("capsule_id"), str)}
+
+
+def _standalone_report_status(output: CapsulectlReport) -> str | None:
+    """The status capsulectl reported for the ``x-deal-v0`` extension when it
+    names the report as standalone; None when it did not say."""
+    for entry in output.get("extensions") or ():
+        if isinstance(entry, Mapping) and entry.get("kind") == "x-deal-v0" and entry.get("report") == "standalone":
+            status = entry.get("status")
+            return status if isinstance(status, str) else None
+    return None
 
 
 def context_from_capsulectl(
@@ -150,4 +164,4 @@ def context_from_bundle_report(
         context = build_context(bundle, verification, disclosure_status)
     except ValueError as exc:  # a disclosure status outside the verifier's vocabulary
         raise VerifierReportError(str(exc)) from exc
-    return context, Assurance(digest, statuses["witnesses"][0], countersignatures)
+    return context, Assurance(digest, statuses["witnesses"][0], countersignatures, _standalone_report_status(output))
