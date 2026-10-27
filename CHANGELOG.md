@@ -69,17 +69,21 @@ here. The format follows
 
 ### Added
 
+- The embedded packaging writes a snippet a host page inlines
+  (action-state-group/capsule-cli#254). Given the core runtime,
+  `buildPresentation(..., {format: "embedded"})` also returns `html`, the
+  snippet `emitEmbeddedHtml` writes. It makes `mount`'s
+  `renderEvidenceGraph` call, with the bundle in a JSON data element. It
+  also returns `scriptSources` and `styleSources`, the hash sources a strict
+  host CSP must allow.
 - The Go emitter writes the fragment and embedded packagings
   (action-state-group/capsule-cli#254). `BuildPresentationFragment` and
   `EncodePresentationFragment` write the `aac.presentation-fragment/v0`
-  token. They match TypeScript's `buildPresentation(..., {format: "fragment"})`
-  byte for byte on seeded vectors the TypeScript tests generate
-  (`go/emitter/testdata/fragment-vectors.json`), and refuse an over-long
-  token or URL with `*FragmentTooLargeError`. `BuildEmbeddedHTML` writes a
-  snippet a host page inlines: it calls `renderEvidenceGraph` with the
-  options TypeScript's `mount` passes and returns the CSP hash sources the
-  host must allow. A TypeScript test renders Go's snippet with the real
-  runtime and gets the same DOM as `mount`.
+  token and refuse an over-long token or URL with `*FragmentTooLargeError`.
+  `BuildEmbeddedHTML` writes the embedded snippet. Both match the
+  TypeScript builder byte for byte on seeded vectors that the TypeScript
+  tests generate (`go/emitter/testdata/fragment-vectors.json`,
+  `embedded-vectors.json`).
 
 - The Outcomes rule table draws each requirement of the cited contract that the
   Result's `requirements_covered` leaves out as a "not covered" row, in a group of

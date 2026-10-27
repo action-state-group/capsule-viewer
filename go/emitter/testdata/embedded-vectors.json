@@ -1,238 +1,3128 @@
 {
  "cases": [
   {
-   "name": "0",
-   "settings": {
-    "audience": "*"
-   },
-   "options": "{\"audience\":\"*\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "1",
-   "settings": {
-    "audience": "*",
-    "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+   "name": "case-0",
+   "bundle": {
+    "bundle_version": "2",
+    "bundle_kind": "evidence-bundle/v2",
+    "completeness": {
+     "closure_depth": 2,
+     "records_mode": "complete",
+     "payloads_mode": "all",
+     "suppressed_fields": [],
+     "missing": []
+    },
+    "root": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+    "records": [
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "result",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3"
+       }
+      },
+      "capsule_id": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-1",
+      "occurred_at": "2026-09-14T23:59:00Z",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7"
+       }
+      },
+      "capsule_id": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-2",
+      "occurred_at": "2026-09-15T23:59:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae"
+       }
+      },
+      "capsule_id": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "case-1",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957"
+       }
+      },
+      "capsule_id": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "act-1",
+      "occurred_at": "2026-09-14T10:15:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623",
+        "agent_output_digest": "352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54"
+       }
+      },
+      "capsule_id": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     }
+    ],
+    "disclosures": {
+     "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-15",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": []
+      }
+     },
+     "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+      "agent_input": {
+       "task_id": "airline-2",
+       "trial": 1,
+       "case_aggregate": "fail",
+       "axis_judgments": [
+        {
+         "axis_id": "refund-policy",
+         "outcome_id": "refund-quoted",
+         "status": "fail",
+         "rationale": "the quoted fee did not match the fare rules"
+        }
+       ]
+      }
+     },
+     "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+      "agent_input": {
+       "case": {
+        "conversation_id": "conv-1",
+        "turn_idx": 0,
+        "task_id": "airline-1",
+        "trial": 1
+       },
+       "prompt": "change my flight to the fourteenth"
+      },
+      "agent_output": {
+       "reply": "your flight is now on the fourteenth"
+      }
+     },
+     "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-14",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": [
+        {
+         "task_id": "airline-1",
+         "trial": 1,
+         "case_aggregate": "pass"
+        }
+       ]
+      }
+     },
+     "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+      "agent_input": {
+       "result_version": "evidence-result-v0",
+       "generated_at": "2026-09-16T00:00:00Z",
+       "claims": [
+        {
+         "id": "claim-1",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-1",
+         "tier": "recomputed",
+         "grade": "witnessed",
+         "sufficiency": "SATISFIED",
+         "verdict": "met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+          },
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [
+          {
+           "kind": "inclusion_proof",
+           "digest_alg": "SHA-256",
+           "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+         ],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+           },
+           {
+            "digest_alg": "SHA-256",
+            "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-2",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-2",
+         "tier": "judged",
+         "grade": "self-attested",
+         "sufficiency": "SATISFIED",
+         "verdict": "not_met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-3",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-3",
+         "tier": "recomputed",
+         "grade": "countersigned",
+         "sufficiency": "GAP",
+         "verdict": "not_evaluable",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "analysis",
+          "status": "WITHHELD",
+          "summary": "the counterparty confirmed the record exists and declined disclosure under its own policy"
+         }
+        }
+       ],
+       "aggregate": {
+        "coverage": {
+         "evaluated_population": 3,
+         "excluded_not_applicable": 1,
+         "unknown_count": 0
+        },
+        "buckets": {
+         "met": [
+          "claim-1"
+         ],
+         "not_met": [
+          "claim-2"
+         ],
+         "not_evaluable": [
+          "claim-3"
+         ]
+        }
+       }
+      }
+     }
+    },
+    "completeness_certificate": {
+     "log_id": "sealed-fixture-log",
+     "range_root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "first_seq": 1,
+     "last_seq": 5,
+     "body_digests": [
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d",
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f",
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095",
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     ],
+     "range_proof": {
+      "from_seq": 1,
+      "to_seq": 5,
+      "size": 8,
+      "from_index": 0,
+      "to_index": 4,
+      "witness": []
+     },
+     "memberships": {
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 1,
+        "leaf_index": 0
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 0,
+        "witness": [
+         "2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 2,
+        "leaf_index": 1
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 1,
+        "witness": [
+         "c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 3,
+        "leaf_index": 2
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 2,
+        "witness": [
+         "b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 4,
+        "leaf_index": 3
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 3,
+        "witness": [
+         "f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 5,
+        "leaf_index": 4
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 4,
+        "witness": [],
+        "peaks_left": [
+         "9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b"
+        ],
+        "peaks_right": []
+       }
+      }
+     }
+    },
+    "checkpoint": {
+     "root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "mmr_size": 8
     }
    },
-   "options": "{\"audience\":\"*\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
-  },
-  {
-   "name": "2",
    "settings": {
-    "audience": "*",
-    "depth": "L0"
-   },
-   "options": "{\"audience\":\"*\",\"depth\":\"L0\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "3",
-   "settings": {
-    "audience": "*",
-    "depth": "L0",
-    "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
-    }
-   },
-   "options": "{\"audience\":\"*\",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
-  },
-  {
-   "name": "4",
-   "settings": {
-    "audience": "*",
-    "depth": "L1"
-   },
-   "options": "{\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "5",
-   "settings": {
-    "audience": "*",
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m0_1=\"\";",
+      "sha256": "16e1ca415fca88afe3a11f160bebc8eabd4a12d233f9dfc75b1e4553cb66b6ff",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "48124c88c47750c9431a0d8823fa74854d5e2e0751cff831a48516bcdc45344a"
+      ]
+     }
+    ],
     "depth": "L1",
     "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "fa45f7bb289d898f48a8d4fbc5b13c9d496b4d5fbda492e3681cc9ad51ca70e7"
     }
    },
-   "options": "{\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 0*/",
+   "runtime_sha256": "e366f60d4bf9cf8449d51762ad3a55e97af182e3776e13ac7b299d084ac44e18",
+   "html": "<script>/*rt 0*/</script>\n<script>window.m0_1=\"\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"bundle_kind\":\"evidence-bundle/v2\",\"bundle_version\":\"2\",\"checkpoint\":{\"mmr_size\":8,\"root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"completeness\":{\"closure_depth\":2,\"missing\":[],\"payloads_mode\":\"all\",\"records_mode\":\"complete\",\"suppressed_fields\":[]},\"completeness_certificate\":{\"body_digests\":[\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\"],\"first_seq\":1,\"last_seq\":5,\"log_id\":\"sealed-fixture-log\",\"memberships\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":2,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":2,\"log_id\":\"sealed-fixture-log\",\"seq\":3}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":0,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":0,\"log_id\":\"sealed-fixture-log\",\"seq\":1}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":1,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":1,\"log_id\":\"sealed-fixture-log\",\"seq\":2}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":3,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":3,\"log_id\":\"sealed-fixture-log\",\"seq\":4}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":4,\"peaks_left\":[\"9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b\"],\"peaks_right\":[],\"size\":8,\"v\":1,\"witness\":[]},\"log_coordinates\":{\"leaf_index\":4,\"log_id\":\"sealed-fixture-log\",\"seq\":5}}},\"range_proof\":{\"from_index\":0,\"from_seq\":1,\"size\":8,\"to_index\":4,\"to_seq\":5,\"witness\":[]},\"range_root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"disclosures\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"agent_input\":{\"cases\":[],\"date\":\"2026-09-15\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"agent_input\":{\"aggregate\":{\"buckets\":{\"met\":[\"claim-1\"],\"not_evaluable\":[\"claim-3\"],\"not_met\":[\"claim-2\"]},\"coverage\":{\"evaluated_population\":3,\"excluded_not_applicable\":1,\"unknown_count\":0}},\"claims\":[{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"witnessed\",\"id\":\"claim-1\",\"presentation\":{\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[{\"digest\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\"digest_alg\":\"SHA-256\",\"kind\":\"inclusion_proof\"}],\"requirement_ref\":\"req-1\",\"sufficiency\":\"SATISFIED\",\"tier\":\"recomputed\",\"verdict\":\"met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"self-attested\",\"id\":\"claim-2\",\"presentation\":{\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[],\"requirement_ref\":\"req-2\",\"sufficiency\":\"SATISFIED\",\"tier\":\"judged\",\"verdict\":\"not_met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"countersigned\",\"id\":\"claim-3\",\"presentation\":{\"kind\":\"analysis\",\"status\":\"WITHHELD\",\"summary\":\"the counterparty confirmed the record exists and declined disclosure under its own policy\"},\"proofs\":[],\"requirement_ref\":\"req-3\",\"sufficiency\":\"GAP\",\"tier\":\"recomputed\",\"verdict\":\"not_evaluable\"}],\"generated_at\":\"2026-09-16T00:00:00Z\",\"result_version\":\"evidence-result-v0\"}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"agent_input\":{\"cases\":[{\"case_aggregate\":\"pass\",\"task_id\":\"airline-1\",\"trial\":1}],\"date\":\"2026-09-14\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"agent_input\":{\"axis_judgments\":[{\"axis_id\":\"refund-policy\",\"outcome_id\":\"refund-quoted\",\"rationale\":\"the quoted fee did not match the fare rules\",\"status\":\"fail\"}],\"case_aggregate\":\"fail\",\"task_id\":\"airline-2\",\"trial\":1}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"agent_input\":{\"case\":{\"conversation_id\":\"conv-1\",\"task_id\":\"airline-1\",\"trial\":1,\"turn_idx\":0},\"prompt\":\"change my flight to the fourteenth\"},\"agent_output\":{\"reply\":\"your flight is now on the fourteenth\"}}},\"records\":[{\"action_id\":\"result\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3\"}},\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7\"}},\"occurred_at\":\"2026-09-14T23:59:00Z\",\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-2\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae\"}},\"occurred_at\":\"2026-09-15T23:59:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"case-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957\"}},\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"act-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623\",\"agent_output_digest\":\"352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54\"}},\"occurred_at\":\"2026-09-14T10:15:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"}],\"root\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\"}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"W\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"fa45f7bb289d898f48a8d4fbc5b13c9d496b4d5fbda492e3681cc9ad51ca70e7\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-42b2DUv5z4RJ1RdirTpV6XrxguN3bhOseymdCErEThg='",
+    "'sha256-FuHKQV/KiK/joR8WC+vI6r1KEtIz+d/HWx5FU8tmtv8='",
+    "'sha256-ervtmEux189Pzz53l1wSekT+5GCaYOUNMArnKwgm5FI='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='",
+    "'sha256-SBJMiMR3UMlDGg2II/p0hU1eLgdRz/gxpIUWvNxFNEo='"
+   ]
   },
   {
-   "name": "6",
+   "name": "case-1",
+   "bundle": {
+    "kind": "test",
+    "n": 1,
+    "data": " "
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m1_1=\"'\\f\";",
+      "sha256": "cd58cdd901421f3c25557b733da14b40cd9ff6d79bf4ec51fcfcc9dfeae31a5e"
+     }
+    ],
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"😀😀😀\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "67f41d7fe99fc84c1a0104a39a185e5f474efd5cf4a39904ade3eaf04964d842"
+    }
+   },
+   "runtime": "/*rt 1*/",
+   "html": "<script>/*rt 1*/</script>\n<script>window.m1_1=\"'\\f\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\" \",\"kind\":\"test\",\"n\":1}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"😀😀😀\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"67f41d7fe99fc84c1a0104a39a185e5f474efd5cf4a39904ade3eaf04964d842\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-utUA6KdobpYuRMf7kypidP0TDIEyFoAAPaGZ3YjzVxw='",
+    "'sha256-zVjN2QFCHzwlVXtzPaFLQM2f9teb9OxR/PzJ3+rjGl4='",
+    "'sha256-azP32YQdNIe26ytik00yXoodHeAq0oqeIbjz+R+O4Oc='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-2",
+   "bundle": {
+    "kind": "test",
+    "n": 2,
+    "data": 5e-324
+   },
    "settings": {
     "audience": "*",
-    "depth": "L2"
+    "modules": [
+     {
+      "code": "window.m2_2=\"</script>\";",
+      "sha256": "6cb8fe21985f7728c564c32cf2603f8134086e8b78beb202ceae2b6f591ea046",
+      "style_sha256": [
+       "45e44656e09bc409db5f54b098075f0ed8ea15cc48f345e585045b9ed9711c6a",
+       "efdac3bd3568cd600c154b99487320b0e98f4c6c573d4dd9c452e3db4ed21bc3"
+      ]
+     },
+     {
+      "code": "window.m2_1=\"\\n\";",
+      "sha256": "c50a2ccf15a9c7bf788e3c09ea464a9043f19aa825dfa40bd2ffefb0ebb95f3b"
+     }
+    ]
    },
-   "options": "{\"audience\":\"*\",\"depth\":\"L2\",\"format\":\"embedded\"}"
+   "runtime": "/*rt 2*/",
+   "error": "float at $.data"
   },
   {
-   "name": "7",
+   "name": "case-3",
+   "bundle": {
+    "kind": "test",
+    "n": 3,
+    "data": "\f"
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m3_2=\"\\\\😀\";",
+      "sha256": "009c17f0e0f9a26fab16b0b92a01099bee1c3a281ea5e4e9a3c59035f840a540"
+     },
+     {
+      "code": "window.m3_1=\"<!--\";",
+      "sha256": "b9a61bc0f6b8854f9a532dcae8f3ea71f87bd7ef700ad3c730b85edf22ff87d1",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "e97d984c12af66f5e907b85d34acded128998684ad7147409c1c12897ccb0439"
+      ]
+     }
+    ],
+    "depth": "L0"
+   },
+   "runtime": "/*rt 3*/",
+   "error": "module 1 must not contain </script or <!--"
+  },
+  {
+   "name": "case-4",
+   "bundle": {
+    "kind": "test",
+    "n": 4,
+    "data": ""
+   },
+   "settings": {
+    "audience": "a",
+    "modules": [],
+    "depth": "L1"
+   },
+   "runtime": "/*rt 4*/",
+   "html": "<script>/*rt 4*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\",\"kind\":\"test\",\"n\":4}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"a\",\"depth\":\"L1\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-7FQPu9TuQzYHHZ3Xf1V8XJgvBYn/fxNrtIaX7LK1R4Q='",
+    "'sha256-0buaMv6XC6DVK3/kMz2JYp6ygmLtwJDwsSVcRHzZIP0='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-5",
+   "bundle": {
+    "kind": "test",
+    "n": 5,
+    "data": "0a "
+   },
    "settings": {
     "audience": "*",
-    "depth": "L2",
-    "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
-    }
+    "modules": [
+     {
+      "code": "window.m5_1=\"\\ta\\u0000\";",
+      "sha256": "a1d04b8b10a7f746e4731d5799195c10a3a04d804c63d946d834a2173ed8612b",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "3aa0f40d75b30e1b129af59177e968f9f716a1881b3b0e3dadc94879acda0be2"
+      ]
+     }
+    ]
    },
-   "options": "{\"audience\":\"*\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 5*/",
+   "html": "<script>/*rt 5*/</script>\n<script>window.m5_1=\"\\ta\\u0000\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"0a\\u2029\",\"kind\":\"test\",\"n\":5}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-NdcygiXEn0Gq9UliuMhIe8OdbUcGXbSoWPTiXIdsr3c='",
+    "'sha256-odBLixCn90bkcx1XmRlcEKOgTYBMY9lG2DSiFz7YYSs='",
+    "'sha256-pWwF2T3+AaNm7LIkkbRdTTElFM0M4YTyiAfNci3hvFo='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='",
+    "'sha256-OqD0DXWzDhsSmvWRd+lo+fcWoYgbOw49rclIeazaC+I='"
+   ]
   },
   {
-   "name": "8",
-   "settings": {
-    "audience": "counterparty"
+   "name": "case-6",
+   "bundle": {
+    "kind": "test",
+    "n": 6,
+    "data": ""
    },
-   "options": "{\"audience\":\"counterparty\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "9",
    "settings": {
-    "audience": "counterparty",
-    "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
-    }
-   },
-   "options": "{\"audience\":\"counterparty\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
-  },
-  {
-   "name": "10",
-   "settings": {
-    "audience": "counterparty",
-    "depth": "L0"
-   },
-   "options": "{\"audience\":\"counterparty\",\"depth\":\"L0\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "11",
-   "settings": {
-    "audience": "counterparty",
-    "depth": "L0",
-    "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
-    }
-   },
-   "options": "{\"audience\":\"counterparty\",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
-  },
-  {
-   "name": "12",
-   "settings": {
-    "audience": "counterparty",
-    "depth": "L1"
-   },
-   "options": "{\"audience\":\"counterparty\",\"depth\":\"L1\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "13",
-   "settings": {
-    "audience": "counterparty",
+    "audience": "*",
+    "modules": [],
     "depth": "L1",
     "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+     "pack": "{\"entries\":{\"page.title\":\"\\u001f\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "30e33e9ed3d85cc223a494f73fc8e28b6dda4afdf32f0224db487ff2a08fc977"
     }
    },
-   "options": "{\"audience\":\"counterparty\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 6*/",
+   "runtime_sha256": "27a299b0e7388b0b76a2a028f6a04732070e800caec68423f0450051aa257d53",
+   "html": "<script>/*rt 6*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\",\"kind\":\"test\",\"n\":6}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"\\\\u001f\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"30e33e9ed3d85cc223a494f73fc8e28b6dda4afdf32f0224db487ff2a08fc977\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-J6KZsOc4iwt2oqAo9qBHMgcOgAyuxoQj8EUAUaolfVM='",
+    "'sha256-XF1TqY8Clte2lt4euyWb0U6bJra5mj8UOOhmnKzMygk='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "14",
+   "name": "case-7",
+   "bundle": {
+    "kind": "test",
+    "n": 7,
+    "data": {
+     "\f": 0,
+     "ß": {
+      "__proto__": " ",
+      "><'": "\"'"
+     }
+    }
+   },
+   "settings": {
+    "audience": "a",
+    "modules": [
+     {
+      "code": "window.m7_2=\"\";",
+      "sha256": "770c65cb453c970a6d5eb17abafa80e7ba1e96860a1253305999a1e8dba70b31"
+     },
+     {
+      "code": "window.m7_1=\"\\u001f \";",
+      "sha256": "a561e62b64b787737a80b574c14a3c9ad246b4c5816802023ff252bae02ab326",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "54865d7bde193b63f7377e92a9859e03ddd1c858743b49be222933b60c9d93f1"
+      ]
+     }
+    ]
+   },
+   "runtime": "/*rt 7*/",
+   "runtime_sha256": "7b2f48c127d8acce8fe2f1f1001562ea28cb56618540cd922f8d10e4c4e590cb",
+   "html": "<script>/*rt 7*/</script>\n<script>window.m7_2=\"\";</script>\n<script>window.m7_1=\"\\u001f \";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":{\"\\f\":0,\"ß\":{\"\\u003e\\u003c'\":\"\\\"'\",\"__proto__\":\" \"}},\"kind\":\"test\",\"n\":7}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"a\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-ey9IwSfYrM6P4vHxABVi6ijLVmGFQM2SL40Q5MTlkMs='",
+    "'sha256-dwxly0U8lwptXrF6uvqA57oeloYKElMwWZmh6NunCzE='",
+    "'sha256-pWHmK2S3h3N6gLV0wUo8mtJGtMWBaAICP/JSuuAqsyY='",
+    "'sha256-c/mSK0x+grgbVWsCoqKzDdn4b+9ApfaUTf4vjKG26mM='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='",
+    "'sha256-VIZde94ZO2P3N36SqYWeA93RyFh0O0m+Iikztgydk/E='"
+   ]
+  },
+  {
+   "name": "case-8",
+   "bundle": {
+    "kind": "test",
+    "n": 8,
+    "data": null
+   },
    "settings": {
     "audience": "counterparty",
-    "depth": "L2"
+    "modules": [
+     {
+      "code": "window.m8_1=\"\";",
+      "sha256": "519c10ccf08b775ed14cbebc49af8a73baa2e2e804024cab769a772eebf5890f"
+     }
+    ]
    },
-   "options": "{\"audience\":\"counterparty\",\"depth\":\"L2\",\"format\":\"embedded\"}"
+   "runtime": "/*rt 8*/",
+   "html": "<script>/*rt 8*/</script>\n<script>window.m8_1=\"\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":null,\"kind\":\"test\",\"n\":8}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-tHACC8M0AYPGzy7IX/tWjF0xvw/mx2JS3kkp3ALZavc='",
+    "'sha256-UZwQzPCLd17RTL68Sa+Kc7qi4ugEAkyrdpp3Luv1iQ8='",
+    "'sha256-MAwsqGbneFmw5uFXilLA8Ys6kVhFebs4OFmp3oz57CI='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "15",
+   "name": "case-9",
+   "bundle": {
+    "kind": "test",
+    "n": 9,
+    "data": [
+     [],
+     "\f"
+    ]
+   },
    "settings": {
-    "audience": "counterparty",
-    "depth": "L2",
-    "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+    "audience": "\u001fa\r€",
+    "modules": [
+     {
+      "code": "window.m9_2=\"😀\\\\a\";",
+      "sha256": "8c0f37b55d809020b7825376639a6b700a1dc87c2d559dfbe1b21cb04da37f61"
+     },
+     {
+      "code": "window.m9_1=\"Z<!--0\";",
+      "sha256": "aa73854dd32ee9f99f156ff2a596c3d4fe472d258214bccb5dd75ed573ccad56",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "70e499f93da65e100f88968b18e61c8cedd7d3d4ddbe2758849cc69f34f6a10e"
+      ]
+     }
+    ]
+   },
+   "runtime": "/*rt 9*/",
+   "error": "module 1 must not contain </script or <!--"
+  },
+  {
+   "name": "case-10",
+   "bundle": {
+    "bundle_version": "2",
+    "bundle_kind": "evidence-bundle/v2",
+    "completeness": {
+     "closure_depth": 2,
+     "records_mode": "complete",
+     "payloads_mode": "all",
+     "suppressed_fields": [],
+     "missing": []
+    },
+    "root": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+    "records": [
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "result",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3"
+       }
+      },
+      "capsule_id": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-1",
+      "occurred_at": "2026-09-14T23:59:00Z",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7"
+       }
+      },
+      "capsule_id": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-2",
+      "occurred_at": "2026-09-15T23:59:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae"
+       }
+      },
+      "capsule_id": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "case-1",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957"
+       }
+      },
+      "capsule_id": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "act-1",
+      "occurred_at": "2026-09-14T10:15:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623",
+        "agent_output_digest": "352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54"
+       }
+      },
+      "capsule_id": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     }
+    ],
+    "disclosures": {
+     "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-15",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": []
+      }
+     },
+     "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+      "agent_input": {
+       "task_id": "airline-2",
+       "trial": 1,
+       "case_aggregate": "fail",
+       "axis_judgments": [
+        {
+         "axis_id": "refund-policy",
+         "outcome_id": "refund-quoted",
+         "status": "fail",
+         "rationale": "the quoted fee did not match the fare rules"
+        }
+       ]
+      }
+     },
+     "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+      "agent_input": {
+       "case": {
+        "conversation_id": "conv-1",
+        "turn_idx": 0,
+        "task_id": "airline-1",
+        "trial": 1
+       },
+       "prompt": "change my flight to the fourteenth"
+      },
+      "agent_output": {
+       "reply": "your flight is now on the fourteenth"
+      }
+     },
+     "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-14",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": [
+        {
+         "task_id": "airline-1",
+         "trial": 1,
+         "case_aggregate": "pass"
+        }
+       ]
+      }
+     },
+     "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+      "agent_input": {
+       "result_version": "evidence-result-v0",
+       "generated_at": "2026-09-16T00:00:00Z",
+       "claims": [
+        {
+         "id": "claim-1",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-1",
+         "tier": "recomputed",
+         "grade": "witnessed",
+         "sufficiency": "SATISFIED",
+         "verdict": "met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+          },
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [
+          {
+           "kind": "inclusion_proof",
+           "digest_alg": "SHA-256",
+           "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+         ],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+           },
+           {
+            "digest_alg": "SHA-256",
+            "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-2",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-2",
+         "tier": "judged",
+         "grade": "self-attested",
+         "sufficiency": "SATISFIED",
+         "verdict": "not_met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-3",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-3",
+         "tier": "recomputed",
+         "grade": "countersigned",
+         "sufficiency": "GAP",
+         "verdict": "not_evaluable",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "analysis",
+          "status": "WITHHELD",
+          "summary": "the counterparty confirmed the record exists and declined disclosure under its own policy"
+         }
+        }
+       ],
+       "aggregate": {
+        "coverage": {
+         "evaluated_population": 3,
+         "excluded_not_applicable": 1,
+         "unknown_count": 0
+        },
+        "buckets": {
+         "met": [
+          "claim-1"
+         ],
+         "not_met": [
+          "claim-2"
+         ],
+         "not_evaluable": [
+          "claim-3"
+         ]
+        }
+       }
+      }
+     }
+    },
+    "completeness_certificate": {
+     "log_id": "sealed-fixture-log",
+     "range_root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "first_seq": 1,
+     "last_seq": 5,
+     "body_digests": [
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d",
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f",
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095",
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     ],
+     "range_proof": {
+      "from_seq": 1,
+      "to_seq": 5,
+      "size": 8,
+      "from_index": 0,
+      "to_index": 4,
+      "witness": []
+     },
+     "memberships": {
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 1,
+        "leaf_index": 0
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 0,
+        "witness": [
+         "2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 2,
+        "leaf_index": 1
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 1,
+        "witness": [
+         "c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 3,
+        "leaf_index": 2
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 2,
+        "witness": [
+         "b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 4,
+        "leaf_index": 3
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 3,
+        "witness": [
+         "f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 5,
+        "leaf_index": 4
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 4,
+        "witness": [],
+        "peaks_left": [
+         "9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b"
+        ],
+        "peaks_right": []
+       }
+      }
+     }
+    },
+    "checkpoint": {
+     "root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "mmr_size": 8
     }
    },
-   "options": "{\"audience\":\"counterparty\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
-  },
-  {
-   "name": "16",
    "settings": {
-    "audience": "é<&> "
+    "audience": "a",
+    "modules": []
    },
-   "options": "{\"audience\":\"é<&> \",\"format\":\"embedded\"}"
+   "runtime": "/*rt 10*/",
+   "html": "<script>/*rt 10*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"bundle_kind\":\"evidence-bundle/v2\",\"bundle_version\":\"2\",\"checkpoint\":{\"mmr_size\":8,\"root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"completeness\":{\"closure_depth\":2,\"missing\":[],\"payloads_mode\":\"all\",\"records_mode\":\"complete\",\"suppressed_fields\":[]},\"completeness_certificate\":{\"body_digests\":[\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\"],\"first_seq\":1,\"last_seq\":5,\"log_id\":\"sealed-fixture-log\",\"memberships\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":2,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":2,\"log_id\":\"sealed-fixture-log\",\"seq\":3}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":0,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":0,\"log_id\":\"sealed-fixture-log\",\"seq\":1}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":1,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":1,\"log_id\":\"sealed-fixture-log\",\"seq\":2}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":3,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":3,\"log_id\":\"sealed-fixture-log\",\"seq\":4}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":4,\"peaks_left\":[\"9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b\"],\"peaks_right\":[],\"size\":8,\"v\":1,\"witness\":[]},\"log_coordinates\":{\"leaf_index\":4,\"log_id\":\"sealed-fixture-log\",\"seq\":5}}},\"range_proof\":{\"from_index\":0,\"from_seq\":1,\"size\":8,\"to_index\":4,\"to_seq\":5,\"witness\":[]},\"range_root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"disclosures\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"agent_input\":{\"cases\":[],\"date\":\"2026-09-15\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"agent_input\":{\"aggregate\":{\"buckets\":{\"met\":[\"claim-1\"],\"not_evaluable\":[\"claim-3\"],\"not_met\":[\"claim-2\"]},\"coverage\":{\"evaluated_population\":3,\"excluded_not_applicable\":1,\"unknown_count\":0}},\"claims\":[{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"witnessed\",\"id\":\"claim-1\",\"presentation\":{\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[{\"digest\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\"digest_alg\":\"SHA-256\",\"kind\":\"inclusion_proof\"}],\"requirement_ref\":\"req-1\",\"sufficiency\":\"SATISFIED\",\"tier\":\"recomputed\",\"verdict\":\"met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"self-attested\",\"id\":\"claim-2\",\"presentation\":{\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[],\"requirement_ref\":\"req-2\",\"sufficiency\":\"SATISFIED\",\"tier\":\"judged\",\"verdict\":\"not_met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"countersigned\",\"id\":\"claim-3\",\"presentation\":{\"kind\":\"analysis\",\"status\":\"WITHHELD\",\"summary\":\"the counterparty confirmed the record exists and declined disclosure under its own policy\"},\"proofs\":[],\"requirement_ref\":\"req-3\",\"sufficiency\":\"GAP\",\"tier\":\"recomputed\",\"verdict\":\"not_evaluable\"}],\"generated_at\":\"2026-09-16T00:00:00Z\",\"result_version\":\"evidence-result-v0\"}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"agent_input\":{\"cases\":[{\"case_aggregate\":\"pass\",\"task_id\":\"airline-1\",\"trial\":1}],\"date\":\"2026-09-14\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"agent_input\":{\"axis_judgments\":[{\"axis_id\":\"refund-policy\",\"outcome_id\":\"refund-quoted\",\"rationale\":\"the quoted fee did not match the fare rules\",\"status\":\"fail\"}],\"case_aggregate\":\"fail\",\"task_id\":\"airline-2\",\"trial\":1}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"agent_input\":{\"case\":{\"conversation_id\":\"conv-1\",\"task_id\":\"airline-1\",\"trial\":1,\"turn_idx\":0},\"prompt\":\"change my flight to the fourteenth\"},\"agent_output\":{\"reply\":\"your flight is now on the fourteenth\"}}},\"records\":[{\"action_id\":\"result\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3\"}},\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7\"}},\"occurred_at\":\"2026-09-14T23:59:00Z\",\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-2\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae\"}},\"occurred_at\":\"2026-09-15T23:59:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"case-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957\"}},\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"act-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623\",\"agent_output_digest\":\"352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54\"}},\"occurred_at\":\"2026-09-14T10:15:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"}],\"root\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\"}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"a\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-mDKzLI6oXBQ1OmnQXfMNps2mBvydT1Jv6rNG2Keswf4='",
+    "'sha256-c/mSK0x+grgbVWsCoqKzDdn4b+9ApfaUTf4vjKG26mM='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "17",
+   "name": "case-11",
+   "bundle": {
+    "kind": "test",
+    "n": 11,
+    "data": "😀"
+   },
    "settings": {
-    "audience": "é<&> ",
+    "audience": "*",
+    "modules": [],
     "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+     "pack": "{\"entries\":{\"page.title\":\"\\u001f\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "30e33e9ed3d85cc223a494f73fc8e28b6dda4afdf32f0224db487ff2a08fc977"
     }
    },
-   "options": "{\"audience\":\"é<&> \",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 11*/",
+   "runtime_sha256": "1cd21dd2ceb52e072fe6144a39948111109fc393641f91f9ab7314bfba571921",
+   "html": "<script>/*rt 11*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"😀\",\"kind\":\"test\",\"n\":11}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"\\\\u001f\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"30e33e9ed3d85cc223a494f73fc8e28b6dda4afdf32f0224db487ff2a08fc977\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-HNId0s61Lgcv5hRKOZSBERCfw5NkH5H5q3MUv7pXGSE='",
+    "'sha256-bpx6mbvp9pmsGsAHsT4WmlRThMlOEyftb8hs2liIBtY='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "18",
-   "settings": {
-    "audience": "é<&> ",
-    "depth": "L0"
+   "name": "case-12",
+   "bundle": {
+    "kind": "test",
+    "n": 12,
+    "data": true
    },
-   "options": "{\"audience\":\"é<&> \",\"depth\":\"L0\",\"format\":\"embedded\"}"
-  },
-  {
-   "name": "19",
    "settings": {
-    "audience": "é<&> ",
-    "depth": "L0",
+    "audience": "*",
+    "modules": [
+     {
+      "code": "window.m12_2=\"\";",
+      "sha256": "7355c0226bd47b16e1cdb5e486587d63c615046d07b7ec83acdabef87b8d1919"
+     },
+     {
+      "code": "window.m12_1=\"\\n\\u0000Z\";",
+      "sha256": "816e6dcf4d317b9da4db8f09dae36ffdfddb04bec7ded5bf79ac091677fb5a1e"
+     }
+    ],
     "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625"
     }
    },
-   "options": "{\"audience\":\"é<&> \",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 12*/",
+   "runtime_sha256": "3a93f0128ce7bf49e4585b5e50265afc1e1909cac74f452e242cd19b1b2c9da3",
+   "html": "<script>/*rt 12*/</script>\n<script>window.m12_2=\"\";</script>\n<script>window.m12_1=\"\\n\\u0000Z\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":true,\"kind\":\"test\",\"n\":12}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"W\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-OpPwEoznv0nkWFteUCZa/B4ZCcrHT0UuJCzRmxssnaM='",
+    "'sha256-c1XAImvUexbhzbXkhlh9Y8YVBG0Ht+yDrNq++HuNGRk='",
+    "'sha256-gW5tz00xe52k248J2uNv/f3bBL7H3tW/eawJFnf7Wh4='",
+    "'sha256-vazAhN6Djx31GHYI1VuqPRLHER5ayJOxAJweSF7yKAc='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "20",
+   "name": "case-13",
+   "bundle": {
+    "kind": "test",
+    "n": 13,
+    "data": []
+   },
    "settings": {
-    "audience": "é<&> ",
+    "audience": "*",
+    "modules": [],
     "depth": "L1"
    },
-   "options": "{\"audience\":\"é<&> \",\"depth\":\"L1\",\"format\":\"embedded\"}"
+   "runtime": "/*rt 13*/",
+   "html": "<script>/*rt 13*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[],\"kind\":\"test\",\"n\":13}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-NMfofhlyFcUo19ZSlJWG11KVQ+89yzIG5YnkcLCSjG4='",
+    "'sha256-gHbPDuPf2Pczt7w6KJDuScEv7qVDyO/3KumGTx/BHM8='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "21",
+   "name": "case-14",
+   "bundle": {
+    "kind": "test",
+    "n": 14,
+    "data": []
+   },
    "settings": {
-    "audience": "é<&> ",
-    "depth": "L1",
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m14_1=\"&\";",
+      "sha256": "e8a6360a90bfc40bf66917c83cfb218d5f8153e5969a9483740f779c1193aeb0",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "828c6cd95c1301ed335e4c6364ad9f6ba1293dc0c0d61d188d7cbc417542db2c"
+      ]
+     }
+    ],
     "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+     "pack": "{\"entries\":{\"page.title\":\"a\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "bbde4491523e06e64ae25a104b74889d02e3372ed42260e02e46aa976008fbbf"
     }
    },
-   "options": "{\"audience\":\"é<&> \",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 14*/",
+   "runtime_sha256": "4b1826c93fd4fdb09bc94f8ab119bed9f4e86a3259d6e3cefad4870de9dece9a",
+   "html": "<script>/*rt 14*/</script>\n<script>window.m14_1=\"&\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[],\"kind\":\"test\",\"n\":14}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"a\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"bbde4491523e06e64ae25a104b74889d02e3372ed42260e02e46aa976008fbbf\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-SxgmyT/U/bCbyU+KsRm+2fToajJZ1uPO+tSHDenezpo='",
+    "'sha256-6KY2CpC/xAv2aRfIPPshjV+BU+WWmpSDdA93nBGTrrA='",
+    "'sha256-po7LBemYLw2xl5XYc+HT02ZjxzEEZiwSWAiK3wcrYWI='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='",
+    "'sha256-goxs2VwTAe0zXkxjZK2fa6EpPcDA1h0YjXy8QXVC2yw='"
+   ]
   },
   {
-   "name": "22",
-   "settings": {
-    "audience": "é<&> ",
-    "depth": "L2"
+   "name": "case-15",
+   "bundle": {
+    "kind": "test",
+    "n": 15,
+    "data": "&a"
    },
-   "options": "{\"audience\":\"é<&> \",\"depth\":\"L2\",\"format\":\"embedded\"}"
+   "settings": {
+    "audience": "*",
+    "modules": [],
+    "depth": "L0",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"𝄞>ß\\\\ ß\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "528e9a4b80c6f5f3eaeb1cae958164fc90fcf2cd15c76df091a56c9faf0952d0"
+    }
+   },
+   "runtime": "/*rt 15*/",
+   "runtime_sha256": "ed4f74dfcbde5c3c2882f7de0f049ad9ab6dffe5372d102990b2dd35e6154c57",
+   "html": "<script>/*rt 15*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\\u0026a\",\"kind\":\"test\",\"n\":15}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"𝄞\\u003eß\\\\\\\\\\u2028ß\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"528e9a4b80c6f5f3eaeb1cae958164fc90fcf2cd15c76df091a56c9faf0952d0\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-7U9038veXDwogvfeDwSa2att/+U3LRApkLLdNeYVTFc='",
+    "'sha256-n3JWd2KRfHnWWxjFynqrxFnAWHgZd3OM/oeP3ZQCk7s='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   },
   {
-   "name": "23",
+   "name": "case-16",
+   "bundle": {
+    "kind": "test",
+    "n": 16,
+    "data": 1.7976931348623157e+308
+   },
    "settings": {
-    "audience": "é<&> ",
+    "audience": "counterparty",
+    "modules": [],
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625"
+    }
+   },
+   "runtime": "/*rt 16*/",
+   "error": "unsafe integer at $.data"
+  },
+  {
+   "name": "case-17",
+   "bundle": {
+    "kind": "test",
+    "n": 17,
+    "data": [
+     "中\u0000<!--﻿a&"
+    ]
+   },
+   "settings": {
+    "audience": "'<!--\f中\u001f",
+    "modules": [],
     "depth": "L2",
     "wording": {
-     "pack": "{\"entries\":{\"page.title\":\"Résumé </script> & co \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
-     "sha256": "0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2"
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "fa45f7bb289d898f48a8d4fbc5b13c9d496b4d5fbda492e3681cc9ad51ca70e7"
     }
    },
-   "options": "{\"audience\":\"é<&> \",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Résumé </script> & co \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"0503c737230b073d6128634d526c9261faf7eb405d125eb5022b3502041466b2\"}}"
+   "runtime": "/*rt 17*/",
+   "html": "<script>/*rt 17*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[\"中\\u0000\\u003c!--﻿a\\u0026\"],\"kind\":\"test\",\"n\":17}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"'\\u003c!--\\f中\\u001f\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"W\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"fa45f7bb289d898f48a8d4fbc5b13c9d496b4d5fbda492e3681cc9ad51ca70e7\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-SNvyuVLWkiiQTlrNINEfO+Yf9wAFmmVOKuwvpBjHnG4='",
+    "'sha256-8txEc5VCb+9YaiImiqahIDjELEyLMX3W7jAgpJEcVCI='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-18",
+   "bundle": {
+    "kind": "test",
+    "n": 18,
+    "data": "﻿\u001fa"
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [
+     {
+      "code": "window.m18_2=\"\\r\";",
+      "sha256": "638e86267a447825e42a1326acf5bebbf2339a4c9c35b994716203732333705f",
+      "style_sha256": [
+       "45e44656e09bc409db5f54b098075f0ed8ea15cc48f345e585045b9ed9711c6a",
+       "915ab74e5dba9fcb1edf4b0bde215f3b637981f2a643611752c6d7f7a74777bf"
+      ]
+     },
+     {
+      "code": "window.m18_1=\" \";",
+      "sha256": "8aaa06131ecdc2012ac109e720bcd596db0b1566e52b7642f5b2d37a4cb404fc",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "915ab74e5dba9fcb1edf4b0bde215f3b637981f2a643611752c6d7f7a74777bf"
+      ]
+     }
+    ]
+   },
+   "runtime": "/*rt 18*/",
+   "runtime_sha256": "d4f7098b48b1d1439170c42a2f410e31d835d39f1f066a0de955290455b789b5",
+   "html": "<script>/*rt 18*/</script>\n<script>window.m18_2=\"\\r\";</script>\n<script>window.m18_1=\" \";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"﻿\\u001fa\",\"kind\":\"test\",\"n\":18}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-1PcJi0ix0UORcMQqL0EOMdg1058fBmoN6VUpBFW3ibU='",
+    "'sha256-Y46GJnpEeCXkKhMmrPW+u/IzmkycNbmUcWIDcyMzcF8='",
+    "'sha256-iqoGEx7NwgEqwQnnILzVltsLFWblK3ZC9bLTeky0BPw='",
+    "'sha256-pWwF2T3+AaNm7LIkkbRdTTElFM0M4YTyiAfNci3hvFo='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ReRGVuCbxAnbX1SwmAdfDtjqFcxI80XlhQRbntlxHGo='",
+    "'sha256-kVq3Tl26n8se30sL3iFfO2N5gfKmQ2EXUsbX96dHd78='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='"
+   ]
+  },
+  {
+   "name": "case-19",
+   "bundle": {
+    "kind": "test",
+    "n": 19,
+    "data": " \u001f"
+   },
+   "settings": {
+    "audience": "*",
+    "modules": []
+   },
+   "runtime": "/*rt 19*/",
+   "html": "<script>/*rt 19*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\\u2028\\u001f\",\"kind\":\"test\",\"n\":19}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-ERqPKjTnmdyf04Ha2a8Djr70IPWVjrrkt4KsjEizRQo='",
+    "'sha256-pWwF2T3+AaNm7LIkkbRdTTElFM0M4YTyiAfNci3hvFo='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-20",
+   "bundle": {
+    "bundle_version": "2",
+    "bundle_kind": "evidence-bundle/v2",
+    "completeness": {
+     "closure_depth": 2,
+     "records_mode": "complete",
+     "payloads_mode": "all",
+     "suppressed_fields": [],
+     "missing": []
+    },
+    "root": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+    "records": [
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "result",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3"
+       }
+      },
+      "capsule_id": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-1",
+      "occurred_at": "2026-09-14T23:59:00Z",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7"
+       }
+      },
+      "capsule_id": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-2",
+      "occurred_at": "2026-09-15T23:59:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae"
+       }
+      },
+      "capsule_id": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "case-1",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957"
+       }
+      },
+      "capsule_id": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "act-1",
+      "occurred_at": "2026-09-14T10:15:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623",
+        "agent_output_digest": "352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54"
+       }
+      },
+      "capsule_id": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     }
+    ],
+    "disclosures": {
+     "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-15",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": []
+      }
+     },
+     "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+      "agent_input": {
+       "task_id": "airline-2",
+       "trial": 1,
+       "case_aggregate": "fail",
+       "axis_judgments": [
+        {
+         "axis_id": "refund-policy",
+         "outcome_id": "refund-quoted",
+         "status": "fail",
+         "rationale": "the quoted fee did not match the fare rules"
+        }
+       ]
+      }
+     },
+     "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+      "agent_input": {
+       "case": {
+        "conversation_id": "conv-1",
+        "turn_idx": 0,
+        "task_id": "airline-1",
+        "trial": 1
+       },
+       "prompt": "change my flight to the fourteenth"
+      },
+      "agent_output": {
+       "reply": "your flight is now on the fourteenth"
+      }
+     },
+     "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-14",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": [
+        {
+         "task_id": "airline-1",
+         "trial": 1,
+         "case_aggregate": "pass"
+        }
+       ]
+      }
+     },
+     "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+      "agent_input": {
+       "result_version": "evidence-result-v0",
+       "generated_at": "2026-09-16T00:00:00Z",
+       "claims": [
+        {
+         "id": "claim-1",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-1",
+         "tier": "recomputed",
+         "grade": "witnessed",
+         "sufficiency": "SATISFIED",
+         "verdict": "met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+          },
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [
+          {
+           "kind": "inclusion_proof",
+           "digest_alg": "SHA-256",
+           "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+         ],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+           },
+           {
+            "digest_alg": "SHA-256",
+            "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-2",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-2",
+         "tier": "judged",
+         "grade": "self-attested",
+         "sufficiency": "SATISFIED",
+         "verdict": "not_met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-3",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-3",
+         "tier": "recomputed",
+         "grade": "countersigned",
+         "sufficiency": "GAP",
+         "verdict": "not_evaluable",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "analysis",
+          "status": "WITHHELD",
+          "summary": "the counterparty confirmed the record exists and declined disclosure under its own policy"
+         }
+        }
+       ],
+       "aggregate": {
+        "coverage": {
+         "evaluated_population": 3,
+         "excluded_not_applicable": 1,
+         "unknown_count": 0
+        },
+        "buckets": {
+         "met": [
+          "claim-1"
+         ],
+         "not_met": [
+          "claim-2"
+         ],
+         "not_evaluable": [
+          "claim-3"
+         ]
+        }
+       }
+      }
+     }
+    },
+    "completeness_certificate": {
+     "log_id": "sealed-fixture-log",
+     "range_root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "first_seq": 1,
+     "last_seq": 5,
+     "body_digests": [
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d",
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f",
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095",
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     ],
+     "range_proof": {
+      "from_seq": 1,
+      "to_seq": 5,
+      "size": 8,
+      "from_index": 0,
+      "to_index": 4,
+      "witness": []
+     },
+     "memberships": {
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 1,
+        "leaf_index": 0
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 0,
+        "witness": [
+         "2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 2,
+        "leaf_index": 1
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 1,
+        "witness": [
+         "c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 3,
+        "leaf_index": 2
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 2,
+        "witness": [
+         "b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 4,
+        "leaf_index": 3
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 3,
+        "witness": [
+         "f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 5,
+        "leaf_index": 4
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 4,
+        "witness": [],
+        "peaks_left": [
+         "9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b"
+        ],
+        "peaks_right": []
+       }
+      }
+     }
+    },
+    "checkpoint": {
+     "root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "mmr_size": 8
+    }
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [
+     {
+      "code": "window.m20_2=\"\";",
+      "sha256": "ba99da9af0d4026921791bae7a8c3f88ff61d7cdd60b891af2f98bdbd01589c6",
+      "style_sha256": [
+       "45e44656e09bc409db5f54b098075f0ed8ea15cc48f345e585045b9ed9711c6a",
+       "f5f03d669697851708fad0a678885d622d195252794bcfa73da5d96e9332ff1a"
+      ]
+     },
+     {
+      "code": "window.m20_1=\"\\\\\";",
+      "sha256": "c387e432917c1d8af52170055d84ec66b12ed69384c093831fb01929b4d829f9",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "f5f03d669697851708fad0a678885d622d195252794bcfa73da5d96e9332ff1a"
+      ]
+     }
+    ],
+    "depth": "L1"
+   },
+   "runtime": "/*rt 20*/",
+   "html": "<script>/*rt 20*/</script>\n<script>window.m20_2=\"\";</script>\n<script>window.m20_1=\"\\\\\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"bundle_kind\":\"evidence-bundle/v2\",\"bundle_version\":\"2\",\"checkpoint\":{\"mmr_size\":8,\"root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"completeness\":{\"closure_depth\":2,\"missing\":[],\"payloads_mode\":\"all\",\"records_mode\":\"complete\",\"suppressed_fields\":[]},\"completeness_certificate\":{\"body_digests\":[\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\"],\"first_seq\":1,\"last_seq\":5,\"log_id\":\"sealed-fixture-log\",\"memberships\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":2,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":2,\"log_id\":\"sealed-fixture-log\",\"seq\":3}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":0,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":0,\"log_id\":\"sealed-fixture-log\",\"seq\":1}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":1,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":1,\"log_id\":\"sealed-fixture-log\",\"seq\":2}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":3,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":3,\"log_id\":\"sealed-fixture-log\",\"seq\":4}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":4,\"peaks_left\":[\"9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b\"],\"peaks_right\":[],\"size\":8,\"v\":1,\"witness\":[]},\"log_coordinates\":{\"leaf_index\":4,\"log_id\":\"sealed-fixture-log\",\"seq\":5}}},\"range_proof\":{\"from_index\":0,\"from_seq\":1,\"size\":8,\"to_index\":4,\"to_seq\":5,\"witness\":[]},\"range_root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"disclosures\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"agent_input\":{\"cases\":[],\"date\":\"2026-09-15\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"agent_input\":{\"aggregate\":{\"buckets\":{\"met\":[\"claim-1\"],\"not_evaluable\":[\"claim-3\"],\"not_met\":[\"claim-2\"]},\"coverage\":{\"evaluated_population\":3,\"excluded_not_applicable\":1,\"unknown_count\":0}},\"claims\":[{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"witnessed\",\"id\":\"claim-1\",\"presentation\":{\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[{\"digest\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\"digest_alg\":\"SHA-256\",\"kind\":\"inclusion_proof\"}],\"requirement_ref\":\"req-1\",\"sufficiency\":\"SATISFIED\",\"tier\":\"recomputed\",\"verdict\":\"met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"self-attested\",\"id\":\"claim-2\",\"presentation\":{\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[],\"requirement_ref\":\"req-2\",\"sufficiency\":\"SATISFIED\",\"tier\":\"judged\",\"verdict\":\"not_met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"countersigned\",\"id\":\"claim-3\",\"presentation\":{\"kind\":\"analysis\",\"status\":\"WITHHELD\",\"summary\":\"the counterparty confirmed the record exists and declined disclosure under its own policy\"},\"proofs\":[],\"requirement_ref\":\"req-3\",\"sufficiency\":\"GAP\",\"tier\":\"recomputed\",\"verdict\":\"not_evaluable\"}],\"generated_at\":\"2026-09-16T00:00:00Z\",\"result_version\":\"evidence-result-v0\"}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"agent_input\":{\"cases\":[{\"case_aggregate\":\"pass\",\"task_id\":\"airline-1\",\"trial\":1}],\"date\":\"2026-09-14\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"agent_input\":{\"axis_judgments\":[{\"axis_id\":\"refund-policy\",\"outcome_id\":\"refund-quoted\",\"rationale\":\"the quoted fee did not match the fare rules\",\"status\":\"fail\"}],\"case_aggregate\":\"fail\",\"task_id\":\"airline-2\",\"trial\":1}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"agent_input\":{\"case\":{\"conversation_id\":\"conv-1\",\"task_id\":\"airline-1\",\"trial\":1,\"turn_idx\":0},\"prompt\":\"change my flight to the fourteenth\"},\"agent_output\":{\"reply\":\"your flight is now on the fourteenth\"}}},\"records\":[{\"action_id\":\"result\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3\"}},\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7\"}},\"occurred_at\":\"2026-09-14T23:59:00Z\",\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-2\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae\"}},\"occurred_at\":\"2026-09-15T23:59:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"case-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957\"}},\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"act-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623\",\"agent_output_digest\":\"352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54\"}},\"occurred_at\":\"2026-09-14T10:15:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"}],\"root\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\"}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"depth\":\"L1\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-GkyDxfubJic6MIdXDqN9D9qXa4iXZabHxp51zfClPxM='",
+    "'sha256-upnamvDUAmkheRuueow/iP9h183WC4ka8vmL29AVicY='",
+    "'sha256-w4fkMpF8HYr1IXAFXYTsZrEu1pOEwJODH7AZKbTYKfk='",
+    "'sha256-gHbPDuPf2Pczt7w6KJDuScEv7qVDyO/3KumGTx/BHM8='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ReRGVuCbxAnbX1SwmAdfDtjqFcxI80XlhQRbntlxHGo='",
+    "'sha256-9fA9ZpaXhRcI+tCmeIhdYi0ZUlJ5S8+nPaXZbpMy/xo='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='"
+   ]
+  },
+  {
+   "name": "case-21",
+   "bundle": {
+    "kind": "test",
+    "n": 21,
+    "data": [
+     ""
+    ]
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [
+     {
+      "code": "window.m21_1=\"Z>﻿\";",
+      "sha256": "388f0456d18168ba46a055658f41579fadca48db567598abd39bb9d48dc0f973"
+     }
+    ],
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"</script>\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "849a95bc73a46ebad3a67f44336be4dc159731e7e1731883b191a7b5214bd3db"
+    }
+   },
+   "runtime": "/*rt 21*/",
+   "runtime_sha256": "0ee5581440d574eed963df1ff158c73d3f2e2d62fd86a054be3b392bddbcaea7",
+   "html": "<script>/*rt 21*/</script>\n<script>window.m21_1=\"Z>﻿\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[\"\"],\"kind\":\"test\",\"n\":21}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"\\u003c/script\\u003e\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"849a95bc73a46ebad3a67f44336be4dc159731e7e1731883b191a7b5214bd3db\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-DuVYFEDVdO7ZY98f8VjHPT8uLWL9hqBUvjs5K928rqc='",
+    "'sha256-OI8EVtGBaLpGoFVlj0FXn63KSNtWdZir05u51I3A+XM='",
+    "'sha256-IGkoZH0hMuDzWfpZ826G1gNVvGXqO47DY8AGYy60YUk='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-22",
+   "bundle": {
+    "kind": "test",
+    "n": 22,
+    "data": null
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [],
+    "depth": "L1",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"Z/</script>\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "5cd5cdc38ac6cdb519d1ee19405a408532b20759f00e775ad8bc736e9afd6f10"
+    }
+   },
+   "runtime": "/*rt 22*/",
+   "html": "<script>/*rt 22*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":null,\"kind\":\"test\",\"n\":22}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"depth\":\"L1\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"Z/\\u003c/script\\u003e\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"5cd5cdc38ac6cdb519d1ee19405a408532b20759f00e775ad8bc736e9afd6f10\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-EmmvGoTf9cg+YvBADa8Q0vV3KR2GGXOA7HoUBy5V47w='",
+    "'sha256-zZqH16TDbIsaKPOvn6fmj0GxL4Dp/OR/moeW1g3MvRQ='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-23",
+   "bundle": {
+    "kind": "test",
+    "n": 23,
+    "data": [
+     "\"﻿&",
+     ""
+    ]
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": []
+   },
+   "runtime": "/*rt 23*/",
+   "html": "<script>/*rt 23*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[\"\\\"﻿\\u0026\",\"\"],\"kind\":\"test\",\"n\":23}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-pPPwrf8OoNoYJ0p3CCc9Px2Kyo1X5VWqw/T3QZ9iKHE='",
+    "'sha256-MAwsqGbneFmw5uFXilLA8Ys6kVhFebs4OFmp3oz57CI='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-24",
+   "bundle": {
+    "kind": "test",
+    "n": 24,
+    "data": 123456789
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m24_1=\"\\t\\n\";",
+      "sha256": "ddf427c1cb8f9deaebaec51398a489394ccd52e5ac1fb8f8beb502ab6f1b2ee2"
+     }
+    ],
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "fa45f7bb289d898f48a8d4fbc5b13c9d496b4d5fbda492e3681cc9ad51ca70e7"
+    }
+   },
+   "runtime": "/*rt 24*/",
+   "runtime_sha256": "dc0395fb155f0f39471d4f93b2f730d14fc01433452305aa3978175051bb84d7",
+   "html": "<script>/*rt 24*/</script>\n<script>window.m24_1=\"\\t\\n\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":123456789,\"kind\":\"test\",\"n\":24}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"W\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"fa45f7bb289d898f48a8d4fbc5b13c9d496b4d5fbda492e3681cc9ad51ca70e7\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-3AOV+xVfDzlHHU+Tsvcw0U/AFDNFIwWqOXgXUFG7hNc='",
+    "'sha256-3fQnwcuPnerrrsUTmKSJOUzNUuWsH7j4vrUCq28bLuI='",
+    "'sha256-eEOeXVqfrNVBSGC9zwDRBQUXBxrothC8ruwhiTZkVd0='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-25",
+   "bundle": {
+    "kind": "test",
+    "n": 25,
+    "data": {
+     "": -1,
+     "\t<": [
+      "﻿ é😀",
+      "",
+      "\u0001"
+     ],
+     "﻿\r0": true
+    }
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m25_1=\"\\n \";",
+      "sha256": "a687e32d331921d54fe8c0eea389cc11aa7239a7203b983b6aa467f67aedc62c"
+     }
+    ],
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"\\r\\\\/\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "60c860b62cbf88472883706a18e34f52131f686be782256add2870874a3f73a6"
+    }
+   },
+   "runtime": "/*rt 25*/",
+   "runtime_sha256": "7fc3b15e8cd8ab464ec4bfcd20a8be4a80f58d04be1f1fa6e2b8e154ebd676bd",
+   "html": "<script>/*rt 25*/</script>\n<script>window.m25_1=\"\\n \";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":{\"\":-1,\"\\t\\u003c\":[\"﻿\\u2028é😀\",\"\",\"\\u0001\"],\"﻿\\r0\":true},\"kind\":\"test\",\"n\":25}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"\\\\r\\\\\\\\/\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"60c860b62cbf88472883706a18e34f52131f686be782256add2870874a3f73a6\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-f8OxXozYq0ZOxL/NIKi+SoD1jQS+Hx+m4rjhVOvWdr0='",
+    "'sha256-pofjLTMZIdVP6MDuo4nMEapyOacgO5g7aqRn9nrtxiw='",
+    "'sha256-wnQZuFrTG8RRmMCrC9cwnXKzf85xoQ5j7cn7eTtSFCk='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-26",
+   "bundle": {
+    "kind": "test",
+    "n": 26,
+    "data": [
+     {
+      " 𝄞": "\n𝄞Z€\\",
+      "": "Z Z<!--\t",
+      "\r𝄞": {
+       "中\u0000𝄞": "𝄞𝄞中é"
+      }
+     },
+     "",
+     null
+    ]
+   },
+   "settings": {
+    "audience": "\\",
+    "modules": [
+     {
+      "code": "window.m26_2=\"\\\\Z \";",
+      "sha256": "6e782bb4afe7f61bb779af348c650210424f945e5bff023582763ef01a1f5253"
+     },
+     {
+      "code": "window.m26_1=\" \\\\\";",
+      "sha256": "fcd110118da5ca4d267741475278d389de05dd7f8ddc8435d9ed31d811a768dc",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "97874080b62149bda1d7ff38ed37698768b1507d5c09b5ac4b3eb49b128ba827"
+      ]
+     }
+    ]
+   },
+   "runtime": "/*rt 26*/",
+   "html": "<script>/*rt 26*/</script>\n<script>window.m26_2=\"\\\\Z \";</script>\n<script>window.m26_1=\" \\\\\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[{\"\":\"Z Z\\u003c!--\\t\",\"\\r𝄞\":{\"中\\u0000𝄞\":\"𝄞𝄞中é\"},\" 𝄞\":\"\\n𝄞Z€\\\\\"},\"\",null],\"kind\":\"test\",\"n\":26}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"\\\\\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-lUDagyW3dZHerV3yOpfRm748W8XWw3vKsZWe790Ffno='",
+    "'sha256-bngrtK/n9hu3ea80jGUCEEJPlF5b/wI1gnY+8BofUlM='",
+    "'sha256-/NEQEY2lyk0md0FHUnjTid4F3X+N3IQ12e0x2BGnaNw='",
+    "'sha256-oQCgH0vb8XFxcgWYGaPHFbHcc0gzs/Aug4Gp1up2pQk='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='",
+    "'sha256-l4dAgLYhSb2h1/847Tdph2ixUH1cCbWsSz60mxKLqCc='"
+   ]
+  },
+  {
+   "name": "case-27",
+   "bundle": {
+    "kind": "test",
+    "n": 27,
+    "data": [
+     "a>\bß",
+     123456789
+    ]
+   },
+   "settings": {
+    "audience": "\r ",
+    "modules": [],
+    "depth": "L1"
+   },
+   "runtime": "/*rt 27*/",
+   "runtime_sha256": "4ab5eeb6065d4396b5c849f18c6e91cb51ee12ecb7c44d1b98e1102b6030b10c",
+   "html": "<script>/*rt 27*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[\"a\\u003e\\bß\",123456789],\"kind\":\"test\",\"n\":27}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"\\r\\u2029\",\"depth\":\"L1\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-SrXutgZdQ5a1yEnxjG6Ry1HuEuy3xE0bmOEQK2AwsQw='",
+    "'sha256-bGuz0yBJv/elkdsY8tmI3QW/my3oNaaOS8xXp1hcf/Q='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-28",
+   "bundle": {
+    "kind": "test",
+    "n": 28,
+    "data": 0.1
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [],
+    "depth": "L1",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"𝄞/\\\"  \\r\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "ee22ce1c41bdae498d92b636a6609b3c6ce746e19a097c591aafe4700000e2b6"
+    }
+   },
+   "runtime": "/*rt 28*/",
+   "error": "float at $.data"
+  },
+  {
+   "name": "case-29",
+   "bundle": {
+    "kind": "test",
+    "n": 29,
+    "data": true
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [
+     {
+      "code": "window.m29_2=\"<</script>\";",
+      "sha256": "f011514c557d153457ced6342bb21a4c51f60cc3112297e0cdfb48640e4340cb"
+     },
+     {
+      "code": "window.m29_1=\"𝄞﻿ \";",
+      "sha256": "1927272881a3b941420d6bcd94237e11ef90025ffd54048d88745e40e38dd7d9"
+     }
+    ],
+    "depth": "L2"
+   },
+   "runtime": "/*rt 29*/",
+   "error": "module 0 must not contain </script or <!--"
+  },
+  {
+   "name": "case-30",
+   "bundle": {
+    "bundle_version": "2",
+    "bundle_kind": "evidence-bundle/v2",
+    "completeness": {
+     "closure_depth": 2,
+     "records_mode": "complete",
+     "payloads_mode": "all",
+     "suppressed_fields": [],
+     "missing": []
+    },
+    "root": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+    "records": [
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "result",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+       },
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3"
+       }
+      },
+      "capsule_id": "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-1",
+      "occurred_at": "2026-09-14T23:59:00Z",
+      "references": [
+       {
+        "digest_alg": "SHA-256",
+        "type": "agent-action-capsule",
+        "citation_purpose": "acted_on",
+        "digest": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+       }
+      ],
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7"
+       }
+      },
+      "capsule_id": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "day-2",
+      "occurred_at": "2026-09-15T23:59:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae"
+       }
+      },
+      "capsule_id": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "case-1",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957"
+       }
+      },
+      "capsule_id": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+     },
+     {
+      "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+      "format_version": "4",
+      "canonicalization_id": "jcs",
+      "action_type": "fyi",
+      "operator": "sealed-fixture",
+      "developer": "sealed-fixture@v1",
+      "timestamp": "2026-09-14T00:00:00Z",
+      "assurance": {
+       "effect_mode": "not_applicable",
+       "attestation_mode": "self_attested",
+       "ledger_mode": "standalone"
+      },
+      "action_id": "act-1",
+      "occurred_at": "2026-09-14T10:15:00Z",
+      "model_attestation": {
+       "compute_attestation": {
+        "agent_input_digest": "86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623",
+        "agent_output_digest": "352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54"
+       }
+      },
+      "capsule_id": "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     }
+    ],
+    "disclosures": {
+     "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-15",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": []
+      }
+     },
+     "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+      "agent_input": {
+       "task_id": "airline-2",
+       "trial": 1,
+       "case_aggregate": "fail",
+       "axis_judgments": [
+        {
+         "axis_id": "refund-policy",
+         "outcome_id": "refund-quoted",
+         "status": "fail",
+         "rationale": "the quoted fee did not match the fare rules"
+        }
+       ]
+      }
+     },
+     "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+      "agent_input": {
+       "case": {
+        "conversation_id": "conv-1",
+        "turn_idx": 0,
+        "task_id": "airline-1",
+        "trial": 1
+       },
+       "prompt": "change my flight to the fourteenth"
+      },
+      "agent_output": {
+       "reply": "your flight is now on the fourteenth"
+      }
+     },
+     "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+      "agent_input": {
+       "spec_version": "evaluation-report/v1",
+       "date": "2026-09-14",
+       "outcomes": [
+        {
+         "outcome_id": "booking-confirmed",
+         "role": "required",
+         "aggregate": "pass"
+        }
+       ],
+       "cases": [
+        {
+         "task_id": "airline-1",
+         "trial": 1,
+         "case_aggregate": "pass"
+        }
+       ]
+      }
+     },
+     "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+      "agent_input": {
+       "result_version": "evidence-result-v0",
+       "generated_at": "2026-09-16T00:00:00Z",
+       "claims": [
+        {
+         "id": "claim-1",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-1",
+         "tier": "recomputed",
+         "grade": "witnessed",
+         "sufficiency": "SATISFIED",
+         "verdict": "met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+          },
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [
+          {
+           "kind": "inclusion_proof",
+           "digest_alg": "SHA-256",
+           "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+         ],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d"
+           },
+           {
+            "digest_alg": "SHA-256",
+            "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-2",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-2",
+         "tier": "judged",
+         "grade": "self-attested",
+         "sufficiency": "SATISFIED",
+         "verdict": "not_met",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "disclosure",
+          "status": "SATISFIED",
+          "evidence": [
+           {
+            "digest_alg": "SHA-256",
+            "digest": "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095"
+           }
+          ]
+         }
+        },
+        {
+         "id": "claim-3",
+         "contract_ref": "ec:airline-week:2026-09-14@1",
+         "requirement_ref": "req-3",
+         "tier": "recomputed",
+         "grade": "countersigned",
+         "sufficiency": "GAP",
+         "verdict": "not_evaluable",
+         "evidence": [
+          {
+           "digest_alg": "SHA-256",
+           "digest": "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f"
+          }
+         ],
+         "proofs": [],
+         "presentation": {
+          "kind": "analysis",
+          "status": "WITHHELD",
+          "summary": "the counterparty confirmed the record exists and declined disclosure under its own policy"
+         }
+        }
+       ],
+       "aggregate": {
+        "coverage": {
+         "evaluated_population": 3,
+         "excluded_not_applicable": 1,
+         "unknown_count": 0
+        },
+        "buckets": {
+         "met": [
+          "claim-1"
+         ],
+         "not_met": [
+          "claim-2"
+         ],
+         "not_evaluable": [
+          "claim-3"
+         ]
+        }
+       }
+      }
+     }
+    },
+    "completeness_certificate": {
+     "log_id": "sealed-fixture-log",
+     "range_root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "first_seq": 1,
+     "last_seq": 5,
+     "body_digests": [
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a",
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d",
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f",
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095",
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"
+     ],
+     "range_proof": {
+      "from_seq": 1,
+      "to_seq": 5,
+      "size": 8,
+      "from_index": 0,
+      "to_index": 4,
+      "witness": []
+     },
+     "memberships": {
+      "563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 1,
+        "leaf_index": 0
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 0,
+        "witness": [
+         "2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 2,
+        "leaf_index": 1
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 1,
+        "witness": [
+         "c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c",
+         "b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 3,
+        "leaf_index": 2
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 2,
+        "witness": [
+         "b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 4,
+        "leaf_index": 3
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 3,
+        "witness": [
+         "f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58",
+         "d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"
+        ],
+        "peaks_left": [],
+        "peaks_right": [
+         "54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"
+        ]
+       }
+      },
+      "f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d": {
+       "log_coordinates": {
+        "log_id": "sealed-fixture-log",
+        "seq": 5,
+        "leaf_index": 4
+       },
+       "inclusion_proof": {
+        "v": 1,
+        "kind": "inclusion",
+        "size": 8,
+        "leaf_index": 4,
+        "witness": [],
+        "peaks_left": [
+         "9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b"
+        ],
+        "peaks_right": []
+       }
+      }
+     }
+    },
+    "checkpoint": {
+     "root": "4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690",
+     "mmr_size": 8
+    }
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m30_2=\"\";",
+      "sha256": "e4c6f55ccb7d466774fe17679ac259dc8b7fb2fede2a9b77321fc8302a127cae"
+     },
+     {
+      "code": "window.m30_1=\"\\f\";",
+      "sha256": "9d0b5df605f1a1d40ee534a104d89b3d4e9fbd0a51fdc49487c23d542e9d3c40",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "6ac0b61cd803a5f6a4920dcf464e29f4de85d9dee14ef1f7fe95679905f74938"
+      ]
+     }
+    ],
+    "depth": "L2",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625"
+    }
+   },
+   "runtime": "/*rt 30*/",
+   "runtime_sha256": "557e7ed016c5beb382df429888b6e17bc6195eff5c162e1ad41265030559fcc0",
+   "html": "<script>/*rt 30*/</script>\n<script>window.m30_2=\"\";</script>\n<script>window.m30_1=\"\\f\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"bundle_kind\":\"evidence-bundle/v2\",\"bundle_version\":\"2\",\"checkpoint\":{\"mmr_size\":8,\"root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"completeness\":{\"closure_depth\":2,\"missing\":[],\"payloads_mode\":\"all\",\"records_mode\":\"complete\",\"suppressed_fields\":[]},\"completeness_certificate\":{\"body_digests\":[\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\"],\"first_seq\":1,\"last_seq\":5,\"log_id\":\"sealed-fixture-log\",\"memberships\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":2,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":2,\"log_id\":\"sealed-fixture-log\",\"seq\":3}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":0,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":0,\"log_id\":\"sealed-fixture-log\",\"seq\":1}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":1,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c\",\"b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b\"]},\"log_coordinates\":{\"leaf_index\":1,\"log_id\":\"sealed-fixture-log\",\"seq\":2}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":3,\"peaks_left\":[],\"peaks_right\":[\"54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af\"],\"size\":8,\"v\":1,\"witness\":[\"f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58\",\"d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f\"]},\"log_coordinates\":{\"leaf_index\":3,\"log_id\":\"sealed-fixture-log\",\"seq\":4}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"inclusion_proof\":{\"kind\":\"inclusion\",\"leaf_index\":4,\"peaks_left\":[\"9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b\"],\"peaks_right\":[],\"size\":8,\"v\":1,\"witness\":[]},\"log_coordinates\":{\"leaf_index\":4,\"log_id\":\"sealed-fixture-log\",\"seq\":5}}},\"range_proof\":{\"from_index\":0,\"from_seq\":1,\"size\":8,\"to_index\":4,\"to_seq\":5,\"witness\":[]},\"range_root\":\"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690\"},\"disclosures\":{\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\":{\"agent_input\":{\"cases\":[],\"date\":\"2026-09-15\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\":{\"agent_input\":{\"aggregate\":{\"buckets\":{\"met\":[\"claim-1\"],\"not_evaluable\":[\"claim-3\"],\"not_met\":[\"claim-2\"]},\"coverage\":{\"evaluated_population\":3,\"excluded_not_applicable\":1,\"unknown_count\":0}},\"claims\":[{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"witnessed\",\"id\":\"claim-1\",\"presentation\":{\"evidence\":[{\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\"},{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[{\"digest\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\"digest_alg\":\"SHA-256\",\"kind\":\"inclusion_proof\"}],\"requirement_ref\":\"req-1\",\"sufficiency\":\"SATISFIED\",\"tier\":\"recomputed\",\"verdict\":\"met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"self-attested\",\"id\":\"claim-2\",\"presentation\":{\"evidence\":[{\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\"}],\"kind\":\"disclosure\",\"status\":\"SATISFIED\"},\"proofs\":[],\"requirement_ref\":\"req-2\",\"sufficiency\":\"SATISFIED\",\"tier\":\"judged\",\"verdict\":\"not_met\"},{\"contract_ref\":\"ec:airline-week:2026-09-14@1\",\"evidence\":[{\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\"}],\"grade\":\"countersigned\",\"id\":\"claim-3\",\"presentation\":{\"kind\":\"analysis\",\"status\":\"WITHHELD\",\"summary\":\"the counterparty confirmed the record exists and declined disclosure under its own policy\"},\"proofs\":[],\"requirement_ref\":\"req-3\",\"sufficiency\":\"GAP\",\"tier\":\"recomputed\",\"verdict\":\"not_evaluable\"}],\"generated_at\":\"2026-09-16T00:00:00Z\",\"result_version\":\"evidence-result-v0\"}},\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\":{\"agent_input\":{\"cases\":[{\"case_aggregate\":\"pass\",\"task_id\":\"airline-1\",\"trial\":1}],\"date\":\"2026-09-14\",\"outcomes\":[{\"aggregate\":\"pass\",\"outcome_id\":\"booking-confirmed\",\"role\":\"required\"}],\"spec_version\":\"evaluation-report/v1\"}},\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\":{\"agent_input\":{\"axis_judgments\":[{\"axis_id\":\"refund-policy\",\"outcome_id\":\"refund-quoted\",\"rationale\":\"the quoted fee did not match the fare rules\",\"status\":\"fail\"}],\"case_aggregate\":\"fail\",\"task_id\":\"airline-2\",\"trial\":1}},\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\":{\"agent_input\":{\"case\":{\"conversation_id\":\"conv-1\",\"task_id\":\"airline-1\",\"trial\":1,\"turn_idx\":0},\"prompt\":\"change my flight to the fourteenth\"},\"agent_output\":{\"reply\":\"your flight is now on the fourteenth\"}}},\"records\":[{\"action_id\":\"result\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3\"}},\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"},{\"citation_purpose\":\"acted_on\",\"digest\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7\"}},\"occurred_at\":\"2026-09-14T23:59:00Z\",\"operator\":\"sealed-fixture\",\"references\":[{\"citation_purpose\":\"acted_on\",\"digest\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"digest_alg\":\"SHA-256\",\"type\":\"agent-action-capsule\"}],\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"day-2\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae\"}},\"occurred_at\":\"2026-09-15T23:59:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"case-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957\"}},\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"},{\"action_id\":\"act-1\",\"action_type\":\"fyi\",\"assurance\":{\"attestation_mode\":\"self_attested\",\"effect_mode\":\"not_applicable\",\"ledger_mode\":\"standalone\"},\"canonicalization_id\":\"jcs\",\"capsule_id\":\"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d\",\"developer\":\"sealed-fixture@v1\",\"format_version\":\"4\",\"model_attestation\":{\"compute_attestation\":{\"agent_input_digest\":\"86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623\",\"agent_output_digest\":\"352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54\"}},\"occurred_at\":\"2026-09-14T10:15:00Z\",\"operator\":\"sealed-fixture\",\"spec_version\":\"draft-mih-scitt-agent-action-capsule-04\",\"timestamp\":\"2026-09-14T00:00:00Z\"}],\"root\":\"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a\"}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"W\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-VX5+0BbFvrOC30KYiLbhe8YZXv9cFi4a1BJlAwVZ/MA='",
+    "'sha256-5Mb1XMt9Rmd0/hdnmsJZ3It/sv7eKpt3Mh/IMCoSfK4='",
+    "'sha256-nQtd9gXxodQO5TShBNibPU6fvQpR/cSUh8I9VC6dPEA='",
+    "'sha256-GX1qmU4v8FBW9eIaAu9qemDyd72eg0DEUosySKEjYkg='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ZHVNsJzwFqbCGv/L8Qhzu95MSGr8zhWiLhpr9I9gAA4='",
+    "'sha256-asC2HNgDpfakkg3PRk4p9N6F2d7hTvH3/pVnmQX3STg='"
+   ]
+  },
+  {
+   "name": "case-31",
+   "bundle": {
+    "kind": "test",
+    "n": 31,
+    "data": ">é€//€"
+   },
+   "settings": {
+    "audience": "﻿\n\t",
+    "modules": []
+   },
+   "runtime": "/*rt 31*/",
+   "html": "<script>/*rt 31*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\\u003eé€//€\",\"kind\":\"test\",\"n\":31}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"﻿\\n\\t\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-hCaKn2xNDkB4pz4A2vgGoy7Iz6pVeXBgFngzX9t+qaY='",
+    "'sha256-DMBBWPrDwY/wWpN8gC4Re2Je6/Tp8pW2R9Pe132NUmY='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-32",
+   "bundle": {
+    "kind": "test",
+    "n": 32,
+    "data": "\u001f"
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [],
+    "depth": "L2",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"W\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"fr-CA\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625"
+    }
+   },
+   "runtime": "/*rt 32*/",
+   "html": "<script>/*rt 32*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\\u001f\",\"kind\":\"test\",\"n\":32}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"depth\":\"L2\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"W\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"fr-CA\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"1941ec21f93209788e0e0e572febbb711c680c4bb3c0e6fd403f7b51c29ef625\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-OZcAmmNlsKyxFS2gNtbYtlSLyqjdHPngVFKDZQyD238='",
+    "'sha256-/u+W+RuCvdFzXQAqqDUvLGBNpA6EeCLBX/rqF0P5pMQ='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-33",
+   "bundle": {
+    "kind": "test",
+    "n": 33,
+    "data": "€中ß"
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m33_1=\"€€\";",
+      "sha256": "ed08f681cd0430941204924f87e73108e9f6094565f3ac3663a6821cb95de556"
+     }
+    ],
+    "depth": "L2"
+   },
+   "runtime": "/*rt 33*/",
+   "runtime_sha256": "b8838bd706527851d48fce39f48fa29e4fd587af8936c72dec9502b023a8e082",
+   "html": "<script>/*rt 33*/</script>\n<script>window.m33_1=\"€€\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"€中ß\",\"kind\":\"test\",\"n\":33}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"depth\":\"L2\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-uIOL1wZSeFHUj8459I+ink/Vh6+JNsct7JUCsCOo4II='",
+    "'sha256-7Qj2gc0EMJQSBJJPh+cxCOn2CUVl86w2Y6aCHLld5VY='",
+    "'sha256-a9Su4op56cAN6pciMHZb0xaZzhBMdMeofQZkc1hROzU='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-34",
+   "bundle": {
+    "kind": "test",
+    "n": 34,
+    "data": 1.7976931348623157e+308
+   },
+   "settings": {
+    "audience": "< \"<",
+    "modules": [
+     {
+      "code": "window.m34_1=\" \";",
+      "sha256": "95e2b02b82fd0d6503fc8367765cd8d95fcb0bc7bed0a54fbd7af6f5719e7a4e",
+      "style_sha256": [
+       "64754db09cf016a6c21affcbf10873bbde4c486afcce15a22e1a6bf48f60000e",
+       "44d3638774a7dd5e9995c3bc3d1ac93371c11f73dc682c85840e332f54df48af"
+      ]
+     }
+    ]
+   },
+   "runtime": "/*rt 34*/",
+   "error": "unsafe integer at $.data"
+  },
+  {
+   "name": "case-35",
+   "bundle": {
+    "kind": "test",
+    "n": 35,
+    "data": true
+   },
+   "settings": {
+    "audience": "\b\\<",
+    "modules": [],
+    "depth": "L1"
+   },
+   "runtime": "/*rt 35*/",
+   "html": "<script>/*rt 35*/</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":true,\"kind\":\"test\",\"n\":35}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"\\b\\\\\\u003c\",\"depth\":\"L1\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-lqCrQpPgIWKe3Yw2EAcwywYBkQ8Bp2sdgaHIAdBf4/o='",
+    "'sha256-zVd9pkuPcGjKsDwx0Ks3B8NEEgJPEjVAKjWnS8Igo1A='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-36",
+   "bundle": {
+    "kind": "test",
+    "n": 36,
+    "data": [
+     0
+    ]
+   },
+   "settings": {
+    "audience": "*",
+    "modules": [
+     {
+      "code": "window.m36_1=\"\";",
+      "sha256": "8c30242f653a8e7233dc9c197cc58d501cb442b1c045b38dab11e11220ca4833"
+     }
+    ],
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"\\n  \\u0001\\r\\r\"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "82a4ca5704f83a184cf8f7c4697ee08a90719246ad8a147d8fd1c63594cb9952"
+    }
+   },
+   "runtime": "/*rt 36*/",
+   "html": "<script>/*rt 36*/</script>\n<script>window.m36_1=\"\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[0],\"kind\":\"test\",\"n\":36}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"*\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"\\\\n\\u2028 \\\\u0001\\\\r\\\\r\\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"82a4ca5704f83a184cf8f7c4697ee08a90719246ad8a147d8fd1c63594cb9952\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-b7iJUoZXE+2bygJ9TDne0hud0RH24tmw7OKdtk9M2ao='",
+    "'sha256-jDAkL2U6jnIz3JwZfMWNUBy0QrHARbONqxHhEiDKSDM='",
+    "'sha256-1kxE1omQWtLQBQVVzBXOIdQwp4qSPxQAs2Y4bywf3C8='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-37",
+   "bundle": {
+    "kind": "test",
+    "n": 37,
+    "data": "<\u001f€"
+   },
+   "settings": {
+    "audience": "'<!--",
+    "modules": [
+     {
+      "code": "window.m37_2=\"\";",
+      "sha256": "88cd86b0cdb8308a1adc84f24289713b5c29822195f0269a836b2b66f66daabe"
+     },
+     {
+      "code": "window.m37_1=\"\\u0001\";",
+      "sha256": "fb4b0d92e650fd15d5bfe0bb6363968513959b19b9dd684f7d95b9f6f0dc7c3b"
+     }
+    ],
+    "depth": "L2"
+   },
+   "runtime": "/*rt 37*/",
+   "html": "<script>/*rt 37*/</script>\n<script>window.m37_2=\"\";</script>\n<script>window.m37_1=\"\\u0001\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":\"\\u003c\\u001f€\",\"kind\":\"test\",\"n\":37}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"'\\u003c!--\",\"depth\":\"L2\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-gEWRiJ7ZpWGQYvXF8Tb0OX30OoZpFm6czVN5Z6gcjq0='",
+    "'sha256-iM2GsM24MIoa3ITyQolxO1wpgiGV8Caag2srZvZtqr4='",
+    "'sha256-+0sNkuZQ/RXVv+C7Y2OWhROVmxm53WhPfZW59vDcfDs='",
+    "'sha256-2DLkc9uyqprE5sey7YeIV7SXTgfdAsYLEBk2qbNw7IU='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
+  },
+  {
+   "name": "case-38",
+   "bundle": {
+    "kind": "test",
+    "n": 38,
+    "data": {}
+   },
+   "settings": {
+    "audience": "counterparty",
+    "modules": [
+     {
+      "code": "window.m38_2=\">\";",
+      "sha256": "3d1afd1443c52c93f24379c6000961b10405616d0daf8b2eba377c1572ea8b8e",
+      "style_sha256": [
+       "45e44656e09bc409db5f54b098075f0ed8ea15cc48f345e585045b9ed9711c6a",
+       "433f9dcabfb60c949b61f32ef6a4ae6c1fb92f5acc91b4251b9f504691117614"
+      ]
+     },
+     {
+      "code": "window.m38_1=\"é\";",
+      "sha256": "14d46c609a26b530e1ed34979e3a2218ceca6d5b76273ffac4aca1dddcbc64f1"
+     }
+    ],
+    "depth": "L0",
+    "wording": {
+     "pack": "{\"entries\":{\"page.title\":\"\\f\\u0001中😀 \"},\"id\":\"org.example.vectors.wording/v0\",\"locale\":\"en\",\"wording_pack_version\":\"aac.wording-pack/v0\"}",
+     "sha256": "4fd1a30cbc1a0d671aa2fcd58baa55ea01e749c8d9c5b822c91d5a8fc4169e20"
+    }
+   },
+   "runtime": "/*rt 38*/",
+   "html": "<script>/*rt 38*/</script>\n<script>window.m38_2=\">\";</script>\n<script>window.m38_1=\"é\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":{},\"kind\":\"test\",\"n\":38}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"counterparty\",\"depth\":\"L0\",\"format\":\"embedded\",\"wording\":{\"pack\":\"{\\\"entries\\\":{\\\"page.title\\\":\\\"\\\\f\\\\u0001中😀 \\\"},\\\"id\\\":\\\"org.example.vectors.wording/v0\\\",\\\"locale\\\":\\\"en\\\",\\\"wording_pack_version\\\":\\\"aac.wording-pack/v0\\\"}\",\"sha256\":\"4fd1a30cbc1a0d671aa2fcd58baa55ea01e749c8d9c5b822c91d5a8fc4169e20\"}}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-3MTWUQzG0yUhkHp6P3J6csG5gXIg622MUH3TK/Qss+g='",
+    "'sha256-PRr9FEPFLJPyQ3nGAAlhsQQFYW0Nr4suujd8FXLqi44='",
+    "'sha256-FNRsYJomtTDh7TSXnjoiGM7KbVt2Jz/6xKyh3dy8ZPE='",
+    "'sha256-lPvO4zLxKknryO3zuRu94UnDlB9bV4et3kaw9ZVEv68='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='",
+    "'sha256-ReRGVuCbxAnbX1SwmAdfDtjqFcxI80XlhQRbntlxHGo='",
+    "'sha256-Qz+dyr+2DJSbYfMu9qSubB+5L1rMkbQlG59QRpERdhQ='"
+   ]
+  },
+  {
+   "name": "case-39",
+   "bundle": {
+    "kind": "test",
+    "n": 39,
+    "data": [
+     "\u0000/<!--\f<",
+     "><\f\u0000"
+    ]
+   },
+   "settings": {
+    "audience": "\u0001>",
+    "modules": [
+     {
+      "code": "window.m39_1=\"&\\n\";",
+      "sha256": "b2b07b0339983574abc121d275f13d28efa5ac817f031f0a45652380a589e3ce"
+     }
+    ],
+    "depth": "L2"
+   },
+   "runtime": "/*rt 39*/",
+   "html": "<script>/*rt 39*/</script>\n<script>window.m39_1=\"&\\n\";</script>\n<div data-aac-embedded></div>\n<script type=\"application/json\">{\"data\":[\"\\u0000/\\u003c!--\\f\\u003c\",\"\\u003e\\u003c\\f\\u0000\"],\"kind\":\"test\",\"n\":39}</script>\n<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {\"audience\":\"\\u0001\\u003e\",\"depth\":\"L2\",\"format\":\"embedded\"}); })(document.currentScript.previousElementSibling);</script>\n",
+   "script_sources": [
+    "'sha256-8ItiIqgjcHxPyZqvXHvf2qgtR+9dRkRsofR6tkxHdVM='",
+    "'sha256-srB7AzmYNXSrwSHSdfE9KO+lrIF/Ax8KRWUjgKWJ484='",
+    "'sha256-79R0Qa6y4ApRawdQlPHfTt9XwVYfDytWn2LmruKpjl4='"
+   ],
+   "style_sources": [
+    "'sha256-Qtt0nF5xi7DsTlshlgdCDrmEIcpvtwg86TccfbHY42w='",
+    "'sha256-LdBUVrCOSscjac9XDVUhhC8BVUCeRTVxPIHho3x2C6I='",
+    "'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8='",
+    "'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY='"
+   ]
   }
  ]
 }

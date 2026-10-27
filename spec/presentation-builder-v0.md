@@ -214,14 +214,18 @@ than used to build a different file.
 and wording, as the `embedded` format, through the caller's registry. The host page owns its own
 CSP.
 
-**Go.** A builder with no DOM writes the same call as a snippet the host page inlines:
-`BuildEmbeddedHTML` (go/emitter) writes the core runtime and each module as inline scripts, an
-empty `<div data-aac-embedded>`, and a bootstrap that calls `renderEvidenceGraph` on that element
-with the bundle and the options `mount` passes (audience, `format: "embedded"`, depth, wording),
-as JCS. The snippet carries no CSP. It returns the hash sources of its scripts and of the
-stylesheets the runtime and modules insert, which the host's `script-src` and `style-src` must
-allow. Title and theme are the host's. The snippet uses the default registry, the one the core
-runtime holds.
+**Snippet.** Given the core runtime, the result also carries `html`: a snippet a host page
+inlines where the presentation goes, which makes `mount`'s call with the same options. It holds
+the core runtime and each module as inline scripts, an empty `<div data-aac-embedded>`, the
+scoped bundle as a `<script type="application/json">` data element, and a bootstrap that reads the
+bundle with `JSON.parse` and calls `renderEvidenceGraph` on that element with `mount`'s options
+(audience, `format: "embedded"`, depth, wording), written as JCS. The snippet carries no CSP. The
+result's `scriptSources` and `styleSources` are the hash sources of its inline scripts and of the
+stylesheets the core runtime and the modules insert. A host CSP that allows them, with no
+`'unsafe-inline'`, runs it. Title and theme are the host's. The snippet resolves with the core
+runtime's own registry, as the offline file does. Go's `BuildEmbeddedHTML` (go/emitter) writes the
+same bytes and sources, held together by seeded vectors that the TypeScript builder generates
+(`go/emitter/testdata/embedded-vectors.json`).
 
 ### 2.4 Static page (`static`)
 

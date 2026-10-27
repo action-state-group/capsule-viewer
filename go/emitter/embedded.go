@@ -10,14 +10,16 @@ import (
 	"github.com/action-state-group/agent-action-capsule/go/canonical"
 )
 
-// The embedded packaging (spec/presentation-builder-v0.md section 2.3) for
-// a caller with no DOM: a snippet a host page inlines where the
-// presentation goes. TypeScript's buildPresentation hands back mount(element)
-// instead, which calls renderEvidenceGraph(bundle, element, undefined,
-// {audience, format: "embedded", depth, wording}); the snippet's bootstrap
-// makes the same call with the same options, written as JCS, on the element
-// just before it. The host page owns its CSP, so the snippet carries none
-// and reports the hash sources the host must allow.
+// The embedded packaging (spec/presentation-builder-v0.md section 2.3) as
+// the snippet a host page inlines where the presentation goes, the Go twin
+// of TypeScript's emitEmbeddedHtml (the html of buildPresentation's
+// "embedded" result): for the same bundle, runtime and settings the two
+// write the same bytes. Its bootstrap makes the call mount makes,
+// renderEvidenceGraph(bundle, element, undefined, {audience, format:
+// "embedded", depth, wording}), on the element just before the bundle. The
+// bundle travels as a JSON data element read with JSON.parse, so every
+// member, "__proto__" included, stays data. The host page owns its CSP, so
+// the snippet carries none and reports the hash sources the host must allow.
 
 // EmbeddedHostAttribute marks the host element the snippet renders into.
 const EmbeddedHostAttribute = "data-aac-embedded"
@@ -25,7 +27,8 @@ const EmbeddedHostAttribute = "data-aac-embedded"
 // BuiltEmbedded is the embedded packaging.
 type BuiltEmbedded struct {
 	// HTML is the snippet: the core runtime and each module as inline
-	// scripts, the host element, and the bootstrap that renders into it.
+	// scripts, the host element, the bundle as a JSON data element, and
+	// the bootstrap that renders into the host element.
 	HTML string
 	// ScriptSources are the CSP hash sources of the snippet's inline
 	// scripts, in order: the host's script-src must allow each.
@@ -81,12 +84,16 @@ func BuildEmbeddedHTML(value interface{}, runtime []byte, o OfflineOptions) (*Bu
 	if err != nil {
 		return nil, err
 	}
+	bundleText := escapeJSONForHTMLScript(string(bundleJSON))
+	if err := checkInline("bundle JSON", bundleText, "</script"); err != nil {
+		return nil, err
+	}
 	options, err := renderOptions(o, "embedded")
 	if err != nil {
 		return nil, err
 	}
-	bootstrap := "renderEvidenceGraph(" + escapeJSONForHTMLScript(string(bundleJSON)) +
-		", document.currentScript.previousElementSibling, undefined, " + options + ");"
+	bootstrap := "(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, " +
+		options + "); })(document.currentScript.previousElementSibling);"
 	if err := checkInline("bootstrap", bootstrap, "</script"); err != nil {
 		return nil, err
 	}
@@ -97,6 +104,7 @@ func BuildEmbeddedHTML(value interface{}, runtime []byte, o OfflineOptions) (*Bu
 		sources = append(sources, cspHashSource(script))
 	}
 	html.WriteString("<div " + EmbeddedHostAttribute + "></div>\n")
+	html.WriteString(`<script type="application/json">` + bundleText + "</script>\n")
 	html.WriteString("<script>" + bootstrap + "</script>\n")
 	sources = append(sources, cspHashSource(bootstrap))
 	return &BuiltEmbedded{HTML: html.String(), ScriptSources: unique(sources), StyleSources: unique(styles)}, nil

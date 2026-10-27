@@ -8,10 +8,10 @@ import { expect, it } from "vitest";
 import { buildPresentation } from "../src/presentation-builder.js";
 
 /**
- * go/emitter's embedded snippet (testdata/expected-embedded.html, written
- * by TestBuildEmbeddedHTMLGolden) run in a host page with the real core
- * runtime in place of the marker draws what TypeScript's mount() draws for
- * the same bundle and settings, and no verification check fails.
+ * The embedded result's snippet (which go/emitter's BuildEmbeddedHTML
+ * writes byte for byte, go-embedded-vectors.test.ts), run in a host page
+ * with the real core runtime, draws what mount() draws for the same bundle
+ * and settings, and no verification check fails.
  */
 
 const host = new JSDOM();
@@ -41,7 +41,7 @@ const verdicts = (root: Element): (string | null)[] =>
     e.getAttribute("data-verify"),
   );
 
-it("the Go embedded snippet renders as mount() does", async () => {
+it("the embedded snippet renders as mount() does", async () => {
   const runtime = (
     await build({
       entryPoints: [resolve(process.cwd(), "src", "browser.ts")],
@@ -54,21 +54,30 @@ it("the Go embedded snippet renders as mount() does", async () => {
       write: false,
     })
   ).outputFiles[0]!.text;
-  const snippet = readFileSync(
-    resolve(
-      process.cwd(),
-      "..",
-      "go",
-      "emitter",
-      "testdata",
-      "expected-embedded.html",
+  const pack = `{"entries":{"page.title":"Résumé </script> & co"},"id":"org.example.w/v0","locale":"fr-CA","wording_pack_version":"aac.wording-pack/v0"}`;
+  const bundle = JSON.parse(
+    readFileSync(
+      resolve(
+        process.cwd(),
+        "test",
+        "testdata",
+        "result-root-bundle.sealed.json",
+      ),
+      "utf8",
     ),
-    "utf8",
-  );
-  const marker = "<script>/*IIFE_MARKER*/</script>";
-  expect(snippet.startsWith(marker)).toBe(true);
+  ) as unknown;
+  const built = await buildPresentation(bundle, {
+    presentation: "auto",
+    format: "embedded",
+    audience: "counterparty",
+    depth: "L1",
+    wording: { pack, sha256: hex(pack) },
+    runtime: { code: runtime },
+  });
+  if (built.format !== "embedded" || built.html === undefined)
+    throw new Error("an embedded snippet expected");
   const page = new JSDOM(
-    `<!doctype html><html><body><p>host</p>${snippet.replace(marker, () => `<script>${runtime}</script>`)}</body></html>`,
+    `<!doctype html><html><body><p>host</p>${built.html}</body></html>`,
     {
       runScripts: "dangerously",
       beforeParse(window) {
@@ -79,40 +88,19 @@ it("the Go embedded snippet renders as mount() does", async () => {
   );
   try {
     const element = page.window.document.querySelector("[data-aac-embedded]")!;
-    const fromGo = await settled(element);
+    const fromSnippet = await settled(element);
 
-    // The same settings as embeddedGoldenOptions in go/emitter/embedded_test.go.
-    const pack = `{"entries":{"page.title":"Résumé </script> & co"},"id":"org.example.w/v0","locale":"fr-CA","wording_pack_version":"aac.wording-pack/v0"}`;
-    const bundle = JSON.parse(
-      readFileSync(
-        resolve(
-          process.cwd(),
-          "test",
-          "testdata",
-          "result-root-bundle.sealed.json",
-        ),
-        "utf8",
-      ),
-    ) as unknown;
-    const built = await buildPresentation(bundle, {
-      presentation: "auto",
-      format: "embedded",
-      audience: "counterparty",
-      depth: "L1",
-      wording: { pack, sha256: hex(pack) },
-    });
-    if (built.format !== "embedded") throw new Error("embedded expected");
     const root = document.createElement("div");
     document.body.append(root);
     await built.mount(root);
-    const fromTs = await settled(root);
+    const fromMount = await settled(root);
 
     // The fixture's banner is "incomplete" (no check failed, some were not
     // run), never "failed" or "unable".
-    expect(verdicts(fromGo)).toEqual(["incomplete"]);
-    expect(verdicts(fromGo)).toEqual(verdicts(fromTs));
-    expect(fromGo.innerHTML).toBe(fromTs.innerHTML);
-    expect(fromGo.textContent).toBe(fromTs.textContent);
+    expect(verdicts(fromSnippet)).toEqual(["incomplete"]);
+    expect(verdicts(fromSnippet)).toEqual(verdicts(fromMount));
+    expect(fromSnippet.innerHTML).toBe(fromMount.innerHTML);
+    expect(fromSnippet.textContent).toBe(fromMount.textContent);
   } finally {
     page.window.close();
   }

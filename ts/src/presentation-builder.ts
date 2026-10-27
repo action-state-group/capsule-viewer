@@ -9,6 +9,7 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import {
   DEFAULT_EVIDENCE_GRAPH_BOOTSTRAP,
+  emitEmbeddedHtml,
   emitEvidenceGraphHtml,
   emitStaticEvidenceGraphHtml,
   escapeJsonForHtmlScript,
@@ -364,6 +365,14 @@ export type BuiltPresentation =
   | (BuiltCommon & {
       readonly format: "embedded";
       mount(element: HTMLElement): Promise<void>;
+      /**
+       * With `runtime` only: the snippet a host page inlines, which makes
+       * mount's call (emitEmbeddedHtml), and the CSP hash sources the
+       * host's `script-src` and `style-src` must allow.
+       */
+      readonly html?: string;
+      readonly scriptSources?: readonly string[];
+      readonly styleSources?: readonly string[];
     })
   | (BuiltCommon & {
       readonly format: "static";
@@ -466,6 +475,33 @@ interface OfflineSettings {
   readonly wording: WordingPackInput | undefined;
 }
 
+// The options a page's bootstrap, an embedded snippet's bootstrap and
+// mount pass to renderEvidenceGraph: the audience, the format, and the
+// depth and wording pack when set. The host's registry is mount's own.
+function renderOptions(
+  settings: Pick<OfflineSettings, "audience" | "depth" | "wording">,
+  format: "html" | "embedded",
+): {
+  audience: string;
+  format: "html" | "embedded";
+  depth?: PresentationDepth;
+  wording?: WordingPackInput;
+} {
+  return {
+    audience: settings.audience,
+    format,
+    ...(settings.depth === undefined ? {} : { depth: settings.depth }),
+    ...(settings.wording === undefined
+      ? {}
+      : {
+          wording: {
+            pack: settings.wording.pack,
+            sha256: settings.wording.sha256,
+          },
+        }),
+  };
+}
+
 // The one offline packager: the direct path and the fragment hand-back both
 // end here, so equal settings give equal bytes. The default settings
 // (audience "*", nothing else) give exactly emitEvidenceGraphHtml's page.
@@ -486,19 +522,9 @@ async function packageOffline(
     settings.audience === "*" &&
     settings.depth === undefined &&
     settings.wording === undefined;
-  const renderOptions: Record<string, unknown> = {
-    audience: settings.audience,
-    format: "html",
-  };
-  if (settings.depth !== undefined) renderOptions.depth = settings.depth;
-  if (settings.wording !== undefined)
-    renderOptions.wording = {
-      pack: settings.wording.pack,
-      sha256: settings.wording.sha256,
-    };
   const bootstrap = isDefault
     ? DEFAULT_EVIDENCE_GRAPH_BOOTSTRAP
-    : `renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, ${escapeJsonForHtmlScript(new TextDecoder().decode(jcs(renderOptions)))});`;
+    : `renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, ${escapeJsonForHtmlScript(new TextDecoder().decode(jcs(renderOptions(settings, "html"))))});`;
   return emitEvidenceGraphHtml(settings.bundle, runtime.code, {
     ...(title === undefined ? {} : { title }),
     ...(settings.themeCss === undefined ? {} : { themeCss: settings.themeCss }),
@@ -802,18 +828,28 @@ async function packageAs(
     return { ...common, format, ...page };
   }
 
+  const embedded = renderOptions(
+    { audience, depth: options.depth, wording: options.wording },
+    "embedded",
+  );
+  // With the core runtime, also the snippet a host page inlines: the same
+  // renderEvidenceGraph call as mount, written out (section 2.3).
+  const snippet =
+    options.runtime === undefined
+      ? {}
+      : emitEmbeddedHtml(bundle, options.runtime.code, {
+          ...(options.runtime.sha256 === undefined
+            ? {}
+            : { coreRuntimeSha256: options.runtime.sha256 }),
+          modules,
+          renderOptions: new TextDecoder().decode(jcs(embedded)),
+        });
   return {
     ...common,
     format,
+    ...snippet,
     mount: (element: HTMLElement) =>
-      mountPresentation(element, {
-        bundle,
-        audience,
-        format: "embedded",
-        ...(options.depth === undefined ? {} : { depth: options.depth }),
-        ...(options.wording === undefined ? {} : { wording: options.wording }),
-        registry,
-      }),
+      mountPresentation(element, { bundle, ...embedded, registry }),
   };
 }
 

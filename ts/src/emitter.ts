@@ -274,6 +274,93 @@ export function emitEvidenceGraphHtml(
   return html;
 }
 
+/** The attribute that marks the host element of an embedded snippet. */
+export const EMBEDDED_HOST_ATTRIBUTE = "data-aac-embedded";
+
+export interface EmbeddedSnippetOptions {
+  /** Lowercase hex SHA-256 pin for the core runtime; checked when given. */
+  readonly coreRuntimeSha256?: string;
+  /** Zero or more digest-pinned module scripts, run after the core runtime. */
+  readonly modules?: readonly EmitterModule[];
+  /**
+   * The JCS text of the options the bootstrap passes to renderEvidenceGraph
+   * (the presentation builder's, the ones `mount` passes).
+   */
+  readonly renderOptions: string;
+}
+
+/** An embedded snippet and the CSP sources its host page must allow. */
+export interface EmbeddedSnippet {
+  readonly html: string;
+  /** Hash sources of the snippet's inline scripts, for the host's `script-src`. */
+  readonly scriptSources: readonly string[];
+  /**
+   * Hash sources of the stylesheets the core runtime and the modules insert
+   * at render time, for the host's `style-src`.
+   */
+  readonly styleSources: readonly string[];
+}
+
+/**
+ * The embedded snippet (spec/presentation-builder-v0.md section 2.3) a host
+ * page inlines where the presentation goes: the core runtime and each
+ * module as inline scripts, the host element, the bundle as a JSON data
+ * element (read with JSON.parse, so every member stays data), and a
+ * bootstrap that renders into the host element. It carries no CSP; the
+ * host's must allow the returned sources. go/emitter's BuildEmbeddedHTML
+ * writes the same bytes.
+ */
+export function emitEmbeddedHtml(
+  bundle: unknown,
+  browserIIFE: string,
+  options: EmbeddedSnippetOptions,
+): EmbeddedSnippet {
+  const bundleJson = escapeJsonForHtmlScript(
+    new TextDecoder().decode(jcs(bundle)),
+  );
+  const modules = options.modules ?? [];
+  const bootstrap = `(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, ${escapeJsonForHtmlScript(options.renderOptions)}); })(document.currentScript.previousElementSibling);`;
+  checkInline("browser IIFE", browserIIFE, "</script");
+  checkInline("bundle JSON", bundleJson, "</script");
+  checkInline("bootstrap", bootstrap, "</script");
+  if (
+    options.coreRuntimeSha256 !== undefined &&
+    cspHashSourceFromHex(options.coreRuntimeSha256) !==
+      cspHashSource(browserIIFE)
+  ) {
+    throw new Error("browser IIFE does not match its SHA-256 pin");
+  }
+  const styleSources = CORE_RUNTIME_STYLES.map(cspHashSource);
+  modules.forEach((module, index) => {
+    checkInline(`module ${index}`, module.code, "</script");
+    if (cspHashSourceFromHex(module.sha256) !== cspHashSource(module.code)) {
+      throw new Error(`module ${index} does not match its SHA-256 pin`);
+    }
+    (module.styleSha256 ?? []).forEach((pin, styleIndex) => {
+      try {
+        styleSources.push(cspHashSourceFromHex(pin));
+      } catch (error) {
+        throw new Error(
+          `module ${index} style ${styleIndex}: ${(error as Error).message}`,
+        );
+      }
+    });
+  });
+  const scripts = [browserIIFE, ...modules.map((m) => m.code)];
+  const html = [
+    ...scripts.map((script) => `<script>${script}</script>`),
+    `<div ${EMBEDDED_HOST_ATTRIBUTE}></div>`,
+    `<script type="application/json">${bundleJson}</script>`,
+    `<script>${bootstrap}</script>`,
+    "",
+  ].join("\n");
+  return {
+    html,
+    scriptSources: unique([...scripts, bootstrap].map(cspHashSource)),
+    styleSources: unique(styleSources),
+  };
+}
+
 /**
  * The stylesheet of the static page's notice (the statement that the page
  * is not self-verifying). Hashed into the static page's CSP like the shell's

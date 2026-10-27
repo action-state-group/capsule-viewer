@@ -11,68 +11,84 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The vectors come from ts/test/go-embedded-vectors.test.ts: the options
-// TypeScript's mount passes to renderEvidenceGraph, as JCS text. The
-// snippet's bootstrap passes the same text.
+// The vectors come from ts/test/go-embedded-vectors.test.ts: seeded,
+// generated (bundle, settings) inputs and the snippet, CSP sources or
+// refusal buildPresentation's "embedded" result gives for each. Go must
+// write the same bytes and sources, and refuse the same inputs.
 func TestBuildEmbeddedHTMLMatchesTypeScript(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("testdata", "embedded-vectors.json"))
 	require.NoError(t, err)
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
 	var doc struct {
 		Cases []struct {
-			Name     string `json:"name"`
+			Name     string      `json:"name"`
+			Bundle   interface{} `json:"bundle"`
 			Settings struct {
 				Audience string   `json:"audience"`
 				Depth    string   `json:"depth"`
 				Wording  *Wording `json:"wording"`
+				Modules  []struct {
+					Code        string   `json:"code"`
+					SHA256      string   `json:"sha256"`
+					StyleSHA256 []string `json:"style_sha256"`
+				} `json:"modules"`
 			} `json:"settings"`
-			Options string `json:"options"`
+			Runtime       string   `json:"runtime"`
+			RuntimeSHA256 string   `json:"runtime_sha256"`
+			HTML          string   `json:"html"`
+			ScriptSources []string `json:"script_sources"`
+			StyleSources  []string `json:"style_sources"`
+			Error         string   `json:"error"`
 		} `json:"cases"`
 	}
-	require.NoError(t, json.Unmarshal(raw, &doc))
-	require.NotEmpty(t, doc.Cases)
+	require.NoError(t, decoder.Decode(&doc))
+	require.Greater(t, len(doc.Cases), 30)
 	for _, c := range doc.Cases {
-		built, err := BuildEmbeddedHTML(map[string]interface{}{"kind": "test"}, []byte(marker), OfflineOptions{
-			Audience: c.Settings.Audience, Depth: c.Settings.Depth, Wording: c.Settings.Wording,
+		t.Run(c.Name, func(t *testing.T) {
+			options := OfflineOptions{
+				Audience: c.Settings.Audience, Depth: c.Settings.Depth, Wording: c.Settings.Wording,
+				CoreRuntimeSHA256: c.RuntimeSHA256,
+			}
+			for _, m := range c.Settings.Modules {
+				options.Modules = append(options.Modules, Module{Code: []byte(m.Code), SHA256: m.SHA256, StyleSHA256: m.StyleSHA256})
+			}
+			built, err := BuildEmbeddedHTML(c.Bundle, []byte(c.Runtime), options)
+			if c.Error != "" {
+				require.Error(t, err, "TypeScript refused: %s", c.Error)
+				return
+			}
+			require.NoError(t, err)
+			require.True(t, built.HTML == c.HTML, "Go snippet differs from TypeScript's")
+			require.Equal(t, c.ScriptSources, built.ScriptSources)
+			require.Equal(t, c.StyleSources, built.StyleSources)
 		})
-		require.NoError(t, err, c.Name)
-		bootstrap := `<script>renderEvidenceGraph({"kind":"test"}, document.currentScript.previousElementSibling, undefined, ` +
-			escapeJSONForHTMLScript(c.Options) + ");</script>\n"
-		require.True(t, strings.HasSuffix(built.HTML, "<div "+EmbeddedHostAttribute+"></div>\n"+bootstrap), c.Name)
 	}
 }
 
-func embeddedGoldenOptions(t *testing.T) (interface{}, OfflineOptions) {
-	t.Helper()
-	sealed := loadJSON(t, filepath.Join("..", "..", "ts", "test", "testdata", "result-root-bundle.sealed.json"))
-	return sealed, OfflineOptions{
-		Audience: "counterparty", Depth: "L1",
+// The reported sources are exactly the snippet's executable scripts, and
+// the stylesheets the runtime and modules insert; the JSON data element is
+// not a script a CSP governs.
+func TestBuildEmbeddedHTMLSourcesAreTheSnippets(t *testing.T) {
+	first := hexPinOf(".m{color:red}")
+	module := styledModule(t, []string{first}, []string{first})
+	built, err := BuildEmbeddedHTML(map[string]interface{}{"k": "</script><!--"}, []byte(marker), OfflineOptions{
+		Audience: "counterparty", Depth: "L1", Modules: []Module{module},
 		Wording: wordingOf(`{"entries":{"page.title":"Résumé </script> & co"},"id":"org.example.w/v0","locale":"fr-CA","wording_pack_version":"aac.wording-pack/v0"}`),
-	}
-}
-
-// expected-embedded.html is Go's snippet for the sealed Result bundle. The
-// TypeScript test "the Go embedded snippet renders" runs it with the real
-// core runtime in place of the marker and checks that it renders and
-// verifies. To regenerate after an intentional change, run this test with
-// UPDATE_PRESENTATION_GOLDENS=1.
-func TestBuildEmbeddedHTMLGolden(t *testing.T) {
-	bundle, options := embeddedGoldenOptions(t)
-	built, err := BuildEmbeddedHTML(bundle, []byte(marker), options)
+	})
 	require.NoError(t, err)
-	if os.Getenv("UPDATE_PRESENTATION_GOLDENS") == "1" {
-		require.NoError(t, os.WriteFile(filepath.Join("testdata", "expected-embedded.html"), []byte(built.HTML), 0o644))
-	}
-	require.True(t, built.HTML == readTestdata(t, "expected-embedded.html"), "Go embedded snippet differs from its golden")
-
-	// The reported sources are the snippet's scripts, and the runtime's
-	// stylesheets.
 	scripts, styles, err := inlineElements(built.HTML)
 	require.NoError(t, err)
 	require.Empty(t, styles)
-	require.Len(t, scripts, 2)
-	require.Equal(t, []string{cspHashSource(scripts[0]), cspHashSource(scripts[1])}, built.ScriptSources)
-	require.Equal(t, coreRuntimeStyleSources(), built.StyleSources)
+	sources := []string{}
+	for _, script := range scripts {
+		sources = append(sources, cspHashSource(script))
+	}
+	require.Equal(t, sources, built.ScriptSources)
+	require.Equal(t, 1, strings.Count(built.HTML, `<script type="application/json">`))
+	require.Equal(t, append(coreRuntimeStyleSources(), sourceOf(".m{color:red}")), built.StyleSources)
 	require.NotContains(t, built.HTML, "Content-Security-Policy")
+	require.NotContains(t, built.HTML, "</script><!--\"")
 	require.NotContains(t, built.HTML, "</script> & co")
 }
 
@@ -83,7 +99,8 @@ func TestBuildEmbeddedHTMLModulesAndRefusals(t *testing.T) {
 	built, err := BuildEmbeddedHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Modules: []Module{module}})
 	require.NoError(t, err)
 	require.Equal(t, "<script>"+marker+"</script>\n<script>"+string(module.Code)+"</script>\n<div data-aac-embedded></div>\n"+
-		`<script>renderEvidenceGraph({"kind":"test"}, document.currentScript.previousElementSibling, undefined, {"audience":"*","format":"embedded"});</script>`+"\n",
+		`<script type="application/json">{"kind":"test"}</script>`+"\n"+
+		`<script>(function (data) { renderEvidenceGraph(JSON.parse(data.textContent), data.previousElementSibling, undefined, {"audience":"*","format":"embedded"}); })(document.currentScript.previousElementSibling);</script>`+"\n",
 		built.HTML)
 	require.Len(t, built.ScriptSources, 3)
 	require.Contains(t, built.StyleSources, sourceOf(".m{color:red}"))
