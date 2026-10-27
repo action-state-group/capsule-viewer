@@ -519,7 +519,7 @@ export function witnessLine(
           ]),
       // AAC fails only on a failed receipt or an unreadable entry; should
       // it fail on anything else, its findings are named as it states them.
-      ...(failed.length === 0 && unreadable === 0
+      ...(failed.length === 0 && unreadable === 0 && aac.findings.length > 0
         ? [
             w.t("prov.witness.invalid.findings", {
               findings: aac.findings.map(quoted).join("; "),

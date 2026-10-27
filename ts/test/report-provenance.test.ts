@@ -781,4 +781,14 @@ it("INVALID with no failed receipt and no unreadable entry still names AAC's fin
   expect(l.text).toMatch(
     /^not witnessed: the witness check failed\. The check states: "witness_new_finding:x"\./u,
   );
+  const bare = witnessLine(bundle, {
+    ...verified,
+    strict: {
+      ...verified.strict,
+      witnesses: { status: "fail", findings: [], receipts: [] },
+    },
+  } as never);
+  expect(bare.witness).toBe("invalid");
+  expect(bare.text).toMatch(/^not witnessed: the witness check failed\./u);
+  expect(bare.text).not.toContain("The check states");
 });
