@@ -697,7 +697,7 @@ function renderRecordsList(
     // Where script runs, the body is built after the browser scrolled to
     // the address; bring it back into view once the body is in place.
     fold.addEventListener("toggle", () => {
-      const hash = fold.ownerDocument.defaultView?.location.hash;
+      const hash = fold.ownerDocument.defaultView?.location?.hash;
       const target = anchors.find((a) => hash === `#${a.id}`);
       if (fold.open && target !== undefined) target.scrollIntoView?.();
     });

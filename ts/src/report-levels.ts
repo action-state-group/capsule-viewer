@@ -31,7 +31,8 @@ import type { Words } from "./contract-report-wording.js";
  * a toggle's body is built the first time it is opened, and inside an open
  * level-1 toggle each conversation's body is built when it scrolls near the
  * view (`lazyBody`), so a month of conversations does not multiply the
- * page's DOM for content nobody read.
+ * page's DOM for content nobody read. A page that runs no script has every
+ * body built before it is written (`fillForNoScript`).
  */
 
 function element(tag: string, text?: string): HTMLElement {
@@ -107,9 +108,9 @@ const pendingToggles = new WeakMap<HTMLDetailsElement, () => void>();
  * Builds every body under `root` that `selector` names and is still
  * pending -- toggle bodies and conversation bodies alike, and the ones those
  * bodies bring -- leaving every toggle open or closed as it was. The static
- * package (presentation-builder.ts) builds the core's record entries this
- * way, so a record a link lands on is not empty on a page that runs no
- * script. Returns how many bodies it built.
+ * package builds every body this way (`fillForNoScript`), so a toggle a
+ * reader opens on a page that runs no script is not empty. Returns how
+ * many bodies it built.
  */
 export function fillPendingBodies(
   root: ParentNode,
@@ -128,6 +129,31 @@ export function fillPendingBodies(
     if (fills.length === 0) return built;
     for (const fill of fills) fill();
     built += fills.length;
+  }
+}
+
+/**
+ * For a page that runs no script (the static package,
+ * presentation-builder.ts): builds every body still pending under `root`,
+ * and the ones those bodies bring, so opening any toggle shows what it
+ * shows where script runs (capsule-viewer#67). Each conversation is kept
+ * once, in the core's records section: a card's conversation becomes a
+ * link to it (`linkConversations`), including the conversations a body
+ * brings when it is built. Every toggle stays open or closed as it was,
+ * except where the host opened a region to L2, as on the scripted page.
+ * Returns how many bodies it built; a body with no fill registered here
+ * stays pending, for the caller to report.
+ */
+export function fillForNoScript(root: ParentNode): number {
+  let built = 0;
+  for (;;) {
+    linkConversations(root);
+    const more = fillPendingBodies(
+      root,
+      '[data-body="pending"]:not([data-section="conversation"])',
+    );
+    if (more === 0) return built;
+    built += more;
   }
 }
 

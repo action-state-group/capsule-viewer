@@ -108,6 +108,8 @@ target with the same settings. Otherwise it is `available: false` with a `reason
 | `runtime-missing` | `html`, `fragment` | No core runtime was given. | |
 | `no-document` | `static` | No DOM `document` to render with at build time. | |
 | `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |
+| `static-body-unbuilt` | `static` | A toggle's body could not be built at build time, so it would open empty. | `unbuilt` (each such toggle's summary text, or the tag of a pending body that is not a toggle) |
+| `static-too-large` | `static` | The page, with every toggle's body built, is over its size budget. | `bytes`, `limit` |
 
 Every reason also carries a `message` in words. An error of the request itself (no audience, a
 bad depth or wording pack, an ambiguous registry, a requested presentation the registry does not
@@ -235,6 +237,20 @@ is listed by hash. A rendered element's `style` attribute (a bar's width, for on
 hash under `'unsafe-hashes'`; no other inline style applies. The page makes no request and runs
 nothing. The builder refuses (`static-carries-script`) a rendering that holds a script element or
 an event-handler attribute, which the CSP would block anyway.
+
+**Every body is built.** Where script runs, a toggle's body is built the first time it opens.
+The static page runs none, so before it is written the builder builds every body still pending,
+with the same builders the toggles run, and leaves every toggle open or closed as the depth left
+it: a reader who opens any toggle sees what the offline file shows there. Each conversation is
+kept once, in the core's records section, and the cards link to it. A body the builder cannot
+build is refused (`static-body-unbuilt`), never written as an empty toggle.
+
+**Size.** The result returns the page's size in UTF-8 bytes (`bytes`) and the budget it was
+checked against (`limit`). The budget is 16 MiB by default (`STATIC_PAGE_DEFAULT_BUDGET`); a
+caller MAY lower or raise it (`maxStaticBytes`, a positive integer). A page over it is refused
+(`static-too-large`, naming the size and the budget), never written with bodies left out. A
+monthly report is a few megabytes: the 451-record outcome fixture builds to about 6.0 MB and
+the 80-session compliance fixture to about 2.2 MB, the same at every depth.
 
 **What it does not do.** It does not carry the bundle: the reader verifies the bundle, shared
 separately, with a verifier they trust. Controls that the scripted page answers on click (a row's

@@ -23,6 +23,7 @@ import {
   PresentationStylePinsError,
   STATIC_BUILD_TIME_STATEMENT,
   STATIC_NOT_SELF_VERIFYING,
+  STATIC_PAGE_DEFAULT_BUDGET,
   type BuildPresentationOptions,
   type BuiltPresentation,
   type PackagingAvailability,
@@ -120,20 +121,32 @@ function snapshot(root: Element): Snapshot {
 }
 
 /**
- * The scripted page as the static page is built to show it: the core's
- * record entries built (closed), and each conversation kept once, in the
- * records section (capsule-viewer#67).
+ * The scripted page as the static page is built to show it: every toggle's
+ * body built by the reader's own toggle, each toggle left open or closed as
+ * it was, and each conversation kept once, in the records section
+ * (capsule-viewer#67). Through the page's own toggle events, so it reads a
+ * page whose script is not this file's copy of the modules.
  */
 function openEveryBody(root: Element): void {
   const view = root.ownerDocument.defaultView!;
-  for (const entry of root.querySelectorAll<HTMLDetailsElement>(
-    'details.cv-record[data-body="pending"], details[data-section="conversation"][data-body="pending"]',
-  )) {
-    entry.open = true;
-    entry.dispatchEvent(new view.Event("toggle"));
-    entry.open = false;
+  const tried = new Set<Element>();
+  for (;;) {
+    linkConversations(root);
+    const pending = [
+      ...root.querySelectorAll<HTMLDetailsElement>(
+        'details[data-body="pending"]',
+      ),
+    ];
+    if (pending.length === 0) return;
+    for (const toggle of pending) {
+      if (tried.has(toggle)) throw new Error("a toggle's body did not build");
+      tried.add(toggle);
+      const was = toggle.open;
+      toggle.open = true;
+      toggle.dispatchEvent(new view.Event("toggle"));
+      toggle.open = was;
+    }
   }
-  linkConversations(root);
 }
 
 const done = (root: Element): boolean =>
@@ -425,7 +438,10 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
         table.push(
           `${label} | ${audience} | module ${first![1].built.module ?? first![1].built.resolution} | verify ${snap.verify.join(",")} | ids ${snap.evidence_ids.length} | identical across ${shown.map(([f]) => f).join("+")} | ${availabilityLine(report)}`,
         );
-      }, 180_000);
+        // The timeout: every body of the 451-record outcome page is built in each
+        // packaging (capsule-viewer#67), so its pages are about 6 MB each:
+        // about 95 s alone on a quiet machine, more under the full parallel run.
+      }, 480_000);
 
   it("prints the table", () => {
     // Visible with --reporter=verbose; also a guard that the table ran.
@@ -493,6 +509,30 @@ describe("theme, wording, locale and depth", () => {
         } = baseline;
         expect(rest, name).toEqual(baseRest);
         expect(ids, name).toEqual(expect.arrayContaining(baseIds));
+      } else if (change.wording !== undefined) {
+        // The proofs' "Words" entry names the pack the page was given, by
+        // its digest, now that every body is built (capsule-viewer#67):
+        // that line, and only that line, changes.
+        const sha = change.wording.sha256;
+        const words = (text: string): string =>
+          text.replace(
+            new RegExp(
+              `wording pack org\\.example\\.view\\.wording/v0 \\(wording_sha256 ${sha}\\), supplied with the page over the built-in (\\S+) \\(`,
+              "u",
+            ),
+            "wording pack $1, built into this viewer (",
+          );
+        expect(shown.text, name).toContain(sha);
+        const { html: _h, text, evidence_ids: ids, ...rest } = shown;
+        const {
+          html: _bh,
+          text: baseText,
+          evidence_ids: baseIds,
+          ...baseRest
+        } = baseline;
+        expect(rest, name).toEqual(baseRest);
+        expect(ids, name).toEqual([...baseIds, sha].sort());
+        expect(words(text), name).toEqual(baseText);
       } else {
         expect(shown.evidence_ids, name).toEqual(baseline.evidence_ids);
         expect(shown, name).toEqual(baseline);
@@ -1290,6 +1330,11 @@ describe("packaging availability", () => {
       expect(fromStatic.verify).toEqual(["incomplete"]);
       expect(fromStatic.pages).toContain("verification");
       expectStaticPage(statik.html, "incomplete");
+      // Every toggle's body is built, and the page stays in its budget.
+      expect(
+        openStatic(statik.html).page.querySelectorAll('[data-body="pending"]'),
+      ).toHaveLength(0);
+      expect(statik.bytes).toBeLessThan(STATIC_PAGE_DEFAULT_BUDGET);
     }, 180_000);
 
   it("reports a missing runtime for html and fragment, and a missing DOM for static", async () => {
@@ -1694,4 +1739,180 @@ it("a static page at depth L1 shows an absent or mismatched conversation's state
     for (const turn of page.querySelectorAll(".chat li.turn"))
       expect(turn.closest("details.cv-record"), name).not.toBeNull();
   }
+});
+
+// ---------------------------------------------------------------------------
+// Every toggle's body is on the static page (capsule-viewer#67)
+// ---------------------------------------------------------------------------
+
+describe("the static page builds every toggle's body", () => {
+  const staticPage = async (
+    bundle: unknown,
+    extra: Partial<BuildPresentationOptions> = {},
+  ): Promise<Document> => {
+    const built = await buildPresentation(bundle, {
+      presentation: "auto",
+      audience: "*",
+      format: "static",
+      depth: "L0",
+      ...extra,
+    });
+    if (built.format !== "static") throw new Error("static expected");
+    return new JSDOM(built.html).window.document;
+  };
+  // The detail row a table row's toggle opens.
+  const detailOf = (page: Document, toggle: Element): Element =>
+    page.getElementById(
+      toggle.querySelector(":scope > summary")!.getAttribute("aria-controls")!,
+    )!;
+
+  it("at depth L0, a closed test row of the compliance report opens onto its sessions", async () => {
+    const { bundle } = await sealEvidenceBundle(
+      fixture("compliance-bundle.json"),
+    );
+    const page = await staticPage(bundle);
+    expect(page.querySelectorAll('[data-body="pending"]')).toHaveLength(0);
+    // L0 opens no toggle of the module's own
+    expect(page.querySelectorAll("details.lv[open]")).toHaveLength(0);
+    const rows = [...page.querySelectorAll('details[data-records="sessions"]')];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.hasAttribute("open")).toBe(false);
+      // the content, not only an open attribute: each session and its
+      // test-by-test body are in the row's detail
+      const sessions = detailOf(page, row).querySelectorAll("article.session");
+      expect(sessions.length).toBeGreaterThan(0);
+      for (const session of sessions)
+        expect(session.querySelector(".conv-slot .conv-b .ck")).not.toBeNull();
+    }
+  });
+
+  it("at depth L0, a closed rule row and the proofs toggle of the outcome report hold their content", async () => {
+    const { bundle } = await sealEvidenceBundle(
+      fixture("outcome-report-bundle.json"),
+    );
+    const page = await staticPage(bundle);
+    expect(page.querySelectorAll('[data-body="pending"]')).toHaveLength(0);
+    expect(page.querySelectorAll("details.lv[open]")).toHaveLength(0);
+    const rules = [
+      ...page.querySelectorAll<HTMLDetailsElement>(
+        'details[data-drill^="rule:"]',
+      ),
+    ].filter((rule) => detailOf(page, rule).querySelector(".convs") !== null);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const rule of rules) {
+      expect(rule.hasAttribute("open")).toBe(false);
+      const list = detailOf(page, rule).querySelector<HTMLElement>(".convs")!;
+      expect(list.children.length).toBeGreaterThan(0);
+    }
+    // every other closed toggle holds more than its summary
+    for (const toggle of page.querySelectorAll<HTMLDetailsElement>(
+      "details.lv:not(.rx)",
+    ))
+      expect(
+        toggle.querySelector(":scope > :not(summary)"),
+        toggle.querySelector(":scope > summary")?.textContent ?? "",
+      ).not.toBeNull();
+  }, 120_000);
+
+  it("reports the page's size, and refuses a page over its budget", async () => {
+    const { bundle } = await sealEvidenceBundle(
+      fixture("compliance-bundle.json"),
+    );
+    const settings = { presentation: "auto", audience: "*" } as const;
+    const built = await buildPresentation(bundle, {
+      ...settings,
+      format: "static",
+    });
+    if (built.format !== "static") throw new Error("static expected");
+    expect(built.bytes).toBe(Buffer.byteLength(built.html, "utf8"));
+    expect(built.limit).toBe(STATIC_PAGE_DEFAULT_BUDGET);
+    const limit = built.bytes - 1;
+    const refused = buildPresentation(bundle, {
+      ...settings,
+      format: "static",
+      maxStaticBytes: limit,
+    });
+    await expect(refused).rejects.toThrow(PackagingUnavailableError);
+    await expect(refused).rejects.toMatchObject({
+      reason: { code: "static-too-large", bytes: built.bytes, limit },
+    });
+    const report = await availablePackagings(bundle, {
+      ...settings,
+      maxStaticBytes: limit,
+    });
+    expect(report[3]).toMatchObject({
+      target: "static",
+      available: false,
+      reason: { code: "static-too-large", bytes: built.bytes, limit },
+    });
+    await expect(
+      buildPresentation(bundle, {
+        ...settings,
+        format: "static",
+        maxStaticBytes: 0,
+      }),
+    ).rejects.toThrow(PresentationBuildError);
+  });
+
+  it("refuses, naming the toggle, a body it cannot build", async () => {
+    const { bundle } = await sealEvidenceBundle(
+      fixture("report-rows-bundle.json"),
+    );
+    const unbuildable: PresentationModule = {
+      manifest: {
+        spec_version: "aac.presentation-manifest/v0",
+        id: "org.example.unbuildable/v0",
+        presentation_api: "aac.presentation-api/v0",
+        runtime_min: "0.1.0",
+        trust_class: "trusted-executable",
+        requires: { bundle_kind: "evidence-bundle/v2" },
+        audiences: ["*"],
+        formats: ["html"],
+        fallback: false,
+        priority: 1,
+        executable: { carrier: "core-runtime" },
+      },
+      canRender: () => true,
+      buildModel: () => null,
+      // A toggle whose body only its own listener builds: the static
+      // builder cannot reach it.
+      render: (_model, host) => {
+        const toggle = document.createElement("details");
+        toggle.dataset.body = "pending";
+        const summary = document.createElement("summary");
+        summary.textContent = "Built only on open";
+        toggle.append(summary);
+        host.L1.append(toggle);
+      },
+    };
+    const registry: PresentationResolver = {
+      resolve: (_context, audience, format) =>
+        resolveModules(
+          [unbuildable],
+          {
+            verified: true,
+            bundle_kind: "evidence-bundle/v2",
+            profiles: new Set(),
+            extensions: new Set(),
+          },
+          audience,
+          format,
+          () => true,
+        ),
+    };
+    await expect(
+      buildPresentation(bundle, {
+        presentation: "auto",
+        audience: "*",
+        format: "static",
+        registry,
+      }),
+    ).rejects.toMatchObject({
+      reason: {
+        code: "static-body-unbuilt",
+        unbuilt: ["Built only on open"],
+      },
+    });
+  });
 });
