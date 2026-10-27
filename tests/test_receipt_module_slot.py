@@ -51,7 +51,9 @@ SLOT = {kind: json.loads(module_slot.manifest_path(kind).read_text(encoding="utf
 PYTHON = {"unilateral": UNILATERAL_MANIFEST, "seller": SELLER_MANIFEST, "bilateral": BILATERAL_MANIFEST}
 # capsule-cli internal/cli/plugin_presentations.go presentationFileLimit.
 PRESENTATION_FILE_LIMIT = 1 << 20
-# Real copies capsulectl (capsule-cli main, e9b1f21) cut: examples/receipt/cut_main_bundles.sh.
+# Real copies capsulectl (capsule-cli main) cut: main-buyer-* and main-seller-* by examples/receipt/cut_main_bundles.sh
+# (e9b1f21; the report is a record on the log), main-standalone-* by examples/receipt/cut_standalone_bundles.sh (d8f58012;
+# the report is the standalone record in x-deal-report/v0).
 MAIN = ("main-buyer-keep", "main-buyer-counterparty", "main-standalone-keep", "main-standalone-counterparty", "main-seller-keep", "main-seller-counterparty")
 
 

@@ -1,8 +1,9 @@
 // The receipt modules' module-slot scripts as a page runs them.
 //
-// (1) jsdom, real copies: the four bundles capsulectl (capsule-cli main)
-//     cut, main-buyer-{keep,counterparty} and main-seller-{keep,counterparty}
-//     (examples/receipt/cut_main_bundles.sh), each through the three scripts as
+// (1) jsdom, real copies: the bundles capsulectl (capsule-cli main) cut,
+//     main-buyer-{keep,counterparty} and main-seller-{keep,counterparty}
+//     (examples/receipt/cut_main_bundles.sh) and main-standalone-{keep,counterparty}
+//     (cut_standalone_bundles.sh: the report is a standalone record), each through the three scripts as
 //     the page's runtime would load them (EvidenceGraph.registerPresentation),
 //     with the context the page's verifier gives (aacContext.js, capsulectl
 //     verify's verdicts on those bytes) and nothing else: no page audience, no
@@ -10,7 +11,7 @@
 //     unilateral receipt's, a seller's the seller receipt's); the owner's copy
 //     shows PRIVATE and the copy shared with the counterparty does not; one
 //     level of details; the kit stylesheet goes in once, as the manifest pins it.
-// (2) headless Chromium at 390px and 1280px: the same four, and no page
+// (2) headless Chromium at 390px and 1280px: the same six, and no page
 //     scrolls sideways.
 // (3) headless Chromium, the receipt goldens (tests/goldens/receipt-*.png):
 //     each page the Python module renders and the same page with the script

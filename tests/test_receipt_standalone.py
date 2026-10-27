@@ -87,3 +87,22 @@ def test_a_standalone_report_that_is_not_the_named_one_is_declined(edit):
     context, assurance = _inputs("main-standalone-keep", edit)
     with pytest.raises(ReceiptUnavailable):
         build_receipt(context, check_opening, assurance, "keep")
+
+
+def test_a_standalone_report_beside_a_report_record_on_the_log_is_declined():
+    """Two reports in one copy are two texts: neither is shown, whether or not
+    the record on the log discloses its text."""
+
+    def add_report_record(bundle):
+        record = copy.deepcopy(bundle["records"][-1])
+        record["capsule_id"] = "f" * 64
+        record["action_id"] = "capsulectl-deal-report"
+        bundle["records"].append(record)
+
+    bundle, output = copy.deepcopy(load("main-standalone-keep"))
+    add_report_record(bundle)
+    output = report_for(bundle, output)
+    output["record_identity"]["f" * 64] = "passed"
+    context, assurance = context_from_capsulectl(bundle, output)
+    with pytest.raises(ReceiptUnavailable, match="both in the bundle"):
+        build_receipt(context, check_opening, assurance, "keep")
