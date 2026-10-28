@@ -11,6 +11,12 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.3.0 and go 0.3.0 (2026-10-28)
+
+The first paired viewer release: `ts/v0.3.0` and `go/v0.3.0` ship the same
+page runtime, which states viewer 0.3.0 (RELEASING.md). There was no ts 0.2.0;
+the Go module was already at 0.2.0.
+
 ### Breaking
 
 - The page shell (`renderEvidenceGraph`, the emitter shell and the Go
