@@ -2725,29 +2725,38 @@ export async function renderEvidenceGraph(
 // scroll is then discarded, which fails closed.
 const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
 const SIDE_MARGIN_SLACK = 9;
+// The paddings and border widths: a module that widens them pushes the words
+// inside out of view.
+const BOX_EDGES = ["top", "right", "bottom", "left"].flatMap((side) => [
+  `padding-${side}`,
+  `border-${side}-width`,
+]);
 // On the root's ancestors, which in the embedded format are the host page's
-// own elements, the offsets and a transform's translation are compared to
-// within the same slack: a host that places its widget with `left: 50%`,
-// `translateX(-50%)` or a percentage margin resolves them to used px that move
-// with the scrollbar too. A positioned element's `top` and `left` resolve to
-// where it is, whichever of its offsets set that, so they stand for `right`
-// and `bottom`, whose used px follow the height of the module's content and
-// are not compared. Both vertical margins are: a host that centres its widget
-// in a flex or grid box centres the margin box, so either one moves the
-// banner. A module can therefore still shift the banner by up to
-// SIDE_MARGIN_SLACK per offset of each ancestor; `position` and a transform
-// that was `none` are compared exactly. Those shifts add up, so where the bar
-// sits in the document is bounded too: it may not rise by more than
-// SIDE_MARGIN_SLACK (a scrollbar only narrows the page, which pushes reflowing
-// content down), nor move sideways by more than one assumed classic
-// scrollbar, twice SIDE_MARGIN_SLACK (a widget a host floats right moves by
-// all of it). A host that centres a growing widget vertically lifts the
-// banner by itself; an honest module there is discarded, which fails closed.
+// own elements, the offsets, paddings, border widths and a transform's
+// translation are compared to within the same slack: a host that places its
+// widget with `left: 50%`, `translateX(-50%)` or a percentage margin or
+// padding resolves them to used px that move with the scrollbar too. A
+// positioned element's `top` and `left` resolve to where it is, whichever of
+// its offsets set that, so they stand for `right` and `bottom`, whose used px
+// follow the height of the module's content and are not compared. A module can
+// therefore still shift the banner by up to SIDE_MARGIN_SLACK per offset of
+// each ancestor; `position` and a transform that was `none` are compared
+// exactly. Those shifts add up, so where the bar sits in the document is
+// bounded too: it may not rise by more than SIDE_MARGIN_SLACK, nor move
+// sideways by more than one assumed classic scrollbar, twice
+// SIDE_MARGIN_SLACK (a widget a host floats right moves by all of it).
+// Downward is left to the per-ancestor caps, since a scrollbar only narrows
+// the page and so pushes reflowing host content above the widget down; the
+// caps keep a module from pushing the banner off the first screen, under
+// fixed content of its own, through an ancestor. A host that centres a
+// growing widget vertically lifts the banner by itself; an honest module there
+// is discarded, which fails closed.
 const ANCESTOR_OFFSETS = [
   "top",
   "left",
   "margin-top",
   "margin-bottom",
+  ...BOX_EDGES,
 ] as const;
 const ANCESTOR_UNCOMPARED = ["right", "bottom"];
 type FrameLook = {
@@ -2789,6 +2798,7 @@ const FRAME_LOOK = [
   "zoom",
   "margin-top",
   "margin-bottom",
+  ...BOX_EDGES,
   "font-family",
   "-webkit-text-fill-color",
   "clip",
@@ -3024,12 +3034,23 @@ async function renderVerifiedContext(
     );
     // Where the bar sits in the document: its box plus every scroll offset
     // above it, the viewport's included once (on <html>, or on <body> in
-    // quirks mode), so a reader's scrolling moves nothing.
+    // quirks mode), so a reader's scrolling moves nothing. A scroll offset is
+    // in its container's own px, scaled by any transform above it into the
+    // viewport px the box is in; the viewport's is in viewport px already.
     const box = parts[0]!.getBoundingClientRect();
     const place: [number, number] = [box.left, box.top];
     for (let at = parts[0]!.parentElement; at !== null; at = at.parentElement) {
-      place[0] += at.scrollLeft;
-      place[1] += at.scrollTop;
+      if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
+      const seen = at.getBoundingClientRect();
+      const html =
+        at instanceof view.HTMLElement &&
+        at !== root.ownerDocument.scrollingElement
+          ? at
+          : undefined;
+      const width = html?.offsetWidth ?? 0;
+      const height = html?.offsetHeight ?? 0;
+      place[0] += at.scrollLeft * (width > 0 ? seen.width / width : 1);
+      place[1] += at.scrollTop * (height > 0 ? seen.height / height : 1);
     }
     root.classList.toggle("cv-shell-chrome", had);
     return { look: seen, offsets, place };

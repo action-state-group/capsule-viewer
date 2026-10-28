@@ -74,7 +74,14 @@ describe.skipIf(executablePath === undefined)(
 
     // Renders the bundle with a module that draws a marker and adds `css`
     // to its region; reports whether the module's content was kept.
-    async function kept(css: string, pageCss = ""): Promise<boolean> {
+    // `scroll` scrolls the element it selects to its first offset before the
+    // frame is drawn and to its second while the module renders, as a reader
+    // might.
+    async function kept(
+      css: string,
+      pageCss = "",
+      scroll?: readonly [string, number, number],
+    ): Promise<boolean> {
       // The shell's rule that centres the page with auto margins.
       await page.setContent(
         "<!doctype html><html><head><style>" +
@@ -84,7 +91,7 @@ describe.skipIf(executablePath === undefined)(
       );
       await page.addScriptTag({ content: runtime });
       return page.evaluate(
-        async ({ bundle, css }) => {
+        async ({ bundle, css, scroll }) => {
           const { renderEvidenceGraph, PresentationRegistry } = (
             globalThis as unknown as {
               Frame: {
@@ -118,9 +125,15 @@ describe.skipIf(executablePath === undefined)(
                 script_sha256: "0".repeat(64),
               },
             },
-            canRender: () => true,
+            canRender: () => {
+              if (scroll !== undefined)
+                document.querySelector(scroll[0])!.scrollTop = scroll[1];
+              return true;
+            },
             buildModel: () => ({}),
             render: (_model: unknown, host: { L1: HTMLElement }) => {
+              if (scroll !== undefined)
+                document.querySelector(scroll[0])!.scrollTop = scroll[2];
               const marker = document.createElement("p");
               marker.dataset.testModule = "";
               host.L1.append(marker);
@@ -135,7 +148,7 @@ describe.skipIf(executablePath === undefined)(
           await renderEvidenceGraph(bundle, root, undefined, { registry });
           return root.querySelector("[data-test-module]") !== null;
         },
-        { bundle, css },
+        { bundle, css, scroll },
       );
     }
 
@@ -215,6 +228,26 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     });
 
+    it("one renders while a reader scrolls a scaled host", async () => {
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "#host{transform:scale(.5);transform-origin:0 0;height:50px;overflow:auto}#host::after{content:'';display:block;height:1000px}",
+          ["#host", 100, 0],
+        ),
+      ).toBe(true);
+    });
+
+    it("one renders while a reader scrolls the page", async () => {
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "html{transform:scale(.5);transform-origin:0 0}body{padding-bottom:3000px}",
+          ["html", 0, 100],
+        ),
+      ).toBe(true);
+    });
+
     it("one renders on a flex-centred host", async () => {
       expect(
         await kept(
@@ -283,6 +316,20 @@ describe.skipIf(executablePath === undefined)(
       "#host{opacity:0}",
       "#host{margin-top:-60px}",
       "#host{position:relative;bottom:100vh}",
+      // Padding or a border that pushes the banner's words out of view.
+      "#app{padding-top:200vh}",
+      "#app{border-top:200vh solid #fff}",
+      ".cv-shell-bar{padding-top:200vh}",
+      ".cv-shell-bar{padding-left:100vw}",
+      ".cv-shell-bar{border-left:100vw solid #fff}",
+      "[data-banner-detail]{padding-top:200vh}",
+      "[data-banner-detail]{padding-left:100vw}",
+      "[data-verify]{padding-left:100vw}",
+      // The banner pushed off the first screen, under fixed module content.
+      "body{padding-top:200vh}",
+      "#host{padding-top:200vh}",
+      "html{border-top:200vh solid #fff}",
+      "body{padding-top:200vh}[data-test-module]{position:fixed;top:0;left:0;right:0;height:100vh}",
       // Shifts within the slack on each ancestor that add up.
       "html,body,#host{margin-top:-9px}",
       "html,body,#host{margin-left:-9px}#app{margin-left:-9px}",
