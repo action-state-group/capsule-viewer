@@ -413,6 +413,12 @@ here. The format follows
 
 ### Fixed
 
+- The banner frame check no longer discards a module render when the page
+  grows a classic scrollbar (capsule-viewer#113). A computed `auto` side margin
+  is its used width, so the shell's centred page root and bar changed by half
+  the scrollbar width; the side margins are compared by class (negative,
+  inside the window, wider than it) instead of by pixel value.
+
 - The deal receipt modules (Python and the module-slot scripts) read a copy
   whose report capsulectl seals as a standalone record in `x-deal-report/v0`,
   on no log (capsule-cli#294; capsule-viewer#104). Earlier they matched no

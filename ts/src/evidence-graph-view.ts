@@ -2714,6 +2714,19 @@ export async function renderEvidenceGraph(
   }
 }
 
+// The side margins are not in FRAME_LOOK: the shell centres the page root and
+// the bar with `auto` margins, and a computed `auto` margin is its used width,
+// which moves by half a classic scrollbar (7.5px) when a module's content
+// makes the page scroll. A module that pushes the bar out of sight does it
+// with a negative margin or one wider than the window, so the margin is
+// compared by that class.
+const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
+const sideMargin = (value: string, windowWidth: number): string => {
+  const px = Number.parseFloat(value);
+  if (Number.isNaN(px) || px === 0) return value;
+  return px < 0 ? "negative" : px >= windowWidth ? "off-window" : "inside";
+};
+
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
 // banner and its details line are shown, where, and whether their words can
@@ -2739,9 +2752,7 @@ const FRAME_LOOK = [
   "rotate",
   "zoom",
   "margin-top",
-  "margin-right",
   "margin-bottom",
-  "margin-left",
   "font-family",
   "-webkit-text-fill-color",
   "clip",
@@ -2922,6 +2933,9 @@ async function renderVerifiedContext(
           const style = view.getComputedStyle(element, pseudo);
           return [
             ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
+            ...SIDE_MARGINS.map((name) =>
+              sideMargin(style.getPropertyValue(name), view.innerWidth),
+            ),
             ...(pseudo === null ? [] : [style.getPropertyValue("content")]),
           ];
         }),

@@ -35,7 +35,12 @@ describe.skipIf(executablePath === undefined)(
     let bundle: unknown;
 
     beforeAll(async () => {
-      browser = await chromium.launch({ executablePath: executablePath! });
+      browser = await chromium.launch({
+        executablePath: executablePath!,
+        // Headless Chrome hides scrollbars by default; CI pages meet classic
+        // ones, which change the width an auto margin resolves to.
+        ignoreDefaultArgs: ["--hide-scrollbars"],
+      });
       const result = await build({
         stdin: {
           contents: [
@@ -69,7 +74,12 @@ describe.skipIf(executablePath === undefined)(
     // Renders the bundle with a module that draws a marker and adds `css`
     // to its region; reports whether the module's content was kept.
     async function kept(css: string): Promise<boolean> {
-      await page.setContent("<!doctype html><html><body></body></html>");
+      // The shell's rule that centres the page with auto margins.
+      await page.setContent(
+        "<!doctype html><html><head><style>" +
+          "#app{max-width:600px;margin-inline:auto}" +
+          "</style></head><body></body></html>",
+      );
       await page.addScriptTag({ content: runtime });
       return page.evaluate(
         async ({ bundle, css }) => {
@@ -118,6 +128,7 @@ describe.skipIf(executablePath === undefined)(
             },
           });
           const root = document.createElement("main");
+          root.id = "app";
           document.body.append(root);
           await renderEvidenceGraph(bundle, root, undefined, { registry });
           return root.querySelector("[data-test-module]") !== null;
@@ -132,12 +143,23 @@ describe.skipIf(executablePath === undefined)(
       );
     });
 
+    it("one that makes the page scroll renders", async () => {
+      expect(
+        await kept(
+          "html::-webkit-scrollbar{width:15px}[data-test-module]{height:3000px}",
+        ),
+      ).toBe(true);
+    });
+
     for (const css of [
       '[data-banner-detail]::after{content:" These findings do not affect this report."}',
       '[data-verify]::before{content:"Unchanged since it was sealed. "}',
       "[data-verify]{scale:0}",
       ".cv-shell-bar{translate:0 -100vh}",
       ".cv-shell-bar{margin-top:-100vh}",
+      ".cv-shell-bar{margin-left:-100vw}",
+      ".cv-shell-bar{margin-left:100vw}",
+      ".cv-shell-bar{margin-right:-100vw}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
     ])
