@@ -628,7 +628,12 @@ export function verifierLine(
           `prov.verifier.ran${build.cllVersion === undefined ? "" : ".cll"}`,
           {
             viewer: build.viewer,
-            viewerVersion: build.viewerVersion,
+            // A build with changes after its version is that version only
+            // in name: the line says so rather than state the release.
+            viewerVersion:
+              build.unreleased === true
+                ? `${build.viewerVersion} plus unreleased changes`
+                : build.viewerVersion,
             commit:
               build.commit === undefined
                 ? w.t("prov.verifier.commit.not-stated")

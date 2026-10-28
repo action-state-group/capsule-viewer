@@ -28,3 +28,27 @@ export function builtCommitSha(cwd) {
     git(["status", "--porcelain", "--untracked-files=no", "--", "."]) !== "";
   return dirty ? "" : headSha;
 }
+
+/**
+ * Whether the tree at `commit` is the release `version` names: true only when
+ * the tag `ts/v<version>` points at that very commit. A build from any other
+ * commit, or from a tree with no stated commit (`""`), is not that release,
+ * so its "Verified by" line says it has changes after the version. Only the
+ * tag decides, so a version bumped in package.json without its release does
+ * not read as released.
+ */
+export function builtIsRelease(cwd, commit, version) {
+  if (commit === "") return false;
+  try {
+    return execFileSync("git", ["tag", "--points-at", commit], {
+      cwd,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .includes(`ts/v${version}`);
+  } catch (error) {
+    throw new Error(
+      `could not run \`git tag --points-at ${commit}\` in ${cwd}: ${error.message}`,
+    );
+  }
+}

@@ -610,6 +610,20 @@ it("names the build's commit, never a release state", () => {
   );
 });
 
+it("a build with changes after its version says so, beside the commit (#118)", () => {
+  const build = {
+    viewer: "@action-state-group/capsule-viewer",
+    viewerVersion: "0.1.0",
+    verifier: "@action-state-group/agent-action-capsule",
+    verifierVersion: "0.8.0",
+    commit: "a1b2c3d4e5f6",
+  };
+  expect(verifierLine({}, { ...build, unreleased: true }).text).toContain(
+    "this page's code: @action-state-group/capsule-viewer 0.1.0 plus unreleased changes at a1b2c3d4e5f6, verifier",
+  );
+  expect(verifierLine({}, build).text).not.toContain("unreleased");
+});
+
 it("the viewer's stated build is the package and the verifier actually installed", () => {
   const own = JSON.parse(
     readFileSync(resolve(process.cwd(), "package.json"), "utf8"),

@@ -373,11 +373,16 @@ export function checkedSummaryLine(
   if (failed === 0 && (pageFailed > 0 || !verified) && notRun > 0)
     leads.push(`${notRun} of ${total} checks not run`);
   const parts = [...leads, recordsWord(model.records.length)];
-  const signatures = model.checkLists.notChecked.filter((id) =>
-    SIGNATURE_CHECKS.has(id),
-  ).length;
-  const others = model.checkLists.notChecked.length - signatures;
-  if (signatures > 0) parts.push("signatures not checked here");
+  // Only the signature checks that are in the not-checked list are named, each
+  // by its own words: a signature check that ran (or failed) is never said to
+  // be unchecked, so the summary cannot contradict the lists under it.
+  const signatures = model.checkLists.notChecked.flatMap((id) => {
+    const words = SIGNATURE_CHECKS.get(id);
+    return words === undefined ? [] : [words];
+  });
+  const others = model.checkLists.notChecked.length - signatures.length;
+  if (signatures.length > 0)
+    parts.push(`${signatures.join(", ")} not checked here`);
   if (others > 0)
     parts.push(
       `${others} other ${others === 1 ? "check" : "checks"} not run here`,
@@ -396,11 +401,11 @@ const NUMBERED_CHECK_GROUND: ReadonlySet<string> = new Set([
   "membership",
 ]);
 
-const SIGNATURE_CHECKS: ReadonlySet<string> = new Set([
-  "checkpoint-signature",
-  "producer-signatures",
-  "cited-signers",
-  "countersignatures",
+const SIGNATURE_CHECKS: ReadonlyMap<string, string> = new Map([
+  ["checkpoint-signature", "checkpoint signature"],
+  ["producer-signatures", "producer signatures"],
+  ["cited-signers", "cited signers' signatures"],
+  ["countersignatures", "countersignatures"],
 ]);
 
 /** The folded verification section's heading. */

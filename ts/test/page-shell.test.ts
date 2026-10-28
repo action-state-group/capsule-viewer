@@ -6,7 +6,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { VERIFICATION_BANNER_LINES } from "@action-state-group/agent-action-capsule";
+import {
+  VERIFICATION_BANNER_LINES,
+  bundleVerified,
+  buildVerificationPageModel,
+  verifyBundle,
+} from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
   CHECKED_SECTION_TITLE,
@@ -198,7 +203,7 @@ describe("checkedSummaryLine", () => {
     ...Array.from({ length: fail }, () => ({ status: "fail" })),
   ];
 
-  it("counts the checks and records and names the signatures not checked", () => {
+  it("counts the checks and records and names each signature check not run", () => {
     expect(
       checkedSummaryLine(true, {
         checks: checks(10),
@@ -208,7 +213,32 @@ describe("checkedSummaryLine", () => {
           notChecked: ["checkpoint-signature", "producer-signatures"],
         },
       }),
-    ).toBe("10 of 10 checks passed · 7 records · signatures not checked here");
+    ).toBe(
+      "10 of 10 checks passed · 7 records · checkpoint signature, producer signatures not checked here",
+    );
+  });
+
+  it("says nothing about a signature check that ran or failed (#118)", () => {
+    const only = (notChecked: string[], _page: string[], failed: string[]) =>
+      checkedSummaryLine(true, {
+        checks: checks(10),
+        records: [1],
+        checkLists: { failed, notChecked },
+      });
+    // Strict mode: the producer signatures ran, only the checkpoint's did not.
+    expect(only(["checkpoint-signature"], ["producer-signatures"], [])).toBe(
+      "10 of 10 checks passed · 1 record · checkpoint signature not checked here",
+    );
+    expect(only([], ["producer-signatures", "checkpoint-signature"], [])).toBe(
+      "10 of 10 checks passed · 1 record",
+    );
+    for (const id of [
+      "checkpoint-signature",
+      "producer-signatures",
+      "cited-signers",
+      "countersignatures",
+    ])
+      expect(only([], [id], [])).not.toMatch(/signature/);
   });
 
   it("says how many of the numbered checks did not run, so none reads as failed", () => {
@@ -296,5 +326,109 @@ describe("checkedSummaryLine", () => {
         checkLists: { failed: [], notChecked: [] },
       }),
     ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 records`);
+  });
+});
+
+// #118: the summary is pinned to the checks that actually ran. AAC's own
+// strict vectors run through the real verifier and AAC's page model; each
+// signature check is named in the summary exactly when it is in the model's
+// not-checked list, never when it ran or failed.
+describe("checkedSummaryLine over the checks actually run (#118)", () => {
+  const STRICT = JSON.parse(
+    readFileSync(
+      resolve(
+        process.cwd(),
+        "test",
+        "testdata",
+        "aac-vectors",
+        "bundle",
+        "strict",
+        "vectors.json",
+      ),
+      "utf8",
+    ),
+  ) as {
+    witness_directory: unknown;
+    cases: { id: string; bundle: Record<string, unknown> }[];
+  };
+  const WORDS: Record<string, string> = {
+    "checkpoint-signature": "checkpoint signature",
+    "producer-signatures": "producer signatures",
+    "cited-signers": "cited signers' signatures",
+    countersignatures: "countersignatures",
+  };
+
+  for (const c of STRICT.cases) {
+    it(`${c.id}: the summary names exactly the signature checks not run`, async () => {
+      const bundle = structuredClone(c.bundle);
+      const verified = await verifyBundle(bundle, {
+        strict: true,
+        witnessDirectory: STRICT.witness_directory,
+      } as never);
+      const model = buildVerificationPageModel(bundle, verified, undefined, {
+        strict: verified.strict,
+      } as never);
+      const line = checkedSummaryLine(bundleVerified(verified), model);
+      const lists = model.checkLists;
+      for (const [id, words] of Object.entries(WORDS)) {
+        const named = line.includes(words);
+        expect(named, `${id} in ${line}`).toBe(
+          (lists.notChecked as readonly string[]).includes(id),
+        );
+      }
+    });
+  }
+
+  it("the browser's strict result (no checkpoint verifier): producer signatures ran, the checkpoint's did not, and the summary says only that", async () => {
+    // The browser build has no CLL checkpoint verifier, so AAC's strict
+    // verdict withholds the checkpoint (`checkpoint_verifier_unavailable`)
+    // and the proofs resting on it carry `checkpoint_unverified`; node's
+    // runtime has the verifier, so that result is made from a node one.
+    const c = STRICT.cases[0]!;
+    const bundle = structuredClone(c.bundle);
+    const run = await verifyBundle(bundle, {
+      strict: true,
+      witnessDirectory: STRICT.witness_directory,
+    } as never);
+    const strict = {
+      ...run.strict!,
+      claims: run.strict!.claims.map((claim) =>
+        claim.name === "checkpoint"
+          ? {
+              ...claim,
+              status: "withheld" as const,
+              findings: ["checkpoint_verifier_unavailable"],
+            }
+          : claim.name === "interval_coverage" ||
+              claim.name === "per_record_membership"
+            ? {
+                ...claim,
+                status: "withheld" as const,
+                findings: ["checkpoint_unverified"],
+              }
+            : claim,
+      ),
+    };
+    const verified = {
+      ...run,
+      strict,
+      intervalCoverage: {
+        ...run.intervalCoverage,
+        findings: ["checkpoint_unverified"],
+      },
+      perRecordMembership: {
+        ...run.perRecordMembership,
+        findings: ["checkpoint_unverified"],
+      },
+    };
+    const model = buildVerificationPageModel(bundle, verified, undefined, {
+      strict,
+    } as never);
+    expect(model.checkLists.page).toContain("producer-signatures");
+    expect(model.checkLists.notChecked).toEqual(["checkpoint-signature"]);
+    const line = checkedSummaryLine(bundleVerified(verified), model);
+    expect(line).toMatch(/ · checkpoint signature not checked here$/u);
+    expect(line).not.toContain("producer");
+    expect(line).not.toContain("signatures not checked");
   });
 });

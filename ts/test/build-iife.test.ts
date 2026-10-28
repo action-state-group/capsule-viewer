@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { builtCommitSha } from "../scripts/built-commit.mjs";
+import { builtCommitSha, builtIsRelease } from "../scripts/built-commit.mjs";
 
 let repo: string | undefined;
 
@@ -68,5 +68,33 @@ describe("builtCommitSha", () => {
     writeFileSync(join(repo, "tracked.txt"), "modified\n");
 
     expect(builtCommitSha(repo)).toBe("");
+  });
+});
+
+describe("builtIsRelease", () => {
+  const head = (cwd: string): string =>
+    execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd,
+      encoding: "utf8",
+    }).trim();
+
+  it("is a release only when ts/v<version> points at the commit", () => {
+    repo = freshRepo();
+    const sha = head(repo);
+    expect(builtIsRelease(repo, sha, "0.1.0")).toBe(false);
+    git(repo, ["tag", "go/v0.1.0"]);
+    git(repo, ["tag", "ts/v0.0.9"]);
+    expect(builtIsRelease(repo, sha, "0.1.0")).toBe(false);
+    git(repo, ["tag", "ts/v0.1.0"]);
+    expect(builtIsRelease(repo, sha, "0.1.0")).toBe(true);
+  });
+
+  it("is not a release a commit after the tag, or with no stated commit", () => {
+    repo = freshRepo();
+    git(repo, ["tag", "ts/v0.1.0"]);
+    writeFileSync(join(repo, "tracked.txt"), "next\n");
+    git(repo, ["commit", "-qam", "next"]);
+    expect(builtIsRelease(repo, head(repo), "0.1.0")).toBe(false);
+    expect(builtIsRelease(repo, "", "0.1.0")).toBe(false);
   });
 });

@@ -22,6 +22,13 @@ export interface ViewerBuild {
    * flag: the line names what the build actually was.
    */
   readonly commit?: string;
+  /**
+   * True when the build is not the release `viewerVersion` names (no tag
+   * `ts/v<viewerVersion>` points at its commit): its code has changes after
+   * that version, and its "Verified by" line says so. Undefined when the
+   * build did not state it; never true of a release.
+   */
+  readonly unreleased?: true;
 }
 
 /**
@@ -32,6 +39,7 @@ export interface ViewerBuild {
  * undeclared global.
  */
 declare const __CAPSULE_VIEWER_COMMIT__: string;
+declare const __CAPSULE_VIEWER_UNRELEASED__: boolean;
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 
@@ -51,6 +59,9 @@ function builtCommit(): string | undefined {
 }
 
 const commit = builtCommit();
+const unreleased =
+  typeof __CAPSULE_VIEWER_UNRELEASED__ === "boolean" &&
+  __CAPSULE_VIEWER_UNRELEASED__;
 
 export const VIEWER_BUILD: ViewerBuild = {
   viewer: "@action-state-group/capsule-viewer",
@@ -59,4 +70,5 @@ export const VIEWER_BUILD: ViewerBuild = {
   verifierVersion: "0.8.0",
   cllVersion: "0.2.1",
   ...(commit === undefined ? {} : { commit }),
+  ...(unreleased ? { unreleased: true as const } : {}),
 };

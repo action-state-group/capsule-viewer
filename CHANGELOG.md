@@ -413,6 +413,17 @@ here. The format follows
 
 ### Fixed
 
+- The verification section's summary line names the signature checks that
+  were not run, each by its own words (for example "checkpoint signature not
+  checked here"), instead of the fixed "signatures not checked here". Under
+  AAC's strict verdict in a browser, where only the checkpoint signature
+  cannot be checked, the line no longer says the producer signatures, listed
+  as checked beneath it, were not (capsule-viewer#118).
+- A report page's "Verified by" line says "plus unreleased changes" after the
+  viewer version when the page runtime was built from a commit that no tag
+  `ts/v<version>` points at, so a page drawn by code newer than `0.1.0` no
+  longer reads as the `0.1.0` release (capsule-viewer#118). A build from the
+  tagged release reads as before.
 - The banner frame check discards a module that covers the banner with a
   layer the browser hit-tests, or clips it (capsule-viewer#125). After
   comparing computed properties, it hit-tests the centre of every character
