@@ -93,7 +93,15 @@ describe("builtIsRelease", () => {
     repo = freshRepo();
     git(repo, ["tag", "ts/v0.1.0"]);
     writeFileSync(join(repo, "tracked.txt"), "next\n");
-    git(repo, ["commit", "-qam", "next"]);
+    git(repo, [
+      "-c",
+      "core.hooksPath=/dev/null",
+      "commit",
+      "-q",
+      "--no-gpg-sign",
+      "-am",
+      "next",
+    ]);
     expect(builtIsRelease(repo, head(repo), "0.1.0")).toBe(false);
     expect(builtIsRelease(repo, "", "0.1.0")).toBe(false);
   });

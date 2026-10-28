@@ -218,27 +218,50 @@ describe("checkedSummaryLine", () => {
     );
   });
 
-  it("says nothing about a signature check that ran or failed (#118)", () => {
-    const only = (notChecked: string[], _page: string[], failed: string[]) =>
-      checkedSummaryLine(true, {
+  it("names a signature check only from the not-checked list, never one that ran or failed (#118)", () => {
+    const summary = (
+      verified: boolean,
+      lists: { failed: string[]; notChecked: string[] },
+    ) =>
+      checkedSummaryLine(verified, {
         checks: checks(10),
         records: [1],
-        checkLists: { failed, notChecked },
+        checkLists: lists,
       });
-    // Strict mode: the producer signatures ran, only the checkpoint's did not.
-    expect(only(["checkpoint-signature"], ["producer-signatures"], [])).toBe(
-      "10 of 10 checks passed · 1 record · checkpoint signature not checked here",
-    );
-    expect(only([], ["producer-signatures", "checkpoint-signature"], [])).toBe(
-      "10 of 10 checks passed · 1 record",
-    );
-    for (const id of [
+    const ids = [
       "checkpoint-signature",
       "producer-signatures",
       "cited-signers",
       "countersignatures",
-    ])
-      expect(only([], [id], [])).not.toMatch(/signature/);
+    ];
+    // Strict mode: the producer signatures ran (in neither list), only the
+    // checkpoint's did not.
+    expect(
+      summary(true, { failed: [], notChecked: ["checkpoint-signature"] }),
+    ).toBe(
+      "10 of 10 checks passed · 1 record · checkpoint signature not checked here",
+    );
+    expect(summary(true, { failed: [], notChecked: [] })).toBe(
+      "10 of 10 checks passed · 1 record",
+    );
+    // A signature check that failed is counted as failed, and said nowhere
+    // as not checked, whichever other one is not checked.
+    expect(
+      summary(false, {
+        failed: ["producer-signatures"],
+        notChecked: ["checkpoint-signature"],
+      }),
+    ).toBe(
+      "1 check on this page failed · 1 record · checkpoint signature not checked here",
+    );
+    for (const id of ids) {
+      expect(summary(true, { failed: [], notChecked: [] })).not.toMatch(
+        /signature/,
+      );
+      expect(summary(false, { failed: [id], notChecked: [] })).not.toMatch(
+        /not checked/,
+      );
+    }
   });
 
   it("says how many of the numbered checks did not run, so none reads as failed", () => {
