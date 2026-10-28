@@ -25,6 +25,10 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 head="$(git rev-parse HEAD)"
 
+# The checks read the working tree, so it must be the commit being tagged.
+[ -z "$(git status --porcelain)" ] \
+  || { echo "go-release-check: commit or discard every change first; the tag gets $head, not the working tree" >&2; exit 1; }
+
 git merge-base --is-ancestor "$head" origin/main \
   || { echo "go-release-check: $head is not on origin/main (fetch it first?)" >&2; exit 1; }
 
