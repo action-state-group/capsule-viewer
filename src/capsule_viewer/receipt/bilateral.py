@@ -342,7 +342,7 @@ class BilateralReceiptModule:
             _join(
                 [
                     _el("div", _join(l0), data_level="L0"),
-                    _el("div", services.drilldown(self.w("depth.l1"), *l1, expanded=l1_open), data_level="L1"),
+                    _el("div", services.drilldown(self.w("depth.l1"), *l1, expanded=l1_open) + (sides.actions(model.case) if keep else ""), data_level="L1"),
                     _el("div", services.drilldown(self.w("depth.l2"), *l2, expanded=l2_open), data_level="L2"),
                 ]
             )

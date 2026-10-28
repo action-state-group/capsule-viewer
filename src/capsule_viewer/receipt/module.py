@@ -58,7 +58,7 @@ from ..verifier_report import Assurance
 from ..wording import PLACEHOLDER, WordingPack
 from .model import Binder, Committed, Fact, Item, Move, ReceiptModel, ReceiptUnavailable, Step, build_receipt
 from .role import SELLER_KIND, sealed_side, seller_kind_engaged
-from .sides import ACTIONS, CASE_TONE, Missing
+from .sides import ACTIONS, CASE_TONE, Missing, plain_date
 
 DEPTHS = ("L0", "L1", "L2")
 # The values this module fills, per wording key; every other key takes none.
@@ -234,17 +234,19 @@ class UnilateralReceiptModule:
         if model.demo:
             l0.append(_el("p", self.w("badge.demo"), data_demo="true"))
         l0.append(_el("h2", self.w("page.title")))
-        if model.report.audience == "keep":
+        keep = model.report.audience == "keep"
+        if keep:
             l0.append(self.private_banner())
-            # The holder's own copy, and nothing from the other side: no record.
-            l0.append(self.sides("none", [self.half("ours", self.w("sides.ours"), _join([levels.headline, *levels.notes])), self.missing_half(None, keep=True)], keep=True))
-        else:
-            l0 += [levels.headline, *levels.notes]
+        l0 += [levels.headline, *levels.notes]
+        if keep:
+            # The holder's own copy and nothing from the other side: no record.
+            # The whole page is theirs, so the missing side alone says it.
+            l0.append(self.sides("none", [self.missing_half(None, keep=True)], line=False))
         return str(
             _join(
                 [
                     _el("div", _join(l0), data_level="L0"),
-                    _el("div", services.drilldown(self.w("depth.l1"), *levels.l1, expanded=levels.l1_open), data_level="L1"),
+                    _el("div", services.drilldown(self.w("depth.l1"), *levels.l1, expanded=levels.l1_open) + (self.actions("none") if keep else ""), data_level="L1"),
                     _el("div", services.drilldown(self.w("depth.l2"), *levels.l2, expanded=levels.l2_open), data_level="L2"),
                 ]
             )
@@ -272,17 +274,22 @@ class UnilateralReceiptModule:
 
     # ---- the receipt's sides (sides.py) ---------------------------------------
 
-    def sides(self, case: str, halves: Sequence[str], *, keep: bool) -> Markup:
-        """The case line, the halves, and on the holder's own page the actions.
-        The case's tone is never ``negative``: a missing side is not a finding."""
-        key = "sides.case.one_sided.shared" if case == "one_sided" and not keep else f"sides.case.{case}"
-        parts: list[str] = [_el("p", self.w(key), class_=f"cv-sides__case cv-tone--{CASE_TONE[case]}", data_case=case), *halves]
-        if keep:
-            # One line: the heading, then each sentence the holder can say.
-            items = [_el("li", self.w("actions.heading"), class_="cv-actions__heading")]
-            items += [_el("li", self.w(k), data_action=k.removeprefix("actions.")) for k in ACTIONS[case]]
-            parts.append(_el("ul", _join(items), class_="cv-actions", data_actions="true"))
+    def sides(self, case: str, halves: Sequence[str], *, keep: bool = True, line: bool = True) -> Markup:
+        """The case line (unless *line* is false) and the halves. The case's
+        tone is never ``negative``: a missing side is not a finding."""
+        parts: list[str] = list(halves)
+        if line:
+            key = "sides.case.one_sided.shared" if case == "one_sided" and not keep else f"sides.case.{case}"
+            parts.insert(0, _el("p", self.w(key), class_=f"cv-sides__case cv-tone--{CASE_TONE[case]}", data_case=case))
         return _el("div", _join(parts), class_="cv-sides", data_receipt_case=case)
+
+    def actions(self, case: str) -> Markup:
+        """The sentences the holder can say to their agent, one line, on the
+        holder's own page only, after L1's drilldown (the design puts them at
+        the page's end, so they are not L0)."""
+        items = [_el("li", self.w("actions.heading"), class_="cv-actions__heading")]
+        items += [_el("li", self.w(k), data_action=k.removeprefix("actions.")) for k in ACTIONS[case]]
+        return _el("ul", _join(items), class_="cv-actions", data_actions="true")
 
     def half(self, kind: str, label: str, body: str, **attrs: str) -> Markup:
         """One side: ``ours`` (blue), ``theirs`` (amber, as received) or
@@ -295,7 +302,7 @@ class UnilateralReceiptModule:
         if missing is None:
             text = self.w("sides.missing.none")
         else:
-            text = self.w("sides.missing.absence", start=missing.window[0], end=missing.window[1])
+            text = self.w("sides.missing.absence", start=plain_date(missing.window[0]), end=plain_date(missing.window[1]))
         if keep or missing is None or missing.role is None:
             label = self.w("sides.missing.heading")
         else:

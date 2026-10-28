@@ -86,11 +86,11 @@
   var CUTS = { keep: ["keep", "counterparty"], counterparty: ["counterparty"], adjudicator: ["adjudicator"] };
   // sides.CASE_TONE and sides.ACTIONS: a case's tone (never "negative": one
   // side missing is not a finding) and the sentences a holder's page offers.
-  var CASE_TONE = { both: "positive", one_sided: "caution", none: "neutral", not_agreed: "neutral" };
+  var CASE_TONE = { both: "positive", one_sided: "caution", not_agreed: "neutral" };
   var ACTIONS = {
     both: ["actions.dispute", "actions.send", "actions.show_theirs"],
     one_sided: ["actions.send", "actions.ask_again"],
-    none: ["actions.send", "actions.ask_again"],
+    none: ["actions.send", "actions.ask"],
     not_agreed: ["actions.dispute", "actions.send", "actions.show_theirs"],
   };
   // The kit's closed vocabularies (capsule_viewer.kit.components).
@@ -1147,6 +1147,14 @@
     return { member: member.id, role: observer ? observer.role : null, window: [start, end] };
   }
 
+  // sides.plain_date: an RFC 3339 timestamp's date, as "Oct 9, 2026".
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function plainDate(value) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(value);
+    if (m === null || +m[2] < 1 || +m[2] > 12) return value;
+    return MONTHS[+m[2] - 1] + " " + +m[3] + ", " + m[1];
+  }
+
   // sides.two_copy_case.
   function twoCopyCase(dealState, joins) {
     var agreed = joins.length > 0 && joins.every(function (jv) {
@@ -1353,18 +1361,22 @@
     return this.d.el("p", { class: "cv-tone--caution", "data-banner": "private" }, [label, " ", w("banner.private.text")]);
   };
   // module.py's sides, half and missing_half (sides.py has the cases).
-  P.sides = function (kase, halves, keep) {
+  P.sides = function (kase, halves, keep, line) {
     var d = this.d;
-    var key = kase === "one_sided" && !keep ? "sides.case.one_sided.shared" : "sides.case." + kase;
-    var parts = [d.el("p", { class: "cv-sides__case cv-tone--" + CASE_TONE[kase], "data-case": kase }, [w(key)])].concat(halves);
-    if (keep) {
-      // One line: the heading, then each sentence the holder can say.
-      var items = [d.el("li", { class: "cv-actions__heading" }, [w("actions.heading")])].concat(ACTIONS[kase].map(function (k) {
-        return d.el("li", { "data-action": k.replace(/^actions\./, "") }, [w(k)]);
-      }));
-      parts.push(d.el("ul", { class: "cv-actions", "data-actions": "true" }, items));
+    var parts = halves.slice();
+    if (line !== false) {
+      var key = kase === "one_sided" && !keep ? "sides.case.one_sided.shared" : "sides.case." + kase;
+      parts.unshift(d.el("p", { class: "cv-sides__case cv-tone--" + CASE_TONE[kase], "data-case": kase }, [w(key)]));
     }
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
+  };
+  // module.py's actions: after L1's drilldown, on the holder's own page only.
+  P.actions = function (kase) {
+    var d = this.d;
+    var items = [d.el("li", { class: "cv-actions__heading" }, [w("actions.heading")])].concat(ACTIONS[kase].map(function (k) {
+      return d.el("li", { "data-action": k.replace(/^actions\./, "") }, [w(k)]);
+    }));
+    return d.el("ul", { class: "cv-actions", "data-actions": "true" }, items);
   };
   P.half = function (kind, label, body, attrs) {
     return this.d.el("div", Object.assign({ class: "cv-half cv-half--" + kind, "data-half": kind }, attrs || {}), [this.d.el("p", { class: "cv-half__label" }, [label])].concat(body));
@@ -1372,7 +1384,7 @@
   P.missingHalf = function (missing, keep) {
     var text;
     if (missing === null) text = w("sides.missing.none");
-    else text = w("sides.missing.absence", { start: missing.window[0], end: missing.window[1] });
+    else text = w("sides.missing.absence", { start: plainDate(missing.window[0]), end: plainDate(missing.window[1]) });
     var label = keep || missing === null || missing.role === null ? w("sides.missing.heading") : missing.role;
     var attrs = missing !== null ? { "data-outcome": "absence", "data-party": missing.member } : { "data-outcome": "none" };
     return this.half("missing", label, [this.d.el("p", {}, [text])], attrs);
@@ -1875,11 +1887,11 @@
   };
 
   // The three levels of one page: L0 always shown, L1 and L2 one toggle each.
-  P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open) {
+  P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after) {
     var d = this.d;
     return [
       d.el("div", { "data-level": "L0" }, l0),
-      d.el("div", { "data-level": "L1" }, [this.kit.drilldown(l1Summary, l1, l1Open)]),
+      d.el("div", { "data-level": "L1" }, [this.kit.drilldown(l1Summary, l1, l1Open)].concat(after ? [after] : [])),
       d.el("div", { "data-level": "L2" }, [this.kit.drilldown(w("depth.l2"), l2, l2Open)]),
     ];
   };
@@ -1890,13 +1902,12 @@
     var l0 = [];
     if (model.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
     l0.push(dr.d.el("h2", {}, [w("page.title")]));
-    if (model.report.audience === "keep") {
-      l0.push(dr.privateBanner());
-      l0.push(dr.sides("none", [dr.half("ours", w("sides.ours"), [levels.headline].concat(levels.notes)), dr.missingHalf(null, true)], true));
-    } else {
-      l0 = l0.concat([levels.headline], levels.notes);
-    }
-    return dr.page(l0, w("depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open);
+    var keep = model.report.audience === "keep";
+    if (keep) l0.push(dr.privateBanner());
+    l0 = l0.concat([levels.headline], levels.notes);
+    // The holder's own copy and nothing from the other side: no record.
+    if (keep) l0.push(dr.sides("none", [dr.missingHalf(null, true)], true, false));
+    return dr.page(l0, w("depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open, keep ? dr.actions("none") : null);
   }
 
   function drawSeller(doc, depth, model) {
@@ -1905,13 +1916,11 @@
     var l0 = [];
     if (model.receipt.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
     l0.push(dr.d.el("h2", {}, [w("seller.title")]));
-    if (model.receipt.report.audience === "keep") {
-      l0.push(dr.privateBanner());
-      l0.push(dr.sides("none", [dr.half("ours", w("sides.ours"), [levels.headline].concat(levels.notes)), dr.missingHalf(null, true)], true));
-    } else {
-      l0 = l0.concat([levels.headline], levels.notes);
-    }
-    return dr.page(l0, w("seller.depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open);
+    var keep = model.receipt.report.audience === "keep";
+    if (keep) l0.push(dr.privateBanner());
+    l0 = l0.concat([levels.headline], levels.notes);
+    if (keep) l0.push(dr.sides("none", [dr.missingHalf(null, true)], true, false));
+    return dr.page(l0, w("seller.depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open, keep ? dr.actions("none") : null);
   }
 
   // ---- drawing: the composition section and the bilateral page ---------------
@@ -2039,7 +2048,7 @@
     }
     l2.push(d.el("div", { "data-composition": "true" }, [kit.section(w("l2.composition"), [compositionSection(dr, model.composition)], 3)]));
     model.parties.forEach(function (p, i) { l2.push(d.el("div", { "data-party": p.member }, [kit.section(heading(p), drawn[i].l2, 3)])); });
-    return dr.page(l0, w("depth.l1"), l1, depth === "L1" || depth === "L2", l2, depth === "L2");
+    return dr.page(l0, w("depth.l1"), l1, depth === "L1" || depth === "L2", l2, depth === "L2", keep ? dr.actions(model.case) : null);
   }
 
   // ---- the modules (presentation contract: canRender, buildModel, render) ----

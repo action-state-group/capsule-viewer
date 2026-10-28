@@ -405,16 +405,17 @@ class SellerReceiptModule(UnilateralReceiptModule):
         l0.append(_el("h2", self.w("seller.title")))
         # The seller's own copy carries the PRIVATE banner, as every keep copy
         # does (module.py); a copy cut for anyone else never does.
-        if model.receipt.report.audience == "keep":
+        keep = model.receipt.report.audience == "keep"
+        if keep:
             l0.append(self.private_banner())
-            l0.append(self.sides("none", [self.half("ours", self.w("sides.ours"), _join([levels.headline, *levels.notes])), self.missing_half(None, keep=True)], keep=True))
-        else:
-            l0 += [levels.headline, *levels.notes]
+        l0 += [levels.headline, *levels.notes]
+        if keep:
+            l0.append(self.sides("none", [self.missing_half(None, keep=True)], line=False))
         return str(
             _join(
                 [
                     _el("div", _join(l0), data_level="L0"),
-                    _el("div", services.drilldown(self.w("seller.depth.l1"), *levels.l1, expanded=levels.l1_open), data_level="L1"),
+                    _el("div", services.drilldown(self.w("seller.depth.l1"), *levels.l1, expanded=levels.l1_open) + (self.actions("none") if keep else ""), data_level="L1"),
                     _el("div", services.drilldown(self.w("depth.l2"), *levels.l2, expanded=levels.l2_open), data_level="L2"),
                 ]
             )

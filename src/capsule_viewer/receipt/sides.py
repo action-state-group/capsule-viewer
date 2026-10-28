@@ -27,6 +27,7 @@ and offers the actions, sentences the holder says to their agent.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
@@ -35,12 +36,16 @@ from ..context import Json, VerifiedBundleContext
 from .model import ReceiptUnavailable
 
 CASES: tuple[str, ...] = ("both", "one_sided", "none", "not_agreed")
-CASE_TONE: Mapping[str, str] = {"both": "positive", "one_sided": "caution", "none": "neutral", "not_agreed": "neutral"}
+# The case line's tone; a holder's own single copy (``none``) draws no case
+# line, only the missing side.
+CASE_TONE: Mapping[str, str] = {"both": "positive", "one_sided": "caution", "not_agreed": "neutral"}
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?:T|$)")
 # The actions a holder's page offers, per case, as wording keys.
 ACTIONS: Mapping[str, tuple[str, ...]] = {
     "both": ("actions.dispute", "actions.send", "actions.show_theirs"),
     "one_sided": ("actions.send", "actions.ask_again"),
-    "none": ("actions.send", "actions.ask_again"),
+    "none": ("actions.send", "actions.ask"),
     "not_agreed": ("actions.dispute", "actions.send", "actions.show_theirs"),
 }
 
@@ -81,6 +86,14 @@ def missing_member(context: VerifiedBundleContext, composition: Composition) -> 
     if start is None or end is None:
         raise ReceiptUnavailable(f"the absence member {member.id!r} carries no window")
     return Missing(member=member.id, role=observer.role if observer else None, window=(start, end))
+
+
+def plain_date(value: str) -> str:
+    """An RFC 3339 timestamp's date, as "Oct 9, 2026"; anything else as it is."""
+    m = _DATE.match(value)
+    if m is None or not 1 <= int(m.group(2)) <= 12:
+        return value
+    return f"{_MONTHS[int(m.group(2)) - 1]} {int(m.group(3))}, {m.group(1)}"
 
 
 def two_copy_case(deal_state: str, joins: Sequence[tuple[Join, Corroboration | None]]) -> str:

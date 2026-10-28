@@ -20,6 +20,7 @@ import pytest
 from receipt_helpers import BILATERAL, SELLER, load, render
 
 from capsule_viewer.receipt.module_slot import KIT_CSS
+from capsule_viewer.receipt.sides import plain_date
 
 
 class _Halves(HTMLParser):
@@ -85,11 +86,12 @@ def text(half: dict[str, object]) -> str:
 def test_a_holders_own_copy_alone_is_no_record(name):
     h = halves(render(name, depth="L0"))
     assert h.cases == ["none"]
-    assert [x["kind"] for x in h.halves] == ["ours", "missing"]
-    assert text(h.halves[0]).startswith("Your side · in your book")
-    assert text(h.halves[1]) == "Their side Nothing from their side is in this receipt."
-    assert h.halves[1]["outcome"] == "none"
-    assert h.actions == ["send", "ask_again"]
+    # The whole page is the holder's: the missing side alone, and no case line.
+    assert [x["kind"] for x in h.halves] == ["missing"] and h.case_classes == []
+    assert text(h.halves[0]) == "Their side No record. Nothing from their side is in this receipt."
+    assert h.halves[0]["outcome"] == "none"
+    # Nobody may have asked yet, so the holder asks, not asks again.
+    assert h.actions == ["send", "ask"]
 
 
 def test_both_copies_agreeing_are_stamped_by_both():
@@ -97,7 +99,7 @@ def test_both_copies_agreeing_are_stamped_by_both():
     assert h.cases == ["both"]
     assert "cv-tone--positive" in h.case_classes[0]
     assert [x["kind"] for x in h.halves] == ["ours", "theirs"]
-    assert text(h.halves[1]).startswith("Their side · in their book · as received")
+    assert text(h.halves[1]).startswith("Their side · as received")
     assert h.actions == ["dispute", "send", "show_theirs"]
 
 
@@ -111,10 +113,7 @@ def test_our_copy_and_an_unanswered_ask_is_your_receipt_only():
     assert "cv-tone--caution" in h.case_classes[0]
     assert [x["kind"] for x in h.halves] == ["ours", "missing"]
     assert h.halves[1]["outcome"] == "absence"
-    assert text(h.halves[1]) == (
-        "Their side No record. Their side was asked, and nothing came back between "
-        "2026-10-09T18:00:00Z and 2026-10-12T18:00:00Z. That is written down too."
-    )
+    assert text(h.halves[1]) == "Their side No record. Their side was asked on Oct 9, 2026 and had not answered by Oct 12, 2026. The ask is on record."
     assert h.actions == ["send", "ask_again"]
 
 
@@ -230,8 +229,7 @@ def test_a_missing_side_is_never_red(name):
     for half in h.halves:
         if half["kind"] == "missing":
             assert not any("negative" in c for c in half["classes"]), half  # type: ignore[union-attr]
-    for case, classes in zip(h.cases, h.case_classes, strict=True):
-        assert "negative" not in classes, case
+    assert not any("negative" in classes for classes in h.case_classes)
 
 
 def test_the_stylesheet_never_draws_a_side_red():
@@ -239,3 +237,17 @@ def test_the_stylesheet_never_draws_a_side_red():
     rules = dict(re.findall(r"(\.cv-(?:sides|half)[^{]*)\{([^}]*)\}", css))
     assert any(".cv-half--missing" in k and "dashed" in v and "neutral" in v for k, v in rules.items())
     assert not any("negative" in v for v in rules.values())
+
+
+@pytest.mark.parametrize(
+    ("value", "date"),
+    [("2026-10-09T18:00:00Z", "Oct 9, 2026"), ("2026-12-31", "Dec 31, 2026"), ("2026-13-01T00:00:00Z", "2026-13-01T00:00:00Z"), ("soon", "soon")],
+)
+def test_a_window_is_said_as_plain_dates(value, date):
+    assert plain_date(value) == date
+
+
+def test_the_actions_are_after_l1_not_in_l0():
+    page = render("bilateral-keep", depth="L0")
+    l0 = page.split('data-level="L1"')[0]
+    assert "data-actions" not in l0 and 'data-actions="true"' in page
