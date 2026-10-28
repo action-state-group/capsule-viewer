@@ -22,6 +22,7 @@ import {
   levelToggle,
   proofList,
   conversationFold,
+  evidenceAction,
   ruleWord,
   wordPill,
   caseParts,
@@ -1396,6 +1397,7 @@ function renderRules(
   host: HTMLElement,
   model: OutcomeReportModel,
   runInfo: OutcomeReportRunInfo,
+  result: ResultRoot,
   w: Words,
 ): void {
   const section = el("section", "sec");
@@ -1408,11 +1410,18 @@ function renderRules(
   const headRow = element("tr");
   // Not met leads; "did not apply" is in each row's expansion, and "could
   // not decide" stays on the row as its own count (Result v0 section 3).
+  const columnWord = {
+    not_met: ruleWord("not_met", "yes", w).word,
+    met: ruleWord("met", "yes", w).word,
+    undecided: w.t("lines.rules.col.undecided"),
+    unverified: w.t("lines.rules.col.unverified"),
+    out_of_scope: ruleWord("out_of_scope", "yes", w).word,
+  };
   headRow.append(
     element("th", w.t("lines.col.rule")),
-    el("th", "n", ruleWord("not_met", "yes", w).word),
-    el("th", "n", ruleWord("met", "yes", w).word),
-    el("th", "n", w.t("lines.rules.col.undecided")),
+    el("th", "n", columnWord.not_met),
+    el("th", "n", columnWord.met),
+    el("th", "n", columnWord.undecided),
   );
   // A claim that failed verification or whose evidence is missing has its
   // own column, never folded into "not met"; drawn only when a bundle has
@@ -1420,13 +1429,11 @@ function renderRules(
   const anyUnverified = model.conversations.some((c) =>
     c.criteria.some((cr) => isUnverified(cr.verdict)),
   );
-  if (anyUnverified)
-    headRow.append(el("th", "n", w.t("lines.rules.col.unverified")));
+  if (anyUnverified) headRow.append(el("th", "n", columnWord.unverified));
   // Judged out of scope (Result v0 section 4.2) is its own column, never
   // folded into "did not apply" or "met"; drawn only when a bundle has one.
   const anyOutOfScope = model.outOfScopeCount > 0;
-  if (anyOutOfScope)
-    headRow.append(el("th", "n", ruleWord("out_of_scope", "yes", w).word));
+  if (anyOutOfScope) headRow.append(el("th", "n", columnWord.out_of_scope));
   const columns = String(4 + (anyUnverified ? 1 : 0) + (anyOutOfScope ? 1 : 0));
   thead.append(headRow);
   table.append(thead);
@@ -1456,6 +1463,35 @@ function renderRules(
       const na = of((v) => v === "not_applicable");
       const outOfScopeHere = of((v) => v === "out_of_scope");
       const undecided = of((v) => v === "not_evaluable" || v === "no_claim");
+      // One count cell: the number, and its Show-evidence action (or the
+      // label that stands in for one) over the claims behind it on this rule.
+      const countCell = (
+        className: string,
+        column: keyof typeof columnWord,
+        counted: readonly Conversation[],
+        pick: (v: DrawnVerdict) => boolean,
+      ): HTMLElement => {
+        const cell = el("td", className);
+        cell.dataset.column = column;
+        cell.append(el("span", "nv", fmtCount(counted.length)));
+        const action = evidenceAction(
+          `rule:${ref}:${column}`,
+          `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
+          counted.map(
+            (c) =>
+              c.criteria.find(
+                (cr) =>
+                  cr.checkId === check.id &&
+                  cr.criterionId === criterion.id &&
+                  pick(cr.verdict),
+              )?.claim,
+          ),
+          result,
+          w,
+        );
+        if (action !== undefined) cell.append(action);
+        return cell;
+      };
       const tr = el("tr", "rule");
       tr.dataset.rule = ref;
       tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
@@ -1491,18 +1527,31 @@ function renderRules(
       ];
       tr.append(
         nameCell,
-        el(
-          "td",
+        countCell(
           `n${notMet.length > 0 ? " bad" : ""}`,
-          fmtCount(notMet.length),
+          "not_met",
+          notMet,
+          isMiss,
         ),
-        el("td", "n ok", fmtCount(met.length)),
-        el("td", "n", fmtCount(undecided.length)),
+        countCell("n ok", "met", met, (v) => v === "met"),
+        countCell(
+          "n",
+          "undecided",
+          undecided,
+          (v) => v === "not_evaluable" || v === "no_claim",
+        ),
       );
       if (anyUnverified)
-        tr.append(el("td", "n", fmtCount(unverifiedHere.length)));
+        tr.append(countCell("n", "unverified", unverifiedHere, isUnverified));
       if (anyOutOfScope)
-        tr.append(el("td", "n", fmtCount(outOfScopeHere.length)));
+        tr.append(
+          countCell(
+            "n",
+            "out_of_scope",
+            outOfScopeHere,
+            (v) => v === "out_of_scope",
+          ),
+        );
       tbody.append(tr);
       // The row opens: a full-width row below it holds how many
       // conversations the rule did not apply to and the conversations
@@ -2074,7 +2123,7 @@ export async function drawLines(
   levels.L0.append(sheet);
 
   // L1, why: rule by rule, led by who judged, who witnessed, what verified.
-  renderRules(levels.L1, model, runInfo, w);
+  renderRules(levels.L1, model, runInfo, result, w);
   leadWithProvenance(
     levels.L1,
     levels.L1.querySelector('[data-section="rules"]'),

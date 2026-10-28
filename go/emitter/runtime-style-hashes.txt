@@ -3,8 +3,8 @@
 # elements at render time. One "sha256-<base64> <constant>" per line, in the
 # order of CORE_RUNTIME_STYLES in ts/src/emitter.ts. ts/test/emitter.test.ts
 # recomputes these from the TypeScript constants and fails on any drift.
-sha256-gl5csnZFtfGfpwsRgm+JZ8yXYrS9+tHhWWKa8H8CLvc= OUTCOME_REPORT_CSS
-sha256-WM2NrHxk2P7AvLsnjBMBkG1kuXdS8GP928auVCRdpQ8= COMPLIANCE_CSS
+sha256-rgS00TREB00IIS3sBBfvxW5WOUJWLm5GIAlRLIeTs+c= OUTCOME_REPORT_CSS
+sha256-P0lCVccDwudUgv/5AsB5L2NkP5HFkI1nnMpWeKvJ52g= COMPLIANCE_CSS
 sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8= RECORD_CONTENT_CSS
 sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY= COMPOSED_CSS
 sha256-nRJWvY3MTkcv7A1bvOFQ+cy4zVL5ULKF6hmud3yBlrk= CORE_STRIP_CSS

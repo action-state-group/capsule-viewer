@@ -139,6 +139,10 @@ function skeleton(node: Element): string {
   // An expandable row's accessible name is its words, like a title.
   for (const e of copy.querySelectorAll("[aria-label]"))
     e.removeAttribute("aria-label");
+  // So is a number's name, which its Show-evidence action carries for the
+  // core's "Cited by" links.
+  for (const e of copy.querySelectorAll("[data-evidence-name]"))
+    e.removeAttribute("data-evidence-name");
   return copy.outerHTML;
 }
 

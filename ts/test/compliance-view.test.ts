@@ -153,7 +153,9 @@ it("each test row carries its population, exceptions and not-evaluable counts, i
   expect(art50f.dataset.population).toBe("2");
   expect(art50f.dataset.exceptions).toBe("0");
   expect(art50f.dataset.notEvaluable).toBe("2");
-  expect(art50f.querySelectorAll("td")[1]!.textContent).toBe("2 sessions");
+  expect(
+    art50f.querySelectorAll("td")[1]!.querySelector(".nv")!.textContent,
+  ).toBe("2 sessions");
 });
 
 it("two levels: a test opens (toggle 1) into its sessions, each naming every test with its result and tier; toggle 2 holds the proofs; nothing deeper", async () => {

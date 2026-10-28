@@ -178,5 +178,12 @@ export function applyDepth(levels: ReportLevels): void {
       "details.lv",
     ))
       openToggle(toggle);
+    // A number's Show-evidence list (report-levels.ts `evidenceAction`) is
+    // the proofs' level: open at L2 only.
+    if (levels.depth === "L2")
+      for (const toggle of region.querySelectorAll<HTMLDetailsElement>(
+        "details.cv-ev",
+      ))
+        toggle.open = true;
   }
 }

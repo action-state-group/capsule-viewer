@@ -4,6 +4,7 @@ import {
   type ConversationTranscript,
   type ReportState,
   type ResultClaim,
+  type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
 
@@ -598,6 +599,132 @@ export function recordAddress(recordId: string): string {
   return `record-${recordId}`;
 }
 
+// ---------------------------------------------------------------------------
+// Show evidence (capsule-viewer#83)
+// ---------------------------------------------------------------------------
+
+/** The address of a number on the page, beside `recordAddress`: the core's "Cited by" links point here. */
+export function numberAddress(key: string): string {
+  return `n-${key.replace(/[^A-Za-z0-9_.:-]/gu, "_")}`;
+}
+
+/** The Show-evidence component (static/show_evidence.js), when a host loaded it beside the runtime. */
+interface ShowEvidenceComponent {
+  resolve(result: ResultRoot, claim: ResultClaim): unknown;
+  render(model: unknown, doc: Document): HTMLElement;
+}
+
+function showEvidenceComponent(): ShowEvidenceComponent | undefined {
+  const found = (globalThis as { CapsuleViewerShowEvidence?: unknown })
+    .CapsuleViewerShowEvidence as Partial<ShowEvidenceComponent> | undefined;
+  return typeof found?.resolve === "function" &&
+    typeof found.render === "function"
+    ? (found as ShowEvidenceComponent)
+    : undefined;
+}
+
+/**
+ * Show evidence for one number: what a count counts, as records.
+ * `counted` holds one entry per thing the number counts: the claim behind
+ * it, or undefined where the page counted it with no claim (a conversation
+ * no claim judged on this rule). Every cited digest comes from the claims'
+ * own `evidence[]` as agent-action-capsule's Result reader resolved it; this
+ * page infers no citation.
+ *
+ * - A number that counts nothing draws nothing: there is nothing to show.
+ * - A number whose claims cite at least one record in this bundle draws a
+ *   `<details>` at the number's address (`numberAddress`): "Show evidence"
+ *   (or `summary`, where one cell holds more than one number), and under it the cited records, each a link to its entry in the core's
+ *   records section, then each cited digest the bundle does not carry, said
+ *   so, and how many were counted with no claim. The list is built at once,
+ *   so a page that runs no script (the static package) carries it as it is.
+ *   Where a host loaded the Show-evidence component, opening the toggle also
+ *   draws each claim side by side under the list.
+ * - A number with no record to show draws a label instead: "unsupported"
+ *   when it counts claims whose evidence is not in this bundle,
+ *   "interpretation" when no claim stands behind it at all.
+ *
+ * The toggle counts as level 2 (the proofs' level) and holds no other
+ * toggle. It is not an `lv` toggle, so depth L1 leaves it closed; depth L2
+ * opens it with everything else (report-front.ts `applyDepth`). The core's "Cited by"
+ * lists (evidence-graph-view.ts) read `data-cites` and `data-evidence-name`
+ * back from it.
+ */
+export function evidenceAction(
+  key: string,
+  name: string,
+  counted: readonly (ResultClaim | undefined)[],
+  result: ResultRoot,
+  w: Words,
+  summary: string = w.t("evidence.show"),
+): HTMLElement | undefined {
+  if (counted.length === 0) return undefined;
+  const claims = counted.filter((c): c is ResultClaim => c !== undefined);
+  const cited = new Set<string>();
+  const missing = new Set<string>();
+  for (const claim of claims)
+    for (const ref of claim.evidence)
+      (ref.resolved ? cited : missing).add(ref.digest);
+  if (cited.size === 0) {
+    const kind = claims.length > 0 ? "unsupported" : "interpretation";
+    const label = el("span", "cv-ev-label", w.t(`evidence.label.${kind}`));
+    label.dataset.evidenceLabel = kind;
+    label.dataset.evidenceFor = key;
+    return label;
+  }
+  const details = document.createElement("details");
+  details.className = "cv-ev";
+  details.dataset.level = "2";
+  details.id = numberAddress(key);
+  details.dataset.evidenceFor = key;
+  details.dataset.evidenceName = name;
+  details.dataset.cites = [...cited].join(" ");
+  details.append(element("summary", summary));
+  const body = el("div", "cv-ev-body");
+  body.append(el("p", "cv-ev-k", w.t("evidence.records")));
+  const list = el("ul", "cv-ev-list");
+  for (const digest of cited) {
+    const item = element("li");
+    item.dataset.cited = digest;
+    const link = element("a");
+    link.setAttribute("href", `#${recordAddress(digest)}`);
+    link.append(element("code", digest));
+    item.append(link);
+    list.append(item);
+  }
+  for (const digest of missing) {
+    const item = element("li");
+    item.dataset.missing = digest;
+    item.append(element("code", digest), ` ${w.t("evidence.not-in-bundle")}`);
+    list.append(item);
+  }
+  const uncited = counted.length - claims.length;
+  if (uncited > 0) {
+    const item = element("li", w.p("evidence.uncited", uncited));
+    item.dataset.uncited = String(uncited);
+    list.append(item);
+  }
+  body.append(list);
+  details.append(body);
+  // Where script runs and a host loaded the component, each claim side by
+  // side, drawn the first time the toggle opens; a static page has none.
+  details.addEventListener("toggle", () => {
+    const component = showEvidenceComponent();
+    if (!details.open || component === undefined) return;
+    if (body.querySelector(":scope > .cv-ev-sides") !== null) return;
+    const sides = el("div", "cv-ev-sides");
+    for (const claim of new Set(claims))
+      sides.append(
+        component.render(
+          component.resolve(result, claim),
+          details.ownerDocument,
+        ),
+      );
+    body.append(sides);
+  });
+  return details;
+}
+
 /**
  * A conversation in place in its card: a level-2 toggle whose body is the
  * chat, built when it opens, with a close control and a link to the record
@@ -839,6 +966,17 @@ ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
 ${s} tr.drill-row > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
+${s} details.cv-ev{display:block;margin-top:2px;font-weight:400;text-align:left}
+${s} details.cv-ev > summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap}
+${s} details.cv-ev > .cv-ev-body{margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
+${s} .cv-ev-k{margin:0 0 4px;color:var(--slate)}
+${s} ul.cv-ev-list{margin:0;padding-left:16px;display:grid;gap:2px}
+${s} ul.cv-ev-list code{font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all}
+${s} .cv-ev-label{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
+${s} .cv-ev-sides{display:grid;gap:10px;margin-top:8px}
+${s} .cv-side-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:10px}
+${s} .cv-side-producer i{color:var(--slate)}
+${s} .cv-side-payload{margin:4px 0;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-word}
 ${s} details.lv2{background:#FAF8F4;border-style:dashed}
 ${s} details.lv2 > summary{color:var(--slate);font-weight:600}
 ${s} details.lv2 > .pf-b{padding:4px 14px 14px;font-size:12.5px}

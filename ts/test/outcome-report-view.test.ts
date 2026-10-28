@@ -328,8 +328,8 @@ it("summarises results rule by rule: per-check pass counts, every rule's counts 
   const rows = rules.querySelectorAll<HTMLElement>("tr[data-rule]");
   expect(rows).toHaveLength(9);
   for (const row of rows) {
-    const counts = [...row.querySelectorAll<HTMLElement>("td.n")].map((td) =>
-      Number(td.textContent),
+    const counts = [...row.querySelectorAll<HTMLElement>("td.n .nv")].map(
+      (nv) => Number(nv.textContent),
     );
     // Not met leads; "did not apply" is in the row's expansion.
     const [notMet, , undecided] = counts;
@@ -1147,7 +1147,9 @@ it("a conversation with one rule met and one missing claim is undecided, and its
   const cells = [
     ...root.querySelectorAll<HTMLElement>(`tr[data-rule="${refs[1]}"] > td`),
   ];
-  expect(cells[3]!.textContent).toBe(String(undecidedElsewhere + 1));
+  expect(cells[3]!.querySelector(".nv")!.textContent).toBe(
+    String(undecidedElsewhere + 1),
+  );
 });
 
 async function resolvedWithCriteria(
@@ -1978,7 +1980,7 @@ it("a claim whose cited evidence is not in the bundle is its own state: 'could n
   );
   expect(heads).toContain("failed verification or evidence missing");
   const cells = [...rules.querySelectorAll<HTMLElement>("tr.rule")].map((tr) =>
-    [...tr.querySelectorAll("td.n")].map((td) => td.textContent),
+    [...tr.querySelectorAll("td.n .nv")].map((nv) => nv.textContent),
   );
   // not met, met, could not decide, then this column
   expect(cells.some((c) => c[3] === "1")).toBe(true);
