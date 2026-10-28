@@ -18,9 +18,10 @@
 // (the records the verifier accepted), and its content is what
 // EvidenceGraph.disclosureOf returns, disclosed only when it matches the digest
 // the record committed. Nothing here re-hashes or repairs a record. A digest
-// is matched to a record's own capsule_id; a capsule an evidence-book record
-// carries is not resolved here (capsule-viewer#83 follow-up), so it draws as
-// not in this bundle.
+// is matched to a record's own capsule_id. A capsule an evidence-book record
+// carries is not resolved here (capsule-viewer#83 follow-up): in a bundle
+// with a disclosed book record, a digest no record has draws as not opened
+// by this view (side.carried_not_opened), never as not in this bundle.
 //
 // The carrier decides what is drawn (Evidence Result v0 sections 2 and 6).
 // Under `disclosure`, each disclosed record's content is drawn, boxed, as the
@@ -51,6 +52,8 @@
   var EVALUATION_REPORT = "evaluation-report/v1";
   var REPORT_CRITERION = "clause_claim";
   var REPORT_PRODUCER_TEXT = "rationale";
+  // A book record's disclosed header (agent-action-capsule result-root.ts).
+  var BOOK_RECORD_TYPE = "published_capsule";
 
   var WORDS = {
     "side.what_happened": "What happened",
@@ -61,6 +64,7 @@
     "side.analysis": "The producer's summary, in place of the evidence",
     "side.story": "The producer's account, in place of the evidence",
     "side.not_in_bundle": "Not in this bundle. This page does not fetch it.",
+    "side.carried_not_opened": "Not a record of its own in this bundle. It may be carried inside a book record, which this view does not open. This page does not fetch it.",
     "side.disclosure_mismatch": "The disclosed content does not match the record's digest, so it is not shown.",
     "side.no_evidence": "This claim cites no evidence.",
     "carrier.withheld": "Withheld: the record is in this bundle, but its content is not disclosed.",
@@ -95,11 +99,13 @@
   }
 
   // One evidence ref, resolved: {digest, state, kind, developer, payload}.
-  // state is "disclosed", "withheld", "disclosure_mismatch" or "not_in_bundle".
-  function resolveRef(context, ref, records, read) {
+  // state is "disclosed", "withheld", "disclosure_mismatch", "not_in_bundle"
+  // or "carried_not_opened" (no record has the digest, and a book record may
+  // carry it).
+  function resolveRef(context, ref, records, hasBook, read) {
     var digest = str(obj(ref).digest) || "";
     var record = records[digest];
-    if (record === undefined) return { digest: digest, state: "not_in_bundle" };
+    if (record === undefined) return { digest: digest, state: hasBook ? "carried_not_opened" : "not_in_bundle" };
     var input = obj(read(context, digest, "agent_input"));
     var state = input.state === "disclosed" ? "disclosed" : input.state === "disclosure_mismatch" ? "disclosure_mismatch" : "withheld";
     var payload = state === "disclosed" ? input.payload : undefined;
@@ -117,9 +123,13 @@
     var read = disclosureOf || runtimeDisclosureOf();
     var c = obj(claim);
     var records = {};
+    var hasBook = false;
     (Array.isArray(obj(context).records) ? context.records : []).forEach(function (r) {
       var id = str(obj(r).capsule_id);
-      if (id !== undefined && !Object.prototype.hasOwnProperty.call(records, id)) records[id] = r;
+      if (id === undefined) return;
+      if (!Object.prototype.hasOwnProperty.call(records, id)) records[id] = r;
+      var input = obj(read(context, id, "agent_input"));
+      if (input.state === "disclosed" && obj(input.payload).record_type === BOOK_RECORD_TYPE) hasBook = true;
     });
     var presentation = obj(c.presentation);
     var carrier = {
@@ -129,7 +139,7 @@
     if (carrier.kind === "analysis" && str(presentation.summary) !== undefined) carrier.text = presentation.summary;
     if (carrier.kind === "story" && str(presentation.narrative) !== undefined) carrier.text = presentation.narrative;
     var evidence = (Array.isArray(c.evidence) ? c.evidence : []).map(function (ref) {
-      return resolveRef(context, ref, records, read);
+      return resolveRef(context, ref, records, hasBook, read);
     });
     var model = {
       id: str(c.id) || "",
@@ -210,7 +220,12 @@
   }
 
   function stateNote(doc, w, state) {
-    var key = state === "withheld" ? "carrier.withheld" : state === "not_in_bundle" ? "side.not_in_bundle" : "side.disclosure_mismatch";
+    var key = {
+      withheld: "carrier.withheld",
+      not_in_bundle: "side.not_in_bundle",
+      carried_not_opened: "side.carried_not_opened",
+      disclosure_mismatch: "side.disclosure_mismatch",
+    }[state];
     return el(doc, "p", { class: "cv-side-state", "data-state": state }, [w(key)]);
   }
 

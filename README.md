@@ -369,7 +369,9 @@ through `CapsuleViewerShowEvidence.resolve(context, claim)` and `render(model, d
 
 - **It never fetches.** A cited digest resolves only to a record the page's verifier
   accepted, and its content comes from the runtime's `EvidenceGraph.disclosureOf`. A
-  digest the bundle does not carry is drawn as not in this bundle. A record carried
+  digest the bundle does not carry is drawn as not in this bundle. A capsule carried
+  inside a book record is not opened here yet: in a bundle with a book record, a digest
+  no record has is drawn as not opened by this view, never as missing. A record carried
   but not disclosed is drawn as withheld (`carrier.withheld`). Content that does not
   match its digest is not drawn.
 - **The carrier decides what is drawn.** Under `disclosure` it draws the disclosed

@@ -186,6 +186,27 @@ describe("show evidence, negative cases", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("never calls a digest not in this bundle when a book record may carry it", async () => {
+    const context = await verify(bundle());
+    const claims = SE.claimsOf(context, disclosureOf);
+    // A stand-in for a book bundle: the verifier's own disclosureOf, except
+    // that one record's content reads as a disclosed book header.
+    const book = claims[1]!.evidence[0].digest as string;
+    const read: typeof disclosureOf = (c, id, member) =>
+      id === book && member === "agent_input"
+        ? { state: "disclosed", payload: { record_type: "published_capsule" } }
+        : disclosureOf(c, id, member);
+    const claim = {
+      ...claims[0]!,
+      evidence: [{ digest_alg: "SHA-256", digest: "e".repeat(64) }],
+    };
+    const node = SE.render(SE.resolve(context, claim, read), document);
+    const record = node.querySelector(`[data-evidence="${"e".repeat(64)}"]`)!;
+    expect(record.getAttribute("data-state")).toBe("carried_not_opened");
+    expect(record.textContent).toContain(SE.WORDS["side.carried_not_opened"]);
+    expect(record.textContent).not.toContain(SE.WORDS["side.not_in_bundle"]);
+  });
+
   it("draws a cited record the bundle does not disclose as withheld, with no content", async () => {
     const b = bundle();
     const first = SE.claimsOf(await verify(b), disclosureOf)[0]!;
