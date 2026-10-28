@@ -2725,6 +2725,8 @@ type FrameLook = {
   readonly place: readonly [number, number];
   /** How far below the bar's top the core strip starts, in viewport px; 0 with no strip. */
   readonly below: number;
+  /** The rules of media the page is not in now that select the frame (see latentRules). */
+  readonly latent: string;
   readonly readable: "yes" | "no" | "unseen";
   readonly clips: readonly {
     readonly width: number;
@@ -2738,6 +2740,7 @@ type FrameLook = {
 // that covered or clipped the widget itself is no module's doing.
 const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.look === b.look &&
+  a.latent === b.latent &&
   (a.readable !== "no" || b.readable === "no") &&
   a.clips.length === b.clips.length &&
   a.clips.every(
@@ -2751,6 +2754,72 @@ const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
   a.offsets.length === b.offsets.length &&
   a.offsets.every((m, i) => Math.abs(m - b.offsets[i]!) <= SIDE_MARGIN_SLACK);
+
+// The style rules, in every stylesheet the frame's document and tree apply,
+// that sit in a media query the page is not in now (print, another width)
+// and select one of `elements`. The computed look is the frame's in the
+// medium the page is rendered in; a module rule that changes the frame only
+// in print or at a phone's width shows up here instead, as a rule that did
+// not select the frame before the module rendered. A rule whose selector
+// cannot be tested (a pseudo-element's) is tested without its
+// pseudo-elements; a sheet that cannot be read is skipped.
+function latentRules(
+  elements: readonly Element[],
+  root: HTMLElement,
+  view: Window,
+): string {
+  const tree = root.getRootNode() as Document | ShadowRoot;
+  const sheets = [
+    ...root.ownerDocument.styleSheets,
+    ...root.ownerDocument.adoptedStyleSheets,
+    ...(tree === root.ownerDocument
+      ? []
+      : [...tree.styleSheets, ...tree.adoptedStyleSheets]),
+  ];
+  const found: string[] = [];
+  // By shape, not instanceof: the rules may come from another window (a
+  // static page drawn into its own document).
+  const visit = (rules: CSSRuleList, latent: boolean): void => {
+    for (const rule of rules) {
+      const grouped =
+        "cssRules" in rule ? (rule as CSSGroupingRule).cssRules : undefined;
+      if ("media" in rule && "conditionText" in rule)
+        visit(
+          grouped!,
+          latent ||
+            !view.matchMedia((rule as CSSMediaRule).conditionText).matches,
+        );
+      else if ("selectorText" in rule) {
+        if (latent) {
+          const selector = (rule as CSSStyleRule).selectorText.replace(
+            /::?(?:before|after|first-line|first-letter|marker|placeholder|selection|backdrop)\b(?:\([^)]*\))?/gu,
+            "",
+          );
+          let selects = false;
+          try {
+            selects = elements.some((element) =>
+              element.matches(selector === "" ? "*" : selector),
+            );
+          } catch {
+            selects = false;
+          }
+          if (selects) found.push(rule.cssText);
+        }
+        if (grouped !== undefined && grouped.length > 0) visit(grouped, latent);
+      } else if (grouped !== undefined) visit(grouped, latent);
+    }
+  };
+  for (const sheet of sheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    visit(rules, false);
+  }
+  return JSON.stringify(found);
+}
 
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
@@ -3199,6 +3268,7 @@ async function renderVerifiedContext(
         offsets: [],
         place: [0, 0],
         below: 0,
+        latent: "",
         readable: "unseen",
         clips: [],
       };
@@ -3348,8 +3418,18 @@ async function renderVerifiedContext(
             },
           ];
         });
+    // With the root's chrome class as given, like the computed look.
+    const latent = jsdom ? "" : latentRules(elements, root, view);
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, offsets, place, below, readable: words, clips };
+    return {
+      look: seen,
+      offsets,
+      place,
+      below,
+      latent,
+      readable: words,
+      clips,
+    };
   };
   // The core strip (core-strip.ts) is held to the same rules as the
   // banner: its words, structure and look are the core's, and it stays the
