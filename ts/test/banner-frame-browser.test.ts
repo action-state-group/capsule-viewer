@@ -163,6 +163,17 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     });
 
+    it("one renders on a host that already styles the root's ancestors", async () => {
+      // Compared before and after the module renders: the host's own styles
+      // are no module's doing.
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "html{transform:scale(0.5)}body{opacity:0.5;margin-top:-10px}",
+        ),
+      ).toBe(true);
+    });
+
     for (const css of [
       '[data-banner-detail]::after{content:" These findings do not affect this report."}',
       '[data-verify]::before{content:"Unchanged since it was sealed. "}',
@@ -182,6 +193,31 @@ describe.skipIf(executablePath === undefined)(
       "html::-webkit-scrollbar{width:90vw}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:-90vw}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
+      "[data-verify]{mask-image:linear-gradient(transparent,transparent)}",
+      "[data-verify]{-webkit-mask-image:linear-gradient(transparent,transparent)}",
+      // The root's ancestors, which scale, move, clip or hide the banner
+      // while every value on the banner itself stays the same.
+      "body{zoom:0.01}",
+      "html{zoom:0.1}",
+      "body{transform:scale(0.01)}",
+      "html{transform:scale(0.01)}",
+      "body{transform:scale(0.01);transform-origin:0 0}[data-test-module]{transform:scale(100)}",
+      "body{scale:0.01}",
+      "html{scale:0.01}",
+      "body{transform:translateY(-100vh)}",
+      "html{translate:0 -100vh}",
+      "body{transform:rotateX(90deg)}",
+      "body{margin-top:-60px}",
+      "html{position:relative;top:-60px}",
+      "body{opacity:0}",
+      "html{opacity:0}",
+      "body{filter:opacity(0)}",
+      "html{filter:blur(20px)}",
+      "body{clip-path:inset(60px 0 0 0)}",
+      "html{clip-path:inset(60px 0 0 0)}",
+      "html{mask-image:linear-gradient(transparent,transparent)}",
+      "html{content-visibility:hidden}",
+      'body::before{content:"";position:fixed;inset:0;background:#fff}',
     ])
       it(`one that adds ${css} is discarded`, async () => {
         expect(await kept(css)).toBe(false);

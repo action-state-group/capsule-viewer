@@ -2761,6 +2761,8 @@ const FRAME_LOOK = [
   "-webkit-text-fill-color",
   "clip",
   "clip-path",
+  "mask-image",
+  "-webkit-mask-image",
   "filter",
   "mix-blend-mode",
   "overflow",
@@ -2909,9 +2911,9 @@ async function renderVerifiedContext(
   const snapshot = (parts: readonly Element[]): string =>
     JSON.stringify(parts.map((part) => part.outerHTML));
   // How the frame looks: the computed properties that decide whether its
-  // words can be read, for every element of each part and the root, with
-  // the root's chrome class as given (the one restyling a module may ask
-  // for, setChromeClass). A stylesheet a module adds that changes any of
+  // words can be read, for every element of each part, the root and the
+  // root's ancestors, with the root's chrome class as given (the one
+  // restyling a module may ask for, setChromeClass). A stylesheet a module adds that changes any of
   // them, hiding the banner included, is caught by comparing with this as it
   // was before the module rendered, so a host that was already hidden (an
   // inactive tab) is no module's doing. Empty off a document, where no
@@ -2922,7 +2924,14 @@ async function renderVerifiedContext(
     if (!root.isConnected || view === null) return { look: "", margins: [] };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
+    // The root's ancestors too, up to <html>: a transform, opacity, filter,
+    // clip or offset on any of them scales, hides or moves the banner while
+    // every value on the banner itself stays the same.
+    const ancestors: Element[] = [];
+    for (let at = root.parentElement; at !== null; at = at.parentElement)
+      ancestors.push(at);
     const elements = [
+      ...ancestors,
       root,
       ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")]),
     ];
