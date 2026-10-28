@@ -13,6 +13,11 @@ The page runtime states `X` as its viewer version, so the version a report
 page names is the release's. Consumers pin the Go tag (see
 [Pinning a viewer release](#pinning-a-viewer-release)).
 
+Releases before this rule were not paired (`ts/v0.1.0`, `go/v0.2.0`). The first
+paired release is `0.3.0`: set it by hand in the release pull request, since
+Prepare's `minor` bump of `ts` would give `0.2.0`, which the Go module already
+used.
+
 The Python package at the repository root is not published; it is installed
 from source. Publishing it later means adding a `releases.json` entry, a
 publisher workflow and a PyPI trusted publisher, as capsule-emit does.
