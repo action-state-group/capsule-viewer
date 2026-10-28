@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("540c153b74d365600a6f73237268a37a15c9e9dc");
+    return commitPrefix("797a3fae2fc4d752a50072ccd82a7b8f4f3220f2");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17589,11 +17589,16 @@ ${pad.repeat(depth)}`;
   }
   var SIDE_MARGINS = ["margin-left", "margin-right"];
   var SIDE_MARGIN_SLACK = 9;
+  var BOX_EDGES = ["top", "right", "bottom", "left"].flatMap((side) => [
+    `padding-${side}`,
+    `border-${side}-width`
+  ]);
   var ANCESTOR_OFFSETS = [
     "top",
     "left",
     "margin-top",
-    "margin-bottom"
+    "margin-bottom",
+    ...BOX_EDGES
   ];
   var ANCESTOR_UNCOMPARED = ["right", "bottom"];
   var sameLook = (a, b) => a.look === b.look && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
@@ -17618,6 +17623,7 @@ ${pad.repeat(depth)}`;
     "zoom",
     "margin-top",
     "margin-bottom",
+    ...BOX_EDGES,
     "font-family",
     "-webkit-text-fill-color",
     "clip",
@@ -17790,8 +17796,13 @@ ${pad.repeat(depth)}`;
       const box = parts[0].getBoundingClientRect();
       const place = [box.left, box.top];
       for (let at = parts[0].parentElement; at !== null; at = at.parentElement) {
-        place[0] += at.scrollLeft;
-        place[1] += at.scrollTop;
+        if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
+        const seen2 = at.getBoundingClientRect();
+        const html = at instanceof view.HTMLElement && at !== root.ownerDocument.scrollingElement ? at : void 0;
+        const width = html?.offsetWidth ?? 0;
+        const height = html?.offsetHeight ?? 0;
+        place[0] += at.scrollLeft * (width > 0 ? seen2.width / width : 1);
+        place[1] += at.scrollTop * (height > 0 ? seen2.height / height : 1);
       }
       root.classList.toggle("cv-shell-chrome", had);
       return { look: seen, offsets, place };
