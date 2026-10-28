@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("e887e7acf6122e44e3dde8688e1196d7eb95e8a2");
+    return commitPrefix("540c153b74d365600a6f73237268a37a15c9e9dc");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17589,9 +17589,14 @@ ${pad.repeat(depth)}`;
   }
   var SIDE_MARGINS = ["margin-left", "margin-right"];
   var SIDE_MARGIN_SLACK = 9;
-  var ANCESTOR_OFFSETS = ["top", "left", "margin-top"];
-  var ANCESTOR_UNCOMPARED = ["right", "bottom", "margin-bottom"];
-  var sameLook = (a, b) => a.look === b.look && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
+  var ANCESTOR_OFFSETS = [
+    "top",
+    "left",
+    "margin-top",
+    "margin-bottom"
+  ];
+  var ANCESTOR_UNCOMPARED = ["right", "bottom"];
+  var sameLook = (a, b) => a.look === b.look && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17743,7 +17748,8 @@ ${pad.repeat(depth)}`;
     const snapshot = (parts) => JSON.stringify(parts.map((part) => part.outerHTML));
     const looks = (parts, chromed) => {
       const view = root.ownerDocument.defaultView;
-      if (!root.isConnected || view === null) return { look: "", offsets: [] };
+      if (!root.isConnected || view === null)
+        return { look: "", offsets: [], place: [0, 0] };
       const had = root.classList.contains("cv-shell-chrome");
       root.classList.toggle("cv-shell-chrome", chromed);
       const ancestors = [];
@@ -17781,8 +17787,14 @@ ${pad.repeat(depth)}`;
           })
         )
       );
+      const box = parts[0].getBoundingClientRect();
+      const place = [box.left, box.top];
+      for (let at = parts[0].parentElement; at !== null; at = at.parentElement) {
+        place[0] += at.scrollLeft;
+        place[1] += at.scrollTop;
+      }
       root.classList.toggle("cv-shell-chrome", had);
-      return { look: seen, offsets };
+      return { look: seen, offsets, place };
     };
     const frameOf = () => {
       const detail = bar.nextElementSibling;
