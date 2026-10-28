@@ -568,6 +568,26 @@ for (const setting of SETTINGS)
         },
       );
 
+      // A clipping box's size is compared in viewport px: at page zoom 50% a
+      // scrollbar takes 30 of the box's own px, 15 in viewport px.
+      it("one that makes a full-width host's page scroll renders inside a clipping ancestor", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{height:3000px}",
+            "#host{width:100vw}#app{max-width:none}body{overflow-x:hidden}",
+          ),
+        ).toBe(true);
+      });
+
+      it("one that makes a scrolling page grow a scrollbar across its bottom renders", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{width:200vw;height:20px}",
+            "html{overflow:auto}",
+          ),
+        ).toBe(true);
+      });
+
       it("one that makes a full-width host's page scroll renders", async () => {
         expect(
           await kept(

@@ -3317,11 +3317,20 @@ async function renderVerifiedContext(
           const down = matrix.transformPoint({ y: element.clientHeight });
           // The scrollbar across the box's bottom, in viewport px: the box's
           // height may shrink by only as much as that grows. A page's own
-          // scrollbar leaves any other height alone.
-          const bar = matrix.transformPoint({
+          // scrollbar leaves any other height alone. The viewport's is what
+          // its height lacks of the window's.
+          // The viewport's size is in viewport px already, as its scroll
+          // offsets are.
+          const viewport = element === root.ownerDocument.scrollingElement;
+          const width = viewport
+            ? element.clientWidth
+            : Math.hypot(across.x, across.y);
+          const height = viewport
+            ? element.clientHeight
+            : Math.hypot(down.x, down.y);
+          const own = matrix.transformPoint({
             y:
-              element instanceof view.HTMLElement &&
-              element !== root.ownerDocument.scrollingElement
+              element instanceof view.HTMLElement && !viewport
                 ? Math.max(
                     0,
                     element.offsetHeight -
@@ -3331,11 +3340,14 @@ async function renderVerifiedContext(
                   )
                 : 0,
           });
+          const bar = viewport
+            ? Math.max(0, view.innerHeight - height)
+            : Math.hypot(own.x, own.y);
           return [
             {
-              width: Math.hypot(across.x, across.y),
-              height: Math.hypot(down.x, down.y),
-              bar: Math.hypot(bar.x, bar.y),
+              width,
+              height,
+              bar,
             },
           ];
         });
