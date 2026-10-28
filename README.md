@@ -359,6 +359,34 @@ stylesheet each script inserts once at render).
   receipt; `presentation list`, which registers the deal view beside them, stops at
   registration (`tests/test_receipt_module_slot.py`).
 
+### Show evidence: one claim side by side
+
+`static/show_evidence.js` draws one claim of an Evidence Result v0 in three columns:
+what happened (the records the claim cites), the criterion and the verdict
+(capsule-viewer#83). It is a module-slot component, not a presentation. Every Result
+page is already served by a module for every audience, so a report module calls it
+through `CapsuleViewerShowEvidence.resolve(context, claim)` and `render(model, document, words)`.
+
+- **It never fetches.** A cited digest resolves only to a record the page's verifier
+  accepted, and its content comes from the runtime's `EvidenceGraph.disclosureOf`. A
+  digest the bundle does not carry is drawn as not in this bundle. A record carried
+  but not disclosed is drawn as withheld (`carrier.withheld`). Content that does not
+  match its digest is not drawn.
+- **The carrier decides what is drawn.** Under `disclosure` it draws the disclosed
+  content, boxed. Under `analysis` or `story` it draws that text as the producer's and
+  no record content.
+- **Producer text is labelled.** A judge's rationale or a carrier's text is drawn in
+  italics after `side.producer_said`. The element is for the page's deepest level
+  only (`data-level="L2"`), never L0. Nothing on it can be clicked or submitted.
+- **Words:** `side.what_happened`, `side.criterion`, `side.verdict`,
+  `side.producer_said`, `carrier.withheld` and the other `side.*` keys, with
+  `verdict.<value>`. A host's entries are layered over the defaults key by key.
+- **Tests:** `ts/test/show-evidence.test.ts` runs the script over contexts built by
+  agent-action-capsule's own verifier. Its golden comes from evidencebook's committed
+  VALID `4-monthly-outcome` bundle. The negative cases cover a digest that is not in
+  the bundle, a withheld record, a mismatched disclosure and `analysis` and `story`
+  carriers.
+
 ## Evidence report page
 
 `capsule_viewer.evidence_report` renders one readable, offline HTML page from
