@@ -214,7 +214,7 @@ describe("checkedSummaryLine", () => {
         },
       }),
     ).toBe(
-      "10 of 10 checks passed · 7 records · checkpoint signature, producer signatures not checked here",
+      "10 of 10 checks passed · 7 records · checkpoint signature and producer signatures not checked here",
     );
   });
 
@@ -243,6 +243,18 @@ describe("checkedSummaryLine", () => {
     );
     expect(summary(true, { failed: [], notChecked: [] })).toBe(
       "10 of 10 checks passed · 1 record",
+    );
+    expect(
+      summary(true, {
+        failed: [],
+        notChecked: [
+          "checkpoint-signature",
+          "producer-signatures",
+          "countersignatures",
+        ],
+      }),
+    ).toBe(
+      "10 of 10 checks passed · 1 record · checkpoint signature, producer signatures and countersignatures not checked here",
     );
     // A signature check that failed is counted as failed, and said nowhere
     // as not checked, whichever other one is not checked.
