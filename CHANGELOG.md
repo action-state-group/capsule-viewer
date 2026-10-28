@@ -71,8 +71,8 @@ here. The format follows
   `JSON.parse` (the emitter shell and the Go emitter's `shell.html`;
   capsule-viewer#109). The page used to write the bundle as a JavaScript
   object literal, where a `"__proto__"` member became the object's prototype:
-  the page verified the bundle without that member and could show its fields
-  as the record's own. It now verifies and shows what any JSON reader sees.
+  the page verified the bundle without that member, yet could show the
+  member's fields as if the record carried them. It now verifies and shows what any JSON reader sees.
   `window.__BUNDLE__` is still set before the bootstrap runs, so bootstraps
   that pass it keep working. Code that extracts the bundle from a page by the
   text `window.__BUNDLE__ = …;` must read the JSON element instead.
