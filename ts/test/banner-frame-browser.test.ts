@@ -473,6 +473,29 @@ for (const setting of SETTINGS)
         });
       }
 
+      for (const [css, pageCss] of [
+        // Paint containment clips as overflow does.
+        ["#host{height:0}", "#host{contain:paint;height:400px}"],
+        // A short clipping box, shrunk to nothing.
+        [
+          ".cv-pill{height:0}",
+          ".cv-pill{display:inline-block;overflow:hidden;height:16px;line-height:16px}",
+        ],
+      ] as const)
+        it(`one that adds ${css} on a host with ${pageCss} is discarded`, async () => {
+          expect(await kept(css, pageCss)).toBe(false);
+        });
+
+      it("one renders while a reader scrolls the page under a fixed host", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{color:red}",
+            "#host{position:fixed;top:0;left:0;right:0}body{padding-bottom:3000px}",
+            ["html", 300, 0],
+          ),
+        ).toBe(true);
+      });
+
       it("one that clips the pill inside a host's clipping rule is discarded", async () => {
         expect(
           await kept(
@@ -515,6 +538,21 @@ for (const setting of SETTINGS)
           ),
         ).toBe(true);
       });
+
+      // At page zoom 50% a classic scrollbar moves the auto side margins by
+      // more than their slack, which fails closed with or without the
+      // clipping ancestor (#116).
+      it.skipIf(setting.css === "html{zoom:.5}")(
+        "one that makes the page scroll renders inside a clipping ancestor",
+        async () => {
+          expect(
+            await kept(
+              "[data-test-module]{height:3000px}",
+              "body{overflow-x:hidden}",
+            ),
+          ).toBe(true);
+        },
+      );
 
       it("one that makes a full-width host's page scroll renders", async () => {
         expect(

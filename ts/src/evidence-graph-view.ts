@@ -2764,7 +2764,11 @@ type FrameLook = {
   readonly offsets: readonly number[];
   readonly place: readonly [number, number];
   readonly readable: "yes" | "no" | "unseen";
-  readonly clips: readonly number[];
+  readonly clips: readonly {
+    readonly width: number;
+    readonly height: number;
+    readonly bar: boolean;
+  }[];
 };
 // `a` is the frame now, `b` as it was before the module rendered. Words a
 // reader sees where the page is now must not be covered or clipped (see
@@ -2774,7 +2778,12 @@ const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.look === b.look &&
   (a.readable !== "no" || b.readable === "no") &&
   a.clips.length === b.clips.length &&
-  a.clips.every((size, i) => size >= b.clips[i]! - 2 * SIDE_MARGIN_SLACK) &&
+  a.clips.every(
+    (box, i) =>
+      box.width >= b.clips[i]!.width - 2 * SIDE_MARGIN_SLACK &&
+      box.height >=
+        b.clips[i]!.height - (b.clips[i]!.bar ? 2 * SIDE_MARGIN_SLACK : 1),
+  ) &&
   Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK &&
   a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
   a.offsets.length === b.offsets.length &&
@@ -3013,6 +3022,23 @@ function scaleArgs(value: string): string {
   return `${x},${y},${z}`;
 }
 
+// Whether a box is the containing block of a `position: fixed` box inside
+// it, in place of the viewport.
+function holdsFixed(style: CSSStyleDeclaration): boolean {
+  return (
+    style.transform !== "none" ||
+    style.translate !== "none" ||
+    style.rotate !== "none" ||
+    style.scale !== "none" ||
+    style.perspective !== "none" ||
+    style.filter !== "none" ||
+    style.backdropFilter !== "none" ||
+    /paint|layout|strict|content/.test(style.contain) ||
+    /transform|perspective|filter/.test(style.willChange) ||
+    style.containerType !== "normal"
+  );
+}
+
 // Resolves after the next frame and then the timers already due. A page
 // that is not shown draws no frames, so a timer stands in for the frame
 // there.
@@ -3242,32 +3268,62 @@ async function renderVerifiedContext(
     // change; the viewport's own is in viewport px already.
     const box = parts[0]!.getBoundingClientRect();
     const place: [number, number] = [box.left, box.top];
+    // A box with `position: fixed` stays put while the boxes between it and
+    // its containing block scroll (the viewport, or the nearest ancestor that
+    // makes one for it), so their offsets are left out.
+    let fixed = false;
     for (let at = parts[0]!.parentElement; at !== null; at = at.parentElement) {
-      if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
-      const move =
-        at === root.ownerDocument.scrollingElement || jsdom
-          ? { x: at.scrollLeft, y: at.scrollTop }
-          : linearTransform(at, view).transformPoint({
-              x: at.scrollLeft,
-              y: at.scrollTop,
-            });
-      place[0] += move.x;
-      place[1] += move.y;
+      const style = jsdom ? undefined : view.getComputedStyle(at);
+      if (fixed && style !== undefined && holdsFixed(style)) fixed = false;
+      if (!fixed && (at.scrollLeft !== 0 || at.scrollTop !== 0)) {
+        const move =
+          at === root.ownerDocument.scrollingElement || jsdom
+            ? { x: at.scrollLeft, y: at.scrollTop }
+            : linearTransform(at, view).transformPoint({
+                x: at.scrollLeft,
+                y: at.scrollTop,
+              });
+        place[0] += move.x;
+        place[1] += move.y;
+      }
+      if (style?.position === "fixed") fixed = true;
     }
     const words = readable(parts, root);
     // The visible size of every box that clips the banner, from <html> down
     // to the banner's own elements: a module that shrinks one (a scrolling
     // host's height set to 0) clips the banner wherever the reader has
     // scrolled. Which boxes clip is compared exactly (`overflow` and
-    // `contain` are in the looks); a size may shrink by one assumed classic
-    // scrollbar, as when the page or the box itself grows one.
+    // `contain` are in the looks). A width may shrink by one assumed classic
+    // scrollbar, as when the page or the box itself grows one, and a height
+    // only where the box can grow one across its bottom. The size is
+    // mapped into viewport px through the transforms on and above the box,
+    // which no module can change.
     const clips = jsdom
       ? []
       : elements.flatMap((element) => {
           const style = view.getComputedStyle(element);
-          return style.overflowX === "visible" && style.overflowY === "visible"
-            ? []
-            : [element.clientWidth, element.clientHeight];
+          if (
+            style.overflowX === "visible" &&
+            style.overflowY === "visible" &&
+            !/paint|strict|content/.test(style.contain) &&
+            style.contentVisibility !== "auto"
+          )
+            return [];
+          // In viewport px, as the slack is: under a page zoom a scrollbar
+          // takes more of a box's own px.
+          const matrix = linearTransform(element, view);
+          const across = matrix.transformPoint({ x: element.clientWidth });
+          const down = matrix.transformPoint({ y: element.clientHeight });
+          return [
+            {
+              width: Math.hypot(across.x, across.y),
+              height: Math.hypot(down.x, down.y),
+              // Only a box that scrolls sideways can grow a scrollbar of
+              // its own across its bottom; any other box's height a page's
+              // scrollbar leaves alone.
+              bar: ["auto", "scroll"].includes(style.overflowX),
+            },
+          ];
         });
     root.classList.toggle("cv-shell-chrome", had);
     return { look: seen, offsets, place, readable: words, clips };
