@@ -3,11 +3,10 @@
 # github.com/action-state-group/capsule-viewer/go (see RELEASING.md).
 #
 # The module version exists as soon as an admin pushes the tag; this workflow
-# checks it and publishes the page runtime it ships as release assets, so a
-# reader without Go can fetch and verify the same bytes. It refuses a tag whose
-# commit is not on main, whose runtime is not the one built at
-# pageruntime.Commit, or whose runtime states a viewer version other than the
-# tag's. The assets get a GitHub build provenance attestation, verifiable with
+# checks it with scripts/go-release-check.sh, which the admin runs before
+# pushing too, and publishes the page runtime the module ships as release
+# assets, so a reader without Go can fetch and verify the same bytes. The
+# assets get a GitHub build provenance attestation, verifiable with
 #   gh attestation verify FILE --repo action-state-group/capsule-viewer \
 #     --signer-workflow action-state-group/capsule-viewer/.github/workflows/release-go.yml
 # and the attestation bundle is published as pageruntime-v<version>.sigstore.json.
@@ -24,9 +23,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  # The check installs and runs npm and Go code, so it holds no write or OIDC
+  # permission. The assets are committed files, not its outputs.
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache: false
+      - name: Check the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: scripts/go-release-check.sh "${TAG#go/v}"
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       TAG: ${{ github.ref_name }}
     permissions:
@@ -36,39 +61,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Check the tag, its commit and the version the runtime states
-        run: |
-          VERSION="${TAG#go/v}"
-          printf '%s\n' "$VERSION" | grep -Eqx '(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?' \
-            || { echo "::error::$TAG is not go/v<major>.<minor>.<patch>[-<pre-release>]"; exit 1; }
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
-            || { echo "::error::$TAG is on $GITHUB_SHA, which is not on main"; exit 1; }
-          # A viewer release X is ts/vX and go/vX: the runtime this module
-          # ships must say it is viewer X, the version its pages state.
-          grep -Fq "viewerVersion: \"$VERSION\"," go/pageruntime/evidence-graph.iife.js \
-            || { echo "::error::go/pageruntime/evidence-graph.iife.js does not state viewerVersion $VERSION; set ts/package.json to $VERSION and refresh the runtime first"; exit 1; }
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          package-manager-cache: false
-      - name: Rebuild the runtime at pageruntime.Commit and compare
-        run: scripts/pageruntime.sh
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go/go.mod
-          cache: false
-      - name: Vet and test the module
-        working-directory: go
-        run: |
-          go vet ./...
-          go test ./...
       - name: Stage the release assets
         run: |
+          echo "VERSION=${TAG#go/v}" >> "$GITHUB_ENV"
           mkdir dist
           cp go/pageruntime/evidence-graph.iife.js go/pageruntime/evidence-graph.iife.js.sha256 \
+            go/pageruntime/NOTICE go/pageruntime/THIRD_PARTY_NOTICES.md \
             go/emitter/runtime-style-hashes.txt dist/
           echo "SHA256=$(cat dist/evidence-graph.iife.js.sha256)" >> "$GITHUB_ENV"
           echo "RUNTIME_COMMIT=$(sed -n 's/^const Commit = "\([0-9a-f]\{40\}\)"$/\1/p' go/pageruntime/pageruntime.go)" >> "$GITHUB_ENV"
@@ -101,5 +100,5 @@ jobs:
           else
             gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" \
               --title "$TAG" \
-              --notes "Go module github.com/action-state-group/capsule-viewer/go v$VERSION, viewer $VERSION. Its page runtime (go/pageruntime) is evidence-graph.iife.js, sha256 $SHA256, built at $RUNTIME_COMMIT; runtime-style-hashes.txt lists the CSP hashes of the styles it inserts. Check the build attestation with no GitHub account: gh attestation verify FILE --bundle pageruntime-v$VERSION.sigstore.json --repo $GITHUB_REPOSITORY --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release-go.yml. See CHANGELOG.md."
+              --notes "Go module github.com/action-state-group/capsule-viewer/go v$VERSION, viewer $VERSION. Its page runtime (go/pageruntime) is evidence-graph.iife.js, sha256 $SHA256, built at $RUNTIME_COMMIT (ts/v$VERSION), the same bytes as the npm release's dist/evidence-graph.iife.js; NOTICE and THIRD_PARTY_NOTICES.md carry its licenses; runtime-style-hashes.txt lists the CSP hashes of the styles it inserts. Check the build attestation with no GitHub account: gh attestation verify FILE --bundle pageruntime-v$VERSION.sigstore.json --repo $GITHUB_REPOSITORY --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release-go.yml. See CHANGELOG.md."
           fi
