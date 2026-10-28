@@ -60,7 +60,7 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    its manifest version and that the commit is on `main`, runs `npm run check`,
    then uploads through OIDC trusted publishing from its environment. Confirm
    the run and the new version on the registry.
-5. **Ship the runtime in Go.** For `ts`, on a clean checkout of the new
+5. **Ship the runtime in Go.** On a clean checkout of the new
    `ts/v<version>` tag, run `scripts/pageruntime.sh --write`, commit the
    refreshed `go/pageruntime` on a branch and merge it as a pull request
    (see [Go](#go)).
@@ -143,13 +143,22 @@ refreshes on the merged `ts/v<version>` commit.
 
 ## Pinning a viewer release
 
-- **capsulectl** (through capsule-cli and evidencebook's `report`) requires
-  `github.com/action-state-group/capsule-viewer/go v<version>` in `go.mod`;
-  `go.sum` then holds the module's hash, which the Go checksum database fixes
-  for the tag. It passes `pageruntime.IIFE` with `pageruntime.SHA256` as the
-  emitter's `CoreRuntimeSHA256`, so the emitter re-checks the runtime against
-  its digest on every page it builds.
-- **The evidence-network loop** names the viewer in its `versions.lock` as
+Go consumers pin `go/v<version>`; npm consumers pin `<version>`. Both carry the
+same page runtime. Today no consumer pins a viewer release: capsule-cli embeds
+its own build of the runtime, which evidencebook's `report` passes on. The
+switches are planned:
+
+- **capsulectl**, through capsule-cli
+  ([capsule-cli#472](https://github.com/action-state-group/capsule-cli/issues/472))
+  and evidencebook's `report`
+  ([evidencebook#152](https://github.com/action-state-group/evidencebook/issues/152)),
+  will require `github.com/action-state-group/capsule-viewer/go v<version>` in
+  `go.mod`. `go.sum` then holds the module's hash, which the Go checksum
+  database fixes for the tag. Passing `pageruntime.IIFE` with
+  `pageruntime.SHA256` as the emitter's `CoreRuntimeSHA256` makes the emitter
+  re-check the runtime against its digest on every page it builds.
+- **The evidence-network loop** has no viewer line in its `versions.lock` yet.
+  Once capsulectl pins a release, it can name it as
   `capsule-viewer action-state-group/capsule-viewer go/v<version>`, the version
   the capsulectl it pins requires. The Release's assets let a check without Go
   compare a page's runtime with the release.
