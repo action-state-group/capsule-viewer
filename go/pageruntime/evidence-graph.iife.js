@@ -10118,21 +10118,9 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
     const s = scope;
     return `
 ${s}{--inset:clamp(20px,5vw,56px)}
-${s} .mockmark{display:inline-block;margin:8px 0 0;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45;text-align:left}
 ${s} .front-card{background:#fff;max-width:1080px;margin:0 auto 16px;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset)}
 ${s} .prov-row{padding-bottom:16px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 ${s} .front-card > .prov-row:last-child{padding-bottom:0;margin-bottom:0;border-bottom:0}
-${s} .agg{margin:8px 0 28px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4}
-${s} .agg-line{font-size:14px;margin:0 0 12px;color:var(--ink)}
-${s} .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-${s} .agg-bucket{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff}
-${s} .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
-${s} .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
-${s} .agg .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
-${s} .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
-${s} .agg-bucket.met b{color:var(--ok)}
-${s} .agg-bucket.not_met b{color:var(--bad)}
-${s} .agg-bucket.not_evaluable b{color:#5F6672}
 ${s} .findings{border:1px solid var(--line);border-left:4px solid var(--gold,#E8A33D);background:#FFFBF2;border-radius:var(--r);padding:32px calc(var(--inset) - 3px);margin:0 0 16px}
 ${s} .findings h2{font-size:19px;margin:4px 0 10px}
 ${s} .plabel{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A0B}
@@ -10156,7 +10144,7 @@ ${s} .anchor{background:var(--cream);border-radius:8px;padding:8px 10px;font-siz
 ${s} .anchor .k{display:block;color:var(--slate);margin-bottom:2px}
 ${s} .anchor code{font-size:11px;word-break:break-all}
 ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.6}
-@media (max-width:640px){${s} .front-card{padding:24px var(--inset)}${s} .agg-buckets{grid-template-columns:minmax(0,1fr)}${s} .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}${s} .agg-bucket b{font-size:22px}}
+@media (max-width:640px){${s} .front-card{padding:24px var(--inset)}}
 `;
   }
 
@@ -10245,7 +10233,6 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
 .cc .l0-card .hd{background:transparent;color:var(--ink);padding:0;margin:0 0 24px;border-radius:0}
 .cc .l0-card .hd h1{color:var(--navy);font-size:30px;margin:0}
 .cc .l0-card .hd .sub{color:var(--slate);margin-top:8px}
-.cc .l0-card section.agg{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0}
 .cc > section{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset);margin:0 0 16px}
 .cc > section.findings{padding:32px calc(var(--inset) - 3px)}
 @media (min-width:821px){.cc table.grid th{white-space:nowrap}}
@@ -10465,10 +10452,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("3fe9ad7b0737dcf96637c7ab9df8bbf6d359eddd");
+    return commitPrefix("a471cba57b5045e57ed0d13bbce65210c95e9052");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.3.0",
@@ -10954,6 +10941,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.bucket.not_met": "Not met (evaluations)",
       "front.agg.bucket.not_evaluable": "Not evaluable (evaluations)",
       "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
+      "front.agg.of": "of {n}",
       "front.check.h": "Check this report yourself",
       "front.check.key": "Producer key",
       "front.check.log": "Log",
@@ -11251,6 +11239,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.bucket.not_met": "Not met (evaluations)",
       "front.agg.bucket.not_evaluable": "Not evaluable (evaluations)",
       "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
+      "front.agg.of": "of {n}",
       "front.check.h": "Check this report yourself",
       "front.check.key": "Producer key",
       "front.check.log": "Log",
@@ -11329,6 +11318,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   var HAS_NON_SPACE = /\S/u;
   var HAS_LETTER = /\p{L}/u;
   var DIGIT_LIKE = /[oil]/gu;
+  var CORE_STRIP_KEY = /^front\.agg\./u;
+  var PERCENT = /[%٪‰]|per\s*cent|percentage/iu;
   var SECTION3_ENUMS = Object.freeze({
     verdict: ["met", "not_met", "not_evaluable", "out_of_scope"],
     tier: TIERS.map((v) => v.toLowerCase()),
@@ -12008,6 +11999,10 @@ ${key}`);
           );
         continue;
       }
+      if (CORE_STRIP_KEY.test(key) && PERCENT.test(text2.replace(PLACEHOLDER, "").normalize("NFKC")))
+        problems.push(
+          `${key} is drawn in the core strip, which shows counts and never a percentage`
+        );
       const want = placeholders(base);
       const got = placeholders(text2);
       if (want.join(" ") !== got.join(" "))
@@ -12078,8 +12073,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "7065032ca2818ad967a35eaa1dd8c6da43a84861c3babc6446afd24db488dbc0",
-    groups: "37f9e5df13bfb85f3c44ecd13fe0b19265e661e9e4c4e5f6d471c7f27c9d93c1"
+    lines: "623ff73bc077b83cf0a59a345642d3e77a5fac50911257c2ea56e4946d533b0d",
+    groups: "5bbe7a1a6f57e02daabbcddfee23c0e432c41632859b3185d08b890f0d116a42"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -12557,131 +12552,13 @@ ${key}`);
     if (text2 !== void 0) node.textContent = text2;
     return node;
   }
-  var fmt2 = (n) => n.toLocaleString("en-US");
-  function mismatchMarker(result, field, w) {
-    const mismatch = result.countMismatches.find(
-      (entry) => entry.field === field
-    );
-    if (mismatch === void 0) return void 0;
-    const marker = el2(
-      "span",
-      "count mismatch",
-      w.t("front.agg.mismatch", { recomputed: fmt2(mismatch.recomputed) })
-    );
-    marker.dataset.countMismatch = field;
-    marker.dataset.stated = String(mismatch.stated);
-    marker.dataset.recomputed = String(mismatch.recomputed);
-    return marker;
-  }
-  function renderMockJudgeLine(tally, w) {
-    if (!judgedByMock(tally)) return void 0;
-    const line = el2("p", "mockmark", w.t("front.mock"));
-    line.dataset.section = "mock-judge";
-    return line;
-  }
-  function placeMockMark(header, mark) {
-    if (mark === void 0) return;
-    const title = header.querySelector("h1");
-    if (title === null) header.prepend(mark);
-    else title.after(mark);
-  }
   function leadWithProvenance(host, section, provenance) {
     const row2 = el2("div", "prov-row");
     row2.append(provenance);
     if (section === null) host.prepend(frontCard(row2));
     else section.prepend(row2);
   }
-  function renderAggregate(result, w) {
-    const section = el2("section", "agg");
-    section.dataset.section = "aggregate";
-    const stated = result.statedCoverage;
-    const requirements = new Set(
-      result.claims.filter((claim) => !claim.later).map(
-        (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
-      )
-    ).size;
-    const line = el2("p", "agg-line");
-    const marked = (text2, field) => {
-      line.append(text2);
-      const marker = mismatchMarker(result, field, w);
-      if (marker !== void 0) line.append(" ", marker);
-    };
-    marked(
-      w.t("front.agg.evaluated", {
-        evaluations: w.p("front.agg.evaluations", stated.evaluatedPopulation, {
-          n: fmt2(stated.evaluatedPopulation)
-        }),
-        requirements: w.p("front.agg.requirements", requirements, {
-          n: fmt2(requirements)
-        })
-      }),
-      "evaluated_population"
-    );
-    line.append(
-      " \xB7 ",
-      w.t("front.agg.excluded", {
-        excluded: fmt2(stated.excludedNotApplicable)
-      }),
-      " \xB7 "
-    );
-    marked(
-      w.p("front.agg.unknown", stated.unknownCount, {
-        n: fmt2(stated.unknownCount)
-      }),
-      "unknown_count"
-    );
-    const later = stated.notYetInForce;
-    if (later !== void 0 || result.countMismatches.some((m) => m.field === "not_yet_in_force")) {
-      line.append(" \xB7 ");
-      marked(
-        w.p("front.agg.later", later ?? 0, { n: fmt2(later ?? 0) }),
-        "not_yet_in_force"
-      );
-      line.dataset.notYetInForce = String(later ?? 0);
-    }
-    line.dataset.evaluated = String(stated.evaluatedPopulation);
-    line.dataset.requirements = String(requirements);
-    line.dataset.excluded = String(stated.excludedNotApplicable);
-    line.dataset.unknown = String(stated.unknownCount);
-    section.append(line);
-    const buckets = el2("div", "agg-buckets");
-    const entries = [
-      ["met", result.buckets.met, "buckets.met"],
-      ["not_met", result.buckets.notMet, "buckets.not_met"],
-      ["not_evaluable", result.buckets.notEvaluable, "buckets.not_evaluable"],
-      ["out_of_scope", result.buckets.outOfScope, "buckets.out_of_scope"]
-    ];
-    for (const [verdict2, ids, field] of entries) {
-      if (ids === void 0) continue;
-      const box = el2("div", `agg-bucket ${verdict2}`);
-      box.dataset.bucket = verdict2;
-      box.dataset.count = String(ids.length);
-      box.append(el2("b", "", fmt2(ids.length)));
-      box.append(el2("span", "", w.t(`front.agg.bucket.${verdict2}`)));
-      const marker = mismatchMarker(result, field, w);
-      if (marker !== void 0) box.append(marker);
-      buckets.append(box);
-    }
-    section.append(buckets);
-    const dated = result.claims.some((claim) => claim.appliesFrom !== void 0);
-    const switched = result.buckets.outOfScope !== void 0;
-    if (dated || switched) {
-      const copied = el2("p", "agg-note");
-      if (dated) {
-        const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
-        copied.append(w.t("front.agg.as-of", { date }), " ");
-        copied.dataset.asOf = date;
-      }
-      copied.append(
-        w.t(
-          dated && switched ? "front.agg.copied.both" : dated ? "front.agg.copied.dates" : "front.agg.copied.switch"
-        )
-      );
-      copied.dataset.copiedFacts = "contract";
-      section.append(copied);
-    }
-    return section;
-  }
+  var fmt2 = (n) => n.toLocaleString("en-US");
   function bundleObject(bundle) {
     return typeof bundle === "object" && bundle !== null && !Array.isArray(bundle) ? bundle : {};
   }
@@ -14168,19 +14045,11 @@ ${key}`);
     const claims = model.conversations.flatMap(
       (c) => c.criteria.flatMap((cr) => cr.claim === void 0 ? [] : [cr.claim])
     );
-    const mock = renderMockJudgeLine(
-      await tallyJudges(result.records, claims),
-      w
-    );
     const sheet = el3("div", "sheet");
     const pad = el3("div", "pad");
     const notes = el3("aside", "footnotes");
     notes.dataset.section = "footnotes";
     renderMeta(pad, model, w, notes);
-    const title = pad.querySelector(".ih-title");
-    if (title !== null) placeMockMark(title, mock);
-    else if (mock !== void 0) pad.prepend(mock);
-    pad.append(renderAggregate(result, w));
     renderLines(pad, model, runInfo, w, notes);
     if (notes.childElementCount > 0) pad.append(notes);
     sheet.append(pad);
@@ -14954,16 +14823,8 @@ ${key}`);
     const claims = model.sessions.flatMap(
       (s) => s.tests.flatMap((t) => t.claim === void 0 ? [] : [t.claim])
     );
-    const mock = renderMockJudgeLine(
-      await tallyJudges(result.records, claims),
-      w
-    );
     const sheet = el4("div", "l0-card");
     renderHeader(sheet, model, w);
-    const header = sheet.querySelector(".hd");
-    if (header !== null) placeMockMark(header, mock);
-    else if (mock !== void 0) sheet.prepend(mock);
-    sheet.append(renderAggregate(result, w));
     levels.L0.append(sheet);
     renderSummary(levels.L1, model, presentation, w);
     leadWithProvenance(
@@ -15311,6 +15172,159 @@ ${key}`);
     },
     render: renderComposed
   };
+
+  // src/core-strip.ts
+  var CORE_STRIP_ATTRIBUTE = "data-core-strip";
+  var CORE_STRIP_CSS = `
+.cv-strip{${OUTCOME_FRAME_VARS}max-width:1080px;margin:0 auto 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
+.cv-strip .agg-line{font-size:14px;margin:0 0 12px}
+.cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.cv-strip .agg-bucket{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff}
+.cv-strip .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.cv-strip .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
+.cv-strip .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
+.cv-strip .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
+.cv-strip .agg-bucket.met b{color:var(--ok)}
+.cv-strip .agg-bucket.not_met b{color:var(--bad)}
+.cv-strip .agg-bucket.not_evaluable b{color:#5F6672}
+@media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
+@media print{.cv-strip{break-inside:avoid}}
+`;
+  function el5(tag, className, text2) {
+    const node = document.createElement(tag);
+    if (className !== "") node.className = className;
+    if (text2 !== void 0) node.textContent = text2;
+    return node;
+  }
+  var fmt4 = (n) => n.toLocaleString("en-US");
+  function mismatchMarker(result, field, w) {
+    const mismatch = result.countMismatches.find(
+      (entry) => entry.field === field
+    );
+    if (mismatch === void 0) return void 0;
+    const marker = el5(
+      "span",
+      "count mismatch",
+      w.t("front.agg.mismatch", { recomputed: fmt4(mismatch.recomputed) })
+    );
+    marker.dataset.countMismatch = field;
+    marker.dataset.stated = String(mismatch.stated);
+    marker.dataset.recomputed = String(mismatch.recomputed);
+    return marker;
+  }
+  function renderAggregate(result, w) {
+    const out = document.createDocumentFragment();
+    const stated = result.statedCoverage;
+    const requirements = new Set(
+      result.claims.filter((claim) => !claim.later).map(
+        (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
+      )
+    ).size;
+    const line = el5("p", "agg-line");
+    const marked = (text2, field) => {
+      line.append(text2);
+      const marker = mismatchMarker(result, field, w);
+      if (marker !== void 0) line.append(" ", marker);
+    };
+    marked(
+      w.t("front.agg.evaluated", {
+        evaluations: w.p("front.agg.evaluations", stated.evaluatedPopulation, {
+          n: fmt4(stated.evaluatedPopulation)
+        }),
+        requirements: w.p("front.agg.requirements", requirements, {
+          n: fmt4(requirements)
+        })
+      }),
+      "evaluated_population"
+    );
+    line.append(
+      " \xB7 ",
+      w.t("front.agg.excluded", {
+        excluded: fmt4(stated.excludedNotApplicable)
+      }),
+      " \xB7 "
+    );
+    marked(
+      w.p("front.agg.unknown", stated.unknownCount, {
+        n: fmt4(stated.unknownCount)
+      }),
+      "unknown_count"
+    );
+    const later = stated.notYetInForce;
+    if (later !== void 0 || result.countMismatches.some((m) => m.field === "not_yet_in_force")) {
+      line.append(" \xB7 ");
+      marked(
+        w.p("front.agg.later", later ?? 0, { n: fmt4(later ?? 0) }),
+        "not_yet_in_force"
+      );
+      line.dataset.notYetInForce = String(later ?? 0);
+    }
+    line.dataset.evaluated = String(stated.evaluatedPopulation);
+    line.dataset.requirements = String(requirements);
+    line.dataset.excluded = String(stated.excludedNotApplicable);
+    line.dataset.unknown = String(stated.unknownCount);
+    out.append(line);
+    const buckets = el5("div", "agg-buckets");
+    const of = w.t("front.agg.of", { n: fmt4(stated.evaluatedPopulation) });
+    const entries = [
+      ["met", result.buckets.met, "buckets.met"],
+      ["not_met", result.buckets.notMet, "buckets.not_met"],
+      ["not_evaluable", result.buckets.notEvaluable, "buckets.not_evaluable"],
+      ["out_of_scope", result.buckets.outOfScope, "buckets.out_of_scope"]
+    ];
+    for (const [verdict2, ids, field] of entries) {
+      if (ids === void 0) continue;
+      const box = el5("div", `agg-bucket ${verdict2}`);
+      box.dataset.bucket = verdict2;
+      box.dataset.count = String(ids.length);
+      box.dataset.of = String(stated.evaluatedPopulation);
+      box.append(el5("b", "", fmt4(ids.length)));
+      box.append(el5("span", "", w.t(`front.agg.bucket.${verdict2}`)));
+      box.append(el5("span", "agg-of", of));
+      const marker = mismatchMarker(result, field, w);
+      if (marker !== void 0) box.append(marker);
+      buckets.append(box);
+    }
+    out.append(buckets);
+    const dated = result.claims.some((claim) => claim.appliesFrom !== void 0);
+    const switched = result.buckets.outOfScope !== void 0;
+    if (dated || switched) {
+      const copied = el5("p", "agg-note");
+      if (dated) {
+        const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
+        copied.append(w.t("front.agg.as-of", { date }), " ");
+        copied.dataset.asOf = date;
+      }
+      copied.append(
+        w.t(
+          dated && switched ? "front.agg.copied.both" : dated ? "front.agg.copied.dates" : "front.agg.copied.switch"
+        )
+      );
+      copied.dataset.copiedFacts = "contract";
+      out.append(copied);
+    }
+    return out;
+  }
+  async function coreStripModel(result, words) {
+    const tally = await tallyJudges(result.records, result.claims);
+    return { result, words, mock: judgedByMock(tally) };
+  }
+  function renderCoreStrip(model) {
+    const strip = el5("section", "cv-strip");
+    strip.setAttribute(CORE_STRIP_ATTRIBUTE, "");
+    strip.dataset.section = "aggregate";
+    const style = document.createElement("style");
+    style.textContent = CORE_STRIP_CSS;
+    strip.append(style);
+    if (model.mock) {
+      const mark = el5("p", "mockmark", model.words.t("front.mock"));
+      mark.dataset.section = "mock-judge";
+      strip.append(mark);
+    }
+    strip.append(renderAggregate(model.result, model.words));
+    return strip;
+  }
 
   // src/record-content.ts
   var isObject3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -15905,8 +15919,6 @@ ${pad.repeat(depth)}`;
     parent2.append(cell);
   }
   var recordsWord2 = (count2) => `${count2} ${count2 === 1 ? "record" : "records"}`;
-  var evaluationsWord = (count2) => `${count2} ${count2 === 1 ? "evaluation" : "evaluations"}`;
-  var requirementsWord = (count2) => `${count2} ${count2 === 1 ? "requirement" : "requirements"}`;
   function renderVerificationBanner(root, model, coverage) {
     const bar = element6("div");
     bar.className = model.state === "failed" ? "cv-shell-bar cv-failed" : model.state === "incomplete" ? "cv-shell-bar cv-incomplete" : "cv-shell-bar";
@@ -17075,55 +17087,13 @@ ${pad.repeat(depth)}`;
     // ER section 4.2: drawn only when the Result carries the fourth bucket.
     ["outOfScope", "out of scope", "buckets.out_of_scope"]
   ];
+  var RESULT_COUNT_MARKS = `[${CORE_STRIP_ATTRIBUTE}], .cv-strip, [data-bucket], [data-bucket-count], [data-count-mismatch]`;
   var CARD_UNFIT_NOTE = "This Result's claims don't fit the report layout, so every claim is listed below instead.";
   function renderResultPage(result, root) {
     const section = element6("section");
     section.dataset.page = "result";
     section.append(element6("h1", "Evidence result"));
-    const requirements = new Set(
-      result.claims.filter((claim) => !claim.later).map(
-        (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
-      )
-    ).size;
-    const coverage = element6("p");
-    coverage.append(
-      `coverage: ${evaluationsWord(result.coverage.evaluatedPopulation)} of ${requirementsWord(requirements)}`
-    );
-    const evaluatedMarker = countMismatchMarker(result, "evaluated_population");
-    if (evaluatedMarker !== void 0) coverage.append(" ", evaluatedMarker);
-    coverage.append(
-      ` \xB7 ${result.coverage.excludedNotApplicable} excluded as not applicable \xB7 ${result.coverage.unknownCount} with an unknown result`
-    );
-    const unknownMarker = countMismatchMarker(result, "unknown_count");
-    if (unknownMarker !== void 0) coverage.append(" ", unknownMarker);
     const later = result.claims.filter((claim) => claim.later);
-    const laterMarker = countMismatchMarker(result, "not_yet_in_force");
-    if (later.length > 0 || laterMarker !== void 0) {
-      coverage.append(` \xB7 ${evaluationsWord(later.length)} not yet in force`);
-      if (laterMarker !== void 0) coverage.append(" ", laterMarker);
-      coverage.dataset.notYetInForce = String(later.length);
-    }
-    coverage.dataset.coverage = "result";
-    coverage.dataset.evaluated = String(result.coverage.evaluatedPopulation);
-    coverage.dataset.requirements = String(requirements);
-    coverage.dataset.excluded = String(result.coverage.excludedNotApplicable);
-    coverage.dataset.excludedBasis = "stated";
-    coverage.dataset.unknown = String(result.coverage.unknownCount);
-    section.append(coverage);
-    const dated = result.claims.some((claim) => claim.appliesFrom !== void 0);
-    if (dated || result.buckets.outOfScope !== void 0) {
-      const copied = element6("p");
-      if (dated) {
-        const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
-        copied.append(`In force as of ${date}. `);
-        copied.dataset.asOf = date;
-      }
-      copied.append(
-        dated && result.buckets.outOfScope !== void 0 ? "The dates and the out-of-scope switch are copied from the contract, not re-checked here." : dated ? "The dates are copied from the contract, not re-checked here." : "The out-of-scope switch is copied from the contract, not re-checked here."
-      );
-      copied.dataset.copiedFacts = "contract";
-      section.append(copied);
-    }
     const byId = new Map(result.claims.map((claim) => [claim.id, claim]));
     const buckets = element6("section");
     buckets.dataset.buckets = "verdict";
@@ -17610,9 +17580,72 @@ ${pad.repeat(depth)}`;
     ...BOX_EDGES
   ];
   var ANCESTOR_UNCOMPARED = ["right", "bottom"];
-  var sameLook = (a, b) => a.look === b.look && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every(
+  var sameLook = (a, b) => a.look === b.look && a.latent === b.latent && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every(
     (box, i) => box.width >= b.clips[i].width - 2 * SIDE_MARGIN_SLACK && box.height >= b.clips[i].height - Math.max(0, box.bar - b.clips[i].bar) - 1
-  ) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
+  ) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && Math.abs(a.below - b.below) <= SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
+  function touchesLook(style) {
+    for (let i = 0; i < style.length; i++)
+      if (LOOK_PROPERTIES.has(style[i])) return true;
+    return false;
+  }
+  function latentRules(elements, root, view) {
+    const tree = root.getRootNode();
+    const sheets = [
+      ...root.ownerDocument.styleSheets,
+      ...root.ownerDocument.adoptedStyleSheets ?? [],
+      ...tree === root.ownerDocument ? [] : [...tree.styleSheets, ...tree.adoptedStyleSheets ?? []]
+    ];
+    const now = (query) => query.trim() === "" || query.trim() === "all" || typeof view.matchMedia === "function" && view.matchMedia(query).matches;
+    const found = [];
+    const visit = (rules, latent) => {
+      for (const rule of rules) {
+        const grouped = "cssRules" in rule ? rule.cssRules : void 0;
+        if ("media" in rule && "conditionText" in rule)
+          visit(grouped, latent || !now(rule.conditionText));
+        else if ("selectorText" in rule) {
+          if (latent && touchesLook(rule.style)) {
+            const selector = rule.selectorText.replace(
+              /::?(?:before|after|first-line|first-letter|marker|placeholder|selection|backdrop)\b(?:\([^)]*\))?/gu,
+              ""
+            );
+            let selects = false;
+            try {
+              selects = elements.some(
+                (element7) => element7.matches(selector === "" ? "*" : selector)
+              );
+            } catch {
+              selects = false;
+            }
+            if (selects) found.push(rule.cssText);
+          }
+          if (grouped !== void 0 && grouped.length > 0) visit(grouped, latent);
+        } else if (grouped !== void 0) visit(grouped, latent);
+        else if ("styleSheet" in rule && "media" in rule) {
+          const imported = rule;
+          let rules2;
+          try {
+            rules2 = imported.styleSheet?.cssRules;
+          } catch {
+            rules2 = void 0;
+          }
+          if (rules2 !== void 0)
+            visit(rules2, latent || !now(imported.media.mediaText));
+        }
+      }
+    };
+    for (const sheet of sheets) {
+      let rules;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      const owner = sheet.ownerNode;
+      const media = sheet.media?.mediaText ?? (typeof owner?.getAttribute === "function" ? owner.getAttribute("media") ?? "" : "");
+      visit(rules, !now(media));
+    }
+    return JSON.stringify(found);
+  }
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17650,6 +17683,28 @@ ${pad.repeat(depth)}`;
     "content-visibility",
     "contain"
   ];
+  var LOOK_PROPERTIES = /* @__PURE__ */ new Set([
+    ...FRAME_LOOK,
+    ...ANCESTOR_OFFSETS,
+    ...SIDE_MARGINS,
+    "right",
+    "bottom",
+    "content",
+    // Shorthands, for a CSSOM that keeps them unexpanded (jsdom).
+    "all",
+    "margin",
+    "padding",
+    "border",
+    "border-width",
+    "border-top",
+    "border-right",
+    "border-bottom",
+    "border-left",
+    "inset",
+    "font",
+    "background",
+    "mask"
+  ]);
   var ANCESTOR_LOOK = FRAME_LOOK.filter(
     (name) => name !== "transform" && !ANCESTOR_OFFSETS.includes(name) && !ANCESTOR_UNCOMPARED.includes(name)
   );
@@ -17856,6 +17911,19 @@ ${pad.repeat(depth)}`;
       uncheckpointed: bannerModel.uncheckpointed,
       total: Array.isArray(records) ? records.length : 0
     };
+    let strip;
+    if (verified) {
+      const result = await resultRootOf(context);
+      if (result !== void 0) {
+        const grouping = contractReportGroupingOf(bundle) ?? "lines";
+        strip = await coreStripModel(
+          result,
+          await contractReportWords(grouping, options.wording, {
+            singleContract: citesOneContract(result)
+          })
+        );
+      }
+    }
     const depth = options.depth ?? "L0";
     const region = (name) => {
       const node = document.createElement("div");
@@ -17869,6 +17937,7 @@ ${pad.repeat(depth)}`;
       core: root
     };
     let bar;
+    let stripNode;
     const drawFrame = () => {
       root.replaceChildren();
       root.classList.remove("cv-shell-chrome");
@@ -17880,6 +17949,8 @@ ${pad.repeat(depth)}`;
       L2.append(core, L2module);
       if (verified) {
         regions = { L0: region("L0"), L1: region("L1"), L2: L2module, core };
+        stripNode = strip === void 0 ? void 0 : renderCoreStrip(strip);
+        if (stripNode !== void 0) regions.L0.append(stripNode);
         root.append(regions.L0, regions.L1, L2);
       } else {
         regions = { L0: root, L1: root, L2: L2module, core };
@@ -17899,6 +17970,8 @@ ${pad.repeat(depth)}`;
           look: "",
           offsets: [],
           place: [0, 0],
+          below: 0,
+          latent: "",
           readable: "unseen",
           clips: []
         };
@@ -17910,6 +17983,7 @@ ${pad.repeat(depth)}`;
       const elements = [
         ...ancestors,
         root,
+        ...stripNode === void 0 ? [] : [regions.L0],
         ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")])
       ];
       const jsdom = view2.navigator.userAgent.includes("jsdom");
@@ -17957,6 +18031,8 @@ ${pad.repeat(depth)}`;
         if (style?.position === "fixed") fixed = true;
       }
       const words = readable(parts, root);
+      const strip2 = parts.length > 0 ? parts[parts.length - 1] : void 0;
+      const below = jsdom || strip2 === void 0 || strip2 !== stripNode ? 0 : strip2.getBoundingClientRect().top - box.top;
       const clips = jsdom ? [] : elements.flatMap((element7) => {
         const style = view2.getComputedStyle(element7);
         if (style.overflowX === "visible" && style.overflowY === "visible" && !/paint|strict|content/.test(style.contain) && style.contentVisibility !== "auto")
@@ -17982,8 +18058,17 @@ ${pad.repeat(depth)}`;
           }
         ];
       });
+      const latent = latentRules(elements, root, view2);
       root.classList.toggle("cv-shell-chrome", had);
-      return { look: seen, offsets, place, readable: words, clips };
+      return {
+        look: seen,
+        offsets,
+        place,
+        below,
+        latent,
+        readable: words,
+        clips
+      };
     };
     const frameOf = () => {
       const detail = bar.nextElementSibling;
@@ -17991,17 +18076,24 @@ ${pad.repeat(depth)}`;
         bar,
         ...detail?.hasAttribute("data-banner-detail") ? [detail] : []
       ];
+      const held = [...parts, ...stripNode === void 0 ? [] : [stripNode]];
       return {
         parts,
+        held,
         header: bar.previousElementSibling,
-        words: snapshot(parts),
+        words: snapshot(held),
         looks: {
-          plain: looks(parts, false),
-          chrome: looks(parts, true)
+          plain: looks(held, false),
+          chrome: looks(held, true)
         }
       };
     };
     let frame = selected !== void 0 || section !== void 0 ? frameOf() : void 0;
+    const stripIntact = (last) => {
+      if (stripNode === void 0)
+        return root.querySelector(RESULT_COUNT_MARKS) === null;
+      return regions.L0.parentNode === root && regions.L0.previousSibling === last && regions.L0.firstChild === stripNode && !stripNode.hidden && root.querySelectorAll(`[${CORE_STRIP_ATTRIBUTE}], .cv-strip`).length === 1;
+    };
     const assertFrameIntact = () => {
       const at = frame;
       const [top, detail] = at.parts;
@@ -18012,8 +18104,8 @@ ${pad.repeat(depth)}`;
       const expected = [pill, ...detail === void 0 ? [] : [detail]];
       if (pill === null || banners.length !== expected.length || expected.some((part, i) => banners[i] !== part) || // Nodes, not elements: a bare text node before the banner is words
       // too. The core draws no text node at the root.
-      root.firstChild !== (at.header ?? top) || top.previousSibling !== at.header || at.header !== null && at.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || snapshot(at.parts) !== at.words || !sameLook(
-        looks(at.parts, root.classList.contains("cv-shell-chrome")),
+      root.firstChild !== (at.header ?? top) || top.previousSibling !== at.header || at.header !== null && at.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || !stripIntact(detail ?? top) || snapshot(at.held) !== at.words || !sameLook(
+        looks(at.held, root.classList.contains("cv-shell-chrome")),
         root.classList.contains("cv-shell-chrome") ? at.looks.chrome : at.looks.plain
       ))
         throw new Error("a module altered the verification banner");
