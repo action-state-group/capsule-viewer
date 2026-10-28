@@ -417,7 +417,8 @@ here. The format follows
   grows a classic scrollbar (capsule-viewer#113). A computed `auto` side margin
   is its used width, so the shell's centred page root and bar changed by half
   the scrollbar width; the side margins are now compared to within the
-  change of the page's width (plus 1px) instead of exactly.
+  change of the page's width (plus 1px), capped at the browser's own
+  scrollbar width, instead of exactly.
 
 - The deal receipt modules (Python and the module-slot scripts) read a copy
   whose report capsulectl seals as a standalone record in `x-deal-report/v0`,

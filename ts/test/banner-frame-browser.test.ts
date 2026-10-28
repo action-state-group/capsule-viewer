@@ -40,6 +40,7 @@ describe.skipIf(executablePath === undefined)(
         // Headless Chrome hides scrollbars by default; CI pages meet classic
         // ones, which change the width an auto margin resolves to.
         ignoreDefaultArgs: ["--hide-scrollbars"],
+        args: ["--disable-features=OverlayScrollbar,FluentOverlayScrollbar"],
       });
       const result = await build({
         stdin: {
@@ -152,14 +153,6 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     });
 
-    it("one that makes the page scroll renders with a wide scrollbar (zoomed out)", async () => {
-      expect(
-        await kept(
-          "html::-webkit-scrollbar{width:24px}[data-test-module]{height:3000px}",
-        ),
-      ).toBe(true);
-    });
-
     it("one that makes the page scroll renders where the margin drops to zero", async () => {
       // 10px of room: 5px margins, and none once a 15px scrollbar appears.
       expect(
@@ -182,6 +175,11 @@ describe.skipIf(executablePath === undefined)(
       "#app{margin-left:99vw;margin-right:99vw}",
       ".cv-shell-bar{margin-left:40px}",
       ".cv-shell-bar{margin-left:10px}",
+      // A module widens the scrollbar, or reserves a gutter, to make room for
+      // the shift.
+      "html::-webkit-scrollbar{width:600px}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:550px}",
+      "html{scrollbar-gutter:stable both-edges}.cv-shell-bar{margin-left:550px}",
+      "html::-webkit-scrollbar{width:90vw}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:-90vw}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
     ])
