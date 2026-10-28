@@ -352,6 +352,34 @@ describe("show evidence, negative cases", () => {
     );
   });
 
+  it("marks a later claim's verdict as readiness only", async () => {
+    const result = await buildResultRoot(monthly());
+    const claim = { ...firstOf(result, "met"), later: true };
+    const verdict = draw(result, claim).querySelector(".cv-side-verdict")!;
+    expect(verdict.getAttribute("data-later")).toBe("true");
+    expect(verdict.textContent).toBe(
+      `${SE.WORDS["verdict.met"]} ${SE.WORDS["side.later"]}`,
+    );
+  });
+
+  it("draws a producer-asserted close state apart from a recomputed one", async () => {
+    const result = await buildResultRoot(monthly());
+    const agreed = (derivation: string) =>
+      draw(result, {
+        ...result.claims[0]!,
+        type: "close",
+        close: { state: "AGREED", asserted: "AGREED", derivation },
+      } as never).querySelector("[data-close-state]")!;
+    const asserted = agreed("producer-asserted");
+    const recomputed = agreed("recomputed");
+    expect(asserted.textContent).toContain("close.state: AGREED");
+    expect(asserted.textContent).toContain(
+      "close.derivation: producer-asserted",
+    );
+    expect(recomputed.textContent).toContain("close.derivation: recomputed");
+    expect(asserted.outerHTML).not.toBe(recomputed.outerHTML);
+  });
+
   it("draws each reconcile tally as its own field", async () => {
     const result = await buildResultRoot(monthly());
     const claim = {
@@ -389,6 +417,10 @@ describe("show evidence, negative cases", () => {
     const verdict = draw(result, claim).querySelector(".cv-side-verdict")!;
     expect(verdict.getAttribute("data-verdict-drawn")).toBe("failed");
     expect(verdict.textContent).toBe(SE.WORDS["side.failed"]);
+    // Nothing else in the column says what the verdict would have been.
+    const column = verdict.closest('[data-side="verdict"]')!;
+    expect(column.textContent).not.toContain("sufficiency");
+    expect(column.querySelector('[data-source="producer"]')).toBeNull();
   });
 
   it("draws a book-form Result root's claims", async () => {

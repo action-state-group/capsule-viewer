@@ -27,9 +27,12 @@
 // cited evidence does not all resolve (unsupported), or of a type the reader
 // does not recognize, gets no verdict word, only the reason
 // (agent-action-capsule result-root.ts: such a claim is never shown as met).
-// A typed claim keeps what tells it apart (ER section 4.1): a close claim's
-// state as the reader recomputed it, and the state it asserted when they
-// differ, so UNILATERAL never reads as AGREED; a reconcile claim's tallies,
+// A later claim (applies_from after the Result's date, ER section 4.3) gets
+// its verdict word with side.later: readiness only, never counted. A typed
+// claim keeps what tells it apart (ER section 4.1): a close claim's state,
+// how the reader derived it (recomputed from the links, or only the
+// producer's assertion), and the state it asserted when they differ, so
+// UNILATERAL never reads as AGREED; a reconcile claim's tallies,
 // each its own field, so A_ONLY and B_ONLY never read as CONFLICTING.
 //
 // The carrier decides what is drawn (Evidence Result v0 sections 2 and 6).
@@ -79,6 +82,7 @@
     "side.no_evidence": "This claim cites no evidence.",
     "side.unsupported": "No verdict is drawn: the evidence this claim cites is not all in this bundle.",
     "side.failed": "No verdict is drawn: this claim failed this page's checks.",
+    "side.later": "Readiness only: this requirement was not yet in force on the Result's date, so this verdict is not counted.",
     "side.unrecognized": "No verdict is drawn: this page does not recognize this type of claim.",
     "carrier.withheld": "Withheld: the record is in this bundle, but its content is not disclosed.",
     "verdict.met": "Met",
@@ -139,6 +143,7 @@
       requirement_ref: str(c.requirementRef) || "",
       verdict: str(c.verdict) || "",
       type: str(c.type) || "",
+      later: c.later === true,
       verdict_drawn: c.failed === true ? "failed" : c.recognized === false ? "unrecognized" : c.support === "supported" ? "drawn" : "unsupported",
       tier: str(c.tier) || "",
       grade: str(c.grade) || "",
@@ -149,7 +154,7 @@
     if (str(c.appliesFrom) !== undefined) model.applies_from = c.appliesFrom;
     var close = obj(c.close);
     if (str(close.state) !== undefined) {
-      model.close = { state: close.state };
+      model.close = { state: close.state, derivation: str(close.derivation) || "" };
       if (str(close.asserted) !== undefined && close.asserted !== close.state) model.close.asserted = close.asserted;
     }
     var reconcile = obj(c.reconcile);
@@ -292,17 +297,20 @@
   }
 
   function verdict(doc, w, model) {
-    var verdictWord = model.verdict_drawn !== "drawn" ? w("side." + model.verdict_drawn) : model.verdict ? w("verdict." + model.verdict) : "";
+    var drawn = model.verdict_drawn === "drawn";
+    var verdictWord = !drawn ? w("side." + model.verdict_drawn) : model.verdict ? w("verdict." + model.verdict) : "";
     var col = el(doc, "div", { class: "cv-side-col", "data-side": "verdict" }, [
       word(doc, "h5", {}, w("side.verdict")),
-      word(doc, "p", { class: "cv-side-verdict", "data-verdict": model.verdict, "data-verdict-drawn": model.verdict_drawn }, verdictWord),
+      verdictLine(doc, w, model, verdictWord),
       el(doc, "p", {}, [
         field(doc, "tier", model.tier),
         " · ",
         field(doc, "grade", model.grade),
         " · ",
-        field(doc, "sufficiency", model.sufficiency),
-        " · ",
+        // Sufficiency and the judge's words say what the verdict would have
+        // been: where no verdict is drawn, neither is.
+        drawn ? field(doc, "sufficiency", model.sufficiency) : null,
+        drawn ? " · " : null,
         field(doc, "presentation.kind", model.carrier.kind),
         " · ",
         field(doc, "presentation.status", model.carrier.status),
@@ -311,7 +319,7 @@
     if (model.applies_from !== undefined) col.appendChild(el(doc, "p", {}, [field(doc, "applies_from", model.applies_from)]));
     if (model.type !== "") col.appendChild(el(doc, "p", {}, [field(doc, "type", model.type)]));
     if (model.close !== undefined) {
-      var closeLine = [field(doc, "close.state", model.close.state)];
+      var closeLine = [field(doc, "close.state", model.close.state), " \u00b7 ", field(doc, "close.derivation", model.close.derivation)];
       if (model.close.asserted !== undefined) closeLine.push(" \u00b7 ", field(doc, "close.asserted", model.close.asserted));
       col.appendChild(el(doc, "p", { "data-close-state": model.close.state }, closeLine));
     }
@@ -327,11 +335,22 @@
       }
       col.appendChild(el(doc, "p", { "data-reconcile": "" }, tallyLine));
     }
-    reports(model).forEach(function (e) {
-      var text = str(obj(e.payload)[REPORT_PRODUCER_TEXT]);
-      if (text !== undefined) col.appendChild(producerText(doc, w, text));
-    });
+    if (drawn)
+      reports(model).forEach(function (e) {
+        var text = str(obj(e.payload)[REPORT_PRODUCER_TEXT]);
+        if (text !== undefined) col.appendChild(producerText(doc, w, text));
+      });
     return col;
+  }
+
+  // The verdict word, or the reason there is none; a later claim's verdict
+  // carries side.later.
+  function verdictLine(doc, w, model, verdictWord) {
+    var attrs = { class: "cv-side-verdict", "data-verdict": model.verdict, "data-verdict-drawn": model.verdict_drawn };
+    if (model.later) attrs["data-later"] = "true";
+    var line = word(doc, "p", attrs, verdictWord);
+    if (model.later && model.verdict_drawn === "drawn") line.appendChild(word(doc, "span", { class: "cv-side-later" }, " " + w("side.later")));
+    return line;
   }
 
   // One claim, side by side, as one element for the page's deepest level.
