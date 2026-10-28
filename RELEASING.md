@@ -62,11 +62,13 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    the run and the new version on the registry.
 5. **Ship the runtime in Go.** On a clean checkout of the new
    `ts/v<version>` tag, run `scripts/pageruntime.sh --write`, commit the
-   refreshed `go/pageruntime` on a branch and merge it as a pull request
-   (see [Go](#go)).
+   refreshed `go/pageruntime` on a branch cut from the tag, and merge it as a
+   pull request with a merge commit (see [Go](#go)). Do not rebase the branch
+   or update it from `main`.
 6. **Tag the Go module.** An admin runs
-   `scripts/go-release-check.sh <version>` on that merge commit, then pushes
-   `go/v<version>` on it. [Release · Go](https://github.com/action-state-group/capsule-viewer/actions/workflows/release-go.yml)
+   `scripts/go-release-check.sh <version>` on that pull request's head commit,
+   the tag plus the refresh, then pushes `go/v<version>` on it, not on the
+   merge commit, which carries whatever reached `main` after `ts/v<version>`. [Release · Go](https://github.com/action-state-group/capsule-viewer/actions/workflows/release-go.yml)
    checks it again and publishes its GitHub Release.
 
 Bumping a version by hand in any pull request releases it the same way when it
@@ -106,7 +108,9 @@ on it. The version is fetchable as soon as the tag exists, so a bad release can
 only be withdrawn with a `retract` directive in a later version. The check
 refuses the commit unless it is on `origin/main`, `ts/v<version>` exists, the
 runtime was built at the `ts/v<version>` commit (`pageruntime.Commit`) and
-states `viewerVersion` `<version>`, `scripts/pageruntime.sh` rebuilds it there
+states `viewerVersion` `<version>`, `go/` differs from that commit only by the
+refresh (the runtime, its `.sha256` and `pageruntime.Commit`),
+`scripts/pageruntime.sh` rebuilds it there
 byte for byte, and the module's vet and tests pass.
 
 The tag starts [`release-go.yml`](.github/workflows/release-go.yml)
