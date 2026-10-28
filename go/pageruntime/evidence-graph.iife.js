@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("c12fd023ba9375597907d10b8b4a6a91ac54a1bb");
+    return commitPrefix("7990b47c7d872c702a2e897b5fb97887fdccffd6");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16013,7 +16013,9 @@ ${pad.repeat(depth)}`;
     });
     const others = model.checkLists.notChecked.length - signatures.length;
     if (signatures.length > 0)
-      parts.push(`${signatures.join(", ")} not checked here`);
+      parts.push(
+        `${signatures.length === 1 ? signatures[0] : `${signatures.slice(0, -1).join(", ")} and ${signatures.at(-1)}`} not checked here`
+      );
     if (others > 0)
       parts.push(
         `${others} other ${others === 1 ? "check" : "checks"} not run here`
