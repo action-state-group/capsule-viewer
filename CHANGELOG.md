@@ -39,9 +39,12 @@ here. The format follows
   the Result's count marks is discarded the same way. Those marks are the
   strip, `data-bucket`, `data-bucket-count` and `data-count-mismatch`. The
   frame check also refuses a module stylesheet rule that, in a medium or at
-  a width the page is not rendered in (print, a phone's width), newly
-  selects the banner, the strip or their ancestors. Presentation contract
-  §9.1 and contract-report module §2 say so.
+  a width the page is not rendered in (print, a phone's width), newly sets
+  a property of how the banner or the strip reads (display, visibility,
+  opacity, color, font, position, margins and the like) on them or on an
+  element that contains them. A print color reset or a module's own line
+  height is not refused. Presentation contract §9.1 and contract-report
+  module §2 say so.
 - The strip's stylesheet (`CORE_STRIP_CSS`) joins `CORE_RUNTIME_STYLES`.
   The emitters' CSP, `go/emitter/runtime-style-hashes.txt` and the embedded
   snippet's `styleSources` list one more hash; a host page that pins the
@@ -49,8 +52,8 @@ here. The format follows
 - Both default contract-report wording packs gain `front.agg.of`
   ("of {n}"), so their digests change. A page built with this version
   records the new digests; a supplied pack layered over a default needs no
-  change. A supplied pack is refused if it puts
-  a percentage in any `front.agg.*` word the strip draws.
+  change. A supplied pack is refused if it puts a percentage in any
+  `front.agg.*` word the strip draws.
 - The outcome and EU frame stylesheets drop their aggregate and mock-mark
   rules, so their CSP hashes change.
 

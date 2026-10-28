@@ -690,7 +690,11 @@ section 3). The strip shows no percentage and no single figure, and it is the sa
 format, with scripts off and in print. Nothing a module, a section or a composed layout supplies
 goes above it: a module that puts any node before the strip or between the banner and L0, or that
 changes, moves or hides the strip, is discarded for the refusal like one whose `render` throws
-(section 4.3). A bundle whose root is no Result draws no strip, and a module that draws the
+(section 4.3). That includes a module style rule that does so only in another medium or at
+another width, such as `@media print`: one that sets a property deciding how the banner or the
+strip reads (display, visibility, opacity, color, font, position, margins and the like) on them
+or on an element that contains them. A rule that sets nothing of that kind, such as a print color
+reset, is not refused. A bundle whose root is no Result draws no strip, and a module that draws the
 core's marks of a Result's counts on such a page (the strip, a bucket tally or list, or a
 count-mismatch marker) is discarded the same way. A module's own figures in L0 follow the strip
 and stay traceable to L1.

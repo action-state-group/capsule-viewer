@@ -249,6 +249,23 @@ describe("a module or layout that writes above the strip, or changes it, is disc
       },
     ],
     [
+      "a print-only rule that hides the counts (as the static builder renders, in jsdom)",
+      (host) => {
+        const style = document.createElement("style");
+        style.textContent = "@media print{[data-bucket]{display:none}}";
+        host.L1.append(style);
+      },
+    ],
+    [
+      "a print stylesheet that hides the counts",
+      (host) => {
+        const style = document.createElement("style");
+        style.media = "print";
+        style.textContent = "[data-bucket]{display:none}";
+        host.L1.append(style);
+      },
+    ],
+    [
       "a second strip drawn in L1",
       (host) => {
         const fake = document.createElement("section");
@@ -276,6 +293,19 @@ describe("a module or layout that writes above the strip, or changes it, is disc
         root.querySelectorAll("[data-core-strip], .cv-strip"),
       ).toHaveLength(1);
     });
+
+  it("a module's print rule that sets nothing the frame shows renders", async () => {
+    const root = await render(
+      fixture("result-root-bundle.json"),
+      registryWith((host) => {
+        const style = document.createElement("style");
+        style.textContent =
+          "@media print{*{print-color-adjust:exact;box-shadow:none}}";
+        host.L1.append(style);
+      }),
+    );
+    expect(refused(root)).toBe(false);
+  });
 
   it("a module that writes after the strip renders", async () => {
     const root = await render(

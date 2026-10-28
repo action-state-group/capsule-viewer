@@ -2755,9 +2755,23 @@ const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.offsets.length === b.offsets.length &&
   a.offsets.every((m, i) => Math.abs(m - b.offsets[i]!) <= SIDE_MARGIN_SLACK);
 
+// Whether a rule's declarations set a property the frame's look compares
+// (FRAME_LOOK, the ancestors' offsets, the side margins, a pseudo-element's
+// content). A browser's CSSOM lists a shorthand's longhands, so `margin` or
+// `all` shows up as the properties it sets; the shorthands are in the set
+// too, for one that does not. A rule that sets none of them (a
+// print color reset, a module's own line height) cannot change how the
+// frame reads, here or in any other medium.
+function touchesLook(style: CSSStyleDeclaration): boolean {
+  for (let i = 0; i < style.length; i++)
+    if (LOOK_PROPERTIES.has(style[i]!)) return true;
+  return false;
+}
+
 // The style rules, in every stylesheet the frame's document and tree apply,
 // that sit in a media query the page is not in now (print, another width)
-// and select one of `elements`. The computed look is the frame's in the
+// and select one of `elements` with a property the look compares
+// (touchesLook). The computed look is the frame's in the
 // medium the page is rendered in; a module rule that changes the frame only
 // in print or at a phone's width shows up here instead, as a rule that did
 // not select the frame before the module rendered. A rule whose selector
@@ -2769,13 +2783,20 @@ function latentRules(
   view: Window,
 ): string {
   const tree = root.getRootNode() as Document | ShadowRoot;
-  const sheets = [
+  const sheets: CSSStyleSheet[] = [
     ...root.ownerDocument.styleSheets,
-    ...root.ownerDocument.adoptedStyleSheets,
+    ...(root.ownerDocument.adoptedStyleSheets ?? []),
     ...(tree === root.ownerDocument
       ? []
-      : [...tree.styleSheets, ...tree.adoptedStyleSheets]),
+      : [...tree.styleSheets, ...(tree.adoptedStyleSheets ?? [])]),
   ];
+  // Whether the page is in a medium now. Without matchMedia (jsdom, where
+  // the static builder renders) no media query applies, so every one is
+  // another medium's.
+  const now = (query: string): boolean =>
+    query.trim() === "" ||
+    query.trim() === "all" ||
+    (typeof view.matchMedia === "function" && view.matchMedia(query).matches);
   const found: string[] = [];
   // By shape, not instanceof: the rules may come from another window (a
   // static page drawn into its own document).
@@ -2784,13 +2805,9 @@ function latentRules(
       const grouped =
         "cssRules" in rule ? (rule as CSSGroupingRule).cssRules : undefined;
       if ("media" in rule && "conditionText" in rule)
-        visit(
-          grouped!,
-          latent ||
-            !view.matchMedia((rule as CSSMediaRule).conditionText).matches,
-        );
+        visit(grouped!, latent || !now((rule as CSSMediaRule).conditionText));
       else if ("selectorText" in rule) {
-        if (latent) {
+        if (latent && touchesLook((rule as CSSStyleRule).style)) {
           const selector = (rule as CSSStyleRule).selectorText.replace(
             /::?(?:before|after|first-line|first-letter|marker|placeholder|selection|backdrop)\b(?:\([^)]*\))?/gu,
             "",
@@ -2807,6 +2824,18 @@ function latentRules(
         }
         if (grouped !== undefined && grouped.length > 0) visit(grouped, latent);
       } else if (grouped !== undefined) visit(grouped, latent);
+      else if ("styleSheet" in rule && "media" in rule) {
+        // An @import with its own media list.
+        const imported = rule as CSSImportRule;
+        let rules: CSSRuleList | undefined;
+        try {
+          rules = imported.styleSheet?.cssRules;
+        } catch {
+          rules = undefined;
+        }
+        if (rules !== undefined)
+          visit(rules, latent || !now(imported.media.mediaText));
+      }
     }
   };
   for (const sheet of sheets) {
@@ -2816,7 +2845,15 @@ function latentRules(
     } catch {
       continue;
     }
-    visit(rules, false);
+    // A sheet's own media list (`<style media="print">`) counts as a query.
+    // jsdom gives a sheet no media list; its element's attribute says it.
+    const owner = sheet.ownerNode as Element | null;
+    const media =
+      (sheet.media as MediaList | undefined)?.mediaText ??
+      (typeof owner?.getAttribute === "function"
+        ? (owner.getAttribute("media") ?? "")
+        : "");
+    visit(rules, !now(media));
   }
   return JSON.stringify(found);
 }
@@ -2863,6 +2900,28 @@ const FRAME_LOOK = [
   "content-visibility",
   "contain",
 ] as const;
+const LOOK_PROPERTIES: ReadonlySet<string> = new Set<string>([
+  ...FRAME_LOOK,
+  ...ANCESTOR_OFFSETS,
+  ...SIDE_MARGINS,
+  "right",
+  "bottom",
+  "content",
+  // Shorthands, for a CSSOM that keeps them unexpanded (jsdom).
+  "all",
+  "margin",
+  "padding",
+  "border",
+  "border-width",
+  "border-top",
+  "border-right",
+  "border-bottom",
+  "border-left",
+  "inset",
+  "font",
+  "background",
+  "mask",
+]);
 const ANCESTOR_LOOK = FRAME_LOOK.filter(
   (name) =>
     name !== "transform" &&
@@ -3419,7 +3478,7 @@ async function renderVerifiedContext(
           ];
         });
     // With the root's chrome class as given, like the computed look.
-    const latent = jsdom ? "" : latentRules(elements, root, view);
+    const latent = latentRules(elements, root, view);
     root.classList.toggle("cv-shell-chrome", had);
     return {
       look: seen,

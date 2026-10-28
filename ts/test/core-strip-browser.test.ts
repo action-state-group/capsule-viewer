@@ -403,6 +403,27 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     }, 60_000);
 
+    it("a print stylesheet that hides the counts is discarded", async () => {
+      expect(
+        (
+          await render(
+            '<style media="print">[data-bucket]{display:none}</style><p>module text</p>',
+          )
+        ).kept,
+      ).toBe(false);
+    }, 60_000);
+
+    it("a module's print reset and line height, which the frame does not show, render", async () => {
+      expect(
+        (
+          await render(
+            "<p>module text</p>",
+            "@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none}}@media (max-width:5000px){p{line-height:1.4}}",
+          )
+        ).kept,
+      ).toBe(true);
+    }, 60_000);
+
     it("a rule that would hide L0 only in print is discarded, and the strip prints", async () => {
       expect(
         await render(
