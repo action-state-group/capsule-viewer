@@ -9931,6 +9931,78 @@ ${body}
   function recordAddress(recordId) {
     return `record-${recordId}`;
   }
+  function numberAddress(key) {
+    return `n-${key.replace(/[^A-Za-z0-9_.:-]/gu, "_")}`;
+  }
+  function showEvidenceComponent() {
+    const found = globalThis.CapsuleViewerShowEvidence;
+    return typeof found?.resolve === "function" && typeof found.render === "function" ? found : void 0;
+  }
+  function evidenceAction(key, name, counted, result, w, summary = w.t("evidence.show")) {
+    if (counted.length === 0) return void 0;
+    const claims = counted.filter((c) => c !== void 0);
+    const cited = /* @__PURE__ */ new Set();
+    const missing = /* @__PURE__ */ new Set();
+    for (const claim of claims)
+      for (const ref of claim.evidence)
+        (ref.resolved ? cited : missing).add(ref.digest);
+    if (cited.size === 0) {
+      const kind = claims.length > 0 ? "unsupported" : "interpretation";
+      const label = el("span", "cv-ev-label", w.t(`evidence.label.${kind}`));
+      label.dataset.evidenceLabel = kind;
+      label.dataset.evidenceFor = key;
+      return label;
+    }
+    const details = document.createElement("details");
+    details.className = "cv-ev";
+    details.dataset.level = "2";
+    details.id = numberAddress(key);
+    details.dataset.evidenceFor = key;
+    details.dataset.evidenceName = name;
+    details.dataset.cites = [...cited].join(" ");
+    details.append(element2("summary", summary));
+    const body = el("div", "cv-ev-body");
+    body.append(el("p", "cv-ev-k", w.t("evidence.records")));
+    const list = el("ul", "cv-ev-list");
+    for (const digest of cited) {
+      const item = element2("li");
+      item.dataset.cited = digest;
+      const link = element2("a");
+      link.setAttribute("href", `#${recordAddress(digest)}`);
+      link.append(element2("code", digest));
+      item.append(link);
+      list.append(item);
+    }
+    for (const digest of missing) {
+      const item = element2("li");
+      item.dataset.missing = digest;
+      item.append(element2("code", digest), ` ${w.t("evidence.not-in-bundle")}`);
+      list.append(item);
+    }
+    const uncited = counted.length - claims.length;
+    if (uncited > 0) {
+      const item = element2("li", w.p("evidence.uncited", uncited));
+      item.dataset.uncited = String(uncited);
+      list.append(item);
+    }
+    body.append(list);
+    details.append(body);
+    details.addEventListener("toggle", () => {
+      const component = showEvidenceComponent();
+      if (!details.open || component === void 0) return;
+      if (body.querySelector(":scope > .cv-ev-sides") !== null) return;
+      const sides = el("div", "cv-ev-sides");
+      for (const claim of new Set(claims))
+        sides.append(
+          component.render(
+            component.resolve(result, claim),
+            details.ownerDocument
+          )
+        );
+      body.append(sides);
+    });
+    return details;
+  }
   function conversationFold(transcript, caseRecord3, w) {
     const wrap = el("div", "chat-fold");
     const record = (transcript.state === "verified" || transcript.state === "cited") && transcript.transcriptRecordId !== void 0 ? transcript.transcriptRecordId : void 0;
@@ -10053,6 +10125,17 @@ ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
 ${s} tr.drill-row > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
+${s} details.cv-ev{display:block;margin-top:2px;font-weight:400;text-align:left}
+${s} details.cv-ev > summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap}
+${s} details.cv-ev > .cv-ev-body{margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
+${s} .cv-ev-k{margin:0 0 4px;color:var(--slate)}
+${s} ul.cv-ev-list{margin:0;padding-left:16px;display:grid;gap:2px}
+${s} ul.cv-ev-list code{font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all}
+${s} .cv-ev-label{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
+${s} .cv-ev-sides{display:grid;gap:10px;margin-top:8px}
+${s} .cv-side-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:10px}
+${s} .cv-side-producer i{color:var(--slate)}
+${s} .cv-side-payload{margin:4px 0;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-word}
 ${s} details.lv2{background:#FAF8F4;border-style:dashed}
 ${s} details.lv2 > summary{color:var(--slate);font-weight:600}
 ${s} details.lv2 > .pf-b{padding:4px 14px 14px;font-size:12.5px}
@@ -10452,7 +10535,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("cd1b02f4e1a7c103bad7a5d3baf8e6feaed5c279");
+    return commitPrefix("ab37b27d84fd75c30e9b5b9f68f7734ef58f9f0b");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -10953,6 +11036,14 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.check.s3.none": "This bundle carries no witness receipt. If you can get the log's checkpoint for this size on your own, compare its root with the one above.",
       "front.check.s4": "Open any row above to see the sealed records it cites.",
       "front.findings.label": "Producer's findings \xB7 presentation text, not evidence",
+      "evidence.show": "Show evidence",
+      "evidence.show.for": "Show evidence: {what}",
+      "evidence.records": "The records this number counts, each a link to its entry in this bundle's records",
+      "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+      "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
+      "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
+      "evidence.label.unsupported": "Unsupported: the evidence its claims cite is not disclosed in this bundle",
+      "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
       "front.findings.h": "Findings"
     }
   };
@@ -11251,6 +11342,14 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.check.s3.none": "This bundle carries no witness receipt. If you can get the log's checkpoint for this size on your own, compare its root with the one above.",
       "front.check.s4": "Open any row above to see the sealed records it cites.",
       "front.findings.label": "Producer's findings \xB7 presentation text, not evidence",
+      "evidence.show": "Show evidence",
+      "evidence.show.for": "Show evidence: {what}",
+      "evidence.records": "The records this number counts, each a link to its entry in this bundle's records",
+      "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+      "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
+      "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
+      "evidence.label.unsupported": "Unsupported: the evidence its claims cite is not disclosed in this bundle",
+      "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
       "front.findings.h": "Findings"
     }
   };
@@ -11720,6 +11819,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "chat.state.cited",
     "chat.state.verified",
     "chat.lede",
+    // Show evidence (report-levels.ts `evidenceAction`): what a number's
+    // evidence is not, and a number with none to show.
+    "evidence.not-in-bundle",
+    "evidence.uncited.one",
+    "evidence.uncited.other",
+    "evidence.label.unsupported",
+    "evidence.label.interpretation",
     // The Outcomes report.
     "lines.tier.unknown",
     "lines.wording.unstated",
@@ -12073,8 +12179,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "623ff73bc077b83cf0a59a345642d3e77a5fac50911257c2ea56e4946d533b0d",
-    groups: "5bbe7a1a6f57e02daabbcddfee23c0e432c41632859b3185d08b890f0d116a42"
+    lines: "fa041b2283e21602533cdcdb5c11f9dd739417ddb89ddbee14ac273aecc17177",
+    groups: "a58ac2794769769735d83e3565f5a88f7ab7ac4372f57b2eaa43ede3efcb4e0c"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -12643,6 +12749,11 @@ ${key}`);
         "details.lv"
       ))
         openToggle(toggle);
+      if (levels.depth === "L2")
+        for (const toggle of region.querySelectorAll(
+          "details.cv-ev"
+        ))
+          toggle.open = true;
     }
   }
 
@@ -13529,7 +13640,7 @@ ${key}`);
     }
     host.append(section);
   }
-  function renderRules(host, model, runInfo, w) {
+  function renderRules(host, model, runInfo, result, w) {
     const section = el3("section", "sec");
     section.dataset.section = "rules";
     section.append(el3("h2", "", w.t("lines.rules.h")));
@@ -13538,20 +13649,25 @@ ${key}`);
     table2.dataset.rows = "rules";
     const thead = element3("thead");
     const headRow = element3("tr");
+    const columnWord = {
+      not_met: ruleWord("not_met", "yes", w).word,
+      met: ruleWord("met", "yes", w).word,
+      undecided: w.t("lines.rules.col.undecided"),
+      unverified: w.t("lines.rules.col.unverified"),
+      out_of_scope: ruleWord("out_of_scope", "yes", w).word
+    };
     headRow.append(
       element3("th", w.t("lines.col.rule")),
-      el3("th", "n", ruleWord("not_met", "yes", w).word),
-      el3("th", "n", ruleWord("met", "yes", w).word),
-      el3("th", "n", w.t("lines.rules.col.undecided"))
+      el3("th", "n", columnWord.not_met),
+      el3("th", "n", columnWord.met),
+      el3("th", "n", columnWord.undecided)
     );
     const anyUnverified = model.conversations.some(
       (c) => c.criteria.some((cr) => isUnverified(cr.verdict))
     );
-    if (anyUnverified)
-      headRow.append(el3("th", "n", w.t("lines.rules.col.unverified")));
+    if (anyUnverified) headRow.append(el3("th", "n", columnWord.unverified));
     const anyOutOfScope = model.outOfScopeCount > 0;
-    if (anyOutOfScope)
-      headRow.append(el3("th", "n", ruleWord("out_of_scope", "yes", w).word));
+    if (anyOutOfScope) headRow.append(el3("th", "n", columnWord.out_of_scope));
     const columns = String(4 + (anyUnverified ? 1 : 0) + (anyOutOfScope ? 1 : 0));
     thead.append(headRow);
     table2.append(thead);
@@ -13577,6 +13693,24 @@ ${key}`);
         const na = of((v) => v === "not_applicable");
         const outOfScopeHere = of((v) => v === "out_of_scope");
         const undecided = of((v) => v === "not_evaluable" || v === "no_claim");
+        const countCell = (className, column, counted, pick) => {
+          const cell3 = el3("td", className);
+          cell3.dataset.column = column;
+          cell3.append(el3("span", "nv", fmtCount(counted.length)));
+          const action = evidenceAction(
+            `rule:${ref}:${column}`,
+            `${label.label} \xB7 ${columnWord[column]}: ${fmtCount(counted.length)}`,
+            counted.map(
+              (c) => c.criteria.find(
+                (cr) => cr.checkId === check.id && cr.criterionId === criterion.id && pick(cr.verdict)
+              )?.claim
+            ),
+            result,
+            w
+          );
+          if (action !== void 0) cell3.append(action);
+          return cell3;
+        };
         const tr = el3("tr", "rule");
         tr.dataset.rule = ref;
         tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
@@ -13610,18 +13744,31 @@ ${key}`);
         ];
         tr.append(
           nameCell,
-          el3(
-            "td",
+          countCell(
             `n${notMet.length > 0 ? " bad" : ""}`,
-            fmtCount(notMet.length)
+            "not_met",
+            notMet,
+            isMiss
           ),
-          el3("td", "n ok", fmtCount(met.length)),
-          el3("td", "n", fmtCount(undecided.length))
+          countCell("n ok", "met", met, (v) => v === "met"),
+          countCell(
+            "n",
+            "undecided",
+            undecided,
+            (v) => v === "not_evaluable" || v === "no_claim"
+          )
         );
         if (anyUnverified)
-          tr.append(el3("td", "n", fmtCount(unverifiedHere.length)));
+          tr.append(countCell("n", "unverified", unverifiedHere, isUnverified));
         if (anyOutOfScope)
-          tr.append(el3("td", "n", fmtCount(outOfScopeHere.length)));
+          tr.append(
+            countCell(
+              "n",
+              "out_of_scope",
+              outOfScopeHere,
+              (v) => v === "out_of_scope"
+            )
+          );
         tbody.append(tr);
         if (problems.length === 0 && na.length === 0) continue;
         const drillRow = el3("tr", "drill-row");
@@ -14054,7 +14201,7 @@ ${key}`);
     if (notes.childElementCount > 0) pad.append(notes);
     sheet.append(pad);
     levels.L0.append(sheet);
-    renderRules(levels.L1, model, runInfo, w);
+    renderRules(levels.L1, model, runInfo, result, w);
     leadWithProvenance(
       levels.L1,
       levels.L1.querySelector('[data-section="rules"]'),
@@ -14286,7 +14433,7 @@ ${key}`);
       ...undecided
     };
   }
-  function rowResult(row2, w) {
+  function rowResult(row2, model, result, w) {
     const cell = document.createElement("td");
     const status2 = rowStatus(row2, w);
     cell.append(statusPill(status2.cls, status2.text));
@@ -14300,9 +14447,41 @@ ${key}`);
           status2.producerNote === true
         )
       );
+    const what = [
+      ["not_met", w.t("groups.verdict.not_met")],
+      ["not_evaluable", w.t("groups.verdict.not_evaluable.judged")],
+      [
+        "unverified",
+        `${w.t("groups.verdict.failed")} / ${w.t("groups.verdict.unsupported")}`
+      ],
+      ["out_of_scope", w.t("groups.verdict.out_of_scope")],
+      ["not_yet_in_force", w.t("groups.verdict.not_yet_in_force")]
+    ];
+    for (const [bucket, word] of what) {
+      const ids = row2.sessionsByVerdict.get(bucket) ?? [];
+      const action = evidenceAction(
+        `test:${row2.criterionId}:${bucket}`,
+        `${row2.name} \xB7 ${word}: ${fmt3(ids.length)}`,
+        ids.map((id) => claimOf(model, id, row2.criterionId)),
+        result,
+        w,
+        w.t("evidence.show.for", { what: word })
+      );
+      if (action !== void 0) cell.append(action);
+    }
     return cell;
   }
-  function renderSummary(host, model, presentation, w) {
+  function claimOf(model, conversationId, criterionId) {
+    return model.sessions.find((s) => s.conversationId === conversationId)?.tests.find((t) => t.criterionId === criterionId)?.claim;
+  }
+  function populationClaims(row2, model) {
+    const outside = /* @__PURE__ */ new Set([
+      ...row2.sessionsByVerdict.get("not_applicable") ?? [],
+      ...row2.sessionsByVerdict.get("not_yet_in_force") ?? []
+    ]);
+    return model.sessions.filter((s) => !outside.has(s.conversationId)).map((s) => s.tests.find((t) => t.criterionId === row2.criterionId)?.claim);
+  }
+  function renderSummary(host, model, presentation, result, w) {
     const section = el4("section", "");
     section.dataset.section = "summary";
     const regulation = maybeProducer(w, "p", "kicker", model.regulation, true);
@@ -14395,11 +14574,18 @@ ${key}`);
           ...test.sessionsByVerdict.get("unverified") ?? [],
           ...test.sessionsByVerdict.get("not_evaluable") ?? []
         ];
-        tr.append(
-          nameCell,
-          el4("td", "n", count(w, "session", counted)),
-          rowResult(test, w)
+        const checkedIn = el4("td", "n");
+        checkedIn.dataset.column = "checked-in";
+        checkedIn.append(el4("span", "nv", count(w, "session", counted)));
+        const action = evidenceAction(
+          `test:${test.criterionId}:checked-in`,
+          `${test.name} \xB7 ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted)}`,
+          populationClaims(test, model),
+          result,
+          w
         );
+        if (action !== void 0) checkedIn.append(action);
+        tr.append(nameCell, checkedIn, rowResult(test, model, result, w));
         tbody.append(tr);
         if (sessionIds.length > 0) {
           const drillRow = el4("tr", "drill-row");
@@ -14826,7 +15012,7 @@ ${key}`);
     const sheet = el4("div", "l0-card");
     renderHeader(sheet, model, w);
     levels.L0.append(sheet);
-    renderSummary(levels.L1, model, presentation, w);
+    renderSummary(levels.L1, model, presentation, result, w);
     leadWithProvenance(
       levels.L1,
       levels.L1.querySelector('[data-section="summary"]'),
@@ -18119,7 +18305,38 @@ ${pad.repeat(depth)}`;
     );
     const summary = root.querySelector("[data-verify-summary]");
     if (summary !== null) summary.textContent = checkedLine;
+    linkCitedBy(root);
     revealRecordsByHash(root.ownerDocument);
+  }
+  function linkCitedBy(root) {
+    const anchors = /* @__PURE__ */ new Map();
+    for (const anchor of root.querySelectorAll(".cv-record-anchor"))
+      anchors.set(anchor.id, anchor);
+    const citing = /* @__PURE__ */ new Map();
+    for (const action of root.querySelectorAll(
+      "details.cv-ev[data-cites]"
+    ))
+      for (const digest of (action.dataset.cites ?? "").split(" ")) {
+        const entry = anchors.get(recordAddress(digest))?.closest("details.cv-record");
+        if (entry === void 0 || entry === null) continue;
+        const list = citing.get(entry) ?? [];
+        if (!list.includes(action)) list.push(action);
+        citing.set(entry, list);
+      }
+    for (const [entry, actions] of citing) {
+      const own = entry.querySelectorAll(":scope > .cv-record-anchor");
+      const anchor = own[own.length - 1];
+      const line = element6("p", "Cited by: ");
+      line.className = "cv-cited-by";
+      line.dataset.citedBy = actions.map((a) => a.id).join(" ");
+      actions.forEach((action, i) => {
+        if (i > 0) line.append(" \xB7 ");
+        const link = element6("a", action.dataset.evidenceName ?? action.id);
+        link.setAttribute("href", `#${action.id}`);
+        line.append(link);
+      });
+      anchor.after(line);
+    }
   }
 
   // src/presentation-mount.ts
