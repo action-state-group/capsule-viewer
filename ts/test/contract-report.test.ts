@@ -1752,15 +1752,15 @@ it("the aggregate is drawn as sealed; a number the claims disagree with carries 
   );
 });
 
-it("the generic Result page keeps its own visible count mismatch marker", async () => {
+it("the core strip on the generic Result page keeps a visible count mismatch marker", async () => {
   const source = fixture("result-root-bundle.json");
   const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
   ((doc.aggregate as Obj).coverage as Obj).evaluated_population = 99;
   const root = await renderSource(source);
   const marker = root.querySelector<HTMLElement>(
-    '[data-count-mismatch="evaluated_population"]',
+    '[data-core-strip] [data-count-mismatch="evaluated_population"]',
   )!;
-  expect(marker.textContent).toBe("count mismatch");
+  expect(marker.textContent).toBe("count mismatch: the claims give 3");
   expect(marker.dataset.stated).toBe("99");
 });
 

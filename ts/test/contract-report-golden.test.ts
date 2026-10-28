@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // @vitest-environment jsdom
 
-// Golden pages for the outcome and EU AI Act report cards. Each case is a
-// sealed fixture rendered twice: as a reader first sees it (every toggle
+// Golden pages for the outcome and EU AI Act report cards and the generic
+// Result page, each under the core strip (core-strip.ts) that opens L0. Each
+// case is a sealed fixture rendered twice: as a reader first sees it (every toggle
 // closed) and with every toggle opened, every lazily built body built. The
 // card's markup must equal the committed golden byte for byte, so a change
 // to the cards' code or to their default wording packs shows up here as a
@@ -79,7 +80,16 @@ function fourConversations(source: Obj): void {
     agent_input: {
       ...resultDoc,
       claims: kept,
-      aggregate: { ...(resultDoc.aggregate as Obj), buckets },
+      // The coverage the cut leaves, so the strip's figures are the
+      // claims' own and no count-mismatch marker stands in the golden.
+      aggregate: {
+        ...(resultDoc.aggregate as Obj),
+        coverage: {
+          ...((resultDoc.aggregate as Obj).coverage as Obj),
+          evaluated_population: kept.length,
+        },
+        buckets,
+      },
     },
   };
 }
@@ -170,6 +180,9 @@ const CASES: readonly Case[] = [
     witnesses: true,
   },
   { name: "eu", file: "compliance-bundle.json", page: "compliance" },
+  // The generic Result page: the contract-report module's fallback for a
+  // Result that opts into no card.
+  { name: "result", file: "result-root-bundle.json", page: "result" },
   {
     name: "eu-withheld",
     file: "compliance-bundle.json",
@@ -222,11 +235,13 @@ for (const c of CASES)
     const root = document.createElement("main");
     await renderEvidenceGraph(await sealed(c), root);
     expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
-    // The card only, in its three host regions (L0, L1, L2): the
-    // verification section in L2 is the core's, and no change to the cards'
-    // code or words reaches it.
+    // The core strip, then the card in its three host regions (L0, L1, L2):
+    // the verification section in L2 is the core's, and no change to the
+    // cards' code or words reaches it. The strip is L0's first node.
+    const strip = root.querySelector<HTMLElement>("[data-core-strip]")!;
+    expect(root.querySelector('[data-region="L0"]')!.firstChild).toBe(strip);
     const card = (): string =>
-      [...root.querySelectorAll<HTMLElement>(`[data-page="${c.page}"]`)]
+      [strip, ...root.querySelectorAll<HTMLElement>(`[data-page="${c.page}"]`)]
         .map((region) => region.outerHTML)
         .join("\n");
     check(`${c.name}.closed`, card());

@@ -236,6 +236,30 @@ CONTRACT = Move(
             "(`neg-wording-pack-core-key.json`).",
             "agent-action-capsule#356, carried with the moved schema (AAC#379)",
         ),
+        # Section 9.1: the core strip opens L0 on a Result page
+        # (capsule-viewer#81).
+        (
+            "| L0 | what matters | The module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The module. |",
+            "| L0 | what matters | On a bundle that carries an Evidence Result, the core strip first; then the module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The core (the strip), then the module. |",
+            "capsule-viewer#81: the core strip",
+        ),
+        (
+            "The core's part of L2 is always present and always comes before any module detail in L2.",
+            "On a verified bundle whose root is an Evidence Result, L0 opens with the **core strip**, drawn by\n"
+            "the core and never by a module: the mock-judge mark when a cited report names a mock judge, then\n"
+            "the Result's sealed `aggregate` as it is, coverage first and then each bucket's count beside its\n"
+            "denominator, the evaluated population (agent-action-capsule's `spec/evidence-result-v0.md`\n"
+            "section 3). The strip shows no percentage and no single figure, and it is the same in every\n"
+            "format, with scripts off and in print. Nothing a module, a section or a composed layout supplies\n"
+            "goes above it: a module that puts any node before the strip or between the banner and L0, or that\n"
+            "changes, moves or hides the strip, is discarded for the refusal like one whose `render` throws\n"
+            "(section 4.3). A bundle with no Result draws no strip, and a module that draws the core's marks\n"
+            "of a Result's counts on such a page (the strip, a bucket tally, a count-mismatch marker or the\n"
+            "Result's coverage line) is discarded the same way. A module's own figures in L0 follow the strip\n"
+            "and stay traceable to L1.\n\n"
+            "The core's part of L2 is always present and always comes before any module detail in L2.",
+            "capsule-viewer#81: the core strip",
+        ),
     ],
 )
 
@@ -273,6 +297,19 @@ CONTRACT_REPORT_MODULE = Move(
             "  judged it. The word is the pack's own key (§3), not a core one.\n" +
             "- **Copied facts are labelled as copied.**",
             "capsule-viewer#96: rows for requirements the run did not cover",
+        ),
+        # Section 2: the core strip draws the sealed aggregate (capsule-viewer#81).
+        (
+            "- **Summary first.** It shows the Result's sealed `aggregate` as it is: coverage, then the",
+            "- **Summary first.** The core strip shows the Result's sealed `aggregate` first in L0\n"
+            "  (presentation contract §9.1), before anything the module draws; the module adds no second copy\n"
+            "  of it. The strip shows it as it is: coverage, then the",
+            "capsule-viewer#81: the core strip",
+        ),
+        (
+            "and the buckets list claims; the module labels",
+            "and the buckets list claims; the strip labels",
+            "capsule-viewer#81: the core strip",
         ),
     ],
     rewrites=[

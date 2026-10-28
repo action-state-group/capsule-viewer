@@ -378,6 +378,7 @@
     "front.agg.bucket.not_met": "Not met (evaluations)",
     "front.agg.bucket.not_evaluable": "Not evaluable (evaluations)",
     "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
+    "front.agg.of": "of {n}",
     "front.check.h": "Check this report yourself",
     "front.check.key": "Producer key",
     "front.check.log": "Log",

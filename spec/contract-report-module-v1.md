@@ -44,9 +44,11 @@ The block is defined in agent-action-capsule's `spec/contract-report-v1.md` §1 
 A **contract-report module** is a presentation module that draws the contract-report view. These
 rules bind it:
 
-- **Summary first.** It shows the Result's sealed `aggregate` as it is: coverage, then the
+- **Summary first.** The core strip shows the Result's sealed `aggregate` first in L0
+  (presentation contract §9.1), before anything the module draws; the module adds no second copy
+  of it. The strip shows it as it is: coverage, then the
   buckets (ER §3), the fourth `out_of_scope` bucket included when the Result carries it (ER §4.2). Coverage counts evaluations, beside the number of distinct requirements the
-  claims cite ("24 evaluations of 4 requirements"), and the buckets list claims; the module labels
+  claims cite ("24 evaluations of 4 requirements"), and the buckets list claims; the strip labels
   each with its unit and never calls `unknown_count` unresolved requirements (ER §3). It never
   recomputes the aggregate. A bucket that names a claim the Result lacks, or a claim with a
   different verdict, makes the Result invalid (ER §4); the Result checks report that, and the

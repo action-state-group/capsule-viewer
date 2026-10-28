@@ -51,8 +51,13 @@ it("the fourth bucket draws when the Result carries out_of_scope, counted on its
   (aggregate.buckets as Obj).not_evaluable = [];
   (aggregate.buckets as Obj).out_of_scope = ["claim-3"];
   const root = await render(source);
-  const coverage = root.querySelector<HTMLElement>('[data-coverage="result"]')!;
-  expect(coverage).not.toBeNull();
+  // The core strip draws the fourth bucket's tile, counted beside the same
+  // denominator as the others.
+  const tile = root.querySelector<HTMLElement>(
+    '[data-core-strip] [data-bucket="out_of_scope"]',
+  )!;
+  expect(tile.dataset.count).toBe("1");
+  expect(tile.dataset.of).toBe("3");
   const buckets = root.querySelector<HTMLElement>('[data-buckets="verdict"]')!;
   const outOfScopeHeading = [...buckets.querySelectorAll("h3")].find(
     (h) => (h as HTMLElement).dataset.bucketOf === "outOfScope",
@@ -86,7 +91,9 @@ it("a claim not yet in force is shown in its own section, after the in-force buc
   (aggregate.coverage as Obj).not_yet_in_force = 1;
   (aggregate.buckets as Obj).not_evaluable = [];
   const root = await render(source);
-  const coverage = root.querySelector<HTMLElement>('[data-coverage="result"]')!;
+  const coverage = root.querySelector<HTMLElement>(
+    "[data-core-strip] .agg-line",
+  )!;
   expect(coverage.dataset.notYetInForce).toBe("1");
   expect(coverage.textContent).toContain("1 evaluation not yet in force");
   const copied = root.querySelector<HTMLElement>("[data-copied-facts]")!;

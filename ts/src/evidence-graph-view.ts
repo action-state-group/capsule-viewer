@@ -51,6 +51,7 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import { digestCapability } from "@action-state-group/agent-action-capsule";
 import {
+  citesOneContract,
   renderContractReport,
   type ContractReportInput,
 } from "./contract-report.js";
@@ -63,7 +64,16 @@ import {
   type OutcomeReportPresentation,
 } from "./outcome-report-presentation.js";
 import { composedSectionModule } from "./composed-view.js";
-import { DEFAULT_WORDS } from "./contract-report-wording.js";
+import {
+  DEFAULT_WORDS,
+  contractReportWords,
+} from "./contract-report-wording.js";
+import {
+  CORE_STRIP_ATTRIBUTE,
+  coreStripModel,
+  renderCoreStrip,
+  type CoreStripModel,
+} from "./core-strip.js";
 import { RECORD_CONTENT_CSS, renderContent } from "./record-content.js";
 import {
   deferBody,
@@ -110,7 +120,6 @@ import {
   buildResultRoot,
   isResultRoot,
   UNVERIFIED_KEY_LABEL,
-  utcDateOf,
   type CountField,
   type CountMismatch,
   type ResultClose,
@@ -192,10 +201,6 @@ function appendTime(
 
 const recordsWord = (count: number): string =>
   `${count} ${count === 1 ? "record" : "records"}`;
-const evaluationsWord = (count: number): string =>
-  `${count} ${count === 1 ? "evaluation" : "evaluations"}`;
-const requirementsWord = (count: number): string =>
-  `${count} ${count === 1 ? "requirement" : "requirements"}`;
 
 // The banner is drawn from AAC's banner model alone (presentation contract
 // section 6.2) and precedes every row in the DOM; a bundle that fails the
@@ -1844,18 +1849,20 @@ const BUCKETS: ReadonlyArray<
   ["outOfScope", "out of scope", "buckets.out_of_scope"],
 ];
 
-// Coverage is the first thing in the Result section after its heading, and
-// no number precedes it within the section; then the buckets, never a
-// single figure; then one row per claim with its own tier and grade. The
-// bundle-level verification banner, drawn before every section, is the one
-// thing above coverage that can carry digits ("N of M records
-// uncheckpointed"). Every number drawn here is the recomputed one
-// (`result.coverage`, `result.bucketCounts`); a producer figure the claims
-// do not bear out shows as a `count mismatch` marker beside the recomputed
-// value. `excluded as not applicable` is the one figure carried as stated:
-// no claim backs it, by construction. Coverage counts evaluations (one per
-// claim, ER §3), so the line also names how many distinct requirements the
-// claims cite, and an UNKNOWN count is never called unresolved requirements.
+// The Result page lists the claims by verdict, after the core strip, which
+// draws coverage first and then the buckets, never a single figure
+// (core-strip.ts). Every count drawn here is the recomputed one
+// (`result.bucketCounts`); a producer figure the claims do not bear out
+// shows as a `count mismatch` marker beside it. Each claim keeps its own
+// tier and grade on its row.
+/**
+ * The marks the core puts on a Result's counts: the strip, its buckets and
+ * count-mismatch markers, and the Result page's coverage line. A page whose
+ * bundle carries no Result shows none of them; a module that draws one
+ * there is discarded for the refusal (renderVerifiedContext).
+ */
+const RESULT_COUNT_MARKS = `[${CORE_STRIP_ATTRIBUTE}], .cv-strip, [data-bucket], [data-bucket-count], [data-count-mismatch], [data-coverage="result"]`;
+
 /** Said above the generic Result page when a Result opted into a card whose layout cannot hold its claims (`claimsFitCard`). */
 export const CARD_UNFIT_NOTE =
   "This Result's claims don't fit the report layout, so every claim is listed below instead.";
@@ -1864,65 +1871,10 @@ function renderResultPage(result: ResultRoot, root: HTMLElement): void {
   const section = element("section");
   section.dataset.page = "result";
   section.append(element("h1", "Evidence result"));
-  // The requirements the in-force evaluations cover: every claim of one
-  // requirement carries the same applies_from, so a requirement is in force
-  // or later as a whole (ER section 4.3).
-  const requirements = new Set(
-    result.claims
-      .filter((claim) => !claim.later)
-      .map((claim) =>
-        JSON.stringify([claim.contractRef, claim.requirementRef]),
-      ),
-  ).size;
-  const coverage = element("p");
-  coverage.append(
-    `coverage: ${evaluationsWord(result.coverage.evaluatedPopulation)} of ${requirementsWord(requirements)}`,
-  );
-  const evaluatedMarker = countMismatchMarker(result, "evaluated_population");
-  if (evaluatedMarker !== undefined) coverage.append(" ", evaluatedMarker);
-  coverage.append(
-    ` · ${result.coverage.excludedNotApplicable} excluded as not applicable · ${result.coverage.unknownCount} with an unknown result`,
-  );
-  const unknownMarker = countMismatchMarker(result, "unknown_count");
-  if (unknownMarker !== undefined) coverage.append(" ", unknownMarker);
-  const later = result.claims.filter((claim) => claim.later);
-  const laterMarker = countMismatchMarker(result, "not_yet_in_force");
-  if (later.length > 0 || laterMarker !== undefined) {
-    coverage.append(` · ${evaluationsWord(later.length)} not yet in force`);
-    if (laterMarker !== undefined) coverage.append(" ", laterMarker);
-    coverage.dataset.notYetInForce = String(later.length);
-  }
-  coverage.dataset.coverage = "result";
-  coverage.dataset.evaluated = String(result.coverage.evaluatedPopulation);
-  coverage.dataset.requirements = String(requirements);
-  coverage.dataset.excluded = String(result.coverage.excludedNotApplicable);
-  coverage.dataset.excludedBasis = "stated";
-  coverage.dataset.unknown = String(result.coverage.unknownCount);
-  section.append(coverage);
-  // ER sections 4.2 and 4.3: whenever a claim is dated, the date "in force"
-  // is relative to; and whenever a claim is dated or the out-of-scope switch
-  // is on, that these are the producer's copy of the contract, never checked
-  // here.
-  const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
-  if (dated || result.buckets.outOfScope !== undefined) {
-    const copied = element("p");
-    if (dated) {
-      // A dated Result passed validation, so generated_at parses.
-      const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
-      copied.append(`In force as of ${date}. `);
-      copied.dataset.asOf = date;
-    }
-    copied.append(
-      dated && result.buckets.outOfScope !== undefined
-        ? "The dates and the out-of-scope switch are copied from the contract, not re-checked here."
-        : dated
-          ? "The dates are copied from the contract, not re-checked here."
-          : "The out-of-scope switch is copied from the contract, not re-checked here.",
-    );
-    copied.dataset.copiedFacts = "contract";
-    section.append(copied);
-  }
+  // Coverage and the bucket counts are the core strip's, first in L0
+  // (core-strip.ts); this page lists the claims behind them.
 
+  const later = result.claims.filter((claim) => claim.later);
   const byId = new Map(result.claims.map((claim) => [claim.id, claim]));
   const buckets = element("section");
   buckets.dataset.buckets = "verdict";
@@ -3157,6 +3109,24 @@ async function renderVerifiedContext(
     total: Array.isArray(records) ? records.length : 0,
   };
 
+  // The core's strip opens L0 on a verified bundle whose root is an
+  // Evidence Result (core-strip.ts; presentation contract section 9.1). Its
+  // words are the contract report's, in the grouping the module draws and
+  // the page's wording pack; a page with no Result draws no strip.
+  let strip: CoreStripModel | undefined;
+  if (verified) {
+    const result = await resultRootOf(context);
+    if (result !== undefined) {
+      const grouping = contractReportGroupingOf(bundle) ?? "lines";
+      strip = await coreStripModel(
+        result,
+        await contractReportWords(grouping, options.wording, {
+          singleContract: citesOneContract(result),
+        }),
+      );
+    }
+  }
+
   // The host's three regions, in order after the banner and the header
   // (presentation contract section 9.1). L2 opens with the core's
   // verification section, drawn last but placed first; a module's L2 detail
@@ -3174,6 +3144,7 @@ async function renderVerifiedContext(
     core: root,
   };
   let bar!: HTMLElement;
+  let stripNode: HTMLElement | undefined;
   const drawFrame = (): void => {
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
@@ -3187,6 +3158,8 @@ async function renderVerifiedContext(
     // section 9.1, I1): no module renders, and a notice goes before L2.
     if (verified) {
       regions = { L0: region("L0"), L1: region("L1"), L2: L2module, core };
+      stripNode = strip === undefined ? undefined : renderCoreStrip(strip);
+      if (stripNode !== undefined) regions.L0.append(stripNode);
       root.append(regions.L0, regions.L1, L2);
     } else {
       regions = { L0: root, L1: root, L2: L2module, core };
@@ -3236,9 +3209,12 @@ async function renderVerifiedContext(
     const ancestors: Element[] = [];
     for (let at = root.parentElement; at !== null; at = at.parentElement)
       ancestors.push(at);
+    // The L0 region's own box too, but not what a module writes in it: a
+    // module that hides or moves the region hides the strip.
     const elements = [
       ...ancestors,
       root,
+      ...(stripNode === undefined ? [] : [regions.L0]),
       ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")]),
     ];
     // A browser also computes each element's ::before and ::after, whose
@@ -3365,25 +3341,46 @@ async function renderVerifiedContext(
     root.classList.toggle("cv-shell-chrome", had);
     return { look: seen, offsets, place, readable: words, clips };
   };
+  // The core strip (core-strip.ts) is held to the same rules as the
+  // banner: its words, structure and look are the core's, and it stays the
+  // first thing in L0, right after the banner.
   const frameOf = () => {
     const detail = bar.nextElementSibling;
     const parts = [
       bar,
       ...(detail?.hasAttribute("data-banner-detail") ? [detail] : []),
     ];
+    const held = [...parts, ...(stripNode === undefined ? [] : [stripNode])];
     return {
       parts,
+      held,
       header: bar.previousElementSibling,
-      words: snapshot(parts),
+      words: snapshot(held),
       looks: {
-        plain: looks(parts, false),
-        chrome: looks(parts, true),
+        plain: looks(held, false),
+        chrome: looks(held, true),
       },
     };
   };
   // Measured only when a module will render: it lays out the page.
   let frame =
     selected !== undefined || section !== undefined ? frameOf() : undefined;
+  // The strip is L0's first node and L0 follows the banner directly; no
+  // other node on the page carries the strip's marker. On a page with no
+  // Result, nothing on it may carry the marks of the Result's counts
+  // (RESULT_COUNT_MARKS): a module or layout there draws no claim counts,
+  // tallies or coverage (the 2026-10-25 ruling on #81, condition 2).
+  const stripIntact = (last: Element): boolean => {
+    if (stripNode === undefined)
+      return root.querySelector(RESULT_COUNT_MARKS) === null;
+    return (
+      regions.L0.parentNode === root &&
+      regions.L0.previousSibling === last &&
+      regions.L0.firstChild === stripNode &&
+      !stripNode.hidden &&
+      root.querySelectorAll(`[${CORE_STRIP_ATTRIBUTE}], .cv-strip`).length === 1
+    );
+  };
   const assertFrameIntact = (): void => {
     const at = frame!;
     const [top, detail] = at.parts as [HTMLElement, Element?];
@@ -3404,9 +3401,10 @@ async function renderVerifiedContext(
       (detail !== undefined && detail.previousElementSibling !== top) ||
       top.parentNode !== root ||
       top.hidden ||
-      snapshot(at.parts) !== at.words ||
+      !stripIntact(detail ?? top) ||
+      snapshot(at.held) !== at.words ||
       !sameLook(
-        looks(at.parts, root.classList.contains("cv-shell-chrome")),
+        looks(at.held, root.classList.contains("cv-shell-chrome")),
         root.classList.contains("cv-shell-chrome")
           ? at.looks.chrome
           : at.looks.plain,
