@@ -11,6 +11,14 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.3.0 and go 0.3.0 (2026-10-28)
+
+The first release under RELEASING.md's pairing rule: `ts/v0.3.0` is tagged on
+this merge, and `go/v0.3.0` follows on the commit that ships its page runtime.
+Both state viewer 0.3.0. There was no ts 0.2.0, because the Go module had
+already used 0.2.0. Go entries below include changes first tagged in
+`go/v0.1.1` and `go/v0.2.0`, which had no CHANGELOG sections.
+
 ### Breaking
 
 - The page shell (`renderEvidenceGraph`, the emitter shell and the Go
@@ -77,7 +85,7 @@ here. The format follows
   (CI), or refreshes it with `--write`.
 - The runtime's global `EvidenceGraph` carries the verifier functions a
   presentation module may call, beside `registerPresentation`:
-  `disclosureOf`, `ed25519Available`, `verifiedPayload`,
+  `buildResultRoot`, `disclosureOf`, `ed25519Available`, `verifiedPayload`,
   `verifyDisclosureEnvelope` and `verifyProducerEnvelope`,
   agent-action-capsule's own functions re-exported from `ts/src/browser.ts`.
 - `go/presentation` declares the report page's block names:
