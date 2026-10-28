@@ -229,6 +229,9 @@ export function emitEvidenceGraphHtml(
     });
   });
 
+  // The shell carries the bundle in a JSON data element that a fixed script
+  // reads with JSON.parse, so every member, "__proto__" included, stays data
+  // (an object literal would make "__proto__" the object's prototype, #109).
   const embeddedBundleJson = escapeJsonForHtmlScript(bundleJson);
   let html = replaceSingle(shell, titleSlot, escapeHtmlText(title));
   html = replaceSingle(html, themeSlot, themeCss);

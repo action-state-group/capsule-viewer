@@ -15,7 +15,7 @@ globalThis.document = dom.window.document;
 globalThis.HTMLElement = dom.window.HTMLElement;
 
 type Obj = Record<string, unknown>;
-const BUNDLE_MARKER = /window\.__BUNDLE__ = ([\s\S]*?);<\/script>/u;
+const BUNDLE_MARKER = /<script type="application\/json">([\s\S]*?)<\/script>/u;
 const IIFE = "/*IIFE_MARKER*/";
 
 const testdata = (name: string): string =>

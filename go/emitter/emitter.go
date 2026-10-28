@@ -278,6 +278,9 @@ func EmitEvidenceGraphHTMLWithOptions(bundle map[string]interface{}, browserIIFE
 		}
 	}
 
+	// The shell carries the bundle in a JSON data element that a fixed script
+	// reads with JSON.parse, so every member, "__proto__" included, stays data
+	// (an object literal would make "__proto__" the object's prototype, #109).
 	embeddedBundleText := escapeJSONForHTMLScript(bundleText)
 	html := shell
 	for _, fill := range []struct{ slot, value string }{
