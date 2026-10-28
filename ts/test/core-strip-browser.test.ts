@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { JSDOM } from "jsdom";
-import { chromium, type Browser } from "playwright-core";
+import { chromium, type Browser, type Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildPresentation } from "../src/presentation-builder.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
@@ -196,6 +196,197 @@ describe.skipIf(executablePath === undefined)(
         expect(runs[0]!.tiles.length).toBeGreaterThanOrEqual(3);
         for (const phone of runs.slice(3)) expect(phone.fits).toBe(true);
       }, 120_000);
+  },
+  120_000,
+);
+
+// A module's content in a real browser, which lays the page out: content
+// laid over the strip, or laid out ahead of it, is discarded for the
+// refusal like content put before it; content after it renders.
+describe.skipIf(executablePath === undefined)(
+  "a module that covers the strip or lays content out ahead of it, in a browser",
+  () => {
+    let browser: Browser;
+    let page: Page;
+    let runtime: string;
+    let bundle: unknown;
+
+    beforeAll(async () => {
+      browser = await chromium.launch({ executablePath: executablePath! });
+      const result = await build({
+        stdin: {
+          contents: [
+            'export { renderEvidenceGraph } from "./src/evidence-graph-view.ts";',
+            'export { PresentationRegistry } from "./src/presentation-registry.ts";',
+          ].join("\n"),
+          resolveDir: process.cwd(),
+          loader: "ts",
+        },
+        bundle: true,
+        format: "iife",
+        globalName: "Frame",
+        write: false,
+      });
+      runtime = result.outputFiles[0]!.text;
+      bundle = (
+        await sealEvidenceBundle(
+          JSON.parse(
+            readFileSync(
+              resolve(
+                import.meta.dirname,
+                "testdata",
+                "result-root-bundle.json",
+              ),
+              "utf8",
+            ),
+          ),
+        )
+      ).bundle;
+      page = await browser.newPage({ viewport: { width: 800, height: 900 } });
+    }, BROWSER_HOOK_TIMEOUT_MS);
+
+    afterAll(async () => {
+      await browser?.close();
+    }, BROWSER_HOOK_TIMEOUT_MS);
+
+    // Renders the Result bundle with a module that appends `html` to L0 and
+    // `css` in a stylesheet, now or (`late`) on a timer; `pageCss` is the
+    // host page's own. Reports whether the module's content was kept and
+    // whether the strip is shown in print.
+    async function render(
+      html: string,
+      css = "",
+      { pageCss = "", late = false } = {},
+    ): Promise<{ kept: boolean; printed: boolean }> {
+      await page.emulateMedia({ media: "screen" });
+      await page.goto("about:blank");
+      await page.setContent(
+        "<!doctype html><html><head><style>body{margin:0}" +
+          pageCss +
+          '</style></head><body><main id="app"></main></body></html>',
+      );
+      await page.addScriptTag({ content: runtime });
+      const kept = await page.evaluate(
+        async ({ bundle, html, css, late }) => {
+          const { renderEvidenceGraph, PresentationRegistry } = (
+            globalThis as unknown as {
+              Frame: {
+                renderEvidenceGraph: (
+                  bundle: unknown,
+                  root: HTMLElement,
+                  countersigners: undefined,
+                  options: { registry: unknown },
+                ) => Promise<void>;
+                PresentationRegistry: new () => {
+                  register(module: unknown): void;
+                };
+              };
+            }
+          ).Frame;
+          const registry = new PresentationRegistry();
+          registry.register({
+            manifest: {
+              spec_version: "aac.presentation-manifest/v0",
+              id: "org.example.strip-test/v0",
+              presentation_api: "aac.presentation-api/v0",
+              runtime_min: "0.1.0",
+              trust_class: "trusted-executable",
+              requires: { bundle_kind: "evidence-bundle/v2" },
+              audiences: ["*"],
+              formats: ["html", "fragment", "embedded"],
+              fallback: true,
+              executable: {
+                carrier: "module-slot",
+                script_sha256: "0".repeat(64),
+              },
+            },
+            canRender: () => true,
+            buildModel: () => ({}),
+            render: (_model: unknown, host: { L0: HTMLElement }) => {
+              const draw = (): void => {
+                const holder = document.createElement("div");
+                holder.dataset.testModule = "";
+                holder.innerHTML = html;
+                host.L0.append(holder);
+                const style = document.createElement("style");
+                style.textContent = css;
+                host.L0.append(style);
+              };
+              if (late) {
+                const marker = document.createElement("p");
+                marker.dataset.testModule = "";
+                host.L0.append(marker);
+                setTimeout(draw, 0);
+              } else draw();
+            },
+          });
+          const root = document.getElementById("app")!;
+          await renderEvidenceGraph(bundle, root, undefined, { registry });
+          return root.querySelector("[data-test-module]") !== null;
+        },
+        { bundle, html, css, late },
+      );
+      await page.emulateMedia({ media: "print" });
+      const printed = await page.evaluate(() => {
+        const strip = document.querySelector("[data-core-strip]");
+        return (
+          strip !== null &&
+          getComputedStyle(strip).display !== "none" &&
+          strip.getBoundingClientRect().height > 0
+        );
+      });
+      return { kept, printed };
+    }
+
+    const HEADLINE =
+      '<h1 style="background:#fff;margin:0;padding:40px">98% resolved</h1>';
+
+    it("a module that writes after the strip renders", async () => {
+      expect(await render(HEADLINE)).toEqual({ kept: true, printed: true });
+    }, 60_000);
+
+    it("one that lays its content over the strip is discarded", async () => {
+      expect(
+        await render(
+          '<h1 style="position:relative;z-index:9;background:#fff;margin:-400px 0 0;padding:200px 0">98% resolved</h1>',
+        ),
+      ).toEqual({ kept: false, printed: true });
+    }, 60_000);
+
+    it("one that lays its headline out ahead of the strip, on a host whose L0 is a flex column, is discarded", async () => {
+      const pageCss =
+        '#app [data-region="L0"]{display:flex!important;flex-direction:column}';
+      // Without the order, the same host keeps the module.
+      expect((await render(HEADLINE, "", { pageCss })).kept).toBe(true);
+      expect(
+        (
+          await render(HEADLINE, "[data-test-module]{order:-1}", {
+            pageCss,
+          })
+        ).kept,
+      ).toBe(false);
+    }, 60_000);
+
+    it("one that lays content over the strip on a timer is discarded", async () => {
+      expect(
+        (
+          await render(
+            '<h1 style="position:fixed;inset:0;z-index:9;background:#fff;margin:0">98% resolved</h1>',
+            "",
+            { late: true },
+          )
+        ).kept,
+      ).toBe(false);
+    }, 60_000);
+
+    it("a rule that would hide L0 only in print leaves the strip printed", async () => {
+      expect(
+        await render(
+          "<p>module text</p>",
+          '@media print{[data-region="L0"],[data-core-strip]{display:none}}',
+        ),
+      ).toEqual({ kept: true, printed: true });
+    }, 60_000);
   },
   120_000,
 );

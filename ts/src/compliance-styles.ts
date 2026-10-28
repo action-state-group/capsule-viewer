@@ -98,7 +98,6 @@ export const COMPLIANCE_CSS =
 .cc .l0-card .hd{background:transparent;color:var(--ink);padding:0;margin:0 0 24px;border-radius:0}
 .cc .l0-card .hd h1{color:var(--navy);font-size:30px;margin:0}
 .cc .l0-card .hd .sub{color:var(--slate);margin-top:8px}
-.cc .l0-card section.agg{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0}
 .cc > section{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset);margin:0 0 16px}
 .cc > section.findings{padding:32px calc(var(--inset) - 3px)}
 @media (min-width:821px){.cc table.grid th{white-space:nowrap}}

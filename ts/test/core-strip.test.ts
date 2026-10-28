@@ -235,9 +235,17 @@ describe("a module or layout that writes above the strip, or changes it, is disc
       },
     ],
     [
-      "the strip hidden by a style on L0",
+      "the strip hidden by an important style on L0",
       (host) => {
-        host.L0.style.display = "none";
+        host.L0.style.setProperty("display", "none", "important");
+      },
+    ],
+    [
+      "a module stylesheet that greys a count out",
+      (host) => {
+        const style = document.createElement("style");
+        style.textContent = '[data-bucket="not_met"] b{color:transparent}';
+        host.L1.append(style);
       },
     ],
     [
@@ -281,6 +289,23 @@ describe("a module or layout that writes above the strip, or changes it, is disc
   });
 });
 
+it("a section that writes above the strip is discarded for the refusal too", async () => {
+  const { bundle } = await sealEvidenceBundle(
+    fixture("result-root-bundle.json"),
+  );
+  const root = document.body.appendChild(document.createElement("main"));
+  await renderEvidenceGraph(bundle, root, undefined, {
+    sections: registryWith((host) => {
+      const h = document.createElement("h1");
+      h.textContent = "98% resolved";
+      host.L0.prepend(h);
+    }),
+  });
+  expect(refused(root)).toBe(true);
+  expect(root.querySelector("[data-test-module]")).toBeNull();
+  expect(L0(root).firstChild).toBe(strip(root));
+});
+
 describe("on a page with no Result, a module that draws the Result's counts is refused", () => {
   const CASES: readonly [string, (host: PresentationHost) => void][] = [
     [
@@ -302,12 +327,21 @@ describe("on a page with no Result, a module that draws the Result's counts is r
       },
     ],
     [
-      "a coverage line",
+      "a bucket count",
       (host) => {
-        const line = document.createElement("p");
-        line.dataset.coverage = "result";
-        line.textContent = "coverage: 9 evaluations";
-        host.L0.append(line);
+        const heading = document.createElement("h3");
+        heading.dataset.bucketCount = "3";
+        heading.textContent = "not met: 3";
+        host.L1.append(heading);
+      },
+    ],
+    [
+      "a count-mismatch marker",
+      (host) => {
+        const marker = document.createElement("span");
+        marker.dataset.countMismatch = "buckets.not_met";
+        marker.textContent = "count mismatch: the claims give 3";
+        host.L1.append(marker);
       },
     ],
   ];
@@ -318,6 +352,25 @@ describe("on a page with no Result, a module that draws the Result's counts is r
       expect(root.querySelector("[data-test-module]")).toBeNull();
       expect(strip(root)).toBeNull();
     });
+
+  // A composed layout reaches the page as a section, after the page's
+  // module, into the same regions (renderVerifiedContext); an agent-written
+  // layout is drawn the same way once #82's renderer lands.
+  it("a composed layout (a section) that draws a bucket tally there", async () => {
+    const { bundle } = await sealEvidenceBundle(rowsBundle());
+    const root = document.body.appendChild(document.createElement("main"));
+    await renderEvidenceGraph(bundle, root, undefined, {
+      sections: registryWith((host) => {
+        const tile = document.createElement("div");
+        tile.dataset.bucket = "not_met";
+        tile.textContent = "3 not met";
+        host.L0.append(tile);
+      }),
+    });
+    expect(refused(root)).toBe(true);
+    expect(root.querySelector("[data-test-module]")).toBeNull();
+    expect(strip(root)).toBeNull();
+  });
 
   it("a module that draws no counts there renders", async () => {
     const root = await render(

@@ -28,7 +28,12 @@ export const CORE_STRIP_ATTRIBUTE = "data-core-strip";
 /**
  * The strip's stylesheet, inserted with it. The core runtime inserts it at
  * render time, so it is one of CORE_RUNTIME_STYLES and the page's CSP lists
- * its hash.
+ * its hash. Its last rule keeps the strip and L0 shown in every medium and
+ * at every width: the frame check compares their look in the medium the page
+ * is rendered in, so a module rule that hid them only in print or on a
+ * narrow screen would otherwise pass it. A module rule marked `!important`
+ * still wins; like the banner's, this check catches a module's mistakes, not
+ * a module written to hide the strip (#125).
  */
 export const CORE_STRIP_CSS = `
 .cv-strip{${OUTCOME_FRAME_VARS}max-width:1080px;margin:0 auto 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -45,6 +50,7 @@ export const CORE_STRIP_CSS = `
 .cv-strip .agg-bucket.not_evaluable b{color:#5F6672}
 @media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
 @media print{.cv-strip{break-inside:avoid}}
+[data-region="L0"],.cv-strip{display:block!important;visibility:visible!important}
 `;
 
 function el(tag: string, className: string, text?: string): HTMLElement {

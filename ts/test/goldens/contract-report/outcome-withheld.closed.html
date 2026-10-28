@@ -13,6 +13,7 @@
 .cv-strip .agg-bucket.not_evaluable b{color:#5F6672}
 @media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
 @media print{.cv-strip{break-inside:avoid}}
+[data-region="L0"],.cv-strip{display:block!important;visibility:visible!important}
 </style><p class="agg-line" data-evaluated="36" data-requirements="9" data-excluded="0" data-unknown="0">36 evaluations of 9 requirements · 0 excluded as not applicable · 0 evaluations with an unknown result</p><div class="agg-buckets"><div class="agg-bucket met" data-bucket="met" data-count="14" data-of="36"><b>14</b><span>Met (evaluations)</span><span class="agg-of">of 36</span></div><div class="agg-bucket not_met" data-bucket="not_met" data-count="7" data-of="36"><b>7</b><span>Not met (evaluations)</span><span class="agg-of">of 36</span></div><div class="agg-bucket not_evaluable" data-bucket="not_evaluable" data-count="15" data-of="36"><b>15</b><span>Not evaluable (evaluations)</span><span class="agg-of">of 36</span></div></div></section>
 <section class="oi" data-page="outcome-report" data-level="L0" data-levels="2"><style>
 .oi{--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;
@@ -270,21 +271,9 @@
 @media (max-width:760px){.oi dl.pf,.oi dl.prov{grid-template-columns:1fr}.oi .chat li.turn{max-width:100%}.oi .conv-h{grid-template-columns:1fr auto}.oi .conv-h .cmodel{display:none}}
 
 .oi{--inset:clamp(20px,5vw,56px)}
-.oi .mockmark{display:inline-block;margin:8px 0 0;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45;text-align:left}
 .oi .front-card{background:#fff;max-width:1080px;margin:0 auto 16px;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset)}
 .oi .prov-row{padding-bottom:16px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 .oi .front-card > .prov-row:last-child{padding-bottom:0;margin-bottom:0;border-bottom:0}
-.oi .agg{margin:8px 0 28px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4}
-.oi .agg-line{font-size:14px;margin:0 0 12px;color:var(--ink)}
-.oi .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.oi .agg-bucket{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff}
-.oi .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
-.oi .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
-.oi .agg .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
-.oi .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
-.oi .agg-bucket.met b{color:var(--ok)}
-.oi .agg-bucket.not_met b{color:var(--bad)}
-.oi .agg-bucket.not_evaluable b{color:#5F6672}
 .oi .findings{border:1px solid var(--line);border-left:4px solid var(--gold,#E8A33D);background:#FFFBF2;border-radius:var(--r);padding:32px calc(var(--inset) - 3px);margin:0 0 16px}
 .oi .findings h2{font-size:19px;margin:4px 0 10px}
 .oi .plabel{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A0B}
@@ -308,7 +297,7 @@
 .oi .anchor .k{display:block;color:var(--slate);margin-bottom:2px}
 .oi .anchor code{font-size:11px;word-break:break-all}
 .oi .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.6}
-@media (max-width:640px){.oi .front-card{padding:24px var(--inset)}.oi .agg-buckets{grid-template-columns:minmax(0,1fr)}.oi .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.oi .agg-bucket b{font-size:22px}}
+@media (max-width:640px){.oi .front-card{padding:24px var(--inset)}}
 
 .oi{background:transparent;display:flow-root}
 .oi .sheet{margin:16px auto;border:1px solid var(--line);border-radius:var(--r);box-shadow:none}

@@ -1849,31 +1849,28 @@ const BUCKETS: ReadonlyArray<
   ["outOfScope", "out of scope", "buckets.out_of_scope"],
 ];
 
+/**
+ * The marks the core puts on a Result's counts: the strip, the bucket tallies
+ * and lists, and the count-mismatch markers. A page whose root is no Result
+ * shows none of them; a module that draws one there is discarded for the
+ * refusal (renderVerifiedContext).
+ */
+const RESULT_COUNT_MARKS = `[${CORE_STRIP_ATTRIBUTE}], .cv-strip, [data-bucket], [data-bucket-count], [data-count-mismatch]`;
+
+/** Said above the generic Result page when a Result opted into a card whose layout cannot hold its claims (`claimsFitCard`). */
+export const CARD_UNFIT_NOTE =
+  "This Result's claims don't fit the report layout, so every claim is listed below instead.";
+
 // The Result page lists the claims by verdict, after the core strip, which
 // draws coverage first and then the buckets, never a single figure
 // (core-strip.ts). Every count drawn here is the recomputed one
 // (`result.bucketCounts`); a producer figure the claims do not bear out
 // shows as a `count mismatch` marker beside it. Each claim keeps its own
 // tier and grade on its row.
-/**
- * The marks the core puts on a Result's counts: the strip, its buckets and
- * count-mismatch markers, and the Result page's coverage line. A page whose
- * bundle carries no Result shows none of them; a module that draws one
- * there is discarded for the refusal (renderVerifiedContext).
- */
-const RESULT_COUNT_MARKS = `[${CORE_STRIP_ATTRIBUTE}], .cv-strip, [data-bucket], [data-bucket-count], [data-count-mismatch], [data-coverage="result"]`;
-
-/** Said above the generic Result page when a Result opted into a card whose layout cannot hold its claims (`claimsFitCard`). */
-export const CARD_UNFIT_NOTE =
-  "This Result's claims don't fit the report layout, so every claim is listed below instead.";
-
 function renderResultPage(result: ResultRoot, root: HTMLElement): void {
   const section = element("section");
   section.dataset.page = "result";
   section.append(element("h1", "Evidence result"));
-  // Coverage and the bucket counts are the core strip's, first in L0
-  // (core-strip.ts); this page lists the claims behind them.
-
   const later = result.claims.filter((claim) => claim.later);
   const byId = new Map(result.claims.map((claim) => [claim.id, claim]));
   const buckets = element("section");
@@ -2726,6 +2723,8 @@ type FrameLook = {
   readonly look: string;
   readonly offsets: readonly number[];
   readonly place: readonly [number, number];
+  /** How far below the bar's top the core strip starts, in viewport px; 0 with no strip. */
+  readonly below: number;
   readonly readable: "yes" | "no" | "unseen";
   readonly clips: readonly {
     readonly width: number;
@@ -2748,6 +2747,7 @@ const sameLook = (a: FrameLook, b: FrameLook): boolean =>
         b.clips[i]!.height - Math.max(0, box.bar - b.clips[i]!.bar) - 1,
   ) &&
   Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK &&
+  Math.abs(a.below - b.below) <= SIDE_MARGIN_SLACK &&
   a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
   a.offsets.length === b.offsets.length &&
   a.offsets.every((m, i) => Math.abs(m - b.offsets[i]!) <= SIDE_MARGIN_SLACK);
@@ -3198,6 +3198,7 @@ async function renderVerifiedContext(
         look: "",
         offsets: [],
         place: [0, 0],
+        below: 0,
         readable: "unseen",
         clips: [],
       };
@@ -3276,7 +3277,16 @@ async function renderVerifiedContext(
       }
       if (style?.position === "fixed") fixed = true;
     }
+    // Every word of the banner and the strip: a module's content laid over
+    // the strip is caught as one laid over the banner is.
     const words = readable(parts, root);
+    // The strip stays where the banner puts it: nothing a module draws, laid
+    // out ahead of it (a flex or grid `order`, a float), pushes it down.
+    const strip = parts.length > 0 ? parts[parts.length - 1]! : undefined;
+    const below =
+      jsdom || strip === undefined || strip !== stripNode
+        ? 0
+        : strip.getBoundingClientRect().top - box.top;
     // The visible size of every box that clips the banner, from <html> down
     // to the banner's own elements: a module that shrinks one (a scrolling
     // host's height set to 0) clips the banner wherever the reader has
@@ -3339,7 +3349,7 @@ async function renderVerifiedContext(
           ];
         });
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, offsets, place, readable: words, clips };
+    return { look: seen, offsets, place, below, readable: words, clips };
   };
   // The core strip (core-strip.ts) is held to the same rules as the
   // banner: its words, structure and look are the core's, and it stays the

@@ -83,28 +83,33 @@ holds it. **Gap**: nothing sealed holds it today; a producer change fills it.
 ## 3. The hierarchy
 
 The three tiers are [pc] §9.1's three levels. The host creates the regions and
-sets the depth; the module fills L0 and L1 and appends to L2 after the core.
+sets the depth. The core's strip opens L0 (the mock-judge mark, then the
+sealed aggregate; capsule-viewer#81); the module fills the rest of L0 and L1
+and appends to L2 after the core.
 
 **L0, what matters.** One screen. Every figure traces to L1.
 
-1. Statement header: report name (wording pack), contract id and version,
-   period, population, requirement count, and the issuer (`operator` and the
-   producer key's short id).
-2. The sealed aggregate, as is: "216 evaluations of 9 requirements · 54
+1. The sealed aggregate, as is, in the core's strip, first in L0
+   (capsule-viewer#81): "216 evaluations of 9 requirements · 54
    excluded as not applicable · 0 evaluations with an unknown result", then
    the met, not met and not evaluable buckets, each labelled with its unit
    (evaluations). Never recomputed. `unknown_count` is never called
-   "unresolved" ([cr] §2, [er] §3).
+   "unresolved" ([cr] §2, [er] §3). Each bucket's count sits beside its
+   denominator, the evaluated population ("of 216").
+2. Statement header, the module's first: report name (wording pack),
+   contract id and version, period, population, requirement count, and the
+   issuer (`operator` and the producer key's short id).
 3. One derived line, with its own unit: Outcomes "30 conversations: 0
    resolved · 29 missed · 1 undecided", where each count opens its list in L1
    (#58 already draws those lists); EU "29 / 30 sessions with at least one
    test not met", from phase 2, when the session grid exists to trace it to.
 
 Per D5 (b), one more L0 line, drawn only when the judge is mock:
-"Verdicts are from a mock judge and are placeholders." As built since
-2026-10-23 it is a mark in the report's header, right under the title,
-and the folded assurance line in L1 then leaves the judge out, so the
-page says it once.
+"Verdicts are from a mock judge and are placeholders." Since
+capsule-viewer#81 it is the first line of the core's strip, before any
+figure (it was a mark in the report's header from 2026-10-23), and the
+folded assurance line in L1 then leaves the judge out, so the page says it
+once.
 
 No assurance strip in L0. [er] §3 is Steven's ruling: "Nothing above the fold
 summarizes assurance". No "Verified" pill: the core's banner and #61's

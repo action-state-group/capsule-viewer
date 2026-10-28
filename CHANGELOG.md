@@ -32,20 +32,24 @@ here. The format follows
   ("of N", the evaluated population). It shows no percentage. The outcome
   and EU cards no longer draw the aggregate or the mock-judge mark
   themselves, and the generic Result page drops its own coverage line. A
-  bundle with no Result draws no strip.
+  bundle whose root is no Result draws no strip.
 - A module is discarded for the "presentation failed" refusal if it puts
   anything before the strip or between the banner and L0, or if it changes,
   moves or hides the strip. On a page with no Result, a module that draws
   the Result's count marks is discarded the same way. Those marks are the
-  strip, `data-bucket`, `data-bucket-count`, `data-count-mismatch` and
-  `data-coverage="result"`. Presentation contract §9.1 and contract-report
+  strip, `data-bucket`, `data-bucket-count` and `data-count-mismatch`. Presentation contract §9.1 and contract-report
   module §2 say so.
 - The strip's stylesheet (`CORE_STRIP_CSS`) joins `CORE_RUNTIME_STYLES`.
   The emitters' CSP, `go/emitter/runtime-style-hashes.txt` and the embedded
   snippet's `styleSources` list one more hash; a host page that pins the
   embedded snippet's style hashes must add it.
 - Both default contract-report wording packs gain `front.agg.of`
-  ("of {n}"), so their digests change.
+  ("of {n}"), so their digests change. A page built with this version
+  records the new digests; a supplied pack layered over a default needs no
+  change. A supplied pack is refused if it puts
+  a percentage in any `front.agg.*` word the strip draws.
+- The outcome and EU frame stylesheets drop their aggregate and mock-mark
+  rules, so their CSP hashes change.
 
 ## ts 0.3.0 and go 0.3.0 (2026-10-28)
 

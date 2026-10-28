@@ -310,6 +310,28 @@ for (const grouping of ["lines", "groups"] as const)
     }
   });
 
+it("a pack that puts a percentage in a word the core strip draws is refused", () => {
+  for (const defaults of Object.values(DEFAULT_PACKS)) {
+    const pack = (key: string, text: string) => ({
+      id: "test/strip@1",
+      locale: "en",
+      entries: { [key]: text },
+    });
+    for (const [key, text] of [
+      ["front.agg.of", "of {n} (100%)"],
+      ["front.agg.of", "of {n}, 100％"],
+      ["front.agg.excluded", "{excluded} excluded (per cent)"],
+      ["front.agg.later.other", "{n} later (a percentage of the rest)"],
+    ] as const)
+      expect(wordingProblems(pack(key, text), defaults), text).toContain(
+        `test/strip@1: ${key} is drawn in the core strip, which shows counts and never a percentage`,
+      );
+    expect(
+      wordingProblems(pack("front.agg.of", "out of {n}"), defaults),
+    ).toEqual([]);
+  }
+});
+
 // contract-report/v1 section 3: "each layer is checked on its own, and a
 // refused layer contributes no words" -- a host pack that rewords a locked
 // line is refused, but the card still draws, with the built-in words and a

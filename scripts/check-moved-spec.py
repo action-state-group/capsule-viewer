@@ -240,7 +240,7 @@ CONTRACT = Move(
         # (capsule-viewer#81).
         (
             "| L0 | what matters | The module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The module. |",
-            "| L0 | what matters | On a bundle that carries an Evidence Result, the core strip first; then the module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The core (the strip), then the module. |",
+            "| L0 | what matters | On a verified bundle whose root is an Evidence Result, the core strip first; then the module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The core (the strip), then the module. |",
             "capsule-viewer#81: the core strip",
         ),
         (
@@ -253,9 +253,9 @@ CONTRACT = Move(
             "format, with scripts off and in print. Nothing a module, a section or a composed layout supplies\n"
             "goes above it: a module that puts any node before the strip or between the banner and L0, or that\n"
             "changes, moves or hides the strip, is discarded for the refusal like one whose `render` throws\n"
-            "(section 4.3). A bundle with no Result draws no strip, and a module that draws the core's marks\n"
-            "of a Result's counts on such a page (the strip, a bucket tally, a count-mismatch marker or the\n"
-            "Result's coverage line) is discarded the same way. A module's own figures in L0 follow the strip\n"
+            "(section 4.3). A bundle whose root is no Result draws no strip, and a module that draws the\n"
+            "core's marks of a Result's counts on such a page (the strip, a bucket tally or list, or a\n"
+            "count-mismatch marker) is discarded the same way. A module's own figures in L0 follow the strip\n"
             "and stay traceable to L1.\n\n"
             "The core's part of L2 is always present and always comes before any module detail in L2.",
             "capsule-viewer#81: the core strip",

@@ -167,6 +167,11 @@ const HAS_LETTER = /\p{L}/u;
  * both sides ("59 o 768" is Welsh for "59 of 768").
  */
 const DIGIT_LIKE = /[oil]/gu;
+// The keys the core strip draws that a pack may reword (the mock mark and
+// the bucket labels are locked), and a percentage as read (NFKC folds the
+// full-width and small percent signs into "%").
+const CORE_STRIP_KEY = /^front\.agg\./u;
+const PERCENT = /[%٪‰]|per\s*cent|percentage/iu;
 
 // ---------------------------------------------------------------------------
 // contract-report/v1 section 3: the keys the kind defines
@@ -1073,6 +1078,16 @@ export function wordingProblems(
         );
       continue;
     }
+    // The core strip's words (core-strip.ts) carry no percentage: the
+    // strip shows counts beside their denominator, never a single figure
+    // (presentation contract section 9.1, ER section 3).
+    if (
+      CORE_STRIP_KEY.test(key) &&
+      PERCENT.test(text.replace(PLACEHOLDER, "").normalize("NFKC"))
+    )
+      problems.push(
+        `${key} is drawn in the core strip, which shows counts and never a percentage`,
+      );
     const want = placeholders(base);
     const got = placeholders(text);
     if (want.join(" ") !== got.join(" "))
