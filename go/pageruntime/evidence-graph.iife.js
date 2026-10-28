@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("f5d94d0be25d5eb80bc91eef1c443d3413b9da66");
+    return commitPrefix("47f1e8e798789de6564d986c5a8be39ca048f14b");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17601,7 +17601,7 @@ ${pad.repeat(depth)}`;
     ...BOX_EDGES
   ];
   var ANCESTOR_UNCOMPARED = ["right", "bottom"];
-  var sameLook = (a, b) => a.look === b.look && (a.readable || !b.readable) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
+  var sameLook = (a, b) => a.look === b.look && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every((size, i) => size >= b.clips[i] - 2 * SIDE_MARGIN_SLACK) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17652,54 +17652,132 @@ ${pad.repeat(depth)}`;
       moves.map((i) => n[i])
     ];
   }
-  function readable(part) {
-    const doc = part.ownerDocument;
+  function readable(parts, root) {
+    const doc = root.ownerDocument;
     const view = doc.defaultView;
-    const at = part.getBoundingClientRect();
-    if (view.self === view.top && (at.top < 0 || at.left < 0 || at.bottom > view.innerHeight || at.right > view.innerWidth))
-      part.scrollIntoView({
-        block: "center",
-        inline: "center",
-        behavior: "instant"
-      });
+    if (view === null || view.navigator.userAgent.includes("jsdom"))
+      return "unseen";
+    const tree = root.getRootNode();
+    const scope = tree === doc ? [doc] : [doc, tree];
     const sheet = new view.CSSStyleSheet();
     sheet.replaceSync(
       "@layer cv-hit-test{*,*::before,*::after{pointer-events:auto!important}}"
     );
-    doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+    for (const at of scope)
+      at.adoptedStyleSheets = [...at.adoptedStyleSheets, sheet];
+    const port = doc.scrollingElement ?? doc.documentElement;
+    const [width, height] = [port.clientWidth, port.clientHeight];
+    const range = doc.createRange();
+    let seen = 0;
     try {
-      const text2 = doc.createTreeWalker(part, view.NodeFilter.SHOW_TEXT);
-      const range = doc.createRange();
-      let seen = 0;
-      for (let node = text2.nextNode(); node !== null; node = text2.nextNode()) {
-        let i = 0;
-        for (const char of node.textContent ?? "") {
-          range.setStart(node, i);
-          i += char.length;
-          range.setEnd(node, i);
-          if (/\s/.test(char)) continue;
-          const boxes = [...range.getClientRects()].filter(
-            (box) => box.width > 0 && box.height > 0
-          );
-          if (boxes.length === 0) return false;
-          for (const box of boxes) {
-            const x = box.left + box.width / 2;
-            const y = box.top + box.height / 2;
-            if (x < 0 || y < 0 || x >= view.innerWidth || y >= view.innerHeight)
-              return false;
-            const hit = doc.elementFromPoint(x, y);
-            if (hit === null || !part.contains(hit)) return false;
-            seen++;
+      for (const part of parts) {
+        const text2 = doc.createTreeWalker(part, view.NodeFilter.SHOW_TEXT);
+        for (let node = text2.nextNode(); node !== null; node = text2.nextNode()) {
+          const own = node.parentElement;
+          let i = 0;
+          for (const char of node.textContent ?? "") {
+            range.setStart(node, i);
+            i += char.length;
+            range.setEnd(node, i);
+            if (/\s/.test(char)) continue;
+            for (const box of range.getClientRects()) {
+              const x = box.left + box.width / 2;
+              const y = box.top + box.height / 2;
+              if (box.width <= 0 || box.height <= 0) continue;
+              if (x < 0 || y < 0 || x >= width || y >= height) continue;
+              let shown2 = false;
+              for (const hit of tree.elementsFromPoint(x, y)) {
+                if (own.contains(hit)) {
+                  shown2 = true;
+                  break;
+                }
+                if (hit.contains(own)) break;
+                if ((root.contains(hit) || doc.head?.contains(hit) === true) && !seeThrough(hit, view))
+                  return "no";
+              }
+              if (shown2) seen++;
+            }
           }
         }
       }
-      return seen > 0;
     } finally {
-      doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter(
-        (other) => other !== sheet
-      );
+      for (const at of scope)
+        at.adoptedStyleSheets = at.adoptedStyleSheets.filter(
+          (other) => other !== sheet
+        );
     }
+    return seen > 0 ? "yes" : "unseen";
   }
+  function seeThrough(element7, view) {
+    for (let at = element7; at !== null; at = at.parentElement)
+      if (view.getComputedStyle(at).opacity === "0") return true;
+    const style = view.getComputedStyle(element7);
+    const clear = (color) => color === "transparent" || /^rgba\(.*,\s*0\)$/.test(color);
+    return clear(style.backgroundColor) && style.backgroundImage === "none" && style.boxShadow === "none" && style.backdropFilter === "none" && ["top", "right", "bottom", "left"].every(
+      (side) => style.getPropertyValue(`border-${side}-width`) === "0px"
+    ) && !REPLACED.has(element7.localName) && ![...element7.childNodes].some(
+      (child) => child.nodeType === 3 && (child.textContent ?? "").trim() !== ""
+    ) && ["::before", "::after"].every(
+      (pseudo) => ["none", "normal"].includes(
+        view.getComputedStyle(element7, pseudo).content
+      )
+    );
+  }
+  var REPLACED = /* @__PURE__ */ new Set([
+    "img",
+    "video",
+    "canvas",
+    "iframe",
+    "object",
+    "embed",
+    "svg",
+    "input",
+    "textarea",
+    "select",
+    "button",
+    "meter",
+    "progress"
+  ]);
+  function linearTransform(element7, view) {
+    let matrix = new DOMMatrix();
+    for (let at = element7; at !== null; at = at.parentElement) {
+      const style = view.getComputedStyle(at);
+      const zoom = Number.parseFloat(style.zoom) || 1;
+      const rotate = style.rotate === "none" ? "" : rotateFunction(style.rotate);
+      const scale = style.scale === "none" ? "" : `scale3d(${scaleArgs(style.scale)})`;
+      const transform = style.transform === "none" ? "" : style.transform;
+      const local = new DOMMatrix(
+        `${rotate} ${scale} ${transform}`.trim() || "none"
+      ).scale(zoom, zoom);
+      local.m41 = local.m42 = local.m43 = 0;
+      matrix = local.multiply(matrix);
+    }
+    return matrix;
+  }
+  function rotateFunction(value) {
+    const parts = value.split(/\s+/);
+    if (parts.length === 1) return `rotate(${value})`;
+    const angle = parts.pop();
+    const axis = parts.length === 1 ? { x: "1 0 0", y: "0 1 0", z: "0 0 1" }[parts[0]] ?? parts[0] : parts.join(" ");
+    return `rotate3d(${axis.split(" ").join(",")},${angle})`;
+  }
+  function scaleArgs(value) {
+    const [x, y = x, z = "1"] = value.split(/\s+/);
+    return `${x},${y},${z}`;
+  }
+  function settled(view) {
+    return new Promise((done) => {
+      let waiting = true;
+      const next = () => {
+        if (!waiting) return;
+        waiting = false;
+        view.setTimeout(done, 0);
+      };
+      view.requestAnimationFrame(next);
+      view.setTimeout(next, SETTLE_MS);
+    });
+  }
+  var SETTLE_MS = 100;
   var checkingRenders = /* @__PURE__ */ new WeakMap();
   async function renderVerifiedContext(context, root, options) {
     const { bundle, verification } = context;
@@ -17801,9 +17879,15 @@ ${pad.repeat(depth)}`;
     drawFrame();
     const snapshot = (parts) => JSON.stringify(parts.map((part) => part.outerHTML));
     const looks = (parts, chromed) => {
-      const view = root.ownerDocument.defaultView;
-      if (!root.isConnected || view === null)
-        return { look: "", offsets: [], place: [0, 0], readable: false };
+      const view2 = root.ownerDocument.defaultView;
+      if (!root.isConnected || view2 === null)
+        return {
+          look: "",
+          offsets: [],
+          place: [0, 0],
+          readable: "unseen",
+          clips: []
+        };
       const had = root.classList.contains("cv-shell-chrome");
       root.classList.toggle("cv-shell-chrome", chromed);
       const ancestors = [];
@@ -17814,13 +17898,13 @@ ${pad.repeat(depth)}`;
         root,
         ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")])
       ];
-      const jsdom = view.navigator.userAgent.includes("jsdom");
+      const jsdom = view2.navigator.userAgent.includes("jsdom");
       const pseudos = jsdom ? [null] : [null, "::before", "::after"];
       const offsets = [];
       const seen = JSON.stringify(
         elements.flatMap(
           (element7, at) => pseudos.map((pseudo) => {
-            const style = view.getComputedStyle(element7, pseudo);
+            const style = view2.getComputedStyle(element7, pseudo);
             const ancestor = at < ancestors.length;
             const [transform, moves] = ancestor ? splitTransform(style.getPropertyValue("transform")) : [void 0, []];
             offsets.push(...moves);
@@ -17842,23 +17926,24 @@ ${pad.repeat(depth)}`;
           })
         )
       );
-      const scrollers = [root, ...ancestors];
-      const scrolled = scrollers.map(
-        (at) => [at.scrollLeft, at.scrollTop]
-      );
-      for (const at of scrollers)
-        if (at.scrollLeft !== 0 || at.scrollTop !== 0)
-          at.scrollTo({ left: 0, top: 0, behavior: "instant" });
       const box = parts[0].getBoundingClientRect();
       const place = [box.left, box.top];
-      const words = !jsdom && parts.every((part) => readable(part));
-      scrollers.forEach((at, i) => {
-        const [left, top] = scrolled[i];
-        if (at.scrollLeft !== left || at.scrollTop !== top)
-          at.scrollTo({ left, top, behavior: "instant" });
+      for (let at = parts[0].parentElement; at !== null; at = at.parentElement) {
+        if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
+        const move = at === root.ownerDocument.scrollingElement || jsdom ? { x: at.scrollLeft, y: at.scrollTop } : linearTransform(at, view2).transformPoint({
+          x: at.scrollLeft,
+          y: at.scrollTop
+        });
+        place[0] += move.x;
+        place[1] += move.y;
+      }
+      const words = readable(parts, root);
+      const clips = jsdom ? [] : elements.flatMap((element7) => {
+        const style = view2.getComputedStyle(element7);
+        return style.overflowX === "visible" && style.overflowY === "visible" ? [] : [element7.clientWidth, element7.clientHeight];
       });
       root.classList.toggle("cv-shell-chrome", had);
-      return { look: seen, offsets, place, readable: words };
+      return { look: seen, offsets, place, readable: words, clips };
     };
     const frameOf = () => {
       const detail = bar.nextElementSibling;
@@ -17876,9 +17961,10 @@ ${pad.repeat(depth)}`;
         }
       };
     };
-    let frame = frameOf();
+    let frame = selected !== void 0 || section !== void 0 ? frameOf() : void 0;
     const assertFrameIntact = () => {
-      const [top, detail] = frame.parts;
+      const at = frame;
+      const [top, detail] = at.parts;
       const pill = top.querySelector("[data-verify]");
       const banners = root.querySelectorAll(
         "[data-verify], [data-banner-detail]"
@@ -17886,9 +17972,9 @@ ${pad.repeat(depth)}`;
       const expected = [pill, ...detail === void 0 ? [] : [detail]];
       if (pill === null || banners.length !== expected.length || expected.some((part, i) => banners[i] !== part) || // Nodes, not elements: a bare text node before the banner is words
       // too. The core draws no text node at the root.
-      root.firstChild !== (frame.header ?? top) || top.previousSibling !== frame.header || frame.header !== null && frame.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || snapshot(frame.parts) !== frame.words || !sameLook(
-        looks(frame.parts, root.classList.contains("cv-shell-chrome")),
-        root.classList.contains("cv-shell-chrome") ? frame.looks.chrome : frame.looks.plain
+      root.firstChild !== (at.header ?? top) || top.previousSibling !== at.header || at.header !== null && at.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || snapshot(at.parts) !== at.words || !sameLook(
+        looks(at.parts, root.classList.contains("cv-shell-chrome")),
+        root.classList.contains("cv-shell-chrome") ? at.looks.chrome : at.looks.plain
       ))
         throw new Error("a module altered the verification banner");
     };
@@ -17947,6 +18033,17 @@ ${pad.repeat(depth)}`;
           },
           presentationServices(context)
         );
+        assertFrameIntact();
+      } catch {
+        chrome = void 0;
+        drawFrame();
+        refusal = "presentation-failed";
+      }
+    }
+    const view = root.ownerDocument.defaultView;
+    if (refusal === void 0 && (selected !== void 0 || section !== void 0) && root.isConnected && view !== null && !view.navigator.userAgent.includes("jsdom")) {
+      await settled(view);
+      try {
         assertFrameIntact();
       } catch {
         chrome = void 0;
