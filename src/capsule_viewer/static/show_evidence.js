@@ -80,7 +80,7 @@
     "side.not_in_bundle": "Not in this bundle. This page does not fetch it.",
     "side.disclosure_mismatch": "The disclosed content does not match the record's digest, so it is not shown.",
     "side.no_evidence": "This claim cites no evidence.",
-    "side.unsupported": "No verdict is drawn: the evidence this claim cites is not all in this bundle.",
+    "side.unsupported": "No verdict is drawn: the evidence this claim cites is not all disclosed in this bundle.",
     "side.failed": "No verdict is drawn: this claim failed this page's checks.",
     "side.later": "Readiness only: this requirement was not yet in force on the Result's date, so this verdict is not counted.",
     "side.unrecognized": "No verdict is drawn: this page does not recognize this type of claim.",

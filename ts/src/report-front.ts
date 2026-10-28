@@ -148,7 +148,11 @@ export function expandableRow(
   // The summary's own click toggles natively; anywhere else on the row
   // does the same.
   row.addEventListener("click", (event) => {
-    if ((event.target as Element).closest("summary") !== null) return;
+    // Nor does a click on a link or in a number's Show-evidence toggle
+    // (report-levels.ts `evidenceAction`): reading a number's evidence
+    // leaves the row as it was.
+    if ((event.target as Element).closest("summary, a, .cv-ev") !== null)
+      return;
     if (toggle.open) toggle.open = false;
     else openToggle(toggle);
   });
@@ -178,5 +182,12 @@ export function applyDepth(levels: ReportLevels): void {
       "details.lv",
     ))
       openToggle(toggle);
+    // A number's Show-evidence list (report-levels.ts `evidenceAction`) is
+    // the proofs' level: open at L2 only.
+    if (levels.depth === "L2")
+      for (const toggle of region.querySelectorAll<HTMLDetailsElement>(
+        "details.cv-ev",
+      ))
+        toggle.open = true;
   }
 }

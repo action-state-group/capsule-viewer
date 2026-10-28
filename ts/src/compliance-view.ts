@@ -32,12 +32,16 @@ import {
   levelToggle,
   proofList,
   conversationFold,
+  evidenceAction,
   ruleWord,
   wordPill,
   assuranceRow,
   reportSummary,
 } from "./report-levels.js";
-import type { ResultRoot } from "@action-state-group/agent-action-capsule";
+import type {
+  ResultClaim,
+  ResultRoot,
+} from "@action-state-group/agent-action-capsule";
 import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import {
   renderCheckYourself,
@@ -451,7 +455,12 @@ export function rowStatus(
   };
 }
 
-function rowResult(row: ObligationRowModel, w: Words): HTMLElement {
+function rowResult(
+  row: ObligationRowModel,
+  model: ComplianceModel,
+  result: ResultRoot,
+  w: Words,
+): HTMLElement {
   const cell = document.createElement("td");
   const status = rowStatus(row, w);
   cell.append(statusPill(status.cls, status.text));
@@ -465,13 +474,68 @@ function rowResult(row: ObligationRowModel, w: Words): HTMLElement {
         status.producerNote === true,
       ),
     );
+  // The pill and its note state a count per verdict: each count that is not
+  // zero gets its own Show-evidence action, named by what it counts.
+  const what: readonly [Bucket, string][] = [
+    ["not_met", w.t("groups.verdict.not_met")],
+    ["not_evaluable", w.t("groups.verdict.not_evaluable.judged")],
+    [
+      "unverified",
+      `${w.t("groups.verdict.failed")} / ${w.t("groups.verdict.unsupported")}`,
+    ],
+    ["out_of_scope", w.t("groups.verdict.out_of_scope")],
+    ["not_yet_in_force", w.t("groups.verdict.not_yet_in_force")],
+  ];
+  for (const [bucket, word] of what) {
+    const ids = row.sessionsByVerdict.get(bucket) ?? [];
+    const action = evidenceAction(
+      `test:${row.criterionId}:${bucket}`,
+      `${row.name} · ${word}: ${fmt(ids.length)}`,
+      ids.map((id) => claimOf(model, id, row.criterionId)),
+      result,
+      w,
+      w.t("evidence.show.for", { what: word }),
+    );
+    if (action !== undefined) cell.append(action);
+  }
   return cell;
+}
+
+type Bucket = Parameters<ObligationRowModel["sessionsByVerdict"]["get"]>[0];
+
+/** The claim behind one session's result for one test, if it has one. */
+function claimOf(
+  model: ComplianceModel,
+  conversationId: string,
+  criterionId: string,
+): ResultClaim | undefined {
+  return model.sessions
+    .find((s) => s.conversationId === conversationId)
+    ?.tests.find((t) => t.criterionId === criterionId)?.claim;
+}
+
+/**
+ * The sessions a test's population counts (`population`), as claims: every
+ * session but the ones it did not apply to and the ones not yet in force.
+ */
+function populationClaims(
+  row: ObligationRowModel,
+  model: ComplianceModel,
+): (ResultClaim | undefined)[] {
+  const outside = new Set([
+    ...(row.sessionsByVerdict.get("not_applicable") ?? []),
+    ...(row.sessionsByVerdict.get("not_yet_in_force") ?? []),
+  ]);
+  return model.sessions
+    .filter((s) => !outside.has(s.conversationId))
+    .map((s) => s.tests.find((t) => t.criterionId === row.criterionId)?.claim);
 }
 
 function renderSummary(
   host: HTMLElement,
   model: ComplianceModel,
   presentation: CompliancePresentation,
+  result: ResultRoot,
   w: Words,
 ): void {
   const section = el("section", "");
@@ -557,6 +621,7 @@ function renderSummary(
       tr.dataset.notYetInForce = String(test.notYetInForceCount);
       tr.dataset.exceptions = String(test.notMetCount);
       tr.dataset.notEvaluable = String(test.notEvaluableCount);
+      tr.dataset.unverified = String(test.unverifiedCount);
       const nameCell = el("td", "tn");
       const head = el("div", "tnh");
       const testName = rowName(w, "b", "", test);
@@ -570,11 +635,18 @@ function renderSummary(
         ...(test.sessionsByVerdict.get("unverified") ?? []),
         ...(test.sessionsByVerdict.get("not_evaluable") ?? []),
       ];
-      tr.append(
-        nameCell,
-        el("td", "n", count(w, "session", counted)),
-        rowResult(test, w),
+      const checkedIn = el("td", "n");
+      checkedIn.dataset.column = "checked-in";
+      checkedIn.append(el("span", "nv", count(w, "session", counted)));
+      const action = evidenceAction(
+        `test:${test.criterionId}:checked-in`,
+        `${test.name} · ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted)}`,
+        populationClaims(test, model),
+        result,
+        w,
       );
+      if (action !== undefined) checkedIn.append(action);
+      tr.append(nameCell, checkedIn, rowResult(test, model, result, w));
       tbody.append(tr);
       // The row itself opens the sessions behind it, in a full-width row
       // below it, so each one reads at the table's width.
@@ -1160,7 +1232,7 @@ export async function drawGroups(
   levels.L0.append(sheet);
 
   // L1, why: the tests, led by who judged, who witnessed, what verified.
-  renderSummary(levels.L1, model, presentation, w);
+  renderSummary(levels.L1, model, presentation, result, w);
   leadWithProvenance(
     levels.L1,
     levels.L1.querySelector('[data-section="summary"]'),

@@ -68,15 +68,13 @@ describe("browser IIFE emitter", () => {
 // registerPresentation beside the verifier functions src/browser.ts lists.
 const MODULE_CONTRACT = [
   "registerPresentation",
+  "buildResultRoot",
   "disclosureOf",
   "ed25519Available",
   "verifiedPayload",
   "verifyDisclosureEnvelope",
   "verifyProducerEnvelope",
 ] as const;
-
-// In the build's global, not yet in go/pageruntime's (see the test below).
-const NOT_YET_SHIPPED = ["buildResultRoot"] as const;
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
@@ -113,46 +111,44 @@ describe("the runtime's global", () => {
       string,
       unknown
     >;
-    for (const member of [...MODULE_CONTRACT.slice(1), ...NOT_YET_SHIPPED])
+    for (const member of MODULE_CONTRACT.slice(1))
       expect(browser[member], member).toBe(aac[member]);
   });
 
-  // Added to the build in capsule-viewer#83; go/pageruntime carries it from
-  // the next release refresh (RELEASING.md), when it moves into
-  // MODULE_CONTRACT above.
-  it("the build carries buildResultRoot, which reads a Result", async () => {
-    // With WebCrypto, as a page has it: the reader hashes every record.
-    const context: Record<string, unknown> = {
-      TextEncoder,
-      TextDecoder,
-      crypto: globalThis.crypto,
-    };
-    runInNewContext(
-      await readFile(
-        new URL("../dist/evidence-graph.iife.js", import.meta.url),
+  // Added to the build in capsule-viewer#83; go/pageruntime carries it
+  // since viewer 0.3.0 (go/v0.3.0).
+  for (const [name, file] of [
+    ["the build", "../dist/evidence-graph.iife.js"],
+    ["go/pageruntime", "../../go/pageruntime/evidence-graph.iife.js"],
+  ] as const)
+    it(`buildResultRoot reads a Result (${name})`, async () => {
+      // With WebCrypto, as a page has it: the reader hashes every record.
+      const context: Record<string, unknown> = {
+        TextEncoder,
+        TextDecoder,
+        crypto: globalThis.crypto,
+      };
+      runInNewContext(
+        await readFile(new URL(file, import.meta.url), "utf8"),
+        context,
+      );
+      const global = context.EvidenceGraph as Record<string, unknown>;
+      // Parsed in the runtime's own realm, as a page parses its bundle.
+      context.source = await readFile(
+        new URL(
+          "testdata/show-evidence/monthly-outcome.bundle.json",
+          import.meta.url,
+        ),
         "utf8",
-      ),
-      context,
-    );
-    const global = context.EvidenceGraph as Record<string, unknown>;
-    for (const member of NOT_YET_SHIPPED)
-      expect(typeof global[member], member).toBe("function");
-    // Parsed in the runtime's own realm, as a page parses its bundle.
-    context.source = await readFile(
-      new URL(
-        "testdata/show-evidence/monthly-outcome.bundle.json",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-    const bundle = runInNewContext("JSON.parse(source)", context) as unknown;
-    const result = await (
-      global.buildResultRoot as (
-        input: unknown,
-      ) => Promise<{ claims: readonly unknown[] }>
-    )(bundle);
-    expect(result.claims).toHaveLength(32);
-  });
+      );
+      const bundle = runInNewContext("JSON.parse(source)", context) as unknown;
+      const result = await (
+        global.buildResultRoot as (
+          input: unknown,
+        ) => Promise<{ claims: readonly unknown[] }>
+      )(bundle);
+      expect(result.claims).toHaveLength(32);
+    });
 });
 
 describe("builtCommit's validation", () => {

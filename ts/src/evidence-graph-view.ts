@@ -3545,6 +3545,49 @@ async function renderVerifiedContext(
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
   if (summary !== null) summary.textContent = checkedLine;
+  linkCitedBy(root);
   // A page opened at a record's address shows that record.
   revealRecordsByHash(root.ownerDocument);
+}
+
+// "Cited by" (capsule-viewer#83): each record a number on the page counts
+// links back to that number. The numbers say what they count themselves
+// (report-levels.ts `evidenceAction`: `data-cites`, the digests their claims
+// cite that this bundle carries, and `data-evidence-name`); this reads them
+// back once the module and the records section are drawn, and infers no
+// citation. The list sits in the record's entry beside its address, outside
+// the entry's lazily built body, so a page that runs no script carries it.
+function linkCitedBy(root: ParentNode): void {
+  const anchors = new Map<string, HTMLElement>();
+  for (const anchor of root.querySelectorAll<HTMLElement>(".cv-record-anchor"))
+    anchors.set(anchor.id, anchor);
+  const citing = new Map<HTMLElement, HTMLElement[]>();
+  for (const action of root.querySelectorAll<HTMLElement>(
+    "details.cv-ev[data-cites]",
+  ))
+    for (const digest of (action.dataset.cites ?? "").split(" ")) {
+      // One entry may hold two addresses (a book record and the capsule it
+      // carries): its list is one, under the entry's last address.
+      const entry = anchors
+        .get(recordAddress(digest))
+        ?.closest<HTMLElement>("details.cv-record");
+      if (entry === undefined || entry === null) continue;
+      const list = citing.get(entry) ?? [];
+      if (!list.includes(action)) list.push(action);
+      citing.set(entry, list);
+    }
+  for (const [entry, actions] of citing) {
+    const own = entry.querySelectorAll(":scope > .cv-record-anchor");
+    const anchor = own[own.length - 1]!;
+    const line = element("p", "Cited by: ");
+    line.className = "cv-cited-by";
+    line.dataset.citedBy = actions.map((a) => a.id).join(" ");
+    actions.forEach((action, i) => {
+      if (i > 0) line.append(" · ");
+      const link = element("a", action.dataset.evidenceName ?? action.id);
+      link.setAttribute("href", `#${action.id}`);
+      line.append(link);
+    });
+    anchor.after(line);
+  }
 }

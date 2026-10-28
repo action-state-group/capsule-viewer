@@ -291,6 +291,17 @@
     "front.check.s3.none": "This bundle carries no witness receipt. If you can get the log's checkpoint for this size on your own, compare its root with the one above.",
     "front.check.s4": "Open any row above to see the sealed records it cites.",
     "front.findings.label": "Producer's findings · presentation text, not evidence",
+    "evidence.show": "Show evidence",
+    "evidence.show.for": "Show evidence: {what}",
+    "evidence.records": "The records the claims behind this number cite, each a link to its entry in this bundle's records",
+    "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+    "evidence.no-evidence.one": "{n} counted from a claim that cites no evidence",
+    "evidence.no-evidence.other": "{n} counted from claims that cite no evidence",
+    "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
+    "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
+    "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
+    "evidence.label.no-evidence": "Unsupported: its claims cite no evidence",
+    "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
     "front.findings.h": "Findings"
   }
 }

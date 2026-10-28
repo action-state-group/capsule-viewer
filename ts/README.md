@@ -19,8 +19,9 @@ The in-browser renderer (`renderEvidenceGraph`) ships bundled as
 module ships the same build as `go/pageruntime`. Bundle verification comes from
 `@action-state-group/agent-action-capsule`. Besides `registerPresentation`,
 the runtime's global `EvidenceGraph` carries the verifier functions a
-presentation module may call: `disclosureOf`, `ed25519Available`,
-`verifiedPayload`, `verifyDisclosureEnvelope` and `verifyProducerEnvelope`.
+presentation module may call: `buildResultRoot`, `disclosureOf`,
+`ed25519Available`, `verifiedPayload`, `verifyDisclosureEnvelope` and
+`verifyProducerEnvelope`.
 
 The code moved here from agent-action-capsule (agent-action-capsule#281) and
 keeps its BSD-3-Clause license (`LICENSE-BSD-3-Clause`); the rest of the
