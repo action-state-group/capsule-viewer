@@ -342,6 +342,7 @@ describe("Show evidence, negative fixtures the old rendering fails", () => {
       .querySelector<HTMLDetailsElement>("details.rx")!;
     const before = toggle.open;
     action.querySelector<HTMLElement>(".cv-ev-body")!.click();
+    expect(toggle.open).toBe(before);
     action.querySelector<HTMLElement>(".cv-ev-list a")!.click();
     expect(toggle.open).toBe(before);
     // A click elsewhere on the row still opens it.
