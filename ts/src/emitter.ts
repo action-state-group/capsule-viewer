@@ -145,9 +145,12 @@ function checkInline(name: string, value: string, endTag: string): void {
   }
 }
 
-// Collect the text of every <script> and <style> element in document order.
-// The shell writes both start tags bare, and checkInline guarantees each
-// element's text runs to the first matching end tag.
+// Collect the text of every bare <script> and <style> element in document
+// order: the ones the CSP hashes. The shell writes their start tags bare, and
+// checkInline guarantees each element's text runs to the first matching end
+// tag. The bundle's <script type="application/json"> element is skipped on
+// purpose: it is data the browser never runs, so it needs no hash, and
+// hashing it would put a per-bundle source in script-src.
 function inlineElements(html: string): { script: string[]; style: string[] } {
   const found = { script: [] as string[], style: [] as string[] };
   let offset = 0;

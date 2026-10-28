@@ -66,7 +66,7 @@ deal note --deal "$id" --kind act --input act.json >/dev/null
 
 deal report --deal "$id" --html keep.html --bundle keep.json >/dev/null
 deal report --deal "$id" --share counterparty --to "the other party" --html counterparty.html >/dev/null
-perl -ne 'print "$1$2\n" if /^\s*(?:<script>window\.__BUNDLE__ = (.*);|<script type="application\/json">(.*))<\/script>$/' counterparty.html >counterparty.json
+perl -ne 'print "$1$2\n" if /^\s*(?:<script>window\.__BUNDLE__ = (\{.*\});|<script type="application\/json">(.*))<\/script>$/' counterparty.html >counterparty.json
 if [ -n "$keep_dir" ]; then mkdir -p "$keep_dir" && cp keep.html counterparty.html "$keep_dir/"; fi
 for name in keep counterparty; do
   jq -S . "$name.json" >"$out/main-standalone-$name.bundle.json"

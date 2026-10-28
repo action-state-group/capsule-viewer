@@ -156,7 +156,11 @@ func TestProtoMemberStaysInTheBundleElement(t *testing.T) {
 	}
 	html, err := EmitEvidenceGraphHTML(bundle, []byte("/*IIFE_MARKER*/"))
 	require.NoError(t, err)
+	// encoding/json has no prototypes, so the round trip below only shows
+	// the member is in the element; the shell's reader line is what keeps it
+	// a member in the browser.
 	require.NotContains(t, html, "window.__BUNDLE__ = {")
+	require.Contains(t, html, `<script>window.__BUNDLE__ = JSON.parse(document.currentScript.previousElementSibling.textContent);</script>`)
 	require.Equal(t, 1, strings.Count(html, `<script type="application/json">`))
 	require.Equal(t, bundle["inner"], extractBundle(t, html)["inner"])
 }
