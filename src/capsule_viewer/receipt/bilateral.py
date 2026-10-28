@@ -36,8 +36,12 @@ mix is declined, so no page shows a copy cut for someone else. The two
 copies come from two observers as the composition declares them (which party
 an observer is, the module does not judge).
 
+A composition may also be one-sided: one party's copy, and the other
+party's member an ``absence`` or a ``refusal`` (the "your receipt only"
+case, ``sides.py``). The page then draws that member as the missing side.
+
 The module declines a composition the verifier did not pass: the composed
-digest, composition closure and each copy's digest must all hold.
+digest, composition closure and each carried member's digest must all hold.
 
 Depth follows the unilateral module: L0 the deal, the joins and each copy's
 headline; L1 each copy's why; L2 the verifier's checks, the composition and
@@ -72,6 +76,7 @@ from .model import (
 from .module import DEPTHS, Levels, UnilateralReceiptModule, _el, _join, draft_manifest
 from .role import sealed_side, seller_kind_engaged
 from .seller import SellerModel, SellerReceiptModule, build_seller
+from .sides import Missing, missing_member, two_copy_case
 
 BILATERAL_MANIFEST: Manifest = json.loads(
     resources.files(__package__).joinpath("manifest-bilateral.json").read_text(encoding="utf-8")
@@ -121,21 +126,31 @@ class BilateralModel:
     composition: Composition
     bundle_digest: str | None
     verification: VerificationResult
+    case: str = "not_agreed"  # sides.CASES
+    missing: Missing | None = None  # the other member, when it is not a copy
 
 
 def composition_problem(c: Composition) -> str | None:
     """Why the verifier's composed/v1 result is not a bilateral receipt's, or
     ``None``: the block must have passed (its digest reproduced, closure
-    passed) and hold exactly two carried copies, under two member ids and two
-    observers, each copy's digest reproduced, with one corroboration result per
-    join. A malformed block reports no members, so it fails too."""
+    passed) and hold exactly two members, under two member ids and two
+    observers: two carried copies, or one carried copy and the other party's
+    ``absence`` or ``refusal`` (one-sided, every join deriving
+    ``one_sided``), each carried body's digest reproduced, with one
+    corroboration result per join. A malformed block reports no members, so
+    it fails too."""
     if c.status != "pass" or not c.digest_matches or c.closure.status != "pass":
         return f"the composition did not pass (status {c.status}, closure {c.closure.status})"
     members = c.members
-    if len(members) != 2 or any(m.body != "carried" or m.outcome != "artifact" for m in members):
-        return "a bilateral receipt is exactly two carried copies"
-    if any(m.digest != "reproduced" for m in members):
-        return "a carried copy's digest was not reproduced"
+    copies = [m for m in members if m.outcome == "artifact"]
+    if len(members) != 2 or any(m.body != "carried" for m in copies) or not copies:
+        return "a bilateral receipt is two members, at least one a carried copy"
+    if len(copies) == 1 and any(m.body not in ("carried", "declared_missing") for m in members if m.outcome != "artifact"):
+        return "the other party's member is neither carried nor declared missing"
+    if len(copies) == 1 and any(j.derived != "one_sided" for j in c.joins):
+        return "a one-sided composition's joins do not all derive one_sided"
+    if any(m.digest != "reproduced" for m in members if m.body == "carried"):
+        return "a carried member's digest was not reproduced"
     if len({m.id for m in members}) != 2 or len({m.observer for m in members}) != 2:
         return "the two copies are not from two observers"
     if len(c.corroboration) != len(c.joins):
@@ -206,8 +221,9 @@ def build_bilateral(
         parts = carried_parts(context, composition)
     except VerifierReportError as exc:
         raise ReceiptUnavailable(str(exc)) from exc
-    if len(parts) != 2:
-        raise ReceiptUnavailable("the bundle does not carry the two copies its report assessed")
+    copies = sum(m.outcome == "artifact" for m in composition.members)
+    if len(parts) != copies:
+        raise ReceiptUnavailable("the bundle does not carry the copies its report assessed")
     parties = tuple(_party(part, bind) for part in parts)
     if not page_may_show(audience, [p.audience for p in parties]):
         cuts = ", ".join(p.audience for p in parties)
@@ -217,6 +233,8 @@ def build_bilateral(
     # (agent-action-capsule go/bundle/composed.go); a report that does not is
     # declined above, never paired by guess.
     joins = tuple(JoinView(j, c) for j, c in zip(composition.joins, composition.corroboration, strict=True))
+    missing = missing_member(context, composition)
+    case = "one_sided" if missing is not None else two_copy_case(deal_state, [(v.join, v.corroboration) for v in joins])
     return BilateralModel(
         deal=named[0] if deal_state == "agree" else None,
         deal_state=deal_state,
@@ -226,6 +244,8 @@ def build_bilateral(
         composition=composition,
         bundle_digest=assurance.bundle_digest,
         verification=context.verification,
+        case=case,
+        missing=missing,
     )
 
 
@@ -278,14 +298,29 @@ class BilateralReceiptModule:
         l1_open = self.depth in ("L1", "L2")
         l2_open = self.depth == "L2"
 
-        l0: list[str] = [_el("h2", self.w("bilateral.title"))]
-        if any(p.audience == "keep" for p in model.parties):
-            l0.append(UnilateralReceiptModule(self.pack).private_banner())
+        sides = UnilateralReceiptModule(self.pack)
+        keep = any(p.audience == "keep" for p in model.parties)
+        one = len(model.parties) == 1
+        l0: list[str] = [_el("h2", self.w("bilateral.title.one_sided" if one else "bilateral.title"))]
+        if keep:
+            l0.append(sides.private_banner())
         l0 += [self._deal(model), self._joins(model)]
+        halves: list[str] = []
         for party, levels in zip(model.parties, drawn, strict=True):
             body = _join([levels.headline, *levels.notes])
-            l0.append(_el("div", services.section(self._heading(party), body, level=3), data_party=party.member, data_cut=party.audience))
-        l0.append(_el("p", self.w("parts.own"), class_="cv-muted"))
+            section = services.section(self._heading(party), body, level=3)
+            # On the holder's page their own copy is ours; every other copy is
+            # theirs, as received.
+            if party.audience == "keep":
+                halves.append(sides.half("ours", self.w("sides.ours"), section, data_party=party.member, data_cut=party.audience))
+            else:
+                label = self.w("sides.theirs") if keep else self.w("sides.half", role=party.role or self.w("party.role_undeclared"))
+                halves.append(sides.half("theirs", label, section, data_party=party.member, data_cut=party.audience))
+        if model.missing is not None or len(model.parties) == 1:
+            halves.append(sides.missing_half(model.missing, keep=keep))
+        l0.append(sides.sides(model.case, halves, keep=keep))
+        if not one:
+            l0.append(_el("p", self.w("parts.own"), class_="cv-muted"))
 
         l1 = [
             _el("div", services.section(self._heading(p), *levels.l1, level=3), data_party=p.member)
@@ -336,7 +371,7 @@ class BilateralReceiptModule:
 
     def _deal(self, model: BilateralModel) -> Markup:
         if model.deal_state == "agree" and model.deal is not None:
-            text = self.w("deal.agree", deal=model.deal)
+            text = self.w("deal.one" if len(model.parties) == 1 else "deal.agree", deal=model.deal)
         elif model.deal_state == "mismatch":
             text = self.w("deal.mismatch", deals=", ".join(model.named))
         else:

@@ -407,7 +407,9 @@ class SellerReceiptModule(UnilateralReceiptModule):
         # does (module.py); a copy cut for anyone else never does.
         if model.receipt.report.audience == "keep":
             l0.append(self.private_banner())
-        l0 += [levels.headline, *levels.notes]
+            l0.append(self.sides("none", [self.half("ours", self.w("sides.ours"), _join([levels.headline, *levels.notes])), self.missing_half(None, keep=True)], keep=True))
+        else:
+            l0 += [levels.headline, *levels.notes]
         return str(
             _join(
                 [

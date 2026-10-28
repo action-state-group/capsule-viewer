@@ -58,6 +58,7 @@ from ..verifier_report import Assurance
 from ..wording import PLACEHOLDER, WordingPack
 from .model import Binder, Committed, Fact, Item, Move, ReceiptModel, ReceiptUnavailable, Step, build_receipt
 from .role import SELLER_KIND, sealed_side, seller_kind_engaged
+from .sides import ACTIONS, CASE_TONE, Missing
 
 DEPTHS = ("L0", "L1", "L2")
 # The values this module fills, per wording key; every other key takes none.
@@ -79,10 +80,15 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "wording.provenance": frozenset({"id", "sha"}),
     # The bilateral module's (``bilateral.py``); one pack words both.
     "deal.agree": frozenset({"deal"}),
+    "deal.one": frozenset({"deal"}),
     "deal.mismatch": frozenset({"deals"}),
     "party.heading": frozenset({"role", "member"}),
     "join.line": frozenset({"basis", "declared", "derived"}),
     "corroboration.redundant": frozenset({"reasons"}),
+    # The receipt's sides (``sides.py``).
+    "sides.half": frozenset({"role"}),
+    "sides.missing.absence": frozenset({"start", "end"}),
+    "sides.missing.refusal": frozenset({"reason"}),
     # The errand's journey: capsulectl's own keys, mirrored (tests/test_receipt_journey.py).
     "journey.agent.act.pay": frozenset({"amount"}),
     "journey.agent.act.pay.within": frozenset({"amount", "limit"}),
@@ -231,7 +237,10 @@ class UnilateralReceiptModule:
         l0.append(_el("h2", self.w("page.title")))
         if model.report.audience == "keep":
             l0.append(self.private_banner())
-        l0 += [levels.headline, *levels.notes]
+            # The holder's own copy, and nothing from the other side: no record.
+            l0.append(self.sides("none", [self.half("ours", self.w("sides.ours"), _join([levels.headline, *levels.notes])), self.missing_half(None, keep=True)], keep=True))
+        else:
+            l0 += [levels.headline, *levels.notes]
         return str(
             _join(
                 [
@@ -261,6 +270,43 @@ class UnilateralReceiptModule:
         """The PRIVATE banner a ``keep`` copy carries in L0, worded by the pack."""
         label = _el("span", self.w("banner.private.label"), class_="cv-badge")
         return _el("p", _join([label, " ", self.w("banner.private.text")]), class_="cv-tone--caution", data_banner="private")
+
+    # ---- the receipt's sides (sides.py) ---------------------------------------
+
+    def sides(self, case: str, halves: Sequence[str], *, keep: bool) -> Markup:
+        """The case line, the halves, and on the holder's own page the actions.
+        The case's tone is never ``negative``: a missing side is not a finding."""
+        key = "sides.case.one_sided.shared" if case == "one_sided" and not keep else f"sides.case.{case}"
+        parts: list[str] = [_el("p", self.w(key), class_=f"cv-sides__case cv-tone--{CASE_TONE[case]}", data_case=case), *halves]
+        if keep:
+            # One line: the heading, then each sentence the holder can say.
+            items = [_el("li", self.w("actions.heading"), class_="cv-actions__heading")]
+            items += [_el("li", self.w(k), data_action=k.removeprefix("actions.")) for k in ACTIONS[case]]
+            parts.append(_el("ul", _join(items), class_="cv-actions", data_actions="true"))
+        return _el("div", _join(parts), class_="cv-sides", data_receipt_case=case)
+
+    def half(self, kind: str, label: str, body: str, **attrs: str) -> Markup:
+        """One side: ``ours`` (blue), ``theirs`` (amber, as received) or
+        ``missing`` (grey, dashed)."""
+        return _el("div", _join([_el("p", label, class_="cv-half__label"), body]), class_=f"cv-half cv-half--{kind}", data_half=kind, **attrs)
+
+    def missing_half(self, missing: Missing | None, *, keep: bool) -> Markup:
+        """The other side when it holds no copy: nothing at all, an ask that
+        went unanswered, or a signed no."""
+        if missing is None:
+            text = self.w("sides.missing.none")
+        elif missing.outcome == "absence" and missing.window is not None:
+            text = self.w("sides.missing.absence", start=missing.window[0], end=missing.window[1])
+        elif missing.outcome == "refusal" and missing.reason is not None:
+            text = self.w("sides.missing.refusal", reason=missing.reason)
+        else:
+            text = self.w(f"sides.missing.{missing.outcome}.bare")
+        if keep or missing is None or missing.role is None:
+            label = self.w("sides.missing.heading")
+        else:
+            label = missing.role
+        attrs = {"data_outcome": missing.outcome, "data_party": missing.member} if missing is not None else {"data_outcome": "none"}
+        return self.half("missing", label, _el("p", text), **attrs)
 
     # ---- words --------------------------------------------------------------
 

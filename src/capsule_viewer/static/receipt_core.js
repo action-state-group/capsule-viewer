@@ -84,6 +84,15 @@
   var MERCHANT_ROWS = ["approved", "agent_reported", "charged", "charged_on", "cancel_by", "domains", "key_size"];
   var PROVENANCES = ["seller_observed", "carrier", "buyer_confirmed"];
   var CUTS = { keep: ["keep", "counterparty"], counterparty: ["counterparty"], adjudicator: ["adjudicator"] };
+  // sides.CASE_TONE and sides.ACTIONS: a case's tone (never "negative": one
+  // side missing is not a finding) and the sentences a holder's page offers.
+  var CASE_TONE = { both: "positive", one_sided: "caution", none: "neutral", not_agreed: "neutral" };
+  var ACTIONS = {
+    both: ["actions.dispute", "actions.send", "actions.show_theirs"],
+    one_sided: ["actions.send", "actions.ask_again"],
+    none: ["actions.send", "actions.ask_again"],
+    not_agreed: ["actions.dispute", "actions.send", "actions.show_theirs"],
+  };
   // The kit's closed vocabularies (capsule_viewer.kit.components).
   var DISCLOSURE_STATES = {
     disclosed: ["DISCLOSED", "positive"],
@@ -1084,8 +1093,12 @@
   function compositionProblem(c) {
     if (c.status !== "pass" || !c.digest_matches || c.closure.status !== "pass") return "the composition did not pass";
     var members = c.members;
-    if (members.length !== 2 || members.some(function (m) { return m.body !== "carried" || m.outcome !== "artifact"; })) return "a bilateral receipt is exactly two carried copies";
-    if (members.some(function (m) { return m.digest !== "reproduced"; })) return "a carried copy's digest was not reproduced";
+    var copies = members.filter(function (m) { return m.outcome === "artifact"; });
+    var others = members.filter(function (m) { return m.outcome !== "artifact"; });
+    if (members.length !== 2 || !copies.length || copies.some(function (m) { return m.body !== "carried"; })) return "a bilateral receipt is two members, at least one a carried copy";
+    if (copies.length === 1 && others.some(function (m) { return m.body !== "carried" && m.body !== "declared_missing"; })) return "the other party's member is neither carried nor declared missing";
+    if (copies.length === 1 && c.joins.some(function (j) { return j.derived !== "one_sided"; })) return "a one-sided composition's joins do not all derive one_sided";
+    if (members.some(function (m) { return m.body === "carried" && m.digest !== "reproduced"; })) return "a carried member's digest was not reproduced";
     if (distinct(members.map(function (m) { return m.id; })).length !== 2 || distinct(members.map(function (m) { return m.observer; })).length !== 2) {
       return "the two copies are not from two observers";
     }
@@ -1119,6 +1132,32 @@
     });
   }
 
+  // sides.missing_member: the one member that is not a copy, its body read
+  // from the bundle's own block (its digest reproduced, compositionProblem).
+  function missingMember(v, composition) {
+    var others = composition.members.filter(function (m) { return m.outcome !== "artifact"; });
+    if (others.length !== 1) return null;
+    var member = others[0];
+    var observer = composition.observers.find(function (o) { return o.id === member.observer; }) || null;
+    var block = map(get(map(get(v.bundle, "extensions")), COMPOSED_KIND));
+    var raw = seq(get(block, "members")).map(map).find(function (r) { return get(r, "id") === member.id; }) || {};
+    var body = map(get(raw, member.outcome));
+    var win = map(get(body, "window"));
+    var start = str(get(win, "from")), end = str(get(win, "to"));
+    return {
+      member: member.id, role: observer ? observer.role : null, outcome: member.outcome,
+      window: start !== null && end !== null ? [start, end] : null, reason: str(get(body, "reason")),
+    };
+  }
+
+  // sides.two_copy_case.
+  function twoCopyCase(dealState, joins) {
+    var agreed = joins.length > 0 && joins.every(function (jv) {
+      return jv.join.derived === "agree" && jv.join.result === "derived_matches" && !!jv.corroboration && jv.corroboration.result === "corroborating";
+    });
+    return dealState === "agree" && agreed ? "both" : "not_agreed";
+  }
+
   // bilateral.build_bilateral. Asynchronous: each carried copy is verified by
   // the page's runtime, which may need a digest.
   function buildBilateral(v, env) {
@@ -1145,7 +1184,8 @@
         throw err instanceof Unavailable ? err : new Unavailable("a carried copy could not be verified: " + (err && err.message));
       });
     })).then(function (contexts) {
-      if (contexts.length !== 2) throw new Unavailable("the bundle does not carry the two copies its report assessed");
+      var copies = composition.members.filter(function (m) { return m.outcome === "artifact"; }).length;
+      if (contexts.length !== copies) throw new Unavailable("the bundle does not carry the copies its report assessed");
       var parties = contexts.map(function (ctx, i) {
         var pv = view(ctx, env);
         var m = members[i];
@@ -1162,15 +1202,19 @@
         throw new Unavailable("a page does not show copies cut for " + parties.map(function (p) { return p.audience; }).join(", "));
       }
       var deal = oneDeal(parties.map(function (p) { return p.deals; }));
+      var joins = composition.joins.map(function (j, i) { return { join: j, corroboration: composition.corroboration[i] }; });
+      var missing = missingMember(v, composition);
       return {
         deal: deal[0] === "agree" ? deal[1][0] : null,
         deal_state: deal[0],
         named: deal[1],
         parties: parties,
-        joins: composition.joins.map(function (j, i) { return { join: j, corroboration: composition.corroboration[i] }; }),
+        joins: joins,
         composition: composition,
         bundle_digest: v.assurance.bundle_digest,
         verification: v.verification,
+        case: missing !== null ? "one_sided" : twoCopyCase(deal[0], joins),
+        missing: missing,
       };
     });
   }
@@ -1310,6 +1354,33 @@
   P.privateBanner = function () {
     var label = this.d.el("span", { class: "cv-badge" }, [w("banner.private.label")]);
     return this.d.el("p", { class: "cv-tone--caution", "data-banner": "private" }, [label, " ", w("banner.private.text")]);
+  };
+  // module.py's sides, half and missing_half (sides.py has the cases).
+  P.sides = function (kase, halves, keep) {
+    var d = this.d;
+    var key = kase === "one_sided" && !keep ? "sides.case.one_sided.shared" : "sides.case." + kase;
+    var parts = [d.el("p", { class: "cv-sides__case cv-tone--" + CASE_TONE[kase], "data-case": kase }, [w(key)])].concat(halves);
+    if (keep) {
+      // One line: the heading, then each sentence the holder can say.
+      var items = [d.el("li", { class: "cv-actions__heading" }, [w("actions.heading")])].concat(ACTIONS[kase].map(function (k) {
+        return d.el("li", { "data-action": k.replace(/^actions\./, "") }, [w(k)]);
+      }));
+      parts.push(d.el("ul", { class: "cv-actions", "data-actions": "true" }, items));
+    }
+    return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
+  };
+  P.half = function (kind, label, body, attrs) {
+    return this.d.el("div", Object.assign({ class: "cv-half cv-half--" + kind, "data-half": kind }, attrs || {}), [this.d.el("p", { class: "cv-half__label" }, [label])].concat(body));
+  };
+  P.missingHalf = function (missing, keep) {
+    var text;
+    if (missing === null) text = w("sides.missing.none");
+    else if (missing.outcome === "absence" && missing.window !== null) text = w("sides.missing.absence", { start: missing.window[0], end: missing.window[1] });
+    else if (missing.outcome === "refusal" && missing.reason !== null) text = w("sides.missing.refusal", { reason: missing.reason });
+    else text = w("sides.missing." + missing.outcome + ".bare");
+    var label = keep || missing === null || missing.role === null ? w("sides.missing.heading") : missing.role;
+    var attrs = missing !== null ? { "data-outcome": missing.outcome, "data-party": missing.member } : { "data-outcome": "none" };
+    return this.half("missing", label, [this.d.el("p", {}, [text])], attrs);
   };
   P.part = function (part, prefix) {
     if (typeof part === "object" && part !== null) return prefix ? this.enumText(prefix, part.value) : part.value;
@@ -1824,8 +1895,12 @@
     var l0 = [];
     if (model.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
     l0.push(dr.d.el("h2", {}, [w("page.title")]));
-    if (model.report.audience === "keep") l0.push(dr.privateBanner());
-    l0 = l0.concat([levels.headline], levels.notes);
+    if (model.report.audience === "keep") {
+      l0.push(dr.privateBanner());
+      l0.push(dr.sides("none", [dr.half("ours", w("sides.ours"), [levels.headline].concat(levels.notes)), dr.missingHalf(null, true)], true));
+    } else {
+      l0 = l0.concat([levels.headline], levels.notes);
+    }
     return dr.page(l0, w("depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open);
   }
 
@@ -1835,8 +1910,12 @@
     var l0 = [];
     if (model.receipt.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
     l0.push(dr.d.el("h2", {}, [w("seller.title")]));
-    if (model.receipt.report.audience === "keep") l0.push(dr.privateBanner());
-    l0 = l0.concat([levels.headline], levels.notes);
+    if (model.receipt.report.audience === "keep") {
+      l0.push(dr.privateBanner());
+      l0.push(dr.sides("none", [dr.half("ours", w("sides.ours"), [levels.headline].concat(levels.notes)), dr.missingHalf(null, true)], true));
+    } else {
+      l0 = l0.concat([levels.headline], levels.notes);
+    }
     return dr.page(l0, w("seller.depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open);
   }
 
@@ -1917,10 +1996,12 @@
     var heading = function (party) {
       return w("party.heading", { role: party.role || w("party.role_undeclared"), member: party.member });
     };
-    var l0 = [d.el("h2", {}, [w("bilateral.title")])];
-    if (model.parties.some(function (p) { return p.audience === "keep"; })) l0.push(dr.privateBanner());
+    var keep = model.parties.some(function (p) { return p.audience === "keep"; });
+    var one = model.parties.length === 1;
+    var l0 = [d.el("h2", {}, [w(one ? "bilateral.title.one_sided" : "bilateral.title")])];
+    if (keep) l0.push(dr.privateBanner());
     var dealText;
-    if (model.deal_state === "agree" && model.deal !== null) dealText = w("deal.agree", { deal: model.deal });
+    if (model.deal_state === "agree" && model.deal !== null) dealText = w(one ? "deal.one" : "deal.agree", { deal: model.deal });
     else if (model.deal_state === "mismatch") dealText = w("deal.mismatch", { deals: model.named.join(", ") });
     else dealText = w("deal.unnamed");
     l0.push(d.el("p", { "data-deal-state": model.deal_state }, [dealText]));
@@ -1940,11 +2021,18 @@
         }, parts);
       }))], 3));
     }
-    model.parties.forEach(function (party, i) {
+    var halves = model.parties.map(function (party, i) {
       var levels = drawn[i];
-      l0.push(d.el("div", { "data-party": party.member, "data-cut": party.audience }, [kit.section(heading(party), [levels.headline].concat(levels.notes), 3)]));
+      var section = kit.section(heading(party), [levels.headline].concat(levels.notes), 3);
+      var attrs = { "data-party": party.member, "data-cut": party.audience };
+      // On the holder's page their own copy is ours; every other copy is theirs, as received.
+      if (party.audience === "keep") return dr.half("ours", w("sides.ours"), [section], attrs);
+      var label = keep ? w("sides.theirs") : w("sides.half", { role: party.role || w("party.role_undeclared") });
+      return dr.half("theirs", label, [section], attrs);
     });
-    l0.push(d.el("p", { class: "cv-muted" }, [w("parts.own")]));
+    if (model.missing !== null || model.parties.length === 1) halves.push(dr.missingHalf(model.missing, keep));
+    l0.push(dr.sides(model.case, halves, keep));
+    if (!one) l0.push(d.el("p", { class: "cv-muted" }, [w("parts.own")]));
     var l1 = model.parties.map(function (p, i) { return d.el("div", { "data-party": p.member }, [kit.section(heading(p), drawn[i].l1, 3)]); });
     var l2 = [kit.verificationDetails(model.verification)];
     if (model.bundle_digest) {

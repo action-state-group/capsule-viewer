@@ -652,5 +652,5 @@ def test_a_bundle_carrying_fewer_copies_than_its_report_assessed_is_declined():
     bundle = copy.deepcopy(bundle)
     del bundle["extensions"]["composed/v1"]["members"][1]["bundle"]
     context, assurance, composition = _read("bilateral-counterparty", bundle, report_for(bundle, output))
-    with pytest.raises(ReceiptUnavailable, match="two copies its report assessed"):
+    with pytest.raises(ReceiptUnavailable, match="the copies its report assessed"):
         build_bilateral(context, composition, check_opening, assurance, "counterparty")
