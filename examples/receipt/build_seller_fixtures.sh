@@ -89,7 +89,7 @@ cut() {
   deal report --deal "$1" --html "$2-keep.html" --bundle "$2-keep.json" >/dev/null
   for audience in counterparty adjudicator; do
     deal report --deal "$1" --share "$audience" --to "the $audience" --html "$2-$audience.html" >/dev/null
-    perl -ne 'print "$1\n" if /^\s*<script>window\.__BUNDLE__ = (.*);<\/script>$/' "$2-$audience.html" >"$2-$audience.json"
+    perl -ne 'print "$1$2\n" if /^\s*(?:<script>window\.__BUNDLE__ = (\{.*\});|<script type="application\/json">(.*))<\/script>$/' "$2-$audience.html" >"$2-$audience.json"
   done
 }
 

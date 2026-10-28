@@ -23,7 +23,9 @@ describe("emitEvidenceGraphHtml", () => {
 
   it("round-trips the inlined bundle", () => {
     const html = emitEvidenceGraphHtml(bundle, iife);
-    const match = /window\.__BUNDLE__ = ([\s\S]*?);<\/script>/.exec(html);
+    const match = /<script type="application\/json">([\s\S]*?)<\/script>/.exec(
+      html,
+    );
 
     expect(match?.[1]).toBeDefined();
     expect(JSON.parse(match![1]!)).toEqual(bundle);
@@ -41,8 +43,23 @@ describe("emitEvidenceGraphHtml", () => {
     const html = emitEvidenceGraphHtml(bundle, iife);
 
     expect(html.toLowerCase()).toMatch(/^<!doctype html/);
-    expect(html).toContain("window.__BUNDLE__ = {");
-    expect(html).not.toMatch(/window\.__BUNDLE__ = https?:/);
+    expect(html).toContain('<script type="application/json">{');
+    expect(html).not.toMatch(/<script[^>]*\ssrc=/u);
+  });
+
+  it('carries a "__proto__" member as data, never as a prototype (#109)', () => {
+    const value = JSON.parse('{"inner":{"__proto__":{"forged":"inherited"}}}');
+    const html = emitEvidenceGraphHtml(value, iife);
+
+    expect(html).not.toContain("window.__BUNDLE__ = {");
+    expect(html).toContain(
+      "window.__BUNDLE__ = JSON.parse(document.currentScript.previousElementSibling.textContent);",
+    );
+    const carried = JSON.parse(
+      /<script type="application\/json">([\s\S]*?)<\/script>/.exec(html)![1]!,
+    ) as { inner: object };
+    expect(Object.keys(carried.inner)).toEqual(["__proto__"]);
+    expect(Object.getPrototypeOf(carried.inner)).toBe(Object.prototype);
   });
 
   it("escapes script-breaking bundle content", () => {
@@ -52,7 +69,9 @@ describe("emitEvidenceGraphHtml", () => {
     expect(html).not.toContain(payload);
     expect(html).toContain("\\u003c/script\\u003e");
     expect(
-      JSON.parse(/window\.__BUNDLE__ = ([\s\S]*?);<\/script>/.exec(html)![1]!),
+      JSON.parse(
+        /<script type="application\/json">([\s\S]*?)<\/script>/.exec(html)![1]!,
+      ),
     ).toEqual({ payload });
   });
 });

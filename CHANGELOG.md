@@ -74,6 +74,16 @@ already used 0.2.0. Go entries below include changes first tagged in
   `capsule-viewer/contract-report/eu-ai-act@2`); their `wording_sha256`
   changes (#52 adds section 3 enum defaults and the resolved-conversation
   out-of-scope header split). A pinned `@1` digest no longer matches.
+- The offline page carries the bundle in a `<script type="application/json">`
+  element, and a fixed inline script sets `window.__BUNDLE__` from it with
+  `JSON.parse` (the emitter shell and the Go emitter's `shell.html`;
+  capsule-viewer#109). The page used to write the bundle as a JavaScript
+  object literal, where a `"__proto__"` member became the object's prototype:
+  the page verified the bundle without that member, yet could show the
+  member's fields as if the record carried them. It now verifies and shows what any JSON reader sees.
+  `window.__BUNDLE__` is still set before the bootstrap runs, so bootstraps
+  that pass it keep working. Code that extracts the bundle from a page by the
+  text `window.__BUNDLE__ = …;` must read the JSON element instead.
 
 ### Added
 

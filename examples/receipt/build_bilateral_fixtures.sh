@@ -69,7 +69,7 @@ cut() {
   capsulectl --profile deal deal report --deal "$1" --html keep.html --bundle keep.json >/dev/null
   for audience in counterparty adjudicator; do
     capsulectl --profile deal deal report --deal "$1" --share "$audience" --to "the $audience" --html "$audience.html" >/dev/null
-    perl -ne 'print "$1\n" if /^\s*<script>window\.__BUNDLE__ = (.*);<\/script>$/' "$audience.html" >"$audience.json"
+    perl -ne 'print "$1$2\n" if /^\s*(?:<script>window\.__BUNDLE__ = (\{.*\});|<script type="application\/json">(.*))<\/script>$/' "$audience.html" >"$audience.json"
   done
 }
 
