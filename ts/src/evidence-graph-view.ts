@@ -2716,44 +2716,20 @@ export async function renderEvidenceGraph(
 
 // The side margins are not in FRAME_LOOK: the shell centres the page root and
 // the bar with `auto` margins, and a computed `auto` margin is its used
-// width, which moves with the width of the page when a module's content makes
-// the page scroll. They are compared to within the change of the document's
-// client width (plus 1px for rounding), capped at the browser's own scrollbar
-// width, which a module's stylesheet cannot widen (see nativeScrollbar). A
-// module that moves the banner by more than a scrollbar is caught at any
-// zoom, and there is no slack at all when the page did not change width.
+// width, which moves by half a classic scrollbar when a module's content
+// makes the page scroll. They are compared to within SIDE_MARGIN_SLACK
+// instead, a constant no module's stylesheet can change: a module that moves
+// the banner by more is still caught. It assumes a classic scrollbar of up to
+// 18 CSS px (a native 17px at zoom 100%); at a very low page zoom the
+// scrollbar is wider in CSS px, and an honest module that makes the page
+// scroll is then discarded, which fails closed.
 const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
-type FrameLook = {
-  readonly look: string;
-  readonly margins: readonly number[];
-  readonly width: number;
-  readonly scrollbar: number;
-};
-const sameLook = (a: FrameLook, b: FrameLook): boolean => {
-  const slack =
-    Math.min(Math.abs(a.width - b.width), Math.max(a.scrollbar, b.scrollbar)) +
-    1;
-  return (
-    a.look === b.look &&
-    a.margins.length === b.margins.length &&
-    a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= slack)
-  );
-};
-// The width of the browser's own classic scrollbar in CSS px, measured on a
-// probe inside a shadow root, where no stylesheet of the page (a module's
-// `::-webkit-scrollbar` rule included) applies.
-const nativeScrollbar = (doc: Document): number => {
-  const host = doc.createElement("div");
-  host.style.cssText =
-    "position:fixed;visibility:hidden;left:0;top:0;width:100px;height:100px";
-  const probe = doc.createElement("div");
-  probe.style.cssText = "overflow:scroll;width:100px;height:100px";
-  host.attachShadow({ mode: "closed" }).append(probe);
-  doc.documentElement.append(host);
-  const width = probe.offsetWidth - probe.clientWidth;
-  host.remove();
-  return width;
-};
+const SIDE_MARGIN_SLACK = 9;
+type FrameLook = { readonly look: string; readonly margins: readonly number[] };
+const sameLook = (a: FrameLook, b: FrameLook): boolean =>
+  a.look === b.look &&
+  a.margins.length === b.margins.length &&
+  a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= SIDE_MARGIN_SLACK);
 
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
@@ -2943,8 +2919,7 @@ async function renderVerifiedContext(
   // this reason.
   const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null)
-      return { look: "", margins: [], width: 0, scrollbar: 0 };
+    if (!root.isConnected || view === null) return { look: "", margins: [] };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
     const elements = [
@@ -2974,16 +2949,8 @@ async function renderVerifiedContext(
         }),
       ),
     );
-    // Read in the state the margins were read in: the two chrome states lay
-    // the page out in different widths.
-    const width = root.ownerDocument.documentElement.clientWidth;
     root.classList.toggle("cv-shell-chrome", had);
-    return {
-      look: seen,
-      margins,
-      width,
-      scrollbar: nativeScrollbar(root.ownerDocument),
-    };
+    return { look: seen, margins };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
