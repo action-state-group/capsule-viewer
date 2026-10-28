@@ -10452,7 +10452,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("a471cba57b5045e57ed0d13bbce65210c95e9052");
+    return commitPrefix("cd1b02f4e1a7c103bad7a5d3baf8e6feaed5c279");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -17580,72 +17580,9 @@ ${pad.repeat(depth)}`;
     ...BOX_EDGES
   ];
   var ANCESTOR_UNCOMPARED = ["right", "bottom"];
-  var sameLook = (a, b) => a.look === b.look && a.latent === b.latent && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every(
+  var sameLook = (a, b) => a.look === b.look && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every(
     (box, i) => box.width >= b.clips[i].width - 2 * SIDE_MARGIN_SLACK && box.height >= b.clips[i].height - Math.max(0, box.bar - b.clips[i].bar) - 1
   ) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && Math.abs(a.below - b.below) <= SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
-  function touchesLook(style) {
-    for (let i = 0; i < style.length; i++)
-      if (LOOK_PROPERTIES.has(style[i])) return true;
-    return false;
-  }
-  function latentRules(elements, root, view) {
-    const tree = root.getRootNode();
-    const sheets = [
-      ...root.ownerDocument.styleSheets,
-      ...root.ownerDocument.adoptedStyleSheets ?? [],
-      ...tree === root.ownerDocument ? [] : [...tree.styleSheets, ...tree.adoptedStyleSheets ?? []]
-    ];
-    const now = (query) => query.trim() === "" || query.trim() === "all" || typeof view.matchMedia === "function" && view.matchMedia(query).matches;
-    const found = [];
-    const visit = (rules, latent) => {
-      for (const rule of rules) {
-        const grouped = "cssRules" in rule ? rule.cssRules : void 0;
-        if ("media" in rule && "conditionText" in rule)
-          visit(grouped, latent || !now(rule.conditionText));
-        else if ("selectorText" in rule) {
-          if (latent && touchesLook(rule.style)) {
-            const selector = rule.selectorText.replace(
-              /::?(?:before|after|first-line|first-letter|marker|placeholder|selection|backdrop)\b(?:\([^)]*\))?/gu,
-              ""
-            );
-            let selects = false;
-            try {
-              selects = elements.some(
-                (element7) => element7.matches(selector === "" ? "*" : selector)
-              );
-            } catch {
-              selects = false;
-            }
-            if (selects) found.push(rule.cssText);
-          }
-          if (grouped !== void 0 && grouped.length > 0) visit(grouped, latent);
-        } else if (grouped !== void 0) visit(grouped, latent);
-        else if ("styleSheet" in rule && "media" in rule) {
-          const imported = rule;
-          let rules2;
-          try {
-            rules2 = imported.styleSheet?.cssRules;
-          } catch {
-            rules2 = void 0;
-          }
-          if (rules2 !== void 0)
-            visit(rules2, latent || !now(imported.media.mediaText));
-        }
-      }
-    };
-    for (const sheet of sheets) {
-      let rules;
-      try {
-        rules = sheet.cssRules;
-      } catch {
-        continue;
-      }
-      const owner = sheet.ownerNode;
-      const media = sheet.media?.mediaText ?? (typeof owner?.getAttribute === "function" ? owner.getAttribute("media") ?? "" : "");
-      visit(rules, !now(media));
-    }
-    return JSON.stringify(found);
-  }
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17683,28 +17620,6 @@ ${pad.repeat(depth)}`;
     "content-visibility",
     "contain"
   ];
-  var LOOK_PROPERTIES = /* @__PURE__ */ new Set([
-    ...FRAME_LOOK,
-    ...ANCESTOR_OFFSETS,
-    ...SIDE_MARGINS,
-    "right",
-    "bottom",
-    "content",
-    // Shorthands, for a CSSOM that keeps them unexpanded (jsdom).
-    "all",
-    "margin",
-    "padding",
-    "border",
-    "border-width",
-    "border-top",
-    "border-right",
-    "border-bottom",
-    "border-left",
-    "inset",
-    "font",
-    "background",
-    "mask"
-  ]);
   var ANCESTOR_LOOK = FRAME_LOOK.filter(
     (name) => name !== "transform" && !ANCESTOR_OFFSETS.includes(name) && !ANCESTOR_UNCOMPARED.includes(name)
   );
@@ -17971,7 +17886,6 @@ ${pad.repeat(depth)}`;
           offsets: [],
           place: [0, 0],
           below: 0,
-          latent: "",
           readable: "unseen",
           clips: []
         };
@@ -18058,17 +17972,8 @@ ${pad.repeat(depth)}`;
           }
         ];
       });
-      const latent = latentRules(elements, root, view2);
       root.classList.toggle("cv-shell-chrome", had);
-      return {
-        look: seen,
-        offsets,
-        place,
-        below,
-        latent,
-        readable: words,
-        clips
-      };
+      return { look: seen, offsets, place, below, readable: words, clips };
     };
     const frameOf = () => {
       const detail = bar.nextElementSibling;
