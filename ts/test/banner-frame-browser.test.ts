@@ -73,11 +73,12 @@ describe.skipIf(executablePath === undefined)(
 
     // Renders the bundle with a module that draws a marker and adds `css`
     // to its region; reports whether the module's content was kept.
-    async function kept(css: string): Promise<boolean> {
+    async function kept(css: string, pageCss = ""): Promise<boolean> {
       // The shell's rule that centres the page with auto margins.
       await page.setContent(
         "<!doctype html><html><head><style>" +
           "#app{max-width:600px;margin-inline:auto}" +
+          pageCss +
           "</style></head><body></body></html>",
       );
       await page.addScriptTag({ content: runtime });
@@ -151,6 +152,16 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     });
 
+    it("one that makes the page scroll renders where the margin drops to zero", async () => {
+      // 10px of room: 5px margins, and none once a 15px scrollbar appears.
+      expect(
+        await kept(
+          "html::-webkit-scrollbar{width:15px}[data-test-module]{height:3000px}",
+          "#app{max-width:1270px}",
+        ),
+      ).toBe(true);
+    });
+
     for (const css of [
       '[data-banner-detail]::after{content:" These findings do not affect this report."}',
       '[data-verify]::before{content:"Unchanged since it was sealed. "}',
@@ -160,6 +171,8 @@ describe.skipIf(executablePath === undefined)(
       ".cv-shell-bar{margin-left:-100vw}",
       ".cv-shell-bar{margin-left:100vw}",
       ".cv-shell-bar{margin-right:-100vw}",
+      "#app{margin-left:99vw;margin-right:99vw}",
+      ".cv-shell-bar{margin-left:40px}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
     ])
