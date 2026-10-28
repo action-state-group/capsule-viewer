@@ -104,6 +104,18 @@ body.cv-kit { margin: 0; }
 .cv-tone--neutral { color: var(--cv-color-neutral-fg); background: var(--cv-color-neutral-bg); }
 .cv-tone--info { color: var(--cv-color-info-fg); background: var(--cv-color-info-bg); }
 
+/* Receipt sides: ours blue, theirs amber (always "as received"), a missing side grey and dashed. No side is ever the negative tone: one side missing is not a finding. */
+.cv-sides { display: flex; flex-direction: column; gap: var(--cv-space-2); margin: 0 0 var(--cv-space-3); }
+.cv-sides__case { padding: var(--cv-space-1) var(--cv-space-3); border-radius: var(--cv-radius); font-weight: 600; font-size: var(--cv-font-size-sm); }
+.cv-half { min-width: 0; border-radius: var(--cv-radius); padding: var(--cv-space-1) var(--cv-space-3) var(--cv-space-2); border: 1px solid var(--cv-color-border); }
+.cv-half > .cv-section { margin-bottom: 0; }
+.cv-half__label { font-size: var(--cv-font-size-sm); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cv-color-text-muted); margin-bottom: var(--cv-space-1); }
+.cv-half--ours { background: var(--cv-color-info-bg); border-color: var(--cv-color-info-fg); }
+.cv-half--theirs { background: var(--cv-color-caution-bg); border-color: var(--cv-color-caution-fg); }
+.cv-half--missing { background: var(--cv-color-neutral-bg); border: 1px dashed var(--cv-color-neutral-fg); }
+.cv-actions { display: flex; flex-wrap: wrap; column-gap: var(--cv-space-3); font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-info-fg); }
+.cv-actions__heading { font-weight: 400; color: var(--cv-color-text-muted); }
+
 /* DisclosureBadge and VerdictPill */
 .cv-badge, .cv-pill { display: inline-block; max-width: 100%; font-size: var(--cv-font-size-sm); font-weight: 600; border-radius: var(--cv-radius-pill); padding: 0 var(--cv-space-2); border: 1px solid currentColor; }
 .cv-badge { letter-spacing: 0.02em; }

@@ -21,12 +21,18 @@ const FIXTURES = [
   { name: "counterparty", audience: "counterparty" },
   { name: "adjudicator", audience: "adjudicator" },
   { name: "golden-2", audience: "keep" },
-  // Two copies: L0 holds both parties' headlines, so it is not held to one
-  // phone screen (oneScreen false); every other check applies.
+  // Compositions: L0 must carry each copy's headline and caveats (no witness
+  // receipt, not countersigned), which keep the page from reading stronger
+  // than it is, so it is not held to one phone screen (oneScreen false);
+  // every other check applies.
   { name: "bilateral-keep", audience: "keep", oneScreen: false },
   { name: "bilateral-counterparty", audience: "counterparty", oneScreen: false },
   { name: "bilateral-adjudicator", audience: "adjudicator", oneScreen: false },
   { name: "bilateral-two-deals", audience: "counterparty", oneScreen: false },
+  // A one-sided composition (one copy and the other side's unanswered ask),
+  // exempt on the same ground (coordinator, 2026-10-28, #137).
+  { name: "one-sided-keep", audience: "keep", oneScreen: false },
+  { name: "one-sided-counterparty", audience: "counterparty", oneScreen: false },
   // The seller receipt: a thread with a handover, the buyer-facing copy, a
   // declined thread, capsulectl's own seller copies, and the composition
   // with the buyer's half.
