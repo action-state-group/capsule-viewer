@@ -2725,11 +2725,52 @@ export async function renderEvidenceGraph(
 // scroll is then discarded, which fails closed.
 const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
 const SIDE_MARGIN_SLACK = 9;
-type FrameLook = { readonly look: string; readonly margins: readonly number[] };
+// The paddings and border widths: a module that widens them pushes the words
+// inside out of view.
+const BOX_EDGES = ["top", "right", "bottom", "left"].flatMap((side) => [
+  `padding-${side}`,
+  `border-${side}-width`,
+]);
+// On the root's ancestors, which in the embedded format are the host page's
+// own elements, the offsets, paddings, border widths and a transform's
+// translation are compared to within the same slack: a host that places its
+// widget with `left: 50%`, `translateX(-50%)` or a percentage margin or
+// padding resolves them to used px that move with the scrollbar too. A
+// positioned element's `top` and `left` resolve to where it is, whichever of
+// its offsets set that, so they stand for `right` and `bottom`, whose used px
+// follow the height of the module's content and are not compared. A module can
+// therefore still shift the banner by up to SIDE_MARGIN_SLACK per offset of
+// each ancestor; `position` and a transform that was `none` are compared
+// exactly. Those shifts add up, so where the bar sits in the document is
+// bounded too: it may not rise by more than SIDE_MARGIN_SLACK, nor move
+// sideways by more than one assumed classic scrollbar, twice
+// SIDE_MARGIN_SLACK (a widget a host floats right moves by all of it).
+// Downward is left to the per-ancestor caps, since a scrollbar only narrows
+// the page and so pushes reflowing host content above the widget down; the
+// caps keep a module from pushing the banner off the first screen, under
+// fixed content of its own, through an ancestor. A host that centres a
+// growing widget vertically lifts the banner by itself; an honest module there
+// is discarded, which fails closed.
+const ANCESTOR_OFFSETS = [
+  "top",
+  "left",
+  "margin-top",
+  "margin-bottom",
+  ...BOX_EDGES,
+] as const;
+const ANCESTOR_UNCOMPARED = ["right", "bottom"];
+type FrameLook = {
+  readonly look: string;
+  readonly offsets: readonly number[];
+  readonly place: readonly [number, number];
+};
+// `a` is the frame now, `b` as it was before the module rendered.
 const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.look === b.look &&
-  a.margins.length === b.margins.length &&
-  a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= SIDE_MARGIN_SLACK);
+  Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK &&
+  a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
+  a.offsets.length === b.offsets.length &&
+  a.offsets.every((m, i) => Math.abs(m - b.offsets[i]!) <= SIDE_MARGIN_SLACK);
 
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
@@ -2757,10 +2798,13 @@ const FRAME_LOOK = [
   "zoom",
   "margin-top",
   "margin-bottom",
+  ...BOX_EDGES,
   "font-family",
   "-webkit-text-fill-color",
   "clip",
   "clip-path",
+  "mask-image",
+  "-webkit-mask-image",
   "filter",
   "mix-blend-mode",
   "overflow",
@@ -2768,7 +2812,28 @@ const FRAME_LOOK = [
   "max-width",
   "z-index",
   "content-visibility",
+  "contain",
 ] as const;
+const ANCESTOR_LOOK = FRAME_LOOK.filter(
+  (name) =>
+    name !== "transform" &&
+    !(ANCESTOR_OFFSETS as readonly string[]).includes(name) &&
+    !ANCESTOR_UNCOMPARED.includes(name),
+);
+
+// A computed transform split into its linear part, compared exactly, and its
+// translation in px, compared within the slack. Anything else (`none`) is
+// compared whole.
+function splitTransform(value: string): [string, number[]] {
+  const m = /^matrix(3d)?\((.*)\)$/.exec(value);
+  if (m === null) return [value, []];
+  const n = m[2]!.split(",").map(Number);
+  const moves = m[1] === undefined ? [4, 5] : [12, 13, 14];
+  return [
+    `matrix${m[1] ?? ""}(${n.filter((_, i) => !moves.includes(i)).join(",")})`,
+    moves.map((i) => n[i]!),
+  ];
+}
 
 // By root, the renders still verifying on it: their `checking` bars, and
 // what the root held before the first of them began.
@@ -2909,9 +2974,9 @@ async function renderVerifiedContext(
   const snapshot = (parts: readonly Element[]): string =>
     JSON.stringify(parts.map((part) => part.outerHTML));
   // How the frame looks: the computed properties that decide whether its
-  // words can be read, for every element of each part and the root, with
-  // the root's chrome class as given (the one restyling a module may ask
-  // for, setChromeClass). A stylesheet a module adds that changes any of
+  // words can be read, for every element of each part, the root and the
+  // root's ancestors, with the root's chrome class as given (the one
+  // restyling a module may ask for, setChromeClass). A stylesheet a module adds that changes any of
   // them, hiding the banner included, is caught by comparing with this as it
   // was before the module rendered, so a host that was already hidden (an
   // inactive tab) is no module's doing. Empty off a document, where no
@@ -2919,10 +2984,18 @@ async function renderVerifiedContext(
   // this reason.
   const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null) return { look: "", margins: [] };
+    if (!root.isConnected || view === null)
+      return { look: "", offsets: [], place: [0, 0] };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
+    // The root's ancestors too, up to <html>: a transform, opacity, filter,
+    // clip or offset on any of them scales, hides or moves the banner while
+    // every value on the banner itself stays the same.
+    const ancestors: Element[] = [];
+    for (let at = root.parentElement; at !== null; at = at.parentElement)
+      ancestors.push(at);
     const elements = [
+      ...ancestors,
       root,
       ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")]),
     ];
@@ -2931,26 +3004,56 @@ async function renderVerifiedContext(
     const pseudos = view.navigator.userAgent.includes("jsdom")
       ? [null]
       : [null, "::before", "::after"];
-    const margins: number[] = [];
+    const offsets: number[] = [];
     const seen = JSON.stringify(
-      elements.flatMap((element) =>
+      elements.flatMap((element, at) =>
         pseudos.map((pseudo) => {
           const style = view.getComputedStyle(element, pseudo);
+          const ancestor = at < ancestors.length;
+          const [transform, moves] = ancestor
+            ? splitTransform(style.getPropertyValue("transform"))
+            : [undefined, []];
+          offsets.push(...moves);
           return [
-            ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
-            ...SIDE_MARGINS.flatMap((name) => {
-              const value = style.getPropertyValue(name);
-              const px = Number.parseFloat(value);
-              margins.push(Number.isNaN(px) ? 0 : px);
-              return Number.isNaN(px) ? [value] : [];
-            }),
+            ...(ancestor ? ANCESTOR_LOOK : FRAME_LOOK).map((name) =>
+              style.getPropertyValue(name),
+            ),
+            ...(transform === undefined ? [] : [transform]),
+            ...[...SIDE_MARGINS, ...(ancestor ? ANCESTOR_OFFSETS : [])].flatMap(
+              (name) => {
+                const value = style.getPropertyValue(name);
+                const px = Number.parseFloat(value);
+                offsets.push(Number.isNaN(px) ? 0 : px);
+                return Number.isNaN(px) ? [value] : [];
+              },
+            ),
             ...(pseudo === null ? [] : [style.getPropertyValue("content")]),
           ];
         }),
       ),
     );
+    // Where the bar sits in the document: its box plus every scroll offset
+    // above it, the viewport's included once (on <html>, or on <body> in
+    // quirks mode), so a reader's scrolling moves nothing. A scroll offset is
+    // in its container's own px, scaled by any transform above it into the
+    // viewport px the box is in; the viewport's is in viewport px already.
+    const box = parts[0]!.getBoundingClientRect();
+    const place: [number, number] = [box.left, box.top];
+    for (let at = parts[0]!.parentElement; at !== null; at = at.parentElement) {
+      if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
+      const seen = at.getBoundingClientRect();
+      const html =
+        at instanceof view.HTMLElement &&
+        at !== root.ownerDocument.scrollingElement
+          ? at
+          : undefined;
+      const width = html?.offsetWidth ?? 0;
+      const height = html?.offsetHeight ?? 0;
+      place[0] += at.scrollLeft * (width > 0 ? seen.width / width : 1);
+      place[1] += at.scrollTop * (height > 0 ? seen.height / height : 1);
+    }
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, margins };
+    return { look: seen, offsets, place };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;

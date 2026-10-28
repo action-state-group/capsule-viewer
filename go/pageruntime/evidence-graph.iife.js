@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("b2793dc8137f3980c10b75716c789034e03eb77c");
+    return commitPrefix("797a3fae2fc4d752a50072ccd82a7b8f4f3220f2");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17587,6 +17587,21 @@ ${pad.repeat(depth)}`;
       if (active.size === 0) checkingRenders.delete(root);
     }
   }
+  var SIDE_MARGINS = ["margin-left", "margin-right"];
+  var SIDE_MARGIN_SLACK = 9;
+  var BOX_EDGES = ["top", "right", "bottom", "left"].flatMap((side) => [
+    `padding-${side}`,
+    `border-${side}-width`
+  ]);
+  var ANCESTOR_OFFSETS = [
+    "top",
+    "left",
+    "margin-top",
+    "margin-bottom",
+    ...BOX_EDGES
+  ];
+  var ANCESTOR_UNCOMPARED = ["right", "bottom"];
+  var sameLook = (a, b) => a.look === b.look && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17607,21 +17622,36 @@ ${pad.repeat(depth)}`;
     "rotate",
     "zoom",
     "margin-top",
-    "margin-right",
     "margin-bottom",
-    "margin-left",
+    ...BOX_EDGES,
     "font-family",
     "-webkit-text-fill-color",
     "clip",
     "clip-path",
+    "mask-image",
+    "-webkit-mask-image",
     "filter",
     "mix-blend-mode",
     "overflow",
     "max-height",
     "max-width",
     "z-index",
-    "content-visibility"
+    "content-visibility",
+    "contain"
   ];
+  var ANCESTOR_LOOK = FRAME_LOOK.filter(
+    (name) => name !== "transform" && !ANCESTOR_OFFSETS.includes(name) && !ANCESTOR_UNCOMPARED.includes(name)
+  );
+  function splitTransform(value) {
+    const m = /^matrix(3d)?\((.*)\)$/.exec(value);
+    if (m === null) return [value, []];
+    const n = m[2].split(",").map(Number);
+    const moves = m[1] === void 0 ? [4, 5] : [12, 13, 14];
+    return [
+      `matrix${m[1] ?? ""}(${n.filter((_, i) => !moves.includes(i)).join(",")})`,
+      moves.map((i) => n[i])
+    ];
+  }
   var checkingRenders = /* @__PURE__ */ new WeakMap();
   async function renderVerifiedContext(context, root, options) {
     const { bundle, verification } = context;
@@ -17724,27 +17754,58 @@ ${pad.repeat(depth)}`;
     const snapshot = (parts) => JSON.stringify(parts.map((part) => part.outerHTML));
     const looks = (parts, chromed) => {
       const view = root.ownerDocument.defaultView;
-      if (!root.isConnected || view === null) return "";
+      if (!root.isConnected || view === null)
+        return { look: "", offsets: [], place: [0, 0] };
       const had = root.classList.contains("cv-shell-chrome");
       root.classList.toggle("cv-shell-chrome", chromed);
+      const ancestors = [];
+      for (let at = root.parentElement; at !== null; at = at.parentElement)
+        ancestors.push(at);
       const elements = [
+        ...ancestors,
         root,
         ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")])
       ];
       const pseudos = view.navigator.userAgent.includes("jsdom") ? [null] : [null, "::before", "::after"];
+      const offsets = [];
       const seen = JSON.stringify(
         elements.flatMap(
-          (element7) => pseudos.map((pseudo) => {
+          (element7, at) => pseudos.map((pseudo) => {
             const style = view.getComputedStyle(element7, pseudo);
+            const ancestor = at < ancestors.length;
+            const [transform, moves] = ancestor ? splitTransform(style.getPropertyValue("transform")) : [void 0, []];
+            offsets.push(...moves);
             return [
-              ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
+              ...(ancestor ? ANCESTOR_LOOK : FRAME_LOOK).map(
+                (name) => style.getPropertyValue(name)
+              ),
+              ...transform === void 0 ? [] : [transform],
+              ...[...SIDE_MARGINS, ...ancestor ? ANCESTOR_OFFSETS : []].flatMap(
+                (name) => {
+                  const value = style.getPropertyValue(name);
+                  const px = Number.parseFloat(value);
+                  offsets.push(Number.isNaN(px) ? 0 : px);
+                  return Number.isNaN(px) ? [value] : [];
+                }
+              ),
               ...pseudo === null ? [] : [style.getPropertyValue("content")]
             ];
           })
         )
       );
+      const box = parts[0].getBoundingClientRect();
+      const place = [box.left, box.top];
+      for (let at = parts[0].parentElement; at !== null; at = at.parentElement) {
+        if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
+        const seen2 = at.getBoundingClientRect();
+        const html = at instanceof view.HTMLElement && at !== root.ownerDocument.scrollingElement ? at : void 0;
+        const width = html?.offsetWidth ?? 0;
+        const height = html?.offsetHeight ?? 0;
+        place[0] += at.scrollLeft * (width > 0 ? seen2.width / width : 1);
+        place[1] += at.scrollTop * (height > 0 ? seen2.height / height : 1);
+      }
       root.classList.toggle("cv-shell-chrome", had);
-      return seen;
+      return { look: seen, offsets, place };
     };
     const frameOf = () => {
       const detail = bar.nextElementSibling;
@@ -17772,7 +17833,10 @@ ${pad.repeat(depth)}`;
       const expected = [pill, ...detail === void 0 ? [] : [detail]];
       if (pill === null || banners.length !== expected.length || expected.some((part, i) => banners[i] !== part) || // Nodes, not elements: a bare text node before the banner is words
       // too. The core draws no text node at the root.
-      root.firstChild !== (frame.header ?? top) || top.previousSibling !== frame.header || frame.header !== null && frame.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || snapshot(frame.parts) !== frame.words || looks(frame.parts, root.classList.contains("cv-shell-chrome")) !== (root.classList.contains("cv-shell-chrome") ? frame.looks.chrome : frame.looks.plain))
+      root.firstChild !== (frame.header ?? top) || top.previousSibling !== frame.header || frame.header !== null && frame.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || snapshot(frame.parts) !== frame.words || !sameLook(
+        looks(frame.parts, root.classList.contains("cv-shell-chrome")),
+        root.classList.contains("cv-shell-chrome") ? frame.looks.chrome : frame.looks.plain
+      ))
         throw new Error("a module altered the verification banner");
     };
     if (refused.length > 0)

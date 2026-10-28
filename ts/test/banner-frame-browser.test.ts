@@ -74,17 +74,24 @@ describe.skipIf(executablePath === undefined)(
 
     // Renders the bundle with a module that draws a marker and adds `css`
     // to its region; reports whether the module's content was kept.
-    async function kept(css: string, pageCss = ""): Promise<boolean> {
+    // `scroll` scrolls the element it selects to its first offset before the
+    // frame is drawn and to its second while the module renders, as a reader
+    // might.
+    async function kept(
+      css: string,
+      pageCss = "",
+      scroll?: readonly [string, number, number],
+    ): Promise<boolean> {
       // The shell's rule that centres the page with auto margins.
       await page.setContent(
         "<!doctype html><html><head><style>" +
           "body{margin:0}#app{max-width:600px;margin-inline:auto}" +
           pageCss +
-          "</style></head><body></body></html>",
+          '</style></head><body><div id="host"></div></body></html>',
       );
       await page.addScriptTag({ content: runtime });
       return page.evaluate(
-        async ({ bundle, css }) => {
+        async ({ bundle, css, scroll }) => {
           const { renderEvidenceGraph, PresentationRegistry } = (
             globalThis as unknown as {
               Frame: {
@@ -118,9 +125,15 @@ describe.skipIf(executablePath === undefined)(
                 script_sha256: "0".repeat(64),
               },
             },
-            canRender: () => true,
+            canRender: () => {
+              if (scroll !== undefined)
+                document.querySelector(scroll[0])!.scrollTop = scroll[1];
+              return true;
+            },
             buildModel: () => ({}),
             render: (_model: unknown, host: { L1: HTMLElement }) => {
+              if (scroll !== undefined)
+                document.querySelector(scroll[0])!.scrollTop = scroll[2];
               const marker = document.createElement("p");
               marker.dataset.testModule = "";
               host.L1.append(marker);
@@ -131,11 +144,11 @@ describe.skipIf(executablePath === undefined)(
           });
           const root = document.createElement("main");
           root.id = "app";
-          document.body.append(root);
+          document.getElementById("host")!.append(root);
           await renderEvidenceGraph(bundle, root, undefined, { registry });
           return root.querySelector("[data-test-module]") !== null;
         },
-        { bundle, css },
+        { bundle, css, scroll },
       );
     }
 
@@ -163,6 +176,98 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     });
 
+    // An embedded host that places its widget with percentages, whose used px
+    // move when the page grows a scrollbar.
+    for (const host of [
+      "#host{position:absolute;left:50%;transform:translateX(-50%);width:80%}",
+      "#host{transform:translateX(-50%);margin-left:50%;width:80%}",
+      "body{margin:2%}",
+    ])
+      it(`one that makes the page scroll renders on a host with ${host}`, async () => {
+        expect(
+          await kept(
+            "html::-webkit-scrollbar{width:15px}[data-test-module]{height:3000px}",
+            host,
+          ),
+        ).toBe(true);
+      });
+
+    it("one that moves a positioned host by its bottom offset is discarded", async () => {
+      expect(
+        await kept(
+          "#host{bottom:100vh}",
+          "#host{position:absolute;left:50%;transform:translateX(-50%);width:80%}",
+        ),
+      ).toBe(false);
+    });
+
+    it("one that moves a flex-centred host by its bottom margin is discarded", async () => {
+      expect(
+        await kept(
+          "#host{margin-bottom:200vh}",
+          "body{display:flex;align-items:center;height:100vh}#host{width:600px;flex:none}",
+        ),
+      ).toBe(false);
+    });
+
+    it("one that shifts each positioned ancestor within the slack is discarded", async () => {
+      expect(
+        await kept(
+          "html,body,#host{top:-9px;margin-top:-9px}",
+          "html,body,#host{position:relative}",
+        ),
+      ).toBe(false);
+    });
+
+    it("one that makes the page scroll renders on a host that floats it right", async () => {
+      expect(
+        await kept(
+          "html::-webkit-scrollbar{width:15px}[data-test-module]{height:3000px}",
+          "#host{float:right;width:500px}",
+        ),
+      ).toBe(true);
+    });
+
+    it("one renders while a reader scrolls a scaled host", async () => {
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "#host{transform:scale(.5);transform-origin:0 0;height:50px;overflow:auto}#host::after{content:'';display:block;height:1000px}",
+          ["#host", 100, 0],
+        ),
+      ).toBe(true);
+    });
+
+    it("one renders while a reader scrolls the page", async () => {
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "html{transform:scale(.5);transform-origin:0 0}body{padding-bottom:3000px}",
+          ["html", 0, 100],
+        ),
+      ).toBe(true);
+    });
+
+    it("one renders on a flex-centred host", async () => {
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "body{display:flex;align-items:center;height:100vh}#host{width:600px;flex:none}",
+        ),
+      ).toBe(true);
+    });
+
+    it("one renders on a host that already styles the root's ancestors", async () => {
+      // Compared before and after the module renders: the host's own styles
+      // are no module's doing.
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "html{transform:scale(0.5)}body{opacity:0.5;margin-top:-10px}",
+        ),
+      ).toBe(true);
+    });
+
     for (const css of [
       '[data-banner-detail]::after{content:" These findings do not affect this report."}',
       '[data-verify]::before{content:"Unchanged since it was sealed. "}',
@@ -182,6 +287,56 @@ describe.skipIf(executablePath === undefined)(
       "html::-webkit-scrollbar{width:90vw}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:-90vw}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
+      "[data-verify]{mask-image:linear-gradient(transparent,transparent)}",
+      "[data-verify]{-webkit-mask-image:linear-gradient(transparent,transparent)}",
+      // The root's ancestors, which scale, move, clip or hide the banner
+      // while every value on the banner itself stays the same.
+      "body{zoom:0.01}",
+      "html{zoom:0.1}",
+      "body{transform:scale(0.01)}",
+      "html{transform:scale(0.01)}",
+      "body{transform:scale(0.01);transform-origin:0 0}[data-test-module]{transform:scale(100)}",
+      "body{scale:0.01}",
+      "html{scale:0.01}",
+      "body{transform:translateY(-100vh)}",
+      "html{translate:0 -100vh}",
+      "body{transform:rotateX(90deg)}",
+      "body{margin-top:-60px}",
+      "html{position:relative;top:-60px}",
+      "body{opacity:0}",
+      "html{opacity:0}",
+      "body{filter:opacity(0)}",
+      "html{filter:blur(20px)}",
+      "body{clip-path:inset(60px 0 0 0)}",
+      "html{clip-path:inset(60px 0 0 0)}",
+      "html{mask-image:linear-gradient(transparent,transparent)}",
+      "html{content-visibility:hidden}",
+      'body::before{content:"";position:fixed;inset:0;background:#fff}',
+      "#host{transform:scale(0.01)}",
+      "#host{opacity:0}",
+      "#host{margin-top:-60px}",
+      "#host{position:relative;bottom:100vh}",
+      // Padding or a border that pushes the banner's words out of view.
+      "#app{padding-top:200vh}",
+      "#app{border-top:200vh solid #fff}",
+      ".cv-shell-bar{padding-top:200vh}",
+      ".cv-shell-bar{padding-left:100vw}",
+      ".cv-shell-bar{border-left:100vw solid #fff}",
+      "[data-banner-detail]{padding-top:200vh}",
+      "[data-banner-detail]{padding-left:100vw}",
+      "[data-verify]{padding-left:100vw}",
+      // The banner pushed off the first screen, under fixed module content.
+      "body{padding-top:200vh}",
+      "#host{padding-top:200vh}",
+      "html{border-top:200vh solid #fff}",
+      "body{padding-top:200vh}[data-test-module]{position:fixed;top:0;left:0;right:0;height:100vh}",
+      // Shifts within the slack on each ancestor that add up.
+      "html,body,#host{margin-top:-9px}",
+      "html,body,#host{margin-left:-9px}#app{margin-left:-9px}",
+      // Paint containment clips the banner.
+      "body{contain:strict}",
+      "body{contain:paint;height:0}",
+      "#app{contain:paint;height:0}",
     ])
       it(`one that adds ${css} is discarded`, async () => {
         expect(await kept(css)).toBe(false);
