@@ -315,6 +315,74 @@ describe("show evidence, negative cases", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("draws a payload member named like an inherited property", async () => {
+    const result = await buildResultRoot(monthly());
+    const claim = result.claims[0]!;
+    const model = SE.resolve(result, claim);
+    model.evidence[0].payload = {
+      ...model.evidence[0].payload,
+      constructor: "kept",
+      toString: "kept too",
+    };
+    const box = SE.render(model, document).querySelector(
+      '[data-source="payload"]',
+    )!;
+    expect(
+      box.querySelector('[data-member="constructor"]')!.textContent,
+    ).toContain("kept");
+    expect(
+      box.querySelector('[data-member="toString"]')!.textContent,
+    ).toContain("kept too");
+  });
+
+  it("never draws two close states alike, and shows an asserted state that differs from the recomputed one", async () => {
+    const result = await buildResultRoot(monthly());
+    const base = { ...result.claims[0]!, type: "close" };
+    const close = (state: string, asserted = state) =>
+      draw(result, { ...base, close: { state, asserted } } as never);
+    const unilateral = close("UNILATERAL");
+    const agreed = close("AGREED");
+    expect(unilateral.outerHTML).not.toBe(agreed.outerHTML);
+    expect(
+      unilateral.querySelector("[data-close-state]")!.textContent,
+    ).toContain("UNILATERAL");
+    const mismatch = close("UNILATERAL", "AGREED");
+    expect(mismatch.querySelector("[data-close-state]")!.textContent).toContain(
+      "close.asserted: AGREED",
+    );
+  });
+
+  it("draws each reconcile tally as its own field", async () => {
+    const result = await buildResultRoot(monthly());
+    const claim = {
+      ...result.claims[0]!,
+      type: "reconcile",
+      reconcile: {
+        tallies: { matched: 3, a_only: 1, b_only: 2, conflicting: 0 },
+        stateOfRecord: "A",
+      },
+    } as never;
+    const line = draw(result, claim).querySelector("[data-reconcile]")!;
+    expect(line.textContent).toContain("reconcile.a_only: 1");
+    expect(line.textContent).toContain("reconcile.b_only: 2");
+    expect(line.textContent).toContain("reconcile.conflicting: 0");
+    expect(line.textContent).toContain("reconcile.state_of_record: A");
+  });
+
+  it("draws a claim of a type the reader does not recognize with no verdict word", async () => {
+    const result = await buildResultRoot(monthly());
+    const claim = {
+      ...result.claims[0]!,
+      type: "x-future",
+      recognized: false,
+    };
+    const node = draw(result, claim);
+    expect(node.querySelector(".cv-side-verdict")!.textContent).toBe(
+      SE.WORDS["side.unrecognized"],
+    );
+    expect(node.textContent).toContain("type: x-future");
+  });
+
   it("draws a failed claim with no verdict word", async () => {
     const result = await buildResultRoot(monthly());
     const claim = { ...result.claims[0]!, failed: true };

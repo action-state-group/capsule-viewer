@@ -376,7 +376,9 @@ through `CapsuleViewerShowEvidence.resolve(result, claim)` and
   digest is not drawn.
 - **The verdict is drawn as the Result states it, and only where the page draws it.**
   A claim that failed the reader's checks, or whose evidence is not all in the bundle,
-  gets the reason instead of a verdict word, so it never reads as met.
+  gets the reason instead of a verdict word, so it never reads as met. So does a claim of
+  a type the reader does not recognize. A close claim shows its recomputed state, and
+  its asserted state when they differ. A reconcile claim shows each tally as its own field.
 - **The carrier decides what is drawn.** Under `disclosure` it draws the disclosed
   content, boxed. Under `analysis` or `story` it draws that text as the producer's and
   no record content.

@@ -23,10 +23,14 @@
 // digest the record committed.
 //
 // The verdict is drawn as the Result states it, labelled so, and only where
-// the page would draw it: a claim that failed the reader's checks, or whose
-// cited evidence does not all resolve (unsupported), gets no verdict word,
-// only the reason (agent-action-capsule result-root.ts: such a claim is never
-// shown as met).
+// the page would draw it: a claim that failed the reader's checks, whose
+// cited evidence does not all resolve (unsupported), or of a type the reader
+// does not recognize, gets no verdict word, only the reason
+// (agent-action-capsule result-root.ts: such a claim is never shown as met).
+// A typed claim keeps what tells it apart (ER section 4.1): a close claim's
+// state as the reader recomputed it, and the state it asserted when they
+// differ, so UNILATERAL never reads as AGREED; a reconcile claim's tallies,
+// each its own field, so A_ONLY and B_ONLY never read as CONFLICTING.
 //
 // The carrier decides what is drawn (Evidence Result v0 sections 2 and 6).
 // Under `disclosure`, each disclosed record's content is drawn, boxed, as the
@@ -75,6 +79,7 @@
     "side.no_evidence": "This claim cites no evidence.",
     "side.unsupported": "No verdict is drawn: the evidence this claim cites is not all in this bundle.",
     "side.failed": "No verdict is drawn: this claim failed this page's checks.",
+    "side.unrecognized": "No verdict is drawn: this page does not recognize this type of claim.",
     "carrier.withheld": "Withheld: the record is in this bundle, but its content is not disclosed.",
     "verdict.met": "Met",
     "verdict.not_met": "Not met",
@@ -88,6 +93,12 @@
 
   function str(v) {
     return typeof v === "string" ? v : undefined;
+  }
+
+  // Own members only: a payload member named "constructor" or "__proto__" is
+  // data, never an inherited property.
+  function own(o, k) {
+    return Object.prototype.hasOwnProperty.call(o, k);
   }
 
   // One cited digest, as the reader resolved it: {digest, state, kind,
@@ -127,7 +138,8 @@
       contract_ref: str(c.contractRef) || "",
       requirement_ref: str(c.requirementRef) || "",
       verdict: str(c.verdict) || "",
-      verdict_drawn: c.failed === true ? "failed" : c.support === "supported" ? "drawn" : "unsupported",
+      type: str(c.type) || "",
+      verdict_drawn: c.failed === true ? "failed" : c.recognized === false ? "unrecognized" : c.support === "supported" ? "drawn" : "unsupported",
       tier: str(c.tier) || "",
       grade: str(c.grade) || "",
       sufficiency: str(c.sufficiency) || "",
@@ -135,6 +147,21 @@
       evidence: evidence,
     };
     if (str(c.appliesFrom) !== undefined) model.applies_from = c.appliesFrom;
+    var close = obj(c.close);
+    if (str(close.state) !== undefined) {
+      model.close = { state: close.state };
+      if (str(close.asserted) !== undefined && close.asserted !== close.state) model.close.asserted = close.asserted;
+    }
+    var reconcile = obj(c.reconcile);
+    if (c.reconcile !== undefined) {
+      var tallies = obj(reconcile.tallies);
+      model.reconcile = {
+        tallies: Object.keys(tallies).map(function (k) {
+          return [k, tallies[k]];
+        }),
+        state_of_record: reconcile.stateOfRecord,
+      };
+    }
     return model;
   }
 
@@ -194,7 +221,7 @@
     }
     var rows = Object.keys(p)
       .filter(function (k) {
-        return !skip[k];
+        return !own(skip, k);
       })
       .map(function (k) {
         return el(doc, "div", { "data-member": k }, [el(doc, "dt", {}, [k]), el(doc, "dd", {}, [scalar(p[k])])]);
@@ -251,7 +278,7 @@
     var seen = {};
     reports(model).forEach(function (e) {
       var text = str(obj(e.payload)[REPORT_CRITERION]);
-      if (text === undefined || seen[text]) return;
+      if (text === undefined || own(seen, text)) return;
       seen[text] = true;
       col.appendChild(
         el(doc, "blockquote", { class: "cv-side-criterion", "data-source": "payload", "data-evidence": e.digest }, [
@@ -282,6 +309,24 @@
       ]),
     ]);
     if (model.applies_from !== undefined) col.appendChild(el(doc, "p", {}, [field(doc, "applies_from", model.applies_from)]));
+    if (model.type !== "") col.appendChild(el(doc, "p", {}, [field(doc, "type", model.type)]));
+    if (model.close !== undefined) {
+      var closeLine = [field(doc, "close.state", model.close.state)];
+      if (model.close.asserted !== undefined) closeLine.push(" \u00b7 ", field(doc, "close.asserted", model.close.asserted));
+      col.appendChild(el(doc, "p", { "data-close-state": model.close.state }, closeLine));
+    }
+    if (model.reconcile !== undefined) {
+      var tallyLine = [];
+      model.reconcile.tallies.forEach(function (pair, i) {
+        if (i > 0) tallyLine.push(" \u00b7 ");
+        tallyLine.push(field(doc, "reconcile." + pair[0], scalar(pair[1])));
+      });
+      if (model.reconcile.state_of_record !== undefined) {
+        if (tallyLine.length > 0) tallyLine.push(" \u00b7 ");
+        tallyLine.push(field(doc, "reconcile.state_of_record", scalar(model.reconcile.state_of_record)));
+      }
+      col.appendChild(el(doc, "p", { "data-reconcile": "" }, tallyLine));
+    }
     reports(model).forEach(function (e) {
       var text = str(obj(e.payload)[REPORT_PRODUCER_TEXT]);
       if (text !== undefined) col.appendChild(producerText(doc, w, text));
