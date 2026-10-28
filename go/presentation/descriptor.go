@@ -17,6 +17,20 @@ const ResultVersion = "evidence-result-v0"
 // ResultRecordType is the record_type of an Evidence Result book record header.
 const ResultRecordType = "evidence_result"
 
+// The bundle extension blocks a report page reads.
+const (
+	// CardExtension records which card a report was built for. Every card
+	// renders the one Result page today, so the runtime does not yet key on
+	// it.
+	CardExtension = "report-card/v1"
+	// PresentationExtension is the header block (producer display name,
+	// logo, title) the runtime renders in the page header and nowhere else.
+	PresentationExtension = "presentation/v1"
+	// ContractReportExtension engages the contract-report module
+	// (spec/contract-report-v1.md).
+	ContractReportExtension = "contract-report/v1"
+)
+
 // Descriptor is the resolution input of spec section 4.2. It never carries
 // the audience or the format.
 type Descriptor struct {
@@ -36,7 +50,7 @@ type Descriptor struct {
 // contract-report/v1 (section 4.2's deprecation table), read unchanged until
 // their removal.
 var extensionReaders = map[string]func(block interface{}) bool{
-	"contract-report/v1":      contractReportEngaged,
+	ContractReportExtension:   contractReportEngaged,
 	"outcome-report/v1":       outcomeReportEngaged,
 	"eu-ai-act-compliance/v1": complianceEngaged,
 }

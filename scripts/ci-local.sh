@@ -22,3 +22,4 @@ npm test
 
 (cd go && test -z "$(gofmt -l .)" && go mod tidy && test -z "$(git status --porcelain -- .)" \
   && go vet ./... && go test -race ./...)
+scripts/pageruntime.sh
