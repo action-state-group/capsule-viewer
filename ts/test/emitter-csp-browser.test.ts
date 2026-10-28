@@ -180,6 +180,68 @@ describe.skipIf(executablePath === undefined)(
       });
     });
 
+    // The runtime go/pageruntime ships was built at its own commit, so its
+    // stylesheets can drift from the ones go/emitter/runtime-style-hashes.txt
+    // lists today. Every stylesheet it inserts must be one the page's CSP
+    // allows, and every listed hash must be one it inserts.
+    it("go/pageruntime's runtime inserts exactly the stylesheets runtime-style-hashes.txt lists", async () => {
+      const runtime = readFileSync(
+        resolve(
+          process.cwd(),
+          "..",
+          "go",
+          "pageruntime",
+          "evidence-graph.iife.js",
+        ),
+        "utf8",
+      );
+      const listed = readFileSync(
+        resolve(
+          process.cwd(),
+          "..",
+          "go",
+          "emitter",
+          "runtime-style-hashes.txt",
+        ),
+        "utf8",
+      )
+        .split("\n")
+        .filter((line) => line.trim() !== "" && !line.startsWith("#"))
+        .map((line) => line.split(" ")[0]!);
+      const inserted = new Set<string>();
+      for (const [name, selector] of [
+        ["outcome-report-bundle.json", ".oi"],
+        ["compliance-bundle.json", ".cc"],
+        [
+          join("aac-vectors", "bundle", "composed", "vectors.json"),
+          "[data-section=composition]",
+        ],
+      ] as const) {
+        const input = name.endsWith("vectors.json")
+          ? (
+              fixture(name) as { cases: { id: string; container: Obj }[] }
+            ).cases.find((c) => c.id === "agree")!.container
+          : fixture(name);
+        const { bundle } = await sealEvidenceBundle(input);
+        const { page: loaded, violations } = await load(
+          emitEvidenceGraphHtml(bundle, runtime),
+        );
+        await loaded.waitForSelector(selector);
+        expect(violations, name).toEqual([]);
+        const styles = await loaded.evaluate(() =>
+          Array.from(
+            document.querySelectorAll("body style"),
+            (style) => style.textContent ?? "",
+          ),
+        );
+        for (const css of styles)
+          inserted.add(
+            `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`,
+          );
+      }
+      for (const hash of listed) expect(inserted, hash).toContain(hash);
+    });
+
     describe("with the reference core runtime", () => {
       let runtime: string;
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { builtCommitSha } from "../scripts/built-commit.mjs";
@@ -60,6 +61,57 @@ describe("browser IIFE emitter", () => {
     } else {
       expect(iife).toContain(headPrefixAtBuild);
     }
+  });
+});
+
+// The runtime's global, as a presentation module sees it: the viewer's
+// registerPresentation beside the verifier functions src/browser.ts lists.
+const MODULE_CONTRACT = [
+  "registerPresentation",
+  "disclosureOf",
+  "ed25519Available",
+  "verifiedPayload",
+  "verifyDisclosureEnvelope",
+  "verifyProducerEnvelope",
+] as const;
+
+function globalOf(iife: string): Record<string, unknown> {
+  const context: Record<string, unknown> = { TextEncoder, TextDecoder };
+  runInNewContext(iife, context);
+  return context.EvidenceGraph as Record<string, unknown>;
+}
+
+describe("the runtime's global", () => {
+  beforeAll(() => {
+    execFileSync("npm", ["run", "emitter:iife"], {
+      cwd: tsRoot,
+      stdio: "inherit",
+    });
+  });
+
+  for (const [name, file] of [
+    ["the build", "../dist/evidence-graph.iife.js"],
+    ["go/pageruntime", "../../go/pageruntime/evidence-graph.iife.js"],
+  ] as const) {
+    it(`carries the functions a presentation module may call (${name})`, async () => {
+      const global = globalOf(
+        await readFile(new URL(file, import.meta.url), "utf8"),
+      );
+      for (const member of MODULE_CONTRACT)
+        expect(typeof global[member], member).toBe("function");
+    });
+  }
+
+  it("re-exports agent-action-capsule's own verifier functions", async () => {
+    const aac = (await import(
+      "@action-state-group/agent-action-capsule"
+    )) as Record<string, unknown>;
+    const browser = (await import("../src/browser.js")) as Record<
+      string,
+      unknown
+    >;
+    for (const member of MODULE_CONTRACT.slice(1))
+      expect(browser[member], member).toBe(aac[member]);
   });
 });
 

@@ -85,6 +85,10 @@ is fetchable as soon as the tag exists, so a bad release can only be withdrawn
 with a `retract` directive in a later version. CI on `main` covers the module's
 tests.
 
+The module ships the page runtime as built (`go/pageruntime`). To ship a newer
+one, merge the change to `ts/`, run `scripts/pageruntime.sh --write` on a clean
+checkout of that commit, and commit the refreshed files on top of it.
+
 ## Registry configuration
 
 npm's trusted publisher names owner `action-state-group`, repository

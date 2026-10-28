@@ -69,6 +69,20 @@ here. The format follows
 
 ### Added
 
+- `go/pageruntime` ships the page runtime (capsule-viewer#111): the
+  `evidence-graph.iife.js` that `ts/scripts/build-iife.mjs` builds, committed
+  as built at the commit `pageruntime.Commit` names, as `IIFE` with its
+  `SHA256` pin, beside its NOTICE and THIRD_PARTY_NOTICES.
+  `scripts/pageruntime.sh` rebuilds it there and compares it byte for byte
+  (CI), or refreshes it with `--write`.
+- The runtime's global `EvidenceGraph` carries the verifier functions a
+  presentation module may call, beside `registerPresentation`:
+  `disclosureOf`, `ed25519Available`, `verifiedPayload`,
+  `verifyDisclosureEnvelope` and `verifyProducerEnvelope`,
+  agent-action-capsule's own functions re-exported from `ts/src/browser.ts`.
+- `go/presentation` declares the report page's block names:
+  `CardExtension` (`report-card/v1`), `PresentationExtension`
+  (`presentation/v1`) and `ContractReportExtension` (`contract-report/v1`).
 - The embedded packaging writes a snippet a host page inlines
   (action-state-group/capsule-cli#254). Given the core runtime,
   `buildPresentation(..., {format: "embedded"})` also returns `html`, the

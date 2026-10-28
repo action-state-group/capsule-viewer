@@ -15,8 +15,12 @@ import {
 ```
 
 The in-browser renderer (`renderEvidenceGraph`) ships bundled as
-`dist/evidence-graph.iife.js`, for a page's core runtime slot. Bundle verification comes from
-`@action-state-group/agent-action-capsule`.
+`dist/evidence-graph.iife.js`, for a page's core runtime slot, and the Go
+module ships the same build as `go/pageruntime`. Bundle verification comes from
+`@action-state-group/agent-action-capsule`. Besides `registerPresentation`,
+the runtime's global `EvidenceGraph` carries the verifier functions a
+presentation module may call: `disclosureOf`, `ed25519Available`,
+`verifiedPayload`, `verifyDisclosureEnvelope` and `verifyProducerEnvelope`.
 
 The code moved here from agent-action-capsule (agent-action-capsule#281) and
 keeps its BSD-3-Clause license (`LICENSE-BSD-3-Clause`); the rest of the
