@@ -254,9 +254,8 @@ the renderer, a two-way door, changes.
   needs scripts and that a no-script copy can be built with the command above.
   `capsulectl report build` prints the same command, and its docs give it,
   because the static path needs Node, which a `capsulectl` user may not have.
-  The shells belong to capsule-viewer#133's lane (viewer-109), so the
-  `<noscript>` line lands after #133 merges. The `capsulectl` line is an
-  evidencebook step. Both are tracked on #82.
+  The `<noscript>` line lands with this item's code. The `capsulectl` line
+  is an evidencebook step, tracked on #82.
 
 ### Words
 
@@ -271,7 +270,7 @@ strings as public text):
 | `chart.not_run` | `Not run` |
 | `chart.table.caption` | `The values in this chart` |
 | `chart.refused` | `This chart was not drawn: its spec does not match the report's data ({reason}).` |
-| `page.noscript` | `This page needs scripts to show the report. A copy that runs no scripts can be built from the same bundle; see capsule-viewer's render-report.` |
+| `page.noscript` | `This page needs scripts to show the report. A version without scripts can be built from the same bundle with render-report --format static.` |
 
 - The caption gives the population and the window, from the checked
   statement. The noun is the core's fixed "records". A pack noun would put
@@ -281,6 +280,9 @@ strings as public text):
 - Every chart carries the derived label. Every chart in the subset is a count
   or sum over records, which is a trend or a comparison, so no chart can leave
   the label off and the spec has no flag for it.
+- v0 limit: a category with no rows after `transform` is not in a
+  non-temporal channel's domain, so it can't show as 0. Only temporal units
+  are listed whether or not they have rows.
 - #120's `calendar.not_run` reuses `chart.not_run`, since a calendar unit is a
   run.
 
