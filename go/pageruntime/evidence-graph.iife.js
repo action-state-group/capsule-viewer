@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("719e43c8acb93976e6e00302c0ecfa375b2df894");
+    return commitPrefix("e887e7acf6122e44e3dde8688e1196d7eb95e8a2");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17589,7 +17589,9 @@ ${pad.repeat(depth)}`;
   }
   var SIDE_MARGINS = ["margin-left", "margin-right"];
   var SIDE_MARGIN_SLACK = 9;
-  var sameLook = (a, b) => a.look === b.look && a.margins.length === b.margins.length && a.margins.every((m, i) => Math.abs(m - b.margins[i]) <= SIDE_MARGIN_SLACK);
+  var ANCESTOR_OFFSETS = ["top", "left", "margin-top"];
+  var ANCESTOR_UNCOMPARED = ["right", "bottom", "margin-bottom"];
+  var sameLook = (a, b) => a.look === b.look && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17623,8 +17625,22 @@ ${pad.repeat(depth)}`;
     "max-height",
     "max-width",
     "z-index",
-    "content-visibility"
+    "content-visibility",
+    "contain"
   ];
+  var ANCESTOR_LOOK = FRAME_LOOK.filter(
+    (name) => name !== "transform" && !ANCESTOR_OFFSETS.includes(name) && !ANCESTOR_UNCOMPARED.includes(name)
+  );
+  function splitTransform(value) {
+    const m = /^matrix(3d)?\((.*)\)$/.exec(value);
+    if (m === null) return [value, []];
+    const n = m[2].split(",").map(Number);
+    const moves = m[1] === void 0 ? [4, 5] : [12, 13, 14];
+    return [
+      `matrix${m[1] ?? ""}(${n.filter((_, i) => !moves.includes(i)).join(",")})`,
+      moves.map((i) => n[i])
+    ];
+  }
   var checkingRenders = /* @__PURE__ */ new WeakMap();
   async function renderVerifiedContext(context, root, options) {
     const { bundle, verification } = context;
@@ -17727,7 +17743,7 @@ ${pad.repeat(depth)}`;
     const snapshot = (parts) => JSON.stringify(parts.map((part) => part.outerHTML));
     const looks = (parts, chromed) => {
       const view = root.ownerDocument.defaultView;
-      if (!root.isConnected || view === null) return { look: "", margins: [] };
+      if (!root.isConnected || view === null) return { look: "", offsets: [] };
       const had = root.classList.contains("cv-shell-chrome");
       root.classList.toggle("cv-shell-chrome", chromed);
       const ancestors = [];
@@ -17739,26 +17755,34 @@ ${pad.repeat(depth)}`;
         ...parts.flatMap((part) => [part, ...part.querySelectorAll("*")])
       ];
       const pseudos = view.navigator.userAgent.includes("jsdom") ? [null] : [null, "::before", "::after"];
-      const margins = [];
+      const offsets = [];
       const seen = JSON.stringify(
         elements.flatMap(
-          (element7) => pseudos.map((pseudo) => {
+          (element7, at) => pseudos.map((pseudo) => {
             const style = view.getComputedStyle(element7, pseudo);
+            const ancestor = at < ancestors.length;
+            const [transform, moves] = ancestor ? splitTransform(style.getPropertyValue("transform")) : [void 0, []];
+            offsets.push(...moves);
             return [
-              ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
-              ...SIDE_MARGINS.flatMap((name) => {
-                const value = style.getPropertyValue(name);
-                const px = Number.parseFloat(value);
-                margins.push(Number.isNaN(px) ? 0 : px);
-                return Number.isNaN(px) ? [value] : [];
-              }),
+              ...(ancestor ? ANCESTOR_LOOK : FRAME_LOOK).map(
+                (name) => style.getPropertyValue(name)
+              ),
+              ...transform === void 0 ? [] : [transform],
+              ...[...SIDE_MARGINS, ...ancestor ? ANCESTOR_OFFSETS : []].flatMap(
+                (name) => {
+                  const value = style.getPropertyValue(name);
+                  const px = Number.parseFloat(value);
+                  offsets.push(Number.isNaN(px) ? 0 : px);
+                  return Number.isNaN(px) ? [value] : [];
+                }
+              ),
               ...pseudo === null ? [] : [style.getPropertyValue("content")]
             ];
           })
         )
       );
       root.classList.toggle("cv-shell-chrome", had);
-      return { look: seen, margins };
+      return { look: seen, offsets };
     };
     const frameOf = () => {
       const detail = bar.nextElementSibling;
