@@ -422,12 +422,15 @@ here. The format follows
   was clipped. It now compares the same computed properties on every ancestor
   up to `<html>`, before and after the module renders, and also compares
   `mask-image` and `contain` on the banner and the root. On an ancestor,
-  `top`, `left`, `margin-top` and a transform's translation are compared to
-  within the same 9px as the side margins, since an embedded host that
-  centres its widget with percentages moves them when the page grows a
-  scrollbar; `right`, `bottom` and `margin-bottom` are not compared there. A
-  module that restyles `html` or `body` in any other compared property is
-  discarded. The Go module ships the runtime built with this fix
+  `top`, `left`, the vertical margins and a transform's translation are
+  compared to within the same 9px as the side margins, since an embedded host
+  that centres its widget with percentages moves them when the page grows a
+  scrollbar; `right` and `bottom` are not compared there. Because those
+  shifts add up across ancestors, the bar's place in the document is bounded
+  too: it may rise by at most 9px and move sideways by at most 18px. A host
+  that centres a growing widget vertically lifts the banner by itself, and an
+  honest module there is discarded (it fails closed). A module that restyles
+  `html` or `body` in any other compared property is discarded. The Go module ships the runtime built with this fix
   (`go/pageruntime`).
 
 - The banner frame check no longer discards a module render when the page

@@ -188,6 +188,42 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(false);
     });
 
+    it("one that moves a flex-centred host by its bottom margin is discarded", async () => {
+      expect(
+        await kept(
+          "#host{margin-bottom:200vh}",
+          "body{display:flex;align-items:center;height:100vh}#host{width:600px;flex:none}",
+        ),
+      ).toBe(false);
+    });
+
+    it("one that shifts each positioned ancestor within the slack is discarded", async () => {
+      expect(
+        await kept(
+          "html,body,#host{top:-9px;margin-top:-9px}",
+          "html,body,#host{position:relative}",
+        ),
+      ).toBe(false);
+    });
+
+    it("one that makes the page scroll renders on a host that floats it right", async () => {
+      expect(
+        await kept(
+          "html::-webkit-scrollbar{width:15px}[data-test-module]{height:3000px}",
+          "#host{float:right;width:500px}",
+        ),
+      ).toBe(true);
+    });
+
+    it("one renders on a flex-centred host", async () => {
+      expect(
+        await kept(
+          "[data-test-module]{color:red}",
+          "body{display:flex;align-items:center;height:100vh}#host{width:600px;flex:none}",
+        ),
+      ).toBe(true);
+    });
+
     it("one renders on a host that already styles the root's ancestors", async () => {
       // Compared before and after the module renders: the host's own styles
       // are no module's doing.
@@ -247,6 +283,9 @@ describe.skipIf(executablePath === undefined)(
       "#host{opacity:0}",
       "#host{margin-top:-60px}",
       "#host{position:relative;bottom:100vh}",
+      // Shifts within the slack on each ancestor that add up.
+      "html,body,#host{margin-top:-9px}",
+      "html,body,#host{margin-left:-9px}#app{margin-left:-9px}",
       // Paint containment clips the banner.
       "body{contain:strict}",
       "body{contain:paint;height:0}",

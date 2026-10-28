@@ -2732,15 +2732,34 @@ const SIDE_MARGIN_SLACK = 9;
 // with the scrollbar too. A positioned element's `top` and `left` resolve to
 // where it is, whichever of its offsets set that, so they stand for `right`
 // and `bottom`, whose used px follow the height of the module's content and
-// are not compared. A module can therefore still shift the banner by up to
+// are not compared. Both vertical margins are: a host that centres its widget
+// in a flex or grid box centres the margin box, so either one moves the
+// banner. A module can therefore still shift the banner by up to
 // SIDE_MARGIN_SLACK per offset of each ancestor; `position` and a transform
-// that was `none` are compared exactly. An ancestor's `margin-bottom` moves
-// nothing in it.
-const ANCESTOR_OFFSETS = ["top", "left", "margin-top"] as const;
-const ANCESTOR_UNCOMPARED = ["right", "bottom", "margin-bottom"];
-type FrameLook = { readonly look: string; readonly offsets: readonly number[] };
+// that was `none` are compared exactly. Those shifts add up, so where the bar
+// sits in the document is bounded too: it may not rise by more than
+// SIDE_MARGIN_SLACK (a scrollbar only narrows the page, which pushes reflowing
+// content down), nor move sideways by more than one assumed classic
+// scrollbar, twice SIDE_MARGIN_SLACK (a widget a host floats right moves by
+// all of it). A host that centres a growing widget vertically lifts the
+// banner by itself; an honest module there is discarded, which fails closed.
+const ANCESTOR_OFFSETS = [
+  "top",
+  "left",
+  "margin-top",
+  "margin-bottom",
+] as const;
+const ANCESTOR_UNCOMPARED = ["right", "bottom"];
+type FrameLook = {
+  readonly look: string;
+  readonly offsets: readonly number[];
+  readonly place: readonly [number, number];
+};
+// `a` is the frame now, `b` as it was before the module rendered.
 const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.look === b.look &&
+  Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK &&
+  a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
   a.offsets.length === b.offsets.length &&
   a.offsets.every((m, i) => Math.abs(m - b.offsets[i]!) <= SIDE_MARGIN_SLACK);
 
@@ -2955,7 +2974,8 @@ async function renderVerifiedContext(
   // this reason.
   const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null) return { look: "", offsets: [] };
+    if (!root.isConnected || view === null)
+      return { look: "", offsets: [], place: [0, 0] };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
     // The root's ancestors too, up to <html>: a transform, opacity, filter,
@@ -3002,8 +3022,17 @@ async function renderVerifiedContext(
         }),
       ),
     );
+    // Where the bar sits in the document: its box plus every scroll offset
+    // above it, the viewport's included once (on <html>, or on <body> in
+    // quirks mode), so a reader's scrolling moves nothing.
+    const box = parts[0]!.getBoundingClientRect();
+    const place: [number, number] = [box.left, box.top];
+    for (let at = parts[0]!.parentElement; at !== null; at = at.parentElement) {
+      place[0] += at.scrollLeft;
+      place[1] += at.scrollTop;
+    }
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, offsets };
+    return { look: seen, offsets, place };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
