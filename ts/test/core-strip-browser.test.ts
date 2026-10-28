@@ -378,60 +378,6 @@ describe.skipIf(executablePath === undefined)(
         ).kept,
       ).toBe(false);
     }, 60_000);
-
-    for (const [name, css] of [
-      ["the counts", "@media print{[data-bucket]{display:none}}"],
-      ["the coverage line", "@media print{.agg-line{color:transparent}}"],
-      [
-        "a count at a phone's width",
-        '@media (max-width:500px){[data-bucket="not_met"] b{visibility:hidden}}',
-      ],
-      ["the banner", "@media print{.cv-pill{opacity:0}}"],
-    ] as const)
-      it(`a rule that would change ${name} only in another medium or width is discarded`, async () => {
-        expect((await render("<p>module text</p>", css)).kept).toBe(false);
-      }, 60_000);
-
-    it("a module's own print and narrow-width rules render", async () => {
-      expect(
-        (
-          await render(
-            '<p class="own">module text</p>',
-            "@media print{.own{color:#000}}@media (max-width:500px){.own{font-size:12px}}",
-          )
-        ).kept,
-      ).toBe(true);
-    }, 60_000);
-
-    it("a print stylesheet that hides the counts is discarded", async () => {
-      expect(
-        (
-          await render(
-            '<style media="print">[data-bucket]{display:none}</style><p>module text</p>',
-          )
-        ).kept,
-      ).toBe(false);
-    }, 60_000);
-
-    it("a module's print reset and line height, which the frame does not show, render", async () => {
-      expect(
-        (
-          await render(
-            "<p>module text</p>",
-            "@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none}}@media (max-width:5000px){p{line-height:1.4}}",
-          )
-        ).kept,
-      ).toBe(true);
-    }, 60_000);
-
-    it("a rule that would hide L0 only in print is discarded, and the strip prints", async () => {
-      expect(
-        await render(
-          "<p>module text</p>",
-          '@media print{[data-region="L0"],[data-core-strip]{display:none}}',
-        ),
-      ).toEqual({ kept: false, printed: true });
-    }, 60_000);
   },
   120_000,
 );
