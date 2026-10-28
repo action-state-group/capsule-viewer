@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("541197c588a59b42410a72753b8e9f6e1c01bc94");
+    return commitPrefix("9068428d0141e7783e7c0d96faee5d6ca5cfd866");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17602,7 +17602,7 @@ ${pad.repeat(depth)}`;
   ];
   var ANCESTOR_UNCOMPARED = ["right", "bottom"];
   var sameLook = (a, b) => a.look === b.look && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every(
-    (box, i) => box.width >= b.clips[i].width - 2 * SIDE_MARGIN_SLACK && box.height >= b.clips[i].height - (b.clips[i].bar ? 2 * SIDE_MARGIN_SLACK : 1)
+    (box, i) => box.width >= b.clips[i].width - 2 * SIDE_MARGIN_SLACK && box.height >= b.clips[i].height - Math.max(0, box.bar - b.clips[i].bar) - 1
   ) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
   var FRAME_LOOK = [
     "display",
@@ -17768,7 +17768,7 @@ ${pad.repeat(depth)}`;
     return `${x},${y},${z}`;
   }
   function holdsFixed(style) {
-    return style.transform !== "none" || style.translate !== "none" || style.rotate !== "none" || style.scale !== "none" || style.perspective !== "none" || style.filter !== "none" || style.backdropFilter !== "none" || /paint|layout|strict|content/.test(style.contain) || /transform|perspective|filter/.test(style.willChange) || style.containerType !== "normal";
+    return style.transform !== "none" || style.translate !== "none" || style.rotate !== "none" || style.scale !== "none" || style.perspective !== "none" || style.filter !== "none" || style.backdropFilter !== "none" || /paint|layout|strict|content/.test(style.contain) || /transform|perspective|filter/.test(style.willChange) || style.containerType !== "normal" || style.contentVisibility === "auto";
   }
   function settled(view) {
     return new Promise((done) => {
@@ -17955,14 +17955,17 @@ ${pad.repeat(depth)}`;
         const matrix = linearTransform(element7, view2);
         const across = matrix.transformPoint({ x: element7.clientWidth });
         const down = matrix.transformPoint({ y: element7.clientHeight });
+        const bar2 = matrix.transformPoint({
+          y: element7 instanceof view2.HTMLElement && element7 !== root.ownerDocument.scrollingElement ? Math.max(
+            0,
+            element7.offsetHeight - element7.clientHeight - Number.parseFloat(style.borderTopWidth) - Number.parseFloat(style.borderBottomWidth)
+          ) : 0
+        });
         return [
           {
             width: Math.hypot(across.x, across.y),
             height: Math.hypot(down.x, down.y),
-            // Only a box that scrolls sideways can grow a scrollbar of
-            // its own across its bottom; any other box's height a page's
-            // scrollbar leaves alone.
-            bar: ["auto", "scroll"].includes(style.overflowX)
+            bar: Math.hypot(bar2.x, bar2.y)
           }
         ];
       });
