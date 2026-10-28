@@ -140,10 +140,12 @@ for (const setting of SETTINGS)
           csp,
           markerStyle,
           late,
+          hostScript,
         }: {
           csp?: string;
           markerStyle?: string;
           late?: { css: string; when: "timer" | "frame" };
+          hostScript?: string;
         } = {},
       ): Promise<boolean> {
         // A fresh document each time: setContent reuses the document, and a
@@ -161,6 +163,8 @@ for (const setting of SETTINGS)
             pageCss +
             '</style></head><body><div id="host"></div></body></html>',
         );
+        if (hostScript !== undefined)
+          await page.addScriptTag({ content: hostScript });
         await page.addScriptTag({ content: runtime });
         return page.evaluate(
           async ({ bundle, css, scroll, markerStyle, late }) => {
@@ -206,6 +210,9 @@ for (const setting of SETTINGS)
               render: (_model: unknown, host: { L1: HTMLElement }) => {
                 if (scroll !== undefined)
                   document.querySelector(scroll[0])!.scrollTop = scroll[2];
+                (
+                  globalThis as { readerScrolls?: () => void }
+                ).readerScrolls?.();
                 const marker = document.createElement("p");
                 marker.dataset.testModule = "";
                 if (markerStyle !== undefined)
@@ -377,15 +384,27 @@ for (const setting of SETTINGS)
         ).toBe(true);
       });
 
-      it("one that makes a scrolled host's height fractional and shifts each ancestor within the slack is discarded", async () => {
-        expect(
-          await kept(
-            "#host{height:100.25px}html,body,#host{margin-top:-9px}",
-            "#host{height:100px;overflow:auto}#host::after{content:'';display:block;height:30000px}",
-            ["#host", 20000, 20000],
-          ),
-        ).toBe(false);
-      });
+      // At page zoom 50% the three 9px rises lift the bar by 9 viewport px in
+      // all, which the place bound allows.
+      it.skipIf(setting.css === "html{zoom:.5}")(
+        "one that shifts each ancestor up within the slack is discarded",
+        async () => {
+          expect(await kept("html,body,#host{margin-top:-9px}")).toBe(false);
+        },
+      );
+
+      it.skipIf(setting.css === "html{zoom:.5}")(
+        "one that makes a scrolled host's height fractional and shifts each ancestor within the slack is discarded",
+        async () => {
+          expect(
+            await kept(
+              "#host{height:100.25px}html,body,#host{margin-top:-9px}",
+              "#host{height:100px;overflow:auto}#host::after{content:'';display:block;height:30000px}",
+              ["#host", 20000, 20000],
+            ),
+          ).toBe(false);
+        },
+      );
 
       it("one that covers a widget lower on a long host page where it first shows is discarded", async () => {
         expect(
@@ -453,6 +472,94 @@ for (const setting of SETTINGS)
           ).toBe(true);
         });
       }
+
+      it("one that clips the pill inside a host's clipping rule is discarded", async () => {
+        expect(
+          await kept(
+            ".cv-pill{width:1px}",
+            ".cv-pill{display:inline-block;overflow:hidden;white-space:nowrap}",
+          ),
+        ).toBe(false);
+      });
+
+      // Layers a module draws that paint nothing over the banner.
+      for (const css of [
+        // A closed dialog, faded out.
+        "[data-test-module]{position:fixed;inset:0;margin:0;opacity:0;pointer-events:none;background:#fff}",
+        // An empty full-page container for toasts.
+        "[data-test-module]{position:fixed;inset:0;margin:0;pointer-events:none}",
+      ])
+        it(`one that adds ${css} renders`, async () => {
+          expect(await kept(css)).toBe(true);
+        });
+
+      it("one renders on a host whose own layer covers the widget", async () => {
+        expect(
+          await kept("[data-test-module]{color:red}", "", undefined, {
+            hostScript:
+              "const cover=document.createElement('nav');cover.style.cssText='position:fixed;inset:0;background:#fff;z-index:1';document.body.append(cover);",
+          }),
+        ).toBe(true);
+      });
+
+      it("one renders on a host that shows a fixed header once the reader scrolls", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{color:red}",
+            "#host{margin-top:100px}body{padding-bottom:3000px}",
+            ["html", 0, 30],
+            {
+              hostScript:
+                "const header=document.createElement('nav');header.style.cssText='position:fixed;top:0;left:0;right:0;height:120px;background:#fff;display:none';document.body.append(header);addEventListener('scroll',()=>{header.style.display=scrollY>0?'block':'none'});",
+            },
+          ),
+        ).toBe(true);
+      });
+
+      it("one that makes a full-width host's page scroll renders", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{height:3000px}",
+            "#host{width:100vw}#app{max-width:none}",
+          ),
+        ).toBe(true);
+      });
+
+      it("one renders without moving where the reader has scrolled", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{color:red}",
+            // Without scroll anchoring, which moves the offset by itself as
+            // the page fills in.
+            "#host{height:100px;overflow:auto;overflow-anchor:none}#host::after{content:'';display:block;height:30000px}body{padding-bottom:3000px}",
+            ["#host", 0, 700],
+          ),
+        ).toBe(true);
+        expect(
+          await page.evaluate(() => [
+            document.getElementById("host")!.scrollTop,
+            scrollY,
+          ]),
+        ).toEqual([700, 0]);
+      });
+
+      it("one renders without stopping the reader's smooth scroll", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{color:red}",
+            "html{scroll-behavior:smooth}body{padding-bottom:5000px}",
+            undefined,
+            {
+              // Called as the module renders: a reader follows a link.
+              hostScript:
+                "window.readerScrolls=()=>{scrollTo({top:300,behavior:'instant'});scrollTo({top:1000,behavior:'smooth'})};",
+            },
+          ),
+        ).toBe(true);
+        await page.waitForFunction(() => scrollY === 1000, undefined, {
+          timeout: 3000,
+        });
+      });
 
       it("one that shrinks a scrolling host to nothing is discarded", async () => {
         expect(
@@ -534,7 +641,6 @@ for (const setting of SETTINGS)
         "html{border-top:200vh solid #fff}",
         "body{padding-top:200vh}[data-test-module]{position:fixed;top:0;left:0;right:0;height:100vh}",
         // Shifts within the slack on each ancestor that add up.
-        "html,body,#host{margin-top:-9px}",
         "html,body,#host{margin-left:-9px}#app{margin-left:-9px}",
         // Paint containment clips the banner.
         "body{contain:strict}",

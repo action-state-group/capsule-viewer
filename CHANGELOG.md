@@ -416,28 +416,35 @@ here. The format follows
 - The banner frame check discards a module that covers the banner with a
   layer the browser hit-tests, or clips it (capsule-viewer#125). After
   comparing computed properties, it hit-tests the centre of every character
-  of the bar and the details line. Each hit must land in the banner, and the
-  test runs where the banner first shows, with every scroll offset above it
-  at zero. If the banner is off screen there, it is scrolled into view for
-  the test and put back before anything paints. An overlay with
-  `pointer-events: none` is found too. The check applies where the banner was
-  readable before the module rendered, so a host that already covered or hid
-  the widget is no module's doing. The bar's place is now measured the same
-  way, at zero scroll, instead of correcting for scrolling with the
-  container's size ratio. The whole check runs again once the page settles
-  (after the next frame and the timers then due), so a toolbar or modal a
-  module opens just after its render returns is caught too. The routes
-  capsule-viewer#117 left open are closed:
+  of the bar and the details line that is in view where the reader is. A
+  layer of the module's, or a module rule laying out `<head>` or `<style>`,
+  found over a character discards the module, unless it paints nothing there
+  (a faded-out dialog, an empty container for toasts). The host's own
+  elements are passed over. An overlay with `pointer-events: none` is found
+  too. Every box that clips the banner, from `<html>` to the banner's own
+  elements, may not shrink by more than a scrollbar, wherever the reader has
+  scrolled. The bar's place now maps each scroll offset into viewport px
+  through the transforms above it, which are compared exactly, instead of
+  through the container's size ratio. Nothing is scrolled to measure, so a
+  reader's scroll, smooth or not, is left as it was. The whole check runs
+  again once the page settles (after the next frame and the timers then
+  due), so a toolbar or modal a module opens just after its render returns is
+  caught too. The routes capsule-viewer#117 left open are closed:
   - an opaque layer drawn by `head`, `style` or the module's own content;
   - a scrolling host shrunk to zero height;
   - a fractional host height skewing the place bound.
 
   An honest module now renders while the reader scrolls inside a rotated
-  host. Not found: paint the browser does not hit-test (an outline, a
-  shadow, a reflection), and anything a module draws after the settle. The
-  check targets a module's mistakes, not trusted code written to hide the
-  banner, which the builder's pin governs (see capsule-viewer#125). The Go module ships the runtime built with this
-  fix (`go/pageruntime`).
+  host. Not found:
+  - paint the browser does not hit-test (an outline, a shadow, a reflection);
+  - a layer whose `pointer-events: none` is set important inline or in the
+    module's own cascade layer;
+  - a layer over words out of view when the check runs;
+  - anything a module draws after the settle.
+
+  The check targets a module's mistakes, not trusted code written to hide the
+  banner, which the builder's pin governs (see capsule-viewer#125). The Go
+  module ships the runtime built with this fix (`go/pageruntime`).
 
 - The banner frame check discards a module whose stylesheet scales, moves,
   clips or hides the banner by styling `html`, `body` or another ancestor of
