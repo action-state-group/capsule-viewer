@@ -2714,6 +2714,23 @@ export async function renderEvidenceGraph(
   }
 }
 
+// The side margins are not in FRAME_LOOK: the shell centres the page root and
+// the bar with `auto` margins, and a computed `auto` margin is its used
+// width, which moves by half a classic scrollbar when a module's content
+// makes the page scroll. They are compared to within SIDE_MARGIN_SLACK
+// instead, a constant no module's stylesheet can change: a module that moves
+// the banner by more is still caught. It assumes a classic scrollbar of up to
+// 18 CSS px (a native 17px at zoom 100%); at a very low page zoom the
+// scrollbar is wider in CSS px, and an honest module that makes the page
+// scroll is then discarded, which fails closed.
+const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
+const SIDE_MARGIN_SLACK = 9;
+type FrameLook = { readonly look: string; readonly margins: readonly number[] };
+const sameLook = (a: FrameLook, b: FrameLook): boolean =>
+  a.look === b.look &&
+  a.margins.length === b.margins.length &&
+  a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= SIDE_MARGIN_SLACK);
+
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
 // banner and its details line are shown, where, and whether their words can
@@ -2739,9 +2756,7 @@ const FRAME_LOOK = [
   "rotate",
   "zoom",
   "margin-top",
-  "margin-right",
   "margin-bottom",
-  "margin-left",
   "font-family",
   "-webkit-text-fill-color",
   "clip",
@@ -2902,9 +2917,9 @@ async function renderVerifiedContext(
   // inactive tab) is no module's doing. Empty off a document, where no
   // styles apply; the static builder renders on a root in its document for
   // this reason.
-  const looks = (parts: readonly Element[], chromed: boolean): string => {
+  const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null) return "";
+    if (!root.isConnected || view === null) return { look: "", margins: [] };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
     const elements = [
@@ -2916,19 +2931,26 @@ async function renderVerifiedContext(
     const pseudos = view.navigator.userAgent.includes("jsdom")
       ? [null]
       : [null, "::before", "::after"];
+    const margins: number[] = [];
     const seen = JSON.stringify(
       elements.flatMap((element) =>
         pseudos.map((pseudo) => {
           const style = view.getComputedStyle(element, pseudo);
           return [
             ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
+            ...SIDE_MARGINS.flatMap((name) => {
+              const value = style.getPropertyValue(name);
+              const px = Number.parseFloat(value);
+              margins.push(Number.isNaN(px) ? 0 : px);
+              return Number.isNaN(px) ? [value] : [];
+            }),
             ...(pseudo === null ? [] : [style.getPropertyValue("content")]),
           ];
         }),
       ),
     );
     root.classList.toggle("cv-shell-chrome", had);
-    return seen;
+    return { look: seen, margins };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
@@ -2967,10 +2989,12 @@ async function renderVerifiedContext(
       top.parentNode !== root ||
       top.hidden ||
       snapshot(frame.parts) !== frame.words ||
-      looks(frame.parts, root.classList.contains("cv-shell-chrome")) !==
-        (root.classList.contains("cv-shell-chrome")
+      !sameLook(
+        looks(frame.parts, root.classList.contains("cv-shell-chrome")),
+        root.classList.contains("cv-shell-chrome")
           ? frame.looks.chrome
-          : frame.looks.plain)
+          : frame.looks.plain,
+      )
     )
       throw new Error("a module altered the verification banner");
   };
