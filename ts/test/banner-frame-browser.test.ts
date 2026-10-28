@@ -481,10 +481,24 @@ for (const setting of SETTINGS)
           ".cv-pill{height:0}",
           ".cv-pill{display:inline-block;overflow:hidden;height:16px;line-height:16px}",
         ],
+        [
+          ".cv-pill{height:0}",
+          ".cv-pill{display:inline-block;overflow:auto;height:16px;line-height:16px}",
+        ],
       ] as const)
         it(`one that adds ${css} on a host with ${pageCss} is discarded`, async () => {
           expect(await kept(css, pageCss)).toBe(false);
         });
+
+      it("one renders while a reader scrolls the page under a host fixed inside a content-visibility box", async () => {
+        expect(
+          await kept(
+            "[data-test-module]{color:red}",
+            "body{content-visibility:auto;padding-bottom:3000px}#host{position:fixed;top:0;left:0;right:0}",
+            ["html", 0, 30],
+          ),
+        ).toBe(true);
+      });
 
       it("one renders while a reader scrolls the page under a fixed host", async () => {
         expect(

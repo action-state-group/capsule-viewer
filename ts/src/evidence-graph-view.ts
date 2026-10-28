@@ -2767,7 +2767,7 @@ type FrameLook = {
   readonly clips: readonly {
     readonly width: number;
     readonly height: number;
-    readonly bar: boolean;
+    readonly bar: number;
   }[];
 };
 // `a` is the frame now, `b` as it was before the module rendered. Words a
@@ -2782,7 +2782,7 @@ const sameLook = (a: FrameLook, b: FrameLook): boolean =>
     (box, i) =>
       box.width >= b.clips[i]!.width - 2 * SIDE_MARGIN_SLACK &&
       box.height >=
-        b.clips[i]!.height - (b.clips[i]!.bar ? 2 * SIDE_MARGIN_SLACK : 1),
+        b.clips[i]!.height - Math.max(0, box.bar - b.clips[i]!.bar) - 1,
   ) &&
   Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK &&
   a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
@@ -3035,7 +3035,8 @@ function holdsFixed(style: CSSStyleDeclaration): boolean {
     style.backdropFilter !== "none" ||
     /paint|layout|strict|content/.test(style.contain) ||
     /transform|perspective|filter/.test(style.willChange) ||
-    style.containerType !== "normal"
+    style.containerType !== "normal" ||
+    style.contentVisibility === "auto"
   );
 }
 
@@ -3295,7 +3296,7 @@ async function renderVerifiedContext(
     // scrolled. Which boxes clip is compared exactly (`overflow` and
     // `contain` are in the looks). A width may shrink by one assumed classic
     // scrollbar, as when the page or the box itself grows one, and a height
-    // only where the box can grow one across its bottom. The size is
+    // by as much as the box's own scrollbar across its bottom grew. The size is
     // mapped into viewport px through the transforms on and above the box,
     // which no module can change.
     const clips = jsdom
@@ -3314,14 +3315,27 @@ async function renderVerifiedContext(
           const matrix = linearTransform(element, view);
           const across = matrix.transformPoint({ x: element.clientWidth });
           const down = matrix.transformPoint({ y: element.clientHeight });
+          // The scrollbar across the box's bottom, in viewport px: the box's
+          // height may shrink by only as much as that grows. A page's own
+          // scrollbar leaves any other height alone.
+          const bar = matrix.transformPoint({
+            y:
+              element instanceof view.HTMLElement &&
+              element !== root.ownerDocument.scrollingElement
+                ? Math.max(
+                    0,
+                    element.offsetHeight -
+                      element.clientHeight -
+                      Number.parseFloat(style.borderTopWidth) -
+                      Number.parseFloat(style.borderBottomWidth),
+                  )
+                : 0,
+          });
           return [
             {
               width: Math.hypot(across.x, across.y),
               height: Math.hypot(down.x, down.y),
-              // Only a box that scrolls sideways can grow a scrollbar of
-              // its own across its bottom; any other box's height a page's
-              // scrollbar leaves alone.
-              bar: ["auto", "scroll"].includes(style.overflowX),
+              bar: Math.hypot(bar.x, bar.y),
             },
           ];
         });
