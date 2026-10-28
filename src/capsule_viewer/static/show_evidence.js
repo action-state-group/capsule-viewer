@@ -12,16 +12,21 @@
 // registry ambiguity (presentation contract section 4.5). Report modules call
 // it instead, through root.CapsuleViewerShowEvidence.
 //
-// resolve(context, claim) reads the claim's evidence[] against the page's
-// verified context (agent-action-capsule's VerifiedBundleContext). It resolves
-// a digest only through the verifier: the record must be among context.records
-// (the records the verifier accepted), and its content is what
-// EvidenceGraph.disclosureOf returns, disclosed only when it matches the digest
-// the record committed. Nothing here re-hashes or repairs a record. A digest
-// is matched to a record's own capsule_id. A capsule an evidence-book record
-// carries is not resolved here (capsule-viewer#83 follow-up): in a bundle
-// with a disclosed book record, a digest no record has draws as not opened
-// by this view (side.carried_not_opened), never as not in this bundle.
+// resolve(result, claim) reads one claim as agent-action-capsule's own
+// Result reader resolved it (buildResultRoot: a ResultRoot and one of its
+// ResultClaims, as the page runtime and the contract report hold them). This
+// script resolves nothing itself. A cited digest is drawn from
+// result.records, the records the reader resolved it to: a capsule an
+// evidence-book record carries is drawn from its carried input. A digest the
+// reader lists in claim.missing is drawn as not in this bundle. A record's
+// content is drawn only when the reader found it disclosed and matching the
+// digest the record committed.
+//
+// The verdict is drawn as the Result states it, labelled so, and only where
+// the page would draw it: a claim that failed the reader's checks, or whose
+// cited evidence does not all resolve (unsupported), gets no verdict word,
+// only the reason (agent-action-capsule result-root.ts: such a claim is never
+// shown as met).
 //
 // The carrier decides what is drawn (Evidence Result v0 sections 2 and 6).
 // Under `disclosure`, each disclosed record's content is drawn, boxed, as the
@@ -32,7 +37,11 @@
 //
 // Producer text (a judge's rationale, an analysis or story carrier) is drawn
 // italic, inside an element marked data-source="producer", after a label
-// naming it as the producer's words. render returns one element for the
+// naming it as the producer's words. Every drawn string sits inside an element
+// whose data-source names where it comes from (Steven's WordSources rule):
+// "pack" (a word, WORDS or the host's layer over it), "field" (a capsule or
+// Result field), "payload" (disclosed record content, digest-checked) or
+// "producer" (a producer's own words). Only separators carry no tag. render returns one element for the
 // page's deepest level (data-level="L2"): a host never puts it, or any
 // producer text, in L0. Nothing is interactive: there is no control that
 // records, agrees or submits. All text is set with textContent; nothing from
@@ -52,25 +61,24 @@
   var EVALUATION_REPORT = "evaluation-report/v1";
   var REPORT_CRITERION = "clause_claim";
   var REPORT_PRODUCER_TEXT = "rationale";
-  // A book record's disclosed header (agent-action-capsule result-root.ts).
-  var BOOK_RECORD_TYPE = "published_capsule";
 
   var WORDS = {
     "side.what_happened": "What happened",
     "side.criterion": "The criterion",
-    "side.verdict": "The verdict",
+    "side.verdict": "The verdict, as the Result states it",
     "side.producer_said": "In the producer's words, not checked by this page",
     "side.criterion_as_recorded": "As the cited record states it",
     "side.analysis": "The producer's summary, in place of the evidence",
     "side.story": "The producer's account, in place of the evidence",
     "side.not_in_bundle": "Not in this bundle. This page does not fetch it.",
-    "side.carried_not_opened": "Not a record of its own in this bundle. It may be carried inside a book record, which this view does not open. This page does not fetch it.",
     "side.disclosure_mismatch": "The disclosed content does not match the record's digest, so it is not shown.",
     "side.no_evidence": "This claim cites no evidence.",
+    "side.unsupported": "No verdict is drawn: the evidence this claim cites is not all in this bundle.",
+    "side.failed": "No verdict is drawn: this claim failed this page's checks.",
     "carrier.withheld": "Withheld: the record is in this bundle, but its content is not disclosed.",
     "verdict.met": "Met",
     "verdict.not_met": "Not met",
-    "verdict.not_evaluable": "Could not decide",
+    "verdict.not_evaluable": "Could not be decided",
     "verdict.out_of_scope": "Out of scope",
   };
 
@@ -82,55 +90,28 @@
     return typeof v === "string" ? v : undefined;
   }
 
-  // The claims of the context's root Result, as the verifier disclosed it; an
-  // empty list when the root's content is not disclosed.
-  function claimsOf(context, disclosureOf) {
-    var read = disclosureOf || runtimeDisclosureOf();
-    var c = obj(context);
-    var result = read(c, c.root, "agent_input");
-    var claims = obj(result).state === "disclosed" ? obj(result.payload).claims : undefined;
-    return Array.isArray(claims) ? claims.map(obj) : [];
-  }
-
-  function runtimeDisclosureOf() {
-    var eg = root.EvidenceGraph;
-    if (eg && typeof eg.disclosureOf === "function") return eg.disclosureOf;
-    throw new Error("show evidence needs the page runtime's disclosureOf");
-  }
-
-  // One evidence ref, resolved: {digest, state, kind, developer, payload}.
-  // state is "disclosed", "withheld", "disclosure_mismatch", "not_in_bundle"
-  // or "carried_not_opened" (no record has the digest, and a book record may
-  // carry it).
-  function resolveRef(context, ref, records, hasBook, read) {
+  // One cited digest, as the reader resolved it: {digest, state, kind,
+  // payload}. state is "disclosed", "withheld", "disclosure_mismatch" or
+  // "not_in_bundle".
+  function resolveRef(result, ref) {
     var digest = str(obj(ref).digest) || "";
-    var record = records[digest];
-    if (record === undefined) return { digest: digest, state: hasBook ? "carried_not_opened" : "not_in_bundle" };
-    var input = obj(read(context, digest, "agent_input"));
+    var record = ref.resolved === true && result.records && typeof result.records.get === "function" ? result.records.get(digest) : undefined;
+    if (record === undefined) return { digest: digest, state: "not_in_bundle" };
+    // A capsule a book record carries, cited by its own id, is its carried input.
+    var input = obj(record.carriedCapsuleId === digest && record.carriedInput !== undefined ? record.carriedInput : record.agentInput);
     var state = input.state === "disclosed" ? "disclosed" : input.state === "disclosure_mismatch" ? "disclosure_mismatch" : "withheld";
-    var payload = state === "disclosed" ? input.payload : undefined;
-    var kind = str(obj(payload).record_type) || str(record.action_type);
     var out = { digest: digest, state: state };
-    if (kind !== undefined) out.kind = kind;
-    if (str(record.developer) !== undefined) out.developer = record.developer;
-    if (state === "disclosed") out.payload = payload;
+    if (state === "disclosed") {
+      out.payload = input.payload;
+      if (str(obj(input.payload).record_type) !== undefined) out.kind = input.payload.record_type;
+    }
     return out;
   }
 
-  // The model render draws: the claim's own fields, its carrier, and each
-  // evidence ref resolved against the verified context.
-  function resolve(context, claim, disclosureOf) {
-    var read = disclosureOf || runtimeDisclosureOf();
+  // The model render draws: the claim's own fields, its carrier, whether its
+  // verdict is drawn, and each cited digest as the reader resolved it.
+  function resolve(result, claim) {
     var c = obj(claim);
-    var records = {};
-    var hasBook = false;
-    (Array.isArray(obj(context).records) ? context.records : []).forEach(function (r) {
-      var id = str(obj(r).capsule_id);
-      if (id === undefined) return;
-      if (!Object.prototype.hasOwnProperty.call(records, id)) records[id] = r;
-      var input = obj(read(context, id, "agent_input"));
-      if (input.state === "disclosed" && obj(input.payload).record_type === BOOK_RECORD_TYPE) hasBook = true;
-    });
     var presentation = obj(c.presentation);
     var carrier = {
       kind: str(presentation.kind) || "",
@@ -139,20 +120,21 @@
     if (carrier.kind === "analysis" && str(presentation.summary) !== undefined) carrier.text = presentation.summary;
     if (carrier.kind === "story" && str(presentation.narrative) !== undefined) carrier.text = presentation.narrative;
     var evidence = (Array.isArray(c.evidence) ? c.evidence : []).map(function (ref) {
-      return resolveRef(context, ref, records, hasBook, read);
+      return resolveRef(obj(result), obj(ref));
     });
     var model = {
       id: str(c.id) || "",
-      contract_ref: str(c.contract_ref) || "",
-      requirement_ref: str(c.requirement_ref) || "",
+      contract_ref: str(c.contractRef) || "",
+      requirement_ref: str(c.requirementRef) || "",
       verdict: str(c.verdict) || "",
+      verdict_drawn: c.failed === true ? "failed" : c.support === "supported" ? "drawn" : "unsupported",
       tier: str(c.tier) || "",
       grade: str(c.grade) || "",
       sufficiency: str(c.sufficiency) || "",
       carrier: carrier,
       evidence: evidence,
     };
-    if (str(c.applies_from) !== undefined) model.applies_from = c.applies_from;
+    if (str(c.appliesFrom) !== undefined) model.applies_from = c.appliesFrom;
     return model;
   }
 
@@ -184,6 +166,15 @@
     return node;
   }
 
+  // A word from the pack (WORDS, or the host's layer over it).
+  function word(doc, tag, attrs, text) {
+    var a = { "data-source": "pack" };
+    Object.keys(attrs || {}).forEach(function (k) {
+      a[k] = attrs[k];
+    });
+    return el(doc, tag, a, [text]);
+  }
+
   // A capsule or Result field, drawn as "name: value" in monospace.
   function field(doc, name, value) {
     return el(doc, "span", { class: "cv-side-field", "data-source": "field" }, [name + ": ", el(doc, "code", {}, [value])]);
@@ -211,10 +202,10 @@
     return el(doc, "dl", { class: "cv-side-payload", "data-source": "payload" }, rows);
   }
 
-  function producerText(doc, w, who, text) {
-    var label = w("side.producer_said") + (who ? " (" + who + ")" : "");
+  function producerText(doc, w, text) {
     return el(doc, "p", { class: "cv-side-producer", "data-source": "producer" }, [
-      el(doc, "span", { class: "cv-side-producer-label" }, [label + ": "]),
+      word(doc, "span", { class: "cv-side-producer-label" }, w("side.producer_said")),
+      ": ",
       el(doc, "i", {}, ["“" + text + "”"]),
     ]);
   }
@@ -223,15 +214,14 @@
     var key = {
       withheld: "carrier.withheld",
       not_in_bundle: "side.not_in_bundle",
-      carried_not_opened: "side.carried_not_opened",
       disclosure_mismatch: "side.disclosure_mismatch",
     }[state];
-    return el(doc, "p", { class: "cv-side-state", "data-state": state }, [w(key)]);
+    return word(doc, "p", { class: "cv-side-state", "data-state": state }, w(key));
   }
 
   function whatHappened(doc, w, model) {
-    var col = el(doc, "div", { class: "cv-side-col", "data-side": "what_happened" }, [el(doc, "h5", {}, [w("side.what_happened")])]);
-    if (model.evidence.length === 0) col.appendChild(el(doc, "p", { "data-state": "no_evidence" }, [w("side.no_evidence")]));
+    var col = el(doc, "div", { class: "cv-side-col", "data-side": "what_happened" }, [word(doc, "h5", {}, w("side.what_happened"))]);
+    if (model.evidence.length === 0) col.appendChild(word(doc, "p", { "data-state": "no_evidence" }, w("side.no_evidence")));
     var shows = showsContent(model);
     var skip = {};
     skip[REPORT_CRITERION] = true;
@@ -239,7 +229,6 @@
     model.evidence.forEach(function (e) {
       var head = [field(doc, "digest", e.digest)];
       if (e.kind !== undefined) head.push(" · ", field(doc, "kind", e.kind));
-      if (e.developer !== undefined) head.push(" · ", field(doc, "developer", e.developer));
       var item = el(doc, "div", { class: "cv-side-record", "data-evidence": e.digest, "data-state": e.state }, [el(doc, "p", {}, head)]);
       if (e.state !== "disclosed") item.appendChild(stateNote(doc, w, e.state));
       else if (shows) item.appendChild(payloadBox(doc, e.payload, e.kind === EVALUATION_REPORT ? skip : {}));
@@ -247,15 +236,15 @@
     });
     if (!shows && model.carrier.text !== undefined) {
       var key = model.carrier.kind === "story" ? "side.story" : "side.analysis";
-      col.appendChild(el(doc, "p", { class: "cv-side-carrier", "data-carrier": model.carrier.kind }, [w(key)]));
-      col.appendChild(producerText(doc, w, "", model.carrier.text));
+      col.appendChild(word(doc, "p", { class: "cv-side-carrier", "data-carrier": model.carrier.kind }, w(key)));
+      col.appendChild(producerText(doc, w, model.carrier.text));
     }
     return col;
   }
 
   function criterion(doc, w, model) {
     var col = el(doc, "div", { class: "cv-side-col", "data-side": "criterion" }, [
-      el(doc, "h5", {}, [w("side.criterion")]),
+      word(doc, "h5", {}, w("side.criterion")),
       el(doc, "p", {}, [field(doc, "contract_ref", model.contract_ref), " · ", field(doc, "requirement_ref", model.requirement_ref)]),
     ]);
     // The criterion as each cited report seals it, once per distinct wording.
@@ -266,7 +255,8 @@
       seen[text] = true;
       col.appendChild(
         el(doc, "blockquote", { class: "cv-side-criterion", "data-source": "payload", "data-evidence": e.digest }, [
-          el(doc, "span", {}, [w("side.criterion_as_recorded") + ": "]),
+          word(doc, "span", {}, w("side.criterion_as_recorded")),
+          ": ",
           text,
         ]),
       );
@@ -275,10 +265,10 @@
   }
 
   function verdict(doc, w, model) {
-    var word = model.verdict ? w("verdict." + model.verdict) : "";
+    var verdictWord = model.verdict_drawn !== "drawn" ? w("side." + model.verdict_drawn) : model.verdict ? w("verdict." + model.verdict) : "";
     var col = el(doc, "div", { class: "cv-side-col", "data-side": "verdict" }, [
-      el(doc, "h5", {}, [w("side.verdict")]),
-      el(doc, "p", { class: "cv-side-verdict", "data-verdict": model.verdict }, [word]),
+      word(doc, "h5", {}, w("side.verdict")),
+      word(doc, "p", { class: "cv-side-verdict", "data-verdict": model.verdict, "data-verdict-drawn": model.verdict_drawn }, verdictWord),
       el(doc, "p", {}, [
         field(doc, "tier", model.tier),
         " · ",
@@ -286,13 +276,15 @@
         " · ",
         field(doc, "sufficiency", model.sufficiency),
         " · ",
-        field(doc, "presentation", model.carrier.kind + " " + model.carrier.status),
+        field(doc, "presentation.kind", model.carrier.kind),
+        " · ",
+        field(doc, "presentation.status", model.carrier.status),
       ]),
     ]);
     if (model.applies_from !== undefined) col.appendChild(el(doc, "p", {}, [field(doc, "applies_from", model.applies_from)]));
     reports(model).forEach(function (e) {
       var text = str(obj(e.payload)[REPORT_PRODUCER_TEXT]);
-      if (text !== undefined) col.appendChild(producerText(doc, w, e.developer || "", text));
+      if (text !== undefined) col.appendChild(producerText(doc, w, text));
     });
     return col;
   }
@@ -307,14 +299,13 @@
       return Object.prototype.hasOwnProperty.call(WORDS, key) ? WORDS[key] : key;
     };
     return el(doc, "section", { class: "cv-side", "data-level": "L2", "data-claim": model.id, "data-verdict": model.verdict }, [
-      el(doc, "h4", {}, [model.requirement_ref + " · " + model.id]),
+      el(doc, "h4", {}, [field(doc, "requirement_ref", model.requirement_ref), " · ", field(doc, "id", model.id)]),
       el(doc, "div", { class: "cv-side-cols" }, [whatHappened(doc, w, model), criterion(doc, w, model), verdict(doc, w, model)]),
     ]);
   }
 
   root.CapsuleViewerShowEvidence = {
     WORDS: WORDS,
-    claimsOf: claimsOf,
     resolve: resolve,
     render: render,
   };

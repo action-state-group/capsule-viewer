@@ -365,29 +365,35 @@ stylesheet each script inserts once at render).
 what happened (the records the claim cites), the criterion and the verdict
 (capsule-viewer#83). It is a module-slot component, not a presentation. Every Result
 page is already served by a module for every audience, so a report module calls it
-through `CapsuleViewerShowEvidence.resolve(context, claim)` and `render(model, document, words)`.
+through `CapsuleViewerShowEvidence.resolve(result, claim)` and
+`render(model, document, words)`. `result` and `claim` are agent-action-capsule's
+`ResultRoot` and one of its `ResultClaim`s, as `buildResultRoot` reads them.
 
-- **It never fetches.** A cited digest resolves only to a record the page's verifier
-  accepted, and its content comes from the runtime's `EvidenceGraph.disclosureOf`. A
-  digest the bundle does not carry is drawn as not in this bundle. A capsule carried
-  inside a book record is not opened here yet: in a bundle with a book record, a digest
-  no record has is drawn as not opened by this view, never as missing. A record carried
-  but not disclosed is drawn as withheld (`carrier.withheld`). Content that does not
-  match its digest is not drawn.
+- **It resolves nothing itself and never fetches.** A cited record comes from the
+  Result reader's `records`, including a capsule carried inside a book record. A digest the
+  reader lists as missing is drawn as not in this bundle. A record carried but not
+  disclosed is drawn as withheld (`carrier.withheld`). Content that does not match its
+  digest is not drawn.
+- **The verdict is drawn as the Result states it, and only where the page draws it.**
+  A claim that failed the reader's checks, or whose evidence is not all in the bundle,
+  gets the reason instead of a verdict word, so it never reads as met.
 - **The carrier decides what is drawn.** Under `disclosure` it draws the disclosed
   content, boxed. Under `analysis` or `story` it draws that text as the producer's and
   no record content.
 - **Producer text is labelled.** A judge's rationale or a carrier's text is drawn in
   italics after `side.producer_said`. The element is for the page's deepest level
   only (`data-level="L2"`), never L0. Nothing on it can be clicked or submitted.
+- **Every string names its source.** Each drawn string sits in an element whose
+  `data-source` is `pack`, `field`, `payload` or `producer`.
 - **Words:** `side.what_happened`, `side.criterion`, `side.verdict`,
   `side.producer_said`, `carrier.withheld` and the other `side.*` keys, with
   `verdict.<value>`. A host's entries are layered over the defaults key by key.
-- **Tests:** `ts/test/show-evidence.test.ts` runs the script over contexts built by
-  agent-action-capsule's own verifier. Its golden comes from evidencebook's committed
-  VALID `4-monthly-outcome` bundle. The negative cases cover a digest that is not in
-  the bundle, a withheld record, a mismatched disclosure and `analysis` and `story`
-  carriers.
+- **Tests:** `ts/test/show-evidence.test.ts` runs the script over agent-action-capsule's
+  own `buildResultRoot`. Its golden comes from evidencebook's committed VALID
+  `4-monthly-outcome` bundle. The negative cases cover a withheld record, a mismatched
+  disclosure, a met claim whose evidence is missing, a failed claim, a book-form Result,
+  a book-carried capsule and the `analysis` and `story` carriers. Every render is
+  checked for source tags.
 
 ## Evidence report page
 

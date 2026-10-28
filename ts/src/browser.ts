@@ -16,11 +16,14 @@ export * from "./presentation-mount.js";
 // global (EvidenceGraph), beside registerPresentation: agent-action-capsule's
 // own functions, re-exported by name and unchanged, so a module verifies with
 // the same verifier the page does (ed25519Available is its check that the
-// browser can verify Ed25519 signatures). This list is the runtime's contract
+// browser can verify Ed25519 signatures; buildResultRoot is its Result
+// reader, which the Show-evidence component, static/show_evidence.js, draws
+// from). This list is the runtime's contract
 // with presentation modules: a name is added here only from
 // agent-action-capsule's verifier, and removing one breaks the modules that
 // call it.
 export {
+  buildResultRoot,
   disclosureOf,
   ed25519Available,
   verifiedPayload,
