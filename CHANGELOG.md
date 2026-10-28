@@ -85,7 +85,7 @@ already used 0.2.0. Go entries below include changes first tagged in
   (CI), or refreshes it with `--write`.
 - The runtime's global `EvidenceGraph` carries the verifier functions a
   presentation module may call, beside `registerPresentation`:
-  `disclosureOf`, `ed25519Available`, `verifiedPayload`,
+  `buildResultRoot`, `disclosureOf`, `ed25519Available`, `verifiedPayload`,
   `verifyDisclosureEnvelope` and `verifyProducerEnvelope`,
   agent-action-capsule's own functions re-exported from `ts/src/browser.ts`.
 - `go/presentation` declares the report page's block names:
