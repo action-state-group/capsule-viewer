@@ -152,6 +152,14 @@ describe.skipIf(executablePath === undefined)(
       ).toBe(true);
     });
 
+    it("one that makes the page scroll renders with a wide scrollbar (zoomed out)", async () => {
+      expect(
+        await kept(
+          "html::-webkit-scrollbar{width:24px}[data-test-module]{height:3000px}",
+        ),
+      ).toBe(true);
+    });
+
     it("one that makes the page scroll renders where the margin drops to zero", async () => {
       // 10px of room: 5px margins, and none once a 15px scrollbar appears.
       expect(
@@ -173,6 +181,7 @@ describe.skipIf(executablePath === undefined)(
       ".cv-shell-bar{margin-right:-100vw}",
       "#app{margin-left:99vw;margin-right:99vw}",
       ".cv-shell-bar{margin-left:40px}",
+      ".cv-shell-bar{margin-left:10px}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
     ])

@@ -2716,17 +2716,26 @@ export async function renderEvidenceGraph(
 
 // The side margins are not in FRAME_LOOK: the shell centres the page root and
 // the bar with `auto` margins, and a computed `auto` margin is its used
-// width, which moves by half a classic scrollbar (at most 8.5px) when a
-// module's content makes the page scroll. They are compared to within
-// SIDE_MARGIN_SLACK instead, so a module that moves the banner by more than
-// that is still caught.
+// width, which moves with the width of the page, by a classic scrollbar at
+// most, when a module's content makes the page scroll. They are compared to
+// within the change of the document's client width (plus 1px for rounding),
+// so a module that moves the banner by more than the page itself narrowed is
+// still caught, at any zoom and scrollbar width, and with no slack at all
+// when the page did not change width.
 const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
-const SIDE_MARGIN_SLACK = 9;
-type FrameLook = { readonly look: string; readonly margins: readonly number[] };
-const sameLook = (a: FrameLook, b: FrameLook): boolean =>
-  a.look === b.look &&
-  a.margins.length === b.margins.length &&
-  a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= SIDE_MARGIN_SLACK);
+type FrameLook = {
+  readonly look: string;
+  readonly margins: readonly number[];
+  readonly width: number;
+};
+const sameLook = (a: FrameLook, b: FrameLook): boolean => {
+  const slack = Math.abs(a.width - b.width) + 1;
+  return (
+    a.look === b.look &&
+    a.margins.length === b.margins.length &&
+    a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= slack)
+  );
+};
 
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
@@ -2916,7 +2925,8 @@ async function renderVerifiedContext(
   // this reason.
   const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null) return { look: "", margins: [] };
+    if (!root.isConnected || view === null)
+      return { look: "", margins: [], width: 0 };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
     const elements = [
@@ -2947,7 +2957,11 @@ async function renderVerifiedContext(
       ),
     );
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, margins };
+    return {
+      look: seen,
+      margins,
+      width: root.ownerDocument.documentElement.clientWidth,
+    };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
