@@ -86,8 +86,12 @@ with a `retract` directive in a later version. CI on `main` covers the module's
 tests.
 
 The module ships the page runtime as built (`go/pageruntime`). To ship a newer
-one, merge the change to `ts/`, run `scripts/pageruntime.sh --write` on a clean
-checkout of that commit, and commit the refreshed files on top of it.
+one, run `scripts/pageruntime.sh --write` on a clean checkout of the commit
+holding the change to `ts/`, and commit the refreshed files on top of it.
+`pageruntime.Commit` must stay an ancestor of `main`, or the `pageruntime` CI
+job fails: a squash or rebase merge rewrites that commit. So either merge the
+`ts/` change first and refresh on the merged `main` commit, or keep both
+commits in one pull request and merge it with a merge commit.
 
 ## Registry configuration
 

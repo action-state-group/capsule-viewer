@@ -15,9 +15,11 @@ export * from "./presentation-mount.js";
 // The verifier functions a presentation module may call on the runtime's
 // global (EvidenceGraph), beside registerPresentation: agent-action-capsule's
 // own functions, re-exported by name and unchanged, so a module verifies with
-// the same verifier the page does. This list is the runtime's contract with
-// presentation modules: a name is added here only as another verifier
-// function, and removing one breaks the modules that call it.
+// the same verifier the page does (ed25519Available is its check that the
+// browser can verify Ed25519 signatures). This list is the runtime's contract
+// with presentation modules: a name is added here only from
+// agent-action-capsule's verifier, and removing one breaks the modules that
+// call it.
 export {
   disclosureOf,
   ed25519Available,
