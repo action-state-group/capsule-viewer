@@ -359,6 +359,46 @@ stylesheet each script inserts once at render).
   receipt; `presentation list`, which registers the deal view beside them, stops at
   registration (`tests/test_receipt_module_slot.py`).
 
+### Show evidence: one claim side by side
+
+`static/show_evidence.js` draws one claim of an Evidence Result v0 in three columns:
+what happened (the records the claim cites), the criterion and the verdict
+(capsule-viewer#83). It is a module-slot component, not a presentation. Every Result
+page is already served by a module for every audience, so a report module calls it
+through `CapsuleViewerShowEvidence.resolve(result, claim)` and
+`render(model, document, words)`. `result` and `claim` are agent-action-capsule's
+`ResultRoot` and one of its `ResultClaim`s, as `buildResultRoot` reads them.
+
+- **It resolves nothing itself and never fetches.** A cited record comes from the
+  Result reader's `records`, including a capsule carried inside a book record. A digest the
+  reader lists as missing is drawn as not in this bundle. A record carried but not
+  disclosed is drawn as withheld (`carrier.withheld`). Content that does not match its
+  digest is not drawn.
+- **The verdict is drawn as the Result states it, and only where the page draws it.**
+  A claim that failed the reader's checks, or whose evidence is not all in the bundle,
+  gets the reason instead of a verdict word, so it never reads as met. So does a claim of
+  a type the reader does not recognize. A later claim (not yet in force on the
+  Result's date) gets its verdict with `side.later`: readiness only, never counted. A close
+  claim shows its state with `close.derivation` (recomputed from the links, or only
+  asserted by the producer), and its asserted state when they differ. A reconcile claim shows each tally as its own field.
+- **The carrier decides what is drawn.** Under `disclosure` it draws the disclosed
+  content, boxed. Under `analysis` or `story` it draws that text as the producer's and
+  no record content.
+- **Producer text is labelled.** A judge's rationale or a carrier's text is drawn in
+  italics after `side.producer_said`. The element is for the page's deepest level
+  only (`data-level="L2"`), never L0. Nothing on it can be clicked or submitted.
+- **Every string names its source.** Each drawn string sits in an element whose
+  `data-source` is `pack`, `field`, `payload` or `producer`.
+- **Words:** `side.what_happened`, `side.criterion`, `side.verdict`,
+  `side.producer_said`, `carrier.withheld` and the other `side.*` keys, with
+  `verdict.<value>`. A host's entries are layered over the defaults key by key.
+- **Tests:** `ts/test/show-evidence.test.ts` runs the script over agent-action-capsule's
+  own `buildResultRoot`. Its golden comes from evidencebook's committed VALID
+  `4-monthly-outcome` bundle. The negative cases cover a withheld record, a mismatched
+  disclosure, a met claim whose evidence is missing, a failed claim, a book-form Result,
+  a book-carried capsule and the `analysis` and `story` carriers. Every render is
+  checked for source tags.
+
 ## Evidence report page
 
 `capsule_viewer.evidence_report` renders one readable, offline HTML page from
