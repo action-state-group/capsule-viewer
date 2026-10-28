@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// bundleMarker matches the same window.__BUNDLE__ = ...;</script> slot the
+// bundleMarker matches the same <script type="application/json"> element the
 // TypeScript tamper test (ts/test/report-tamper.test.ts) parses -- both
 // languages tamper the same shared fixture and expect the same class of
 // verifier disagreement, in each language's own bundle verifier.
-var bundleMarker = regexp.MustCompile(`(?s)window\.__BUNDLE__ = (.*);</script>`)
+var bundleMarker = regexp.MustCompile(`(?s)<script type="application/json">(.*?)</script>`)
 
 func loadWeekBundle(t *testing.T) map[string]interface{} {
 	t.Helper()
@@ -142,4 +142,25 @@ func TestReportHTMLTamperKeepsXSSRegression(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, html, payload)
 	require.Contains(t, html, `</script>`)
+}
+
+// A "__proto__" member is data like any other: the page carries it in its
+// JSON data element, which the shell reads with JSON.parse (#109). In an
+// object literal it would set the object's prototype and vanish from what
+// the page verifies; ts/test/emitter-proto-browser.test.ts shows that in a
+// browser.
+func TestProtoMemberStaysInTheBundleElement(t *testing.T) {
+	bundle := map[string]interface{}{
+		"note":  "n",
+		"inner": map[string]interface{}{"__proto__": map[string]interface{}{"forged": "inherited"}},
+	}
+	html, err := EmitEvidenceGraphHTML(bundle, []byte("/*IIFE_MARKER*/"))
+	require.NoError(t, err)
+	// encoding/json has no prototypes, so the round trip below only shows
+	// the member is in the element; the shell's reader line is what keeps it
+	// a member in the browser.
+	require.NotContains(t, html, "window.__BUNDLE__ = {")
+	require.Contains(t, html, `<script>window.__BUNDLE__ = JSON.parse(document.currentScript.previousElementSibling.textContent);</script>`)
+	require.Equal(t, 1, strings.Count(html, `<script type="application/json">`))
+	require.Equal(t, bundle["inner"], extractBundle(t, html)["inner"])
 }

@@ -41,7 +41,7 @@ capsulectl --profile deal deal note --deal "$id" --kind act --input "$demo/act-p
 capsulectl --profile deal deal report --deal "$id" --html keep.html --bundle keep.json >/dev/null
 for audience in counterparty adjudicator; do
   capsulectl --profile deal deal report --deal "$id" --share "$audience" --to "the $audience" --html "$audience.html" >/dev/null
-  perl -ne 'print "$1\n" if /^\s*<script>window\.__BUNDLE__ = (.*);<\/script>$/' "$audience.html" >"$audience.json"
+  perl -ne 'print "$1$2\n" if /^\s*(?:<script>window\.__BUNDLE__ = (\{.*\});|<script type="application\/json">(.*))<\/script>$/' "$audience.html" >"$audience.json"
 done
 
 golden="$cli/internal/cli/testdata/presentation/2-unilateral-receipt"

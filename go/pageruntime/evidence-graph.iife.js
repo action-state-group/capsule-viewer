@@ -2535,6 +2535,7 @@ var EvidenceGraph = (() => {
     UNABLE_TO_VERIFY_LINES: () => UNABLE_TO_VERIFY_LINES2,
     WORDING_PACK_VERSION: () => WORDING_PACK_VERSION,
     WordingPackError: () => WordingPackError,
+    buildResultRoot: () => buildResultRoot,
     checkWordingPackInput: () => checkWordingPackInput,
     checkedSummaryLine: () => checkedSummaryLine,
     citesOneContract: () => citesOneContract,
@@ -10464,13 +10465,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("7990b47c7d872c702a2e897b5fb97887fdccffd6");
+    return commitPrefix("3fe9ad7b0737dcf96637c7ab9df8bbf6d359eddd");
   }
   var commit = builtCommit();
-  var unreleased = true;
+  var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.1.0",
+    viewerVersion: "0.3.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.8.0",
     cllVersion: "0.2.1",

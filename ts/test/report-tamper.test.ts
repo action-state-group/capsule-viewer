@@ -17,7 +17,7 @@ const dom = new JSDOM();
 globalThis.document = dom.window.document;
 globalThis.HTMLElement = dom.window.HTMLElement;
 
-const BUNDLE_MARKER = /window\.__BUNDLE__ = ([\s\S]*?);<\/script>/u;
+const BUNDLE_MARKER = /<script type="application\/json">([\s\S]*?)<\/script>/u;
 
 function bundle(): Record<string, unknown> {
   return JSON.parse(
@@ -61,7 +61,7 @@ function tamperHtml(
     throw new Error("embedded bundle not found in report.html");
   const mutated = mutate(JSON.parse(match[1]) as Record<string, unknown>);
   const replacement = JSON.stringify(mutated);
-  return `${html.slice(0, match.index)}window.__BUNDLE__ = ${replacement};</script>${html.slice(match.index + match[0].length)}`;
+  return `${html.slice(0, match.index)}<script type="application/json">${replacement}</script>${html.slice(match.index + match[0].length)}`;
 }
 
 async function verifiedBanner(html: string): Promise<string | undefined> {

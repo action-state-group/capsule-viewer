@@ -13,6 +13,28 @@ here. The format follows
 
 ### Breaking
 
+- The offline page carries the bundle in a `<script type="application/json">`
+  element, and a fixed inline script sets `window.__BUNDLE__` from it with
+  `JSON.parse` (the emitter shell and the Go emitter's `shell.html`;
+  capsule-viewer#109). The page used to write the bundle as a JavaScript
+  object literal, where a `"__proto__"` member became the object's prototype:
+  the page verified the bundle without that member, yet could show the
+  member's fields as if the record carried them. It now verifies and shows
+  what any JSON reader sees. `window.__BUNDLE__` is still set before the
+  bootstrap runs, so bootstraps that pass it keep working. Code that extracts
+  the bundle from a page by the text `window.__BUNDLE__ = …;` must read the
+  JSON element instead.
+
+## ts 0.3.0 and go 0.3.0 (2026-10-28)
+
+The first release under RELEASING.md's pairing rule: `ts/v0.3.0` is tagged on
+this merge, and `go/v0.3.0` follows on the commit that ships its page runtime.
+Both state viewer 0.3.0. There was no ts 0.2.0, because the Go module had
+already used 0.2.0. Go entries below include changes first tagged in
+`go/v0.1.1` and `go/v0.2.0`, which had no CHANGELOG sections.
+
+### Breaking
+
 - The page shell (`renderEvidenceGraph`, the emitter shell and the Go
   emitter's `shell.html`; capsule-viewer#60):
   - Every page has a width and padding: the theme's `--aac-page-width` and
@@ -77,7 +99,7 @@ here. The format follows
   (CI), or refreshes it with `--write`.
 - The runtime's global `EvidenceGraph` carries the verifier functions a
   presentation module may call, beside `registerPresentation`:
-  `disclosureOf`, `ed25519Available`, `verifiedPayload`,
+  `buildResultRoot`, `disclosureOf`, `ed25519Available`, `verifiedPayload`,
   `verifyDisclosureEnvelope` and `verifyProducerEnvelope`,
   agent-action-capsule's own functions re-exported from `ts/src/browser.ts`.
 - `go/presentation` declares the report page's block names:

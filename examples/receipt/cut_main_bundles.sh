@@ -61,7 +61,7 @@ check() {
 cut() {
   deal report --deal "$1" --html "$2-keep.html" --bundle "$2-keep.json" >/dev/null
   deal report --deal "$1" --share counterparty --to "the other party" --html "$2-counterparty.html" >/dev/null
-  perl -ne 'print "$1\n" if /^\s*<script>window\.__BUNDLE__ = (.*);<\/script>$/' "$2-counterparty.html" >"$2-counterparty.json"
+  perl -ne 'print "$1$2\n" if /^\s*(?:<script>window\.__BUNDLE__ = (\{.*\});|<script type="application\/json">(.*))<\/script>$/' "$2-counterparty.html" >"$2-counterparty.json"
   if [ -n "$keep_dir" ]; then mkdir -p "$keep_dir" && cp "$2-keep.html" "$2-counterparty.html" "$keep_dir/"; fi
 }
 

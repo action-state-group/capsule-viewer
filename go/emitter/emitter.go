@@ -146,9 +146,12 @@ func checkPin(name, pin, value string) error {
 	return nil
 }
 
-// inlineElements returns the text of every <script> and <style> element in
-// document order. The shell writes both start tags bare, and checkInline
-// guarantees each element's text runs to the first matching end tag.
+// inlineElements returns the text of every bare <script> and <style> element
+// in document order: the ones the CSP hashes. The shell writes their start
+// tags bare, and checkInline guarantees each element's text runs to the first
+// matching end tag. The bundle's <script type="application/json"> element is
+// skipped on purpose: it is data the browser never runs, so it needs no hash,
+// and hashing it would put a per-bundle source in script-src.
 func inlineElements(html string) (scripts, styles []string, err error) {
 	offset := 0
 	for {
@@ -278,6 +281,9 @@ func EmitEvidenceGraphHTMLWithOptions(bundle map[string]interface{}, browserIIFE
 		}
 	}
 
+	// The shell carries the bundle in a JSON data element that a fixed script
+	// reads with JSON.parse, so every member, "__proto__" included, stays data
+	// (an object literal would make "__proto__" the object's prototype, #109).
 	embeddedBundleText := escapeJSONForHTMLScript(bundleText)
 	html := shell
 	for _, fill := range []struct{ slot, value string }{
