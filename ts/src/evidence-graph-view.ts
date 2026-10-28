@@ -2763,10 +2763,14 @@ type FrameLook = {
   readonly look: string;
   readonly offsets: readonly number[];
   readonly place: readonly [number, number];
+  readonly readable: boolean;
 };
-// `a` is the frame now, `b` as it was before the module rendered.
+// `a` is the frame now, `b` as it was before the module rendered. A banner
+// a reader could see before must still be seen (see readable); one the host
+// already covered or hid is no module's doing.
 const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.look === b.look &&
+  (a.readable || !b.readable) &&
   Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK &&
   a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK &&
   a.offsets.length === b.offsets.length &&
@@ -2833,6 +2837,77 @@ function splitTransform(value: string): [string, number[]] {
     `matrix${m[1] ?? ""}(${n.filter((_, i) => !moves.includes(i)).join(",")})`,
     moves.map((i) => n[i]!),
   ];
+}
+
+// Whether a reader can see every word of `part`: each character other than
+// white space has a box on screen, and a hit test at the box's centre lands
+// in `part`, so nothing is drawn over it and nothing clips it, whatever
+// property does so. It runs where `part` first shows, every scroll offset
+// above it at zero (see looks), and if that is off screen, after scrolling
+// it into view. That is done only in a top-level page, since a frame's
+// scrollIntoView also scrolls the page around it, which cannot be put back;
+// in a frame a banner off screen is not readable, and the check then falls
+// back to the comparison of looks. For the test's duration a constructed
+// stylesheet, which adds no element a module's rule could show, makes
+// everything hit-testable, so an overlay with `pointer-events: none` is
+// still found. Its rule is important and in a layer, so it wins over an
+// unlayered important rule of any specificity; only an important rule in a
+// module's own layer still wins. Paint the browser does not hit-test (an outline, a shadow, a
+// reflection) is not found; see #125 for why this check targets a module's
+// mistakes and not a module that sets out to hide the banner.
+function readable(part: Element): boolean {
+  const doc = part.ownerDocument;
+  const view = doc.defaultView!;
+  const at = part.getBoundingClientRect();
+  if (
+    view.self === view.top &&
+    (at.top < 0 ||
+      at.left < 0 ||
+      at.bottom > view.innerHeight ||
+      at.right > view.innerWidth)
+  )
+    part.scrollIntoView({
+      block: "center",
+      inline: "center",
+      behavior: "instant",
+    });
+  const sheet = new view.CSSStyleSheet();
+  sheet.replaceSync(
+    "@layer cv-hit-test{*,*::before,*::after{pointer-events:auto!important}}",
+  );
+  doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+  try {
+    const text = doc.createTreeWalker(part, view.NodeFilter.SHOW_TEXT);
+    const range = doc.createRange();
+    let seen = 0;
+    for (let node = text.nextNode(); node !== null; node = text.nextNode()) {
+      let i = 0;
+      for (const char of node.textContent ?? "") {
+        range.setStart(node, i);
+        i += char.length;
+        range.setEnd(node, i);
+        if (/\s/.test(char)) continue;
+        const boxes = [...range.getClientRects()].filter(
+          (box) => box.width > 0 && box.height > 0,
+        );
+        if (boxes.length === 0) return false;
+        for (const box of boxes) {
+          const x = box.left + box.width / 2;
+          const y = box.top + box.height / 2;
+          if (x < 0 || y < 0 || x >= view.innerWidth || y >= view.innerHeight)
+            return false;
+          const hit = doc.elementFromPoint(x, y);
+          if (hit === null || !part.contains(hit)) return false;
+          seen++;
+        }
+      }
+    }
+    return seen > 0;
+  } finally {
+    doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter(
+      (other) => other !== sheet,
+    );
+  }
 }
 
 // By root, the renders still verifying on it: their `checking` bars, and
@@ -2985,7 +3060,7 @@ async function renderVerifiedContext(
   const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
     if (!root.isConnected || view === null)
-      return { look: "", offsets: [], place: [0, 0] };
+      return { look: "", offsets: [], place: [0, 0], readable: false };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
     // The root's ancestors too, up to <html>: a transform, opacity, filter,
@@ -3001,9 +3076,8 @@ async function renderVerifiedContext(
     ];
     // A browser also computes each element's ::before and ::after, whose
     // content can add words to the banner; jsdom computes no pseudo-element.
-    const pseudos = view.navigator.userAgent.includes("jsdom")
-      ? [null]
-      : [null, "::before", "::after"];
+    const jsdom = view.navigator.userAgent.includes("jsdom");
+    const pseudos = jsdom ? [null] : [null, "::before", "::after"];
     const offsets: number[] = [];
     const seen = JSON.stringify(
       elements.flatMap((element, at) =>
@@ -3032,28 +3106,29 @@ async function renderVerifiedContext(
         }),
       ),
     );
-    // Where the bar sits in the document: its box plus every scroll offset
-    // above it, the viewport's included once (on <html>, or on <body> in
-    // quirks mode), so a reader's scrolling moves nothing. A scroll offset is
-    // in its container's own px, scaled by any transform above it into the
-    // viewport px the box is in; the viewport's is in viewport px already.
+    // Where the bar sits in the document, and whether its words can be
+    // read, measured with every scroll offset above it at zero: a reader's
+    // scrolling then moves nothing, through any transform, and no size a
+    // module's stylesheet can change enters the measure. Every offset is put
+    // back before anything paints. jsdom lays nothing out, so its banner is
+    // never readable and the check of looks alone applies there.
+    const scrollers = [root, ...ancestors];
+    const scrolled = scrollers.map(
+      (at) => [at.scrollLeft, at.scrollTop] as const,
+    );
+    for (const at of scrollers)
+      if (at.scrollLeft !== 0 || at.scrollTop !== 0)
+        at.scrollTo({ left: 0, top: 0, behavior: "instant" });
     const box = parts[0]!.getBoundingClientRect();
     const place: [number, number] = [box.left, box.top];
-    for (let at = parts[0]!.parentElement; at !== null; at = at.parentElement) {
-      if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
-      const seen = at.getBoundingClientRect();
-      const html =
-        at instanceof view.HTMLElement &&
-        at !== root.ownerDocument.scrollingElement
-          ? at
-          : undefined;
-      const width = html?.offsetWidth ?? 0;
-      const height = html?.offsetHeight ?? 0;
-      place[0] += at.scrollLeft * (width > 0 ? seen.width / width : 1);
-      place[1] += at.scrollTop * (height > 0 ? seen.height / height : 1);
-    }
+    const words = !jsdom && parts.every((part) => readable(part));
+    scrollers.forEach((at, i) => {
+      const [left, top] = scrolled[i]!;
+      if (at.scrollLeft !== left || at.scrollTop !== top)
+        at.scrollTo({ left, top, behavior: "instant" });
+    });
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, offsets, place };
+    return { look: seen, offsets, place, readable: words };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
