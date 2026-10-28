@@ -182,8 +182,8 @@ describe.skipIf(executablePath === undefined)(
 
     // The runtime go/pageruntime ships was built at its own commit, so its
     // stylesheets can drift from the ones go/emitter/runtime-style-hashes.txt
-    // lists today. Every stylesheet it inserts must be one the page's CSP
-    // allows, and every listed hash must be one it inserts.
+    // lists today. The stylesheets it inserts on these pages, each allowed
+    // by the page's CSP, are exactly the listed ones.
     it("go/pageruntime's runtime inserts exactly the stylesheets runtime-style-hashes.txt lists", async () => {
       const runtime = readFileSync(
         resolve(
@@ -239,7 +239,7 @@ describe.skipIf(executablePath === undefined)(
             `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`,
           );
       }
-      for (const hash of listed) expect(inserted, hash).toContain(hash);
+      expect([...inserted].sort()).toEqual([...listed].sort());
     });
 
     describe("with the reference core runtime", () => {

@@ -1,0 +1,6 @@
+evidence-graph.iife.js is built by capsule-viewer's ts/scripts/build-iife.mjs
+from capsule-viewer's ts/src/browser.ts (the page code) at the commit
+pageruntime.Commit names, bundling @action-state-group/agent-action-capsule
+0.8.0 (the verifier), @action-state-group/cll 0.2.1 and cborg 6.1.2 from npm.
+It is committed as built; evidence-graph.iife.js.sha256 records its digest.
+THIRD_PARTY_NOTICES.md beside it reproduces each component's license.
