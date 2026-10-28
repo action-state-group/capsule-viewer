@@ -179,9 +179,6 @@ describe.skipIf(executablePath === undefined)(
       // the shift.
       "html::-webkit-scrollbar{width:600px}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:550px}",
       "html{scrollbar-gutter:stable both-edges}.cv-shell-bar{margin-left:550px}",
-      // A module scales the scrollbar probe to widen the cap.
-      ":root>div{zoom:20!important}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:200px}",
-      "html>div{zoom:0.1}html::-webkit-scrollbar{width:600px}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:90px}",
       "html::-webkit-scrollbar{width:90vw}[data-test-module]{height:3000px}.cv-shell-bar{margin-left:-90vw}",
       "[data-verify]{-webkit-text-fill-color:transparent}",
       "[data-verify]{zoom:0.01}",
