@@ -80,7 +80,7 @@ describe.skipIf(executablePath === undefined)(
         "<!doctype html><html><head><style>" +
           "body{margin:0}#app{max-width:600px;margin-inline:auto}" +
           pageCss +
-          "</style></head><body></body></html>",
+          '</style></head><body><div id="host"></div></body></html>',
       );
       await page.addScriptTag({ content: runtime });
       return page.evaluate(
@@ -131,7 +131,7 @@ describe.skipIf(executablePath === undefined)(
           });
           const root = document.createElement("main");
           root.id = "app";
-          document.body.append(root);
+          document.getElementById("host")!.append(root);
           await renderEvidenceGraph(bundle, root, undefined, { registry });
           return root.querySelector("[data-test-module]") !== null;
         },
@@ -161,6 +161,31 @@ describe.skipIf(executablePath === undefined)(
           "#app{max-width:1270px}",
         ),
       ).toBe(true);
+    });
+
+    // An embedded host that places its widget with percentages, whose used px
+    // move when the page grows a scrollbar.
+    for (const host of [
+      "#host{position:absolute;left:50%;transform:translateX(-50%);width:80%}",
+      "#host{transform:translateX(-50%);margin-left:50%;width:80%}",
+      "body{margin:2%}",
+    ])
+      it(`one that makes the page scroll renders on a host with ${host}`, async () => {
+        expect(
+          await kept(
+            "html::-webkit-scrollbar{width:15px}[data-test-module]{height:3000px}",
+            host,
+          ),
+        ).toBe(true);
+      });
+
+    it("one that moves a positioned host by its bottom offset is discarded", async () => {
+      expect(
+        await kept(
+          "#host{bottom:100vh}",
+          "#host{position:absolute;left:50%;transform:translateX(-50%);width:80%}",
+        ),
+      ).toBe(false);
     });
 
     it("one renders on a host that already styles the root's ancestors", async () => {
@@ -218,6 +243,14 @@ describe.skipIf(executablePath === undefined)(
       "html{mask-image:linear-gradient(transparent,transparent)}",
       "html{content-visibility:hidden}",
       'body::before{content:"";position:fixed;inset:0;background:#fff}',
+      "#host{transform:scale(0.01)}",
+      "#host{opacity:0}",
+      "#host{margin-top:-60px}",
+      "#host{position:relative;bottom:100vh}",
+      // Paint containment clips the banner.
+      "body{contain:strict}",
+      "body{contain:paint;height:0}",
+      "#app{contain:paint;height:0}",
     ])
       it(`one that adds ${css} is discarded`, async () => {
         expect(await kept(css)).toBe(false);

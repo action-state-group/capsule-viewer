@@ -417,13 +417,18 @@ here. The format follows
   clips or hides the banner by styling `html`, `body` or another ancestor of
   the page root (capsule-viewer#117). Earlier it read only the root, the bar
   and the details line, so `transform`, `scale`, `translate`, `opacity`,
-  `filter`, `clip-path`, `mask-image`, `margin-top` or `position` on an
-  ancestor kept the render while the banner shrank or left the page. It now
-  compares the same computed properties on every ancestor up to `<html>`,
-  before and after the module renders, and also compares `mask-image` on the
-  banner itself. A module that restyles `html` or `body` in any of those
-  properties is discarded. The Go module ships the runtime built with this
-  fix (`go/pageruntime`).
+  `filter`, `clip-path`, `mask-image`, `contain`, `margin-top` or `position`
+  on an ancestor kept the render while the banner shrank, left the page or
+  was clipped. It now compares the same computed properties on every ancestor
+  up to `<html>`, before and after the module renders, and also compares
+  `mask-image` and `contain` on the banner and the root. On an ancestor,
+  `top`, `left`, `margin-top` and a transform's translation are compared to
+  within the same 9px as the side margins, since an embedded host that
+  centres its widget with percentages moves them when the page grows a
+  scrollbar; `right`, `bottom` and `margin-bottom` are not compared there. A
+  module that restyles `html` or `body` in any other compared property is
+  discarded. The Go module ships the runtime built with this fix
+  (`go/pageruntime`).
 
 - The banner frame check no longer discards a module render when the page
   grows a classic scrollbar (capsule-viewer#113). A computed `auto` side margin

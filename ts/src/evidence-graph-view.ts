@@ -2725,11 +2725,24 @@ export async function renderEvidenceGraph(
 // scroll is then discarded, which fails closed.
 const SIDE_MARGINS = ["margin-left", "margin-right"] as const;
 const SIDE_MARGIN_SLACK = 9;
-type FrameLook = { readonly look: string; readonly margins: readonly number[] };
+// On the root's ancestors, which in the embedded format are the host page's
+// own elements, the offsets and a transform's translation are compared to
+// within the same slack: a host that places its widget with `left: 50%`,
+// `translateX(-50%)` or a percentage margin resolves them to used px that move
+// with the scrollbar too. A positioned element's `top` and `left` resolve to
+// where it is, whichever of its offsets set that, so they stand for `right`
+// and `bottom`, whose used px follow the height of the module's content and
+// are not compared. A module can therefore still shift the banner by up to
+// SIDE_MARGIN_SLACK per offset of each ancestor; `position` and a transform
+// that was `none` are compared exactly. An ancestor's `margin-bottom` moves
+// nothing in it.
+const ANCESTOR_OFFSETS = ["top", "left", "margin-top"] as const;
+const ANCESTOR_UNCOMPARED = ["right", "bottom", "margin-bottom"];
+type FrameLook = { readonly look: string; readonly offsets: readonly number[] };
 const sameLook = (a: FrameLook, b: FrameLook): boolean =>
   a.look === b.look &&
-  a.margins.length === b.margins.length &&
-  a.margins.every((m, i) => Math.abs(m - b.margins[i]!) <= SIDE_MARGIN_SLACK);
+  a.offsets.length === b.offsets.length &&
+  a.offsets.every((m, i) => Math.abs(m - b.offsets[i]!) <= SIDE_MARGIN_SLACK);
 
 // The computed properties of the banner frame a module's stylesheet must not
 // change (see looks in renderVerifiedContext): what decides whether the
@@ -2770,7 +2783,28 @@ const FRAME_LOOK = [
   "max-width",
   "z-index",
   "content-visibility",
+  "contain",
 ] as const;
+const ANCESTOR_LOOK = FRAME_LOOK.filter(
+  (name) =>
+    name !== "transform" &&
+    !(ANCESTOR_OFFSETS as readonly string[]).includes(name) &&
+    !ANCESTOR_UNCOMPARED.includes(name),
+);
+
+// A computed transform split into its linear part, compared exactly, and its
+// translation in px, compared within the slack. Anything else (`none`) is
+// compared whole.
+function splitTransform(value: string): [string, number[]] {
+  const m = /^matrix(3d)?\((.*)\)$/.exec(value);
+  if (m === null) return [value, []];
+  const n = m[2]!.split(",").map(Number);
+  const moves = m[1] === undefined ? [4, 5] : [12, 13, 14];
+  return [
+    `matrix${m[1] ?? ""}(${n.filter((_, i) => !moves.includes(i)).join(",")})`,
+    moves.map((i) => n[i]!),
+  ];
+}
 
 // By root, the renders still verifying on it: their `checking` bars, and
 // what the root held before the first of them began.
@@ -2921,7 +2955,7 @@ async function renderVerifiedContext(
   // this reason.
   const looks = (parts: readonly Element[], chromed: boolean): FrameLook => {
     const view = root.ownerDocument.defaultView;
-    if (!root.isConnected || view === null) return { look: "", margins: [] };
+    if (!root.isConnected || view === null) return { look: "", offsets: [] };
     const had = root.classList.contains("cv-shell-chrome");
     root.classList.toggle("cv-shell-chrome", chromed);
     // The root's ancestors too, up to <html>: a transform, opacity, filter,
@@ -2940,26 +2974,36 @@ async function renderVerifiedContext(
     const pseudos = view.navigator.userAgent.includes("jsdom")
       ? [null]
       : [null, "::before", "::after"];
-    const margins: number[] = [];
+    const offsets: number[] = [];
     const seen = JSON.stringify(
-      elements.flatMap((element) =>
+      elements.flatMap((element, at) =>
         pseudos.map((pseudo) => {
           const style = view.getComputedStyle(element, pseudo);
+          const ancestor = at < ancestors.length;
+          const [transform, moves] = ancestor
+            ? splitTransform(style.getPropertyValue("transform"))
+            : [undefined, []];
+          offsets.push(...moves);
           return [
-            ...FRAME_LOOK.map((name) => style.getPropertyValue(name)),
-            ...SIDE_MARGINS.flatMap((name) => {
-              const value = style.getPropertyValue(name);
-              const px = Number.parseFloat(value);
-              margins.push(Number.isNaN(px) ? 0 : px);
-              return Number.isNaN(px) ? [value] : [];
-            }),
+            ...(ancestor ? ANCESTOR_LOOK : FRAME_LOOK).map((name) =>
+              style.getPropertyValue(name),
+            ),
+            ...(transform === undefined ? [] : [transform]),
+            ...[...SIDE_MARGINS, ...(ancestor ? ANCESTOR_OFFSETS : [])].flatMap(
+              (name) => {
+                const value = style.getPropertyValue(name);
+                const px = Number.parseFloat(value);
+                offsets.push(Number.isNaN(px) ? 0 : px);
+                return Number.isNaN(px) ? [value] : [];
+              },
+            ),
             ...(pseudo === null ? [] : [style.getPropertyValue("content")]),
           ];
         }),
       ),
     );
     root.classList.toggle("cv-shell-chrome", had);
-    return { look: seen, margins };
+    return { look: seen, offsets };
   };
   const frameOf = () => {
     const detail = bar.nextElementSibling;
