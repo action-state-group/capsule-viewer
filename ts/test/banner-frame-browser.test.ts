@@ -77,7 +77,7 @@ describe.skipIf(executablePath === undefined)(
       // The shell's rule that centres the page with auto margins.
       await page.setContent(
         "<!doctype html><html><head><style>" +
-          "#app{max-width:600px;margin-inline:auto}" +
+          "body{margin:0}#app{max-width:600px;margin-inline:auto}" +
           pageCss +
           "</style></head><body></body></html>",
       );
