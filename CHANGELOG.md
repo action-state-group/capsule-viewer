@@ -413,8 +413,8 @@ here. The format follows
 
 ### Fixed
 
-- The banner frame check discards a module that draws anything over the
-  banner or clips it, whatever property does so (capsule-viewer#125). After
+- The banner frame check discards a module that covers the banner with a
+  layer the browser hit-tests, or clips it (capsule-viewer#125). After
   comparing computed properties, it hit-tests the centre of every character
   of the bar and the details line. Each hit must land in the banner, and the
   test runs where the banner first shows, with every scroll offset above it
@@ -424,16 +424,19 @@ here. The format follows
   readable before the module rendered, so a host that already covered or hid
   the widget is no module's doing. The bar's place is now measured the same
   way, at zero scroll, instead of correcting for scrolling with the
-  container's size ratio. The routes capsule-viewer#117 left open are closed:
+  container's size ratio. The whole check runs again once the page settles
+  (after the next frame and the timers then due), so a toolbar or modal a
+  module opens just after its render returns is caught too. The routes
+  capsule-viewer#117 left open are closed:
   - an opaque layer drawn by `head`, `style` or the module's own content;
   - a scrolling host shrunk to zero height;
   - a fractional host height skewing the place bound.
 
   An honest module now renders while the reader scrolls inside a rotated
-  host. Paint the browser does not hit-test (an outline, a shadow, a
-  reflection) is not found. The check targets a module's mistakes, not
-  trusted code written to hide the banner, which the builder's pin governs
-  (see capsule-viewer#125). The Go module ships the runtime built with this
+  host. Not found: paint the browser does not hit-test (an outline, a
+  shadow, a reflection), and anything a module draws after the settle. The
+  check targets a module's mistakes, not trusted code written to hide the
+  banner, which the builder's pin governs (see capsule-viewer#125). The Go module ships the runtime built with this
   fix (`go/pageruntime`).
 
 - The banner frame check discards a module whose stylesheet scales, moves,

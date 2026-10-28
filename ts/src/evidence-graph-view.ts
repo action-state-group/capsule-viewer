@@ -2910,6 +2910,24 @@ function readable(part: Element): boolean {
   }
 }
 
+// Resolves after the next frame and then the timers already due. A page
+// that is not shown draws no frames, so a timer stands in for the frame
+// there.
+function settled(view: Window): Promise<void> {
+  return new Promise((done) => {
+    let waiting = true;
+    const next = (): void => {
+      if (!waiting) return;
+      waiting = false;
+      view.setTimeout(done, 0);
+    };
+    view.requestAnimationFrame(next);
+    view.setTimeout(next, SETTLE_MS);
+  });
+}
+// The longest the settle waits for a frame.
+const SETTLE_MS = 100;
+
 // By root, the renders still verifying on it: their `checking` bars, and
 // what the root held before the first of them began.
 const checkingRenders = new WeakMap<
@@ -3045,7 +3063,9 @@ async function renderVerifiedContext(
   // attributes, hides or moves them, puts anything before them but the
   // core's own header, or draws a second banner, is discarded for the
   // refusal like one that throws. The bar's summary line is empty until the
-  // verification section fills it, after every module has rendered.
+  // verification section fills it, after every module has rendered. These
+  // checks catch a module's mistakes; they do not hold against module code
+  // written to hide the banner, which the builder's pin governs (#125).
   const snapshot = (parts: readonly Element[]): string =>
     JSON.stringify(parts.map((part) => part.outerHTML));
   // How the frame looks: the computed properties that decide whether its
@@ -3235,6 +3255,29 @@ async function renderVerifiedContext(
         },
         presentationServices(context),
       );
+      assertFrameIntact();
+    } catch {
+      chrome = undefined;
+      drawFrame();
+      refusal = "presentation-failed";
+    }
+  }
+  // A module may still draw once its render has returned, from a timer or
+  // the next frame: a toolbar or a modal it opens when its data is in. The
+  // frame is checked again after the page settles, after the next frame and
+  // then the timers already due. Anything a module draws later is out of
+  // reach (#125). jsdom lays nothing out, so there the checks above are the
+  // last.
+  const view = root.ownerDocument.defaultView;
+  if (
+    refusal === undefined &&
+    (selected !== undefined || section !== undefined) &&
+    root.isConnected &&
+    view !== null &&
+    !view.navigator.userAgent.includes("jsdom")
+  ) {
+    await settled(view);
+    try {
       assertFrameIntact();
     } catch {
       chrome = undefined;

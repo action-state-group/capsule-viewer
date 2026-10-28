@@ -136,7 +136,15 @@ for (const setting of SETTINGS)
         css: string,
         pageCss = "",
         scroll?: readonly [string, number, number],
-        { csp, markerStyle }: { csp?: string; markerStyle?: string } = {},
+        {
+          csp,
+          markerStyle,
+          late,
+        }: {
+          csp?: string;
+          markerStyle?: string;
+          late?: { css: string; when: "timer" | "frame" };
+        } = {},
       ): Promise<boolean> {
         // A fresh document each time: setContent reuses the document, and a
         // policy set in a meta tag would stay with it.
@@ -155,7 +163,7 @@ for (const setting of SETTINGS)
         );
         await page.addScriptTag({ content: runtime });
         return page.evaluate(
-          async ({ bundle, css, scroll, markerStyle }) => {
+          async ({ bundle, css, scroll, markerStyle, late }) => {
             const { renderEvidenceGraph, PresentationRegistry } = (
               globalThis as unknown as {
                 Frame: {
@@ -206,6 +214,15 @@ for (const setting of SETTINGS)
                 const style = document.createElement("style");
                 style.textContent = css;
                 host.L1.append(style);
+                if (late !== undefined) {
+                  const add = (): void => {
+                    const later = document.createElement("style");
+                    later.textContent = late.css;
+                    host.L1.append(later);
+                  };
+                  if (late.when === "timer") setTimeout(add, 0);
+                  else requestAnimationFrame(add);
+                }
               },
             });
             const root = document.createElement("main");
@@ -214,7 +231,7 @@ for (const setting of SETTINGS)
             await renderEvidenceGraph(bundle, root, undefined, { registry });
             return root.querySelector("[data-test-module]") !== null;
           },
-          { bundle, css, scroll, markerStyle },
+          { bundle, css, scroll, markerStyle, late },
         );
       }
 
@@ -402,6 +419,40 @@ for (const setting of SETTINGS)
           true,
         );
       });
+
+      // Drawn just after render returns, as a module that opens a toolbar or a
+      // modal once its data is in might.
+      for (const when of ["timer", "frame"] as const) {
+        it(`one that draws a layer over the banner on the next ${when} is discarded`, async () => {
+          expect(
+            await kept("", "", undefined, {
+              late: {
+                css: "[data-test-module]{position:fixed;margin:0;top:0;left:0;right:0;height:100vh;background:#eee}",
+                when,
+              },
+            }),
+          ).toBe(false);
+        });
+
+        it(`one that moves the banner on the next ${when} is discarded`, async () => {
+          expect(
+            await kept("", "", undefined, {
+              late: { css: ".cv-shell-bar{margin-top:-100vh}", when },
+            }),
+          ).toBe(false);
+        });
+
+        it(`one that styles its own content on the next ${when} renders`, async () => {
+          expect(
+            await kept("", "", undefined, {
+              late: {
+                css: "[data-test-module]{color:red;margin-top:4px}",
+                when,
+              },
+            }),
+          ).toBe(true);
+        });
+      }
 
       it("one that shrinks a scrolling host to nothing is discarded", async () => {
         expect(
