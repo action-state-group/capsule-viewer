@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("47f1e8e798789de6564d986c5a8be39ca048f14b");
+    return commitPrefix("541197c588a59b42410a72753b8e9f6e1c01bc94");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17601,7 +17601,9 @@ ${pad.repeat(depth)}`;
     ...BOX_EDGES
   ];
   var ANCESTOR_UNCOMPARED = ["right", "bottom"];
-  var sameLook = (a, b) => a.look === b.look && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every((size, i) => size >= b.clips[i] - 2 * SIDE_MARGIN_SLACK) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
+  var sameLook = (a, b) => a.look === b.look && (a.readable !== "no" || b.readable === "no") && a.clips.length === b.clips.length && a.clips.every(
+    (box, i) => box.width >= b.clips[i].width - 2 * SIDE_MARGIN_SLACK && box.height >= b.clips[i].height - (b.clips[i].bar ? 2 * SIDE_MARGIN_SLACK : 1)
+  ) && Math.abs(a.place[0] - b.place[0]) <= 2 * SIDE_MARGIN_SLACK && a.place[1] - b.place[1] >= -SIDE_MARGIN_SLACK && a.offsets.length === b.offsets.length && a.offsets.every((m, i) => Math.abs(m - b.offsets[i]) <= SIDE_MARGIN_SLACK);
   var FRAME_LOOK = [
     "display",
     "visibility",
@@ -17764,6 +17766,9 @@ ${pad.repeat(depth)}`;
   function scaleArgs(value) {
     const [x, y = x, z = "1"] = value.split(/\s+/);
     return `${x},${y},${z}`;
+  }
+  function holdsFixed(style) {
+    return style.transform !== "none" || style.translate !== "none" || style.rotate !== "none" || style.scale !== "none" || style.perspective !== "none" || style.filter !== "none" || style.backdropFilter !== "none" || /paint|layout|strict|content/.test(style.contain) || /transform|perspective|filter/.test(style.willChange) || style.containerType !== "normal";
   }
   function settled(view) {
     return new Promise((done) => {
@@ -17928,19 +17933,38 @@ ${pad.repeat(depth)}`;
       );
       const box = parts[0].getBoundingClientRect();
       const place = [box.left, box.top];
+      let fixed = false;
       for (let at = parts[0].parentElement; at !== null; at = at.parentElement) {
-        if (at.scrollLeft === 0 && at.scrollTop === 0) continue;
-        const move = at === root.ownerDocument.scrollingElement || jsdom ? { x: at.scrollLeft, y: at.scrollTop } : linearTransform(at, view2).transformPoint({
-          x: at.scrollLeft,
-          y: at.scrollTop
-        });
-        place[0] += move.x;
-        place[1] += move.y;
+        const style = jsdom ? void 0 : view2.getComputedStyle(at);
+        if (fixed && style !== void 0 && holdsFixed(style)) fixed = false;
+        if (!fixed && (at.scrollLeft !== 0 || at.scrollTop !== 0)) {
+          const move = at === root.ownerDocument.scrollingElement || jsdom ? { x: at.scrollLeft, y: at.scrollTop } : linearTransform(at, view2).transformPoint({
+            x: at.scrollLeft,
+            y: at.scrollTop
+          });
+          place[0] += move.x;
+          place[1] += move.y;
+        }
+        if (style?.position === "fixed") fixed = true;
       }
       const words = readable(parts, root);
       const clips = jsdom ? [] : elements.flatMap((element7) => {
         const style = view2.getComputedStyle(element7);
-        return style.overflowX === "visible" && style.overflowY === "visible" ? [] : [element7.clientWidth, element7.clientHeight];
+        if (style.overflowX === "visible" && style.overflowY === "visible" && !/paint|strict|content/.test(style.contain) && style.contentVisibility !== "auto")
+          return [];
+        const matrix = linearTransform(element7, view2);
+        const across = matrix.transformPoint({ x: element7.clientWidth });
+        const down = matrix.transformPoint({ y: element7.clientHeight });
+        return [
+          {
+            width: Math.hypot(across.x, across.y),
+            height: Math.hypot(down.x, down.y),
+            // Only a box that scrolls sideways can grow a scrollbar of
+            // its own across its bottom; any other box's height a page's
+            // scrollbar leaves alone.
+            bar: ["auto", "scroll"].includes(style.overflowX)
+          }
+        ];
       });
       root.classList.toggle("cv-shell-chrome", had);
       return { look: seen, offsets, place, readable: words, clips };
