@@ -32,7 +32,7 @@ states each spec's SHA-256.
 | `html` (TS and Go) | the specs as one JSON data element beside the wording pack. The page runtime checks and draws them |
 | `embedded` | the same data element in the host element |
 | `static` | the drawn SVG and its table, with no spec element. The digests are stated in text |
-| `fragment` | nothing: a build with `charts` is unavailable for `fragment`, with a new reason `fragment-has-charts`, and the hand-back to the offline file shows them. Carrying specs would need a new member in `aac.presentation-fragment/v0` and would spend the link budget. That is not needed for v0 |
+| `fragment` | nothing: a build with `charts` is unavailable for `fragment`, with a new reason `fragment-has-charts`. A reader gets the charts from the `html` or `static` packaging. Carrying specs would need a new member in `aac.presentation-fragment/v0` and would spend the link budget, which v0 doesn't need |
 
 The new setting and the new reason change `spec/presentation-builder-v0.md`
 (§1 and the §1.1 table) in the same PR as the code.
@@ -55,7 +55,7 @@ Narrowing it is a break.
 | `data` | `{"name": "dataset"}` only. No `url`, no `values`, no `sequence` |
 | `mark` | `bar`, `line`, `point`, `rect`, as a string or `{"type": ...}` with no other key |
 | `transform` | a list of `{"filter": P}`. P is a field predicate (`equal`, `oneOf`, or `range` with an optional `timeUnit`) or `and` / `or` / `not` of them. Never an expression string |
-| `encoding.x`, `.y`, `.color` | `field`, `type` (`quantitative`, `ordinal`, `nominal`, `temporal`), `aggregate` (`count` or `sum`), `timeUnit` (`utcyearmonthdate`, `utcyearweek`, `utcyearmonth`) on a temporal field only. `title` is accepted and ignored |
+| `encoding.x`, `.y`, `.color` | `field`, `type` (`quantitative`, `ordinal`, `nominal`, `temporal`), `aggregate` (`count` or `sum`), `timeUnit` (`utcyearmonthdate`, `utcyearmonth`) on a temporal field only. `title` is accepted and ignored |
 | `usermeta.capsule` | the statement the checker holds the chart to (section 3) |
 | `title`, `description` | accepted and ignored |
 
@@ -65,7 +65,7 @@ for `rect`. A spec with no aggregate, or with two, is refused
 
 Refused by construction: `params`, signals, selections, `calculate`, `lookup`,
 `href`, `tooltip`, any `transform` other than `filter`, any `expr` member, any
-string that Vega would evaluate, local (non-`utc`) time units, `mean`, `min`,
+string that Vega would evaluate, local (non-`utc`) time units, week units, `mean`, `min`,
 `max` and other aggregates, and `layer`, `concat`, `facet` and `repeat`. A
 chart that needs a ratio shows both counts, following Steven's ruling against
 a single figure.
@@ -88,10 +88,11 @@ The window is a `range` filter in `transform`, on the window field, with
 `timeUnit: "utcyearmonthdate"`. Both ends are inclusive calendar days, so
 standard tools filter the same rows the viewer does. `usermeta.capsule.window`
 restates that filter, and the two have to match (`chart-window-mismatch`). A
-temporal axis's units have to tile the window exactly: a `utcyearweek` chart
-needs a window from a Sunday to a Saturday (Vega-Lite's week), and a
-`utcyearmonth` chart one from the 1st of a month to a month's last day.
-Partial units are refused (`chart-window-mismatch`), never drawn short.
+temporal axis's units have to tile the window exactly: a `utcyearmonth` chart
+needs a window from the 1st of a month to a month's last day. Partial units are
+refused (`chart-window-mismatch`), never drawn short. Weeks are left out of v0,
+because a monthly report's sealed window (D4) never starts on Vega-Lite's
+Sunday.
 
 ### Runs and "not run"
 
@@ -114,30 +115,43 @@ no bar or point, and its table row reads "not run". It is never drawn as zero.
     { "x": "2026-09-01", "y": 4 },
     { "x": "2026-09-02", "y": 0 },
     { "x": "2026-09-03", "not_run": true }
-  ],
-  "derived": true
+  ]
 }
 ```
 
-`values` holds one object per drawn group: one per x unit, and per color key
-when `color` is not the aggregate. Each object is keyed by the encoded channels
-(`x`, `y`, `color`). A temporal key is the ISO date of the unit's first day, in
-UTC. The aggregate channel holds the number. A not-run unit has no aggregate
-key and has `"not_run": true`. Order doesn't matter, and a group listed twice
-is refused.
+**Groups.** A group's key is the values of every encoded channel that doesn't
+aggregate: `x` alone, `x` and `color` for a series, `x` and `y` for a `rect`
+cell. The group domain is the product of each key channel's domain. A temporal
+channel's domain is every unit in the window. Any other channel's domain is the
+values seen in the rows that pass `transform`. Every group in the domain is
+listed. On a run unit, or on a chart with no temporal channel, a group with no
+rows has the value `0`. On a not-run unit, every group is not run.
+
+`values` holds one object per group, keyed by channel (`x`, `y`, `color`). A
+temporal key is the ISO date of the unit's first day, in UTC. The aggregate
+channel holds the number. A not-run group has no aggregate key and has
+`"not_run": true`. Order doesn't matter, and a group listed twice is refused.
 
 The checker runs these checks in order. Each failure refuses the build with
 its own reason and a vector:
 
 1. **Fields exist and have a type** (`chart-field-missing`, `chart-field-type`).
-   Every field the spec names, in `encoding`, in `transform`, in `window.field`
-   and in `runs`, resolves in every dataset row (section 4) to a value of the
-   type the spec uses: a number under `sum` or `quantitative`, an RFC 3339
-   timestamp under `temporal`, a string or number under `equal`/`oneOf`. A
-   field that is missing from some rows is refused, never treated as zero.
+   A dataset mixes record types (D5), so each field is checked on the rows it
+   applies to (section 4 says how a field resolves). A `transform` or
+   `runs.filter` predicate is false on a row that lacks its field, as in
+   Vega-Lite, and that is how a filter selects one record type. Every
+   `encoding` field and `window.field` has to resolve on every row that passes
+   `transform`. `runs.field` has to resolve on every row that matches
+   `runs.filter`. A resolved value has to have the type the spec uses: a number
+   under `sum` or `quantitative`, an RFC 3339 timestamp under `temporal`, a
+   string or number under `equal`/`oneOf`. A field missing from a selected row
+   is refused, never treated as zero.
 2. **Window** (`chart-window-mismatch`), as above.
-3. **Population matches** (`chart-population-mismatch`). The rows that pass
-   `transform` number exactly `population.count`.
+3. **Population matches** (`chart-population-mismatch`). The population is
+   the rows that pass `transform`, run records included when the filter
+   selects them, and it numbers exactly `population.count`. A chart of cases
+   selects them by record type. Otherwise the daily Results count too, and a
+   producer who counted only cases is refused.
 4. **Values match** (`chart-aggregate-mismatch`). The checker recomputes every
    group, including the run and not-run units, from the filtered rows and the
    run records. The result has to equal `values` exactly. The chart is drawn
@@ -224,8 +238,10 @@ the renderer, a two-way door, changes.
 - **Scripts off means the static packaging.** It draws every chart at build
   time, and `static-carries-script` refuses any script. That holds for any
   sealed bundle, including one `capsulectl` built:
-  `node ts/scripts/render-report.mjs BUNDLE.json --format static` (a new
-  flag in this PR) writes the scripts-off copy.
+  `node ts/scripts/render-report.mjs BUNDLE.json --charts CHARTS.json --format static -o PAGE.html`
+  writes the scripts-off copy. `--charts` (a JSON list of specs, in page order,
+  passed to the `charts` setting) and `--format` are new flags in this PR.
+  The static acceptance test runs this command with a charts file.
 - **A Go-built offline page is a scripted page.** Its whole body is drawn by
   the runtime (`go/emitter/shell.html` has no content outside its scripts),
   so with scripts off it shows nothing at all, charts or not. Giving Go its own
@@ -233,6 +249,14 @@ the renderer, a two-way door, changes.
   second renderer that has to match the TS one byte for byte. A Go static
   packaging would be a Go twin of all of [pb] §2.4, which is its own item, not
   #82's.
+- **A reader with scripts off is told where the static copy is.** The Go and
+  TS shells get a `<noscript>` line, `page.noscript`, which says the page
+  needs scripts and that a no-script copy can be built with the command above.
+  `capsulectl report build` prints the same command, and its docs give it,
+  because the static path needs Node, which a `capsulectl` user may not have.
+  The shells belong to capsule-viewer#133's lane (viewer-109), so the
+  `<noscript>` line lands after #133 merges. The `capsulectl` line is an
+  evidencebook step. Both are tracked on #82.
 
 ### Words
 
@@ -241,21 +265,22 @@ strings as public text):
 
 | Key | String |
 | --- | --- |
-| `chart.population` | `{count} records` |
+| `chart.population.one` / `.other` | `{count} record` / `{count} records` (the repository's plural convention, as in `front.agg.evaluations.one`) |
 | `chart.window` | `{from} to {to} (UTC)` |
-| `chart.derived` | `Derived from the records above, not evidence itself` |
+| `chart.derived` | `Derived from this report's records, not evidence itself` |
 | `chart.not_run` | `Not run` |
 | `chart.table.caption` | `The values in this chart` |
 | `chart.refused` | `This chart was not drawn: its spec does not match the report's data ({reason}).` |
+| `page.noscript` | `This page needs scripts to show the report. A copy that runs no scripts can be built from the same bundle; see capsule-viewer's render-report.` |
 
 - The caption gives the population and the window, from the checked
   statement. The noun is the core's fixed "records". A pack noun would put
   producer text in a core caption.
 - The text table of every drawn group, not-run units included, is the chart's
   text alternative and what print and the 390 px layout fall back to.
-- The derived label is applied by construction: on every `line` chart, every
-  chart with a `color` series, every chart on a temporal axis, and every chart
-  with `derived: true`. The flag can add the label and can't remove it.
+- Every chart carries the derived label. Every chart in the subset is a count
+  or sum over records, which is a trend or a comparison, so no chart can leave
+  the label off and the spec has no flag for it.
 - #120's `calendar.not_run` reuses `chart.not_run`, since a calendar unit is a
   run.
 
@@ -287,14 +312,20 @@ and Go run them.
   partial week), `chart-runs-missing`, `chart-population-mismatch`,
   `chart-aggregate-mismatch`, `chart-row-withheld` and `chart-no-dataset`.
 - Time: a timestamp at 23:59:59Z and one at 00:00:00Z on the window's last and
-  first days; a `utcyearweek` chart across a year boundary.
-- Not run: 30 days, daily Results on 28 of them. Of those, one day has
-  matching rows and one has none after the filter. That draws 28 values, one
-  of them `0`, and 2 "not run" cells.
-- Derived: a two-category `bar` with a `color` series and `derived: false`
-  still carries the label.
-- Static page: a spec-driven chart builds with `static` and passes
-  `static-carries-script`. `fragment` with `charts` reports
+  first days; a `utcyearmonth` window that isn't whole months is refused.
+- Not run: 30 days, daily Results on 28 of them. One of the 28 days has no
+  rows after the filter. That draws 28 values, one of them `0`, and 2 "not
+  run" cells.
+- Groups: a `color` series where one key has no rows on a run day lists that
+  group as `0`. A `rect` with two cells at the same x and different y lists
+  two groups.
+- Mixed dataset: daily Results and cases in one dataset. A case chart whose
+  `transform` selects cases by record type passes, and a case field missing
+  from the daily Results doesn't refuse it. The same spec without the
+  record-type filter is refused (`chart-population-mismatch`).
+- Derived: a two-category `bar` with no `color` carries the label.
+- Static page: `render-report.mjs --charts … --format static` builds a page
+  with its charts and passes `static-carries-script`. `fragment` with `charts` reports
   `fragment-has-charts`.
 - Goldens (after #107): the outcome and EU months, re-rendered byte for byte
   in CI, through the existing accessibility, 390 px and print checks.
