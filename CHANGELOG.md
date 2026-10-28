@@ -13,9 +13,11 @@ here. The format follows
 
 ## ts 0.3.0 and go 0.3.0 (2026-10-28)
 
-The first paired viewer release: `ts/v0.3.0` and `go/v0.3.0` ship the same
-page runtime, which states viewer 0.3.0 (RELEASING.md). There was no ts 0.2.0;
-the Go module was already at 0.2.0.
+The first release under RELEASING.md's pairing rule: `ts/v0.3.0` is tagged on
+this merge, and `go/v0.3.0` follows on the commit that ships its page runtime.
+Both state viewer 0.3.0. There was no ts 0.2.0, because the Go module had
+already used 0.2.0. Go entries below include changes first tagged in
+`go/v0.1.1` and `go/v0.2.0`, which had no CHANGELOG sections.
 
 ### Breaking
 
