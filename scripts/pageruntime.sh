@@ -8,7 +8,9 @@
 #
 # The build is ts/scripts/build-iife.mjs, run after `npm ci` in a clean
 # worktree of the commit, so the bytes depend only on that commit's tree and
-# lockfile. --write needs a clean tracked tree, since the commit it records
+# lockfile, and on whether the tag ts/v<version> points at it (the page's
+# "Verified by" line says "plus unreleased changes" when none does), so tags
+# must be fetched: --write fetches them. --write needs a clean tracked tree, since the commit it records
 # must be the one the runtime was built from. The refreshed files are then
 # committed on top of that commit: the runtime never has to contain itself.
 set -euo pipefail
@@ -29,6 +31,7 @@ if [ "$mode" = write ]; then
     echo "pageruntime: commit or discard tracked changes first; the runtime must be built from a commit" >&2
     exit 1
   fi
+  git -C "$root" fetch --tags --quiet
   commit="$(git -C "$root" rev-parse HEAD)"
 else
   commit="$(sed -n 's/^const Commit = "\([0-9a-f]\{40\}\)"$/\1/p' "$source_go")"
@@ -69,6 +72,7 @@ fi
 
 if ! cmp -s "$built" "$asset"; then
   echo "pageruntime: go/pageruntime/evidence-graph.iife.js is not the runtime built at $commit" >&2
+  echo "  (the tag ts/v<version> on the commit is a build input: git fetch --tags, then rerun)" >&2
   echo "  shipped sha256 $(shasum -a 256 "$asset" | cut -d' ' -f1), rebuilt $sum" >&2
   exit 1
 fi

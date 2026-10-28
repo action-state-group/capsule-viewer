@@ -88,6 +88,10 @@ tests.
 The module ships the page runtime as built (`go/pageruntime`). To ship a newer
 one, run `scripts/pageruntime.sh --write` on a clean checkout of the commit
 holding the change to `ts/`, and commit the refreshed files on top of it.
+The build also reads whether the tag `ts/v<version>` points at that commit (a
+page from any other commit says "plus unreleased changes" after the viewer
+version), so the script fetches tags first, and a tag added later to the
+commit `pageruntime.Commit` names changes the rebuild: refresh then too.
 `pageruntime.Commit` must stay an ancestor of `main`, or the `pageruntime` CI
 job fails: a squash or rebase merge rewrites that commit. So either merge the
 `ts/` change first and refresh on the merged `main` commit, or keep both

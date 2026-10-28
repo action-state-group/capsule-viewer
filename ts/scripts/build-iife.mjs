@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
-import { builtCommitSha } from "./built-commit.mjs";
+import { builtCommitSha, builtIsRelease } from "./built-commit.mjs";
 
 const tsRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -40,6 +40,9 @@ async function main() {
   // output (dist/) has no step like this one, so it reads VIEWER_BUILD.commit
   // as not stated.
   const commitSha = builtCommitSha(tsRoot);
+  // The version is package.json's; whether this build is that release, or has
+  // changes after it, is stated from the release tag alone.
+  const unreleased = !builtIsRelease(tsRoot, commitSha, own.version);
 
   await build({
     entryPoints: ["src/browser.ts"],
@@ -48,6 +51,7 @@ async function main() {
     globalName: "EvidenceGraph",
     define: {
       __CAPSULE_VIEWER_COMMIT__: JSON.stringify(commitSha),
+      __CAPSULE_VIEWER_UNRELEASED__: JSON.stringify(unreleased),
     },
     footer: {
       js: "globalThis.renderEvidenceGraph = EvidenceGraph.renderEvidenceGraph;",

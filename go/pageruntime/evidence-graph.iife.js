@@ -10464,16 +10464,18 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("ed23ee24c0fad05a962a74211cd543dc3942298f");
+    return commitPrefix("7990b47c7d872c702a2e897b5fb97887fdccffd6");
   }
   var commit = builtCommit();
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.1.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.8.0",
     cllVersion: "0.2.1",
-    ...commit === void 0 ? {} : { commit }
+    ...commit === void 0 ? {} : { commit },
+    ...unreleased ? { unreleased: true } : {}
   };
 
   // src/presentation-fragment.ts
@@ -12486,7 +12488,9 @@ ${key}`);
       `prov.verifier.ran${build.cllVersion === void 0 ? "" : ".cll"}`,
       {
         viewer: build.viewer,
-        viewerVersion: build.viewerVersion,
+        // A build with changes after its version is that version only
+        // in name: the line says so rather than state the release.
+        viewerVersion: build.unreleased === true ? `${build.viewerVersion} plus unreleased changes` : build.viewerVersion,
         commit: build.commit === void 0 ? w.t("prov.verifier.commit.not-stated") : build.commit,
         verifier: build.verifier,
         verifierVersion: build.verifierVersion,
@@ -16003,11 +16007,15 @@ ${pad.repeat(depth)}`;
     if (failed2 === 0 && (pageFailed > 0 || !verified) && notRun > 0)
       leads.push(`${notRun} of ${total} checks not run`);
     const parts = [...leads, recordsWord2(model.records.length)];
-    const signatures = model.checkLists.notChecked.filter(
-      (id) => SIGNATURE_CHECKS.has(id)
-    ).length;
-    const others = model.checkLists.notChecked.length - signatures;
-    if (signatures > 0) parts.push("signatures not checked here");
+    const signatures = model.checkLists.notChecked.flatMap((id) => {
+      const words = SIGNATURE_CHECKS.get(id);
+      return words === void 0 ? [] : [words];
+    });
+    const others = model.checkLists.notChecked.length - signatures.length;
+    if (signatures.length > 0)
+      parts.push(
+        `${signatures.length === 1 ? signatures[0] : `${signatures.slice(0, -1).join(", ")} and ${signatures.at(-1)}`} not checked here`
+      );
     if (others > 0)
       parts.push(
         `${others} other ${others === 1 ? "check" : "checks"} not run here`
@@ -16022,11 +16030,11 @@ ${pad.repeat(depth)}`;
     "range",
     "membership"
   ]);
-  var SIGNATURE_CHECKS = /* @__PURE__ */ new Set([
-    "checkpoint-signature",
-    "producer-signatures",
-    "cited-signers",
-    "countersignatures"
+  var SIGNATURE_CHECKS = /* @__PURE__ */ new Map([
+    ["checkpoint-signature", "checkpoint signature"],
+    ["producer-signatures", "producer signatures"],
+    ["cited-signers", "cited signers' signatures"],
+    ["countersignatures", "countersignatures"]
   ]);
   var CHECKED_SECTION_TITLE = "How this page was checked";
   var CHECKED_SECTION_ID = "cv-checked";
