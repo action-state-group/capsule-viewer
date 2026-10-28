@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: Apache-2.0
+# Publish the GitHub Release for a go/v<version> tag of the Go module
+# github.com/action-state-group/capsule-viewer/go (see RELEASING.md).
+#
+# The module version exists as soon as an admin pushes the tag; this workflow
+# checks it with scripts/go-release-check.sh, which the admin runs before
+# pushing too, and publishes the page runtime the module ships as release
+# assets, so a reader without Go can fetch and verify the same bytes. The
+# assets get a GitHub build provenance attestation, verifiable with
+#   gh attestation verify FILE --repo action-state-group/capsule-viewer \
+#     --signer-workflow action-state-group/capsule-viewer/.github/workflows/release-go.yml
+# and the attestation bundle is published as pageruntime-v<version>.sigstore.json.
+name: Release · Go
+
+on:
+  push:
+    tags: ["go/v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-go-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The check installs and runs npm and Go code, so it holds no write or OIDC
+  # permission. The assets are committed files, not its outputs.
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache: false
+      - name: Check the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: scripts/go-release-check.sh "${TAG#go/v}"
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TAG: ${{ github.ref_name }}
+    permissions:
+      contents: write
+      id-token: write # OIDC token for the build provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Stage the release assets
+        run: |
+          echo "VERSION=${TAG#go/v}" >> "$GITHUB_ENV"
+          mkdir dist
+          cp go/pageruntime/evidence-graph.iife.js go/pageruntime/evidence-graph.iife.js.sha256 \
+            go/pageruntime/NOTICE go/pageruntime/THIRD_PARTY_NOTICES.md \
+            go/emitter/runtime-style-hashes.txt dist/
+          echo "SHA256=$(cat dist/evidence-graph.iife.js.sha256)" >> "$GITHUB_ENV"
+          echo "RUNTIME_COMMIT=$(sed -n 's/^const Commit = "\([0-9a-f]\{40\}\)"$/\1/p' go/pageruntime/pageruntime.go)" >> "$GITHUB_ENV"
+      - name: Attest build provenance of the assets
+        id: attest
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: dist/*
+      - name: Attach the attestation bundle
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$BUNDLE" "dist/pageruntime-v$VERSION.sigstore.json"
+      - name: Publish GitHub release
+        # A version with a hyphen is a pre-release, never marked the latest.
+        # A draft left by a run that died mid-upload is finished here; a
+        # published release is never changed.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          case "$VERSION" in
+            *-*) flags=(--prerelease --latest=false) ;;
+          esac
+          if draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [ "$draft" != true ]; then
+              echo "::error::release $TAG is already published"; exit 1
+            fi
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false "${flags[@]}"
+          else
+            gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" \
+              --title "$TAG" \
+              --notes "Go module github.com/action-state-group/capsule-viewer/go v$VERSION, viewer $VERSION. Its page runtime (go/pageruntime) is evidence-graph.iife.js, sha256 $SHA256, built at $RUNTIME_COMMIT (ts/v$VERSION), the same bytes as the npm release's dist/evidence-graph.iife.js; NOTICE and THIRD_PARTY_NOTICES.md carry its licenses; runtime-style-hashes.txt lists the CSP hashes of the styles it inserts. Check the build attestation with no GitHub account: gh attestation verify FILE --bundle pageruntime-v$VERSION.sigstore.json --repo $GITHUB_REPOSITORY --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release-go.yml. See CHANGELOG.md."
+          fi
