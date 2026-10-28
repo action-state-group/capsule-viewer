@@ -10464,7 +10464,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("9068428d0141e7783e7c0d96faee5d6ca5cfd866");
+    return commitPrefix("ed23ee24c0fad05a962a74211cd543dc3942298f");
   }
   var commit = builtCommit();
   var VIEWER_BUILD = {
@@ -17955,17 +17955,21 @@ ${pad.repeat(depth)}`;
         const matrix = linearTransform(element7, view2);
         const across = matrix.transformPoint({ x: element7.clientWidth });
         const down = matrix.transformPoint({ y: element7.clientHeight });
-        const bar2 = matrix.transformPoint({
-          y: element7 instanceof view2.HTMLElement && element7 !== root.ownerDocument.scrollingElement ? Math.max(
+        const viewport = element7 === root.ownerDocument.scrollingElement;
+        const width = viewport ? element7.clientWidth : Math.hypot(across.x, across.y);
+        const height = viewport ? element7.clientHeight : Math.hypot(down.x, down.y);
+        const own = matrix.transformPoint({
+          y: element7 instanceof view2.HTMLElement && !viewport ? Math.max(
             0,
             element7.offsetHeight - element7.clientHeight - Number.parseFloat(style.borderTopWidth) - Number.parseFloat(style.borderBottomWidth)
           ) : 0
         });
+        const bar2 = viewport ? Math.max(0, view2.innerHeight - height) : Math.hypot(own.x, own.y);
         return [
           {
-            width: Math.hypot(across.x, across.y),
-            height: Math.hypot(down.x, down.y),
-            bar: Math.hypot(bar2.x, bar2.y)
+            width,
+            height,
+            bar: bar2
           }
         ];
       });
