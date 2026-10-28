@@ -8,6 +8,11 @@ capsule-viewer publishes two packages:
 - the Go module `github.com/action-state-group/capsule-viewer/go` (`go/`),
   released by pushing a tag (see [Go](#go)).
 
+A viewer release `X` is both: `ts/vX` and `go/vX` on the same `main` commit.
+The page runtime states `X` as its viewer version, so the version a report
+page names is the release's. Consumers pin the Go tag (see
+[Pinning a viewer release](#pinning-a-viewer-release)).
+
 The Python package at the repository root is not published; it is installed
 from source. Publishing it later means adding a `releases.json` entry, a
 publisher workflow and a PyPI trusted publisher, as capsule-emit does.
@@ -40,7 +45,9 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    `npm run check` fails until it matches `ts/package.json`. A dependency
    bump of `@action-state-group/agent-action-capsule` or
    `@action-state-group/cll` sets `verifierVersion` or `cllVersion` there the
-   same way.
+   same way. Then refresh the Go module's runtime on top of that commit
+   (`scripts/pageruntime.sh --write`, see [Go](#go)), so it states the new
+   version too, and merge the pull request with a merge commit.
 3. **Merge.** [Release · Tag](https://github.com/action-state-group/capsule-viewer/actions/workflows/tag-release.yml)
    runs on the merge. For each package whose version changed it creates the
    tag and GitHub Release on the merge commit and dispatches the package's
@@ -49,6 +56,9 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    its manifest version and that the commit is on `main`, runs `npm run check`,
    then uploads through OIDC trusted publishing from its environment. Confirm
    the run and the new version on the registry.
+5. **Tag the Go module.** An admin pushes `go/v<version>`, the same version,
+   on the same merge commit. [Release · Go](https://github.com/action-state-group/capsule-viewer/actions/workflows/release-go.yml)
+   checks it and publishes its GitHub Release (see [Go](#go)).
 
 Bumping a version by hand in any pull request releases it the same way when it
 merges.
@@ -76,7 +86,7 @@ If a publish fails after the tag exists:
   started from a branch or another tag cannot upload.
 - **Tags.** The `release tags` ruleset lets only admins move or delete tags.
   Creating `go/v*` tags is also admin-only, because a Go release is the pushed
-  tag itself, with no workflow in between.
+  tag itself: Release · Go checks it only after it exists.
 
 ## Go
 
@@ -85,6 +95,29 @@ is fetchable as soon as the tag exists, so a bad release can only be withdrawn
 with a `retract` directive in a later version. CI on `main` covers the module's
 tests.
 
+The tag starts [`release-go.yml`](.github/workflows/release-go.yml)
+(Release · Go). It refuses the tag unless its commit is on `main`, the runtime
+is the one built at `pageruntime.Commit` (`scripts/pageruntime.sh`), the
+module's vet and tests pass, and the runtime states the tag's version as
+`viewerVersion`. It then publishes the tag's GitHub Release with the module's
+runtime files as assets:
+
+| Asset | What it is |
+|---|---|
+| `evidence-graph.iife.js` | the page runtime, `pageruntime.IIFE` |
+| `evidence-graph.iife.js.sha256` | its SHA-256 in hex, `pageruntime.SHA256` |
+| `runtime-style-hashes.txt` | the CSP hashes of the styles it inserts (`go/emitter`) |
+| `pageruntime-v<version>.sigstore.json` | the build provenance attestation over the three files |
+
+The release notes name the SHA-256 and the commit the runtime was built from.
+Check an asset with
+`gh attestation verify FILE --bundle pageruntime-v<version>.sigstore.json --repo action-state-group/capsule-viewer --signer-workflow action-state-group/capsule-viewer/.github/workflows/release-go.yml`.
+
+If Release · Go refuses a tag, the module version still exists: retract it in
+the next version and release that. If it failed for another reason, fix the
+cause and re-run it; it finishes a draft release it left, and never changes a
+published one.
+
 The module ships the page runtime as built (`go/pageruntime`). To ship a newer
 one, run `scripts/pageruntime.sh --write` on a clean checkout of the commit
 holding the change to `ts/`, and commit the refreshed files on top of it.
@@ -92,6 +125,23 @@ holding the change to `ts/`, and commit the refreshed files on top of it.
 job fails: a squash or rebase merge rewrites that commit. So either merge the
 `ts/` change first and refresh on the merged `main` commit, or keep both
 commits in one pull request and merge it with a merge commit.
+
+## Pinning a viewer release
+
+- **capsulectl** (through capsule-cli and evidencebook's `report`) requires
+  `github.com/action-state-group/capsule-viewer/go v<version>` in `go.mod`;
+  `go.sum` then holds the module's hash, which the Go checksum database fixes
+  for the tag. It passes `pageruntime.IIFE` with `pageruntime.SHA256` as the
+  emitter's `CoreRuntimeSHA256`, so the emitter re-checks the runtime against
+  its digest on every page it builds.
+- **The evidence-network loop** names the viewer in its `versions.lock` as
+  `capsule-viewer action-state-group/capsule-viewer go/v<version>`, the version
+  the capsulectl it pins requires. The Release's assets let a check without Go
+  compare a page's runtime with the release.
+
+The npm package's `dist/evidence-graph.iife.js` is built at the `ts/v<version>`
+tag's commit, so the commit it names differs from the Go runtime's. The Go
+module and its Release are the artifact to pin.
 
 ## Registry configuration
 

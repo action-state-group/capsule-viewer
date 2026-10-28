@@ -493,7 +493,11 @@ the `go/` module's tests, as CI does.
 Besides the Python package above, the repository holds the npm package
 `@action-state-group/capsule-viewer` (`ts/`) and the Go module
 `github.com/action-state-group/capsule-viewer/go` (`go/`).
-[RELEASING.md](RELEASING.md) says how each is released.
+A viewer release `X` is `ts/vX` and `go/vX` together, and the page runtime
+states `X`. To use a release, pin the Go tag: its GitHub Release carries the
+page runtime, its SHA-256 and the hashes of the styles it inserts, with a build
+provenance attestation. [RELEASING.md](RELEASING.md) says how each is released
+and pinned.
 
 ## Boundary
 

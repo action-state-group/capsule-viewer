@@ -79,7 +79,8 @@ jobs:
       - run: npm run check
 
   # The Go module github.com/action-state-group/capsule-viewer/go. A Go release
-  # is the pushed go/v* tag itself, so this job on main is its only gate.
+  # is the pushed go/v* tag itself, so this job on main is its gate before the
+  # tag; release-go.yml checks the tag again after it is pushed.
   go:
     runs-on: ubuntu-latest
     defaults:
