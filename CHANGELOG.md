@@ -433,8 +433,15 @@ here. The format follows
   sideways by at most 18px, wherever the reader has scrolled. A host that
   centres a growing widget vertically lifts the banner by itself, and an
   honest module there is discarded (it fails closed). A module that restyles
-  `html` or `body` in any other compared property is discarded. The Go module
-  ships the runtime built with this fix (`go/pageruntime`).
+  `html` or `body` in any other compared property is discarded. An honest
+  module also fails closed when the reader scrolls inside a rotated host
+  while it renders. Some routes remain open and are tracked in
+  capsule-viewer#125:
+  - an opaque overlay drawn by `head`, `style` or the module's own content;
+  - a clipping host shrunk to zero height;
+  - a fractional host height that skews the place bound's scroll correction.
+
+  The Go module ships the runtime built with this fix (`go/pageruntime`).
 
 - The banner frame check no longer discards a module render when the page
   grows a classic scrollbar (capsule-viewer#113). A computed `auto` side margin
