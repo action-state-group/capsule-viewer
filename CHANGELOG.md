@@ -413,6 +413,39 @@ here. The format follows
 
 ### Fixed
 
+- The banner frame check discards a module that covers the banner with a
+  layer the browser hit-tests, or clips it (capsule-viewer#125). After
+  comparing computed properties, it hit-tests the centre of every character
+  of the bar and the details line that is in view where the reader is. A
+  layer of the module's, or a module rule laying out `<head>` or `<style>`,
+  found over a character discards the module, unless it paints nothing there
+  (a faded-out dialog, an empty container for toasts). The host's own
+  elements are passed over. An overlay with `pointer-events: none` is found
+  too. Every box that clips the banner, from `<html>` to the banner's own
+  elements, may not shrink by more than a scrollbar, wherever the reader has
+  scrolled. The bar's place now maps each scroll offset into viewport px
+  through the transforms above it, which are compared exactly, instead of
+  through the container's size ratio. Nothing is scrolled to measure, so a
+  reader's scroll, smooth or not, is left as it was. The whole check runs
+  again once the page settles (after the next frame and the timers then
+  due), so a toolbar or modal a module opens just after its render returns is
+  caught too. The routes capsule-viewer#117 left open are closed:
+  - an opaque layer drawn by `head`, `style` or the module's own content;
+  - a scrolling host shrunk to zero height;
+  - a fractional host height skewing the place bound.
+
+  An honest module now renders while the reader scrolls inside a rotated
+  host. Not found:
+  - paint the browser does not hit-test (an outline, a shadow, a reflection);
+  - a layer whose `pointer-events: none` is set important inline or in the
+    module's own cascade layer;
+  - a layer over words out of view when the check runs;
+  - anything a module draws after the settle.
+
+  The check targets a module's mistakes, not trusted code written to hide the
+  banner, which the builder's pin governs (see capsule-viewer#125). The Go
+  module ships the runtime built with this fix (`go/pageruntime`).
+
 - The banner frame check discards a module whose stylesheet scales, moves,
   clips or hides the banner by styling `html`, `body` or another ancestor of
   the page root, or pushes the banner's words out of view with padding or a
@@ -433,13 +466,8 @@ here. The format follows
   sideways by at most 18px, wherever the reader has scrolled. A host that
   centres a growing widget vertically lifts the banner by itself, and an
   honest module there is discarded (it fails closed). A module that restyles
-  `html` or `body` in any other compared property is discarded. An honest
-  module also fails closed when the reader scrolls inside a rotated host
-  while it renders. Some routes remain open and are tracked in
-  capsule-viewer#125:
-  - an opaque overlay drawn by `head`, `style` or the module's own content;
-  - a clipping host shrunk to zero height;
-  - a fractional host height that skews the place bound's scroll correction.
+  `html` or `body` in any other compared property is discarded. The routes it
+  left open are closed by capsule-viewer#125 (above).
 
   The Go module ships the runtime built with this fix (`go/pageruntime`).
 
