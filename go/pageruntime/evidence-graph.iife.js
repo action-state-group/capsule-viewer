@@ -9946,10 +9946,14 @@ ${body}
     for (const claim of claims)
       for (const ref of claim.evidence)
         (ref.resolved ? cited : missing).add(ref.digest);
+    const citeNothing = claims.filter((c) => c.evidence.length === 0).length;
     if (cited.size === 0) {
       const kind = claims.length > 0 ? "unsupported" : "interpretation";
-      const label = el("span", "cv-ev-label", w.t(`evidence.label.${kind}`));
+      const key2 = kind === "interpretation" ? "evidence.label.interpretation" : missing.size === 0 ? "evidence.label.no-evidence" : "evidence.label.unsupported";
+      const label = el("span", "cv-ev-label", w.t(key2));
       label.dataset.evidenceLabel = kind;
+      if (key2 === "evidence.label.no-evidence")
+        label.dataset.evidenceReason = "no-evidence";
       label.dataset.evidenceFor = key;
       return label;
     }
@@ -9977,6 +9981,11 @@ ${body}
       const item = element2("li");
       item.dataset.missing = digest;
       item.append(element2("code", digest), ` ${w.t("evidence.not-in-bundle")}`);
+      list.append(item);
+    }
+    if (citeNothing > 0) {
+      const item = element2("li", w.p("evidence.no-evidence", citeNothing));
+      item.dataset.noEvidence = String(citeNothing);
       list.append(item);
     }
     const uncited = counted.length - claims.length;
@@ -10127,11 +10136,11 @@ ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8p
 ${s} tr.drill-row > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 ${s} details.cv-ev{display:block;margin-top:2px;font-weight:400;text-align:left}
 ${s} details.cv-ev > summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap}
-${s} details.cv-ev > .cv-ev-body{margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
+${s} details.cv-ev > .cv-ev-body{white-space:normal;margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
 ${s} .cv-ev-k{margin:0 0 4px;color:var(--slate)}
 ${s} ul.cv-ev-list{margin:0;padding-left:16px;display:grid;gap:2px}
 ${s} ul.cv-ev-list code{font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all}
-${s} .cv-ev-label{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
+${s} .cv-ev-label{white-space:normal;display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
 ${s} .cv-ev-sides{display:grid;gap:10px;margin-top:8px}
 ${s} .cv-side-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:10px}
 ${s} .cv-side-producer i{color:var(--slate)}
@@ -10535,7 +10544,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("ab37b27d84fd75c30e9b5b9f68f7734ef58f9f0b");
+    return commitPrefix("3acaf15fc773ff57fd1366ca42daceb47bdd9115");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -11038,11 +11047,14 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.findings.label": "Producer's findings \xB7 presentation text, not evidence",
       "evidence.show": "Show evidence",
       "evidence.show.for": "Show evidence: {what}",
-      "evidence.records": "The records this number counts, each a link to its entry in this bundle's records",
+      "evidence.records": "The records the claims behind this number cite, each a link to its entry in this bundle's records",
       "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+      "evidence.no-evidence.one": "{n} counted from a claim that cites no evidence",
+      "evidence.no-evidence.other": "{n} counted from claims that cite no evidence",
       "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
       "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
-      "evidence.label.unsupported": "Unsupported: the evidence its claims cite is not disclosed in this bundle",
+      "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
+      "evidence.label.no-evidence": "Unsupported: its claims cite no evidence",
       "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
       "front.findings.h": "Findings"
     }
@@ -11344,11 +11356,14 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.findings.label": "Producer's findings \xB7 presentation text, not evidence",
       "evidence.show": "Show evidence",
       "evidence.show.for": "Show evidence: {what}",
-      "evidence.records": "The records this number counts, each a link to its entry in this bundle's records",
+      "evidence.records": "The records the claims behind this number cite, each a link to its entry in this bundle's records",
       "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+      "evidence.no-evidence.one": "{n} counted from a claim that cites no evidence",
+      "evidence.no-evidence.other": "{n} counted from claims that cite no evidence",
       "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
       "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
-      "evidence.label.unsupported": "Unsupported: the evidence its claims cite is not disclosed in this bundle",
+      "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
+      "evidence.label.no-evidence": "Unsupported: its claims cite no evidence",
       "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
       "front.findings.h": "Findings"
     }
@@ -11825,7 +11840,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "evidence.uncited.one",
     "evidence.uncited.other",
     "evidence.label.unsupported",
+    "evidence.label.no-evidence",
     "evidence.label.interpretation",
+    "evidence.no-evidence.one",
+    "evidence.no-evidence.other",
     // The Outcomes report.
     "lines.tier.unknown",
     "lines.wording.unstated",
@@ -12179,8 +12197,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "fa041b2283e21602533cdcdb5c11f9dd739417ddb89ddbee14ac273aecc17177",
-    groups: "a58ac2794769769735d83e3565f5a88f7ab7ac4372f57b2eaa43ede3efcb4e0c"
+    lines: "e109d698df5a51bf91f0b8a1aac6c6ad8290ca554678edffd6be3cde5aad3fd1",
+    groups: "ba4e6eaf8d1049c9811769e8d3a8270f8aa229a0e6bcc8fa4d503eccd973814c"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -12729,7 +12747,8 @@ ${key}`);
     toggle.append(summary);
     deferBody(toggle, build, eager, cell);
     row2.addEventListener("click", (event) => {
-      if (event.target.closest("summary") !== null) return;
+      if (event.target.closest("summary, a, .cv-ev") !== null)
+        return;
       if (toggle.open) toggle.open = false;
       else openToggle(toggle);
     });
@@ -13687,13 +13706,21 @@ ${key}`);
             (cr) => cr.checkId === check.id && cr.criterionId === criterion.id && pick(cr.verdict)
           )
         );
-        const met = of((v) => v === "met");
-        const notMet = of(isMiss);
-        const unverifiedHere = of(isUnverified);
+        const picks = {
+          not_met: isMiss,
+          met: (v) => v === "met",
+          undecided: (v) => v === "not_evaluable" || v === "no_claim",
+          unverified: isUnverified,
+          out_of_scope: (v) => v === "out_of_scope"
+        };
+        const met = of(picks.met);
+        const notMet = of(picks.not_met);
+        const unverifiedHere = of(picks.unverified);
         const na = of((v) => v === "not_applicable");
-        const outOfScopeHere = of((v) => v === "out_of_scope");
-        const undecided = of((v) => v === "not_evaluable" || v === "no_claim");
-        const countCell = (className, column, counted, pick) => {
+        const outOfScopeHere = of(picks.out_of_scope);
+        const undecided = of(picks.undecided);
+        const countCell = (className, column, counted) => {
+          const pick = picks[column];
           const cell3 = el3("td", className);
           cell3.dataset.column = column;
           cell3.append(el3("span", "nv", fmtCount(counted.length)));
@@ -13744,31 +13771,14 @@ ${key}`);
         ];
         tr.append(
           nameCell,
-          countCell(
-            `n${notMet.length > 0 ? " bad" : ""}`,
-            "not_met",
-            notMet,
-            isMiss
-          ),
-          countCell("n ok", "met", met, (v) => v === "met"),
-          countCell(
-            "n",
-            "undecided",
-            undecided,
-            (v) => v === "not_evaluable" || v === "no_claim"
-          )
+          countCell(`n${notMet.length > 0 ? " bad" : ""}`, "not_met", notMet),
+          countCell("n ok", "met", met),
+          countCell("n", "undecided", undecided)
         );
         if (anyUnverified)
-          tr.append(countCell("n", "unverified", unverifiedHere, isUnverified));
+          tr.append(countCell("n", "unverified", unverifiedHere));
         if (anyOutOfScope)
-          tr.append(
-            countCell(
-              "n",
-              "out_of_scope",
-              outOfScopeHere,
-              (v) => v === "out_of_scope"
-            )
-          );
+          tr.append(countCell("n", "out_of_scope", outOfScopeHere));
         tbody.append(tr);
         if (problems.length === 0 && na.length === 0) continue;
         const drillRow = el3("tr", "drill-row");
@@ -14561,6 +14571,7 @@ ${key}`);
         tr.dataset.notYetInForce = String(test.notYetInForceCount);
         tr.dataset.exceptions = String(test.notMetCount);
         tr.dataset.notEvaluable = String(test.notEvaluableCount);
+        tr.dataset.unverified = String(test.unverifiedCount);
         const nameCell = el4("td", "tn");
         const head2 = el4("div", "tnh");
         const testName = rowName(w, "b", "", test);
