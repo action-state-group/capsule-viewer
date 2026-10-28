@@ -392,11 +392,14 @@
     "front.findings.label": "Producer's findings · presentation text, not evidence",
     "evidence.show": "Show evidence",
     "evidence.show.for": "Show evidence: {what}",
-    "evidence.records": "The records this number counts, each a link to its entry in this bundle's records",
+    "evidence.records": "The records the claims behind this number cite, each a link to its entry in this bundle's records",
     "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+    "evidence.no-evidence.one": "{n} counted from a claim that cites no evidence",
+    "evidence.no-evidence.other": "{n} counted from claims that cite no evidence",
     "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
     "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
-    "evidence.label.unsupported": "Unsupported: the evidence its claims cite is not disclosed in this bundle",
+    "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
+    "evidence.label.no-evidence": "Unsupported: its claims cite no evidence",
     "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
     "front.findings.h": "Findings"
   }

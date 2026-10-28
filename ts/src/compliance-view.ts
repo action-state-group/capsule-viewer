@@ -621,6 +621,7 @@ function renderSummary(
       tr.dataset.notYetInForce = String(test.notYetInForceCount);
       tr.dataset.exceptions = String(test.notMetCount);
       tr.dataset.notEvaluable = String(test.notEvaluableCount);
+      tr.dataset.unverified = String(test.unverifiedCount);
       const nameCell = el("td", "tn");
       const head = el("div", "tnh");
       const testName = rowName(w, "b", "", test);

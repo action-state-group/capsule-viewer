@@ -686,7 +686,10 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "evidence.uncited.one",
   "evidence.uncited.other",
   "evidence.label.unsupported",
+  "evidence.label.no-evidence",
   "evidence.label.interpretation",
+  "evidence.no-evidence.one",
+  "evidence.no-evidence.other",
   // The Outcomes report.
   "lines.tier.unknown",
   "lines.wording.unstated",
@@ -1215,8 +1218,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "fa041b2283e21602533cdcdb5c11f9dd739417ddb89ddbee14ac273aecc17177",
-  groups: "a58ac2794769769735d83e3565f5a88f7ab7ac4372f57b2eaa43ede3efcb4e0c",
+  lines: "e109d698df5a51bf91f0b8a1aac6c6ad8290ca554678edffd6be3cde5aad3fd1",
+  groups: "ba4e6eaf8d1049c9811769e8d3a8270f8aa229a0e6bcc8fa4d503eccd973814c",
 });
 
 export interface Words {

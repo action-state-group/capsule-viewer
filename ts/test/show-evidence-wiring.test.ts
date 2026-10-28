@@ -72,15 +72,36 @@ function countCells(doc: Document): HTMLElement[] {
   ];
 }
 
-/** What a number counts, read from the cell: >0 means it needs an action or a label. */
-function counted(cell: HTMLElement): number {
-  const nv = cell.querySelector(":scope > .nv");
-  if (nv !== null) return Number(/\d+/u.exec(nv.textContent ?? "")?.[0]);
-  // A compliance result cell: one number per verdict its row states.
+/**
+ * The numbers a cell states, each by the key its action or label must carry
+ * (`data-evidence-for`), with its value read from the page: every one above
+ * zero needs exactly one action or label, and a zero none.
+ */
+function numbers(cell: HTMLElement): Map<string, number> {
   const row = cell.closest("tr")!;
-  return ["exceptions", "notEvaluable", "outOfScope", "notYetInForce"].reduce(
-    (n, k) => n + Number(row.dataset[k] ?? 0),
-    0,
+  const nv = cell.querySelector(":scope > .nv");
+  if (nv !== null) {
+    const n = Number(/\d+/u.exec(nv.textContent ?? "")?.[0]);
+    const key =
+      row.dataset.rule !== undefined
+        ? `rule:${row.dataset.rule}:${cell.dataset.column}`
+        : `test:${row.dataset.criterion}:${cell.dataset.column}`;
+    return new Map([[key, n]]);
+  }
+  // A compliance result cell: one number per verdict its row states.
+  return new Map(
+    (
+      [
+        ["exceptions", "not_met"],
+        ["notEvaluable", "not_evaluable"],
+        ["unverified", "unverified"],
+        ["outOfScope", "out_of_scope"],
+        ["notYetInForce", "not_yet_in_force"],
+      ] as const
+    ).map(([attr, bucket]) => [
+      `test:${row.dataset.criterion}:${bucket}`,
+      Number(row.dataset[attr] ?? 0),
+    ]),
   );
 }
 
@@ -112,11 +133,20 @@ describe("Show evidence in the contract report, from committed VALID bundles", (
       expect(cells.length).toBeGreaterThan(0);
       let actions = 0;
       for (const cell of cells) {
-        const shown = cell.querySelectorAll(
-          ":scope > details.cv-ev, :scope > .cv-ev-label",
+        const shown = [
+          ...cell.querySelectorAll<HTMLElement>(
+            ":scope > details.cv-ev, :scope > .cv-ev-label",
+          ),
+        ];
+        const stated = numbers(cell);
+        for (const [key, n] of stated)
+          expect(
+            shown.filter((e) => e.dataset.evidenceFor === key),
+            `${key} = ${n}`,
+          ).toHaveLength(n > 0 ? 1 : 0);
+        expect(shown.every((e) => stated.has(e.dataset.evidenceFor!))).toBe(
+          true,
         );
-        if (counted(cell) === 0) expect(shown).toHaveLength(0);
-        else expect(shown.length, cell.outerHTML).toBeGreaterThan(0);
         actions += shown.length;
       }
       expect(actions).toBeGreaterThan(0);
@@ -185,6 +215,31 @@ describe("Show evidence, a number with no evidence to show", () => {
     expect(node.textContent).toBe(w.t("evidence.label.interpretation"));
   });
 
+  it("labels a number whose claims cite nothing at all as citing no evidence, never as undisclosed", () => {
+    const node = evidenceAction("k", "n", [claim([])], result, w)!;
+    expect(node.dataset.evidenceLabel).toBe("unsupported");
+    expect(node.dataset.evidenceReason).toBe("no-evidence");
+    expect(node.textContent).toBe(w.t("evidence.label.no-evidence"));
+  });
+
+  it("counts claims that cite nothing in the list, so its parts add up to the number", () => {
+    const node = evidenceAction(
+      "k",
+      "n",
+      [
+        claim([{ digest: "a".repeat(64), resolved: true }]),
+        claim([]),
+        claim([]),
+      ],
+      result,
+      w,
+    )!;
+    expect(node.querySelectorAll("li[data-cited]")).toHaveLength(1);
+    const none = node.querySelector<HTMLElement>("li[data-no-evidence]")!;
+    expect(none.dataset.noEvidence).toBe("2");
+    expect(none.textContent).toBe(w.p("evidence.no-evidence", 2));
+  });
+
   it("lists what a number cites, what is not disclosed, and what it counted with no claim", () => {
     const node = evidenceAction(
       "rule:a.b:undecided",
@@ -243,7 +298,11 @@ describe("Show evidence, negative fixtures the old rendering fails", () => {
       cell.querySelector('.cv-ev-label[data-evidence-label="unsupported"]'),
     ).not.toBeNull();
     expect(cell.querySelector("details.cv-ev")).toBeNull();
-    expect(root.textContent).not.toContain(`Cited by:`.concat(absent));
+    expect(root.querySelector(`[data-cites~="${absent}"]`)).toBeNull();
+    for (const back of root.querySelectorAll<HTMLElement>("p.cv-cited-by"))
+      expect(back.dataset.citedBy).not.toContain(
+        `n-rule:${target.requirement_ref}:unverified`,
+      );
   });
 
   it("a conversation counted with no claim: its count says so, never cites a record for it", async () => {
@@ -270,6 +329,24 @@ describe("Show evidence, negative fixtures the old rendering fails", () => {
         '.cv-ev-label[data-evidence-label="interpretation"]',
       ) ?? cell.querySelector("details.cv-ev li[data-uncited]");
     expect(said, cell.outerHTML).not.toBeNull();
+  });
+
+  it("a click in a number's evidence, or on its record link, leaves the row's drill-down as it was", async () => {
+    const { bundle } = await sealEvidenceBundle(
+      read("outcome-report-bundle.json"),
+    );
+    const root = await rendered(bundle);
+    const action = root.querySelector<HTMLElement>("tr.rule.x details.cv-ev")!;
+    const toggle = action
+      .closest("tr")!
+      .querySelector<HTMLDetailsElement>("details.rx")!;
+    const before = toggle.open;
+    action.querySelector<HTMLElement>(".cv-ev-body")!.click();
+    action.querySelector<HTMLElement>(".cv-ev-list a")!.click();
+    expect(toggle.open).toBe(before);
+    // A click elsewhere on the row still opens it.
+    action.closest("tr")!.querySelector<HTMLElement>(".nv")!.click();
+    expect(toggle.open).toBe(!before);
   });
 
   it("where a host loaded the component, opening a number draws each claim side by side; the static page draws none", async () => {

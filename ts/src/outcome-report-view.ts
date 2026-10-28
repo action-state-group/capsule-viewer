@@ -1457,20 +1457,32 @@ function renderRules(
               pick(cr.verdict),
           ),
         );
-      const met = of((v) => v === "met");
-      const notMet = of(isMiss);
-      const unverifiedHere = of(isUnverified);
+      // Each count column's verdicts, read once: a cell's number and the
+      // claims its Show-evidence action lists come from the same pick.
+      const picks: Record<
+        keyof typeof columnWord,
+        (v: DrawnVerdict) => boolean
+      > = {
+        not_met: isMiss,
+        met: (v) => v === "met",
+        undecided: (v) => v === "not_evaluable" || v === "no_claim",
+        unverified: isUnverified,
+        out_of_scope: (v) => v === "out_of_scope",
+      };
+      const met = of(picks.met);
+      const notMet = of(picks.not_met);
+      const unverifiedHere = of(picks.unverified);
       const na = of((v) => v === "not_applicable");
-      const outOfScopeHere = of((v) => v === "out_of_scope");
-      const undecided = of((v) => v === "not_evaluable" || v === "no_claim");
+      const outOfScopeHere = of(picks.out_of_scope);
+      const undecided = of(picks.undecided);
       // One count cell: the number, and its Show-evidence action (or the
       // label that stands in for one) over the claims behind it on this rule.
       const countCell = (
         className: string,
         column: keyof typeof columnWord,
         counted: readonly Conversation[],
-        pick: (v: DrawnVerdict) => boolean,
       ): HTMLElement => {
+        const pick = picks[column];
         const cell = el("td", className);
         cell.dataset.column = column;
         cell.append(el("span", "nv", fmtCount(counted.length)));
@@ -1527,31 +1539,14 @@ function renderRules(
       ];
       tr.append(
         nameCell,
-        countCell(
-          `n${notMet.length > 0 ? " bad" : ""}`,
-          "not_met",
-          notMet,
-          isMiss,
-        ),
-        countCell("n ok", "met", met, (v) => v === "met"),
-        countCell(
-          "n",
-          "undecided",
-          undecided,
-          (v) => v === "not_evaluable" || v === "no_claim",
-        ),
+        countCell(`n${notMet.length > 0 ? " bad" : ""}`, "not_met", notMet),
+        countCell("n ok", "met", met),
+        countCell("n", "undecided", undecided),
       );
       if (anyUnverified)
-        tr.append(countCell("n", "unverified", unverifiedHere, isUnverified));
+        tr.append(countCell("n", "unverified", unverifiedHere));
       if (anyOutOfScope)
-        tr.append(
-          countCell(
-            "n",
-            "out_of_scope",
-            outOfScopeHere,
-            (v) => v === "out_of_scope",
-          ),
-        );
+        tr.append(countCell("n", "out_of_scope", outOfScopeHere));
       tbody.append(tr);
       // The row opens: a full-width row below it holds how many
       // conversations the rule did not apply to and the conversations

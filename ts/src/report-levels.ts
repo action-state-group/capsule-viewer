@@ -636,12 +636,14 @@ function showEvidenceComponent(): ShowEvidenceComponent | undefined {
  *   `<details>` at the number's address (`numberAddress`): "Show evidence"
  *   (or `summary`, where one cell holds more than one number), and under it the cited records, each a link to its entry in the core's
  *   records section, then each cited digest the bundle does not carry, said
- *   so, and how many were counted with no claim. The list is built at once,
+ *   so, how many were counted from a claim that cites nothing, and how many
+ *   with no claim. The list is built at once,
  *   so a page that runs no script (the static package) carries it as it is.
  *   Where a host loaded the Show-evidence component, opening the toggle also
  *   draws each claim side by side under the list.
  * - A number with no record to show draws a label instead: "unsupported"
- *   when it counts claims whose evidence is not in this bundle,
+ *   when it counts claims whose evidence is not disclosed in this bundle, or
+ *   that cite none,
  *   "interpretation" when no claim stands behind it at all.
  *
  * The toggle counts as level 2 (the proofs' level) and holds no other
@@ -665,10 +667,21 @@ export function evidenceAction(
   for (const claim of claims)
     for (const ref of claim.evidence)
       (ref.resolved ? cited : missing).add(ref.digest);
+  // Claims that cite nothing at all (AAC reads them unsupported): counted
+  // apart, so a list's parts add up to the number it stands under.
+  const citeNothing = claims.filter((c) => c.evidence.length === 0).length;
   if (cited.size === 0) {
     const kind = claims.length > 0 ? "unsupported" : "interpretation";
-    const label = el("span", "cv-ev-label", w.t(`evidence.label.${kind}`));
+    const key2 =
+      kind === "interpretation"
+        ? "evidence.label.interpretation"
+        : missing.size === 0
+          ? "evidence.label.no-evidence"
+          : "evidence.label.unsupported";
+    const label = el("span", "cv-ev-label", w.t(key2));
     label.dataset.evidenceLabel = kind;
+    if (key2 === "evidence.label.no-evidence")
+      label.dataset.evidenceReason = "no-evidence";
     label.dataset.evidenceFor = key;
     return label;
   }
@@ -696,6 +709,11 @@ export function evidenceAction(
     const item = element("li");
     item.dataset.missing = digest;
     item.append(element("code", digest), ` ${w.t("evidence.not-in-bundle")}`);
+    list.append(item);
+  }
+  if (citeNothing > 0) {
+    const item = element("li", w.p("evidence.no-evidence", citeNothing));
+    item.dataset.noEvidence = String(citeNothing);
     list.append(item);
   }
   const uncited = counted.length - claims.length;
@@ -968,11 +986,11 @@ ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8p
 ${s} tr.drill-row > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 ${s} details.cv-ev{display:block;margin-top:2px;font-weight:400;text-align:left}
 ${s} details.cv-ev > summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap}
-${s} details.cv-ev > .cv-ev-body{margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
+${s} details.cv-ev > .cv-ev-body{white-space:normal;margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
 ${s} .cv-ev-k{margin:0 0 4px;color:var(--slate)}
 ${s} ul.cv-ev-list{margin:0;padding-left:16px;display:grid;gap:2px}
 ${s} ul.cv-ev-list code{font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all}
-${s} .cv-ev-label{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
+${s} .cv-ev-label{white-space:normal;display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
 ${s} .cv-ev-sides{display:grid;gap:10px;margin-top:8px}
 ${s} .cv-side-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:10px}
 ${s} .cv-side-producer i{color:var(--slate)}

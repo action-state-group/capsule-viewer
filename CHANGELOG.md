@@ -58,11 +58,12 @@ here. The format follows
   in" count and each verdict count its result states) carries a "Show
   evidence" toggle. It lists the records the counted claims cite, each a
   link to its entry in the records section, then any cited digest not
-  disclosed in this bundle and how many were counted with no claim. The
-  list is in the page's HTML, so the static package shows it with no
-  script. A count whose claims cite no record in the bundle reads
-  "Unsupported" instead, and one that no claim stands behind reads
-  "Interpretation". Where a host loaded the Show-evidence component
+  disclosed in this bundle, how many were counted from a claim that cites
+  no evidence, and how many were counted with no claim. The list is in the
+  page's HTML, so the static package shows it with no script. A count whose
+  claims cite no record in the bundle reads "Unsupported" instead, and one
+  that no claim stands behind reads "Interpretation". Clicking inside the
+  list leaves the row's own drill-down as it was. Where a host loaded the Show-evidence component
   (`static/show_evidence.js`), opening the toggle also draws each claim side
   by side. Each record's entry in the records section lists the counts that
   cite it, as "Cited by" links back. The default wording packs gain the
