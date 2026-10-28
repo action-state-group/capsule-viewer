@@ -328,15 +328,17 @@ verifier reported, never from a label a producer sets:
 | Case | When | Drawn |
 |---|---|---|
 | Stamped by both | two carried copies, every join deriving `agree` as declared, each agreement corroborating, both copies naming one deal | ours blue, theirs amber, labelled "as received" |
-| Your receipt only | one carried copy, the other party's member an `absence` (asked, nothing came back by the window's end) or a `refusal`, every join deriving `one_sided` | ours blue, their side grey and dashed, saying what was asked and when |
+| Your receipt only | one carried copy, the other party's member an `absence` (asked, nothing came back by the window's end), every join deriving `one_sided` | ours blue, their side grey and dashed, saying when it was asked |
 | No record | the holder's own copy and nothing from the other side | ours blue, their side grey and dashed |
 
 Two copies that do not meet the first row are "not stamped by both": a state of their own,
-never drawn like an agreement. No side is ever drawn in the negative tone: one side missing
+never drawn like an agreement. A `refusal` member makes no receipt: capsulectl reads it
+INCOMPLETE, so the page declines the bundle. No side is ever drawn in the negative tone: one side missing
 is not a finding. Only the holder's own page says "your" and lists the sentences the holder
 can say to their agent (dispute this, send me this receipt, show me the other side's
-receipt, ask their side again); a page cut for someone else names each side by its role.
-A single copy cut for someone else draws no sides. `tests/test_receipt_sides.py` holds the
+receipt, ask their side again); a page cut for someone else names each side by its role,
+including a one-sided composition's missing side. A single copy (no composition) cut for
+someone else draws no sides. `tests/test_receipt_sides.py` holds the
 negatives. The `receipt_document` record kind (a payment app's or email receipt, sealed by
 digest) is not in the spec yet; until it is, the recorded ask is what makes "your receipt
 only".

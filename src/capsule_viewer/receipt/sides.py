@@ -9,10 +9,11 @@ producer sets:
   copies, every join deriving ``agree`` as declared, each agreement
   corroborating on declared custody, and both copies naming one deal;
 * ``one_sided``, **your receipt only**: one party's copy, and the other
-  party's member an ``absence`` (asked, nothing came back) or a
-  ``refusal`` (a signed no), every join deriving ``one_sided``. Until the
-  ``receipt_document`` record kind is in the spec, the recorded ask is what
-  makes this case; the document will add a line to it, not change it;
+  party's member an ``absence`` (asked, nothing came back by the window's
+  end), every join deriving ``one_sided``. Until the ``receipt_document``
+  record kind is in the spec, the recorded ask is what makes this case; the
+  document will add a line to it, not change it. A ``refusal`` member is no
+  receipt: capsulectl reads it INCOMPLETE, so the bundle does not verify;
 * ``none``, **no record**: one copy and nothing from the other side.
 
 Two copies that do not meet ``both`` are ``not_agreed``: their own state,
@@ -31,6 +32,7 @@ from dataclasses import dataclass
 
 from ..composed import KIND, Composition, Corroboration, Join
 from ..context import Json, VerifiedBundleContext
+from .model import ReceiptUnavailable
 
 CASES: tuple[str, ...] = ("both", "one_sided", "none", "not_agreed")
 CASE_TONE: Mapping[str, str] = {"both": "positive", "one_sided": "caution", "none": "neutral", "not_agreed": "neutral"}
@@ -45,14 +47,12 @@ ACTIONS: Mapping[str, tuple[str, ...]] = {
 
 @dataclass(frozen=True)
 class Missing:
-    """The other party's member when it is not a copy: what the composition
-    declares for it, read from the bundle (its digest reproduced)."""
+    """The other party's member when it is not a copy: the recorded ask that
+    went unanswered, read from the bundle (its digest reproduced)."""
 
     member: str
     role: str | None
-    outcome: str  # absence | refusal
-    window: tuple[str, str] | None = None  # an absence's from and to
-    reason: str | None = None  # a refusal's reason
+    window: tuple[str, str]  # the absence's from and to
 
 
 def _map(value: object) -> Mapping[str, Json]:
@@ -64,11 +64,11 @@ def _str(value: object) -> str | None:
 
 
 def missing_member(context: VerifiedBundleContext, composition: Composition) -> Missing | None:
-    """The composition's one member that is not an artifact, or ``None``.
-    Its body is read from the bundle's own block; the verifier reproduced
-    its digest (``composition_problem`` checks), so the body is the one the
-    composer declared."""
-    members = [m for m in composition.members if m.outcome != "artifact"]
+    """The composition's one ``absence`` member, or ``None``. Its body is read
+    from the bundle's own block: ``composition_problem`` accepts only a
+    carried body whose digest the verifier reproduced, and the verifier
+    refuses an absence without its window. ``ReceiptUnavailable`` if not."""
+    members = [m for m in composition.members if m.outcome == "absence"]
     if len(members) != 1:
         return None
     member = members[0]
@@ -76,16 +76,11 @@ def missing_member(context: VerifiedBundleContext, composition: Composition) -> 
     block = _map(_map(_map(context.bundle).get("extensions")).get(KIND))
     raws = block.get("members")
     raw = next((_map(r) for r in (raws if isinstance(raws, (list, tuple)) else ()) if _map(r).get("id") == member.id), {})
-    body = _map(raw.get(member.outcome))
-    window = _map(body.get("window"))
+    window = _map(_map(raw.get("absence")).get("window"))
     start, end = _str(window.get("from")), _str(window.get("to"))
-    return Missing(
-        member=member.id,
-        role=observer.role if observer else None,
-        outcome=member.outcome,
-        window=(start, end) if start is not None and end is not None else None,
-        reason=_str(body.get("reason")),
-    )
+    if start is None or end is None:
+        raise ReceiptUnavailable(f"the absence member {member.id!r} carries no window")
+    return Missing(member=member.id, role=observer.role if observer else None, window=(start, end))
 
 
 def two_copy_case(deal_state: str, joins: Sequence[tuple[Join, Corroboration | None]]) -> str:

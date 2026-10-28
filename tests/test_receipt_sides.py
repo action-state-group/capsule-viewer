@@ -127,6 +127,17 @@ def test_a_shared_page_names_each_side_by_its_role_and_says_no_your():
     assert "Your side" not in page and h.actions == []
 
 
+def test_a_shared_one_sided_page_names_the_missing_side_by_its_role():
+    page = render("one-sided-counterparty", depth="L0")
+    h = halves(page)
+    assert h.cases == ["one_sided"]
+    assert " ".join(h.case_text) == "One side's record only: the other side's record is missing."
+    assert [x["kind"] for x in h.halves] == ["theirs", "missing"]
+    assert text(h.halves[1]).startswith("seller No record.")
+    assert "Your " not in page and h.actions == []
+    assert "two copies" not in page and "How the two copies line up" not in page
+
+
 @pytest.mark.parametrize("name", [n for n, a in {**SELLER, "counterparty": "counterparty", "adjudicator": "adjudicator"}.items() if a != "keep"])
 def test_a_single_copy_cut_for_someone_else_draws_no_sides(name):
     assert halves(render(name, depth="L0")).cases == []
@@ -159,6 +170,36 @@ def test_one_sided_declared_as_agreed_is_declined_not_drawn():
     assert "Stamped by both" not in page
 
 
+def test_a_signed_refusal_is_no_receipt():
+    """capsulectl verifies the refusal's signature and reads the member as
+    INCOMPLETE: the bundle does not verify, and nothing is drawn."""
+    _, output = load("one-sided-refusal-keep")
+    composed = next(e["composed"] for e in output["extensions"] if e["kind"] == "composed/v1")
+    assert output["verdict"] == "INCOMPLETE"
+    assert composed["members"][1]["refusal_signature"]["status"] == "verified"
+    page = render("one-sided-refusal-keep", depth="L0")
+    assert halves(page).cases == [] and "Stamped by both" not in page and "Your receipt only" not in page
+
+
+def test_an_absence_the_bundle_does_not_carry_is_declined():
+    """Only a carried absence, its digest reproduced, is an answer the page
+    shows; one the composer only declared missing is none."""
+    _, output = load("one-sided-keep")
+    output = copy.deepcopy(output)
+    composed = next(e["composed"] for e in output["extensions"] if e["kind"] == "composed/v1")
+    composed["members"][1]["body"] = "declared_missing"
+    page = render("one-sided-keep", depth="L0", output=output)
+    assert halves(page).cases == [] and "Your receipt only" not in page
+
+
+def test_an_absence_without_its_window_is_declined():
+    bundle, output = load("one-sided-keep")
+    bundle = copy.deepcopy(bundle)
+    del bundle["extensions"]["composed/v1"]["members"][1]["absence"]["window"]
+    page = render("one-sided-keep", depth="L0", bundle=bundle)
+    assert halves(page).cases == [] and "Your receipt only" not in page
+
+
 @pytest.mark.parametrize(
     ("name", "edit"),
     [
@@ -180,7 +221,7 @@ def test_two_copies_that_do_not_show_one_agreement_are_not_drawn_as_agreed(name,
     assert "Stamped by both" not in page
 
 
-ALL = sorted({*BILATERAL, *SELLER, "keep", "golden-2", "main-buyer-keep", "main-seller-keep", "one-sided-keep"})
+ALL = sorted({*BILATERAL, *SELLER, "keep", "golden-2", "main-buyer-keep", "main-seller-keep", "one-sided-keep", "one-sided-counterparty"})
 
 
 @pytest.mark.parametrize("name", ALL)

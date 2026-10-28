@@ -1,21 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
 """Turn a two-copy composed/v1 bundle into a one-sided one, for the "your
-receipt only" receipt fixture:
+receipt only" receipt fixtures:
 
-  one_sided.py COMPOSED [MEMBER]
+  one_sided.py COMPOSED absence|refusal [MEMBER]
 
-COMPOSED is a bundle ``compose_bilateral.py`` wrote (``bilateral-keep``).
-MEMBER (default ``party-b``) is replaced by an ``absence`` member: the
-holder asked that party for its copy and nothing came back within the
-window (draft-mih-zhang-agent-disclosure-bundle-01, "Members"; evidencebook
-``Book.RecordAbsence``). The absence names the request it answers by digest,
-and its member digest is the JCS digest of that body. The other member is
-carried unchanged, and every join is declared ``one_sided``, which is what
-the verifier derives for one artifact and one non-artifact. The container
-and its checkpoint are unchanged: the block is an extension, which the
-container's seal does not cover.
+COMPOSED is a bundle ``compose_bilateral.py`` wrote (``bilateral-keep``,
+``bilateral-counterparty``). MEMBER (default ``party-b``) is replaced by:
 
-Writes the bundle to stdout.
+* ``absence``: the holder asked that party for its copy and nothing came
+  back within the window (draft-mih-zhang-agent-disclosure-bundle-01,
+  "Members"; evidencebook ``Book.RecordAbsence``);
+* ``refusal``: that party answered with a signed no, in capsulectl's
+  ``ed25519-jcs`` refusal form (capsule-cli ``cli/composed.go``), signed with
+  a fixed synthetic key so a rebuild writes the same bytes. capsulectl
+  verifies the signature and still reads the member as INCOMPLETE: a no is
+  no copy.
+
+The member names the request it answers by digest, and its member digest is
+the JCS digest of its body. The other member is carried unchanged, and every
+join is declared ``one_sided``, which is what the verifier derives for one
+artifact and one non-artifact. The container and its checkpoint are
+unchanged: the block is an extension, which the container's seal does not
+cover.
+
+Writes the bundle to stdout. Needs ``cryptography`` for the refusals.
 """
 from __future__ import annotations
 
@@ -30,31 +38,53 @@ from compose_bilateral import KIND, composed_digest  # noqa: E402 -- the sibling
 
 from capsule_viewer.digest import jcs  # noqa: E402 -- the repo's own digest, after the path
 
+KINDS = ("absence", "refusal")
 # The window the holder waited, and the route the ask went by: synthetic.
 WINDOW = {"from": "2026-10-09T18:00:00Z", "to": "2026-10-12T18:00:00Z"}
+# The refusing party's synthetic Ed25519 seed: fixture bytes, never a real key.
+REFUSAL_SEED = bytes(range(32))
+
+
+def refusal(request_digest: str) -> dict[str, str]:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+    key = Ed25519PrivateKey.from_private_bytes(REFUSAL_SEED)
+    body = {
+        "request_digest": request_digest,
+        "reason": "policy_declined",
+        "issued_at": "2026-10-10T09:00:00Z",
+        "key_id": key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex(),
+    }
+    body["signature"] = key.sign(jcs(body)).hex()
+    return body
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) not in (1, 2):
+    if len(argv) not in (2, 3) or argv[1] not in KINDS:
         print(__doc__, file=sys.stderr)
         return 2
     bundle = json.loads(Path(argv[0]).read_text(encoding="utf-8"))
-    target = argv[1] if len(argv) == 2 else "party-b"
+    kind = argv[1]
+    target = argv[2] if len(argv) == 3 else "party-b"
     block = bundle["extensions"][KIND]
     members = []
     for m in block["members"]:
         if m["id"] != target:
             members.append(m)
             continue
-        absence = {"request_digest": m["request_digest"], "window": WINDOW, "route": "a2a"}
+        if kind == "absence":
+            outcome, body = "absence", {"request_digest": m["request_digest"], "window": WINDOW, "route": "a2a"}
+        else:
+            outcome, body = "refusal", refusal(m["request_digest"])
         members.append(
             {
                 "id": m["id"],
                 "observer": m["observer"],
                 "request_digest": m["request_digest"],
-                "outcome": "absence",
-                "digest": hashlib.sha256(jcs(absence)).hexdigest(),
-                "absence": absence,
+                "outcome": outcome,
+                "digest": hashlib.sha256(jcs(body)).hexdigest(),
+                outcome: body,
             }
         )
     if members == block["members"]:

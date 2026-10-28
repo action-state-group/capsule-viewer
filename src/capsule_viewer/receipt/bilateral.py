@@ -37,8 +37,8 @@ copies come from two observers as the composition declares them (which party
 an observer is, the module does not judge).
 
 A composition may also be one-sided: one party's copy, and the other
-party's member an ``absence`` or a ``refusal`` (the "your receipt only"
-case, ``sides.py``). The page then draws that member as the missing side.
+party's member an ``absence`` (the "your receipt only" case,
+``sides.py``). The page then draws that member as the missing side.
 
 The module declines a composition the verifier did not pass: the composed
 digest, composition closure and each carried member's digest must all hold.
@@ -135,21 +135,21 @@ def composition_problem(c: Composition) -> str | None:
     ``None``: the block must have passed (its digest reproduced, closure
     passed) and hold exactly two members, under two member ids and two
     observers: two carried copies, or one carried copy and the other party's
-    ``absence`` or ``refusal`` (one-sided, every join deriving
-    ``one_sided``), each carried body's digest reproduced, with one
-    corroboration result per join. A malformed block reports no members, so
+    carried ``absence`` (one-sided, every join deriving ``one_sided``), each member's digest reproduced, with one corroboration
+    result per join. A missing member the composer only declared is no
+    answer the page can show, so it is declined. A malformed block reports no members, so
     it fails too."""
     if c.status != "pass" or not c.digest_matches or c.closure.status != "pass":
         return f"the composition did not pass (status {c.status}, closure {c.closure.status})"
     members = c.members
     copies = [m for m in members if m.outcome == "artifact"]
-    if len(members) != 2 or any(m.body != "carried" for m in copies) or not copies:
-        return "a bilateral receipt is two members, at least one a carried copy"
-    if len(copies) == 1 and any(m.body not in ("carried", "declared_missing") for m in members if m.outcome != "artifact"):
-        return "the other party's member is neither carried nor declared missing"
+    if len(members) != 2 or not copies or any(m.body != "carried" for m in members):
+        return "a bilateral receipt is two carried members, at least one a copy"
+    if len(copies) == 1 and any(m.outcome != "absence" for m in members if m.outcome != "artifact"):
+        return "a one-sided receipt's other member is an absence"
     if len(copies) == 1 and any(j.derived != "one_sided" for j in c.joins):
         return "a one-sided composition's joins do not all derive one_sided"
-    if any(m.digest != "reproduced" for m in members if m.body == "carried"):
+    if any(m.digest != "reproduced" for m in members):
         return "a carried member's digest was not reproduced"
     if len({m.id for m in members}) != 2 or len({m.observer for m in members}) != 2:
         return "the two copies are not from two observers"
@@ -304,7 +304,11 @@ class BilateralReceiptModule:
         l0: list[str] = [_el("h2", self.w("bilateral.title.one_sided" if one else "bilateral.title"))]
         if keep:
             l0.append(sides.private_banner())
-        l0 += [self._deal(model), self._joins(model)]
+        l0.append(self._deal(model))
+        # A one-sided page's joins all derive one_sided, which its case line
+        # says; they stay in L2's composition section.
+        if not one:
+            l0.append(self._joins(model))
         halves: list[str] = []
         for party, levels in zip(model.parties, drawn, strict=True):
             body = _join([levels.headline, *levels.notes])
@@ -316,7 +320,7 @@ class BilateralReceiptModule:
             else:
                 label = self.w("sides.theirs") if keep else self.w("sides.half", role=party.role or self.w("party.role_undeclared"))
                 halves.append(sides.half("theirs", label, section, data_party=party.member, data_cut=party.audience))
-        if model.missing is not None or len(model.parties) == 1:
+        if model.missing is not None:
             halves.append(sides.missing_half(model.missing, keep=keep))
         l0.append(sides.sides(model.case, halves, keep=keep))
         if not one:

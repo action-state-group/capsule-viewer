@@ -88,7 +88,6 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     # The receipt's sides (``sides.py``).
     "sides.half": frozenset({"role"}),
     "sides.missing.absence": frozenset({"start", "end"}),
-    "sides.missing.refusal": frozenset({"reason"}),
     # The errand's journey: capsulectl's own keys, mirrored (tests/test_receipt_journey.py).
     "journey.agent.act.pay": frozenset({"amount"}),
     "journey.agent.act.pay.within": frozenset({"amount", "limit"}),
@@ -291,21 +290,17 @@ class UnilateralReceiptModule:
         return _el("div", _join([_el("p", label, class_="cv-half__label"), body]), class_=f"cv-half cv-half--{kind}", data_half=kind, **attrs)
 
     def missing_half(self, missing: Missing | None, *, keep: bool) -> Markup:
-        """The other side when it holds no copy: nothing at all, an ask that
-        went unanswered, or a signed no."""
+        """The other side when it holds no copy: nothing at all, or an ask
+        that went unanswered."""
         if missing is None:
             text = self.w("sides.missing.none")
-        elif missing.outcome == "absence" and missing.window is not None:
-            text = self.w("sides.missing.absence", start=missing.window[0], end=missing.window[1])
-        elif missing.outcome == "refusal" and missing.reason is not None:
-            text = self.w("sides.missing.refusal", reason=missing.reason)
         else:
-            text = self.w(f"sides.missing.{missing.outcome}.bare")
+            text = self.w("sides.missing.absence", start=missing.window[0], end=missing.window[1])
         if keep or missing is None or missing.role is None:
             label = self.w("sides.missing.heading")
         else:
             label = missing.role
-        attrs = {"data_outcome": missing.outcome, "data_party": missing.member} if missing is not None else {"data_outcome": "none"}
+        attrs = {"data_outcome": "absence", "data_party": missing.member} if missing is not None else {"data_outcome": "none"}
         return self.half("missing", label, _el("p", text), **attrs)
 
     # ---- words --------------------------------------------------------------

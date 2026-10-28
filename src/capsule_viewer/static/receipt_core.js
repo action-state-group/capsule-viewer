@@ -1094,11 +1094,10 @@
     if (c.status !== "pass" || !c.digest_matches || c.closure.status !== "pass") return "the composition did not pass";
     var members = c.members;
     var copies = members.filter(function (m) { return m.outcome === "artifact"; });
-    var others = members.filter(function (m) { return m.outcome !== "artifact"; });
-    if (members.length !== 2 || !copies.length || copies.some(function (m) { return m.body !== "carried"; })) return "a bilateral receipt is two members, at least one a carried copy";
-    if (copies.length === 1 && others.some(function (m) { return m.body !== "carried" && m.body !== "declared_missing"; })) return "the other party's member is neither carried nor declared missing";
+    if (members.length !== 2 || !copies.length || members.some(function (m) { return m.body !== "carried"; })) return "a bilateral receipt is two carried members, at least one a copy";
+    if (copies.length === 1 && members.some(function (m) { return m.outcome !== "artifact" && m.outcome !== "absence"; })) return "a one-sided receipt's other member is an absence";
     if (copies.length === 1 && c.joins.some(function (j) { return j.derived !== "one_sided"; })) return "a one-sided composition's joins do not all derive one_sided";
-    if (members.some(function (m) { return m.body === "carried" && m.digest !== "reproduced"; })) return "a carried member's digest was not reproduced";
+    if (members.some(function (m) { return m.digest !== "reproduced"; })) return "a carried member's digest was not reproduced";
     if (distinct(members.map(function (m) { return m.id; })).length !== 2 || distinct(members.map(function (m) { return m.observer; })).length !== 2) {
       return "the two copies are not from two observers";
     }
@@ -1132,22 +1131,20 @@
     });
   }
 
-  // sides.missing_member: the one member that is not a copy, its body read
-  // from the bundle's own block (its digest reproduced, compositionProblem).
+  // sides.missing_member: the one absence member, its body read
+  // from the bundle's own block (carried, its digest reproduced:
+  // compositionProblem).
   function missingMember(v, composition) {
-    var others = composition.members.filter(function (m) { return m.outcome !== "artifact"; });
+    var others = composition.members.filter(function (m) { return m.outcome === "absence"; });
     if (others.length !== 1) return null;
     var member = others[0];
     var observer = composition.observers.find(function (o) { return o.id === member.observer; }) || null;
     var block = map(get(map(get(v.bundle, "extensions")), COMPOSED_KIND));
     var raw = seq(get(block, "members")).map(map).find(function (r) { return get(r, "id") === member.id; }) || {};
-    var body = map(get(raw, member.outcome));
-    var win = map(get(body, "window"));
+    var win = map(get(map(get(raw, "absence")), "window"));
     var start = str(get(win, "from")), end = str(get(win, "to"));
-    return {
-      member: member.id, role: observer ? observer.role : null, outcome: member.outcome,
-      window: start !== null && end !== null ? [start, end] : null, reason: str(get(body, "reason")),
-    };
+    if (start === null || end === null) throw new Unavailable("the absence member " + pyRepr(member.id) + " carries no window");
+    return { member: member.id, role: observer ? observer.role : null, window: [start, end] };
   }
 
   // sides.two_copy_case.
@@ -1375,11 +1372,9 @@
   P.missingHalf = function (missing, keep) {
     var text;
     if (missing === null) text = w("sides.missing.none");
-    else if (missing.outcome === "absence" && missing.window !== null) text = w("sides.missing.absence", { start: missing.window[0], end: missing.window[1] });
-    else if (missing.outcome === "refusal" && missing.reason !== null) text = w("sides.missing.refusal", { reason: missing.reason });
-    else text = w("sides.missing." + missing.outcome + ".bare");
+    else text = w("sides.missing.absence", { start: missing.window[0], end: missing.window[1] });
     var label = keep || missing === null || missing.role === null ? w("sides.missing.heading") : missing.role;
-    var attrs = missing !== null ? { "data-outcome": missing.outcome, "data-party": missing.member } : { "data-outcome": "none" };
+    var attrs = missing !== null ? { "data-outcome": "absence", "data-party": missing.member } : { "data-outcome": "none" };
     return this.half("missing", label, [this.d.el("p", {}, [text])], attrs);
   };
   P.part = function (part, prefix) {
@@ -2005,7 +2000,11 @@
     else if (model.deal_state === "mismatch") dealText = w("deal.mismatch", { deals: model.named.join(", ") });
     else dealText = w("deal.unnamed");
     l0.push(d.el("p", { "data-deal-state": model.deal_state }, [dealText]));
-    if (!model.joins.length) {
+    // A one-sided page's joins all derive one_sided, which its case line
+    // says; they stay in L2's composition section.
+    if (one) {
+      // no joins section in L0
+    } else if (!model.joins.length) {
       l0.push(kit.section(w("joins.heading"), [d.el("p", {}, [w("joins.none")])], 3));
     } else {
       l0.push(kit.section(w("joins.heading"), [d.el("ul", {}, model.joins.map(function (jv) {
@@ -2030,7 +2029,7 @@
       var label = keep ? w("sides.theirs") : w("sides.half", { role: party.role || w("party.role_undeclared") });
       return dr.half("theirs", label, [section], attrs);
     });
-    if (model.missing !== null || model.parties.length === 1) halves.push(dr.missingHalf(model.missing, keep));
+    if (model.missing !== null) halves.push(dr.missingHalf(model.missing, keep));
     l0.push(dr.sides(model.case, halves, keep));
     if (!one) l0.push(d.el("p", { class: "cv-muted" }, [w("parts.own")]));
     var l1 = model.parties.map(function (p, i) { return d.el("div", { "data-party": p.member }, [kit.section(heading(p), drawn[i].l1, 3)]); });
