@@ -32,18 +32,11 @@ import {
 } from "./report-levels.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
-import {
-  provenanceLines,
-  renderProvenance,
-  tallyJudges,
-} from "./report-provenance.js";
+import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import {
   expandableRow,
   leadWithProvenance,
-  placeMockMark,
-  renderAggregate,
   renderCheckYourself,
-  renderMockJudgeLine,
 } from "./report-front.js";
 import type { Words } from "./contract-report-wording.js";
 
@@ -2065,12 +2058,9 @@ export async function drawLines(
     c.criteria.flatMap((cr) => (cr.claim === undefined ? [] : [cr.claim])),
   );
 
-  // L0, what matters: the header with the mock-judge mark (D5 b), the
-  // sealed aggregate, then the per-conversation lines, each opening its list.
-  const mock = renderMockJudgeLine(
-    await tallyJudges(result.records, claims),
-    w,
-  );
+  // L0, what matters, after the core's strip (the mock-judge mark and the
+  // sealed aggregate, core-strip.ts): the header, then the per-conversation
+  // lines, each opening its list.
   const sheet = el("div", "sheet");
   const pad = el("div", "pad");
   // Notes that explain a figure sit under the sheet, in small type, never
@@ -2078,10 +2068,6 @@ export async function drawLines(
   const notes = el("aside", "footnotes");
   notes.dataset.section = "footnotes";
   renderMeta(pad, model, w, notes);
-  const title = pad.querySelector<HTMLElement>(".ih-title");
-  if (title !== null) placeMockMark(title, mock);
-  else if (mock !== undefined) pad.prepend(mock);
-  pad.append(renderAggregate(result, w));
   renderLines(pad, model, runInfo, w, notes);
   if (notes.childElementCount > 0) pad.append(notes);
   sheet.append(pad);

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { COMPLIANCE_CSS } from "./compliance-styles.js";
 import { COMPOSED_CSS } from "./composed-styles.js";
+import { CORE_STRIP_CSS } from "./core-strip.js";
 import { jcs } from "@action-state-group/agent-action-capsule";
 import { OUTCOME_REPORT_CSS } from "./outcome-report-styles.js";
 import { RECORD_CONTENT_CSS } from "./record-content.js";
@@ -41,6 +42,7 @@ export const CORE_RUNTIME_STYLES: readonly string[] = [
   COMPLIANCE_CSS,
   RECORD_CONTENT_CSS,
   COMPOSED_CSS,
+  CORE_STRIP_CSS,
 ];
 
 const shell = readFileSync(

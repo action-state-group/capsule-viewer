@@ -678,9 +678,22 @@ this order, after the header chrome and the verification banner:
 
 | Level | Name | What it holds | Who fills it |
 |---|---|---|---|
-| L0 | what matters | The module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The module. |
+| L0 | what matters | On a verified bundle whose root is an Evidence Result, the core strip first; then the module's headline over verified content: one screen, no scrolling at a phone's width, every figure on it traceable to L1. | The core (the strip), then the module. |
 | L1 | why | The reasons: rows, claims, joins and their cited evidence, each item a `details` disclosure. | The module. |
 | L2 | verify | The core's verification section (the three bundle claims, every record's identity and membership, disclosure states, countersignatures, every extension with its integrity and interpretation status, every refused module as section 3.2 words it), then any module-specific detail. | The core, then the module. |
+
+On a verified bundle whose root is an Evidence Result, L0 opens with the **core strip**, drawn by
+the core and never by a module: the mock-judge mark when a cited report names a mock judge, then
+the Result's sealed `aggregate` as it is, coverage first and then each bucket's count beside its
+denominator, the evaluated population (agent-action-capsule's `spec/evidence-result-v0.md`
+section 3). The strip shows no percentage and no single figure, and it is the same in every
+format, with scripts off and in print. Nothing a module, a section or a composed layout supplies
+goes above it: a module that puts any node before the strip or between the banner and L0, or that
+changes, moves or hides the strip, is discarded for the refusal like one whose `render` throws
+(section 4.3). A bundle whose root is no Result draws no strip, and a module that draws the
+core's marks of a Result's counts on such a page (the strip, a bucket tally or list, or a
+count-mismatch marker) is discarded the same way. A module's own figures in L0 follow the strip
+and stay traceable to L1.
 
 The core's part of L2 is always present and always comes before any module detail in L2. A
 module MUST NOT replace, reorder or reword it; it MAY append detail (for example a

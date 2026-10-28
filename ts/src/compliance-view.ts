@@ -38,18 +38,11 @@ import {
   reportSummary,
 } from "./report-levels.js";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
+import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import {
-  provenanceLines,
-  renderProvenance,
-  tallyJudges,
-} from "./report-provenance.js";
-import {
-  renderAggregate,
   renderCheckYourself,
   expandableRow,
   leadWithProvenance,
-  placeMockMark,
-  renderMockJudgeLine,
 } from "./report-front.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 
@@ -1160,19 +1153,10 @@ export async function drawGroups(
     s.tests.flatMap((t) => (t.claim === undefined ? [] : [t.claim])),
   );
 
-  // L0, what matters: the header with the mock-judge mark (D5 b), the
-  // sealed aggregate.
-  const mock = renderMockJudgeLine(
-    await tallyJudges(result.records, claims),
-    w,
-  );
-  // One L0 card: the header (with the mark) and the aggregate.
+  // L0, what matters, after the core's strip (the mock-judge mark and the
+  // sealed aggregate, core-strip.ts): one card, the header.
   const sheet = el("div", "l0-card");
   renderHeader(sheet, model, w);
-  const header = sheet.querySelector<HTMLElement>(".hd");
-  if (header !== null) placeMockMark(header, mock);
-  else if (mock !== undefined) sheet.prepend(mock);
-  sheet.append(renderAggregate(result, w));
   levels.L0.append(sheet);
 
   // L1, why: the tests, led by who judged, who witnessed, what verified.

@@ -126,7 +126,7 @@ for (const { card, file, page } of CARDS) {
     expect(b.textContent).not.toMatch(/customer/iu);
   });
 
-  it(`${card} card: a mock judge is a mark under the header's title, said once; the provenance row opens the rows' card`, async () => {
+  it(`${card} card: a mock judge is a mark first in the core strip, said once; the provenance row opens the rows' card`, async () => {
     const source = fixture(file);
     const mockPin = { ...PIN, model_id: "jev-1.13.0 (mock backend)" };
     const digest = await pinDigest(mockPin);
@@ -146,9 +146,12 @@ for (const { card, file, page } of CARDS) {
     expect(mark.textContent).toBe(
       "Verdicts are from a mock judge and are placeholders.",
     );
-    // In L0, inside the header, right under the title: no bar above the card.
-    expect(mark.closest<HTMLElement>("[data-page]")!.dataset.level).toBe("L0");
-    expect(mark.previousElementSibling!.tagName).toBe("H1");
+    // First in the core strip, the first thing in L0, so a reader meets it
+    // before any figure (D5 (b)).
+    const strip = mark.closest<HTMLElement>("[data-core-strip]")!;
+    expect(strip.parentElement!.dataset.region).toBe("L0");
+    expect(strip.parentElement!.firstElementChild).toBe(strip);
+    expect(mark.previousElementSibling!.tagName).toBe("STYLE");
     // The folded line does not say it again; the opened line still does.
     const b = block(root, page);
     const brief = b.querySelector(":scope > summary")!.textContent!;
