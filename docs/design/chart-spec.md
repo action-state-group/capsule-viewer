@@ -306,10 +306,10 @@ and Go run them.
 
 - One passing spec per mark, each validated against the Vega-Lite v5 schema.
 - One vector per refusal reason: `chart-unsupported-member` (for `expr`,
-  `url`, `params`, `calculate` and a local time unit), `chart-aggregate-shape`,
+  `url`, `params`, `calculate`, a local time unit and `utcyearweek`), `chart-aggregate-shape`,
   `chart-field-missing`, `chart-field-type` (a string under `sum` and a
   timestamp with no offset), `chart-window-mismatch` (a differing statement, a
-  partial week), `chart-runs-missing`, `chart-population-mismatch`,
+  `utcyearmonth` window from 2026-09-02 to 2026-09-30), `chart-runs-missing`, `chart-population-mismatch`,
   `chart-aggregate-mismatch`, `chart-row-withheld` and `chart-no-dataset`.
 - Time: a timestamp at 23:59:59Z and one at 00:00:00Z on the window's last and
   first days; a `utcyearmonth` window that isn't whole months is refused.
@@ -322,7 +322,10 @@ and Go run them.
 - Mixed dataset: daily Results and cases in one dataset. A case chart whose
   `transform` selects cases by record type passes, and a case field missing
   from the daily Results doesn't refuse it. The same spec without the
-  record-type filter is refused (`chart-population-mismatch`).
+  record-type filter is refused (`chart-field-missing`, since check 1 runs
+  first). A count of cases by day that uses only `generated_at`, which both
+  record types have, and leaves out the record-type filter is refused
+  (`chart-population-mismatch`), because the daily Results are counted too.
 - Derived: a two-category `bar` with no `color` carries the label.
 - Static page: `render-report.mjs --charts … --format static` builds a page
   with its charts and passes `static-carries-script`. `fragment` with `charts` reports
