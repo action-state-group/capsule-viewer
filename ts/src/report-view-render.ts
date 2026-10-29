@@ -103,7 +103,14 @@ function laneCell(
   wrap.append(code(lane.id), " ");
   const groups = groupsOn(lane.chart, day);
   const counted = groups.filter((g) => (g.value ?? 0) > 0);
-  const shown = counted.length > 0 ? counted : groups.slice(0, 1);
+  // Nothing counted that day: a single 0. A lane whose category domain is
+  // empty has no group at all, so the 0 is a group of no rows.
+  const shown =
+    counted.length > 0
+      ? counted
+      : groups.length > 0
+        ? groups.slice(0, 1)
+        : [{ key: {}, value: 0, notRun: false, rows: [], runRows: [] }];
   shown.forEach((g, i) => {
     const key = `view-${String(index)}-${lane.id}-${day}-${String(i)}`;
     const extra = lane.chart.keys.filter((k) => k !== "x");
@@ -216,13 +223,23 @@ export function renderByPeriod(
   const keyOf = (chart: CheckedChart): "x" | "y" | "color" =>
     chart.keys.find((k) => k !== "x")!;
   const field = view.count.chart.channels[keyOf(view.count.chart)]!.field!;
-  const requirements = [
-    ...new Set(
-      parts.flatMap((p) =>
-        p.chart.groups.map((g) => scalarText(g.key[keyOf(p.chart)])),
-      ),
-    ),
-  ].sort();
+  // Rows are the checked values themselves (the checker holds the charts to
+  // one type), ordered as the checker orders a domain.
+  const requirements: Scalar[] = [];
+  for (const p of parts)
+    for (const g of p.chart.groups) {
+      const v = g.key[keyOf(p.chart)]!;
+      if (!requirements.some((r) => r === v)) requirements.push(v);
+    }
+  requirements.sort((a, b) =>
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a) < String(b)
+        ? -1
+        : String(a) > String(b)
+          ? 1
+          : 0,
+  );
   // The weeks that have a day in the window, Monday first; per week, the
   // window's days in it and which of those did not run.
   const weeks = new Map<string, { days: string[]; notRun: Set<string> }>();
@@ -269,12 +286,12 @@ export function renderByPeriod(
 
   const sumOver = (
     chart: CheckedChart,
-    requirement: string,
+    requirement: Scalar,
     days: ReadonlySet<string> | undefined,
   ): Sum => {
     const sum: Sum = { value: 0, rows: [] };
     for (const g of chart.groups) {
-      if (scalarText(g.key[keyOf(chart)]) !== requirement || g.notRun) continue;
+      if (g.key[keyOf(chart)] !== requirement || g.notRun) continue;
       if (days !== undefined && !days.has(g.key.x as string)) continue;
       sum.value += g.value ?? 0;
       sum.rows.push(...g.rows);
@@ -282,13 +299,13 @@ export function renderByPeriod(
     return sum;
   };
   const tbody = el("tbody");
-  for (const requirement of requirements) {
+  requirements.forEach((requirement, r) => {
     const tr = el("tr");
-    tr.dataset.requirement = requirement;
-    const th = el("th", undefined, requirement);
+    tr.dataset.requirement = String(requirement);
+    const th = el("th", undefined, String(requirement));
     th.setAttribute("scope", "row");
     tr.append(th);
-    for (const monday of mondays) {
+    mondays.forEach((monday, m) => {
       const week = weeks.get(monday)!;
       const td = el("td");
       td.dataset.week = monday;
@@ -296,7 +313,7 @@ export function renderByPeriod(
         td.dataset.notRun = "";
         td.textContent = w.t("chart.not_run");
       } else {
-        const key = `view-${String(index)}-${requirement}-${monday}`;
+        const key = `view-${String(index)}-r${String(r)}-w${String(m)}`;
         const live = new Set(week.days.filter((d) => !week.notRun.has(d)));
         const sum = sumOver(view.count.chart, requirement, live);
         const value = el("span", undefined, String(sum.value));
@@ -304,7 +321,12 @@ export function renderByPeriod(
         td.append(
           value,
           " ",
-          valueEvidence(key, `${requirement} ${monday}`, groupOf(sum), w),
+          valueEvidence(
+            key,
+            `${String(requirement)} ${monday}`,
+            groupOf(sum),
+            w,
+          ),
         );
         if (week.notRun.size > 0) {
           const note = el(
@@ -317,22 +339,27 @@ export function renderByPeriod(
         }
       }
       tr.append(td);
-    }
-    for (const col of view.columns) {
+    });
+    view.columns.forEach((col, c) => {
       const td = el("td");
       td.dataset.column = col.id;
       if (windowNotRun === windowDays) {
         td.dataset.notRun = "";
         td.textContent = w.t("chart.not_run");
       } else {
-        const key = `view-${String(index)}-${requirement}-${col.id}`;
+        const key = `view-${String(index)}-r${String(r)}-c${String(c)}`;
         const sum = sumOver(col.chart, requirement, undefined);
         const value = el("span", undefined, String(sum.value));
         value.dataset.chartValue = key;
         td.append(
           value,
           " ",
-          valueEvidence(key, `${requirement} ${col.id}`, groupOf(sum), w),
+          valueEvidence(
+            key,
+            `${String(requirement)} ${col.id}`,
+            groupOf(sum),
+            w,
+          ),
         );
         if (windowNotRun > 0) {
           const note = el(
@@ -345,9 +372,9 @@ export function renderByPeriod(
         }
       }
       tr.append(td);
-    }
+    });
     tbody.append(tr);
-  }
+  });
   table.append(thead, tbody);
   const scroll = el("div", "cv-view-table");
   scroll.append(table);

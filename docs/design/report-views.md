@@ -157,7 +157,7 @@ chart table uses). Weekday headers are core words.
 ### By-period
 
 One `<table class="cv-period">`. Rows are the requirements: the union of the
-`y` domains of all the view's charts, sorted. Columns, in order:
+values of each chart's key channel besides `x`, sorted as the checker sorts a domain, with their types kept (the charts must agree on one type). Columns, in order:
 
 1. the requirement field, as code;
 2. one column per Monday-start UTC week that has a day in the window, headed
@@ -215,7 +215,7 @@ as a follow-up (needs `go/chartspec` to read `view`).
 Fixtures are literal objects (`ts/test/helpers/view-fixtures.ts`), a pure
 function of that file, sealed into a committed VALID bundle by the test sealer
 as #82's golden is (`ts/test/testdata/views/`). The book: September 2026, a
-`daily_run` on 28 of 30 days dated by `event_time_claim`, each with
+`daily_run` on 26 of 30 days dated by `event_time_claim`, each with
 `statement.judgment`; case records carrying `statement.requirement` and
 `statement.verdict`, among them `out_of_scope` and `not_yet_in_force`; and an
 `adjudication` record on every sixth day. The calendar declares three lanes
@@ -223,7 +223,8 @@ as #82's golden is (`ts/test/testdata/views/`). The book: September 2026, a
 activity, judgment and adjudications), so the third is under test. The days not
 run are the 10th (a Thursday) and the 28th to 30th (the last partial week, fully
 not run), so a mixed week and a fully not-run week are both golden. A case on
-the 10th and 30th and an adjudication on the 30th sit on days that did not run:
+each of the 10th, 28th and 30th and an adjudication on the 30th sit on days that did not
+run (the 29th has none):
 `view.unplaced` reads 4. The lane ids and requirements are a fixture's, not
 the viewer's: a second pack with other ids needs no code change.
 
@@ -244,7 +245,10 @@ the viewer's: a second pack with other ids needs no code change.
   sealed from the 2nd), `view-overlap`, a constituent chart that fails its own
   check (`chart-field-missing` on a view field absent from the dataset), a view
   with no dataset (`chart-no-dataset`). A bar keyed by `color` as the
-  requirement is read through the same key-channel rule.
+  requirement draws the same table as the `rect` keyed by `y`; a keyed lane
+  that matches nothing reads `0` on every day that ran; a requirement field
+  holding more than one type is refused (`view-chart-shape`). A chart's own
+  refusal keeps its pointer, prefixed with the entry's (`/lanes/1/chart/...`).
 - **Pages:** html (checked and drawn), static (drawn at build time, passes
   `static-carries-script`), fragment (unavailable), a failed bundle (no L1),
   and a mismatching view (notice, never the table).

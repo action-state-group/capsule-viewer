@@ -5,8 +5,9 @@
 // record on 26 of 30 days: not run on the 10th (a Thursday) and on the 28th
 // to the 30th (Monday to Wednesday, the month's last, partial week). Cases
 // carry a requirement and a verdict, among them out_of_scope and
-// not_yet_in_force; adjudications fall on some days. A case on the 10th and
-// an adjudication on the 30th sit on days that did not run.
+// not_yet_in_force; adjudications fall on some days. A case on each of the
+// 10th, 28th and 30th and an adjudication on the 30th sit on days that did
+// not run (the 29th has none).
 import {
   BOOK_ID,
   CASE_TYPE,
@@ -191,6 +192,37 @@ export function viewCharts(
         },
         [DAY, { name: "y", field: "statement.judgment" }],
         { name: "color" },
+      ),
+    /** A rect of day by a field, over any record type: with none of that type, no groups. */
+    keyedPerDay: (type: string, field: string): Obj =>
+      make(
+        "rect",
+        type,
+        of(type),
+        {
+          x: DAY_X,
+          y: { field: `statement.${field}`, type: "nominal" },
+          color: COUNT_Y,
+        },
+        [DAY, { name: "y", field: `statement.${field}` }],
+        { name: "color" },
+      ),
+    /** The same rows as byVerdict, as a bar keyed by color: the key channel is not y. */
+    byVerdictBar: (verdict: string): Obj =>
+      make(
+        "bar",
+        CASE_TYPE,
+        (h) =>
+          h.record_type === CASE_TYPE &&
+          (h.statement as Obj).verdict === verdict,
+        {
+          x: DAY_X,
+          y: COUNT_Y,
+          color: { field: "statement.requirement", type: "nominal" },
+        },
+        [DAY, { name: "color", field: "statement.requirement" }],
+        { name: "y" },
+        [verdictIs(verdict)],
       ),
     byVerdict: (verdict: string, field = "requirement"): Obj =>
       make(

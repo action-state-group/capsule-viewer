@@ -57,6 +57,10 @@ export interface CheckedByPeriod {
 
 export type CheckedView = CheckedCalendar | CheckedByPeriod;
 
+/** A chart's one key channel besides x. */
+const keyChannel = (chart: CheckedChart): "y" | "color" =>
+  chart.keys.find((k) => k !== "x") as "y" | "color";
+
 function onlyKeys(value: Obj, allowed: readonly string[], at: string): void {
   for (const key of Object.keys(value))
     if (!allowed.includes(key))
@@ -215,15 +219,16 @@ export function checkView(
   if (!isObj(value))
     return refuse("view-unsupported-member", "a view must be an object", "");
   const kind = value.view;
-  const checkOne = (id: string, spec: unknown): ViewChart => {
+  const checkOne = (id: string, spec: unknown, at: string): ViewChart => {
     try {
       return { id, chart: checkChart(spec, dataset) };
     } catch (err) {
       if (err instanceof ChartRefusal)
+        // The chart's pointer is relative to the chart; make it the entry's.
         throw new ChartRefusal(
           err.reason,
           `${id}: ${err.message.slice(err.reason.length + 2)}`,
-          err.pointer,
+          err.pointer === undefined ? at : `${at}${err.pointer}`,
         );
       throw err;
     }
@@ -234,7 +239,9 @@ export function checkView(
     const lanes = list(value.lanes, "/lanes", 1).map((raw, i) =>
       readEntry(raw, `/lanes/${String(i)}`, seen),
     );
-    const checked = lanes.map((l) => checkOne(l.id, l.spec));
+    const checked = lanes.map((l, i) =>
+      checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`),
+    );
     for (const lane of checked)
       checkFit(lane.id, lane.chart, (n) => n <= 1, "at most one key channel");
     const window = checkTogether(checked, false);
@@ -256,7 +263,13 @@ export function checkView(
     const columns = (
       value.columns === undefined ? [] : list(value.columns, "/columns", 0)
     ).map((raw, i) => readEntry(raw, `/columns/${String(i)}`, seen));
-    const all = [count, ...columns].map((e) => checkOne(e.id, e.spec));
+    const all = [count, ...columns].map((e, i) =>
+      checkOne(
+        e.id,
+        e.spec,
+        i === 0 ? "/count/chart" : `/columns/${String(i - 1)}/chart`,
+      ),
+    );
     for (const part of all)
       checkFit(
         part.id,
@@ -275,6 +288,16 @@ export function checkView(
           `${part.id} groups by ${String(mine.field)}, not ${String(field)}`,
         );
     }
+    const types = new Set(
+      all.flatMap((p) =>
+        p.chart.groups.map((g) => typeof g.key[keyChannel(p.chart)]),
+      ),
+    );
+    if (types.size > 1)
+      refuse(
+        "view-chart-shape",
+        `the charts' ${String(field)} values are of more than one type (${[...types].sort().join(", ")}), so a row would join unlike values`,
+      );
     const window = checkTogether(all, true);
     return {
       view: "by-period",

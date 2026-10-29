@@ -30,7 +30,12 @@ import {
 } from "../src/presentation-builder.js";
 import { checkView } from "../src/report-view.js";
 import { chartBundleSource } from "./helpers/chart-bundle.js";
-import { CASE_TYPE, datasetOf, datasetPlan } from "./helpers/chart-fixtures.js";
+import {
+  CASE_TYPE,
+  WINDOW,
+  datasetOf,
+  datasetPlan,
+} from "./helpers/chart-fixtures.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 import {
   VIEW_RECORD_TYPES,
@@ -158,6 +163,21 @@ describe("the calendar", () => {
     ).toContain("1");
   });
 
+  it("a keyed lane with no rows at all reads 0 with its label on every day that ran", async () => {
+    const quiet = clone(calendar);
+    (quiet.lanes as Obj[]).push({
+      id: "escalations",
+      chart: viewCharts(viewHeaders()).keyedPerDay("escalation", "level"),
+    });
+    const root = await render([quiet]);
+    expect(root.querySelector("[data-chart-refused]")).toBeNull();
+    const lane = root.querySelector<HTMLElement>(
+      'td[data-day="2026-09-15"] [data-lane="escalations"]',
+    )!;
+    expect(lane.querySelector("[data-chart-value]")!.textContent).toBe("0");
+    expect(lane.querySelector("[data-evidence-label]")).not.toBeNull();
+  });
+
   it("says how many records sit on days that did not run", async () => {
     const root = await render([calendar]);
     const note = root.querySelector<HTMLElement>("[data-unplaced]")!;
@@ -243,6 +263,45 @@ describe("the by-period table", () => {
     expect(total.querySelector("[data-not-run-days]")!.textContent).toBe(
       "4 days not run",
     );
+    // The 10th (a Thursday of the week of the 7th) has a not-met req-b case
+    // and no daily run: the week's req-b cell counts no run day's case, so 0.
+    const cell = root.querySelector<HTMLElement>(
+      'tr[data-requirement="req-b"] td[data-week="2026-09-07"]',
+    )!;
+    expect(cell.querySelector("[data-chart-value]")!.textContent).toBe("0");
+  });
+
+  it("with no not-met row at all the weeks still read Not run or 0, never blank", async () => {
+    const none = clone(byPeriod);
+    (none.count as Obj).chart =
+      viewCharts(viewHeaders()).byVerdict("never_recorded");
+    const root = await render([none]);
+    expect(root.querySelector("[data-chart-refused]")).toBeNull();
+    const cell = root.querySelector<HTMLElement>(
+      'tr[data-requirement="req-a"] td[data-week="2026-09-28"]',
+    )!;
+    expect(cell.textContent).toBe("Not run");
+    const week = root.querySelector<HTMLElement>(
+      'tr[data-requirement="req-a"] td[data-week="2026-09-14"]',
+    )!;
+    expect(week.querySelector("[data-chart-value]")!.textContent).toBe("0");
+  });
+
+  it("reads a requirement keyed by color (a bar) like one keyed by y", async () => {
+    const bar = clone(byPeriod);
+    (bar.count as Obj).chart =
+      viewCharts(viewHeaders()).byVerdictBar("not_met");
+    const root = await render([bar, byPeriod]);
+    const [a, b] = [...root.querySelectorAll("figure.cv-view")].map((f) =>
+      [...f.querySelectorAll("td[data-week]")].map((td) => td.textContent),
+    );
+    expect(a).toEqual(b);
+  });
+
+  it("every Show evidence anchor is unique, whatever characters a requirement has", async () => {
+    const root = await render([byPeriod]);
+    const ids = [...root.querySelectorAll("details.cv-ev")].map((d) => d.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 
@@ -252,9 +311,10 @@ describe("the refusals, each the change of a passing view", () => {
   const headers = viewHeaders();
   async function datasetWith(
     windows: { field: string; from: string; to: string }[],
+    book: Obj[] = headers,
   ): Promise<ChartDataset> {
-    const plan = datasetPlan(headers.length, windows, [], VIEW_RECORD_TYPES);
-    const { rows } = await datasetOf(plan, headers);
+    const plan = datasetPlan(book.length, windows, [], VIEW_RECORD_TYPES);
+    const { rows } = await datasetOf(plan, book);
     return {
       plan,
       rows: rows.map((r) => ({
@@ -321,6 +381,27 @@ describe("the refusals, each the change of a passing view", () => {
     expect(err.message).toContain("statement.verdict");
   });
 
+  it("view-chart-shape: requirement values of more than one type", async () => {
+    const mixed = viewHeaders().map((h) =>
+      h.record_type === CASE_TYPE &&
+      (h.statement as Obj).verdict === "out_of_scope"
+        ? { ...h, statement: { ...(h.statement as Obj), requirement: 7 } }
+        : h,
+    );
+    const on = await datasetWith(
+      [{ field: "event_time_claim", ...WINDOW }],
+      mixed,
+    );
+    const c = viewCharts(mixed);
+    const entry = clone(byPeriod);
+    (entry.count as Obj).chart = c.byVerdict("not_met");
+    (entry.columns as Obj[])[0]!.chart = c.byVerdict("out_of_scope");
+    (entry.columns as Obj[]).pop();
+    const err = refusalOn(entry, on);
+    expect(err.reason).toBe("view-chart-shape");
+    expect(err.message).toContain("more than one type");
+  });
+
   it("a chart that fails its own check fails the view with its reason and its id", () => {
     const bad = clone(calendar);
     const chart = chartOf(bad, ["lanes", 1, "chart"]);
@@ -328,6 +409,7 @@ describe("the refusals, each the change of a passing view", () => {
     const err = refusal(bad);
     expect(err.reason).toBe("chart-field-missing");
     expect(err.message).toContain("judgment:");
+    expect(err.pointer ?? "").toMatch(/^\/lanes\/1\/chart/u);
   });
 
   it("the old rendering: a not-run day stated as 0 is refused", () => {
