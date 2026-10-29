@@ -84,7 +84,10 @@ here. The format follows
   `crypto.subtle`, so a page whose records and checkpoint verify reads
   verified where it read incomplete ("checkpoint signature not checked
   here", `checkpoint_verifier_unavailable`), and a forged checkpoint reads
-  failed. The "Verified by" line names the new versions.
+  failed. The "Verified by" line names the new versions. The runtime now also bundles
+  `@noble/curves` and `@noble/hashes` 2.4.0 (MIT), which cll 0.3.0 uses for the
+  Ed25519 check; `go/pageruntime/THIRD_PARTY_NOTICES.md` reproduces their
+  license.
 
 ## ts 0.3.0 and go 0.3.0 (2026-10-28)
 
