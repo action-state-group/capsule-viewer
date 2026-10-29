@@ -1,7 +1,7 @@
 # Third-party notices: evidence-graph.iife.js
 
 `evidence-graph.iife.js` is a build artifact: esbuild bundles capsule-viewer's
-page code with the three npm packages below (`ts/scripts/build-iife.mjs`, at
+page code with the five npm packages below (`ts/scripts/build-iife.mjs`, at
 the commit `pageruntime.Commit` names, with the versions `ts/package-lock.json`
 pins there). Each keeps its own license, reproduced below. Every page that
 embeds the file carries these components.
@@ -9,9 +9,11 @@ embeds the file carries these components.
 | Component | Version | License | Source |
 |---|---|---|---|
 | capsule-viewer `ts/src` (the page code: views, presentation mount, report cards) | `pageruntime.Commit` | Apache-2.0 AND BSD-3-Clause | github.com/action-state-group/capsule-viewer |
-| @action-state-group/agent-action-capsule (the verifier) | 0.8.0 | BSD-3-Clause | github.com/action-state-group/agent-action-capsule |
-| @action-state-group/cll | 0.2.1 | Apache-2.0 | github.com/action-state-group/cll-ts |
+| @action-state-group/agent-action-capsule (the verifier) | 0.9.0 | BSD-3-Clause | github.com/action-state-group/agent-action-capsule |
+| @action-state-group/cll | 0.3.0 | Apache-2.0 | github.com/action-state-group/cll-ts |
 | cborg | 6.1.2 | Apache-2.0 | github.com/rvagg/cborg |
+| @noble/curves | 2.4.0 | MIT | github.com/paulmillr/noble-curves |
+| @noble/hashes | 2.4.0 | MIT | github.com/paulmillr/noble-hashes |
 
 ## capsule-viewer (Apache-2.0 AND BSD-3-Clause)
 
@@ -276,4 +278,56 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+## @noble/curves (MIT)
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2022 Paul Miller (https://paulmillr.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+## @noble/hashes (MIT)
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2022 Paul Miller (https://paulmillr.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```

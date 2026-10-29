@@ -2,7 +2,7 @@
 // The in-browser renderer the emitted page runs. It is published only as
 // dist/evidence-graph.iife.js (`npm run emitter:iife`), which exposes
 // renderEvidenceGraph, and not as a package export. It bundles
-// @action-state-group/agent-action-capsule (0.8.0 or later) through that
+// @action-state-group/agent-action-capsule (0.9.0 or later) through that
 // package's own browser entry, by plain package resolution. The Go module
 // ships the build as go/pageruntime.
 export * from "./evidence-graph-view.js";

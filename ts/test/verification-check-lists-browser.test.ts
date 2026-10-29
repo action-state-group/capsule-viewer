@@ -13,15 +13,12 @@ import { build } from "esbuild";
 import { chromium, type Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
-import {
-  CHECKPOINT_NOT_CHECKED_NOTE,
-  VERIFICATION_CHECK_WORDS,
-} from "@action-state-group/agent-action-capsule";
-import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
+import { TEST_KEYS, sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
-// The browser build has no checkpoint authenticator, so a signed checkpoint
-// is recorded as checkpoint_unverified there: this is the runtime in which
-// the not-checked list matters most. A real browser, found as
+// The browser build checks a signed checkpoint with AAC 0.9.0's strict
+// verifier (the Ed25519 check runs on cll 0.3.0's browser path), so a bundle
+// whose records and checkpoint are signed reads verified there. The
+// not-checked list still matters for a bundle that is not fully signed. A real browser, found as
 // emitter-csp-browser.test.ts finds one; skipped when none is installed.
 function browserPath(): string | undefined {
   return [
@@ -79,7 +76,11 @@ describe.skipIf(executablePath === undefined)(
         rmSync(directory, { recursive: true, force: true });
     }, 60_000);
 
-    async function open(bundle: unknown, bootstrap?: string): Promise<Lists> {
+    async function open(
+      bundle: unknown,
+      bootstrap?: string,
+      noWebCrypto = false,
+    ): Promise<Lists> {
       const file = join(directory, `page-${count++}.html`);
       writeFileSync(
         file,
@@ -91,6 +92,11 @@ describe.skipIf(executablePath === undefined)(
       );
       const context = await browser.newContext();
       const page = await context.newPage();
+      // A page outside a secure context has no SubtleCrypto.
+      if (noWebCrypto)
+        await page.addInitScript(() => {
+          Object.defineProperty(globalThis, "crypto", { value: undefined });
+        });
       await page.goto(pathToFileURL(file).href);
       await page.waitForSelector('[data-checks="scope"]', {
         // The section is folded, so it is drawn but not visible.
@@ -124,33 +130,85 @@ describe.skipIf(executablePath === undefined)(
       return shown;
     }
 
-    it("a signed checkpoint: the bundle passes, and the checkpoint signature is listed as not checked", async () => {
-      const bundle = json(
-        "test",
-        "testdata",
-        "aac-vectors",
-        "minimum-necessary",
-        "bundle-internal-audit",
-        "input.json",
-      ).bundle;
+    const signedSource = (): Obj => ({
+      root: "deal",
+      records: [
+        { capsule_id: "act", key_id: TEST_KEYS.a },
+        {
+          capsule_id: "deal",
+          key_id: TEST_KEYS.a,
+          chain: { parent_capsule_id: "act", relation: "derived_from" },
+        },
+      ],
+      disclosures: {
+        act: { agent_output: { step: "act", amount: 1 } },
+        deal: {
+          agent_input: { spec_version: "x-example-deal/v0", step: "open" },
+        },
+      },
+    });
+
+    it("a signed checkpoint: verifies in the browser, which used to withhold it (checkpoint_verifier_unavailable)", async () => {
+      const { bundle } = await sealEvidenceBundle(signedSource(), {
+        signCheckpoint: true,
+      });
       const shown = await open(bundle);
-      // The browser build cannot check the checkpoint signature, so no
-      // check fails but one was not run (presentation contract 6.2).
-      expect(shown.verify).toBe("incomplete");
-      expect(shown.page).toEqual([
-        "record-digests",
-        "record-rules",
-        "closure",
-        "range",
-        "membership",
-        "disclosures",
-      ]);
+      expect(shown.verify).toBe("verified");
+      expect(shown.page).toContain("checkpoint-signature");
       expect(shown.failed).toEqual([]);
-      expect(shown.notChecked).toEqual(["checkpoint-signature"]);
-      expect(shown.checkpointLine).toBe(
-        `${VERIFICATION_CHECK_WORDS["checkpoint-signature"]} ${CHECKPOINT_NOT_CHECKED_NOTE}`,
+      expect(shown.notChecked).toEqual([]);
+      expect(shown.checkpointLine).toBeNull();
+    });
+
+    it("a signed checkpoint is checked in a page with no SubtleCrypto, and a forged one fails there", async () => {
+      const { bundle } = await sealEvidenceBundle(signedSource(), {
+        signCheckpoint: true,
+      });
+      const honest = await open(bundle, undefined, true);
+      // The checkpoint is checked by cll's pure-JS Ed25519; only the producer
+      // envelopes need SubtleCrypto, so they are the one thing not checked.
+      expect(honest.page).toContain("checkpoint-signature");
+      expect(honest.failed).toEqual([]);
+      expect(honest.notChecked).toEqual(["producer-signatures"]);
+      expect(honest.verify).toBe("incomplete");
+      // Strict verification, which also holds the JSON copy of the signed
+      // fields to the signature, needs Ed25519 and does not run here; the
+      // signature itself is still checked.
+      const cose = Buffer.from(
+        (bundle.checkpoint as Obj).cose as string,
+        "base64url",
       );
-      expect(shown.hint).toBeNull();
+      cose[cose.length - 1]! ^= 0xff;
+      (bundle.checkpoint as Obj).cose = cose.toString("base64url");
+      const forged = await open(bundle, undefined, true);
+      expect(forged.verify).toBe("failed");
+      expect(forged.failed).toContain("checkpoint-signature");
+    });
+
+    it("a forged checkpoint (a signed value changed): the browser reads failed", async () => {
+      const { bundle } = await sealEvidenceBundle(signedSource(), {
+        signCheckpoint: true,
+      });
+      (bundle.checkpoint as Obj).timestamp = "2026-09-15T00:00:00Z";
+      const shown = await open(bundle);
+      expect(shown.verify).toBe("failed");
+      expect(shown.failed).toContain("checkpoint-signature");
+      expect(shown.notChecked).toEqual([]);
+    });
+
+    it("a forged checkpoint (a signature byte flipped): the browser reads failed", async () => {
+      const { bundle } = await sealEvidenceBundle(signedSource(), {
+        signCheckpoint: true,
+      });
+      const cose = Buffer.from(
+        (bundle.checkpoint as Obj).cose as string,
+        "base64url",
+      );
+      cose[cose.length - 1]! ^= 0xff;
+      (bundle.checkpoint as Obj).cose = cose.toString("base64url");
+      const shown = await open(bundle);
+      expect(shown.verify).toBe("failed");
+      expect(shown.failed).toContain("checkpoint-signature");
     });
 
     it("a host bootstrap passes its own verifier text, shown under the not-checked list", async () => {

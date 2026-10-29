@@ -414,11 +414,11 @@ describe("checkedSummaryLine over the checks actually run (#118)", () => {
     });
   }
 
-  it("the browser's strict result (no checkpoint verifier): producer signatures ran, the checkpoint's did not, and the summary says only that", async () => {
-    // The browser build has no CLL checkpoint verifier, so AAC's strict
-    // verdict withholds the checkpoint (`checkpoint_verifier_unavailable`)
-    // and the proofs resting on it carry `checkpoint_unverified`; node's
-    // runtime has the verifier, so that result is made from a node one.
+  it("a strict result whose checkpoint verifier could not load: producer signatures ran, the checkpoint's did not, and the summary says only that", async () => {
+    // When AAC cannot load the CLL checkpoint verifier its strict verdict
+    // withholds the checkpoint (`checkpoint_verifier_unavailable`) and the
+    // proofs resting on it carry `checkpoint_unverified`; the node runtime
+    // has the verifier, so that result is made from a node one.
     const c = STRICT.cases[0]!;
     const bundle = structuredClone(c.bundle);
     const run = await verifyBundle(bundle, {
