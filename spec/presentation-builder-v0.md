@@ -130,8 +130,8 @@ target with the same settings. Otherwise it is `available: false` with a `reason
 
 Every reason also carries a `message` in words. An error of the request itself (no audience, a
 bad depth or wording pack, an ambiguous registry, a requested presentation the registry does not
-select, scoping a bundle that did not verify, a chart spec that does not match) is not a packaging question: it is thrown, by both
-calls, as it is for every target alike.
+select, scoping a bundle that did not verify, a chart spec that does not match) is not a
+packaging question: it is thrown, by both calls, as it is for every target alike.
 
 A direct `buildPresentation` call for an unavailable target throws. A fragment over its budget
 throws `FragmentTooLargeError` (with `length`, `maxLength` and `subject`), as it always has; the
@@ -157,8 +157,8 @@ default. The wording pack's bytes MUST hash to its `wording_sha256`, and the pac
 presentation only (contract I3): changing any of them changes the file's bytes and never an
 evidence identifier.
 
-With the default settings (audience `"*"`, no depth, no wording, no charts) the builder writes exactly the
-page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.
+With the default settings (audience `"*"`, no depth, no wording, no charts) the builder writes
+exactly the page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.
 
 ### 2.2 Fragment permalink (`fragment`)
 
