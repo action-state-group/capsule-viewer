@@ -100,13 +100,16 @@ ships its page runtime.
   A shared card (no `deals` in the block) shows its counts as the holder's
   statement, with `counts_recompute` not checked. A block that carries
   `deals` is the holder's own copy: it is drawn under the PRIVATE banner,
-  with the sentences for their agent, and its counts are recounted from the
-  deal entries. The six checks of the standard-history spec §6 run, and a
+  with the sentences for their agent. Its counts are recounted from the
+  deal entries only when the block also carries `policy` and `as_of`;
+  without one, that check reads not checked and the counts stay the
+  holder's statement. The six checks of the standard-history spec §6 run, and a
   card that fails them draws none of its counts. `anchor_inclusion` is
   always shown as not checked, the page never says a signature or a witness
-  was checked, and no ratio or percentage is drawn. `rules/manifest.json`
-  forbids `x-standard-history/v0` beside the History selection, so no bundle
-  selects both modules.
+  was checked, and no ratio or percentage is drawn. The rules module
+  (`capsuleviewer.rules/v0`) now forbids `x-standard-history/v0`, as it
+  already forbids `x-history-selection/v0`, so no bundle selects both the
+  rules module and the History card.
 - Charts from a checked spec (capsule-viewer#82;
   `docs/design/chart-spec.md`). The builder's new `charts` setting takes
   Vega-Lite v5 specs in a closed subset. Each spec is checked against the
