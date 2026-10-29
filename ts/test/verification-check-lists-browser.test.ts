@@ -13,10 +13,6 @@ import { build } from "esbuild";
 import { chromium, type Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
-import {
-  CHECKPOINT_NOT_CHECKED_NOTE,
-  VERIFICATION_CHECK_WORDS,
-} from "@action-state-group/agent-action-capsule";
 import { TEST_KEYS, sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 // The browser build checks a signed checkpoint with AAC 0.9.0's strict
@@ -80,7 +76,11 @@ describe.skipIf(executablePath === undefined)(
         rmSync(directory, { recursive: true, force: true });
     }, 60_000);
 
-    async function open(bundle: unknown, bootstrap?: string): Promise<Lists> {
+    async function open(
+      bundle: unknown,
+      bootstrap?: string,
+      noWebCrypto = false,
+    ): Promise<Lists> {
       const file = join(directory, `page-${count++}.html`);
       writeFileSync(
         file,
@@ -92,6 +92,11 @@ describe.skipIf(executablePath === undefined)(
       );
       const context = await browser.newContext();
       const page = await context.newPage();
+      // A page outside a secure context has no SubtleCrypto.
+      if (noWebCrypto)
+        await page.addInitScript(() => {
+          Object.defineProperty(globalThis, "crypto", { value: undefined });
+        });
       await page.goto(pathToFileURL(file).href);
       await page.waitForSelector('[data-checks="scope"]', {
         // The section is folded, so it is drawn but not visible.
@@ -153,6 +158,31 @@ describe.skipIf(executablePath === undefined)(
       expect(shown.failed).toEqual([]);
       expect(shown.notChecked).toEqual([]);
       expect(shown.checkpointLine).toBeNull();
+    });
+
+    it("a signed checkpoint is checked in a page with no SubtleCrypto, and a forged one fails there", async () => {
+      const { bundle } = await sealEvidenceBundle(signedSource(), {
+        signCheckpoint: true,
+      });
+      const honest = await open(bundle, undefined, true);
+      // The checkpoint is checked by cll's pure-JS Ed25519; only the producer
+      // envelopes need SubtleCrypto, so they are the one thing not checked.
+      expect(honest.page).toContain("checkpoint-signature");
+      expect(honest.failed).toEqual([]);
+      expect(honest.notChecked).toEqual(["producer-signatures"]);
+      expect(honest.verify).toBe("incomplete");
+      // Strict verification, which also holds the JSON copy of the signed
+      // fields to the signature, needs Ed25519 and does not run here; the
+      // signature itself is still checked.
+      const cose = Buffer.from(
+        (bundle.checkpoint as Obj).cose as string,
+        "base64url",
+      );
+      cose[cose.length - 1]! ^= 0xff;
+      (bundle.checkpoint as Obj).cose = cose.toString("base64url");
+      const forged = await open(bundle, undefined, true);
+      expect(forged.verify).toBe("failed");
+      expect(forged.failed).toContain("checkpoint-signature");
     });
 
     it("a forged checkpoint (a signed value changed): the browser reads failed", async () => {
