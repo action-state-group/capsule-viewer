@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: Apache-2.0
+"""The History card as a module-slot script: ``static/standard_history_card.js``
+with its ``@generated`` lines filled, and the manifest that pins it.
+
+The generated lines are the manifest (with ``script_sha256`` all zeros, as a
+script cannot carry its own digest), the words of the ``consumer/en`` pack
+(``wording-consumer-en.json``, compiled in: the script reads no pack), the
+pack's id and sha256 (named in L2), and the two stylesheets the script inserts
+once at render (``static/kit.css`` and ``static/standard_history.css``), which
+the manifest pins by ``style_sha256``. The manifest also pins the pack by
+``wording_sha256``.
+
+``python -m capsule_viewer.standard_history.module_slot --write`` rewrites the
+script and the manifest in place; ``--check`` exits 1 when a committed file is
+not what this writes (``tests/test_standard_history_module.py`` runs the same
+check). A change to ``static/kit.css`` changes this script, as it changes the
+receipt scripts.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+import sys
+from pathlib import Path
+
+from . import EXTENSION, STANDARD_HISTORY_ID
+
+ZERO = "0" * 64
+_PACKAGE = Path(__file__).resolve().parent
+STATIC = _PACKAGE.parent / "static"
+SCRIPT = STATIC / "standard_history_card.js"
+KIT_CSS = STATIC / "kit.css"
+CARD_CSS = STATIC / "standard_history.css"
+PACK = _PACKAGE / "wording-consumer-en.json"
+MANIFEST = _PACKAGE / "manifest.json"
+_GENERATED = re.compile(r"^(  var (\w+) = ).*; // @generated \2$", re.MULTILINE)
+
+# The selection clauses. Every other module that reads a deal bundle's own
+# extension is forbidden, so no bundle selects this module and another one.
+SOURCE_MANIFEST = {
+    "spec_version": "aac.presentation-manifest/v0",
+    "id": STANDARD_HISTORY_ID,
+    "presentation_api": "aac.presentation-api/v0",
+    "runtime_min": "0.1.0",
+    "trust_class": "trusted-executable",
+    "requires": {"bundle_kind": "evidence-bundle/v2", "extensions": {"required": [EXTENSION]}},
+    "forbids": {
+        "profiles": ["spec_version:report/v1", "spec_version:evaluation-summary/v1", "result_version:evidence-result-v0"],
+        "extensions": ["composed/v1", "x-deal-v0", "x-history-selection/v0"],
+    },
+    "audiences": ["*"],
+    "formats": ["html"],
+    "fallback": False,
+    "priority": 1,
+}
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _js(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
+
+
+def _manifest(script_sha256: str) -> dict:
+    manifest = json.loads(json.dumps(SOURCE_MANIFEST))
+    manifest["executable"] = {
+        "carrier": "module-slot",
+        "script_sha256": script_sha256,
+        "style_sha256": [_sha(KIT_CSS.read_bytes()), _sha(CARD_CSS.read_bytes())],
+        "wording_sha256": _sha(PACK.read_bytes()),
+    }
+    return manifest
+
+
+def script_bytes() -> bytes:
+    """The script with its generated lines filled."""
+    pack = PACK.read_bytes()
+    raw = json.loads(pack.decode("utf-8"))
+    values = {
+        "MANIFEST": _js(_manifest(ZERO)),
+        "WORDS": _js(raw["entries"]),
+        "PACK": _js({"id": raw["id"], "sha256": _sha(pack)}),
+        "KIT_CSS": _js(KIT_CSS.read_text(encoding="utf-8")),
+        "CARD_CSS": _js(CARD_CSS.read_text(encoding="utf-8")),
+    }
+    source = SCRIPT.read_text(encoding="utf-8")
+    if sorted(m.group(2) for m in _GENERATED.finditer(source)) != sorted(values):
+        raise ValueError("standard_history_card.js does not carry exactly the generated lines this fills")
+    return _GENERATED.sub(lambda m: f"{m.group(1)}{values[m.group(2)]}; // @generated {m.group(2)}", source).encode("utf-8")
+
+
+def manifest() -> dict:
+    """The module-slot manifest, pinning the script, its stylesheets and its wording pack."""
+    return _manifest(_sha(script_bytes()))
+
+
+def outputs() -> dict[Path, bytes]:
+    return {SCRIPT: script_bytes(), MANIFEST: (json.dumps(manifest(), indent=2, ensure_ascii=False) + "\n").encode("utf-8")}
+
+
+def stale() -> list[Path]:
+    """The committed files that are not what ``outputs`` writes."""
+    return [path for path, data in outputs().items() if not path.exists() or path.read_bytes() != data]
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    if args == ["--write"]:
+        # The script first: the manifest pins the bytes it was just given.
+        SCRIPT.write_bytes(script_bytes())
+        MANIFEST.write_bytes(outputs()[MANIFEST])
+        return 0
+    if args == ["--check"]:
+        bad = stale()
+        for path in bad:
+            print(f"stale: {path}", file=sys.stderr)
+        return 1 if bad else 0
+    print(__doc__, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
