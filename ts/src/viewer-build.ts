@@ -67,7 +67,7 @@ export const VIEWER_BUILD: ViewerBuild = {
   viewer: "@action-state-group/capsule-viewer",
   viewerVersion: "0.3.0",
   verifier: "@action-state-group/agent-action-capsule",
-  verifierVersion: "0.9.0",
+  verifierVersion: "0.10.0",
   cllVersion: "0.3.0",
   ...(commit === undefined ? {} : { commit }),
   ...(unreleased ? { unreleased: true as const } : {}),

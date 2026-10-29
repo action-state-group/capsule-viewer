@@ -86,8 +86,10 @@ here. The format follows
   (`vectors/chart-spec/`), and `OfflineOptions.Charts` carries specs in the
   Go offline and embedded pages. `render-report.mjs` gains `--charts` and
   `--format static`, and the page shell gains a `<noscript>` line pointing
-  to that scripts-off copy. Needs an agent-action-capsule TS release with
-  agent-action-capsule#443 to read a Result that names a dataset.
+  to that scripts-off copy. The page runtime and the npm package depend on
+  `@action-state-group/agent-action-capsule` 0.10.0 (was 0.9.0), whose
+  Result reader accepts `plan_ref` and `dataset_ref`
+  (agent-action-capsule#443); the "Verified by" line names it.
 
 ### Changed
 

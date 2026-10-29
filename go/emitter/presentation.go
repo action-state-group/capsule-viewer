@@ -9,6 +9,7 @@ import (
 	"io"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 
@@ -243,8 +244,31 @@ func checkCharts(bundleObject map[string]interface{}, charts []json.RawMessage) 
 		if err != nil {
 			return nil, fmt.Errorf("chart %d is refused: %w; no page is written", i+1, err)
 		}
+		specs[i] = integerSpelling(spec)
 	}
 	return specs, nil
+}
+
+// integerSpelling rewrites every number of a checked spec in its integer
+// form: Check accepts only safe integers, but a json.Number keeps its
+// spelling ("1.0", "1e2"), which canonical JSON refuses. TypeScript's
+// JSON.parse reads the same text as the integer, so both builders carry it.
+func integerSpelling(value interface{}) interface{} {
+	switch v := value.(type) {
+	case json.Number:
+		if f, err := strconv.ParseFloat(v.String(), 64); err == nil {
+			return json.Number(strconv.FormatInt(int64(f), 10))
+		}
+	case []interface{}:
+		for i, item := range v {
+			v[i] = integerSpelling(item)
+		}
+	case map[string]interface{}:
+		for k, item := range v {
+			v[k] = integerSpelling(item)
+		}
+	}
+	return value
 }
 
 // renderOptions is the options argument a bootstrap passes to

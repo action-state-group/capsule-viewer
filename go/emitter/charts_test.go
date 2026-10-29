@@ -4,6 +4,7 @@ package emitter
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/action-state-group/agent-action-capsule/go/canonical"
@@ -98,4 +99,17 @@ func TestBuildOfflineHTMLRefusesAFailingChart(t *testing.T) {
 
 	_, err = BuildEmbeddedHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Charts: []json.RawMessage{chartSpec(2)}})
 	require.ErrorContains(t, err, "chart 1 is refused: chart-aggregate-mismatch")
+}
+
+// TypeScript's JSON.parse reads "1.0" and "1e0" as 1, so both builders
+// carry such a spec, as the integer.
+func TestBuildOfflineHTMLCarriesAnIntegerSpelledAsAFloat(t *testing.T) {
+	for _, spelling := range []string{"1.0", "1e0"} {
+		bundle := chartBundle(t)
+		spec := strings.Replace(string(chartSpec(1)), `"count":1`, `"count":`+spelling, 1)
+		require.Contains(t, spec, `"count":`+spelling)
+		got, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Charts: []json.RawMessage{json.RawMessage(spec)}})
+		require.NoError(t, err, spelling)
+		require.Contains(t, got, `"count":1}`, spelling)
+	}
 }
