@@ -484,9 +484,45 @@ func readStatement(value interface{}, at string) statement {
 
 // readChartSpec reads a spec in the closed subset, or refuses it (structure
 // only; no data is read).
+// inexactNumber is the pointer of the first number in a spec that is not a
+// safe integer (keys in sorted order), or "". A spec is hashed (JCS) for the
+// page and carried in its render options, and JCS has no form for a fraction
+// or an unsafe integer; no record header holds one either.
+func inexactNumber(value interface{}, at string) string {
+	if _, ok := numberOf(value); ok {
+		if i, ok := integerOf(value); ok && math.Abs(i) <= maxSafeInteger {
+			return ""
+		}
+		return orRoot(at)
+	}
+	switch v := value.(type) {
+	case []interface{}:
+		for i, item := range v {
+			if found := inexactNumber(item, indexOf(at, i)); found != "" {
+				return found
+			}
+		}
+	case map[string]interface{}:
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			if found := inexactNumber(v[key], pointerOf(at, key)); found != "" {
+				return found
+			}
+		}
+	}
+	return ""
+}
+
 func readChartSpec(value interface{}) *chartSpec {
 	spec, ok := isObj(value)
 	need(ok, "", "a Vega-Lite object")
+	if inexact := inexactNumber(value, ""); inexact != "" {
+		refuse(ReasonUnsupportedMember, inexact+" is a fraction or an integer beyond 2^53; a spec holds integers only", inexact)
+	}
 	onlyKeys(spec, []string{"$schema", "data", "mark", "transform", "encoding", "usermeta", "title", "description"}, "")
 	need(spec["$schema"] == schemaURL, "/$schema", schemaURL)
 	data, ok := isObj(spec["data"])
@@ -566,8 +602,17 @@ func readChartSpec(value interface{}) *chartSpec {
 			}
 		}
 	}
-	if len(temporals) > 1 {
-		refuse(ReasonUnsupportedMember, "a chart has at most one temporal channel", pointerOf("/encoding", temporals[1]))
+	// A key is a category or a time unit: the renderer places keys in bands.
+	for _, c := range keys {
+		if chans[c].Type == "quantitative" {
+			refuse(ReasonUnsupportedMember, c+" is a key, so it is nominal, ordinal or temporal; only the aggregate is quantitative", pointerOf(pointerOf("/encoding", c), "type"))
+		}
+	}
+	// The time axis is x: "not run" is drawn as a column of x.
+	for _, c := range temporals {
+		if c != "x" {
+			refuse(ReasonUnsupportedMember, "only x can be temporal", pointerOf(pointerOf("/encoding", c), "type"))
+		}
 	}
 	out := &chartSpec{mark: mark, transform: transform, channels: chans, aggregate: want, keys: keys, statement: st}
 	if len(temporals) == 1 {

@@ -57,13 +57,17 @@ Narrowing it is a break.
 | `data` | `{"name": "dataset"}` only. No `url`, no `values`, no `sequence` |
 | `mark` | `bar`, `line`, `point`, `rect`, as a string or `{"type": ...}` with no other key |
 | `transform` | a list of `{"filter": P}`. P is a field predicate (`equal` or `oneOf` over strings, numbers and booleans, or `range` of two UTC DateTime objects `{year, month, date, utc: true}` with `timeUnit: "utcyearmonthdate"`) or `and` / `or` / `not` of them. Never an expression string |
-| `encoding.x`, `.y`, `.color` | `field`, `type` (`quantitative`, `ordinal`, `nominal`, `temporal`), `aggregate` (`count`, which names no field, or `sum`, both `quantitative`), `timeUnit` (`utcyearmonthdate`, `utcyearmonth`), required on a temporal field and only there. At most one channel is temporal. `title` is accepted and ignored |
+| `encoding.x`, `.y`, `.color` | `field`, `type` (`quantitative`, `ordinal`, `nominal`, `temporal`), `aggregate` (`count`, which names no field, or `sum`, both `quantitative`), `timeUnit` (`utcyearmonthdate`, `utcyearmonth`), required on a temporal field and only there. Only the aggregate channel is `quantitative`: the other channels are keys, drawn in bands. Only `x` can be temporal, since a unit not run is drawn as a column of `x`. `title` is accepted and ignored |
 | `usermeta.capsule` | the statement the checker holds the chart to (section 3) |
 | `title`, `description` | accepted and ignored |
 
 Exactly one channel aggregates: `y` for `bar`, `line` and `point`, and `color`
 for `rect`. A spec with no aggregate, or with two, is refused
 (`chart-aggregate-shape`). Raw point plots are left out of v0.
+
+Every number in a spec is an integer of at most 2^53 - 1 in magnitude
+(`chart-unsupported-member` otherwise): a spec is hashed with JCS, which has
+no form for a fraction, and no record header holds one.
 
 Refused by construction: `params`, signals, selections, `calculate`, `lookup`,
 `href`, `tooltip`, any `transform` other than `filter`, any `expr` member, any
@@ -291,6 +295,7 @@ strings as public text):
 | `chart.window` | `{from} to {to} (UTC)` |
 | `chart.derived` | `Derived from this report's records, not evidence itself` |
 | `chart.not_run` | `Not run` |
+| `chart.no_runs` | `This report's plan does not say which days ran, so a day with no records reads 0` (under a time axis on a plan with no window node, or several) |
 | `chart.table.caption` | `The values in this chart` |
 | `chart.count` / `chart.sum` | `Count` / `Sum of` (the table's value column, the summed field path after it as code) |
 | `chart.evidence.records` | `The records this value counts, each a link to its entry in this bundle's records` |
@@ -298,9 +303,8 @@ strings as public text):
 | `chart.refused` | `This chart was not drawn: its spec does not match the report's data ({reason}).` |
 | shell `<noscript>` (fixed text) | `This page needs scripts to show the report. A version without scripts can be built from the same bundle with render-report --format static.` |
 
-`chart.derived`, `chart.not_run`, `chart.evidence.records`,
-`chart.evidence.none` and `chart.refused` are locked: a pack cannot reword
-them (`LOCKED_ENTRIES`).
+Every `chart.*` entry is locked (`LOCKED_ENTRIES`): each states what the
+checked data is, so a pack cannot reword a count as something else.
 
 - The caption gives the population and the window, from the checked
   statement. The noun is the core's fixed "records". A pack noun would put
@@ -322,7 +326,11 @@ them (`LOCKED_ENTRIES`).
   computation half of 5a is #146.
 
 Build refusals (`chart-no-dataset` and the reasons in section 3) are builder
-errors with a `message`, not page text.
+errors with a `message`, not page text. A page built some other way shows
+each refused chart's notice; on a verified bundle with no Result, that is
+`chart-no-dataset`. On a bundle that did not verify no chart is drawn (L1 is
+not created), and "How this page was checked" says so beside each spec's
+digest.
 
 ## 6. What the code waits on
 

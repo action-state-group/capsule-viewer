@@ -190,6 +190,45 @@ describe("the html page", () => {
   });
 });
 
+describe("charts on a page that can't carry them", () => {
+  it("a verified bundle whose root is no Result shows each chart's notice", async () => {
+    const { bundle: plain } = await sealEvidenceBundle(
+      JSON.parse(
+        readFileSync(join(TESTDATA, "week-bundle.json"), "utf8"),
+      ) as Obj,
+    );
+    const root = document.createElement("div");
+    document.body.append(root);
+    await renderEvidenceGraph(plain, root, undefined, { charts: [charts[0]] });
+    root.remove();
+    expect(root.querySelector("figure.cv-chart")).toBeNull();
+    expect(
+      root.querySelector<HTMLElement>("[data-chart-refused]")!.dataset
+        .chartRefused,
+    ).toBe("chart-no-dataset");
+    expect(root.querySelector("[data-checked]")!.textContent).toContain(
+      "(not drawn: chart-no-dataset)",
+    );
+  });
+
+  it("a bundle that did not verify draws no chart and says why", async () => {
+    const tampered = structuredClone(bundle);
+    const disclosures = tampered.disclosures as Record<string, Obj>;
+    const first = Object.keys(disclosures)[0]!;
+    ((disclosures[first]!.agent_input as Obj).statement as Obj).tampered = true;
+    const root = document.createElement("div");
+    document.body.append(root);
+    await renderEvidenceGraph(tampered, root, undefined, { charts });
+    root.remove();
+    expect(
+      root.querySelector("figure.cv-chart, [data-chart-refused]"),
+    ).toBeNull();
+    expect(root.querySelector("[data-checked]")!.textContent).toContain(
+      "(not drawn: the bundle did not verify)",
+    );
+  });
+});
+
 describe("the builder", () => {
   const runtime = {
     code: readFileSync(

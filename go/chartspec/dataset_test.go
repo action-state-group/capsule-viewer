@@ -62,7 +62,7 @@ type fixture struct {
 // withheld, 4 carried inline as evidence_record_header.
 func newFixture(t *testing.T) *fixture {
 	f := &fixture{disclosures: m{}}
-	f.plan = m{"ir_version": "evidence-plan-ir-v0", "nodes": []interface{}{
+	f.plan = m{"header": m{"ir_version": "evidence-plan-ir-v0"}, "nodes": []interface{}{
 		m{"id": "w", "operator": "traditional.window", "params": m{"field": "event_time_claim", "from": "2026-09-01", "to": "2026-09-30"}},
 	}}
 	var rows []interface{}

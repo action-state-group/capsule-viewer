@@ -32,6 +32,7 @@ export const CHART_CSS = `
 .cv-chart svg{display:block;width:100%;height:auto;max-height:280px}
 .cv-chart figcaption{font-size:13px;color:var(--slate);margin:6px 0 8px}
 .cv-chart .cv-chart-derived{display:inline-block;margin:0 0 8px;padding:2px 8px;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-size:12px}
+.cv-chart .cv-chart-no-runs{margin:0 0 8px;font-size:13px;color:var(--slate)}
 .cv-chart .cv-chart-table{overflow-x:auto}
 .cv-chart table{border-collapse:collapse;font-size:13px;min-width:100%}
 .cv-chart caption{text-align:left;font-weight:600;margin:0 0 4px}
@@ -131,16 +132,20 @@ function drawSvg(chart: CheckedChart, index: number): SVGElement {
   const values = chart.groups.flatMap((g) =>
     g.value === undefined ? [] : [g.value],
   );
-  const max = Math.max(1, ...values);
-  const yAt = (v: number): number => PAD.top + plotH - (plotH * v) / max;
+  // The value axis spans 0 and every value: a sum can be negative.
+  const min = Math.min(0, ...values);
+  const max = Math.max(min === 0 ? 1 : 0, ...values);
+  const yAt = (v: number): number =>
+    PAD.top + (plotH * (max - v)) / (max - min);
+  const zero = yAt(0);
 
-  // Axes: the baseline, 0 and the largest value, and the field paths.
+  // Axes: the zero line, 0 and the extreme values, and the field paths.
   root.append(
     svg("line", {
       x1: PAD.left,
-      y1: PAD.top + plotH,
+      y1: zero,
       x2: W - PAD.right,
-      y2: PAD.top + plotH,
+      y2: zero,
       stroke: "#6B7482",
     }),
   );
@@ -162,12 +167,19 @@ function drawSvg(chart: CheckedChart, index: number): SVGElement {
     root.append(t);
   };
   if (chart.mark !== "rect") {
-    label("0", { x: PAD.left - 4, y: PAD.top + plotH, "text-anchor": "end" });
-    label(String(max), {
-      x: PAD.left - 4,
-      y: PAD.top + 10,
-      "text-anchor": "end",
-    });
+    label("0", { x: PAD.left - 4, y: zero + 4, "text-anchor": "end" });
+    if (max !== 0)
+      label(String(max), {
+        x: PAD.left - 4,
+        y: PAD.top + 10,
+        "text-anchor": "end",
+      });
+    if (min !== 0)
+      label(String(min), {
+        x: PAD.left - 4,
+        y: PAD.top + plotH,
+        "text-anchor": "end",
+      });
   }
   const every = Math.max(1, Math.ceil(xs.length / 8));
   xs.forEach((x, i) => {
@@ -222,7 +234,10 @@ function drawSvg(chart: CheckedChart, index: number): SVGElement {
           width: Math.max(1, band - 2),
           height: Math.max(1, rowH - 2),
           fill: SERIES[0]!,
-          "fill-opacity": (0.08 + (0.92 * g.value) / max).toFixed(3),
+          "fill-opacity": (
+            0.08 +
+            (0.92 * (g.value - min)) / (max - min)
+          ).toFixed(3),
         }),
       );
     }
@@ -243,9 +258,9 @@ function drawSvg(chart: CheckedChart, index: number): SVGElement {
         root.append(
           svg("rect", {
             x: xAt(g.key.x) + sub * k + 1,
-            y: yAt(g.value),
+            y: Math.min(yAt(g.value), zero),
             width: Math.max(1, sub - 2),
-            height: PAD.top + plotH - yAt(g.value),
+            height: Math.abs(zero - yAt(g.value)),
             fill: colour,
           }),
         );
@@ -358,6 +373,13 @@ export function renderChart(
       : `${population} · ${w.t("chart.window", { from: chart.window.from, to: chart.window.to })}`;
   figure.append(caption);
   figure.append(el("p", "cv-chart-derived", w.t("chart.derived")));
+  // A time axis that cannot say "not run" says so: a unit without rows reads
+  // 0 whether or not anything ran (a plan with no window node, or several).
+  if (chart.temporal !== undefined && !chart.runs) {
+    const note = el("p", "cv-chart-no-runs", w.t("chart.no_runs"));
+    note.dataset.chartNoRuns = "";
+    figure.append(note);
+  }
 
   const wrap = el("div", "cv-chart-table");
   const table = el("table");

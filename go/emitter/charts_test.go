@@ -33,7 +33,7 @@ func sealedRecord(t *testing.T, id string, output interface{}) jsonObject {
 // members and digests DatasetOf reads.
 func chartBundle(t *testing.T) jsonObject {
 	header := jsonObject{"seq": json.Number("1"), "record_type": "case_record"}
-	plan := jsonObject{"ir_version": "evidence-plan-ir-v0", "nodes": []interface{}{}}
+	plan := jsonObject{"header": jsonObject{"ir_version": "evidence-plan-ir-v0"}, "nodes": []interface{}{}}
 	dataset := jsonObject{"dataset_version": "evidence-dataset-v0", "plan_ref": digestRefOf(t, plan), "rows": []interface{}{
 		jsonObject{"seq": json.Number("1"), "record_type": "case_record", "digest_alg": "SHA-256", "digest": digestRefOf(t, header)["digest"]},
 	}}

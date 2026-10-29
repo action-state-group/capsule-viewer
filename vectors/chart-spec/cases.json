@@ -5271,6 +5271,691 @@
     }
   },
   {
+    "name": "neg-fraction-in-filter",
+    "base": "pos-bar-cases-by-day",
+    "note": "A fraction in a filter: a spec holds integers only (JCS has no form for a fraction, and no header holds one).",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "dataset"
+      },
+      "mark": "bar",
+      "transform": [
+        {
+          "filter": {
+            "field": "event_time_claim",
+            "range": [
+              {
+                "year": 2026,
+                "month": 9,
+                "date": 1,
+                "utc": true
+              },
+              {
+                "year": 2026,
+                "month": 9,
+                "date": 30,
+                "utc": true
+              }
+            ],
+            "timeUnit": "utcyearmonthdate"
+          }
+        },
+        {
+          "filter": {
+            "field": "record_type",
+            "equal": "case_record"
+          }
+        },
+        {
+          "filter": {
+            "field": "statement.score",
+            "equal": 1.5
+          }
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "event_time_claim",
+          "type": "temporal",
+          "timeUnit": "utcyearmonthdate"
+        },
+        "y": {
+          "aggregate": "count",
+          "type": "quantitative"
+        }
+      },
+      "usermeta": {
+        "capsule": {
+          "population": {
+            "count": 36
+          },
+          "window": {
+            "field": "event_time_claim",
+            "from": "2026-09-01",
+            "to": "2026-09-30"
+          },
+          "runs": {
+            "filter": {
+              "field": "record_type",
+              "equal": "daily_run"
+            },
+            "field": "event_time_claim"
+          },
+          "values": [
+            {
+              "x": "2026-09-01",
+              "y": 1
+            },
+            {
+              "x": "2026-09-02",
+              "y": 1
+            },
+            {
+              "x": "2026-09-03",
+              "y": 2
+            },
+            {
+              "x": "2026-09-04",
+              "y": 1
+            },
+            {
+              "x": "2026-09-05",
+              "y": 1
+            },
+            {
+              "x": "2026-09-06",
+              "y": 2
+            },
+            {
+              "x": "2026-09-07",
+              "y": 1
+            },
+            {
+              "x": "2026-09-08",
+              "y": 1
+            },
+            {
+              "x": "2026-09-09",
+              "y": 2
+            },
+            {
+              "x": "2026-09-10",
+              "not_run": true
+            },
+            {
+              "x": "2026-09-11",
+              "y": 1
+            },
+            {
+              "x": "2026-09-12",
+              "y": 2
+            },
+            {
+              "x": "2026-09-13",
+              "y": 1
+            },
+            {
+              "x": "2026-09-14",
+              "y": 1
+            },
+            {
+              "x": "2026-09-15",
+              "y": 0
+            },
+            {
+              "x": "2026-09-16",
+              "y": 1
+            },
+            {
+              "x": "2026-09-17",
+              "y": 1
+            },
+            {
+              "x": "2026-09-18",
+              "y": 2
+            },
+            {
+              "x": "2026-09-19",
+              "y": 1
+            },
+            {
+              "x": "2026-09-20",
+              "not_run": true
+            },
+            {
+              "x": "2026-09-21",
+              "y": 2
+            },
+            {
+              "x": "2026-09-22",
+              "y": 1
+            },
+            {
+              "x": "2026-09-23",
+              "y": 1
+            },
+            {
+              "x": "2026-09-24",
+              "y": 2
+            },
+            {
+              "x": "2026-09-25",
+              "y": 1
+            },
+            {
+              "x": "2026-09-26",
+              "y": 1
+            },
+            {
+              "x": "2026-09-27",
+              "y": 2
+            },
+            {
+              "x": "2026-09-28",
+              "y": 1
+            },
+            {
+              "x": "2026-09-29",
+              "y": 1
+            },
+            {
+              "x": "2026-09-30",
+              "y": 2
+            }
+          ]
+        }
+      }
+    },
+    "dataset": "book",
+    "expect": {
+      "reason": "chart-unsupported-member"
+    }
+  },
+  {
+    "name": "neg-unsafe-integer-in-values",
+    "base": "pos-bar-by-outcome",
+    "note": "An integer beyond 2^53 in a stated value.",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "dataset"
+      },
+      "mark": "bar",
+      "transform": [
+        {
+          "filter": {
+            "field": "record_type",
+            "equal": "case_record"
+          }
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "statement.outcome",
+          "type": "nominal",
+          "title": "ignored"
+        },
+        "y": {
+          "aggregate": "count",
+          "type": "quantitative"
+        }
+      },
+      "usermeta": {
+        "capsule": {
+          "population": {
+            "count": 36
+          },
+          "values": [
+            {
+              "x": "fail",
+              "y": 9007199254740992
+            },
+            {
+              "x": "pass",
+              "y": 28
+            }
+          ]
+        }
+      }
+    },
+    "dataset": "book",
+    "expect": {
+      "reason": "chart-unsupported-member"
+    }
+  },
+  {
+    "name": "neg-time-axis-not-x",
+    "base": "pos-rect-outcome-by-day",
+    "note": "A rect whose time axis is y: only x can be temporal, since not run is drawn as a column of x.",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "dataset"
+      },
+      "mark": "rect",
+      "transform": [
+        {
+          "filter": {
+            "field": "event_time_claim",
+            "range": [
+              {
+                "year": 2026,
+                "month": 9,
+                "date": 1,
+                "utc": true
+              },
+              {
+                "year": 2026,
+                "month": 9,
+                "date": 30,
+                "utc": true
+              }
+            ],
+            "timeUnit": "utcyearmonthdate"
+          }
+        },
+        {
+          "filter": {
+            "field": "record_type",
+            "equal": "case_record"
+          }
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "statement.outcome",
+          "type": "nominal"
+        },
+        "y": {
+          "field": "event_time_claim",
+          "type": "temporal",
+          "timeUnit": "utcyearmonthdate"
+        },
+        "color": {
+          "aggregate": "count",
+          "type": "quantitative"
+        }
+      },
+      "usermeta": {
+        "capsule": {
+          "population": {
+            "count": 36
+          },
+          "window": {
+            "field": "event_time_claim",
+            "from": "2026-09-01",
+            "to": "2026-09-30"
+          },
+          "runs": {
+            "filter": {
+              "field": "record_type",
+              "equal": "daily_run"
+            },
+            "field": "event_time_claim"
+          },
+          "values": [
+            {
+              "x": "2026-09-01",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-01",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-02",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-02",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-03",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-03",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-04",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-04",
+              "y": "pass",
+              "color": 0
+            },
+            {
+              "x": "2026-09-05",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-05",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-06",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-06",
+              "y": "pass",
+              "color": 2
+            },
+            {
+              "x": "2026-09-07",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-07",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-08",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-08",
+              "y": "pass",
+              "color": 0
+            },
+            {
+              "x": "2026-09-09",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-09",
+              "y": "pass",
+              "color": 2
+            },
+            {
+              "x": "2026-09-10",
+              "y": "fail",
+              "not_run": true
+            },
+            {
+              "x": "2026-09-10",
+              "y": "pass",
+              "not_run": true
+            },
+            {
+              "x": "2026-09-11",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-11",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-12",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-12",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-13",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-13",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-14",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-14",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-15",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-15",
+              "y": "pass",
+              "color": 0
+            },
+            {
+              "x": "2026-09-16",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-16",
+              "y": "pass",
+              "color": 0
+            },
+            {
+              "x": "2026-09-17",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-17",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-18",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-18",
+              "y": "pass",
+              "color": 2
+            },
+            {
+              "x": "2026-09-19",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-19",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-20",
+              "y": "fail",
+              "not_run": true
+            },
+            {
+              "x": "2026-09-20",
+              "y": "pass",
+              "not_run": true
+            },
+            {
+              "x": "2026-09-21",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-21",
+              "y": "pass",
+              "color": 2
+            },
+            {
+              "x": "2026-09-22",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-22",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-23",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-23",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-24",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-24",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-25",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-25",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-26",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-26",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-27",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-27",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-28",
+              "y": "fail",
+              "color": 1
+            },
+            {
+              "x": "2026-09-28",
+              "y": "pass",
+              "color": 0
+            },
+            {
+              "x": "2026-09-29",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-29",
+              "y": "pass",
+              "color": 1
+            },
+            {
+              "x": "2026-09-30",
+              "y": "fail",
+              "color": 0
+            },
+            {
+              "x": "2026-09-30",
+              "y": "pass",
+              "color": 2
+            }
+          ]
+        }
+      }
+    },
+    "dataset": "book",
+    "expect": {
+      "reason": "chart-unsupported-member"
+    }
+  },
+  {
+    "name": "neg-quantitative-key",
+    "base": "pos-bar-by-outcome",
+    "note": "A quantitative x: keys are drawn in bands, so only the aggregate is quantitative.",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": {
+        "name": "dataset"
+      },
+      "mark": "bar",
+      "transform": [
+        {
+          "filter": {
+            "field": "record_type",
+            "equal": "case_record"
+          }
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "statement.score",
+          "type": "quantitative"
+        },
+        "y": {
+          "aggregate": "count",
+          "type": "quantitative"
+        }
+      },
+      "usermeta": {
+        "capsule": {
+          "population": {
+            "count": 36
+          },
+          "values": [
+            {
+              "x": "fail",
+              "y": 8
+            },
+            {
+              "x": "pass",
+              "y": 28
+            }
+          ]
+        }
+      }
+    },
+    "dataset": "book",
+    "expect": {
+      "reason": "chart-unsupported-member"
+    }
+  },
+  {
     "name": "neg-no-aggregate",
     "base": "pos-bar-by-outcome",
     "note": "No channel aggregates.",
@@ -8139,7 +8824,7 @@
   {
     "name": "neg-group-listed-twice",
     "base": "pos-bar-by-outcome",
-    "note": "A group listed twice.",
+    "note": "A group listed twice in place of another, so the count of groups still matches.",
     "spec": {
       "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
       "data": {
@@ -8174,10 +8859,6 @@
             {
               "x": "fail",
               "y": 8
-            },
-            {
-              "x": "pass",
-              "y": 28
             },
             {
               "x": "fail",

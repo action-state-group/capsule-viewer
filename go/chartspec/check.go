@@ -383,6 +383,15 @@ func check(value interface{}, dataset *Dataset) *Chart {
 		d := domains[i]
 		sort.SliceStable(d, func(a, b int) bool { return compareScalar(d[a], d[b]) })
 	}
+	// The stated values list every group, so a domain of another size
+	// refuses before it is enumerated.
+	size := 1
+	for _, d := range domains {
+		size *= len(d)
+	}
+	if size != len(st.values) {
+		refuse(ReasonAggregateMismatch, fmt.Sprintf("the chart's domain has %d groups; the statement lists %d", size, len(st.values)), "/usermeta/capsule/values")
+	}
 	rowsOf := map[string][]*Row{}
 	for _, row := range selected {
 		text := keyText(keys, keyOf[row])

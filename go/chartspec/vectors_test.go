@@ -123,3 +123,52 @@ func TestVectors(t *testing.T) {
 	}
 	assert.Len(t, reasons, 13, "every refusal reason has a vector")
 }
+
+// TestGoldenBundleMatchesTheBookVectors resolves the TypeScript golden's
+// committed bundle (ts/test/testdata/charts/book.bundle.json) with DatasetOf
+// and checks its specs (specs.json, the "book" positives) against it: the
+// Go reader must find the plan, the dataset and every row the TypeScript
+// reader finds, so both draw the same values.
+func TestGoldenBundleMatchesTheBookVectors(t *testing.T) {
+	read := func(name string, into interface{}) {
+		raw, err := os.ReadFile(filepath.Join("..", "..", "ts", "test", "testdata", "charts", name))
+		require.NoError(t, err)
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.UseNumber()
+		require.NoError(t, decoder.Decode(into))
+	}
+	var bundle map[string]interface{}
+	var specs []interface{}
+	read("book.bundle.json", &bundle)
+	read("specs.json", &specs)
+	dataset, err := DatasetOf(bundle)
+	require.NoError(t, err)
+	require.NotNil(t, dataset, "DatasetOf found no plan or dataset in the golden bundle")
+	var datasets map[string]vectorDataset
+	decodeFile(t, "datasets.json", &datasets)
+	require.Len(t, dataset.Rows, len(datasets["book"].Rows))
+	for i, row := range dataset.Rows {
+		require.NotNil(t, row.Header, "row %d is not disclosed", i)
+		assert.Equal(t, datasets["book"].Rows[i].Digest, row.Digest)
+	}
+	var cases []vector
+	decodeFile(t, "cases.json", &cases)
+	byName := map[string]vector{}
+	for _, c := range cases {
+		if c.Expect["valid"] == true && c.Dataset != nil && *c.Dataset == "book" {
+			byName[jsJSON(plain(c.Spec))] = c
+		}
+	}
+	require.NotEmpty(t, specs)
+	for i, spec := range specs {
+		c, ok := byName[jsJSON(plain(spec))]
+		require.True(t, ok, "spec %d is no vector", i)
+		chart, err := Check(spec, dataset)
+		require.NoError(t, err, c.Name)
+		values := []interface{}{}
+		for _, g := range chart.Values() {
+			values = append(values, map[string]interface{}(g))
+		}
+		assert.Equal(t, plain(c.Expect["values"]), plain(values), c.Name)
+	}
+}

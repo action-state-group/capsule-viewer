@@ -519,9 +519,40 @@ function readStatement(value: unknown, at: string): Statement {
   return out;
 }
 
+/**
+ * The first number in a spec that is not a safe integer, by its pointer. A
+ * spec is hashed (JCS) for the page and carried in its render options, and
+ * JCS here has no form for a fraction or an unsafe integer; a record header
+ * holds none either, so no such number can match the data.
+ */
+function inexactNumber(value: unknown, at: string): string | undefined {
+  if (typeof value === "number")
+    return Number.isSafeInteger(value) ? undefined : at || "/";
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      const found = inexactNumber(value[i], pointerOf(at, i));
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  if (isObj(value))
+    for (const [k, v] of Object.entries(value)) {
+      const found = inexactNumber(v, pointerOf(at, k));
+      if (found !== undefined) return found;
+    }
+  return undefined;
+}
+
 /** Read a spec in the closed subset, or refuse it (structure only; no data is read). */
 export function readChartSpec(value: unknown): ChartSpec {
   need(isObj(value), undefined, "", "a Vega-Lite object");
+  const inexact = inexactNumber(value, "");
+  if (inexact !== undefined)
+    refuse(
+      "chart-unsupported-member",
+      `${inexact} is a fraction or an integer beyond 2^53; a spec holds integers only`,
+      inexact,
+    );
   const spec = value as Obj;
   onlyKeys(
     spec,
@@ -620,12 +651,23 @@ export function readChartSpec(value: unknown): ChartSpec {
     );
   const keys = CHANNELS.filter((c) => channels[c] !== undefined && c !== want);
   const temporals = keys.filter((c) => channels[c]!.type === "temporal");
-  if (temporals.length > 1)
-    refuse(
-      "chart-unsupported-member",
-      "a chart has at most one temporal channel",
-      pointerOf("/encoding", temporals[1]!),
-    );
+  // A key is a category or a time unit: the renderer places keys in bands,
+  // so a quantitative key would draw its distances wrong.
+  for (const c of keys)
+    if (channels[c]!.type === "quantitative")
+      refuse(
+        "chart-unsupported-member",
+        `${c} is a key, so it is nominal, ordinal or temporal; only the aggregate is quantitative`,
+        pointerOf(pointerOf("/encoding", c), "type"),
+      );
+  // The time axis is x: "not run" is drawn as a column of x.
+  for (const c of temporals)
+    if (c !== "x")
+      refuse(
+        "chart-unsupported-member",
+        "only x can be temporal",
+        pointerOf(pointerOf("/encoding", c), "type"),
+      );
   return {
     mark,
     transform,
@@ -928,7 +970,9 @@ export function checkChart(
       const day = timestamp(row, runs!.field);
       if (day < window!.from || day > window!.to) continue;
       const u = unitOf(day, unit);
-      runRowsOf.set(u, [...(runRowsOf.get(u) ?? []), row]);
+      const list = runRowsOf.get(u);
+      if (list === undefined) runRowsOf.set(u, [row]);
+      else list.push(row);
     }
   }
 
@@ -948,13 +992,27 @@ export function checkChart(
           compareScalar,
         ),
   );
+  // The stated values list every group, so a domain of another size
+  // refuses before it is enumerated: a spec can't make the check build a
+  // domain far larger than itself.
+  const size = domains.reduce((n, d) => n * d.length, 1);
+  if (size !== statement.values.length)
+    refuse(
+      "chart-aggregate-mismatch",
+      `the chart's domain has ${size} groups; the statement lists ${statement.values.length}`,
+      "/usermeta/capsule/values",
+    );
+  const rowsByKey = new Map<string, ChartRow[]>();
+  for (const row of selected) {
+    const text = keyText(keys, keyOf.get(row)!);
+    const list = rowsByKey.get(text);
+    if (list === undefined) rowsByKey.set(text, [row]);
+    else list.push(row);
+  }
   const groups: ChartGroup[] = [];
   const product = (i: number, key: Partial<Record<ChannelName, Scalar>>) => {
     if (i === keys.length) {
-      const text = keyText(keys, key);
-      const counted = selected.filter(
-        (row) => keyText(keys, keyOf.get(row)!) === text,
-      );
+      const counted = rowsByKey.get(keyText(keys, key)) ?? [];
       const unit = temporal === undefined ? undefined : key[temporal];
       const runRows =
         unit === undefined ? [] : (runRowsOf.get(unit as string) ?? []);

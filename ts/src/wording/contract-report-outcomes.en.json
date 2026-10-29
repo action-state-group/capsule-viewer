@@ -401,6 +401,7 @@
     "chart.window": "{from} to {to} (UTC)",
     "chart.derived": "Derived from this report's records, not evidence itself",
     "chart.not_run": "Not run",
+    "chart.no_runs": "This report's plan does not say which days ran, so a day with no records reads 0",
     "chart.table.caption": "The values in this chart",
     "chart.count": "Count",
     "chart.sum": "Sum of",

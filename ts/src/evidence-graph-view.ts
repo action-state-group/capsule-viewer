@@ -51,6 +51,8 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import {
   digestCapability,
+  JcsFloatError,
+  JcsUnsafeIntegerError,
   jsonDigest,
 } from "@action-state-group/agent-action-capsule";
 import { chartDatasetOf } from "./chart-dataset.js";
@@ -2565,7 +2567,19 @@ async function chartDigestsOf(
   charts: readonly unknown[] | undefined,
 ): Promise<ChartDigest[]> {
   const out: ChartDigest[] = [];
-  for (const spec of charts ?? []) out.push({ sha256: await jsonDigest(spec) });
+  for (const spec of charts ?? []) {
+    try {
+      out.push({ sha256: await jsonDigest(spec) });
+    } catch (err) {
+      // A number JCS has no form for: the checker refuses that spec, and the
+      // page goes on with the rest.
+      if (
+        !(err instanceof JcsFloatError || err instanceof JcsUnsafeIntegerError)
+      )
+        throw err;
+      out.push({ sha256: "uncomputable" });
+    }
+  }
   return out;
 }
 
@@ -2577,7 +2591,7 @@ async function chartDigestsOf(
  */
 async function drawCharts(
   context: VerifiedBundleContext,
-  result: ResultRoot,
+  result: ResultRoot | undefined,
   charts: readonly unknown[],
   digests: ChartDigest[],
   words: Words,
@@ -2585,7 +2599,8 @@ async function drawCharts(
   let dataset: ChartDataset | undefined;
   let invalid: ChartRefusal | undefined;
   try {
-    dataset = await chartDatasetOf(context, result);
+    dataset =
+      result === undefined ? undefined : await chartDatasetOf(context, result);
   } catch (err) {
     if (!(err instanceof ChartRefusal)) throw err;
     invalid = err;
@@ -3194,24 +3209,32 @@ async function renderVerifiedContext(
   let strip: CoreStripModel | undefined;
   let chartsNode: HTMLElement | undefined;
   const chartDigests = await chartDigestsOf(options.charts);
+  const charted = options.charts !== undefined && options.charts.length > 0;
   if (verified) {
     const result = await resultRootOf(context);
-    if (result !== undefined) {
-      const grouping = contractReportGroupingOf(bundle) ?? "lines";
-      const words = await contractReportWords(grouping, options.wording, {
-        singleContract: citesOneContract(result),
-      });
-      strip = await coreStripModel(result, words);
-      if (options.charts !== undefined && options.charts.length > 0)
-        chartsNode = await drawCharts(
-          context,
-          result,
-          options.charts,
-          chartDigests,
-          words,
-        );
-    }
-  }
+    const grouping = contractReportGroupingOf(bundle) ?? "lines";
+    const words =
+      result === undefined && !charted
+        ? undefined
+        : await contractReportWords(grouping, options.wording, {
+            singleContract: result !== undefined && citesOneContract(result),
+          });
+    if (result !== undefined) strip = await coreStripModel(result, words!);
+    // With no Result there is no dataset: each chart shows its notice
+    // (chart-no-dataset), never nothing.
+    if (charted)
+      chartsNode = await drawCharts(
+        context,
+        result,
+        options.charts!,
+        chartDigests,
+        words!,
+      );
+  } else
+    // A failed bundle has no L1 (contract I1); the verification page says
+    // why no chart was drawn.
+    for (const digest of chartDigests)
+      digest.refused = "the bundle did not verify";
 
   // The host's three regions, in order after the banner and the header
   // (presentation contract section 9.1). L2 opens with the core's

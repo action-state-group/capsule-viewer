@@ -127,7 +127,13 @@ func (b bundleView) documentsByDigest() map[string]obj {
 	found := map[string]obj{}
 	consider := func(value interface{}) {
 		m, ok := isObj(value)
-		if !ok || (!has(m, "dataset_version") && !has(m, "ir_version")) {
+		if !ok {
+			return
+		}
+		// Only a document that names itself a dataset or a plan is hashed; a
+		// plan names its ir_version in its header (Plan IR §2).
+		header, headed := isObj(m["header"])
+		if !has(m, "dataset_version") && !(headed && has(header, "ir_version")) {
 			return
 		}
 		if digest, ok := jsonDigest(m); ok {

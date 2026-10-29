@@ -6,6 +6,7 @@ import {
   disclosureOf,
   isResultRoot,
   JcsFloatError,
+  JcsUnsafeIntegerError,
   jsonDigest,
   type ResultRoot,
   type VerifiedBundleContext,
@@ -81,13 +82,14 @@ function resultDocument(
 
 /**
  * The JCS SHA-256 of a value, or undefined for one with no canonical form
- * (a fraction, which this JCS refuses): no plan, dataset or row can name it.
+ * (a fraction or an unsafe integer, which this JCS refuses): no plan, dataset or row can name it.
  */
 async function digestOf(value: unknown): Promise<string | undefined> {
   try {
     return await jsonDigest(value);
   } catch (err) {
-    if (err instanceof JcsFloatError) return undefined;
+    if (err instanceof JcsFloatError || err instanceof JcsUnsafeIntegerError)
+      return undefined;
     throw err;
   }
 }

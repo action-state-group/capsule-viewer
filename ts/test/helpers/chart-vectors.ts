@@ -529,6 +529,49 @@ export async function chartVectors(): Promise<{
     },
   );
   neg(
+    "neg-fraction-in-filter",
+    "pos-bar-cases-by-day",
+    "A fraction in a filter: a spec holds integers only (JCS has no form for a fraction, and no header holds one).",
+    "chart-unsupported-member",
+    (s) => {
+      (s.transform as unknown[]).push({
+        filter: { field: "statement.score", equal: 1.5 },
+      });
+      return s;
+    },
+  );
+  neg(
+    "neg-unsafe-integer-in-values",
+    "pos-bar-by-outcome",
+    "An integer beyond 2^53 in a stated value.",
+    "chart-unsupported-member",
+    (s) => {
+      (capsuleOf(s).values as Obj[])[0]!.y = 2 ** 53;
+      return s;
+    },
+  );
+  neg(
+    "neg-time-axis-not-x",
+    "pos-rect-outcome-by-day",
+    "A rect whose time axis is y: only x can be temporal, since not run is drawn as a column of x.",
+    "chart-unsupported-member",
+    (s) => {
+      const e = enc(s);
+      [e.x, e.y] = [e.y, e.x];
+      return s;
+    },
+  );
+  neg(
+    "neg-quantitative-key",
+    "pos-bar-by-outcome",
+    "A quantitative x: keys are drawn in bands, so only the aggregate is quantitative.",
+    "chart-unsupported-member",
+    (s) => {
+      enc(s).x = { field: "statement.score", type: "quantitative" };
+      return s;
+    },
+  );
+  neg(
     "neg-no-aggregate",
     "pos-bar-by-outcome",
     "No channel aggregates.",
@@ -706,11 +749,11 @@ export async function chartVectors(): Promise<{
   neg(
     "neg-group-listed-twice",
     "pos-bar-by-outcome",
-    "A group listed twice.",
+    "A group listed twice in place of another, so the count of groups still matches.",
     "chart-aggregate-mismatch",
     (s) => {
       const values = capsuleOf(s).values as Obj[];
-      values.push({ ...values[0] });
+      values[1] = { ...values[0] };
       return s;
     },
   );
