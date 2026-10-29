@@ -32,8 +32,8 @@
     "emitter:iife": "node scripts/build-iife.mjs"
   },
   "dependencies": {
-    "@action-state-group/agent-action-capsule": "0.8.0",
-    "@action-state-group/cll": "0.2.1"
+    "@action-state-group/agent-action-capsule": "0.9.0",
+    "@action-state-group/cll": "0.3.0"
   },
   "devDependencies": {
     "@types/jsdom": "30.0.0",

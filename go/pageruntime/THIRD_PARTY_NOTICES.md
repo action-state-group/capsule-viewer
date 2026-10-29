@@ -9,8 +9,8 @@ embeds the file carries these components.
 | Component | Version | License | Source |
 |---|---|---|---|
 | capsule-viewer `ts/src` (the page code: views, presentation mount, report cards) | `pageruntime.Commit` | Apache-2.0 AND BSD-3-Clause | github.com/action-state-group/capsule-viewer |
-| @action-state-group/agent-action-capsule (the verifier) | 0.8.0 | BSD-3-Clause | github.com/action-state-group/agent-action-capsule |
-| @action-state-group/cll | 0.2.1 | Apache-2.0 | github.com/action-state-group/cll-ts |
+| @action-state-group/agent-action-capsule (the verifier) | 0.9.0 | BSD-3-Clause | github.com/action-state-group/agent-action-capsule |
+| @action-state-group/cll | 0.3.0 | Apache-2.0 | github.com/action-state-group/cll-ts |
 | cborg | 6.1.2 | Apache-2.0 | github.com/rvagg/cborg |
 
 ## capsule-viewer (Apache-2.0 AND BSD-3-Clause)
