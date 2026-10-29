@@ -20,13 +20,17 @@ type Obj = Record<string, unknown>;
 
 const alias = (seq: number): string => `r-${seq}`;
 
-export async function chartBundleSource(): Promise<{
+export async function chartBundleSource(
+  book: { headers: Obj[]; recordTypes?: readonly string[] } = {
+    headers: bookHeaders(),
+  },
+): Promise<{
   source: Obj;
   plan: Obj;
   dataset: Obj;
 }> {
-  const headers = bookHeaders();
-  const plan = datasetPlan(headers.length);
+  const headers = book.headers;
+  const plan = datasetPlan(headers.length, undefined, [], book.recordTypes);
   const { dataset } = await datasetOf(plan, headers);
   const next = headers.length + 1;
   const own = (seq: number, recordType: string, statement: Obj): Obj => ({

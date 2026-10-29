@@ -34,7 +34,14 @@ export type ChartRefusalReason =
   | "chart-runs-field-mismatch"
   | "chart-runs-unsealed"
   | "chart-population-mismatch"
-  | "chart-aggregate-mismatch";
+  | "chart-aggregate-mismatch"
+  // A calendar or by-period view's own rules (report-view.ts).
+  | "view-unsupported-member"
+  | "view-chart-shape"
+  | "view-runs-unsealed"
+  | "view-runs-mismatch"
+  | "view-window-not-months"
+  | "view-overlap";
 
 /** A refused chart: its reason, the JSON pointer it names (if any) and why. */
 export class ChartRefusal extends Error {
@@ -117,6 +124,15 @@ export interface CheckedChart {
   readonly window?: ChartWindow;
   /** True only when the chart can say "not run": a temporal chart with `runs` on a one-window plan. */
   readonly runs: boolean;
+  /**
+   * On a temporal chart, every unit of the window in order and whether it was
+   * not run. A chart whose other key channel has no values after `transform`
+   * has no groups, yet its units still say which days ran (report-view.ts).
+   */
+  readonly units?: readonly {
+    readonly unit: string;
+    readonly notRun: boolean;
+  }[];
   readonly groups: readonly ChartGroup[];
 }
 
@@ -773,7 +789,7 @@ const sameWindow = (a: ChartWindow, b: ChartWindow): boolean =>
 const describe = (w: ChartWindow): string => `${w.field} ${w.from} to ${w.to}`;
 
 /** Compare two key values: false before true, numbers by value, strings by code point. */
-function compareScalar(a: Scalar, b: Scalar): number {
+export function compareScalar(a: Scalar, b: Scalar): number {
   if (typeof a === "number" && typeof b === "number") return a - b;
   if (typeof a === "boolean" && typeof b === "boolean")
     return Number(a) - Number(b);
@@ -1091,6 +1107,14 @@ export function checkChart(
     population: selected.length,
     ...(window === undefined ? {} : { window }),
     runs: drawsRuns,
+    ...(temporal === undefined
+      ? {}
+      : {
+          units: (units as string[]).map((unit) => ({
+            unit,
+            notRun: drawsRuns && (runRowsOf.get(unit) ?? []).length === 0,
+          })),
+        }),
     groups,
   };
 }

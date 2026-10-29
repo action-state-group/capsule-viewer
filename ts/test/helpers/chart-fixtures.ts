@@ -93,6 +93,7 @@ export function datasetPlan(
   throughSeq: number,
   windows: readonly WindowParams[] = [{ field: "event_time_claim", ...WINDOW }],
   filters: readonly Obj[][] = [],
+  recordTypes: readonly string[] = [RUN_TYPE, CASE_TYPE],
 ): Obj {
   const node = (
     id: string,
@@ -113,7 +114,7 @@ export function datasetPlan(
     node("population", "traditional.population", {
       book_id: BOOK_ID,
       through_seq: throughSeq,
-      record_types: [RUN_TYPE, CASE_TYPE],
+      record_types: [...recordTypes],
     }),
   ];
   windows.forEach((w, i) =>

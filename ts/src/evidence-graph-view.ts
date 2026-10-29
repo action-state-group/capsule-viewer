@@ -58,6 +58,8 @@ import {
 import { chartDatasetOf } from "./chart-dataset.js";
 import { ChartRefusal, checkChart, type ChartDataset } from "./chart-spec.js";
 import { renderChart, renderChartRefused, renderCharts } from "./chart-view.js";
+import { checkView, isView } from "./report-view.js";
+import { renderView } from "./report-view-render.js";
 import {
   citesOneContract,
   renderContractReport,
@@ -2608,12 +2610,9 @@ async function drawCharts(
   const parts = charts.map((spec, i) => {
     try {
       if (invalid !== undefined) throw invalid;
-      return renderChart(
-        checkChart(spec, dataset),
-        i,
-        digests[i]!.sha256,
-        words,
-      );
+      return isView(spec)
+        ? renderView(checkView(spec, dataset), i, digests[i]!.sha256, words)
+        : renderChart(checkChart(spec, dataset), i, digests[i]!.sha256, words);
     } catch (err) {
       if (!(err instanceof ChartRefusal)) throw err;
       digests[i]!.refused = err.reason;

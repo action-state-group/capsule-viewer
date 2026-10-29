@@ -231,8 +231,9 @@ never `committed_at`.
 per bundle (the 2026-09-28 one-headline-document rule): a monthly Result's
 bundle cannot also disclose daily Results as `evidence_result` records. The
 vectors and goldens date runs by a neutral run record type (`daily_run`, as
-the AAC vectors use `example-run`). How a Terms Pack month carries its daily
-runs is open for #120 and evidencebook#107.
+the AAC vectors use `example-run`). A Terms Pack month carries its daily
+runs the same way: `daily_run` is the name (docs/design/report-views.md
+section 1), with no AAC REGISTRY entry.
 
 ## 5. Drawing, scripts off, and words
 
@@ -317,8 +318,8 @@ checked data is, so a pack cannot reword a count as something else.
 - v0 limit: a category with no rows after `transform` is not in a
   non-temporal channel's domain, so it can't show as 0. Only temporal units
   are listed whether or not they have rows.
-- #120's `calendar.not_run` reuses `chart.not_run`, since a calendar unit is a
-  run.
+- #120's calendar and by-period views reuse `chart.not_run` (a calendar unit is a
+  run); see docs/design/report-views.md.
 - Acceptance 5a: every value in the table carries Show evidence, the records
   it counts as links to the core's records section (the same shape as
   `evidenceAction`, so the core's "Cited by" lists read it back), or, for a

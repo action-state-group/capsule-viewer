@@ -705,6 +705,19 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "chart.evidence.records",
   "chart.evidence.none",
   "chart.refused",
+  // Calendar and by-period views (report-view-render.ts): the same rule.
+  "calendar.weekday.1",
+  "calendar.weekday.2",
+  "calendar.weekday.3",
+  "calendar.weekday.4",
+  "calendar.weekday.5",
+  "calendar.weekday.6",
+  "calendar.weekday.7",
+  "period.week",
+  "period.not_run_days.one",
+  "period.not_run_days.other",
+  "view.unplaced.one",
+  "view.unplaced.other",
   // The Outcomes report.
   "lines.tier.unknown",
   "lines.wording.unstated",
@@ -1233,8 +1246,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "e74efb3684df709b0ca3ff169c12eccfe8f492be45f32bf63e54cf66574f7165",
-  groups: "28ce67152b86ae8d492ad3b01e9ba1b7d7a8d746864cdcf49c73bcbd117314f6",
+  lines: "5f72b1a7201f63d6f6519dbbcad7154e47f508d59edeaebce6a45f7306f62591",
+  groups: "3f2d1dee87d888298073be8cd0ab39e63412fa38b60492c230f17118d1a7a28a",
 });
 
 export interface Words {
