@@ -16,8 +16,8 @@ import (
 // "embedded" result): for the same bundle, runtime and settings the two
 // write the same bytes. Its bootstrap makes the call mount makes,
 // renderEvidenceGraph(bundle, element, undefined, {audience, format:
-// "embedded", depth, wording}), on the element just before the bundle. The
-// bundle travels as a JSON data element read with JSON.parse, so every
+// "embedded", depth, wording, charts}), on the element just before the
+// bundle. The bundle travels as a JSON data element read with JSON.parse, so every
 // member, "__proto__" included, stays data. The host page owns its CSP, so
 // the snippet carries none and reports the hash sources the host must allow.
 
@@ -40,9 +40,9 @@ type BuiltEmbedded struct {
 }
 
 // BuildEmbeddedHTML packages a (scoped) bundle as the embedded snippet. It
-// checks the settings as BuildOfflineHTML does, and the runtime and each
-// module against its pin. Title and ThemeCSS are the host page's, as with
-// TypeScript's mount, and are not used.
+// checks the settings and the charts as BuildOfflineHTML does, and the
+// runtime and each module against its pin. Title and ThemeCSS are the host
+// page's, as with TypeScript's mount, and are not used.
 func BuildEmbeddedHTML(value interface{}, runtime []byte, o OfflineOptions) (*BuiltEmbedded, error) {
 	bundleObject, ok := value.(map[string]interface{})
 	if !ok {
@@ -88,7 +88,11 @@ func BuildEmbeddedHTML(value interface{}, runtime []byte, o OfflineOptions) (*Bu
 	if err := checkInline("bundle JSON", bundleText, "</script"); err != nil {
 		return nil, err
 	}
-	options, err := renderOptions(o, "embedded")
+	charts, err := checkCharts(bundleObject, o.Charts)
+	if err != nil {
+		return nil, err
+	}
+	options, err := renderOptions(o, "embedded", charts)
 	if err != nil {
 		return nil, err
 	}

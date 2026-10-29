@@ -209,6 +209,7 @@ describe.skipIf(executablePath === undefined)(
         .filter((line) => line.trim() !== "" && !line.startsWith("#"))
         .map((line) => line.split(" ")[0]!);
       const inserted = new Set<string>();
+      const pages: [string, string, string][] = [];
       for (const [name, selector] of [
         ["outcome-report-bundle.json", ".oi"],
         ["compliance-bundle.json", ".cc"],
@@ -223,9 +224,20 @@ describe.skipIf(executablePath === undefined)(
             ).cases.find((c) => c.id === "agree")!.container
           : fixture(name);
         const { bundle } = await sealEvidenceBundle(input);
-        const { page: loaded, violations } = await load(
-          emitEvidenceGraphHtml(bundle, runtime),
-        );
+        pages.push([name, emitEvidenceGraphHtml(bundle, runtime), selector]);
+      }
+      // The charts' stylesheet: the committed chart bundle, drawn with its
+      // specs (capsule-viewer#82).
+      const charts = join("charts", "book.bundle.json");
+      pages.push([
+        charts,
+        emitEvidenceGraphHtml(fixture(charts), runtime, {
+          bootstrap: `renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, ${JSON.stringify({ audience: "*", charts: fixture(join("charts", "specs.json")), format: "html" })});`,
+        }),
+        "figure.cv-chart",
+      ]);
+      for (const [name, html, selector] of pages) {
+        const { page: loaded, violations } = await load(html);
         await loaded.waitForSelector(selector);
         expect(violations, name).toEqual([]);
         const styles = await loaded.evaluate(() =>

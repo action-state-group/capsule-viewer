@@ -65,7 +65,7 @@ func TestEmitCSPListsEveryInlineElement(t *testing.T) {
 	}
 	styles = append(styles, coreRuntimeStyleSources()...)
 	require.Equal(t, styles, policy["style-src"])
-	require.Len(t, coreRuntimeStyleSources(), 5)
+	require.Len(t, coreRuntimeStyleSources(), 6)
 }
 
 func TestEmitListsModuleStylePins(t *testing.T) {

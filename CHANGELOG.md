@@ -69,6 +69,27 @@ here. The format follows
   cite it, as "Cited by" links back. The default wording packs gain the
   `evidence.*` entries; the ones that say what a page does not show are
   locked.
+- History card module (capsuleviewer.standard-history/v0) draws a
+  standard_history/1 card, with the consumer/en wording pack (#134, #149).
+- Charts from a checked spec (capsule-viewer#82;
+  `docs/design/chart-spec.md`). The builder's new `charts` setting takes
+  Vega-Lite v5 specs in a closed subset. Each spec is checked against the
+  dataset the Result names (`plan_ref`, `dataset_ref`) and drawn in L1 as
+  SVG by the viewer's own code: a caption with the population and window,
+  a "derived" label, and a table of every value, each with Show evidence or
+  a label. A unit with no run record reads "Not run", never 0, and only on a
+  plan with exactly one window node. A spec that does not match refuses the
+  build, and a page that carries one anyway shows the core's notice instead
+  of the chart. The page's "How this page was checked" section states each
+  spec's SHA-256. `fragment` with charts is unavailable
+  (`fragment-has-charts`). Go: `go/chartspec` checks the same shared vectors
+  (`vectors/chart-spec/`), and `OfflineOptions.Charts` carries specs in the
+  Go offline and embedded pages. `render-report.mjs` gains `--charts` and
+  `--format static`, and the page shell gains a `<noscript>` line pointing
+  to that scripts-off copy. The page runtime and the npm package depend on
+  `@action-state-group/agent-action-capsule` 0.10.0 (was 0.9.0), whose
+  Result reader accepts `plan_ref` and `dataset_ref`
+  (agent-action-capsule#443); the "Verified by" line names it.
 
 ### Changed
 

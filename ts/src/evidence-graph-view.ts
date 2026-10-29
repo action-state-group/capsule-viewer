@@ -49,7 +49,15 @@ import {
   type ReportNode,
   zoneStatement,
 } from "@action-state-group/agent-action-capsule";
-import { digestCapability } from "@action-state-group/agent-action-capsule";
+import {
+  digestCapability,
+  JcsFloatError,
+  JcsUnsafeIntegerError,
+  jsonDigest,
+} from "@action-state-group/agent-action-capsule";
+import { chartDatasetOf } from "./chart-dataset.js";
+import { ChartRefusal, checkChart, type ChartDataset } from "./chart-spec.js";
+import { renderChart, renderChartRefused, renderCharts } from "./chart-view.js";
 import {
   citesOneContract,
   renderContractReport,
@@ -67,6 +75,7 @@ import { composedSectionModule } from "./composed-view.js";
 import {
   DEFAULT_WORDS,
   contractReportWords,
+  type Words,
 } from "./contract-report-wording.js";
 import {
   CORE_STRIP_ATTRIBUTE,
@@ -1013,6 +1022,7 @@ async function renderVerificationPage(
   verifierHint: string | undefined,
   depth: "L0" | "L1" | "L2",
   stamps: readonly CountersignatureStamp[],
+  charts: readonly ChartDigest[],
 ): Promise<string> {
   const { bundle, verification: verified } = context;
   const section = element("section");
@@ -1050,6 +1060,17 @@ async function renderVerificationPage(
   appendValue(summary, "bundle digest", model.bundleDigest ?? "uncomputable");
   appendValue(summary, "checkpoint root", model.checkpointRoot ?? "absent");
   appendValue(summary, "checkpoint size", model.checkpointSize ?? "absent");
+  // Each chart spec the page was built with, by the SHA-256 of its JCS, and
+  // whether it was drawn (docs/design/chart-spec.md section 1).
+  charts.forEach((chart, i) =>
+    appendValue(
+      summary,
+      `chart spec ${i + 1} sha256`,
+      chart.refused === undefined
+        ? chart.sha256
+        : `${chart.sha256} (not drawn: ${chart.refused})`,
+    ),
+  );
   page.append(summary);
   renderReceipts(page, model.receipts);
   if (model.selfWitnessed) {
@@ -2517,6 +2538,12 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly wording?: WordingPackInput;
   /**
+   * Chart specs (docs/design/chart-spec.md), drawn in L1 in this order. Each
+   * is checked against the dataset the Result names before it is drawn; a
+   * spec that fails is replaced by the core's notice, never drawn.
+   */
+  readonly charts?: readonly unknown[];
+  /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
    */
@@ -2528,6 +2555,72 @@ export interface RenderEvidenceGraphOptions {
    * it changes no list and no result. Omitted, only the pointer is shown.
    */
   readonly verifierHint?: string;
+}
+
+interface ChartDigest {
+  readonly sha256: string;
+  /** The refusal reason, once the chart was checked and not drawn. */
+  refused?: string;
+}
+
+async function chartDigestsOf(
+  charts: readonly unknown[] | undefined,
+): Promise<ChartDigest[]> {
+  const out: ChartDigest[] = [];
+  for (const spec of charts ?? []) {
+    try {
+      out.push({ sha256: await jsonDigest(spec) });
+    } catch (err) {
+      // A number JCS has no form for: the checker refuses that spec, and the
+      // page goes on with the rest.
+      if (
+        !(err instanceof JcsFloatError || err instanceof JcsUnsafeIntegerError)
+      )
+        throw err;
+      out.push({ sha256: "uncomputable" });
+    }
+  }
+  return out;
+}
+
+/**
+ * Check every chart against the Result's dataset and draw it, or the core's
+ * notice for a chart that fails (chart-spec.ts). The page runtime checks
+ * again here even when the builder already did: a page that reaches a reader
+ * with a mismatch never shows the chart.
+ */
+async function drawCharts(
+  context: VerifiedBundleContext,
+  result: ResultRoot | undefined,
+  charts: readonly unknown[],
+  digests: ChartDigest[],
+  words: Words,
+): Promise<HTMLElement> {
+  let dataset: ChartDataset | undefined;
+  let invalid: ChartRefusal | undefined;
+  try {
+    dataset =
+      result === undefined ? undefined : await chartDatasetOf(context, result);
+  } catch (err) {
+    if (!(err instanceof ChartRefusal)) throw err;
+    invalid = err;
+  }
+  const parts = charts.map((spec, i) => {
+    try {
+      if (invalid !== undefined) throw invalid;
+      return renderChart(
+        checkChart(spec, dataset),
+        i,
+        digests[i]!.sha256,
+        words,
+      );
+    } catch (err) {
+      if (!(err instanceof ChartRefusal)) throw err;
+      digests[i]!.refused = err.reason;
+      return renderChartRefused(i, err.reason, words);
+    }
+  });
+  return renderCharts(parts);
 }
 
 /**
@@ -3114,18 +3207,34 @@ async function renderVerifiedContext(
   // words are the contract report's, in the grouping the module draws and
   // the page's wording pack; a page with no Result draws no strip.
   let strip: CoreStripModel | undefined;
+  let chartsNode: HTMLElement | undefined;
+  const chartDigests = await chartDigestsOf(options.charts);
+  const charted = options.charts !== undefined && options.charts.length > 0;
   if (verified) {
     const result = await resultRootOf(context);
-    if (result !== undefined) {
-      const grouping = contractReportGroupingOf(bundle) ?? "lines";
-      strip = await coreStripModel(
+    const grouping = contractReportGroupingOf(bundle) ?? "lines";
+    const words =
+      result === undefined && !charted
+        ? undefined
+        : await contractReportWords(grouping, options.wording, {
+            singleContract: result !== undefined && citesOneContract(result),
+          });
+    if (result !== undefined) strip = await coreStripModel(result, words!);
+    // With no Result there is no dataset: each chart shows its notice
+    // (chart-no-dataset), never nothing.
+    if (charted)
+      chartsNode = await drawCharts(
+        context,
         result,
-        await contractReportWords(grouping, options.wording, {
-          singleContract: citesOneContract(result),
-        }),
+        options.charts!,
+        chartDigests,
+        words!,
       );
-    }
-  }
+  } else
+    // A failed bundle has no L1 (contract I1); the verification page says
+    // why no chart was drawn.
+    for (const digest of chartDigests)
+      digest.refused = "the bundle did not verify";
 
   // The host's three regions, in order after the banner and the header
   // (presentation contract section 9.1). L2 opens with the core's
@@ -3160,6 +3269,8 @@ async function renderVerifiedContext(
       regions = { L0: region("L0"), L1: region("L1"), L2: L2module, core };
       stripNode = strip === undefined ? undefined : renderCoreStrip(strip);
       if (stripNode !== undefined) regions.L0.append(stripNode);
+      // The charts open L1, in the order the build gave them (chart-view.ts).
+      if (chartsNode !== undefined) regions.L1.append(chartsNode);
       root.append(regions.L0, regions.L1, L2);
     } else {
       regions = { L0: root, L1: root, L2: L2module, core };
@@ -3541,6 +3652,7 @@ async function renderVerifiedContext(
     options.verifierHint,
     depth,
     stamps,
+    chartDigests,
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");

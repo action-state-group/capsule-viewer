@@ -690,6 +690,21 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "evidence.label.interpretation",
   "evidence.no-evidence.one",
   "evidence.no-evidence.other",
+  // Charts (chart-view.ts): every word a chart draws states what the
+  // checked data is (its count, window, units and labels), so none is a
+  // pack's to reword.
+  "chart.population.one",
+  "chart.population.other",
+  "chart.window",
+  "chart.derived",
+  "chart.not_run",
+  "chart.no_runs",
+  "chart.table.caption",
+  "chart.count",
+  "chart.sum",
+  "chart.evidence.records",
+  "chart.evidence.none",
+  "chart.refused",
   // The Outcomes report.
   "lines.tier.unknown",
   "lines.wording.unstated",
@@ -1218,8 +1233,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "e109d698df5a51bf91f0b8a1aac6c6ad8290ca554678edffd6be3cde5aad3fd1",
-  groups: "ba4e6eaf8d1049c9811769e8d3a8270f8aa229a0e6bcc8fa4d503eccd973814c",
+  lines: "e74efb3684df709b0ca3ff169c12eccfe8f492be45f32bf63e54cf66574f7165",
+  groups: "28ce67152b86ae8d492ad3b01e9ba1b7d7a8d746864cdcf49c73bcbd117314f6",
 });
 
 export interface Words {

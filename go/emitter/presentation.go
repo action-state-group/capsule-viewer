@@ -9,11 +9,13 @@ import (
 	"io"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 
 	"github.com/action-state-group/agent-action-capsule/go/bundle"
 	"github.com/action-state-group/agent-action-capsule/go/canonical"
+	"github.com/action-state-group/capsule-viewer/go/chartspec"
 )
 
 // The offline packaging of the presentation builder
@@ -65,6 +67,11 @@ type OfflineOptions struct {
 	// CoreRuntimeSHA256 is the runtime's pin; checked when set.
 	CoreRuntimeSHA256 string
 	Modules           []Module
+	// Charts are chart specs (docs/design/chart-spec.md), drawn in L1 in
+	// this order. Each is checked against the dataset the bundle's Result
+	// names before anything is written (chartspec.Check); one that fails
+	// refuses the build. They reach the page as renderOptions' charts.
+	Charts []json.RawMessage
 }
 
 // CheckWordingPack checks a wording pack against its digest and its shape
@@ -210,11 +217,69 @@ func checkSettings(o OfflineOptions) (string, error) {
 	return title, nil
 }
 
+// checkCharts decodes each chart spec and checks it against the dataset
+// the bundle's root Result names (chartspec.DatasetOf), the build-time half
+// of the check the page runs again before it draws. It returns the decoded
+// specs, or an error naming the first chart refused; no page is written.
+func checkCharts(bundleObject map[string]interface{}, charts []json.RawMessage) ([]interface{}, error) {
+	if len(charts) == 0 {
+		return nil, nil
+	}
+	specs := make([]interface{}, len(charts))
+	for i, raw := range charts {
+		decoder := json.NewDecoder(strings.NewReader(string(raw)))
+		decoder.UseNumber()
+		if err := decoder.Decode(&specs[i]); err != nil {
+			return nil, fmt.Errorf("chart %d is not JSON; no page is written", i+1)
+		}
+		if _, err := decoder.Token(); err != io.EOF {
+			return nil, fmt.Errorf("chart %d is not JSON; no page is written", i+1)
+		}
+	}
+	dataset, err := chartspec.DatasetOf(bundleObject)
+	for i, spec := range specs {
+		if err == nil {
+			_, err = chartspec.Check(spec, dataset)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("chart %d is refused: %w; no page is written", i+1, err)
+		}
+		specs[i] = integerSpelling(spec)
+	}
+	return specs, nil
+}
+
+// integerSpelling rewrites every number of a checked spec in its integer
+// form: Check accepts only safe integers, but a json.Number keeps its
+// spelling ("1.0", "1e2"), which canonical JSON refuses. TypeScript's
+// JSON.parse reads the same text as the integer, so both builders carry it.
+func integerSpelling(value interface{}) interface{} {
+	switch v := value.(type) {
+	case json.Number:
+		if f, err := strconv.ParseFloat(v.String(), 64); err == nil {
+			return json.Number(strconv.FormatInt(int64(f), 10))
+		}
+	case []interface{}:
+		for i, item := range v {
+			v[i] = integerSpelling(item)
+		}
+	case map[string]interface{}:
+		for k, item := range v {
+			v[k] = integerSpelling(item)
+		}
+	}
+	return value
+}
+
 // renderOptions is the options argument a bootstrap passes to
 // renderEvidenceGraph, as JCS text escaped for an inline script: the
-// audience, the format, and the depth and wording pack when set.
-func renderOptions(o OfflineOptions, format string) (string, error) {
+// audience, the format, and the depth, wording pack and checked chart specs
+// when set.
+func renderOptions(o OfflineOptions, format string, charts []interface{}) (string, error) {
 	options := map[string]interface{}{"audience": o.Audience, "format": format}
+	if len(charts) > 0 {
+		options["charts"] = charts
+	}
 	if o.Depth != "" {
 		options["depth"] = o.Depth
 	}
@@ -233,7 +298,8 @@ func renderOptions(o OfflineOptions, format string) (string, error) {
 // else) write exactly EmitEvidenceGraphHTML's page. Each module's script
 // and stylesheet pins reach the CSP; a module given with its manifest is
 // checked against it first (checkModuleManifest), and on a mismatch no page
-// is written.
+// is written. So with Charts: every spec is checked against the bundle's
+// dataset first (checkCharts), and one refused chart writes no page.
 func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (string, error) {
 	bundleObject, ok := value.(map[string]interface{})
 	if !ok {
@@ -243,9 +309,13 @@ func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (stri
 	if err != nil {
 		return "", err
 	}
+	charts, err := checkCharts(bundleObject, o.Charts)
+	if err != nil {
+		return "", err
+	}
 	bootstrap := DefaultBootstrap
-	if o.Audience != "*" || o.Depth != "" || o.Wording != nil {
-		options, err := renderOptions(o, "html")
+	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || len(charts) > 0 {
+		options, err := renderOptions(o, "html", charts)
 		if err != nil {
 			return "", err
 		}

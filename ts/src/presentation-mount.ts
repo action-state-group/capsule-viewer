@@ -18,6 +18,8 @@ export interface MountPresentationInput {
   readonly format: PresentationFormat;
   readonly depth?: PresentationDepth;
   readonly wording?: WordingPackInput;
+  /** Chart specs, checked and drawn by the page runtime (chart-spec.ts). */
+  readonly charts?: readonly unknown[];
   /** The host's registry; the default registry when omitted. */
   readonly registry?: PresentationResolver;
 }
@@ -37,6 +39,7 @@ export function mountPresentation(
     format: input.format,
     ...(input.depth === undefined ? {} : { depth: input.depth }),
     ...(input.wording === undefined ? {} : { wording: input.wording }),
+    ...(input.charts === undefined ? {} : { charts: input.charts }),
     ...(input.registry === undefined ? {} : { registry: input.registry }),
   });
 }

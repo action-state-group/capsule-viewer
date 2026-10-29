@@ -40,6 +40,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 AAC_REV = "60a5b119a1a979b1970d22caec8577eac0bb59e8"
+
+# The builder spec's chart-specs paragraph (capsule-viewer#82), amended in whole.
+CHART_SPECS_PARAGRAPH = (
+    "**Chart specs.** `charts` is an ordered list of chart specs, each a Vega-Lite v5 document in the\n"
+    "closed subset of `docs/design/chart-spec.md`, checked against the dataset the bundle's Evidence\n"
+    "Result names (`plan_ref` and `dataset_ref`, agent-action-capsule `spec/evidence-result-v0.md`\n"
+    "§7.3). After resolving, the builder checks every spec against the scoped, verified bundle; when\n"
+    "any spec fails, it writes no page in any packaging and fails with `PresentationBuildError`, naming\n"
+    "each failing spec by its position and its refusal reason. A bundle that did not verify, or whose\n"
+    "root is not a Result naming a disclosed dataset, fails every spec (`chart-no-dataset`). The\n"
+    "`html` and `embedded` packagings carry the specs in the page's render options; the page runtime\n"
+    "checks them again and draws each in L1, or the core's notice in place of a spec that fails. The\n"
+    "`static` page carries the drawn charts and no spec. A `fragment` cannot carry them\n"
+    "(`fragment-has-charts`). The page's \"How this page was checked\" section states each spec's\n"
+    "SHA-256, over its JCS. With no `charts`, every packaging is unchanged byte for byte. The Go\n"
+    "offline builder (`OfflineOptions.Charts`) checks the specs with `go/chartspec` and carries them\n"
+    "the same way."
+)
 REPO = Path(__file__).resolve().parent.parent
 
 # Citations to text that stays in agent-action-capsule: its
@@ -436,6 +454,45 @@ BUILDER = Move(
             "held together by seeded vectors that the TypeScript builder generates\n"
             "(`go/emitter/testdata/embedded-vectors.json`).",
             "action-state-group/capsule-cli#254",
+        ),
+        # Section 1, 1.1 and 2.1: chart specs (capsule-viewer#82).
+        (
+            "`wording` (a\n  wording pack's exact text and its `wording_sha256`), `maxFragmentLength`, `viewerUrl`.",
+            "`wording` (a\n  wording pack's exact text and its `wording_sha256`), `charts` (a list of chart specs, below),\n  `maxFragmentLength`, `viewerUrl`.",
+            "capsule-viewer#82",
+        ),
+        (
+            "A page with no\nmodule stylesheets is unchanged byte for byte.",
+            "A page with no\nmodule stylesheets is unchanged byte for byte.\n\n"
+            + CHART_SPECS_PARAGRAPH,
+            "capsule-viewer#82",
+        ),
+        (
+            "| `runtime-missing` | `html`, `fragment` | No core runtime was given. | |",
+            "| `fragment-has-charts` | `fragment` | The build has `charts`, which a fragment does not carry. | |\n"
+            "| `runtime-missing` | `html`, `fragment` | No core runtime was given. | |",
+            "capsule-viewer#82",
+        ),
+        (
+            "select, scoping a bundle that did not verify) is not a packaging question: it is thrown, by both\n"
+            "calls, as it is for every target alike.",
+            "select, scoping a bundle that did not verify, a chart spec that does not match) is not a\n"
+            "packaging question: it is thrown, by both calls, as it is for every target alike.",
+            "capsule-viewer#82",
+        ),
+        (
+            "depth and the wording pack. The page carries",
+            "depth, the wording pack and the chart specs. The shell's `<noscript>` line tells a reader with\n"
+            "scripts off that the page needs them and that a copy without scripts is built with\n"
+            "`render-report --format static`. The page carries",
+            "capsule-viewer#82",
+        ),
+        (
+            "With the default settings (audience `\"*\"`, no depth, no wording) the builder writes exactly the\n"
+            "page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.",
+            "With the default settings (audience `\"*\"`, no depth, no wording, no charts) the builder writes\n"
+            "exactly the page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.",
+            "capsule-viewer#82",
         ),
     ],
 )
