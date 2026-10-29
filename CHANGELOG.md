@@ -156,7 +156,8 @@ The first release under RELEASING.md's pairing rule: `ts/v0.3.0` is tagged on
 this merge, and `go/v0.3.0` follows on the commit that ships its page runtime.
 Both state viewer 0.3.0. There was no ts 0.2.0, because the Go module had
 already used 0.2.0. Go entries below include changes first tagged in
-`go/v0.1.1` and `go/v0.2.0`, which had no CHANGELOG sections.
+`go/v0.1.1` and `go/v0.2.0`. `go/v0.1.1` has its own section further down;
+`go/v0.2.0` has none.
 
 ### Breaking
 
@@ -695,6 +696,25 @@ already used 0.2.0. Go entries below include changes first tagged in
   says "judged" only for sealed days, and What ran shows the period, the
   sealed days and the outcome card's dating note. Ported from
   agent-action-capsule#193. No style changes, so no CSP hash moves.
+
+## go 0.1.1 (2026-10-20)
+
+Go module only (tag `go/v0.1.1`); there was no ts release. The same entry is
+also listed under ts 0.3.0 above, the first ts release to carry the change. In
+the Go module this release changed only the CSP hash for `OUTCOME_REPORT_CSS`
+in `go/emitter/runtime-style-hashes.txt`: the criteria count and the phone
+layout are in the TypeScript runtime. The new hash replaced the old one, so
+a page whose runtime carries the ts 0.1.0 outcome stylesheet has it blocked by
+this emitter.
+
+### Fixed
+
+- The outcome report counts the criteria each conversation was judged on
+  instead of always saying "nine", and fits a 390px viewport: the header
+  stacks at narrow widths, and the day calendar keeps each date on one line.
+  Ported from agent-action-capsule#323. The Go emitter's CSP hash for
+  `OUTCOME_REPORT_CSS` (`go/emitter/runtime-style-hashes.txt`) follows, so a
+  page whose runtime carries the new stylesheet is not blocked.
 
 ## ts 0.1.0 and go 0.1.0 (2026-10-16)
 
