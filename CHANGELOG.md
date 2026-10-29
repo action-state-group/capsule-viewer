@@ -77,21 +77,36 @@ ships its page runtime.
 - The deal receipt modules (Python and the module-slot scripts) draw three
   cases, read from the verifier's composed result and never from a
   producer's label (capsule-viewer#124, #137): stamped by both (two carried
-  copies whose joins all derive `agree`, one deal; ours in blue, theirs in
+  copies whose joins all derive `agree`, each agreement corroborating, one
+  deal; ours in blue, theirs in
   amber and labelled "as received"), your receipt only (one carried copy,
   the other party's member a carried `absence`, every join deriving
   `one_sided`; the missing member is drawn grey and dashed, saying when it
   was asked) and no record (the holder's own copy alone, as the unilateral
-  and seller pages). A `refusal` member makes no receipt, so the page
+  and seller keep pages). A `refusal` member makes no receipt, so the page
   declines the bundle. Two copies that miss the first case read "not
   stamped by both", never drawn like an agreement, and no side takes the
   negative tone. Only the holder's page says "your" and lists the sentences
-  for their agent; a page cut for someone else names each side by its role.
+  for their agent; a page cut for someone else names each side by its role,
+  and a single copy cut for someone else draws no sides.
   "Your receipt only" rests on the recorded ask: when agent-action-capsule's
   `receipt_document` record kind lands it adds a line to this case without
   changing it.
-- History card module (capsuleviewer.standard-history/v0) draws a
-  standard_history/1 card, with the consumer/en wording pack (#134, #149).
+- History card module (`capsuleviewer.standard-history/v0`) draws a
+  standard_history/1 card as the 9b History card, with the consumer/en
+  wording pack (capsule-viewer#134, #149). It reads an evidence-bundle/v2
+  whose root record's `agent_input` is the card, with an
+  `x-standard-history/v0` block carrying what a receiver holds beside it.
+  A shared card (no `deals` in the block) shows its counts as the holder's
+  statement, with `counts_recompute` not checked. A block that carries
+  `deals` is the holder's own copy: it is drawn under the PRIVATE banner,
+  with the sentences for their agent, and its counts are recounted from the
+  deal entries. The six checks of the standard-history spec §6 run, and a
+  card that fails them draws none of its counts. `anchor_inclusion` is
+  always shown as not checked, the page never says a signature or a witness
+  was checked, and no ratio or percentage is drawn. `rules/manifest.json`
+  forbids `x-standard-history/v0` beside the History selection, so no bundle
+  selects both modules.
 - Charts from a checked spec (capsule-viewer#82;
   `docs/design/chart-spec.md`). The builder's new `charts` setting takes
   Vega-Lite v5 specs in a closed subset. Each spec is checked against the
@@ -108,7 +123,7 @@ ships its page runtime.
   Go offline and embedded pages. `render-report.mjs` gains `--charts` and
   `--format static`, and the page shell gains a `<noscript>` line pointing
   to that scripts-off copy. The page runtime and the npm package depend on
-  `@action-state-group/agent-action-capsule` 0.10.0 (was 0.9.0), whose
+  `@action-state-group/agent-action-capsule` 0.10.0, whose
   Result reader accepts `plan_ref` and `dataset_ref`
   (agent-action-capsule#443); the "Verified by" line names it.
 
@@ -119,11 +134,11 @@ ships its page runtime.
   by a record whose disclosure is withheld reads unsupported, though the
   bundle carries it.
 - The page runtime and the npm package depend on
-  `@action-state-group/agent-action-capsule` 0.9.0 and
+  `@action-state-group/agent-action-capsule` 0.10.0 and
   `@action-state-group/cll` 0.3.0 (were 0.8.0 and 0.2.1), and `go/pageruntime`
-  ships a runtime built on them (capsule-viewer#115). AAC's strict verifier
-  now checks a signed checkpoint in the browser, so a page whose records and
-  checkpoint verify reads verified where it read incomplete ("checkpoint
+  ships a runtime built on them (capsule-viewer#115, with 0.10.0 from #82
+  above). AAC's strict verifier (from 0.9.0) now checks a signed checkpoint
+  in the browser, so a page whose records and checkpoint verify reads verified where it read incomplete ("checkpoint
   signature not checked here", `checkpoint_verifier_unavailable`), and a
   forged checkpoint reads failed. In a page with no SubtleCrypto the
   checkpoint signature is checked too (a forged one reads failed), but strict
