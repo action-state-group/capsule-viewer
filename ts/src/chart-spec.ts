@@ -789,7 +789,7 @@ const sameWindow = (a: ChartWindow, b: ChartWindow): boolean =>
 const describe = (w: ChartWindow): string => `${w.field} ${w.from} to ${w.to}`;
 
 /** Compare two key values: false before true, numbers by value, strings by code point. */
-function compareScalar(a: Scalar, b: Scalar): number {
+export function compareScalar(a: Scalar, b: Scalar): number {
   if (typeof a === "number" && typeof b === "number") return a - b;
   if (typeof a === "boolean" && typeof b === "boolean")
     return Number(a) - Number(b);

@@ -22,7 +22,11 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import { chartDatasetOf } from "../src/chart-dataset.js";
-import { ChartRefusal, type ChartDataset } from "../src/chart-spec.js";
+import {
+  ChartRefusal,
+  compareScalar,
+  type ChartDataset,
+} from "../src/chart-spec.js";
 import {
   availablePackagings,
   buildPresentation,
@@ -466,6 +470,13 @@ describe("the refusals, each the change of a passing view", () => {
       viewCharts(headers).byVerdict("not_met");
     expect(refusal(wide).reason).toBe("view-overlap");
   });
+});
+
+it("by-period rows sort as the checker sorts a domain, by code point", () => {
+  expect(["\u{1F600}", "\uE000"].sort(compareScalar)).toEqual([
+    "\uE000",
+    "\u{1F600}",
+  ]);
 });
 
 describe("a month with no not-met case", () => {

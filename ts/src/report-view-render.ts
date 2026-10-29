@@ -8,6 +8,7 @@
  * Show evidence (chart-view.ts `valueEvidence`) or the `none` label.
  */
 import type { Words } from "./contract-report-wording.js";
+import { compareScalar } from "./chart-spec.js";
 import type {
   ChartGroup,
   CheckedChart,
@@ -231,15 +232,8 @@ export function renderByPeriod(
       const v = g.key[keyOf(p.chart)]!;
       if (!requirements.some((r) => r === v)) requirements.push(v);
     }
-  requirements.sort((a, b) =>
-    typeof a === "number" && typeof b === "number"
-      ? a - b
-      : String(a) < String(b)
-        ? -1
-        : String(a) > String(b)
-          ? 1
-          : 0,
-  );
+  requirements.sort(compareScalar);
+
   // The weeks that have a day in the window, Monday first; per week, the
   // window's days in it and which of those did not run.
   const weeks = new Map<string, { days: string[]; notRun: Set<string> }>();
