@@ -699,8 +699,13 @@ already used 0.2.0. Go entries below include changes first tagged in
 
 ## go 0.1.1 (2026-10-20)
 
-Go module only (tag `go/v0.1.1`); there was no ts release. The same change is
-also listed under ts 0.3.0 above, the first ts release to carry it.
+Go module only (tag `go/v0.1.1`); there was no ts release. The same entry is
+also listed under ts 0.3.0 above, the first ts release to carry the change. In
+the Go module this release changed only the CSP hash for `OUTCOME_REPORT_CSS`
+in `go/emitter/runtime-style-hashes.txt`: the criteria count and the phone
+layout are in the TypeScript stylesheet. The new hash replaced the old one, so
+a page whose runtime carries the ts 0.1.0 outcome stylesheet has it blocked by
+this emitter.
 
 ### Fixed
 
