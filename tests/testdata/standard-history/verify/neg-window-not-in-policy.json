@@ -1,0 +1,142 @@
+{
+  "bundle_digest": "e8b021f9117e19125dc90cef82b58cc5972122f739f8f5a67b772f56418201eb",
+  "checkpoint": {
+    "findings": [],
+    "status": "pass"
+  },
+  "countersignatures": [],
+  "disclosures": [
+    {
+      "capsule_id": "113ed7be810557474876b424f18b85c77602d41c6027e0c0bfe287df37e4d5da",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "21b15d8fb728de1ea4c5192d2b792614b955e8b523001b283f378446399a2d0c",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "522bc369fd44cda239a3ba61b72d48b25c39da03690616b05c13ef0409e05030",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "697419d20f6aa52b3ceff54feb919708ae0e7e944f8c3c34903044e6537c2cac",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "72a768c08e7cfb7a532bd768ae22ac78e08e4587062060f91fb9bbc56eb00ac7",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "ae50cb87e4201efefdebcdeaa291754724441fd82262b0088812142b0abc6440",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "b01a65d09b6605040e8936559f1bfb751e15073f9908dad6fff6a12ce68dd25c",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "b34168010e8ff2b1261d674a58f68fafe5775b3725858c13a124a158fbb37b0a",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "bad8723154091b6491826b7755c837469bb76d1772211e38d2b13864de444db0",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "c6717a166b7fdd09b44872983b8e1339691e4aebded330a7c112221b7d71e4d2",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "c821dc465c8ef83331074fbce70af5b9decd864d845a9ff99a12d1593d0fd059",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "e157699858ee3440b94d39fc9ab9fd446c525a3082e0f9fa9149e439ec36298e",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    },
+    {
+      "capsule_id": "ed6687915ace56c047432c8bccbb396945e7d798b7784fc753c1f6a7a46d2dd3",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    }
+  ],
+  "extensions": [
+    {
+      "kind": "producer-key/v1",
+      "status": "uninterpreted"
+    },
+    {
+      "kind": "x-standard-history/v0",
+      "status": "uninterpreted"
+    }
+  ],
+  "graph_closure": {
+    "findings": [],
+    "status": "pass"
+  },
+  "interval_coverage": {
+    "findings": [],
+    "status": "pass"
+  },
+  "per_record_membership": {
+    "findings": [],
+    "status": "pass"
+  },
+  "producer_signatures": {
+    "findings": [],
+    "status": "pass"
+  },
+  "record_identity": {
+    "113ed7be810557474876b424f18b85c77602d41c6027e0c0bfe287df37e4d5da": "passed",
+    "21b15d8fb728de1ea4c5192d2b792614b955e8b523001b283f378446399a2d0c": "passed",
+    "522bc369fd44cda239a3ba61b72d48b25c39da03690616b05c13ef0409e05030": "passed",
+    "697419d20f6aa52b3ceff54feb919708ae0e7e944f8c3c34903044e6537c2cac": "passed",
+    "72a768c08e7cfb7a532bd768ae22ac78e08e4587062060f91fb9bbc56eb00ac7": "passed",
+    "ae50cb87e4201efefdebcdeaa291754724441fd82262b0088812142b0abc6440": "passed",
+    "b01a65d09b6605040e8936559f1bfb751e15073f9908dad6fff6a12ce68dd25c": "passed",
+    "b34168010e8ff2b1261d674a58f68fafe5775b3725858c13a124a158fbb37b0a": "passed",
+    "bad8723154091b6491826b7755c837469bb76d1772211e38d2b13864de444db0": "passed",
+    "c6717a166b7fdd09b44872983b8e1339691e4aebded330a7c112221b7d71e4d2": "passed",
+    "c821dc465c8ef83331074fbce70af5b9decd864d845a9ff99a12d1593d0fd059": "passed",
+    "e157699858ee3440b94d39fc9ab9fd446c525a3082e0f9fa9149e439ec36298e": "passed",
+    "ed6687915ace56c047432c8bccbb396945e7d798b7784fc753c1f6a7a46d2dd3": "passed"
+  },
+  "record_signatures": {
+    "113ed7be810557474876b424f18b85c77602d41c6027e0c0bfe287df37e4d5da": "authored",
+    "21b15d8fb728de1ea4c5192d2b792614b955e8b523001b283f378446399a2d0c": "authored",
+    "522bc369fd44cda239a3ba61b72d48b25c39da03690616b05c13ef0409e05030": "authored",
+    "697419d20f6aa52b3ceff54feb919708ae0e7e944f8c3c34903044e6537c2cac": "authored",
+    "72a768c08e7cfb7a532bd768ae22ac78e08e4587062060f91fb9bbc56eb00ac7": "authored",
+    "ae50cb87e4201efefdebcdeaa291754724441fd82262b0088812142b0abc6440": "authored",
+    "b01a65d09b6605040e8936559f1bfb751e15073f9908dad6fff6a12ce68dd25c": "authored",
+    "b34168010e8ff2b1261d674a58f68fafe5775b3725858c13a124a158fbb37b0a": "authored",
+    "bad8723154091b6491826b7755c837469bb76d1772211e38d2b13864de444db0": "authored",
+    "c6717a166b7fdd09b44872983b8e1339691e4aebded330a7c112221b7d71e4d2": "authored",
+    "c821dc465c8ef83331074fbce70af5b9decd864d845a9ff99a12d1593d0fd059": "authored",
+    "e157699858ee3440b94d39fc9ab9fd446c525a3082e0f9fa9149e439ec36298e": "authored",
+    "ed6687915ace56c047432c8bccbb396945e7d798b7784fc753c1f6a7a46d2dd3": "authored"
+  },
+  "say": "Checked: unchanged since it was locked.",
+  "spec_version": "capsule-cli-result/v1",
+  "verdict": "VALID",
+  "voice": "report",
+  "witnesses": {
+    "findings": [
+      "witness_receipt_absent"
+    ],
+    "receipts": [],
+    "status": "withheld"
+  }
+}

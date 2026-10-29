@@ -12,7 +12,8 @@
       "result_version:evidence-result-v0"
     ],
     "extensions": [
-      "x-history-selection/v0"
+      "x-history-selection/v0",
+      "x-standard-history/v0"
     ]
   },
   "audiences": [
