@@ -690,6 +690,13 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "evidence.label.interpretation",
   "evidence.no-evidence.one",
   "evidence.no-evidence.other",
+  // Charts (chart-view.ts): that a chart is derived, a unit not run, a
+  // value with nothing to show, what its evidence is, and a refused chart.
+  "chart.derived",
+  "chart.not_run",
+  "chart.evidence.records",
+  "chart.evidence.none",
+  "chart.refused",
   // The Outcomes report.
   "lines.tier.unknown",
   "lines.wording.unstated",
@@ -1218,8 +1225,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "e109d698df5a51bf91f0b8a1aac6c6ad8290ca554678edffd6be3cde5aad3fd1",
-  groups: "ba4e6eaf8d1049c9811769e8d3a8270f8aa229a0e6bcc8fa4d503eccd973814c",
+  lines: "d426bf016b2b4694ed848bde19d77035ec66a39eb4158980d1098cd47e00eba9",
+  groups: "955e9ff46705fafffee104c4ba048391f7495809beebde87bb439149b97f3058",
 });
 
 export interface Words {

@@ -57,7 +57,8 @@ buildPresentation(context, { presentation, audience, format, ...settings })
 - Settings: `runtime` (the core runtime and, optionally, its pin; required for `html` and
   `fragment`), `modules` (digest-pinned module-slot scripts), `registry` (the resolver; the
   built-ins when omitted), `disclose` (section 3), `depth`, `title`, `themeCss`, `wording` (a
-  wording pack's exact text and its `wording_sha256`), `maxFragmentLength`, `viewerUrl`.
+  wording pack's exact text and its `wording_sha256`), `charts` (a list of chart specs, below),
+  `maxFragmentLength`, `viewerUrl`.
 
 The steps run in this order: scope (section 3), verify the scoped bundle, resolve, package. Every
 packaging carries the same scoped bundle and the same settings.
@@ -84,6 +85,21 @@ writes no page in any packaging and fails with `PresentationStylePinsError` (Go:
 with its `Manifest`, after the same check that the manifest pins the script. A page with no
 module stylesheets is unchanged byte for byte.
 
+**Chart specs.** `charts` is an ordered list of chart specs, each a Vega-Lite v5 document in the
+closed subset of `docs/design/chart-spec.md`, checked against the dataset the bundle's Evidence
+Result names (`plan_ref` and `dataset_ref`, agent-action-capsule `spec/evidence-result-v0.md`
+§7.3). After resolving, the builder checks every spec against the scoped, verified bundle; when
+any spec fails, it writes no page in any packaging and fails with `PresentationBuildError`, naming
+each failing spec by its position and its refusal reason. A bundle that did not verify, or whose
+root is not a Result naming a disclosed dataset, fails every spec (`chart-no-dataset`). The
+`html` and `embedded` packagings carry the specs in the page's render options; the page runtime
+checks them again and draws each in L1, or the core's notice in place of a spec that fails. The
+`static` page carries the drawn charts and no spec. A `fragment` cannot carry them
+(`fragment-has-charts`). The page's "How this page was checked" section states each spec's
+SHA-256, over its JCS. With no `charts`, every packaging is unchanged byte for byte. The Go
+offline builder (`OfflineOptions.Charts`) checks the specs with `go/chartspec` and carries them
+the same way.
+
 **Supported targets.** The builder supports four packaging targets: `html`, `fragment`,
 `embedded` and `static`. A target is *supported* for one (bundle, audience) and one set of
 settings when the builder can package it; otherwise it is *unavailable*, and the builder says so
@@ -105,6 +121,7 @@ target with the same settings. Otherwise it is `available: false` with a `reason
 | `reason.code` | Target | Meaning | Other members |
 |---|---|---|---|
 | `fragment-too-large` | `fragment` | The token, or the whole URL with `viewerUrl`, is over the budget. | `subject` (`"fragment token"` or `"permalink URL"`), `length`, `limit` |
+| `fragment-has-charts` | `fragment` | The build has `charts`, which a fragment does not carry. | |
 | `runtime-missing` | `html`, `fragment` | No core runtime was given. | |
 | `no-document` | `static` | No DOM `document` to render with at build time. | |
 | `static-carries-script` | `static` | The rendered page holds a script element or an event-handler attribute. | |
@@ -113,7 +130,7 @@ target with the same settings. Otherwise it is `available: false` with a `reason
 
 Every reason also carries a `message` in words. An error of the request itself (no audience, a
 bad depth or wording pack, an ambiguous registry, a requested presentation the registry does not
-select, scoping a bundle that did not verify) is not a packaging question: it is thrown, by both
+select, scoping a bundle that did not verify, a chart spec that does not match) is not a packaging question: it is thrown, by both
 calls, as it is for every target alike.
 
 A direct `buildPresentation` call for an unavailable target throws. A fragment over its budget
@@ -128,7 +145,9 @@ other reasons throw `PackagingUnavailableError`, a `PresentationBuildError` carr
 One self-contained file: the shell, the scoped bundle in `BUNDLE_SLOT`, the core runtime in
 `CORE_RUNTIME_SLOT`, any modules in `MODULE_SLOT`, the theme in `THEME_SLOT`, the title in
 `TITLE_SLOT`, and a bootstrap that calls `renderEvidenceGraph` with the audience, the format, the
-depth and the wording pack. The page carries the emitter's per-page Content-Security-Policy
+depth, the wording pack and the chart specs. The shell's `<noscript>` line tells a reader with
+scripts off that the page needs them and that a copy without scripts is built with
+`render-report --format static`. The page carries the emitter's per-page Content-Security-Policy
 (`default-src 'none'`, `connect-src 'none'`, and every inline script and style by hash), so it
 makes no request and runs no script it was not built with.
 
@@ -138,7 +157,7 @@ default. The wording pack's bytes MUST hash to its `wording_sha256`, and the pac
 presentation only (contract I3): changing any of them changes the file's bytes and never an
 evidence identifier.
 
-With the default settings (audience `"*"`, no depth, no wording) the builder writes exactly the
+With the default settings (audience `"*"`, no depth, no wording, no charts) the builder writes exactly the
 page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.
 
 ### 2.2 Fragment permalink (`fragment`)

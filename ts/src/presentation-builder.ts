@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+import { checkChartsAgainst } from "./chart-dataset.js";
 import {
   buildVerifiedBundleContext,
   classifyCountersignatures,
@@ -133,6 +134,14 @@ export type PackagingUnavailableReason =
       readonly code: "static-body-unbuilt";
       /** The summary text of each toggle (or the tag of each body) left unbuilt. */
       readonly unbuilt: readonly string[];
+      readonly message: string;
+    }
+  | {
+      /**
+       * A build with `charts`: a fragment carries no chart specs. A reader
+       * gets the charts from the `html` or `static` packaging.
+       */
+      readonly code: "fragment-has-charts";
       readonly message: string;
     }
   | {
@@ -331,6 +340,14 @@ export interface BuildPresentationOptions {
   readonly themeCss?: string;
   readonly wording?: WordingPackInput;
   /**
+   * Chart specs (docs/design/chart-spec.md), drawn in L1 in this order.
+   * Each is checked against the dataset the bundle's Result names before
+   * any packaging is written; one that fails refuses the build, naming the
+   * spec and the reason. A `fragment` cannot carry them
+   * (`fragment-has-charts`).
+   */
+  readonly charts?: readonly unknown[];
+  /**
    * `fragment` only: the token budget. Omitted, it is
    * FRAGMENT_TOKEN_DEFAULT_BUDGET; it may be lowered, or raised up to
    * FRAGMENT_TOKEN_MAX_LENGTH, never above.
@@ -473,23 +490,28 @@ interface OfflineSettings {
   readonly title: string | undefined;
   readonly themeCss: string | undefined;
   readonly wording: WordingPackInput | undefined;
+  readonly charts?: readonly unknown[] | undefined;
 }
 
 // The options a page's bootstrap, an embedded snippet's bootstrap and
 // mount pass to renderEvidenceGraph: the audience, the format, and the
 // depth and wording pack when set. The host's registry is mount's own.
 function renderOptions(
-  settings: Pick<OfflineSettings, "audience" | "depth" | "wording">,
+  settings: Pick<OfflineSettings, "audience" | "depth" | "wording" | "charts">,
   format: "html" | "embedded",
 ): {
   audience: string;
   format: "html" | "embedded";
   depth?: PresentationDepth;
   wording?: WordingPackInput;
+  charts?: readonly unknown[];
 } {
   return {
     audience: settings.audience,
     format,
+    ...(settings.charts === undefined || settings.charts.length === 0
+      ? {}
+      : { charts: settings.charts }),
     ...(settings.depth === undefined ? {} : { depth: settings.depth }),
     ...(settings.wording === undefined
       ? {}
@@ -521,7 +543,8 @@ async function packageOffline(
   const isDefault =
     settings.audience === "*" &&
     settings.depth === undefined &&
-    settings.wording === undefined;
+    settings.wording === undefined &&
+    (settings.charts === undefined || settings.charts.length === 0);
   const bootstrap = isDefault
     ? DEFAULT_EVIDENCE_GRAPH_BOOTSTRAP
     : `renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, ${escapeJsonForHtmlScript(new TextDecoder().decode(jcs(renderOptions(settings, "html"))))});`;
@@ -667,6 +690,7 @@ async function resolveFor(
     );
   if (options.wording !== undefined)
     await checkWordingFits(options.wording, module, context.bundle);
+  await checkCharts(context, options.charts);
   return {
     common: {
       audience,
@@ -677,6 +701,29 @@ async function resolveFor(
     context,
     registry,
   };
+}
+
+/**
+ * Refuse a build whose chart specs do not match the bundle's dataset
+ * (chart-spec.ts), naming each spec that fails and why. The page runtime
+ * checks them again before it draws.
+ */
+async function checkCharts(
+  context: VerifiedBundleContext,
+  charts: readonly unknown[] | undefined,
+): Promise<void> {
+  if (charts === undefined || charts.length === 0) return;
+  if (!Array.isArray(charts))
+    throw new PresentationBuildError("charts is not a list of chart specs");
+  const failed = (await checkChartsAgainst(context, charts)).flatMap((c) =>
+    c.refusal === undefined
+      ? []
+      : [`chart ${c.index + 1}: ${c.refusal.message}`],
+  );
+  if (failed.length > 0)
+    throw new PresentationBuildError(
+      `chart specs do not match the report's data, so no page is written: ${failed.join("; ")}`,
+    );
 }
 
 const contractFormat = (target: PackagingTarget): PresentationFormat =>
@@ -773,6 +820,7 @@ async function packageAs(
         title: options.title,
         themeCss: options.themeCss,
         wording: options.wording,
+        charts: options.charts,
       },
       requireRuntime(options.runtime, format),
       modules,
@@ -781,6 +829,12 @@ async function packageAs(
   }
 
   if (format === "fragment") {
+    if (options.charts !== undefined && options.charts.length > 0)
+      throw new PackagingUnavailableError({
+        code: "fragment-has-charts",
+        message:
+          "a fragment carries no chart specs; build the html or static packaging to share the charts",
+      });
     const runtime = requireRuntime(options.runtime, format);
     const runtimePin = await sha256Hex(new TextEncoder().encode(runtime.code));
     if (runtime.sha256 !== undefined && runtime.sha256 !== runtimePin)
@@ -829,7 +883,12 @@ async function packageAs(
   }
 
   const embedded = renderOptions(
-    { audience, depth: options.depth, wording: options.wording },
+    {
+      audience,
+      depth: options.depth,
+      wording: options.wording,
+      charts: options.charts,
+    },
     "embedded",
   );
   // With the core runtime, also the snippet a host page inlines: the same
@@ -903,6 +962,7 @@ async function packageStatic(
       format: "html",
       ...(options.depth === undefined ? {} : { depth: options.depth }),
       ...(options.wording === undefined ? {} : { wording: options.wording }),
+      ...(options.charts === undefined ? {} : { charts: options.charts }),
       registry,
     });
   } finally {

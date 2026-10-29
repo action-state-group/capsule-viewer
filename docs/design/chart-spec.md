@@ -1,7 +1,9 @@
 # Charts from a declarative spec, checked against the dataset (design note)
 
-Status: design only, for capsule-viewer#82. No code yet. Code waits on the
-dataset contract from evidencebook#107 (section 6).
+Status: implemented for capsule-viewer#82 (`ts/src/chart-spec.ts`,
+`chart-dataset.ts`, `chart-view.ts`; `go/chartspec`; vectors
+`vectors/chart-spec/`). Section 4 follows the dataset contract as merged in
+agent-action-capsule#443 (8c673d1).
 
 Every chart on a report page comes from a chart spec, which is data. The
 viewer checks the spec against the dataset the report was built from, refuses
@@ -54,8 +56,8 @@ Narrowing it is a break.
 | `$schema` | exactly `https://vega.github.io/schema/vega-lite/v5.json` |
 | `data` | `{"name": "dataset"}` only. No `url`, no `values`, no `sequence` |
 | `mark` | `bar`, `line`, `point`, `rect`, as a string or `{"type": ...}` with no other key |
-| `transform` | a list of `{"filter": P}`. P is a field predicate (`equal`, `oneOf`, or `range` with an optional `timeUnit`) or `and` / `or` / `not` of them. Never an expression string |
-| `encoding.x`, `.y`, `.color` | `field`, `type` (`quantitative`, `ordinal`, `nominal`, `temporal`), `aggregate` (`count` or `sum`), `timeUnit` (`utcyearmonthdate`, `utcyearmonth`) on a temporal field only. `title` is accepted and ignored |
+| `transform` | a list of `{"filter": P}`. P is a field predicate (`equal` or `oneOf` over strings, numbers and booleans, or `range` of two UTC DateTime objects `{year, month, date, utc: true}` with `timeUnit: "utcyearmonthdate"`) or `and` / `or` / `not` of them. Never an expression string |
+| `encoding.x`, `.y`, `.color` | `field`, `type` (`quantitative`, `ordinal`, `nominal`, `temporal`), `aggregate` (`count`, which names no field, or `sum`, both `quantitative`), `timeUnit` (`utcyearmonthdate`, `utcyearmonth`), required on a temporal field and only there. At most one channel is temporal. `title` is accepted and ignored |
 | `usermeta.capsule` | the statement the checker holds the chart to (section 3) |
 | `title`, `description` | accepted and ignored |
 
@@ -88,6 +90,9 @@ The window is a `range` filter in `transform`, on the window field, with
 `timeUnit: "utcyearmonthdate"`. Both ends are inclusive calendar days, so
 standard tools filter the same rows the viewer does. `usermeta.capsule.window`
 restates that filter, and the two have to match (`chart-window-mismatch`). A
+temporal chart states a window, and its time axis reads the window field. On a
+plan with one window node the chart's window equals the sealed one (D4); on a
+plan with several, it lies inside each one on the same field. A
 temporal axis's units have to tile the window exactly: a `utcyearmonth` chart
 needs a window from the 1st of a month to a month's last day. Partial units are
 refused (`chart-window-mismatch`), never drawn short. Weeks are left out of v0,
@@ -98,9 +103,19 @@ Sunday.
 
 On a temporal axis, a unit is **run** when the dataset holds a run record for
 it, and **not run** otherwise. `usermeta.capsule.runs` names the run records:
-a filter predicate over the dataset (for example, the daily Results) and the
-time field that dates each one. A temporal chart without `runs` is refused
-(`chart-runs-missing`). A unit that was run and has no matching rows has a
+a filter predicate over the dataset (for example, the daily run records) and the
+time field that dates each one. Only a plan with exactly one window node can
+tell "not run" from zero (agent-action-capsule `spec/evidence-plan-ir-v0.md`
+§5.1), and a run's day is the UTC day of that node's field:
+
+- On such a plan, a temporal chart without `runs` is refused
+  (`chart-runs-missing`), and `runs.field` has to be the sealed window field
+  (`chart-runs-field-mismatch`).
+- On a plan with no window node, or more than one, `runs` is refused
+  (`chart-runs-unsealed`), so no unit reads "not run": a unit without rows
+  reads 0. A non-temporal chart stating `runs` is refused the same way.
+- A unit with rows but no run record is still not run; its rows stay in the
+  population. A unit that was run and has no matching rows has a
 value of `0`. A unit that was not run has no value. Its cell is hatched, it has
 no bar or point, and its table row reads "not run". It is never drawn as zero.
 
@@ -109,8 +124,8 @@ no bar or point, and its table row reads "not run". It is never drawn as zero.
 ```json
 {
   "population": { "count": 30 },
-  "window": { "field": "generated_at", "from": "2026-09-01", "to": "2026-09-30" },
-  "runs": { "filter": { "field": "record_type", "equal": "evidence-result" }, "field": "generated_at" },
+  "window": { "field": "event_time_claim", "from": "2026-09-01", "to": "2026-09-30" },
+  "runs": { "filter": { "field": "record_type", "equal": "daily_run" }, "field": "event_time_claim" },
   "values": [
     { "x": "2026-09-01", "y": 4 },
     { "x": "2026-09-02", "y": 0 },
@@ -132,8 +147,11 @@ temporal key is the ISO date of the unit's first day, in UTC. The aggregate
 channel holds the number. A not-run group has no aggregate key and has
 `"not_run": true`. Order doesn't matter, and a group listed twice is refused.
 
-The checker runs these checks in order. Each failure refuses the build with
-its own reason and a vector:
+The checker runs these checks in order, after the spec's shape
+(`chart-unsupported-member`, `chart-aggregate-shape`), the dataset
+(`chart-no-dataset`, `chart-dataset-invalid`) and every row's record
+(`chart-row-withheld`). Each failure refuses the build with its own reason and
+a vector:
 
 1. **Fields exist and have a type** (`chart-field-missing`, `chart-field-type`).
    A dataset mixes record types (D5), so each field is checked on the rows it
@@ -146,11 +164,12 @@ its own reason and a vector:
    under `sum` or `quantitative`, an RFC 3339 timestamp under `temporal`, a
    string or number under `equal`/`oneOf`. A field missing from a selected row
    is refused, never treated as zero.
-2. **Window** (`chart-window-mismatch`), as above.
+2. **Window and runs** (`chart-window-mismatch`, `chart-runs-missing`,
+   `chart-runs-field-mismatch`, `chart-runs-unsealed`), as above.
 3. **Population matches** (`chart-population-mismatch`). The population is
    the rows that pass `transform`, run records included when the filter
    selects them, and it numbers exactly `population.count`. A chart of cases
-   selects them by record type. Otherwise the daily Results count too, and a
+   selects them by record type. Otherwise the run records count too, and a
    producer who counted only cases is refused.
 4. **Values match** (`chart-aggregate-mismatch`). The checker recomputes every
    group, including the run and not-run units, from the filtered rows and the
@@ -170,44 +189,46 @@ page runtime runs the check again before it draws. A page that reaches a
 reader with a mismatch shows `chart.refused` in place of the chart, never the
 chart.
 
-## 4. The dataset, and what this note needs from #107
+## 4. The dataset
 
-The dataset is the sealed record that the Result's `dataset_ref` names [107].
-Its rows are read from the bundle, never from page-local state. A build given
-`charts` for a bundle whose Result has no `dataset_ref`, or whose dataset
-record isn't disclosed, is refused (`chart-no-dataset`). A build with no
-`charts` is unaffected. The checker never falls back to the Result's own
-claims or `evidence[]`, because that would make a second dataset definition
-beside #107's. A row whose record the bundle doesn't disclose to this audience
-is refused (`chart-row-withheld`), never dropped, because dropping it would
-change the population.
+The dataset is the sealed selection the Result names (agent-action-capsule
+`spec/evidence-result-v0.md` §7.3): `plan_ref` digests a dataset plan
+(`spec/evidence-plan-ir-v0.md` §5.1) and `dataset_ref` the dataset document
+it selected (§6.2 there), each over `UTF8(JCS(value))`. Both are documents of
+their own. The reader (`chart-dataset.ts`; Go `chartspec.DatasetOf`) takes any
+disclosed member, or the `statement` of a disclosed evidence-book record
+header, whose digest is the ref. A build given `charts` for a bundle whose
+Result has neither, or that does not disclose both documents, is refused
+(`chart-no-dataset`). A dataset that is not an `evidence-dataset-v0` document,
+whose `plan_ref` is not the Result's, whose rows are not in `seq` order, or
+whose plan's window node has no params, is refused (`chart-dataset-invalid`).
+A build with no `charts` is unaffected. The checker never falls back to the
+Result's own claims or `evidence[]`.
 
-What the checker needs from #107's row format, for the #107 lane to check
-against:
+A row names one record header by the digest of its JCS. The bundle carries the
+header as the record's disclosed `agent_input`, whose digest the record
+commits to (a record the book sealed), or inline in its `evidence_record_header`
+member (a record its caller sealed). A row's `seq` and `record_type` have to
+equal its header's. A row whose header the bundle does not disclose to this
+audience is refused (`chart-row-withheld`), never dropped, because dropping it
+would change the population.
 
-- **D1.** The dataset record's bytes are what `dataset_ref` digests, so the
-  checker verifies the rows before reading them.
-- **D2.** Each row names exactly one committed record by digest (`digest`,
-  `digest_alg`), and that record resolves in the bundle when disclosed.
-- **D3.** The rows are the plan's whole population, with none dropped and no
-  duplicates, so `count` and `sum` can be recomputed.
-- **D4.** The plan's window (`from` and `to`, as UTC calendar days) is sealed
-  data, in the plan that `plan_ref` names or in the dataset record. Otherwise
-  "not run" can't be told from "outside the window", and
-  `usermeta.capsule.window` has nothing sealed to agree with. The checker
-  refuses a spec window that differs from the sealed window.
-- **D5.** The run records, the daily Results for the calendar, are rows of the
-  same dataset. Otherwise `runs` can't find them.
-- **D6.** Each row (or its record) states its record type, so `runs` and
-  `transform` can select by it.
+The reader does not run the plan again: that needs every header of the
+population, which a bundle that withholds any of them cannot give (§6.2). It
+checks what the bundle can show: both digests, the dataset's own `plan_ref`,
+and each disclosed row against its header.
 
-The chart fields read through a row are dot paths into the referenced record.
-For a daily Result these are `generated_at` and the `aggregate.coverage`
-members (`evaluations`, `excluded_not_applicable`, `unknown_count`,
-`not_yet_in_force`, `requirements_covered`). For case records they are the
-record's own timestamp and the fields #120's cells use. If the AAC text gives
-rows their own fields instead of refs, section 4 follows the AAC text and this
-note is amended.
+Field paths are header paths, as the plan's are: the first name is a header
+member and a payload member is `statement.<name>`. A run is dated by a field
+the producer sets, such as `event_time_claim` or `statement.generated_at`,
+never `committed_at`.
+
+**Daily run records.** agent-action-capsule's Result reader allows one Result
+per bundle (the 2026-09-28 one-headline-document rule): a monthly Result's
+bundle cannot also disclose daily Results as `evidence_result` records. The
+vectors and goldens date runs by a neutral run record type (`daily_run`, as
+the AAC vectors use `example-run`). How a Terms Pack month carries its daily
+runs is open for #120 and evidencebook#107.
 
 ## 5. Drawing, scripts off, and words
 
@@ -250,8 +271,10 @@ the renderer, a two-way door, changes.
   packaging would be a Go twin of all of [pb] §2.4, which is its own item, not
   #82's.
 - **A reader with scripts off is told where the static copy is.** The Go and
-  TS shells get a `<noscript>` line, `page.noscript`, which says the page
-  needs scripts and that a no-script copy can be built with the command above.
+  TS shells carry a `<noscript>` line which says the page needs scripts and
+  that a no-script copy can be built with the command above. It is fixed shell
+  text, not a wording key: the shell is written before any pack is read, and
+  the static page has no `<noscript>`.
   `capsulectl report build` prints the same command, and its docs give it,
   because the static path needs Node, which a `capsulectl` user may not have.
   The `<noscript>` line lands with this item's code. The `capsulectl` line
@@ -264,13 +287,20 @@ strings as public text):
 
 | Key | String |
 | --- | --- |
-| `chart.population.one` / `.other` | `{count} record` / `{count} records` (the repository's plural convention, as in `front.agg.evaluations.one`) |
+| `chart.population.one` / `.other` | `{n} record` / `{n} records` (the repository's plural convention, as in `front.agg.evaluations.one`) |
 | `chart.window` | `{from} to {to} (UTC)` |
 | `chart.derived` | `Derived from this report's records, not evidence itself` |
 | `chart.not_run` | `Not run` |
 | `chart.table.caption` | `The values in this chart` |
+| `chart.count` / `chart.sum` | `Count` / `Sum of` (the table's value column, the summed field path after it as code) |
+| `chart.evidence.records` | `The records this value counts, each a link to its entry in this bundle's records` |
+| `chart.evidence.none` | `Nothing counted: no record in this report's data falls here` |
 | `chart.refused` | `This chart was not drawn: its spec does not match the report's data ({reason}).` |
-| `page.noscript` | `This page needs scripts to show the report. A version without scripts can be built from the same bundle with render-report --format static.` |
+| shell `<noscript>` (fixed text) | `This page needs scripts to show the report. A version without scripts can be built from the same bundle with render-report --format static.` |
+
+`chart.derived`, `chart.not_run`, `chart.evidence.records`,
+`chart.evidence.none` and `chart.refused` are locked: a pack cannot reword
+them (`LOCKED_ENTRIES`).
 
 - The caption gives the population and the window, from the checked
   statement. The noun is the core's fixed "records". A pack noun would put
@@ -285,52 +315,68 @@ strings as public text):
   are listed whether or not they have rows.
 - #120's `calendar.not_run` reuses `chart.not_run`, since a calendar unit is a
   run.
+- Acceptance 5a: every value in the table carries Show evidence, the records
+  it counts as links to the core's records section (the same shape as
+  `evidenceAction`, so the core's "Cited by" lists read it back), or, for a
+  value that counts nothing, the `chart.evidence.none` label. The
+  computation half of 5a is #146.
 
 Build refusals (`chart-no-dataset` and the reasons in section 3) are builder
 errors with a `message`, not page text.
 
-## 6. Blockers
+## 6. What the code waits on
 
-1. **The dataset row format** (evidencebook#107, AAC spec PR). That PR isn't
-   open yet. D1 to D6 in section 4 are what this note needs from it.
-2. **A committed VALID bundle that carries a dataset.** Goldens need one. No
-   committed fixture has a `dataset_ref` or daily Results today. evidencebook's
-   `4-monthly-outcome` Result cites only `evaluation-report/v1` records. One
-   comes from `book result build` once #107's code lands.
-
-Code waits for the #107 spec PR to merge (coordinator, 2026-10-28).
+1. **An agent-action-capsule TS release with #443.** The published
+   `ts/v0.9.0` predates #443, and its Result reader refuses `plan_ref` and
+   `dataset_ref` as unknown members, so no page shows a Result that names a
+   dataset until a release carries #443's `ts/src/result-root.ts`.
+2. **An evidencebook-built bundle.** The golden bundle,
+   `ts/test/testdata/charts/book.bundle.json`, is sealed in this repository
+   by the test sealer from literal headers. One from `book result build` can
+   replace it once evidencebook#107's code lands.
 
 ## 7. Tests
 
-The vectors are data. Each one is a spec plus either no dataset or a dataset
-of rows, each row with its resolved record or a `withheld: true` marker. TS
-and Go run them.
+The vectors (`vectors/chart-spec/`) are data. Each one is a spec plus no
+dataset or a named dataset of rows, each row with its header or none
+(withheld). TS and Go run them. Each negative names the passing positive it
+changes in one way, and both runners check that the positive passes, so each
+refusal is that change's and a renderer without the check would have drawn
+the negative.
 
 - One passing spec per mark, each validated against the Vega-Lite v5 schema.
 - One vector per refusal reason: `chart-unsupported-member` (for `expr`,
   `url`, `params`, `calculate`, a local time unit and `utcyearweek`), `chart-aggregate-shape`,
   `chart-field-missing`, `chart-field-type` (a string under `sum` and a
   timestamp with no offset), `chart-window-mismatch` (a differing statement, a
-  `utcyearmonth` window from 2026-09-02 to 2026-09-30), `chart-runs-missing`, `chart-population-mismatch`,
-  `chart-aggregate-mismatch`, `chart-row-withheld` and `chart-no-dataset`.
+  `utcyearmonth` window from 2026-09-02 to 2026-09-30), `chart-runs-missing`,
+  `chart-runs-field-mismatch`, `chart-runs-unsealed` (a plan with no window
+  node, and one with two), `chart-population-mismatch`,
+  `chart-aggregate-mismatch` (including a not-run day stated as 0),
+  `chart-row-withheld`, `chart-no-dataset` and `chart-dataset-invalid`.
+- No "not run" on a plan with no window node or two: a day without rows
+  reads 0.
 - Time: a timestamp at 23:59:59Z and one at 00:00:00Z on the window's last and
   first days; a `utcyearmonth` window that isn't whole months is refused.
-- Not run: 30 days, daily Results on 28 of them. One of the 28 days has no
+- Not run: 30 days, daily run records on 28 of them. One of the 28 days has no
   rows after the filter. That draws 28 values, one of them `0`, and 2 "not
   run" cells.
 - Groups: a `color` series where one key has no rows on a run day lists that
   group as `0`. A `rect` with two cells at the same x and different y lists
   two groups.
-- Mixed dataset: daily Results and cases in one dataset. A case chart whose
+- Mixed dataset: daily run records and cases in one dataset. A case chart whose
   `transform` selects cases by record type passes, and a case field missing
-  from the daily Results doesn't refuse it. The same spec without the
+  from the run records doesn't refuse it. The same spec without the
   record-type filter is refused (`chart-field-missing`, since check 1 runs
-  first). A count of cases by day that uses only `generated_at`, which both
-  record types have, and leaves out the record-type filter is refused
-  (`chart-population-mismatch`), because the daily Results are counted too.
+  first). A count of cases by day that uses only `event_time_claim`, which
+  both record types have, and leaves out the record-type filter is refused
+  (`chart-population-mismatch`), because the run records are counted too.
 - Derived: a two-category `bar` with no `color` carries the label.
 - Static page: `render-report.mjs --charts … --format static` builds a page
   with its charts and passes `static-carries-script`. `fragment` with `charts` reports
   `fragment-has-charts`.
-- Goldens (after #107): the outcome and EU months, re-rendered byte for byte
-  in CI, through the existing accessibility, 390 px and print checks.
+- Golden: the book bundle's charts section, byte for byte
+  (`ts/test/goldens/charts/book.html`), and the same charts with scripts on
+  and off, in print and at 390 px, with no CSP violation
+  (`chart-browser.test.ts`). The Terms Pack outcome and EU months follow
+  when evidencebook builds them.
