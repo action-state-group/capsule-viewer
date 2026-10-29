@@ -34,11 +34,11 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "52c9f961e8a3f5905097098207fd121e45feb5731a5446a8ca52d837f72e7d0f",
+    "script_sha256": "a4d7e9725b0b1f301e4a1e87fc67efcfbb99b70488fea3ceb82f4ad8c9d12eb7",
     "style_sha256": [
       "6135185b2523a3bb536304f68cb7b30dee3e24a0c6258852650aeffdcc5328d5",
       "3b10dec93618bcdba09299e516aeeb663462b6379e80787fccf93db6348fc2e3"
     ],
-    "wording_sha256": "4b52f011e3e71359482447909ba0fd4c618b1fa7e7e263bc45abb29973d88b2e"
+    "wording_sha256": "c77fd6b20fe07c29971ef34d1839f1b84869096aa374d40561d784ebf1dcb1ca"
   }
 }

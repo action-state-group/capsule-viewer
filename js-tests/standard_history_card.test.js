@@ -100,6 +100,19 @@ describe("the check is AAC's reference check_card (agent-action-capsule vectors/
       expect(api.isStandard(props)).toBe(c.expected.standard);
     });
   }
+  it("reads an assetScale written 2.0 as 2, the one input the reference refuses and JSON.parse cannot tell apart", () => {
+    const i = VECTORS.cases[0].inputs;
+    const deals = JSON.parse(JSON.stringify(i.deals).replace(/"assetScale":2/g, '"assetScale":2.0'));
+    expect(api.checkCard(i.card, i.policy, i.as_of, deals).counts_recompute).toBe("PASS");
+  });
+  it("a \"__proto__\" member is a member: a band or a card carrying one is not a standard card", () => {
+    const i = VECTORS.cases[0].inputs;
+    const band = JSON.parse(JSON.stringify(i.card).replace('"currency":"BTC"', '"__proto__":{},"currency":"BTC"'));
+    expect(api.checkCard(band, i.policy, i.as_of, i.deals).card_form).toBe("FAIL");
+    const top = JSON.parse(JSON.stringify(i.card).replace('{"derivation"', '{"__proto__":0.5,"derivation"'));
+    const props = api.checkCard(top, i.policy, i.as_of, i.deals);
+    expect([props.card_form, props.counts_integral]).toEqual(["FAIL", "FAIL"]);
+  });
   it("throws on a malformed input, never on a malformed card", () => {
     const i = VECTORS.cases[0].inputs;
     expect(() => api.checkCard("not a card", i.policy, i.as_of, i.deals)).not.toThrow();
@@ -143,6 +156,37 @@ describe("the committed bundles (capsulectl, VALID)", () => {
       expect(host.L0.querySelector("[data-sh-total]")).toBeNull();
       expect(host.L2.children).toHaveLength(0);
     }
+  });
+  it("a malformed verification is a bundle that did not verify, never a crash", () => {
+    const ctx = contextOf("person-shared");
+    for (const verification of [null, { ...ctx.verification, capsuleResults: { x: null } }, { ...ctx.verification, disclosures: "x" },
+      { ...ctx.verification, capsuleResults: { x: { ok: 1 } } }, { ...ctx.verification, perRecordMembership: { status: "fail", findings: "x" } }]) {
+      expect(modelOf(l, { ...ctx, verification }).state).toBe("unverified");
+    }
+  });
+  it("an unreadable deal entry is never quoted on the page", () => {
+    const b = bundleOf("person-own");
+    b.extensions[EXT].deals[0].outcome = "met";
+    const m = modelOf(l, contextOf("person-own", b));
+    expect(m.state).toBe("unreadable");
+    expect(JSON.stringify(m)).not.toContain(b.extensions[EXT].deals[0].deal);
+    expect(pageText(renderAll(l, m))).not.toContain(b.extensions[EXT].deals[0].deal);
+  });
+  it("deal entries without the policy say what is missing, never that the page holds no entries", () => {
+    const b = bundleOf("person-own");
+    delete b.extensions[EXT].policy;
+    const m = modelOf(l, contextOf("person-own", b));
+    expect(m.properties.counts_recompute).toBe("NOT_CHECKED");
+    expect(renderAll(l, m).L0.querySelector("[data-sh-counts]").textContent).toBe(
+      "This copy carries the deal entries but not the policy, so the counts were not recounted: they are the holder's own statement.");
+  });
+  it("says the snapshot covers the card only when the root record's own membership holds", () => {
+    const ctx = contextOf("person-shared");
+    const unbound = { ...ctx, verification: { ...ctx.verification, perRecordMembership: { status: "fail", findings: [`membership_record_unbound:${ctx.root}`] } } };
+    const proves = (c) => renderAll(l, modelOf(l, c), "L1").L1.querySelector('[data-sh-section="proves"]').textContent;
+    expect(proves(ctx)).toContain("the log's snapshot covers it");
+    expect(modelOf(l, unbound).state).toBe("card");
+    expect(proves(unbound)).not.toContain("snapshot covers it");
   });
   it("a bundle that did not verify draws no count", () => {
     const b = bundleOf("person-shared");
@@ -282,7 +326,8 @@ describe("negative: deal entries never travel as the card to send", () => {
       for (const d of p.c.block.deals || []) {
         expect(text).not.toContain(d.deal);
         expect(text).not.toContain(d.agreed_at);
-        if (d.amount.value.length > 2) expect(text).not.toContain(d.amount.value);
+        // As a whole number: a digest's hex may hold the same digits.
+        if (d.amount.value.length > 2) expect(text).not.toMatch(new RegExp(`(?<![0-9a-f])${d.amount.value}(?![0-9a-f])`));
       }
     }
   });
@@ -318,11 +363,23 @@ describe("the counts recount from the deal entries (the holder's own copy)", () 
 
 describe("what the page claims", () => {
   const l = load();
+  it("a check skipped because an earlier one failed says so, never 'not checked here'", () => {
+    const p = everyPage(l).find((x) => x.c.name === "neg-percentage-member" && x.depth === "L2");
+    const row = (k) => p.host.L2.querySelector(`[data-property="${k}"]`);
+    for (const k of ["denominator", "counts_recompute"]) {
+      expect(row(k).getAttribute("data-skipped")).toBe(k === "denominator" ? "true" : "false");
+    }
+    expect(row("denominator").lastChild.textContent).toBe("not run: an earlier check failed");
+    const own = everyPage(l).find((x) => x.c.name === "neg-counted-shop-purchase-own" && x.depth === "L2");
+    expect(own.host.L0.textContent).toContain("Failed: The counts recount from the deal entries");
+  });
   it("never says a signature or a witness was checked, and names anchor_inclusion not checked", () => {
     for (const p of everyPage(l).filter((x) => x.depth === "L2" && x.model.state !== "unreadable")) {
       const row = p.host.L2.querySelector('[data-property="anchor_inclusion"]');
       expect(row.getAttribute("data-property-status")).toBe("NOT_CHECKED");
-      expect(pageText(p.host)).not.toMatch(/signed by|witnessed|verified signature/i);
+      // "signed" only where the page says it did not check the signature.
+      const sentences = pageText(p.host).split(/(?<=\.)\s*|\n/).filter((s) => /\bsign(ed|ature)\b|witnessed/i.test(s));
+      expect(sentences.filter((s) => !/does not check the signature/.test(s) && !/^That the holder's key signed it\.?$/.test(s.trim()))).toEqual([]);
     }
   });
 });
