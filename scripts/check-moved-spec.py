@@ -54,7 +54,9 @@ CHART_SPECS_PARAGRAPH = (
     "checks them again and draws each in L1, or the core's notice in place of a spec that fails. The\n"
     "`static` page carries the drawn charts and no spec. A `fragment` cannot carry them\n"
     "(`fragment-has-charts`). The page's \"How this page was checked\" section states each spec's\n"
-    "SHA-256, over its JCS. With no `charts`, every packaging is unchanged byte for byte. The Go\n"
+    "SHA-256, over its JCS. An entry with a `view` member is a calendar or by-period view\n"
+    "(`docs/design/report-views.md`), a set of chart specs checked together; it is checked, carried\n"
+    "and stated the same way. With no `charts`, every packaging is unchanged byte for byte. The Go\n"
     "offline builder (`OfflineOptions.Charts`) checks the specs with `go/chartspec` and carries them\n"
     "the same way."
 )

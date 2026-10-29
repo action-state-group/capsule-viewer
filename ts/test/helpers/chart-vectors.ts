@@ -40,19 +40,20 @@ const utcDay = (value: unknown): string =>
 const get = (h: Obj, path: string): unknown =>
   path.split(".").reduce<unknown>((at, k) => (at as Obj | undefined)?.[k], h);
 
-interface OracleChannel {
+export interface OracleChannel {
   readonly name: "x" | "y" | "color";
   readonly field: string;
   readonly unit?: "day" | "month";
 }
 
 /** The values a chart states, computed the plain way for the fixtures. */
-function oracle(
+export function oracle(
   rows: readonly Obj[],
   keep: (h: Obj) => boolean,
   keys: readonly OracleChannel[],
   agg: { readonly name: string; readonly sum?: string },
   days?: { readonly from: string; readonly to: string; readonly runs: boolean },
+  runType: string = RUN_TYPE,
 ): Obj[] {
   const headers = rows.map((r) => r.header as Obj).filter(keep);
   const val = (h: Obj, c: OracleChannel): Scalar => {
@@ -78,7 +79,7 @@ function oracle(
   const ran = new Set(
     rows
       .map((r) => r.header as Obj)
-      .filter((h) => h.record_type === RUN_TYPE)
+      .filter((h) => h.record_type === runType)
       .map((h) => {
         const d = utcDay(h.event_time_claim);
         return keys.find((k) => k.unit !== undefined)?.unit === "month"
@@ -128,12 +129,12 @@ function oracle(
 }
 
 const isCase = (h: Obj): boolean => h.record_type === CASE_TYPE;
-const DAY_X = {
+export const DAY_X = {
   field: "event_time_claim",
   type: "temporal",
   timeUnit: "utcyearmonthdate",
 };
-const COUNT_Y = { aggregate: "count", type: "quantitative" };
+export const COUNT_Y = { aggregate: "count", type: "quantitative" };
 const WINDOW_STATED = { field: "event_time_claim", ...WINDOW };
 
 export interface VectorDataset {

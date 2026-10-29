@@ -17,6 +17,7 @@ import {
   type ChartDataset,
   type ChartRow,
 } from "./chart-spec.js";
+import { checkView, isView } from "./report-view.js";
 
 /**
  * The sealed dataset a report's charts are checked against, read from a
@@ -256,7 +257,8 @@ export async function checkChartsAgainst(
   return charts.map((spec, index) => {
     try {
       if (invalid !== undefined) throw invalid;
-      checkChart(spec, dataset);
+      if (isView(spec)) checkView(spec, dataset);
+      else checkChart(spec, dataset);
       return { index };
     } catch (err) {
       if (!(err instanceof ChartRefusal)) throw err;

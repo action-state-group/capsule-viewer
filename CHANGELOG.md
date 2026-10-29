@@ -11,6 +11,27 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- Calendar and by-period views over a monthly Result's daily runs
+  (capsule-viewer#120; `docs/design/report-views.md`). A `charts` entry with a
+  `view` member (`"calendar"` or `"by-period"`) lays several chart specs out
+  in a grid, and the viewer checks each against the sealed dataset exactly as
+  it checks a chart. The calendar is a Monday-first month table, a cell per
+  day with the pack's lanes (each a chart spec with its own id); a day with no
+  daily run reads "Not run", never 0, in every lane. The by-period table
+  counts the rows of one chart by requirement and Monday-start UTC week, with
+  the `out_of_scope` and `not_yet_in_force` rows in columns of their own and
+  no "met" column; a row counted by two of its charts is refused
+  (`view-overlap`). Every count carries Show evidence. Refusals add the
+  `view-*` reasons beside the chart's. The run record type is `daily_run`; the
+  viewer never names it, since a view reads it from the spec's `runs` filter.
+  Words: `calendar.weekday.1` to `.7`, `period.week`, `period.not_run_days.*`
+  and `view.unplaced.*`, locked like the `chart.*` words. Both default wording
+  packs change, so their digests do, and the chart stylesheet's CSP hash does.
+  `go/chartspec` refuses a view entry as an unsupported member, so a page the
+  Go builder writes never draws one unchecked until its twin lands.
+
 ## ts 0.4.0 and go 0.4.0 (2026-10-29)
 
 Both state viewer 0.4.0: `ts/v0.4.0`, then `go/v0.4.0` on the commit that

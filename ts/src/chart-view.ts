@@ -41,6 +41,21 @@ export const CHART_CSS = `
 .cv-chart .cv-ev-label{font-size:12px;color:var(--slate)}
 .cv-chart-refused{margin:0 0 16px;padding:10px 14px;border:1px solid var(--bad);border-radius:10px;background:var(--bad-l);font-size:14px}
 @media print{.cv-chart{break-inside:avoid}}
+.cv-view{margin:0 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.cv-view figcaption{font-size:13px;color:var(--slate);margin:6px 0 8px}
+.cv-view .cv-chart-derived{display:inline-block;margin:0 0 8px;padding:2px 8px;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-size:12px}
+.cv-view .cv-view-legend{margin:0 0 8px;padding:0;list-style:none;font-size:12px;color:var(--slate)}
+.cv-view .cv-unplaced{margin:0 0 8px;font-size:13px;color:var(--slate)}
+.cv-view .cv-view-table{overflow-x:auto;margin:0 0 8px}
+.cv-view table{border-collapse:collapse;font-size:13px;min-width:100%}
+.cv-view caption{text-align:left;font-weight:600;margin:0 0 4px}
+.cv-view th,.cv-view td{text-align:left;padding:3px 8px;border:1px solid var(--line);vertical-align:top}
+.cv-cal{table-layout:fixed;min-width:560px}
+.cv-cal .cv-dn{font-weight:600;font-size:12px}
+.cv-cal .cv-lane{margin:2px 0;overflow-wrap:anywhere}
+.cv-cal td[data-not-run],.cv-period td[data-not-run]{color:var(--slate);font-style:italic;background:repeating-linear-gradient(45deg,var(--cream),var(--cream) 4px,#fff 4px,#fff 8px)}
+.cv-view .cv-ev-label,.cv-view .cv-nr{font-size:12px;color:var(--slate)}
+@media print{.cv-view{break-inside:avoid}}
 `;
 
 // A fixed palette for series; the chart draws no colour from the spec.
@@ -309,7 +324,7 @@ function drawSvg(chart: CheckedChart, index: number): SVGElement {
  * report-levels.ts `evidenceAction` (so the core's "Cited by" lists read it
  * back). A value that counts no record carries the label instead.
  */
-function valueEvidence(
+export function valueEvidence(
   key: string,
   name: string,
   group: ChartGroup,

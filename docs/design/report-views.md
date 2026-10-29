@@ -38,9 +38,14 @@ headers, as #82 did.
 ## 2. The shape: a view is chart specs laid out
 
 The viewer does not get a second checker. A view is a **list of ordinary chart
-specs** (chart-spec.md section 2), each checked by `checkChart` unchanged,
-plus a layout. Every number a cell shows is a group `checkChart` recomputed
-from the rows. A view adds only the rules that make the specs fit one grid.
+specs** (chart-spec.md section 2), each checked by `checkChart`, plus a layout.
+Every number a cell shows is a group `checkChart` recomputed from the rows. A
+view adds only the rules that make the specs fit one grid. The one change to
+`checkChart` is additive: `CheckedChart.units`, a temporal chart's every unit
+in order with whether it was not run. A chart whose other key channel has no
+value after `transform` has no groups, so without `units` its days would not
+say which ran (a month with no not-met cases would draw blanks where the
+weeks read "Not run").
 
 A view is an entry of the existing `charts` setting, told from a chart spec by
 its `view` member (a chart spec has `$schema`). No new builder setting, no new
@@ -82,27 +87,44 @@ After `checkChart` passes, the view checks the checked chart (`CheckedChart`):
   (`view-runs-unsealed`), because a calendar that reads 0 for a day nothing
   ran is the failure #120 exists to remove;
 - the aggregate is `count` (`view-chart-shape`);
-- at most one key channel besides `x`. A calendar lane has none (a bar of
-  counts per day) or one (a `rect` of day by value, for example the day's
-  judgment). A by-period chart has exactly one, the requirement
-  (`view-chart-shape`).
+- exactly one key channel besides `x` in a by-period chart, the requirement:
+  `y` on a `rect`, `color` on a `bar`, `line` or `point`. The view reads it as
+  "the key channel that is not `x`", not as `y`. A calendar lane has none (a
+  bar of counts per day) or that one (a `rect` of day by value, for example
+  the day's judgment). The subset allows no more than one, so the lane rule
+  needs no check of its own.
 
-Across the charts of one view: the same `window` (`view-window-mismatch`) and
-the same `runs` filter and field (`view-runs-mismatch`), so every lane agrees
-on which days ran. A calendar's window is whole calendar months, because the
-grid draws whole months (`view-window-not-months`). A by-period's window is any
-window the charts agree on.
+Across the charts of one view: **the same days not run**
+(`view-runs-mismatch`), compared unit by unit from `units`, so every lane
+agrees on which days ran even when two lanes name different `runs.filter`
+predicates. A view needs no check that the windows agree: it needs a plan with
+exactly one window node, and `checkChart` already holds every chart's window
+to the sealed one. A by-period's charts all group by **one field**
+(`view-chart-shape`, naming both fields): the rows of its table are the union
+of their values, and two vocabularies in one row would draw a wrong figure. A
+calendar's window is whole calendar months, because the grid draws whole
+months (`view-window-not-months`); it is reachable when the sealed window is
+not (a Terms Pack month sealed from the 2nd).
 
 A refusal from `checkChart` is the view's refusal with the chart's own reason
 and the chart's id in the message: one table of reasons for charts and views.
 
 **By-period never counts a row twice.** The rows of `count` and of each
-`columns` chart must be disjoint (`view-overlap`, naming the first shared
-`seq`). A row counted as not met and also as `out_of_scope` is a producer
-error. Because the `count` chart selects its verdict by `transform`, an
-`out_of_scope` or `not_yet_in_force` row cannot reach the not-met cells; the
-check keeps it that way when a pack edit widens a filter. No cell is ever
-"met": the view has no such column.
+`columns` chart must be pairwise disjoint (`view-overlap`, naming the first
+shared `seq`): a row counted as not met and also as `out_of_scope` is refused.
+The guarantee is "disjoint across the charts the view declares". It does not
+say a pack declared the right columns: `columns` may be empty, and a pack that
+leaves `out_of_scope` out of it and out of `count`'s filter simply does not
+show those rows. No cell is ever "met": the view has no such column, and the
+`count` chart selects its verdict by `transform`.
+
+**Which date puts a row in a day or a week.** The chart's `x` field, a
+producer-set date such as `event_time_claim` (chart-spec.md section 4: never
+`committed_at`). The How ack on #120 said a week by the subject's
+`committed_at`; that is replaced, in the same comment thread, by this rule, so
+a backfilled record lands in the week it is about, not the week it was
+written. All days and weeks are UTC, and the caption says so (`chart.window`
+ends "(UTC)").
 
 ## 3. Drawing
 
@@ -112,17 +134,21 @@ One `<table class="cv-cal">` per month in the window, Monday first. Padding
 days outside the month are empty cells. A cell holds the day (`DD`) and:
 
 - **a day that ran:** for each lane, in lane order, the lane id as code and the
-  day's groups from that lane's chart: the count, or `key × count` for a lane
-  with a key channel (a day with one `daily_run` whose `statement.judgment` is
-  `not_met` draws `not_met × 1`). A lane with no group that day reads `0`,
-  which `checkChart` has already shown means "ran, nothing matched" because
-  the day ran. Each count carries Show evidence (chart-spec.md section 5,
-  `valueEvidence`): the records it counts as links into the core's records
-  section, or the `chart.evidence.none` label for a 0. That is the cell's link
-  to its side-by-side.
+  day's nonzero groups from that lane's chart: the count, or `key × count` for
+  a lane with a key channel (a day with one `daily_run` whose
+  `statement.judgment` is `not_met` draws `not_met × 1`, and `met × 0` is not
+  drawn). A lane with no nonzero group that day reads a single `0`, which
+  `checkChart` has shown means "ran, nothing matched" because the day ran.
+  Each count carries Show evidence (chart-spec.md section 5, `valueEvidence`,
+  exported and called with the group): the records it counts as links into the
+  core's records section, or the `chart.evidence.none` label for a 0. That is
+  the cell's link to its side-by-side.
 - **a day that did not run:** the cell is hatched, reads `chart.not_run`, and
   draws no lane. The same days are not run in every lane (`view-runs-mismatch`),
-  so one mark covers the cell.
+  so one mark covers the cell. A record dated on such a day (chart-spec.md
+  keeps it in the population) is in no cell, so the view says so once, under
+  its legend: `view.unplaced` ("2 records are dated on days that did not run,
+  so they are in no cell"), counting distinct records by `seq`.
 
 The table is the text alternative, so there is no hidden SVG. Print keeps the
 table; at 390 px it scrolls inside its own container (the same wrapper the
@@ -139,13 +165,17 @@ One `<table class="cv-period">`. Rows are the requirements: the union of the
    before the window on the first week). Each cell is the `count` chart's sum
    over that week's days **that ran**; the cell also reads `period.not_run_days`
    ("2 days not run") when some of the week's days in the window did not run,
-   and reads `chart.not_run` instead of a number when none of them ran;
+   and reads `chart.not_run` instead of a number when none of them ran. A
+   requirement with no group in a week that ran reads `0` with the `none`
+   label;
 3. one column per `columns` entry, headed by its id as code, holding the
-   window total for that requirement from that chart (sum over run days).
+   window total for that requirement from that chart (sum over run days). It
+   carries `period.not_run_days` for the days of the whole window that did not
+   run, and reads `chart.not_run` when no day in the window ran.
 
 `out_of_scope` and `not_yet_in_force` are therefore columns of their own and
 are not in any week cell. A week cell and a column total carry Show evidence
-(the union of the records of the groups they sum).
+(the union of the records of the groups they sum, as one synthetic group).
 
 A week that straddles the window edge is one column with the days it has
 inside the window. The cell never counts a day outside the sealed window.
@@ -160,11 +190,14 @@ Every new string is a core word, locked like the `chart.*` entries
 | `calendar.weekday.1` to `.7` | `Mon` `Tue` `Wed` `Thu` `Fri` `Sat` `Sun` |
 | `period.week` | `Week of {date}` |
 | `period.not_run_days.one` / `.other` | `{n} day not run` / `{n} days not run` |
+| `view.unplaced.one` / `.other` | `{n} record is dated on a day that did not run, so it is in no cell` / `{n} records are dated on days that did not run, so they are in no cell` |
 
 Reused: `chart.not_run`, `chart.window`, `chart.derived`,
 `chart.population.*`, `chart.evidence.*`, `chart.refused`. A view carries the
-derived label once, and a caption with its window and the number of records
-its charts count together. `chart.refused` names a view's reason the same way;
+derived label once, a caption with its window, and a legend with each chart's
+id as code and its own population (`chart.population.*`); there is no total,
+because two lanes that count the same record would add it twice. A month is
+drawn as its ISO `YYYY-MM` in the table caption, which needs no word. `chart.refused` names a view's reason the same way;
 the reasons are `view-*` strings or a chart reason.
 
 ## 4. Packagings and the Go twin
@@ -185,8 +218,14 @@ as #82's golden is (`ts/test/testdata/views/`). The book: September 2026, a
 `daily_run` on 28 of 30 days dated by `event_time_claim`, each with
 `statement.judgment`; case records carrying `statement.requirement` and
 `statement.verdict`, among them `out_of_scope` and `not_yet_in_force`; and an
-adjudication record on some days. A second month (an EU-shaped book with
-different lane ids) shows the layout is the pack's.
+`adjudication` record on every sixth day. The calendar declares three lanes
+(`activity`, `judgment`, `adjudications`, as #120 asks for the day's
+activity, judgment and adjudications), so the third is under test. The days not
+run are the 10th (a Thursday) and the 28th to 30th (the last partial week, fully
+not run), so a mixed week and a fully not-run week are both golden. A case on
+the 10th and 30th and an adjudication on the 30th sit on days that did not run:
+`view.unplaced` reads 4. The lane ids and requirements are a fixture's, not
+the viewer's: a second pack with other ids needs no code change.
 
 - **Goldens** (byte for byte in CI): the calendar and the by-period section of
   the sealed page, from the committed bundle and committed view specs.
@@ -194,19 +233,25 @@ different lane ids) shows the layout is the pack's.
   "Not run", not `0`, in every lane, and the old rendering (a view that counted
   the day as `0`, here the spec's own stated values) is refused by
   `chart-aggregate-mismatch`.
-- **A week column:** one week with a not-run day reads its sum plus "1 day not
-  run"; a week fully not run reads "Not run" and never `0`.
+- **A week column:** the week of the 7th reads its sum plus "1 day not run"; the
+  week of the 28th is fully not run and reads "Not run", never `0`. A column
+  total carries "4 days not run".
 - **Refusals**, one case each, every negative naming the positive it changes:
-  `view-unsupported-member`, `view-chart-shape` (a month unit, two key channels
-  on a lane, a `sum`), `view-runs-unsealed`, `view-runs-mismatch`,
-  `view-window-mismatch`, `view-window-not-months`, `view-overlap`, a
-  constituent chart that fails its own check (`chart-field-missing` on a view
-  field absent from the dataset), a view with no dataset (`chart-no-dataset`).
+  `view-unsupported-member`, `view-chart-shape` (a month unit, a `sum`, a
+  keyless chart in a by-period, charts grouping by different fields),
+  `view-runs-unsealed` (a plan with no window node), `view-runs-mismatch`
+  (two lanes naming different run records), `view-window-not-months` (a plan
+  sealed from the 2nd), `view-overlap`, a constituent chart that fails its own
+  check (`chart-field-missing` on a view field absent from the dataset), a view
+  with no dataset (`chart-no-dataset`). A bar keyed by `color` as the
+  requirement is read through the same key-channel rule.
 - **Pages:** html (checked and drawn), static (drawn at build time, passes
   `static-carries-script`), fragment (unavailable), a failed bundle (no L1),
   and a mismatching view (notice, never the table).
 - **5a:** every nonzero cell value has Show evidence whose records are in the
   core's records section; every zero has the `none` label.
-- **Go:** an entry with `view` is refused by `go/chartspec`.
+- **Go:** an entry with `view` is refused by `go/chartspec` (a Go test).
+- **Empty category domain:** a by-period month with no not-met cases still
+  reads "Not run" on the weeks no run covered (`units`).
 - **Browser:** the calendar and the table, scripts on and off, print and 390 px,
   no CSP violation.
