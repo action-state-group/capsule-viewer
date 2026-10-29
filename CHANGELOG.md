@@ -69,6 +69,8 @@ here. The format follows
   cite it, as "Cited by" links back. The default wording packs gain the
   `evidence.*` entries; the ones that say what a page does not show are
   locked.
+- History card module (capsuleviewer.standard-history/v0) draws a
+  standard_history/1 card, with the consumer/en wording pack (#134, #149).
 - Charts from a checked spec (capsule-viewer#82;
   `docs/design/chart-spec.md`). The builder's new `charts` setting takes
   Vega-Lite v5 specs in a closed subset. Each spec is checked against the

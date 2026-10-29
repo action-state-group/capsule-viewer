@@ -34,6 +34,14 @@ jobs:
           git -C "$RUNNER_TEMP/aac" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$rev" "$vendored"
           python scripts/check-moved-spec.py --aac "$RUNNER_TEMP/aac"
           python scripts/check-vendored-aac.py --aac "$RUNNER_TEMP/aac" --rev "$vendored"
+      # The chart golden's bundle is sealed here by the test sealer; its Result
+      # and dataset are held to AAC's own checkers too (capsule-viewer#82).
+      - name: Chart golden's Result and dataset, against AAC's checkers
+        run: |
+          rev="$(python scripts/check-chart-golden.py --rev)"
+          git init -q "$RUNNER_TEMP/aac-charts"
+          git -C "$RUNNER_TEMP/aac-charts" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "$rev"
+          python scripts/check-chart-golden.py --aac "$RUNNER_TEMP/aac-charts"
       # Warns, never fails: a vendored agent-action-capsule file that AAC's
       # main has since changed is due to be re-vendored, with the AAC release
       # capsule-viewer pins.
