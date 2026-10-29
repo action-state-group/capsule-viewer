@@ -11,6 +11,11 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.4.0 and go 0.4.0 (2026-10-29)
+
+Both state viewer 0.4.0: `ts/v0.4.0`, then `go/v0.4.0` on the commit that
+ships its page runtime.
+
 ### Breaking
 
 - The offline page carries the bundle in a `<script type="application/json">`
@@ -69,6 +74,22 @@ here. The format follows
   cite it, as "Cited by" links back. The default wording packs gain the
   `evidence.*` entries; the ones that say what a page does not show are
   locked.
+- The deal receipt modules (Python and the module-slot scripts) draw three
+  cases, read from the verifier's composed result and never from a
+  producer's label (capsule-viewer#124, #137): stamped by both (two carried
+  copies whose joins all derive `agree`, one deal; ours in blue, theirs in
+  amber and labelled "as received"), your receipt only (one carried copy,
+  the other party's member a carried `absence`, every join deriving
+  `one_sided`; the missing member is drawn grey and dashed, saying when it
+  was asked) and no record (the holder's own copy alone, as the unilateral
+  and seller pages). A `refusal` member makes no receipt, so the page
+  declines the bundle. Two copies that miss the first case read "not
+  stamped by both", never drawn like an agreement, and no side takes the
+  negative tone. Only the holder's page says "your" and lists the sentences
+  for their agent; a page cut for someone else names each side by its role.
+  "Your receipt only" rests on the recorded ask: when agent-action-capsule's
+  `receipt_document` record kind lands it adds a line to this case without
+  changing it.
 - History card module (capsuleviewer.standard-history/v0) draws a
   standard_history/1 card, with the consumer/en wording pack (#134, #149).
 - Charts from a checked spec (capsule-viewer#82;
