@@ -102,6 +102,7 @@
   };
   var VERIFICATION_OUTCOMES = {
     verified: ["Verified", "positive"],
+    incomplete: ["Incomplete", "caution"],
     failed: ["Did not verify", "negative"],
     not_checked: ["Not checked", "neutral"],
   };
@@ -382,7 +383,9 @@
       disclosed: disclosed,
       memberships: map(map(c.completeness).memberships),
       verification: verification,
-      verified: verification.outcome === "verified" && !mismatch,
+      // context.py GATE_OUTCOMES: an incomplete outcome (a producer-selected bundle, which the
+      // page supplies only for the top-level bundle) passes the gate as it does there.
+      verified: (verification.outcome === "verified" || verification.outcome === "incomplete") && !mismatch,
       assurance: env.assurance(context),
     };
   }
