@@ -35,6 +35,8 @@ VERIFIER = "capsulectl verify --bundle"
 GATE_CLAIMS: tuple[str, ...] = ("graph_closure", "interval_coverage", "per_record_membership")
 # Every bundle claim the report carries, in the order the checks list them.
 CLAIMS: tuple[str, ...] = (*GATE_CLAIMS, "checkpoint", "producer_signatures", "witnesses")
+# The finding capsulectl gives interval coverage for a selection the producer chose.
+SELECTION_NOT_CHECKABLE = "selection_not_checkable"
 _OUTCOME = {"pass": "verified", "fail": "failed", "withheld": "not_checked"}
 
 
@@ -156,7 +158,20 @@ def context_from_bundle_report(
         Check(name.replace("_", " "), _OUTCOME.get(status, "failed"), findings)
         for name, (status, findings) in statuses.items()
     )
-    verification = VerificationResult(VERIFIER, "verified" if gate else "failed", checks)
+    # A producer-selected bundle (capsulectl's `selection_not_checkable`): nothing
+    # failed, the records it carries all check, and only the claim that nothing
+    # is missing from the log cannot be made. Any other INCOMPLETE stays failed.
+    selected = (
+        not gate
+        and output.get("verdict") == "INCOMPLETE"
+        and statuses["interval_coverage"] == ("withheld", SELECTION_NOT_CHECKABLE)
+        and all(statuses[name][0] == "pass" for name in GATE_CLAIMS if name != "interval_coverage")
+        and not any(status == "fail" for status, _ in statuses.values())
+        and all(value == "passed" for value in identity.values())
+        and not any(s == "disclosure_mismatch" for members in disclosure_status.values() for s in members.values())
+    )
+    outcome = "verified" if gate else "incomplete" if selected else "failed"
+    verification = VerificationResult(VERIFIER, outcome, checks)
     countersignatures = tuple(
         str(c.get("status")) if isinstance(c, Mapping) else "unknown" for c in output.get("countersignatures") or ()
     )

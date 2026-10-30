@@ -113,3 +113,43 @@ def test_an_unknown_disclosure_status_is_refused_not_raised_raw():
 def test_the_assurance_carries_the_bound_digest():
     bundle, output = load("keep")
     assert context_from_capsulectl(bundle, output)[1].bundle_digest == output["bundle_digest"]
+
+
+def _selected():
+    return load("mesh-payer-selected")
+
+
+def test_a_producer_selected_bundle_is_incomplete_not_failed():
+    """capsulectl reads a selection INCOMPLETE (`selection_not_checkable`) and
+    every other claim passes: the gate passes with the outcome `incomplete`,
+    never `verified`."""
+    context, _ = context_from_capsulectl(*_selected())
+    assert context.verified
+    assert context.verification.outcome == "incomplete"
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda o: o["interval_coverage"].update(findings=["other_reason"]),
+        lambda o: o["interval_coverage"].update(findings=["selection_not_checkable", "other_reason"]),
+        lambda o: o["per_record_membership"].update(status="withheld"),
+        lambda o: o["graph_closure"].update(status="fail"),
+        lambda o: o["checkpoint"].update(status="fail"),
+        lambda o: o["record_identity"].update({next(iter(o["record_identity"])): "failed"}),
+        lambda o: o["disclosures"][0].update(status="disclosure_mismatch"),
+        lambda o: o.update(verdict="INVALID"),
+    ],
+)
+def test_any_other_incomplete_or_failure_still_fails_the_gate(edit):
+    bundle, output = _selected()
+    output = copy.deepcopy(output)
+    edit(output)
+    assert not context_from_capsulectl(bundle, output)[0].verified
+
+
+def test_a_valid_verdict_with_a_withheld_interval_still_fails_the_gate():
+    bundle, output = _selected()
+    output = copy.deepcopy(output)
+    output["verdict"] = "VALID"
+    assert not context_from_capsulectl(bundle, output)[0].verified
