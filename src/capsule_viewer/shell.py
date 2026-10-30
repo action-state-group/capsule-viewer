@@ -42,6 +42,19 @@ INCOMPLETE_SELECTION = (
     "the producer's log, but the verifier cannot check that nothing was left out. What is shown is what "
     "the file holds, which may not be everything that happened."
 )
+# A bundle that verifies when no witness the verifier trusts holds a receipt
+# for its checkpoint (evidencebook#209): its chain checks only against its
+# holder's own signatures, so the page never reads as checked without saying so.
+NOT_WITNESSED = (
+    "No witness has vouched for this log: this file checks only against its holder's own signatures. No receipt from a witness "
+    "the verifier trusts covers its checkpoint, so it could be a private copy of the log that no witness has seen."
+)
+# The same page when no verifier reported a witness result at all (a result
+# from before witness checks): it is not shown as witnessed either.
+WITNESS_UNREPORTED = (
+    "No witness result: none was reported to this page, so it does not show whether any witness has seen "
+    "this log. What it shows checks only against its holder's own signatures."
+)
 PACK_REFUSED = "The wording pack was refused ({reason}), so labels are shown by their keys."
 FALLBACK_TITLE = "Evidence bundle"
 

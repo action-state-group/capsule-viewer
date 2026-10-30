@@ -8,6 +8,13 @@ of capsule-emit's own verifier,
 record, a signature, a checkpoint, a proof or a witness receipt: every status
 on the page is one the verifier reported, read unchanged.
 
+One reading is the page's own: a file whose every check passes is shown as
+checking in full only when the verifier also checked a witness receipt for its
+checkpoint (its ``witnesses`` result is ``pass``). Without one the chain checks
+only against its holder's own signatures, and the page says no witness has
+vouched for it (evidencebook#209). The verdict and the exit code stay the
+verifier's.
+
 The one thing this module computes is the pairing of a result handed in from
 outside with the bundle it is drawn over. :func:`render_report_html` refuses
 (:class:`BundleMismatch`) when the result's ``bundle_digest`` is not the
@@ -34,6 +41,8 @@ import html as _html
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from .shell import NOT_WITNESSED, WITNESS_UNREPORTED
 
 if TYPE_CHECKING:
     from capsule_emit.evidence_file import EvidenceFileCheck
@@ -119,6 +128,10 @@ def _overall(check: EvidenceFileCheck) -> tuple[str, str]:
     if not check.ok:
         return "fail", "This file does not check. The failing items are marked below."
     if check.proven:
+        if check.witness is None:
+            return "withheld", WITNESS_UNREPORTED
+        if check.witness.status != "pass":
+            return "withheld", NOT_WITNESSED
         return "pass", "Everything this file claims checks, offline, from the file alone."
     if not check.checkpoint_authenticated:
         return (
