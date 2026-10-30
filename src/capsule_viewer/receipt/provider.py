@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from html import escape
 from importlib import resources
 
@@ -94,6 +95,17 @@ class ProviderModel:
     total: str | None
 
 
+def _utc(stamp: str) -> str:
+    """An RFC 3339 time in UTC, with the zone said; "?" when it is not one with an offset."""
+    try:
+        when = datetime.fromisoformat(stamp)
+    except ValueError:
+        return "?"
+    if when.tzinfo is None:
+        return "?"
+    return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S UTC")
+
+
 def _is_leg(record: Frozen) -> bool:
     return _get(_get(record, "settlement"), "leg") == _LEG and _get(_get(record, "settlement"), "sealer_role") == "payee"
 
@@ -117,9 +129,9 @@ def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]
     if poc.get("role", "served") != "served":
         return None
     # Only an exchange that was served: a request that failed or never completed
-    # (a payment may still have come in) is not "an exchange you served". An
-    # exchange that states no status is read as served until the record states one.
-    if _get(_get(exchange[0], "effect"), "status") not in (None, "confirmed"):
+    # (a payment may still have come in) is not "an exchange you served", and a
+    # record that states no status is not shown as one either.
+    if _get(_get(exchange[0], "effect"), "status") != "confirmed":
         return None
     return exchange[0], tuple(others)
 
@@ -160,7 +172,7 @@ class ProviderReceiptModule:
         return ProviderModel(
             exchange_id=_text(_get(exchange, "capsule_id")),
             model=_text(_get(_get(exchange, "model_attestation"), "model_id")),
-            served_at=(_text(_get(exchange, "timestamp")))[:19] + " UTC",
+            served_at=_utc(_text(_get(exchange, "timestamp"))),
             payments=tuple(
                 Payment(
                     _text(_get(leg, "capsule_id")),

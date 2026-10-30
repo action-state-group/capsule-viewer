@@ -132,12 +132,17 @@ def test_the_manifest_matches_no_other_viewer_or_builtin_module():
     assert sorted(n for n, m in others.items() if co_matchable(MANIFEST, m)) == []
 
 
-@pytest.mark.parametrize("status", ["failed", "planned", "dispatched", "refused"])
+@pytest.mark.parametrize("status", ["failed", "planned", "dispatched", "refused", None, "missing", "no effect"])
 def test_an_exchange_that_was_not_served_is_not_an_exchange_you_served(status):
     bundle, output = load(NAME)
     edited = copy.deepcopy(bundle)
     root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
-    root["effect"]["status"] = status
+    if status == "missing":
+        del root["effect"]["status"]
+    elif status == "no effect":
+        del root["effect"]
+    else:
+        root["effect"]["status"] = status
     context, _ = context_from_capsulectl(edited, report_for(edited, output))
     assert not ProviderReceiptModule().canRender(context)
 
@@ -145,3 +150,20 @@ def test_an_exchange_that_was_not_served_is_not_an_exchange_you_served(status):
 def test_the_fee_says_what_it_is_the_fee_for_and_the_time_says_its_zone():
     text = visible_text(_page())
     assert "Fee for receiving" in text and "UTC" in text
+
+
+@pytest.mark.parametrize(
+    ("stamp", "shown"),
+    [
+        ("2026-10-30T19:50:00Z", "2026-10-30T19:50:00 UTC"),
+        ("2026-10-30T14:50:00-05:00", "2026-10-30T19:50:00 UTC"),
+        ("2026-10-30T19:50:00+00:00", "2026-10-30T19:50:00 UTC"),
+        ("2026-10-30T19:50:00", "?"),
+        ("not a time", "?"),
+        ("", "?"),
+    ],
+)
+def test_the_time_is_shown_in_utc_or_not_at_all(stamp, shown):
+    from capsule_viewer.receipt.provider import _utc
+
+    assert _utc(stamp) == shown
