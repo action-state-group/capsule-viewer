@@ -652,6 +652,67 @@ describe("a module that alters the banner is discarded for the refusal", () => {
       expect(root.querySelectorAll("[data-banner-detail]")).toHaveLength(1);
     });
 
+  // A signed checkpoint with no witness receipt: the banner carries the
+  // witness notice (capsule-viewer#162), and it is held like the details line.
+  const witnessCases: [string, (root: HTMLElement) => void][] = [
+    [
+      "removes the witness notice",
+      (root) => {
+        root.querySelector("[data-witness-notice]")!.remove();
+      },
+    ],
+    [
+      "rewrites the witness notice",
+      (root) => {
+        root.querySelector("[data-witness-notice]")!.textContent =
+          "Checked in full.";
+      },
+    ],
+    [
+      "hides the witness notice",
+      (root) => {
+        (root.querySelector("[data-witness-notice]") as HTMLElement).hidden =
+          true;
+      },
+    ],
+  ];
+  it("but one that leaves the witness notice alone renders", async () => {
+    const { bundle } = await sealEvidenceBundle(SOURCE(), {
+      signCheckpoint: true,
+    });
+    const registry = new PresentationRegistry();
+    registry.register(testModule(() => {}));
+    const root = await render(bundle, registry);
+    expect(root.querySelectorAll("[data-test-module]")).toHaveLength(1);
+    expect(root.querySelector("[data-refusal]")).toBeNull();
+    expect(root.querySelectorAll("[data-witness-notice]")).toHaveLength(1);
+  });
+  for (const [name, tamper] of witnessCases)
+    it(`one that ${name}`, async () => {
+      const { bundle } = await sealEvidenceBundle(SOURCE(), {
+        signCheckpoint: true,
+      });
+      const untouched = await render(bundle);
+      expect(
+        untouched.querySelectorAll('[data-witness-notice="not-witnessed"]'),
+      ).toHaveLength(1);
+      const registry = new PresentationRegistry();
+      registry.register(testModule(tamper));
+      const root = await render(bundle, registry);
+      expect(root.querySelectorAll("[data-test-module]")).toHaveLength(0);
+      expect(
+        root.querySelector('[data-refusal="presentation-failed"]'),
+      ).not.toBeNull();
+      const notices = root.querySelectorAll<HTMLElement>(
+        "[data-witness-notice]",
+      );
+      expect(notices).toHaveLength(1);
+      expect(notices[0]!.textContent).toBe(
+        untouched.querySelector("[data-witness-notice]")!.textContent,
+      );
+      expect(notices[0]!.hidden).toBe(false);
+    });
+
   it("one that puts content before the producer's header", async () => {
     const { bundle } = await sealEvidenceBundle({
       ...SOURCE(),

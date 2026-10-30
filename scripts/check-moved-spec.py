@@ -245,6 +245,20 @@ CONTRACT = Move(
         ),
     ],
     amendments=[
+        # Section 6.2: the witness notice joins the banner's frame
+        # (capsule-viewer#162, evidencebook#209).
+        (
+            "A viewer discards a module that changes, moves or hides the banner or its details line while\n"
+            "it renders, as it discards one whose `render` fails.",
+            "Under a verified or incomplete banner whose checkpoint signature verified, the core draws a\n"
+            "**witness notice** when agent-action-capsule's strict witness check passed no receipt: the\n"
+            "bundle then checks only against its holder's own signatures, so it could be a private copy of\n"
+            "the log. Like the details line, the notice is the core's own fixed text. A banner whose witness\n"
+            "check passed draws none, and a failed one already says the bundle failed.\n\n"
+            "A viewer discards a module that changes, moves or hides the banner, its details line or its\n"
+            "witness notice while it renders, as it discards one whose `render` fails.",
+            "capsule-viewer#162: the witness notice",
+        ),
         # Section 7.4: the reserved core. key prefix, from Steven Mih's closed
         # agent-action-capsule PR #356, with the schema rule, its negative and
         # its mutant. #356's renderer refusal and its words are not carried.

@@ -87,6 +87,11 @@ import {
 } from "./core-strip.js";
 import { RECORD_CONTENT_CSS, renderContent } from "./record-content.js";
 import {
+  WITNESS_NOTICE_LINES,
+  witnessNotice,
+  type WitnessNotice,
+} from "./report-provenance.js";
+import {
   deferBody,
   recordAddress,
   revealRecord,
@@ -223,10 +228,13 @@ const recordsWord = (count: number): string =>
 // signature. Its line is the core's fixed text for the state; the details
 // line under the bar names the findings. The bar also says, from the
 // verification section, how many checks passed, and links down to it.
+// `witness` is the notice drawn under the bar when no witness receipt was
+// checked (bannerWitnessNotice): the pill alone would read as checked.
 function renderVerificationBanner(
   root: HTMLElement,
   model: VerificationBanner,
   coverage: { uncheckpointed: number; total: number },
+  witness: WitnessNotice | undefined,
 ): HTMLElement {
   const bar = element("div");
   // A failed bundle's bar is a callout on every page, with or without a
@@ -278,11 +286,38 @@ function renderVerificationBanner(
     detail.dataset.bannerDetail = "";
     root.append(detail);
   }
+  if (witness !== undefined) {
+    const notice = element("p", WITNESS_NOTICE_LINES[witness]);
+    // In the warning colour, as an incomplete banner: the bundle checks,
+    // but only against its holder's own signatures.
+    notice.className = "cv-banner-detail cv-witness-notice";
+    notice.dataset.witnessNotice = witness;
+    root.append(notice);
+  }
   if (model.refusal === undefined) return bar;
   const refusal = element("p", model.refusal);
   refusal.dataset.refusal = "unverified-bundle";
   root.append(refusal);
   return bar;
+}
+
+/**
+ * The witness notice a banner carries (capsule-viewer#162, from
+ * evidencebook#209): only on a verified or incomplete banner whose
+ * checkpoint signature verified, since a failed banner already says the
+ * witness check failed and with no signed checkpoint there is nothing for a
+ * witness to cover. Which notice, from AAC's strict witness status, is
+ * `witnessNotice`'s, the decision the "Witnessed by" line draws from too.
+ */
+function bannerWitnessNotice(
+  model: VerificationBanner,
+  bundle: unknown,
+  verification: BundleVerificationResult,
+): WitnessNotice | undefined {
+  if (model.state !== "verified" && model.state !== "incomplete")
+    return undefined;
+  if (model.checkpoint !== "verified") return undefined;
+  return witnessNotice(bundle, verification);
 }
 
 /**
@@ -3257,7 +3292,12 @@ async function renderVerifiedContext(
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
     renderPresentationHeader(root, bundle);
-    bar = renderVerificationBanner(root, bannerModel, coverage);
+    bar = renderVerificationBanner(
+      root,
+      bannerModel,
+      coverage,
+      bannerWitnessNotice(bannerModel, bundle, withStrict(context)),
+    );
     const L2 = region("L2");
     const core = region("L2-core");
     const L2module = region("L2-module");
@@ -3282,10 +3322,11 @@ async function renderVerifiedContext(
     else root.insertBefore(note, regions.core.parentElement);
   };
   drawFrame();
-  // The banner and its details line are the core's (contract sections 3 and
-  // 6.2). A module that, while it renders, changes their words, structure or
-  // attributes, hides or moves them, puts anything before them but the
-  // core's own header, or draws a second banner, is discarded for the
+  // The banner, its details line and its witness notice are the core's
+  // (contract sections 3 and 6.2). A module that, while it renders, changes
+  // their words, structure or attributes, hides or moves them, puts anything
+  // before them but the core's own header, or draws a second banner, is
+  // discarded for the
   // refusal like one that throws. The bar's summary line is empty until the
   // verification section fills it, after every module has rendered. These
   // checks catch a module's mistakes; they do not hold against module code
@@ -3464,12 +3505,14 @@ async function renderVerifiedContext(
   // The core strip (core-strip.ts) is held to the same rules as the
   // banner: its words, structure and look are the core's, and it stays the
   // first thing in L0, right after the banner.
+  // The frame is the bar, then its details line and its witness notice
+  // when it has them, in that order.
   const frameOf = () => {
-    const detail = bar.nextElementSibling;
-    const parts = [
-      bar,
-      ...(detail?.hasAttribute("data-banner-detail") ? [detail] : []),
-    ];
+    const parts: Element[] = [bar];
+    for (const mark of ["data-banner-detail", "data-witness-notice"]) {
+      const next = parts[parts.length - 1]!.nextElementSibling;
+      if (next?.hasAttribute(mark)) parts.push(next);
+    }
     const held = [...parts, ...(stripNode === undefined ? [] : [stripNode])];
     return {
       parts,
@@ -3503,12 +3546,13 @@ async function renderVerifiedContext(
   };
   const assertFrameIntact = (): void => {
     const at = frame!;
-    const [top, detail] = at.parts as [HTMLElement, Element?];
+    const [top, ...below] = at.parts as [HTMLElement, ...Element[]];
+    const last = at.parts[at.parts.length - 1]!;
     const pill = top.querySelector("[data-verify]");
     const banners = root.querySelectorAll(
-      "[data-verify], [data-banner-detail]",
+      "[data-verify], [data-banner-detail], [data-witness-notice]",
     );
-    const expected = [pill, ...(detail === undefined ? [] : [detail])];
+    const expected = [pill, ...below];
     if (
       pill === null ||
       banners.length !== expected.length ||
@@ -3518,10 +3562,10 @@ async function renderVerifiedContext(
       root.firstChild !== (at.header ?? top) ||
       top.previousSibling !== at.header ||
       (at.header !== null && at.header.parentNode !== root) ||
-      (detail !== undefined && detail.previousElementSibling !== top) ||
+      below.some((part, i) => part.previousElementSibling !== at.parts[i]) ||
       top.parentNode !== root ||
       top.hidden ||
-      !stripIntact(detail ?? top) ||
+      !stripIntact(last) ||
       snapshot(at.held) !== at.words ||
       !sameLook(
         looks(at.held, root.classList.contains("cv-shell-chrome")),

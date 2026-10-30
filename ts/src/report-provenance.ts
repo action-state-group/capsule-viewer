@@ -445,6 +445,82 @@ export function witnessEntries(checkpoint: unknown): WitnessEntry[] {
  */
 export type WitnessStatus = "verified" | "not-checked" | "invalid" | "absent";
 
+type StrictWitnesses = NonNullable<
+  BundleVerificationResult["strict"]
+>["witnesses"];
+
+/**
+ * The bundle's readable witness receipts, each with whether AAC's strict
+ * verifier passed it. When AAC did not fail the list it read every entry as
+ * a receipt, so its results are the bundle's entries one for one and in
+ * order; otherwise none reads as passed.
+ */
+function checkedWitnessEntries(
+  all: readonly WitnessEntry[],
+  aac: StrictWitnesses | undefined,
+): (WitnessEntry & { readonly passed: boolean })[] {
+  const results =
+    aac !== undefined && aac !== null && aac.receipts.length === all.length
+      ? aac.receipts
+      : undefined;
+  return all.flatMap((e, i) =>
+    e.stub || e.malformed
+      ? []
+      : [{ ...e, passed: results?.[i]?.status === "pass" }],
+  );
+}
+
+/**
+ * The witness status of `bundle` under `verified`: the one decision the
+ * "Witnessed by" line (`witnessLine`) and the banner's witness notice
+ * (`witnessNotice`) both draw from, so the two never disagree.
+ */
+export function witnessStatus(
+  bundle: unknown,
+  verified: BundleVerificationResult,
+): WitnessStatus {
+  const aac = verified.strict?.witnesses ?? undefined;
+  if (aac?.status === "fail") return "invalid";
+  const checkpoint = isObject(bundle) ? bundle.checkpoint : undefined;
+  const entries = checkedWitnessEntries(witnessEntries(checkpoint), aac);
+  if (entries.length === 0) return "absent";
+  return entries.some((e) => e.passed) ? "verified" : "not-checked";
+}
+
+/**
+ * The notice under a verified or incomplete banner when no witness receipt
+ * was checked (capsule-viewer#162, from evidencebook#209): the bundle then
+ * checks only against its holder's own signatures. The Python pages' own
+ * sentences (shell.py NOT_WITNESSED and WITNESS_UNREPORTED).
+ */
+export const WITNESS_NOTICE_LINES = {
+  "not-witnessed":
+    "No witness this verifier trusts has vouched for this log: this file checks only against its holder's own signatures. Without such a receipt for its checkpoint, it could be a private copy of the log.",
+  "witness-unreported":
+    "No witness result: none was reported to this page, so it does not show whether any witness has seen this log. What it shows was checked only against its holder's own signatures.",
+} as const;
+
+export type WitnessNotice = keyof typeof WITNESS_NOTICE_LINES;
+
+/**
+ * Which witness notice, if any, goes under the banner: `witness-unreported`
+ * when this runtime reached no strict result (`verified.strict` absent), so
+ * there is no witness result at all; `not-witnessed` when the bundle
+ * carries no receipt or none could be checked here; none when a receipt
+ * passed, or when the witness check failed (the banner fails then). The
+ * banner shows it only when its state is verified or incomplete and the
+ * checkpoint's signature verified: with no signed checkpoint there is
+ * nothing for a witness to cover.
+ */
+export function witnessNotice(
+  bundle: unknown,
+  verified: BundleVerificationResult,
+): WitnessNotice | undefined {
+  const status = witnessStatus(bundle, verified);
+  if (status === "verified" || status === "invalid") return undefined;
+  return verified.strict === undefined ? "witness-unreported" : "not-witnessed";
+}
+
 /**
  * "Witnessed by": the bundle's witness receipts, the status AAC's strict
  * verifier gave each, and the checkpoint they would cover. A receipt reads
@@ -490,8 +566,9 @@ export function witnessLine(
   const label = w.t("prov.witness.label");
   const aac = verified.strict?.witnesses ?? undefined;
   const all = witnessEntries(checkpoint);
+  const status = witnessStatus(bundle, verified);
 
-  if (aac?.status === "fail") {
+  if (status === "invalid" && aac !== undefined) {
     // AAC failed a receipt or found an entry it cannot read: nothing on
     // this line reads as witnessed, whatever else passed.
     const failed = aac.receipts
@@ -537,17 +614,7 @@ export function witnessLine(
     };
   }
 
-  // Not failed, so AAC read every entry as a receipt: its results, when it
-  // checked any, are the bundle's entries one for one and in order.
-  const results =
-    aac !== undefined && aac.receipts.length === all.length
-      ? aac.receipts
-      : undefined;
-  const entries = all.flatMap((e, i) =>
-    e.stub || e.malformed
-      ? []
-      : [{ ...e, passed: results?.[i]?.status === "pass" }],
-  );
+  const entries = checkedWitnessEntries(all, aac);
   const stubs = all.filter((e) => e.stub).length;
   const malformed = all.filter((e) => e.malformed).length;
   const others = [
@@ -567,7 +634,7 @@ export function witnessLine(
                 : w.t("prov.witness.both", { a: others[0]!, b: others[1]! }),
           }),
         ];
-  if (entries.length === 0)
+  if (status === "absent")
     return {
       key: "witness",
       label,
@@ -610,7 +677,7 @@ export function witnessLine(
           : "prov.brief.witness.mixed",
     ),
     state: others.length === 0 ? "stated" : "mixed",
-    witness: passed.length > 0 ? "verified" : "not-checked",
+    witness: status,
   };
 }
 

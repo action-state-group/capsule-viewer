@@ -32,6 +32,20 @@ here. The format follows
   `go/chartspec` refuses a view entry as an unsupported member, so a page the
   Go builder writes never draws one unchecked until its twin lands.
 
+### Fixed
+
+- A verified or incomplete banner over a signed checkpoint no longer reads as
+  checked when no witness receipt was (capsule-viewer#162, from
+  evidencebook#209). A notice under the bar (`data-witness-notice`) says the
+  file checks only against its holder's own signatures: `not-witnessed` when
+  AAC's strict witness status is `withheld` or the bundle carries no receipt,
+  `witness-unreported` when this runtime reached no strict result. A passed
+  receipt draws no notice, and a failed one already fails the banner. The
+  words are the Python pages' own, and the status is the one the "Witnessed
+  by" line reads (`witnessStatus`), so the two never disagree. The notice is
+  part of the banner's frame: a module that changes, hides or moves it is
+  discarded like one that alters the banner.
+
 ## ts 0.4.0 and go 0.4.0 (2026-10-29)
 
 Both state viewer 0.4.0: `ts/v0.4.0`, then `go/v0.4.0` on the commit that
