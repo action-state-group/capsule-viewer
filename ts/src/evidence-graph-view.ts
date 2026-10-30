@@ -288,7 +288,9 @@ function renderVerificationBanner(
   }
   if (witness !== undefined) {
     const notice = element("p", WITNESS_NOTICE_LINES[witness]);
-    notice.className = "cv-banner-detail";
+    // In the warning colour, as an incomplete banner: the bundle checks,
+    // but only against its holder's own signatures.
+    notice.className = "cv-banner-detail cv-witness-notice";
     notice.dataset.witnessNotice = witness;
     root.append(notice);
   }

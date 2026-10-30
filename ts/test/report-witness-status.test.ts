@@ -87,6 +87,8 @@ function expectNotice(
   expect(notices).toHaveLength(1);
   const [notice] = notices as [HTMLElement];
   expect(notice.dataset.witnessNotice).toBe(kind);
+  // In the warning colour, never the details line's muted grey alone.
+  expect(notice.classList.contains("cv-witness-notice")).toBe(true);
   expect(notice.textContent).toBe(WITNESS_NOTICE_LINES[kind]);
   const bar = banner.parentElement!;
   const before = notice.previousElementSibling!;
