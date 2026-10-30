@@ -99,13 +99,18 @@ def ledger_page(bundle: Any, check: EvidenceFileCheck, *, source: str = "", dept
     module = LedgerModule(source, depth)
     registry = Registry()
     registry.register(MANIFEST, module.canRender, module)
-    return present(context, registry, audience="*", core_checks=True, notices=witness_notice(check))
+    return present(context, registry, audience="*", core_checks=True, caveats=witness_notice(check))
 
 
 def witness_notice(check: EvidenceFileCheck) -> tuple:
     """The notice under a verified banner when no witness receipt was checked
     (evidencebook#209): the file then checks only against its holder's own
-    signatures. A refused page draws no notice, so a failing file gets none."""
+    signatures. A refused page draws no notice, so a failing file gets none,
+    and neither does a file with no signed checkpoint: there is no checkpoint
+    for a witness to cover, and the banner and checkpoint check already say
+    the file is tied to no log."""
+    if not check.checkpoint_authenticated:
+        return ()
     if check.witness is None:
         return (notice(WITNESS_UNREPORTED, "witness-unreported"),)
     if check.witness.status != "pass":

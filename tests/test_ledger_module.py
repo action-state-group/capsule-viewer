@@ -411,6 +411,37 @@ def test_a_verified_ledger_says_when_no_witness_receipt_was_checked(tmp_path, wi
         assert page.index(f'data-notice="{kind}"') < page.index("<tbody>")
 
 
+@pytest.mark.parametrize(
+    "witness, kind", [("pass", None), ("withheld", "not-witnessed"), (None, "witness-unreported")]
+)
+def test_a_ledger_whose_module_fails_keeps_the_witness_notice(tmp_path, monkeypatch, witness, kind):
+    """The fallback page still shows the verified outcome in its checks, so it
+    keeps the notice saying what that outcome does not cover."""
+    _, bundle = exported_bundle(tmp_path)
+    check = dataclasses.replace(
+        check_evidence_file(bundle), witness=None if witness is None else Check("witnesses", witness)
+    )
+
+    def boom(self, model, services):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(LedgerModule, "render", boom)
+    page = ledger_page(bundle, check)
+    assert FAILED in page and _outcome(page) == "verified"
+    assert re.findall(r'data-notice="(not-witnessed|witness-unreported)"', page) == ([kind] if kind else [])
+
+
+def test_a_ledger_with_no_signed_checkpoint_draws_no_witness_notice(ledger):
+    """No checkpoint, so nothing for a witness to cover: the incomplete banner
+    and the checkpoint check say the file is tied to no log."""
+    bundle = _file(ledger)
+    check = check_evidence_file(bundle)
+    assert not check.checkpoint_authenticated
+    page = ledger_page(bundle, check)
+    assert _outcome(page) == "incomplete"
+    assert "data-notice=\"not-witnessed\"" not in page and "data-notice=\"witness-unreported\"" not in page
+
+
 def test_a_failing_ledger_draws_no_witness_notice(ledger):
     bundle = _file(ledger)
     edited = json.loads(json.dumps(bundle))
