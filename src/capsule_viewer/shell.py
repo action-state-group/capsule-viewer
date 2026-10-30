@@ -28,6 +28,7 @@ from .context import VerifiedBundleContext
 from .kit.components import Markup, VerificationResult, page, verification_details
 from .kit.contract import KIT
 from .registry import RUNTIME_VERSION, AmbiguityError, Refusal, Registry
+from .verifier_report import SELECTION_NOT_CHECKABLE
 
 REFUSAL = (
     "This bundle did not verify. Its records, rows and payloads are not shown; "
@@ -36,8 +37,21 @@ REFUSAL = (
 NO_PRESENTATION = "No presentation is available for this bundle, audience and format."
 AMBIGUOUS = "The presentation could not be resolved: more than one module matches ({ids}), so none is shown."
 FAILED = "The presentation failed, so nothing it produced is shown; the verification checks are below."
+INCOMPLETE_SELECTION = (
+    "This file holds the records its producer chose to include. Each one is signed and checked against "
+    "the producer's log, but the verifier cannot check that nothing was left out. What is shown is what "
+    "the file holds, which may not be everything that happened."
+)
 PACK_REFUSED = "The wording pack was refused ({reason}), so labels are shown by their keys."
 FALLBACK_TITLE = "Evidence bundle"
+
+
+def _selection_unchecked(result: VerificationResult) -> bool:
+    """The outcome is incomplete because the producer chose which records to
+    carry and the verifier could not check that none is missing."""
+    return result.outcome == "incomplete" and any(
+        check.name == "interval coverage" and check.detail == SELECTION_NOT_CHECKABLE for check in result.checks
+    )
 
 
 def refusal_line(r: Refusal) -> str:
@@ -91,4 +105,5 @@ def present(
         return str(page(FALLBACK_TITLE, notice(FAILED, "failed"), *refused, checks))
     title = getattr(module, "title", FALLBACK_TITLE)
     tail = (checks,) if core_checks else ()
-    return str(page(title, banner(context.verification), *notices, *refused, Markup(body), *tail))
+    selection = (notice(INCOMPLETE_SELECTION, "incomplete-selection"),) if _selection_unchecked(context.verification) else ()
+    return str(page(title, banner(context.verification), *selection, *notices, *refused, Markup(body), *tail))

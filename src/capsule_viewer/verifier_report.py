@@ -35,6 +35,8 @@ VERIFIER = "capsulectl verify --bundle"
 GATE_CLAIMS: tuple[str, ...] = ("graph_closure", "interval_coverage", "per_record_membership")
 # Every bundle claim the report carries, in the order the checks list them.
 CLAIMS: tuple[str, ...] = (*GATE_CLAIMS, "checkpoint", "producer_signatures", "witnesses")
+# The finding capsulectl gives interval coverage for a selection the producer chose.
+SELECTION_NOT_CHECKABLE = "selection_not_checkable"
 _OUTCOME = {"pass": "verified", "fail": "failed", "withheld": "not_checked"}
 
 
@@ -101,6 +103,11 @@ def _record_ids(bundle: JsonObject) -> set[str]:
     return {r["capsule_id"] for r in records if isinstance(r, Mapping) and isinstance(r.get("capsule_id"), str)}
 
 
+def _extensions(bundle: JsonObject) -> Mapping:
+    extensions = bundle.get("extensions")
+    return extensions if isinstance(extensions, Mapping) else {}
+
+
 def _standalone_report_status(output: CapsulectlReport) -> str | None:
     """The status capsulectl reported for the ``x-deal-v0`` extension when it
     names the report as standalone; None when it did not say."""
@@ -118,16 +125,19 @@ def context_from_capsulectl(
     ``capsulectl verify --bundle`` printed for that same bundle."""
     if output.get("spec_version") != REPORT_VERSION:
         raise VerifierReportError(f"not a {REPORT_VERSION} report: {output.get('spec_version')!r}")
-    return context_from_bundle_report(bundle, output)
+    return context_from_bundle_report(bundle, output, allow_selection=True)
 
 
 def context_from_bundle_report(
-    bundle: JsonObject, output: CapsulectlReport
+    bundle: JsonObject, output: CapsulectlReport, *, allow_selection: bool = False
 ) -> tuple[VerifiedBundleContext, Assurance]:
     """``context_from_capsulectl`` for one bundle's report inside a report
     already read: a composed/v1 member's, which capsulectl prints on the member
     without a ``spec_version`` of its own. The same binding holds: the report's
-    ``bundle_digest`` must be the digest of exactly *bundle*."""
+    ``bundle_digest`` must be the digest of exactly *bundle*. A producer-selected
+    bundle passes with the outcome ``incomplete`` only when *allow_selection*,
+    which a member of a composition is not given: its page would show it with no
+    notice."""
     try:
         digest = bundle_digest(bundle)
     except NotCanonical as exc:
@@ -156,7 +166,22 @@ def context_from_bundle_report(
         Check(name.replace("_", " "), _OUTCOME.get(status, "failed"), findings)
         for name, (status, findings) in statuses.items()
     )
-    verification = VerificationResult(VERIFIER, "verified" if gate else "failed", checks)
+    # A producer-selected bundle (capsulectl's `selection_not_checkable`): nothing
+    # failed, the records it carries all check, and only the claim that nothing
+    # is missing from the log cannot be made. Any other INCOMPLETE stays failed.
+    selected = (
+        allow_selection
+        and not gate
+        and "composed/v1" not in _extensions(bundle)
+        and output.get("verdict") == "INCOMPLETE"
+        and statuses["interval_coverage"] == ("withheld", SELECTION_NOT_CHECKABLE)
+        and all(statuses[name][0] == "pass" for name in (*GATE_CLAIMS, "checkpoint", "producer_signatures") if name != "interval_coverage")
+        and not any(status == "fail" for status, _ in statuses.values())
+        and all(value == "passed" for value in identity.values())
+        and not any(s == "disclosure_mismatch" for members in disclosure_status.values() for s in members.values())
+    )
+    outcome = "verified" if gate else "incomplete" if selected else "failed"
+    verification = VerificationResult(VERIFIER, outcome, checks)
     countersignatures = tuple(
         str(c.get("status")) if isinstance(c, Mapping) else "unknown" for c in output.get("countersignatures") or ()
     )
