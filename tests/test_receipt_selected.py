@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """A producer-selected receipt bundle (a Mesh payer's deal, cut from one shared
-ledger; its report is sealed for the counterparty audience): its verified rows are shown with a notice that the selection cannot be
+ledger; its report is sealed for the owner (keep)): its verified rows are shown with a notice that the selection cannot be
 checked to be complete, and the page never reads as verified overall."""
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from capsule_viewer.shell import INCOMPLETE_SELECTION
 
 
 def test_the_selected_receipt_shows_its_rows_and_says_the_selection_is_unchecked():
-    html = render("mesh-payer-selected", audience="counterparty")
+    html = render("mesh-payer-selected", audience="keep")
     text = visible_text(html)
     assert INCOMPLETE_SELECTION in text
     assert "This bundle did not verify" not in text
