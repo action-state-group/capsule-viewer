@@ -560,8 +560,14 @@ are in agent-action-capsule's `spec/verification-display-v0.md` §6.2. The rules
   verified, incomplete or failed banner, and adds its own refusal line. It never changes the
   banner, because the refusal is about the presentation, not the evidence.
 
-A viewer discards a module that changes, moves or hides the banner or its details line while
-it renders, as it discards one whose `render` fails.
+Under a verified or incomplete banner whose checkpoint signature verified, the core draws a
+**witness notice** when agent-action-capsule's strict witness check passed no receipt: the
+bundle then checks only against its holder's own signatures, so it could be a private copy of
+the log. Like the details line, the notice is the core's own fixed text. A banner whose witness
+check passed draws none, and a failed one already says the bundle failed.
+
+A viewer discards a module that changes, moves or hides the banner, its details line or its
+witness notice while it renders, as it discards one whose `render` fails.
 
 ## 7. The text-binding rule
 
