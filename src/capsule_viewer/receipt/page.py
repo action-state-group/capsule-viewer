@@ -18,10 +18,13 @@ from ..verifier_report import Assurance
 from ..wording import EMPTY_PACK, WordingPack, WordingPackError, load_wording_pack
 from .bilateral import BilateralReceiptModule
 from .module import PLACEHOLDERS, UnilateralReceiptModule
+from .provider import ProviderReceiptModule
 from .seller import SellerReceiptModule
 
 
-def receipt_registry(*modules: UnilateralReceiptModule | SellerReceiptModule | BilateralReceiptModule) -> Registry:
+def receipt_registry(
+    *modules: UnilateralReceiptModule | SellerReceiptModule | BilateralReceiptModule | ProviderReceiptModule,
+) -> Registry:
     """A registry holding the receipt modules given."""
     registry = Registry()
     for module in modules:
@@ -43,7 +46,8 @@ def receipt_page(
 ) -> str:
     """The page for *context* and *audience*, opened at *depth* (L0, L1, L2).
     *forbid_profiles* is render-time manifest configuration (see
-    ``unilateral_manifest``). *composition* is the verifier's composed/v1
+    ``unilateral_manifest``; it does not apply to the provider module, which
+    forbids a fixed set). *composition* is the verifier's composed/v1
     result for this bundle, when it reported one
     (``capsule_viewer.composed.composition_from_capsulectl``)."""
     pack: WordingPack = EMPTY_PACK
@@ -55,4 +59,7 @@ def receipt_page(
     unilateral = UnilateralReceiptModule(pack, depth, audience, assurance, check_opening, forbid_profiles)
     seller = SellerReceiptModule(pack, depth, audience, assurance, check_opening, forbid_profiles)
     bilateral = BilateralReceiptModule(pack, depth, audience, assurance, composition, check_opening, forbid_profiles)
-    return present(context, receipt_registry(unilateral, seller, bilateral), audience=audience, fmt=fmt, notices=notices)
+    provider = ProviderReceiptModule()
+    return present(
+        context, receipt_registry(unilateral, seller, bilateral, provider), audience=audience, fmt=fmt, notices=notices
+    )

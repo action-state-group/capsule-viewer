@@ -637,6 +637,7 @@ def test_each_viewer_module_forbids_the_selection_extension_and_needs_to():
         unpatched[name] = bare
     assert sorted(n for n, m in unpatched.items() if co_matchable(SKETCH_JSON, m)) == [
         "manifest-bilateral",
+        "manifest-provider",
         "manifest-seller",
         "manifest-unilateral",
         "module-slot/manifest-bilateral",
