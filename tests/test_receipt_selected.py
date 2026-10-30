@@ -15,6 +15,8 @@ def test_the_selected_receipt_shows_its_rows_and_says_the_selection_is_unchecked
     assert INCOMPLETE_SELECTION in text
     assert "This bundle did not verify" not in text
     assert "Incomplete" in text
+    # Nothing before the notice (the banner) reads as verified.
+    assert "Verified" not in text.split(INCOMPLETE_SELECTION)[0]
     records = snapshot(html)
     shown = [r for r in records.values() if r["disclosure"] == "disclosed"]
     # The deal's steps; its report is the sealed text above them.

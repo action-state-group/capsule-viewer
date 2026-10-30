@@ -136,6 +136,8 @@ def test_a_producer_selected_bundle_is_incomplete_not_failed():
         lambda o: o["per_record_membership"].update(status="withheld"),
         lambda o: o["graph_closure"].update(status="fail"),
         lambda o: o["checkpoint"].update(status="fail"),
+        lambda o: o["checkpoint"].update(status="withheld"),
+        lambda o: o["producer_signatures"].update(status="withheld"),
         lambda o: o["record_identity"].update({next(iter(o["record_identity"])): "failed"}),
         lambda o: o["disclosures"][0].update(status="disclosure_mismatch"),
         lambda o: o.update(verdict="INVALID"),
@@ -153,3 +155,14 @@ def test_a_valid_verdict_with_a_withheld_interval_still_fails_the_gate():
     output = copy.deepcopy(output)
     output["verdict"] = "VALID"
     assert not context_from_capsulectl(bundle, output)[0].verified
+
+
+def test_a_composed_bundle_or_a_member_report_never_passes_as_a_selection():
+    from capsule_viewer.verifier_report import context_from_bundle_report
+
+    bundle, output = _selected()
+    assert not context_from_bundle_report(bundle, output)[0].verified  # a member: no notice would show
+    composed = copy.deepcopy(bundle)
+    composed["extensions"]["composed/v1"] = {}
+    report = {**output, "bundle_digest": bundle_digest(composed)}
+    assert not context_from_capsulectl(composed, report)[0].verified

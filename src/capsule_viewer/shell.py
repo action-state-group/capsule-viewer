@@ -38,9 +38,9 @@ NO_PRESENTATION = "No presentation is available for this bundle, audience and fo
 AMBIGUOUS = "The presentation could not be resolved: more than one module matches ({ids}), so none is shown."
 FAILED = "The presentation failed, so nothing it produced is shown; the verification checks are below."
 INCOMPLETE_SELECTION = (
-    "This file carries a selection of records chosen by whoever produced it. The verifier could not "
-    "check that the selection is complete, so what is shown is what the file holds, not everything "
-    "that happened."
+    "This file holds the records its producer chose to include. Each one is signed and checked against "
+    "the producer's log, but the verifier cannot check that nothing was left out. What is shown is what "
+    "the file holds, which may not be everything that happened."
 )
 PACK_REFUSED = "The wording pack was refused ({reason}), so labels are shown by their keys."
 FALLBACK_TITLE = "Evidence bundle"
