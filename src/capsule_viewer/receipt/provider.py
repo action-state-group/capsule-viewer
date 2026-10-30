@@ -40,7 +40,7 @@ RECORDS_NOTE = "The exchange and each payment are records of their own, listed b
 MODEL = "Model served"
 SERVED_AT = "Served at"
 RECEIVED = "Received"
-FEE = "Fee"
+FEE = "Fee for receiving"
 TOTAL = "Received in total"
 
 _POC = "x-mesh-poc-v1"
@@ -116,6 +116,11 @@ def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]
         return None
     if poc.get("role", "served") != "served":
         return None
+    # Only an exchange that was served: a request that failed or never completed
+    # (a payment may still have come in) is not "an exchange you served". An
+    # exchange that states no status is read as served until the record states one.
+    if _get(_get(exchange[0], "effect"), "status") not in (None, "confirmed"):
+        return None
     return exchange[0], tuple(others)
 
 
@@ -155,7 +160,7 @@ class ProviderReceiptModule:
         return ProviderModel(
             exchange_id=_text(_get(exchange, "capsule_id")),
             model=_text(_get(_get(exchange, "model_attestation"), "model_id")),
-            served_at=(_text(_get(exchange, "timestamp")))[:19],
+            served_at=(_text(_get(exchange, "timestamp")))[:19] + " UTC",
             payments=tuple(
                 Payment(
                     _text(_get(leg, "capsule_id")),

@@ -83,8 +83,10 @@ def test_only_a_served_exchange_with_its_payments_is_this_modules():
     deal, deal_output = load("mesh-payer-selected")
     deal_context, _ = context_from_capsulectl(deal, deal_output)
     assert not module.canRender(deal_context)
-    assert "did not verify" not in visible_text(render(NAME, audience="keep"))
-    assert "No presentation" in visible_text(render(NAME, audience="keep"))
+    # The page the Evidence tab asks for (`receipt_page`) resolves to this module for
+    # the owner, and to nothing for another audience: the bundle is the owner's.
+    assert OWN_HALF in visible_text(render(NAME, audience="keep"))
+    assert "No presentation" in visible_text(render(NAME, audience="counterparty"))
 
 
 def test_a_bundle_that_did_not_verify_shows_no_rows():
@@ -128,3 +130,18 @@ def test_the_manifest_matches_no_other_viewer_or_builtin_module():
     others.pop("manifest-provider", None)
     assert RECEIPT_MANIFESTS["manifest-provider"] == MANIFEST
     assert sorted(n for n, m in others.items() if co_matchable(MANIFEST, m)) == []
+
+
+@pytest.mark.parametrize("status", ["failed", "planned", "dispatched", "refused"])
+def test_an_exchange_that_was_not_served_is_not_an_exchange_you_served(status):
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
+    root["effect"]["status"] = status
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    assert not ProviderReceiptModule().canRender(context)
+
+
+def test_the_fee_says_what_it_is_the_fee_for_and_the_time_says_its_zone():
+    text = visible_text(_page())
+    assert "Fee for receiving" in text and "UTC" in text

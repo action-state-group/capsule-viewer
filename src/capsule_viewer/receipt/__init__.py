@@ -16,6 +16,7 @@ from .bilateral import (
 from .model import ReceiptModel, ReceiptUnavailable, build_receipt
 from .module import PLACEHOLDERS, UNILATERAL_MANIFEST, UnilateralReceiptModule, unilateral_manifest
 from .page import receipt_page, receipt_registry
+from .provider import ProviderReceiptModule, provider_receipt_page
 from .role import SELLER_KIND, sealed_party_role, sealed_side, seller_kind_engaged
 from .seller import SELLER_MANIFEST, SellerModel, SellerReceiptModule, build_seller, seller_manifest
 
@@ -26,6 +27,8 @@ def example_wording_pack() -> bytes:
 
 
 __all__ = [
+    "ProviderReceiptModule",
+    "provider_receipt_page",
     "BILATERAL_MANIFEST",
     "BilateralModel",
     "BilateralReceiptModule",
