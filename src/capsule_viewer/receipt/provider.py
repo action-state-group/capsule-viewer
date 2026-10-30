@@ -18,6 +18,7 @@ has gated, and a bundle the producer chose the records of reaches it as
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -44,6 +45,7 @@ RECEIVED = "Received"
 FEE = "Fee for receiving"
 TOTAL = "Received in total"
 
+_CANONICAL = re.compile(r"0|[1-9][0-9]*")
 _POC = "x-mesh-poc-v1"
 _LEG = "payee_observed"
 
@@ -70,9 +72,12 @@ def amount_text(amount: Frozen) -> str | None:
     of units or names no asset: the page then shows nothing rather than a
     number with no unit."""
     value, code, scale = _get(amount, "value"), _get(amount, "assetCode"), _get(amount, "assetScale")
-    if not isinstance(value, str) or not value.isascii() or not value.isdigit():
+    # AAC's exact amount: a canonical integer string, a code, a scale of 0 to 255.
+    if not isinstance(value, str) or not _CANONICAL.fullmatch(value):
         return None
     if not isinstance(code, str) or not code or not isinstance(scale, int) or isinstance(scale, bool):
+        return None
+    if not 0 <= scale <= 255:
         return None
     if code == "BTC" and scale == 11:
         return f"{int(value)} msat"
@@ -98,7 +103,8 @@ class ProviderModel:
 def _utc(stamp: str) -> str:
     """An RFC 3339 time in UTC, with the zone said; "?" when it is not one with an offset."""
     try:
-        when = datetime.fromisoformat(stamp)
+        # Before Python 3.11 fromisoformat does not read a trailing Z.
+        when = datetime.fromisoformat(stamp[:-1] + "+00:00" if stamp[-1:] in "Zz" and stamp else stamp)
     except ValueError:
         return "?"
     if when.tzinfo is None:
@@ -110,7 +116,11 @@ def _utc(stamp: str) -> str:
 
 
 def _is_leg(record: Frozen) -> bool:
-    return _get(_get(record, "settlement"), "leg") == _LEG and _get(_get(record, "settlement"), "sealer_role") == "payee"
+    """A payment this node received: only a settled one. A pending, failed or
+    reversed leg is not "received", and counting it (or a reversal beside the
+    settled leg it undoes) would state an amount that was not kept."""
+    leg = _get(record, "settlement")
+    return _get(leg, "leg") == _LEG and _get(leg, "sealer_role") == "payee" and _get(leg, "status") == "settled"
 
 
 def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]] | None:

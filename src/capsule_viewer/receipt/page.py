@@ -46,7 +46,8 @@ def receipt_page(
 ) -> str:
     """The page for *context* and *audience*, opened at *depth* (L0, L1, L2).
     *forbid_profiles* is render-time manifest configuration (see
-    ``unilateral_manifest``). *composition* is the verifier's composed/v1
+    ``unilateral_manifest``; it does not apply to the provider module, which
+    forbids a fixed set). *composition* is the verifier's composed/v1
     result for this bundle, when it reported one
     (``capsule_viewer.composed.composition_from_capsulectl``)."""
     pack: WordingPack = EMPTY_PACK

@@ -54,6 +54,11 @@ def test_the_page_is_not_a_deal_receipt_and_names_nobody_who_asked():
     ("amount", "shown"),
     [
         ({"value": "995", "assetCode": "BTC", "assetScale": 11}, "995 msat"),
+        ({"value": "0", "assetCode": "BTC", "assetScale": 11}, "0 msat"),
+        ({"value": "0995", "assetCode": "BTC", "assetScale": 11}, None),
+        ({"value": "7", "assetCode": "USD", "assetScale": -2}, None),
+        ({"value": "7", "assetCode": "USD", "assetScale": 300}, None),
+        ({"value": "7", "assetCode": "USD", "assetScale": 255}, "7 × 10^-255 USD"),
         ({"value": "12", "assetCode": "BTC", "assetScale": 8}, "12 × 10^-8 BTC"),
         ({"value": "7", "assetCode": "USD", "assetScale": 2}, "7 × 10^-2 USD"),
         ({"value": "995", "assetScale": 11}, None),
@@ -132,6 +137,19 @@ def test_the_manifest_matches_no_other_viewer_or_builtin_module():
     assert sorted(n for n, m in others.items() if co_matchable(MANIFEST, m)) == []
 
 
+@pytest.mark.parametrize("status", ["pending", "failed", "reversed", None, "missing"])
+def test_a_leg_that_is_not_settled_is_not_a_payment_received(status):
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    leg = next(r for r in edited["records"] if "settlement" in r)
+    if status == "missing":
+        del leg["settlement"]["status"]
+    else:
+        leg["settlement"]["status"] = status
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    assert not ProviderReceiptModule().canRender(context)
+
+
 @pytest.mark.parametrize("status", ["failed", "planned", "dispatched", "refused", None, "missing", "no effect"])
 def test_an_exchange_that_was_not_served_is_not_an_exchange_you_served(status):
     bundle, output = load(NAME)
@@ -156,6 +174,7 @@ def test_the_fee_says_what_it_is_the_fee_for_and_the_time_says_its_zone():
     ("stamp", "shown"),
     [
         ("2026-10-30T19:50:00Z", "2026-10-30T19:50:00 UTC"),
+        ("2026-10-30T19:50:00z", "2026-10-30T19:50:00 UTC"),
         ("2026-10-30T14:50:00-05:00", "2026-10-30T19:50:00 UTC"),
         ("2026-10-30T19:50:00+00:00", "2026-10-30T19:50:00 UTC"),
         ("2026-10-30T19:50:00", "?"),
