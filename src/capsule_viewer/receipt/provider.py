@@ -103,7 +103,10 @@ def _utc(stamp: str) -> str:
         return "?"
     if when.tzinfo is None:
         return "?"
-    return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S UTC")
+    try:
+        return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S UTC")
+    except (OverflowError, ValueError):  # at the edge of the year range
+        return "?"
 
 
 def _is_leg(record: Frozen) -> bool:
