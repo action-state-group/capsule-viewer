@@ -72,7 +72,10 @@ def amount_text(amount: Frozen) -> str | None:
     of units or names no asset: the page then shows nothing rather than a
     number with no unit."""
     value, code, scale = _get(amount, "value"), _get(amount, "assetCode"), _get(amount, "assetScale")
-    # AAC's exact amount: a canonical integer string, a code, a scale of 0 to 255.
+    # AAC's exact amount: exactly these three members, a canonical integer
+    # string, a code, a scale of 0 to 255.
+    if not isinstance(amount, Mapping) or set(amount) != {"value", "assetCode", "assetScale"}:
+        return None
     if not isinstance(value, str) or not _CANONICAL.fullmatch(value):
         return None
     if not isinstance(code, str) or not code or not isinstance(scale, int) or isinstance(scale, bool):

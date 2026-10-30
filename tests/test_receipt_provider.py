@@ -55,6 +55,7 @@ def test_the_page_is_not_a_deal_receipt_and_names_nobody_who_asked():
     [
         ({"value": "995", "assetCode": "BTC", "assetScale": 11}, "995 msat"),
         ({"value": "0", "assetCode": "BTC", "assetScale": 11}, "0 msat"),
+        ({"value": "5", "assetCode": "BTC", "assetScale": 11, "extra": 1}, None),
         ({"value": "0995", "assetCode": "BTC", "assetScale": 11}, None),
         ({"value": "7", "assetCode": "USD", "assetScale": -2}, None),
         ({"value": "7", "assetCode": "USD", "assetScale": 300}, None),
