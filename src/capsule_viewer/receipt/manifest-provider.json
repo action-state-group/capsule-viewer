@@ -8,11 +8,28 @@
     "bundle_kind": "evidence-bundle/v2"
   },
   "forbids": {
-    "extensions": ["x-deal-v0", "composed/v1", "x-history-selection/v0"]
+    "profiles": [
+      "spec_version:report/v1",
+      "spec_version:evaluation-summary/v1",
+      "result_version:evidence-result-v0",
+      "spec_version:org.example.rules-comparison/v0"
+    ],
+    "extensions": [
+      "x-deal-v0",
+      "composed/v1",
+      "x-history-selection/v0",
+      "x-standard-history/v0"
+    ]
   },
-  "audiences": ["keep"],
-  "formats": ["html"],
+  "audiences": [
+    "keep"
+  ],
+  "formats": [
+    "html"
+  ],
   "fallback": false,
   "priority": 1,
-  "executable": { "carrier": "core-runtime" }
+  "executable": {
+    "carrier": "core-runtime"
+  }
 }

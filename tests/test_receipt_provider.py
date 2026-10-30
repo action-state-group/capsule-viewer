@@ -94,3 +94,37 @@ def test_a_bundle_that_did_not_verify_shows_no_rows():
     context, _ = context_from_capsulectl(bundle, output)
     text = visible_text(provider_receipt_page(context))
     assert "This bundle did not verify" in text and OWN_HALF not in text
+
+
+def _with_poc(edit):
+    """The fixture with its exchange record's `x-mesh-poc-v1` block edited, and the
+    verifier's report for the edited bundle."""
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
+    edit(root["model_attestation"]["compute_attestation"])
+    return context_from_capsulectl(edited, report_for(edited, output))[0]
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda ca: ca.update({"x-mesh-poc-v1": {}}),
+        lambda ca: ca.update({"x-mesh-poc-v1": {"serving_provenance": {}, "role": "requested"}}),
+        lambda ca: ca.update({"x-mesh-poc-v1": {"role": "served"}}),
+        lambda ca: ca.pop("x-mesh-poc-v1"),
+    ],
+)
+def test_a_record_that_is_not_the_nodes_served_exchange_is_not_rendered(edit):
+    assert not ProviderReceiptModule().canRender(_with_poc(edit))
+
+
+def test_the_manifest_matches_no_other_viewer_or_builtin_module():
+    from test_history_card_design import BUILTINS, RECEIPT_MANIFESTS, _viewer_specific_manifests, co_matchable
+
+    from capsule_viewer.receipt.provider import MANIFEST
+
+    others = {**_viewer_specific_manifests(), **{n: m for n, m in BUILTINS.items() if not m["fallback"]}}
+    others.pop("manifest-provider", None)
+    assert RECEIPT_MANIFESTS["manifest-provider"] == MANIFEST
+    assert sorted(n for n, m in others.items() if co_matchable(MANIFEST, m)) == []

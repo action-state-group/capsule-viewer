@@ -108,7 +108,13 @@ def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]
     others = [r for r in records if _get(r, "capsule_id") != root]
     if len(exchange) != 1 or not others or not all(_is_leg(r) for r in others):
         return None
-    if _get(_get(_get(exchange[0], "model_attestation"), "compute_attestation"), _POC) is None:
+    poc = _get(_get(_get(exchange[0], "model_attestation"), "compute_attestation"), _POC)
+    # The node's own served record: a mesh exchange block that names its serving
+    # provenance and is not marked as another role (the block states `served`,
+    # or leaves it to the default).
+    if not isinstance(poc, Mapping) or not isinstance(poc.get("serving_provenance"), Mapping):
+        return None
+    if poc.get("role", "served") != "served":
         return None
     return exchange[0], tuple(others)
 
