@@ -14859,7 +14859,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("58d2bfe5aec80a67d49af3d1c061b87495b10f23");
+    return commitPrefix("32367bf5840078f4abcae9f9c154d88d23b22524");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16889,6 +16889,29 @@ ${key}`);
       };
     });
   }
+  function checkedWitnessEntries(all, aac) {
+    const results = aac !== void 0 && aac !== null && aac.receipts.length === all.length ? aac.receipts : void 0;
+    return all.flatMap(
+      (e, i) => e.stub || e.malformed ? [] : [{ ...e, passed: results?.[i]?.status === "pass" }]
+    );
+  }
+  function witnessStatus(bundle, verified) {
+    const aac = verified.strict?.witnesses ?? void 0;
+    if (aac?.status === "fail") return "invalid";
+    const checkpoint = isObject(bundle) ? bundle.checkpoint : void 0;
+    const entries = checkedWitnessEntries(witnessEntries(checkpoint), aac);
+    if (entries.length === 0) return "absent";
+    return entries.some((e) => e.passed) ? "verified" : "not-checked";
+  }
+  var WITNESS_NOTICE_LINES = {
+    "not-witnessed": "No witness this verifier trusts has vouched for this log: this file checks only against its holder's own signatures. Without such a receipt for its checkpoint, it could be a private copy of the log.",
+    "witness-unreported": "No witness result: none was reported to this page, so it does not show whether any witness has seen this log. What it shows was checked only against its holder's own signatures."
+  };
+  function witnessNotice(bundle, verified) {
+    const status2 = witnessStatus(bundle, verified);
+    if (status2 === "verified" || status2 === "invalid") return void 0;
+    return verified.strict === void 0 ? "witness-unreported" : "not-witnessed";
+  }
   function witnessLine(bundle, verified, w = DEFAULT_WORDS.lines) {
     const checkpoint = isObject(bundle) ? bundle.checkpoint : void 0;
     const page = buildVerificationPageModel(bundle, verified);
@@ -16913,7 +16936,8 @@ ${key}`);
     const label = w.t("prov.witness.label");
     const aac = verified.strict?.witnesses ?? void 0;
     const all = witnessEntries(checkpoint);
-    if (aac?.status === "fail") {
+    const status2 = witnessStatus(bundle, verified);
+    if (status2 === "invalid" && aac !== void 0) {
       const failed2 = aac.receipts.filter((r) => r.status === "fail").map(
         (r) => w.t("prov.witness.failed-entry", {
           witness: quoted(r.tsUrl),
@@ -16948,10 +16972,7 @@ ${key}`);
         witness: "invalid"
       };
     }
-    const results = aac !== void 0 && aac.receipts.length === all.length ? aac.receipts : void 0;
-    const entries = all.flatMap(
-      (e, i) => e.stub || e.malformed ? [] : [{ ...e, passed: results?.[i]?.status === "pass" }]
-    );
+    const entries = checkedWitnessEntries(all, aac);
     const stubs = all.filter((e) => e.stub).length;
     const malformed = all.filter((e) => e.malformed).length;
     const others = [
@@ -16963,7 +16984,7 @@ ${key}`);
         others: others.length === 1 ? others[0] : w.t("prov.witness.both", { a: others[0], b: others[1] })
       })
     ];
-    if (entries.length === 0)
+    if (status2 === "absent")
       return {
         key: "witness",
         label,
@@ -16991,7 +17012,7 @@ ${key}`);
         passed.length > 0 ? stated.length === 0 && others.length === 0 ? "prov.brief.witness.verified" : "prov.brief.witness.partly-checked" : others.length === 0 ? "prov.brief.witness.stated" : "prov.brief.witness.mixed"
       ),
       state: others.length === 0 ? "stated" : "mixed",
-      witness: passed.length > 0 ? "verified" : "not-checked"
+      witness: status2
     };
   }
   function verifierLine(bundle, build = VIEWER_BUILD, w = DEFAULT_WORDS.lines) {
@@ -20507,7 +20528,7 @@ ${pad.repeat(depth)}`;
     parent2.append(cell);
   }
   var recordsWord2 = (count2) => `${count2} ${count2 === 1 ? "record" : "records"}`;
-  function renderVerificationBanner(root, model, coverage) {
+  function renderVerificationBanner(root, model, coverage, witness) {
     const bar = element6("div");
     bar.className = model.state === "failed" ? "cv-shell-bar cv-failed" : model.state === "incomplete" ? "cv-shell-bar cv-incomplete" : "cv-shell-bar";
     const banner = element6("span", model.line);
@@ -20546,11 +20567,23 @@ ${pad.repeat(depth)}`;
       detail.dataset.bannerDetail = "";
       root.append(detail);
     }
+    if (witness !== void 0) {
+      const notice = element6("p", WITNESS_NOTICE_LINES[witness]);
+      notice.className = "cv-banner-detail";
+      notice.dataset.witnessNotice = witness;
+      root.append(notice);
+    }
     if (model.refusal === void 0) return bar;
     const refusal = element6("p", model.refusal);
     refusal.dataset.refusal = "unverified-bundle";
     root.append(refusal);
     return bar;
+  }
+  function bannerWitnessNotice(model, bundle, verification) {
+    if (model.state !== "verified" && model.state !== "incomplete")
+      return void 0;
+    if (model.checkpoint !== "verified") return void 0;
+    return witnessNotice(bundle, verification);
   }
   function renderChecking(root) {
     const bar = element6("div");
@@ -22495,7 +22528,12 @@ ${pad.repeat(depth)}`;
       root.replaceChildren();
       root.classList.remove("cv-shell-chrome");
       renderPresentationHeader(root, bundle);
-      bar = renderVerificationBanner(root, bannerModel, coverage);
+      bar = renderVerificationBanner(
+        root,
+        bannerModel,
+        coverage,
+        bannerWitnessNotice(bannerModel, bundle, withStrict(context))
+      );
       const L2 = region("L2");
       const core = region("L2-core");
       const L2module = region("L2-module");
@@ -22615,11 +22653,11 @@ ${pad.repeat(depth)}`;
       return { look: seen, offsets, place, below, readable: words, clips };
     };
     const frameOf = () => {
-      const detail = bar.nextElementSibling;
-      const parts = [
-        bar,
-        ...detail?.hasAttribute("data-banner-detail") ? [detail] : []
-      ];
+      const parts = [bar];
+      for (const mark of ["data-banner-detail", "data-witness-notice"]) {
+        const next = parts[parts.length - 1].nextElementSibling;
+        if (next?.hasAttribute(mark)) parts.push(next);
+      }
       const held = [...parts, ...stripNode === void 0 ? [] : [stripNode]];
       return {
         parts,
@@ -22640,15 +22678,16 @@ ${pad.repeat(depth)}`;
     };
     const assertFrameIntact = () => {
       const at = frame2;
-      const [top, detail] = at.parts;
+      const [top, ...below] = at.parts;
+      const last = at.parts[at.parts.length - 1];
       const pill = top.querySelector("[data-verify]");
       const banners = root.querySelectorAll(
-        "[data-verify], [data-banner-detail]"
+        "[data-verify], [data-banner-detail], [data-witness-notice]"
       );
-      const expected = [pill, ...detail === void 0 ? [] : [detail]];
+      const expected = [pill, ...below];
       if (pill === null || banners.length !== expected.length || expected.some((part, i) => banners[i] !== part) || // Nodes, not elements: a bare text node before the banner is words
       // too. The core draws no text node at the root.
-      root.firstChild !== (at.header ?? top) || top.previousSibling !== at.header || at.header !== null && at.header.parentNode !== root || detail !== void 0 && detail.previousElementSibling !== top || top.parentNode !== root || top.hidden || !stripIntact(detail ?? top) || snapshot(at.held) !== at.words || !sameLook(
+      root.firstChild !== (at.header ?? top) || top.previousSibling !== at.header || at.header !== null && at.header.parentNode !== root || below.some((part, i) => part.previousElementSibling !== at.parts[i]) || top.parentNode !== root || top.hidden || !stripIntact(last) || snapshot(at.held) !== at.words || !sameLook(
         looks(at.held, root.classList.contains("cv-shell-chrome")),
         root.classList.contains("cv-shell-chrome") ? at.looks.chrome : at.looks.plain
       ))
