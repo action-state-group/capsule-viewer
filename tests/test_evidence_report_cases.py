@@ -12,15 +12,17 @@ The bundles come from ``tests/testdata/evidence-report`` (see
 from __future__ import annotations
 
 import dataclasses
+import html
 import json
 import re
 from pathlib import Path
 
 import pytest
 from capsule_emit.evidence_file import Check, check_evidence_file
-from evidence_report_helpers import no_link_or_script
+from evidence_report_helpers import banner_class, no_link_or_script
 
 from capsule_viewer.evidence_report import check_and_render, main, render_report_html
+from capsule_viewer.shell import NOT_WITNESSED
 
 GOLDENS = Path(__file__).parent / "testdata" / "evidence-report"
 
@@ -60,7 +62,7 @@ def test_a_hostile_record_is_reported_and_never_rendered_raw(tmp_path, capsys):
 
 def test_a_whole_log_file_says_what_it_shows_and_where_to_check_it():
     _, page = check_and_render(bundle("whole-log"), source="b.json")
-    assert "Everything this file claims checks" in page
+    assert html.escape(NOT_WITNESSED) in page  # no witness directory, so no receipt is checked
     assert "The request and response text" in page
     assert "capsule-emit verify --bundle b.json" in page
 
@@ -78,7 +80,7 @@ def test_a_live_evidence_file_renders():
     live = bundle("live-provider")
     check, page = check_and_render(live, source="two-node-provider.json")
     assert "Evidence report" in page and live["checkpoint"]["log_id"] in page
-    assert verdict_class(page) == {"VALID": "pass", "INCOMPLETE": "withheld", "INVALID": "fail"}[check.verdict]
+    assert verdict_class(page) == banner_class(check)
 
 
 def test_a_witness_receipt_shows_as_the_verifier_judged_it(tmp_path, capsys):
@@ -122,7 +124,7 @@ TAMPERED = {
 
 def test_the_untampered_file_checks():
     check, page = check_and_render(bundle("whole-log"))
-    assert check.verdict == "VALID" and verdict_class(page) == "pass"
+    assert check.verdict == "VALID" and verdict_class(page) == "withheld"  # checks, but no receipt checked
     assert page.count("producer_signature_invalid") == 0
 
 
@@ -195,6 +197,7 @@ def test_a_hostile_file_name_is_text():
 @pytest.mark.parametrize("case", sorted(p.name for p in GOLDENS.iterdir() if p.is_dir()))
 def test_the_banner_never_claims_more_than_the_verdict(case):
     """agent-action-capsule#196: the banner and ``capsule-emit verify --bundle``
-    agree, because the banner is that verdict: pass only on VALID."""
+    agree, because the banner is that verdict: pass only on VALID, and only
+    when a witness receipt was checked (evidencebook#209)."""
     check, page = check_and_render(bundle(case))
-    assert verdict_class(page) == {"VALID": "pass", "INCOMPLETE": "withheld", "INVALID": "fail"}[check.verdict]
+    assert verdict_class(page) == banner_class(check)

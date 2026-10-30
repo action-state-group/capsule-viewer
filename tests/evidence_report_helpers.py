@@ -180,3 +180,12 @@ def frozen_check(raw: dict) -> EvidenceFileCheck:
             "witness": check(raw["witness"]) if raw["witness"] else None,
         }
     )
+
+
+def banner_class(check: EvidenceFileCheck) -> str:
+    """The report banner's class for *check*: the verdict's, except that a
+    VALID file with no witness receipt the verifier checked is not shown as
+    passing (evidencebook#209)."""
+    if check.verdict == "VALID" and (check.witness is None or check.witness.status != "pass"):
+        return "withheld"
+    return {"VALID": "pass", "INCOMPLETE": "withheld", "INVALID": "fail"}[check.verdict]

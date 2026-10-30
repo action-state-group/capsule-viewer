@@ -14,6 +14,10 @@ then draws the banner and the checks and resolves the Ledger module through a
 registry; the module fills only the records, and the shell follows them with
 the verifier's checks.
 
+Under a verified banner the page says so when no witness receipt was checked
+(:func:`witness_notice`): such a file checks only against its holder's own
+signatures (evidencebook#209).
+
 So the banner is the verifier's verdict, never the module's: VALID shows as
 verified, INCOMPLETE as incomplete (something the file claims is not proven:
 a file with no signed checkpoint is not tied to any log, and one without a
@@ -30,7 +34,7 @@ from ..context import VerifiedBundleContext, build_context
 from ..evidence_report import bind_result
 from ..kit.components import Check, VerificationResult
 from ..registry import Registry
-from ..shell import present
+from ..shell import NOT_WITNESSED, WITNESS_UNREPORTED, notice, present
 from .module import MANIFEST, LedgerModule
 
 if TYPE_CHECKING:
@@ -95,7 +99,23 @@ def ledger_page(bundle: Any, check: EvidenceFileCheck, *, source: str = "", dept
     module = LedgerModule(source, depth)
     registry = Registry()
     registry.register(MANIFEST, module.canRender, module)
-    return present(context, registry, audience="*", core_checks=True)
+    return present(context, registry, audience="*", core_checks=True, caveats=witness_notice(check))
+
+
+def witness_notice(check: EvidenceFileCheck) -> tuple:
+    """The notice under a verified banner when no witness receipt was checked
+    (evidencebook#209): the file then checks only against its holder's own
+    signatures. A refused page draws no notice, so a failing file gets none,
+    and neither does a file with no signed checkpoint: there is no checkpoint
+    for a witness to cover, and the banner and checkpoint check already say
+    the file is tied to no log."""
+    if not check.checkpoint_authenticated:
+        return ()
+    if check.witness is None:
+        return (notice(WITNESS_UNREPORTED, "witness-unreported"),)
+    if check.witness.status != "pass":
+        return (notice(NOT_WITNESSED, "not-witnessed"),)
+    return ()
 
 
 def check_and_render(bundle: Any, *, source: str = "", depth: str = "L1") -> tuple[EvidenceFileCheck, str]:

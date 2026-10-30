@@ -21,7 +21,7 @@ import jsonschema
 import pytest
 from agent_action_capsule.bundle import build_unproven_bundle
 from capsule_emit import LocalKeypairSigner, seal
-from capsule_emit.evidence_file import check_evidence_file
+from capsule_emit.evidence_file import Check, check_evidence_file
 from capsule_emit.ledger import read_ledger
 from evidence_report_helpers import exported_bundle, frozen_check, no_link_or_script
 
@@ -389,3 +389,62 @@ def test_the_page_is_the_frozen_one(case):
     bundle = json.loads((path / "bundle.json").read_text(encoding="utf-8"))
     check = frozen_check(json.loads((path / "check.json").read_text(encoding="utf-8")))
     assert ledger_page(bundle, check, source="ledger.jsonl") == (path / "page.html").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "witness, kind", [("pass", None), ("withheld", "not-witnessed"), (None, "witness-unreported")]
+)
+def test_a_verified_ledger_says_when_no_witness_receipt_was_checked(tmp_path, witness, kind):
+    """evidencebook#209: a verified banner over a chain that checks only
+    against its holder's own signatures carries a notice saying so; one whose
+    witness receipt the verifier checked carries none."""
+    _, bundle = exported_bundle(tmp_path)
+    check = dataclasses.replace(
+        check_evidence_file(bundle), witness=None if witness is None else Check("witnesses", witness)
+    )
+    page = ledger_page(bundle, check)
+    assert _outcome(page) == "verified"
+    notices = re.findall(r'data-notice="(not-witnessed|witness-unreported)"', page)
+    assert notices == ([kind] if kind else [])
+    if kind:
+        # The notice sits right under the banner, before the rows.
+        assert page.index(f'data-notice="{kind}"') < page.index("<tbody>")
+
+
+@pytest.mark.parametrize(
+    "witness, kind", [("pass", None), ("withheld", "not-witnessed"), (None, "witness-unreported")]
+)
+def test_a_ledger_whose_module_fails_keeps_the_witness_notice(tmp_path, monkeypatch, witness, kind):
+    """The fallback page still shows the verified outcome in its checks, so it
+    keeps the notice saying what that outcome does not cover."""
+    _, bundle = exported_bundle(tmp_path)
+    check = dataclasses.replace(
+        check_evidence_file(bundle), witness=None if witness is None else Check("witnesses", witness)
+    )
+
+    def boom(self, model, services):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(LedgerModule, "render", boom)
+    page = ledger_page(bundle, check)
+    assert FAILED in page and _outcome(page) == "verified"
+    assert re.findall(r'data-notice="(not-witnessed|witness-unreported)"', page) == ([kind] if kind else [])
+
+
+def test_a_ledger_with_no_signed_checkpoint_draws_no_witness_notice(ledger):
+    """No checkpoint, so nothing for a witness to cover: the incomplete banner
+    and the checkpoint check say the file is tied to no log."""
+    bundle = _file(ledger)
+    check = check_evidence_file(bundle)
+    assert not check.checkpoint_authenticated
+    page = ledger_page(bundle, check)
+    assert _outcome(page) == "incomplete"
+    assert "data-notice=\"not-witnessed\"" not in page and "data-notice=\"witness-unreported\"" not in page
+
+
+def test_a_failing_ledger_draws_no_witness_notice(ledger):
+    bundle = _file(ledger)
+    edited = json.loads(json.dumps(bundle))
+    edited["records"][0]["timestamp"] = "1999-01-01T00:00:00Z"
+    page = ledger_page(edited, check_evidence_file(edited))
+    assert REFUSAL in page and "data-notice=\"not-witnessed\"" not in page

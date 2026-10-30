@@ -18,10 +18,11 @@ import re
 
 import pytest
 from capsule_emit.evidence_file import Check, check_evidence_file
-from evidence_report_helpers import exported_bundle, whole_log_bundle
+from evidence_report_helpers import banner_class, exported_bundle, whole_log_bundle
 
 from capsule_viewer import evidence_report
 from capsule_viewer.evidence_report import BundleMismatch, check_and_render, main, render_report_html
+from capsule_viewer.shell import NOT_WITNESSED, WITNESS_UNREPORTED
 
 FORBIDDEN = ["fetch(", "XMLHttpRequest", "WebSocket(", "<script", "import(", "navigator.sendBeacon", "@import", "url("]
 
@@ -47,8 +48,10 @@ def test_a_whole_log_bundle_renders_the_verifiers_valid_result(tmp_path):
     bundle = whole_log_bundle(tmp_path)
     check, page = check_and_render(bundle, source="b.json")
     assert check.verdict == "VALID"
-    assert _verdict_class(page) == "pass"
-    assert "Everything this file claims checks" in page
+    # No witness directory, so no receipt is checked: the chain checks only
+    # against its holder's own signatures, and the page says so.
+    assert _verdict_class(page) == "withheld"
+    assert html.escape(NOT_WITNESSED) in page and "Everything this file claims checks" not in page
     for c in check.checks:
         assert html.escape(c.plain) in page
     assert check.bundle_digest in page
@@ -64,7 +67,7 @@ def test_an_exported_bundle_renders_exactly_what_the_verifier_reported(exported)
     # `capsule-emit bundle --all` proves the whole log, seq 1 to the
     # checkpoint tip, so every check passes, interval coverage included.
     assert check.verdict == "VALID"
-    assert _verdict_class(page) == "pass"
+    assert _verdict_class(page) == "withheld" and html.escape(NOT_WITNESSED) in page
     statuses = {c.name: c.status for c in check.checks}
     assert statuses["interval_coverage"] == "pass"
     for c in check.checks:
@@ -95,7 +98,7 @@ def test_the_page_shows_the_result_it_is_given_not_one_it_computes(tmp_path):
     )
     page = render_report_html(bundle, altered)
     assert _verdict_class(page) == "fail" and "altered" in page
-    assert _verdict_class(render_report_html(bundle, check)) == "pass"
+    assert _verdict_class(render_report_html(bundle, check)) == "withheld"
 
 
 @pytest.mark.parametrize(
@@ -113,6 +116,28 @@ def test_the_witness_line_is_each_receipt_as_the_verifier_judged_it(tmp_path, st
         witness_receipts=[{"ts_url": "https://witness.example", "binding": "cll", "status": status, "reason": "r"}],
     )
     assert words in render_report_html(bundle, check)
+
+
+@pytest.mark.parametrize(
+    "witness, banner, headline",
+    [("pass", "pass", "Everything this file claims checks"), ("withheld", "withheld", NOT_WITNESSED),
+     (None, "withheld", WITNESS_UNREPORTED)],
+)
+def test_a_file_that_checks_reads_as_checking_in_full_only_when_witnessed(tmp_path, witness, banner, headline):
+    """evidencebook#209: a page never says checked of a chain that only
+    self-verifies. Every check passes in each case; only the witness result
+    differs: a receipt the verifier checked, none, or a result from before
+    witness checks (no ``witnesses`` at all)."""
+    bundle = whole_log_bundle(tmp_path)
+    check = dataclasses.replace(
+        check_evidence_file(bundle), witness=None if witness is None else Check("witnesses", witness)
+    )
+    assert check.verdict == "VALID"
+    page = render_report_html(bundle, check)
+    assert _verdict_class(page) == banner
+    assert html.escape(headline) in page
+    if witness != "pass":
+        assert "Everything this file claims checks" not in page
 
 
 def test_a_result_for_another_bundle_is_refused(exported):
@@ -156,7 +181,7 @@ def test_a_file_with_no_digest_renders_as_capsule_emit_renders_it(exported, tmp_
     out = tmp_path / "float.html"
     assert main([str(path), "-o", str(out)]) == {"VALID": 0, "INCOMPLETE": 2, "INVALID": 1}[check.verdict]
     assert out.read_text(encoding="utf-8") == check_and_render(bundle, source="float.json")[1]
-    assert _verdict_class(page) == {"VALID": "pass", "INCOMPLETE": "withheld", "INVALID": "fail"}[check.verdict]
+    assert _verdict_class(page) == banner_class(check)
 
 
 def test_a_file_that_is_not_an_evidence_bundle_renders_as_a_failure():
@@ -189,7 +214,7 @@ def test_the_cli_writes_the_page_and_exits_with_the_verifiers_verdict(exported, 
     out = tmp_path / "report.html"
     assert main([str(path), "-o", str(out)]) == 0  # VALID, as capsule-emit exits
     assert "report: VALID" in capsys.readouterr().out
-    assert _verdict_class(out.read_text(encoding="utf-8")) == "pass"
+    assert _verdict_class(out.read_text(encoding="utf-8")) == "withheld"  # the page's reading, not the exit code
     tampered = tmp_path / "tampered.json"
     tampered.write_text(json.dumps(_tamper(json.loads(path.read_text()))))
     assert main([str(tampered), "-o", str(out)]) == 1
