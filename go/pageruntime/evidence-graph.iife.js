@@ -14859,7 +14859,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("32367bf5840078f4abcae9f9c154d88d23b22524");
+    return commitPrefix("da9724a02e611c07cd011bdf51ab5bf7fca9215d");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -20569,7 +20569,7 @@ ${pad.repeat(depth)}`;
     }
     if (witness !== void 0) {
       const notice = element6("p", WITNESS_NOTICE_LINES[witness]);
-      notice.className = "cv-banner-detail";
+      notice.className = "cv-banner-detail cv-witness-notice";
       notice.dataset.witnessNotice = witness;
       root.append(notice);
     }
