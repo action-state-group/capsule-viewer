@@ -142,8 +142,12 @@ export function readEnvelope(hex: string): EnvelopeView | undefined {
   const bytes = Uint8Array.from(
     hex.match(/../gu)!.map((pair) => parseInt(pair, 16)),
   );
+  // COSE_Sign1 is CBOR tag 18 (0xd2) over a four-item array, and nothing else.
   const tagged = bytes[0] === 0xd2;
-  const outer = readCbor(bytes, { i: 0 });
+  if (!tagged) return undefined;
+  const at = { i: 1 };
+  const outer = readCbor(bytes, at);
+  if (at.i !== bytes.length) return undefined;
   if (!Array.isArray(outer) || outer.length !== 4) return undefined;
   const [protectedBytes, unprotected, payload, signature] = outer;
   if (
@@ -387,18 +391,29 @@ export function ladder(input: RecordPageInput, w: Words): Rung[] {
 
   // 5 Inclusion: the record's log coordinates under the checkpoint.
   const at = logCoordinates(context.completeness.memberships, capsuleId);
-  const claim = context.completeness.perRecordMembership.status;
+  // AAC's strict claim, not the plain one: the plain reading passes a
+  // membership under a checkpoint nobody authenticated.
+  const membership = context.strict?.claims.find(
+    (c) => c.name === "per_record_membership",
+  );
+  const named = membership?.findings.some((f) => f.endsWith(`:${capsuleId}`));
+  let inclusion: RungStatus = "NOT_CHECKED";
+  let inclusionNote: string | undefined;
+  if (at === undefined) inclusion = "NOT_PRESENT";
+  else if (context.strict === undefined || membership === undefined)
+    inclusionNote = t("record.rung.5.unanchored");
+  else if (!context.strict.checkpointAuthenticated)
+    inclusionNote = t("record.rung.5.unanchored");
+  else if (membership.status === "pass") inclusion = "PASS";
+  else if (membership.status === "fail") {
+    if (named) inclusion = "FAIL";
+    else inclusionNote = t("record.rung.5.other");
+  }
   add(
     5,
     "inclusion",
-    at === undefined
-      ? "NOT_PRESENT"
-      : claim === "pass"
-        ? "PASS"
-        : claim === "fail"
-          ? "FAIL"
-          : "NOT_CHECKED",
-    undefined,
+    inclusion,
+    inclusionNote,
     at === undefined
       ? t("record.rung.5.sub.none")
       : t("record.rung.5.sub", { leaf: at.leafIndex, seq: at.seq }),
@@ -428,9 +443,11 @@ export function ladder(input: RecordPageInput, w: Words): Rung[] {
         : passed === receipts.length
           ? "PASS"
           : "NOT_CHECKED",
-    receipts.length === 0
-      ? t("record.rung.7.none")
-      : t("record.rung.7.count", { n: passed, of: receipts.length }),
+    context.strict === undefined
+      ? t("record.rung.7.note-unread")
+      : receipts.length === 0
+        ? t("record.rung.7.none")
+        : t("record.rung.7.count", { n: passed, of: receipts.length }),
     t("record.rung.7.sub"),
   );
 

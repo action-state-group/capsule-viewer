@@ -592,6 +592,17 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // proves and does not, what a status means, and what this page did not
   // run. A pack cannot make a rung read as proving more than it does.
   "record.capsule.recomputed",
+  "record.env.covered",
+  "record.env.not-signed",
+  "record.envelope.foot.own",
+  "record.envelope.foot.shared",
+  "record.envelope.none",
+  "record.rung.5.other",
+  "record.rung.5.unanchored",
+  "record.rung.7.note-unread",
+  ...["clear", "digest-only", "bodies-by-digest", "commitment"].map(
+    (t) => `record.tag.${t}`,
+  ),
   "record.env.alg.other",
   "record.envelope.unreadable",
   "record.foot.order",
@@ -1264,8 +1275,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "20f2425721519c3bf31041dcd3477564c3f0b0d36b80c6717f58bdb278a6297c",
-  groups: "44122d360b84db015ca533ddaa4ab27fe18977a0f5c9e561f4c2d20189edef50",
+  lines: "75e98551d13bc390897743b66894b869c4f3f231e85fd35f2b341b175b7e5c55",
+  groups: "c931a0c1d47a11bab2da253290f5d41170cfcf658f717a688df6b9ead621390d",
 });
 
 export interface Words {

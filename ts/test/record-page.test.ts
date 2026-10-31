@@ -132,6 +132,9 @@ it("reads the envelope's own bytes: algorithm, content type, key, payload and si
     "64 bytes",
   );
   // nothing that is not a COSE_Sign1 is drawn as one
+  // only a tag-18 COSE_Sign1, with nothing after it
+  expect(readEnvelope(record.signature.slice(2))).toBeUndefined();
+  expect(readEnvelope(`${record.signature}00`)).toBeUndefined();
   expect(readEnvelope("zz")).toBeUndefined();
   expect(readEnvelope("00")).toBeUndefined();
   expect(readEnvelope(record.signature.slice(0, 40))).toBeUndefined();
@@ -290,3 +293,31 @@ for (const voice of ["own", "shared"] as const)
     }
     expect(html).toBe(readFileSync(golden, "utf8"));
   });
+
+it("rung 5 does not read PASS under a checkpoint nobody authenticated", async () => {
+  const bundle = structuredClone(
+    strict.cases.find((c: Obj) => c.id === "incomplete-no-signed-checkpoint")
+      .bundle,
+  );
+  const root = await render(bundle);
+  const pages = [...root.querySelectorAll<HTMLElement>("[data-record-page]")];
+  expect(pages.length).toBeGreaterThan(0);
+  for (const page of pages) {
+    expect(statuses(page)["5"]).not.toBe("PASS");
+    expect(page.querySelector('tr[data-rung="5"]')!.textContent).toContain(
+      "checkpoint is not authenticated",
+    );
+  }
+});
+
+it("words no line says more than the page checked", async () => {
+  const w = await contractReportWords("lines");
+  expect(w.t("record.foot.sdk")).not.toContain("kit.");
+  expect(w.t("record.foot.order")).not.toContain("banner");
+  expect(w.t("record.foot.status")).not.toContain("banner");
+  expect(w.t("record.env.kid.value", { kid: "x", bytes: 32 })).not.toContain(
+    "agent's key",
+  );
+  for (const n of [6, 8])
+    expect(w.t(`record.rung.${n}.check`)).toContain("not yet available");
+});

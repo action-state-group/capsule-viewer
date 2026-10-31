@@ -13,7 +13,7 @@
 <dt class="">3 · content type</dt>
 <dd class="">application/agent-action-capsule-id</dd>
 <dt class="">4 · kid</dt>
-<dd class="">66be…473a · the raw 32-byte public key · this is the agent's key</dd>
+<dd class="">66be…473a · the raw 32-byte public key · the signing key</dd>
 </dl>
 </div>
 <div class="l3-box l3-unprot" data-l3="unprotected">
@@ -86,13 +86,13 @@
 <td>
 <span class="l3-status l3-s-PASS" data-status="PASS">PASS</span>
 </td>
-<td class="l3-cmd">aac verify capsule.json → id matches</td>
+<td class="l3-cmd">agent-action-capsule verify capsule.json</td>
 </tr>
 <tr data-rung="2" data-rung-status="NOT_PRESENT">
 <td class="l3-n">2</td>
 <td>
 <b class="">Content digests</b>
-<div class="l3-sub">agent_input/output, response, evidence</div>
+<div class="l3-sub">agent_input and agent_output</div>
 </td>
 <td class="">The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.</td>
 <td>
@@ -105,11 +105,11 @@
 <b class="">Producer envelope</b>
 <div class="l3-sub">Ed25519 over the id</div>
 </td>
-<td class="">The holder of the key in the header signed this id. Not: that the key may act for the operator (rung 8).</td>
+<td class="">Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).</td>
 <td>
 <span class="l3-status l3-s-PASS" data-status="PASS">PASS</span>
 </td>
-<td class="l3-cmd">aac verify --envelopes</td>
+<td class="l3-cmd">capsulectl verify --profile NAME --capsule capsule.json</td>
 </tr>
 <tr data-rung="4" data-rung-status="NOT_PRESENT">
 <td class="l3-n">4</td>
@@ -117,11 +117,11 @@
 <b class="">Chain</b>
 <div class="l3-sub">parent_capsule_id · relation</div>
 </td>
-<td class="">This record follows its parent in the same book. Not: that no record supersedes it, and nothing about other books (that is references[]).</td>
+<td class="">This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).</td>
 <td>
 <span class="l3-status l3-s-NOT_PRESENT" data-status="NOT_PRESENT">NOT_PRESENT</span>
 </td>
-<td class="l3-cmd">walk chain to the book head</td>
+<td class="l3-cmd">agent-action-capsule verify --store DIR</td>
 </tr>
 <tr data-rung="5" data-rung-status="PASS">
 <td class="l3-n">5</td>
@@ -133,7 +133,7 @@
 <td>
 <span class="l3-status l3-s-PASS" data-status="PASS">PASS</span>
 </td>
-<td class="l3-cmd">cll verify --inclusion leaf root</td>
+<td class="l3-cmd">capsulectl cll verify --profile NAME --proof PROOF.json</td>
 </tr>
 <tr data-rung="6" data-rung-status="NOT_CHECKED">
 <td class="l3-n">6</td>
@@ -144,7 +144,7 @@
 <td class="">The book only grew between the head the reader kept and this one; nothing was replaced. Not: anything if the reader kept no head (first contact).</td>
 <td>
 <span class="l3-status l3-s-NOT_CHECKED" data-status="NOT_CHECKED">NOT_CHECKED</span> this page does not run it: a bundle carries no earlier head to compare against</td>
-<td class="l3-cmd">cll verify --consistency old new</td>
+<td class="l3-cmd">not yet available (agent-action-capsule#513)</td>
 </tr>
 <tr data-rung="7" data-rung-status="NOT_PRESENT">
 <td class="l3-n">7</td>
@@ -155,7 +155,7 @@
 <td class="">A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.</td>
 <td>
 <span class="l3-status l3-s-NOT_PRESENT" data-status="NOT_PRESENT">NOT_PRESENT</span> this bundle carries no witness receipt</td>
-<td class="l3-cmd">verify receipt under the service key you trust</td>
+<td class="l3-cmd">agent-action-capsule verify --transparent STATEMENT --issuer-key PEM --log-key PEM</td>
 </tr>
 <tr data-rung="8" data-rung-status="NOT_CHECKED">
 <td class="l3-n">8</td>
@@ -166,7 +166,7 @@
 <td class="">The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is the reader's trust root or a registry).</td>
 <td>
 <span class="l3-status l3-s-NOT_CHECKED" data-status="NOT_CHECKED">NOT_CHECKED</span> this page does not run it yet: it reads no controller binding record</td>
-<td class="l3-cmd">aac verify --controller-binding</td>
+<td class="l3-cmd">not yet available (agent-action-capsule#514)</td>
 </tr>
 <tr data-rung="9" data-rung-status="NOT_PRESENT">
 <td class="l3-n">9</td>
@@ -174,7 +174,7 @@
 <b class="">References · the other side</b>
 <div class="l3-sub">cited records</div>
 </td>
-<td class="">The cited records exist and cite back. Not: the other book's consistency unless the reader holds its proof material.</td>
+<td class="">The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless the reader holds its proof material.</td>
 <td>
 <span class="l3-status l3-s-NOT_PRESENT" data-status="NOT_PRESENT">NOT_PRESENT</span>
 </td>
@@ -184,35 +184,35 @@
 <td class="l3-n">10</td>
 <td>
 <b class="">Judgment and adjudication</b>
-<div class="l3-sub">Result · pack digest · judge pin</div>
+<div class="l3-sub">the sealed Result</div>
 </td>
-<td class="">The verdict on the card is the one the sealed Result carries, under the pinned pack and judge. Not: that the verdict is right.</td>
+<td class="">The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.</td>
 <td>
 <span class="l3-status l3-s-NOT_PRESENT" data-status="NOT_PRESENT">NOT_PRESENT</span>
 </td>
-<td class="l3-cmd">aac verify bundle.json → Result cites[] closed</td>
+<td class="l3-cmd">capsulectl verify --bundle bundle.json</td>
 </tr>
 <tr data-rung="11" data-rung-status="NOT_PRESENT">
 <td class="l3-n">11</td>
 <td>
 <b class="">Countersign</b>
-<div class="l3-sub">the buyer's signature over the Result</div>
+<div class="l3-sub">the other party's signature over the Result</div>
 </td>
 <td class="">The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.</td>
 <td>
 <span class="l3-status l3-s-NOT_PRESENT" data-status="NOT_PRESENT">NOT_PRESENT</span>
 </td>
-<td class="l3-cmd">countersign verify result.json</td>
+<td class="l3-cmd">capsulectl countersign verify --profile NAME --directory URL_OR_FILE bundle.json</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section class="l3-card l3-foot" data-l3="foot">
 <p>
-<b class="">Why the order.</b> Each rung assumes the one below: an envelope is over an id, an id is over the JSON, inclusion is of an id, a checkpoint is over inclusions, a witness is of a checkpoint, a judgment is over verified records. A FAIL at rung n leaves every rung above it unproved, and the banner says so.</p>
+<b class="">Why the order.</b> Each rung assumes the one below: an envelope is over an id, an id is over the JSON, inclusion is of an id, a checkpoint is over inclusions, a witness is of a checkpoint, a judgment is over verified records.</p>
 <p>
-<b class="">What a status means here.</b> PASS the check ran and held · FAIL it ran and did not · NOT_PRESENT the material is not in the bundle · NOT_CHECKED the page did not run it (offline, no key, no adapter) · INCONCLUSIVE it ran and could not decide. The banner's count is the count of these.</p>
+<b class="">What a status means here.</b> PASS the check ran and held · FAIL it ran and did not · NOT_PRESENT the material is not in the bundle · NOT_CHECKED the page did not run it (offline, no key, no adapter) · INCONCLUSIVE it ran and could not decide.</p>
 <p>
-<b class="">What the SDK gives a builder.</b> kit.verify(bundle) returns these as Finding[] (property, status, method, key refs, proof refs); kit.report draws this page from them and never upgrades a status. The verifier is the same code in Go, Rust, Python and TypeScript, proved by one vector corpus.</p>
+<b class="">Who else checks this.</b> Four implementations, in Go, Rust, Python and TypeScript, pass one vector corpus.</p>
 </section>
 </div>

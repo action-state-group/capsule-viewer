@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+import { RECORD_PAGE_CSS } from "../src/record-page.js";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -251,14 +252,20 @@ describe.skipIf(executablePath === undefined)(
             `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`,
           );
       }
-      // Every stylesheet the shipped runtime inserts is one the CSP lists.
-      // The runtime is rebuilt only at a release (RELEASING.md step 5), so
-      // today's list can name a stylesheet it does not insert yet; the other
-      // way round, a stylesheet it inserts that is not listed, is the
-      // failure this test is for.
-      expect(
-        [...inserted].filter((hash) => !listed.includes(hash)).sort(),
-      ).toEqual([]);
+      // Every stylesheet the shipped runtime inserts is one the CSP lists, and
+      // the only listed ones it does not insert yet are the stylesheets added
+      // since the runtime was last rebuilt (RELEASING.md step 5 rebuilds it at
+      // a release). When that rebuild lands this fails until UNRELEASED
+      // empties, so a release that forgot it cannot pass.
+      const hash = (css: string) =>
+        `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`;
+      const UNRELEASED = [hash(RECORD_PAGE_CSS)];
+      expect([...inserted].filter((h) => !listed.includes(h)).sort()).toEqual(
+        [],
+      );
+      expect(listed.filter((h) => !inserted.has(h)).sort()).toEqual(
+        [...UNRELEASED].sort(),
+      );
     });
 
     describe("with the reference core runtime", () => {
