@@ -1,0 +1,38 @@
+/* SPDX-License-Identifier: Apache-2.0
+ * The Adjudications page (capsuleviewer.adjudications/v0), on top of kit.css.
+ * Colours are kit tokens only (var(--cv-*)). One column on a phone; the strip
+ * of four tiles wraps by its own width, and a row's two panels sit side by side
+ * from 36rem, one above the other below it. */
+.cv-adj { display: flex; flex-direction: column; gap: var(--cv-space-3); }
+.cv-adj__bar { border: 1px solid var(--cv-color-positive-fg); background: var(--cv-color-positive-bg); color: var(--cv-color-positive-fg); border-radius: var(--cv-radius); padding: var(--cv-space-2) var(--cv-space-3); display: flex; flex-wrap: wrap; column-gap: var(--cv-space-4); }
+.cv-adj__bar strong { font-weight: 700; }
+.cv-adj__core { font-size: var(--cv-font-size-sm); letter-spacing: 0.04em; text-transform: uppercase; color: var(--cv-color-text-muted); }
+.cv-adj__strip { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); padding: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-3); }
+.cv-adj__tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--cv-space-2); }
+.cv-adj__tile { background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); padding: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-1); }
+.cv-adj__num { font-size: 1.875rem; font-weight: 700; line-height: 1.1; }
+.cv-adj__label { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }
+.cv-adj__headline { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.cv-adj__sec-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; column-gap: var(--cv-space-3); }
+.cv-adj__num-cell { text-align: right; white-space: nowrap; }
+.cv-adj__rows { display: flex; flex-direction: column; }
+.cv-adj__head { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--cv-space-2); padding: var(--cv-space-2) 0; font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-text-muted); border-bottom: 1px solid var(--cv-color-border); }
+.cv-adj__row > summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--cv-space-2); align-items: baseline; cursor: pointer; padding: var(--cv-space-2) 0; border-top: 1px solid var(--cv-color-border); }
+.cv-adj__row:first-child > summary { border-top: none; }
+.cv-adj__pill { display: inline-block; font-size: var(--cv-font-size-sm); font-weight: 600; border-radius: var(--cv-radius-pill); padding: 0 var(--cv-space-2); }
+.cv-adj__pill--met { color: var(--cv-color-positive-fg); background: var(--cv-color-positive-bg); }
+.cv-adj__pill--not_met { color: var(--cv-color-negative-fg); background: var(--cv-color-negative-bg); }
+.cv-adj__pill--other { color: var(--cv-color-neutral-fg); background: var(--cv-color-neutral-bg); }
+.cv-adj__match--concurs { color: var(--cv-color-positive-fg); }
+.cv-adj__match--differs { color: var(--cv-color-caution-fg); font-weight: 600; }
+.cv-adj__match--not_counted, .cv-adj__match--unresolved { color: var(--cv-color-text-muted); }
+.cv-adj__panels { display: grid; grid-template-columns: 1fr; gap: var(--cv-space-2); padding: var(--cv-space-2) 0 var(--cv-space-3); }
+@container (min-width: 36rem) { .cv-adj__panels { grid-template-columns: 1fr 1fr; } }
+.cv-adj__panel { border-radius: var(--cv-radius); padding: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-1); }
+.cv-adj__panel--judge-not_met { background: var(--cv-color-negative-bg); }
+.cv-adj__panel--judge-met { background: var(--cv-color-positive-bg); }
+.cv-adj__panel--judge-other { background: var(--cv-color-neutral-bg); }
+.cv-adj__panel--adjudicator { background: var(--cv-color-caution-bg); }
+.cv-adj__panel-title { font-size: var(--cv-font-size-sm); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cv-color-text-muted); }
+.cv-adj__more { color: var(--cv-color-text-muted); }
+.cv-adj__wrap { container-type: inline-size; }
