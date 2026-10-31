@@ -437,15 +437,10 @@
     "legend.toggle.core": "no toggle, the core always draws it",
     "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
     "legend.src.lead": "Where every word comes from",
-    "legend.src.core": "core",
-    "legend.src.core.is": "the viewer's own words",
-    "legend.src.pack": "wording pack",
-    "legend.src.pack.is": "the report's words",
-    "legend.src.field": "capsule field",
-    "legend.src.field.is": "a typed field, as recorded",
     "legend.src.payload": "payload",
     "legend.src.payload.is": "the record's content",
     "legend.src.producer": "producer",
-    "legend.src.producer.is": "quoted, with whose words"
+    "legend.src.producer.is": "quoted, with whose words",
+    "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words."
   }
 }

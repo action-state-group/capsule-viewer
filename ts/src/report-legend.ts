@@ -25,6 +25,14 @@ export const WORD_SOURCES = [
 export type WordSource = (typeof WORD_SOURCES)[number];
 
 /**
+ * The sources the legend names: the ones the page marks in its text. Core,
+ * wording-pack and capsule-field words are drawn but not yet tagged node by
+ * node, so the legend does not list chips for styles a reader cannot see;
+ * its last line says unmarked text is the viewer's or the report's own.
+ */
+export const MARKED_SOURCES = ["payload", "producer"] as const;
+
+/**
  * Marks `node` as words from `source`. The style is the page stylesheet's:
  * the pack's own words are the page's plain sans, so a pack-source node is
  * marked and not restyled.
@@ -66,7 +74,7 @@ export function renderLegend(w: Words): HTMLElement {
   const strip = el("p", "cv-legend-sources");
   strip.dataset.legend = "sources";
   strip.append(el("span", "cv-legend-lead", w.t("legend.src.lead")));
-  for (const source of WORD_SOURCES) {
+  for (const source of MARKED_SOURCES) {
     const entry = el("span", "cv-legend-item");
     const chip = el("span", "cv-src");
     chip.dataset.src = source;
@@ -74,6 +82,7 @@ export function renderLegend(w: Words): HTMLElement {
     entry.append(chip, w.t(`legend.src.${source}.is`));
     strip.append(entry);
   }
+  strip.append(el("span", "cv-legend-item", w.t("legend.src.unmarked")));
   legend.append(strip);
   return legend;
 }

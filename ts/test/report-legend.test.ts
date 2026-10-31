@@ -4,6 +4,7 @@
 import { expect, it } from "vitest";
 import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
 import {
+  MARKED_SOURCES,
   WORD_SOURCES,
   legendCss,
   renderLegend,
@@ -13,7 +14,7 @@ import { applyDepth } from "../src/report-front.js";
 import { levelCss, levelToggle, renderTurns } from "../src/report-levels.js";
 
 for (const grouping of ["lines", "groups"] as const) {
-  it(`the ${grouping} page's legend names the three toggle glyphs and the five word sources`, () => {
+  it(`the ${grouping} page's legend names the three toggle glyphs and the sources the page marks`, () => {
     const legend = renderLegend(DEFAULT_WORDS[grouping]);
     const glyphs = [...legend.querySelectorAll(".cv-lg")].map((g) => [
       g.textContent,
@@ -25,14 +26,9 @@ for (const grouping of ["lines", "groups"] as const) {
       ["■", "cv-lg core"],
     ]);
     const chips = [...legend.querySelectorAll<HTMLElement>(".cv-src")];
-    expect(chips.map((c) => c.dataset.src)).toEqual([...WORD_SOURCES]);
-    expect(chips.map((c) => c.textContent)).toEqual([
-      "core",
-      "wording pack",
-      "capsule field",
-      "payload",
-      "producer",
-    ]);
+    expect(chips.map((c) => c.dataset.src)).toEqual([...MARKED_SOURCES]);
+    expect(chips.map((c) => c.textContent)).toEqual(["payload", "producer"]);
+    expect(legend.textContent).toContain("Unmarked text is the viewer's");
     expect(legend.textContent).toContain("closed, the reader opens it");
     expect(legend.textContent).toContain("Where every word comes from");
   });
