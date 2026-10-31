@@ -201,7 +201,8 @@ some) from the judgment lane, a bar of those three shares (SVG widths) and, from
 the adjudication lane, `◆ {n} recorded · all concur` or `· {k} differs` (the
 lane's `good` values concur, its `bad` values differ; a lane with no `classes`
 states only the count). The cell is green when at most one judged case is not
-good, red when more than half are bad, and amber otherwise; a day with no judged
+good and most are good, red when more than half are bad, and amber otherwise
+(one judged case that was not met is red); a day with no judged
 case is uncoloured. The legend states the three colours and the diamond. Each
 day that ran has a section under the grid: the heading (weekday, month, day,
 count, judged), the lanes' counts with Show evidence, and a table of the

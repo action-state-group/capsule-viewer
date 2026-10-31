@@ -188,12 +188,27 @@ describe("the calendar's cells (lanes with a role)", () => {
     );
   });
 
+  it("a day with one judged case that was not met is red, and one of two not met is amber, never green", async () => {
+    const root = await drawn();
+    // 2026-09-18: one case, not met. 2026-09-07: one case, undecided.
+    expect(
+      root.querySelector<HTMLElement>('td[data-day="2026-09-18"]')!.dataset
+        .scale,
+    ).toBe("most");
+    expect(
+      root.querySelector<HTMLElement>('td[data-day="2026-09-07"]')!.dataset
+        .scale,
+    ).toBe("some");
+  });
+
   it("an overturned ruling reads as a difference", async () => {
     const root = await drawn();
     const chip = root.querySelector<HTMLElement>(
       'td[data-day="2026-09-24"] .cv-adj',
     )!;
-    expect(chip.textContent).toBe("◆ 1 adjudication recorded · 1 differs");
+    expect(chip.textContent).toBe(
+      "◆ 1 adjudication recorded · 1 differs from the judge",
+    );
   });
 
   it("colours a day green, amber or red by its judged cases, and says so in a legend", async () => {
@@ -203,11 +218,11 @@ describe("the calendar's cells (lanes with a role)", () => {
         (td) => td.dataset.scale,
       ),
     );
-    expect(scales).toEqual(new Set(["good", "most"]));
+    expect(scales).toEqual(new Set(["good", "some", "most"]));
     expect(
       [...root.querySelectorAll(".cv-legend li")].map((li) => li.textContent),
     ).toEqual([
-      " all but one met",
+      " all, or all but one, met",
       " some not met",
       " most not met",
       "◆ adjudications recorded that day",

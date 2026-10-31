@@ -164,11 +164,15 @@ const sumOf = (lane: ViewChart, day: string): number =>
 
 type Scale = "good" | "some" | "most";
 
-/** Green when at most one judged case is not good, red when most are bad, else amber. */
+/**
+ * Green when at most one judged case is not good and most are good, red when
+ * more than half are bad, else amber. One judged case that was not met is
+ * therefore red, never green.
+ */
 function scaleOf(t: Tally): Scale | undefined {
   const total = t.good + t.bad + t.open;
   if (total === 0) return undefined;
-  if (total - t.good <= 1) return "good";
+  if (total - t.good <= 1 && t.good * 2 > total) return "good";
   return t.bad * 2 > total ? "most" : "some";
 }
 
