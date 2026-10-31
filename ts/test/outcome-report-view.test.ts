@@ -196,7 +196,17 @@ it("opens the report lines with one sentence of the same counts, each with its t
   const pct = (await render(pctBundle)).querySelector<HTMLElement>(
     '[data-headline="lines"]',
   )!;
-  expect(pct.textContent).not.toMatch(/%/u);
+  expect(pct.textContent).toBe(headline.textContent);
+  // The sentence says what the table's counts say, no other number.
+  const line = (key: string) =>
+    Number(
+      root.querySelector<HTMLElement>(`[data-line="${key}"]`)?.dataset.count ??
+        0,
+    );
+  expect(headline.textContent).toContain(`${line("missed")} missed`);
+  expect(headline.textContent).toContain(
+    `${line("undecided")} could not be decided`,
+  );
 });
 
 it("shows counts by default, never a percentage, unless the presentation flag asks for one", async () => {

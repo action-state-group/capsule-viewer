@@ -13,7 +13,7 @@ here. The format follows
 
 ### Added
 
-- The outcome report's report lines open with one sentence of the same counts, as Steven's Terms Pack canvas opens: "188 of 244 conversations resolved: every rule that applied was met. 49 missed at least one. 7 could not be decided." Whole numbers, each with its total, never a share, whether or not the presentation asks for percentages in the table below (#172). Five new words in `contract-report-outcomes.en.json`; its digest changes.
+- The outcome report's report lines open with one sentence of the same counts, as Steven's Terms Pack canvas opens: "188 of 244 conversations resolved: every rule that applied was met. 49 missed at least one. 7 could not be decided." Whole numbers, never a share, whether or not the presentation asks for percentages in the table below; the first count carries the total the others are of, and a report with no conversation draws no sentence (#172). A conversation no rule applied to is counted on its own ("had no rule that applied"), not as one the judge could not decide. Six new words in `contract-report-outcomes.en.json`; its digest changes.
 
 ### Changed
 
