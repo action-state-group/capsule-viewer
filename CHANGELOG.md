@@ -9,9 +9,15 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
-## Unreleased
+## ts 0.8.0 and go 0.8.0 (2026-10-31)
+
+Both state viewer 0.8.0: `ts/v0.8.0`, then `go/v0.8.0` on the commit that
+ships its page runtime. This release carries the frames merged since 0.7.0:
+#196, #197.
 
 ### Added
+
+- Outcomes frames 6 and 7 of Steven's Terms Pack canvas (#123, #197): the regions the core always draws with no toggle (verification banner and its notices, core strip, refused-wording notice) carry the core square at their left edge, and the level-0 legend names all five word sources (core, wording pack, capsule field, payload, producer), each chip in its style. Core strip identity lines are marked core; tile captions and the spot check's labels are marked wording pack; the spot check's judge pin digest is a capsule field drawn with its path. Depth `L3` and the red tier-gated mark are not drawn: a bundle carries no signal for which tier withheld a record's content. Both default wording packs gain `legend.src.core|pack|field` (and `.is`), so their digests change; the contract-report goldens, `go/emitter/runtime-style-hashes.txt` and the Go goldens are regenerated.
 
 - Same customer in this report, as Steven's Terms Pack canvas draws Outcomes frame 5 (#122): when the day Result carries the producer's `x-<pack>.subject_history` member (evidencebook-skills#89, #92; no new AAC vocabulary), the Outcomes page adds a section with, per customer handle that has two or more conversations, the CORE customer line, four tiles (conversations of the report's total, resolved, missed, could not decide, each "k of n"), a timeline with the dashed follow-up link and its days, and "Each conversation, each term": request, term squares, USD band as a range (`$10-99`, never `e+1`), halves present and outcome, each row opening a three-column card (what happened, the terms not met, the verdict and why). At the operator tier (`handle_scope.tier`) the page speaks to "you" and draws the handle and `follow_up_of`; at any other tier, or with no `handle_scope`, the viewer ignores both fields whatever the document says and draws only request, band, halves and terms, with no customer grouping, until per-share salting exists (evidencebook-skills#93). What the bundle does not carry (must-have versus informational terms, when a term is met, the adjudication) is a locked line, not drawn. 44 new `lines.subject.*` words in the Outcomes default pack (one locked); its digest changes, so the contract-report goldens, `go/emitter/runtime-style-hashes.txt` and the Go goldens are regenerated.
 
