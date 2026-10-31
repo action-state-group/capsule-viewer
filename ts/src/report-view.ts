@@ -2,9 +2,13 @@
 import {
   ChartRefusal,
   checkChart,
+  compareScalar,
+  resolveField,
   type ChartDataset,
+  type ChartRow,
   type ChartWindow,
   type CheckedChart,
+  type Scalar,
 } from "./chart-spec.js";
 
 /**
@@ -34,10 +38,23 @@ const ID = /^[a-z][a-z0-9_]{0,31}$/u;
 export const isView = (value: unknown): boolean =>
   isObj(value) && Object.hasOwn(value, "view");
 
+/** How a calendar cell reads a lane (docs/design/report-views.md section 3). */
+export type LaneRole = "activity" | "judgment" | "adjudication";
+/** What a value of a keyed lane counts as in a cell's bar and colour. */
+export type ValueClass = "good" | "bad" | "open";
+
 export interface ViewChart {
   readonly id: string;
   readonly chart: CheckedChart;
+  /** A calendar lane only: the part of the cell this lane draws. */
+  readonly role?: LaneRole;
+  /** A calendar lane with a key channel only: the class of each key value, by its text. */
+  readonly classes?: Readonly<Record<string, ValueClass>>;
+  /** A timeline lane only: the mark drawn on each day with a count. */
+  readonly mark?: TimelineMark;
 }
+
+export type TimelineMark = "tick" | "diamond";
 
 export interface CheckedCalendar {
   readonly view: "calendar";
@@ -55,7 +72,38 @@ export interface CheckedByPeriod {
   readonly columns: readonly ViewChart[];
 }
 
-export type CheckedView = CheckedCalendar | CheckedByPeriod;
+export interface CheckedTimeline {
+  readonly view: "timeline";
+  readonly window: ChartWindow;
+  readonly unplaced: number;
+  readonly lanes: readonly ViewChart[];
+}
+
+/** One cell of the co-failure matrix: the subjects failing both requirements, and the rows that say so. */
+export interface CoFailureCell {
+  readonly subjects: number;
+  readonly rows: readonly ChartRow[];
+}
+
+export interface CheckedCoFailure {
+  readonly view: "co-failure";
+  readonly window: ChartWindow;
+  readonly unplaced: number;
+  readonly count: ViewChart;
+  readonly subject: string;
+  /** The requirements with at least one failing subject, in the checker's order. */
+  readonly requirements: readonly Scalar[];
+  /** Distinct subjects that fail at least one requirement. */
+  readonly failing: number;
+  /** `cells[i][j]`: the subjects failing requirement i and j (i = j: failing i alone or with others). */
+  readonly cells: readonly (readonly CoFailureCell[])[];
+}
+
+export type CheckedView =
+  | CheckedCalendar
+  | CheckedByPeriod
+  | CheckedTimeline
+  | CheckedCoFailure;
 
 /** A chart's one key channel besides x. */
 const keyChannel = (chart: CheckedChart): "y" | "color" =>
@@ -71,15 +119,35 @@ function onlyKeys(value: Obj, allowed: readonly string[], at: string): void {
       );
 }
 
-/** `{id, chart}`: an id the page draws as code, and a chart spec. */
+const ROLES: readonly LaneRole[] = ["activity", "judgment", "adjudication"];
+const CLASSES: readonly ValueClass[] = ["good", "bad", "open"];
+
+interface Entry {
+  id: string;
+  spec: unknown;
+  role?: LaneRole;
+  classes?: Record<string, ValueClass>;
+  mark?: TimelineMark;
+}
+
+/** `{id, chart}` (a calendar lane also `role` and `classes`): an id the page draws as code, and a chart spec. */
 function readEntry(
   value: unknown,
   at: string,
   seen: Set<string>,
-): { id: string; spec: unknown } {
+  lane: "calendar" | "timeline" | false = false,
+): Entry {
   if (!isObj(value))
     return refuse("view-unsupported-member", `${at} must be an object`, at);
-  onlyKeys(value, ["id", "chart"], at);
+  onlyKeys(
+    value,
+    lane === "calendar"
+      ? ["id", "chart", "role", "classes"]
+      : lane === "timeline"
+        ? ["id", "chart", "mark", "classes"]
+        : ["id", "chart"],
+    at,
+  );
   const { id, chart } = value;
   if (typeof id !== "string" || !ID.test(id))
     refuse(
@@ -92,7 +160,49 @@ function readEntry(
   seen.add(id as string);
   if (chart === undefined)
     refuse("view-unsupported-member", `${at}/chart is missing`, `${at}/chart`);
-  return { id: id as string, spec: chart };
+  const out: Entry = { id: id as string, spec: chart };
+  if (value.role !== undefined) {
+    if (!ROLES.includes(value.role as LaneRole))
+      refuse(
+        "view-unsupported-member",
+        `${at}/role must be one of ${ROLES.join(", ")}`,
+        `${at}/role`,
+      );
+    out.role = value.role as LaneRole;
+  }
+  if (value.mark !== undefined) {
+    if (value.mark !== "tick" && value.mark !== "diamond")
+      refuse(
+        "view-unsupported-member",
+        `${at}/mark must be tick or diamond`,
+        `${at}/mark`,
+      );
+    out.mark = value.mark as TimelineMark;
+  }
+  if (value.classes !== undefined) {
+    const c = value.classes;
+    if (!isObj(c) || Object.keys(c).length === 0)
+      refuse(
+        "view-unsupported-member",
+        `${at}/classes must be a non-empty object`,
+        `${at}/classes`,
+      );
+    const classes: Record<string, ValueClass> = Object.create(null) as Record<
+      string,
+      ValueClass
+    >;
+    for (const [k, v] of Object.entries(c as Obj)) {
+      if (!CLASSES.includes(v as ValueClass))
+        refuse(
+          "view-unsupported-member",
+          `${at}/classes/${k} must be one of ${CLASSES.join(", ")}`,
+          `${at}/classes/${k}`,
+        );
+      classes[k] = v as ValueClass;
+    }
+    out.classes = classes;
+  }
+  return out;
 }
 
 const list = (value: unknown, at: string, min: number): unknown[] => {
@@ -206,6 +316,111 @@ function checkTogether(
   return window;
 }
 
+/** A value with no class would be counted as nothing, so it is refused. */
+function checkClasses(lanes: readonly ViewChart[]): void {
+  lanes.forEach((lane, i) => {
+    if (lane.classes === undefined) return;
+    if (!lane.chart.keys.some((k) => k !== "x"))
+      refuse(
+        "view-lane-role",
+        `${lane.id}: classes name the values of a key channel, and this lane has none`,
+        `/lanes/${String(i)}/classes`,
+      );
+    const key = keyChannel(lane.chart);
+    for (const g of lane.chart.groups) {
+      const v = String(g.key[key]);
+      if (!Object.hasOwn(lane.classes, v))
+        refuse(
+          "view-lane-role",
+          `${lane.id}: the value ${v} has no class`,
+          `/lanes/${String(i)}/classes`,
+        );
+    }
+  });
+}
+
+// The same grammar as a chart's field paths (chart-spec.ts).
+const FIELD_PATH = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/u;
+
+/**
+ * The co-failure matrix, recomputed from the rows of one counted chart: a
+ * subject (a session, a conversation) fails a requirement when a row of that
+ * requirement names it, and cell (i, j) counts the subjects failing both. The
+ * rows of a day that did not run are not counted, as in a by-period cell.
+ */
+function coFailureOf(
+  part: ViewChart,
+  subject: string,
+  window: ChartWindow,
+): CheckedCoFailure {
+  const key = keyChannel(part.chart);
+  const requirements: Scalar[] = [];
+  const failures = new Map<string, Map<number, ChartRow[]>>();
+  for (const g of part.chart.groups) {
+    if (g.notRun || (g.value ?? 0) === 0) continue;
+    const requirement = g.key[key]!;
+    let at = requirements.findIndex((r) => r === requirement);
+    if (at < 0) {
+      requirements.push(requirement);
+      at = requirements.length - 1;
+    }
+    for (const row of g.rows) {
+      const who =
+        row.header === undefined
+          ? undefined
+          : resolveField(row.header, subject);
+      if (typeof who !== "string" && typeof who !== "number")
+        refuse(
+          "view-chart-shape",
+          `${part.id}: row seq ${String(row.seq)} has no ${subject} to name its subject`,
+        );
+      const id = `${typeof who}:${String(who)}`;
+      const byReq = failures.get(id) ?? new Map<number, ChartRow[]>();
+      byReq.set(at, [...(byReq.get(at) ?? []), row]);
+      failures.set(id, byReq);
+    }
+  }
+  // Sort the requirements as the checker sorts a domain, keeping each one's index.
+  const order = requirements
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => compareScalar(a.r, b.r));
+  const rank = new Map(order.map((o, n) => [o.i, n]));
+  const n = order.length;
+  const subjects: number[][] = Array.from({ length: n }, () =>
+    new Array<number>(n).fill(0),
+  );
+  const rows: Map<number, ChartRow>[][] = Array.from({ length: n }, () =>
+    Array.from({ length: n }, () => new Map<number, ChartRow>()),
+  );
+  for (const byReq of failures.values()) {
+    const mine = [...byReq.keys()].map((i) => rank.get(i)!);
+    for (const a of mine)
+      for (const b of mine) {
+        subjects[a]![b]!++;
+        for (const row of [
+          ...byReq.get(order[a]!.i)!,
+          ...byReq.get(order[b]!.i)!,
+        ])
+          rows[a]![b]!.set(row.seq, row);
+      }
+  }
+  return {
+    view: "co-failure",
+    window,
+    unplaced: unplacedOf([part]),
+    count: part,
+    subject,
+    requirements: order.map((o) => o.r),
+    failing: failures.size,
+    cells: subjects.map((line, a) =>
+      line.map((value, b) => ({
+        subjects: value,
+        rows: [...rows[a]![b]!.values()].sort((x, y) => x.seq - y.seq),
+      })),
+    ),
+  };
+}
+
 /**
  * Read a view entry and check every chart in it against the dataset. Throws
  * a {@link ChartRefusal}: a `view-*` reason for the view's own rules, the
@@ -237,13 +452,50 @@ export function checkView(
   if (kind === "calendar") {
     onlyKeys(value, ["view", "lanes"], "");
     const lanes = list(value.lanes, "/lanes", 1).map((raw, i) =>
-      readEntry(raw, `/lanes/${String(i)}`, seen),
+      readEntry(raw, `/lanes/${String(i)}`, seen, "calendar"),
     );
-    const checked = lanes.map((l, i) =>
-      checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`),
-    );
+    const checked = lanes.map((l, i): ViewChart => {
+      const part = checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`);
+      return {
+        ...part,
+        ...(l.role === undefined ? {} : { role: l.role }),
+        ...(l.classes === undefined ? {} : { classes: l.classes }),
+      };
+    });
+    const roles = new Set<LaneRole>();
+    checked.forEach((lane, i) => {
+      const at = `/lanes/${String(i)}`;
+      const keyed = lane.chart.keys.some((k) => k !== "x");
+      if (lane.role === undefined) return;
+      if (roles.has(lane.role))
+        refuse(
+          "view-lane-role",
+          `${lane.id}: role ${lane.role} is on two lanes`,
+          `${at}/role`,
+        );
+      roles.add(lane.role);
+      if (lane.role === "activity" && keyed)
+        refuse(
+          "view-lane-role",
+          `${lane.id}: the activity lane counts per day and has no key channel`,
+          `${at}/role`,
+        );
+      if (lane.role === "judgment" && (!keyed || lane.classes === undefined))
+        refuse(
+          "view-lane-role",
+          `${lane.id}: the judgment lane needs a key channel and classes for its values`,
+          `${at}/role`,
+        );
+      if (lane.role === "adjudication" && keyed && lane.classes === undefined)
+        refuse(
+          "view-lane-role",
+          `${lane.id}: a keyed adjudication lane needs classes for its values`,
+          `${at}/role`,
+        );
+    });
     for (const lane of checked)
       checkFit(lane.id, lane.chart, (n) => n <= 1, "at most one key channel");
+    checkClasses(checked);
     const window = checkTogether(checked, false);
     if (!wholeMonths(window))
       refuse(
@@ -256,6 +508,50 @@ export function checkView(
       unplaced: unplacedOf(checked),
       lanes: checked,
     };
+  }
+  if (kind === "timeline") {
+    onlyKeys(value, ["view", "lanes"], "");
+    const lanes = list(value.lanes, "/lanes", 1).map((raw, i) =>
+      readEntry(raw, `/lanes/${String(i)}`, seen, "timeline"),
+    );
+    const checked = lanes.map((l, i): ViewChart => {
+      const part = checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`);
+      return {
+        ...part,
+        mark: l.mark ?? "tick",
+        ...(l.classes === undefined ? {} : { classes: l.classes }),
+      };
+    });
+    for (const lane of checked)
+      checkFit(lane.id, lane.chart, (n) => n <= 1, "at most one key channel");
+    checkClasses(checked);
+    const window = checkTogether(checked, false);
+    return {
+      view: "timeline",
+      window,
+      unplaced: unplacedOf(checked),
+      lanes: checked,
+    };
+  }
+  if (kind === "co-failure") {
+    onlyKeys(value, ["view", "count", "subject"], "");
+    const count = readEntry(value.count, "/count", seen);
+    const part = checkOne(count.id, count.spec, "/count/chart");
+    checkFit(
+      part.id,
+      part.chart,
+      (n) => n === 1,
+      "exactly one key channel, the requirement,",
+    );
+    const subject = value.subject;
+    if (typeof subject !== "string" || !FIELD_PATH.test(subject))
+      refuse(
+        "view-unsupported-member",
+        "/subject must be a field path",
+        "/subject",
+      );
+    const window = checkTogether([part], false);
+    return coFailureOf(part, subject as string, window);
   }
   if (kind === "by-period") {
     onlyKeys(value, ["view", "count", "columns"], "");
@@ -309,7 +605,7 @@ export function checkView(
   }
   return refuse(
     "view-unsupported-member",
-    'view must be "calendar" or "by-period"',
+    'view must be "calendar", "timeline", "co-failure" or "by-period"',
     "/view",
   );
 }

@@ -180,6 +180,66 @@ are not in any week cell. A week cell and a column total carry Show evidence
 A week that straddles the window edge is one column with the days it has
 inside the window. The cell never counts a day outside the sealed window.
 
+### Calendar cells, timeline and co-failure (capsule-viewer#172, Steven's Terms Pack frames 2 and 11)
+
+Status: additive members of the same public format. A door of the kind this
+note already records (an additive page format with no new product meaning, no
+spec text): engineering's call, with Sherlock2's door confirmation.
+
+**Lane `role` and `classes` (calendar).** A calendar lane may carry `role`
+(`activity`, `judgment`, `adjudication`, each on at most one lane) and, on a
+keyed lane, `classes`: each value of the key channel, by its text, to `good`,
+`bad` or `open`. A calendar with any `role` draws the canvas's cell; with none
+it draws the lane list above, unchanged. A value with no class is refused
+(`view-lane-role`): a value that counted as nothing would be a figure the page
+made up. The viewer holds no list of values: the pack declares which verdicts
+are good, bad or open.
+
+The cell, from the checked groups alone: the day (a link to its section), the
+activity lane's count, `judged · {good} · {bad}` (plus `{open}` when there are
+some) from the judgment lane, a bar of those three shares (SVG widths) and, from
+the adjudication lane, `◆ {n} recorded · all concur` or `· {k} differs` (the
+lane's `good` values concur, its `bad` values differ; a lane with no `classes`
+states only the count). The cell is green when at most one judged case is not
+good and most are good, red when more than half are bad, and amber otherwise
+(one judged case that was not met is red); a day with no judged
+case is uncoloured. The legend states the three colours and the diamond. Each
+day that ran has a section under the grid: the heading (weekday, month, day,
+count, judged), the lanes' counts with Show evidence, and a table of the
+activity lane's records (time in UTC from the chart's time field, and a link to
+the record in the bundle). A day that did not run has no section and is not a
+link. The nouns and verbs (`calendar.activity`, `calendar.class.*`,
+`calendar.adj.*`, `calendar.legend.*`) are wording-pack words: the default packs
+say "cases", "met" and "not met", and a pack such as Terms Pack's overrides
+them ("conversations", "resolved", "missed").
+
+**`timeline`.** `{"view": "timeline", "lanes": [{"id", "chart", "mark",
+"classes"?}]}`: the same lane charts (a count per UTC day, at most one key
+channel), each drawn as a row of marks on one shared day axis, `mark` being
+`tick` (a bar whose height is the count, capped) or `diamond`. A mark's colour
+is its value's class. Days that did not run are hatched across every lane. The
+SVG is aria-hidden; the text alternative is each lane's list of days and counts
+with Show evidence. A lane's label is the wording pack's `lane.<id>.title`
+when it has one, else the id as code.
+
+**`co-failure`.** `{"view": "co-failure", "count": {"id", "chart"}, "subject":
+"<field path>"}`: the chart is a by-period `count` chart (one key channel, the
+requirement, over the failing rows). `subject` names the field on each row that
+says which session or conversation it belongs to. The viewer recomputes the
+matrix from those rows: cell (a, b) is the number of distinct subjects with a
+row in both requirement a and requirement b, the diagonal is the subjects
+failing that requirement, and each cell carries Show evidence for the records
+it counts. A row with no subject is refused (`view-chart-shape`).
+
+**Not drawn, because no record carries it** (filed as producer gaps on
+capsule-viewer#172): spans with a duration (the "routed to a person" lane's
+resolution minutes) need a start and end per record; per-case columns in the
+day section (request, per-requirement squares, band, outcome, card) need the
+case's own fields; "judged Oct 30 02:00" needs the daily run's time; lane
+titles beyond a wording pack's. Voice follows Sherlock2: the words above are
+second person in the holder's own preview and third person when shared, set by
+the wording pack the page is built with.
+
 ### Words
 
 Every new string is a core word, locked like the `chart.*` entries
