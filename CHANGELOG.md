@@ -15,6 +15,10 @@ here. The format follows
 
 - The report front's third tile reads "Could not decide (evaluations)" in both default wording packs, as Steven's Terms Pack canvas draws it and as the results table's column already says; it read "Not evaluable". The packs keep their ids and change their digests (`DEFAULT_PACK_SHA256`), so the contract-report goldens are regenerated (#172).
 
+### Added
+
+- Each Go release carries `standard-history-module-v<version>.tar.gz` and its `.sha256` as release assets (attested like the page runtime): the History card module `capsuleviewer.standard-history/v0` in the form a plugin carries, with its manifest, script, stylesheets and wording pack, and `presentation.json`, the `cli-plugin/v1` presentations entry for them. The bundle's files and tar members carry nothing of the run (sorted, no owner, no time); the bytes are the same on every run in one build environment, and the release states the sha256 (#171).
+
 ## ts 0.5.0 and go 0.5.0 (2026-10-31)
 
 Both state viewer 0.5.0: `ts/v0.5.0`, then `go/v0.5.0` on the commit that

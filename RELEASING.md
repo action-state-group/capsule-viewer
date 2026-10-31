@@ -72,7 +72,13 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    `scripts/go-release-check.sh <version>` on that pull request's head commit,
    the tag plus the refresh, then pushes `go/v<version>` on it, not on the
    merge commit, which carries whatever reached `main` after `ts/v<version>`. [Release · Go](https://github.com/action-state-group/capsule-viewer/actions/workflows/release-go.yml)
-   checks it again and publishes its GitHub Release.
+   checks it again and publishes its GitHub Release. The release also carries
+   `standard-history-module-v<version>.tar.gz` (and its `.sha256`): the History
+   card module's manifest, script, stylesheets and wording pack, and
+   `presentation.json`, the `cli-plugin/v1` presentations entry a plugin copies.
+   It is built by `python -m capsule_viewer.standard_history.module_slot --bundle`
+   and is the same bytes on every run in one build environment; the release
+   states its sha256, so rebuild only to compare with a note of the zlib used.
 
 Bumping a version by hand in any pull request releases it the same way when it
 merges.
