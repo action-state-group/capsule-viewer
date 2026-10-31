@@ -13,6 +13,10 @@ here. The format follows
 
 ### Added
 
+- Calendar cells as Steven's Terms Pack canvas draws them (frame 2 and EU frame 11, #172): a calendar lane may carry a `role` (`activity`, `judgment`, `adjudication`) and `classes` for its values, and the cell then shows the day's count, `judged · 8 resolved · 1 missed`, a bar of those shares, a green, amber or red colour (one judged case that was not met is red, never green), a diamond chip for the day's adjudications ("all concur" or "1 differs"), a legend, and a link to the day's section (heading, counts with Show evidence, the day's records). A calendar with no `role` is drawn as before. A new refusal, `view-lane-role`, names a role on two lanes, classes on a lane with no key channel, or a value with no class.
+- A `timeline` view ("What happened across the month"): one row per lane, a tick or diamond on each day with a count, coloured by the value's class, days that did not run hatched, and a list of each lane's days with Show evidence as its text alternative.
+- A `co-failure` view ("Which fail together"): a matrix of the sessions failing both of two requirements, recomputed from the rows of a not-met chart and the field that names their session.
+- Wording: 23 locked words (long weekday and month names, the day section's labels) and 17 pack words (the cell's nouns and verbs, the legend and the co-failure total) in both default packs; their digests change. Spans with a duration and the per-case columns of the day section need records no producer writes yet.
 - The Adjudications page (`capsuleviewer.adjudications/v0`, a module-slot script), Outcomes frame 4 of Steven's Terms Pack canvas: the strip of four tiles, By term, By adjudicator and rows that open the judge's and the adjudicator's sides side by side, drawn from `calibration-summary/v1`, `human-rating/v1` and `evaluation-report/v1` records. The only percentage is derived from the k and n beside it; what the records do not carry (either side's words, a case's term, the adjudicator's book) is named on the page, not drawn (#121). Design: `docs/design/adjudications.md`.
 
 ### Changed

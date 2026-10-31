@@ -104,7 +104,9 @@ describe.skipIf(executablePath === undefined)(
             ),
           ),
           shown: figures.every((f) => {
-            const table = f.querySelector("table")!.getBoundingClientRect();
+            const table = f
+              .querySelector("table, svg.cv-timeline")!
+              .getBoundingClientRect();
             const style = getComputedStyle(f);
             return (
               style.display !== "none" && table.height > 0 && table.width > 0
