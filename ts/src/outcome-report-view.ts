@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import type { BundleVerificationResult } from "@action-state-group/agent-action-capsule";
 import {
+  disclosureOf,
+  verifiedBundleContext,
+} from "@action-state-group/agent-action-capsule";
+import {
   buildOutcomeReportModel,
   type CalibrationWeek,
   type Conversation,
@@ -41,6 +45,11 @@ import {
   renderCheckYourself,
 } from "./report-front.js";
 import { spotCheckToggle } from "./spot-check.js";
+import {
+  readSubjectHistory,
+  renderSubjectHistory,
+  type SubjectConversation,
+} from "./subject-history.js";
 import type { Words } from "./contract-report-wording.js";
 
 /**
@@ -2142,6 +2151,80 @@ function renderReportProofs(
   host.append(section);
 }
 
+/**
+ * The Result document the root carries, from the verified disclosures: the
+ * member itself, or a book header's statement. Undefined when it is withheld
+ * or is not an object.
+ */
+async function resultDocument(
+  result: ResultRoot,
+  bundle: unknown,
+): Promise<unknown> {
+  try {
+    const context = await verifiedBundleContext(bundle);
+    const member = disclosureOf(context, result.capsuleId, result.member);
+    if (member.state !== "disclosed") return undefined;
+    const payload: unknown = member.payload;
+    return result.form === "book" &&
+      payload !== null &&
+      typeof payload === "object"
+      ? (payload as Record<string, unknown>).statement
+      : payload;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Each conversation as Same customer in this report draws it (subject-history.ts). */
+function subjectConversations(
+  model: OutcomeReportModel,
+  w: Words,
+): SubjectConversation[] {
+  return model.conversations.map((c) => {
+    const status = conversationStatus(c);
+    const outcome = statusWord(status, c, w);
+    const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
+    const turns =
+      c.transcript.state === "verified" || c.transcript.state === "cited"
+        ? c.transcript.turns
+        : undefined;
+    return {
+      id: c.conversationId,
+      date: c.day,
+      ...(time === undefined ? {} : { time }),
+      status,
+      outcome,
+      terms: c.criteria.map((cr) => ({
+        ref: `${cr.checkId}.${cr.criterionId}`,
+        label: criterionLabel(model, cr.checkId, cr.criterionId, w).label,
+        tone: criterionWord(cr, w).tone,
+      })),
+      open: c.criteria
+        .filter((cr) => cr.verdict !== "met" && cr.verdict !== "not_applicable")
+        .map((cr) => {
+          const label = criterionLabel(model, cr.checkId, cr.criterionId, w);
+          const worded = criterionWord(cr, w);
+          return {
+            label: label.label,
+            wording: label.source === "sealed" ? label.text : "",
+            verdict: worded.word,
+            tone: worded.tone,
+            note:
+              cr.rationale === undefined
+                ? noNoteText(cr, w)
+                : judgeNote(cr.rationale, cr.claim?.verdict ?? cr.verdict, w),
+          };
+        }),
+      ...(turns === undefined
+        ? {}
+        : {
+            turns: turns.length,
+            calls: turns.reduce((n, t) => n + t.toolCalls.length, 0),
+          }),
+    };
+  });
+}
+
 /** The `lines` grouping's page wrapper: its element, class, page name and stylesheet. */
 export const LINES_FRAME = {
   tag: "section",
@@ -2187,6 +2270,18 @@ export async function drawLines(
   if (notes.childElementCount > 0) pad.append(notes);
   sheet.append(pad);
   levels.L0.append(sheet);
+  // Same customer in this report (Outcomes frame 5), when the Result carries
+  // the producer's slice; every count in it is of this report's conversations.
+  const slice = readSubjectHistory(await resultDocument(result, bundle));
+  if (slice !== undefined) {
+    const subject = renderSubjectHistory(
+      subjectConversations(model, w),
+      slice,
+      model.totalCount,
+      w,
+    );
+    if (subject !== undefined) levels.L0.append(subject);
+  }
 
   // L1, why: rule by rule, led by who judged, who witnessed, what verified.
   renderRules(levels.L1, model, runInfo, result, w);
