@@ -1246,8 +1246,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "5f72b1a7201f63d6f6519dbbcad7154e47f508d59edeaebce6a45f7306f62591",
-  groups: "3f2d1dee87d888298073be8cd0ab39e63412fa38b60492c230f17118d1a7a28a",
+  lines: "3c754baf63901a90b0de578fb4cf7b2dea2b20b06958ad29d295074400c04346",
+  groups: "49d3f98b8336daf02d620ff63dce036003eb49802ba07c208287006f6db080d3",
 });
 
 export interface Words {
