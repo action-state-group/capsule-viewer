@@ -864,11 +864,13 @@ it("two levels: the missed line opens (toggle 1) into every missed conversation,
       .map((r) => Number(r.dataset.count))
       .reduce((a, b) => a + b, 0),
   ).toBe(48);
-  // no third level: the conversation holds two level-2 toggles, side by
-  // side, and nothing deeper: the conversation itself and the proofs
+  // no third level: the conversation holds three level-2 toggles, side by
+  // side, and nothing deeper: the spot check, the conversation itself and
+  // the proofs
   const nested = conv.querySelectorAll<HTMLElement>("details");
-  expect([...nested].map((d) => d.dataset.level)).toEqual(["2", "2"]);
-  expect(nested[0]!.dataset.section).toBe("conversation");
+  expect([...nested].map((d) => d.dataset.level)).toEqual(["2", "2", "2"]);
+  expect(nested[0]!.dataset.section).toBe("spot-check");
+  expect(nested[1]!.dataset.section).toBe("conversation");
   const proofBox = proofs(conv);
   const rows = conv.querySelectorAll<HTMLElement>("tr[data-crit]");
   expect(rows).toHaveLength(9);
@@ -2193,4 +2195,46 @@ it("a Result that does not list requirements_covered draws no 'not covered' row"
   const root = await render(bundle);
   expect(root.querySelectorAll('tr[data-not-run="true"]')).toHaveLength(0);
   expect(root.textContent).not.toContain("Not covered by this run");
+});
+
+it("each conversation offers a spot check: one three-column card per rule with a claim, drawn from the bundle and saying what the bundle lacks", async () => {
+  const { bundle } = await sealEvidenceBundle(
+    fixture("outcome-report-bundle.json"),
+  );
+  const root = await render(bundle);
+  const drill = root.querySelector<HTMLElement>(
+    'details[data-drill="missed"]',
+  )!;
+  open(drill);
+  const conv = open(drill.querySelector<HTMLElement>("article.conv")!);
+  const toggle = conv.querySelector<HTMLElement>(
+    'details[data-section="spot-check"]',
+  )!;
+  expect(toggle.querySelector("summary")!.textContent).toBe(
+    "Spot check, side by side",
+  );
+  open(toggle);
+  const cards = toggle.querySelectorAll<HTMLElement>("article.sc-card");
+  expect(cards).toHaveLength(9);
+  // the rule table's rows and the cards are the same rules, in the same order
+  expect([...cards].map((c) => c.dataset.spotCheck)).toEqual(
+    [...conv.querySelectorAll<HTMLElement>("tr[data-crit]")].map(
+      (r) => r.dataset.crit,
+    ),
+  );
+  const card = cards[0]!;
+  expect(
+    [...card.querySelectorAll<HTMLElement>("[data-column]")].map(
+      (c) => c.dataset.column,
+    ),
+  ).toEqual(["happened", "criterion", "verdict"]);
+  // this fixture carries no conversation: the card says so, draws no turn
+  expect(card.querySelector("[data-transcript=absent]")).not.toBeNull();
+  expect(card.querySelector("li.turn")).toBeNull();
+  expect(card.querySelector(".pill")!.textContent).toBe(
+    conv.querySelector<HTMLElement>(
+      `tr[data-crit="${card.dataset.spotCheck}"] .pill`,
+    )!.textContent,
+  );
+  expect(card.textContent).toContain("Blind adjudication is not read");
 });

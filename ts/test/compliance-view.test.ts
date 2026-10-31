@@ -196,12 +196,14 @@ it("two levels: a test opens (toggle 1) into its sessions, each naming every tes
     '[data-crit="art50.disclosure_before_first_turn"]',
   )!;
   expect(recomputedBlock.textContent).toContain("recomputed");
-  // two level-2 toggles, side by side: the conversation and the proofs
+  // three level-2 toggles, side by side: the spot check, the conversation and the proofs
   const inner = session.querySelectorAll<HTMLElement>("details");
-  expect([...inner].map((d) => d.dataset.level)).toEqual(["2", "2"]);
-  expect(inner[0]!.dataset.section).toBe("conversation");
-  open(inner[1]!);
-  expect(inner[1]!.querySelector("[data-check-it]")!.textContent).toContain(
+  expect([...inner].map((d) => d.dataset.level)).toEqual(["2", "2", "2"]);
+  expect(inner[0]!.dataset.section).toBe("spot-check");
+  expect(inner[1]!.dataset.section).toBe("conversation");
+  const proofsToggle = session.querySelector<HTMLElement>("details.proofs")!;
+  open(proofsToggle);
+  expect(proofsToggle.querySelector("[data-check-it]")!.textContent).toContain(
     "tau2:airline:task-0:trial-0",
   );
 });
@@ -752,11 +754,7 @@ function datingParts(root: HTMLElement): {
 } {
   expand(root);
   const session = root.querySelector<HTMLElement>("article[data-session]")!;
-  const sessionProofs = open(
-    session.querySelector(
-      'details[data-level="2"]:not([data-section="conversation"])',
-    )!,
-  );
+  const sessionProofs = open(session.querySelector("details.proofs")!);
   const reportProofs = open(
     root.querySelector(
       '[data-section="report-proofs"] details[data-level="2"]',
@@ -820,4 +818,29 @@ it("dating: with no case record cited, a session keeps the day its reports were 
   expect(method.querySelector("[data-period]")!.textContent).toBe("2026-09-23");
   expect(method.querySelector("[data-sealed]")).toBeNull();
   expect(method.querySelector("[data-date-note]")).toBeNull();
+});
+
+it("each session offers a spot check: one three-column card per test with a claim, the same tests the session lists", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const root = await render(bundle);
+  expand(root);
+  const session = root.querySelector<HTMLElement>("article[data-session]")!;
+  const toggle = session.querySelector<HTMLElement>(
+    'details[data-section="spot-check"]',
+  )!;
+  open(toggle);
+  const cards = toggle.querySelectorAll<HTMLElement>("article.sc-card");
+  expect(cards.length).toBeGreaterThan(0);
+  const listed = [
+    ...session.querySelectorAll<HTMLElement>(".ck[data-crit]"),
+  ].map((c) => c.dataset.crit);
+  for (const card of cards) {
+    expect(listed).toContain(card.dataset.spotCheck);
+    expect(
+      [...card.querySelectorAll<HTMLElement>("[data-column]")].map(
+        (c) => c.dataset.column,
+      ),
+    ).toEqual(["happened", "criterion", "verdict"]);
+    expect(card.querySelector(".pill")).not.toBeNull();
+  }
 });

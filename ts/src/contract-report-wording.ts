@@ -635,6 +635,13 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.verifier.built",
   "prov.verifier.built.not-stated",
   "prov.verifier.version.not-stated",
+  // The spot-check card (spot-check.ts): what the bundle does not carry.
+  "spot.term",
+  "spot.term.unstated",
+  "spot.term.mixed",
+  "spot.gap.produced",
+  "spot.gap.when",
+  "spot.gap.adjudication",
   // Both cards: a rule or conversation nobody could decide, by why.
   "lines.status.undecided.unjudged",
   "lines.status.undecided.withheld",
@@ -1246,8 +1253,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "818fbebb5a0fe1644d5c63cd2effac138fe648f828f847608f9d387dde399f0e",
-  groups: "49d3f98b8336daf02d620ff63dce036003eb49802ba07c208287006f6db080d3",
+  lines: "781efb09fc0d1e63a3999ab632bd897e979da1fd36d6e35918123812c63cf666",
+  groups: "1780b9df3e9ef94407785bf4ed14b676208e6ad46941f92f61bf2871189156df",
 });
 
 export interface Words {

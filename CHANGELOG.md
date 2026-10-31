@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- Spot check, side by side (#184), as Steven's Terms Pack canvas draws it (Outcomes frame 3, EU AI Act frame 10): each conversation or session opens a "Spot check, side by side" toggle with one card per rule that has a claim, in three columns: what happened (the conversation, who said what and each tool call), the criterion (the rule as the judge was given it, from the sealed report) and the verdict with the judge's words, judge pin and confidence. What the bundle does not carry is said in locked lines, not drawn: who produced each message, when a rule is met and when it cannot be decided, and the blind adjudication. Both default wording packs gain the `spot.*` entries, so their digests change; both card stylesheets changed, so `go/emitter/runtime-style-hashes.txt` and the Go goldens carry the new CSP hashes.
+
 ## ts 0.6.0 and go 0.6.0 (2026-10-31)
 
 Both state viewer 0.6.0: `ts/v0.6.0`, then `go/v0.6.0` on the commit that
