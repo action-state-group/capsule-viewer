@@ -5,7 +5,9 @@ contract.
 
 The page is drawn over an evidence file (``evidence-bundle/v2``) of the
 ledger that its producer made, for example with ``capsule-emit bundle LEDGER
---all``; the viewer never builds one and holds no key. capsule-emit's
+--all``, or any ``evidence-bundle/v2``, such as one ``capsulectl bundle
+--profile NAME --root CAPSULE_ID --out bundle.json`` writes from a CLL entry
+log plus artifact store; the viewer never builds one and holds no key. capsule-emit's
 verifier, ``check_evidence_file``, checks that file; its result becomes the
 page's verification (:func:`verification_of`) and the context the module
 reads, after :func:`~capsule_viewer.evidence_report.bind_result` has shown the

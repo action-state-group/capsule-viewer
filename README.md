@@ -532,6 +532,10 @@ capsule-emit bundle ledger.jsonl --all -o bundle.json
 python -m capsule_viewer.ledger bundle.json -o ledger.html
 ```
 
+Any `evidence-bundle/v2` works, for example one
+`capsulectl bundle --profile NAME --root CAPSULE_ID --out bundle.json`
+writes from a CLL entry log plus artifact store.
+
 It exits as the report does: 0 VALID, 2 INCOMPLETE, 1 INVALID or
 unreadable.
 
