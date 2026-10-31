@@ -53,7 +53,7 @@ ships its page runtime.
   response text. The receipt modules also draw a bundle whose only gap is
   that its producer chose the records (interval coverage `withheld` /
   `selection_not_checkable`, every other check `pass`). It reads
-  "Incomplete", with a notice that the verifier cannot check nothing was
+  "Incomplete", with a notice that the verifier cannot check that nothing was
   left out (capsule-viewer#159).
 
 ### Fixed
