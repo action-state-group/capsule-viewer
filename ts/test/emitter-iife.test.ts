@@ -79,7 +79,7 @@ const MODULE_CONTRACT = [
 
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = ["buildVerifiedBundleContext"];
+const NOT_YET_SHIPPED: readonly string[] = [];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
