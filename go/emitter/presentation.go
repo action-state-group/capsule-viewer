@@ -54,6 +54,89 @@ type Wording struct {
 	SHA256 string
 }
 
+// Contract is a compiled Evidence Contract as distributed: its exact text
+// and the lowercase hex SHA-256 of its UTF-8 bytes (contract_sha256).
+type Contract struct {
+	Text   string
+	SHA256 string
+}
+
+// CheckedContract is what the page reads from a contract: its id, version
+// and each listed requirement's tier ("" where it states none).
+type CheckedContract struct {
+	ID      string
+	Version string
+	Tiers   map[string]string
+}
+
+// CheckContract checks a compiled contract against its digest and its
+// shape (spec/presentation-builder-v0.md, contract), the Go twin of
+// ts/src/evidence-contract.ts checkContractInput: the same inputs are
+// refused. The shape is what the page reads: a non-empty string id and
+// version, and requirements, a list of objects with unique non-empty
+// string ids and an optional tier of must_have or informational. Every
+// other member is the contract's own and is not read.
+func CheckContract(c Contract) (*CheckedContract, error) {
+	if !hexPin.MatchString(c.SHA256) {
+		return nil, fmt.Errorf("contract sha256 is not a lowercase hex SHA-256")
+	}
+	sum := sha256.Sum256([]byte(c.Text))
+	if hex.EncodeToString(sum[:]) != c.SHA256 {
+		return nil, fmt.Errorf("contract bytes do not hash to its contract_sha256")
+	}
+	var parsed interface{}
+	decoder := json.NewDecoder(strings.NewReader(c.Text))
+	decoder.UseNumber()
+	if err := decoder.Decode(&parsed); err != nil {
+		return nil, fmt.Errorf("contract is not JSON")
+	}
+	if _, err := decoder.Token(); err != io.EOF {
+		return nil, fmt.Errorf("contract is not JSON")
+	}
+	bad := func(why string) (*CheckedContract, error) {
+		return nil, fmt.Errorf("contract is not a compiled Evidence Contract: %s", why)
+	}
+	object, ok := parsed.(map[string]interface{})
+	if !ok {
+		return bad("not a JSON object")
+	}
+	id, ok := object["id"].(string)
+	if !ok || id == "" {
+		return bad("id is not a non-empty string")
+	}
+	version, ok := object["version"].(string)
+	if !ok || version == "" {
+		return bad("version is not a non-empty string")
+	}
+	requirements, ok := object["requirements"].([]interface{})
+	if !ok {
+		return bad("requirements is not a list")
+	}
+	tiers := make(map[string]string, len(requirements))
+	for i, raw := range requirements {
+		requirement, ok := raw.(map[string]interface{})
+		if !ok {
+			return bad(fmt.Sprintf("requirement %d is not an object", i+1))
+		}
+		rid, ok := requirement["id"].(string)
+		if !ok || rid == "" {
+			return bad(fmt.Sprintf("requirement %d id is not a non-empty string", i+1))
+		}
+		if _, listed := tiers[rid]; listed {
+			return bad(fmt.Sprintf("requirement id %s is listed twice", strconv.Quote(rid)))
+		}
+		tier := ""
+		if value, present := requirement["tier"]; present {
+			tier, ok = value.(string)
+			if !ok || (tier != "must_have" && tier != "informational") {
+				return bad(fmt.Sprintf("requirement %s tier is not must_have or informational", strconv.Quote(rid)))
+			}
+		}
+		tiers[rid] = tier
+	}
+	return &CheckedContract{ID: id, Version: version, Tiers: tiers}, nil
+}
+
 // OfflineOptions are the offline file's settings.
 type OfflineOptions struct {
 	// Audience is required; "*" is no particular audience.
@@ -64,6 +147,10 @@ type OfflineOptions struct {
 	Title    string
 	ThemeCSS string
 	Wording  *Wording
+	// Contract is the compiled Evidence Contract the contract-report module
+	// reads each row's requirement tier from; checked (CheckContract) before
+	// anything is written. It reaches the page as renderOptions' contract.
+	Contract *Contract
 	// CoreRuntimeSHA256 is the runtime's pin; checked when set.
 	CoreRuntimeSHA256 string
 	Modules           []Module
@@ -188,8 +275,8 @@ func checkModuleManifest(m Module) error {
 // checkSettings checks what every packaging checks before it writes
 // anything (buildPresentation's scopeAndVerify and refuseRefusedModules):
 // the audience, the depth, each module against its manifest, and the
-// wording pack. It returns the page title: the Title setting, else the
-// wording pack's page.title, else "".
+// wording pack and the contract. It returns the page title: the Title
+// setting, else the wording pack's page.title, else "".
 func checkSettings(o OfflineOptions) (string, error) {
 	if o.Audience == "" {
 		return "", fmt.Errorf("audience is required")
@@ -212,6 +299,11 @@ func checkSettings(o OfflineOptions) (string, error) {
 		}
 		if title == "" {
 			title = entries[WordingTitleKey]
+		}
+	}
+	if o.Contract != nil {
+		if _, err := CheckContract(*o.Contract); err != nil {
+			return "", err
 		}
 	}
 	return title, nil
@@ -273,8 +365,8 @@ func integerSpelling(value interface{}) interface{} {
 
 // renderOptions is the options argument a bootstrap passes to
 // renderEvidenceGraph, as JCS text escaped for an inline script: the
-// audience, the format, and the depth, wording pack and checked chart specs
-// when set.
+// audience, the format, and the depth, wording pack, contract and checked
+// chart specs when set.
 func renderOptions(o OfflineOptions, format string, charts []interface{}) (string, error) {
 	options := map[string]interface{}{"audience": o.Audience, "format": format}
 	if len(charts) > 0 {
@@ -285,6 +377,9 @@ func renderOptions(o OfflineOptions, format string, charts []interface{}) (strin
 	}
 	if o.Wording != nil {
 		options["wording"] = map[string]interface{}{"pack": o.Wording.Pack, "sha256": o.Wording.SHA256}
+	}
+	if o.Contract != nil {
+		options["contract"] = map[string]interface{}{"text": o.Contract.Text, "sha256": o.Contract.SHA256}
 	}
 	encoded, err := canonical.JCS(options)
 	if err != nil {
@@ -314,7 +409,7 @@ func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (stri
 		return "", err
 	}
 	bootstrap := DefaultBootstrap
-	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || len(charts) > 0 {
+	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || o.Contract != nil || len(charts) > 0 {
 		options, err := renderOptions(o, "html", charts)
 		if err != nil {
 			return "", err
@@ -338,6 +433,7 @@ type PresentationFragment struct {
 	Title             string
 	ThemeCSS          string
 	Wording           *Wording
+	Contract          *Contract
 	CoreRuntimeSHA256 string
 	ModuleSHA256      []string
 	Bundle            interface{}
@@ -372,7 +468,7 @@ func checkPresentationFragment(value interface{}) (*PresentationFragment, error)
 		return nil, fmt.Errorf("presentation fragment: %s", why)
 	}
 	known := map[string]bool{"fragment_version": true, "audience": true, "presentation": true, "depth": true,
-		"title": true, "theme_css": true, "wording": true, "core_runtime_sha256": true, "module_sha256": true, "bundle": true}
+		"title": true, "theme_css": true, "wording": true, "contract": true, "core_runtime_sha256": true, "module_sha256": true, "bundle": true}
 	keys := make([]string, 0, len(object))
 	for key := range object {
 		keys = append(keys, key)
@@ -422,6 +518,15 @@ func checkPresentationFragment(value interface{}) (*PresentationFragment, error)
 			return fail("wording is not {pack, sha256}")
 		}
 		out.Wording = &Wording{Pack: pack, SHA256: sum}
+	}
+	if raw, present := object["contract"]; present {
+		c, ok := raw.(map[string]interface{})
+		text, textOK := c["text"].(string)
+		sum, sumOK := c["sha256"].(string)
+		if !ok || len(c) != 2 || !textOK || !sumOK || !hexPin.MatchString(sum) {
+			return fail("contract is not {text, sha256}")
+		}
+		out.Contract = &Contract{Text: text, SHA256: sum}
 	}
 	if out.CoreRuntimeSHA256, okAll = str("core_runtime_sha256"); !okAll || !hexPin.MatchString(out.CoreRuntimeSHA256) {
 		return fail("core_runtime_sha256 is not a lowercase hex SHA-256")
@@ -487,6 +592,9 @@ func EncodePresentationFragment(p PresentationFragment, maxLength int, viewerURL
 	}
 	if p.Wording != nil {
 		payload["wording"] = map[string]interface{}{"pack": p.Wording.Pack, "sha256": p.Wording.SHA256}
+	}
+	if p.Contract != nil {
+		payload["contract"] = map[string]interface{}{"text": p.Contract.Text, "sha256": p.Contract.SHA256}
 	}
 	pins := make([]interface{}, len(p.ModuleSHA256))
 	for i, pin := range p.ModuleSHA256 {
@@ -560,6 +668,7 @@ func BuildPresentationFragment(value interface{}, runtime []byte, o FragmentOpti
 		Title:             o.Title,
 		ThemeCSS:          o.ThemeCSS,
 		Wording:           o.Wording,
+		Contract:          o.Contract,
 		CoreRuntimeSHA256: runtimePin,
 		ModuleSHA256:      []string{},
 		Bundle:            value,
@@ -611,6 +720,7 @@ func OfflineHTMLFromFragment(token string, runtime []byte, modules []Module) (st
 		Title:             payload.Title,
 		ThemeCSS:          payload.ThemeCSS,
 		Wording:           payload.Wording,
+		Contract:          payload.Contract,
 		CoreRuntimeSHA256: runtimePin,
 		Modules:           modules,
 	})

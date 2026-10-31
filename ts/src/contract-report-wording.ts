@@ -189,13 +189,17 @@ export const SECTION3_ENUMS = Object.freeze({
   grade: GRADES.map((v) => v.toLowerCase()),
   sufficiency: SUFFICIENCIES.map((v) => v.toLowerCase()),
   status: EVIDENCE_STATUSES.map((v) => v.toLowerCase()),
+  // A row's requirement tier from the page's contract (evidence-contract.ts
+  // RowTier): the contract's two values, and `unstated` where nothing
+  // given states one.
+  requirement_tier: ["must_have", "informational", "unstated"],
 } as const);
 
 /**
  * A key whose meaning contract-report/v1 section 3 fixes. The module's own
  * keys never use these prefixes (`report.`, `group.`, `row.`, `verdict.`,
  * `sufficiency.`, `tier.`, `grade.`, `status.`, `applicability.`,
- * `contract_fact.`); its own words sit under `card.`, `lines.`, `groups.`
+ * `contract_fact.`, `requirement_tier.`); its own words sit under `card.`, `lines.`, `groups.`
  * and the shared prefixes (`prov.`, `chat.`, `case.`, `judge.`).
  */
 export const SECTION3_PREFIXES: readonly string[] = Object.freeze([
@@ -209,6 +213,7 @@ export const SECTION3_PREFIXES: readonly string[] = Object.freeze([
   "status.",
   "applicability.",
   "contract_fact.",
+  "requirement_tier.",
 ]);
 
 /**
@@ -411,6 +416,19 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
   ["lines.rules.col.undecided", "lines.rules.col.unverified"],
   // A test row's undecided and unverified counts (EU card).
   ["groups.row.undecided-note", "groups.row.unverified-note"],
+  // A tier section's heading: a pack must not make the informational
+  // section read as the must-have one, or the reverse. The tier words
+  // themselves are locked (LOCKED_ENTRIES).
+  [
+    "lines.rtier.must_have.title",
+    "lines.rtier.informational.title",
+    "lines.rtier.unstated.title",
+  ],
+  [
+    "groups.rtier.must_have.title",
+    "groups.rtier.informational.title",
+    "groups.rtier.unstated.title",
+  ],
 ];
 
 /**
@@ -577,6 +595,15 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   ...SECTION3_ENUMS.status.map((v) => `status.${v}`),
   ...SECTION3_ENUMS.grade.map((v) => `grade.${v}`),
   ...SECTION3_ENUMS.sufficiency.map((v) => `sufficiency.${v}`),
+  // A row's requirement tier, as the page's contract states it, and the
+  // lines that say a row's tier is not stated and that the sealed
+  // aggregate counts informational rows the derived lines leave out: a
+  // pack cannot make an informational row read as must-have.
+  ...SECTION3_ENUMS.requirement_tier.map((v) => `requirement_tier.${v}`),
+  "lines.rtier.unstated.note",
+  "groups.rtier.unstated.note",
+  "lines.rtier.sealed-note",
+  "groups.rtier.sealed-note",
   // The shared front (report-front.ts): the mock-judge line, what the
   // aggregate's unknown count is, what the page and the bundle carry, and
   // the producer's findings label.
@@ -1328,8 +1355,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "33d3d38eb7019d0c93c53b29b801935dd0a90496a7db5186327cb70ada4e31e0",
-  groups: "71388f5b52c23a6c5f78adb8767c724d99855a0223a0ee7eae4997fe97458dae",
+  lines: "ffd8bcfdb9b374327f5c1eff3e2aa57a23e44729203f3439bdfea32259202cdb",
+  groups: "a33ccce92ab89fd0e499d8c6b2bb3b92c0ab231ab913c5cee0b98e8a07a4f8f4",
 });
 
 export interface Words {

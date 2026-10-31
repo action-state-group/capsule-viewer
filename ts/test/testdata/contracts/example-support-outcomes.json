@@ -1,0 +1,33 @@
+{
+  "id": "example-support-outcomes/v1",
+  "version": "1",
+  "requirements": [
+    {
+      "id": "resolution.done_in_full",
+      "profile": "outcome",
+      "statement": "Done in full",
+      "tier": "must_have",
+      "mode": "judged"
+    },
+    {
+      "id": "resolution.right_change",
+      "profile": "outcome",
+      "statement": "Made the right change",
+      "tier": "informational",
+      "mode": "judged"
+    },
+    {
+      "id": "policy.confirmed_before_acting",
+      "profile": "outcome",
+      "statement": "Confirmed before acting",
+      "tier": "must_have",
+      "mode": "judged"
+    },
+    {
+      "id": "communication.no_invented_terms",
+      "profile": "outcome",
+      "statement": "No invented terms",
+      "mode": "judged"
+    }
+  ]
+}

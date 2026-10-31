@@ -230,4 +230,11 @@ export const OUTCOME_REPORT_CSS =
 @media (min-width:821px){.oi table.rules th{white-space:nowrap}}
 .oi table.rules tr.grp td{font-family:inherit;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--slate);padding-top:22px;border-bottom:1px solid var(--line)}
 @media (max-width:820px){.oi .sheet .pad,.oi .sec,.oi .sec.rp{padding:24px var(--inset)}}
+.oi table.rules tr.tier td{padding-top:28px;border-bottom:2px solid var(--navy)}
+.oi table.rules tr.tier b{display:block;font-family:Georgia,Cambria,serif;font-size:19px;color:var(--navy)}
+.oi table.rules tr.tier small{display:block;color:var(--slate);font-size:12.5px;margin-top:3px}
+.oi .rtier{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-top:3px;background:var(--cream);color:var(--slate)}
+.oi .rtier[data-requirement-tier="must_have"]{background:#E6EEF6;color:#2B5A85}
+.oi .rtier[data-requirement-tier="informational"]{background:#FBEFD9;color:#8A5A00}
+.oi .tier-note{margin:0 0 12px;font-size:13px;color:var(--slate)}
 `;

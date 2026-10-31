@@ -345,6 +345,31 @@ CONTRACT_REPORT_MODULE = Move(
             "and the buckets list claims; the strip labels",
             "capsule-viewer#81: the core strip",
         ),
+        # Section 2 and 3: a row's requirement tier, read from the page's contract (capsule-viewer#199).
+        (
+            "- **Groups.** A row's group is",
+            '- **Requirement tier.** A page MAY be built with a compiled Evidence Contract (presentation builder\n'
+            "  section 1, `contract`). The module then reads each row's `tier` from it by (`contract_ref`,\n"
+            "  `requirement_ref`): the row's tier is the contract's when `contract_ref` is the contract's\n"
+            '  `<id>@<version>` and the contract lists the requirement with a `tier`; otherwise it is not stated,\n'
+            "  never `must_have`. A row with no claim to read `contract_ref` from takes the Result's one\n"
+            '  `contract_ref`, when it cites only one. Rows are drawn in tier sections, in this order: must-have,\n'
+            '  then informational (reported, never in the answer), then rows whose tier is not stated, and a\n'
+            "  group heads each section it has rows in. Each row shows its tier. The module's derived lines (a\n"
+            "  conversation's or session's result, the headline, a group's worst line) leave out rows the\n"
+            '  contract marks informational; a row whose tier is not stated stays in them. The sealed aggregate\n'
+            "  the core strip shows is the producer's and counts every claim, so when the Result has an\n"
+            '  informational row the module says, in L0, that the sealed result counts informational rows and\n'
+            '  its derived lines do not. With no contract, nothing here applies and no row shows a tier.\n'
+            "- **Groups.** A row's group is",
+            "capsule-viewer#199",
+        ),
+        (
+            '| `status.<value>` | The lowercased EvidenceStatus, for example `withheld`. |',
+            '| `status.<value>` | The lowercased EvidenceStatus, for example `withheld`. |\n'
+            "| `requirement_tier.<value>` | A row's requirement tier (§2): `must_have`, `informational`, `unstated`. |",
+            "capsule-viewer#199",
+        ),
     ],
     rewrites=[
         ("# The contract-report/v1 Extension — v1", "# The contract-report/v1 Module — v1"),
@@ -509,6 +534,59 @@ BUILDER = Move(
             "With the default settings (audience `\"*\"`, no depth, no wording, no charts) the builder writes\n"
             "exactly the page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.",
             "capsule-viewer#82",
+        ),
+        # Section 1, 2.1 and 2.2: the compiled contract as a setting (capsule-viewer#199).
+        (
+            "  wording pack's exact text and its `wording_sha256`), `charts` (a list of chart specs, below),\n"
+            '  `maxFragmentLength`, `viewerUrl`.',
+            "  wording pack's exact text and its `wording_sha256`), `contract` (a compiled Evidence Contract's\n"
+            '  exact text and its `contract_sha256`, below), `charts` (a list of chart specs, below),\n'
+            '  `maxFragmentLength`, `viewerUrl`.',
+            "capsule-viewer#199",
+        ),
+        (
+            'offline builder (`OfflineOptions.Charts`) checks the specs with `go/chartspec` and carries them\n'
+            'the same way.',
+            'offline builder (`OfflineOptions.Charts`) checks the specs with `go/chartspec` and carries them\n'
+            'the same way.\n'
+            '\n'
+            '**Contract.** `contract` is a compiled Evidence Contract as distributed: its exact text and the\n'
+            'lowercase hex SHA-256 of its UTF-8 bytes (`contract_sha256`). The contract-report module reads one\n'
+            "thing from it, each requirement's `tier` (`spec/contract-report-module-v1.md` §2). Before anything\n"
+            'is written, the builder checks that the bytes hash to `contract_sha256` and that the text is a\n'
+            'JSON object with a non-empty string `id` and `version` and `requirements`, a list of objects each\n'
+            'with a non-empty string `id`, no `id` listed twice, and an optional `tier` of `must_have` or\n'
+            "`informational`; every other member is the contract's own and is not read. A contract that fails\n"
+            'refuses the build in every packaging (`PresentationBuildError`). Every packaging carries it: the\n'
+            "`html` and `embedded` packagings in the page's render options, the `fragment` in its payload, and\n"
+            'the `static` page drawn with it. The page runtime checks it again; a contract that does not check\n'
+            'there is not read, and the page is drawn as it is without one. The page\'s "How this page was\n'
+            'checked" section states the contract\'s `<id>@<version>` and its `contract_sha256`. With no\n'
+            '`contract`, every packaging is unchanged byte for byte. The Go offline builder\n'
+            '(`OfflineOptions.Contract`, checked with `CheckContract`) applies the same check and writes the same\n'
+            'bytes; `go/emitter/testdata/contract-vectors.json` holds the two checks together.',
+            "capsule-viewer#199",
+        ),
+        (
+            'bad depth or wording pack, an ambiguous registry,',
+            'bad depth, wording pack or contract, an ambiguous registry,',
+            "capsule-viewer#199",
+        ),
+        (
+            "depth, the wording pack and the chart specs. The shell's",
+            "depth, the wording pack, the contract and the chart specs. The shell's",
+            "capsule-viewer#199",
+        ),
+        (
+            'With the default settings (audience `"*"`, no depth, no wording, no charts) the builder writes',
+            'With the default settings (audience `"*"`, no depth, no wording, no contract, no charts) the builder writes',
+            "capsule-viewer#199",
+        ),
+        (
+            "| `wording` | Optional: `{pack, sha256}`, the pack's exact text and its digest. |",
+            "| `wording` | Optional: `{pack, sha256}`, the pack's exact text and its digest. |\n"
+            "| `contract` | Optional: `{text, sha256}`, the compiled contract's exact text and its digest (section 1). |",
+            "capsule-viewer#199",
         ),
     ],
 )

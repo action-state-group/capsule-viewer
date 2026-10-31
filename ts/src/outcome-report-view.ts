@@ -51,6 +51,7 @@ import {
   type SubjectConversation,
 } from "./subject-history.js";
 import type { Words } from "./contract-report-wording.js";
+import { ROW_TIERS, type RowTier, type TierOf } from "./evidence-contract.js";
 
 /**
  * The contract-report module's `lines` grouping (contract-report.ts): a
@@ -299,9 +300,59 @@ function notApplying(verdict: DrawnVerdict): boolean {
   return verdict === "not_applicable" || verdict === "out_of_scope";
 }
 
-export function conversationStatus(
-  conversation: Conversation,
-): ConversationStatus {
+/**
+ * Each conversation as the page's derived lines read it, when a contract
+ * marks some of its rules informational: those rules left out and its
+ * result rolled up again over the rest, so an informational rule changes
+ * no conversation's result (contract-report/v1 section 2). Set by
+ * `drawLines`; a conversation not in it is read as it is. Rules whose tier
+ * is not stated stay in: only a rule the contract marks informational is
+ * left out.
+ */
+const GATED = new WeakMap<Conversation, Conversation>();
+
+function gated(conversation: Conversation): Conversation {
+  return GATED.get(conversation) ?? conversation;
+}
+
+/**
+ * The roll-up agent-action-capsule's outcome model applies to a
+ * conversation (outcome-report.js `rollUp`), over the rules left in.
+ */
+function rollUp(verdicts: readonly DrawnVerdict[]): Conversation["verdict"] {
+  if (verdicts.length === 0) return "not_evaluable";
+  if (verdicts.some((v) => v === "not_met" || isUnverified(v)))
+    return "not_met";
+  if (verdicts.some((v) => v === "not_evaluable" || v === "no_claim"))
+    return "not_evaluable";
+  if (!verdicts.some((v) => v === "met")) return "not_evaluable";
+  return "met";
+}
+
+function gateConversations(
+  conversations: readonly Conversation[],
+  tierOf: TierOf,
+): void {
+  for (const conversation of conversations) {
+    const kept = conversation.criteria.filter(
+      (c) =>
+        tierOf(c.claim?.contractRef, `${c.checkId}.${c.criterionId}`) !==
+        "informational",
+    );
+    if (kept.length === conversation.criteria.length) continue;
+    GATED.set(conversation, {
+      ...conversation,
+      criteria: kept,
+      verdict: rollUp(kept.map((c) => c.verdict)),
+    });
+  }
+}
+
+export function conversationStatus(given: Conversation): ConversationStatus {
+  const conversation = gated(given);
+  // Every rule it has is informational: none of them is in its answer.
+  if (conversation !== given && conversation.criteria.length === 0)
+    return "nothing-applied";
   if (conversation.verdict === "met") return "resolved";
   if (conversation.criteria.some((c) => isMiss(c.verdict))) return "missed";
   if (conversation.criteria.some((c) => isUnverified(c.verdict)))
@@ -430,7 +481,7 @@ function resultSentence(
   model: OutcomeReportModel,
   w: Words,
 ): string {
-  const all = conversation.criteria;
+  const all = gated(conversation).criteria;
   const applied = all.filter((c) => !notApplying(c.verdict));
   const outOfScope = all.filter((c) => c.verdict === "out_of_scope").length;
   const na = all.length - applied.length - outOfScope;
@@ -507,20 +558,20 @@ function renderConversation(
   const status = conversationStatus(conversation);
   const item = el("article", "conv");
   item.dataset.conversation = conversation.conversationId;
-  item.dataset.conversationVerdict = conversation.verdict;
+  // The header's line is a derived one: it reads the rules in the answer.
+  const counted = gated(conversation);
+  item.dataset.conversationVerdict = counted.verdict;
   item.dataset.status = status;
   const head = el("div", "conv-h");
   const parts = caseParts(conversation.conversationId, w);
   head.append(el("span", "cid", parts.label));
   head.append(wordPill(statusWord(status, conversation, w), status));
-  const misses = conversation.criteria.filter((c) => isMiss(c.verdict));
-  const unverified = conversation.criteria.filter((c) =>
-    isUnverified(c.verdict),
-  );
-  const undecided = conversation.criteria.filter(
+  const misses = counted.criteria.filter((c) => isMiss(c.verdict));
+  const unverified = counted.criteria.filter((c) => isUnverified(c.verdict));
+  const undecided = counted.criteria.filter(
     (c) => c.verdict === "not_evaluable" || c.verdict === "no_claim",
   );
-  const outOfScope = conversation.criteria.filter(
+  const outOfScope = counted.criteria.filter(
     (c) => c.verdict === "out_of_scope",
   );
   head.append(
@@ -543,11 +594,9 @@ function renderConversation(
                 ? w.t("lines.why.resolved")
                 : w.p(
                     "lines.why.resolved-out-of-scope",
-                    conversation.criteria.length - outOfScope.length,
+                    counted.criteria.length - outOfScope.length,
                     {
-                      n: fmtCount(
-                        conversation.criteria.length - outOfScope.length,
-                      ),
+                      n: fmtCount(counted.criteria.length - outOfScope.length),
                       oos: fmtCount(outOfScope.length),
                     },
                   ),
@@ -1062,7 +1111,7 @@ export function groupMissedReasons(
   const structured = new Map<string, boolean>();
   const labels = new Map<string, string>();
   for (const conversation of missed) {
-    const first = conversation.criteria.find((c) => isMiss(c.verdict));
+    const first = gated(conversation).criteria.find((c) => isMiss(c.verdict));
     if (first === undefined) continue;
     const label = labelledReasonCode(first.reasonCode);
     const key =
@@ -1478,6 +1527,7 @@ function renderRules(
   runInfo: OutcomeReportRunInfo,
   result: ResultRoot,
   w: Words,
+  tierOf?: TierOf,
 ): void {
   const section = el("section", "sec");
   section.dataset.section = "rules";
@@ -1517,151 +1567,205 @@ function renderRules(
   thead.append(headRow);
   table.append(thead);
   const tbody = element("tbody");
-  for (const check of model.terms.checks) {
-    const group = el("tr", "grp");
-    group.dataset.checkId = check.id;
-    group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
-    const cell = el("td", "", groupTitle(check, w));
-    cell.setAttribute("colspan", columns);
-    group.append(cell);
-    tbody.append(group);
+  // With a contract, each rule's requirement tier (contract-report/v1
+  // section 2), read by the contract_ref of the rule's claims: rules are
+  // drawn in tier sections, must-have first, then informational, then
+  // those whose tier is not stated. Without one, one section, as before.
+  const ruleTier = (ref: string): RowTier | undefined => {
+    if (tierOf === undefined) return undefined;
+    const claim = model.conversations
+      .flatMap((c) => c.criteria)
+      .find((c) => `${c.checkId}.${c.criterionId}` === ref && c.claim)?.claim;
+    return tierOf(claim?.contractRef, ref);
+  };
+  const tiers = new Map<string, RowTier | undefined>();
+  for (const check of model.terms.checks)
     for (const criterion of check.criteria) {
       const ref = `${check.id}.${criterion.id}`;
-      const of = (pick: (v: DrawnVerdict) => boolean) =>
-        model.conversations.filter((c) =>
-          c.criteria.some(
-            (cr) =>
-              cr.checkId === check.id &&
-              cr.criterionId === criterion.id &&
-              pick(cr.verdict),
-          ),
-        );
-      // Each count column's verdicts, read once: a cell's number and the
-      // claims its Show-evidence action lists come from the same pick.
-      const picks: Record<
-        keyof typeof columnWord,
-        (v: DrawnVerdict) => boolean
-      > = {
-        not_met: isMiss,
-        met: (v) => v === "met",
-        undecided: (v) => v === "not_evaluable" || v === "no_claim",
-        unverified: isUnverified,
-        out_of_scope: (v) => v === "out_of_scope",
-      };
-      const met = of(picks.met);
-      const notMet = of(picks.not_met);
-      const unverifiedHere = of(picks.unverified);
-      const na = of((v) => v === "not_applicable");
-      const outOfScopeHere = of(picks.out_of_scope);
-      const undecided = of(picks.undecided);
-      // One count cell: the number, and its Show-evidence action (or the
-      // label that stands in for one) over the claims behind it on this rule.
-      const countCell = (
-        className: string,
-        column: keyof typeof columnWord,
-        counted: readonly Conversation[],
-      ): HTMLElement => {
-        const pick = picks[column];
-        const cell = el("td", className);
-        cell.dataset.column = column;
-        cell.append(el("span", "nv", fmtCount(counted.length)));
-        const action = evidenceAction(
-          `rule:${ref}:${column}`,
-          `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
-          counted.map(
-            (c) =>
-              c.criteria.find(
-                (cr) =>
-                  cr.checkId === check.id &&
-                  cr.criterionId === criterion.id &&
-                  pick(cr.verdict),
-              )?.claim,
-          ),
-          result,
-          w,
-        );
-        if (action !== undefined) cell.append(action);
-        return cell;
-      };
-      const tr = el("tr", "rule");
-      tr.dataset.rule = ref;
-      tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
-      const label = criterionLabel(model, check.id, criterion.id, w);
-      const nameCell = el("td", "cn");
-      const ruleName = el("b", "", label.label);
-      nameCell.append(ruleName);
-      const badge = editedBadge(model, ref, w);
-      if (badge !== undefined) nameCell.append(badge);
-      if (label.source === "sealed")
-        nameCell.append(el("small", "", label.text));
-      // contract-report/v1 section 3: the pack's explanation of the rule,
-      // and its note for a rule whose claims could not be decided.
-      const detail = w.row(ref, "detail");
-      if (detail !== undefined) {
-        const line = el("small", "rdet", detail);
-        line.dataset.wording = "pack";
-        nameCell.append(line);
-      }
-      const undecidedNote = w.row(ref, "not_evaluable");
-      if (undecidedNote !== undefined && undecided.length > 0) {
-        const line = el("small", "rdet", undecidedNote);
-        line.dataset.wording = "pack";
-        line.dataset.note = "not-evaluable";
-        nameCell.append(line);
-      }
-      const problems = [
-        ...notMet,
-        ...unverifiedHere.filter((c) => !notMet.includes(c)),
-        ...undecided.filter(
-          (c) => !notMet.includes(c) && !unverifiedHere.includes(c),
-        ),
-      ];
-      tr.append(
-        nameCell,
-        countCell(`n${notMet.length > 0 ? " bad" : ""}`, "not_met", notMet),
-        countCell("n ok", "met", met),
-        countCell("n", "undecided", undecided),
-      );
-      if (anyUnverified)
-        tr.append(countCell("n", "unverified", unverifiedHere));
-      if (anyOutOfScope)
-        tr.append(countCell("n", "out_of_scope", outOfScopeHere));
-      tbody.append(tr);
-      // The row opens: a full-width row below it holds how many
-      // conversations the rule did not apply to and the conversations
-      // behind its problems, each read at the table's width. A rule with
-      // neither has nothing to open.
-      if (problems.length === 0 && na.length === 0) continue;
-      const drillRow = el("tr", "drill-row");
-      drillRow.dataset.drillFor = ref;
-      const cell = element("td");
+      tiers.set(ref, ruleTier(ref));
+    }
+  const sections: readonly (RowTier | undefined)[] =
+    tierOf === undefined
+      ? [undefined]
+      : ROW_TIERS.filter((tier) => [...tiers.values()].includes(tier));
+  for (const tier of sections) {
+    if (tier !== undefined) {
+      const inTier = [...tiers.values()].filter((t) => t === tier).length;
+      const heading = el("tr", "tier");
+      heading.dataset.requirementTier = tier;
+      const cell = el("td", "");
       cell.setAttribute("colspan", columns);
-      drillRow.append(cell);
-      // The not-applicable count is drawn now, so a static page (which runs
-      // no script to build a body) still shows it when the row opens.
-      if (na.length > 0) {
-        const naLine = el(
-          "p",
-          "rule-na",
-          w.p("lines.rules.expand.na", na.length, {
-            n: fmtCount(na.length),
-          }),
-        );
-        naLine.dataset.count = String(na.length);
-        cell.append(naLine);
-      }
-      const toggle = expandableRow(
-        tr,
-        ruleName,
-        drillRow,
-        () =>
-          problems.length > 0
-            ? renderConversationList(problems, model, runInfo, `rule:${ref}`, w)
-            : document.createDocumentFragment(),
-        `rule-${ref}`,
+      cell.append(
+        el("b", "", w.t(`lines.rtier.${tier}.title`, { n: fmtCount(inTier) })),
+        el("small", "", w.t(`lines.rtier.${tier}.note`)),
       );
-      toggle.dataset.drill = `rule:${ref}`;
-      tbody.append(drillRow);
+      heading.append(cell);
+      tbody.append(heading);
+    }
+    for (const check of model.terms.checks) {
+      const criteria = check.criteria.filter(
+        (criterion) => tiers.get(`${check.id}.${criterion.id}`) === tier,
+      );
+      if (criteria.length === 0) continue;
+      const group = el("tr", "grp");
+      group.dataset.checkId = check.id;
+      group.dataset.passCount = String(
+        model.checkPassCounts.get(check.id) ?? 0,
+      );
+      const cell = el("td", "", groupTitle(check, w));
+      cell.setAttribute("colspan", columns);
+      group.append(cell);
+      tbody.append(group);
+      for (const criterion of criteria) {
+        const ref = `${check.id}.${criterion.id}`;
+        const of = (pick: (v: DrawnVerdict) => boolean) =>
+          model.conversations.filter((c) =>
+            c.criteria.some(
+              (cr) =>
+                cr.checkId === check.id &&
+                cr.criterionId === criterion.id &&
+                pick(cr.verdict),
+            ),
+          );
+        // Each count column's verdicts, read once: a cell's number and the
+        // claims its Show-evidence action lists come from the same pick.
+        const picks: Record<
+          keyof typeof columnWord,
+          (v: DrawnVerdict) => boolean
+        > = {
+          not_met: isMiss,
+          met: (v) => v === "met",
+          undecided: (v) => v === "not_evaluable" || v === "no_claim",
+          unverified: isUnverified,
+          out_of_scope: (v) => v === "out_of_scope",
+        };
+        const met = of(picks.met);
+        const notMet = of(picks.not_met);
+        const unverifiedHere = of(picks.unverified);
+        const na = of((v) => v === "not_applicable");
+        const outOfScopeHere = of(picks.out_of_scope);
+        const undecided = of(picks.undecided);
+        // One count cell: the number, and its Show-evidence action (or the
+        // label that stands in for one) over the claims behind it on this rule.
+        const countCell = (
+          className: string,
+          column: keyof typeof columnWord,
+          counted: readonly Conversation[],
+        ): HTMLElement => {
+          const pick = picks[column];
+          const cell = el("td", className);
+          cell.dataset.column = column;
+          cell.append(el("span", "nv", fmtCount(counted.length)));
+          const action = evidenceAction(
+            `rule:${ref}:${column}`,
+            `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
+            counted.map(
+              (c) =>
+                c.criteria.find(
+                  (cr) =>
+                    cr.checkId === check.id &&
+                    cr.criterionId === criterion.id &&
+                    pick(cr.verdict),
+                )?.claim,
+            ),
+            result,
+            w,
+          );
+          if (action !== undefined) cell.append(action);
+          return cell;
+        };
+        const tr = el("tr", "rule");
+        tr.dataset.rule = ref;
+        tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
+        const label = criterionLabel(model, check.id, criterion.id, w);
+        const nameCell = el("td", "cn");
+        const ruleName = el("b", "", label.label);
+        nameCell.append(ruleName);
+        const badge = editedBadge(model, ref, w);
+        if (badge !== undefined) nameCell.append(badge);
+        if (tier !== undefined) {
+          tr.dataset.requirementTier = tier;
+          const chip = el("span", "rtier", w.t(`requirement_tier.${tier}`));
+          chip.dataset.requirementTier = tier;
+          nameCell.append(chip);
+        }
+        if (label.source === "sealed")
+          nameCell.append(el("small", "", label.text));
+        // contract-report/v1 section 3: the pack's explanation of the rule,
+        // and its note for a rule whose claims could not be decided.
+        const detail = w.row(ref, "detail");
+        if (detail !== undefined) {
+          const line = el("small", "rdet", detail);
+          line.dataset.wording = "pack";
+          nameCell.append(line);
+        }
+        const undecidedNote = w.row(ref, "not_evaluable");
+        if (undecidedNote !== undefined && undecided.length > 0) {
+          const line = el("small", "rdet", undecidedNote);
+          line.dataset.wording = "pack";
+          line.dataset.note = "not-evaluable";
+          nameCell.append(line);
+        }
+        const problems = [
+          ...notMet,
+          ...unverifiedHere.filter((c) => !notMet.includes(c)),
+          ...undecided.filter(
+            (c) => !notMet.includes(c) && !unverifiedHere.includes(c),
+          ),
+        ];
+        tr.append(
+          nameCell,
+          countCell(`n${notMet.length > 0 ? " bad" : ""}`, "not_met", notMet),
+          countCell("n ok", "met", met),
+          countCell("n", "undecided", undecided),
+        );
+        if (anyUnverified)
+          tr.append(countCell("n", "unverified", unverifiedHere));
+        if (anyOutOfScope)
+          tr.append(countCell("n", "out_of_scope", outOfScopeHere));
+        tbody.append(tr);
+        // The row opens: a full-width row below it holds how many
+        // conversations the rule did not apply to and the conversations
+        // behind its problems, each read at the table's width. A rule with
+        // neither has nothing to open.
+        if (problems.length === 0 && na.length === 0) continue;
+        const drillRow = el("tr", "drill-row");
+        drillRow.dataset.drillFor = ref;
+        const cell = element("td");
+        cell.setAttribute("colspan", columns);
+        drillRow.append(cell);
+        // The not-applicable count is drawn now, so a static page (which runs
+        // no script to build a body) still shows it when the row opens.
+        if (na.length > 0) {
+          const naLine = el(
+            "p",
+            "rule-na",
+            w.p("lines.rules.expand.na", na.length, {
+              n: fmtCount(na.length),
+            }),
+          );
+          naLine.dataset.count = String(na.length);
+          cell.append(naLine);
+        }
+        const toggle = expandableRow(
+          tr,
+          ruleName,
+          drillRow,
+          () =>
+            problems.length > 0
+              ? renderConversationList(
+                  problems,
+                  model,
+                  runInfo,
+                  `rule:${ref}`,
+                  w,
+                )
+              : document.createDocumentFragment(),
+          `rule-${ref}`,
+        );
+        toggle.dataset.drill = `rule:${ref}`;
+        tbody.append(drillRow);
+      }
     }
   }
   // Requirements of the cited contract the run did not cover (Result v0
@@ -1720,9 +1824,15 @@ function renderCalendar(
   const list = el("div", "cal");
   list.dataset.days = String(model.days.length);
   for (const day of model.days) {
+    // Resolved as the page's lines count it (`conversationStatus`), which
+    // leaves out informational rules; the model's own count is the same
+    // when a contract marks none.
+    const resolved = day.conversations.filter(
+      (c) => conversationStatus(c) === "resolved",
+    ).length;
     const item = el("div", "day");
     item.dataset.day = day.date;
-    item.dataset.resolved = String(day.resolvedCount);
+    item.dataset.resolved = String(resolved);
     item.dataset.total = String(day.conversations.length);
     item.append(el("div", "dn", day.date));
     if (note !== undefined) {
@@ -1748,7 +1858,7 @@ function renderCalendar(
         "div",
         "v",
         fmtShare(
-          day.resolvedCount,
+          resolved,
           day.conversations.length,
           model.options.percentages,
           w,
@@ -1757,9 +1867,7 @@ function renderCalendar(
     );
     const mini = el("div", "mini");
     const share =
-      day.conversations.length === 0
-        ? 0
-        : day.resolvedCount / day.conversations.length;
+      day.conversations.length === 0 ? 0 : resolved / day.conversations.length;
     const fill = element("i");
     fill.style.width = `${Math.round(share * 100)}%`;
     mini.append(fill);
@@ -2248,8 +2356,10 @@ export async function drawLines(
   bundle: unknown,
   verified: BundleVerificationResult,
   w: Words,
+  tierOf?: TierOf,
 ): Promise<void> {
   const model = buildOutcomeReportModel(result, options);
+  if (tierOf !== undefined) gateConversations(model.conversations, tierOf);
   const runInfo = await verifyJudgePin(model.runInfo);
   const claims = model.conversations.flatMap((c) =>
     c.criteria.flatMap((cr) => (cr.claim === undefined ? [] : [cr.claim])),
@@ -2284,7 +2394,7 @@ export async function drawLines(
   }
 
   // L1, why: rule by rule, led by who judged, who witnessed, what verified.
-  renderRules(levels.L1, model, runInfo, result, w);
+  renderRules(levels.L1, model, runInfo, result, w, tierOf);
   leadWithProvenance(
     levels.L1,
     levels.L1.querySelector('[data-section="rules"]'),

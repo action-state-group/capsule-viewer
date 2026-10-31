@@ -103,4 +103,11 @@ export const COMPLIANCE_CSS =
 .cc > section{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset);margin:0 0 16px}
 .cc > section.findings{padding:32px calc(var(--inset) - 3px)}
 @media (min-width:821px){.cc table.grid th{white-space:nowrap}}
+.cc table.sum tbody tr.tier td{padding:28px 10px 8px;border-bottom:2px solid var(--navy)}
+.cc table.sum tr.tier b{display:block;font-family:Georgia,Cambria,serif;font-size:19px;color:var(--navy)}
+.cc table.sum tr.tier small{display:block;color:var(--slate);font-size:12.5px;margin-top:3px}
+.cc .rtier{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px;background:var(--cream);color:var(--slate)}
+.cc .rtier[data-requirement-tier="must_have"]{background:#E6EEF6;color:#2B5A85}
+.cc .rtier[data-requirement-tier="informational"]{background:#FBEFD9;color:#8A5A00}
+.cc .tier-note{margin:0 0 12px;font-size:13px;color:var(--slate)}
 `;

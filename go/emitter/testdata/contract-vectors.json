@@ -1,0 +1,120 @@
+{
+  "_comment": "Compiled Evidence Contract checks, read by go/emitter (TestCheckContractVectors) and ts/test/evidence-contract.test.ts: both refuse the same inputs with the same reason. A vector with ref/tiers checks; tiers maps each listed requirement to its tier, \"\" where it states none.",
+  "vectors": [
+    {
+      "name": "compiled shape, other members not read",
+      "text": "{\"id\":\"c\",\"version\":\"1.0.0\",\"requirements\":[{\"id\":\"a.x\",\"tier\":\"must_have\",\"statement\":\"S\"},{\"id\":\"a.y\",\"tier\":\"informational\"},{\"id\":\"b.z\"}],\"x-extra\":{\"any\":1}}",
+      "ref": "c@1.0.0",
+      "tiers": {
+        "a.x": "must_have",
+        "a.y": "informational",
+        "b.z": ""
+      },
+      "sha256": "165c3a637002f91702934f8eb9974c9831ffd5cf4f895b0dcc84cf41f09809c0"
+    },
+    {
+      "name": "no requirements listed",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[]}",
+      "ref": "c@1",
+      "tiers": {},
+      "sha256": "8be087d661aeb2eb29fe3a861e9ba6395d7a4182c366e65ff4a0489c68c8f948"
+    },
+    {
+      "name": "whitespace around the object",
+      "text": " \n{\"id\":\"c\",\"version\":\"1\",\"requirements\":[]}\n",
+      "ref": "c@1",
+      "tiers": {},
+      "sha256": "0b6dd252ea645bb97ef26121bc1cb32f784e1115d20891502a7aa6c215fb0257"
+    },
+    {
+      "name": "digest of other bytes",
+      "text": "{\"id\":\"c\",\"version\":\"1.0.0\",\"requirements\":[{\"id\":\"a.x\",\"tier\":\"must_have\",\"statement\":\"S\"},{\"id\":\"a.y\",\"tier\":\"informational\"},{\"id\":\"b.z\"}],\"x-extra\":{\"any\":1}}",
+      "sha256": "db19f311cf7d0c744dbc29cb60a5f9311c4f327fac7abae3eebaec003d02b945",
+      "error": "do not hash to its contract_sha256"
+    },
+    {
+      "name": "digest not lowercase hex",
+      "text": "{\"id\":\"c\",\"version\":\"1.0.0\",\"requirements\":[{\"id\":\"a.x\",\"tier\":\"must_have\",\"statement\":\"S\"},{\"id\":\"a.y\",\"tier\":\"informational\"},{\"id\":\"b.z\"}],\"x-extra\":{\"any\":1}}",
+      "sha256": "165C3A637002F91702934F8EB9974C9831FFD5CF4F895B0DCC84CF41F09809C0",
+      "error": "not a lowercase hex SHA-256"
+    },
+    {
+      "name": "not JSON",
+      "text": "{\"id\":",
+      "error": "contract is not JSON",
+      "sha256": "082027641f4532cec3b8585e1d86e6a9adf1dfb9cd2333de1aca7b1b35cc4ece"
+    },
+    {
+      "name": "trailing data",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[]} {}",
+      "error": "contract is not JSON",
+      "sha256": "9e435f0b5854f991b0346035a09d8e8cd8adcade20182e8ee94c7307682c2467"
+    },
+    {
+      "name": "not an object",
+      "text": "[]",
+      "error": "not a JSON object",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "id missing",
+      "text": "{\"version\":\"1\",\"requirements\":[]}",
+      "error": "id is not a non-empty string",
+      "sha256": "fe5d7edc1b1e53144ee3fc3ba9ccd9614f53b31a240174b7c912b3f8dd1283f3"
+    },
+    {
+      "name": "id empty",
+      "text": "{\"id\":\"\",\"version\":\"1\",\"requirements\":[]}",
+      "error": "id is not a non-empty string",
+      "sha256": "3121e1849628c9c51f132c5a2f092a82b342345aeb97af8e9a015f9a4ac3dc0f"
+    },
+    {
+      "name": "version a number",
+      "text": "{\"id\":\"c\",\"version\":1,\"requirements\":[]}",
+      "error": "version is not a non-empty string",
+      "sha256": "9f3b78689dfb3ce2f4ea2b7799835c1ef3a5dced915ba5071e456317da06fd31"
+    },
+    {
+      "name": "requirements not a list",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":{}}",
+      "error": "requirements is not a list",
+      "sha256": "9729f3e5764fa2af6f1ce9e5e2fb6f49d50699bfdb32875e7b4fb8d559875525"
+    },
+    {
+      "name": "requirement not an object",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[\"a\"]}",
+      "error": "requirement 1 is not an object",
+      "sha256": "db7b3437f45f2f56e8a6bfd6447440b45a3179924cad3d5abdac34a84138beef"
+    },
+    {
+      "name": "requirement id missing",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[{\"tier\":\"must_have\"}]}",
+      "error": "requirement 1 id is not a non-empty string",
+      "sha256": "38c89dd976b540780c8fb9cc9875885f4867caa9061385b9c90ce9ac2472bc3e"
+    },
+    {
+      "name": "requirement listed twice",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[{\"id\":\"a\"},{\"id\":\"a\"}]}",
+      "error": "is listed twice",
+      "sha256": "c2cef85b2cb6af2ec43d073b5f1e6c4cbd78846abb0544588a77d324d08d6c8d"
+    },
+    {
+      "name": "tier outside the enum",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[{\"id\":\"a\",\"tier\":\"optional\"}]}",
+      "error": "tier is not must_have or informational",
+      "sha256": "05dade02b84566d9b42fe56d0245a1e1db6a36ae3b0e9766a95b09f7a2013c7e"
+    },
+    {
+      "name": "tier null",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[{\"id\":\"a\",\"tier\":null}]}",
+      "error": "tier is not must_have or informational",
+      "sha256": "342ade432b5c2b3c7f373b4014f004b81691913a6d463b5b89a06ae28b4bad8a"
+    },
+    {
+      "name": "claim tier is not a requirement tier",
+      "text": "{\"id\":\"c\",\"version\":\"1\",\"requirements\":[{\"id\":\"a\",\"tier\":\"judged\"}]}",
+      "error": "tier is not must_have or informational",
+      "sha256": "d34ce10d8328500b823c3752334659d797f23d4fa9c3cb8ebba5471d6979942c"
+    }
+  ]
+}

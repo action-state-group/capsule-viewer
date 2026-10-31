@@ -7,6 +7,7 @@ import {
   encodeFragment,
 } from "@action-state-group/agent-action-capsule";
 import { isHex64 } from "@action-state-group/agent-action-capsule";
+import type { ContractInput } from "./evidence-contract.js";
 
 /**
  * The presentation fragment payload and the share-side scoping step
@@ -142,6 +143,8 @@ export interface PresentationFragment {
   readonly title?: string;
   readonly theme_css?: string;
   readonly wording?: WordingPackInput;
+  /** The compiled Evidence Contract the page reads requirement tiers from. */
+  readonly contract?: ContractInput;
   readonly core_runtime_sha256: string;
   readonly module_sha256: readonly string[];
   /** The bundle as scoped for the audience, before encoding. */
@@ -156,6 +159,7 @@ const FRAGMENT_MEMBERS = new Set([
   "title",
   "theme_css",
   "wording",
+  "contract",
   "core_runtime_sha256",
   "module_sha256",
   "bundle",
@@ -200,6 +204,16 @@ export function checkPresentationFragment(
       !isHex64(w.sha256)
     )
       fail("wording is not {pack, sha256}");
+  }
+  if (v.contract !== undefined) {
+    const c = v.contract;
+    if (
+      !isObject(c) ||
+      Object.keys(c).some((k) => k !== "text" && k !== "sha256") ||
+      typeof c.text !== "string" ||
+      !isHex64(c.sha256)
+    )
+      fail("contract is not {text, sha256}");
   }
   if (!isHex64(v.core_runtime_sha256))
     fail("core_runtime_sha256 is not a lowercase hex SHA-256");
