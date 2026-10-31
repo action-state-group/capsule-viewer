@@ -145,7 +145,7 @@ it("the toggle is a level-2 toggle that builds one card per subject on first ope
   const toggle = spotCheckToggle(
     [subject(), subject({ ref: "x.y", name: "Other rule" })],
     DEFAULT_WORDS.lines,
-  )!;
+  ) as HTMLDetailsElement;
   expect(toggle.dataset.level).toBe("2");
   expect(toggle.querySelector("summary")!.textContent).toBe(
     "Spot check, side by side",
