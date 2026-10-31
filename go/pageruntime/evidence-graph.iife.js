@@ -12411,7 +12411,7 @@ ${body}
         );
       return day;
     };
-    const keyOf = /* @__PURE__ */ new Map();
+    const keyOf2 = /* @__PURE__ */ new Map();
     const amountOf = /* @__PURE__ */ new Map();
     for (const row2 of selected) {
       const key = {};
@@ -12431,7 +12431,7 @@ ${body}
           );
         key[name] = v;
       }
-      keyOf.set(row2, key);
+      keyOf2.set(row2, key);
       if (aggregate.aggregate === "sum") {
         const v = resolveField(headerOf(row2), aggregate.field);
         if (v === MISSING)
@@ -12449,7 +12449,7 @@ ${body}
       if (statement.window !== void 0) timestamp(row2, statement.window.field);
     }
     for (const name of keys) {
-      const types = new Set(selected.map((row2) => typeof keyOf.get(row2)[name]));
+      const types = new Set(selected.map((row2) => typeof keyOf2.get(row2)[name]));
       if (types.size > 1)
         refuse(
           "chart-field-type",
@@ -12546,7 +12546,7 @@ ${body}
         "/usermeta/capsule/population/count"
       );
     const domains = keys.map(
-      (name) => name === temporal ? units : [...new Set(selected.map((row2) => keyOf.get(row2)[name]))].sort(
+      (name) => name === temporal ? units : [...new Set(selected.map((row2) => keyOf2.get(row2)[name]))].sort(
         compareScalar
       )
     );
@@ -12559,7 +12559,7 @@ ${body}
       );
     const rowsByKey = /* @__PURE__ */ new Map();
     for (const row2 of selected) {
-      const text2 = keyText(keys, keyOf.get(row2));
+      const text2 = keyText(keys, keyOf2.get(row2));
       const list2 = rowsByKey.get(text2);
       if (list2 === void 0) rowsByKey.set(text2, [row2]);
       else list2.push(row2);
@@ -12655,10 +12655,16 @@ ${body}
           `${at}/${key}`
         );
   }
-  function readEntry(value, at, seen) {
+  var ROLES = ["activity", "judgment", "adjudication"];
+  var CLASSES = ["good", "bad", "open"];
+  function readEntry(value, at, seen, lane = false) {
     if (!isObj2(value))
       return refuse2("view-unsupported-member", `${at} must be an object`, at);
-    onlyKeys2(value, ["id", "chart"], at);
+    onlyKeys2(
+      value,
+      lane === "calendar" ? ["id", "chart", "role", "classes"] : lane === "timeline" ? ["id", "chart", "mark", "classes"] : ["id", "chart"],
+      at
+    );
     const { id, chart } = value;
     if (typeof id !== "string" || !ID.test(id))
       refuse2(
@@ -12671,7 +12677,46 @@ ${body}
     seen.add(id);
     if (chart === void 0)
       refuse2("view-unsupported-member", `${at}/chart is missing`, `${at}/chart`);
-    return { id, spec: chart };
+    const out = { id, spec: chart };
+    if (value.role !== void 0) {
+      if (!ROLES.includes(value.role))
+        refuse2(
+          "view-unsupported-member",
+          `${at}/role must be one of ${ROLES.join(", ")}`,
+          `${at}/role`
+        );
+      out.role = value.role;
+    }
+    if (value.mark !== void 0) {
+      if (value.mark !== "tick" && value.mark !== "diamond")
+        refuse2(
+          "view-unsupported-member",
+          `${at}/mark must be tick or diamond`,
+          `${at}/mark`
+        );
+      out.mark = value.mark;
+    }
+    if (value.classes !== void 0) {
+      const c = value.classes;
+      if (!isObj2(c) || Object.keys(c).length === 0)
+        refuse2(
+          "view-unsupported-member",
+          `${at}/classes must be a non-empty object`,
+          `${at}/classes`
+        );
+      const classes = /* @__PURE__ */ Object.create(null);
+      for (const [k, v] of Object.entries(c)) {
+        if (!CLASSES.includes(v))
+          refuse2(
+            "view-unsupported-member",
+            `${at}/classes/${k} must be one of ${CLASSES.join(", ")}`,
+            `${at}/classes/${k}`
+          );
+        classes[k] = v;
+      }
+      out.classes = classes;
+    }
+    return out;
   }
   var list = (value, at, min) => {
     if (!Array.isArray(value) || value.length < min)
@@ -12744,6 +12789,86 @@ ${body}
     }
     return window;
   }
+  function checkClasses(lanes) {
+    lanes.forEach((lane, i) => {
+      if (lane.classes === void 0) return;
+      const key = keyChannel(lane.chart);
+      for (const g of lane.chart.groups) {
+        const v = String(g.key[key]);
+        if (!Object.hasOwn(lane.classes, v))
+          refuse2(
+            "view-lane-role",
+            `${lane.id}: the value ${v} has no class`,
+            `/lanes/${String(i)}/classes`
+          );
+      }
+    });
+  }
+  var FIELD_PATH2 = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/u;
+  function coFailureOf(part, subject, window) {
+    const key = keyChannel(part.chart);
+    const requirements = [];
+    const failures = /* @__PURE__ */ new Map();
+    for (const g of part.chart.groups) {
+      if (g.notRun || (g.value ?? 0) === 0) continue;
+      const requirement = g.key[key];
+      let at = requirements.findIndex((r) => r === requirement);
+      if (at < 0) {
+        requirements.push(requirement);
+        at = requirements.length - 1;
+      }
+      for (const row2 of g.rows) {
+        const who = row2.header === void 0 ? void 0 : resolveField(row2.header, subject);
+        if (typeof who !== "string" && typeof who !== "number")
+          refuse2(
+            "view-chart-shape",
+            `${part.id}: row seq ${String(row2.seq)} has no ${subject} to name its subject`
+          );
+        const id = `${typeof who}:${String(who)}`;
+        const byReq = failures.get(id) ?? /* @__PURE__ */ new Map();
+        byReq.set(at, [...byReq.get(at) ?? [], row2]);
+        failures.set(id, byReq);
+      }
+    }
+    const order = requirements.map((r, i) => ({ r, i })).sort((a, b) => compareScalar(a.r, b.r));
+    const rank = new Map(order.map((o, n2) => [o.i, n2]));
+    const n = order.length;
+    const subjects = Array.from(
+      { length: n },
+      () => new Array(n).fill(0)
+    );
+    const rows = Array.from(
+      { length: n },
+      () => Array.from({ length: n }, () => /* @__PURE__ */ new Map())
+    );
+    for (const byReq of failures.values()) {
+      const mine = [...byReq.keys()].map((i) => rank.get(i));
+      for (const a of mine)
+        for (const b of mine) {
+          subjects[a][b]++;
+          for (const row2 of [
+            ...byReq.get(order[a].i),
+            ...byReq.get(order[b].i)
+          ])
+            rows[a][b].set(row2.seq, row2);
+        }
+    }
+    return {
+      view: "co-failure",
+      window,
+      unplaced: unplacedOf([part]),
+      count: part,
+      subject,
+      requirements: order.map((o) => o.r),
+      failing: failures.size,
+      cells: subjects.map(
+        (line, a) => line.map((value, b) => ({
+          subjects: value,
+          rows: [...rows[a][b].values()].sort((x, y) => x.seq - y.seq)
+        }))
+      )
+    };
+  }
   function checkView(value, dataset) {
     if (!isObj2(value))
       return refuse2("view-unsupported-member", "a view must be an object", "");
@@ -12765,13 +12890,56 @@ ${body}
     if (kind === "calendar") {
       onlyKeys2(value, ["view", "lanes"], "");
       const lanes = list(value.lanes, "/lanes", 1).map(
-        (raw, i) => readEntry(raw, `/lanes/${String(i)}`, seen)
+        (raw, i) => readEntry(raw, `/lanes/${String(i)}`, seen, "calendar")
       );
-      const checked = lanes.map(
-        (l, i) => checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`)
-      );
+      const checked = lanes.map((l, i) => {
+        const part = checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`);
+        return {
+          ...part,
+          ...l.role === void 0 ? {} : { role: l.role },
+          ...l.classes === void 0 ? {} : { classes: l.classes }
+        };
+      });
+      const roles = /* @__PURE__ */ new Set();
+      checked.forEach((lane, i) => {
+        const at = `/lanes/${String(i)}`;
+        const keyed = lane.chart.keys.some((k) => k !== "x");
+        if (lane.classes !== void 0 && !keyed)
+          refuse2(
+            "view-lane-role",
+            `${lane.id}: classes name the values of a key channel, and this lane has none`,
+            `${at}/classes`
+          );
+        if (lane.role === void 0) return;
+        if (roles.has(lane.role))
+          refuse2(
+            "view-lane-role",
+            `${lane.id}: role ${lane.role} is on two lanes`,
+            `${at}/role`
+          );
+        roles.add(lane.role);
+        if (lane.role === "activity" && keyed)
+          refuse2(
+            "view-lane-role",
+            `${lane.id}: the activity lane counts per day and has no key channel`,
+            `${at}/role`
+          );
+        if (lane.role === "judgment" && (!keyed || lane.classes === void 0))
+          refuse2(
+            "view-lane-role",
+            `${lane.id}: the judgment lane needs a key channel and classes for its values`,
+            `${at}/role`
+          );
+        if (lane.role === "adjudication" && keyed && lane.classes === void 0)
+          refuse2(
+            "view-lane-role",
+            `${lane.id}: a keyed adjudication lane needs classes for its values`,
+            `${at}/role`
+          );
+      });
       for (const lane of checked)
         checkFit(lane.id, lane.chart, (n) => n <= 1, "at most one key channel");
+      checkClasses(checked);
       const window = checkTogether(checked, false);
       if (!wholeMonths(window))
         refuse2(
@@ -12784,6 +12952,50 @@ ${body}
         unplaced: unplacedOf(checked),
         lanes: checked
       };
+    }
+    if (kind === "timeline") {
+      onlyKeys2(value, ["view", "lanes"], "");
+      const lanes = list(value.lanes, "/lanes", 1).map(
+        (raw, i) => readEntry(raw, `/lanes/${String(i)}`, seen, "timeline")
+      );
+      const checked = lanes.map((l, i) => {
+        const part = checkOne(l.id, l.spec, `/lanes/${String(i)}/chart`);
+        return {
+          ...part,
+          mark: l.mark ?? "tick",
+          ...l.classes === void 0 ? {} : { classes: l.classes }
+        };
+      });
+      for (const lane of checked)
+        checkFit(lane.id, lane.chart, (n) => n <= 1, "at most one key channel");
+      checkClasses(checked);
+      const window = checkTogether(checked, false);
+      return {
+        view: "timeline",
+        window,
+        unplaced: unplacedOf(checked),
+        lanes: checked
+      };
+    }
+    if (kind === "co-failure") {
+      onlyKeys2(value, ["view", "count", "subject"], "");
+      const count2 = readEntry(value.count, "/count", seen);
+      const part = checkOne(count2.id, count2.spec, "/count/chart");
+      checkFit(
+        part.id,
+        part.chart,
+        (n) => n === 1,
+        "exactly one key channel, the requirement,"
+      );
+      const subject = value.subject;
+      if (typeof subject !== "string" || !FIELD_PATH2.test(subject))
+        refuse2(
+          "view-unsupported-member",
+          "/subject must be a field path",
+          "/subject"
+        );
+      const window = checkTogether([part], false);
+      return coFailureOf(part, subject, window);
     }
     if (kind === "by-period") {
       onlyKeys2(value, ["view", "count", "columns"], "");
@@ -12833,7 +13045,7 @@ ${body}
     }
     return refuse2(
       "view-unsupported-member",
-      'view must be "calendar" or "by-period"',
+      'view must be "calendar", "timeline", "co-failure" or "by-period"',
       "/view"
     );
   }
@@ -13505,6 +13717,38 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
 .cv-cal .cv-lane{margin:2px 0;overflow-wrap:anywhere}
 .cv-cal td[data-not-run],.cv-period td[data-not-run]{color:var(--slate);font-style:italic;background:repeating-linear-gradient(45deg,var(--cream),var(--cream) 4px,#fff 4px,#fff 8px)}
 .cv-view .cv-ev-label,.cv-view .cv-nr{font-size:12px;color:var(--slate)}
+.cv-cal td[data-scale]{border-radius:6px}
+.cv-cal td[data-scale=good],.cv-swatch[data-scale=good]{background:var(--ok-l);border-color:var(--ok)}
+.cv-cal td[data-scale=some],.cv-swatch[data-scale=some]{background:var(--gold-l);border-color:var(--gold)}
+.cv-cal td[data-scale=most],.cv-swatch[data-scale=most]{background:var(--bad-l);border-color:var(--bad)}
+.cv-cal .cv-day-link{color:inherit;text-decoration:none}
+.cv-cal .cv-day-link:hover,.cv-cal .cv-day-link:focus-visible{text-decoration:underline}
+.cv-cal .cv-act{margin:2px 0;font-size:12px}
+.cv-cal .cv-jdg{margin:2px 0 4px;font-size:11px;color:var(--slate)}
+.cv-cal .cv-bar{display:block;width:100%;height:4px;border-radius:2px;overflow:hidden}
+.cv-bar-good{fill:var(--ok)}.cv-bar-bad{fill:var(--bad)}.cv-bar-open{fill:var(--slate);fill-opacity:.45}
+.cv-cal .cv-adj{margin-top:4px;padding:2px 4px;border-radius:4px;background:var(--person-l);color:var(--person);font-size:11px}
+.cv-diamond{color:var(--person)}
+.cv-view .cv-legend{display:flex;flex-wrap:wrap;gap:4px 18px;margin:8px 0;padding:0;list-style:none;font-size:12px;color:var(--slate)}
+.cv-swatch{display:inline-block;width:12px;height:12px;border:1px solid var(--line);border-radius:3px;vertical-align:-2px}
+.cv-day-section{margin:16px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+.cv-day-section h3{margin:0 0 6px;font-size:15px}
+.cv-day-section .cv-k{margin:0 0 4px;font-size:12px;color:var(--slate)}
+.cv-day-table{border-collapse:collapse;font-size:13px}
+.cv-timeline{display:block;width:100%;min-width:560px;height:auto}
+.cv-tl-text{font-size:11px;fill:var(--ink)}
+.cv-tl-lane{font-family:ui-monospace,monospace}
+.cv-tl-axis{stroke:var(--line);stroke-width:1}
+.cv-tl-notrun{fill:var(--cream);fill-opacity:.9}
+.cv-tl-mark{stroke-width:2}
+path.cv-tl-mark{stroke:none}
+line.cv-tl-good{stroke:var(--ok)}line.cv-tl-bad{stroke:var(--bad)}line.cv-tl-open{stroke:var(--slate)}
+path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-open{fill:var(--person)}
+.cv-tl-lists ul{margin:0 0 8px;padding-left:18px;font-size:13px}
+.cv-tl-lists .cv-k{margin:6px 0 2px;font-size:12px;color:var(--slate)}
+.cv-cofail{min-width:0}
+.cv-cofail td[data-diagonal]{background:var(--person-l);font-weight:600}
+.cv-cofail-total{margin:0 0 8px;font-size:13px}
 @media print{.cv-view{break-inside:avoid}}
 `;
   var SERIES = [
@@ -13846,6 +14090,7 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
   }
 
   // src/report-view-render.ts
+  var SVG2 = "http://www.w3.org/2000/svg";
   function el3(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== void 0) node.className = className;
@@ -13913,12 +14158,199 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
     });
     return wrap;
   }
+  var laneOf = (view, role) => view.lanes.find((l) => l.role === role);
+  var keyOf = (chart) => chart.keys.find((k) => k !== "x");
+  function tallyOf(lane, day) {
+    const tally = { good: 0, bad: 0, open: 0 };
+    for (const g of groupsOn(lane.chart, day)) {
+      const cls = lane.classes[String(g.key[keyOf(lane.chart)])];
+      tally[cls] += g.value ?? 0;
+    }
+    return tally;
+  }
+  var sumOf = (lane, day) => groupsOn(lane.chart, day).reduce((n, g) => n + (g.value ?? 0), 0);
+  function scaleOf(t) {
+    const total = t.good + t.bad + t.open;
+    if (total === 0) return void 0;
+    if (total - t.good <= 1) return "good";
+    return t.bad * 2 > total ? "most" : "some";
+  }
+  var svgEl = (tag, attrs) => {
+    const node = document.createElementNS(SVG2, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+    return node;
+  };
+  function barOf(t) {
+    const total = t.good + t.bad + t.open;
+    const root = svgEl("svg", {
+      viewBox: "0 0 100 4",
+      preserveAspectRatio: "none",
+      class: "cv-bar",
+      "aria-hidden": "true",
+      focusable: "false"
+    });
+    let x = 0;
+    for (const cls of ["good", "bad", "open"]) {
+      if (t[cls] === 0) continue;
+      const width = 100 * t[cls] / total;
+      root.append(
+        svgEl("rect", {
+          x: x.toFixed(2),
+          y: 0,
+          width: width.toFixed(2),
+          height: 4,
+          class: `cv-bar-${cls}`
+        })
+      );
+      x += width;
+    }
+    return root;
+  }
+  function judgedLine(t, w) {
+    const parts = [
+      w.t("calendar.judged"),
+      w.t("calendar.class.good", { n: t.good }),
+      w.t("calendar.class.bad", { n: t.bad })
+    ];
+    if (t.open > 0) parts.push(w.t("calendar.class.open", { n: t.open }));
+    return parts.join(" \xB7 ");
+  }
+  function adjudicationChip(lane, day, w) {
+    const keyed = lane.classes !== void 0;
+    const t = keyed ? tallyOf(lane, day) : void 0;
+    const n = t === void 0 ? sumOf(lane, day) : t.good + t.bad + t.open;
+    if (n === 0) return void 0;
+    const parts = [w.p("calendar.adj.recorded", n)];
+    if (t !== void 0)
+      parts.push(
+        t.bad === 0 ? w.t("calendar.adj.concur") : w.p("calendar.adj.differ", t.bad)
+      );
+    const chip = el3("div", "cv-adj");
+    chip.dataset.adjudications = String(n);
+    chip.append(el3("span", "cv-diamond", "\u25C6"), ` ${parts.join(" \xB7 ")}`);
+    return chip;
+  }
+  var dayId = (index, day) => `cv-day-${String(index)}-${day}`;
+  function roleCell(view, index, day, cell, w) {
+    const activity = laneOf(view, "activity");
+    const judgment = laneOf(view, "judgment");
+    const adjudication = laneOf(view, "adjudication");
+    const number = el3("div", "cv-dn");
+    const link = el3("a", "cv-day-link", String(Number(day.slice(8))));
+    link.setAttribute("href", `#${dayId(index, day)}`);
+    number.append(link);
+    cell.replaceChildren(number);
+    if (activity !== void 0)
+      cell.append(
+        el3("div", "cv-act", w.p("calendar.activity", sumOf(activity, day)))
+      );
+    if (judgment !== void 0) {
+      const t = tallyOf(judgment, day);
+      const scale = scaleOf(t);
+      if (scale !== void 0) cell.dataset.scale = scale;
+      cell.append(el3("div", "cv-jdg", judgedLine(t, w)));
+      if (t.good + t.bad + t.open > 0) cell.append(barOf(t));
+    }
+    if (adjudication !== void 0) {
+      const chip = adjudicationChip(adjudication, day, w);
+      if (chip !== void 0) cell.append(chip);
+    }
+  }
+  function legendOf(view, w) {
+    const legend = el3("ul", "cv-legend");
+    if (laneOf(view, "judgment") !== void 0)
+      for (const scale of ["good", "some", "most"]) {
+        const item = el3("li");
+        const swatch = el3("span", "cv-swatch");
+        swatch.dataset.scale = scale;
+        item.append(swatch, ` ${w.t(`calendar.legend.${scale}`)}`);
+        legend.append(item);
+      }
+    if (laneOf(view, "adjudication") !== void 0) {
+      const item = el3("li");
+      item.append(
+        el3("span", "cv-diamond", "\u25C6"),
+        ` ${w.t("calendar.legend.adjudication")}`
+      );
+      legend.append(item);
+    }
+    return legend;
+  }
+  function timeOf(row2, field) {
+    const v = row2.header === void 0 ? void 0 : resolveField(row2.header, field);
+    const ms = typeof v === "string" ? Date.parse(v) : NaN;
+    return Number.isNaN(ms) ? "" : new Date(ms).toISOString().slice(11, 16);
+  }
+  function daySection(view, index, day, w) {
+    const activity = laneOf(view, "activity");
+    const judgment = laneOf(view, "judgment");
+    const section = el3("section", "cv-day-section");
+    section.id = dayId(index, day);
+    section.dataset.daySection = day;
+    const [, m, d] = day.split("-").map(Number);
+    const heading = [
+      w.t("calendar.day.heading", {
+        weekday: w.t(`calendar.weekday.long.${String(weekdayOf(day) + 1)}`),
+        month: w.t(`calendar.month.${String(m)}`),
+        day: d
+      })
+    ];
+    if (activity !== void 0)
+      heading.push(w.p("calendar.activity", sumOf(activity, day)));
+    if (judgment !== void 0)
+      heading.push(judgedLine(tallyOf(judgment, day), w));
+    section.append(el3("h3", void 0, heading.join(" \xB7 ")));
+    const counts = el3("div", "cv-day-counts");
+    counts.append(el3("p", "cv-k", w.t("calendar.day.counts")));
+    for (const lane of view.lanes) counts.append(laneCell(lane, index, day, w));
+    section.append(counts);
+    const field = view.lanes[0].chart.channels.x.field;
+    const rows = /* @__PURE__ */ new Map();
+    if (activity !== void 0)
+      for (const g of groupsOn(activity.chart, day))
+        for (const row2 of g.rows) rows.set(row2.seq, row2);
+    if (rows.size > 0) {
+      const table2 = el3("table", "cv-day-table");
+      const head2 = el3("tr");
+      for (const key of ["calendar.day.time", "calendar.day.record"]) {
+        const th = el3("th", void 0, w.t(key));
+        th.setAttribute("scope", "col");
+        head2.append(th);
+      }
+      const thead = el3("thead");
+      thead.append(head2);
+      const tbody = el3("tbody");
+      const ordered = [...rows.values()].sort(
+        (a, b) => timeOf(a, field).localeCompare(timeOf(b, field)) || a.seq - b.seq
+      );
+      for (const row2 of ordered) {
+        const tr = el3("tr");
+        tr.append(el3("td", void 0, timeOf(row2, field)));
+        const td = el3("td");
+        if (row2.recordId === void 0) td.append(code(`seq ${String(row2.seq)}`));
+        else {
+          const a = el3("a");
+          a.setAttribute("href", `#${recordAddress(row2.recordId)}`);
+          a.append(code(row2.recordId));
+          td.append(a);
+        }
+        tr.append(td);
+        tbody.append(tr);
+      }
+      table2.append(thead, tbody);
+      const wrap = el3("div", "cv-view-table");
+      wrap.append(table2);
+      section.append(wrap);
+    }
+    return section;
+  }
   function renderCalendar(view, index, sha2564, w) {
     const figure = frame(view, index, sha2564, w, view.lanes);
     const first = view.lanes[0];
     const notRun = new Set(
       (first.chart.units ?? []).filter((u) => u.notRun).map((u) => u.unit)
     );
+    const hasRoles = view.lanes.some((l) => l.role !== void 0);
     const months = [];
     for (let ms = utcMs(view.window.from); ms <= utcMs(view.window.to); ms += DAY) {
       const month = isoOf(ms).slice(0, 7);
@@ -13956,7 +14388,8 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
         if (notRun.has(day)) {
           cell.dataset.notRun = "";
           cell.append(el3("div", "cv-nr", w.t("chart.not_run")));
-        } else
+        } else if (hasRoles) roleCell(view, index, day, cell, w);
+        else
           for (const lane of view.lanes)
             cell.append(laneCell(lane, index, day, w));
         row2.append(cell);
@@ -13969,6 +14402,13 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
       scroll.append(table2);
     }
     figure.append(scroll);
+    if (hasRoles) {
+      figure.append(legendOf(view, w));
+      for (const [day, ran] of (first.chart.units ?? []).map(
+        (u) => [u.unit, !u.notRun]
+      ))
+        if (ran) figure.append(daySection(view, index, day, w));
+    }
     return figure;
   }
   var groupOf = (sum) => ({
@@ -13981,12 +14421,12 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
   function renderByPeriod(view, index, sha2564, w) {
     const parts = [view.count, ...view.columns];
     const figure = frame(view, index, sha2564, w, parts);
-    const keyOf = (chart) => chart.keys.find((k) => k !== "x");
-    const field = view.count.chart.channels[keyOf(view.count.chart)].field;
+    const keyOf2 = (chart) => chart.keys.find((k) => k !== "x");
+    const field = view.count.chart.channels[keyOf2(view.count.chart)].field;
     const requirements = [];
     for (const p of parts)
       for (const g of p.chart.groups) {
-        const v = g.key[keyOf(p.chart)];
+        const v = g.key[keyOf2(p.chart)];
         if (!requirements.some((r) => r === v)) requirements.push(v);
       }
     requirements.sort(compareScalar);
@@ -14033,7 +14473,7 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
     const sumOver = (chart, requirement, days) => {
       const sum = { value: 0, rows: [] };
       for (const g of chart.groups) {
-        if (g.key[keyOf(chart)] !== requirement || g.notRun) continue;
+        if (g.key[keyOf2(chart)] !== requirement || g.notRun) continue;
         if (days !== void 0 && !days.has(g.key.x)) continue;
         sum.value += g.value ?? 0;
         sum.rows.push(...g.rows);
@@ -14123,8 +14563,188 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
     figure.append(scroll);
     return figure;
   }
+  var TL = { left: 150, right: 12, top: 22, row: 44, w: 760 };
+  function laneLabel(id, w) {
+    const word = w.section3(`lane.${id}.title`);
+    return word ?? code(id);
+  }
+  function renderTimeline(view, index, sha2564, w) {
+    const figure = frame(view, index, sha2564, w, view.lanes);
+    const units = view.lanes[0].chart.units ?? [];
+    const plotW = TL.w - TL.left - TL.right;
+    const band = plotW / Math.max(1, units.length);
+    const height = TL.top + TL.row * view.lanes.length + 6;
+    const root = svgEl("svg", {
+      viewBox: `0 0 ${String(TL.w)} ${String(height)}`,
+      class: "cv-timeline",
+      "aria-hidden": "true",
+      focusable: "false"
+    });
+    const dayAt = new Map(units.map((u, i) => [u.unit, i]));
+    const text2 = (label, attrs) => {
+      const t = svgEl("text", { class: "cv-tl-text", ...attrs });
+      t.textContent = label;
+      root.append(t);
+    };
+    units.forEach((u, i) => {
+      if (!u.notRun) return;
+      const rect = svgEl("rect", {
+        x: (TL.left + band * i).toFixed(2),
+        y: TL.top - 6,
+        width: band.toFixed(2),
+        height: TL.row * view.lanes.length,
+        class: "cv-tl-notrun"
+      });
+      rect.setAttribute("data-not-run", u.unit);
+      root.append(rect);
+    });
+    if (units.length > 0)
+      for (const at of [0, Math.floor((units.length - 1) / 2), units.length - 1])
+        text2(units[at].unit, {
+          x: (TL.left + band * at + band / 2).toFixed(2),
+          y: 12,
+          "text-anchor": at === 0 ? "start" : at === units.length - 1 ? "end" : "middle"
+        });
+    view.lanes.forEach((lane, row2) => {
+      const mid = TL.top + TL.row * row2 + TL.row / 2;
+      root.append(
+        svgEl("line", {
+          x1: TL.left,
+          x2: TL.w - TL.right,
+          y1: mid,
+          y2: mid,
+          class: "cv-tl-axis"
+        })
+      );
+      const word = w.section3(`lane.${lane.id}.title`);
+      text2(word ?? lane.id, {
+        x: 0,
+        y: mid + 4,
+        class: word === void 0 ? "cv-tl-text cv-tl-lane" : "cv-tl-text"
+      });
+      const key = lane.classes === void 0 ? void 0 : keyOf(lane.chart);
+      for (const g of lane.chart.groups) {
+        const at = dayAt.get(String(g.key.x));
+        if (g.notRun || at === void 0 || (g.value ?? 0) === 0) continue;
+        const cls = key === void 0 ? "open" : lane.classes[String(g.key[key])];
+        const cx = TL.left + band * at + band / 2;
+        const n = Math.min(g.value, 5);
+        const mark = lane.mark === "diamond" ? svgEl("path", {
+          d: `M${cx.toFixed(2)} ${String(mid - 6)} l6 6 l-6 6 l-6 -6 z`,
+          class: `cv-tl-mark cv-tl-${cls}`
+        }) : svgEl("line", {
+          x1: cx.toFixed(2),
+          x2: cx.toFixed(2),
+          y1: mid - 4 - 3 * n,
+          y2: mid + 4 + 3 * n,
+          class: `cv-tl-mark cv-tl-tick cv-tl-${cls}`
+        });
+        mark.setAttribute("data-day", String(g.key.x));
+        root.append(mark);
+      }
+    });
+    const scroll = el3("div", "cv-view-table");
+    scroll.append(root);
+    figure.append(scroll);
+    const lists = el3("div", "cv-tl-lists");
+    view.lanes.forEach((lane) => {
+      const block = el3("div", "cv-tl-lane");
+      block.dataset.lane = lane.id;
+      const head2 = el3("p", "cv-k");
+      head2.append(laneLabel(lane.id, w));
+      block.append(head2);
+      const list2 = el3("ul");
+      const key = keyOf(lane.chart);
+      for (const g of lane.chart.groups) {
+        if (g.notRun || (g.value ?? 0) === 0) continue;
+        const item = el3("li");
+        const evidenceKey = `view-${String(index)}-${lane.id}-${String(g.key.x)}-${String(g.key[key] ?? "")}`;
+        const name = [g.key.x, g.key[key]].filter((v) => v !== void 0).join(" \xB7 ");
+        const value = el3("span", void 0, String(g.value));
+        value.dataset.chartValue = evidenceKey;
+        item.append(
+          `${String(g.key.x)} `,
+          ...lane.chart.keys.some((k) => k !== "x") ? [el3("span", "cv-lane-key", `${String(g.key[key])} \xD7 `)] : [],
+          value,
+          " ",
+          valueEvidence(evidenceKey, `${lane.id} ${name}`, g, w)
+        );
+        list2.append(item);
+      }
+      block.append(list2);
+      lists.append(block);
+    });
+    figure.append(lists);
+    return figure;
+  }
+  function renderCoFailure(view, index, sha2564, w) {
+    const figure = frame(view, index, sha2564, w, [view.count]);
+    figure.append(
+      el3("p", "cv-cofail-total", w.p("cofail.failing", view.failing))
+    );
+    const table2 = el3("table", "cv-cofail");
+    const head2 = el3("tr");
+    const corner = el3("th");
+    corner.append(code(view.subject));
+    head2.append(corner);
+    for (const req of view.requirements) {
+      const th = el3("th", void 0, String(req));
+      th.setAttribute("scope", "col");
+      head2.append(th);
+    }
+    const thead = el3("thead");
+    thead.append(head2);
+    const tbody = el3("tbody");
+    view.requirements.forEach((req, a) => {
+      const tr = el3("tr");
+      const th = el3("th", void 0, String(req));
+      th.setAttribute("scope", "row");
+      tr.append(th);
+      view.requirements.forEach((other, b) => {
+        const cell = view.cells[a][b];
+        const td = el3("td");
+        if (a === b) td.dataset.diagonal = "";
+        td.dataset.cofail = `${String(req)}|${String(other)}`;
+        const key = `view-${String(index)}-co-${String(a)}-${String(b)}`;
+        const value = el3("span", void 0, String(cell.subjects));
+        value.dataset.chartValue = key;
+        td.append(
+          value,
+          " ",
+          valueEvidence(
+            key,
+            `${String(req)} \xB7 ${String(other)}`,
+            {
+              key: {},
+              value: cell.subjects,
+              notRun: false,
+              rows: cell.rows,
+              runRows: []
+            },
+            w
+          )
+        );
+        tr.append(td);
+      });
+      tbody.append(tr);
+    });
+    table2.append(thead, tbody);
+    const scroll = el3("div", "cv-view-table");
+    scroll.append(table2);
+    figure.append(scroll);
+    return figure;
+  }
   function renderView(view, index, sha2564, w) {
-    return view.view === "calendar" ? renderCalendar(view, index, sha2564, w) : renderByPeriod(view, index, sha2564, w);
+    switch (view.view) {
+      case "calendar":
+        return renderCalendar(view, index, sha2564, w);
+      case "timeline":
+        return renderTimeline(view, index, sha2564, w);
+      case "co-failure":
+        return renderCoFailure(view, index, sha2564, w);
+      case "by-period":
+        return renderByPeriod(view, index, sha2564, w);
+    }
   }
 
   // src/record-dating.ts
@@ -14860,10 +15480,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("89a6b6b7a2020b7ae8087e4fa1ed3f4b3bf5392c");
+    return commitPrefix("8493ebeac977e0c301e5d81a249a86f4bfa44d0e");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.6.0",
@@ -15397,6 +16017,46 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "period.not_run_days.other": "{n} days not run",
       "view.unplaced.one": "{n} record is dated on a day that did not run, so it is in no cell",
       "view.unplaced.other": "{n} records are dated on days that did not run, so they are in no cell",
+      "calendar.weekday.long.1": "Monday",
+      "calendar.weekday.long.2": "Tuesday",
+      "calendar.weekday.long.3": "Wednesday",
+      "calendar.weekday.long.4": "Thursday",
+      "calendar.weekday.long.5": "Friday",
+      "calendar.weekday.long.6": "Saturday",
+      "calendar.weekday.long.7": "Sunday",
+      "calendar.month.1": "January",
+      "calendar.month.2": "February",
+      "calendar.month.3": "March",
+      "calendar.month.4": "April",
+      "calendar.month.5": "May",
+      "calendar.month.6": "June",
+      "calendar.month.7": "July",
+      "calendar.month.8": "August",
+      "calendar.month.9": "September",
+      "calendar.month.10": "October",
+      "calendar.month.11": "November",
+      "calendar.month.12": "December",
+      "calendar.day.heading": "{weekday}, {month} {day}",
+      "calendar.day.time": "Time (UTC)",
+      "calendar.day.record": "Record",
+      "calendar.day.counts": "Counts for this day",
+      "calendar.activity.one": "{n} case",
+      "calendar.activity.other": "{n} cases",
+      "calendar.judged": "judged",
+      "calendar.class.good": "{n} met",
+      "calendar.class.bad": "{n} not met",
+      "calendar.class.open": "{n} undecided",
+      "calendar.adj.recorded.one": "{n} adjudication recorded",
+      "calendar.adj.recorded.other": "{n} adjudications recorded",
+      "calendar.adj.concur": "all concur",
+      "calendar.adj.differ.one": "{n} differs",
+      "calendar.adj.differ.other": "{n} differ",
+      "calendar.legend.good": "all but one met",
+      "calendar.legend.some": "some not met",
+      "calendar.legend.most": "most not met",
+      "calendar.legend.adjudication": "adjudications recorded that day",
+      "cofail.failing.one": "{n} case did not meet at least one requirement",
+      "cofail.failing.other": "{n} cases did not meet at least one requirement",
       "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
       "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
       "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
@@ -15730,6 +16390,46 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "period.not_run_days.other": "{n} days not run",
       "view.unplaced.one": "{n} record is dated on a day that did not run, so it is in no cell",
       "view.unplaced.other": "{n} records are dated on days that did not run, so they are in no cell",
+      "calendar.weekday.long.1": "Monday",
+      "calendar.weekday.long.2": "Tuesday",
+      "calendar.weekday.long.3": "Wednesday",
+      "calendar.weekday.long.4": "Thursday",
+      "calendar.weekday.long.5": "Friday",
+      "calendar.weekday.long.6": "Saturday",
+      "calendar.weekday.long.7": "Sunday",
+      "calendar.month.1": "January",
+      "calendar.month.2": "February",
+      "calendar.month.3": "March",
+      "calendar.month.4": "April",
+      "calendar.month.5": "May",
+      "calendar.month.6": "June",
+      "calendar.month.7": "July",
+      "calendar.month.8": "August",
+      "calendar.month.9": "September",
+      "calendar.month.10": "October",
+      "calendar.month.11": "November",
+      "calendar.month.12": "December",
+      "calendar.day.heading": "{weekday}, {month} {day}",
+      "calendar.day.time": "Time (UTC)",
+      "calendar.day.record": "Record",
+      "calendar.day.counts": "Counts for this day",
+      "calendar.activity.one": "{n} case",
+      "calendar.activity.other": "{n} cases",
+      "calendar.judged": "judged",
+      "calendar.class.good": "{n} met",
+      "calendar.class.bad": "{n} not met",
+      "calendar.class.open": "{n} undecided",
+      "calendar.adj.recorded.one": "{n} adjudication recorded",
+      "calendar.adj.recorded.other": "{n} adjudications recorded",
+      "calendar.adj.concur": "all concur",
+      "calendar.adj.differ.one": "{n} differs",
+      "calendar.adj.differ.other": "{n} differ",
+      "calendar.legend.good": "all but one met",
+      "calendar.legend.some": "some not met",
+      "calendar.legend.most": "most not met",
+      "calendar.legend.adjudication": "adjudications recorded that day",
+      "cofail.failing.one": "{n} case did not meet at least one requirement",
+      "cofail.failing.other": "{n} cases did not meet at least one requirement",
       "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
       "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
       "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
@@ -16242,6 +16942,29 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "period.not_run_days.other",
     "view.unplaced.one",
     "view.unplaced.other",
+    "calendar.weekday.long.1",
+    "calendar.weekday.long.2",
+    "calendar.weekday.long.3",
+    "calendar.weekday.long.4",
+    "calendar.weekday.long.5",
+    "calendar.weekday.long.6",
+    "calendar.weekday.long.7",
+    "calendar.month.1",
+    "calendar.month.2",
+    "calendar.month.3",
+    "calendar.month.4",
+    "calendar.month.5",
+    "calendar.month.6",
+    "calendar.month.7",
+    "calendar.month.8",
+    "calendar.month.9",
+    "calendar.month.10",
+    "calendar.month.11",
+    "calendar.month.12",
+    "calendar.day.heading",
+    "calendar.day.time",
+    "calendar.day.record",
+    "calendar.day.counts",
     // The Outcomes report.
     "lines.tier.unknown",
     "lines.wording.unstated",
@@ -16595,8 +17318,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "818fbebb5a0fe1644d5c63cd2effac138fe648f828f847608f9d387dde399f0e",
-    groups: "49d3f98b8336daf02d620ff63dce036003eb49802ba07c208287006f6db080d3"
+    lines: "96113ef0f10f606df8b23bf291c3fdd9a758a376456d6906bcce920521bbbeec",
+    groups: "d9815d21e4193fcf111229ab39f8066b65797d0dffdb7e267b17893aacdd2398"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
