@@ -14172,7 +14172,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
   function scaleOf(t) {
     const total = t.good + t.bad + t.open;
     if (total === 0) return void 0;
-    if (total - t.good <= 1) return "good";
+    if (total - t.good <= 1 && t.good * 2 > total) return "good";
     return t.bad * 2 > total ? "most" : "some";
   }
   var svgEl = (tag, attrs) => {
@@ -15480,7 +15480,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("8493ebeac977e0c301e5d81a249a86f4bfa44d0e");
+    return commitPrefix("9f52d8d6147db58105cd995e9e93255d3582bb74");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16049,9 +16049,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "calendar.adj.recorded.one": "{n} adjudication recorded",
       "calendar.adj.recorded.other": "{n} adjudications recorded",
       "calendar.adj.concur": "all concur",
-      "calendar.adj.differ.one": "{n} differs",
-      "calendar.adj.differ.other": "{n} differ",
-      "calendar.legend.good": "all but one met",
+      "calendar.adj.differ.one": "{n} differs from the judge",
+      "calendar.adj.differ.other": "{n} differ from the judge",
+      "calendar.legend.good": "all, or all but one, met",
       "calendar.legend.some": "some not met",
       "calendar.legend.most": "most not met",
       "calendar.legend.adjudication": "adjudications recorded that day",
@@ -16422,9 +16422,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "calendar.adj.recorded.one": "{n} adjudication recorded",
       "calendar.adj.recorded.other": "{n} adjudications recorded",
       "calendar.adj.concur": "all concur",
-      "calendar.adj.differ.one": "{n} differs",
-      "calendar.adj.differ.other": "{n} differ",
-      "calendar.legend.good": "all but one met",
+      "calendar.adj.differ.one": "{n} differs from the judge",
+      "calendar.adj.differ.other": "{n} differ from the judge",
+      "calendar.legend.good": "all, or all but one, met",
       "calendar.legend.some": "some not met",
       "calendar.legend.most": "most not met",
       "calendar.legend.adjudication": "adjudications recorded that day",
@@ -17318,8 +17318,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "96113ef0f10f606df8b23bf291c3fdd9a758a376456d6906bcce920521bbbeec",
-    groups: "d9815d21e4193fcf111229ab39f8066b65797d0dffdb7e267b17893aacdd2398"
+    lines: "7c7ec468f0e75e620de16c00043cf83bbea6afc5da4c99aa80d3c703881f02f9",
+    groups: "11da8f365925e7c5d49d4dc19b51514e4fe0e113f30d4ebb41e284dfe4809fec"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
