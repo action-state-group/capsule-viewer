@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; style-src &#x27;sha256-hdAUDzGWJdkQLFbGqr5VWocYxrjrIvv4v5sMfQMlSKk=&#x27;; img-src &#x27;none&#x27;; connect-src &#x27;none&#x27;">
+<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; style-src &#x27;sha256-clEWzB2b1yP9N3PPEEqX838ofjx/tzuPoKNGnTSoN+U=&#x27;; img-src &#x27;none&#x27;; connect-src &#x27;none&#x27;">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Evidence bundle</title>
 <style>
@@ -124,11 +124,11 @@ body.cv-kit { margin: 0; }
 .cv-actions { display: flex; flex-wrap: wrap; column-gap: var(--cv-space-3); font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-info-fg); }
 .cv-actions__heading { font-weight: 400; color: var(--cv-color-text-muted); }
 
-/* DisclosureBadge and VerdictPill */
-.cv-badge, .cv-pill { display: inline-block; max-width: 100%; font-size: var(--cv-font-size-sm); font-weight: 600; border-radius: var(--cv-radius-pill); padding: 0 var(--cv-space-2); border: 1px solid currentColor; }
+/* DisclosureBadge and VerdictPill. The pill is scoped to the kit wrapper: the page shell's verification banner is a .cv-pill outside it, and a module's stylesheet must not restyle the banner (the frame check refuses the module). */
+.cv-badge, .cv-kit .cv-pill { display: inline-block; max-width: 100%; font-size: var(--cv-font-size-sm); font-weight: 600; border-radius: var(--cv-radius-pill); padding: 0 var(--cv-space-2); border: 1px solid currentColor; }
 .cv-badge { letter-spacing: 0.02em; }
 /* A state label breaks between words, never inside one. */
-.cv-badge, .cv-pill { overflow-wrap: normal; }
+.cv-badge, .cv-kit .cv-pill { overflow-wrap: normal; }
 .cv-refusal { color: var(--cv-color-negative-fg); background: var(--cv-color-negative-bg); border: 1px dashed currentColor; }
 
 /* CitationList */
