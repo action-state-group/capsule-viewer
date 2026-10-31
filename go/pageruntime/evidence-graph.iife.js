@@ -14874,7 +14874,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("5ec577b7e333aeccb64a40e0789d7916cb01934c");
+    return commitPrefix("c55843fc931fb4d8aab0c8d18ab2b76c7b5f38f1");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -15223,8 +15223,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "spot.pin": "judge pin {digest}",
       "spot.confidence": "confidence {c}",
       "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
-      "spot.gap.when": "When the rule is met and when it cannot be decided are not in this bundle: a sealed report states only the rule's wording.",
-      "spot.gap.adjudication": "Blind adjudication is not read by this page: no adjudication record is drawn from this bundle.",
+      "spot.gap.when": "This report states only the rule's wording, not when it counts as met or when it cannot be decided.",
+      "spot.gap.adjudication": "This card does not show whether a second, blind judge checked the verdict.",
       "card.not-stated": "not stated",
       "card.span": "{from} \u2013 {to}",
       "card.span.unknown": "unknown",
@@ -15568,8 +15568,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "spot.pin": "judge pin {digest}",
       "spot.confidence": "confidence {c}",
       "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
-      "spot.gap.when": "When the rule is met and when it cannot be decided are not in this bundle: a sealed report states only the rule's wording.",
-      "spot.gap.adjudication": "Blind adjudication is not read by this page: no adjudication record is drawn from this bundle.",
+      "spot.gap.when": "This report states only the rule's wording, not when it counts as met or when it cannot be decided.",
+      "spot.gap.adjudication": "This card does not show whether a second, blind judge checked the verdict.",
       "card.not-stated": "not stated",
       "card.span": "{from} \u2013 {to}",
       "card.span.unknown": "unknown",
@@ -16648,8 +16648,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "781efb09fc0d1e63a3999ab632bd897e979da1fd36d6e35918123812c63cf666",
-    groups: "1780b9df3e9ef94407785bf4ed14b676208e6ad46941f92f61bf2871189156df"
+    lines: "ef452c3eecbd97ce7792c83902110183f2a25956d34679a6edc5a7c68a5f09e9",
+    groups: "0e54097c8a6c19b5a70d836a10c2cccb1aaac2ab17c9449fdf17f50e3ac48760"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
