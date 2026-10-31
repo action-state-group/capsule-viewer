@@ -5,9 +5,9 @@
   "entries": {
     "layout.grouping": "lines",
     "lines.rtier.must_have.title": "Must-have terms · {n}",
-    "lines.rtier.must_have.note": "These decide the answer.",
+    "lines.rtier.must_have.note": "These count in the answer.",
     "lines.rtier.informational.title": "Informational terms · {n}",
-    "lines.rtier.informational.note": "Reported, never in the answer: a not met here changes nothing above it.",
+    "lines.rtier.informational.note": "Reported, never in the answer: a term not met here changes nothing above it.",
     "lines.rtier.unstated.title": "Terms with no stated tier · {n}",
     "lines.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
     "lines.rtier.sealed-note": "The sealed result counts informational terms too; the lines this report derives leave them out.",

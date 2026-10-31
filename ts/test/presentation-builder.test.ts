@@ -1666,6 +1666,25 @@ describe("the contract setting", () => {
     ).rejects.toThrow(PresentationBuildError);
   });
 
+  it("is refused by the hand-back when the fragment carries one that does not check, as in Go", async () => {
+    const bundle = fixture("result-root-bundle.sealed.json");
+    const built = await buildPresentation(bundle, {
+      ...base({ text, sha256: hex(text) }),
+      format: "fragment",
+    });
+    if (built.format !== "fragment") throw new Error("unexpected format");
+    const { encodePresentationFragment } = await import(
+      "../src/presentation-fragment.js"
+    );
+    const { fragment } = encodePresentationFragment({
+      ...built.payload,
+      contract: { text, sha256: "0".repeat(64) },
+    });
+    await expect(
+      offlineHtmlFromFragment(fragment, { code: "/*IIFE_MARKER*/" }),
+    ).rejects.toThrow(/do not hash to its contract_sha256/u);
+  });
+
   it("leaves the page as it is without one, and reaches the page's render options with one", async () => {
     const bundle = fixture("result-root-bundle.sealed.json");
     const without = await buildPresentation(bundle, {

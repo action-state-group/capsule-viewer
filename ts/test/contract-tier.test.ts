@@ -17,6 +17,14 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
+import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
+import {
+  conversationStatus,
+  gating,
+  statusWord,
+  type Conversation,
+} from "../src/outcome-report-view.js";
+import { DEFAULT_PACKS, wordsOf } from "../src/contract-report-wording.js";
 
 const host = new JSDOM();
 globalThis.document = host.window.document;
@@ -88,8 +96,8 @@ describe("the Outcomes report (lines)", () => {
       "communication.no_invented_terms": "unstated",
     });
     expect(sectionOrder(root)).toEqual([
-      "must_have: Must-have terms · 2These decide the answer.",
-      "informational: Informational terms · 1Reported, never in the answer: a not met here changes nothing above it.",
+      "must_have: Must-have terms · 2These count in the answer.",
+      "informational: Informational terms · 1Reported, never in the answer: a term not met here changes nothing above it.",
       "unstated: Terms with no stated tier · 1The contract given for this page states no tier for these, so they stay in the answer.",
     ]);
     // Every rule row sits after its own section's heading.
@@ -136,6 +144,39 @@ describe("the Outcomes report (lines)", () => {
       Object.values(all).filter((s) => s === status).length;
     expect(count(without, "missed")).toBe(4);
     expect(count(withIt, "missed")).toBe(3);
+  });
+
+  it("marks each rule's tier in a conversation's own table, and the calendar counts resolved as the lines do", async () => {
+    const without = await render(bundle);
+    const root = await render(bundle, contract);
+    const crit = [
+      ...root.querySelectorAll<HTMLElement>(
+        "tr[data-crit][data-requirement-tier]",
+      ),
+    ];
+    expect(crit.length).toBeGreaterThan(0);
+    for (const row of crit)
+      expect(
+        row.querySelector(".rtier")?.getAttribute("data-requirement-tier"),
+      ).toBe(row.dataset.requirementTier);
+    expect(
+      root.querySelector<HTMLElement>('tr[data-crit="resolution.right_change"]')
+        ?.dataset.requirementTier,
+    ).toBe("informational");
+    expect(
+      without.querySelector("tr[data-crit][data-requirement-tier]"),
+    ).toBeNull();
+    const resolved = (r: HTMLElement) =>
+      [...r.querySelectorAll<HTMLElement>("[data-day][data-resolved]")].reduce(
+        (n, d) => n + Number(d.dataset.resolved),
+        0,
+      );
+    const statusesOf = (r: HTMLElement) => statuses(r);
+    const count = (all: Record<string, string | undefined>) =>
+      Object.values(all).filter((st) => st === "resolved").length;
+    expect(resolved(without)).toBe(count(statusesOf(without)));
+    expect(resolved(root)).toBe(count(statusesOf(root)));
+    expect(resolved(root)).toBe(resolved(without) + 2);
   });
 
   it("with a contract the Result does not cite, every row's tier is not stated and nothing is left out", async () => {
@@ -206,11 +247,102 @@ describe("the EU AI Act Results (groups)", () => {
     ).toBe(root.querySelectorAll("[id]").length);
   });
 
+  it("reads a test's tier by its own claims' contract_ref when the Result cites two contracts", async () => {
+    const source = JSON.parse(
+      readFileSync(testdata("compliance-bundle.json"), "utf8"),
+    ) as Record<string, any>;
+    for (const claim of source.disclosures.result.agent_input.claims)
+      if (claim.requirement_ref.startsWith("art26."))
+        claim.contract_ref = "eu-other@1";
+    const { bundle: two } = await sealEvidenceBundle(source);
+    const root = await render(
+      two,
+      contractOf(
+        '{"id":"eu-ai-act-obligations","version":"0.1.0","requirements":[{"id":"art5.no_manipulation_or_deception","tier":"informational"},{"id":"art50.disclosure_before_first_turn","tier":"must_have"},{"id":"art50.disclosure_clear_or_obvious","tier":"must_have"},{"id":"art26.allowed_action_rules","tier":"must_have"}]}',
+      ),
+    );
+    const rows = tiersOf(root, "tr.test[data-criterion]");
+    expect(rows["art5.no_manipulation_or_deception"]).toBe("informational");
+    expect(rows["art50.disclosure_clear_or_obvious"]).toBe("must_have");
+    // The art26 tests cite another contract: not stated, never must-have.
+    for (const [id, tier] of Object.entries(rows))
+      if (id.startsWith("art26.")) expect(tier).toBe("unstated");
+    expect(root.querySelector("[data-sealed-counts]")).not.toBeNull();
+  });
+
   it("leaves an informational not met out of the headline", async () => {
     const without = headline(await render(bundle));
     const withIt = headline(await render(bundle, contract));
     // Session 3 missed only on art50.disclosure_before_first_turn.
     expect(without).toMatch(/^1 of 4 sessions met every test/u);
     expect(withIt).toMatch(/^2 of 4 sessions met every test/u);
+  });
+});
+
+describe("a conversation's result, read with tiers", () => {
+  const criterion = (
+    checkId: string,
+    criterionId: string,
+    verdict: string,
+    contractRef = "c@1",
+  ) =>
+    ({
+      checkId,
+      criterionId,
+      verdict,
+      claim: { contractRef },
+    }) as unknown as Conversation["criteria"][number];
+  const conversation = (criteria: Conversation["criteria"]): Conversation =>
+    ({ criteria, verdict: "not_met" }) as unknown as Conversation;
+  const tiers: Record<string, "must_have" | "informational" | "unstated"> = {
+    "a.must": "must_have",
+    "a.info": "informational",
+    "a.info2": "informational",
+  };
+  const tierOf = (_ref: string | undefined, req: string) =>
+    tiers[req] ?? "unstated";
+
+  it("is nothing applied when every rule it has is informational", () => {
+    const c = conversation([
+      criterion("a", "info", "not_met"),
+      criterion("a", "info2", "met"),
+    ]);
+    const g = gating([c], tierOf);
+    expect(conversationStatus(c)).toBe("missed");
+    expect(conversationStatus(c, g)).toBe("nothing-applied");
+  });
+
+  it("chooses the undecided word from the rules in its answer", () => {
+    // A must-have rule with no claim (unjudged) and an informational rule a
+    // judge could not decide: the counted rules say unjudged.
+    const c = {
+      criteria: [
+        { checkId: "a", criterionId: "must", verdict: "no_claim" },
+        {
+          checkId: "a",
+          criterionId: "info",
+          verdict: "not_evaluable",
+          claim: { contractRef: "c@1" },
+          reportState: "disclosed",
+          judgePinDigest: "a".repeat(64),
+        },
+      ],
+      verdict: "not_evaluable",
+    } as unknown as Conversation;
+    const g = gating([c], tierOf);
+    const pack = DEFAULT_PACKS.lines;
+    const w = wordsOf(pack, {
+      pack: {
+        ...pack,
+        entries: {
+          ...pack.entries,
+          "lines.status.undecided.judged": "judge could not decide",
+          "lines.status.undecided.unjudged": "not yet judged",
+        },
+      },
+    });
+    expect(conversationStatus(c, g)).toBe("undecided");
+    expect(statusWord("undecided", c, w, g).word).toBe("not yet judged");
+    expect(statusWord("undecided", c, w).word).toBe("judge could not decide");
   });
 });

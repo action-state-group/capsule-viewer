@@ -693,8 +693,16 @@ function renderSummary(
   // heads each section it has tests in. Its worst line reads only that
   // section's tests, so an informational test changes no must-have line.
   // Without a contract, one section, as before.
+  // Read by the contract_ref of the claims behind the test, as the
+  // headline reads each session's test (`sessionStatus`).
   const tierOfRow = (row: ObligationRowModel): RowTier | undefined =>
-    tierOf?.(undefined, row.criterionId);
+    tierOf?.(
+      model.sessions
+        .flatMap((s) => s.tests)
+        .find((t) => t.criterionId === row.criterionId && t.claim)?.claim
+        ?.contractRef,
+      row.criterionId,
+    );
   const allRows = model.obligations.flatMap((o) => o.rows);
   const sections: readonly (RowTier | undefined)[] =
     tierOf === undefined

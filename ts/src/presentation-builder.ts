@@ -579,6 +579,9 @@ async function packageOffline(
     settings.wording === undefined
       ? undefined
       : await checkWordingPack(settings.wording);
+  // The hand-back reaches here with a fragment's contract unchecked: refuse
+  // it as the direct path does (and as Go's OfflineHTMLFromFragment does).
+  if (settings.contract !== undefined) await checkContract(settings.contract);
   const title =
     settings.title !== undefined && settings.title !== ""
       ? settings.title

@@ -5,9 +5,9 @@
   "entries": {
     "layout.grouping": "groups",
     "groups.rtier.must_have.title": "Must-have tests · {n}",
-    "groups.rtier.must_have.note": "These decide the answer.",
+    "groups.rtier.must_have.note": "These count in the answer.",
     "groups.rtier.informational.title": "Informational tests · {n}",
-    "groups.rtier.informational.note": "Reported, never in the answer: a not met here changes nothing above it.",
+    "groups.rtier.informational.note": "Reported, never in the answer: a test not met here changes nothing above it.",
     "groups.rtier.unstated.title": "Tests with no stated tier · {n}",
     "groups.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
     "groups.rtier.sealed-note": "The sealed result counts informational tests too; the lines this report derives leave them out.",
