@@ -184,9 +184,9 @@ describe("the committed bundles (capsulectl, VALID)", () => {
     const ctx = contextOf("person-shared");
     const unbound = { ...ctx, verification: { ...ctx.verification, perRecordMembership: { status: "fail", findings: [`membership_record_unbound:${ctx.root}`] } } };
     const proves = (c) => renderAll(l, modelOf(l, c), "L1").L1.querySelector('[data-sh-section="proves"]').textContent;
-    expect(proves(ctx)).toContain("the log's snapshot covers it");
+    expect(proves(ctx)).toContain("which snapshot of the holder's log it is as of");
     expect(modelOf(l, unbound).state).toBe("card");
-    expect(proves(unbound)).not.toContain("snapshot covers it");
+    expect(proves(unbound)).not.toContain("which snapshot of the holder's log it is as of");
   });
   it("a bundle that did not verify draws no count", () => {
     const b = bundleOf("person-shared");

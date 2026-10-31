@@ -83,7 +83,7 @@
     "counts.not_on.own": "Not on it: your name, what you bought or sold, what you paid, who the other side was, anything outside the window.",
     "counts.not_on.shared": "Not on it: the holder's name, what they bought or sold, what they paid, who the other side was, anything outside the window.",
     "heading.proves": "What it proves",
-    "proves.sealed": "The card is sealed in the holder's log, and the log's snapshot covers it.",
+    "proves.sealed": "The card says which snapshot of the holder's log it is as of, and this page checked it against the snapshot carried beside it.",
     "proves.add_up": "Every count sits inside its total, and the totals agree with each other.",
     "proves.recomputed": "The counts recount from the deal entries in this copy.",
     "heading.doesnt": "What it doesn't",
