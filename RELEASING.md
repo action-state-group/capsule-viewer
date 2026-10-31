@@ -77,7 +77,8 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    card module's manifest, script, stylesheets and wording pack, and
    `presentation.json`, the `cli-plugin/v1` presentations entry a plugin copies.
    It is built by `python -m capsule_viewer.standard_history.module_slot --bundle`
-   and is the same bytes on every run.
+   and is the same bytes on every run in one build environment; the release
+   states its sha256, so rebuild only to compare with a note of the zlib used.
 
 Bumping a version by hand in any pull request releases it the same way when it
 merges.

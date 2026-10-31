@@ -70,8 +70,8 @@ jobs:
             go/pageruntime/NOTICE go/pageruntime/THIRD_PARTY_NOTICES.md \
             go/emitter/runtime-style-hashes.txt dist/
           # The History card module's files, for a plugin that carries it
-          # (capsule-cli's cli-plugin/v1 presentations): the same bytes on
-          # every run, pinned by the manifest inside.
+          # (capsule-cli's cli-plugin/v1 presentations): its files are pinned
+          # by the manifest inside; the release states the tar's sha256.
           PYTHONPATH=src python3 -m capsule_viewer.standard_history.module_slot \
             --bundle "dist/standard-history-module-v${TAG#go/v}.tar.gz"
           echo "SHA256=$(cat dist/evidence-graph.iife.js.sha256)" >> "$GITHUB_ENV"
