@@ -132,3 +132,11 @@ def test_the_release_bundle_carries_the_bytes_the_manifest_pins_and_a_handshake_
     assert set(by_role) == {"script", "style", "wording"}
     assert STANDARD_HISTORY_ID == manifest["id"]
     assert EXTENSION in manifest["requires"]["extensions"]["required"]
+
+
+def test_the_bundle_command_writes_the_tar_and_its_sha256(tmp_path):
+    out = tmp_path / "standard-history-module-v0.0.0.tar.gz"
+    assert module_slot.main(["--bundle", str(out)]) == 0
+    data = out.read_bytes()
+    assert (tmp_path / (out.name + ".sha256")).read_text(encoding="utf-8").strip() == hashlib.sha256(data).hexdigest()
+    assert sorted(_unpack(data)) == [f"standard-history-module/{n}" for n in sorted(module_slot.bundle_files())]

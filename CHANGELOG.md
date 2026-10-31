@@ -17,7 +17,7 @@ here. The format follows
 
 ### Added
 
-- Each Go release carries `standard-history-module-v<version>.tar.gz` and its `.sha256` as release assets (attested like the page runtime): the History card module `capsuleviewer.standard-history/v0` as a plugin carries it, with its manifest, script, stylesheets and wording pack, and `presentation.json`, the `cli-plugin/v1` presentations entry for them. The bundle is the same bytes on every run (#171).
+- Each Go release carries `standard-history-module-v<version>.tar.gz` and its `.sha256` as release assets (attested like the page runtime): the History card module `capsuleviewer.standard-history/v0` as a plugin carries it, with its manifest, script, stylesheets and wording pack, and `presentation.json`, the `cli-plugin/v1` presentations entry for them. The bundle's files and tar members carry nothing of the run (sorted, no owner, no time); the release states its sha256 (#171).
 
 ## ts 0.5.0 and go 0.5.0 (2026-10-31)
 

@@ -121,7 +121,8 @@ def bundle_files() -> dict[str, bytes]:
     """The release bundle: the module's own files, and ``presentation.json``, the
     handshake's ``presentations`` entry for them (the manifest, and each file's
     role, path and sha256), so a plugin copies it and states nothing of its own.
-    Every digest is the one the manifest pins."""
+    Every digest is the one the manifest pins, and the committed script and
+    manifest are what ``--write`` produces, or this refuses to build."""
     script, kit, card, pack = script_bytes(), KIT_CSS.read_bytes(), CARD_CSS.read_bytes(), PACK.read_bytes()
     manifest_data = manifest()
     files = {
@@ -130,9 +131,8 @@ def bundle_files() -> dict[str, bytes]:
         "standard_history.css": ("style", card),
         "wording-consumer-en.json": ("wording", pack),
     }
-    pins = manifest_data["executable"]
-    if _sha(script) != pins["script_sha256"] or [_sha(kit), _sha(card)] != pins["style_sha256"] or _sha(pack) != pins["wording_sha256"]:
-        raise ValueError("the manifest does not pin the bytes this bundle carries")
+    if stale():
+        raise ValueError("the committed script or manifest is not what --write produces: run --write first")
     entry = {
         "manifest": manifest_data,
         "files": [{"role": role, "path": f"{BUNDLE_DIR}/{name}", "sha256": _sha(data)} for name, (role, data) in files.items()],
@@ -144,8 +144,10 @@ def bundle_files() -> dict[str, bytes]:
 
 
 def bundle_tar() -> bytes:
-    """``bundle_files`` as a gzip tar that is the same bytes on every run: sorted
-    names, no owner, no time, so its sha256 is a function of the module alone."""
+    """``bundle_files`` as a gzip tar with nothing of the run in it: sorted names,
+    no owner, no time. The bytes are the same on every run in one build
+    environment; the deflate stream can differ with another zlib, so the
+    release states the bundle's sha256 and attests that file."""
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w", format=tarfile.PAX_FORMAT) as tar:
         for name, data in bundle_files().items():
