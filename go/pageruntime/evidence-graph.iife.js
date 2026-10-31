@@ -13424,7 +13424,11 @@ ${s} details.lv2 > .sc-body{padding:6px 14px 14px;display:grid;gap:14px}
 ${s} .sc-card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px}
 ${s} .sc-t{margin:0 0 8px;font-size:14px;color:var(--navy)}
 ${s} .sc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
-@media (max-width:820px){${s} .sc-grid{grid-template-columns:minmax(0,1fr)}}
+${s} .sc-happened{grid-column:1;grid-row:1 / span var(--span)}
+${s} .sc-criterion{grid-column:2;grid-row:var(--row)}
+${s} .sc-verdict{grid-column:3;grid-row:var(--row)}
+${s} .sc-name{font-weight:700;color:var(--navy);margin-bottom:4px}
+@media (max-width:820px){${s} .sc-grid{grid-template-columns:minmax(0,1fr)}${s} .sc-col{grid-column:1;grid-row:auto}}
 ${s} .sc-h{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
 ${s} .sc-box{border:1px solid var(--line);border-radius:8px;background:#FAF8F4;padding:8px 10px;margin-bottom:8px}
 ${s} .sc-v.ok{background:var(--ok-l)}
@@ -13659,15 +13663,15 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
     );
     xs.forEach((x, i) => {
       if (!notRunX.has(scalarText(x))) return;
-      const cell = svg("rect", {
+      const cell2 = svg("rect", {
         x: PAD.left + band * i,
         y: PAD.top,
         width: band,
         height: plotH,
         fill: `url(#${hatchId})`
       });
-      cell.setAttribute("data-not-run", scalarText(x));
-      root.append(cell);
+      cell2.setAttribute("data-not-run", scalarText(x));
+      root.append(cell2);
     });
     if (chart.mark === "rect") {
       const ys = domainOf(chart, "y");
@@ -13825,18 +13829,18 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
       const row2 = el2("tr");
       for (const name of chart.keys)
         row2.append(el2("td", void 0, scalarText(g.key[name])));
-      const cell = el2("td");
+      const cell2 = el2("td");
       if (g.notRun) {
-        cell.dataset.notRun = "";
-        cell.textContent = w.t("chart.not_run");
+        cell2.dataset.notRun = "";
+        cell2.textContent = w.t("chart.not_run");
       } else {
         const key = `chart-${index}-${i}`;
         const name = chart.keys.map((k) => scalarText(g.key[k])).join(" \xB7 ");
         const value = el2("span", void 0, String(g.value));
         value.dataset.chartValue = key;
-        cell.append(value, " ", valueEvidence(key, name, g, w));
+        cell2.append(value, " ", valueEvidence(key, name, g, w));
       }
-      row2.append(cell);
+      row2.append(cell2);
       tbody.append(row2);
     });
     table2.append(thead, tbody);
@@ -13964,16 +13968,16 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
         row2.append(el3("td", "cv-pad"));
       for (let n = 1; n <= last; n++) {
         const day = `${month}-${String(n).padStart(2, "0")}`;
-        const cell = el3("td", "cv-day");
-        cell.dataset.day = day;
-        cell.append(el3("div", "cv-dn", String(n).padStart(2, "0")));
+        const cell2 = el3("td", "cv-day");
+        cell2.dataset.day = day;
+        cell2.append(el3("div", "cv-dn", String(n).padStart(2, "0")));
         if (notRun.has(day)) {
-          cell.dataset.notRun = "";
-          cell.append(el3("div", "cv-nr", w.t("chart.not_run")));
+          cell2.dataset.notRun = "";
+          cell2.append(el3("div", "cv-nr", w.t("chart.not_run")));
         } else
           for (const lane of view.lanes)
-            cell.append(laneCell(lane, index, day, w));
-        row2.append(cell);
+            cell2.append(laneCell(lane, index, day, w));
+        row2.append(cell2);
         if (weekdayOf(day) === 6 || n === last) {
           tbody.append(row2);
           row2 = el3("tr");
@@ -14874,7 +14878,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("c55843fc931fb4d8aab0c8d18ab2b76c7b5f38f1");
+    return commitPrefix("16492064d8f5487c0defc0088782a120162477b8");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -17164,7 +17168,7 @@ ${key}`);
     section.dataset.section = "check-yourself";
     section.append(el4("h2", "", w.t("front.check.h")));
     const anchors = el4("div", "anchors");
-    const cell = (label, value, key) => {
+    const cell2 = (label, value, key) => {
       const box = el4("div", "anchor");
       box.dataset.anchor = key;
       box.append(el4("span", "k", label), el4("code", "", value));
@@ -17173,18 +17177,18 @@ ${key}`);
     const extensions2 = bundleObject(b.extensions);
     const producerKey = bundleObject(extensions2["producer-key/v1"]).public_key;
     if (typeof producerKey === "string")
-      cell(w.t("front.check.key"), producerKey, "producer-key");
+      cell2(w.t("front.check.key"), producerKey, "producer-key");
     const checkpoint = bundleObject(b.checkpoint);
     if (typeof checkpoint.log_id === "string")
-      cell(w.t("front.check.log"), checkpoint.log_id, "log");
+      cell2(w.t("front.check.log"), checkpoint.log_id, "log");
     if (typeof checkpoint.root === "string" && typeof checkpoint.mmr_size === "number")
-      cell(
+      cell2(
         w.t("front.check.root"),
         `${checkpoint.root} \xB7 ${fmt2(checkpoint.mmr_size)}`,
         "checkpoint"
       );
     if (Array.isArray(b.records))
-      cell(w.t("front.check.records"), fmt2(b.records.length), "records");
+      cell2(w.t("front.check.records"), fmt2(b.records.length), "records");
     section.append(anchors);
     const receipts2 = witnessEntries(b.checkpoint).filter(
       (entry) => !entry.stub && !entry.malformed
@@ -17208,7 +17212,7 @@ ${key}`);
     row2.classList.add("x");
     detail.classList.add("x-detail");
     detail.id = `cr-x-${key.replace(/[^A-Za-z0-9_.-]/gu, "_")}`;
-    const cell = detail.firstElementChild;
+    const cell2 = detail.firstElementChild;
     const toggle = document.createElement("details");
     toggle.className = "lv lv1 rx";
     toggle.dataset.level = "1";
@@ -17217,7 +17221,7 @@ ${key}`);
     name.replaceWith(toggle);
     summary.append(name);
     toggle.append(summary);
-    deferBody(toggle, build, eager, cell);
+    deferBody(toggle, build, eager, cell2);
     row2.addEventListener("click", (event) => {
       if (event.target.closest("summary, a, .cv-ev") !== null)
         return;
@@ -17255,64 +17259,73 @@ ${key}`);
     if (text2 !== void 0) value.textContent = text2;
     return value;
   }
-  function column(kind, heading) {
+  function cell(kind, heading, rule) {
     const col = el5("div", `sc-col sc-${kind}`);
     col.dataset.column = kind;
+    if (rule !== void 0) col.dataset.spotRule = rule;
     col.append(el5("h5", "sc-h", heading));
     return col;
   }
   function happened(s, w) {
     const turns = s.transcript.turns;
     const shown2 = s.transcript.state === "verified" || s.transcript.state === "cited";
-    const col = column(
+    const calls = turns?.reduce((n, t) => n + t.toolCalls.length, 0) ?? 0;
+    const col = cell(
       "happened",
       shown2 && turns !== void 0 ? w.t("spot.col.happened.counted", {
         turns: w.p("spot.turns", turns.length, { n: String(turns.length) }),
-        calls: w.p(
-          "chat.calls",
-          turns.reduce((n, t) => n + t.toolCalls.length, 0),
-          { n: String(turns.reduce((n, t) => n + t.toolCalls.length, 0)) }
-        )
+        calls: w.p("chat.calls", calls, { n: String(calls) })
       }) : w.t("spot.col.happened")
     );
+    col.style.setProperty("--span", String(s.rules.length));
     col.append(renderChat(s.transcript, s.caseRecord, w));
-    if (shown2) col.append(el5("p", "sc-gap", w.t("spot.gap.produced")));
+    if (shown2) {
+      const record = s.transcript.transcriptRecordId;
+      if (record !== void 0) {
+        col.dataset.record = record;
+        const link = el5("a", "chat-static", w.t("chat.read"));
+        link.setAttribute("href", `#${recordAddress(record)}`);
+        link.hidden = true;
+        col.append(link);
+      }
+      col.append(el5("p", "sc-gap", w.t("spot.gap.produced")));
+    }
     return col;
   }
-  function criterion(s, w) {
-    const col = column("criterion", w.t("spot.col.criterion"));
+  function criterion(r, w) {
+    const col = cell("criterion", w.t("spot.col.criterion"), r.ref);
+    col.append(el5("div", "sc-name", r.name));
     const term = el5("div", "sc-box");
-    term.dataset.wording = s.wording.source;
-    if (s.wording.source === "sealed") {
+    term.dataset.wording = r.wording.source;
+    if (r.wording.source === "sealed") {
       term.append(el5("div", "sc-k", w.t("spot.term")));
-      term.append(el5("blockquote", "sc-q", s.wording.text));
+      term.append(el5("blockquote", "sc-q", r.wording.text));
     } else
       term.append(
         el5(
           "p",
           "sc-gap",
           w.t(
-            s.wording.source === "mixed" ? "spot.term.mixed" : "spot.term.unstated"
+            r.wording.source === "mixed" ? "spot.term.mixed" : "spot.term.unstated"
           )
         )
       );
     col.append(term);
-    col.append(el5("p", "sc-gap", w.t("spot.gap.when")));
     return col;
   }
-  function verdictColumn(s, w) {
-    const col = column("verdict", w.t("spot.col.verdict"));
-    const head2 = el5("div", `sc-box sc-v ${s.worded.tone}`);
-    head2.append(wordPill(s.worded, s.verdict));
-    if (s.rationale !== void 0) {
+  function verdictCell(r, w) {
+    const col = cell("verdict", w.t("spot.col.verdict"), r.ref);
+    const head2 = el5("div", `sc-box sc-v ${r.worded.tone}`);
+    head2.append(wordPill(r.worded, r.verdict));
+    if (r.rationale !== void 0) {
       head2.append(el5("div", "sc-k", w.t("spot.says")));
-      head2.append(el5("p", "sc-q", judgeNote(s.rationale, s.drawnVerdict, w)));
-    } else head2.append(el5("p", "sc-gap", s.noNote));
+      head2.append(el5("p", "sc-q", judgeNote(r.rationale, r.drawnVerdict, w)));
+    } else head2.append(el5("p", "sc-gap", r.noNote));
     col.append(head2);
-    const parsed = s.rationale === void 0 ? {} : parseJudgeProbabilities(s.rationale);
+    const parsed = r.rationale === void 0 ? {} : parseJudgeProbabilities(r.rationale);
     const facts = [];
-    if (s.judgePinDigest !== void 0)
-      facts.push(w.t("spot.pin", { digest: s.judgePinDigest }));
+    if (r.judgePinDigest !== void 0)
+      facts.push(w.t("spot.pin", { digest: r.judgePinDigest }));
     if (parsed.confidence !== void 0)
       facts.push(w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }));
     if (facts.length > 0) {
@@ -17320,24 +17333,35 @@ ${key}`);
       line.dataset.judge = "";
       col.append(line);
     }
-    col.append(el5("p", "sc-gap", w.t("spot.gap.adjudication")));
     return col;
   }
   function spotCheckCard(s, w) {
     const card = el5("article", "sc-card");
-    card.dataset.spotCheck = s.ref;
-    card.dataset.critVerdict = s.verdict;
-    card.append(el5("h4", "sc-t", s.name));
+    card.dataset.spotCheck = "";
     const grid = el5("div", "sc-grid");
-    grid.append(happened(s, w), criterion(s, w), verdictColumn(s, w));
+    grid.append(happened(s, w));
+    s.rules.forEach((rule, index) => {
+      const row2 = index + 1;
+      const c = criterion(rule, w);
+      const v = verdictCell(rule, w);
+      c.style.setProperty("--row", String(row2));
+      v.style.setProperty("--row", String(row2));
+      grid.append(c, v);
+    });
     card.append(grid);
+    const gaps = el5("div", "sc-gaps");
+    gaps.append(
+      el5("p", "sc-gap", w.t("spot.gap.when")),
+      el5("p", "sc-gap", w.t("spot.gap.adjudication"))
+    );
+    card.append(gaps);
     return card;
   }
-  function spotCheckToggle(subjects, w) {
-    if (subjects.length === 0) return void 0;
+  function spotCheckToggle(s, w) {
+    if (s.rules.length === 0) return void 0;
     const toggle = levelToggle(2, w.t("spot.toggle"), () => {
       const body = el5("div", "sc-body");
-      for (const subject of subjects) body.append(spotCheckCard(subject, w));
+      body.append(spotCheckCard(s, w));
       return body;
     });
     toggle.dataset.section = "spot-check";
@@ -17673,11 +17697,11 @@ ${key}`);
         nameCell.append(wording);
       }
       tr.append(nameCell);
-      const verdictCell = element3("td");
-      verdictCell.append(
+      const verdictCell2 = element3("td");
+      verdictCell2.append(
         wordPill(criterionWord(criterion2, w), criterion2.verdict)
       );
-      tr.append(verdictCell);
+      tr.append(verdictCell2);
       if (!hasNotes) {
         tbody.append(tr);
         continue;
@@ -17727,31 +17751,33 @@ ${key}`);
       body.append(gap);
     }
     const spot = spotCheckToggle(
-      conversation.criteria.flatMap((criterion2) => {
-        if (criterion2.claim === void 0) return [];
-        const label = criterionLabel(
-          model,
-          criterion2.checkId,
-          criterion2.criterionId,
-          w
-        );
-        return [
-          {
-            name: label.label,
-            ref: `${criterion2.checkId}.${criterion2.criterionId}`,
-            worded: criterionWord(criterion2, w),
-            verdict: criterion2.verdict,
-            drawnVerdict: criterion2.claim.verdict,
-            wording: { text: label.text, source: label.source },
-            rationale: criterion2.rationale,
-            noNote: noNoteText(criterion2, w),
-            judgePinDigest: criterion2.judgePinDigest,
-            reportState: criterion2.reportState,
-            transcript: conversation.transcript,
-            caseRecord: conversation.sourceCapsuleId
-          }
-        ];
-      }),
+      {
+        transcript: conversation.transcript,
+        caseRecord: conversation.sourceCapsuleId,
+        rules: conversation.criteria.flatMap((criterion2) => {
+          if (criterion2.claim === void 0) return [];
+          const label = criterionLabel(
+            model,
+            criterion2.checkId,
+            criterion2.criterionId,
+            w
+          );
+          return [
+            {
+              name: label.label,
+              ref: `${criterion2.checkId}.${criterion2.criterionId}`,
+              worded: criterionWord(criterion2, w),
+              verdict: criterion2.verdict,
+              drawnVerdict: criterion2.claim.verdict,
+              wording: { text: label.text, source: label.source },
+              rationale: criterion2.rationale,
+              noNote: noNoteText(criterion2, w),
+              judgePinDigest: criterion2.judgePinDigest,
+              reportState: criterion2.reportState
+            }
+          ];
+        })
+      },
       w
     );
     if (spot !== void 0) body.append(spot);
@@ -17889,10 +17915,10 @@ ${key}`);
       if (criterion2.claim === void 0) tr.append(el6("td", "muted", "\u2013"));
       else {
         const [, text2, data] = assuranceRow(criterion2.claim, w);
-        const cell = element3("td", text2);
+        const cell2 = element3("td", text2);
         for (const [key, value] of Object.entries(data))
-          cell.dataset[key] = value;
-        tr.append(cell);
+          cell2.dataset[key] = value;
+        tr.append(cell2);
       }
       tbody.append(tr);
     }
@@ -18322,9 +18348,9 @@ ${key}`);
       const group = el6("tr", "grp");
       group.dataset.checkId = check.id;
       group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
-      const cell = el6("td", "", groupTitle(check, w));
-      cell.setAttribute("colspan", columns);
-      group.append(cell);
+      const cell2 = el6("td", "", groupTitle(check, w));
+      cell2.setAttribute("colspan", columns);
+      group.append(cell2);
       tbody.append(group);
       for (const criterion2 of check.criteria) {
         const ref = `${check.id}.${criterion2.id}`;
@@ -18346,14 +18372,14 @@ ${key}`);
         const na = of((v) => v === "not_applicable");
         const outOfScopeHere = of(picks.out_of_scope);
         const undecided = of(picks.undecided);
-        const countCell = (className, column2, counted) => {
-          const pick = picks[column2];
-          const cell3 = el6("td", className);
-          cell3.dataset.column = column2;
-          cell3.append(el6("span", "nv", fmtCount(counted.length)));
+        const countCell = (className, column, counted) => {
+          const pick = picks[column];
+          const cell4 = el6("td", className);
+          cell4.dataset.column = column;
+          cell4.append(el6("span", "nv", fmtCount(counted.length)));
           const action = evidenceAction(
-            `rule:${ref}:${column2}`,
-            `${label.label} \xB7 ${columnWord[column2]}: ${fmtCount(counted.length)}`,
+            `rule:${ref}:${column}`,
+            `${label.label} \xB7 ${columnWord[column]}: ${fmtCount(counted.length)}`,
             counted.map(
               (c) => c.criteria.find(
                 (cr) => cr.checkId === check.id && cr.criterionId === criterion2.id && pick(cr.verdict)
@@ -18362,8 +18388,8 @@ ${key}`);
             result,
             w
           );
-          if (action !== void 0) cell3.append(action);
-          return cell3;
+          if (action !== void 0) cell4.append(action);
+          return cell4;
         };
         const tr = el6("tr", "rule");
         tr.dataset.rule = ref;
@@ -18410,9 +18436,9 @@ ${key}`);
         if (problems.length === 0 && na.length === 0) continue;
         const drillRow = el6("tr", "drill-row");
         drillRow.dataset.drillFor = ref;
-        const cell2 = element3("td");
-        cell2.setAttribute("colspan", columns);
-        drillRow.append(cell2);
+        const cell3 = element3("td");
+        cell3.setAttribute("colspan", columns);
+        drillRow.append(cell3);
         if (na.length > 0) {
           const naLine = el6(
             "p",
@@ -18422,7 +18448,7 @@ ${key}`);
             })
           );
           naLine.dataset.count = String(na.length);
-          cell2.append(naLine);
+          cell3.append(naLine);
         }
         const toggle = expandableRow(
           tr,
@@ -19071,11 +19097,11 @@ ${key}`);
     };
   }
   function rowResult(row2, model, result, w) {
-    const cell = document.createElement("td");
+    const cell2 = document.createElement("td");
     const status2 = rowStatus(row2, w);
-    cell.append(statusPill(status2.cls, status2.text));
+    cell2.append(statusPill(status2.cls, status2.text));
     if (status2.note !== void 0)
-      cell.append(
+      cell2.append(
         maybeProducer(
           w,
           "div",
@@ -19104,9 +19130,9 @@ ${key}`);
         w,
         w.t("evidence.show.for", { what: word })
       );
-      if (action !== void 0) cell.append(action);
+      if (action !== void 0) cell2.append(action);
     }
-    return cell;
+    return cell2;
   }
   function claimOf(model, conversationId, criterionId) {
     return model.sessions.find((s) => s.conversationId === conversationId)?.tests.find((t) => t.criterionId === criterionId)?.claim;
@@ -19228,9 +19254,9 @@ ${key}`);
         if (sessionIds.length > 0) {
           const drillRow = el7("tr", "drill-row");
           drillRow.dataset.drillFor = test.criterionId;
-          const cell = document.createElement("td");
-          cell.setAttribute("colspan", "3");
-          drillRow.append(cell);
+          const cell2 = document.createElement("td");
+          cell2.setAttribute("colspan", "3");
+          drillRow.append(cell2);
           const toggle = expandableRow(
             tr,
             testName,
@@ -19408,32 +19434,34 @@ ${key}`);
       )
     );
     const spot = spotCheckToggle(
-      session.tests.flatMap((test) => {
-        if (test.claim === void 0) return [];
-        return [
-          {
-            name: names2(test.criterionId, "span", "").textContent ?? "",
-            ref: test.criterionId,
-            worded: ruleWord(
-              test.verdict,
-              judgedOf(test.reportState, test.judgePinDigest),
-              w
-            ),
-            verdict: test.verdict,
-            drawnVerdict: test.claim.verdict,
-            wording: wordings.get(test.criterionId) ?? {
-              text: "",
-              source: "unstated"
-            },
-            rationale: test.rationale,
-            noNote: notesGap([test.reportState], w),
-            judgePinDigest: test.judgePinDigest,
-            reportState: test.reportState,
-            transcript: session.transcript,
-            caseRecord: session.sourceCapsuleId
-          }
-        ];
-      }),
+      {
+        transcript: session.transcript,
+        caseRecord: session.sourceCapsuleId,
+        rules: session.tests.flatMap((test) => {
+          if (test.claim === void 0) return [];
+          return [
+            {
+              name: names2(test.criterionId, "span", "").textContent ?? "",
+              ref: test.criterionId,
+              worded: ruleWord(
+                test.verdict,
+                judgedOf(test.reportState, test.judgePinDigest),
+                w
+              ),
+              verdict: test.verdict,
+              drawnVerdict: test.claim.verdict,
+              wording: wordings.get(test.criterionId) ?? {
+                text: "",
+                source: "unstated"
+              },
+              rationale: test.rationale,
+              noNote: notesGap([test.reportState], w),
+              judgePinDigest: test.judgePinDigest,
+              reportState: test.reportState
+            }
+          ];
+        })
+      },
       w
     );
     if (spot !== void 0) body.append(spot);
@@ -19830,7 +19858,7 @@ ${key}`);
   }
   function row(cells, header = false) {
     const tr = element5("tr");
-    for (const cell of cells) tr.append(element5(header ? "th" : "td", cell));
+    for (const cell2 of cells) tr.append(element5(header ? "th" : "td", cell2));
     return tr;
   }
   function table(name, columns, rows) {
@@ -20768,14 +20796,14 @@ ${pad.repeat(depth)}`;
   }
   function appendTime(parent2, label, value, absent) {
     parent2.append(element6("dt", label));
-    const cell = element6("dd");
+    const cell2 = element6("dd");
     if (value === void 0) {
-      cell.textContent = absent;
-      cell.dataset.time = "not-stated";
+      cell2.textContent = absent;
+      cell2.dataset.time = "not-stated";
     } else {
-      cell.append(renderTime(value));
+      cell2.append(renderTime(value));
     }
-    parent2.append(cell);
+    parent2.append(cell2);
   }
   var recordsWord2 = (count2) => `${count2} ${count2 === 1 ? "record" : "records"}`;
   function renderVerificationBanner(root, model, coverage, witness) {
@@ -21434,19 +21462,19 @@ ${pad.repeat(depth)}`;
   }
   function appendCount(parent2, label, count2) {
     parent2.append(element6("dt", label));
-    const cell = element6("dd");
+    const cell2 = element6("dd");
     if (count2 === void 0) {
-      cell.textContent = "not stated";
-      cell.dataset.count = "not-stated";
+      cell2.textContent = "not stated";
+      cell2.dataset.count = "not-stated";
     } else if ("rate" in count2) {
-      cell.textContent = "rate given, k and n not stated";
-      cell.dataset.count = "not-stated";
+      cell2.textContent = "rate given, k and n not stated";
+      cell2.dataset.count = "not-stated";
     } else {
-      cell.textContent = `${count2.k} of ${count2.n}`;
-      cell.dataset.k = String(count2.k);
-      cell.dataset.n = String(count2.n);
+      cell2.textContent = `${count2.k} of ${count2.n}`;
+      cell2.dataset.k = String(count2.k);
+      cell2.dataset.n = String(count2.n);
     }
-    parent2.append(cell);
+    parent2.append(cell2);
   }
   function renderProvenance2(capsuleId, coordinates, times) {
     const panel = element6("section");
@@ -21763,28 +21791,28 @@ ${pad.repeat(depth)}`;
     return marker;
   }
   function appendCloseState(parent2, close, tag) {
-    const cell = element6(tag, close.state);
-    cell.dataset.closeState = close.state;
-    cell.dataset.closeDerivation = close.derivation;
-    cell.dataset.assertedState = close.asserted;
+    const cell2 = element6(tag, close.state);
+    cell2.dataset.closeState = close.state;
+    cell2.dataset.closeDerivation = close.derivation;
+    cell2.dataset.assertedState = close.asserted;
     if (close.stateMismatch) {
       const marker = element6("span", "state mismatch");
       marker.dataset.stateMismatch = "close_state";
       marker.dataset.asserted = close.asserted;
       marker.dataset.recomputed = close.state;
-      cell.append(" ", marker);
+      cell2.append(" ", marker);
     } else if (close.derivation === "producer-asserted") {
       const marker = element6("span", "producer-asserted");
       marker.dataset.producerAsserted = "close_state";
-      cell.append(" ", marker);
+      cell2.append(" ", marker);
     }
     if (close.peerRefMismatch) {
       const marker = element6("span", "peer_close_ref carries no such link");
       marker.dataset.peerRefMismatch = "peer_close_ref";
-      cell.append(" ", marker);
+      cell2.append(" ", marker);
     }
-    parent2.append(cell);
-    return cell;
+    parent2.append(cell2);
+    return cell2;
   }
   function renderClose(close, result, host) {
     host.append(element6("h4", "Close"));
@@ -21856,31 +21884,31 @@ ${pad.repeat(depth)}`;
   }
   function appendVerdict(parent2, claim) {
     const shown2 = shownVerdict(claim);
-    const cell = element6(
+    const cell2 = element6(
       parent2.tagName === "TR" ? "td" : "dd",
       claim.later ? `${shown2} (readiness)` : shown2
     );
-    cell.dataset.verdict = shown2;
-    cell.dataset.support = claim.support;
-    if (claim.later) cell.dataset.later = "true";
+    cell2.dataset.verdict = shown2;
+    cell2.dataset.support = claim.support;
+    if (claim.later) cell2.dataset.later = "true";
     if (claim.failed) {
-      cell.dataset.statedVerdict = claim.verdict;
-      cell.className = "claim-failed";
+      cell2.dataset.statedVerdict = claim.verdict;
+      cell2.className = "claim-failed";
     } else if (claim.support === "unsupported")
-      cell.className = "claim-unsupported";
-    parent2.append(cell);
-    return cell;
+      cell2.className = "claim-unsupported";
+    parent2.append(cell2);
+    return cell2;
   }
   function appendSufficiency(parent2, claim) {
     const shown2 = claim.failed ? "failed" : claim.sufficiency;
-    const cell = element6(parent2.tagName === "TR" ? "td" : "dd", shown2);
-    cell.dataset.sufficiency = shown2;
+    const cell2 = element6(parent2.tagName === "TR" ? "td" : "dd", shown2);
+    cell2.dataset.sufficiency = shown2;
     if (claim.failed) {
-      cell.dataset.statedSufficiency = claim.sufficiency;
-      cell.className = "claim-failed";
+      cell2.dataset.statedSufficiency = claim.sufficiency;
+      cell2.className = "claim-failed";
     }
-    parent2.append(cell);
-    return cell;
+    parent2.append(cell2);
+    return cell2;
   }
   function renderClaim(claim, result, host) {
     host.replaceChildren();
