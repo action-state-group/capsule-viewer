@@ -15407,7 +15407,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   function readEntry2(value, operator) {
     if (!isObj4(value)) return void 0;
     const labels = value.request_labels;
-    if (!Array.isArray(labels) || labels.length === 0 || labels.length > MAX_LABELS || labels.some((l) => str(l, MAX_LABEL) === void 0))
+    if (!Array.isArray(labels) || labels.length > MAX_LABELS || labels.some((l) => str(l, MAX_LABEL) === void 0))
       return void 0;
     let bandExponent;
     if (value.usd_band !== void 0) {
@@ -15572,7 +15572,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       core.append(
         ` \xB7 ${w.t("lines.subject.core.halves", {
           present: fmt(halves.reduce((a, h) => a + h.present, 0)),
-          of: fmt(halves.reduce((a, h) => a + h.of, 0))
+          of: fmt(halves.reduce((a, h) => a + h.of, 0)),
+          k: fmt(halves.length),
+          n: fmt(n)
         })}`
       );
     block.append(core);
@@ -15598,8 +15600,18 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     const nothing = count2("nothing-applied");
     if (unverified + nothing > 0) {
       const rest = [
-        ...unverified > 0 ? [w.t("lines.headline.unverified", { n: fmt(unverified) })] : [],
-        ...nothing > 0 ? [w.t("lines.headline.nothing-applied", { n: fmt(nothing) })] : []
+        ...unverified > 0 ? [
+          w.t("lines.subject.note.unverified", {
+            n: fmt(unverified),
+            total: fmt(n)
+          })
+        ] : [],
+        ...nothing > 0 ? [
+          w.t("lines.subject.note.nothing-applied", {
+            n: fmt(nothing),
+            total: fmt(n)
+          })
+        ] : []
       ];
       block.append(el5("p", "sh-note", rest.join(" ")));
     }
@@ -15982,7 +15994,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("8022ace1212a4d7fc00a02edf390af313dfde7e5");
+    return commitPrefix("87d9347ce7f4bda2617aaa996e6b59d86ac28b7b");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16716,7 +16728,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.subject.none": "No customer handle in this report has more than one conversation.",
       "lines.subject.core.customer": "Customer {handle}",
       "lines.subject.core.scope": "handle scope: {pack}, {tier} tier, salted {salting}, salt {salt}",
-      "lines.subject.core.halves": "the customer's halves: {present} of {of} present",
+      "lines.subject.core.halves": "the customer's halves: {present} of {of} present, in {k} of {n} conversations that state them",
       "lines.subject.share": "{count} of {total}",
       "lines.subject.tile.conversations": "conversations \xB7 {first} to {last} \xB7 of the report's {total}",
       "lines.subject.tile.resolved": "resolved \xB7 every term met",
@@ -16751,7 +16763,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.subject.legend.not-met": "not met",
       "lines.subject.legend.undecided": "could not decide",
       "lines.subject.legend.order": "terms are in the contract's order",
-      "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them."
+      "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them.",
+      "lines.subject.note.unverified": "{n} of {total} could not be verified.",
+      "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied."
     }
   };
 
@@ -18221,7 +18235,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "576787d154cb69f52b508b0aa00d8c0bef18c249cf3be43d06143ca1f140b148",
+    lines: "06049d1407810f6b9fe8d39ee81c2fc964f9961cddf3e171aaeb4344784d8305",
     groups: "71388f5b52c23a6c5f78adb8767c724d99855a0223a0ee7eae4997fe97458dae"
   });
   function fill(key, text2, vars) {
