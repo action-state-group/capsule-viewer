@@ -20,6 +20,7 @@ import {
   type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
+import { tagSource } from "./report-legend.js";
 import { OUTCOME_FRAME_VARS } from "./frame-tokens.generated.js";
 import { judgedByMock, tallyJudges } from "./report-provenance.js";
 
@@ -32,7 +33,9 @@ export const CORE_STRIP_ATTRIBUTE = "data-core-strip";
  * its hash.
  */
 export const CORE_STRIP_CSS = `
-.cv-strip{${OUTCOME_FRAME_VARS}max-width:1080px;margin:0 auto 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cv-strip{${OUTCOME_FRAME_VARS}position:relative;max-width:1080px;margin:0 auto 16px;padding:14px 16px 14px 34px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cv-strip:before{content:"\\25A0";content:"\\25A0" / "";position:absolute;left:13px;top:16px;font-size:12px;line-height:1;color:#8A93A0}
+.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
 .cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
 .cv-strip .agg-line{font-size:14px;margin:0 0 12px}
 .cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -172,7 +175,7 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
     // The canvas draws the tile's caption on one line: "Met · of N ...".
     const caption = el("div", "agg-cap");
     caption.append(
-      el("span", "", w.t(`front.agg.bucket.${verdict}`)),
+      tagSource(el("span", "", w.t(`front.agg.bucket.${verdict}`)), "pack"),
       document.createTextNode(" · "),
       el("span", "agg-of", of),
     );
@@ -254,9 +257,15 @@ function renderCoreIdentity(model: CoreStripModel): HTMLElement {
     facts.push(w.t("front.core.pins", { n: fmt(model.pins.length) }));
   const block = el("div", "core-id");
   block.dataset.section = "core-identity";
-  const top = el("p", "agg-note core-kicker", kicker.join(" · "));
+  const top = tagSource(
+    el("p", "agg-note core-kicker", kicker.join(" · ")),
+    "core",
+  );
   top.dataset.coreKicker = "";
-  const rest = el("p", "agg-note core-facts", facts.join(" · "));
+  const rest = tagSource(
+    el("p", "agg-note core-facts", facts.join(" · ")),
+    "core",
+  );
   rest.dataset.coreFacts = "";
   block.append(top, rest);
   return block;

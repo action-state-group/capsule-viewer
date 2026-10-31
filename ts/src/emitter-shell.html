@@ -159,6 +159,22 @@
         border-color: var(--aac-bad);
         background: var(--aac-bad-bg);
       }
+      /* The banner and its notices have no toggle: the core draws them, and
+         the square at their left edge says so (Terms Pack, the toggle). */
+      #app.cv-shell-chrome :where(.cv-shell-bar)::before,
+      #app.cv-shell-chrome :where(.cv-banner-detail)::before {
+        content: "\25A0";
+        content: "\25A0" / "";
+        flex: none;
+        width: 1em;
+        margin-right: 0.25rem;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #8a93a0;
+      }
+      #app.cv-shell-chrome :where(.cv-banner-detail)::before {
+        display: inline-block;
+      }
       #app.cv-shell-chrome :where(.cv-banner-detail) {
         max-width: 1080px;
         box-sizing: border-box;

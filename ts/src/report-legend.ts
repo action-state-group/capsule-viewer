@@ -25,12 +25,11 @@ export const WORD_SOURCES = [
 export type WordSource = (typeof WORD_SOURCES)[number];
 
 /**
- * The sources the legend names: the ones the page marks in its text. Core,
- * wording-pack and capsule-field words are drawn but not yet tagged node by
- * node, so the legend does not list chips for styles a reader cannot see;
- * its last line says unmarked text is the viewer's or the report's own.
+ * The sources the legend names: the five the page marks in its text, in the
+ * canvas's order. Not every word on a page is tagged node by node, so the
+ * legend's last line says unmarked text is the viewer's or the report's own.
  */
-export const MARKED_SOURCES = ["payload", "producer"] as const;
+export const MARKED_SOURCES = WORD_SOURCES;
 
 /**
  * Marks `node` as words from `source`. The style is the page stylesheet's:
@@ -42,6 +41,18 @@ export function tagSource<T extends HTMLElement>(
   source: WordSource,
 ): T {
   node.dataset.src = source;
+  return node;
+}
+
+/**
+ * A typed field of a record, shown with its path, as recorded (the canvas's
+ * `effect: fee_applied`): the value is the record's, the path names where a
+ * reader finds it in the record view. Monospace, blue (`field` source).
+ */
+export function fieldText(path: string, value: string): HTMLElement {
+  const node = tagSource(document.createElement("code"), "field");
+  node.dataset.path = path;
+  node.textContent = `${path}: ${value}`;
   return node;
 }
 
@@ -107,7 +118,7 @@ ${s} .cv-src[data-src="field"]{background:#FBEFD2;color:#8A5A0B}
 ${s} .cv-src[data-src="payload"]{background:#F2EEE8;color:#4A4339;border:1px solid #D9D2C6}
 ${s} .cv-src[data-src="producer"]{background:#ECE6F8;color:#5B3FA0}
 ${s} [data-src="core"]:not(.cv-src){font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
-${s} [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;color:#1F5C99}
+${s} [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;font-size:.92em;color:#1F5C99}
 ${s} [data-src="payload"]:not(.cv-src){background:#F2EEE8;border:1px solid #E3DCCF;border-radius:6px;padding:2px 6px;color:var(--ink)}
 ${s} [data-src="payload"][data-kind="tool-call"]:not(.cv-src){border-style:dashed;font-family:ui-monospace,Menlo,monospace}
 ${s} [data-src="producer"]:not(.cv-src){font-style:italic}

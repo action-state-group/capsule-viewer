@@ -89,7 +89,7 @@ for (const grouping of ["lines", "groups"] as const)
       W.t("judge.note.sure", { p: 91 }),
     );
     expect(verdict.querySelector("[data-judge]")!.textContent).toBe(
-      `judge pin ${PIN} · confidence 0.91`,
+      `judge_pin: ${PIN} · confidence: 0.91`,
     );
   });
 

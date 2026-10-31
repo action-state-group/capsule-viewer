@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
 import {
   MARKED_SOURCES,
+  fieldText,
   WORD_SOURCES,
   legendCss,
   renderLegend,
@@ -27,7 +28,13 @@ for (const grouping of ["lines", "groups"] as const) {
     ]);
     const chips = [...legend.querySelectorAll<HTMLElement>(".cv-src")];
     expect(chips.map((c) => c.dataset.src)).toEqual([...MARKED_SOURCES]);
-    expect(chips.map((c) => c.textContent)).toEqual(["payload", "producer"]);
+    expect(chips.map((c) => c.textContent)).toEqual([
+      "core",
+      "wording pack",
+      "capsule field",
+      "payload",
+      "producer",
+    ]);
     expect(legend.textContent).toContain("Unmarked text is the viewer's");
     expect(legend.textContent).toContain("closed, the reader opens it");
     expect(legend.textContent).toContain("Where every word comes from");
@@ -152,4 +159,27 @@ it("a table row's toggle clears the view's mark on a reader close too", async ()
   toggle.open = false;
   toggle.dispatchEvent(new Event("toggle"));
   expect(toggle.dataset.openedBy).toBeUndefined();
+});
+
+it("a typed field is shown with its path, as the field source", () => {
+  const node = fieldText("effect", "fee_applied");
+  expect(node.tagName).toBe("CODE");
+  expect(node.dataset.src).toBe("field");
+  expect(node.dataset.path).toBe("effect");
+  expect(node.textContent).toBe("effect: fee_applied");
+  expect(legendCss("x")).toContain(
+    '[data-src="field"]:not(.cv-src){font-family:ui-monospace',
+  );
+});
+
+it("the core's regions that have no toggle carry the square at their left edge", async () => {
+  const { CORE_STRIP_CSS } = await import("../src/core-strip.js");
+  expect(CORE_STRIP_CSS).toContain('.cv-strip:before{content:"\\25A0"');
+  expect(levelCss("x")).toContain('.x .wref:before{content:"\\25A0"');
+  const shell = (await import("node:fs")).readFileSync(
+    "src/emitter-shell.html",
+    "utf8",
+  );
+  expect(shell).toContain(".cv-shell-bar)::before");
+  expect(shell).toContain(".cv-banner-detail)::before");
 });
