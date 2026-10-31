@@ -15,6 +15,7 @@
  * elements anywhere on the page).
  */
 import { levelCss } from "./report-levels.js";
+import { legendCss } from "./report-legend.js";
 import { OUTCOME_FRAME_VARS } from "./frame-tokens.generated.js";
 import { frontCss } from "./report-front-styles.js";
 
@@ -212,6 +213,7 @@ export const OUTCOME_REPORT_CSS =
 }
 ` +
   levelCss("oi") +
+  legendCss("oi") +
   frontCss(".oi") +
   // The page layout (one left edge, bordered cards 16px apart): last, so
   // it wins over the card's older rules above. The page colour is the
