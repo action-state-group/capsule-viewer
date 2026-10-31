@@ -63,7 +63,10 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
 5. **Ship the runtime in Go.** On a clean checkout of the new
    `ts/v<version>` tag, run `scripts/pageruntime.sh --write`, commit the
    refreshed `go/pageruntime` on a branch cut from the tag, and merge it as a
-   pull request with a merge commit (see [Go](#go)). Do not rebase the branch
+   pull request with a merge commit (see [Go](#go)). If the refresh ships a
+   name listed in `NOT_YET_SHIPPED` in `ts/test/emitter-iife.test.ts`, drop it
+   there in the same pull request: the runtime's contract test fails until
+   you do. Do not rebase the branch
    or update it from `main`.
 6. **Tag the Go module.** An admin runs
    `scripts/go-release-check.sh <version>` on that pull request's head commit,

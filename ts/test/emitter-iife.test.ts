@@ -69,12 +69,17 @@ describe("browser IIFE emitter", () => {
 const MODULE_CONTRACT = [
   "registerPresentation",
   "buildResultRoot",
+  "buildVerifiedBundleContext",
   "disclosureOf",
   "ed25519Available",
   "verifiedPayload",
   "verifyDisclosureEnvelope",
   "verifyProducerEnvelope",
 ] as const;
+
+// Names src/browser.ts lists that the committed go/pageruntime predates
+// (capsule-viewer#167).
+const NOT_YET_SHIPPED: readonly string[] = ["buildVerifiedBundleContext"];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
@@ -98,8 +103,20 @@ describe("the runtime's global", () => {
       const global = globalOf(
         await readFile(new URL(file, import.meta.url), "utf8"),
       );
-      for (const member of MODULE_CONTRACT)
+      for (const member of MODULE_CONTRACT) {
+        // Not yet in the shipped runtime. Asserting its absence makes the
+        // refresh that ships it fail here until that refresh also drops it
+        // from NOT_YET_SHIPPED (RELEASING.md step 5; an edit under ts/, which
+        // scripts/go-release-check.sh does not compare).
+        if (name === "go/pageruntime" && NOT_YET_SHIPPED.includes(member)) {
+          expect(
+            typeof global[member],
+            `${member} now ships in go/pageruntime: drop it from NOT_YET_SHIPPED`,
+          ).toBe("undefined");
+          continue;
+        }
         expect(typeof global[member], member).toBe("function");
+      }
     });
   }
 
@@ -149,6 +166,58 @@ describe("the runtime's global", () => {
       )(bundle);
       expect(result.claims).toHaveLength(32);
     });
+
+  // A module that draws a composed/v1 bundle verifies each carried member
+  // with the page's own verifier (capsule-viewer#167): on the built runtime,
+  // both members of AAC's two-responder vector verify, and a member whose
+  // record was edited does not.
+  it("buildVerifiedBundleContext verifies each member of a two-sided bundle (the build)", async () => {
+    const context: Record<string, unknown> = {
+      TextEncoder,
+      TextDecoder,
+      crypto: globalThis.crypto,
+    };
+    runInNewContext(
+      await readFile(
+        new URL("../dist/evidence-graph.iife.js", import.meta.url),
+        "utf8",
+      ),
+      context,
+    );
+    const global = context.EvidenceGraph as Record<string, unknown>;
+    context.source = await readFile(
+      new URL(
+        "testdata/aac-vectors/bundle/composed/vectors.json",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const members = runInNewContext(
+      `JSON.parse(source).cases.find((c) => c.id === "agree").container.extensions["composed/v1"].members.filter((m) => m.bundle !== undefined).map((m) => m.bundle)`,
+      context,
+    ) as Array<{ records: Array<Record<string, unknown>> }>;
+    expect(members).toHaveLength(2);
+    type Verification = {
+      graphClosure: { status: string };
+      capsuleResults: Record<string, { ok: boolean }>;
+    };
+    const verify = global.buildVerifiedBundleContext as (
+      input: unknown,
+    ) => Promise<{ verification: Verification }>;
+    for (const member of members) {
+      const { verification } = await verify(member);
+      expect(verification.graphClosure.status).toBe("pass");
+      const results = Object.values(verification.capsuleResults);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.every((r) => r.ok)).toBe(true);
+    }
+    const edited = members[0]!;
+    edited.records[0]!.operator = "someone-else.example";
+    const { verification } = await verify(edited);
+    expect(Object.values(verification.capsuleResults).every((r) => r.ok)).toBe(
+      false,
+    );
+  });
 });
 
 describe("builtCommit's validation", () => {

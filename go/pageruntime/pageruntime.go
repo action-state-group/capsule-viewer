@@ -9,10 +9,10 @@
 // also on globalThis.
 //
 // Besides registerPresentation, the global carries the verifier functions a
-// presentation module may call: disclosureOf, ed25519Available,
-// verifiedPayload, verifyDisclosureEnvelope and verifyProducerEnvelope,
-// agent-action-capsule's own functions re-exported unchanged (the list in
-// ts/src/browser.ts).
+// presentation module may call: buildResultRoot, buildVerifiedBundleContext,
+// disclosureOf, ed25519Available, verifiedPayload, verifyDisclosureEnvelope
+// and verifyProducerEnvelope, agent-action-capsule's own functions
+// re-exported unchanged (the list in ts/src/browser.ts).
 //
 // The file is committed as built at Commit, with its SHA-256 pin beside it
 // (evidence-graph.iife.js.sha256). scripts/pageruntime.sh rebuilds it at
