@@ -15,10 +15,7 @@ here. The format follows
 
 Both state viewer 0.7.0: `ts/v0.7.0`, then `go/v0.7.0` on the commit that
 ships its page runtime. This release carries the frames merged since 0.6.0, as
-Steven's canvases draw them: #186 (adjudications), #187 (toggles and word
-sources), #188 (CORE identity line, one-line tiles, EU headline and worst
-line), #189 (calendar, timeline and co-failure), #190 (spot check), #192
-(lowest level), and #193 (Release · Go attaches the Adjudications bundle).
+Steven's canvases draw them: #186, #187, #188, #189, #190, #192, #193.
 
 ### Added
 
