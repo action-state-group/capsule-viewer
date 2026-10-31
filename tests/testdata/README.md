@@ -265,8 +265,10 @@ capsule-emit checkout for the `_stub_receipt` test helper and the
 `test-vectors/evidence-file` vector, and a capsule-emit that still ships
 `evidence_report`. The `exported`, `tampered-record` and `no-digest` cases
 come from `capsule-emit export --all`, which the shared
-`tests/evidence_report_helpers.py` ran at `df334fc`; the helper now runs
-`capsule-emit bundle --all`, so a rerun takes it from that commit. The
+`tests/evidence_report_helpers.py` ran at `df334fc`; the helper now builds
+the bundle with agent-action-capsule's `build_evidence_bundle` over a
+checkpointed CLL log and capsule-emit's artifact store, so a rerun takes it
+from that commit. The
 `witnessed` case also carries the witness directory its receipt checks under.
 
 `ledger/<case>/` holds the Ledger page's own goldens, written by

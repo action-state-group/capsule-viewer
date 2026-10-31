@@ -64,8 +64,9 @@ def test_a_whole_log_bundle_renders_the_verifiers_valid_result(tmp_path):
 def test_an_exported_bundle_renders_exactly_what_the_verifier_reported(exported):
     path, bundle = exported
     check, page = check_and_render(bundle, source=path.name)
-    # `capsule-emit bundle --all` proves the whole log, seq 1 to the
-    # checkpoint tip, so every check passes, interval coverage included.
+    # agent-action-capsule's build_evidence_bundle, over a checkpointed CLL
+    # log and capsule-emit's artifact store, proves the whole log, seq 1 to
+    # the checkpoint tip, so every check passes, interval coverage included.
     assert check.verdict == "VALID"
     assert _verdict_class(page) == "withheld" and html.escape(NOT_WITNESSED) in page
     statuses = {c.name: c.status for c in check.checks}
