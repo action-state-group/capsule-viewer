@@ -252,17 +252,13 @@ describe.skipIf(executablePath === undefined)(
           );
       }
       // Every stylesheet the shipped runtime inserts is one the CSP lists, and
-      // the only listed ones it does not insert yet are the stylesheets added
-      // since the runtime was last rebuilt (RELEASING.md step 5 rebuilds it at
-      // a release). When that rebuild lands this fails until UNRELEASED
-      // empties, so a release that forgot it cannot pass.
-      const UNRELEASED: string[] = [];
+      // every listed one is inserted by it. A stylesheet added to the CSP
+      // before the runtime is rebuilt (RELEASING.md step 5) is listed here as
+      // unreleased until that rebuild ships it.
       expect([...inserted].filter((h) => !listed.includes(h)).sort()).toEqual(
         [],
       );
-      expect(listed.filter((h) => !inserted.has(h)).sort()).toEqual(
-        [...UNRELEASED].sort(),
-      );
+      expect(listed.filter((h) => !inserted.has(h)).sort()).toEqual([]);
     });
 
     describe("with the reference core runtime", () => {

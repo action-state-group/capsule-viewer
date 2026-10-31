@@ -13167,21 +13167,9 @@ ${body}
   var OUTCOME_FRAME_VARS = "--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;";
 
   // src/report-legend.ts
-  var WORD_SOURCES = [
-    "core",
-    "pack",
-    "field",
-    "payload",
-    "producer"
-  ];
+  var MARKED_SOURCES = ["payload", "producer"];
   function tagSource(node, source) {
     node.dataset.src = source;
-    return node;
-  }
-  function fieldText(path2, value) {
-    const node = tagSource(document.createElement("code"), "field");
-    node.dataset.path = path2;
-    node.textContent = `${path2}: ${value}`;
     return node;
   }
   function el(tag, className, text2) {
@@ -13209,7 +13197,7 @@ ${body}
     const strip = el("p", "cv-legend-sources");
     strip.dataset.legend = "sources";
     strip.append(el("span", "cv-legend-lead", w.t("legend.src.lead")));
-    for (const source of WORD_SOURCES) {
+    for (const source of MARKED_SOURCES) {
       const entry = el("span", "cv-legend-item");
       const chip = el("span", "cv-src");
       chip.dataset.src = source;
@@ -13240,7 +13228,7 @@ ${s} .cv-src[data-src="field"]{background:#FBEFD2;color:#8A5A0B}
 ${s} .cv-src[data-src="payload"]{background:#F2EEE8;color:#4A4339;border:1px solid #D9D2C6}
 ${s} .cv-src[data-src="producer"]{background:#ECE6F8;color:#5B3FA0}
 ${s} [data-src="core"]:not(.cv-src){font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
-${s} [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;font-size:.92em;color:#1F5C99}
+${s} [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;color:#1F5C99}
 ${s} [data-src="payload"]:not(.cv-src){background:#F2EEE8;border:1px solid #E3DCCF;border-radius:6px;padding:2px 6px;color:var(--ink)}
 ${s} [data-src="payload"][data-kind="tool-call"]:not(.cv-src){border-style:dashed;font-family:ui-monospace,Menlo,monospace}
 ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
@@ -13685,7 +13673,7 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
   }
   function refusedWordingNotice(w) {
     if (w.source.refused === void 0) return void 0;
-    const p = tagSource(el2("p", "wref", w.t("card.wording.refused")), "core");
+    const p = el2("p", "wref", w.t("card.wording.refused"));
     p.dataset.wording = "refused";
     p.dataset.refusal = w.source.refused.reason;
     return p;
@@ -13710,7 +13698,6 @@ ${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;co
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
-${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
@@ -15612,13 +15599,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("cc18143beddece5bce9e33d6861423e9a96904ab");
+    return commitPrefix("0905d9d3c0750a9610940abfe8653ce8c2e87b86");
   }
   var commit = builtCommit();
-  var unreleased = true;
+  var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.6.0",
+    viewerVersion: "0.7.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.10.0",
     cllVersion: "0.3.0",
@@ -15958,6 +15945,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "spot.term.unstated": "The rule's wording is not in this bundle: no report in it states the wording.",
       "spot.term.mixed": "The rule's wording is not shown: the reports in this bundle state different wordings.",
       "spot.says": "The judge's words",
+      "spot.pin": "judge pin {digest}",
       "spot.confidence": "confidence {c}",
       "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
       "spot.gap.when": "This report states only each rule's wording, not when it counts as met or when it cannot be decided.",
@@ -16223,12 +16211,6 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "legend.toggle.core": "no toggle, the core always draws it",
       "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
       "legend.src.lead": "Where every word comes from",
-      "legend.src.core": "core",
-      "legend.src.core.is": "the viewer's own words",
-      "legend.src.pack": "wording pack",
-      "legend.src.pack.is": "the report's words",
-      "legend.src.field": "capsule field",
-      "legend.src.field.is": "a field as recorded, with its path",
       "legend.src.payload": "payload",
       "legend.src.payload.is": "the record's content",
       "legend.src.producer": "producer",
@@ -16487,6 +16469,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "spot.term.unstated": "The rule's wording is not in this bundle: no report in it states the wording.",
       "spot.term.mixed": "The rule's wording is not shown: the reports in this bundle state different wordings.",
       "spot.says": "The judge's words",
+      "spot.pin": "judge pin {digest}",
       "spot.confidence": "confidence {c}",
       "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
       "spot.gap.when": "This report states only each rule's wording, not when it counts as met or when it cannot be decided.",
@@ -16756,12 +16739,6 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "legend.toggle.core": "no toggle, the core always draws it",
       "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
       "legend.src.lead": "Where every word comes from",
-      "legend.src.core": "core",
-      "legend.src.core.is": "the viewer's own words",
-      "legend.src.pack": "wording pack",
-      "legend.src.pack.is": "the report's words",
-      "legend.src.field": "capsule field",
-      "legend.src.field.is": "a field as recorded, with its path",
       "legend.src.payload": "payload",
       "legend.src.payload.is": "the record's content",
       "legend.src.producer": "producer",
@@ -17817,8 +17794,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "dbb0e2fe7b85158ebfb15c18a67aa697aa25359f89f375e80cf07c756b398e5e",
-    groups: "72973aa2a763891e562f5be6de1c430e500de7f8866ab89b06aaea02f6e55fbd"
+    lines: "2b7c7fa07f4d0e041457012eb66a5f24608220a804e69731b726cb5af7a33944",
+    groups: "71388f5b52c23a6c5f78adb8767c724d99855a0223a0ee7eae4997fe97458dae"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -18465,7 +18442,7 @@ ${key}`);
     const term = el6("div", "sc-box");
     term.dataset.wording = r.wording.source;
     if (r.wording.source === "sealed") {
-      term.append(tagSource(el6("div", "sc-k", w.t("spot.term")), "pack"));
+      term.append(el6("div", "sc-k", w.t("spot.term")));
       term.append(el6("blockquote", "sc-q", r.wording.text));
     } else
       term.append(
@@ -18485,30 +18462,18 @@ ${key}`);
     const head2 = el6("div", `sc-box sc-v ${r.worded.tone}`);
     head2.append(wordPill(r.worded, r.verdict));
     if (r.rationale !== void 0) {
-      head2.append(tagSource(el6("div", "sc-k", w.t("spot.says")), "pack"));
+      head2.append(el6("div", "sc-k", w.t("spot.says")));
       head2.append(el6("p", "sc-q", judgeNote(r.rationale, r.drawnVerdict, w)));
     } else head2.append(el6("p", "sc-gap", r.noNote));
     col.append(head2);
     const parsed = r.rationale === void 0 ? {} : parseJudgeProbabilities(r.rationale);
     const facts = [];
     if (r.judgePinDigest !== void 0)
-      facts.push(fieldText("judge_pin_digest", r.judgePinDigest));
+      facts.push(w.t("spot.pin", { digest: r.judgePinDigest }));
     if (parsed.confidence !== void 0)
-      facts.push(
-        tagSource(
-          el6(
-            "span",
-            "",
-            w.t("spot.confidence", { c: parsed.confidence.toFixed(2) })
-          ),
-          "pack"
-        )
-      );
+      facts.push(w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }));
     if (facts.length > 0) {
-      const line = el6("p", "sc-facts");
-      facts.forEach(
-        (fact, i) => line.append(...i > 0 ? [" \xB7 ", fact] : [fact])
-      );
+      const line = el6("p", "sc-facts", facts.join(" \xB7 "));
       line.dataset.judge = "";
       col.append(line);
     }
@@ -21850,9 +21815,7 @@ ${key}`);
   // src/core-strip.ts
   var CORE_STRIP_ATTRIBUTE = "data-core-strip";
   var CORE_STRIP_CSS = `
-.cv-strip{${OUTCOME_FRAME_VARS}position:relative;max-width:1080px;margin:0 auto 16px;padding:14px 16px 14px 34px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.cv-strip:before{content:"\\25A0";content:"\\25A0" / "";position:absolute;left:13px;top:16px;font-size:12px;line-height:1;color:#8A93A0}
-.cv-strip .agg-note[data-src="core"],.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
+.cv-strip{${OUTCOME_FRAME_VARS}max-width:1080px;margin:0 auto 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
 .cv-strip .agg-line{font-size:14px;margin:0 0 12px}
 .cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -21958,7 +21921,7 @@ ${key}`);
       box.append(el10("b", "", fmt4(ids.length)));
       const caption = el10("div", "agg-cap");
       caption.append(
-        tagSource(el10("span", "", w.t(`front.agg.bucket.${verdict2}`)), "pack"),
+        el10("span", "", w.t(`front.agg.bucket.${verdict2}`)),
         document.createTextNode(" \xB7 "),
         el10("span", "agg-of", of)
       );
@@ -22016,15 +21979,9 @@ ${key}`);
       facts.push(w.t("front.core.pins", { n: fmt4(model.pins.length) }));
     const block = el10("div", "core-id");
     block.dataset.section = "core-identity";
-    const top = tagSource(
-      el10("p", "agg-note core-kicker", kicker.join(" \xB7 ")),
-      "core"
-    );
+    const top = el10("p", "agg-note core-kicker", kicker.join(" \xB7 "));
     top.dataset.coreKicker = "";
-    const rest = tagSource(
-      el10("p", "agg-note core-facts", facts.join(" \xB7 ")),
-      "core"
-    );
+    const rest = el10("p", "agg-note core-facts", facts.join(" \xB7 "));
     rest.dataset.coreFacts = "";
     block.append(top, rest);
     return block;
