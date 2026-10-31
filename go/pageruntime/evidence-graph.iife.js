@@ -10858,13 +10858,13 @@ ${body}
     }
     const contracts = claimContracts.size > 0 ? claimContracts : reportContracts;
     const pinned = contracts.size <= 1 && pins.size <= 1 && components.size <= 1;
-    const counted = withheldReports(result.records, conversations.flatMap((c) => c.criteria.flatMap((cr) => cr.claim === void 0 ? [] : [cr.claim])));
+    const counted2 = withheldReports(result.records, conversations.flatMap((c) => c.criteria.flatMap((cr) => cr.claim === void 0 ? [] : [cr.claim])));
     return {
-      ...counted.withheld > 0 ? { reportsWithheld: counted.withheld } : {},
-      ...counted.mismatched > 0 ? { reportsMismatched: counted.mismatched } : {},
-      ...counted.unreadable > 0 ? { reportsUnreadable: counted.unreadable } : {},
-      ...counted.invalid > 0 ? { reportsInvalid: counted.invalid } : {},
-      ...counted.withheld + counted.mismatched + counted.unreadable + counted.invalid > 0 ? { reportsCited: counted.total } : {},
+      ...counted2.withheld > 0 ? { reportsWithheld: counted2.withheld } : {},
+      ...counted2.mismatched > 0 ? { reportsMismatched: counted2.mismatched } : {},
+      ...counted2.unreadable > 0 ? { reportsUnreadable: counted2.unreadable } : {},
+      ...counted2.invalid > 0 ? { reportsInvalid: counted2.invalid } : {},
+      ...counted2.withheld + counted2.mismatched + counted2.unreadable + counted2.invalid > 0 ? { reportsCited: counted2.total } : {},
       ...contracts.size === 1 ? { contract: [...contracts][0] } : {},
       ...pins.size === 1 ? { judgePinDigest: [...pins][0] } : {},
       ...pins.size === 1 && components.size === 1 ? { judgePin: [...components.values()][0] } : {},
@@ -12568,16 +12568,16 @@ ${body}
     const groups = [];
     const product = (i, key) => {
       if (i === keys.length) {
-        const counted = rowsByKey.get(keyText(keys, key)) ?? [];
+        const counted2 = rowsByKey.get(keyText(keys, key)) ?? [];
         const unit = temporal === void 0 ? void 0 : key[temporal];
         const runRows = unit === void 0 ? [] : runRowsOf.get(unit) ?? [];
         const notRun = drawsRuns && runRows.length === 0;
-        const value2 = aggregate.aggregate === "count" ? counted.length : counted.reduce((sum, row2) => sum + amountOf.get(row2), 0);
+        const value2 = aggregate.aggregate === "count" ? counted2.length : counted2.reduce((sum, row2) => sum + amountOf.get(row2), 0);
         groups.push({
           key: { ...key },
           ...notRun ? {} : { value: value2 },
           notRun,
-          rows: counted,
+          rows: counted2,
           runRows
         });
         return;
@@ -13517,9 +13517,9 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
     const found = globalThis.CapsuleViewerShowEvidence;
     return typeof found?.resolve === "function" && typeof found.render === "function" ? found : void 0;
   }
-  function evidenceAction(key, name, counted, result, w, summary = w.t("evidence.show")) {
-    if (counted.length === 0) return void 0;
-    const claims = counted.filter((c) => c !== void 0);
+  function evidenceAction(key, name, counted2, result, w, summary = w.t("evidence.show")) {
+    if (counted2.length === 0) return void 0;
+    const claims = counted2.filter((c) => c !== void 0);
     const cited = /* @__PURE__ */ new Set();
     const missing = /* @__PURE__ */ new Set();
     for (const claim of claims)
@@ -13567,7 +13567,7 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
       item.dataset.noEvidence = String(citeNothing);
       list2.append(item);
     }
-    const uncited = counted.length - claims.length;
+    const uncited = counted2.length - claims.length;
     if (uncited > 0) {
       const item = element2("li", w.p("evidence.uncited", uncited));
       item.dataset.uncited = String(uncited);
@@ -14260,8 +14260,8 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     wrap.dataset.lane = lane.id;
     wrap.append(code(lane.id), " ");
     const groups = groupsOn(lane.chart, day);
-    const counted = groups.filter((g) => (g.value ?? 0) > 0);
-    const shown2 = counted.length > 0 ? counted : groups.length > 0 ? groups.slice(0, 1) : [{ key: {}, value: 0, notRun: false, rows: [], runRows: [] }];
+    const counted2 = groups.filter((g) => (g.value ?? 0) > 0);
+    const shown2 = counted2.length > 0 ? counted2 : groups.length > 0 ? groups.slice(0, 1) : [{ key: {}, value: 0, notRun: false, rows: [], runRows: [] }];
     shown2.forEach((g, i) => {
       const key = `view-${String(index)}-${lane.id}-${day}-${String(i)}`;
       const extra = lane.chart.keys.filter((k) => k !== "x");
@@ -15189,18 +15189,18 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     };
   }
   function withheldOf(result, sessions) {
-    const counted = withheldReports(
+    const counted2 = withheldReports(
       result.records,
       sessions.flatMap(
         (s) => s.tests.flatMap((t) => t.claim === void 0 ? [] : [t.claim])
       )
     );
     return {
-      ...counted.withheld > 0 ? { reportsWithheld: counted.withheld } : {},
-      ...counted.mismatched > 0 ? { reportsMismatched: counted.mismatched } : {},
-      ...counted.unreadable > 0 ? { reportsUnreadable: counted.unreadable } : {},
-      ...counted.invalid > 0 ? { reportsInvalid: counted.invalid } : {},
-      ...counted.withheld + counted.mismatched + counted.unreadable + counted.invalid > 0 ? { reportsCited: counted.total } : {}
+      ...counted2.withheld > 0 ? { reportsWithheld: counted2.withheld } : {},
+      ...counted2.mismatched > 0 ? { reportsMismatched: counted2.mismatched } : {},
+      ...counted2.unreadable > 0 ? { reportsUnreadable: counted2.unreadable } : {},
+      ...counted2.invalid > 0 ? { reportsInvalid: counted2.invalid } : {},
+      ...counted2.withheld + counted2.mismatched + counted2.unreadable + counted2.invalid > 0 ? { reportsCited: counted2.total } : {}
     };
   }
   function buildFindings(obligations) {
@@ -16022,7 +16022,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("7af0e3bfeec47061ffd3765583063dceca664882");
+    return commitPrefix("a2b6ebbe3ab45c6053df6b703ffac49d9187dd72");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16144,9 +16144,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     entries: {
       "layout.grouping": "lines",
       "lines.rtier.must_have.title": "Must-have terms \xB7 {n}",
-      "lines.rtier.must_have.note": "These decide the answer.",
+      "lines.rtier.must_have.note": "These count in the answer.",
       "lines.rtier.informational.title": "Informational terms \xB7 {n}",
-      "lines.rtier.informational.note": "Reported, never in the answer: a not met here changes nothing above it.",
+      "lines.rtier.informational.note": "Reported, never in the answer: a term not met here changes nothing above it.",
       "lines.rtier.unstated.title": "Terms with no stated tier \xB7 {n}",
       "lines.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
       "lines.rtier.sealed-note": "The sealed result counts informational terms too; the lines this report derives leave them out.",
@@ -16826,9 +16826,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     entries: {
       "layout.grouping": "groups",
       "groups.rtier.must_have.title": "Must-have tests \xB7 {n}",
-      "groups.rtier.must_have.note": "These decide the answer.",
+      "groups.rtier.must_have.note": "These count in the answer.",
       "groups.rtier.informational.title": "Informational tests \xB7 {n}",
-      "groups.rtier.informational.note": "Reported, never in the answer: a not met here changes nothing above it.",
+      "groups.rtier.informational.note": "Reported, never in the answer: a test not met here changes nothing above it.",
       "groups.rtier.unstated.title": "Tests with no stated tier \xB7 {n}",
       "groups.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
       "groups.rtier.sealed-note": "The sealed result counts informational tests too; the lines this report derives leave them out.",
@@ -18326,8 +18326,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "8fd303f97db2ea5d83753d6e990ba3db971b670c5b15e2ef9c648d1a791783f7",
-    groups: "7055f7db6c62efd580855047a330d11acac23b3b65bff5b2e212a55efbd11cf8"
+    lines: "047b4938c07e05a7d122246e0e80a11b9db2fc65edf02286e8f49f4bc618ac6c",
+    groups: "3d269d31a57915293bb7f81cefb93b450e845aa07be26bd9a7e203defd560784"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -18482,7 +18482,7 @@ ${key}`);
       }
       unnamed += 1;
     }
-    const counted = [];
+    const counted2 = [];
     for (const [digest, entry] of pins) {
       let model;
       let modelNotShown;
@@ -18502,18 +18502,18 @@ ${key}`);
           );
         else modelNotShown = "does_not_recompute";
       }
-      counted.push({
+      counted2.push({
         digest,
         count: entry.count,
         ...model === void 0 ? {} : { model },
         ...modelNotShown === void 0 ? {} : { modelNotShown }
       });
     }
-    counted.sort((a, b) => b.count - a.count || (a.digest < b.digest ? -1 : 1));
+    counted2.sort((a, b) => b.count - a.count || (a.digest < b.digest ? -1 : 1));
     return {
       cited,
       notCarried,
-      pins: counted,
+      pins: counted2,
       withheld,
       unread,
       checkers: [...checkers].map(([ref, count2]) => ({ ref, count: count2 })).sort((a, b) => b.count - a.count || (a.ref < b.ref ? -1 : 1)),
@@ -19247,9 +19247,16 @@ ${key}`);
   function notApplying(verdict2) {
     return verdict2 === "not_applicable" || verdict2 === "out_of_scope";
   }
-  var GATED = /* @__PURE__ */ new WeakMap();
-  function gated(conversation) {
-    return GATED.get(conversation) ?? conversation;
+  function counted(conversation, gating2) {
+    return gating2?.counted.get(conversation) ?? conversation;
+  }
+  function tierChip(tier, w) {
+    const chip = el8("span", "rtier", w.t(`requirement_tier.${tier}`));
+    chip.dataset.requirementTier = tier;
+    return chip;
+  }
+  function criterionTier(c, gating2) {
+    return gating2?.tierOf(c.claim?.contractRef, `${c.checkId}.${c.criterionId}`);
   }
   function rollUp2(verdicts) {
     if (verdicts.length === 0) return "not_evaluable";
@@ -19260,21 +19267,24 @@ ${key}`);
     if (!verdicts.some((v) => v === "met")) return "not_evaluable";
     return "met";
   }
-  function gateConversations(conversations, tierOf) {
+  function gating(conversations, tierOf) {
+    const map = /* @__PURE__ */ new Map();
+    const out = { tierOf, counted: map };
     for (const conversation of conversations) {
       const kept = conversation.criteria.filter(
-        (c) => tierOf(c.claim?.contractRef, `${c.checkId}.${c.criterionId}`) !== "informational"
+        (c) => criterionTier(c, out) !== "informational"
       );
       if (kept.length === conversation.criteria.length) continue;
-      GATED.set(conversation, {
+      map.set(conversation, {
         ...conversation,
         criteria: kept,
         verdict: rollUp2(kept.map((c) => c.verdict))
       });
     }
+    return out;
   }
-  function conversationStatus(given) {
-    const conversation = gated(given);
+  function conversationStatus(given, gating2) {
+    const conversation = counted(given, gating2);
     if (conversation !== given && conversation.criteria.length === 0)
       return "nothing-applied";
     if (conversation.verdict === "met") return "resolved";
@@ -19284,7 +19294,7 @@ ${key}`);
     if (conversation.verdict === "not_met") return "missed";
     return conversation.criteria.length > 0 && conversation.criteria.every((c) => notApplying(c.verdict)) ? "nothing-applied" : "undecided";
   }
-  function statusWord(status2, conversation, w) {
+  function statusWord(status2, conversation, w, gating2) {
     if (status2 === "resolved")
       return { word: w.t("lines.status.resolved"), tone: "ok" };
     if (status2 === "missed")
@@ -19293,7 +19303,9 @@ ${key}`);
       return { word: w.t("lines.status.unverified"), tone: "ne" };
     if (status2 === "nothing-applied")
       return { word: w.t("lines.status.nothing-applied"), tone: "na" };
-    const judged = conversation.criteria.filter((c) => c.verdict === "not_evaluable" || c.verdict === "no_claim").map(
+    const judged = counted(conversation, gating2).criteria.filter(
+      (c) => c.verdict === "not_evaluable" || c.verdict === "no_claim"
+    ).map(
       (c) => c.verdict === "no_claim" ? "no" : judgedOf(c.reportState, c.judgePinDigest)
     );
     if (judged.includes("yes"))
@@ -19344,7 +19356,7 @@ ${key}`);
     return lower ? text2 : text2.charAt(0).toUpperCase() + text2.slice(1);
   }
   function resultSentence(conversation, model, w) {
-    const all = gated(conversation).criteria;
+    const all = counted(conversation, model.gating).criteria;
     const applied = all.filter((c) => !notApplying(c.verdict));
     const outOfScope = all.filter((c) => c.verdict === "out_of_scope").length;
     const na = all.length - applied.length - outOfScope;
@@ -19357,7 +19369,7 @@ ${key}`);
     }) : "";
     const naText = `${na > 0 ? ` ${w.t("lines.sentence.na", { n: String(na) })}` : ""}${outOfScope > 0 ? ` ${w.t("lines.sentence.out-of-scope", { n: String(outOfScope) })}` : ""}`;
     const unverifiedText = unverified.length > 0 ? ` ${unverifiedClause(model, unverified, w)}` : "";
-    switch (conversationStatus(conversation)) {
+    switch (conversationStatus(conversation, model.gating)) {
       case "resolved":
         return `${w.p("lines.sentence.resolved", applied.length, { n: String(applied.length) })}${naText}`;
       case "missed":
@@ -19387,22 +19399,24 @@ ${key}`);
     }
   }
   function renderConversation(conversation, model, runInfo, w) {
-    const status2 = conversationStatus(conversation);
+    const status2 = conversationStatus(conversation, model.gating);
     const item = el8("article", "conv");
     item.dataset.conversation = conversation.conversationId;
-    const counted = gated(conversation);
-    item.dataset.conversationVerdict = counted.verdict;
+    const inAnswer = counted(conversation, model.gating);
+    item.dataset.conversationVerdict = inAnswer.verdict;
     item.dataset.status = status2;
     const head2 = el8("div", "conv-h");
     const parts = caseParts(conversation.conversationId, w);
     head2.append(el8("span", "cid", parts.label));
-    head2.append(wordPill(statusWord(status2, conversation, w), status2));
-    const misses = counted.criteria.filter((c) => isMiss(c.verdict));
-    const unverified = counted.criteria.filter((c) => isUnverified(c.verdict));
-    const undecided = counted.criteria.filter(
+    head2.append(
+      wordPill(statusWord(status2, conversation, w, model.gating), status2)
+    );
+    const misses = inAnswer.criteria.filter((c) => isMiss(c.verdict));
+    const unverified = inAnswer.criteria.filter((c) => isUnverified(c.verdict));
+    const undecided = inAnswer.criteria.filter(
       (c) => c.verdict === "not_evaluable" || c.verdict === "no_claim"
     );
-    const outOfScope = counted.criteria.filter(
+    const outOfScope = inAnswer.criteria.filter(
       (c) => c.verdict === "out_of_scope"
     );
     head2.append(
@@ -19413,9 +19427,9 @@ ${key}`);
           names: names(model, undecided, w)
         }) : status2 === "nothing-applied" ? w.t("lines.why.nothing-applied") : outOfScope.length === 0 ? w.t("lines.why.resolved") : w.p(
           "lines.why.resolved-out-of-scope",
-          counted.criteria.length - outOfScope.length,
+          inAnswer.criteria.length - outOfScope.length,
           {
-            n: fmtCount(counted.criteria.length - outOfScope.length),
+            n: fmtCount(inAnswer.criteria.length - outOfScope.length),
             oos: fmtCount(outOfScope.length)
           }
         )
@@ -19435,7 +19449,7 @@ ${key}`);
       "verdict-line",
       resultSentence(conversation, model, w)
     );
-    sentence.dataset.why = conversationStatus(conversation);
+    sentence.dataset.why = conversationStatus(conversation, model.gating);
     body.append(sentence);
     body.append(el8("h4", "", w.t("lines.h.rule-by-rule")));
     const hasNotes = conversation.criteria.some((c) => c.rationale !== void 0);
@@ -19470,6 +19484,11 @@ ${key}`);
       nameCell.append(el8("b", "", label.label));
       const rowBadge = editedBadge(model, ref, w);
       if (rowBadge !== void 0) nameCell.append(rowBadge);
+      const tier = criterionTier(criterion2, model.gating);
+      if (tier !== void 0) {
+        tr.dataset.requirementTier = tier;
+        nameCell.append(tierChip(tier, w));
+      }
       if (label.source === "sealed") {
         const wording = tagSource(el8("small", "", label.text), "producer");
         wording.dataset.wording = label.source;
@@ -19783,13 +19802,15 @@ ${key}`);
   function groupTitle(check, w) {
     return w.group(check.id) ?? check.question;
   }
-  function groupMissedReasons(missed, terms, w) {
+  function groupMissedReasons(missed, terms, w, gating2) {
     const labelledReasonCode = (code2) => code2 === void 0 ? void 0 : terms.reasonCodes[code2];
     const groups = /* @__PURE__ */ new Map();
     const structured = /* @__PURE__ */ new Map();
     const labels = /* @__PURE__ */ new Map();
     for (const conversation of missed) {
-      const first = gated(conversation).criteria.find((c) => isMiss(c.verdict));
+      const first = counted(conversation, gating2).criteria.find(
+        (c) => isMiss(c.verdict)
+      );
       if (first === void 0) continue;
       const label = labelledReasonCode(first.reasonCode);
       const key = label !== void 0 ? first.reasonCode : `${first.checkId}.${first.criterionId}`;
@@ -19812,7 +19833,7 @@ ${key}`);
   function whyMissed(missed, model, runInfo, w) {
     const box = el8("div", "why-missed");
     box.dataset.section = "why-missed";
-    const groups = groupMissedReasons(missed, model.terms, w);
+    const groups = groupMissedReasons(missed, model.terms, w, model.gating);
     box.dataset.reasons = String(groups.length);
     box.append(el8("h5", "", w.t("lines.why-missed.h")));
     const table3 = element3("table");
@@ -19988,7 +20009,9 @@ ${key}`);
     thead.append(headRow);
     table3.append(thead);
     const tbody = document.createElement("tbody");
-    const byStatus = (status2) => model.conversations.filter((c) => conversationStatus(c) === status2);
+    const byStatus = (status2) => model.conversations.filter(
+      (c) => conversationStatus(c, model.gating) === status2
+    );
     const resolved = byStatus("resolved");
     const missed = byStatus("missed");
     const unverified = byStatus("unverified");
@@ -20095,7 +20118,8 @@ ${key}`);
     }
     host.append(section);
   }
-  function renderRules(host, model, runInfo, result, w, tierOf) {
+  function renderRules(host, model, runInfo, result, w) {
+    const tierOf = model.gating?.tierOf;
     const section = el8("section", "sec");
     section.dataset.section = "rules";
     section.append(el8("h2", "", w.t("lines.rules.h")));
@@ -20187,15 +20211,15 @@ ${key}`);
           const na = of((v) => v === "not_applicable");
           const outOfScopeHere = of(picks.out_of_scope);
           const undecided = of(picks.undecided);
-          const countCell = (className, column, counted) => {
+          const countCell = (className, column, counted2) => {
             const pick = picks[column];
             const cell4 = el8("td", className);
             cell4.dataset.column = column;
-            cell4.append(el8("span", "nv", fmtCount(counted.length)));
+            cell4.append(el8("span", "nv", fmtCount(counted2.length)));
             const action = evidenceAction(
               `rule:${ref}:${column}`,
-              `${label.label} \xB7 ${columnWord[column]}: ${fmtCount(counted.length)}`,
-              counted.map(
+              `${label.label} \xB7 ${columnWord[column]}: ${fmtCount(counted2.length)}`,
+              counted2.map(
                 (c) => c.criteria.find(
                   (cr) => cr.checkId === check.id && cr.criterionId === criterion2.id && pick(cr.verdict)
                 )?.claim
@@ -20217,9 +20241,7 @@ ${key}`);
           if (badge !== void 0) nameCell.append(badge);
           if (tier !== void 0) {
             tr.dataset.requirementTier = tier;
-            const chip = el8("span", "rtier", w.t(`requirement_tier.${tier}`));
-            chip.dataset.requirementTier = tier;
-            nameCell.append(chip);
+            nameCell.append(tierChip(tier, w));
           }
           if (label.source === "sealed")
             nameCell.append(el8("small", "", label.text));
@@ -20332,7 +20354,7 @@ ${key}`);
     list2.dataset.days = String(model.days.length);
     for (const day of model.days) {
       const resolved = day.conversations.filter(
-        (c) => conversationStatus(c) === "resolved"
+        (c) => conversationStatus(c, model.gating) === "resolved"
       ).length;
       const item = el8("div", "day");
       item.dataset.day = day.date;
@@ -20687,8 +20709,8 @@ ${key}`);
   }
   function subjectConversations(model, w) {
     return model.conversations.map((c) => {
-      const status2 = conversationStatus(c);
-      const outcome = statusWord(status2, c, w);
+      const status2 = conversationStatus(c, model.gating);
+      const outcome = statusWord(status2, c, w, model.gating);
       const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
       const turns = c.transcript.state === "verified" || c.transcript.state === "cited" ? c.transcript.turns : void 0;
       return {
@@ -20727,8 +20749,8 @@ ${key}`);
     css: OUTCOME_REPORT_CSS
   };
   async function drawLines(levels, result, options, bundle, verified, w, tierOf) {
-    const model = buildOutcomeReportModel(result, options);
-    if (tierOf !== void 0) gateConversations(model.conversations, tierOf);
+    const built = buildOutcomeReportModel(result, options);
+    const model = tierOf === void 0 ? built : { ...built, gating: gating(built.conversations, tierOf) };
     const runInfo = await verifyJudgePin(model.runInfo);
     const claims = model.conversations.flatMap(
       (c) => c.criteria.flatMap((cr) => cr.claim === void 0 ? [] : [cr.claim])
@@ -20753,7 +20775,7 @@ ${key}`);
       );
       if (subject !== void 0) levels.L0.append(subject);
     }
-    renderRules(levels.L1, model, runInfo, result, w, tierOf);
+    renderRules(levels.L1, model, runInfo, result, w);
     leadWithProvenance(
       levels.L1,
       levels.L1.querySelector('[data-section="rules"]'),
@@ -21122,7 +21144,10 @@ ${key}`);
     );
     thead.append(headRow);
     table3.append(thead);
-    const tierOfRow = (row2) => tierOf?.(void 0, row2.criterionId);
+    const tierOfRow = (row2) => tierOf?.(
+      model.sessions.flatMap((s) => s.tests).find((t) => t.criterionId === row2.criterionId && t.claim)?.claim?.contractRef,
+      row2.criterionId
+    );
     const allRows = model.obligations.flatMap((o) => o.rows);
     const sections = tierOf === void 0 ? [void 0] : ROW_TIERS.filter((tier) => allRows.some((r) => tierOfRow(r) === tier));
     for (const tier of sections) {
@@ -21202,8 +21227,8 @@ ${key}`);
         for (const test of obligation.rows) {
           const tr = el9("tr", "test");
           tr.dataset.criterion = test.criterionId;
-          const counted = population(test, model.totalSessions);
-          tr.dataset.population = String(counted);
+          const counted2 = population(test, model.totalSessions);
+          tr.dataset.population = String(counted2);
           tr.dataset.outOfScope = String(test.outOfScopeCount);
           tr.dataset.notYetInForce = String(test.notYetInForceCount);
           tr.dataset.exceptions = String(test.notMetCount);
@@ -21230,10 +21255,10 @@ ${key}`);
           ];
           const checkedIn = el9("td", "n");
           checkedIn.dataset.column = "checked-in";
-          checkedIn.append(el9("span", "nv", count(w, "session", counted)));
+          checkedIn.append(el9("span", "nv", count(w, "session", counted2)));
           const action = evidenceAction(
             `test:${test.criterionId}:checked-in`,
-            `${test.name} \xB7 ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted)}`,
+            `${test.name} \xB7 ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted2)}`,
             populationClaims(test, model),
             result,
             w
