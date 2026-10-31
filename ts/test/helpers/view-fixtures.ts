@@ -71,19 +71,29 @@ export function viewHeaders(): Obj[] {
       push({
         record_type: CASE_TYPE,
         event_time_claim: `${date}T09:15:00Z`,
-        statement: { requirement: REQUIREMENTS[d % 3], verdict, weight: d },
+        statement: {
+          requirement: REQUIREMENTS[d % 3],
+          verdict,
+          weight: d,
+          session: `s${String(d)}`,
+        },
       });
     if (d % 4 === 0 && ran)
       push({
         record_type: CASE_TYPE,
         event_time_claim: `${date}T10:15:00Z`,
-        statement: { requirement: "req-a", verdict: "not_met", weight: d },
+        statement: {
+          requirement: "req-a",
+          verdict: "not_met",
+          weight: d,
+          session: `s${String(d)}`,
+        },
       });
     if (d % 6 === 0)
       push({
         record_type: ADJUDICATION_TYPE,
         event_time_claim: `${date}T14:00:00Z`,
-        statement: { ruling: "upheld" },
+        statement: { ruling: d % 12 === 0 ? "overturned" : "upheld" },
       });
   }
   return out;
@@ -247,6 +257,9 @@ export function viewCharts(
 export function viewSpecs(headers: readonly Obj[] = viewHeaders()): {
   calendar: Obj;
   byPeriod: Obj;
+  cells: Obj;
+  timeline: Obj;
+  coFailure: Obj;
 } {
   const c = viewCharts(headers);
   return {
@@ -257,6 +270,53 @@ export function viewSpecs(headers: readonly Obj[] = viewHeaders()): {
         { id: "judgment", chart: c.judgment() },
         { id: "adjudications", chart: c.perDay(ADJUDICATION_TYPE) },
       ],
+    },
+    // The same month drawn as the canvas's cells: the day's cases by verdict
+    // for the bar and the colour scale, and the adjudications by ruling.
+    cells: {
+      view: "calendar",
+      lanes: [
+        { id: "cases", role: "activity", chart: c.perDay(CASE_TYPE) },
+        {
+          id: "verdicts",
+          role: "judgment",
+          classes: {
+            met: "good",
+            not_met: "bad",
+            out_of_scope: "open",
+            not_yet_in_force: "open",
+          },
+          chart: c.keyedPerDay(CASE_TYPE, "verdict"),
+        },
+        {
+          id: "rulings",
+          role: "adjudication",
+          classes: { upheld: "good", overturned: "bad" },
+          chart: c.keyedPerDay(ADJUDICATION_TYPE, "ruling"),
+        },
+      ],
+    },
+    timeline: {
+      view: "timeline",
+      lanes: [
+        {
+          id: "misses",
+          mark: "tick",
+          classes: { "req-a": "bad", "req-b": "bad", "req-c": "bad" },
+          chart: c.byVerdictBar("not_met"),
+        },
+        {
+          id: "rulings",
+          mark: "diamond",
+          classes: { upheld: "good", overturned: "bad" },
+          chart: c.keyedPerDay(ADJUDICATION_TYPE, "ruling"),
+        },
+      ],
+    },
+    coFailure: {
+      view: "co-failure",
+      count: { id: "not_met", chart: c.byVerdict("not_met") },
+      subject: "statement.session",
     },
     byPeriod: {
       view: "by-period",

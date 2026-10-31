@@ -8,7 +8,7 @@
  * Show evidence (chart-view.ts `valueEvidence`) or the `none` label.
  */
 import type { Words } from "./contract-report-wording.js";
-import { compareScalar } from "./chart-spec.js";
+import { compareScalar, resolveField } from "./chart-spec.js";
 import type {
   ChartGroup,
   CheckedChart,
@@ -16,12 +16,18 @@ import type {
   Scalar,
 } from "./chart-spec.js";
 import { CHART_ATTRIBUTE, valueEvidence } from "./chart-view.js";
+import { recordAddress } from "./report-levels.js";
 import type {
   CheckedByPeriod,
   CheckedCalendar,
+  CheckedCoFailure,
+  CheckedTimeline,
   CheckedView,
+  LaneRole,
+  ValueClass,
   ViewChart,
 } from "./report-view.js";
+const SVG = "http://www.w3.org/2000/svg";
 
 function el(tag: string, className?: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -125,6 +131,255 @@ function laneCell(
   return wrap;
 }
 
+// ---------------------------------------------------------------------------
+// Calendar cells (lanes with a role): the canvas's cell, its legend and the
+// day's own section. Counts, classes and colours come from the checked groups
+// alone; the nouns and verbs of a cell are wording-pack words.
+// ---------------------------------------------------------------------------
+
+const laneOf = (view: CheckedCalendar, role: LaneRole): ViewChart | undefined =>
+  view.lanes.find((l) => l.role === role);
+
+interface Tally {
+  good: number;
+  bad: number;
+  open: number;
+}
+
+const keyOf = (chart: CheckedChart): "x" | "y" | "color" =>
+  chart.keys.find((k) => k !== "x")!;
+
+/** A keyed lane's day, summed by the class of each value. */
+function tallyOf(lane: ViewChart, day: string): Tally {
+  const tally: Tally = { good: 0, bad: 0, open: 0 };
+  for (const g of groupsOn(lane.chart, day)) {
+    const cls = lane.classes![String(g.key[keyOf(lane.chart)])] as ValueClass;
+    tally[cls] += g.value ?? 0;
+  }
+  return tally;
+}
+
+const sumOf = (lane: ViewChart, day: string): number =>
+  groupsOn(lane.chart, day).reduce((n, g) => n + (g.value ?? 0), 0);
+
+type Scale = "good" | "some" | "most";
+
+/** Green when at most one judged case is not good, red when most are bad, else amber. */
+function scaleOf(t: Tally): Scale | undefined {
+  const total = t.good + t.bad + t.open;
+  if (total === 0) return undefined;
+  if (total - t.good <= 1) return "good";
+  return t.bad * 2 > total ? "most" : "some";
+}
+
+const svgEl = (
+  tag: string,
+  attrs: Record<string, string | number>,
+): SVGElement => {
+  const node = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+  return node;
+};
+
+/** The day's bar: good, bad and open shares of its judged cases, as SVG widths. */
+function barOf(t: Tally): SVGElement {
+  const total = t.good + t.bad + t.open;
+  const root = svgEl("svg", {
+    viewBox: "0 0 100 4",
+    preserveAspectRatio: "none",
+    class: "cv-bar",
+    "aria-hidden": "true",
+    focusable: "false",
+  });
+  let x = 0;
+  for (const cls of ["good", "bad", "open"] as const) {
+    if (t[cls] === 0) continue;
+    const width = (100 * t[cls]) / total;
+    root.append(
+      svgEl("rect", {
+        x: x.toFixed(2),
+        y: 0,
+        width: width.toFixed(2),
+        height: 4,
+        class: `cv-bar-${cls}`,
+      }),
+    );
+    x += width;
+  }
+  return root;
+}
+
+/** "judged · 8 resolved · 1 missed": good and bad always, open when there is some. */
+function judgedLine(t: Tally, w: Words): string {
+  const parts = [
+    w.t("calendar.judged"),
+    w.t("calendar.class.good", { n: t.good }),
+    w.t("calendar.class.bad", { n: t.bad }),
+  ];
+  if (t.open > 0) parts.push(w.t("calendar.class.open", { n: t.open }));
+  return parts.join(" · ");
+}
+
+/** The adjudication chip: the count recorded, and how many concur or differ when the lane says. */
+function adjudicationChip(
+  lane: ViewChart,
+  day: string,
+  w: Words,
+): HTMLElement | undefined {
+  const keyed = lane.classes !== undefined;
+  const t = keyed ? tallyOf(lane, day) : undefined;
+  const n = t === undefined ? sumOf(lane, day) : t.good + t.bad + t.open;
+  if (n === 0) return undefined;
+  const parts = [w.p("calendar.adj.recorded", n)];
+  if (t !== undefined)
+    parts.push(
+      t.bad === 0
+        ? w.t("calendar.adj.concur")
+        : w.p("calendar.adj.differ", t.bad),
+    );
+  const chip = el("div", "cv-adj");
+  chip.dataset.adjudications = String(n);
+  chip.append(el("span", "cv-diamond", "◆"), ` ${parts.join(" · ")}`);
+  return chip;
+}
+
+const dayId = (index: number, day: string): string =>
+  `cv-day-${String(index)}-${day}`;
+
+function roleCell(
+  view: CheckedCalendar,
+  index: number,
+  day: string,
+  cell: HTMLElement,
+  w: Words,
+): void {
+  const activity = laneOf(view, "activity");
+  const judgment = laneOf(view, "judgment");
+  const adjudication = laneOf(view, "adjudication");
+  const number = el("div", "cv-dn");
+  const link = el("a", "cv-day-link", String(Number(day.slice(8))));
+  link.setAttribute("href", `#${dayId(index, day)}`);
+  number.append(link);
+  cell.replaceChildren(number);
+  if (activity !== undefined)
+    cell.append(
+      el("div", "cv-act", w.p("calendar.activity", sumOf(activity, day))),
+    );
+  if (judgment !== undefined) {
+    const t = tallyOf(judgment, day);
+    const scale = scaleOf(t);
+    if (scale !== undefined) cell.dataset.scale = scale;
+    cell.append(el("div", "cv-jdg", judgedLine(t, w)));
+    if (t.good + t.bad + t.open > 0) cell.append(barOf(t));
+  }
+  if (adjudication !== undefined) {
+    const chip = adjudicationChip(adjudication, day, w);
+    if (chip !== undefined) cell.append(chip);
+  }
+}
+
+function legendOf(view: CheckedCalendar, w: Words): HTMLElement {
+  const legend = el("ul", "cv-legend");
+  if (laneOf(view, "judgment") !== undefined)
+    for (const scale of ["good", "some", "most"] as const) {
+      const item = el("li");
+      const swatch = el("span", "cv-swatch");
+      swatch.dataset.scale = scale;
+      item.append(swatch, ` ${w.t(`calendar.legend.${scale}`)}`);
+      legend.append(item);
+    }
+  if (laneOf(view, "adjudication") !== undefined) {
+    const item = el("li");
+    item.append(
+      el("span", "cv-diamond", "◆"),
+      ` ${w.t("calendar.legend.adjudication")}`,
+    );
+    legend.append(item);
+  }
+  return legend;
+}
+
+/** The time of day (UTC) of a row, from the chart's own time field. */
+function timeOf(row: ChartRow, field: string): string {
+  const v =
+    row.header === undefined ? undefined : resolveField(row.header, field);
+  const ms = typeof v === "string" ? Date.parse(v) : NaN;
+  return Number.isNaN(ms) ? "" : new Date(ms).toISOString().slice(11, 16);
+}
+
+/** One day's section: its heading, its counts with Show evidence, and the records it counts. */
+function daySection(
+  view: CheckedCalendar,
+  index: number,
+  day: string,
+  w: Words,
+): HTMLElement {
+  const activity = laneOf(view, "activity");
+  const judgment = laneOf(view, "judgment");
+  const section = el("section", "cv-day-section");
+  section.id = dayId(index, day);
+  section.dataset.daySection = day;
+  const [, m, d] = day.split("-").map(Number) as [number, number, number];
+  const heading = [
+    w.t("calendar.day.heading", {
+      weekday: w.t(`calendar.weekday.long.${String(weekdayOf(day) + 1)}`),
+      month: w.t(`calendar.month.${String(m)}`),
+      day: d,
+    }),
+  ];
+  if (activity !== undefined)
+    heading.push(w.p("calendar.activity", sumOf(activity, day)));
+  if (judgment !== undefined)
+    heading.push(judgedLine(tallyOf(judgment, day), w));
+  section.append(el("h3", undefined, heading.join(" · ")));
+
+  const counts = el("div", "cv-day-counts");
+  counts.append(el("p", "cv-k", w.t("calendar.day.counts")));
+  for (const lane of view.lanes) counts.append(laneCell(lane, index, day, w));
+  section.append(counts);
+
+  const field = view.lanes[0]!.chart.channels.x!.field!;
+  const rows = new Map<number, ChartRow>();
+  if (activity !== undefined)
+    for (const g of groupsOn(activity.chart, day))
+      for (const row of g.rows) rows.set(row.seq, row);
+  if (rows.size > 0) {
+    const table = el("table", "cv-day-table");
+    const head = el("tr");
+    for (const key of ["calendar.day.time", "calendar.day.record"]) {
+      const th = el("th", undefined, w.t(key));
+      th.setAttribute("scope", "col");
+      head.append(th);
+    }
+    const thead = el("thead");
+    thead.append(head);
+    const tbody = el("tbody");
+    const ordered = [...rows.values()].sort(
+      (a, b) =>
+        timeOf(a, field).localeCompare(timeOf(b, field)) || a.seq - b.seq,
+    );
+    for (const row of ordered) {
+      const tr = el("tr");
+      tr.append(el("td", undefined, timeOf(row, field)));
+      const td = el("td");
+      if (row.recordId === undefined) td.append(code(`seq ${String(row.seq)}`));
+      else {
+        const a = el("a");
+        a.setAttribute("href", `#${recordAddress(row.recordId)}`);
+        a.append(code(row.recordId));
+        td.append(a);
+      }
+      tr.append(td);
+      tbody.append(tr);
+    }
+    table.append(thead, tbody);
+    const wrap = el("div", "cv-view-table");
+    wrap.append(table);
+    section.append(wrap);
+  }
+  return section;
+}
+
 export function renderCalendar(
   view: CheckedCalendar,
   index: number,
@@ -136,6 +391,7 @@ export function renderCalendar(
   const notRun = new Set(
     (first.chart.units ?? []).filter((u) => u.notRun).map((u) => u.unit),
   );
+  const hasRoles = view.lanes.some((l) => l.role !== undefined);
   const months: string[] = [];
   for (
     let ms = utcMs(view.window.from);
@@ -177,7 +433,8 @@ export function renderCalendar(
       if (notRun.has(day)) {
         cell.dataset.notRun = "";
         cell.append(el("div", "cv-nr", w.t("chart.not_run")));
-      } else
+      } else if (hasRoles) roleCell(view, index, day, cell, w);
+      else
         for (const lane of view.lanes)
           cell.append(laneCell(lane, index, day, w));
       row.append(cell);
@@ -190,6 +447,13 @@ export function renderCalendar(
     scroll.append(table);
   }
   figure.append(scroll);
+  if (hasRoles) {
+    figure.append(legendOf(view, w));
+    for (const [day, ran] of (first.chart.units ?? []).map(
+      (u) => [u.unit, !u.notRun] as const,
+    ))
+      if (ran) figure.append(daySection(view, index, day, w));
+  }
   return figure;
 }
 
@@ -376,13 +640,229 @@ export function renderByPeriod(
   return figure;
 }
 
+// ---------------------------------------------------------------------------
+// Timeline: one row per lane, a mark on each day that has a count
+// ---------------------------------------------------------------------------
+
+const TL = { left: 150, right: 12, top: 22, row: 44, w: 760 };
+
+/** A lane's row label: the wording pack's `lane.<id>.title` when it has one, else the id as code. */
+function laneLabel(id: string, w: Words): HTMLElement | string {
+  const word = w.section3(`lane.${id}.title`);
+  return word ?? code(id);
+}
+
+export function renderTimeline(
+  view: CheckedTimeline,
+  index: number,
+  sha256: string,
+  w: Words,
+): HTMLElement {
+  const figure = frame(view, index, sha256, w, view.lanes);
+  const units = view.lanes[0]!.chart.units ?? [];
+  const plotW = TL.w - TL.left - TL.right;
+  const band = plotW / Math.max(1, units.length);
+  const height = TL.top + TL.row * view.lanes.length + 6;
+  const root = svgEl("svg", {
+    viewBox: `0 0 ${String(TL.w)} ${String(height)}`,
+    class: "cv-timeline",
+    "aria-hidden": "true",
+    focusable: "false",
+  });
+  const dayAt = new Map(units.map((u, i) => [u.unit, i]));
+  const text = (
+    label: string,
+    attrs: Record<string, string | number>,
+  ): void => {
+    const t = svgEl("text", { class: "cv-tl-text", ...attrs });
+    t.textContent = label;
+    root.append(t);
+  };
+  // Not-run days: a hatched band the height of the plot, no mark in it.
+  units.forEach((u, i) => {
+    if (!u.notRun) return;
+    const rect = svgEl("rect", {
+      x: (TL.left + band * i).toFixed(2),
+      y: TL.top - 6,
+      width: band.toFixed(2),
+      height: TL.row * view.lanes.length,
+      class: "cv-tl-notrun",
+    });
+    rect.setAttribute("data-not-run", u.unit);
+    root.append(rect);
+  });
+  if (units.length > 0)
+    for (const at of [0, Math.floor((units.length - 1) / 2), units.length - 1])
+      text(units[at]!.unit, {
+        x: (TL.left + band * at + band / 2).toFixed(2),
+        y: 12,
+        "text-anchor":
+          at === 0 ? "start" : at === units.length - 1 ? "end" : "middle",
+      });
+  view.lanes.forEach((lane, row) => {
+    const mid = TL.top + TL.row * row + TL.row / 2;
+    root.append(
+      svgEl("line", {
+        x1: TL.left,
+        x2: TL.w - TL.right,
+        y1: mid,
+        y2: mid,
+        class: "cv-tl-axis",
+      }),
+    );
+    const word = w.section3(`lane.${lane.id}.title`);
+    text(word ?? lane.id, {
+      x: 0,
+      y: mid + 4,
+      class: word === undefined ? "cv-tl-text cv-tl-lane" : "cv-tl-text",
+    });
+    const key = lane.classes === undefined ? undefined : keyOf(lane.chart);
+    for (const g of lane.chart.groups) {
+      const at = dayAt.get(String(g.key.x));
+      if (g.notRun || at === undefined || (g.value ?? 0) === 0) continue;
+      const cls =
+        key === undefined ? "open" : lane.classes![String(g.key[key])]!;
+      const cx = TL.left + band * at + band / 2;
+      const n = Math.min(g.value!, 5);
+      const mark =
+        lane.mark === "diamond"
+          ? svgEl("path", {
+              d: `M${cx.toFixed(2)} ${String(mid - 6)} l6 6 l-6 6 l-6 -6 z`,
+              class: `cv-tl-mark cv-tl-${cls}`,
+            })
+          : svgEl("line", {
+              x1: cx.toFixed(2),
+              x2: cx.toFixed(2),
+              y1: mid - 4 - 3 * n,
+              y2: mid + 4 + 3 * n,
+              class: `cv-tl-mark cv-tl-tick cv-tl-${cls}`,
+            });
+      mark.setAttribute("data-day", String(g.key.x));
+      root.append(mark);
+    }
+  });
+  const scroll = el("div", "cv-view-table");
+  scroll.append(root);
+  figure.append(scroll);
+
+  // The text alternative: each lane's marks as a list, each count with Show evidence.
+  const lists = el("div", "cv-tl-lists");
+  view.lanes.forEach((lane) => {
+    const block = el("div", "cv-tl-lane");
+    block.dataset.lane = lane.id;
+    const head = el("p", "cv-k");
+    head.append(laneLabel(lane.id, w));
+    block.append(head);
+    const list = el("ul");
+    const key = keyOf(lane.chart);
+    for (const g of lane.chart.groups) {
+      if (g.notRun || (g.value ?? 0) === 0) continue;
+      const item = el("li");
+      const evidenceKey = `view-${String(index)}-${lane.id}-${String(g.key.x)}-${String(g.key[key] ?? "")}`;
+      const name = [g.key.x, g.key[key]]
+        .filter((v) => v !== undefined)
+        .join(" · ");
+      const value = el("span", undefined, String(g.value));
+      value.dataset.chartValue = evidenceKey;
+      item.append(
+        `${String(g.key.x)} `,
+        ...(lane.chart.keys.some((k) => k !== "x")
+          ? [el("span", "cv-lane-key", `${String(g.key[key])} × `)]
+          : []),
+        value,
+        " ",
+        valueEvidence(evidenceKey, `${lane.id} ${name}`, g, w),
+      );
+      list.append(item);
+    }
+    block.append(list);
+    lists.append(block);
+  });
+  figure.append(lists);
+  return figure;
+}
+
+// ---------------------------------------------------------------------------
+// Co-failure: which requirements fail together
+// ---------------------------------------------------------------------------
+
+export function renderCoFailure(
+  view: CheckedCoFailure,
+  index: number,
+  sha256: string,
+  w: Words,
+): HTMLElement {
+  const figure = frame(view, index, sha256, w, [view.count]);
+  figure.append(
+    el("p", "cv-cofail-total", w.p("cofail.failing", view.failing)),
+  );
+  const table = el("table", "cv-cofail");
+  const head = el("tr");
+  const corner = el("th");
+  corner.append(code(view.subject));
+  head.append(corner);
+  for (const req of view.requirements) {
+    const th = el("th", undefined, String(req));
+    th.setAttribute("scope", "col");
+    head.append(th);
+  }
+  const thead = el("thead");
+  thead.append(head);
+  const tbody = el("tbody");
+  view.requirements.forEach((req, a) => {
+    const tr = el("tr");
+    const th = el("th", undefined, String(req));
+    th.setAttribute("scope", "row");
+    tr.append(th);
+    view.requirements.forEach((other, b) => {
+      const cell = view.cells[a]![b]!;
+      const td = el("td");
+      if (a === b) td.dataset.diagonal = "";
+      td.dataset.cofail = `${String(req)}|${String(other)}`;
+      const key = `view-${String(index)}-co-${String(a)}-${String(b)}`;
+      const value = el("span", undefined, String(cell.subjects));
+      value.dataset.chartValue = key;
+      td.append(
+        value,
+        " ",
+        valueEvidence(
+          key,
+          `${String(req)} · ${String(other)}`,
+          {
+            key: {},
+            value: cell.subjects,
+            notRun: false,
+            rows: cell.rows,
+            runRows: [],
+          },
+          w,
+        ),
+      );
+      tr.append(td);
+    });
+    tbody.append(tr);
+  });
+  table.append(thead, tbody);
+  const scroll = el("div", "cv-view-table");
+  scroll.append(table);
+  figure.append(scroll);
+  return figure;
+}
+
 export function renderView(
   view: CheckedView,
   index: number,
   sha256: string,
   w: Words,
 ): HTMLElement {
-  return view.view === "calendar"
-    ? renderCalendar(view, index, sha256, w)
-    : renderByPeriod(view, index, sha256, w);
+  switch (view.view) {
+    case "calendar":
+      return renderCalendar(view, index, sha256, w);
+    case "timeline":
+      return renderTimeline(view, index, sha256, w);
+    case "co-failure":
+      return renderCoFailure(view, index, sha256, w);
+    case "by-period":
+      return renderByPeriod(view, index, sha256, w);
+  }
 }

@@ -41,7 +41,8 @@ export type ChartRefusalReason =
   | "view-runs-unsealed"
   | "view-runs-mismatch"
   | "view-window-not-months"
-  | "view-overlap";
+  | "view-overlap"
+  | "view-lane-role";
 
 /** A refused chart: its reason, the JSON pointer it names (if any) and why. */
 export class ChartRefusal extends Error {

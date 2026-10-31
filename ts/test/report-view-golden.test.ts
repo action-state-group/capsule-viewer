@@ -10,6 +10,7 @@
 // rewrites the bundle, the entries and the goldens; review the diff.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -65,15 +66,25 @@ const { source } = await chartBundleSource({
 });
 const sealed = `${JSON.stringify((await sealEvidenceBundle(source)).bundle)}\n`;
 const generated = viewSpecs();
-const viewsText = `${JSON.stringify([generated.calendar, generated.byPeriod], null, 2)}\n`;
+const viewsText = `${JSON.stringify(
+  [
+    generated.calendar,
+    generated.byPeriod,
+    generated.cells,
+    generated.timeline,
+    generated.coFailure,
+  ],
+  null,
+  2,
+)}\n`;
 if (write) {
   writeFileSync(BUNDLE, sealed);
   writeFileSync(VIEWS, viewsText);
 }
 const bundle = JSON.parse(readFileSync(BUNDLE, "utf8")) as Obj;
-const [calendar, byPeriod] = JSON.parse(
+const [calendar, byPeriod, cells, timeline, coFailure] = JSON.parse(
   readFileSync(VIEWS, "utf8"),
-) as Obj[] as [Obj, Obj];
+) as Obj[] as [Obj, Obj, Obj, Obj, Obj];
 
 async function render(entries: readonly unknown[]): Promise<HTMLElement> {
   const root = document.createElement("div");
@@ -109,6 +120,238 @@ it("the committed bundle and view entries are what the generator writes", () => 
 
 it("the committed bundle verifies VALID", () => {
   expect(bundleVerified(context.verification)).toBe(true);
+});
+
+describe("the calendar's cells (lanes with a role)", () => {
+  const drawn = async (): Promise<HTMLElement> => {
+    const root = await render([cells]);
+    expect(root.querySelector("[data-chart-refused]")).toBeNull();
+    return root;
+  };
+
+  it("matches its golden", async () => {
+    const root = await drawn();
+    const html = `${root.querySelector('[data-region="L1"] > [data-section="charts"]')!.outerHTML}\n`;
+    const golden = join(GOLDENS, "calendar-cells.html");
+    if (write) writeFileSync(golden, html);
+    expect(html).toBe(readFileSync(golden, "utf8"));
+  });
+
+  it("a cell reads the day's activity, judgment, bar and adjudication chip", async () => {
+    const root = await drawn();
+    const cell = root.querySelector<HTMLElement>('td[data-day="2026-09-18"]')!;
+    expect(cell.querySelector(".cv-act")!.textContent).toBe("1 case");
+    expect(cell.querySelector(".cv-jdg")!.textContent).toBe(
+      "judged · 0 met · 1 not met",
+    );
+    expect(cell.querySelector("svg.cv-bar rect.cv-bar-bad")).not.toBeNull();
+    expect(cell.querySelector(".cv-adj")!.textContent).toBe(
+      "◆ 1 adjudication recorded · all concur",
+    );
+    const link = cell.querySelector<HTMLAnchorElement>("a.cv-day-link")!;
+    expect(root.querySelector(link.getAttribute("href")!)).not.toBeNull();
+  });
+
+  it("a wording pack gives the cell its nouns and verbs, and the legend its scale: Terms Pack's words are a pack's, not the viewer's", async () => {
+    const text = JSON.stringify({
+      wording_pack_version: "aac.wording-pack/v0",
+      id: "test/terms-pack-calendar@1",
+      locale: "en",
+      entries: {
+        "calendar.activity.one": "{n} conversation",
+        "calendar.activity.other": "{n} conversations",
+        "calendar.class.good": "{n} resolved",
+        "calendar.class.bad": "{n} missed",
+        "calendar.legend.good": "all but one resolved",
+        "calendar.legend.some": "some missed",
+        "calendar.legend.most": "most missed",
+      },
+    });
+    const wording = {
+      pack: text,
+      sha256: createHash("sha256").update(text).digest("hex"),
+    };
+    const root = document.createElement("div");
+    document.body.append(root);
+    await renderEvidenceGraph(bundle, root, undefined, {
+      charts: [cells],
+      wording,
+    });
+    root.remove();
+    const cell = root.querySelector<HTMLElement>('td[data-day="2026-09-18"]')!;
+    expect(cell.querySelector(".cv-act")!.textContent).toBe("1 conversation");
+    expect(cell.querySelector(".cv-jdg")!.textContent).toBe(
+      "judged · 0 resolved · 1 missed",
+    );
+    expect(root.querySelector(".cv-legend li")!.textContent).toBe(
+      " all but one resolved",
+    );
+  });
+
+  it("an overturned ruling reads as a difference", async () => {
+    const root = await drawn();
+    const chip = root.querySelector<HTMLElement>(
+      'td[data-day="2026-09-24"] .cv-adj',
+    )!;
+    expect(chip.textContent).toBe("◆ 1 adjudication recorded · 1 differs");
+  });
+
+  it("colours a day green, amber or red by its judged cases, and says so in a legend", async () => {
+    const root = await drawn();
+    const scales = new Set(
+      [...root.querySelectorAll<HTMLElement>("td[data-scale]")].map(
+        (td) => td.dataset.scale,
+      ),
+    );
+    expect(scales).toEqual(new Set(["good", "most"]));
+    expect(
+      [...root.querySelectorAll(".cv-legend li")].map((li) => li.textContent),
+    ).toEqual([
+      " all but one met",
+      " some not met",
+      " most not met",
+      "◆ adjudications recorded that day",
+    ]);
+  });
+
+  it("gives every day that ran a section with its heading and records, and a cell never links to a day that did not run", async () => {
+    const root = await drawn();
+    const section = root.querySelector<HTMLElement>(
+      '[data-day-section="2026-09-15"]',
+    )!;
+    expect(section.querySelector("h3")!.textContent).toBe(
+      "Tuesday, September 15 · 1 case · judged · 1 met · 0 not met",
+    );
+    expect(section.querySelectorAll(".cv-day-table tbody tr")).toHaveLength(1);
+    expect(root.querySelector('[data-day-section="2026-09-10"]')).toBeNull();
+    const notRun = root.querySelector<HTMLElement>(
+      'td[data-day="2026-09-10"]',
+    )!;
+    expect(notRun.querySelector("a")).toBeNull();
+  });
+
+  it("5a: every counted value in a day section has Show evidence, every 0 a label", async () => {
+    const root = await drawn();
+    for (const value of root.querySelectorAll<HTMLElement>(
+      "[data-chart-value]",
+    )) {
+      const key = value.dataset.chartValue!;
+      const evidence = root.querySelector(`[data-evidence-for="${key}"]`)!;
+      expect(evidence).not.toBeNull();
+      expect(evidence.hasAttribute("data-evidence-label")).toBe(
+        value.textContent === "0",
+      );
+    }
+  });
+
+  it("refuses a role on two lanes, a value with no class, classes with no key, and a judgment lane without classes", async () => {
+    const twice = clone(cells);
+    (twice.lanes as Obj[])[1]!.role = "activity";
+    expect(refusal(twice).reason).toBe("view-lane-role");
+    const unclassed = clone(cells);
+    delete ((unclassed.lanes as Obj[])[1]!.classes as Obj).not_yet_in_force;
+    expect(refusal(unclassed).reason).toBe("view-lane-role");
+    const keyless = clone(cells);
+    (keyless.lanes as Obj[])[0]!.classes = { x: "good" };
+    expect(refusal(keyless).reason).toBe("view-lane-role");
+    const bare = clone(cells);
+    delete (bare.lanes as Obj[])[1]!.classes;
+    expect(refusal(bare).reason).toBe("view-lane-role");
+    const badRole = clone(cells);
+    (badRole.lanes as Obj[])[0]!.role = "headline";
+    expect(refusal(badRole).reason).toBe("view-unsupported-member");
+    const badClass = clone(cells);
+    ((badClass.lanes as Obj[])[1]!.classes as Obj).met = "great";
+    expect(refusal(badClass).reason).toBe("view-unsupported-member");
+  });
+});
+
+describe("the timeline", () => {
+  it("matches its golden: a row per lane, a mark on each day with a count, hatched days that did not run", async () => {
+    const root = await render([timeline]);
+    expect(root.querySelector("[data-chart-refused]")).toBeNull();
+    const figure = root.querySelector('figure.cv-view[data-view="timeline"]')!;
+    expect(
+      figure.querySelectorAll("svg.cv-timeline .cv-tl-notrun"),
+    ).toHaveLength(4);
+    expect(
+      figure.querySelector('[data-lane="rulings"] li')!.textContent,
+    ).toContain("2026-09-06");
+    const html = `${root.querySelector('[data-region="L1"] > [data-section="charts"]')!.outerHTML}\n`;
+    const golden = join(GOLDENS, "timeline.html");
+    if (write) writeFileSync(golden, html);
+    expect(html).toBe(readFileSync(golden, "utf8"));
+  });
+
+  it("no mark on a day that did not run, and every count has Show evidence", async () => {
+    const root = await render([timeline]);
+    for (const day of ["2026-09-10", "2026-09-28"])
+      expect(root.querySelector(`.cv-tl-mark[data-day="${day}"]`)).toBeNull();
+    for (const value of root.querySelectorAll<HTMLElement>(
+      "[data-chart-value]",
+    ))
+      expect(
+        root.querySelector(`[data-evidence-for="${value.dataset.chartValue}"]`),
+      ).not.toBeNull();
+  });
+
+  it("refuses an unknown mark and a value with no class", async () => {
+    const bad = clone(timeline);
+    (bad.lanes as Obj[])[0]!.mark = "bar";
+    expect(refusal(bad).reason).toBe("view-unsupported-member");
+    const unclassed = clone(timeline);
+    delete ((unclassed.lanes as Obj[])[1]!.classes as Obj).overturned;
+    expect(refusal(unclassed).reason).toBe("view-lane-role");
+  });
+});
+
+describe("the co-failure matrix", () => {
+  it("matches its golden", async () => {
+    const root = await render([coFailure]);
+    expect(root.querySelector("[data-chart-refused]")).toBeNull();
+    const html = `${root.querySelector('[data-region="L1"] > [data-section="charts"]')!.outerHTML}\n`;
+    const golden = join(GOLDENS, "co-failure.html");
+    if (write) writeFileSync(golden, html);
+    expect(html).toBe(readFileSync(golden, "utf8"));
+  });
+
+  it("counts a session once per requirement it fails, and pairs by sessions failing both", async () => {
+    const checked = checkView(coFailure, dataset);
+    if (checked.view !== "co-failure") throw new Error("not a co-failure view");
+    const at = (r: string): number => checked.requirements.indexOf(r);
+    // Session s4 fails req-b (its case) and req-a (the extra case).
+    expect(checked.cells[at("req-a")]![at("req-b")]!.subjects).toBeGreaterThan(
+      0,
+    );
+    // The matrix is symmetric.
+    for (const a of checked.requirements.keys())
+      for (const b of checked.requirements.keys())
+        expect(checked.cells[a]![b]!.subjects).toBe(
+          checked.cells[b]![a]!.subjects,
+        );
+    // No session fails more requirements than there are sessions that fail any.
+    for (const a of checked.requirements.keys())
+      expect(checked.cells[a]![a]!.subjects).toBeLessThanOrEqual(
+        checked.failing,
+      );
+  });
+
+  it("a diagonal cell is the sessions failing that requirement, whatever else they fail", async () => {
+    const root = await render([coFailure]);
+    const diagonal = root.querySelector<HTMLElement>("td[data-diagonal]")!;
+    expect(diagonal.querySelector("[data-chart-value]")!.textContent).not.toBe(
+      "0",
+    );
+  });
+
+  it("refuses a subject field a row lacks, and a non-path subject", async () => {
+    const lacking = clone(coFailure);
+    lacking.subject = "statement.conversation";
+    expect(refusal(lacking).reason).toBe("view-chart-shape");
+    const bad = clone(coFailure);
+    bad.subject = "not a path";
+    expect(refusal(bad).reason).toBe("view-unsupported-member");
+  });
 });
 
 describe("the calendar", () => {
@@ -637,6 +880,6 @@ describe("the pages", () => {
     );
     const html = readFileSync(out, "utf8");
     expect(html).not.toMatch(/<script/iu);
-    expect(html.match(/<figure class="cv-view"/gu)).toHaveLength(2);
+    expect(html.match(/<figure class="cv-view"/gu)).toHaveLength(5);
   });
 });
