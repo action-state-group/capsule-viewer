@@ -15496,7 +15496,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("1fec3799e745136a6e9ba4287d2ffa486bb45cac");
+    return commitPrefix("4821ae0dc7c8006b17172e3c96420637704dc490");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16069,7 +16069,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "calendar.adj.differ.other": "{n} differ from the judge",
       "calendar.adj.open": "{n} not yet ruled",
       "calendar.legend.good": "all, or all but one, met",
-      "calendar.legend.some": "some not met",
+      "calendar.legend.some": "some not met or undecided",
       "calendar.legend.most": "most not met",
       "calendar.legend.adjudication": "adjudications recorded that day",
       "cofail.failing.one": "{n} case did not meet at least one requirement",
@@ -16443,7 +16443,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "calendar.adj.differ.other": "{n} differ from the judge",
       "calendar.adj.open": "{n} not yet ruled",
       "calendar.legend.good": "all, or all but one, met",
-      "calendar.legend.some": "some not met",
+      "calendar.legend.some": "some not met or undecided",
       "calendar.legend.most": "most not met",
       "calendar.legend.adjudication": "adjudications recorded that day",
       "cofail.failing.one": "{n} case did not meet at least one requirement",
@@ -17336,8 +17336,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "6bc09b6eec4509325c037e609828dae071261296c8d59ca924407d816b354180",
-    groups: "9d0aee6fcd56e776ae4cc83513f0e57a6cb46551d630e8e2f1f13f02d3d93a50"
+    lines: "a3b6ac4abec53fb0e6578332b1079c4a2cb28150c1301e400f7a10d21abadea3",
+    groups: "8ad71d0e1182941b5847e8f6a1e2a9e17683f896aa32ebed943de9e35b53de4e"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
