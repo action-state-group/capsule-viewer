@@ -184,9 +184,9 @@ describe("the committed bundles (capsulectl, VALID)", () => {
     const ctx = contextOf("person-shared");
     const unbound = { ...ctx, verification: { ...ctx.verification, perRecordMembership: { status: "fail", findings: [`membership_record_unbound:${ctx.root}`] } } };
     const proves = (c) => renderAll(l, modelOf(l, c), "L1").L1.querySelector('[data-sh-section="proves"]').textContent;
-    expect(proves(ctx)).toContain("the log's snapshot covers it");
+    expect(proves(ctx)).toContain("which snapshot of the holder's log it is as of");
     expect(modelOf(l, unbound).state).toBe("card");
-    expect(proves(unbound)).not.toContain("snapshot covers it");
+    expect(proves(unbound)).not.toContain("which snapshot of the holder's log it is as of");
   });
   it("a bundle that did not verify draws no count", () => {
     const b = bundleOf("person-shared");
@@ -372,6 +372,16 @@ describe("what the page claims", () => {
     expect(row("denominator").lastChild.textContent).toBe("not run: an earlier check failed");
     const own = everyPage(l).find((x) => x.c.name === "neg-counted-shop-purchase-own" && x.depth === "L2");
     expect(own.host.L0.textContent).toContain("Failed: The counts recount from the deal entries");
+  });
+  it("the window line carries the snapshot's time in UTC, and only the holder's own copy says which snapshot the others see, with no witness claim", () => {
+    for (const p of everyPage(l).filter((x) => x.depth === "L0" && x.model.state === "card" && x.model.held.as_of)) {
+      const win = p.host.L0.querySelector('[data-sh-window="true"]').textContent;
+      expect(win).toMatch(/ · as of [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2} UTC$/);
+      const level = p.host.L0.querySelector('[data-sh-lead="level"]');
+      expect(level !== null).toBe(p.model.own === true);
+      if (level) expect(level.textContent).toMatch(/^Level they see: Standard · .+ · snapshot [A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(win + (level ? level.textContent : "")).not.toMatch(/witness/i);
+    }
   });
   it("never says a signature or a witness was checked, and names anchor_inclusion not checked", () => {
     for (const p of everyPage(l).filter((x) => x.depth === "L2" && x.model.state !== "unreadable")) {
