@@ -63,6 +63,12 @@ import {
 } from "./presentation-fragment.js";
 import { mountPresentation } from "./presentation-mount.js";
 import { fillForNoScript } from "./report-levels.js";
+import {
+  checkContractInput,
+  ContractError,
+  type CheckedContract,
+  type ContractInput,
+} from "./evidence-contract.js";
 
 /**
  * One builder, four packagings (spec/presentation-builder-v0.md):
@@ -340,6 +346,13 @@ export interface BuildPresentationOptions {
   readonly themeCss?: string;
   readonly wording?: WordingPackInput;
   /**
+   * The compiled Evidence Contract (its exact text and `contract_sha256`),
+   * from which the contract-report module reads each row's requirement
+   * tier. Checked against its digest and shape before any packaging is
+   * written (evidence-contract.ts); every packaging carries it.
+   */
+  readonly contract?: ContractInput;
+  /**
    * Chart specs (docs/design/chart-spec.md), drawn in L1 in this order.
    * Each is checked against the dataset the bundle's Result names before
    * any packaging is written; one that fails refuses the build, naming the
@@ -438,6 +451,22 @@ export async function checkWordingPack(
 }
 
 /**
+ * Check a compiled contract against its digest and its shape and return
+ * it (evidence-contract.ts; the Go twin is CheckContract). One check for
+ * every path.
+ */
+export async function checkContract(
+  contract: ContractInput,
+): Promise<CheckedContract> {
+  try {
+    return await checkContractInput(contract);
+  } catch (e) {
+    if (e instanceof ContractError) throw new PresentationBuildError(e.message);
+    throw e;
+  }
+}
+
+/**
  * The contract-report grouping each earlier display card draws, by module
  * id. The contract-report module (CONTRACT_REPORT_MANIFEST) draws the
  * grouping its bundle's data supports (`contractReportGroupingOf`).
@@ -490,20 +519,26 @@ interface OfflineSettings {
   readonly title: string | undefined;
   readonly themeCss: string | undefined;
   readonly wording: WordingPackInput | undefined;
+  readonly contract?: ContractInput | undefined;
   readonly charts?: readonly unknown[] | undefined;
 }
 
 // The options a page's bootstrap, an embedded snippet's bootstrap and
 // mount pass to renderEvidenceGraph: the audience, the format, and the
-// depth and wording pack when set. The host's registry is mount's own.
+// depth, wording pack, contract and charts when set. The host's registry is
+// mount's own.
 function renderOptions(
-  settings: Pick<OfflineSettings, "audience" | "depth" | "wording" | "charts">,
+  settings: Pick<
+    OfflineSettings,
+    "audience" | "depth" | "wording" | "contract" | "charts"
+  >,
   format: "html" | "embedded",
 ): {
   audience: string;
   format: "html" | "embedded";
   depth?: PresentationDepth;
   wording?: WordingPackInput;
+  contract?: ContractInput;
   charts?: readonly unknown[];
 } {
   return {
@@ -521,6 +556,14 @@ function renderOptions(
             sha256: settings.wording.sha256,
           },
         }),
+    ...(settings.contract === undefined
+      ? {}
+      : {
+          contract: {
+            text: settings.contract.text,
+            sha256: settings.contract.sha256,
+          },
+        }),
   };
 }
 
@@ -536,6 +579,9 @@ async function packageOffline(
     settings.wording === undefined
       ? undefined
       : await checkWordingPack(settings.wording);
+  // The hand-back reaches here with a fragment's contract unchecked: refuse
+  // it as the direct path does (and as Go's OfflineHTMLFromFragment does).
+  if (settings.contract !== undefined) await checkContract(settings.contract);
   const title =
     settings.title !== undefined && settings.title !== ""
       ? settings.title
@@ -544,6 +590,7 @@ async function packageOffline(
     settings.audience === "*" &&
     settings.depth === undefined &&
     settings.wording === undefined &&
+    settings.contract === undefined &&
     (settings.charts === undefined || settings.charts.length === 0);
   const bootstrap = isDefault
     ? DEFAULT_EVIDENCE_GRAPH_BOOTSTRAP
@@ -593,6 +640,7 @@ async function scopeAndVerify(
   )
     throw new PresentationBuildError("depth is not L0, L1 or L2");
   if (options.wording !== undefined) await checkWordingPack(options.wording);
+  if (options.contract !== undefined) await checkContract(options.contract);
 
   const given = isVerifiedBundleContext(input)
     ? input
@@ -820,6 +868,7 @@ async function packageAs(
         title: options.title,
         themeCss: options.themeCss,
         wording: options.wording,
+        contract: options.contract,
         charts: options.charts,
       },
       requireRuntime(options.runtime, format),
@@ -858,6 +907,14 @@ async function packageAs(
               sha256: options.wording.sha256,
             },
           }),
+      ...(options.contract === undefined
+        ? {}
+        : {
+            contract: {
+              text: options.contract.text,
+              sha256: options.contract.sha256,
+            },
+          }),
       core_runtime_sha256: runtimePin,
       module_sha256: modules.map((m) => m.sha256),
       bundle,
@@ -887,6 +944,7 @@ async function packageAs(
       audience,
       depth: options.depth,
       wording: options.wording,
+      contract: options.contract,
       charts: options.charts,
     },
     "embedded",
@@ -962,6 +1020,7 @@ async function packageStatic(
       format: "html",
       ...(options.depth === undefined ? {} : { depth: options.depth }),
       ...(options.wording === undefined ? {} : { wording: options.wording }),
+      ...(options.contract === undefined ? {} : { contract: options.contract }),
       ...(options.charts === undefined ? {} : { charts: options.charts }),
       registry,
     });
@@ -1099,6 +1158,7 @@ export async function offlineHtmlFromFragment(
       title: payload.title,
       themeCss: payload.theme_css,
       wording: payload.wording,
+      contract: payload.contract,
     },
     { code: runtime.code, sha256: runtimePin },
     emitterModules(modules),

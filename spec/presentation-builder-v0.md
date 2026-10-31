@@ -57,7 +57,8 @@ buildPresentation(context, { presentation, audience, format, ...settings })
 - Settings: `runtime` (the core runtime and, optionally, its pin; required for `html` and
   `fragment`), `modules` (digest-pinned module-slot scripts), `registry` (the resolver; the
   built-ins when omitted), `disclose` (section 3), `depth`, `title`, `themeCss`, `wording` (a
-  wording pack's exact text and its `wording_sha256`), `charts` (a list of chart specs, below),
+  wording pack's exact text and its `wording_sha256`), `contract` (a compiled Evidence Contract's
+  exact text and its `contract_sha256`, below), `charts` (a list of chart specs, below),
   `maxFragmentLength`, `viewerUrl`.
 
 The steps run in this order: scope (section 3), verify the scoped bundle, resolve, package. Every
@@ -102,6 +103,23 @@ and stated the same way. With no `charts`, every packaging is unchanged byte for
 offline builder (`OfflineOptions.Charts`) checks the specs with `go/chartspec` and carries them
 the same way.
 
+**Contract.** `contract` is a compiled Evidence Contract as distributed: its exact text and the
+lowercase hex SHA-256 of its UTF-8 bytes (`contract_sha256`). The contract-report module reads one
+thing from it, each requirement's `tier` (`spec/contract-report-module-v1.md` §2). Before anything
+is written, the builder checks that the bytes hash to `contract_sha256` and that the text is a
+JSON object with a non-empty string `id` and `version` and `requirements`, a list of objects each
+with a non-empty string `id`, no `id` listed twice, and an optional `tier` of `must_have` or
+`informational`; every other member is the contract's own and is not read. A contract that fails
+refuses the build in every packaging (`PresentationBuildError`). Every packaging carries it: the
+`html` and `embedded` packagings in the page's render options, the `fragment` in its payload, and
+the `static` page drawn with it. The page runtime checks it again; a contract that does not check
+there is not read, and the page is drawn as it is without one. The page's "How this page was
+checked" section states the contract's `<id>@<version>` and its `contract_sha256`. With no
+`contract`, the builder writes what it writes without the setting for the same runtime and packs;
+the page draws no tier. The Go offline builder
+(`OfflineOptions.Contract`, checked with `CheckContract`) applies the same check and writes the same
+bytes; `go/emitter/testdata/contract-vectors.json` holds the two checks together.
+
 **Supported targets.** The builder supports four packaging targets: `html`, `fragment`,
 `embedded` and `static`. A target is *supported* for one (bundle, audience) and one set of
 settings when the builder can package it; otherwise it is *unavailable*, and the builder says so
@@ -131,7 +149,7 @@ target with the same settings. Otherwise it is `available: false` with a `reason
 | `static-too-large` | `static` | The page, with every toggle's body built, is over its size budget. | `bytes`, `limit` |
 
 Every reason also carries a `message` in words. An error of the request itself (no audience, a
-bad depth or wording pack, an ambiguous registry, a requested presentation the registry does not
+bad depth, wording pack or contract, an ambiguous registry, a requested presentation the registry does not
 select, scoping a bundle that did not verify, a chart spec that does not match) is not a
 packaging question: it is thrown, by both calls, as it is for every target alike.
 
@@ -147,7 +165,7 @@ other reasons throw `PackagingUnavailableError`, a `PresentationBuildError` carr
 One self-contained file: the shell, the scoped bundle in `BUNDLE_SLOT`, the core runtime in
 `CORE_RUNTIME_SLOT`, any modules in `MODULE_SLOT`, the theme in `THEME_SLOT`, the title in
 `TITLE_SLOT`, and a bootstrap that calls `renderEvidenceGraph` with the audience, the format, the
-depth, the wording pack and the chart specs. The shell's `<noscript>` line tells a reader with
+depth, the wording pack, the contract and the chart specs. The shell's `<noscript>` line tells a reader with
 scripts off that the page needs them and that a copy without scripts is built with
 `render-report --format static`. The page carries the emitter's per-page Content-Security-Policy
 (`default-src 'none'`, `connect-src 'none'`, and every inline script and style by hash), so it
@@ -159,7 +177,7 @@ default. The wording pack's bytes MUST hash to its `wording_sha256`, and the pac
 presentation only (contract I3): changing any of them changes the file's bytes and never an
 evidence identifier.
 
-With the default settings (audience `"*"`, no depth, no wording, no charts) the builder writes
+With the default settings (audience `"*"`, no depth, no wording, no contract, no charts) the builder writes
 exactly the page `emitEvidenceGraphHtml(bundle, runtime)` writes, byte for byte.
 
 ### 2.2 Fragment permalink (`fragment`)
@@ -189,6 +207,7 @@ the link can read all of it. What an audience may see is decided before encoding
 | `presentation` | The module id the builder resolved, or `"auto"`. Informational. |
 | `depth`, `title`, `theme_css` | Optional settings, as in section 1. |
 | `wording` | Optional: `{pack, sha256}`, the pack's exact text and its digest. |
+| `contract` | Optional: `{text, sha256}`, the compiled contract's exact text and its digest (section 1). |
 | `core_runtime_sha256` | Lowercase hex SHA-256 of the core runtime the page was built with. |
 | `module_sha256` | The pins of the module-slot scripts, in order. |
 | `bundle` | The scoped bundle. |
