@@ -69,6 +69,11 @@ jobs:
           cp go/pageruntime/evidence-graph.iife.js go/pageruntime/evidence-graph.iife.js.sha256 \
             go/pageruntime/NOTICE go/pageruntime/THIRD_PARTY_NOTICES.md \
             go/emitter/runtime-style-hashes.txt dist/
+          # The History card module's files, for a plugin that carries it
+          # (capsule-cli's cli-plugin/v1 presentations): the same bytes on
+          # every run, pinned by the manifest inside.
+          PYTHONPATH=src python3 -m capsule_viewer.standard_history.module_slot \
+            --bundle "dist/standard-history-module-v${TAG#go/v}.tar.gz"
           echo "SHA256=$(cat dist/evidence-graph.iife.js.sha256)" >> "$GITHUB_ENV"
           echo "RUNTIME_COMMIT=$(sed -n 's/^const Commit = "\([0-9a-f]\{40\}\)"$/\1/p' go/pageruntime/pageruntime.go)" >> "$GITHUB_ENV"
       - name: Attest build provenance of the assets
@@ -100,5 +105,5 @@ jobs:
           else
             gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" \
               --title "$TAG" \
-              --notes "Go module github.com/action-state-group/capsule-viewer/go v$VERSION, viewer $VERSION. Its page runtime (go/pageruntime) is evidence-graph.iife.js, sha256 $SHA256, built at $RUNTIME_COMMIT (ts/v$VERSION), the same bytes as the npm release's dist/evidence-graph.iife.js; NOTICE and THIRD_PARTY_NOTICES.md carry its licenses; runtime-style-hashes.txt lists the CSP hashes of the styles it inserts. Check the build attestation with no GitHub account: gh attestation verify FILE --bundle pageruntime-v$VERSION.sigstore.json --repo $GITHUB_REPOSITORY --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release-go.yml. See CHANGELOG.md."
+              --notes "Go module github.com/action-state-group/capsule-viewer/go v$VERSION, viewer $VERSION. Its page runtime (go/pageruntime) is evidence-graph.iife.js, sha256 $SHA256, built at $RUNTIME_COMMIT (ts/v$VERSION), the same bytes as the npm release's dist/evidence-graph.iife.js; NOTICE and THIRD_PARTY_NOTICES.md carry its licenses; runtime-style-hashes.txt lists the CSP hashes of the styles it inserts. standard-history-module-v$VERSION.tar.gz holds the History card module (capsuleviewer.standard-history/v0): its manifest, script, stylesheets and wording pack, and presentation.json, the cli-plugin/v1 presentations entry for them; its sha256 is in the .sha256 file. Check the build attestation with no GitHub account: gh attestation verify FILE --bundle pageruntime-v$VERSION.sigstore.json --repo $GITHUB_REPOSITORY --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release-go.yml. See CHANGELOG.md."
           fi

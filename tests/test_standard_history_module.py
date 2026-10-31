@@ -96,3 +96,39 @@ def test_every_fixture_is_valid_and_carries_its_case():
         assert bundle["extensions"][EXTENSION] == case["block"]
         # Deal entries travel only in the holder's own copy, which the case name says.
         assert ("deals" in case["block"]) == case["name"].endswith("-own"), case["name"]
+
+
+def _unpack(blob: bytes) -> dict[str, bytes]:
+    import io
+    import tarfile
+
+    with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as tar:
+        return {m.name: tar.extractfile(m).read() for m in tar.getmembers() if m.isfile()}
+
+
+def test_the_release_bundle_is_the_same_bytes_on_every_run():
+    first = module_slot.bundle_tar()
+    assert module_slot.bundle_tar() == first
+    members = _unpack(first)
+    assert sorted(members) == [f"standard-history-module/{n}" for n in sorted(module_slot.bundle_files())]
+
+
+def test_the_release_bundle_carries_the_bytes_the_manifest_pins_and_a_handshake_entry_for_them():
+    files = _unpack(module_slot.bundle_tar())
+    entry = json.loads(files["standard-history-module/presentation.json"])
+    manifest = json.loads(files["standard-history-module/manifest.json"])
+    assert entry["manifest"] == manifest == MANIFEST
+    pins = manifest["executable"]
+    by_role: dict[str, list[str]] = {}
+    for f in entry["files"]:
+        # A plugin's path is relative to its launcher's directory and stays inside it.
+        assert f["path"].startswith("standard-history-module/") and ".." not in f["path"].split("/")
+        data = files[f["path"]]
+        assert hashlib.sha256(data).hexdigest() == f["sha256"]
+        by_role.setdefault(f["role"], []).append(f["sha256"])
+    assert by_role["script"] == [pins["script_sha256"]]
+    assert by_role["style"] == pins["style_sha256"]
+    assert by_role["wording"] == [pins["wording_sha256"]]
+    assert set(by_role) == {"script", "style", "wording"}
+    assert STANDARD_HISTORY_ID == manifest["id"]
+    assert EXTENSION in manifest["requires"]["extensions"]["required"]

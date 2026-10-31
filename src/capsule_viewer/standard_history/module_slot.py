@@ -10,6 +10,9 @@ once at render (``static/kit.css`` and ``static/standard_history.css``), which
 the manifest pins by ``style_sha256``. The manifest also pins the pack by
 ``wording_sha256``.
 
+``--bundle FILE.tar.gz`` writes the release bundle (``bundle_files``) and
+``FILE.tar.gz.sha256``; Release · Go attaches it to the release.
+
 ``python -m capsule_viewer.standard_history.module_slot --write`` rewrites the
 script and the manifest in place; ``--check`` exits 1 when a committed file is
 not what this writes (``tests/test_standard_history_module.py`` runs the same
@@ -18,10 +21,13 @@ receipt scripts.
 """
 from __future__ import annotations
 
+import gzip
 import hashlib
+import io
 import json
 import re
 import sys
+import tarfile
 from pathlib import Path
 
 from . import EXTENSION, STANDARD_HISTORY_ID
@@ -106,6 +112,54 @@ def stale() -> list[Path]:
     return [path for path, data in outputs().items() if not path.exists() or path.read_bytes() != data]
 
 
+# The files a plugin carries to put this module in a page, by the role the
+# cli-plugin/v1 handshake gives each (capsule-cli plugin_presentations.go).
+BUNDLE_DIR = "standard-history-module"
+
+
+def bundle_files() -> dict[str, bytes]:
+    """The release bundle: the module's own files, and ``presentation.json``, the
+    handshake's ``presentations`` entry for them (the manifest, and each file's
+    role, path and sha256), so a plugin copies it and states nothing of its own.
+    Every digest is the one the manifest pins."""
+    script, kit, card, pack = script_bytes(), KIT_CSS.read_bytes(), CARD_CSS.read_bytes(), PACK.read_bytes()
+    manifest_data = manifest()
+    files = {
+        "standard_history_card.js": ("script", script),
+        "kit.css": ("style", kit),
+        "standard_history.css": ("style", card),
+        "wording-consumer-en.json": ("wording", pack),
+    }
+    pins = manifest_data["executable"]
+    if _sha(script) != pins["script_sha256"] or [_sha(kit), _sha(card)] != pins["style_sha256"] or _sha(pack) != pins["wording_sha256"]:
+        raise ValueError("the manifest does not pin the bytes this bundle carries")
+    entry = {
+        "manifest": manifest_data,
+        "files": [{"role": role, "path": f"{BUNDLE_DIR}/{name}", "sha256": _sha(data)} for name, (role, data) in files.items()],
+    }
+    out = {"manifest.json": (json.dumps(manifest_data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")}
+    out.update({name: data for name, (_, data) in files.items()})
+    out["presentation.json"] = (json.dumps(entry, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    return dict(sorted(out.items()))
+
+
+def bundle_tar() -> bytes:
+    """``bundle_files`` as a gzip tar that is the same bytes on every run: sorted
+    names, no owner, no time, so its sha256 is a function of the module alone."""
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w", format=tarfile.PAX_FORMAT) as tar:
+        for name, data in bundle_files().items():
+            info = tarfile.TarInfo(f"{BUNDLE_DIR}/{name}")
+            info.size, info.mtime, info.mode = len(data), 0, 0o644
+            info.uid = info.gid = 0
+            info.uname = info.gname = ""
+            tar.addfile(info, io.BytesIO(data))
+    out = io.BytesIO()
+    with gzip.GzipFile(fileobj=out, mode="wb", mtime=0, filename="") as gz:
+        gz.write(raw.getvalue())
+    return out.getvalue()
+
+
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if args == ["--write"]:
@@ -118,6 +172,11 @@ def main(argv: list[str] | None = None) -> int:
         for path in bad:
             print(f"stale: {path}", file=sys.stderr)
         return 1 if bad else 0
+    if len(args) == 2 and args[0] == "--bundle":
+        data = bundle_tar()
+        Path(args[1]).write_bytes(data)
+        Path(args[1] + ".sha256").write_text(f"{_sha(data)}\n", encoding="utf-8")
+        return 0
     print(__doc__, file=sys.stderr)
     return 2
 
