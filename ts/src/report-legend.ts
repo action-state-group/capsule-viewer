@@ -24,10 +24,6 @@ export const WORD_SOURCES = [
 ] as const;
 export type WordSource = (typeof WORD_SOURCES)[number];
 
-// The legend names all five sources, in the canvas's order. Not every word on a
-// page is tagged node by node, so its last line says unmarked text is the
-// viewer's or the report's own.
-
 /**
  * Marks `node` as words from `source`. The style is the page stylesheet's:
  * the pack's own words are the page's plain sans, so a pack-source node is
@@ -82,6 +78,9 @@ export function renderLegend(w: Words): HTMLElement {
   const strip = el("p", "cv-legend-sources");
   strip.dataset.legend = "sources";
   strip.append(el("span", "cv-legend-lead", w.t("legend.src.lead")));
+  // All five, in the canvas's order. Not every word on a page is tagged node
+  // by node, so the last line says unmarked text is the viewer's or the
+  // report's own.
   for (const source of WORD_SOURCES) {
     const entry = el("span", "cv-legend-item");
     const chip = el("span", "cv-src");
