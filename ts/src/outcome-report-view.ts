@@ -40,6 +40,7 @@ import {
   leadWithProvenance,
   renderCheckYourself,
 } from "./report-front.js";
+import { spotCheckToggle } from "./spot-check.js";
 import type { Words } from "./contract-report-wording.js";
 
 /**
@@ -667,6 +668,39 @@ function conversationBody(
     gap.dataset.gaps = "true";
     body.append(gap);
   }
+
+  // The conversation beside each rule's wording and verdict (spot-check.ts)
+  const spot = spotCheckToggle(
+    {
+      transcript: conversation.transcript,
+      caseRecord: conversation.sourceCapsuleId,
+      rules: conversation.criteria.flatMap((criterion) => {
+        if (criterion.claim === undefined) return [];
+        const label = criterionLabel(
+          model,
+          criterion.checkId,
+          criterion.criterionId,
+          w,
+        );
+        return [
+          {
+            name: label.label,
+            ref: `${criterion.checkId}.${criterion.criterionId}`,
+            worded: criterionWord(criterion, w),
+            verdict: criterion.verdict,
+            drawnVerdict: criterion.claim.verdict,
+            wording: { text: label.text, source: label.source },
+            rationale: criterion.rationale,
+            noNote: noNoteText(criterion, w),
+            judgePinDigest: criterion.judgePinDigest,
+            reportState: criterion.reportState,
+          },
+        ];
+      }),
+    },
+    w,
+  );
+  if (spot !== undefined) body.append(spot);
 
   // The conversation itself
   body.append(

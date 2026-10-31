@@ -23,6 +23,7 @@ import {
   wordingRow,
 } from "./outcome-report-view.js";
 import { NOT_STATED } from "@action-state-group/agent-action-capsule";
+import { spotCheckToggle } from "./spot-check.js";
 import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
 import {
   caseParts,
@@ -893,6 +894,43 @@ function sessionBody(
     gap.dataset.gaps = "true";
     body.append(gap);
   }
+  const wordings = new Map(
+    model.obligations.flatMap((o) =>
+      o.rows.map((r) => [r.criterionId, r.wording] as const),
+    ),
+  );
+  const spot = spotCheckToggle(
+    {
+      transcript: session.transcript,
+      caseRecord: session.sourceCapsuleId,
+      rules: session.tests.flatMap((test) => {
+        if (test.claim === undefined) return [];
+        return [
+          {
+            name: names(test.criterionId, "span", "").textContent ?? "",
+            ref: test.criterionId,
+            worded: ruleWord(
+              test.verdict,
+              judgedOf(test.reportState, test.judgePinDigest),
+              w,
+            ),
+            verdict: test.verdict,
+            drawnVerdict: test.claim.verdict,
+            wording: wordings.get(test.criterionId) ?? {
+              text: "",
+              source: "unstated" as const,
+            },
+            rationale: test.rationale,
+            noNote: notesGap([test.reportState], w),
+            judgePinDigest: test.judgePinDigest,
+            reportState: test.reportState,
+          },
+        ];
+      }),
+    },
+    w,
+  );
+  if (spot !== undefined) body.append(spot);
   body.append(conversationFold(session.transcript, session.sourceCapsuleId, w));
   body.append(
     levelToggle(
