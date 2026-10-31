@@ -24,7 +24,7 @@ import { JSDOM } from "jsdom";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { standInContext } from "./aacContext.js";
-import { EXT, TERMS, build, reseal } from "./adjudicationsFixture.js";
+import { EXT, TERMS, build, reseal, sha } from "./adjudicationsFixture.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const STATIC = join(ROOT, "src", "capsule_viewer", "static");
@@ -156,7 +156,7 @@ describe("voice: the second person on the holder's own preview, the third when s
 describe("the checks", () => {
   it("passes the recount when every rating is in the bundle and equals the summary", () => {
     const { model } = page(build());
-    expect(model.checks).toEqual({ bundle: "PASS", summary: "PASS", recount: "PASS" });
+    expect(model.checks).toEqual({ bundle: "PASS", summary: "PASS", records: "PASS", recount: "PASS" });
   });
   it("does not check the recount when a rating's report is not in the bundle, and still draws the summary", () => {
     const b = build();
@@ -182,6 +182,71 @@ describe("the checks", () => {
     expect(model.state).toBe("page");
     expect(model.checks.recount).toBe("NOT_CHECKED");
     expect(text(host)).toMatch(/adjudication records themselves are not in this bundle/);
+    // Without the ratings nothing states "blind" or "human", so the page does not either.
+    expect(host.L0.querySelector('[data-adj="headline"]').textContent).toBe("Thirty-eight re-grades, thirty-five agree with the judge");
+    expect(text(host)).not.toMatch(/blind|human/i);
+    expect(host.L0.querySelector('[data-adj="blind"]')).toBeNull();
+  });
+  it("calls a withheld rating a gap, not a mismatch, and still draws the summary", () => {
+    const b = build();
+    const gone = b.records.find((r) => b.disclosures[r.capsule_id].agent_input.record_version === "human-rating/v1");
+    b.records = b.records.filter((r) => r !== gone);
+    delete b.disclosures[gone.capsule_id];
+    const { model } = page(b);
+    expect(model.state).toBe("page");
+    expect(model.checks.recount).toBe("NOT_CHECKED");
+    expect([model.k, model.n]).toEqual([35, 38]);
+  });
+  it("draws no counts for two summaries it cannot tell apart from one counted twice", () => {
+    const b = build();
+    const second = JSON.parse(JSON.stringify(b.records.find((r) => r.capsule_id === b.root)));
+    const input = JSON.parse(JSON.stringify(b.disclosures[b.root].agent_input));
+    input.record_id = "summary-0";
+    input.computed_at = "2026-10-24T02:00:00Z";
+    second.model_attestation.compute_attestation.agent_input_digest = sha(input);
+    delete second.capsule_id;
+    second.capsule_id = sha(second);
+    b.records.push(second);
+    b.disclosures[second.capsule_id] = { agent_input: input };
+    // With every rating in the bundle the sum is 70 of 76 against 39 ratings: not a count, never 70 of 76.
+    expect(page(b).model.state).toBe("ambiguous");
+    const thin = JSON.parse(JSON.stringify(b));
+    const isRating = (r) => thin.disclosures[r.capsule_id].agent_input.record_version === "human-rating/v1";
+    const gone = thin.records.filter(isRating);
+    thin.records = thin.records.filter((r) => !isRating(r));
+    gone.forEach((r) => delete thin.disclosures[r.capsule_id]);
+    const { model, host } = page(thin);
+    expect(model.state).toBe("ambiguous");
+    expect(host.L0.querySelector("[data-adj-tile]")).toBeNull();
+    expect(text(host)).not.toMatch(/70 of 76/);
+  });
+  it("counts a rating whose report holds several cases as not resolved, and says why", () => {
+    const b = build({ terms: [["a-term", 2, 2]], uncounted: 0, unrated: 0 });
+    const rating = b.records.map((r) => b.disclosures[r.capsule_id].agent_input).find((x) => x.record_version === "human-rating/v1");
+    const target = b.records.find((r) => r.capsule_id === rating.case.digest);
+    // The report grows a second case: its id changes, so the rating's citation is re-pointed with it.
+    const input = JSON.parse(JSON.stringify(b.disclosures[target.capsule_id].agent_input));
+    input.cases.push({ ...input.cases[0], case_id: "second" });
+    const moved = { ...target, model_attestation: { compute_attestation: { agent_input_digest: sha(input) } } };
+    delete moved.capsule_id;
+    const id = sha(moved);
+    b.records[b.records.indexOf(target)] = { ...moved, capsule_id: id };
+    delete b.disclosures[target.capsule_id];
+    b.disclosures[id] = { agent_input: input };
+    const ratingRec = b.records.find((r) => b.disclosures[r.capsule_id].agent_input === rating);
+    const newRating = { ...rating, case: { ...rating.case, digest: id } };
+    const r2 = { ...ratingRec, model_attestation: { compute_attestation: { agent_input_digest: sha(newRating) } } };
+    delete r2.capsule_id;
+    const rid = sha(r2);
+    b.records[b.records.indexOf(ratingRec)] = { ...r2, capsule_id: rid };
+    delete b.disclosures[ratingRec.capsule_id];
+    b.disclosures[rid] = { agent_input: newRating };
+    const { model, host } = page(b);
+    expect(model.state).toBe("page");
+    expect(model.checks.recount).toBe("NOT_CHECKED");
+    expect(model.rows.filter((r) => r.match === "unresolved")).toHaveLength(1);
+    host.L1.querySelectorAll("details").forEach((d) => { d.open = true; });
+    expect(host.L1.querySelector('[data-adj-row="unresolved"]').textContent).toMatch(/holds more than one case/);
   });
 });
 
@@ -201,7 +266,7 @@ describe("the negatives", () => {
     const b = build({ terms: [["a-term", 0, 0]], uncounted: 0, unrated: 0 });
     const { model, host } = page(b);
     expect(model.state).toBe("none");
-    expect(text(host)).toMatch(/No adjudication was sampled/);
+    expect(text(host)).toMatch(/None of the judged verdicts was sampled/);
     expect(text(host)).not.toMatch(/%/);
     expect(host.L0.querySelector("[data-adj-tile]")).toBeNull();
   });
@@ -209,9 +274,17 @@ describe("the negatives", () => {
     const b = reseal(build(), (x) => x.record_version === "calibration-summary/v1", (x) => { x.clauses[0].agreement.k = 13; });
     expect(page(b).model.state).toBe("unreadable");
   });
-  it("refuses a rating that does not say it is blind", () => {
+  it("refuses a drift tally whose k is above its n, and blames the summary", () => {
+    const b = reseal(build(), (x) => x.record_version === "calibration-summary/v1", (x) => { x.clauses[0].drift = { k: 99, n: 1 }; });
+    const { model } = page(b);
+    expect(model.state).toBe("unreadable");
+    expect(model.checks.summary).toBe("FAIL");
+  });
+  it("refuses a rating that does not say it is blind, and blames the records, not the summary", () => {
     const b = reseal(build(), ratingOf(1), (x) => { x.blind = false; });
-    expect(page(b).model.state).toBe("unreadable");
+    const { model } = page(b);
+    expect(model.state).toBe("unreadable");
+    expect(model.checks).toEqual({ bundle: "PASS", summary: "NOT_CHECKED", records: "FAIL", recount: "NOT_CHECKED" });
   });
   it("refuses a block member it does not know, and draws a refusal without the error's text", () => {
     const b = build();
@@ -219,6 +292,20 @@ describe("the negatives", () => {
     const { model, host } = page(b);
     expect(model.state).toBe("unreadable");
     expect(text(host)).not.toMatch(/SETTLEMENT-PREIMAGE|secret/);
+  });
+  it("draws no percentage for an adjudicator with no counted answer", () => {
+    // Every one of p-07's ratings neither met nor not met: sampled, but k of n is 0 of 0.
+    let b = build({ terms: [["a-term", 2, 2]], uncounted: 0, unrated: 0 });
+    b = reseal(b, (x) => x.record_version === "human-rating/v1" && x.rater_ref === "p-07", (x) => { x.label = "not_evaluable"; });
+    const { model, host } = page(b);
+    expect(model.state).toBe("page");
+    const p07 = host.L1.querySelector('[data-adjudicator="p-07"]');
+    expect(p07.lastElementChild.textContent).toBe("0 of 0");
+    expect(p07.textContent).not.toMatch(/%/);
+    const full = build({ terms: [["a-term", 3, 3]], uncounted: 0, unrated: 0 });
+    const ok = page(full);
+    const none = [...ok.host.L1.querySelectorAll("[data-adjudicator]")].map((r) => r.lastElementChild.textContent);
+    expect(none.every((t) => /^\d+ of \d+ · \d+%$/.test(t))).toBe(true);
   });
   it("says there is no summary when the bundle carries none", () => {
     const b = build();
@@ -249,7 +336,9 @@ describe("the negatives", () => {
   it("sets a hostile label and rater by textContent", () => {
     const b = reseal(build(), ratingOf(1), (x) => { x.label = "<img src=x onerror=alert(1)>"; x.rater_ref = "<script>x</script>"; });
     const { host } = page(b);
-    expect(html(host)).not.toMatch(/<img|<script/);
+    expect(host.L1.querySelector("img, script")).toBeNull();
+    expect(html(host)).not.toMatch(/<img[ >]/);
+    expect(host.L1.textContent).toContain("<script>x</script>");
   });
   it("carries no rationale or book the bundle does not hold: a record's own strings never reach the judge's panel as words", () => {
     const b = reseal(build(), ratingOf(1), (x) => { x.note = "I think the customer asked for it"; });
