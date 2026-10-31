@@ -13043,9 +13043,6 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
     if (typeof summary === "string") head2.append(summary);
     else head2.append(summary);
     details.append(head2);
-    details.addEventListener("toggle", () => {
-      if (!details.open) delete details.dataset.openedBy;
-    });
     deferBody(details, build, options.eager === true);
     return details;
   }
@@ -13062,6 +13059,9 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
       into.append(build());
       openBuiltToDepth(into);
     };
+    details.addEventListener("toggle", () => {
+      if (!details.open) delete details.dataset.openedBy;
+    });
     details.dataset.body = "pending";
     if (eager) {
       fill2();
@@ -14945,7 +14945,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("b41d74cad0361a35e937b038898fecc6d433e950");
+    return commitPrefix("01fa5bbef9c6a052b4cb12691f35b912d1f30fc3");
   }
   var commit = builtCommit();
   var unreleased = true;
