@@ -1275,6 +1275,9 @@ function renderLines(
   const table = document.createElement("table");
   table.className = "lines";
   table.dataset.rows = "report-lines";
+  const headline = el("p", "headline");
+  headline.dataset.headline = "lines";
+  section.append(headline);
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.append(
@@ -1316,6 +1319,24 @@ function renderLines(
     shown,
     ...(behind === undefined ? {} : { behind }),
   });
+  // The same counts as the table below, as the Terms Pack canvas opens with
+  // them: whole numbers, each with its total, never a share.
+  const headlineParts = [
+    w.p("lines.headline", model.totalCount, {
+      resolved: fmtCount(resolved.length),
+      n: fmtCount(model.totalCount),
+    }),
+    w.t("lines.headline.missed", { n: fmtCount(missed.length) }),
+  ];
+  if (unverified.length > 0)
+    headlineParts.push(
+      w.t("lines.headline.unverified", { n: fmtCount(unverified.length) }),
+    );
+  if (undecided.length > 0)
+    headlineParts.push(
+      w.t("lines.headline.undecided", { n: fmtCount(undecided.length) }),
+    );
+  headline.textContent = headlineParts.join(" ");
   const lines: Line[] = [
     line("resolved", resolved.length, share(resolved.length), resolved),
     line("missed", missed.length, share(missed.length), missed),

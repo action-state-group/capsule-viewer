@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The outcome report's report lines open with one sentence of the same counts, as Steven's Terms Pack canvas opens: "188 of 244 conversations resolved: every rule that applied was met. 49 missed at least one. 7 could not be decided." Whole numbers, each with its total, never a share, whether or not the presentation asks for percentages in the table below (#172). Five new words in `contract-report-outcomes.en.json`; its digest changes.
+
 ### Changed
 
 - The report front's third tile reads "Could not decide (evaluations)" in both default wording packs, as Steven's Terms Pack canvas draws it and as the results table's column already says; it read "Not evaluable". The packs keep their ids and change their digests (`DEFAULT_PACK_SHA256`), so the contract-report goldens are regenerated (#172).
