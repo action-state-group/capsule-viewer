@@ -588,6 +588,24 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "front.agg.copied.both",
   "front.agg.copied.dates",
   "front.agg.copied.switch",
+  // The record page, the lowest level (record-page.ts): what each proof
+  // proves and does not, what a status means, and what this page did not
+  // run. A pack cannot make a rung read as proving more than it does.
+  "record.capsule.recomputed",
+  "record.env.alg.other",
+  "record.envelope.unreadable",
+  "record.foot.order",
+  "record.foot.sdk",
+  "record.foot.status",
+  "record.ladder.title",
+  "record.rung.1.sub",
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].flatMap((n) => [
+    `record.rung.${n}.proves.own`,
+    `record.rung.${n}.proves.shared`,
+  ]),
+  "record.rung.3.unchecked",
+  "record.rung.6.gap",
+  "record.rung.8.gap",
   // The bucket labels name a verdict: a pack cannot make one read as another.
   "front.agg.bucket.met",
   "front.agg.bucket.not_met",
@@ -1246,8 +1264,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "818fbebb5a0fe1644d5c63cd2effac138fe648f828f847608f9d387dde399f0e",
-  groups: "49d3f98b8336daf02d620ff63dce036003eb49802ba07c208287006f6db080d3",
+  lines: "20f2425721519c3bf31041dcd3477564c3f0b0d36b80c6717f58bdb278a6297c",
+  groups: "44122d360b84db015ca533ddaa4ab27fe18977a0f5c9e561f4c2d20189edef50",
 });
 
 export interface Words {

@@ -182,9 +182,9 @@ describe.skipIf(executablePath === undefined)(
 
     // The runtime go/pageruntime ships was built at its own commit, so its
     // stylesheets can drift from the ones go/emitter/runtime-style-hashes.txt
-    // lists today. The stylesheets it inserts on these pages, each allowed
-    // by the page's CSP, are exactly the listed ones.
-    it("go/pageruntime's runtime inserts exactly the stylesheets runtime-style-hashes.txt lists", async () => {
+    // lists today. The stylesheets it inserts on these pages are each
+    // allowed by the page's CSP.
+    it("go/pageruntime's runtime inserts only stylesheets runtime-style-hashes.txt lists", async () => {
       const runtime = readFileSync(
         resolve(
           process.cwd(),
@@ -251,7 +251,14 @@ describe.skipIf(executablePath === undefined)(
             `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`,
           );
       }
-      expect([...inserted].sort()).toEqual([...listed].sort());
+      // Every stylesheet the shipped runtime inserts is one the CSP lists.
+      // The runtime is rebuilt only at a release (RELEASING.md step 5), so
+      // today's list can name a stylesheet it does not insert yet; the other
+      // way round, a stylesheet it inserts that is not listed, is the
+      // failure this test is for.
+      expect(
+        [...inserted].filter((hash) => !listed.includes(hash)).sort(),
+      ).toEqual([]);
     });
 
     describe("with the reference core runtime", () => {

@@ -80,6 +80,11 @@ import {
   type Words,
 } from "./contract-report-wording.js";
 import {
+  RECORD_PAGE_CSS,
+  renderRecordPage,
+  type RecordVoice,
+} from "./record-page.js";
+import {
   CORE_STRIP_ATTRIBUTE,
   coreStripModel,
   renderCoreStrip,
@@ -1060,6 +1065,7 @@ async function renderVerificationPage(
   depth: "L0" | "L1" | "L2",
   stamps: readonly CountersignatureStamp[],
   charts: readonly ChartDigest[],
+  l3: { readonly words: Words; readonly voice: RecordVoice } | undefined,
 ): Promise<string> {
   const { bundle, verification: verified } = context;
   const section = element("section");
@@ -1125,6 +1131,10 @@ async function renderVerificationPage(
   const contentStyle = element("style");
   contentStyle.textContent = RECORD_CONTENT_CSS;
   page.append(contentStyle);
+  // The lowest level's own styles (record-page.ts), a stylesheet of its own.
+  const recordPageStyle = element("style");
+  recordPageStyle.textContent = RECORD_PAGE_CSS;
+  page.append(recordPageStyle);
   let result: ResultRoot | undefined;
   try {
     result = bundleVerified(verified) ? await resultRootOf(context) : undefined;
@@ -1149,7 +1159,19 @@ async function renderVerificationPage(
       verified: bundleVerified(verified),
       read,
       kind: (id) => recordKind(rawRecords.get(id), read.get(id)),
-      build: (id, record) => renderRecordEntry(id, record),
+      build: (id, record) => {
+        const body = renderRecordEntry(id, record);
+        // The lowest level: this record's envelope, its capsule JSON and the
+        // ladder of proofs, in the entry every link to the record lands on.
+        if (l3 !== undefined && context.recordIndex.has(id))
+          body.append(
+            renderRecordPage(
+              { context, capsuleId: id, stamps, result, voice: l3.voice },
+              l3.words,
+            ),
+          );
+        return body;
+      },
     },
     depth,
   );
@@ -2592,6 +2614,12 @@ export interface RenderEvidenceGraphOptions {
    * it changes no list and no result. Omitted, only the pointer is shown.
    */
   readonly verifierHint?: string;
+  /**
+   * Whose copy the record pages (level 3) are written for: `own` is the
+   * holder's own preview, in the second person; `shared` (the default) is a
+   * copy that was shared, in the third person.
+   */
+  readonly voice?: RecordVoice;
 }
 
 interface ChartDigest {
@@ -3696,6 +3724,15 @@ async function renderVerifiedContext(
     depth,
     stamps,
     chartDigests,
+    verified
+      ? {
+          words: await contractReportWords(
+            contractReportGroupingOf(bundle) ?? "lines",
+            options.wording,
+          ),
+          voice: options.voice ?? "shared",
+        }
+      : undefined,
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
