@@ -136,6 +136,7 @@
     "checks.not_held.as_of": "the snapshot's time",
     "checks.not_held.deals": "the deal entries",
     "window.as_of": "as of {month} {day} {hh}:{mm} UTC",
-    "lead.level": "Level they see: Standard · {window} · snapshot {date}"
+    "lead.level": "Level they see: Standard · {window} · snapshot {date}",
+    "card.not_counted": "{n} of {of} deals in the window are not counted."
   }
 }
