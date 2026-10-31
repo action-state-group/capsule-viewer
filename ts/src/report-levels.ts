@@ -71,10 +71,6 @@ export function levelToggle(
   if (typeof summary === "string") head.append(summary);
   else head.append(summary);
   details.append(head);
-  // A toggle the view opened that the reader then closes is the reader's.
-  details.addEventListener("toggle", () => {
-    if (!details.open) delete details.dataset.openedBy;
-  });
   deferBody(details, build, options.eager === true);
   return details;
 }
@@ -111,6 +107,10 @@ export function deferBody(
     into.append(build());
     openBuiltToDepth(into);
   };
+  // A toggle the view opened that the reader then closes is the reader's.
+  details.addEventListener("toggle", () => {
+    if (!details.open) delete details.dataset.openedBy;
+  });
   details.dataset.body = "pending";
   if (eager) {
     fill();

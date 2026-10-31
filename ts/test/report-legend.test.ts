@@ -132,3 +132,24 @@ it("a tool result is payload too", () => {
     "payload",
   );
 });
+
+it("a table row's toggle clears the view's mark on a reader close too", async () => {
+  const { expandableRow } = await import("../src/report-front.js");
+  const table = document.createElement("table");
+  table.innerHTML =
+    '<tbody><tr class="r"><td><span class="n">Row</span></td></tr><tr class="d"><td></td></tr></tbody>';
+  const row = table.querySelector<HTMLElement>("tr.r")!;
+  const detail = table.querySelector<HTMLElement>("tr.d")!;
+  const toggle = expandableRow(
+    row,
+    row.querySelector<HTMLElement>(".n")!,
+    detail,
+    () => document.createElement("p"),
+    "k",
+  );
+  toggle.dataset.openedBy = "view";
+  toggle.open = true;
+  toggle.open = false;
+  toggle.dispatchEvent(new Event("toggle"));
+  expect(toggle.dataset.openedBy).toBeUndefined();
+});

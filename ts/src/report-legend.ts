@@ -52,7 +52,7 @@ function el(tag: string, className: string, text?: string): HTMLElement {
   return node;
 }
 
-/** The toggle legend and the source strip, one aside. */
+/** The toggle legend and the source strip. */
 export function renderLegend(w: Words): HTMLElement {
   const legend = el("div", "cv-legend");
   legend.dataset.legend = "words-and-toggles";
