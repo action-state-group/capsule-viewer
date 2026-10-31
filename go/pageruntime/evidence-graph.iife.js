@@ -12792,6 +12792,12 @@ ${body}
   function checkClasses(lanes) {
     lanes.forEach((lane, i) => {
       if (lane.classes === void 0) return;
+      if (!lane.chart.keys.some((k) => k !== "x"))
+        refuse2(
+          "view-lane-role",
+          `${lane.id}: classes name the values of a key channel, and this lane has none`,
+          `/lanes/${String(i)}/classes`
+        );
       const key = keyChannel(lane.chart);
       for (const g of lane.chart.groups) {
         const v = String(g.key[key]);
@@ -13743,7 +13749,7 @@ ${s} dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
 .cv-tl-mark{stroke-width:2}
 path.cv-tl-mark{stroke:none}
 line.cv-tl-good{stroke:var(--ok)}line.cv-tl-bad{stroke:var(--bad)}line.cv-tl-open{stroke:var(--slate)}
-path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-open{fill:var(--person)}
+path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-open{fill:var(--slate)}
 .cv-tl-lists ul{margin:0 0 8px;padding-left:18px;font-size:13px}
 .cv-tl-lists .cv-k{margin:6px 0 2px;font-size:12px;color:var(--slate)}
 .cv-cofail{min-width:0}
@@ -14221,10 +14227,11 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
     const n = t === void 0 ? sumOf(lane, day) : t.good + t.bad + t.open;
     if (n === 0) return void 0;
     const parts = [w.p("calendar.adj.recorded", n)];
-    if (t !== void 0)
-      parts.push(
-        t.bad === 0 ? w.t("calendar.adj.concur") : w.p("calendar.adj.differ", t.bad)
-      );
+    if (t !== void 0) {
+      if (t.bad === 0 && t.open === 0) parts.push(w.t("calendar.adj.concur"));
+      if (t.bad > 0) parts.push(w.p("calendar.adj.differ", t.bad));
+      if (t.open > 0) parts.push(w.t("calendar.adj.open", { n: t.open }));
+    }
     const chip = el3("div", "cv-adj");
     chip.dataset.adjudications = String(n);
     chip.append(el3("span", "cv-diamond", "\u25C6"), ` ${parts.join(" \xB7 ")}`);
@@ -14304,7 +14311,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
     counts.append(el3("p", "cv-k", w.t("calendar.day.counts")));
     for (const lane of view.lanes) counts.append(laneCell(lane, index, day, w));
     section.append(counts);
-    const field = view.lanes[0].chart.channels.x.field;
+    const field = (activity ?? view.lanes[0]).chart.channels.x.field;
     const rows = /* @__PURE__ */ new Map();
     if (activity !== void 0)
       for (const g of groupsOn(activity.chart, day))
@@ -14623,12 +14630,19 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
         class: word === void 0 ? "cv-tl-text cv-tl-lane" : "cv-tl-text"
       });
       const key = lane.classes === void 0 ? void 0 : keyOf(lane.chart);
+      const totals = /* @__PURE__ */ new Map();
       for (const g of lane.chart.groups) {
-        const at = dayAt.get(String(g.key.x));
-        if (g.notRun || at === void 0 || (g.value ?? 0) === 0) continue;
+        if (g.notRun || (g.value ?? 0) === 0 || !dayAt.has(String(g.key.x)))
+          continue;
         const cls = key === void 0 ? "open" : lane.classes[String(g.key[key])];
-        const cx = TL.left + band * at + band / 2;
-        const n = Math.min(g.value, 5);
+        const id = `${String(g.key.x)}|${cls}`;
+        totals.set(id, (totals.get(id) ?? 0) + g.value);
+      }
+      for (const [id, total] of totals) {
+        const [day, cls] = id.split("|");
+        const slot = ["good", "bad", "open"].indexOf(cls);
+        const cx = TL.left + band * dayAt.get(day) + band / 2 + 3 * slot;
+        const n = Math.min(total, 5);
         const mark = lane.mark === "diamond" ? svgEl("path", {
           d: `M${cx.toFixed(2)} ${String(mid - 6)} l6 6 l-6 6 l-6 -6 z`,
           class: `cv-tl-mark cv-tl-${cls}`
@@ -14639,7 +14653,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
           y2: mid + 4 + 3 * n,
           class: `cv-tl-mark cv-tl-tick cv-tl-${cls}`
         });
-        mark.setAttribute("data-day", String(g.key.x));
+        mark.setAttribute("data-day", day);
         root.append(mark);
       }
     });
@@ -14655,10 +14669,10 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
       block.append(head2);
       const list2 = el3("ul");
       const key = keyOf(lane.chart);
-      for (const g of lane.chart.groups) {
-        if (g.notRun || (g.value ?? 0) === 0) continue;
+      lane.chart.groups.forEach((g, gi) => {
+        if (g.notRun || (g.value ?? 0) === 0) return;
         const item = el3("li");
-        const evidenceKey = `view-${String(index)}-${lane.id}-${String(g.key.x)}-${String(g.key[key] ?? "")}`;
+        const evidenceKey = `view-${String(index)}-${lane.id}-g${String(gi)}`;
         const name = [g.key.x, g.key[key]].filter((v) => v !== void 0).join(" \xB7 ");
         const value = el3("span", void 0, String(g.value));
         value.dataset.chartValue = evidenceKey;
@@ -14670,8 +14684,13 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--gold)}path.cv-tl-op
           valueEvidence(evidenceKey, `${lane.id} ${name}`, g, w)
         );
         list2.append(item);
-      }
+      });
       block.append(list2);
+      if (list2.children.length === 0)
+        block.append(el3("p", "cv-nr", w.t("chart.evidence.none")));
+      const notRun = (lane.chart.units ?? []).filter((u) => u.notRun).length;
+      if (notRun > 0)
+        block.append(el3("p", "cv-nr", w.p("period.not_run_days", notRun)));
       lists.append(block);
     });
     figure.append(lists);
@@ -15480,7 +15499,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("9f52d8d6147db58105cd995e9e93255d3582bb74");
+    return commitPrefix("1214bd8f14f5c2593c31630038dd94c6027290b4");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16051,6 +16070,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "calendar.adj.concur": "all concur",
       "calendar.adj.differ.one": "{n} differs from the judge",
       "calendar.adj.differ.other": "{n} differ from the judge",
+      "calendar.adj.open": "{n} not yet ruled",
       "calendar.legend.good": "all, or all but one, met",
       "calendar.legend.some": "some not met",
       "calendar.legend.most": "most not met",
@@ -16424,6 +16444,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "calendar.adj.concur": "all concur",
       "calendar.adj.differ.one": "{n} differs from the judge",
       "calendar.adj.differ.other": "{n} differ from the judge",
+      "calendar.adj.open": "{n} not yet ruled",
       "calendar.legend.good": "all, or all but one, met",
       "calendar.legend.some": "some not met",
       "calendar.legend.most": "most not met",
@@ -17318,8 +17339,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "7c7ec468f0e75e620de16c00043cf83bbea6afc5da4c99aa80d3c703881f02f9",
-    groups: "11da8f365925e7c5d49d4dc19b51514e4fe0e113f30d4ebb41e284dfe4809fec"
+    lines: "6bc09b6eec4509325c037e609828dae071261296c8d59ca924407d816b354180",
+    groups: "9d0aee6fcd56e776ae4cc83513f0e57a6cb46551d630e8e2f1f13f02d3d93a50"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
