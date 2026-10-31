@@ -35,7 +35,7 @@ export const CORE_STRIP_ATTRIBUTE = "data-core-strip";
 export const CORE_STRIP_CSS = `
 .cv-strip{${OUTCOME_FRAME_VARS}position:relative;max-width:1080px;margin:0 auto 16px;padding:14px 16px 14px 34px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .cv-strip:before{content:"\\25A0";content:"\\25A0" / "";position:absolute;left:13px;top:16px;font-size:12px;line-height:1;color:#8A93A0}
-.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
+.cv-strip .agg-note[data-src="core"],.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
 .cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
 .cv-strip .agg-line{font-size:14px;margin:0 0 12px}
 .cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}

@@ -4,7 +4,6 @@
 import { expect, it } from "vitest";
 import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
 import {
-  MARKED_SOURCES,
   fieldText,
   WORD_SOURCES,
   legendCss,
@@ -27,7 +26,7 @@ for (const grouping of ["lines", "groups"] as const) {
       ["■", "cv-lg core"],
     ]);
     const chips = [...legend.querySelectorAll<HTMLElement>(".cv-src")];
-    expect(chips.map((c) => c.dataset.src)).toEqual([...MARKED_SOURCES]);
+    expect(chips.map((c) => c.dataset.src)).toEqual([...WORD_SOURCES]);
     expect(chips.map((c) => c.textContent)).toEqual([
       "core",
       "wording pack",

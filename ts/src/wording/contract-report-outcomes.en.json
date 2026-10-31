@@ -235,7 +235,6 @@
     "spot.term.unstated": "The rule's wording is not in this bundle: no report in it states the wording.",
     "spot.term.mixed": "The rule's wording is not shown: the reports in this bundle state different wordings.",
     "spot.says": "The judge's words",
-    "spot.pin": "judge pin {digest}",
     "spot.confidence": "confidence {c}",
     "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
     "spot.gap.when": "This report states only each rule's wording, not when it counts as met or when it cannot be decided.",

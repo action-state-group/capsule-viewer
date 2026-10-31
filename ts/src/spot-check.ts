@@ -150,13 +150,23 @@ function verdictCell(r: SpotCheckRule, w: Words): HTMLElement {
   col.append(head);
   const parsed =
     r.rationale === undefined ? {} : parseJudgeProbabilities(r.rationale);
-  // The judge pin and the confidence are fields of the sealed report: drawn
-  // as fields, with their path, not as the pack's words.
+  // The judge pin digest is a field of the sealed report: drawn as a field,
+  // with its path.
   const facts: HTMLElement[] = [];
   if (r.judgePinDigest !== undefined)
-    facts.push(fieldText("judge_pin", r.judgePinDigest));
+    facts.push(fieldText("judge_pin_digest", r.judgePinDigest));
   if (parsed.confidence !== undefined)
-    facts.push(fieldText("confidence", parsed.confidence.toFixed(2)));
+    // Parsed out of the judge's words, not a stored field: pack words.
+    facts.push(
+      tagSource(
+        el(
+          "span",
+          "",
+          w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }),
+        ),
+        "pack",
+      ),
+    );
   if (facts.length > 0) {
     const line = el("p", "sc-facts");
     facts.forEach((fact, i) =>
