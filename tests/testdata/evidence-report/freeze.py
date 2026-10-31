@@ -11,8 +11,9 @@ with no digest, the page `capsule-emit report` wrote) for that bundle and check.
 
 The exported, tampered-record and no-digest cases were frozen when
 exported_bundle ran `capsule-emit export --all` (tests/evidence_report_helpers.py
-at df334fc). It now runs `capsule-emit bundle --all` (capsule-emit 0.12), which
-0.9.1 does not have, so a rerun takes the helper from that commit.
+at df334fc). It now builds and signs records with capsule_emit.produce and
+proves them with agent-action-capsule's build_evidence_bundle, which 0.9.1 does
+not have, so a rerun takes the helper from that commit.
 """
 import base64
 import dataclasses
