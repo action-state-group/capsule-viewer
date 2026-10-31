@@ -321,6 +321,9 @@ export function obligationWorst(
       }),
     };
   }
+  // "Met" is said only when every test with a result was met by a session:
+  // a test whose sessions were all judged out of scope was never met.
+  if (inForce.some((r) => r.metCount === 0)) return undefined;
   return { kind: "clean", text: w.t("groups.ob.worst.clean") };
 }
 
