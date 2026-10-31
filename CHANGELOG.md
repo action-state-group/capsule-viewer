@@ -11,6 +11,12 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.7.0 and go 0.7.0 (2026-10-31)
+
+Both state viewer 0.7.0: `ts/v0.7.0`, then `go/v0.7.0` on the commit that
+ships its page runtime. This release carries the frames merged since 0.6.0, as
+Steven's canvases draw them: #186, #187, #188, #189, #190, #192, #193.
+
 ### Added
 
 - The lowest level, as Steven's Terms Pack canvas draws Outcomes frame 8 (#191): every record in a bundle has a page at its entry in "Records in this bundle" (where each Proofs link already lands). It draws the record's producer envelope read from its own COSE_Sign1 bytes (protected header, unprotected header, payload, signature), its capsule JSON member by member in clear or by digest, the eleven-rung ladder of what each proof proves and does not with its status on the page (PASS, FAIL, NOT_PRESENT, NOT_CHECKED), how to check each yourself, and the canvas's three-column footer. Each status comes from what the verified bundle holds; rung 6 (checkpoint consistency) and rung 8 (controller binding) read NOT_CHECKED because the bundle carries no retained head and no binding (agent-action-capsule#513, #514). `renderEvidenceGraph`'s new `voice` option (`own` or `shared`, default `shared`) writes the page to the holder in their own preview or about the holder once shared. About 100 new `record.*` words in both default wording packs (the lines that say what a proof does not prove are locked); both packs change their digests, so the contract-report goldens are regenerated. A new stylesheet adds one CSP hash (`go/emitter/runtime-style-hashes.txt`), and the Go goldens move with it.
