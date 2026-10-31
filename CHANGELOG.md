@@ -15,6 +15,8 @@ here. The format follows
 
 - Spot check, side by side (#184), as Steven's Terms Pack canvas draws it (Outcomes frame 3, EU AI Act frame 10): each conversation or session opens a "Spot check, side by side" toggle with one card per rule that has a claim, in three columns: what happened (the conversation, who said what and each tool call), the criterion (the rule as the judge was given it, from the sealed report) and the verdict with the judge's words, judge pin and confidence. What the bundle does not carry is said in locked lines, not drawn: who produced each message, when a rule is met and when it cannot be decided, and the blind adjudication. Both default wording packs gain the `spot.*` entries, so their digests change; both card stylesheets changed, so `go/emitter/runtime-style-hashes.txt` and the Go goldens carry the new CSP hashes.
 
+- The Adjudications page (`capsuleviewer.adjudications/v0`, a module-slot script), Outcomes frame 4 of Steven's Terms Pack canvas: the strip of four tiles, By term, By adjudicator and rows that open the judge's and the adjudicator's sides side by side, drawn from `calibration-summary/v1`, `human-rating/v1` and `evaluation-report/v1` records. The only percentage is derived from the k and n beside it; what the records do not carry (either side's words, a case's term, the adjudicator's book) is named on the page, not drawn (#121). Design: `docs/design/adjudications.md`.
+
 ## ts 0.6.0 and go 0.6.0 (2026-10-31)
 
 Both state viewer 0.6.0: `ts/v0.6.0`, then `go/v0.6.0` on the commit that
