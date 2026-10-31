@@ -90,8 +90,8 @@ it("what the bundle does not carry is said, not drawn: who produced each turn, w
   const gaps = [...card.querySelectorAll(".sc-gap")].map((g) => g.textContent);
   expect(gaps).toEqual([
     expect.stringContaining("Who produced each message"),
-    expect.stringContaining("When the rule is met"),
-    expect.stringContaining("Blind adjudication is not read"),
+    expect.stringContaining("not when it counts as met"),
+    expect.stringContaining("does not show whether a second, blind judge"),
   ]);
   expect(card.textContent).not.toMatch(/concur|adjudicator said/i);
 });

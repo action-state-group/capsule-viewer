@@ -2236,5 +2236,5 @@ it("each conversation offers a spot check: one three-column card per rule with a
       `tr[data-crit="${card.dataset.spotCheck}"] .pill`,
     )!.textContent,
   );
-  expect(card.textContent).toContain("Blind adjudication is not read");
+  expect(card.textContent).toContain("does not show whether a second, blind judge");
 });
