@@ -84,7 +84,7 @@ export function viewHeaders(): Obj[] {
         event_time_claim: `${date}T10:15:00Z`,
         statement: {
           requirement: "req-a",
-          verdict: "not_met",
+          verdict: d % 8 === 0 ? "met" : "not_met",
           weight: d,
           session: `s${String(d)}`,
         },

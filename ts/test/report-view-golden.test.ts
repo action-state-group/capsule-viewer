@@ -201,6 +201,15 @@ describe("the calendar's cells (lanes with a role)", () => {
     ).toBe("some");
   });
 
+  it("one of two cases not met is amber", async () => {
+    const root = await drawn();
+    const cell = root.querySelector<HTMLElement>('td[data-day="2026-09-08"]')!;
+    expect(cell.querySelector(".cv-jdg")!.textContent).toBe(
+      "judged · 1 met · 1 not met",
+    );
+    expect(cell.dataset.scale).toBe("some");
+  });
+
   it("a ruling the pack classes as open is never called concurring", async () => {
     const open = clone(cells);
     ((open.lanes as Obj[])[2]!.classes as Obj).upheld = "open";
@@ -246,7 +255,7 @@ describe("the calendar's cells (lanes with a role)", () => {
       [...root.querySelectorAll(".cv-legend li")].map((li) => li.textContent),
     ).toEqual([
       " all, or all but one, met",
-      " some not met",
+      " some not met or undecided",
       " most not met",
       "◆ adjudications recorded that day",
     ]);

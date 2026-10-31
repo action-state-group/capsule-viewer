@@ -357,7 +357,7 @@
     "calendar.adj.differ.other": "{n} differ from the judge",
     "calendar.adj.open": "{n} not yet ruled",
     "calendar.legend.good": "all, or all but one, met",
-    "calendar.legend.some": "some not met",
+    "calendar.legend.some": "some not met or undecided",
     "calendar.legend.most": "most not met",
     "calendar.legend.adjudication": "adjudications recorded that day",
     "cofail.failing.one": "{n} case did not meet at least one requirement",
