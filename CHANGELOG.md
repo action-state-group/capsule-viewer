@@ -11,15 +11,26 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.6.0 and go 0.6.0 (2026-10-31)
+
+Both state viewer 0.6.0: `ts/v0.6.0`, then `go/v0.6.0` on the commit that
+ships its page runtime. This release carries the History card and Outcomes
+pages as Steven's canvases draw them: #173, #174, #176, #177, #178, #179, #180.
+
 ### Changed
 
+- The History card (`capsuleviewer.standard-history/v0`) draws the window with the snapshot's time ("as of Oct 28 12:00 UTC"), the title as one row ("History card" and "Standard · last 3 months"), on the holder's own copy the "Level they see" line and the green lead box, and under the headline how many deals in the window are not counted (#173). "What it proves" no longer says the log's snapshot covers the card; it says the card names its snapshot and the page checked it against the one carried beside it, only when that check passed (#173).
+- The History card draws the outcomes tally as one bar of its three counts, as the 9b canvas does and as the History frame now allows (agent-action-capsule#506): the bar's widths are the counts, it states no figure, and it is drawn for a card with a counted deal only (#180). USD, EUR and GBP size rows read "under $10", "$10 – $99", each with the canvas's chip ("27 · 26 as agreed · 1 unsure"); other currencies keep their decade in their own units (#180).
 - The report front's third tile reads "Could not decide (evaluations)" in both default wording packs, as Steven's Terms Pack canvas draws it and as the results table's column already says; it read "Not evaluable". The packs keep their ids and change their digests (`DEFAULT_PACK_SHA256`), so the contract-report goldens are regenerated (#172).
 
 ### Added
 
 - The outcome report's report lines open with one sentence of the same counts, as Steven's Terms Pack canvas opens: "188 of 244 conversations resolved: every rule that applied was met. 49 missed at least one. 7 could not be decided." Whole numbers, never a share, whether or not the presentation asks for percentages in the table below; the first count carries the total the others are of, and a report with no conversation draws no sentence (#172). A conversation no rule applied to is counted on its own ("had no rule that applied"), not as one the judge could not decide. Six new words in `contract-report-outcomes.en.json`; its digest changes.
-
 - Each Go release carries `standard-history-module-v<version>.tar.gz` and its `.sha256` as release assets (attested like the page runtime): the History card module `capsuleviewer.standard-history/v0` in the form a plugin carries, with its manifest, script, stylesheets and wording pack, and `presentation.json`, the `cli-plugin/v1` presentations entry for them. The bundle's files and tar members carry nothing of the run (sorted, no owner, no time); the bytes are the same on every run in one build environment, and the release states the sha256 (#171).
+
+### Fixed
+
+- The kit's `.cv-pill` rules apply only inside `.cv-kit`. The page shell's verification banner is a `.cv-pill` outside it, and a module that inserted `kit.css` restyled the banner, so the page's frame check refused the module: capsulectl's page builder showed "The presentation for this bundle failed" for the History card (#179). The scripts that embed `kit.css` change: `receipt_unilateral.js`, `receipt_seller.js`, `receipt_bilateral.js` and `standard_history_card.js`, and their manifests' digests with them; anything that pins one of them re-pins. `history_card.js` is unchanged.
 
 ## ts 0.5.0 and go 0.5.0 (2026-10-31)
 
