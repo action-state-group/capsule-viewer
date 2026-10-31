@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OrFPBglJHMf3+HTCWoszaU8noRQjBdFZlACsMHzi6gY=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-yDxt9SE+BEH6DylhSx83Q8yYo8Iiufu0hy3tkbcfik8=' 'sha256-LiGx6a8SSs9x7sQRVvf2MRQqUorNVAc9Ls3EEoXFKb0='; style-src 'sha256-NYy5Us2EFHKB0p0fTYQ7d4JBKIeRiLiCt9pjzj4xSI4=' 'sha256-LWazZoTJrOZQj6itTDXVg1jcZZSfuwveS3aCZK/EgGc=' 'sha256-fDaZEBpzr5GwSy1bg2ErRaKALg00SWADcVMxD3OyyNM=' 'sha256-oNpVlY6JHiqNL4jYjv8jH7v34iVjt3hRNqXvMeW7xB0=' 'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8=' 'sha256-s1Hwep8I1r8nY6NDRi7DWaukU34KC1bQuwAIy0K6WvM=' 'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY=' 'sha256-nRJWvY3MTkcv7A1bvOFQ+cy4zVL5ULKF6hmud3yBlrk=' 'sha256-9XVagwzRCQjejTg6rQrF5gvDz4JNsa2rLsvqiZTCMEw=' 'sha256-OBbLpT0c0tPY6/0DX4zudgeaeZCEtUubYo6OwMQDotc=' 'sha256-X25ZwBqBIao1806mstr2Agg/Lhd734LuRkcmEfRRRg8='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OrFPBglJHMf3+HTCWoszaU8noRQjBdFZlACsMHzi6gY=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-yDxt9SE+BEH6DylhSx83Q8yYo8Iiufu0hy3tkbcfik8=' 'sha256-LiGx6a8SSs9x7sQRVvf2MRQqUorNVAc9Ls3EEoXFKb0='; style-src 'sha256-U9UbCPvy2QLM7aHKw620JQWRtvFEimSOpTxo1ReNTEI=' 'sha256-LWazZoTJrOZQj6itTDXVg1jcZZSfuwveS3aCZK/EgGc=' 'sha256-rxP+aseaQoTuv//OR+EKiXRtwwnsMs6sumByXc3FJnA=' 'sha256-86pwsGaZSk/Ajs8C3XMxHXLoAvIU5Z78tj2DanIYq2Y=' 'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8=' 'sha256-s1Hwep8I1r8nY6NDRi7DWaukU34KC1bQuwAIy0K6WvM=' 'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY=' 'sha256-fj4bjTRa3ql3b8+HSvh7EqwtYcLrrMc3EQH0QeECpJM=' 'sha256-9XVagwzRCQjejTg6rQrF5gvDz4JNsa2rLsvqiZTCMEw=' 'sha256-OBbLpT0c0tPY6/0DX4zudgeaeZCEtUubYo6OwMQDotc=' 'sha256-X25ZwBqBIao1806mstr2Agg/Lhd734LuRkcmEfRRRg8='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Module styles</title>
     <style>
@@ -158,6 +158,22 @@
       #app.cv-shell-chrome :where(.cv-shell-bar.cv-failed) {
         border-color: var(--aac-bad);
         background: var(--aac-bad-bg);
+      }
+      /* The banner and its notices have no toggle: the core draws them, and
+         the square at their left edge says so (Terms Pack, the toggle). */
+      #app.cv-shell-chrome :where(.cv-shell-bar)::before,
+      #app.cv-shell-chrome :where(.cv-banner-detail)::before {
+        content: "\25A0";
+        content: "\25A0" / "";
+        flex: none;
+        width: 1em;
+        margin-right: 0.25rem;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #8a93a0;
+      }
+      #app.cv-shell-chrome :where(.cv-banner-detail)::before {
+        display: inline-block;
       }
       #app.cv-shell-chrome :where(.cv-banner-detail) {
         max-width: 1080px;
