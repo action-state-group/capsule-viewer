@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OrFPBglJHMf3+HTCWoszaU8noRQjBdFZlACsMHzi6gY=' 'sha256-OAnRkBfFl7fGZDKcu9BmtPtVX8hs7WL5jTAsba729Hg=' 'sha256-UUO/EYQ8rMDyCyl6JhYn8biaM3GwQ7HmAJmZWuAnnfU='; style-src 'sha256-U9UbCPvy2QLM7aHKw620JQWRtvFEimSOpTxo1ReNTEI=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-rxP+aseaQoTuv//OR+EKiXRtwwnsMs6sumByXc3FJnA=' 'sha256-86pwsGaZSk/Ajs8C3XMxHXLoAvIU5Z78tj2DanIYq2Y=' 'sha256-cncT4OYMoss7phrDXOY4dpINPZZ9vGmepBpESuOrcC8=' 'sha256-s1Hwep8I1r8nY6NDRi7DWaukU34KC1bQuwAIy0K6WvM=' 'sha256-RuO4TmjSxyTX5mOP1pm1P82iXcTuhv9kumWRUpFDekY=' 'sha256-fj4bjTRa3ql3b8+HSvh7EqwtYcLrrMc3EQH0QeECpJM=' 'sha256-9XVagwzRCQjejTg6rQrF5gvDz4JNsa2rLsvqiZTCMEw='; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Evidence Graph</title>
+    <style>
+      /*
+       * Base shell stylesheet. It owns the page frame only: theme tokens,
+       * typography baseline, page width, overflow containment, focus and
+       * motion defaults, native details/summary disclosure, the
+       * verification-banner area and print defaults. Every rule sits inside
+       * :where() so it has zero specificity and any presentation module's
+       * own stylesheet wins. No report layout lives here.
+       */
+      :root {
+        --aac-bg: #ffffff;
+        --aac-fg: #1f2733;
+        --aac-muted: #6b7482;
+        --aac-line: #e3ded3;
+        --aac-accent: #232f42;
+        --aac-focus: #2b5a85;
+        --aac-ok: #2e7d5b;
+        --aac-ok-bg: #e3f1ea;
+        --aac-bad: #b5462f;
+        --aac-bad-bg: #f8e6e1;
+        --aac-warn: #8a6a2f;
+        --aac-warn-bg: #fbefd9;
+        --aac-font: system-ui, sans-serif;
+        --aac-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --aac-line-height: 1.5;
+        --aac-page-width: 60rem;
+        --aac-gutter: 1rem;
+        --aac-page-pad-block: 1.5rem 2.5rem;
+        --aac-radius: 10px;
+        /* A report's frame: the page colour behind its cards, and the one
+           inset every card's content starts at. */
+        --aac-page-bg: #eef0f3;
+        --aac-inset: clamp(20px, 5vw, 56px);
+      }
+      :where(html) {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      :where(body) {
+        margin: 0;
+        font-family: var(--aac-font);
+        line-height: var(--aac-line-height);
+        color: var(--aac-fg);
+        background: var(--aac-bg);
+        overflow-wrap: break-word;
+      }
+      :where(#app) {
+        box-sizing: border-box;
+        max-width: var(--aac-page-width);
+        margin-inline: auto;
+        padding-inline: var(--aac-gutter);
+        padding-block: var(--aac-page-pad-block);
+      }
+      /* A module with its own frame (the outcome and compliance cards) keeps
+         it; a module's own .cv-page drops its width and padding here, so no
+         page is padded twice (capsule-viewer#60). These two rules use #app
+         so they win over a module's own stylesheet; a theme overrides them
+         with an #app selector of its own. */
+      #app.cv-shell-chrome {
+        max-width: none;
+        padding: 0 var(--aac-gutter);
+      }
+      :where(body:has(> #app.cv-shell-chrome)) {
+        background: var(--aac-page-bg);
+      }
+      #app .cv-page {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+      :where(.cv-shell-bar) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin: 0 0 0.75rem;
+      }
+      :where(.cv-pill) {
+        display: inline-block;
+        padding: 0.0625rem 0.625rem;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+      :where(.cv-pill[data-verify="verified"]) {
+        color: var(--aac-ok);
+        background: var(--aac-ok-bg);
+      }
+      :where(.cv-pill[data-verify="failed"]) {
+        color: var(--aac-bad);
+        background: var(--aac-bad-bg);
+      }
+      :where(.cv-pill[data-verify="incomplete"]) {
+        color: var(--aac-warn);
+        background: var(--aac-warn-bg);
+      }
+      :where(.cv-pill[data-verify="checking"]) {
+        color: var(--aac-muted);
+      }
+      /* The details line under the bar: the findings behind an incomplete
+         or failed verdict, in the core's words. */
+      :where(.cv-banner-detail) {
+        margin: 0 0 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--aac-muted);
+      }
+      /* The witness notice: a bundle that checks only against its holder's
+         own signatures, in the warning colour. */
+      :where(.cv-witness-notice) {
+        color: var(--aac-warn);
+      }
+      :where(.cv-shell-note) {
+        font-size: 0.8125rem;
+        color: var(--aac-muted);
+      }
+      :where(.cv-shell-detail, .cv-shell-link) {
+        font-size: 0.8125rem;
+        color: var(--aac-muted);
+      }
+      :where(.cv-shell-detail:empty) {
+        display: none;
+      }
+      /* A report's frame: the bar becomes one full-width callout at the
+         top of the page, the verdict first, then the counts and the link.
+         It is green for a verified bundle; a report also renders when no
+         check failed but some were not run, or when a check failed and the
+         records are still shown, and the bar then takes that state's
+         colours (below). */
+      #app.cv-shell-chrome :where(.cv-shell-bar) {
+        max-width: 1080px;
+        box-sizing: border-box;
+        margin: 1rem auto 0;
+        /* The 6px left border is part of the inset: the text starts where
+           every card's content starts. */
+        padding: 0.75rem calc(var(--aac-inset) - 1px) 0.75rem
+          calc(var(--aac-inset) - 5px);
+        justify-content: flex-start;
+        gap: 0.375rem 0.75rem;
+        border: 1px solid var(--aac-ok);
+        border-left-width: 6px;
+        border-radius: 10px;
+        background: var(--aac-ok-bg);
+      }
+      #app.cv-shell-chrome :where(.cv-shell-bar.cv-incomplete) {
+        border-color: var(--aac-warn);
+        background: var(--aac-warn-bg);
+      }
+      #app.cv-shell-chrome :where(.cv-shell-bar.cv-failed) {
+        border-color: var(--aac-bad);
+        background: var(--aac-bad-bg);
+      }
+      /* The banner and its notices have no toggle: the core draws them, and
+         the square at their left edge says so (Terms Pack, the toggle). */
+      #app.cv-shell-chrome :where(.cv-shell-bar)::before,
+      #app.cv-shell-chrome :where(.cv-banner-detail)::before {
+        content: "\25A0";
+        content: "\25A0" / "";
+        flex: none;
+        width: 1em;
+        margin-right: 0.25rem;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #8a93a0;
+      }
+      #app.cv-shell-chrome :where(.cv-banner-detail)::before {
+        display: inline-block;
+      }
+      #app.cv-shell-chrome :where(.cv-banner-detail) {
+        max-width: 1080px;
+        box-sizing: border-box;
+        margin: 0.375rem auto 0;
+        padding: 0 var(--aac-inset);
+      }
+      #app.cv-shell-chrome :where(.cv-pill) {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      #app.cv-shell-chrome :where(.cv-shell-detail) {
+        font-size: 0.875rem;
+        color: inherit;
+      }
+      #app.cv-shell-chrome :where(.cv-shell-link) {
+        margin-left: auto;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      /* A bundle with a failed check: on every page the core draws the
+         bar as a red callout, the verdict first, then the check section's
+         counts and the link to it. It does not wait for a report's frame:
+         no report renders on a bundle the page refuses. */
+      :where(.cv-shell-bar.cv-failed) {
+        box-sizing: border-box;
+        padding: 0.75rem 1rem;
+        justify-content: flex-start;
+        gap: 0.375rem 0.75rem;
+        border: 1px solid var(--aac-bad);
+        border-left-width: 6px;
+        border-radius: 10px;
+        background: var(--aac-bad-bg);
+      }
+      :where(.cv-shell-bar.cv-failed .cv-pill) {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      :where(.cv-shell-bar.cv-failed .cv-shell-detail) {
+        font-size: 0.875rem;
+        color: var(--aac-fg);
+      }
+      :where(.cv-shell-bar.cv-failed .cv-shell-link) {
+        margin-left: auto;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      :where(details.cv-checked) {
+        margin: 2rem 0 0;
+        padding: 0.75rem 0 0;
+        border-top: 1px solid var(--aac-line);
+      }
+      /* In a report's frame the check section is a card like the
+         report's own, folded to its one line until opened. */
+      #app.cv-shell-chrome :where(details.cv-checked) {
+        box-sizing: border-box;
+        max-width: 1080px;
+        margin: 0 auto 16px;
+        padding: 18px var(--aac-inset);
+        border: 1px solid var(--aac-line);
+        border-radius: 14px;
+        background: var(--aac-bg);
+      }
+      :where(details.cv-checked > summary) {
+        font-size: 0.875rem;
+        color: var(--aac-muted);
+      }
+      :where(img, svg, video, canvas) {
+        max-width: 100%;
+        height: auto;
+      }
+      :where(pre) {
+        overflow-x: auto;
+      }
+      :where(code, kbd, samp, pre) {
+        font-family: var(--aac-mono);
+      }
+      :where(summary) {
+        cursor: pointer;
+      }
+      :where(:focus-visible) {
+        outline: 2px solid var(--aac-focus);
+        outline-offset: 2px;
+      }
+      :where(.aac-banner) {
+        display: block;
+        margin: 0 0 1rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--aac-line);
+        border-radius: var(--aac-radius);
+      }
+      :where(.aac-banner[data-state="verified"]) {
+        color: var(--aac-ok);
+        background: var(--aac-ok-bg);
+      }
+      :where(.aac-banner[data-state="failed"]) {
+        color: var(--aac-bad);
+        background: var(--aac-bad-bg);
+      }
+      :where(.aac-banner[data-state="partial"]) {
+        color: var(--aac-warn);
+        background: var(--aac-warn-bg);
+      }
+      @media (max-width: 760px) {
+        :where(table) {
+          display: block;
+          max-width: 100%;
+          overflow-x: auto;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        :where(*, *::before, *::after) {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+      @media print {
+        :where(body) {
+          color: #000;
+          background: #fff;
+        }
+        :where(#app) {
+          max-width: none;
+          padding: 0;
+        }
+        :where(summary, h1, h2, h3, h4) {
+          break-after: avoid;
+        }
+        :where(tr, img, svg, figure) {
+          break-inside: avoid;
+        }
+      }
+    </style>
+    <!-- prettier-ignore -->
+    <style></style>
+  </head>
+  <body>
+    <!-- prettier-ignore -->
+    <noscript><p>This page needs scripts to show the report. A version without scripts can be built from the same bundle with render-report --format static.</p></noscript>
+    <div id="app"></div>
+    <!-- prettier-ignore -->
+    <script type="application/json">{"bundle_kind":"evidence-bundle/v2","bundle_version":"2","checkpoint":{"mmr_size":8,"root":"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690"},"completeness":{"closure_depth":2,"missing":[],"payloads_mode":"all","records_mode":"complete","suppressed_fields":[]},"completeness_certificate":{"body_digests":["563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a","992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d","403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f","d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095","f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d"],"first_seq":1,"last_seq":5,"log_id":"sealed-fixture-log","memberships":{"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f":{"inclusion_proof":{"kind":"inclusion","leaf_index":2,"peaks_left":[],"peaks_right":["54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"],"size":8,"v":1,"witness":["b399042b2e81fa2d50066eca568fbb9b71325bad929fb4e737a6f91f8f2bd99b","d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"]},"log_coordinates":{"leaf_index":2,"log_id":"sealed-fixture-log","seq":3}},"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a":{"inclusion_proof":{"kind":"inclusion","leaf_index":0,"peaks_left":[],"peaks_right":["54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"],"size":8,"v":1,"witness":["2f4226947e21d851b17b35da1dbd32398fca1da249e0febd80a612438377c3db","b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"]},"log_coordinates":{"leaf_index":0,"log_id":"sealed-fixture-log","seq":1}},"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d":{"inclusion_proof":{"kind":"inclusion","leaf_index":1,"peaks_left":[],"peaks_right":["54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"],"size":8,"v":1,"witness":["c147fac213da66635e58c39b1db0864ebb15dc0e80bf11717fab8a66dbcb009c","b980b7756707dd86009d661e09b97c0a690503609b037288ac59c5c3163dbf5b"]},"log_coordinates":{"leaf_index":1,"log_id":"sealed-fixture-log","seq":2}},"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095":{"inclusion_proof":{"kind":"inclusion","leaf_index":3,"peaks_left":[],"peaks_right":["54a9b7b1b5457f0c540e4c0d37d518061921a49962e37eb1aec490b6b20b68af"],"size":8,"v":1,"witness":["f87f65c668aa5cd2154368562c14467944879d2dbb2c8d2326111cc0b4656f58","d4c76b4bddc003b487b99b5f572c777c5334f6359b9cc299b9bb378b6767ea8f"]},"log_coordinates":{"leaf_index":3,"log_id":"sealed-fixture-log","seq":4}},"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d":{"inclusion_proof":{"kind":"inclusion","leaf_index":4,"peaks_left":["9f6b2727c25662f381552917571baf7c2e7a25caf069b6467b7d873ad0e3df2b"],"peaks_right":[],"size":8,"v":1,"witness":[]},"log_coordinates":{"leaf_index":4,"log_id":"sealed-fixture-log","seq":5}}},"range_proof":{"from_index":0,"from_seq":1,"size":8,"to_index":4,"to_seq":5,"witness":[]},"range_root":"4e7995d97423cc4cfaa8cd9ba10b977e78d5f50c7c28978e483b62ddaced2690"},"disclosures":{"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a":{"agent_input":{"aggregate":{"buckets":{"met":["claim-1"],"not_evaluable":["claim-3"],"not_met":["claim-2"]},"coverage":{"evaluated_population":3,"excluded_not_applicable":1,"unknown_count":0}},"claims":[{"contract_ref":"ec:airline-week:2026-09-14@1","evidence":[{"digest":"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d","digest_alg":"SHA-256"},{"digest":"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f","digest_alg":"SHA-256"}],"grade":"witnessed","id":"claim-1","presentation":{"evidence":[{"digest":"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d","digest_alg":"SHA-256"},{"digest":"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f","digest_alg":"SHA-256"}],"kind":"disclosure","status":"SATISFIED"},"proofs":[{"digest":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","digest_alg":"SHA-256","kind":"inclusion_proof"}],"requirement_ref":"req-1","sufficiency":"SATISFIED","tier":"recomputed","verdict":"met"},{"contract_ref":"ec:airline-week:2026-09-14@1","evidence":[{"digest":"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095","digest_alg":"SHA-256"}],"grade":"self-attested","id":"claim-2","presentation":{"evidence":[{"digest":"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095","digest_alg":"SHA-256"}],"kind":"disclosure","status":"SATISFIED"},"proofs":[],"requirement_ref":"req-2","sufficiency":"SATISFIED","tier":"judged","verdict":"not_met"},{"contract_ref":"ec:airline-week:2026-09-14@1","evidence":[{"digest":"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f","digest_alg":"SHA-256"}],"grade":"countersigned","id":"claim-3","presentation":{"kind":"analysis","status":"WITHHELD","summary":"the counterparty confirmed the record exists and declined disclosure under its own policy"},"proofs":[],"requirement_ref":"req-3","sufficiency":"GAP","tier":"recomputed","verdict":"not_evaluable"}],"generated_at":"2026-09-16T00:00:00Z","result_version":"evidence-result-v0"}}},"records":[{"action_id":"result","action_type":"fyi","assurance":{"attestation_mode":"self_attested","effect_mode":"not_applicable","ledger_mode":"standalone"},"canonicalization_id":"jcs","capsule_id":"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a","developer":"sealed-fixture@v1","format_version":"4","model_attestation":{"compute_attestation":{"agent_input_digest":"f6f4de9e1faa7102b2d217afef9adbbca2f1441b1dab1f1d8506bdc25fc9b0a3"}},"operator":"sealed-fixture","references":[{"citation_purpose":"acted_on","digest":"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d","digest_alg":"SHA-256","type":"agent-action-capsule"},{"citation_purpose":"acted_on","digest":"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f","digest_alg":"SHA-256","type":"agent-action-capsule"},{"citation_purpose":"acted_on","digest":"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095","digest_alg":"SHA-256","type":"agent-action-capsule"}],"spec_version":"draft-mih-scitt-agent-action-capsule-04","timestamp":"2026-09-14T00:00:00Z"},{"action_id":"day-1","action_type":"fyi","assurance":{"attestation_mode":"self_attested","effect_mode":"not_applicable","ledger_mode":"standalone"},"canonicalization_id":"jcs","capsule_id":"992821e083cacc53a5f874e4c08f11758cd5d6600c14df98050dfd4b4e6a085d","developer":"sealed-fixture@v1","format_version":"4","model_attestation":{"compute_attestation":{"agent_input_digest":"b305a967346a37c62fe44b1cedc6820c6a554ca1ed3153dc300f3b985c22e0f7"}},"occurred_at":"2026-09-14T23:59:00Z","operator":"sealed-fixture","references":[{"citation_purpose":"acted_on","digest":"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d","digest_alg":"SHA-256","type":"agent-action-capsule"}],"spec_version":"draft-mih-scitt-agent-action-capsule-04","timestamp":"2026-09-14T00:00:00Z"},{"action_id":"day-2","action_type":"fyi","assurance":{"attestation_mode":"self_attested","effect_mode":"not_applicable","ledger_mode":"standalone"},"canonicalization_id":"jcs","capsule_id":"403757ad689566b30511ee25361b13efe42e78a7c5164ea19381ee5ca9a56e4f","developer":"sealed-fixture@v1","format_version":"4","model_attestation":{"compute_attestation":{"agent_input_digest":"11010e65de996ab54c77c3ea1441feb55a3cbf03e8caf1385a8992534510aaae"}},"occurred_at":"2026-09-15T23:59:00Z","operator":"sealed-fixture","spec_version":"draft-mih-scitt-agent-action-capsule-04","timestamp":"2026-09-14T00:00:00Z"},{"action_id":"case-1","action_type":"fyi","assurance":{"attestation_mode":"self_attested","effect_mode":"not_applicable","ledger_mode":"standalone"},"canonicalization_id":"jcs","capsule_id":"d04ca55c1b9340ac40aa2646c34dbda1a3654223c7a1c4399dfffc490de99095","developer":"sealed-fixture@v1","format_version":"4","model_attestation":{"compute_attestation":{"agent_input_digest":"e8b7ce3dd3ce8f6e7c79fe4114ad506748b40070070270bfdae03373e1bac957"}},"operator":"sealed-fixture","spec_version":"draft-mih-scitt-agent-action-capsule-04","timestamp":"2026-09-14T00:00:00Z"},{"action_id":"act-1","action_type":"fyi","assurance":{"attestation_mode":"self_attested","effect_mode":"not_applicable","ledger_mode":"standalone"},"canonicalization_id":"jcs","capsule_id":"f5bfd4fd9de3ff1b028984fabc6bdc24510a23a5e06893174a30a4204da24b1d","developer":"sealed-fixture@v1","format_version":"4","model_attestation":{"compute_attestation":{"agent_input_digest":"86820dfbff59b2f294159e1a9630d1c6b2bc5f65024e1c7e38d0a88326db0623","agent_output_digest":"352e9b15cc2e74b516abc4fd219b14793292c1c713f65a379fbd40ae6c9a0f54"}},"occurred_at":"2026-09-14T10:15:00Z","operator":"sealed-fixture","spec_version":"draft-mih-scitt-agent-action-capsule-04","timestamp":"2026-09-14T00:00:00Z"}],"root":"563befb2a36a677ca9f1f5fd90335b54bfe16dfd7f563d51891607dbc9ccf71a"}</script>
+    <!-- prettier-ignore -->
+    <script>window.__BUNDLE__ = JSON.parse(document.currentScript.previousElementSibling.textContent);</script>
+    <!-- prettier-ignore -->
+    <script>/*IIFE_MARKER*/</script>
+    <!-- prettier-ignore -->
+    
+    <!-- prettier-ignore -->
+    <script>renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, {"audience":"counterparty","contract":{"sha256":"48814c2a6604ed40484dc73741ccea9428f3efcf0b3a46dbb223496d5d250edb","text":"{\n  \"id\": \"example-support-outcomes/v1\",\n  \"version\": \"1\",\n  \"requirements\": [\n    {\n      \"id\": \"resolution.done_in_full\",\n      \"profile\": \"outcome\",\n      \"statement\": \"Done in full\",\n      \"tier\": \"must_have\",\n      \"mode\": \"judged\"\n    },\n    {\n      \"id\": \"resolution.right_change\",\n      \"profile\": \"outcome\",\n      \"statement\": \"Made the right change\",\n      \"tier\": \"informational\",\n      \"mode\": \"judged\"\n    },\n    {\n      \"id\": \"policy.confirmed_before_acting\",\n      \"profile\": \"outcome\",\n      \"statement\": \"Confirmed before acting\",\n      \"tier\": \"must_have\",\n      \"mode\": \"judged\"\n    },\n    {\n      \"id\": \"communication.no_invented_terms\",\n      \"profile\": \"outcome\",\n      \"statement\": \"No invented terms\",\n      \"mode\": \"judged\"\n    }\n  ]\n}\n"},"depth":"L1","format":"html"});</script>
+  </body>
+</html>

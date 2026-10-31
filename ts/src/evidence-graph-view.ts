@@ -80,6 +80,12 @@ import {
   type Words,
 } from "./contract-report-wording.js";
 import {
+  checkContractInput,
+  ContractError,
+  type CheckedContract,
+  type ContractInput,
+} from "./evidence-contract.js";
+import {
   RECORD_PAGE_CSS,
   renderRecordPage,
   type RecordVoice,
@@ -1065,6 +1071,7 @@ async function renderVerificationPage(
   depth: "L0" | "L1" | "L2",
   stamps: readonly CountersignatureStamp[],
   charts: readonly ChartDigest[],
+  contract: PageContract,
   l3: { readonly words: Words; readonly voice: RecordVoice } | undefined,
 ): Promise<string> {
   const { bundle, verification: verified } = context;
@@ -1114,6 +1121,21 @@ async function renderVerificationPage(
         : `${chart.sha256} (not drawn: ${chart.refused})`,
     ),
   );
+  // The contract the page read requirement tiers from, by its id, version
+  // and the SHA-256 of its exact bytes (presentation-builder-v0 section 1).
+  if (contract.checked !== undefined) {
+    appendValue(
+      summary,
+      "contract",
+      `${contract.checked.id}@${contract.checked.version}`,
+    );
+    appendValue(summary, "contract sha256", contract.checked.sha256);
+  } else if (contract.refused !== undefined)
+    appendValue(
+      summary,
+      "contract sha256",
+      `${contract.refused.sha256} (not read: ${contract.refused.reason})`,
+    );
   page.append(summary);
   renderReceipts(page, model.receipts);
   if (model.selfWitnessed) {
@@ -2178,7 +2200,11 @@ const reportRowsModule: PresentationModule<ReportRows> = {
  * wording pack when one was given (`RenderEvidenceGraphOptions.wording`),
  * which the contract-report module draws its words from.
  */
-type WordedHost = PresentationHost & { readonly wording?: WordingPackInput };
+type WordedHost = PresentationHost & {
+  readonly wording?: WordingPackInput;
+  /** The page's contract, checked (`RenderEvidenceGraphOptions.contract`). */
+  readonly contract?: CheckedContract;
+};
 
 /**
  * The context's verification with AAC's strict result in its `strict`
@@ -2228,6 +2254,7 @@ const resultOutcomeReportModule: PresentationModule<
       model.verification,
       { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
+      (host as WordedHost).contract,
     );
   },
 };
@@ -2261,6 +2288,7 @@ const resultComplianceModule: PresentationModule<
       model.verification,
       { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
+      (host as WordedHost).contract,
     );
   },
 };
@@ -2409,6 +2437,7 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
       model.verification,
       { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
+      (host as WordedHost).contract,
     );
   },
 };
@@ -2597,6 +2626,15 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly wording?: WordingPackInput;
   /**
+   * The compiled Evidence Contract the page was built with (its exact text
+   * and `contract_sha256`). The contract-report module reads each row's
+   * requirement tier from it; the verification page states its id, version
+   * and digest. Checked again here: a contract that does not check is not
+   * read, the module draws the page as it does with none, and the
+   * verification page says why.
+   */
+  readonly contract?: ContractInput;
+  /**
    * Chart specs (docs/design/chart-spec.md), drawn in L1 in this order. Each
    * is checked against the dataset the Result names before it is drawn; a
    * spec that fails is replaced by the core's notice, never drawn.
@@ -2620,6 +2658,31 @@ export interface RenderEvidenceGraphOptions {
    * copy that was shared, in the third person.
    */
   readonly voice?: RecordVoice;
+}
+
+/** The page's contract: checked, refused with its reason, or not given. */
+interface PageContract {
+  readonly checked?: CheckedContract;
+  readonly refused?: { readonly sha256: string; readonly reason: string };
+}
+
+async function pageContract(
+  given: ContractInput | undefined,
+): Promise<PageContract> {
+  if (given === undefined) return {};
+  try {
+    return { checked: await checkContractInput(given) };
+  } catch (err) {
+    if (!(err instanceof ContractError)) throw err;
+    return {
+      refused: {
+        sha256: /^[0-9a-f]{64}$/u.test(given.sha256)
+          ? given.sha256
+          : "(not a SHA-256)",
+        reason: err.message,
+      },
+    };
+  }
 }
 
 interface ChartDigest {
@@ -3271,6 +3334,7 @@ async function renderVerifiedContext(
   let strip: CoreStripModel | undefined;
   let chartsNode: HTMLElement | undefined;
   const chartDigests = await chartDigestsOf(options.charts);
+  const contract = await pageContract(options.contract);
   const charted = options.charts !== undefined && options.charts.length > 0;
   if (verified) {
     const result = await resultRootOf(context);
@@ -3615,6 +3679,7 @@ async function renderVerifiedContext(
       L2: regions.L2,
       depth,
       ...(options.wording === undefined ? {} : { wording: options.wording }),
+      ...(contract.checked === undefined ? {} : { contract: contract.checked }),
       setChromeClass(name: string): void {
         if (name !== OUTCOME_CHROME && name !== COMPLIANCE_CHROME)
           throw new Error(`unknown chrome class ${JSON.stringify(name)}`);
@@ -3724,6 +3789,7 @@ async function renderVerifiedContext(
     depth,
     stamps,
     chartDigests,
+    contract,
     verified
       ? {
           words: await contractReportWords(

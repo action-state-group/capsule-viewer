@@ -25,6 +25,7 @@ import {
 import { NOT_STATED } from "@action-state-group/agent-action-capsule";
 import { spotCheckToggle } from "./spot-check.js";
 import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
+import { ROW_TIERS, type RowTier, type TierOf } from "./evidence-contract.js";
 import {
   caseParts,
   judgedOf,
@@ -248,9 +249,17 @@ export type SessionStatus =
   | "undecided"
   | "nothing-applied";
 
-export function sessionStatus(session: Session): SessionStatus {
+export function sessionStatus(
+  session: Session,
+  tierOf?: TierOf,
+): SessionStatus {
+  // A test the contract marks informational is reported, never in the
+  // session's answer (contract-report/v1 section 2). A test whose tier is
+  // not stated stays in.
   const applied = session.tests.filter(
     (t) =>
+      (tierOf === undefined ||
+        tierOf(t.claim?.contractRef, t.criterionId) !== "informational") &&
       t.verdict !== "not_applicable" &&
       t.verdict !== "out_of_scope" &&
       t.verdict !== "not_yet_in_force",
@@ -265,10 +274,14 @@ export function sessionStatus(session: Session): SessionStatus {
 }
 
 /** The page's one sentence of whole-number counts, as the canvas opens with them; empty when there is no session. */
-export function headlineSentence(model: ComplianceModel, w: Words): string {
+export function headlineSentence(
+  model: ComplianceModel,
+  w: Words,
+  tierOf?: TierOf,
+): string {
   if (model.totalSessions === 0) return "";
   const by = (status: SessionStatus): number =>
-    model.sessions.filter((s) => sessionStatus(s) === status).length;
+    model.sessions.filter((s) => sessionStatus(s, tierOf) === status).length;
   const parts = [
     w.p("groups.headline", model.totalSessions, {
       met: fmt(by("met")),
@@ -335,6 +348,7 @@ function renderHeader(
   host: HTMLElement,
   model: ComplianceModel,
   w: Words,
+  tierOf: TierOf | undefined,
 ): void {
   const hd = el("div", "hd");
   hd.dataset.section = "header";
@@ -368,7 +382,7 @@ function renderHeader(
           ),
     ),
   );
-  const sentence = headlineSentence(model, w);
+  const sentence = headlineSentence(model, w, tierOf);
   if (sentence !== "") {
     const headline = el("p", "sub headline", sentence);
     headline.dataset.headline = "groups";
@@ -643,6 +657,7 @@ function renderSummary(
   presentation: CompliancePresentation,
   result: ResultRoot,
   w: Words,
+  tierOf: TierOf | undefined,
 ): void {
   const section = el("section", "");
   section.dataset.section = "summary";
@@ -672,115 +687,174 @@ function renderSummary(
   );
   thead.append(headRow);
   table.append(thead);
-  for (const obligation of model.obligations) {
-    const tbody = document.createElement("tbody");
-    tbody.dataset.obligationGroup = obligation.key;
-    const row = el("tr", "ob");
-    row.dataset.obligation = obligation.key;
-    // A group heading (contract-report/v1 section 2): its tests are the
-    // rows. No tally sums the tests' sessions here. The heading opens to
-    // the obligation's plain-language text and when it applies, kept
-    // together (decision D3).
-    const title = el("td", "");
-    title.setAttribute("colspan", "3");
-    const name = el("b", "obn");
-    name.append(
-      ...obligationName(w, obligation, el("span", "art", obligation.article)),
+  // With a contract, each test's requirement tier (contract-report/v1
+  // section 2): tests are drawn in tier sections, must-have first, then
+  // informational, then those whose tier is not stated, and an obligation
+  // heads each section it has tests in. Its worst line reads only that
+  // section's tests, so an informational test changes no must-have line.
+  // Without a contract, one section, as before.
+  // Read by the contract_ref of the claims behind the test, as the
+  // headline reads each session's test (`sessionStatus`).
+  const tierOfRow = (row: ObligationRowModel): RowTier | undefined =>
+    tierOf?.(
+      model.sessions
+        .flatMap((s) => s.tests)
+        .find((t) => t.criterionId === row.criterionId && t.claim)?.claim
+        ?.contractRef,
+      row.criterionId,
     );
-    title.append(name);
-    const worst = obligationWorst(obligation, model.totalSessions, w);
-    if (worst !== undefined) {
-      const line = el("div", "applic worst", worst.text);
-      line.dataset.worst = worst.kind;
-      title.append(line);
-    }
-    row.append(title);
-    tbody.append(row);
-    const about = el("tr", "drill-row ob-about");
-    about.dataset.aboutFor = obligation.key;
-    const aboutCell = el("td", "");
-    aboutCell.setAttribute("colspan", "3");
-    about.append(aboutCell);
-    expandableRow(
-      row,
-      name,
-      about,
-      () => {
-        const body = el("div", "ob-x");
-        if (obligation.plain !== NOT_STATED)
-          body.append(maybeProducer(w, "div", "plain", obligation.plain, true));
-        body.append(
-          maybeProducer(
-            w,
-            "div",
-            "applic",
-            obligation.applicability.note,
-            obligation.mapped,
-          ),
-        );
-        return body;
-      },
-      `ob-${obligation.key}`,
-      true,
-    );
-    tbody.append(about);
-    for (const test of obligation.rows) {
-      const tr = el("tr", "test");
-      tr.dataset.criterion = test.criterionId;
-      const counted = population(test, model.totalSessions);
-      tr.dataset.population = String(counted);
-      tr.dataset.outOfScope = String(test.outOfScopeCount);
-      tr.dataset.notYetInForce = String(test.notYetInForceCount);
-      tr.dataset.exceptions = String(test.notMetCount);
-      tr.dataset.notEvaluable = String(test.notEvaluableCount);
-      tr.dataset.unverified = String(test.unverifiedCount);
-      const nameCell = el("td", "tn");
-      const head = el("div", "tnh");
-      const testName = rowName(w, "b", "", test);
-      head.append(testName, tierBadge(test.tier, w));
-      nameCell.append(head);
-      const detail = w.row(test.criterionId, "detail");
-      if (detail !== undefined)
-        nameCell.append(packWord("div", "plain", detail));
-      const sessionIds = [
-        ...(test.sessionsByVerdict.get("not_met") ?? []),
-        ...(test.sessionsByVerdict.get("unverified") ?? []),
-        ...(test.sessionsByVerdict.get("not_evaluable") ?? []),
-      ];
-      const checkedIn = el("td", "n");
-      checkedIn.dataset.column = "checked-in";
-      checkedIn.append(el("span", "nv", count(w, "session", counted)));
-      const action = evidenceAction(
-        `test:${test.criterionId}:checked-in`,
-        `${test.name} · ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted)}`,
-        populationClaims(test, model),
-        result,
-        w,
+  const allRows = model.obligations.flatMap((o) => o.rows);
+  const sections: readonly (RowTier | undefined)[] =
+    tierOf === undefined
+      ? [undefined]
+      : ROW_TIERS.filter((tier) => allRows.some((r) => tierOfRow(r) === tier));
+  for (const tier of sections) {
+    if (tier !== undefined) {
+      const head = document.createElement("tbody");
+      head.dataset.requirementTier = tier;
+      const tr = el("tr", "tier");
+      tr.dataset.requirementTier = tier;
+      const cell = el("td", "");
+      cell.setAttribute("colspan", "3");
+      cell.append(
+        el(
+          "b",
+          "",
+          w.t(`groups.rtier.${tier}.title`, {
+            n: fmt(allRows.filter((r) => tierOfRow(r) === tier).length),
+          }),
+        ),
+        el("small", "", w.t(`groups.rtier.${tier}.note`)),
       );
-      if (action !== undefined) checkedIn.append(action);
-      tr.append(nameCell, checkedIn, rowResult(test, model, result, w));
-      tbody.append(tr);
-      // The row itself opens the sessions behind it, in a full-width row
-      // below it, so each one reads at the table's width.
-      if (sessionIds.length > 0) {
-        const drillRow = el("tr", "drill-row");
-        drillRow.dataset.drillFor = test.criterionId;
-        const cell = document.createElement("td");
-        cell.setAttribute("colspan", "3");
-        drillRow.append(cell);
-        const toggle = expandableRow(
-          tr,
-          testName,
-          drillRow,
-          () => renderSessionList(sessionIds, model, presentation, w),
-          `test-${obligation.key}-${test.criterionId}`,
-        );
-        toggle.dataset.records = "sessions";
-        toggle.dataset.drill = test.criterionId;
-        tbody.append(drillRow);
-      }
+      tr.append(cell);
+      head.append(tr);
+      table.append(head);
     }
-    table.append(tbody);
+    for (const given of model.obligations) {
+      const obligation: ObligationModel =
+        tier === undefined
+          ? given
+          : { ...given, rows: given.rows.filter((r) => tierOfRow(r) === tier) };
+      if (obligation.rows.length === 0) continue;
+      const tbody = document.createElement("tbody");
+      tbody.dataset.obligationGroup = obligation.key;
+      const row = el("tr", "ob");
+      row.dataset.obligation = obligation.key;
+      // A group heading (contract-report/v1 section 2): its tests are the
+      // rows. No tally sums the tests' sessions here. The heading opens to
+      // the obligation's plain-language text and when it applies, kept
+      // together (decision D3).
+      const title = el("td", "");
+      title.setAttribute("colspan", "3");
+      const name = el("b", "obn");
+      name.append(
+        ...obligationName(w, obligation, el("span", "art", obligation.article)),
+      );
+      title.append(name);
+      const worst = obligationWorst(obligation, model.totalSessions, w);
+      if (worst !== undefined) {
+        const line = el("div", "applic worst", worst.text);
+        line.dataset.worst = worst.kind;
+        title.append(line);
+      }
+      row.append(title);
+      tbody.append(row);
+      const about = el("tr", "drill-row ob-about");
+      about.dataset.aboutFor = obligation.key;
+      const aboutCell = el("td", "");
+      aboutCell.setAttribute("colspan", "3");
+      about.append(aboutCell);
+      expandableRow(
+        row,
+        name,
+        about,
+        () => {
+          const body = el("div", "ob-x");
+          if (obligation.plain !== NOT_STATED)
+            body.append(
+              maybeProducer(w, "div", "plain", obligation.plain, true),
+            );
+          body.append(
+            maybeProducer(
+              w,
+              "div",
+              "applic",
+              obligation.applicability.note,
+              obligation.mapped,
+            ),
+          );
+          return body;
+        },
+        tier === undefined
+          ? `ob-${obligation.key}`
+          : `ob-${obligation.key}-${tier}`,
+        true,
+      );
+      tbody.append(about);
+      for (const test of obligation.rows) {
+        const tr = el("tr", "test");
+        tr.dataset.criterion = test.criterionId;
+        const counted = population(test, model.totalSessions);
+        tr.dataset.population = String(counted);
+        tr.dataset.outOfScope = String(test.outOfScopeCount);
+        tr.dataset.notYetInForce = String(test.notYetInForceCount);
+        tr.dataset.exceptions = String(test.notMetCount);
+        tr.dataset.notEvaluable = String(test.notEvaluableCount);
+        tr.dataset.unverified = String(test.unverifiedCount);
+        const nameCell = el("td", "tn");
+        const head = el("div", "tnh");
+        const testName = rowName(w, "b", "", test);
+        head.append(testName, tierBadge(test.tier, w));
+        if (tier !== undefined) {
+          tr.dataset.requirementTier = tier;
+          const chip = el("span", "rtier", w.t(`requirement_tier.${tier}`));
+          chip.dataset.requirementTier = tier;
+          head.append(chip);
+        }
+        nameCell.append(head);
+        const detail = w.row(test.criterionId, "detail");
+        if (detail !== undefined)
+          nameCell.append(packWord("div", "plain", detail));
+        const sessionIds = [
+          ...(test.sessionsByVerdict.get("not_met") ?? []),
+          ...(test.sessionsByVerdict.get("unverified") ?? []),
+          ...(test.sessionsByVerdict.get("not_evaluable") ?? []),
+        ];
+        const checkedIn = el("td", "n");
+        checkedIn.dataset.column = "checked-in";
+        checkedIn.append(el("span", "nv", count(w, "session", counted)));
+        const action = evidenceAction(
+          `test:${test.criterionId}:checked-in`,
+          `${test.name} · ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted)}`,
+          populationClaims(test, model),
+          result,
+          w,
+        );
+        if (action !== undefined) checkedIn.append(action);
+        tr.append(nameCell, checkedIn, rowResult(test, model, result, w));
+        tbody.append(tr);
+        // The row itself opens the sessions behind it, in a full-width row
+        // below it, so each one reads at the table's width.
+        if (sessionIds.length > 0) {
+          const drillRow = el("tr", "drill-row");
+          drillRow.dataset.drillFor = test.criterionId;
+          const cell = document.createElement("td");
+          cell.setAttribute("colspan", "3");
+          drillRow.append(cell);
+          const toggle = expandableRow(
+            tr,
+            testName,
+            drillRow,
+            () => renderSessionList(sessionIds, model, presentation, w),
+            `test-${obligation.key}-${test.criterionId}`,
+          );
+          toggle.dataset.records = "sessions";
+          toggle.dataset.drill = test.criterionId;
+          tbody.append(drillRow);
+        }
+      }
+      table.append(tbody);
+    }
   }
   section.append(table);
   const notes = el("aside", "footnotes");
@@ -1368,6 +1442,7 @@ export async function drawGroups(
   bundle: unknown,
   verified: BundleVerificationResult,
   w: Words,
+  tierOf?: TierOf,
 ): Promise<void> {
   const model = buildComplianceModel(result, presentation);
   const claims = model.sessions.flatMap((s) =>
@@ -1378,11 +1453,11 @@ export async function drawGroups(
   // sealed aggregate, core-strip.ts): one card, the header.
   levels.L0.append(renderLegend(w));
   const sheet = el("div", "l0-card");
-  renderHeader(sheet, model, w);
+  renderHeader(sheet, model, w, tierOf);
   levels.L0.append(sheet);
 
   // L1, why: the tests, led by who judged, who witnessed, what verified.
-  renderSummary(levels.L1, model, presentation, result, w);
+  renderSummary(levels.L1, model, presentation, result, w, tierOf);
   leadWithProvenance(
     levels.L1,
     levels.L1.querySelector('[data-section="summary"]'),

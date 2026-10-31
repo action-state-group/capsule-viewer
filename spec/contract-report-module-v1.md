@@ -61,6 +61,19 @@ rules bind it:
   a claim, never as a requirement. There is no percentage and no single score.
 - **Several contracts.** A Result that cites more than one contract shows its rows grouped by
   `contract_ref` first, in order of first appearance.
+- **Requirement tier.** A page MAY be built with a compiled Evidence Contract (presentation builder
+  section 1, `contract`). The module then reads each row's `tier` from it by (`contract_ref`,
+  `requirement_ref`): the row's tier is the contract's when `contract_ref` is the contract's
+  `<id>@<version>` and the contract lists the requirement with a `tier`; otherwise it is not stated,
+  never `must_have`. A row with no claim to read `contract_ref` from takes the Result's one
+  `contract_ref`, when it cites only one. Rows are drawn in tier sections, in this order: must-have,
+  then informational (reported, never in the answer), then rows whose tier is not stated, and a
+  group heads each section it has rows in. Each row shows its tier. The module's derived lines (a
+  conversation's or session's result, the headline, a group's worst line) leave out rows the
+  contract marks informational; a row whose tier is not stated stays in them. The sealed aggregate
+  the core strip shows is the producer's and counts every claim, so when the Result has an
+  informational row the module says, in L0, that the sealed result counts informational rows and
+  its derived lines do not. With no contract, nothing here applies and no row shows a tier.
 - **Groups.** A row's group is the part of its `requirement_ref` before the first `.`. It is read
   from the claims; the producer never supplies it. Groups and rows keep the order of their first
   claim. A `requirement_ref` with no `.` is in a final group with no title. There is one level of
@@ -121,6 +134,7 @@ lowercased:
 | `tier.<value>` | `recomputed`, `judged`. |
 | `grade.<value>` | `self-attested`, `witnessed`, `countersigned`. |
 | `status.<value>` | The lowercased EvidenceStatus, for example `withheld`. |
+| `requirement_tier.<value>` | A row's requirement tier (§2): `must_have`, `informational`, `unstated`. |
 
 `row.*` and `group.*` keys apply only when every claim cites the same `contract_ref`: a pack is
 written for one contract, and two contracts can use one `requirement_ref` for different

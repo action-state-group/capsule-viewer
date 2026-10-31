@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """``python -m capsule_viewer.ledger BUNDLE.json [--depth L0|L1|L2] [-o OUTPUT.html]``: the
 ledger page, offline, over an evidence file of the ledger (``capsule-emit bundle LEDGER --all``
-writes one). It exits as ``capsule-emit verify --bundle`` does on that file: 0 VALID,
-2 INCOMPLETE, 1 INVALID or unreadable."""
+writes one). Any ``evidence-bundle/v2`` works, for example one ``capsulectl bundle --profile NAME
+--root CAPSULE_ID --out bundle.json`` writes from a CLL entry log plus artifact store. It exits
+as ``capsule-emit verify --bundle`` does on that file: 0 VALID, 2 INCOMPLETE, 1 INVALID or
+unreadable."""
 from __future__ import annotations
 
 import argparse
@@ -18,7 +20,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m capsule_viewer.ledger",
         description="Write one offline HTML page over a capsule ledger's evidence file "
-        "(evidence-bundle/v2), such as `capsule-emit bundle LEDGER --all` writes. The file is "
+        "(evidence-bundle/v2), such as `capsule-emit bundle LEDGER --all` or `capsulectl bundle` "
+        "writes. The file is "
         "checked by capsule-emit's verifier; this only draws the page.",
     )
     parser.add_argument("path", metavar="BUNDLE.json", help="the ledger's evidence file")

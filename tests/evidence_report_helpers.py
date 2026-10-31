@@ -1,10 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Evidence files for the evidence report tests, produced by the donated
-libraries only (capsule-emit, checkpointed-local-log); nothing here checks one.
+"""Evidence files for the evidence report and Ledger tests, produced by the
+donated libraries only (capsule-emit, agent-action-capsule,
+checkpointed-local-log); nothing here checks one.
 
-* :func:`exported_bundle`: a node ledger (three sealed records and a checkpoint
-  signed by the node key) written out by ``capsule-emit bundle --all``, the way
-  a producer hands a third party an evidence file.
+Records are built and signed in memory with ``capsule_emit.produce``; no
+ledger is written.
+
+* :func:`signed_record`: one record and its Producer Envelope, the envelope
+  inlined as the record's ``signature`` and ``key_id``, as a bundle carries it.
+* :func:`ledger_records`: a grant, a write under it that passed its gate, and
+  one refused, the records the Ledger page tests draw.
+* :func:`exported_bundle`: three records in capsule-emit's artifact store and
+  a CLL log checkpointed by the node key, proven by agent-action-capsule's
+  ``build_evidence_bundle``, the way a producer hands a third party an
+  evidence file.
 * :func:`whole_log_bundle`: a bundle over a whole three-record log with its
   completeness certificate, built as capsule-emit's own ``test_evidence_file``
   builds one; the verifier finds it VALID.
@@ -15,70 +24,156 @@ import base64
 import dataclasses
 import json
 import re
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
-from types import SimpleNamespace
 
-from capsule_emit import LocalKeypairSigner, seal
-from capsule_emit.cli import main as capsule_emit_main
+from agent_action_capsule import compute_capsule_id
+from agent_action_capsule.bundle import build_evidence_bundle, proof_source_from_cll
+from agent_action_capsule.canonical import jcs
+from capsule_emit import LocalKeypairSigner
+from capsule_emit.artifact import Record
+from capsule_emit.artifact.memory import MemoryArtifactStore
 from capsule_emit.evidence_file import Check, EvidenceFileCheck, RecordCheck
-from capsule_emit.ledger import read_ledger
+from capsule_emit.produce import (
+    Chain,
+    ComputeAttestation,
+    Disposition,
+    Effect,
+    Input,
+    SigningIdentity,
+    build,
+    digest_json,
+    new_ed25519_signing_identity,
+    sign,
+)
+from capsule_emit.produce.model import BuiltPayload
 from cll.checkpoint import (
     CheckpointRecord,
     MemoryNodeStore,
-    MmrLedger,
     add_leaf,
     checkpoint_to_cose,
     core,
-    emit_checkpoint,
     leaf_hash,
     peaks,
     root_from_peaks,
 )
+from cll.log import AppendInput, CheckpointState, CllState
+from cll.log.memory import MemoryStore
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+TIMESTAMP = "2026-10-01T00:00:00Z"
+CHECKS = [{"name": "AmountUnderCap", "passed": True, "reason": None}]
+OVER_CAP = [{"name": "AmountUnderCap", "passed": False, "reason": "over cap"}]
 
 
-class _Log:
-    def __init__(self) -> None:
-        self.n = 0
-
-    def append(self, capsule: dict, *, consequential: bool = True):  # noqa: ARG002
-        self.n += 1
-        return SimpleNamespace(seq=self.n, capsule_id=capsule["capsule_id"])
-
-    def scan(self, *a, **k):  # noqa: ARG002
-        return []
+def node_key(path: Path) -> tuple[LocalKeypairSigner, SigningIdentity]:
+    """One Ed25519 key as both signers: capsule-emit's, which signs a
+    checkpoint, and the produce identity that signs Producer Envelopes."""
+    signer = LocalKeypairSigner(path)  # writes the key file when it is missing
+    return signer, new_ed25519_signing_identity(load_pem_private_key(path.read_bytes(), password=None))
 
 
-class _CheckpointSigner:
-    """The checkpoint layer's signer over the node's own key."""
+def _built(capsule: Input, gate_checks: list | None) -> BuiltPayload:
+    built = build(capsule)
+    if gate_checks is None:
+        return built
+    # capsule_emit.produce has no member for gate checks; the Ledger module
+    # reads them from compute_attestation, where seal()'s extra_compute put
+    # them. Add the member and derive the id again before signing.
+    value = json.loads(built.json)
+    value.setdefault("model_attestation", {}).setdefault("compute_attestation", {})["gate_checks"] = gate_checks
+    del value["capsule_id"]
+    value["capsule_id"] = compute_capsule_id(value)
+    return BuiltPayload(capsule_id=value["capsule_id"], value=value, json=jcs(value))
 
-    def __init__(self, inner: LocalKeypairSigner) -> None:
-        self._inner = inner
-        self.key_id = inner.key_id
 
-    def sign(self, digest_hex: str) -> str:
-        return self._inner.sign(digest_hex.encode("ascii"))[0]
+def signed_pair(identity: SigningIdentity, capsule: Input, *, payload: object = None,
+                gate_checks: list | None = None) -> tuple[dict, bytes]:
+    """``(capsule, envelope)``: the signature-free Capsule ``produce`` builds
+    from ``capsule`` (``payload`` committed as its agent input digest) and
+    its Producer Envelope."""
+    if payload is not None:
+        capsule = dataclasses.replace(capsule, compute=ComputeAttestation(agent_input_digest=digest_json(payload)))
+    built = _built(capsule, gate_checks)
+    return json.loads(built.json), sign(built, identity)
+
+
+def signed_record(identity: SigningIdentity, capsule: Input, **kw) -> dict:
+    """The record as a bundle carries it: the Capsule with its verified
+    Producer Envelope inlined as ``signature`` and ``key_id``, as
+    agent-action-capsule's bundle producer inlines a stored one."""
+    record, envelope = signed_pair(identity, capsule, **kw)
+    return {**record, "signature": envelope.hex(), "key_id": identity.public_key.hex()}
+
+
+def capsule_input(n: int, action: str, **kw) -> Input:
+    return Input(**{"action_id": f"{action}/{n}", "action_type": "fyi", "operator": "example-org",
+                    "developer": "agent@v1", "timestamp": f"2026-10-01T00:00:{n:02d}Z", **kw})
+
+
+def ledger_records(identity: SigningIdentity, *, operator: str = "acme-co", developer: str = "po-agent@v1",
+                   reason: str = "over cap", over_cap: list | None = None) -> list[dict]:
+    """A grant, a write under it that passed its gate, and one refused
+    (``reason`` is the refused gate check's reason, ``over_cap`` replaces
+    its gate checks)."""
+    executed = {"action_type": "decide",
+                "disposition": Disposition(decision="accept", approver="policy", verdict_class="executed")}
+    grant = signed_record(identity, capsule_input(0, "grant", operator=operator, **executed,
+                          effect=Effect(type="memory_write", status="dispatched", irreversibility_class="two_way",
+                                        effect_attestation="runtime_claimed")),
+                          payload={"step": 0})
+    write = signed_record(identity, capsule_input(1, "write_po", operator=operator, developer=developer, **executed,
+                          effect=Effect(type="spend", status="dispatched", irreversibility_class="two_way",
+                                        effect_attestation="runtime_claimed"),
+                          chain=Chain(parent_capsule_id=grant["capsule_id"], relation="confirms")),
+                          payload={"step": 1}, gate_checks=CHECKS)
+    refused = signed_record(identity, capsule_input(2, "write_po", action_type="decide", operator=operator, developer="po-agent@v1",
+                            disposition=Disposition(decision="denied", approver="policy", verdict_class="blocked"),
+                            effect=Effect(type="spend", status="planned", irreversibility_class="two_way")),
+                            payload={"step": 2},
+                            gate_checks=over_cap or [{"name": "AmountUnderCap", "passed": False, "reason": reason}])
+    return [grant, write, refused]
+
+
+def _checkpointed_log(values: list[bytes], signer: LocalKeypairSigner, log_id: str) -> MemoryStore:
+    """A CLL memory log of ``values``, checkpointed at its tip by ``signer``."""
+    log = MemoryStore()
+    nodes = MemoryNodeStore()
+    appended_at = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    for value in values:
+        log.append(AppendInput(value=value, appended_at=appended_at))
+        add_leaf(nodes, leaf_hash(value))
+    size = nodes.size()
+    peak_hashes = [nodes.node(p) for p in peaks(size)]
+    cp = CheckpointRecord(
+        v=1, kind="mmr_checkpoint", log_id=log_id, mmr_size=size, root=root_from_peaks(peak_hashes).hex(),
+        prev_size=0, prev_root="", key_id=signer.key_id, timestamp=TIMESTAMP, signature="",
+    )
+    cose = checkpoint_to_cose(cp, signer, peak_hashes)
+    log.commit_cll(0, None, CllState(
+        size=size, nodes=tuple(nodes.node(i) for i in range(size)), indexed_seq=len(values),
+        checkpoint=CheckpointState(bytes=cose, size=size, indexed_seq=len(values), peaks=tuple(peak_hashes)),
+    ))
+    return log
 
 
 def exported_bundle(tmp_path: Path) -> tuple[Path, dict]:
-    """``(path, bundle)`` of the evidence file ``capsule-emit bundle --all`` writes."""
-    key = tmp_path / "node-key.pem"
-    signer = LocalKeypairSigner(key)
-    flat = tmp_path / "flat.jsonl"
-    for action in ("lookup_order", "issue_refund", "notify_customer"):
-        seal(None, action=action, operator="example-org", anchor=False, witness=False, signer=signer, ledger=flat)
-    capsules = read_ledger(flat)
-    mmr = MmrLedger(_Log())
-    for capsule in capsules:
-        mmr.append({"capsule_id": capsule["capsule_id"]})
-    cp = emit_checkpoint(mmr, _CheckpointSigner(signer), log_id="example-org/node-1")
-    ledger = tmp_path / "ledger"
-    ledger.mkdir()
-    (ledger / "capsules.jsonl").write_text("".join(json.dumps(c) + "\n" for c in capsules))
-    (ledger / "checkpoints.jsonl").write_text(json.dumps(dataclasses.asdict(cp)) + "\n")
+    """``(path, bundle)``: three records signed by the node key, put into
+    capsule-emit's artifact store and appended to a CLL log the node key
+    checkpointed, proven from seq 1 to the tip."""
+    signer, identity = node_key(tmp_path / "node-key.pem")
+    artifacts = MemoryArtifactStore("example-org", [identity.public_key])
+    artifacts.init()
+    ids = []
+    for n, action in enumerate(("lookup_order", "issue_refund", "notify_customer")):
+        capsule, envelope = signed_pair(identity, capsule_input(n, action), payload={"step": n})
+        artifacts.put(Record(capsule_id=capsule["capsule_id"], capsule=jcs(capsule), producer_envelope=envelope))
+        ids.append(capsule["capsule_id"])
+    log = _checkpointed_log([bytes.fromhex(i) for i in ids], signer, "example-org/node-1")
+    bundle = build_evidence_bundle(proof_source_from_cll(log, artifacts), root=ids[-1], interval_from=1)
     out = tmp_path / "bundle.json"
-    code = capsule_emit_main(["bundle", "--all", "--signing-key", str(key), "-o", str(out), str(ledger)])
-    assert code == 0, "capsule-emit bundle did not write the evidence file"
+    out.write_text(json.dumps(bundle), encoding="utf-8")
     return out, json.loads(out.read_text(encoding="utf-8"))
 
 
@@ -97,11 +192,8 @@ def _proof(p) -> dict:
 def whole_log_bundle(tmp_path: Path, *, n: int = 3, cose: bool = True) -> dict:
     """A bundle over a whole ``n``-record log; ``cose=False`` leaves the
     checkpoint unsigned."""
-    signer = LocalKeypairSigner(tmp_path / "k.pem")
-    ledger = tmp_path / "whole-log.jsonl"
-    caps = [
-        seal({"step": i}, anchor=False, witness=False, signer=signer, ledger=ledger).capsule for i in range(n)
-    ]
+    signer, identity = node_key(tmp_path / "k.pem")
+    caps = [signed_record(identity, capsule_input(i, "step"), payload={"step": i}) for i in range(n)]
     store = MemoryNodeStore()
     for cap in caps:
         add_leaf(store, leaf_hash(bytes.fromhex(cap["capsule_id"])))

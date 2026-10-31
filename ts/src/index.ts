@@ -9,3 +9,4 @@ export * from "./presentation-builder.js";
 export * from "./presentation-registry.js";
 export * from "./builtin-manifests.js";
 export * from "./presentation-fragment.js";
+export * from "./evidence-contract.js";

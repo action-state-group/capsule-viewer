@@ -244,3 +244,111 @@ func TestBuildOfflineHTMLRefusesManifestStyleMismatch(t *testing.T) {
 	_, err = BuildOfflineHTML(week, []byte(marker), OfflineOptions{Audience: "*", Modules: []Module{other}})
 	require.ErrorContains(t, err, "does not pin this module-slot script")
 }
+
+func contractOf(text string) *Contract {
+	sum := sha256.Sum256([]byte(text))
+	return &Contract{Text: text, SHA256: hex.EncodeToString(sum[:])}
+}
+
+// The vectors ts/test/evidence-contract.test.ts reads too: both builders
+// accept and refuse the same contracts, for the same reason.
+func TestCheckContractVectors(t *testing.T) {
+	var doc struct {
+		Vectors []struct {
+			Name   string            `json:"name"`
+			Text   string            `json:"text"`
+			SHA256 string            `json:"sha256"`
+			Error  string            `json:"error"`
+			Ref    string            `json:"ref"`
+			Tiers  map[string]string `json:"tiers"`
+		} `json:"vectors"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(readTestdata(t, "contract-vectors.json")), &doc))
+	require.NotEmpty(t, doc.Vectors)
+	for _, v := range doc.Vectors {
+		got, err := CheckContract(Contract{Text: v.Text, SHA256: v.SHA256})
+		if v.Error != "" {
+			require.ErrorContains(t, err, v.Error, v.Name)
+			continue
+		}
+		require.NoError(t, err, v.Name)
+		require.Equal(t, v.Ref, got.ID+"@"+got.Version, v.Name)
+		require.Equal(t, v.Tiers, got.Tiers, v.Name)
+	}
+}
+
+func TestBuildOfflineHTMLRefusesABadContract(t *testing.T) {
+	week := loadWeekBundle(t)
+	bad := contractOf(`{"id":"c","version":"1","requirements":[{"id":"a","tier":"optional"}]}`)
+	_, err := BuildOfflineHTML(week, []byte(marker), OfflineOptions{Audience: "*", Contract: bad})
+	require.ErrorContains(t, err, "tier is not must_have or informational")
+	_, err = BuildPresentationFragment(week, []byte(marker), FragmentOptions{OfflineOptions: OfflineOptions{Audience: "*", Contract: bad}})
+	require.ErrorContains(t, err, "tier is not must_have or informational")
+	other := *contractOf(`{"id":"c","version":"1","requirements":[]}`)
+	other.SHA256 = strings.Repeat("0", 64)
+	_, err = BuildOfflineHTML(week, []byte(marker), OfflineOptions{Audience: "*", Contract: &other})
+	require.ErrorContains(t, err, "do not hash to its contract_sha256")
+}
+
+// The token and the offline file come from ts/test/presentation-builder.test.ts
+// ("the Go twin's goldens", with a contract): the same build with the
+// compiled contract as a setting.
+func TestOfflineHTMLWithContractMatchesTypeScript(t *testing.T) {
+	token := strings.TrimSpace(readTestdata(t, "offline-fragment-contract.txt"))
+	want := readTestdata(t, "expected-offline-contract.html")
+	got, err := OfflineHTMLFromFragment(token, []byte(marker), nil)
+	require.NoError(t, err)
+	require.True(t, got == want, "Go offline file from the fragment differs from TypeScript's")
+
+	payload, err := DecodePresentationFragment(token, 0)
+	require.NoError(t, err)
+	require.NotNil(t, payload.Contract)
+	got, err = BuildOfflineHTML(payload.Bundle, []byte(marker), OfflineOptions{
+		Audience: payload.Audience,
+		Depth:    payload.Depth,
+		ThemeCSS: payload.ThemeCSS,
+		Wording:  payload.Wording,
+		Contract: payload.Contract,
+	})
+	require.NoError(t, err)
+	require.True(t, got == want, "Go offline file differs from TypeScript's")
+	require.Contains(t, got, `"contract":{"sha256":"`+payload.Contract.SHA256)
+
+	rebuilt, err := BuildPresentationFragment(payload.Bundle, []byte(marker), FragmentOptions{
+		OfflineOptions: OfflineOptions{
+			Audience: payload.Audience,
+			Depth:    payload.Depth,
+			ThemeCSS: payload.ThemeCSS,
+			Wording:  payload.Wording,
+			Contract: payload.Contract,
+		},
+		Presentation: payload.Presentation,
+		MaxLength:    FragmentTokenMaxLength,
+	})
+	require.NoError(t, err)
+	require.Equal(t, token, rebuilt.Fragment)
+}
+
+func TestPresentationFragmentContractShape(t *testing.T) {
+	encode := func(contract interface{}) string {
+		token, err := bundle.EncodeFragment(map[string]interface{}{
+			"fragment_version": PresentationFragmentVersion, "audience": "a", "presentation": "auto",
+			"core_runtime_sha256": strings.Repeat("a", 64), "module_sha256": []interface{}{}, "bundle": map[string]interface{}{},
+			"contract": contract,
+		})
+		require.NoError(t, err)
+		return token
+	}
+	got, err := DecodePresentationFragment(encode(map[string]interface{}{"text": "{}", "sha256": strings.Repeat("b", 64)}), 0)
+	require.NoError(t, err)
+	require.Equal(t, &Contract{Text: "{}", SHA256: strings.Repeat("b", 64)}, got.Contract)
+	for name, bad := range map[string]interface{}{
+		"not an object": "x",
+		"extra member":  map[string]interface{}{"text": "{}", "sha256": strings.Repeat("b", 64), "id": "c"},
+		"no text":       map[string]interface{}{"sha256": strings.Repeat("b", 64)},
+		"bad digest":    map[string]interface{}{"text": "{}", "sha256": "B"},
+	} {
+		_, err := DecodePresentationFragment(encode(bad), 0)
+		require.ErrorContains(t, err, "contract is not {text, sha256}", name)
+	}
+}

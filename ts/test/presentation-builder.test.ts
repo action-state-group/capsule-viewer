@@ -1579,6 +1579,131 @@ describe("the Go twin's goldens", () => {
       readFileSync(goTestdata("offline-fragment.txt"), "utf8"),
     );
   });
+
+  it("the offline file and the fragment that rebuilds it, with a contract", async () => {
+    const bundle = fixture("result-root-bundle.sealed.json");
+    const text = readFileSync(
+      testdata("contracts/example-support-outcomes.json"),
+      "utf8",
+    );
+    const options = {
+      presentation: "auto",
+      audience: "counterparty",
+      runtime: { code: "/*IIFE_MARKER*/" },
+      depth: "L1" as const,
+      contract: { text, sha256: hex(text) },
+      disclose: rootOnly(bundle),
+      maxFragmentLength: FRAGMENT_TOKEN_MAX_LENGTH,
+    };
+    const html = await buildPresentation(bundle, {
+      ...options,
+      format: "html",
+    });
+    const fragment = await buildPresentation(bundle, {
+      ...options,
+      format: "fragment",
+    });
+    if (html.format !== "html" || fragment.format !== "fragment")
+      throw new Error("unexpected format");
+    expect(fragment.payload.contract).toEqual(options.contract);
+    // The page carries the contract's exact text in its render options.
+    expect(html.html).toContain(`"contract":{"sha256":"${hex(text)}"`);
+    expect(
+      await offlineHtmlFromFragment(fragment.fragment, {
+        code: "/*IIFE_MARKER*/",
+      }),
+    ).toBe(html.html);
+    if (process.env.UPDATE_PRESENTATION_GOLDENS === "1") {
+      const { writeFileSync } = await import("node:fs");
+      writeFileSync(goTestdata("expected-offline-contract.html"), html.html);
+      writeFileSync(
+        goTestdata("offline-fragment-contract.txt"),
+        `${fragment.fragment}\n`,
+      );
+    }
+    expect(html.html).toBe(
+      readFileSync(goTestdata("expected-offline-contract.html"), "utf8"),
+    );
+    expect(`${fragment.fragment}\n`).toBe(
+      readFileSync(goTestdata("offline-fragment-contract.txt"), "utf8"),
+    );
+  });
+});
+
+describe("the contract setting", () => {
+  const text = '{"id":"c","version":"1","requirements":[{"id":"a"}]}';
+  const base = (contract: { text: string; sha256: string }) => ({
+    presentation: "auto",
+    audience: "*",
+    runtime: { code: "/*IIFE_MARKER*/" },
+    contract,
+  });
+
+  it("is refused, in every packaging, when its bytes or its shape do not check", async () => {
+    const bundle = fixture("result-root-bundle.sealed.json");
+    const bad =
+      '{"id":"c","version":"1","requirements":[{"id":"a","tier":"optional"}]}';
+    for (const format of PACKAGING_TARGETS) {
+      await expect(
+        buildPresentation(bundle, {
+          ...base({ text: bad, sha256: hex(bad) }),
+          format,
+        }),
+      ).rejects.toThrow(
+        new PresentationBuildError(
+          'contract is not a compiled Evidence Contract: requirement "a" tier is not must_have or informational',
+        ),
+      );
+      await expect(
+        buildPresentation(bundle, {
+          ...base({ text, sha256: hex(`${text} `) }),
+          format,
+        }),
+      ).rejects.toThrow(/do not hash to its contract_sha256/u);
+    }
+    await expect(
+      availablePackagings(bundle, base({ text: bad, sha256: hex(bad) })),
+    ).rejects.toThrow(PresentationBuildError);
+  });
+
+  it("is refused by the hand-back when the fragment carries one that does not check, as in Go", async () => {
+    const bundle = fixture("result-root-bundle.sealed.json");
+    const built = await buildPresentation(bundle, {
+      ...base({ text, sha256: hex(text) }),
+      format: "fragment",
+    });
+    if (built.format !== "fragment") throw new Error("unexpected format");
+    const { encodePresentationFragment } = await import(
+      "../src/presentation-fragment.js"
+    );
+    const { fragment } = encodePresentationFragment({
+      ...built.payload,
+      contract: { text, sha256: "0".repeat(64) },
+    });
+    await expect(
+      offlineHtmlFromFragment(fragment, { code: "/*IIFE_MARKER*/" }),
+    ).rejects.toThrow(/do not hash to its contract_sha256/u);
+  });
+
+  it("leaves the page as it is without one, and reaches the page's render options with one", async () => {
+    const bundle = fixture("result-root-bundle.sealed.json");
+    const without = await buildPresentation(bundle, {
+      presentation: "auto",
+      audience: "*",
+      runtime: { code: "/*IIFE_MARKER*/" },
+      format: "html",
+    });
+    const withIt = await buildPresentation(bundle, {
+      ...base({ text, sha256: hex(text) }),
+      format: "html",
+    });
+    if (without.format !== "html" || withIt.format !== "html")
+      throw new Error("unexpected format");
+    expect(without.html).not.toContain('"contract"');
+    expect(withIt.html).toContain(
+      `{"audience":"*","contract":{"sha256":"${hex(text)}","text":`,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

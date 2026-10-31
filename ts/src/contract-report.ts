@@ -13,6 +13,11 @@ import {
 } from "./contract-report-wording.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
 import { refusedWordingNotice } from "./report-levels.js";
+import {
+  rowTier,
+  type CheckedContract,
+  type TierOf,
+} from "./evidence-contract.js";
 import { applyDepth, type ReportLevels } from "./report-front.js";
 
 /**
@@ -65,6 +70,12 @@ import { applyDepth, type ReportLevels } from "./report-front.js";
  *   verdict.<value>, tier.<value>     the verdict and tier words
  *   grade.<value>, sufficiency.<value>, status.<value>
  *                                     each claim's assurance, in its proofs
+ *   requirement_tier.<value>          a row's tier from the page's
+ *                                     contract (evidence-contract.ts); its
+ *                                     section's heading and note, and the
+ *                                     line that the sealed aggregate counts
+ *                                     informational rows, are the
+ *                                     grouping's own (`<grouping>.rtier.*`)
  *
  * `row.*` and `group.*` apply only when every claim cites one
  * `contract_ref`; otherwise rows and groups keep what they show without a
@@ -93,6 +104,25 @@ const FRAMES: Readonly<
   Record<ContractReportGrouping, typeof LINES_FRAME | typeof GROUPS_FRAME>
 > = { lines: LINES_FRAME, groups: GROUPS_FRAME };
 
+/**
+ * How the module reads tiers for one Result: undefined with no contract,
+ * which leaves the page as it is without one; otherwise the contract's tier
+ * for each row, `unstated` wherever the contract does not say. A row with
+ * no claim to read its `contract_ref` from takes the Result's one
+ * `contract_ref`, when it cites only one.
+ */
+export function tierReader(
+  result: ResultRoot,
+  contract: CheckedContract | undefined,
+): TierOf | undefined {
+  if (contract === undefined) return undefined;
+  const single = citesOneContract(result)
+    ? result.claims[0]?.contractRef
+    : undefined;
+  return (contractRef, requirementRef) =>
+    rowTier(contract, contractRef ?? single ?? "", requirementRef);
+}
+
 /** Every claim cites the same `contract_ref` (contract-report/v1 section 3: only then do `row.*` and `group.*` apply). */
 export function citesOneContract(result: ResultRoot): boolean {
   return new Set(result.claims.map((claim) => claim.contractRef)).size <= 1;
@@ -113,7 +143,9 @@ export async function renderContractReport(
   verified: BundleVerificationResult,
   host: ReportLevels | HTMLElement,
   wording?: WordingPackInput,
+  contract?: CheckedContract,
 ): Promise<void> {
+  const tierOf = tierReader(result, contract);
   const w = await contractReportWords(input.grouping, wording, {
     singleContract: citesOneContract(result),
   });
@@ -139,10 +171,34 @@ export async function renderContractReport(
   levels.L0.append(style);
   const refused = refusedWordingNotice(w);
   if (refused !== undefined) levels.L0.append(refused);
+  // The sealed aggregate the core strip shows counts every claim; the
+  // module's derived lines leave out informational rows. When the Result
+  // has one, the page says so, so the two never disagree unexplained.
+  if (
+    tierOf !== undefined &&
+    result.claims.some(
+      (claim) =>
+        tierOf(claim.contractRef, claim.requirementRef) === "informational",
+    )
+  ) {
+    const note = document.createElement("p");
+    note.className = "tier-note";
+    note.dataset.sealedCounts = "informational";
+    note.textContent = w.t(`${input.grouping}.rtier.sealed-note`);
+    levels.L0.append(note);
+  }
   if (input.grouping === "lines")
-    await drawLines(levels, result, input.options, bundle, verified, w);
+    await drawLines(levels, result, input.options, bundle, verified, w, tierOf);
   else
-    await drawGroups(levels, result, input.presentation, bundle, verified, w);
+    await drawGroups(
+      levels,
+      result,
+      input.presentation,
+      bundle,
+      verified,
+      w,
+      tierOf,
+    );
   regions.L0.append(levels.L0);
   regions.L1.append(levels.L1);
   regions.L2.append(levels.L2);

@@ -10,6 +10,7 @@ import {
   type PresentationDepth,
   type WordingPackInput,
 } from "./presentation-fragment.js";
+import type { ContractInput } from "./evidence-contract.js";
 
 /** What a host element is given: an already scoped bundle and its settings. */
 export interface MountPresentationInput {
@@ -18,6 +19,8 @@ export interface MountPresentationInput {
   readonly format: PresentationFormat;
   readonly depth?: PresentationDepth;
   readonly wording?: WordingPackInput;
+  /** The compiled Evidence Contract the contract-report module reads requirement tiers from. */
+  readonly contract?: ContractInput;
   /** Chart specs, checked and drawn by the page runtime (chart-spec.ts). */
   readonly charts?: readonly unknown[];
   /** The host's registry; the default registry when omitted. */
@@ -39,6 +42,7 @@ export function mountPresentation(
     format: input.format,
     ...(input.depth === undefined ? {} : { depth: input.depth }),
     ...(input.wording === undefined ? {} : { wording: input.wording }),
+    ...(input.contract === undefined ? {} : { contract: input.contract }),
     ...(input.charts === undefined ? {} : { charts: input.charts }),
     ...(input.registry === undefined ? {} : { registry: input.registry }),
   });
@@ -72,5 +76,6 @@ export async function mountPresentationFragment(
     format: "fragment",
     ...(payload.depth === undefined ? {} : { depth: payload.depth }),
     ...(payload.wording === undefined ? {} : { wording: payload.wording }),
+    ...(payload.contract === undefined ? {} : { contract: payload.contract }),
   });
 }

@@ -51,6 +51,7 @@ import {
   type SubjectConversation,
 } from "./subject-history.js";
 import type { Words } from "./contract-report-wording.js";
+import { ROW_TIERS, type RowTier, type TierOf } from "./evidence-contract.js";
 
 /**
  * The contract-report module's `lines` grouping (contract-report.ts): a
@@ -169,7 +170,7 @@ const tierLabel = (tier: CriterionTierReading, w: Words): string =>
  * when it sets one (contract-report/v1 section 3), else the contract's label.
  */
 function criterionLabel(
-  model: OutcomeReportModel,
+  model: LinesModel,
   checkId: string,
   criterionId: string,
   w: Words,
@@ -200,7 +201,7 @@ const wordingFallback = (
 ): string => w.t(`lines.wording.${source}`);
 
 /** One sentence on where the criterion wording on this page comes from. */
-function wordingNote(model: OutcomeReportModel, w: Words): string {
+function wordingNote(model: LinesModel, w: Words): string {
   const sources = new Set(
     [...model.criterionWording.values()].map((c) => c.source),
   );
@@ -213,7 +214,7 @@ function wordingNote(model: OutcomeReportModel, w: Words): string {
 /** The producer's "edited" badge for a criterion, when its presentation
  * extension marks one -- presentation text, titled as such, never evidence. */
 function editedBadge(
-  model: OutcomeReportModel,
+  model: LinesModel,
   ref: string,
   w: Words,
 ): HTMLElement | undefined {
@@ -226,7 +227,7 @@ function editedBadge(
 }
 function renderProducerNote(
   host: HTMLElement,
-  model: OutcomeReportModel,
+  model: LinesModel,
   w: Words,
 ): void {
   const note = model.options.producerNote;
@@ -299,9 +300,85 @@ function notApplying(verdict: DrawnVerdict): boolean {
   return verdict === "not_applicable" || verdict === "out_of_scope";
 }
 
+/**
+ * How the page reads requirement tiers, when it was built with a contract
+ * (contract-report/v1 section 2): each rule's tier, and each conversation
+ * as the derived lines read it, its informational rules left out and its
+ * result rolled up again over the rest, so an informational rule changes no
+ * conversation's result. A conversation not in `counted` is read as it is.
+ * Rules whose tier is not stated stay in: only a rule the contract marks
+ * informational is left out.
+ */
+export interface Gating {
+  readonly tierOf: TierOf;
+  readonly counted: ReadonlyMap<Conversation, Conversation>;
+}
+
+/** The model the `lines` grouping draws: AAC's, and the tiers when the page has a contract. */
+type LinesModel = OutcomeReportModel & { readonly gating?: Gating };
+
+/** A conversation as the derived lines read it (`Gating`). */
+function counted(conversation: Conversation, gating?: Gating): Conversation {
+  return gating?.counted.get(conversation) ?? conversation;
+}
+
+/** A row's requirement tier chip (contract-report/v1 section 3, `requirement_tier.*`). */
+function tierChip(tier: RowTier, w: Words): HTMLElement {
+  const chip = el("span", "rtier", w.t(`requirement_tier.${tier}`));
+  chip.dataset.requirementTier = tier;
+  return chip;
+}
+
+/** A rule's requirement tier, when the page has a contract. */
+function criterionTier(
+  c: DrawnCriterion,
+  gating: Gating | undefined,
+): RowTier | undefined {
+  return gating?.tierOf(c.claim?.contractRef, `${c.checkId}.${c.criterionId}`);
+}
+
+/**
+ * The roll-up agent-action-capsule's outcome model applies to a
+ * conversation (outcome-report.js `rollUp`), over the rules left in.
+ */
+function rollUp(verdicts: readonly DrawnVerdict[]): Conversation["verdict"] {
+  if (verdicts.length === 0) return "not_evaluable";
+  if (verdicts.some((v) => v === "not_met" || isUnverified(v)))
+    return "not_met";
+  if (verdicts.some((v) => v === "not_evaluable" || v === "no_claim"))
+    return "not_evaluable";
+  if (!verdicts.some((v) => v === "met")) return "not_evaluable";
+  return "met";
+}
+
+export function gating(
+  conversations: readonly Conversation[],
+  tierOf: TierOf,
+): Gating {
+  const map = new Map<Conversation, Conversation>();
+  const out: Gating = { tierOf, counted: map };
+  for (const conversation of conversations) {
+    const kept = conversation.criteria.filter(
+      (c) => criterionTier(c, out) !== "informational",
+    );
+    if (kept.length === conversation.criteria.length) continue;
+    map.set(conversation, {
+      ...conversation,
+      criteria: kept,
+      verdict: rollUp(kept.map((c) => c.verdict)),
+    });
+  }
+  return out;
+}
+
 export function conversationStatus(
-  conversation: Conversation,
+  given: Conversation,
+  gating?: Gating,
 ): ConversationStatus {
+  const conversation = counted(given, gating);
+  // Every rule it has is informational: none of them is in its answer.
+  if (conversation !== given && conversation.criteria.length === 0)
+    return "nothing-applied";
   if (conversation.verdict === "met") return "resolved";
   if (conversation.criteria.some((c) => isMiss(c.verdict))) return "missed";
   if (conversation.criteria.some((c) => isUnverified(c.verdict)))
@@ -319,6 +396,7 @@ export function statusWord(
   status: ConversationStatus,
   conversation: Conversation,
   w: Words,
+  gating?: Gating,
 ): Worded {
   if (status === "resolved")
     return { word: w.t("lines.status.resolved"), tone: "ok" };
@@ -334,8 +412,10 @@ export function statusWord(
   // tells them apart.
   // A `no_claim` rule is undecided with no judge run on it (no claim, so no
   // report): it counts as unjudged.
-  const judged = conversation.criteria
-    .filter((c) => c.verdict === "not_evaluable" || c.verdict === "no_claim")
+  const judged = counted(conversation, gating)
+    .criteria.filter(
+      (c) => c.verdict === "not_evaluable" || c.verdict === "no_claim",
+    )
     .map((c) =>
       c.verdict === "no_claim"
         ? "no"
@@ -381,11 +461,7 @@ function noNoteText(c: DrawnCriterion, w: Words): string {
   }
 }
 
-function names(
-  model: OutcomeReportModel,
-  list: readonly DrawnCriterion[],
-  w: Words,
-) {
+function names(model: LinesModel, list: readonly DrawnCriterion[], w: Words) {
   return list
     .map((c) => criterionLabel(model, c.checkId, c.criterionId, w).label)
     .join(", ");
@@ -400,7 +476,7 @@ function countWord(n: number, w: Words): string {
 
 /** The rules whose claim failed verification or whose evidence is missing, as one sentence: their verdict was never drawn. */
 function unverifiedClause(
-  model: OutcomeReportModel,
+  model: LinesModel,
   list: readonly DrawnCriterion[],
   w: Words,
   lower = false,
@@ -427,10 +503,10 @@ function unverifiedClause(
 /** One plain sentence: the conversation's result and the rules behind it. */
 function resultSentence(
   conversation: Conversation,
-  model: OutcomeReportModel,
+  model: LinesModel,
   w: Words,
 ): string {
-  const all = conversation.criteria;
+  const all = counted(conversation, model.gating).criteria;
   const applied = all.filter((c) => !notApplying(c.verdict));
   const outOfScope = all.filter((c) => c.verdict === "out_of_scope").length;
   const na = all.length - applied.length - outOfScope;
@@ -455,7 +531,7 @@ function resultSentence(
   }`;
   const unverifiedText =
     unverified.length > 0 ? ` ${unverifiedClause(model, unverified, w)}` : "";
-  switch (conversationStatus(conversation)) {
+  switch (conversationStatus(conversation, model.gating)) {
     case "resolved":
       return `${w.p("lines.sentence.resolved", applied.length, { n: String(applied.length) })}${naText}`;
     case "missed":
@@ -500,27 +576,29 @@ function resultSentence(
  */
 function renderConversation(
   conversation: Conversation,
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   w: Words,
 ): HTMLElement {
-  const status = conversationStatus(conversation);
+  const status = conversationStatus(conversation, model.gating);
   const item = el("article", "conv");
   item.dataset.conversation = conversation.conversationId;
-  item.dataset.conversationVerdict = conversation.verdict;
+  // The header's line is a derived one: it reads the rules in the answer.
+  const inAnswer = counted(conversation, model.gating);
+  item.dataset.conversationVerdict = inAnswer.verdict;
   item.dataset.status = status;
   const head = el("div", "conv-h");
   const parts = caseParts(conversation.conversationId, w);
   head.append(el("span", "cid", parts.label));
-  head.append(wordPill(statusWord(status, conversation, w), status));
-  const misses = conversation.criteria.filter((c) => isMiss(c.verdict));
-  const unverified = conversation.criteria.filter((c) =>
-    isUnverified(c.verdict),
+  head.append(
+    wordPill(statusWord(status, conversation, w, model.gating), status),
   );
-  const undecided = conversation.criteria.filter(
+  const misses = inAnswer.criteria.filter((c) => isMiss(c.verdict));
+  const unverified = inAnswer.criteria.filter((c) => isUnverified(c.verdict));
+  const undecided = inAnswer.criteria.filter(
     (c) => c.verdict === "not_evaluable" || c.verdict === "no_claim",
   );
-  const outOfScope = conversation.criteria.filter(
+  const outOfScope = inAnswer.criteria.filter(
     (c) => c.verdict === "out_of_scope",
   );
   head.append(
@@ -543,11 +621,9 @@ function renderConversation(
                 ? w.t("lines.why.resolved")
                 : w.p(
                     "lines.why.resolved-out-of-scope",
-                    conversation.criteria.length - outOfScope.length,
+                    inAnswer.criteria.length - outOfScope.length,
                     {
-                      n: fmtCount(
-                        conversation.criteria.length - outOfScope.length,
-                      ),
+                      n: fmtCount(inAnswer.criteria.length - outOfScope.length),
                       oos: fmtCount(outOfScope.length),
                     },
                   ),
@@ -563,7 +639,7 @@ function renderConversation(
 
 function conversationBody(
   conversation: Conversation,
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   w: Words,
 ): HTMLElement {
@@ -573,7 +649,7 @@ function conversationBody(
     "verdict-line",
     resultSentence(conversation, model, w),
   );
-  sentence.dataset.why = conversationStatus(conversation);
+  sentence.dataset.why = conversationStatus(conversation, model.gating);
   body.append(sentence);
 
   // Rule by rule, in plain words
@@ -612,6 +688,13 @@ function conversationBody(
     nameCell.append(el("b", "", label.label));
     const rowBadge = editedBadge(model, ref, w);
     if (rowBadge !== undefined) nameCell.append(rowBadge);
+    // The rule's tier, so a conversation resolved over an informational
+    // rule not met says why that rule did not count.
+    const tier = criterionTier(criterion, model.gating);
+    if (tier !== undefined) {
+      tr.dataset.requirementTier = tier;
+      nameCell.append(tierChip(tier, w));
+    }
     if (label.source === "sealed") {
       const wording = tagSource(el("small", "", label.text), "producer");
       wording.dataset.wording = label.source;
@@ -788,7 +871,7 @@ export function datedText(dated: ConversationDate, w: Words): string {
 
 function conversationProofs(
   conversation: Conversation,
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   w: Words,
 ): HTMLElement {
@@ -977,7 +1060,7 @@ function pinNotShown(runInfo: OutcomeReportRunInfo, w: Words): string {
 
 function renderConversationList(
   conversations: readonly Conversation[],
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   key: string,
   w: Words,
@@ -1006,7 +1089,7 @@ function drill(
 function conversationsDrill(
   label: string,
   conversations: readonly Conversation[],
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   key: string,
   w: Words,
@@ -1055,6 +1138,7 @@ export function groupMissedReasons(
   missed: readonly Conversation[],
   terms: OutcomeReportModel["terms"],
   w?: Words,
+  gating?: Gating,
 ): readonly MissedReasonGroup[] {
   const labelledReasonCode = (code: string | undefined): string | undefined =>
     code === undefined ? undefined : terms.reasonCodes[code];
@@ -1062,7 +1146,9 @@ export function groupMissedReasons(
   const structured = new Map<string, boolean>();
   const labels = new Map<string, string>();
   for (const conversation of missed) {
-    const first = conversation.criteria.find((c) => isMiss(c.verdict));
+    const first = counted(conversation, gating).criteria.find((c) =>
+      isMiss(c.verdict),
+    );
     if (first === undefined) continue;
     const label = labelledReasonCode(first.reasonCode);
     const key =
@@ -1097,13 +1183,13 @@ export function groupMissedReasons(
  */
 function whyMissed(
   missed: readonly Conversation[],
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   w: Words,
 ): HTMLElement {
   const box = el("div", "why-missed");
   box.dataset.section = "why-missed";
-  const groups = groupMissedReasons(missed, model.terms, w);
+  const groups = groupMissedReasons(missed, model.terms, w, model.gating);
   box.dataset.reasons = String(groups.length);
   box.append(el("h5", "", w.t("lines.why-missed.h")));
   const table = element("table");
@@ -1162,7 +1248,7 @@ function whyMissed(
 // ---------------------------------------------------------------------------
 
 /** The pack and version as one line: both come from the claims' `contract_ref` (see `readOutcomeReportTerms`), or read "not stated". */
-function packLine(model: OutcomeReportModel, w: Words): string {
+function packLine(model: LinesModel, w: Words): string {
   const { id, version } = model.terms.pack;
   return id === NOT_STATED
     ? w.t("card.not-stated")
@@ -1187,7 +1273,7 @@ export const basisText = (basis: ConversationDate["basis"], w: Words): string =>
   w.t(`card.basis.${basis}`);
 
 /** The page's one plain statement of what its dates are, or undefined when every conversation is dated by the day it was judged (the card's behaviour before record dating). */
-function datingNote(model: OutcomeReportModel, w: Words): string | undefined {
+function datingNote(model: LinesModel, w: Words): string | undefined {
   return datingStatement(model.dating, model.totalCount, w);
 }
 
@@ -1226,7 +1312,7 @@ export function datingStatement(
 
 function renderMeta(
   host: HTMLElement,
-  model: OutcomeReportModel,
+  model: LinesModel,
   w: Words,
   notes: HTMLElement,
 ): void {
@@ -1309,7 +1395,7 @@ function renderMeta(
 
 function renderLines(
   host: HTMLElement,
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   w: Words,
   notes: HTMLElement,
@@ -1332,7 +1418,9 @@ function renderLines(
   table.append(thead);
   const tbody = document.createElement("tbody");
   const byStatus = (status: ConversationStatus) =>
-    model.conversations.filter((c) => conversationStatus(c) === status);
+    model.conversations.filter(
+      (c) => conversationStatus(c, model.gating) === status,
+    );
   const resolved = byStatus("resolved");
   const missed = byStatus("missed");
   const unverified = byStatus("unverified");
@@ -1474,11 +1562,12 @@ function renderLines(
 
 function renderRules(
   host: HTMLElement,
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   result: ResultRoot,
   w: Words,
 ): void {
+  const tierOf = model.gating?.tierOf;
   const section = el("section", "sec");
   section.dataset.section = "rules";
   section.append(el("h2", "", w.t("lines.rules.h")));
@@ -1517,151 +1606,203 @@ function renderRules(
   thead.append(headRow);
   table.append(thead);
   const tbody = element("tbody");
-  for (const check of model.terms.checks) {
-    const group = el("tr", "grp");
-    group.dataset.checkId = check.id;
-    group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
-    const cell = el("td", "", groupTitle(check, w));
-    cell.setAttribute("colspan", columns);
-    group.append(cell);
-    tbody.append(group);
+  // With a contract, each rule's requirement tier (contract-report/v1
+  // section 2), read by the contract_ref of the rule's claims: rules are
+  // drawn in tier sections, must-have first, then informational, then
+  // those whose tier is not stated. Without one, one section, as before.
+  const ruleTier = (ref: string): RowTier | undefined => {
+    if (tierOf === undefined) return undefined;
+    const claim = model.conversations
+      .flatMap((c) => c.criteria)
+      .find((c) => `${c.checkId}.${c.criterionId}` === ref && c.claim)?.claim;
+    return tierOf(claim?.contractRef, ref);
+  };
+  const tiers = new Map<string, RowTier | undefined>();
+  for (const check of model.terms.checks)
     for (const criterion of check.criteria) {
       const ref = `${check.id}.${criterion.id}`;
-      const of = (pick: (v: DrawnVerdict) => boolean) =>
-        model.conversations.filter((c) =>
-          c.criteria.some(
-            (cr) =>
-              cr.checkId === check.id &&
-              cr.criterionId === criterion.id &&
-              pick(cr.verdict),
-          ),
-        );
-      // Each count column's verdicts, read once: a cell's number and the
-      // claims its Show-evidence action lists come from the same pick.
-      const picks: Record<
-        keyof typeof columnWord,
-        (v: DrawnVerdict) => boolean
-      > = {
-        not_met: isMiss,
-        met: (v) => v === "met",
-        undecided: (v) => v === "not_evaluable" || v === "no_claim",
-        unverified: isUnverified,
-        out_of_scope: (v) => v === "out_of_scope",
-      };
-      const met = of(picks.met);
-      const notMet = of(picks.not_met);
-      const unverifiedHere = of(picks.unverified);
-      const na = of((v) => v === "not_applicable");
-      const outOfScopeHere = of(picks.out_of_scope);
-      const undecided = of(picks.undecided);
-      // One count cell: the number, and its Show-evidence action (or the
-      // label that stands in for one) over the claims behind it on this rule.
-      const countCell = (
-        className: string,
-        column: keyof typeof columnWord,
-        counted: readonly Conversation[],
-      ): HTMLElement => {
-        const pick = picks[column];
-        const cell = el("td", className);
-        cell.dataset.column = column;
-        cell.append(el("span", "nv", fmtCount(counted.length)));
-        const action = evidenceAction(
-          `rule:${ref}:${column}`,
-          `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
-          counted.map(
-            (c) =>
-              c.criteria.find(
-                (cr) =>
-                  cr.checkId === check.id &&
-                  cr.criterionId === criterion.id &&
-                  pick(cr.verdict),
-              )?.claim,
-          ),
-          result,
-          w,
-        );
-        if (action !== undefined) cell.append(action);
-        return cell;
-      };
-      const tr = el("tr", "rule");
-      tr.dataset.rule = ref;
-      tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
-      const label = criterionLabel(model, check.id, criterion.id, w);
-      const nameCell = el("td", "cn");
-      const ruleName = el("b", "", label.label);
-      nameCell.append(ruleName);
-      const badge = editedBadge(model, ref, w);
-      if (badge !== undefined) nameCell.append(badge);
-      if (label.source === "sealed")
-        nameCell.append(el("small", "", label.text));
-      // contract-report/v1 section 3: the pack's explanation of the rule,
-      // and its note for a rule whose claims could not be decided.
-      const detail = w.row(ref, "detail");
-      if (detail !== undefined) {
-        const line = el("small", "rdet", detail);
-        line.dataset.wording = "pack";
-        nameCell.append(line);
-      }
-      const undecidedNote = w.row(ref, "not_evaluable");
-      if (undecidedNote !== undefined && undecided.length > 0) {
-        const line = el("small", "rdet", undecidedNote);
-        line.dataset.wording = "pack";
-        line.dataset.note = "not-evaluable";
-        nameCell.append(line);
-      }
-      const problems = [
-        ...notMet,
-        ...unverifiedHere.filter((c) => !notMet.includes(c)),
-        ...undecided.filter(
-          (c) => !notMet.includes(c) && !unverifiedHere.includes(c),
-        ),
-      ];
-      tr.append(
-        nameCell,
-        countCell(`n${notMet.length > 0 ? " bad" : ""}`, "not_met", notMet),
-        countCell("n ok", "met", met),
-        countCell("n", "undecided", undecided),
-      );
-      if (anyUnverified)
-        tr.append(countCell("n", "unverified", unverifiedHere));
-      if (anyOutOfScope)
-        tr.append(countCell("n", "out_of_scope", outOfScopeHere));
-      tbody.append(tr);
-      // The row opens: a full-width row below it holds how many
-      // conversations the rule did not apply to and the conversations
-      // behind its problems, each read at the table's width. A rule with
-      // neither has nothing to open.
-      if (problems.length === 0 && na.length === 0) continue;
-      const drillRow = el("tr", "drill-row");
-      drillRow.dataset.drillFor = ref;
-      const cell = element("td");
+      tiers.set(ref, ruleTier(ref));
+    }
+  const sections: readonly (RowTier | undefined)[] =
+    tierOf === undefined
+      ? [undefined]
+      : ROW_TIERS.filter((tier) => [...tiers.values()].includes(tier));
+  for (const tier of sections) {
+    if (tier !== undefined) {
+      const inTier = [...tiers.values()].filter((t) => t === tier).length;
+      const heading = el("tr", "tier");
+      heading.dataset.requirementTier = tier;
+      const cell = el("td", "");
       cell.setAttribute("colspan", columns);
-      drillRow.append(cell);
-      // The not-applicable count is drawn now, so a static page (which runs
-      // no script to build a body) still shows it when the row opens.
-      if (na.length > 0) {
-        const naLine = el(
-          "p",
-          "rule-na",
-          w.p("lines.rules.expand.na", na.length, {
-            n: fmtCount(na.length),
-          }),
-        );
-        naLine.dataset.count = String(na.length);
-        cell.append(naLine);
-      }
-      const toggle = expandableRow(
-        tr,
-        ruleName,
-        drillRow,
-        () =>
-          problems.length > 0
-            ? renderConversationList(problems, model, runInfo, `rule:${ref}`, w)
-            : document.createDocumentFragment(),
-        `rule-${ref}`,
+      cell.append(
+        el("b", "", w.t(`lines.rtier.${tier}.title`, { n: fmtCount(inTier) })),
+        el("small", "", w.t(`lines.rtier.${tier}.note`)),
       );
-      toggle.dataset.drill = `rule:${ref}`;
-      tbody.append(drillRow);
+      heading.append(cell);
+      tbody.append(heading);
+    }
+    for (const check of model.terms.checks) {
+      const criteria = check.criteria.filter(
+        (criterion) => tiers.get(`${check.id}.${criterion.id}`) === tier,
+      );
+      if (criteria.length === 0) continue;
+      const group = el("tr", "grp");
+      group.dataset.checkId = check.id;
+      group.dataset.passCount = String(
+        model.checkPassCounts.get(check.id) ?? 0,
+      );
+      const cell = el("td", "", groupTitle(check, w));
+      cell.setAttribute("colspan", columns);
+      group.append(cell);
+      tbody.append(group);
+      for (const criterion of criteria) {
+        const ref = `${check.id}.${criterion.id}`;
+        const of = (pick: (v: DrawnVerdict) => boolean) =>
+          model.conversations.filter((c) =>
+            c.criteria.some(
+              (cr) =>
+                cr.checkId === check.id &&
+                cr.criterionId === criterion.id &&
+                pick(cr.verdict),
+            ),
+          );
+        // Each count column's verdicts, read once: a cell's number and the
+        // claims its Show-evidence action lists come from the same pick.
+        const picks: Record<
+          keyof typeof columnWord,
+          (v: DrawnVerdict) => boolean
+        > = {
+          not_met: isMiss,
+          met: (v) => v === "met",
+          undecided: (v) => v === "not_evaluable" || v === "no_claim",
+          unverified: isUnverified,
+          out_of_scope: (v) => v === "out_of_scope",
+        };
+        const met = of(picks.met);
+        const notMet = of(picks.not_met);
+        const unverifiedHere = of(picks.unverified);
+        const na = of((v) => v === "not_applicable");
+        const outOfScopeHere = of(picks.out_of_scope);
+        const undecided = of(picks.undecided);
+        // One count cell: the number, and its Show-evidence action (or the
+        // label that stands in for one) over the claims behind it on this rule.
+        const countCell = (
+          className: string,
+          column: keyof typeof columnWord,
+          counted: readonly Conversation[],
+        ): HTMLElement => {
+          const pick = picks[column];
+          const cell = el("td", className);
+          cell.dataset.column = column;
+          cell.append(el("span", "nv", fmtCount(counted.length)));
+          const action = evidenceAction(
+            `rule:${ref}:${column}`,
+            `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
+            counted.map(
+              (c) =>
+                c.criteria.find(
+                  (cr) =>
+                    cr.checkId === check.id &&
+                    cr.criterionId === criterion.id &&
+                    pick(cr.verdict),
+                )?.claim,
+            ),
+            result,
+            w,
+          );
+          if (action !== undefined) cell.append(action);
+          return cell;
+        };
+        const tr = el("tr", "rule");
+        tr.dataset.rule = ref;
+        tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
+        const label = criterionLabel(model, check.id, criterion.id, w);
+        const nameCell = el("td", "cn");
+        const ruleName = el("b", "", label.label);
+        nameCell.append(ruleName);
+        const badge = editedBadge(model, ref, w);
+        if (badge !== undefined) nameCell.append(badge);
+        if (tier !== undefined) {
+          tr.dataset.requirementTier = tier;
+          nameCell.append(tierChip(tier, w));
+        }
+        if (label.source === "sealed")
+          nameCell.append(el("small", "", label.text));
+        // contract-report/v1 section 3: the pack's explanation of the rule,
+        // and its note for a rule whose claims could not be decided.
+        const detail = w.row(ref, "detail");
+        if (detail !== undefined) {
+          const line = el("small", "rdet", detail);
+          line.dataset.wording = "pack";
+          nameCell.append(line);
+        }
+        const undecidedNote = w.row(ref, "not_evaluable");
+        if (undecidedNote !== undefined && undecided.length > 0) {
+          const line = el("small", "rdet", undecidedNote);
+          line.dataset.wording = "pack";
+          line.dataset.note = "not-evaluable";
+          nameCell.append(line);
+        }
+        const problems = [
+          ...notMet,
+          ...unverifiedHere.filter((c) => !notMet.includes(c)),
+          ...undecided.filter(
+            (c) => !notMet.includes(c) && !unverifiedHere.includes(c),
+          ),
+        ];
+        tr.append(
+          nameCell,
+          countCell(`n${notMet.length > 0 ? " bad" : ""}`, "not_met", notMet),
+          countCell("n ok", "met", met),
+          countCell("n", "undecided", undecided),
+        );
+        if (anyUnverified)
+          tr.append(countCell("n", "unverified", unverifiedHere));
+        if (anyOutOfScope)
+          tr.append(countCell("n", "out_of_scope", outOfScopeHere));
+        tbody.append(tr);
+        // The row opens: a full-width row below it holds how many
+        // conversations the rule did not apply to and the conversations
+        // behind its problems, each read at the table's width. A rule with
+        // neither has nothing to open.
+        if (problems.length === 0 && na.length === 0) continue;
+        const drillRow = el("tr", "drill-row");
+        drillRow.dataset.drillFor = ref;
+        const cell = element("td");
+        cell.setAttribute("colspan", columns);
+        drillRow.append(cell);
+        // The not-applicable count is drawn now, so a static page (which runs
+        // no script to build a body) still shows it when the row opens.
+        if (na.length > 0) {
+          const naLine = el(
+            "p",
+            "rule-na",
+            w.p("lines.rules.expand.na", na.length, {
+              n: fmtCount(na.length),
+            }),
+          );
+          naLine.dataset.count = String(na.length);
+          cell.append(naLine);
+        }
+        const toggle = expandableRow(
+          tr,
+          ruleName,
+          drillRow,
+          () =>
+            problems.length > 0
+              ? renderConversationList(
+                  problems,
+                  model,
+                  runInfo,
+                  `rule:${ref}`,
+                  w,
+                )
+              : document.createDocumentFragment(),
+          `rule-${ref}`,
+        );
+        toggle.dataset.drill = `rule:${ref}`;
+        tbody.append(drillRow);
+      }
     }
   }
   // Requirements of the cited contract the run did not cover (Result v0
@@ -1700,11 +1841,7 @@ function renderRules(
 // Day by day
 // ---------------------------------------------------------------------------
 
-function renderCalendar(
-  host: HTMLElement,
-  model: OutcomeReportModel,
-  w: Words,
-): void {
+function renderCalendar(host: HTMLElement, model: LinesModel, w: Words): void {
   const section = el("section", "sec");
   section.dataset.section = "calendar";
   section.append(el("h2", "", w.t("lines.cal.h")));
@@ -1720,9 +1857,15 @@ function renderCalendar(
   const list = el("div", "cal");
   list.dataset.days = String(model.days.length);
   for (const day of model.days) {
+    // Resolved as the page's lines count it (`conversationStatus`), which
+    // leaves out informational rules; the model's own count is the same
+    // when a contract marks none.
+    const resolved = day.conversations.filter(
+      (c) => conversationStatus(c, model.gating) === "resolved",
+    ).length;
     const item = el("div", "day");
     item.dataset.day = day.date;
-    item.dataset.resolved = String(day.resolvedCount);
+    item.dataset.resolved = String(resolved);
     item.dataset.total = String(day.conversations.length);
     item.append(el("div", "dn", day.date));
     if (note !== undefined) {
@@ -1748,7 +1891,7 @@ function renderCalendar(
         "div",
         "v",
         fmtShare(
-          day.resolvedCount,
+          resolved,
           day.conversations.length,
           model.options.percentages,
           w,
@@ -1757,9 +1900,7 @@ function renderCalendar(
     );
     const mini = el("div", "mini");
     const share =
-      day.conversations.length === 0
-        ? 0
-        : day.resolvedCount / day.conversations.length;
+      day.conversations.length === 0 ? 0 : resolved / day.conversations.length;
     const fill = element("i");
     fill.style.width = `${Math.round(share * 100)}%`;
     mini.append(fill);
@@ -1851,11 +1992,7 @@ function renderHumanChecks(
 // The terms
 // ---------------------------------------------------------------------------
 
-function renderTerms(
-  host: HTMLElement,
-  model: OutcomeReportModel,
-  w: Words,
-): void {
+function renderTerms(host: HTMLElement, model: LinesModel, w: Words): void {
   const section = el("div", "rp-s");
   section.dataset.section = "terms";
   section.append(el("h3", "", w.t("lines.terms.h")));
@@ -2116,7 +2253,7 @@ export function wordingRow(w: Words): [string, string] {
 
 function renderReportProofs(
   host: HTMLElement,
-  model: OutcomeReportModel,
+  model: LinesModel,
   runInfo: OutcomeReportRunInfo,
   bundle: unknown,
   verified: BundleVerificationResult,
@@ -2177,12 +2314,12 @@ async function resultDocument(
 
 /** Each conversation as Same customer in this report draws it (subject-history.ts). */
 function subjectConversations(
-  model: OutcomeReportModel,
+  model: LinesModel,
   w: Words,
 ): SubjectConversation[] {
   return model.conversations.map((c) => {
-    const status = conversationStatus(c);
-    const outcome = statusWord(status, c, w);
+    const status = conversationStatus(c, model.gating);
+    const outcome = statusWord(status, c, w, model.gating);
     const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
     const turns =
       c.transcript.state === "verified" || c.transcript.state === "cited"
@@ -2248,8 +2385,13 @@ export async function drawLines(
   bundle: unknown,
   verified: BundleVerificationResult,
   w: Words,
+  tierOf?: TierOf,
 ): Promise<void> {
-  const model = buildOutcomeReportModel(result, options);
+  const built = buildOutcomeReportModel(result, options);
+  const model: LinesModel =
+    tierOf === undefined
+      ? built
+      : { ...built, gating: gating(built.conversations, tierOf) };
   const runInfo = await verifyJudgePin(model.runInfo);
   const claims = model.conversations.flatMap((c) =>
     c.criteria.flatMap((cr) => (cr.claim === undefined ? [] : [cr.claim])),
