@@ -11,15 +11,13 @@ here. The format follows
 
 ## Unreleased
 
-### Added
-
-- The outcome report's report lines open with one sentence of the same counts, as Steven's Terms Pack canvas opens: "188 of 244 conversations resolved: every rule that applied was met. 49 missed at least one. 7 could not be decided." Whole numbers, never a share, whether or not the presentation asks for percentages in the table below; the first count carries the total the others are of, and a report with no conversation draws no sentence (#172). A conversation no rule applied to is counted on its own ("had no rule that applied"), not as one the judge could not decide. Six new words in `contract-report-outcomes.en.json`; its digest changes.
-
 ### Changed
 
 - The report front's third tile reads "Could not decide (evaluations)" in both default wording packs, as Steven's Terms Pack canvas draws it and as the results table's column already says; it read "Not evaluable". The packs keep their ids and change their digests (`DEFAULT_PACK_SHA256`), so the contract-report goldens are regenerated (#172).
 
 ### Added
+
+- The outcome report's report lines open with one sentence of the same counts, as Steven's Terms Pack canvas opens: "188 of 244 conversations resolved: every rule that applied was met. 49 missed at least one. 7 could not be decided." Whole numbers, never a share, whether or not the presentation asks for percentages in the table below; the first count carries the total the others are of, and a report with no conversation draws no sentence (#172). A conversation no rule applied to is counted on its own ("had no rule that applied"), not as one the judge could not decide. Six new words in `contract-report-outcomes.en.json`; its digest changes.
 
 - Each Go release carries `standard-history-module-v<version>.tar.gz` and its `.sha256` as release assets (attested like the page runtime): the History card module `capsuleviewer.standard-history/v0` in the form a plugin carries, with its manifest, script, stylesheets and wording pack, and `presentation.json`, the `cli-plugin/v1` presentations entry for them. The bundle's files and tar members carry nothing of the run (sorted, no owner, no time); the bytes are the same on every run in one build environment, and the release states the sha256 (#171).
 
