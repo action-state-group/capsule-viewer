@@ -112,9 +112,14 @@ def test_no_stylesheet_a_module_inserts_styles_the_shells_verification_pill_bare
     from pathlib import Path
 
     static = Path(__file__).resolve().parent.parent / "src" / "capsule_viewer" / "static"
+    scoped = re.compile(r"^\.cv-kit\s+[^~+>\s][^~+>]*$")
+    seen = 0
     for name in ("kit.css", "standard_history.css"):
         css = re.sub(r"/\*.*?\*/", "", (static / name).read_text(encoding="utf-8"), flags=re.S)
         for selectors in re.findall(r"([^{}]+)\{", css):
             for selector in selectors.split(","):
                 if ".cv-pill" in selector:
-                    assert selector.strip().startswith(".cv-kit "), f"{name}: {selector.strip()!r} styles the shell's banner pill bare"
+                    seen += 1
+                    assert scoped.match(selector.strip()), f"{name}: {selector.strip()!r} styles the shell's banner pill outside .cv-kit"
+    # Not vacuous: the kit does style its pill, and only in the scoped form.
+    assert seen >= 2
