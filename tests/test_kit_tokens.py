@@ -100,3 +100,21 @@ def test_every_tone_the_css_uses_has_a_checked_pair():
     tones = set(re.findall(r"\.cv-tone--([a-z]+)", css))
     checked = {fg.removeprefix("color-").removesuffix("-fg") for fg, _ in CONTRAST_PAIRS}
     assert tones and tones <= checked
+
+
+def test_no_stylesheet_a_module_inserts_styles_the_shells_verification_pill_bare():
+    """The page shell's verification banner is a `.cv-pill` outside every kit
+    wrapper, and a module's stylesheet must not change how it reads: the page's
+    frame check refuses the module, and the page shows no presentation at all
+    (found on capsulectl's real page runtime with the History card). The kit's
+    own pill is therefore styled only inside `.cv-kit`."""
+    import re
+    from pathlib import Path
+
+    static = Path(__file__).resolve().parent.parent / "src" / "capsule_viewer" / "static"
+    for name in ("kit.css", "standard_history.css"):
+        css = re.sub(r"/\*.*?\*/", "", (static / name).read_text(encoding="utf-8"), flags=re.S)
+        for selectors in re.findall(r"([^{}]+)\{", css):
+            for selector in selectors.split(","):
+                if ".cv-pill" in selector:
+                    assert selector.strip().startswith(".cv-kit "), f"{name}: {selector.strip()!r} styles the shell's banner pill bare"
