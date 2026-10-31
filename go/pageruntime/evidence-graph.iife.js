@@ -13174,7 +13174,6 @@ ${body}
     "payload",
     "producer"
   ];
-  var MARKED_SOURCES = WORD_SOURCES;
   function tagSource(node, source) {
     node.dataset.src = source;
     return node;
@@ -13210,7 +13209,7 @@ ${body}
     const strip = el("p", "cv-legend-sources");
     strip.dataset.legend = "sources";
     strip.append(el("span", "cv-legend-lead", w.t("legend.src.lead")));
-    for (const source of MARKED_SOURCES) {
+    for (const source of WORD_SOURCES) {
       const entry = el("span", "cv-legend-item");
       const chip = el("span", "cv-src");
       chip.dataset.src = source;
@@ -15613,7 +15612,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("1a93c15179c5cc7682df2cdc85aadcb7443f0cd9");
+    return commitPrefix("cc18143beddece5bce9e33d6861423e9a96904ab");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -15959,7 +15958,6 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "spot.term.unstated": "The rule's wording is not in this bundle: no report in it states the wording.",
       "spot.term.mixed": "The rule's wording is not shown: the reports in this bundle state different wordings.",
       "spot.says": "The judge's words",
-      "spot.pin": "judge pin {digest}",
       "spot.confidence": "confidence {c}",
       "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
       "spot.gap.when": "This report states only each rule's wording, not when it counts as met or when it cannot be decided.",
@@ -16489,7 +16487,6 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "spot.term.unstated": "The rule's wording is not in this bundle: no report in it states the wording.",
       "spot.term.mixed": "The rule's wording is not shown: the reports in this bundle state different wordings.",
       "spot.says": "The judge's words",
-      "spot.pin": "judge pin {digest}",
       "spot.confidence": "confidence {c}",
       "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
       "spot.gap.when": "This report states only each rule's wording, not when it counts as met or when it cannot be decided.",
@@ -17820,8 +17817,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "94eadfaad126b786b89a822a647f22c0f74d994cbbaac12e86ee29d3b2a37b4b",
-    groups: "fd1b4c7e9cb6b08370b86709bceb08e68de9967038267a70338a68ed89567b70"
+    lines: "dbb0e2fe7b85158ebfb15c18a67aa697aa25359f89f375e80cf07c756b398e5e",
+    groups: "72973aa2a763891e562f5be6de1c430e500de7f8866ab89b06aaea02f6e55fbd"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -18495,9 +18492,18 @@ ${key}`);
     const parsed = r.rationale === void 0 ? {} : parseJudgeProbabilities(r.rationale);
     const facts = [];
     if (r.judgePinDigest !== void 0)
-      facts.push(fieldText("judge_pin", r.judgePinDigest));
+      facts.push(fieldText("judge_pin_digest", r.judgePinDigest));
     if (parsed.confidence !== void 0)
-      facts.push(fieldText("confidence", parsed.confidence.toFixed(2)));
+      facts.push(
+        tagSource(
+          el6(
+            "span",
+            "",
+            w.t("spot.confidence", { c: parsed.confidence.toFixed(2) })
+          ),
+          "pack"
+        )
+      );
     if (facts.length > 0) {
       const line = el6("p", "sc-facts");
       facts.forEach(
@@ -21846,7 +21852,7 @@ ${key}`);
   var CORE_STRIP_CSS = `
 .cv-strip{${OUTCOME_FRAME_VARS}position:relative;max-width:1080px;margin:0 auto 16px;padding:14px 16px 14px 34px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .cv-strip:before{content:"\\25A0";content:"\\25A0" / "";position:absolute;left:13px;top:16px;font-size:12px;line-height:1;color:#8A93A0}
-.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
+.cv-strip .agg-note[data-src="core"],.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
 .cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
 .cv-strip .agg-line{font-size:14px;margin:0 0 12px}
 .cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
