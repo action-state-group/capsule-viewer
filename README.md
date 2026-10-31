@@ -22,21 +22,23 @@ supplies only the per-record card body. Two modules ship today:
 ## Module ownership: what is the product path
 
 The 9b receipt, the deal's page for each party, has one owner: `capsulectl`'s
-deal view (`capsulectl.deal-view/v0`, in `evidencebook-deal`). Muse pins that
-module and drops its own copies of the receipt and Rules pages. Design changes
-to the receipt (the three cases, the proofs ladder, the explainers) are made
-there, not here.
+deal view (`capsulectl.deal-view/v0`, in `evidencebook-deal`). Muse is to pin
+that module and drop its own copies. Design changes to the receipt (the proofs
+ladder, the explainers, the wording of the three cases) are made there, not
+here. The Rules page's canonical implementation is also `capsulectl`'s deal
+view, together with the Muse JS modules.
 
-This repository keeps the generic, neutral view of a record: the Result pages,
-the History card (`capsuleviewer.standard-history/v0`), and a plain receipt. The
-Python Rules and Receipt carriers (`capsule_viewer.rules` and
-`capsule_viewer.receipt`) and the JS receipt module-slot scripts
-(`static/receipt_*.js`) are that plain receipt. They are **not the consumer
-product path** for the receipt, and they do not follow the 9b receipt design.
-This repository also keeps what the product modules are held to: the goldens
-and the wording packs it ships.
+This repository keeps the generic, neutral view of a record. That includes the
+Result pages, the History card (`capsuleviewer.standard-history/v0`) and a
+plain receipt: `capsule_viewer.receipt` and the JS receipt module-slot scripts
+(`static/receipt_*.js`). The plain receipt is **not the consumer product path**
+and is not held to the 9b receipt design. The Python Rules carrier
+(`capsule_viewer.rules`) is likewise not the consumer product path. This
+repository also keeps what the product modules are held to: the goldens and the
+wording packs it ships.
 
-Nothing here is deleted by this note. The Python receipt modules stay as the
+Nothing here is deleted by this note. The JS receipt scripts and the Rules
+module stay as the basic rendering, and the Python receipt modules stay as the
 oracle the parity tests hold the scripts to; removing them would be a separate
 decision. Two things are out of scope here: the S1-S7 surface forms (head seam,
 wordmark, image and text buckets, 1.91:1 share image) are deferred to after
@@ -269,7 +271,8 @@ builds a read-only context from them.
 
 ## Receipt module
 
-This is the plain receipt this repository keeps (see Module ownership above; the 9b receipt is `capsulectl.deal-view/v0`). `capsule_viewer.receipt` is the unilateral deal receipt,
+This is the plain receipt this repository keeps (see Module ownership above; the
+9b receipt is `capsulectl.deal-view/v0`). `capsule_viewer.receipt` is the unilateral deal receipt,
 `capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
 `x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the
 `x-deal-v0` extension and forbids `composed/v1`, so a composition never resolves to it.
@@ -327,6 +330,9 @@ match one bundle (`tests/test_receipt_bilateral.py`). `receipt_page` registers b
   `tests/testdata/receipt/README.md`).
 
 ### The receipt's sides: three cases
+
+This section describes the plain receipt kept here (`receipt/sides.py`); the 9b
+receipt is `capsulectl.deal-view/v0`.
 
 Every receipt a holder keeps, and every composition, opens L0 with whose records it
 holds and the case they make (`receipt/sides.py`). The case is read from what the
