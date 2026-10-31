@@ -46,6 +46,16 @@ ships its page runtime.
   `go/chartspec` refuses a view entry as an unsupported member, so a page the
   Go builder writes never draws one unchecked until its twin lands.
 
+- Python receipt modules: `capsuleviewer.receipt.provider/v0`, a Mesh node's
+  own receipt for an exchange it served and the payments it received
+  (`receipt/provider.py`, `manifest-provider.json`, audience `keep`;
+  capsule-viewer#161). It is not a deal receipt, and it holds no request or
+  response text. The receipt modules also draw a bundle whose only gap is
+  that its producer chose the records (interval coverage `withheld` /
+  `selection_not_checkable`, every other check `pass`). It reads
+  "Incomplete", with a notice that the verifier cannot check nothing was
+  left out (capsule-viewer#159).
+
 ### Fixed
 
 - A verified or incomplete banner over a signed checkpoint no longer reads as
@@ -59,6 +69,11 @@ ships its page runtime.
   by" line reads (`witnessStatus`), so the two never disagree. The notice is
   part of the banner's frame: a module that changes, hides or moves it is
   discarded like one that alters the banner.
+
+- The Python evidence report and Ledger page no longer show a file as
+  checking in full when its checkpoint carries no witness receipt the
+  verifier checked: an amber banner or notice says it checks only against
+  its holder's own signatures (capsule-viewer#163, the Python half of #162).
 
 ## ts 0.4.0 and go 0.4.0 (2026-10-29)
 
