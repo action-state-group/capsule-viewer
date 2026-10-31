@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The Outcomes and EU AI Act report pages draw Steven's two design-system frames, "One glyph says what opens; its colour says who opens it" and "Five sources of text" (#123). Every toggle opens with a triangle drawn by the stylesheet (closed, open), in the reader's colour, or the view's when the depth opened it (`data-opened-by="view"`). L0 leads with a legend of the three glyphs (open by the view's depth, closed for the reader, no toggle for the core) and a one-line strip of the five word sources (core, wording pack, capsule field, payload, producer), with the payload (a conversation's turns, a tool call's arguments) and producer text (the judge's sealed rule wording, the producer's note) drawn in their source's style. Both default wording packs gain the `legend.*` keys and change their digests (`DEFAULT_PACK_SHA256`); the contract-report goldens, `go/emitter/runtime-style-hashes.txt` and the Go emitter's pinned pages are regenerated. The core strip and the banner are not yet tagged, and the depth `L3` the canvas draws is not added: it is a presentation-contract change.
+
 ## ts 0.6.0 and go 0.6.0 (2026-10-31)
 
 Both state viewer 0.6.0: `ts/v0.6.0`, then `go/v0.6.0` on the commit that

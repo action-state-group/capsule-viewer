@@ -7,6 +7,7 @@ import {
   type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
+import { tagSource } from "./report-legend.js";
 
 /**
  * The two levels every human-facing report card has, and nothing deeper:
@@ -66,11 +67,26 @@ export function levelToggle(
   details.className = `lv lv${level}${options.className === undefined ? "" : ` ${options.className}`}`;
   details.dataset.level = String(level);
   const head = document.createElement("summary");
-  if (typeof summary === "string") head.textContent = summary;
+  head.append(toggleGlyph());
+  if (typeof summary === "string") head.append(summary);
   else head.append(summary);
   details.append(head);
   deferBody(details, build, options.eager === true);
   return details;
+}
+
+/**
+ * The toggle's glyph, drawn first in its summary (the Terms Pack toggle
+ * frame): the triangle itself comes from the stylesheet, closed or open, so
+ * it is not text a reader copies and it is the same on a static page. Its
+ * colour says who opens the region (`details.lv[data-opened-by]`, set by
+ * `applyDepth` for a region the view's depth opened; the reader's click is
+ * the default).
+ */
+export function toggleGlyph(): HTMLElement {
+  const glyph = el("span", "tg");
+  glyph.setAttribute("aria-hidden", "true");
+  return glyph;
 }
 
 /**
@@ -570,7 +586,7 @@ export function renderTurns(
         const pre = el("pre", "say", shown.text);
         pre.dataset.exact = shown.indented ? "indented" : "verbatim";
         item.append(pre);
-      } else item.append(el("div", "say", turn.content));
+      } else item.append(tagSource(el("div", "say", turn.content), "payload"));
     }
     for (const call of turn.toolCalls) {
       const line = el("div", "call");
@@ -583,7 +599,8 @@ export function renderTurns(
       // JSON cannot hold exactly is already rounded there. Never claimed
       // verbatim; this page rewords nothing further.
       if (call.arguments.length > 0) {
-        const args = el("code", "call-a", call.arguments);
+        const args = tagSource(el("code", "call-a", call.arguments), "payload");
+        args.dataset.kind = "tool-call";
         args.dataset.exact = "as-modelled";
         line.append(" ", args);
       }
@@ -978,8 +995,10 @@ export function levelCss(scope: string): string {
 ${s} details.lv{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px;padding:0}
 ${s} details.lv > summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--navy)}
 ${s} details.lv > summary::-webkit-details-marker{display:none}
-${s} details.lv > summary:before{content:"";display:inline-block;width:0;height:0;border-left:5px solid var(--navy);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:8px;vertical-align:1px;transition:transform .1s}
-${s} details.lv[open] > summary:before{transform:rotate(90deg)}
+${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;color:var(--reader,#B0651A);font-size:12px;line-height:1}
+${s} details.lv > summary .tg:before{content:"\\25B8"}
+${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
+${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
