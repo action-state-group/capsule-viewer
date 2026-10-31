@@ -1275,6 +1275,9 @@ function renderLines(
   const table = document.createElement("table");
   table.className = "lines";
   table.dataset.rows = "report-lines";
+  const headline = el("p", "headline");
+  headline.dataset.headline = "lines";
+  section.append(headline);
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.append(
@@ -1316,6 +1319,38 @@ function renderLines(
     shown,
     ...(behind === undefined ? {} : { behind }),
   });
+  // The same counts as the table below, as the Terms Pack canvas opens with
+  // them: whole numbers, never a share. The first carries the total the rest
+  // are of. A conversation no rule applied to is not "could not be decided":
+  // the judge had nothing to decide, and the table says so in its own words.
+  const headlineParts = [
+    w.p("lines.headline", model.totalCount, {
+      resolved: fmtCount(resolved.length),
+      n: fmtCount(model.totalCount),
+    }),
+    w.t("lines.headline.missed", { n: fmtCount(missed.length) }),
+  ];
+  const judgedUndecided = byStatus("undecided");
+  const nothingApplied = byStatus("nothing-applied");
+  if (unverified.length > 0)
+    headlineParts.push(
+      w.t("lines.headline.unverified", { n: fmtCount(unverified.length) }),
+    );
+  if (judgedUndecided.length > 0)
+    headlineParts.push(
+      w.t("lines.headline.undecided", {
+        n: fmtCount(judgedUndecided.length),
+      }),
+    );
+  if (nothingApplied.length > 0)
+    headlineParts.push(
+      w.t("lines.headline.nothing-applied", {
+        n: fmtCount(nothingApplied.length),
+      }),
+    );
+  // No conversation, no sentence: "0 of 0 resolved" says nothing true.
+  headline.textContent = model.totalCount === 0 ? "" : headlineParts.join(" ");
+  headline.hidden = model.totalCount === 0;
   const lines: Line[] = [
     line("resolved", resolved.length, share(resolved.length), resolved),
     line("missed", missed.length, share(missed.length), missed),

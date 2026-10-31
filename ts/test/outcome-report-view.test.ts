@@ -183,6 +183,32 @@ it("renders report lines with counts recomputed from the claims, and held/added 
   expect(line("resolved").textContent).toContain("0 of 50");
 });
 
+it("opens the report lines with one sentence of the same counts, each with its total and never a share", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const root = await render(bundle);
+  const headline = root.querySelector<HTMLElement>('[data-headline="lines"]')!;
+  expect(headline.textContent).toBe(
+    "0 of 50 conversations resolved: every rule that applied was met. 48 missed at least one. 2 could not be decided.",
+  );
+  const { bundle: pctBundle } = await sealedOutcomeReportBundle((source) => {
+    ((source.extensions as Obj)["outcome-report/v1"] as Obj).percentages = true;
+  });
+  const pct = (await render(pctBundle)).querySelector<HTMLElement>(
+    '[data-headline="lines"]',
+  )!;
+  expect(pct.textContent).toBe(headline.textContent);
+  // The sentence says what the table's counts say, no other number.
+  const line = (key: string) =>
+    Number(
+      root.querySelector<HTMLElement>(`[data-line="${key}"]`)?.dataset.count ??
+        0,
+    );
+  expect(headline.textContent).toContain(`${line("missed")} missed`);
+  expect(headline.textContent).toContain(
+    `${line("undecided")} could not be decided`,
+  );
+});
+
 it("shows counts by default, never a percentage, unless the presentation flag asks for one", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
