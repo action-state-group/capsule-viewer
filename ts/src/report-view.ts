@@ -466,12 +466,6 @@ export function checkView(
     checked.forEach((lane, i) => {
       const at = `/lanes/${String(i)}`;
       const keyed = lane.chart.keys.some((k) => k !== "x");
-      if (lane.classes !== undefined && !keyed)
-        refuse(
-          "view-lane-role",
-          `${lane.id}: classes name the values of a key channel, and this lane has none`,
-          `${at}/classes`,
-        );
       if (lane.role === undefined) return;
       if (roles.has(lane.role))
         refuse(

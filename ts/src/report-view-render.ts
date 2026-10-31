@@ -733,8 +733,12 @@ export function renderTimeline(
     }
     for (const [id, total] of totals) {
       const [day, cls] = id.split("|") as [string, ValueClass];
-      const slot = (["good", "bad", "open"] as const).indexOf(cls);
-      const cx = TL.left + band * dayAt.get(day)! + band / 2 + 3 * slot;
+      // The classes present on that day, spread about the day's centre.
+      const present = (["good", "bad", "open"] as const).filter((c) =>
+        totals.has(`${day}|${c}`),
+      );
+      const slot = present.indexOf(cls) - (present.length - 1) / 2;
+      const cx = TL.left + band * dayAt.get(day)! + band / 2 + 8 * slot;
       const n = Math.min(total, 5);
       const mark =
         lane.mark === "diamond"
