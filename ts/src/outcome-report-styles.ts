@@ -17,6 +17,7 @@
 import { levelCss } from "./report-levels.js";
 import { legendCss } from "./report-legend.js";
 import { OUTCOME_FRAME_VARS } from "./frame-tokens.generated.js";
+import { SUBJECT_HISTORY_CSS } from "./subject-history.js";
 import { frontCss } from "./report-front-styles.js";
 
 export const OUTCOME_REPORT_CSS =
@@ -215,6 +216,7 @@ export const OUTCOME_REPORT_CSS =
   levelCss("oi") +
   legendCss("oi") +
   frontCss(".oi") +
+  SUBJECT_HISTORY_CSS +
   // The page layout (one left edge, bordered cards 16px apart): last, so
   // it wins over the card's older rules above. The page colour is the
   // shell's (emitter-shell.html), so the frame itself stays transparent.
