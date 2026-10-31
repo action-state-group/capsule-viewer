@@ -71,6 +71,10 @@ export function levelToggle(
   if (typeof summary === "string") head.append(summary);
   else head.append(summary);
   details.append(head);
+  // A toggle the view opened that the reader then closes is the reader's.
+  details.addEventListener("toggle", () => {
+    if (!details.open) delete details.dataset.openedBy;
+  });
   deferBody(details, build, options.eager === true);
   return details;
 }
@@ -219,7 +223,10 @@ export function nestingProblems(root: ParentNode): string[] {
 export function openBuiltToDepth(body: HTMLElement): void {
   if (body.closest("[data-open-all]") === null) return;
   for (const toggle of body.querySelectorAll<HTMLDetailsElement>("details.lv"))
-    if (!toggle.open) openToggle(toggle);
+    if (!toggle.open) {
+      toggle.dataset.openedBy = "view";
+      openToggle(toggle);
+    }
 }
 
 /** Opens a toggle and builds its body now (tests, print). */
@@ -583,7 +590,7 @@ export function renderTurns(
     if (turn.content !== undefined && turn.content.length > 0) {
       if (role === "tool") {
         const shown = exactText(turn.content);
-        const pre = el("pre", "say", shown.text);
+        const pre = tagSource(el("pre", "say", shown.text), "payload");
         pre.dataset.exact = shown.indented ? "indented" : "verbatim";
         item.append(pre);
       } else item.append(tagSource(el("div", "say", turn.content), "payload"));
@@ -995,7 +1002,7 @@ export function levelCss(scope: string): string {
 ${s} details.lv{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px;padding:0}
 ${s} details.lv > summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--navy)}
 ${s} details.lv > summary::-webkit-details-marker{display:none}
-${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;color:var(--reader,#B0651A);font-size:12px;line-height:1}
+${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;color:var(--reader,#9A5311);font-size:12px;line-height:1}
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}

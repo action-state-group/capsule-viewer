@@ -102,3 +102,37 @@ it("tagSource marks a node and returns it", () => {
   expect(tagSource(node, "producer")).toBe(node);
   expect(node.dataset.src).toBe("producer");
 });
+
+it("a toggle the view opened is the reader's once the reader closes it; a built body's toggles under L2 are the view's", () => {
+  const outer = levelToggle(1, "Outer", () => {
+    const inner = levelToggle(2, "Inner", () => document.createElement("p"));
+    const body = document.createElement("div");
+    body.append(inner);
+    return body;
+  });
+  const L1 = document.createElement("div");
+  L1.dataset.openAll = "";
+  L1.append(outer);
+  applyDepth({
+    L0: document.createElement("div"),
+    L1,
+    L2: document.createElement("div"),
+    depth: "L2",
+  });
+  const inner = outer.querySelector<HTMLDetailsElement>("details.lv2")!;
+  expect(inner.open).toBe(true);
+  expect(inner.dataset.openedBy).toBe("view");
+  inner.open = false;
+  inner.dispatchEvent(new Event("toggle"));
+  expect(inner.dataset.openedBy).toBeUndefined();
+});
+
+it("a tool result is payload too", () => {
+  const turns = renderTurns(
+    [{ role: "tool", content: '{"ok":true}', toolCalls: [] }] as never,
+    DEFAULT_WORDS.lines,
+  );
+  expect(turns.querySelector<HTMLElement>("pre.say")?.dataset.src).toBe(
+    "payload",
+  );
+});

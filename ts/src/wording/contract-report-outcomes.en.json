@@ -435,7 +435,7 @@
     "legend.toggle.open": "open, by the view's depth",
     "legend.toggle.closed": "closed, the reader opens it",
     "legend.toggle.core": "no toggle, the core always draws it",
-    "legend.toggle.note": "Every toggle sits left of the thing it opens. Opening is a click; the page records nothing about it.",
+    "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
     "legend.src.lead": "Where every word comes from",
     "legend.src.core": "core",
     "legend.src.core.is": "the viewer's own words",
@@ -446,6 +446,6 @@
     "legend.src.payload": "payload",
     "legend.src.payload.is": "the record's content",
     "legend.src.producer": "producer",
-    "legend.src.producer.is": "quoted, whose words"
+    "legend.src.producer.is": "quoted, with whose words"
   }
 }

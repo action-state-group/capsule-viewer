@@ -46,14 +46,16 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 
 /** The toggle legend and the source strip, one aside. */
 export function renderLegend(w: Words): HTMLElement {
-  const legend = el("aside", "cv-legend");
+  const legend = el("div", "cv-legend");
   legend.dataset.legend = "words-and-toggles";
 
   const toggles = el("p", "cv-legend-toggles");
   toggles.dataset.legend = "toggles";
   const item = (glyph: string, cls: string, word: string): void => {
     const entry = el("span", "cv-legend-item");
-    entry.append(el("span", `cv-lg ${cls}`, glyph), word);
+    const mark = el("span", `cv-lg ${cls}`, glyph);
+    mark.setAttribute("aria-hidden", "true");
+    entry.append(mark, word);
     toggles.append(entry);
   };
   item("▾", "view", w.t("legend.toggle.open"));
@@ -85,7 +87,7 @@ ${s} .cv-legend p{margin:4px 0}
 ${s} .cv-legend-item{display:inline-block;margin-right:18px}
 ${s} .cv-lg{display:inline-block;width:1em;margin-right:6px;font-size:12px}
 ${s} .cv-lg.view{color:var(--navy)}
-${s} .cv-lg.reader{color:#B0651A}
+${s} .cv-lg.reader{color:#9A5311}
 ${s} .cv-lg.core{color:var(--slate)}
 ${s} .cv-legend-note{text-align:right}
 ${s} .cv-legend-lead{font-weight:700;margin-right:12px;color:var(--ink)}
