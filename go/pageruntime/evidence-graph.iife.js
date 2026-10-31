@@ -193,18 +193,18 @@ var EvidenceGraph = (() => {
     }
     return 0;
   }
-  function utf8ToBytes(str2) {
+  function utf8ToBytes(str3) {
     const out = [];
     let p = 0;
-    for (let i = 0; i < str2.length; i++) {
-      let c = str2.charCodeAt(i);
+    for (let i = 0; i < str3.length; i++) {
+      let c = str3.charCodeAt(i);
       if (c < 128) {
         out[p++] = c;
       } else if (c < 2048) {
         out[p++] = c >> 6 | 192;
         out[p++] = c & 63 | 128;
-      } else if ((c & 64512) === 55296 && i + 1 < str2.length && (str2.charCodeAt(i + 1) & 64512) === 56320) {
-        c = 65536 + ((c & 1023) << 10) + (str2.charCodeAt(++i) & 1023);
+      } else if ((c & 64512) === 55296 && i + 1 < str3.length && (str3.charCodeAt(i + 1) & 64512) === 56320) {
+        c = 65536 + ((c & 1023) << 10) + (str3.charCodeAt(++i) & 1023);
         out[p++] = c >> 18 | 240;
         out[p++] = c >> 12 & 63 | 128;
         out[p++] = c >> 6 & 63 | 128;
@@ -749,15 +749,15 @@ var EvidenceGraph = (() => {
   function toStr(bytes, start, end) {
     const len = end - start;
     if (len < ASCII_THRESHOLD) {
-      let str2 = "";
+      let str3 = "";
       for (let i = start; i < end; i++) {
         const c = bytes[i];
         if (c & 128) {
           return textDecoder.decode(bytes.subarray(start, end));
         }
-        str2 += String.fromCharCode(c);
+        str3 += String.fromCharCode(c);
       }
-      return str2;
+      return str3;
     }
     return textDecoder.decode(bytes.subarray(start, end));
   }
@@ -3309,12 +3309,12 @@ var EvidenceGraph = (() => {
       digits.push(Number(power & _15n));
       power >>= _4n;
     }
-    const table2 = new Array(16);
-    table2[0] = _1n2;
-    table2[1] = d;
+    const table3 = new Array(16);
+    table3[0] = _1n2;
+    table3[1] = d;
     for (let i = 2; i < 16; i++)
-      table2[i] = table2[i - 1] * d % modulo;
-    let p = table2[digits[digits.length - 1]];
+      table3[i] = table3[i - 1] * d % modulo;
+    let p = table3[digits[digits.length - 1]];
     for (let w = digits.length - 2; w >= 0; w--) {
       p = p * p % modulo;
       p = p * p % modulo;
@@ -3322,7 +3322,7 @@ var EvidenceGraph = (() => {
       p = p * p % modulo;
       const digit = digits[w];
       if (digit !== 0)
-        p = p * table2[digit] % modulo;
+        p = p * table3[digit] % modulo;
     }
     return p;
   }
@@ -4040,10 +4040,10 @@ var EvidenceGraph = (() => {
           const W2 = FW_WINDOW;
           const size = 1 << W2;
           const mask = bitMask(W2);
-          const table2 = new Array(size);
-          table2[0] = this.ZERO;
+          const table3 = new Array(size);
+          table3[0] = this.ZERO;
           for (let i = 1; i < size; i++)
-            table2[i] = table2[i - 1].add(point);
+            table3[i] = table3[i - 1].add(point);
           const windows = Math.ceil(bits / W2);
           let acc = this.ZERO;
           for (let window = windows - 1; window >= 0; window--) {
@@ -4051,9 +4051,9 @@ var EvidenceGraph = (() => {
               for (let d = 0; d < W2; d++)
                 acc = acc.double();
             const digit = Number(n >> BigInt(window * W2) & mask);
-            let sel = table2[0];
+            let sel = table3[0];
             for (let i = 1; i < size; i++)
-              sel = i === digit ? table2[i] : sel;
+              sel = i === digit ? table3[i] : sel;
             acc = acc.add(sel);
           }
           return { p: acc, f: acc };
@@ -14134,8 +14134,8 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
       figure.append(note);
     }
     const wrap = el3("div", "cv-chart-table");
-    const table2 = el3("table");
-    table2.append(el3("caption", void 0, w.t("chart.table.caption")));
+    const table3 = el3("table");
+    table3.append(el3("caption", void 0, w.t("chart.table.caption")));
     const head2 = el3("tr");
     for (const name of chart.keys) {
       const th = el3("th");
@@ -14171,8 +14171,8 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
       row2.append(cell2);
       tbody.append(row2);
     });
-    table2.append(thead, tbody);
-    wrap.append(table2);
+    table3.append(thead, tbody);
+    wrap.append(table3);
     figure.append(wrap);
     return figure;
   }
@@ -14413,7 +14413,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
       for (const g of groupsOn(activity.chart, day))
         for (const row2 of g.rows) rows.set(row2.seq, row2);
     if (rows.size > 0) {
-      const table2 = el4("table", "cv-day-table");
+      const table3 = el4("table", "cv-day-table");
       const head2 = el4("tr");
       for (const key of ["calendar.day.time", "calendar.day.record"]) {
         const th = el4("th", void 0, w.t(key));
@@ -14440,9 +14440,9 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
         tr.append(td);
         tbody.append(tr);
       }
-      table2.append(thead, tbody);
+      table3.append(thead, tbody);
       const wrap = el4("div", "cv-view-table");
-      wrap.append(table2);
+      wrap.append(table3);
       section.append(wrap);
     }
     return section;
@@ -14461,9 +14461,9 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     }
     const scroll = el4("div", "cv-view-table");
     for (const month of months) {
-      const table2 = el4("table", "cv-cal");
-      table2.dataset.month = month;
-      table2.append(el4("caption", void 0, month));
+      const table3 = el4("table", "cv-cal");
+      table3.dataset.month = month;
+      table3.append(el4("caption", void 0, month));
       const head2 = el4("tr");
       for (let d = 1; d <= 7; d++) {
         const th = el4("th", void 0, w.t(`calendar.weekday.${String(d)}`));
@@ -14501,8 +14501,8 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
           row2 = el4("tr");
         }
       }
-      table2.append(thead, tbody);
-      scroll.append(table2);
+      table3.append(thead, tbody);
+      scroll.append(table3);
     }
     figure.append(scroll);
     if (hasRoles) {
@@ -14546,7 +14546,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     ).length;
     const windowDays = (view.count.chart.units ?? []).length;
     const mondays = [...weeks.keys()].sort();
-    const table2 = el4("table", "cv-period");
+    const table3 = el4("table", "cv-period");
     const top = el4("tr");
     const reqHead = el4("th");
     reqHead.setAttribute("scope", "col");
@@ -14660,9 +14660,9 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
       });
       tbody.append(tr);
     });
-    table2.append(thead, tbody);
+    table3.append(thead, tbody);
     const scroll = el4("div", "cv-view-table");
-    scroll.append(table2);
+    scroll.append(table3);
     figure.append(scroll);
     return figure;
   }
@@ -14800,7 +14800,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     figure.append(
       el4("p", "cv-cofail-total", w.p("cofail.failing", view.failing))
     );
-    const table2 = el4("table", "cv-cofail");
+    const table3 = el4("table", "cv-cofail");
     const head2 = el4("tr");
     const corner = el4("th");
     corner.append(code(view.subject));
@@ -14846,9 +14846,9 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
       });
       tbody.append(tr);
     });
-    table2.append(thead, tbody);
+    table3.append(thead, tbody);
     const scroll = el4("div", "cv-view-table");
-    scroll.append(table2);
+    scroll.append(table3);
     figure.append(scroll);
     return figure;
   }
@@ -15385,6 +15385,401 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
 @media (min-width:821px){.cc table.grid th{white-space:nowrap}}
 `;
 
+  // src/subject-history.ts
+  var HEX642 = /^[0-9a-f]{64}$/u;
+  var BAND = /^e\+(\d{1,2})$/u;
+  var MAX_LABELS = 8;
+  var MAX_LABEL = 60;
+  var EXTENSION = /^x-[a-z0-9][a-z0-9._-]*$/u;
+  var isObj4 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+  function str(value, max) {
+    return typeof value === "string" && value.length > 0 && value.length <= max ? value : void 0;
+  }
+  function readScope(value) {
+    if (!isObj4(value)) return void 0;
+    const pack = str(value.pack, 120);
+    const salting = str(value.salting, 60);
+    const saltId = str(value.salt_id, 120);
+    if (pack === void 0 || salting === void 0 || saltId === void 0 || value.tier !== "operator" && value.tier !== "shared")
+      return void 0;
+    return { pack, tier: value.tier, salting, saltId };
+  }
+  function readEntry2(value, operator) {
+    if (!isObj4(value)) return void 0;
+    const labels = value.request_labels;
+    if (!Array.isArray(labels) || labels.length > MAX_LABELS || labels.some((l) => str(l, MAX_LABEL) === void 0))
+      return void 0;
+    let bandExponent;
+    if (value.usd_band !== void 0) {
+      const band = typeof value.usd_band === "string" ? BAND.exec(value.usd_band) : null;
+      if (band === null) return void 0;
+      bandExponent = Number(band[1]);
+    }
+    let halves;
+    if (value.halves !== void 0) {
+      const h = value.halves;
+      if (!isObj4(h) || !Number.isSafeInteger(h.present) || !Number.isSafeInteger(h.of) || h.present < 0 || h.of < 1 || h.present > h.of)
+        return void 0;
+      halves = { present: h.present, of: h.of };
+    }
+    let handle;
+    let followUpOf;
+    if (operator) {
+      if (value.customer_handle !== void 0) {
+        if (typeof value.customer_handle !== "string" || !HEX642.test(value.customer_handle))
+          return void 0;
+        handle = value.customer_handle;
+      }
+      if (value.follow_up_of !== void 0) {
+        followUpOf = str(value.follow_up_of, 200);
+        if (followUpOf === void 0) return void 0;
+      }
+    }
+    return {
+      requestLabels: labels,
+      ...bandExponent === void 0 ? {} : { bandExponent },
+      ...halves === void 0 ? {} : { halves },
+      ...handle === void 0 ? {} : { handle },
+      ...followUpOf === void 0 ? {} : { followUpOf }
+    };
+  }
+  function readSubjectHistory(document2) {
+    if (!isObj4(document2)) return void 0;
+    const found = Object.entries(document2).filter(
+      ([key, member]) => EXTENSION.test(key) && isObj4(member) && isObj4(member.subject_history)
+    );
+    if (found.length !== 1) return void 0;
+    const block = found[0][1].subject_history;
+    if (!isObj4(block.conversations)) return void 0;
+    const scope = readScope(block.handle_scope);
+    const operator = scope?.tier === "operator";
+    const entries = /* @__PURE__ */ new Map();
+    for (const [id, value] of Object.entries(block.conversations)) {
+      const entry = readEntry2(value, operator);
+      if (entry !== void 0) entries.set(id, entry);
+    }
+    if (entries.size === 0) return void 0;
+    return {
+      tier: operator ? "operator" : "shared",
+      ...operator && scope !== void 0 ? { scope } : {},
+      entries
+    };
+  }
+  function usdRange(exponent) {
+    const low = 10n ** BigInt(exponent);
+    const high = 10n ** BigInt(exponent + 1) - 1n;
+    return `$${low.toLocaleString("en-US")}-${high.toLocaleString("en-US")}`;
+  }
+  function el5(tag, className, text2) {
+    const node = document.createElement(tag);
+    if (className !== "") node.className = className;
+    if (text2 !== void 0) node.textContent = text2;
+    return node;
+  }
+  var fmt = (n) => n.toLocaleString("en-US");
+  function dayNumber(date) {
+    return Date.parse(`${date}T00:00:00Z`) / 864e5;
+  }
+  function dateWords(date, w) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(date);
+    if (m === null) return date;
+    return `${w.t(`calendar.month.${Number(m[2])}`)} ${Number(m[3])}`;
+  }
+  var when = (c, w) => c.time === void 0 ? dateWords(c.date, w) : `${dateWords(c.date, w)} \xB7 ${c.time}`;
+  var requestOf = (e, w) => e.requestLabels.length === 0 ? w.t("lines.subject.request.none") : e.requestLabels.join(", ");
+  var bandOf = (e, w) => e.bandExponent === void 0 ? w.t("lines.subject.band.none") : w.t("lines.subject.band", { range: usdRange(e.bandExponent) });
+  var halvesOf = (e, w) => e.halves === void 0 ? w.t("lines.subject.halves.none") : w.t("lines.subject.halves", {
+    present: fmt(e.halves.present),
+    of: fmt(e.halves.of)
+  });
+  var shortHandle = (handle) => `${handle.slice(0, 6)}\u2026${handle.slice(-4)}`;
+  function squares(c) {
+    const box = el5("span", "sh-sq");
+    for (const term of c.terms) {
+      const sq = el5("i", `sq ${term.tone}`);
+      sq.dataset.term = term.ref;
+      sq.title = term.label;
+      box.append(sq);
+    }
+    return box;
+  }
+  function card(c, w) {
+    const body = el5("div", "sh-card");
+    const happened2 = el5("div", "sh-col");
+    happened2.append(el5("h5", "sh-h", w.t("lines.subject.card.happened")));
+    happened2.append(
+      el5(
+        "p",
+        "",
+        c.turns === void 0 || c.calls === void 0 ? w.t("lines.subject.card.no-transcript") : w.t("lines.subject.card.counts", {
+          turns: w.p("spot.turns", c.turns, { n: fmt(c.turns) }),
+          calls: w.p("chat.calls", c.calls, { n: fmt(c.calls) })
+        })
+      )
+    );
+    const terms = el5("div", "sh-col");
+    terms.append(el5("h5", "sh-h", w.t("lines.subject.card.terms")));
+    if (c.open.length === 0)
+      terms.append(el5("p", "", w.t("lines.subject.card.all-met")));
+    for (const o of c.open) {
+      terms.append(el5("p", "sh-term", o.label));
+      if (o.wording !== "") terms.append(el5("p", "sh-sub", o.wording));
+    }
+    const verdict2 = el5("div", "sh-col");
+    verdict2.append(el5("h5", "sh-h", w.t("lines.subject.card.verdict")));
+    if (c.open.length === 0) verdict2.append(el5("p", "", c.outcome.word));
+    for (const o of c.open) {
+      const line = el5("p", "");
+      line.append(el5("span", `pill ${o.tone}`, o.verdict), " ", o.note);
+      verdict2.append(line);
+    }
+    body.append(happened2, terms, verdict2);
+    return body;
+  }
+  function tile(className, big2, caption) {
+    const box = el5("div", `sh-tile ${className}`);
+    box.append(el5("b", "", big2), el5("span", "", caption));
+    return box;
+  }
+  function customerBlock(handle, rows, history, reportTotal, w) {
+    const block = el5("article", "sh-cust");
+    block.dataset.handle = handle;
+    const n = rows.length;
+    const count2 = (s) => rows.filter((r) => r.status === s).length;
+    const core = el5("p", "sh-core");
+    core.append(
+      el5(
+        "b",
+        "",
+        w.t("lines.subject.core.customer", { handle: shortHandle(handle) })
+      )
+    );
+    const scope = history.scope;
+    if (scope !== void 0)
+      core.append(
+        ` \xB7 ${w.t("lines.subject.core.scope", {
+          pack: scope.pack,
+          tier: scope.tier,
+          salting: scope.salting,
+          salt: scope.saltId
+        })}`
+      );
+    const halves = rows.flatMap((r) => {
+      const h = history.entries.get(r.id)?.halves;
+      return h === void 0 ? [] : [h];
+    });
+    if (halves.length > 0)
+      core.append(
+        ` \xB7 ${w.t("lines.subject.core.halves", {
+          present: fmt(halves.reduce((a, h) => a + h.present, 0)),
+          of: fmt(halves.reduce((a, h) => a + h.of, 0)),
+          k: fmt(halves.length),
+          n: fmt(n)
+        })}`
+      );
+    block.append(core);
+    const dates = rows.map((r) => r.date).sort();
+    const tiles = el5("div", "sh-tiles");
+    const of = (k) => w.t("lines.subject.share", { count: fmt(k), total: fmt(n) });
+    tiles.append(
+      tile(
+        "all",
+        fmt(n),
+        w.t("lines.subject.tile.conversations", {
+          first: dateWords(dates[0], w),
+          last: dateWords(dates[dates.length - 1], w),
+          total: fmt(reportTotal)
+        })
+      ),
+      tile("ok", of(count2("resolved")), w.t("lines.subject.tile.resolved")),
+      tile("bad", of(count2("missed")), w.t("lines.subject.tile.missed")),
+      tile("ne", of(count2("undecided")), w.t("lines.subject.tile.undecided"))
+    );
+    block.append(tiles);
+    const unverified = count2("unverified");
+    const nothing = count2("nothing-applied");
+    if (unverified + nothing > 0) {
+      const rest = [
+        ...unverified > 0 ? [
+          w.t("lines.subject.note.unverified", {
+            n: fmt(unverified),
+            total: fmt(n)
+          })
+        ] : [],
+        ...nothing > 0 ? [
+          w.t("lines.subject.note.nothing-applied", {
+            n: fmt(nothing),
+            total: fmt(n)
+          })
+        ] : []
+      ];
+      block.append(el5("p", "sh-note", rest.join(" ")));
+    }
+    block.append(
+      el5("h3", "sh-head", w.t("lines.subject.headline", { n: fmt(n) }))
+    );
+    block.append(el5("p", "sh-lede", w.t("lines.subject.explain", { n: fmt(n) })));
+    block.append(timeline(rows, history, w));
+    block.append(table(rows, history, w));
+    const legend = el5("p", "sh-legend");
+    for (const [tone, key] of [
+      ["ok", "met"],
+      ["bad", "not-met"],
+      ["ne", "undecided"]
+    ]) {
+      const item = el5("span", "sh-key");
+      item.append(el5("i", `sq ${tone}`), w.t(`lines.subject.legend.${key}`));
+      legend.append(item);
+    }
+    legend.append(el5("span", "sh-key", w.t("lines.subject.legend.order")));
+    block.append(legend);
+    return block;
+  }
+  function timeline(rows, history, w) {
+    const section = el5("div", "sh-time");
+    section.append(el5("h3", "sh-head", w.t("lines.subject.timeline.title")));
+    const first = dayNumber(rows[0].date);
+    const span2 = dayNumber(rows[rows.length - 1].date) - first;
+    const at = (c) => span2 <= 0 ? 50 : (dayNumber(c.date) - first) / span2 * 100;
+    const track = el5("div", "sh-track");
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const list2 = el5("ol", "sh-steps");
+    for (const c of rows) {
+      const dot = el5("i", `sh-dot ${c.outcome.tone}`);
+      dot.style.setProperty("--at", `${at(c).toFixed(2)}%`);
+      dot.dataset.conversation = c.id;
+      track.append(dot);
+      const entry = history.entries.get(c.id);
+      const step = el5("li", "", `${when(c, w)} \xB7 ${requestOf(entry, w)} \xB7 `);
+      step.append(el5("span", `pill ${c.outcome.tone}`, c.outcome.word));
+      list2.append(step);
+    }
+    for (const c of rows) {
+      const target = byId.get(history.entries.get(c.id)?.followUpOf ?? "");
+      if (target === void 0 || target.id === c.id || target.date > c.date)
+        continue;
+      const days = dayNumber(c.date) - dayNumber(target.date);
+      const link = el5("span", "sh-link");
+      link.dataset.followUp = c.id;
+      link.dataset.of = target.id;
+      link.style.setProperty("--from", `${at(target).toFixed(2)}%`);
+      link.style.setProperty("--to", `${at(c).toFixed(2)}%`);
+      link.append(
+        el5(
+          "em",
+          "",
+          days === 0 ? w.t("lines.subject.follow.same-day") : w.p("lines.subject.follow", days, { n: fmt(days) })
+        )
+      );
+      track.append(link);
+    }
+    section.append(
+      track,
+      list2,
+      el5("p", "sh-note", w.t("lines.subject.timeline.note"))
+    );
+    return section;
+  }
+  function table(rows, history, w) {
+    const section = el5("div", "sh-table");
+    section.append(el5("h3", "sh-head", w.t("lines.subject.table.title")));
+    const head2 = el5("div", "sh-row sh-thead");
+    for (const key of ["when", "request", "terms", "band", "halves", "outcome"])
+      head2.append(
+        el5(
+          "span",
+          "",
+          key === "terms" ? w.t("lines.subject.col.terms", {
+            n: fmt(Math.max(...rows.map((r) => r.terms.length)))
+          }) : w.t(`lines.subject.col.${key}`)
+        )
+      );
+    section.append(head2);
+    for (const c of rows) {
+      const entry = history.entries.get(c.id);
+      const summary = el5("span", "sh-row");
+      summary.append(
+        el5("span", "", when(c, w)),
+        el5("span", "", requestOf(entry, w)),
+        squares(c),
+        el5("span", "sh-band", bandOf(entry, w)),
+        el5("span", "", halvesOf(entry, w))
+      );
+      const outcome = el5("span", `pill ${c.outcome.tone}`, c.outcome.word);
+      summary.append(outcome);
+      const row2 = levelToggle(2, summary, () => card(c, w), {
+        className: "sh-conv"
+      });
+      row2.dataset.conversation = c.id;
+      section.append(row2);
+    }
+    return section;
+  }
+  function renderSubjectHistory(rows, history, reportTotal, w) {
+    const drawn = rows.filter((r) => history.entries.has(r.id)).sort(
+      (a, b) => a.date === b.date ? a.id < b.id ? -1 : 1 : a.date < b.date ? -1 : 1
+    );
+    if (drawn.length === 0) return void 0;
+    const section = el5("section", "sec sh");
+    section.dataset.section = "subject-history";
+    section.dataset.tier = history.tier;
+    section.append(el5("h2", "sh-title", w.t("lines.subject.title")));
+    if (history.tier === "operator") {
+      const groups = /* @__PURE__ */ new Map();
+      for (const r of drawn) {
+        const handle = history.entries.get(r.id)?.handle;
+        if (handle === void 0) continue;
+        groups.set(handle, [...groups.get(handle) ?? [], r]);
+      }
+      const repeat = [...groups].filter(([, list2]) => list2.length >= 2);
+      section.append(el5("p", "sh-slice", w.t("lines.subject.slice.operator")));
+      if (repeat.length === 0)
+        section.append(el5("p", "sh-lede", w.t("lines.subject.none")));
+      repeat.sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
+      for (const [handle, list2] of repeat)
+        section.append(customerBlock(handle, list2, history, reportTotal, w));
+    } else {
+      section.append(el5("p", "sh-slice", w.t("lines.subject.slice.shared")));
+      section.append(table(drawn, history, w));
+    }
+    section.append(el5("p", "sh-gap", w.t("lines.subject.gap")));
+    return section;
+  }
+  var SUBJECT_HISTORY_CSS = `
+.oi .sh{max-width:1080px;margin:16px auto;padding:22px 24px;background:#fff;border:1px solid var(--line);border-radius:var(--r)}
+.oi .sh-title{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:22px;margin:0 0 10px}
+.oi .sh-slice{background:var(--gold-l);border:1px solid #F0D7A8;border-radius:8px;padding:8px 12px;font-size:13px;margin:0 0 14px}
+.oi .sh-cust{margin:0 0 22px;padding:14px 0 0;border-top:1px solid var(--line)}
+.oi .sh-core{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--slate);margin:0 0 10px;overflow-wrap:anywhere}
+.oi .sh-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.oi .sh-tile{display:flex;flex-direction:column;gap:4px;background:var(--cream);border-radius:10px;padding:10px 14px}
+.oi .sh-tile b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.oi .sh-tile span{font-size:12.5px;color:var(--slate)}
+.oi .sh-tile.ok b{color:var(--ok)}.oi .sh-tile.bad b{color:var(--bad)}
+.oi .sh-head{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:18px;margin:16px 0 8px}
+.oi .sh-lede,.oi .sh-note,.oi .sh-gap{font-size:13px;color:var(--slate);margin:6px 0}
+.oi .sh-track{position:relative;height:34px;margin:8px 12px 4px;border-bottom:2px solid var(--line)}
+.oi .sh-dot{position:absolute;bottom:-7px;left:var(--at);width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2px solid var(--slate);background:#fff}
+.oi .sh-dot.ok{border-color:var(--ok)}.oi .sh-dot.bad{border-color:var(--bad)}
+.oi .sh-link{position:absolute;bottom:2px;left:var(--from);width:calc(var(--to) - var(--from));border-top:2px dashed var(--bad);text-align:center}
+.oi .sh-link em{position:relative;top:-20px;font-size:11px;font-style:normal;color:var(--slate);white-space:nowrap}
+.oi .sh-steps{margin:10px 0 0;padding-left:18px;font-size:13px}
+.oi .sh-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(110px,1.4fr) minmax(130px,2fr) minmax(70px,.8fr) minmax(60px,.7fr) minmax(80px,.8fr);gap:8px;align-items:center;font-size:13px}
+.oi .sh-thead{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);border-bottom:2px solid var(--ink);padding:6px 0}
+.oi .sh-conv{border-bottom:1px solid var(--line)}
+.oi .sh-conv>summary{padding:8px 0;cursor:pointer;list-style:none}
+.oi .sh-sq{display:inline-flex;gap:3px;flex-wrap:wrap}
+.oi .sq{display:inline-block;width:14px;height:14px;border:1px solid var(--slate);border-radius:3px;background:#fff}
+.oi .sq.ok{background:var(--ok-l);border-color:var(--ok)}.oi .sq.bad{background:var(--bad-l);border-color:var(--bad)}.oi .sq.ne,.oi .sq.na{background:#ECEAE4}
+.oi .sh-band{font-family:ui-monospace,Menlo,monospace}
+.oi .sh-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:4px 0 10px;padding:12px 14px;background:var(--cream);border:1px solid var(--line);border-radius:8px;font-size:13px}
+.oi .sh-h{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);margin:0 0 6px}
+.oi .sh-term{font-weight:600;margin:0}.oi .sh-sub{margin:0 0 6px;color:var(--slate)}
+.oi .sh-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--slate);margin:10px 0 0}
+.oi .sh-key{display:inline-flex;gap:6px;align-items:center}
+@media (max-width:640px){.oi .sh{padding:16px}.oi .sh-row{grid-template-columns:1fr 1fr}.oi .sh-thead{display:none}}
+`;
+
   // src/outcome-report-styles.ts
   var OUTCOME_REPORT_CSS = `
 .oi{${OUTCOME_FRAME_VARS}
@@ -15577,7 +15972,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   .oi{background:#fff}
   .oi .sheet,.oi .sec{box-shadow:none;margin:0 0 12px}
 }
-` + levelCss("oi") + legendCss("oi") + frontCss(".oi") + // The page layout (one left edge, bordered cards 16px apart): last, so
+` + levelCss("oi") + legendCss("oi") + frontCss(".oi") + SUBJECT_HISTORY_CSS + // The page layout (one left edge, bordered cards 16px apart): last, so
   // it wins over the card's older rules above. The page colour is the
   // shell's (emitter-shell.html), so the frame itself stays transparent.
   `
@@ -15599,10 +15994,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("0905d9d3c0750a9610940abfe8653ce8c2e87b86");
+    return commitPrefix("986b546fcde6852fc412c94bed06a5515806b269");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.7.0",
@@ -16326,7 +16721,51 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "record.foot.sdk": "Four implementations, in Go, Rust, Python and TypeScript, pass one vector corpus.",
       "record.rung.7.note-unread": "this page could not read the witness receipts here",
       "record.rung.5.other": "the bundle's membership claim did not hold, and its findings do not name this record",
-      "record.rung.5.unanchored": "the checkpoint is not authenticated on this page"
+      "record.rung.5.unanchored": "the checkpoint is not authenticated on this page",
+      "lines.subject.title": "Same customer in this report",
+      "lines.subject.slice.operator": "Slice: this report, filtered to one customer handle. Nothing is re-judged; the page shows what the report's Result already holds for the handle.",
+      "lines.subject.slice.shared": "This copy carries no customer handle, so it does not say which conversations are one customer's. Each conversation shows its requests, its band and the halves present, and nothing else about the customer.",
+      "lines.subject.none": "No customer handle in this report has more than one conversation.",
+      "lines.subject.core.customer": "Customer {handle}",
+      "lines.subject.core.scope": "handle scope: {pack}, {tier} tier, salted {salting}, salt {salt}",
+      "lines.subject.core.halves": "the customer's halves: {present} of {of} present, in {k} of {n} conversations that state them",
+      "lines.subject.share": "{count} of {total}",
+      "lines.subject.tile.conversations": "conversations \xB7 {first} to {last} \xB7 of the report's {total}",
+      "lines.subject.tile.resolved": "resolved \xB7 every term met",
+      "lines.subject.tile.missed": "missed \xB7 one or more terms not met",
+      "lines.subject.tile.undecided": "could not decide",
+      "lines.subject.headline": "One customer, {n} conversations",
+      "lines.subject.explain": "The handle is a salted commitment to the customer id, stable within this pack's scope and your tier. You can tell these {n} are the same person; you cannot learn who.",
+      "lines.subject.timeline.title": "Over time",
+      "lines.subject.timeline.note": "The dashed link joins a conversation to the earlier one it follows up: the later record cites the earlier one (the producer's follow_up_of).",
+      "lines.subject.follow.one": "{n} day to the follow-up",
+      "lines.subject.follow.other": "{n} days to the follow-up",
+      "lines.subject.follow.same-day": "the same day",
+      "lines.subject.table.title": "Each conversation, each term",
+      "lines.subject.col.when": "When",
+      "lines.subject.col.request": "Requested",
+      "lines.subject.col.terms": "Terms ({n})",
+      "lines.subject.col.band": "Band",
+      "lines.subject.col.halves": "Halves",
+      "lines.subject.col.outcome": "Outcome",
+      "lines.subject.request.none": "not stated",
+      "lines.subject.band": "USD {range}",
+      "lines.subject.band.none": "no band",
+      "lines.subject.halves": "{present} of {of}",
+      "lines.subject.halves.none": "not stated",
+      "lines.subject.card.happened": "What happened",
+      "lines.subject.card.counts": "{turns}, {calls}.",
+      "lines.subject.card.no-transcript": "The conversation is not in this bundle.",
+      "lines.subject.card.terms": "The terms not met",
+      "lines.subject.card.all-met": "Every term was met.",
+      "lines.subject.card.verdict": "The verdict, and why",
+      "lines.subject.legend.met": "met",
+      "lines.subject.legend.not-met": "not met",
+      "lines.subject.legend.undecided": "could not decide",
+      "lines.subject.legend.order": "terms are in the contract's order",
+      "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them.",
+      "lines.subject.note.unverified": "{n} of {total} could not be verified.",
+      "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied."
     }
   };
 
@@ -17335,6 +17774,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "spot.gap.produced",
     "spot.gap.when",
     "spot.gap.adjudication",
+    // Same customer in this report (subject-history.ts): what the bundle does not carry.
+    "lines.subject.gap",
     // Both cards: a rule or conversation nobody could decide, by why.
     "lines.status.undecided.unjudged",
     "lines.status.undecided.withheld",
@@ -17794,7 +18235,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "2b7c7fa07f4d0e041457012eb66a5f24608220a804e69731b726cb5af7a33944",
+    lines: "06049d1407810f6b9fe8d39ee81c2fc964f9961cddf3e171aaeb4344784d8305",
     groups: "71388f5b52c23a6c5f78adb8767c724d99855a0223a0ee7eae4997fe97458dae"
   });
   function fill(key, text2, vars) {
@@ -17989,7 +18430,7 @@ ${key}`);
       unnamed
     };
   }
-  var fmt = (n) => n.toLocaleString();
+  var fmt2 = (n) => n.toLocaleString();
   var quoted = (value) => JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}\u2026` : value);
   var HEX_DIGEST = /^[0-9a-f]+$/iu;
   var short = (digest) => HEX_DIGEST.test(digest) ? digest.length > 12 ? `${digest.slice(0, 12)}\u2026` : digest : quoted(digest);
@@ -18000,7 +18441,7 @@ ${key}`);
   }
   function judgeLine(tally, w = DEFAULT_WORDS.lines) {
     const label = w.t("prov.judge.label");
-    const of = (n) => w.t("prov.of", { count: fmt(n), total: fmt(tally.cited) });
+    const of = (n) => w.t("prov.of", { count: fmt2(n), total: fmt2(tally.cited) });
     if (tally.cited === 0)
       return {
         key: "judge",
@@ -18038,13 +18479,13 @@ ${key}`);
       const by = tally.checkers.map(
         (c) => w.t("prov.judge.checker", {
           checker: quoted(c.ref),
-          count: fmt(c.count)
+          count: fmt2(c.count)
         })
       );
       if (tally.recomputedUnnamed > 0)
         by.push(
           w.t("prov.judge.checker-not-stated", {
-            count: fmt(tally.recomputedUnnamed)
+            count: fmt2(tally.recomputedUnnamed)
           })
         );
       parts.push(
@@ -18126,7 +18567,7 @@ ${key}`);
     if (logId !== void 0)
       facts.push(w.t("prov.witness.log", { log: quoted(logId) }));
     if (page.checkpointSize !== void 0)
-      facts.push(w.t("prov.witness.size", { size: fmt(page.checkpointSize) }));
+      facts.push(w.t("prov.witness.size", { size: fmt2(page.checkpointSize) }));
     if (page.checkpointRoot !== void 0)
       facts.push(w.t("prov.witness.root", { root: short(page.checkpointRoot) }));
     const unchecked = [
@@ -18158,7 +18599,7 @@ ${key}`);
         ...failed2.length === 0 ? [] : [w.t("prov.witness.failed", { witnesses: failed2.join("; ") })],
         ...unreadable === 0 ? [] : [
           w.p("prov.witness.invalid.unreadable", unreadable, {
-            n: fmt(unreadable)
+            n: fmt2(unreadable)
           })
         ],
         // AAC fails only on a failed receipt or an unreadable entry; should
@@ -18182,8 +18623,8 @@ ${key}`);
     const stubs = all.filter((e) => e.stub).length;
     const malformed = all.filter((e) => e.malformed).length;
     const others = [
-      stubs === 0 ? "" : w.p("prov.witness.stubs", stubs, { n: fmt(stubs) }),
-      malformed === 0 ? "" : w.p("prov.witness.malformed", malformed, { n: fmt(malformed) })
+      stubs === 0 ? "" : w.p("prov.witness.stubs", stubs, { n: fmt2(stubs) }),
+      malformed === 0 ? "" : w.p("prov.witness.malformed", malformed, { n: fmt2(malformed) })
     ].filter((t) => t !== "");
     const besides = others.length === 0 ? [] : [
       w.t("prov.witness.besides", {
@@ -18201,7 +18642,7 @@ ${key}`);
       };
     const name = (e) => {
       const url = e.url === void 0 ? w.t("prov.witness.receipt-not-stated") : quoted(e.url);
-      return e.treeSize === void 0 ? url : w.t("prov.witness.entry", { witness: url, size: fmt(e.treeSize) });
+      return e.treeSize === void 0 ? url : w.t("prov.witness.entry", { witness: url, size: fmt2(e.treeSize) });
     };
     const passed = entries.filter((e) => e.passed).map(name);
     const stated = entries.filter((e) => !e.passed).map(name);
@@ -18288,32 +18729,32 @@ ${key}`);
   }
 
   // src/report-front.ts
-  function el5(tag, className, text2) {
+  function el6(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== "") node.className = className;
     if (text2 !== void 0) node.textContent = text2;
     return node;
   }
   function leadWithProvenance(host, section, provenance) {
-    const row2 = el5("div", "prov-row");
+    const row2 = el6("div", "prov-row");
     row2.append(provenance);
     if (section === null) host.prepend(frontCard(row2));
     else section.prepend(row2);
   }
-  var fmt2 = (n) => n.toLocaleString("en-US");
+  var fmt3 = (n) => n.toLocaleString("en-US");
   function bundleObject(bundle) {
     return typeof bundle === "object" && bundle !== null && !Array.isArray(bundle) ? bundle : {};
   }
   function renderCheckYourself(bundle, w) {
     const b = bundleObject(bundle);
-    const section = el5("section", "check front-card");
+    const section = el6("section", "check front-card");
     section.dataset.section = "check-yourself";
-    section.append(el5("h2", "", w.t("front.check.h")));
-    const anchors = el5("div", "anchors");
+    section.append(el6("h2", "", w.t("front.check.h")));
+    const anchors = el6("div", "anchors");
     const cell2 = (label, value, key) => {
-      const box = el5("div", "anchor");
+      const box = el6("div", "anchor");
       box.dataset.anchor = key;
-      box.append(el5("span", "k", label), el5("code", "", value));
+      box.append(el6("span", "k", label), el6("code", "", value));
       anchors.append(box);
     };
     const extensions2 = bundleObject(b.extensions);
@@ -18326,27 +18767,27 @@ ${key}`);
     if (typeof checkpoint.root === "string" && typeof checkpoint.mmr_size === "number")
       cell2(
         w.t("front.check.root"),
-        `${checkpoint.root} \xB7 ${fmt2(checkpoint.mmr_size)}`,
+        `${checkpoint.root} \xB7 ${fmt3(checkpoint.mmr_size)}`,
         "checkpoint"
       );
     if (Array.isArray(b.records))
-      cell2(w.t("front.check.records"), fmt2(b.records.length), "records");
+      cell2(w.t("front.check.records"), fmt3(b.records.length), "records");
     section.append(anchors);
     const receipts2 = witnessEntries(b.checkpoint).filter(
       (entry) => !entry.stub && !entry.malformed
     );
-    const steps = el5("ol", "steps");
+    const steps = el6("ol", "steps");
     steps.append(
-      el5("li", "", w.t("front.check.s1")),
-      el5("li", "", w.t("front.check.s2"))
+      el6("li", "", w.t("front.check.s1")),
+      el6("li", "", w.t("front.check.s2"))
     );
-    const compare2 = el5(
+    const compare2 = el6(
       "li",
       "",
       w.t(receipts2.length > 0 ? "front.check.s3.receipt" : "front.check.s3.none")
     );
     compare2.dataset.receipt = receipts2.length > 0 ? "present" : "absent";
-    steps.append(compare2, el5("li", "", w.t("front.check.s4")));
+    steps.append(compare2, el6("li", "", w.t("front.check.s4")));
     section.append(steps);
     return section;
   }
@@ -18373,9 +18814,9 @@ ${key}`);
     return toggle;
   }
   function frontCard(...children) {
-    const card = el5("div", "front-card");
-    card.append(...children);
-    return card;
+    const card2 = el6("div", "front-card");
+    card2.append(...children);
+    return card2;
   }
   function applyDepth(levels) {
     if (levels.depth === "L0") return;
@@ -18397,17 +18838,17 @@ ${key}`);
   }
 
   // src/spot-check.ts
-  function el6(tag, className, text2) {
+  function el7(tag, className, text2) {
     const value = document.createElement(tag);
     value.className = className;
     if (text2 !== void 0) value.textContent = text2;
     return value;
   }
   function cell(kind, heading, rule) {
-    const col = el6("div", `sc-col sc-${kind}`);
+    const col = el7("div", `sc-col sc-${kind}`);
     col.dataset.column = kind;
     if (rule !== void 0) col.dataset.spotRule = rule;
-    col.append(el6("h5", "sc-h", heading));
+    col.append(el7("h5", "sc-h", heading));
     return col;
   }
   function happened(s, w) {
@@ -18427,26 +18868,26 @@ ${key}`);
       const record = s.transcript.transcriptRecordId;
       if (record !== void 0) {
         col.dataset.record = record;
-        const link = el6("a", "chat-static", w.t("chat.read"));
+        const link = el7("a", "chat-static", w.t("chat.read"));
         link.setAttribute("href", `#${recordAddress(record)}`);
         link.hidden = true;
         col.append(link);
       }
-      col.append(el6("p", "sc-gap", w.t("spot.gap.produced")));
+      col.append(el7("p", "sc-gap", w.t("spot.gap.produced")));
     }
     return col;
   }
   function criterion(r, w) {
     const col = cell("criterion", w.t("spot.col.criterion"), r.ref);
-    col.append(el6("div", "sc-name", r.name));
-    const term = el6("div", "sc-box");
+    col.append(el7("div", "sc-name", r.name));
+    const term = el7("div", "sc-box");
     term.dataset.wording = r.wording.source;
     if (r.wording.source === "sealed") {
-      term.append(el6("div", "sc-k", w.t("spot.term")));
-      term.append(el6("blockquote", "sc-q", r.wording.text));
+      term.append(el7("div", "sc-k", w.t("spot.term")));
+      term.append(el7("blockquote", "sc-q", r.wording.text));
     } else
       term.append(
-        el6(
+        el7(
           "p",
           "sc-gap",
           w.t(
@@ -18459,12 +18900,12 @@ ${key}`);
   }
   function verdictCell(r, w) {
     const col = cell("verdict", w.t("spot.col.verdict"), r.ref);
-    const head2 = el6("div", `sc-box sc-v ${r.worded.tone}`);
+    const head2 = el7("div", `sc-box sc-v ${r.worded.tone}`);
     head2.append(wordPill(r.worded, r.verdict));
     if (r.rationale !== void 0) {
-      head2.append(el6("div", "sc-k", w.t("spot.says")));
-      head2.append(el6("p", "sc-q", judgeNote(r.rationale, r.drawnVerdict, w)));
-    } else head2.append(el6("p", "sc-gap", r.noNote));
+      head2.append(el7("div", "sc-k", w.t("spot.says")));
+      head2.append(el7("p", "sc-q", judgeNote(r.rationale, r.drawnVerdict, w)));
+    } else head2.append(el7("p", "sc-gap", r.noNote));
     col.append(head2);
     const parsed = r.rationale === void 0 ? {} : parseJudgeProbabilities(r.rationale);
     const facts = [];
@@ -18473,16 +18914,16 @@ ${key}`);
     if (parsed.confidence !== void 0)
       facts.push(w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }));
     if (facts.length > 0) {
-      const line = el6("p", "sc-facts", facts.join(" \xB7 "));
+      const line = el7("p", "sc-facts", facts.join(" \xB7 "));
       line.dataset.judge = "";
       col.append(line);
     }
     return col;
   }
   function spotCheckCard(s, w) {
-    const card = el6("article", "sc-card");
-    card.dataset.spotCheck = "";
-    const grid = el6("div", "sc-grid");
+    const card2 = el7("article", "sc-card");
+    card2.dataset.spotCheck = "";
+    const grid = el7("div", "sc-grid");
     grid.append(happened(s, w));
     s.rules.forEach((rule, index) => {
       const row2 = index + 1;
@@ -18492,19 +18933,19 @@ ${key}`);
       v.style.setProperty("--row", String(row2));
       grid.append(c, v);
     });
-    card.append(grid);
-    const gaps = el6("div", "sc-gaps");
+    card2.append(grid);
+    const gaps = el7("div", "sc-gaps");
     gaps.append(
-      el6("p", "sc-gap", w.t("spot.gap.when")),
-      el6("p", "sc-gap", w.t("spot.gap.adjudication"))
+      el7("p", "sc-gap", w.t("spot.gap.when")),
+      el7("p", "sc-gap", w.t("spot.gap.adjudication"))
     );
-    card.append(gaps);
-    return card;
+    card2.append(gaps);
+    return card2;
   }
   function spotCheckToggle(s, w) {
     if (s.rules.length === 0) return void 0;
     const toggle = levelToggle(2, w.t("spot.toggle"), () => {
-      const body = el6("div", "sc-body");
+      const body = el7("div", "sc-body");
       body.append(spotCheckCard(s, w));
       return body;
     });
@@ -18518,7 +18959,7 @@ ${key}`);
     if (text2 !== void 0) value.textContent = text2;
     return value;
   }
-  function el7(tag, className, text2) {
+  function el8(tag, className, text2) {
     const value = element3(tag, text2);
     value.className = className;
     return value;
@@ -18599,7 +19040,7 @@ ${key}`);
   function editedBadge(model, ref, w) {
     const edited = model.options.editedCriteria?.find((e) => e.criterion === ref);
     if (edited === void 0) return void 0;
-    const badge = el7("span", "edited", edited.badge);
+    const badge = el8("span", "edited", edited.badge);
     badge.dataset.edited = ref;
     badge.title = w.t("lines.edited.title");
     return badge;
@@ -18607,14 +19048,14 @@ ${key}`);
   function renderProducerNote(host, model, w) {
     const note = model.options.producerNote;
     if (note === void 0) return;
-    const box = el7("aside", "pnote");
+    const box = el8("aside", "pnote");
     box.dataset.producerNote = "true";
-    box.append(el7("div", "pn-k", w.t("lines.producer-note.kicker")));
-    box.append(el7("h2", "pn-t", note.title));
-    const list2 = tagSource(el7("ul", "pn-l"), "producer");
+    box.append(el8("div", "pn-k", w.t("lines.producer-note.kicker")));
+    box.append(el8("h2", "pn-t", note.title));
+    const list2 = tagSource(el8("ul", "pn-l"), "producer");
     for (const line of note.lines) list2.append(element3("li", line));
     box.append(list2);
-    box.append(el7("p", "pn-src", w.t("lines.producer-note.source")));
+    box.append(el8("p", "pn-src", w.t("lines.producer-note.source")));
     host.append(box);
   }
   var fmtP = (p) => p.toFixed(2);
@@ -18746,13 +19187,13 @@ ${key}`);
   }
   function renderConversation(conversation, model, runInfo, w) {
     const status2 = conversationStatus(conversation);
-    const item = el7("article", "conv");
+    const item = el8("article", "conv");
     item.dataset.conversation = conversation.conversationId;
     item.dataset.conversationVerdict = conversation.verdict;
     item.dataset.status = status2;
-    const head2 = el7("div", "conv-h");
+    const head2 = el8("div", "conv-h");
     const parts = caseParts(conversation.conversationId, w);
-    head2.append(el7("span", "cid", parts.label));
+    head2.append(el8("span", "cid", parts.label));
     head2.append(wordPill(statusWord(status2, conversation, w), status2));
     const misses = conversation.criteria.filter((c) => isMiss(c.verdict));
     const unverified = conversation.criteria.filter(
@@ -18765,7 +19206,7 @@ ${key}`);
       (c) => c.verdict === "out_of_scope"
     );
     head2.append(
-      el7(
+      el8(
         "span",
         "cwhy",
         status2 === "missed" ? w.t("lines.why.missed", { names: names(model, misses, w) }) : status2 === "unverified" ? w.t("lines.why.unverified", { names: names(model, unverified, w) }) : status2 === "undecided" ? undecided.length === 0 ? w.t("lines.why.undecided.none") : w.t("lines.why.undecided", {
@@ -18782,30 +19223,30 @@ ${key}`);
         )
       )
     );
-    head2.append(el7("span", "cmodel", parts.model ?? ""));
+    head2.append(el8("span", "cmodel", parts.model ?? ""));
     item.append(head2);
-    const body = el7("div", "conv-slot");
+    const body = el8("div", "conv-slot");
     item.append(body);
     lazyBody(body, () => conversationBody(conversation, model, runInfo, w));
     return item;
   }
   function conversationBody(conversation, model, runInfo, w) {
-    const body = el7("div", "conv-b");
-    const sentence = el7(
+    const body = el8("div", "conv-b");
+    const sentence = el8(
       "p",
       "verdict-line",
       resultSentence(conversation, model, w)
     );
     sentence.dataset.why = conversationStatus(conversation);
     body.append(sentence);
-    body.append(el7("h4", "", w.t("lines.h.rule-by-rule")));
+    body.append(el8("h4", "", w.t("lines.h.rule-by-rule")));
     const hasNotes = conversation.criteria.some((c) => c.rationale !== void 0);
     const wordings = conversation.criteria.map(
       (c) => criterionLabel(model, c.checkId, c.criterionId, w).source
     );
     const anyWording = wordings.some((source) => source === "sealed");
-    const table2 = el7("table", "crit");
-    table2.dataset.criteriaTable = conversation.conversationId;
+    const table3 = el8("table", "crit");
+    table3.dataset.criteriaTable = conversation.conversationId;
     const head2 = element3("thead");
     const headRow = element3("tr");
     headRow.append(
@@ -18814,7 +19255,7 @@ ${key}`);
     );
     if (hasNotes) headRow.append(element3("th", w.t("lines.col.note")));
     head2.append(headRow);
-    table2.append(head2);
+    table3.append(head2);
     const tbody = element3("tbody");
     for (const criterion2 of conversation.criteria) {
       const ref = `${criterion2.checkId}.${criterion2.criterionId}`;
@@ -18827,16 +19268,16 @@ ${key}`);
         criterion2.criterionId,
         w
       );
-      const nameCell = el7("td", "cn");
-      nameCell.append(el7("b", "", label.label));
+      const nameCell = el8("td", "cn");
+      nameCell.append(el8("b", "", label.label));
       const rowBadge = editedBadge(model, ref, w);
       if (rowBadge !== void 0) nameCell.append(rowBadge);
       if (label.source === "sealed") {
-        const wording = tagSource(el7("small", "", label.text), "producer");
+        const wording = tagSource(el8("small", "", label.text), "producer");
         wording.dataset.wording = label.source;
         nameCell.append(wording);
       } else if (anyWording) {
-        const wording = el7("small", "wsrc", wordingFallback(label.source, w));
+        const wording = el8("small", "wsrc", wordingFallback(label.source, w));
         wording.dataset.wording = label.source;
         nameCell.append(wording);
       }
@@ -18850,12 +19291,12 @@ ${key}`);
         tbody.append(tr);
         continue;
       }
-      const noteCell = el7("td", "rat");
+      const noteCell = el8("td", "rat");
       if (criterion2.verdict === "not_applicable")
-        noteCell.append(el7("span", "muted", w.t("lines.note.not-applicable")));
+        noteCell.append(el8("span", "muted", w.t("lines.note.not-applicable")));
       else if (criterion2.rationale !== void 0)
         noteCell.append(
-          el7(
+          el8(
             "span",
             "sealed",
             judgeNote(
@@ -18865,13 +19306,13 @@ ${key}`);
             )
           )
         );
-      else noteCell.append(el7("span", "muted", noNoteText(criterion2, w)));
+      else noteCell.append(el8("span", "muted", noNoteText(criterion2, w)));
       tr.append(noteCell);
       tbody.append(tr);
     }
-    table2.append(tbody);
-    const scroll = el7("div", "tscroll");
-    scroll.append(table2);
+    table3.append(tbody);
+    const scroll = el8("div", "tscroll");
+    scroll.append(table3);
     body.append(scroll);
     const gaps = [];
     if (!anyWording)
@@ -18890,7 +19331,7 @@ ${key}`);
         )
       );
     if (gaps.length > 0) {
-      const gap = el7("p", "small", gaps.join(" "));
+      const gap = el8("p", "small", gaps.join(" "));
       gap.dataset.gaps = "true";
       body.append(gap);
     }
@@ -18977,7 +19418,7 @@ ${key}`);
     );
   }
   function conversationProofs(conversation, model, runInfo, w) {
-    const box = el7("div", "pf-b");
+    const box = el8("div", "pf-b");
     box.dataset.proofsFor = conversation.conversationId;
     const rows = [];
     rows.push([w.t("lines.pf.case"), conversation.conversationId]);
@@ -19012,20 +19453,20 @@ ${key}`);
     const dl = proofList(rows);
     dl.dataset.checkIt = conversation.conversationId;
     box.append(dl);
-    box.append(el7("h5", "", w.t("lines.pf.h.each-report")));
-    const table2 = el7("table", "crit pft");
+    box.append(el8("h5", "", w.t("lines.pf.h.each-report")));
+    const table3 = el8("table", "crit pft");
     const head2 = element3("thead");
     const headRow = element3("tr");
     headRow.append(
       element3("th", w.t("lines.pf.col.rule")),
       element3("th", w.t("lines.pf.col.verdict")),
-      el7("th", "n", w.t("lines.pf.col.p")),
+      el8("th", "n", w.t("lines.pf.col.p")),
       element3("th", w.t("lines.pf.col.report")),
       element3("th", w.t("lines.pf.col.rationale")),
       element3("th", w.t("card.pf.assurance"))
     );
     head2.append(headRow);
-    table2.append(head2);
+    table3.append(head2);
     const tbody = element3("tbody");
     for (const criterion2 of conversation.criteria) {
       const tr = element3("tr");
@@ -19039,24 +19480,24 @@ ${key}`);
         element3("td", verdictText(criterion2.verdict, w))
       );
       const p = verdictProbability(criterion2);
-      const pCell = el7("td", "n", p === void 0 ? "\u2013" : fmtP(p));
+      const pCell = el8("td", "n", p === void 0 ? "\u2013" : fmtP(p));
       if (p !== void 0) pCell.dataset.p = fmtP(p);
       tr.append(pCell);
       tr.append(
-        el7(
+        el8(
           "td",
           "mono",
           criterion2.claim === void 0 ? w.t("lines.pf.no-claim") : `${criterion2.reportCapsuleId ?? w.t("lines.pf.not-cited")}${criterion2.reportRecordId === void 0 ? "" : ` (${criterion2.reportRecordId})`}`
         )
       );
-      const rationale = el7("td", "rat");
+      const rationale = el8("td", "rat");
       if (criterion2.rationale !== void 0) {
-        const sealed = el7("code", "sealed", criterion2.rationale);
+        const sealed = el8("code", "sealed", criterion2.rationale);
         sealed.dataset.rationale = "sealed";
         rationale.append(sealed);
-      } else rationale.append(el7("span", "muted", "\u2013"));
+      } else rationale.append(el8("span", "muted", "\u2013"));
       tr.append(rationale);
-      if (criterion2.claim === void 0) tr.append(el7("td", "muted", "\u2013"));
+      if (criterion2.claim === void 0) tr.append(el8("td", "muted", "\u2013"));
       else {
         const [, text2, data] = assuranceRow(criterion2.claim, w);
         const cell2 = element3("td", text2);
@@ -19066,22 +19507,22 @@ ${key}`);
       }
       tbody.append(tr);
     }
-    table2.append(tbody);
-    const scroll = el7("div", "tscroll");
-    scroll.append(table2);
+    table3.append(tbody);
+    const scroll = el8("div", "tscroll");
+    scroll.append(table3);
     box.append(scroll);
     const rationales = conversation.criteria.map((c) => c.rationale).filter((r) => r !== void 0);
     if (rationales.length > 0 && rationales.every((r) => /^jev choice:/u.test(r))) {
-      const derived = el7("p", "", w.t("lines.pf.derived"));
+      const derived = el8("p", "", w.t("lines.pf.derived"));
       derived.dataset.rationaleLabel = "derived";
       box.append(derived);
     } else if (rationales.length > 0) {
-      const shown2 = el7("p", "", w.t("lines.pf.sealed-rationale"));
+      const shown2 = el8("p", "", w.t("lines.pf.sealed-rationale"));
       shown2.dataset.rationaleLabel = "sealed";
       box.append(shown2);
     }
     box.append(
-      el7(
+      el8(
         "p",
         "",
         w.t("lines.pf.recompute", {
@@ -19115,11 +19556,11 @@ ${key}`);
     return pinAbsence(runInfo, w) ?? w.t("lines.pin.not-stated");
   }
   function renderConversationList(conversations, model, runInfo, key, w) {
-    const list2 = el7("div", "convs");
+    const list2 = el8("div", "convs");
     list2.dataset.conversationsFor = key;
     list2.dataset.conversationCount = String(conversations.length);
     if (conversations.length === 0)
-      list2.append(el7("p", "small", w.t("lines.list.empty")));
+      list2.append(el8("p", "small", w.t("lines.list.empty")));
     for (const conversation of conversations)
       list2.append(renderConversation(conversation, model, runInfo, w));
     return list2;
@@ -19171,12 +19612,12 @@ ${key}`);
     })).sort((a, b) => b.conversations.length - a.conversations.length);
   }
   function whyMissed(missed, model, runInfo, w) {
-    const box = el7("div", "why-missed");
+    const box = el8("div", "why-missed");
     box.dataset.section = "why-missed";
     const groups = groupMissedReasons(missed, model.terms, w);
     box.dataset.reasons = String(groups.length);
-    box.append(el7("h5", "", w.t("lines.why-missed.h")));
-    const table2 = element3("table");
+    box.append(el8("h5", "", w.t("lines.why-missed.h")));
+    const table3 = element3("table");
     const tbody = element3("tbody");
     for (const group of groups) {
       const tr = element3("tr");
@@ -19185,15 +19626,15 @@ ${key}`);
       tr.dataset.count = String(group.conversations.length);
       tr.append(
         element3("td", group.label),
-        el7("td", "n", fmtCount(group.conversations.length))
+        el8("td", "n", fmtCount(group.conversations.length))
       );
       tbody.append(tr);
     }
-    table2.append(tbody);
-    box.append(table2);
+    table3.append(tbody);
+    box.append(table3);
     const anyStructured = groups.some((g) => g.structured);
     box.append(
-      el7(
+      el8(
         "p",
         "small",
         w.t(
@@ -19202,7 +19643,7 @@ ${key}`);
       )
     );
     for (const group of groups) {
-      const head2 = el7(
+      const head2 = el8(
         "div",
         "rsn-h",
         w.t("lines.why-missed.reason", {
@@ -19267,20 +19708,20 @@ ${key}`);
     return parts.join(" ");
   }
   function renderMeta(host, model, w, notes) {
-    const section = el7("section", "");
+    const section = el8("section", "");
     section.dataset.section = "meta";
-    const row1 = el7("div", "ih-row");
-    const bill = el7("div", "party");
-    bill.append(el7("div", "k", w.t("lines.meta.pack")));
-    bill.append(el7("div", "v", packLine(model, w)));
+    const row1 = el8("div", "ih-row");
+    const bill = el8("div", "party");
+    bill.append(el8("div", "k", w.t("lines.meta.pack")));
+    bill.append(el8("div", "v", packLine(model, w)));
     row1.append(bill);
-    const title = el7("div", "ih-title");
-    title.append(el7("h1", "inv-title", w.t("lines.title")));
+    const title = el8("div", "ih-title");
+    title.append(el8("h1", "inv-title", w.t("lines.title")));
     const summary = reportSummary(w);
     if (summary !== void 0) title.append(summary);
     if (model.terms.pack.locked !== NOT_STATED)
       title.append(
-        el7(
+        el8(
           "div",
           "inv-sub",
           w.t("lines.meta.locked", { locked: model.terms.pack.locked })
@@ -19288,8 +19729,8 @@ ${key}`);
       );
     row1.append(title);
     section.append(row1);
-    const row2 = el7("div", "ih-row");
-    const details = el7("div", "meta");
+    const row2 = el8("div", "ih-row");
+    const details = el8("div", "meta");
     const first = model.days[0]?.date;
     const last = model.days[model.days.length - 1]?.date;
     const metaRow = (label, value) => {
@@ -19307,11 +19748,11 @@ ${key}`);
       details.lastElementChild.setAttribute("data-sealed", "");
     }
     metaRow(w.t("lines.meta.conversations"), fmtCount(model.totalCount));
-    const checked = el7("div", "party");
+    const checked = el8("div", "party");
     const rules = model.terms.checks.reduce((n, c) => n + c.criteria.length, 0);
-    checked.append(el7("div", "k", w.t("lines.meta.what-checked")));
+    checked.append(el8("div", "k", w.t("lines.meta.what-checked")));
     const groups = model.terms.checks.length;
-    const what = el7(
+    const what = el8(
       "div",
       "d",
       w.t("lines.meta.what-checked.text", {
@@ -19325,29 +19766,29 @@ ${key}`);
     row2.append(checked, details);
     section.append(row2);
     if (note !== void 0) {
-      const label = el7("p", "date-note", note);
+      const label = el8("p", "date-note", note);
       label.dataset.dateNote = model.dating.basis;
       notes.append(label);
     }
     host.append(section);
   }
   function renderLines(host, model, runInfo, w, notes) {
-    const section = el7("section", "");
+    const section = el8("section", "");
     section.dataset.section = "lines";
-    const table2 = document.createElement("table");
-    table2.className = "lines";
-    table2.dataset.rows = "report-lines";
-    const headline = el7("p", "headline");
+    const table3 = document.createElement("table");
+    table3.className = "lines";
+    table3.dataset.rows = "report-lines";
+    const headline = el8("p", "headline");
     headline.dataset.headline = "lines";
     section.append(headline);
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
     headRow.append(
       element3("th", w.t("lines.col.result")),
-      el7("th", "n", w.t("lines.lines.col.conversations"))
+      el8("th", "n", w.t("lines.lines.col.conversations"))
     );
     thead.append(headRow);
-    table2.append(thead);
+    table3.append(thead);
     const tbody = document.createElement("tbody");
     const byStatus = (status2) => model.conversations.filter((c) => conversationStatus(c) === status2);
     const resolved = byStatus("resolved");
@@ -19415,9 +19856,9 @@ ${key}`);
       const tr = document.createElement("tr");
       tr.dataset.line = line2.key;
       tr.dataset.count = String(line2.count);
-      const desc = el7("td", "desc");
-      desc.append(el7("b", "", line2.label));
-      desc.append(el7("small", "", line2.help));
+      const desc = el8("td", "desc");
+      desc.append(el8("b", "", line2.label));
+      desc.append(el8("small", "", line2.help));
       if (line2.behind !== void 0 && line2.behind.length > 0) {
         const label = w.p("lines.drill.show", line2.behind.length, {
           n: fmtCount(line2.behind.length)
@@ -19427,12 +19868,12 @@ ${key}`);
           line2.key === "missed" ? drill(label, () => whyMissed(behind, model, runInfo, w), line2.key) : conversationsDrill(label, behind, model, runInfo, line2.key, w)
         );
       }
-      tr.append(desc, el7("td", "n", line2.shown));
+      tr.append(desc, el8("td", "n", line2.shown));
       tbody.append(tr);
     }
-    table2.append(tbody);
-    section.append(table2);
-    const na = el7(
+    table3.append(tbody);
+    section.append(table3);
+    const na = el8(
       "p",
       "na-note",
       w.p("lines.na-note", model.notApplicableCount, {
@@ -19443,7 +19884,7 @@ ${key}`);
     na.dataset.count = String(model.notApplicableCount);
     notes.append(na);
     if (model.outOfScopeCount > 0) {
-      const oos = el7(
+      const oos = el8(
         "p",
         "na-note",
         w.p("lines.oos-note", model.outOfScopeCount, {
@@ -19457,12 +19898,12 @@ ${key}`);
     host.append(section);
   }
   function renderRules(host, model, runInfo, result, w) {
-    const section = el7("section", "sec");
+    const section = el8("section", "sec");
     section.dataset.section = "rules";
-    section.append(el7("h2", "", w.t("lines.rules.h")));
-    section.append(el7("p", "lede", w.t("lines.rules.lede")));
-    const table2 = el7("table", "rules");
-    table2.dataset.rows = "rules";
+    section.append(el8("h2", "", w.t("lines.rules.h")));
+    section.append(el8("p", "lede", w.t("lines.rules.lede")));
+    const table3 = el8("table", "rules");
+    table3.dataset.rows = "rules";
     const thead = element3("thead");
     const headRow = element3("tr");
     const columnWord = {
@@ -19474,25 +19915,25 @@ ${key}`);
     };
     headRow.append(
       element3("th", w.t("lines.col.rule")),
-      el7("th", "n", columnWord.not_met),
-      el7("th", "n", columnWord.met),
-      el7("th", "n", columnWord.undecided)
+      el8("th", "n", columnWord.not_met),
+      el8("th", "n", columnWord.met),
+      el8("th", "n", columnWord.undecided)
     );
     const anyUnverified = model.conversations.some(
       (c) => c.criteria.some((cr) => isUnverified(cr.verdict))
     );
-    if (anyUnverified) headRow.append(el7("th", "n", columnWord.unverified));
+    if (anyUnverified) headRow.append(el8("th", "n", columnWord.unverified));
     const anyOutOfScope = model.outOfScopeCount > 0;
-    if (anyOutOfScope) headRow.append(el7("th", "n", columnWord.out_of_scope));
+    if (anyOutOfScope) headRow.append(el8("th", "n", columnWord.out_of_scope));
     const columns = String(4 + (anyUnverified ? 1 : 0) + (anyOutOfScope ? 1 : 0));
     thead.append(headRow);
-    table2.append(thead);
+    table3.append(thead);
     const tbody = element3("tbody");
     for (const check of model.terms.checks) {
-      const group = el7("tr", "grp");
+      const group = el8("tr", "grp");
       group.dataset.checkId = check.id;
       group.dataset.passCount = String(model.checkPassCounts.get(check.id) ?? 0);
-      const cell2 = el7("td", "", groupTitle(check, w));
+      const cell2 = el8("td", "", groupTitle(check, w));
       cell2.setAttribute("colspan", columns);
       group.append(cell2);
       tbody.append(group);
@@ -19518,9 +19959,9 @@ ${key}`);
         const undecided = of(picks.undecided);
         const countCell = (className, column, counted) => {
           const pick = picks[column];
-          const cell4 = el7("td", className);
+          const cell4 = el8("td", className);
           cell4.dataset.column = column;
-          cell4.append(el7("span", "nv", fmtCount(counted.length)));
+          cell4.append(el8("span", "nv", fmtCount(counted.length)));
           const action = evidenceAction(
             `rule:${ref}:${column}`,
             `${label.label} \xB7 ${columnWord[column]}: ${fmtCount(counted.length)}`,
@@ -19535,26 +19976,26 @@ ${key}`);
           if (action !== void 0) cell4.append(action);
           return cell4;
         };
-        const tr = el7("tr", "rule");
+        const tr = el8("tr", "rule");
         tr.dataset.rule = ref;
         tr.dataset.tier = model.criterionTiers.get(ref) ?? "unknown";
         const label = criterionLabel(model, check.id, criterion2.id, w);
-        const nameCell = el7("td", "cn");
-        const ruleName = el7("b", "", label.label);
+        const nameCell = el8("td", "cn");
+        const ruleName = el8("b", "", label.label);
         nameCell.append(ruleName);
         const badge = editedBadge(model, ref, w);
         if (badge !== void 0) nameCell.append(badge);
         if (label.source === "sealed")
-          nameCell.append(el7("small", "", label.text));
+          nameCell.append(el8("small", "", label.text));
         const detail = w.row(ref, "detail");
         if (detail !== void 0) {
-          const line = el7("small", "rdet", detail);
+          const line = el8("small", "rdet", detail);
           line.dataset.wording = "pack";
           nameCell.append(line);
         }
         const undecidedNote = w.row(ref, "not_evaluable");
         if (undecidedNote !== void 0 && undecided.length > 0) {
-          const line = el7("small", "rdet", undecidedNote);
+          const line = el8("small", "rdet", undecidedNote);
           line.dataset.wording = "pack";
           line.dataset.note = "not-evaluable";
           nameCell.append(line);
@@ -19578,13 +20019,13 @@ ${key}`);
           tr.append(countCell("n", "out_of_scope", outOfScopeHere));
         tbody.append(tr);
         if (problems.length === 0 && na.length === 0) continue;
-        const drillRow = el7("tr", "drill-row");
+        const drillRow = el8("tr", "drill-row");
         drillRow.dataset.drillFor = ref;
         const cell3 = element3("td");
         cell3.setAttribute("colspan", columns);
         drillRow.append(cell3);
         if (na.length > 0) {
-          const naLine = el7(
+          const naLine = el8(
             "p",
             "rule-na",
             w.p("lines.rules.expand.na", na.length, {
@@ -19606,56 +20047,56 @@ ${key}`);
       }
     }
     if (model.notRun.length > 0) {
-      const group = el7("tr", "grp");
+      const group = el8("tr", "grp");
       group.dataset.group = "not-run";
-      const heading = el7("td", "", w.t("lines.rules.not-run.h"));
+      const heading = el8("td", "", w.t("lines.rules.not-run.h"));
       heading.setAttribute("colspan", columns);
       group.append(heading);
       tbody.append(group);
       for (const ref of model.notRun) {
         const [checkId = "", ...rest] = ref.split(".");
         const label = criterionLabel(model, checkId, rest.join("."), w);
-        const tr = el7("tr", "rule not-run");
+        const tr = el8("tr", "rule not-run");
         tr.dataset.rule = ref;
         tr.dataset.notRun = "true";
-        const nameCell = el7("td", "cn");
-        nameCell.append(el7("b", "", label.label));
-        const status2 = el7("td", "nr", w.t("lines.rules.not-run"));
+        const nameCell = el8("td", "cn");
+        nameCell.append(el8("b", "", label.label));
+        const status2 = el8("td", "nr", w.t("lines.rules.not-run"));
         status2.setAttribute("colspan", String(Number(columns) - 1));
         tr.append(nameCell, status2);
         tbody.append(tr);
       }
     }
-    table2.append(tbody);
-    const scroll = el7("div", "tscroll");
-    scroll.append(table2);
+    table3.append(tbody);
+    const scroll = el8("div", "tscroll");
+    scroll.append(table3);
     section.append(scroll);
     host.append(section);
   }
   function renderCalendar2(host, model, w) {
-    const section = el7("section", "sec");
+    const section = el8("section", "sec");
     section.dataset.section = "calendar";
-    section.append(el7("h2", "", w.t("lines.cal.h")));
+    section.append(el8("h2", "", w.t("lines.cal.h")));
     const note = datingNote(model, w);
     section.append(
-      el7(
+      el8(
         "p",
         "lede",
         w.t(note === void 0 ? "lines.cal.lede" : "lines.cal.lede.dated")
       )
     );
-    const list2 = el7("div", "cal");
+    const list2 = el8("div", "cal");
     list2.dataset.days = String(model.days.length);
     for (const day of model.days) {
-      const item = el7("div", "day");
+      const item = el8("div", "day");
       item.dataset.day = day.date;
       item.dataset.resolved = String(day.resolvedCount);
       item.dataset.total = String(day.conversations.length);
-      item.append(el7("div", "dn", day.date));
+      item.append(el8("div", "dn", day.date));
       if (note !== void 0) {
         const bases = new Set(day.conversations.map((c) => c.dated.basis));
         if (bases.has("source")) {
-          const chip = el7("div", "src-says", w.t("lines.cal.source-says"));
+          const chip = el8("div", "src-says", w.t("lines.cal.source-says"));
           chip.dataset.sourceSays = String(
             day.conversations.filter((c) => c.dated.basis === "source").length
           );
@@ -19665,13 +20106,13 @@ ${key}`);
           (c) => c.dated.zone === "not-stated"
         ).length;
         if (notStated > 0) {
-          const tz = el7("div", "tz", w.t("lines.cal.tz"));
+          const tz = el8("div", "tz", w.t("lines.cal.tz"));
           tz.dataset.tzMarker = "not-stated";
           item.append(tz);
         }
       }
       item.append(
-        el7(
+        el8(
           "div",
           "v",
           fmtShare(
@@ -19682,14 +20123,14 @@ ${key}`);
           )
         )
       );
-      const mini = el7("div", "mini");
+      const mini = el8("div", "mini");
       const share = day.conversations.length === 0 ? 0 : day.resolvedCount / day.conversations.length;
       const fill2 = element3("i");
       fill2.style.width = `${Math.round(share * 100)}%`;
       mini.append(fill2);
       item.append(mini);
       if (note !== void 0) {
-        const sealed = el7(
+        const sealed = el8(
           "div",
           "sealed",
           w.t("lines.cal.sealed", { span: span(day.judgedDays, w) })
@@ -19698,7 +20139,7 @@ ${key}`);
         item.append(sealed);
       }
       if (day.policyChanged !== null) {
-        const flag = el7("div", "flag", w.t("lines.cal.policy-changed"));
+        const flag = el8("div", "flag", w.t("lines.cal.policy-changed"));
         flag.dataset.policyChanged = day.policyChanged;
         item.append(flag);
       }
@@ -19708,37 +20149,37 @@ ${key}`);
     host.append(section);
   }
   function renderHumanChecks(host, calibration, w) {
-    const section = el7("section", "sec");
+    const section = el8("section", "sec");
     section.dataset.section = "human-checks";
-    section.append(el7("h2", "", w.t("lines.hc.h")));
-    section.append(el7("p", "lede", w.t("lines.hc.lede")));
+    section.append(el8("h2", "", w.t("lines.hc.h")));
+    section.append(el8("p", "lede", w.t("lines.hc.lede")));
     if (calibration.length === 0) {
-      section.append(el7("p", "", w.t("lines.hc.none")));
+      section.append(el8("p", "", w.t("lines.hc.none")));
       host.append(section);
       return;
     }
-    const table2 = document.createElement("table");
-    table2.className = "hct";
-    table2.dataset.weeks = String(calibration.length);
+    const table3 = document.createElement("table");
+    table3.className = "hct";
+    table3.dataset.weeks = String(calibration.length);
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
     headRow.append(
       element3("th", w.t("lines.hc.col.week")),
-      el7("th", "n", w.t("lines.hc.col.agreed")),
-      el7("th", "n", w.t("lines.hc.col.held")),
-      el7("th", "n", w.t("lines.hc.col.added"))
+      el8("th", "n", w.t("lines.hc.col.agreed")),
+      el8("th", "n", w.t("lines.hc.col.held")),
+      el8("th", "n", w.t("lines.hc.col.added"))
     );
     thead.append(headRow);
-    table2.append(thead);
+    table3.append(thead);
     const tbody = document.createElement("tbody");
     for (const week of calibration) {
       const tr = document.createElement("tr");
       tr.dataset.week = week.weekId;
       tr.dataset.k = String(week.k);
       tr.dataset.n = String(week.n);
-      tr.append(el7("td", "", week.weekId));
+      tr.append(el8("td", "", week.weekId));
       tr.append(
-        el7(
+        el8(
           "td",
           "n",
           w.t("lines.hc.agreed", { k: String(week.k), n: String(week.n) })
@@ -19750,22 +20191,22 @@ ${key}`);
       const added = week.sample.filter(
         (s) => s.aiVerdict !== "met" && s.humanVerdict === "met"
       ).length;
-      const heldCell = el7("td", "n", String(held));
+      const heldCell = el8("td", "n", String(held));
       heldCell.dataset.held = String(held);
-      const addedCell = el7("td", "n", String(added));
+      const addedCell = el8("td", "n", String(added));
       addedCell.dataset.added = String(added);
       tr.append(heldCell, addedCell);
       tbody.append(tr);
     }
-    table2.append(tbody);
-    section.append(table2);
+    table3.append(tbody);
+    section.append(table3);
     host.append(section);
   }
   function renderTerms(host, model, w) {
-    const section = el7("div", "rp-s");
+    const section = el8("div", "rp-s");
     section.dataset.section = "terms";
-    section.append(el7("h3", "", w.t("lines.terms.h")));
-    const lede = el7(
+    section.append(el8("h3", "", w.t("lines.terms.h")));
+    const lede = el8(
       "p",
       "lede",
       model.terms.pack.agreement === NOT_STATED ? w.t("lines.terms.lede") : w.t("lines.terms.lede.agreed", {
@@ -19774,10 +20215,10 @@ ${key}`);
     );
     lede.dataset.termsSource = "bundle";
     section.append(lede);
-    const pack = el7("div", "pack");
+    const pack = el8("div", "pack");
     const packField = (label, value) => {
-      const box = el7("div", "pk");
-      box.append(el7("div", "k", label), el7("div", "v", value));
+      const box = el8("div", "pk");
+      box.append(el8("div", "k", label), el8("div", "v", value));
       pack.append(box);
     };
     packField(w.t("lines.meta.pack"), model.terms.pack.id);
@@ -19790,28 +20231,28 @@ ${key}`);
     if (model.terms.pack.locked !== NOT_STATED)
       packField(w.t("lines.terms.locked"), model.terms.pack.locked);
     section.append(pack);
-    const outcome = el7("div", "outcome");
-    const outcomeIcon = el7("div", "oic");
+    const outcome = el8("div", "outcome");
+    const outcomeIcon = el8("div", "oic");
     const target = icon("target");
     if (target !== void 0) outcomeIcon.append(target);
     outcome.append(outcomeIcon);
     const outcomeBody = element3("div");
-    outcomeBody.append(el7("div", "t", w.t("lines.terms.outcome")));
-    outcomeBody.append(el7("div", "v", model.terms.pack.outcomeStatement));
+    outcomeBody.append(el8("div", "t", w.t("lines.terms.outcome")));
+    outcomeBody.append(el8("div", "v", model.terms.pack.outcomeStatement));
     outcome.append(outcomeBody);
     section.append(outcome);
-    const checks = el7("div", "checks");
+    const checks = el8("div", "checks");
     checks.dataset.checks = String(model.terms.checks.length);
     for (const check of model.terms.checks) {
-      const card = el7("section", "check");
-      card.dataset.checkId = check.id;
-      const checkIcon = el7("div", "ic");
+      const card2 = el8("section", "check");
+      card2.dataset.checkId = check.id;
+      const checkIcon = el8("div", "ic");
       const drawn = icon(check.icon);
       if (drawn !== void 0) checkIcon.append(drawn);
-      card.append(checkIcon);
-      card.append(el7("div", "q", groupTitle(check, w)));
-      card.append(el7("div", "d", check.description));
-      const criteria = el7("ul", "subs");
+      card2.append(checkIcon);
+      card2.append(el8("div", "q", groupTitle(check, w)));
+      card2.append(el8("div", "d", check.description));
+      const criteria = el8("ul", "subs");
       for (const criterion2 of check.criteria) {
         const ref = `${check.id}.${criterion2.id}`;
         const tier = model.criterionTiers.get(ref) ?? "unknown";
@@ -19823,7 +20264,7 @@ ${key}`);
           source: "unstated"
         };
         item.dataset.wording = wording.source;
-        const label = el7("b", "", w.row(ref, "label") ?? criterion2.label);
+        const label = el8("b", "", w.row(ref, "label") ?? criterion2.label);
         const termsBadge = editedBadge(model, ref, w);
         if (termsBadge !== void 0) label.append(termsBadge);
         item.append(label);
@@ -19837,32 +20278,32 @@ ${key}`);
           )
         );
         if (wording.source !== "sealed")
-          item.append(el7("small", "wsrc", wordingFallback(wording.source, w)));
+          item.append(el8("small", "wsrc", wordingFallback(wording.source, w)));
         criteria.append(item);
       }
-      card.append(criteria);
-      checks.append(card);
+      card2.append(criteria);
+      checks.append(card2);
     }
     section.append(checks);
-    const note = el7("p", "small", wordingNote(model, w));
+    const note = el8("p", "small", wordingNote(model, w));
     note.dataset.wordingNote = "true";
     section.append(note);
-    section.append(el7("div", "rule", model.terms.pack.resolutionRule));
+    section.append(el8("div", "rule", model.terms.pack.resolutionRule));
     host.append(section);
   }
   function renderWhatRan(host, runInfo, w) {
-    const section = el7("div", "rp-s");
+    const section = el8("div", "rp-s");
     section.dataset.section = "what-ran";
-    section.append(el7("h3", "", w.t("lines.ran.h")));
-    const ran = el7("div", "ran");
+    section.append(el8("h3", "", w.t("lines.ran.h")));
+    const ran = el8("div", "ran");
     ran.dataset.pinned = String(runInfo.pinned);
     if (runInfo.judgePinRecomputes !== void 0)
       ran.dataset.pinRecomputes = String(runInfo.judgePinRecomputes);
     const box = (label, value, key) => {
-      const item = el7("div", "it");
+      const item = el8("div", "it");
       item.dataset.ran = key;
-      item.append(el7("div", "k", label));
-      item.append(el7("div", "v", value));
+      item.append(el8("div", "k", label));
+      item.append(el8("div", "v", value));
       ran.append(item);
     };
     const pin = runInfo.judgePinRecomputes === true ? runInfo.judgePin : void 0;
@@ -19893,32 +20334,32 @@ ${key}`);
     box(w.t("lines.ran.agent"), w.t("lines.ran.agent.value"), "agent");
     section.append(ran);
     if (runInfo.judgePinRecomputes === false) {
-      const warning = el7("p", "", w.t("lines.ran.components-mismatch"));
+      const warning = el8("p", "", w.t("lines.ran.components-mismatch"));
       warning.dataset.pinComponentsMismatch = "true";
       section.append(warning);
     }
-    const lock = el7("div", "lock", w.t("lines.ran.lock"));
+    const lock = el8("div", "lock", w.t("lines.ran.lock"));
     section.append(lock);
     if (!runInfo.pinned) {
-      const warning = el7("p", "", w.t("lines.ran.pin-mismatch"));
+      const warning = el8("p", "", w.t("lines.ran.pin-mismatch"));
       warning.dataset.pinMismatch = "true";
       section.append(warning);
     }
     host.append(section);
   }
   function renderVerificationDetails(host, bundle, verified, w) {
-    const section = el7("div", "rp-s");
+    const section = el8("div", "rp-s");
     section.dataset.section = "verification-details";
-    section.append(el7("h3", "", w.t("card.vd.h")));
-    section.append(el7("p", "lede", w.t("lines.vd.lede")));
+    section.append(el8("h3", "", w.t("card.vd.h")));
+    section.append(el8("p", "lede", w.t("lines.vd.lede")));
     const model = buildVerificationPageModel(bundle, verified);
-    const tech = el7("div", "tech");
+    const tech = el8("div", "tech");
     const field = (label, value) => {
-      tech.append(el7("div", "k", label), el7("div", "v", value));
+      tech.append(el8("div", "k", label), el8("div", "v", value));
     };
     for (const [label, value] of verificationRows(model, w)) field(label, value);
     section.append(tech);
-    const note = el7("p", "note", w.t("lines.vd.note"));
+    const note = el8("p", "note", w.t("lines.vd.note"));
     note.dataset.checkpointKind = "mmr";
     section.append(note);
     host.append(section);
@@ -19960,13 +20401,13 @@ ${key}`);
     ];
   }
   function renderReportProofs(host, model, runInfo, bundle, verified, w) {
-    const section = el7("section", "sec rp");
+    const section = el8("section", "sec rp");
     section.dataset.section = "report-proofs";
     const toggle = levelToggle(
       2,
       w.t("lines.rp.toggle"),
       () => {
-        const box = el7("div", "pf-b");
+        const box = el8("div", "pf-b");
         const ids = proofList([
           [w.t("card.pf.result-capsule"), model.capsuleId],
           [w.t("lines.meta.pack"), packLine(model, w)],
@@ -19977,7 +20418,7 @@ ${key}`);
         renderTerms(box, model, w);
         renderWhatRan(box, runInfo, w);
         renderVerificationDetails(box, bundle, verified, w);
-        const tamper = el7("p", "tamper-note", w.t("lines.rp.tamper"));
+        const tamper = el8("p", "tamper-note", w.t("lines.rp.tamper"));
         tamper.dataset.tamperNote = "verify-first";
         box.append(tamper);
         return box;
@@ -19986,6 +20427,52 @@ ${key}`);
     );
     section.append(toggle);
     host.append(section);
+  }
+  async function resultDocument3(result, bundle) {
+    try {
+      const context = await verifiedBundleContext(bundle);
+      const member = disclosureOf(context, result.capsuleId, result.member);
+      if (member.state !== "disclosed") return void 0;
+      const payload = member.payload;
+      return result.form === "book" && payload !== null && typeof payload === "object" ? payload.statement : payload;
+    } catch {
+      return void 0;
+    }
+  }
+  function subjectConversations(model, w) {
+    return model.conversations.map((c) => {
+      const status2 = conversationStatus(c);
+      const outcome = statusWord(status2, c, w);
+      const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
+      const turns = c.transcript.state === "verified" || c.transcript.state === "cited" ? c.transcript.turns : void 0;
+      return {
+        id: c.conversationId,
+        date: c.day,
+        ...time === void 0 ? {} : { time },
+        status: status2,
+        outcome,
+        terms: c.criteria.map((cr) => ({
+          ref: `${cr.checkId}.${cr.criterionId}`,
+          label: criterionLabel(model, cr.checkId, cr.criterionId, w).label,
+          tone: criterionWord(cr, w).tone
+        })),
+        open: c.criteria.filter((cr) => cr.verdict !== "met" && cr.verdict !== "not_applicable").map((cr) => {
+          const label = criterionLabel(model, cr.checkId, cr.criterionId, w);
+          const worded = criterionWord(cr, w);
+          return {
+            label: label.label,
+            wording: label.source === "sealed" ? label.text : "",
+            verdict: worded.word,
+            tone: worded.tone,
+            note: cr.rationale === void 0 ? noNoteText(cr, w) : judgeNote(cr.rationale, cr.claim?.verdict ?? cr.verdict, w)
+          };
+        }),
+        ...turns === void 0 ? {} : {
+          turns: turns.length,
+          calls: turns.reduce((n, t) => n + t.toolCalls.length, 0)
+        }
+      };
+    });
   }
   var LINES_FRAME = {
     tag: "section",
@@ -20000,15 +20487,25 @@ ${key}`);
       (c) => c.criteria.flatMap((cr) => cr.claim === void 0 ? [] : [cr.claim])
     );
     levels.L0.append(renderLegend(w));
-    const sheet = el7("div", "sheet");
-    const pad = el7("div", "pad");
-    const notes = el7("aside", "footnotes");
+    const sheet = el8("div", "sheet");
+    const pad = el8("div", "pad");
+    const notes = el8("aside", "footnotes");
     notes.dataset.section = "footnotes";
     renderMeta(pad, model, w, notes);
     renderLines(pad, model, runInfo, w, notes);
     if (notes.childElementCount > 0) pad.append(notes);
     sheet.append(pad);
     levels.L0.append(sheet);
+    const slice2 = readSubjectHistory(await resultDocument3(result, bundle));
+    if (slice2 !== void 0) {
+      const subject = renderSubjectHistory(
+        subjectConversations(model, w),
+        slice2,
+        model.totalCount,
+        w
+      );
+      if (subject !== void 0) levels.L0.append(subject);
+    }
     renderRules(levels.L1, model, runInfo, result, w);
     leadWithProvenance(
       levels.L1,
@@ -20030,7 +20527,7 @@ ${key}`);
     if (text2 !== void 0) value.textContent = text2;
     return value;
   }
-  function el8(tag, className, text2) {
+  function el9(tag, className, text2) {
     const value = element4(tag, text2);
     value.className = className;
     return value;
@@ -20043,13 +20540,13 @@ ${key}`);
     return value;
   }
   function maybeProducer(w, tag, className, text2, producer) {
-    if (!producer) return el8(tag, className, text2);
-    const value = el8(tag, className);
+    if (!producer) return el9(tag, className, text2);
+    const value = el9(tag, className);
     value.append(producerText(w, text2));
     return value;
   }
-  var fmt3 = (n) => n.toLocaleString();
-  var count = (w, noun, n) => w.p(`groups.count.${noun}`, n, { n: fmt3(n) });
+  var fmt4 = (n) => n.toLocaleString();
+  var count = (w, noun, n) => w.p(`groups.count.${noun}`, n, { n: fmt4(n) });
   var SEVERITY_CLASS = {
     High: "high",
     Medium: "medium",
@@ -20057,13 +20554,13 @@ ${key}`);
   };
   function severityPill(severity, w) {
     const cls = Object.hasOwn(SEVERITY_CLASS, severity) ? SEVERITY_CLASS[severity] : void 0;
-    const pill = el8("span", cls === void 0 ? "sev" : `sev ${cls}`);
+    const pill = el9("span", cls === void 0 ? "sev" : `sev ${cls}`);
     pill.append(producerText(w, severity));
     return pill;
   }
   function tierBadge(tier, w) {
     const key = tier === "judged" || tier === "recomputed" || tier === "mixed" ? tier : "unstated";
-    const badge = el8(
+    const badge = el9(
       "span",
       `kind ${tier === "judged" || tier === "recomputed" ? tier : "unstated"}`,
       w.t(`groups.tier.${key}`)
@@ -20073,10 +20570,10 @@ ${key}`);
     return badge;
   }
   function statusPill(statusClass, text2) {
-    return el8("span", `st ${statusClass}`, text2);
+    return el9("span", `st ${statusClass}`, text2);
   }
   function packWord(tag, className, text2) {
-    const value = el8(tag, className, text2);
+    const value = el9(tag, className, text2);
     value.dataset.wording = "pack";
     return value;
   }
@@ -20127,17 +20624,17 @@ ${key}`);
     const by = (status2) => model.sessions.filter((s) => sessionStatus(s) === status2).length;
     const parts = [
       w.p("groups.headline", model.totalSessions, {
-        met: fmt3(by("met")),
-        n: fmt3(model.totalSessions)
+        met: fmt4(by("met")),
+        n: fmt4(model.totalSessions)
       }),
-      w.t("groups.headline.missed", { n: fmt3(by("missed")) })
+      w.t("groups.headline.missed", { n: fmt4(by("missed")) })
     ];
     for (const [status2, key] of [
       ["unverified", "groups.headline.unverified"],
       ["undecided", "groups.headline.undecided"],
       ["nothing-applied", "groups.headline.nothing-applied"]
     ])
-      if (by(status2) > 0) parts.push(w.t(key, { n: fmt3(by(status2)) }));
+      if (by(status2) > 0) parts.push(w.t(key, { n: fmt4(by(status2)) }));
     return parts.join(" ");
   }
   function obligationWorst(obligation, totalSessions, w) {
@@ -20158,7 +20655,7 @@ ${key}`);
       return {
         kind,
         text: w.t(key, {
-          n: fmt3(countOf2(row2)),
+          n: fmt4(countOf2(row2)),
           sessions: count(w, "session", population(row2, totalSessions))
         })
       };
@@ -20167,9 +20664,9 @@ ${key}`);
     return { kind: "clean", text: w.t("groups.ob.worst.clean") };
   }
   function renderHeader(host, model, w) {
-    const hd = el8("div", "hd");
+    const hd = el9("div", "hd");
     hd.dataset.section = "header";
-    hd.append(el8("h1", "", w.t("groups.kicker")));
+    hd.append(el9("h1", "", w.t("groups.kicker")));
     const summary = reportSummary(w);
     if (summary !== void 0) hd.append(summary);
     const pack = model.pack.id === NOT_STATED ? w.t("groups.pack.not-stated") : w.t("groups.pack", { id: model.pack.id, version: model.pack.version });
@@ -20180,7 +20677,7 @@ ${key}`);
       sessions: count(w, "session", model.totalSessions)
     };
     hd.append(
-      el8(
+      el9(
         "div",
         "sub",
         period === void 0 ? w.t("groups.sub", vars) : w.t(
@@ -20191,7 +20688,7 @@ ${key}`);
     );
     const sentence = headlineSentence(model, w);
     if (sentence !== "") {
-      const headline = el8("p", "sub headline", sentence);
+      const headline = el9("p", "sub headline", sentence);
       headline.dataset.headline = "groups";
       hd.append(headline);
     }
@@ -20221,7 +20718,7 @@ ${key}`);
     );
     const total = inForce.length;
     const uncheckedText = unchecked > 0 ? w.t("groups.ob.unchecked-of", {
-      unchecked: fmt3(unchecked),
+      unchecked: fmt4(unchecked),
       total: count(w, "test", total)
     }) : "";
     if (exceptions > 0)
@@ -20247,15 +20744,15 @@ ${key}`);
       return {
         cls: "na",
         text: w.t("groups.row.later"),
-        note: w.t("groups.row.later-note", { n: fmt3(row2.notYetInForceCount) })
+        note: w.t("groups.row.later-note", { n: fmt4(row2.notYetInForceCount) })
       };
     if (nothingChecked(row2))
       return { cls: "ne", text: w.t("groups.row.nothing") };
     if (noneDecided(row2)) {
       const packNotEvaluable = row2.notEvaluableCount > 0 ? w.row(row2.criterionId, "not_evaluable") : void 0;
       const moduleNotes = [
-        ...row2.unverifiedCount > 0 ? [w.t("groups.row.unverified-note", { n: fmt3(row2.unverifiedCount) })] : [],
-        ...row2.notYetInForceCount > 0 ? [w.t("groups.row.later-note", { n: fmt3(row2.notYetInForceCount) })] : []
+        ...row2.unverifiedCount > 0 ? [w.t("groups.row.unverified-note", { n: fmt4(row2.unverifiedCount) })] : [],
+        ...row2.notYetInForceCount > 0 ? [w.t("groups.row.later-note", { n: fmt4(row2.notYetInForceCount) })] : []
       ];
       if (packNotEvaluable !== void 0)
         return {
@@ -20277,17 +20774,17 @@ ${key}`);
       };
     }
     const notes = [
-      ...row2.notEvaluableCount > 0 ? [w.t("groups.row.undecided-note", { n: fmt3(row2.notEvaluableCount) })] : [],
-      ...row2.unverifiedCount > 0 ? [w.t("groups.row.unverified-note", { n: fmt3(row2.unverifiedCount) })] : [],
-      ...row2.outOfScopeCount > 0 ? [w.t("groups.row.out-of-scope-note", { n: fmt3(row2.outOfScopeCount) })] : [],
-      ...row2.notYetInForceCount > 0 ? [w.t("groups.row.later-note", { n: fmt3(row2.notYetInForceCount) })] : []
+      ...row2.notEvaluableCount > 0 ? [w.t("groups.row.undecided-note", { n: fmt4(row2.notEvaluableCount) })] : [],
+      ...row2.unverifiedCount > 0 ? [w.t("groups.row.unverified-note", { n: fmt4(row2.unverifiedCount) })] : [],
+      ...row2.outOfScopeCount > 0 ? [w.t("groups.row.out-of-scope-note", { n: fmt4(row2.outOfScopeCount) })] : [],
+      ...row2.notYetInForceCount > 0 ? [w.t("groups.row.later-note", { n: fmt4(row2.notYetInForceCount) })] : []
     ];
     const undecided = notes.length > 0 ? { note: notes.join("; ") } : {};
     if (row2.notMetCount > 0)
       return {
         cls: "exc",
         text: w.p("groups.row.exceptions", row2.notMetCount, {
-          n: fmt3(row2.notMetCount)
+          n: fmt4(row2.notMetCount)
         }),
         ...undecided
       };
@@ -20329,7 +20826,7 @@ ${key}`);
       const ids = row2.sessionsByVerdict.get(bucket) ?? [];
       const action = evidenceAction(
         `test:${row2.criterionId}:${bucket}`,
-        `${row2.name} \xB7 ${word}: ${fmt3(ids.length)}`,
+        `${row2.name} \xB7 ${word}: ${fmt4(ids.length)}`,
         ids.map((id) => claimOf(model, id, row2.criterionId)),
         result,
         w,
@@ -20350,14 +20847,14 @@ ${key}`);
     return model.sessions.filter((s) => !outside.has(s.conversationId)).map((s) => s.tests.find((t) => t.criterionId === row2.criterionId)?.claim);
   }
   function renderSummary(host, model, presentation, result, w) {
-    const section = el8("section", "");
+    const section = el9("section", "");
     section.dataset.section = "summary";
     const regulation = maybeProducer(w, "p", "kicker", model.regulation, true);
     regulation.dataset.regulation = "";
-    section.append(regulation, el8("h2", "", w.t("groups.summary.h")));
+    section.append(regulation, el9("h2", "", w.t("groups.summary.h")));
     const tests = model.obligations.reduce((n, o) => n + o.rows.length, 0);
     section.append(
-      el8(
+      el9(
         "p",
         "lede",
         w.t("groups.summary.lede", {
@@ -20366,41 +20863,41 @@ ${key}`);
         })
       )
     );
-    const table2 = document.createElement("table");
-    table2.className = "grid sum";
-    table2.dataset.rows = "summary";
+    const table3 = document.createElement("table");
+    table3.className = "grid sum";
+    table3.dataset.rows = "summary";
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
     headRow.append(
       element4("th", w.t("groups.summary.col.test")),
-      el8("th", "n", w.t("groups.summary.col.checked-in")),
+      el9("th", "n", w.t("groups.summary.col.checked-in")),
       element4("th", w.t("groups.summary.col.result"))
     );
     thead.append(headRow);
-    table2.append(thead);
+    table3.append(thead);
     for (const obligation of model.obligations) {
       const tbody = document.createElement("tbody");
       tbody.dataset.obligationGroup = obligation.key;
-      const row2 = el8("tr", "ob");
+      const row2 = el9("tr", "ob");
       row2.dataset.obligation = obligation.key;
-      const title = el8("td", "");
+      const title = el9("td", "");
       title.setAttribute("colspan", "3");
-      const name = el8("b", "obn");
+      const name = el9("b", "obn");
       name.append(
-        ...obligationName(w, obligation, el8("span", "art", obligation.article))
+        ...obligationName(w, obligation, el9("span", "art", obligation.article))
       );
       title.append(name);
       const worst = obligationWorst(obligation, model.totalSessions, w);
       if (worst !== void 0) {
-        const line = el8("div", "applic worst", worst.text);
+        const line = el9("div", "applic worst", worst.text);
         line.dataset.worst = worst.kind;
         title.append(line);
       }
       row2.append(title);
       tbody.append(row2);
-      const about = el8("tr", "drill-row ob-about");
+      const about = el9("tr", "drill-row ob-about");
       about.dataset.aboutFor = obligation.key;
-      const aboutCell = el8("td", "");
+      const aboutCell = el9("td", "");
       aboutCell.setAttribute("colspan", "3");
       about.append(aboutCell);
       expandableRow(
@@ -20408,7 +20905,7 @@ ${key}`);
         name,
         about,
         () => {
-          const body = el8("div", "ob-x");
+          const body = el9("div", "ob-x");
           if (obligation.plain !== NOT_STATED)
             body.append(maybeProducer(w, "div", "plain", obligation.plain, true));
           body.append(
@@ -20427,7 +20924,7 @@ ${key}`);
       );
       tbody.append(about);
       for (const test of obligation.rows) {
-        const tr = el8("tr", "test");
+        const tr = el9("tr", "test");
         tr.dataset.criterion = test.criterionId;
         const counted = population(test, model.totalSessions);
         tr.dataset.population = String(counted);
@@ -20436,8 +20933,8 @@ ${key}`);
         tr.dataset.exceptions = String(test.notMetCount);
         tr.dataset.notEvaluable = String(test.notEvaluableCount);
         tr.dataset.unverified = String(test.unverifiedCount);
-        const nameCell = el8("td", "tn");
-        const head2 = el8("div", "tnh");
+        const nameCell = el9("td", "tn");
+        const head2 = el9("div", "tnh");
         const testName = rowName2(w, "b", "", test);
         head2.append(testName, tierBadge(test.tier, w));
         nameCell.append(head2);
@@ -20449,9 +20946,9 @@ ${key}`);
           ...test.sessionsByVerdict.get("unverified") ?? [],
           ...test.sessionsByVerdict.get("not_evaluable") ?? []
         ];
-        const checkedIn = el8("td", "n");
+        const checkedIn = el9("td", "n");
         checkedIn.dataset.column = "checked-in";
-        checkedIn.append(el8("span", "nv", count(w, "session", counted)));
+        checkedIn.append(el9("span", "nv", count(w, "session", counted)));
         const action = evidenceAction(
           `test:${test.criterionId}:checked-in`,
           `${test.name} \xB7 ${w.t("groups.summary.col.checked-in")}: ${count(w, "session", counted)}`,
@@ -20463,7 +20960,7 @@ ${key}`);
         tr.append(nameCell, checkedIn, rowResult(test, model, result, w));
         tbody.append(tr);
         if (sessionIds.length > 0) {
-          const drillRow = el8("tr", "drill-row");
+          const drillRow = el9("tr", "drill-row");
           drillRow.dataset.drillFor = test.criterionId;
           const cell2 = document.createElement("td");
           cell2.setAttribute("colspan", "3");
@@ -20480,12 +20977,12 @@ ${key}`);
           tbody.append(drillRow);
         }
       }
-      table2.append(tbody);
+      table3.append(tbody);
     }
-    section.append(table2);
-    const notes = el8("aside", "footnotes");
+    section.append(table3);
+    const notes = el9("aside", "footnotes");
     notes.dataset.section = "footnotes";
-    const basis = el8("p", "", w.t("groups.summary.basis"));
+    const basis = el9("p", "", w.t("groups.summary.basis"));
     basis.dataset.basis = "terms";
     notes.append(basis);
     section.append(notes);
@@ -20493,21 +20990,21 @@ ${key}`);
   }
   function renderFindings(host, model, w) {
     if (model.findings.length === 0) return;
-    const section = el8("section", "findings");
+    const section = el9("section", "findings");
     section.dataset.section = "findings";
     section.dataset.producer = "";
     section.append(
-      el8("div", "plabel", w.t("front.findings.label")),
-      el8("h2", "", w.t("front.findings.h"))
+      el9("div", "plabel", w.t("front.findings.label")),
+      el9("h2", "", w.t("front.findings.h"))
     );
     for (const finding of model.findings)
       section.append(renderFinding(finding, w));
     host.append(section);
   }
   function renderFinding(finding, w) {
-    const box = el8("div", "fnd");
+    const box = el9("div", "fnd");
     box.dataset.finding = finding.id;
-    const fh = el8("div", "fh");
+    const fh = el9("div", "fh");
     fh.append(
       maybeProducer(w, "b", "", w.t("groups.finding", { id: finding.id }), true),
       severityPill(finding.severity, w),
@@ -20515,14 +21012,14 @@ ${key}`);
     );
     box.append(fh);
     box.append(maybeProducer(w, "div", "rec", finding.recommendation, true));
-    const own = el8("div", "own", w.t("groups.finding.owner"));
+    const own = el9("div", "own", w.t("groups.finding.owner"));
     own.append(producerText(w, finding.ownerDue));
     box.append(own);
     return box;
   }
   function renderSessionList(conversationIds, model, presentation, w) {
     const byId = new Map(model.sessions.map((s) => [s.conversationId, s]));
-    const list2 = el8("div", "convs");
+    const list2 = el9("div", "convs");
     list2.dataset.sessionCount = String(conversationIds.length);
     for (const id of conversationIds) {
       const session = byId.get(id);
@@ -20532,7 +21029,7 @@ ${key}`);
     return list2;
   }
   function laterNote(test, w, tag) {
-    const note = el8(
+    const note = el9(
       tag,
       "applic",
       w.t("groups.later.note", { date: test.claim?.appliesFrom ?? "" })
@@ -20556,10 +21053,10 @@ ${key}`);
     const unverified = session.tests.filter(isUnverified2);
     const undecided = session.tests.filter((t) => t.verdict === "not_evaluable");
     const parts = caseParts(session.conversationId, w);
-    const item = el8("article", "conv session");
+    const item = el9("article", "conv session");
     item.dataset.session = session.conversationId;
-    const head2 = el8("div", "conv-h");
-    head2.append(el8("span", "cid", parts.label));
+    const head2 = el9("div", "conv-h");
+    head2.append(el9("span", "cid", parts.label));
     head2.append(
       exceptions.length > 0 ? wordPill(
         { word: count(w, "exception", exceptions.length), tone: "bad" },
@@ -20575,28 +21072,28 @@ ${key}`);
         "none"
       )
     );
-    const why = el8("span", "cwhy");
+    const why = el9("span", "cwhy");
     (exceptions.length > 0 ? exceptions : unverified.length > 0 ? unverified : undecided).forEach((t, i) => {
       if (i > 0) why.append(", ");
       why.append(names2(t.criterionId, "span", ""));
     });
     head2.append(why);
-    head2.append(el8("span", "cmodel", parts.model ?? session.day));
+    head2.append(el9("span", "cmodel", parts.model ?? session.day));
     item.append(head2);
-    const body = el8("div", "conv-slot");
+    const body = el9("div", "conv-slot");
     item.append(body);
     lazyBody(body, () => sessionBody(session, model, presentation, w));
     return item;
   }
   function sessionBody(session, model, presentation, w) {
     const names2 = testNames(model, w);
-    const body = el8("div", "conv-b");
-    body.append(el8("h4", "", w.t("groups.h.test-by-test")));
+    const body = el9("div", "conv-b");
+    body.append(el9("h4", "", w.t("groups.h.test-by-test")));
     for (const test of session.tests) {
-      const box = el8("div", "ck");
+      const box = el9("div", "ck");
       box.dataset.crit = test.criterionId;
       box.dataset.critVerdict = test.verdict;
-      const h = el8("div", "h");
+      const h = el9("div", "h");
       h.append(
         wordPill(
           ruleWord(
@@ -20611,13 +21108,13 @@ ${key}`);
       if (test.verdict !== "not_applicable" && test.verdict !== "not_yet_in_force")
         h.append(tierBadge(test.tier, w));
       if (test.verdict === "failed" || test.verdict === "unsupported")
-        h.append(el8("span", "applic", w.t("groups.unverified-note")));
+        h.append(el9("span", "applic", w.t("groups.unverified-note")));
       if (test.verdict === "not_yet_in_force")
         h.append(laterNote(test, w, "span"));
       box.append(h);
       if (test.rationale !== void 0)
         box.append(
-          el8(
+          el9(
             "div",
             "why",
             judgeNote(test.rationale, test.claim?.verdict ?? test.verdict, w)
@@ -20626,7 +21123,7 @@ ${key}`);
       body.append(box);
     }
     if (session.tests.every((t) => t.rationale === void 0)) {
-      const gap = el8(
+      const gap = el9(
         "p",
         "small",
         notesGap(
@@ -20689,7 +21186,7 @@ ${key}`);
   }
   function sessionProofs(session, model, w) {
     const names2 = testNames(model, w);
-    const box = el8("div", "pf-b");
+    const box = el9("div", "pf-b");
     box.dataset.proofsFor = session.conversationId;
     const dated = session.dated;
     const dating = dated.basis === "judged" ? [] : [
@@ -20718,9 +21215,9 @@ ${key}`);
     const dl = proofList(rows);
     dl.dataset.checkIt = session.conversationId;
     box.append(dl);
-    box.append(el8("h5", "", w.t("groups.pf.h.each-report")));
+    box.append(el9("h5", "", w.t("groups.pf.h.each-report")));
     for (const test of session.tests) {
-      const ev = el8("div", "ev");
+      const ev = el9("div", "ev");
       ev.dataset.proofCrit = test.criterionId;
       const label = names2(test.criterionId, "b", "");
       label.append(": ");
@@ -20742,7 +21239,7 @@ ${key}`);
             )
           );
         if (test.rationale !== void 0) {
-          const sealed = el8(
+          const sealed = el9(
             "div",
             "sealed",
             w.t("groups.pf.rationale", { rationale: test.rationale })
@@ -20766,14 +21263,14 @@ ${key}`);
     return pinAbsence(model.runInfo, w) ?? w.t("groups.pin.none");
   }
   function renderReportProofs2(host, model, bundle, verified, w) {
-    const section = el8("section", "rp");
+    const section = el9("section", "rp");
     section.dataset.section = "report-proofs";
     section.append(
       levelToggle(
         2,
         w.t("groups.rp.toggle"),
         () => {
-          const box = el8("div", "pf-b");
+          const box = el9("div", "pf-b");
           renderObligationDetails(box, model, w);
           renderQuality(box, model, w);
           renderWhatRan2(box, model, w);
@@ -20786,11 +21283,11 @@ ${key}`);
     host.append(section);
   }
   function renderObligationDetails(host, model, w) {
-    const part = el8("div", "rp-s");
+    const part = el9("div", "rp-s");
     part.dataset.section = "obligation-detail";
-    part.append(el8("h3", "", w.t("groups.od.h")));
+    part.append(el9("h3", "", w.t("groups.od.h")));
     for (const obligation of model.obligations) {
-      const box = el8("div", "obd");
+      const box = el9("div", "obd");
       box.dataset.obligationDetail = obligation.key;
       box.dataset.mapped = String(obligation.mapped);
       const heading = element4("h5");
@@ -20799,26 +21296,26 @@ ${key}`);
       );
       box.append(heading);
       box.append(
-        el8(
+        el9(
           "p",
           "na",
           w.t(obligation.mapped ? "groups.od.mapped" : "groups.od.unmapped")
         )
       );
       if (obligation.judgedTerms.length > 0) {
-        const terms = el8("p", "applic", w.t("groups.od.judged-terms"));
+        const terms = el9("p", "applic", w.t("groups.od.judged-terms"));
         terms.append(producerText(w, obligation.judgedTerms.join(", ")));
         box.append(terms);
       }
       box.append(maybeProducer(w, "p", "", obligation.method, obligation.mapped));
       for (const row2 of obligation.rows) {
-        const rowBox = el8("div", "ck");
+        const rowBox = el9("div", "ck");
         rowBox.dataset.wording = row2.wording.source;
-        const h = el8("div", "h");
+        const h = el9("div", "h");
         h.append(rowName2(w, "span", "", row2), tierBadge(row2.tier, w));
         rowBox.append(h);
         rowBox.append(
-          el8(
+          el9(
             "div",
             "why",
             row2.wording.source === "sealed" ? w.t("groups.od.wording.sealed", { text: row2.wording.text }) : w.t(
@@ -20840,16 +21337,16 @@ ${key}`);
     host.append(part);
   }
   function renderQuality(host, model, w) {
-    const part = el8("div", "rp-s");
+    const part = el9("div", "rp-s");
     part.dataset.section = "quality";
-    part.append(el8("h3", "", w.t("groups.q.h")));
+    part.append(el9("h3", "", w.t("groups.q.h")));
     const protocol = model.qualityProtocol;
     if (protocol === void 0) {
-      part.append(el8("p", "", w.t("groups.q.none")));
+      part.append(el9("p", "", w.t("groups.q.none")));
       host.append(part);
       return;
     }
-    const line = el8("p", "", w.t("groups.q.protocol"));
+    const line = el9("p", "", w.t("groups.q.protocol"));
     line.append(
       protocol.protocol === void 0 ? w.t("groups.q.unspecified") : producerText(w, protocol.protocol)
     );
@@ -20862,9 +21359,9 @@ ${key}`);
     host.append(part);
   }
   function renderWhatRan2(host, model, w) {
-    const part = el8("div", "rp-s");
+    const part = el9("div", "rp-s");
     part.dataset.section = "methodology";
-    part.append(el8("h3", "", w.t("groups.ran.h")));
+    part.append(el9("h3", "", w.t("groups.ran.h")));
     const dl = proofList([
       [
         w.t("groups.ran.contract"),
@@ -20873,7 +21370,7 @@ ${key}`);
         )
       ],
       [w.t("groups.ran.judge-pin"), pinText(model, w)],
-      [w.t("groups.ran.sessions"), fmt3(model.totalSessions)],
+      [w.t("groups.ran.sessions"), fmt4(model.totalSessions)],
       ...model.dating.from === void 0 || model.dating.to === void 0 ? [] : [
         [
           w.t("groups.ran.period"),
@@ -20895,19 +21392,19 @@ ${key}`);
     part.append(dl);
     const note = datingStatement(model.dating, model.totalSessions, w);
     if (note !== void 0) {
-      const p = el8("p", "na", note);
+      const p = el9("p", "na", note);
       p.dataset.dateNote = model.dating.basis;
       part.append(p);
     }
     host.append(part);
   }
   function renderVerificationDetails2(host, bundle, verified, w) {
-    const part = el8("div", "rp-s");
+    const part = el9("div", "rp-s");
     part.dataset.section = "verification-details";
-    part.append(el8("h3", "", w.t("card.vd.h")));
+    part.append(el9("h3", "", w.t("card.vd.h")));
     const model = buildVerificationPageModel(bundle, verified);
     part.append(proofList(verificationRows(model, w)));
-    part.append(el8("p", "", w.t("groups.vd.note")));
+    part.append(el9("p", "", w.t("groups.vd.note")));
     host.append(part);
   }
   var GROUPS_FRAME = {
@@ -20922,7 +21419,7 @@ ${key}`);
       (s) => s.tests.flatMap((t) => t.claim === void 0 ? [] : [t.claim])
     );
     levels.L0.append(renderLegend(w));
-    const sheet = el8("div", "l0-card");
+    const sheet = el9("div", "l0-card");
     renderHeader(sheet, model, w);
     levels.L0.append(sheet);
     renderSummary(levels.L1, model, presentation, result, w);
@@ -21073,7 +21570,7 @@ ${key}`);
     for (const cell2 of cells) tr.append(element5(header ? "th" : "td", cell2));
     return tr;
   }
-  function table(name, columns, rows) {
+  function table2(name, columns, rows) {
     const node = element5("table");
     node.setAttribute(`data-${name}`, "");
     const head2 = element5("thead");
@@ -21148,7 +21645,7 @@ ${key}`);
     section.append(digest);
     section.append(element5("h3", "Members"));
     section.append(
-      table(
+      table2(
         "composition-members",
         [
           "member",
@@ -21184,7 +21681,7 @@ ${key}`);
     );
     section.append(element5("h3", "Observers"));
     section.append(
-      table(
+      table2(
         "composition-observers",
         ["observer", "role", "custody domain"],
         result.observers.map((o) => {
@@ -21211,7 +21708,7 @@ ${key}`);
     if (result.joins.length === 0) section.append(element5("p", "No joins."));
     else {
       section.append(
-        table(
+        table2(
           "composition-joins",
           ["members", "basis", "declared", "derived", "result"],
           result.joins.map((j) => {
@@ -21242,7 +21739,7 @@ ${key}`);
       }
       section.append(element5("h3", "Agreement"));
       section.append(
-        table(
+        table2(
           "composition-agreement",
           ["members", "result"],
           result.corroboration.map((c) => {
@@ -21574,7 +22071,7 @@ ${key}`);
     );
     return rungs;
   }
-  function el9(tag, className, text2) {
+  function el10(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== void 0) node.className = className;
     if (text2 !== void 0) node.textContent = text2;
@@ -21587,36 +22084,36 @@ ${key}`);
     const { context, capsuleId } = input;
     const voice = input.voice;
     const raw = object10(context.recordIndex.get(capsuleId));
-    const card = el9("section", "l3-card");
-    card.dataset.l3 = "envelope";
-    card.append(el9("h4", "l3-k", w.t("record.envelope.title")));
+    const card2 = el10("section", "l3-card");
+    card2.dataset.l3 = "envelope";
+    card2.append(el10("h4", "l3-k", w.t("record.envelope.title")));
     const hex5 = typeof raw.signature === "string" ? raw.signature : void 0;
     const view = hex5 === void 0 ? void 0 : readEnvelope(hex5);
     if (hex5 === void 0) {
-      const none = el9("p", "l3-note", w.t("record.envelope.none"));
+      const none = el10("p", "l3-note", w.t("record.envelope.none"));
       none.dataset.l3 = "no-envelope";
-      card.append(none);
+      card2.append(none);
     } else if (view === void 0) {
-      const bad2 = el9("p", "l3-note", w.t("record.envelope.unreadable"));
+      const bad2 = el10("p", "l3-note", w.t("record.envelope.unreadable"));
       bad2.dataset.l3 = "unreadable-envelope";
-      card.append(bad2);
+      card2.append(bad2);
     } else {
       const covered = (cls, tag) => {
-        const chip = el9("span", `l3-chip ${cls}`, tag);
+        const chip = el10("span", `l3-chip ${cls}`, tag);
         return chip;
       };
-      const prot = el9("div", "l3-box l3-prot");
+      const prot = el10("div", "l3-box l3-prot");
       prot.dataset.l3 = "protected";
-      const ph = el9("p", "l3-h");
+      const ph = el10("p", "l3-h");
       ph.append(
-        el9("b", "", w.t("record.env.protected")),
+        el10("b", "", w.t("record.env.protected")),
         " ",
         covered("l3-green", w.t("record.env.covered"))
       );
       prot.append(ph);
-      const dl = el9("dl", "l3-kv");
+      const dl = el10("dl", "l3-kv");
       const row2 = (k, v) => {
-        dl.append(el9("dt", "", k), el9("dd", "", v));
+        dl.append(el10("dt", "", k), el10("dd", "", v));
       };
       if (view.alg !== void 0)
         row2(
@@ -21634,17 +22131,17 @@ ${key}`);
           })
         );
       prot.append(dl);
-      const un = el9("div", "l3-box l3-unprot");
+      const un = el10("div", "l3-box l3-unprot");
       un.dataset.l3 = "unprotected";
-      const uh = el9("p", "l3-h");
+      const uh = el10("p", "l3-h");
       uh.append(
-        el9("b", "", w.t("record.env.unprotected")),
+        el10("b", "", w.t("record.env.unprotected")),
         " ",
         covered("l3-grey", w.t("record.env.not-signed"))
       );
       un.append(
         uh,
-        el9(
+        el10(
           "p",
           "",
           view.unprotectedEntries === 0 ? w.t("record.env.unprotected.empty") : w.t("record.env.unprotected.entries", {
@@ -21652,17 +22149,17 @@ ${key}`);
           })
         )
       );
-      const pay = el9("div", "l3-box l3-payload");
+      const pay = el10("div", "l3-box l3-payload");
       pay.dataset.l3 = "payload";
-      const yh = el9("p", "l3-h");
+      const yh = el10("p", "l3-h");
       yh.append(
-        el9("b", "", w.t("record.env.payload")),
+        el10("b", "", w.t("record.env.payload")),
         " ",
         covered("l3-green", w.t("record.env.covered"))
       );
       pay.append(
         yh,
-        el9(
+        el10(
           "p",
           "",
           view.payloadHex !== void 0 && view.payloadHex === capsuleId ? w.t("record.env.payload.is-id", {
@@ -21670,48 +22167,48 @@ ${key}`);
           }) : w.t("record.env.payload.other")
         )
       );
-      const sig = el9("div", "l3-box l3-sig");
+      const sig = el10("div", "l3-box l3-sig");
       sig.dataset.l3 = "signature";
       sig.append(
-        el9("p", "", w.t("record.env.signature", { bytes: view.signatureBytes }))
+        el10("p", "", w.t("record.env.signature", { bytes: view.signatureBytes }))
       );
-      card.append(prot, un, pay, sig);
+      card2.append(prot, un, pay, sig);
     }
-    card.append(el9("p", "l3-note", w.t(`record.envelope.foot.${voice}`)));
-    return card;
+    card2.append(el10("p", "l3-note", w.t(`record.envelope.foot.${voice}`)));
+    return card2;
   }
   function tagWord(tag, w) {
     return w.t(`record.tag.${tag}`);
   }
   function capsuleCard(input, w) {
     const raw = object10(input.context.recordIndex.get(input.capsuleId));
-    const card = el9("section", "l3-card");
-    card.dataset.l3 = "capsule";
-    card.append(el9("h4", "l3-k", w.t("record.capsule.title")));
-    const dl = el9("dl", "l3-fields");
+    const card2 = el10("section", "l3-card");
+    card2.dataset.l3 = "capsule";
+    card2.append(el10("h4", "l3-k", w.t("record.capsule.title")));
+    const dl = el10("dl", "l3-fields");
     for (const row2 of fieldRows(raw)) {
-      const dt = el9("dt", "", row2.label);
-      const dd = el9("dd");
+      const dt = el10("dt", "", row2.label);
+      const dd = el10("dd");
       dd.append(row2.value);
       if (row2.note === "recomputed")
         dd.append(" \xB7 ", w.t("record.capsule.recomputed"));
       for (const tag of row2.tags) {
-        const chip = el9("span", `l3-chip l3-tag-${tag}`, tagWord(tag, w));
+        const chip = el10("span", `l3-chip l3-tag-${tag}`, tagWord(tag, w));
         chip.dataset.tag = tag;
         dd.append(" ", chip);
       }
       dl.append(dt, dd);
     }
-    card.append(dl);
-    return card;
+    card2.append(dl);
+    return card2;
   }
   function ladderCard(input, w) {
     const voice = input.voice;
-    const card = el9("section", "l3-card l3-ladder");
-    card.dataset.l3 = "ladder";
-    card.append(el9("h3", "l3-title", w.t("record.ladder.title")));
-    const table2 = el9("table", "l3-table");
-    const head2 = el9("tr");
+    const card2 = el10("section", "l3-card l3-ladder");
+    card2.dataset.l3 = "ladder";
+    card2.append(el10("h3", "l3-title", w.t("record.ladder.title")));
+    const table3 = el10("table", "l3-table");
+    const head2 = el10("tr");
     for (const key of [
       "record.ladder.col.n",
       "record.ladder.col.proof",
@@ -21719,41 +22216,41 @@ ${key}`);
       "record.ladder.col.status",
       "record.ladder.col.check"
     ])
-      head2.append(el9("th", "", w.t(key)));
-    const thead = el9("thead");
+      head2.append(el10("th", "", w.t(key)));
+    const thead = el10("thead");
     thead.append(head2);
-    table2.append(thead);
-    const body = el9("tbody");
+    table3.append(thead);
+    const body = el10("tbody");
     for (const rung of ladder(input, w)) {
-      const tr = el9("tr");
+      const tr = el10("tr");
       tr.dataset.rung = String(rung.n);
       tr.dataset.rungStatus = rung.status;
-      tr.append(el9("td", "l3-n", String(rung.n)));
-      const name = el9("td");
+      tr.append(el10("td", "l3-n", String(rung.n)));
+      const name = el10("td");
       name.append(
-        el9("b", "", w.t(`record.rung.${rung.n}.title`)),
-        el9("div", "l3-sub", rung.sub)
+        el10("b", "", w.t(`record.rung.${rung.n}.title`)),
+        el10("div", "l3-sub", rung.sub)
       );
-      tr.append(name, el9("td", "", w.t(`record.rung.${rung.n}.proves.${voice}`)));
-      const status2 = el9("td");
-      const chip = el9("span", `l3-status l3-s-${rung.status}`, rung.status);
+      tr.append(name, el10("td", "", w.t(`record.rung.${rung.n}.proves.${voice}`)));
+      const status2 = el10("td");
+      const chip = el10("span", `l3-status l3-s-${rung.status}`, rung.status);
       chip.dataset.status = rung.status;
       status2.append(chip);
       if (rung.note !== void 0) status2.append(" ", rung.note);
-      tr.append(status2, el9("td", "l3-cmd", w.t(`record.rung.${rung.n}.check`)));
+      tr.append(status2, el10("td", "l3-cmd", w.t(`record.rung.${rung.n}.check`)));
       body.append(tr);
     }
-    table2.append(body);
-    card.append(table2);
-    return card;
+    table3.append(body);
+    card2.append(table3);
+    return card2;
   }
   function footer(w) {
-    const foot = el9("section", "l3-card l3-foot");
+    const foot = el10("section", "l3-card l3-foot");
     foot.dataset.l3 = "foot";
     for (const key of ["order", "status", "sdk"]) {
-      const col = el9("p");
+      const col = el10("p");
       col.append(
-        el9("b", "", w.t(`record.foot.${key}.k`)),
+        el10("b", "", w.t(`record.foot.${key}.k`)),
         ` ${w.t(`record.foot.${key}`)}`
       );
       foot.append(col);
@@ -21762,19 +22259,19 @@ ${key}`);
   }
   function renderRecordPage(input, w) {
     const raw = object10(input.context.recordIndex.get(input.capsuleId));
-    const page = el9("div", "cv-l3");
+    const page = el10("div", "cv-l3");
     page.dataset.level = "3";
     page.dataset.recordPage = input.capsuleId;
     page.dataset.voice = input.voice;
     const actionId = typeof raw.action_id === "string" ? raw.action_id : "";
     page.append(
-      el9(
+      el10(
         "p",
         "l3-banner",
         w.t(`record.banner.${input.voice}`, { action: actionId })
       )
     );
-    const cols = el9("div", "l3-cols");
+    const cols = el10("div", "l3-cols");
     cols.append(envelopeCard(input, w), capsuleCard(input, w));
     page.append(cols, ladderCard(input, w), footer(w));
     return page;
@@ -21830,22 +22327,22 @@ ${key}`);
 @media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
 @media print{.cv-strip{break-inside:avoid}}
 `;
-  function el10(tag, className, text2) {
+  function el11(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== "") node.className = className;
     if (text2 !== void 0) node.textContent = text2;
     return node;
   }
-  var fmt4 = (n) => n.toLocaleString("en-US");
+  var fmt5 = (n) => n.toLocaleString("en-US");
   function mismatchMarker(result, field, w) {
     const mismatch = result.countMismatches.find(
       (entry) => entry.field === field
     );
     if (mismatch === void 0) return void 0;
-    const marker = el10(
+    const marker = el11(
       "span",
       "count mismatch",
-      w.t("front.agg.mismatch", { recomputed: fmt4(mismatch.recomputed) })
+      w.t("front.agg.mismatch", { recomputed: fmt5(mismatch.recomputed) })
     );
     marker.dataset.countMismatch = field;
     marker.dataset.stated = String(mismatch.stated);
@@ -21860,7 +22357,7 @@ ${key}`);
         (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
       )
     ).size;
-    const line = el10("p", "agg-line");
+    const line = el11("p", "agg-line");
     const marked = (text2, field) => {
       line.append(text2);
       const marker = mismatchMarker(result, field, w);
@@ -21869,10 +22366,10 @@ ${key}`);
     marked(
       w.t("front.agg.evaluated", {
         evaluations: w.p("front.agg.evaluations", stated.evaluatedPopulation, {
-          n: fmt4(stated.evaluatedPopulation)
+          n: fmt5(stated.evaluatedPopulation)
         }),
         requirements: w.p("front.agg.requirements", requirements, {
-          n: fmt4(requirements)
+          n: fmt5(requirements)
         })
       }),
       "evaluated_population"
@@ -21880,13 +22377,13 @@ ${key}`);
     line.append(
       " \xB7 ",
       w.t("front.agg.excluded", {
-        excluded: fmt4(stated.excludedNotApplicable)
+        excluded: fmt5(stated.excludedNotApplicable)
       }),
       " \xB7 "
     );
     marked(
       w.p("front.agg.unknown", stated.unknownCount, {
-        n: fmt4(stated.unknownCount)
+        n: fmt5(stated.unknownCount)
       }),
       "unknown_count"
     );
@@ -21894,7 +22391,7 @@ ${key}`);
     if (later !== void 0 || result.countMismatches.some((m) => m.field === "not_yet_in_force")) {
       line.append(" \xB7 ");
       marked(
-        w.p("front.agg.later", later ?? 0, { n: fmt4(later ?? 0) }),
+        w.p("front.agg.later", later ?? 0, { n: fmt5(later ?? 0) }),
         "not_yet_in_force"
       );
       line.dataset.notYetInForce = String(later ?? 0);
@@ -21904,8 +22401,8 @@ ${key}`);
     line.dataset.excluded = String(stated.excludedNotApplicable);
     line.dataset.unknown = String(stated.unknownCount);
     out.append(line);
-    const buckets = el10("div", "agg-buckets");
-    const of = w.t("front.agg.of", { n: fmt4(stated.evaluatedPopulation) });
+    const buckets = el11("div", "agg-buckets");
+    const of = w.t("front.agg.of", { n: fmt5(stated.evaluatedPopulation) });
     const entries = [
       ["met", result.buckets.met, "buckets.met"],
       ["not_met", result.buckets.notMet, "buckets.not_met"],
@@ -21914,16 +22411,16 @@ ${key}`);
     ];
     for (const [verdict2, ids, field] of entries) {
       if (ids === void 0) continue;
-      const box = el10("div", `agg-bucket ${verdict2}`);
+      const box = el11("div", `agg-bucket ${verdict2}`);
       box.dataset.bucket = verdict2;
       box.dataset.count = String(ids.length);
       box.dataset.of = String(stated.evaluatedPopulation);
-      box.append(el10("b", "", fmt4(ids.length)));
-      const caption = el10("div", "agg-cap");
+      box.append(el11("b", "", fmt5(ids.length)));
+      const caption = el11("div", "agg-cap");
       caption.append(
-        el10("span", "", w.t(`front.agg.bucket.${verdict2}`)),
+        el11("span", "", w.t(`front.agg.bucket.${verdict2}`)),
         document.createTextNode(" \xB7 "),
-        el10("span", "agg-of", of)
+        el11("span", "agg-of", of)
       );
       box.append(caption);
       const marker = mismatchMarker(result, field, w);
@@ -21934,7 +22431,7 @@ ${key}`);
     const dated = result.claims.some((claim) => claim.appliesFrom !== void 0);
     const switched = result.buckets.outOfScope !== void 0;
     if (dated || switched) {
-      const copied = el10("p", "agg-note");
+      const copied = el11("p", "agg-note");
       if (dated) {
         const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
         copied.append(w.t("front.agg.as-of", { date }), " ");
@@ -21966,7 +22463,7 @@ ${key}`);
         }) : refs[0]
       );
     } else if (refs.length > 1)
-      kicker.push(w.t("front.core.packs", { n: fmt4(refs.length) }));
+      kicker.push(w.t("front.core.packs", { n: fmt5(refs.length) }));
     const generated = utcDateOf(result.generatedAt) === void 0 ? void 0 : result.generatedAt;
     if (generated !== void 0)
       kicker.push(w.t("front.core.generated", { time: generated }));
@@ -21976,12 +22473,12 @@ ${key}`);
     if (model.pins.length === 1)
       facts.push(w.t("front.core.pin", { digest: shortDigest(model.pins[0]) }));
     else if (model.pins.length > 1)
-      facts.push(w.t("front.core.pins", { n: fmt4(model.pins.length) }));
-    const block = el10("div", "core-id");
+      facts.push(w.t("front.core.pins", { n: fmt5(model.pins.length) }));
+    const block = el11("div", "core-id");
     block.dataset.section = "core-identity";
-    const top = el10("p", "agg-note core-kicker", kicker.join(" \xB7 "));
+    const top = el11("p", "agg-note core-kicker", kicker.join(" \xB7 "));
     top.dataset.coreKicker = "";
-    const rest = el10("p", "agg-note core-facts", facts.join(" \xB7 "));
+    const rest = el11("p", "agg-note core-facts", facts.join(" \xB7 "));
     rest.dataset.coreFacts = "";
     block.append(top, rest);
     return block;
@@ -21996,14 +22493,14 @@ ${key}`);
     };
   }
   function renderCoreStrip(model) {
-    const strip = el10("section", "cv-strip");
+    const strip = el11("section", "cv-strip");
     strip.setAttribute(CORE_STRIP_ATTRIBUTE, "");
     strip.dataset.section = "aggregate";
     const style = document.createElement("style");
     style.textContent = CORE_STRIP_CSS;
     strip.append(style);
     if (model.mock) {
-      const mark = el10("p", "mockmark", model.words.t("front.mock"));
+      const mark = el11("p", "mockmark", model.words.t("front.mock"));
       mark.dataset.section = "mock-judge";
       strip.append(mark);
     }
@@ -22121,7 +22618,7 @@ ${pad.repeat(depth)}`;
   function object11(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
   }
-  function str(value) {
+  function str2(value) {
     return typeof value === "string" ? value : void 0;
   }
   function strArray(value) {
@@ -22129,20 +22626,20 @@ ${pad.repeat(depth)}`;
   }
   function readFinding(value) {
     const obj = object11(value);
-    const id = str(obj?.id);
-    const severity = str(obj?.severity);
-    const recommendation = str(obj?.recommendation);
-    const ownerDue = str(obj?.owner_due);
+    const id = str2(obj?.id);
+    const severity = str2(obj?.severity);
+    const recommendation = str2(obj?.recommendation);
+    const ownerDue = str2(obj?.owner_due);
     if (id === void 0 || severity === void 0 || recommendation === void 0 || ownerDue === void 0)
       return void 0;
     return { id, severity, recommendation, ownerDue };
   }
   function readRow(value) {
     const obj = object11(value);
-    const criterionId = str(obj?.criterion_id);
-    const name = str(obj?.name);
+    const criterionId = str2(obj?.criterion_id);
+    const name = str2(obj?.name);
     if (criterionId === void 0 || name === void 0) return void 0;
-    const notEvaluableNote = str(obj?.not_evaluable_note);
+    const notEvaluableNote = str2(obj?.not_evaluable_note);
     const finding = obj?.finding === void 0 ? void 0 : readFinding(obj.finding);
     return {
       criterionId,
@@ -22154,17 +22651,17 @@ ${pad.repeat(depth)}`;
   function readApplicability(value) {
     const obj = object11(value);
     const status2 = obj?.status === "in_force" || obj?.status === "future" ? obj.status : void 0;
-    const note = str(obj?.note);
+    const note = str2(obj?.note);
     if (status2 === void 0 || note === void 0) return void 0;
     return { status: status2, note };
   }
   function readObligation(value) {
     const obj = object11(value);
-    const key = str(obj?.key);
-    const article = str(obj?.article);
-    const title = str(obj?.title);
-    const plain2 = str(obj?.plain);
-    const method = str(obj?.method);
+    const key = str2(obj?.key);
+    const article = str2(obj?.article);
+    const title = str2(obj?.title);
+    const plain2 = str2(obj?.plain);
+    const method = str2(obj?.method);
     const applicability = readApplicability(obj?.applicability);
     if (key === void 0 || article === void 0 || title === void 0 || plain2 === void 0 || method === void 0 || applicability === void 0)
       return void 0;
@@ -22186,9 +22683,9 @@ ${pad.repeat(depth)}`;
   function readQualityProtocol(value) {
     const obj = object11(value);
     if (obj === void 0) return void 0;
-    const protocol = str(obj.protocol);
-    const cadence = str(obj.cadence);
-    const note = str(obj.note);
+    const protocol = str2(obj.protocol);
+    const cadence = str2(obj.cadence);
+    const note = str2(obj.note);
     if (protocol === void 0 && cadence === void 0 && note === void 0)
       return void 0;
     return {
@@ -22202,7 +22699,7 @@ ${pad.repeat(depth)}`;
     const extensions2 = object11(top?.extensions);
     const block = object11(extensions2?.["eu-ai-act-compliance/v1"]);
     if (block === void 0 || block.enabled !== true) return void 0;
-    const regulation = str(block.regulation) ?? "Regulation (EU) 2024/1689";
+    const regulation = str2(block.regulation) ?? "Regulation (EU) 2024/1689";
     const obligations = Array.isArray(block.obligations) ? block.obligations.flatMap((o) => {
       const obligation = readObligation(o);
       return obligation === void 0 ? [] : [obligation];
@@ -23072,8 +23569,8 @@ ${pad.repeat(depth)}`;
   function renderExtensionTable(host, rows) {
     if (rows.length === 0) return;
     host.append(element6("h4", "Extensions"));
-    const table2 = element6("table");
-    table2.dataset.extensions = "";
+    const table3 = element6("table");
+    table3.dataset.extensions = "";
     const head2 = element6("tr");
     for (const label of ["extension", "integrity", "semantics"])
       head2.append(element6("th", label));
@@ -23097,8 +23594,8 @@ ${pad.repeat(depth)}`;
       );
       body.append(tr);
     }
-    table2.append(thead, body);
-    host.append(table2);
+    table3.append(thead, body);
+    host.append(table3);
   }
   function renderCheckLists(host, lists, verifierHint) {
     const groups = [
@@ -23450,7 +23947,7 @@ ${pad.repeat(depth)}`;
     const section = element6("section");
     section.dataset.page = "report-rows";
     section.append(element6("h1", reportRows.title ?? "Report"));
-    const table2 = document.createElement("table");
+    const table3 = document.createElement("table");
     const detail = element6("section");
     reportRows.rows.forEach((row2) => {
       const tr = document.createElement("tr");
@@ -23463,10 +23960,10 @@ ${pad.repeat(depth)}`;
       const statusCell = element6("td", row2.status.replaceAll("_", " "));
       statusCell.dataset.rowStatus = row2.status;
       tr.append(labelCell, statusCell);
-      table2.append(tr);
+      table3.append(tr);
     });
     section.append(
-      table2,
+      table3,
       detail,
       renderProvenance2(
         reportRows.capsuleId,
@@ -23887,8 +24384,8 @@ ${pad.repeat(depth)}`;
       buckets.append(list2);
     }
     section.append(buckets);
-    const table2 = document.createElement("table");
-    table2.dataset.claims = "rows";
+    const table3 = document.createElement("table");
+    table3.dataset.claims = "rows";
     const detail = element6("section");
     for (const claim of result.claims) {
       const tr = document.createElement("tr");
@@ -23920,10 +24417,10 @@ ${pad.repeat(depth)}`;
         appendCloseState(type, claim.close, "span");
       }
       tr.append(tier, grade, type);
-      table2.append(tr);
+      table3.append(tr);
     }
     section.append(
-      table2,
+      table3,
       detail,
       renderProvenance2(result.capsuleId, result.logCoordinates, result)
     );
@@ -23941,15 +24438,15 @@ ${pad.repeat(depth)}`;
     calendar.append(element6("h2", "Daily reports"));
     const detail = element6("section");
     [...graph2.reports].sort((left, right) => left.date.localeCompare(right.date)).forEach((report) => {
-      const tile = element6("button");
-      tile.append(renderTime(report.date), `: ${metRate(report)}`);
-      tile.setAttribute("type", "button");
-      tile.dataset.reportDate = report.date;
-      tile.addEventListener(
+      const tile2 = element6("button");
+      tile2.append(renderTime(report.date), `: ${metRate(report)}`);
+      tile2.setAttribute("type", "button");
+      tile2.dataset.reportDate = report.date;
+      tile2.addEventListener(
         "click",
         () => renderReport(report, detail, records)
       );
-      calendar.append(tile);
+      calendar.append(tile2);
     });
     root.append(calendar, detail);
   }
