@@ -5,6 +5,7 @@ import {
   type ReportState,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
+import { fieldText, tagSource } from "./report-legend.js";
 import {
   judgeNote,
   levelToggle,
@@ -120,7 +121,7 @@ function criterion(r: SpotCheckRule, w: Words): HTMLElement {
   const term = el("div", "sc-box");
   term.dataset.wording = r.wording.source;
   if (r.wording.source === "sealed") {
-    term.append(el("div", "sc-k", w.t("spot.term")));
+    term.append(tagSource(el("div", "sc-k", w.t("spot.term")), "pack"));
     term.append(el("blockquote", "sc-q", r.wording.text));
   } else
     term.append(
@@ -143,19 +144,34 @@ function verdictCell(r: SpotCheckRule, w: Words): HTMLElement {
   const head = el("div", `sc-box sc-v ${r.worded.tone}`);
   head.append(wordPill(r.worded, r.verdict));
   if (r.rationale !== undefined) {
-    head.append(el("div", "sc-k", w.t("spot.says")));
+    head.append(tagSource(el("div", "sc-k", w.t("spot.says")), "pack"));
     head.append(el("p", "sc-q", judgeNote(r.rationale, r.drawnVerdict, w)));
   } else head.append(el("p", "sc-gap", r.noNote));
   col.append(head);
   const parsed =
     r.rationale === undefined ? {} : parseJudgeProbabilities(r.rationale);
-  const facts: string[] = [];
+  // The judge pin digest is a field of the sealed report: drawn as a field,
+  // with its path.
+  const facts: HTMLElement[] = [];
   if (r.judgePinDigest !== undefined)
-    facts.push(w.t("spot.pin", { digest: r.judgePinDigest }));
+    facts.push(fieldText("judge_pin_digest", r.judgePinDigest));
   if (parsed.confidence !== undefined)
-    facts.push(w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }));
+    // Parsed out of the judge's words, not a stored field: pack words.
+    facts.push(
+      tagSource(
+        el(
+          "span",
+          "",
+          w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }),
+        ),
+        "pack",
+      ),
+    );
   if (facts.length > 0) {
-    const line = el("p", "sc-facts", facts.join(" · "));
+    const line = el("p", "sc-facts");
+    facts.forEach((fact, i) =>
+      line.append(...(i > 0 ? [" · ", fact] : [fact])),
+    );
     line.dataset.judge = "";
     col.append(line);
   }

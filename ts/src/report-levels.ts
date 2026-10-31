@@ -1003,7 +1003,7 @@ export function assuranceRow(
  */
 export function refusedWordingNotice(w: Words): HTMLElement | undefined {
   if (w.source.refused === undefined) return undefined;
-  const p = el("p", "wref", w.t("card.wording.refused"));
+  const p = tagSource(el("p", "wref", w.t("card.wording.refused")), "core");
   p.dataset.wording = "refused";
   p.dataset.refusal = w.source.refused.reason;
   return p;
@@ -1040,6 +1040,7 @@ ${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;co
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
+${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
