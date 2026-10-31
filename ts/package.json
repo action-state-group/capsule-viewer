@@ -1,6 +1,6 @@
 {
   "name": "@action-state-group/capsule-viewer",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "capsule-viewer page emitter and presentation builder, under the Agent Action Capsule presentation contract",
   "license": "Apache-2.0 AND BSD-3-Clause",
   "type": "module",
