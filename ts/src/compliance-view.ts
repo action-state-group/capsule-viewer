@@ -230,6 +230,104 @@ function sessionSpan(model: ComplianceModel, w: Words): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Headline: how many sessions met every test that applied to them
+// ---------------------------------------------------------------------------
+
+/**
+ * A session's result, by the rule the outcome card uses for a conversation
+ * (`conversationStatus`): any not-met test makes it missed; failing that, a
+ * test that could not be verified; failing that, one nobody could decide;
+ * and a session with no test that applied is its own count, never "met".
+ * Tests not yet in force are outside the session's population (Result v0
+ * section 4.3).
+ */
+export type SessionStatus =
+  | "met"
+  | "missed"
+  | "unverified"
+  | "undecided"
+  | "nothing-applied";
+
+export function sessionStatus(session: Session): SessionStatus {
+  const applied = session.tests.filter(
+    (t) =>
+      t.verdict !== "not_applicable" &&
+      t.verdict !== "out_of_scope" &&
+      t.verdict !== "not_yet_in_force",
+  );
+  if (applied.some((t) => t.verdict === "not_met")) return "missed";
+  if (
+    applied.some((t) => t.verdict === "failed" || t.verdict === "unsupported")
+  )
+    return "unverified";
+  if (applied.some((t) => t.verdict === "not_evaluable")) return "undecided";
+  return applied.length === 0 ? "nothing-applied" : "met";
+}
+
+/** The page's one sentence of whole-number counts, as the canvas opens with them; empty when there is no session. */
+export function headlineSentence(model: ComplianceModel, w: Words): string {
+  if (model.totalSessions === 0) return "";
+  const by = (status: SessionStatus): number =>
+    model.sessions.filter((s) => sessionStatus(s) === status).length;
+  const parts = [
+    w.p("groups.headline", model.totalSessions, {
+      met: fmt(by("met")),
+      n: fmt(model.totalSessions),
+    }),
+    w.t("groups.headline.missed", { n: fmt(by("missed")) }),
+  ];
+  for (const [status, key] of [
+    ["unverified", "groups.headline.unverified"],
+    ["undecided", "groups.headline.undecided"],
+    ["nothing-applied", "groups.headline.nothing-applied"],
+  ] as const)
+    if (by(status) > 0) parts.push(w.t(key, { n: fmt(by(status)) }));
+  return parts.join(" ");
+}
+
+/**
+ * The line an obligation's heading carries: its worst test, derived from
+ * the sealed counts and never stated by the producer. Not met comes first,
+ * then could not be verified, then could not be decided; the count is of the
+ * sessions the test applied to (`population`). Undefined when no test of the
+ * obligation has a result to read.
+ */
+export function obligationWorst(
+  obligation: ObligationModel,
+  totalSessions: number,
+  w: Words,
+): { kind: string; text: string } | undefined {
+  const inForce = obligation.rows.filter((r) => !nothingChecked(r));
+  if (inForce.length === 0) return undefined;
+  const most = (count: (r: ObligationRowModel) => number) =>
+    inForce.reduce<ObligationRowModel | undefined>(
+      (best, r) =>
+        count(r) > (best === undefined ? 0 : count(best)) ? r : best,
+      undefined,
+    );
+  const picks: [string, string, (r: ObligationRowModel) => number][] = [
+    ["not_met", "groups.ob.worst.not_met", (r) => r.notMetCount],
+    ["unverified", "groups.ob.worst.unverified", (r) => r.unverifiedCount],
+    ["undecided", "groups.ob.worst.undecided", (r) => r.notEvaluableCount],
+  ];
+  for (const [kind, key, countOf] of picks) {
+    const row = most(countOf);
+    if (row === undefined) continue;
+    return {
+      kind,
+      text: w.t(key, {
+        n: fmt(countOf(row)),
+        sessions: count(w, "session", population(row, totalSessions)),
+      }),
+    };
+  }
+  // "Met" is said only when every test with a result was met by a session:
+  // a test whose sessions were all judged out of scope was never met.
+  if (inForce.some((r) => r.metCount === 0)) return undefined;
+  return { kind: "clean", text: w.t("groups.ob.worst.clean") };
+}
+
+// ---------------------------------------------------------------------------
 // Header
 // ---------------------------------------------------------------------------
 
@@ -270,6 +368,12 @@ function renderHeader(
           ),
     ),
   );
+  const sentence = headlineSentence(model, w);
+  if (sentence !== "") {
+    const headline = el("p", "sub headline", sentence);
+    headline.dataset.headline = "groups";
+    hd.append(headline);
+  }
   host.append(hd);
 }
 
@@ -584,6 +688,12 @@ function renderSummary(
       ...obligationName(w, obligation, el("span", "art", obligation.article)),
     );
     title.append(name);
+    const worst = obligationWorst(obligation, model.totalSessions, w);
+    if (worst !== undefined) {
+      const line = el("div", "applic worst", worst.text);
+      line.dataset.worst = worst.kind;
+      title.append(line);
+    }
     row.append(title);
     tbody.append(row);
     const about = el("tr", "drill-row ob-about");

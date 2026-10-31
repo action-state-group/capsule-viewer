@@ -622,6 +622,27 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "front.agg.bucket.not_met",
   "front.agg.bucket.not_evaluable",
   "front.agg.bucket.out_of_scope",
+  // The CORE line and the headline state what the Result is and what its
+  // sessions did, so a pack cannot reword them ("generated" must not become
+  // "closed").
+  "front.core.label",
+  "front.core.pack",
+  "front.core.packs",
+  "front.core.generated",
+  "front.core.result",
+  "front.core.pin",
+  "front.core.pins",
+  "groups.headline.one",
+  "groups.headline.other",
+  "groups.headline.missed",
+  "groups.headline.unverified",
+  "groups.headline.undecided",
+  "groups.headline.nothing-applied",
+  // The worst line names a verdict, so a pack cannot reword it.
+  "groups.ob.worst.not_met",
+  "groups.ob.worst.unverified",
+  "groups.ob.worst.undecided",
+  "groups.ob.worst.clean",
   "front.check.s1",
   "front.check.s3.receipt",
   "front.check.s3.none",
@@ -1305,8 +1326,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "6e11dc61d221c05b0e2210f0634f86c12f3c214dfb28f217a6a542698ba2d7c1",
-  groups: "898dd942bf45bfca3b71edd668cf95d165c192bb07030514f7f2ece36628c011",
+  lines: "2b7c7fa07f4d0e041457012eb66a5f24608220a804e69731b726cb5af7a33944",
+  groups: "71388f5b52c23a6c5f78adb8767c724d99855a0223a0ee7eae4997fe97458dae",
 });
 
 export interface Words {

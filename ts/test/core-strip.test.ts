@@ -122,10 +122,12 @@ describe("the strip opens L0 on every Result page", () => {
           "[data-banner-detail], .cv-shell-bar",
         ),
       ).toBe(true);
-      // Coverage, then the buckets.
+      // The CORE identity line (as the Terms Pack canvas opens), coverage,
+      // then the buckets.
       const kids = [...s.children].filter((c) => c.tagName !== "STYLE");
-      expect(kids[0]!.className).toBe("agg-line");
-      expect(kids[1]!.className).toBe("agg-buckets");
+      expect(kids[0]!.className).toBe("core-id");
+      expect(kids[1]!.className).toBe("agg-line");
+      expect(kids[2]!.className).toBe("agg-buckets");
       // Every bucket the Result seals, each with its count of the
       // evaluated population.
       const tiles = [...s.querySelectorAll<HTMLElement>("[data-bucket]")];
@@ -139,7 +141,7 @@ describe("the strip opens L0 on every Result page", () => {
         expect(tile.dataset.count).toBe(String(ids.length));
         expect(tile.dataset.of).toBe(String(population));
         expect(tile.querySelector(".agg-of")!.textContent).toBe(
-          `of ${population.toLocaleString("en-US")}`,
+          `of ${population.toLocaleString("en-US")} evaluations`,
         );
       }
       // Every not-met claim in force is counted (ER section 3: each in-force
