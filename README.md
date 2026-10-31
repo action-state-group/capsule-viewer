@@ -272,7 +272,9 @@ builds a read-only context from them.
 ## Receipt module
 
 This is the plain receipt this repository keeps (see Module ownership above; the
-9b receipt is `capsulectl.deal-view/v0`). `capsule_viewer.receipt` is the unilateral deal receipt,
+9b receipt is `capsulectl.deal-view/v0`).
+
+`capsule_viewer.receipt` is the unilateral deal receipt,
 `capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
 `x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the
 `x-deal-v0` extension and forbids `composed/v1`, so a composition never resolves to it.
