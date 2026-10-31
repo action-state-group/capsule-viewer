@@ -65,6 +65,9 @@ def test_the_script_carries_the_same_manifest_with_a_zero_pin():
 
 def test_the_script_fetches_nothing_and_imports_nothing():
     text = module_slot.SCRIPT.read_text(encoding="utf-8")
+    # The SVG namespace is a name an element is created in (the outcome bar), never an address that is loaded.
+    assert text.count("http://www.w3.org/2000/svg") == 1
+    text = text.replace("http://www.w3.org/2000/svg", "")
     for token in ("fetch(", "XMLHttpRequest", "WebSocket(", "<script", "import(", "require(", "http://", "https://",
                   "innerHTML", "eval(", "localStorage", "sendBeacon"):
         assert token not in text, token
