@@ -3232,14 +3232,14 @@ var EvidenceGraph = (() => {
       throw new Error("expected non-negative bigint, got " + n);
     return n === _0n ? 0 : n.toString(2).length;
   }
-  function validateObject(object12, fields2 = {}, optFields = {}, title = "object") {
-    aobject2(object12, title);
+  function validateObject(object13, fields2 = {}, optFields = {}, title = "object") {
+    aobject2(object13, title);
     aobject2(fields2, "fields");
     aobject2(optFields, "optFields");
     function checkField(fieldName, expectedType, isOpt) {
       const label = title === "object" ? `param "${String(fieldName)}"` : `"${title}.${String(fieldName)}"`;
-      const val = object12[fieldName];
-      if (!Object.hasOwn(object12, fieldName) && (isOpt ? val !== void 0 : expectedType !== "function")) {
+      const val = object13[fieldName];
+      if (!Object.hasOwn(object13, fieldName) && (isOpt ? val !== void 0 : expectedType !== "function")) {
         throw new TypeError(`${label} is invalid: expected own property`);
       }
       if (isOpt && val === void 0)
@@ -13167,9 +13167,22 @@ ${body}
   var OUTCOME_FRAME_VARS = "--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;";
 
   // src/report-legend.ts
-  var MARKED_SOURCES = ["payload", "producer"];
+  var WORD_SOURCES = [
+    "core",
+    "pack",
+    "field",
+    "payload",
+    "producer"
+  ];
+  var MARKED_SOURCES = WORD_SOURCES;
   function tagSource(node, source) {
     node.dataset.src = source;
+    return node;
+  }
+  function fieldText(path2, value) {
+    const node = tagSource(document.createElement("code"), "field");
+    node.dataset.path = path2;
+    node.textContent = `${path2}: ${value}`;
     return node;
   }
   function el(tag, className, text2) {
@@ -13228,7 +13241,7 @@ ${s} .cv-src[data-src="field"]{background:#FBEFD2;color:#8A5A0B}
 ${s} .cv-src[data-src="payload"]{background:#F2EEE8;color:#4A4339;border:1px solid #D9D2C6}
 ${s} .cv-src[data-src="producer"]{background:#ECE6F8;color:#5B3FA0}
 ${s} [data-src="core"]:not(.cv-src){font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
-${s} [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;color:#1F5C99}
+${s} [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;font-size:.92em;color:#1F5C99}
 ${s} [data-src="payload"]:not(.cv-src){background:#F2EEE8;border:1px solid #E3DCCF;border-radius:6px;padding:2px 6px;color:var(--ink)}
 ${s} [data-src="payload"][data-kind="tool-call"]:not(.cv-src){border-style:dashed;font-family:ui-monospace,Menlo,monospace}
 ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
@@ -13673,7 +13686,7 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
   }
   function refusedWordingNotice(w) {
     if (w.source.refused === void 0) return void 0;
-    const p = el2("p", "wref", w.t("card.wording.refused"));
+    const p = tagSource(el2("p", "wref", w.t("card.wording.refused")), "core");
     p.dataset.wording = "refused";
     p.dataset.refusal = w.source.refused.reason;
     return p;
@@ -13698,6 +13711,7 @@ ${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;co
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
+${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
@@ -15599,7 +15613,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("bd6f580e4a7c6d947c0001895269a21ad8001283");
+    return commitPrefix("1a93c15179c5cc7682df2cdc85aadcb7443f0cd9");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16106,11 +16120,18 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.copied.switch": "The out-of-scope switch is copied from the contract, not re-checked here.",
       "prov.brief.judge.partial": "judge pinned for some results",
       "front.agg.excluded": "{excluded} excluded as not applicable",
-      "front.agg.bucket.met": "Met (evaluations)",
-      "front.agg.bucket.not_met": "Not met (evaluations)",
-      "front.agg.bucket.not_evaluable": "Could not decide (evaluations)",
-      "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
-      "front.agg.of": "of {n}",
+      "front.agg.bucket.met": "Met",
+      "front.agg.bucket.not_met": "Not met",
+      "front.agg.bucket.not_evaluable": "Could not decide",
+      "front.agg.bucket.out_of_scope": "Out of scope",
+      "front.agg.of": "of {n} evaluations",
+      "front.core.label": "CORE",
+      "front.core.pack": "{id} v{version}",
+      "front.core.packs": "{n} packs",
+      "front.core.generated": "generated {time}",
+      "front.core.result": "Result {digest}",
+      "front.core.pin": "judge pin {digest}",
+      "front.core.pins": "{n} judge pins",
       "front.check.h": "Check this report yourself",
       "front.check.key": "Producer key",
       "front.check.log": "Log",
@@ -16204,11 +16225,128 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "legend.toggle.core": "no toggle, the core always draws it",
       "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
       "legend.src.lead": "Where every word comes from",
+      "legend.src.core": "core",
+      "legend.src.core.is": "the viewer's own words",
+      "legend.src.pack": "wording pack",
+      "legend.src.pack.is": "the report's words",
+      "legend.src.field": "capsule field",
+      "legend.src.field.is": "a field as recorded, with its path",
       "legend.src.payload": "payload",
       "legend.src.payload.is": "the record's content",
       "legend.src.producer": "producer",
       "legend.src.producer.is": "quoted, with whose words",
-      "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words."
+      "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words.",
+      "record.banner.own": "Core \xB7 L3 \xB7 the lowest level. Opened from a card's \u201CProofs\u201D or from \u201CRecords in this bundle\u201D. Shown for one record, {action}; every record in this bundle has the same page. What is below this is the bytes, as you hold them.",
+      "record.banner.shared": "Core \xB7 L3 \xB7 the lowest level. Opened from a card's \u201CProofs\u201D or from \u201CRecords in this bundle\u201D. Shown for one record, {action}; every record in this bundle has the same page. What is below this is the bytes, as the holder shared them.",
+      "record.envelope.title": "The producer envelope \xB7 COSE_Sign1 (tag 18) \xB7 what is signed is the capsule's identity, not its JSON",
+      "record.envelope.none": "This record carries no producer envelope: it is not signed, which is not the same as a bad signature.",
+      "record.envelope.unreadable": "This record carries an envelope this page could not read as a COSE_Sign1.",
+      "record.envelope.foot.own": "A capsule may carry zero, one or several envelopes; each verifies on its own; none is in the id's preimage, so adding a signer never changes capsule_id. Verifying an envelope proves the key signed this id. It does not prove the key was allowed to act for the operator: that is rung 8.",
+      "record.envelope.foot.shared": "A capsule may carry zero, one or several envelopes; each verifies on its own; none is in the id's preimage, so adding a signer never changes capsule_id. Verifying an envelope proves the key signed this id. It does not prove the key was allowed to act for the operator: that is rung 8.",
+      "record.env.protected": "protected header",
+      "record.env.covered": "covered by the signature",
+      "record.env.not-signed": "not signed",
+      "record.env.alg": "1 \xB7 alg",
+      "record.env.alg.other": "an algorithm this page does not name",
+      "record.env.content-type": "3 \xB7 content type",
+      "record.env.kid": "4 \xB7 kid",
+      "record.env.kid.value": "{kid} \xB7 the raw {bytes}-byte public key \xB7 the signing key",
+      "record.env.unprotected": "unprotected header",
+      "record.env.unprotected.empty": "empty by rule in a bare envelope; nothing here is ever evidence. A registrar's receipt is a separate Signed Statement (rung 7), never a header on this one.",
+      "record.env.unprotected.entries": "{n} entries, none of them signed and none of them evidence. A registrar's receipt is a separate Signed Statement (rung 7), never a header on this one.",
+      "record.env.payload": "payload",
+      "record.env.payload.is-id": "the raw {bytes} bytes of capsule_id = SHA-256 over the JCS form of the capsule JSON (minus the id field itself). This is the digest. Change one byte of the capsule and it no longer matches.",
+      "record.env.payload.other": "the payload is not the capsule_id this record names.",
+      "record.env.signature": 'signature \xB7 {bytes} bytes \xB7 Ed25519 over Sig_structure("Signature1", protected header, external AAD = empty, payload)',
+      "record.capsule.title": "The capsule JSON \xB7 format 4 \xB7 fields in clear vs committed by digest",
+      "record.capsule.recomputed": "recomputed, never trusted as carried",
+      "record.tag.clear": "clear",
+      "record.tag.digest-only": "digest only",
+      "record.tag.bodies-by-digest": "bodies by digest",
+      "record.tag.commitment": "commitment",
+      "record.ladder.title": "The ladder: what each proof proves, and its status on this page",
+      "record.ladder.col.n": "Rung",
+      "record.ladder.col.proof": "Proof",
+      "record.ladder.col.proves": "What it proves \xB7 what it does not",
+      "record.ladder.col.status": "Status here",
+      "record.ladder.col.check": "Check it yourself",
+      "record.rung.1.title": "Payload digest",
+      "record.rung.1.sub": "capsule_id recomputed",
+      "record.rung.1.proves.own": "The capsule JSON you hold is the one this id names. Not: that its contents are true.",
+      "record.rung.1.proves.shared": "The capsule JSON in this file is the one this id names. Not: that its contents are true.",
+      "record.rung.1.check": "agent-action-capsule verify capsule.json",
+      "record.rung.2.title": "Content digests",
+      "record.rung.2.sub": "agent_input and agent_output",
+      "record.rung.2.proves.own": "The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.",
+      "record.rung.2.proves.shared": "The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.",
+      "record.rung.2.check": "sha256 over the disclosed body = the field",
+      "record.rung.2.none": "this record commits to no input or output",
+      "record.rung.2.count": "{n} of {of} committed members disclosed",
+      "record.rung.3.title": "Producer envelope",
+      "record.rung.3.sub": "Ed25519 over the id",
+      "record.rung.3.proves.own": "Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).",
+      "record.rung.3.proves.shared": "Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).",
+      "record.rung.3.check": "capsulectl verify --profile NAME --capsule capsule.json",
+      "record.rung.3.unchecked": "this page could not run it here (no Ed25519 in this browser); check it offline",
+      "record.rung.4.title": "Chain",
+      "record.rung.4.sub": "parent_capsule_id {parent} \xB7 relation",
+      "record.rung.4.sub.none": "parent_capsule_id \xB7 relation",
+      "record.rung.4.proves.own": "This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).",
+      "record.rung.4.proves.shared": "This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).",
+      "record.rung.4.check": "agent-action-capsule verify --store DIR",
+      "record.rung.4.parent-absent": "the parent is not a record of this bundle",
+      "record.rung.5.title": "Inclusion",
+      "record.rung.5.sub": "leaf {leaf} \xB7 seq {seq}",
+      "record.rung.5.sub.none": "no log coordinates for this record",
+      "record.rung.5.proves.own": "This record is in the book at that position, under the checkpoint root. Not: that the book was not rewritten before the checkpoint (rung 6).",
+      "record.rung.5.proves.shared": "This record is in the book at that position, under the checkpoint root. Not: that the book was not rewritten before the checkpoint (rung 6).",
+      "record.rung.5.check": "capsulectl cll verify --profile NAME --proof PROOF.json",
+      "record.rung.6.title": "Checkpoint consistency",
+      "record.rung.6.sub": "retained head \u2192 this root",
+      "record.rung.6.proves.own": "The book only grew between the head you kept and this one; nothing was replaced. Not: anything if you kept no head (first contact).",
+      "record.rung.6.proves.shared": "The book only grew between the head the reader kept and this one; nothing was replaced. Not: anything if the reader kept no head (first contact).",
+      "record.rung.6.check": "not yet available (agent-action-capsule#513)",
+      "record.rung.6.gap": "this page does not run it: a bundle carries no earlier head to compare against",
+      "record.rung.7.title": "Witness receipt \xB7 registration",
+      "record.rung.7.sub": "SCITT Signed Statement + Receipt",
+      "record.rung.7.proves.own": "A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.",
+      "record.rung.7.proves.shared": "A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.",
+      "record.rung.7.check": "agent-action-capsule verify --transparent STATEMENT --issuer-key PEM --log-key PEM",
+      "record.rung.7.none": "this bundle carries no witness receipt",
+      "record.rung.7.count": "{n} of {of} receipts verified",
+      "record.rung.8.title": "Controller binding",
+      "record.rung.8.sub": "key \u2192 controller",
+      "record.rung.8.proves.own": "The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is your trust root or a registry).",
+      "record.rung.8.proves.shared": "The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is the reader's trust root or a registry).",
+      "record.rung.8.check": "not yet available (agent-action-capsule#514)",
+      "record.rung.8.gap": "this page does not run it yet: it reads no controller binding record",
+      "record.rung.9.title": "References \xB7 the other side",
+      "record.rung.9.sub": "cited records",
+      "record.rung.9.proves.own": "The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless you hold its proof material.",
+      "record.rung.9.proves.shared": "The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless the reader holds its proof material.",
+      "record.rung.9.check": "ask for subject: record with proof material",
+      "record.rung.9.count": "{n} of {of} cited records are in this bundle",
+      "record.rung.10.title": "Judgment and adjudication",
+      "record.rung.10.sub": "the sealed Result",
+      "record.rung.10.proves.own": "The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.",
+      "record.rung.10.proves.shared": "The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.",
+      "record.rung.10.check": "capsulectl verify --bundle bundle.json",
+      "record.rung.10.is-result": "this is the sealed Result",
+      "record.rung.10.count": "cited by {n} claims of the sealed Result",
+      "record.rung.11.title": "Countersign",
+      "record.rung.11.sub": "the other party's signature over the Result",
+      "record.rung.11.proves.own": "The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.",
+      "record.rung.11.proves.shared": "The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.",
+      "record.rung.11.check": "capsulectl countersign verify --profile NAME --directory URL_OR_FILE bundle.json",
+      "record.foot.order.k": "Why the order.",
+      "record.foot.order": "Each rung assumes the one below: an envelope is over an id, an id is over the JSON, inclusion is of an id, a checkpoint is over inclusions, a witness is of a checkpoint, a judgment is over verified records.",
+      "record.foot.status.k": "What a status means here.",
+      "record.foot.status": "PASS the check ran and held \xB7 FAIL it ran and did not \xB7 NOT_PRESENT the material is not in the bundle \xB7 NOT_CHECKED the page did not run it (offline, no key, no adapter) \xB7 INCONCLUSIVE it ran and could not decide.",
+      "record.foot.sdk.k": "Who else checks this.",
+      "record.foot.sdk": "Four implementations, in Go, Rust, Python and TypeScript, pass one vector corpus.",
+      "record.rung.7.note-unread": "this page could not read the witness receipts here",
+      "record.rung.5.other": "the bundle's membership claim did not hold, and its findings do not name this record",
+      "record.rung.5.unanchored": "the checkpoint is not authenticated on this page"
     }
   };
 
@@ -16242,6 +16380,16 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.sub": "{pack} \xB7 {obligations} \xB7 {sessions}",
       "groups.sub.judged": "{pack} \xB7 {obligations} \xB7 {sessions} \xB7 judged {period}",
       "groups.sub.dated": "{pack} \xB7 {obligations} \xB7 {sessions} \xB7 {period}",
+      "groups.headline.one": "{met} of {n} session met every test that applied to it.",
+      "groups.headline.other": "{met} of {n} sessions met every test that applied to them.",
+      "groups.headline.missed": "{n} did not meet at least one.",
+      "groups.headline.unverified": "{n} could not be verified.",
+      "groups.headline.undecided": "{n} could not be decided.",
+      "groups.headline.nothing-applied": "{n} had no test that applied.",
+      "groups.ob.worst.not_met": "worst: not met, {n} of {sessions} \xB7 derived",
+      "groups.ob.worst.unverified": "worst: could not be verified, {n} of {sessions} \xB7 derived",
+      "groups.ob.worst.undecided": "worst: could not be decided, {n} of {sessions} \xB7 derived",
+      "groups.ob.worst.clean": "worst: met in every session it applied to \xB7 derived",
       "groups.ob.unchecked": "Could not be checked",
       "groups.ob.unchecked-of": " \xB7 {unchecked} of {total} could not be checked",
       "groups.ob.ok": "No exceptions",
@@ -16506,11 +16654,18 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.copied.switch": "The out-of-scope switch is copied from the contract, not re-checked here.",
       "prov.brief.judge.partial": "judge pinned for some results",
       "front.agg.excluded": "{excluded} excluded as not applicable",
-      "front.agg.bucket.met": "Met (evaluations)",
-      "front.agg.bucket.not_met": "Not met (evaluations)",
-      "front.agg.bucket.not_evaluable": "Could not decide (evaluations)",
-      "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
-      "front.agg.of": "of {n}",
+      "front.agg.bucket.met": "Met",
+      "front.agg.bucket.not_met": "Not met",
+      "front.agg.bucket.not_evaluable": "Could not decide",
+      "front.agg.bucket.out_of_scope": "Out of scope",
+      "front.agg.of": "of {n} evaluations",
+      "front.core.label": "CORE",
+      "front.core.pack": "{id} v{version}",
+      "front.core.packs": "{n} packs",
+      "front.core.generated": "generated {time}",
+      "front.core.result": "Result {digest}",
+      "front.core.pin": "judge pin {digest}",
+      "front.core.pins": "{n} judge pins",
       "front.check.h": "Check this report yourself",
       "front.check.key": "Producer key",
       "front.check.log": "Log",
@@ -16604,11 +16759,128 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "legend.toggle.core": "no toggle, the core always draws it",
       "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
       "legend.src.lead": "Where every word comes from",
+      "legend.src.core": "core",
+      "legend.src.core.is": "the viewer's own words",
+      "legend.src.pack": "wording pack",
+      "legend.src.pack.is": "the report's words",
+      "legend.src.field": "capsule field",
+      "legend.src.field.is": "a field as recorded, with its path",
       "legend.src.payload": "payload",
       "legend.src.payload.is": "the record's content",
       "legend.src.producer": "producer",
       "legend.src.producer.is": "quoted, with whose words",
-      "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words."
+      "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words.",
+      "record.banner.own": "Core \xB7 L3 \xB7 the lowest level. Opened from a card's \u201CProofs\u201D or from \u201CRecords in this bundle\u201D. Shown for one record, {action}; every record in this bundle has the same page. What is below this is the bytes, as you hold them.",
+      "record.banner.shared": "Core \xB7 L3 \xB7 the lowest level. Opened from a card's \u201CProofs\u201D or from \u201CRecords in this bundle\u201D. Shown for one record, {action}; every record in this bundle has the same page. What is below this is the bytes, as the holder shared them.",
+      "record.envelope.title": "The producer envelope \xB7 COSE_Sign1 (tag 18) \xB7 what is signed is the capsule's identity, not its JSON",
+      "record.envelope.none": "This record carries no producer envelope: it is not signed, which is not the same as a bad signature.",
+      "record.envelope.unreadable": "This record carries an envelope this page could not read as a COSE_Sign1.",
+      "record.envelope.foot.own": "A capsule may carry zero, one or several envelopes; each verifies on its own; none is in the id's preimage, so adding a signer never changes capsule_id. Verifying an envelope proves the key signed this id. It does not prove the key was allowed to act for the operator: that is rung 8.",
+      "record.envelope.foot.shared": "A capsule may carry zero, one or several envelopes; each verifies on its own; none is in the id's preimage, so adding a signer never changes capsule_id. Verifying an envelope proves the key signed this id. It does not prove the key was allowed to act for the operator: that is rung 8.",
+      "record.env.protected": "protected header",
+      "record.env.covered": "covered by the signature",
+      "record.env.not-signed": "not signed",
+      "record.env.alg": "1 \xB7 alg",
+      "record.env.alg.other": "an algorithm this page does not name",
+      "record.env.content-type": "3 \xB7 content type",
+      "record.env.kid": "4 \xB7 kid",
+      "record.env.kid.value": "{kid} \xB7 the raw {bytes}-byte public key \xB7 the signing key",
+      "record.env.unprotected": "unprotected header",
+      "record.env.unprotected.empty": "empty by rule in a bare envelope; nothing here is ever evidence. A registrar's receipt is a separate Signed Statement (rung 7), never a header on this one.",
+      "record.env.unprotected.entries": "{n} entries, none of them signed and none of them evidence. A registrar's receipt is a separate Signed Statement (rung 7), never a header on this one.",
+      "record.env.payload": "payload",
+      "record.env.payload.is-id": "the raw {bytes} bytes of capsule_id = SHA-256 over the JCS form of the capsule JSON (minus the id field itself). This is the digest. Change one byte of the capsule and it no longer matches.",
+      "record.env.payload.other": "the payload is not the capsule_id this record names.",
+      "record.env.signature": 'signature \xB7 {bytes} bytes \xB7 Ed25519 over Sig_structure("Signature1", protected header, external AAD = empty, payload)',
+      "record.capsule.title": "The capsule JSON \xB7 format 4 \xB7 fields in clear vs committed by digest",
+      "record.capsule.recomputed": "recomputed, never trusted as carried",
+      "record.tag.clear": "clear",
+      "record.tag.digest-only": "digest only",
+      "record.tag.bodies-by-digest": "bodies by digest",
+      "record.tag.commitment": "commitment",
+      "record.ladder.title": "The ladder: what each proof proves, and its status on this page",
+      "record.ladder.col.n": "Rung",
+      "record.ladder.col.proof": "Proof",
+      "record.ladder.col.proves": "What it proves \xB7 what it does not",
+      "record.ladder.col.status": "Status here",
+      "record.ladder.col.check": "Check it yourself",
+      "record.rung.1.title": "Payload digest",
+      "record.rung.1.sub": "capsule_id recomputed",
+      "record.rung.1.proves.own": "The capsule JSON you hold is the one this id names. Not: that its contents are true.",
+      "record.rung.1.proves.shared": "The capsule JSON in this file is the one this id names. Not: that its contents are true.",
+      "record.rung.1.check": "agent-action-capsule verify capsule.json",
+      "record.rung.2.title": "Content digests",
+      "record.rung.2.sub": "agent_input and agent_output",
+      "record.rung.2.proves.own": "The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.",
+      "record.rung.2.proves.shared": "The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.",
+      "record.rung.2.check": "sha256 over the disclosed body = the field",
+      "record.rung.2.none": "this record commits to no input or output",
+      "record.rung.2.count": "{n} of {of} committed members disclosed",
+      "record.rung.3.title": "Producer envelope",
+      "record.rung.3.sub": "Ed25519 over the id",
+      "record.rung.3.proves.own": "Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).",
+      "record.rung.3.proves.shared": "Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).",
+      "record.rung.3.check": "capsulectl verify --profile NAME --capsule capsule.json",
+      "record.rung.3.unchecked": "this page could not run it here (no Ed25519 in this browser); check it offline",
+      "record.rung.4.title": "Chain",
+      "record.rung.4.sub": "parent_capsule_id {parent} \xB7 relation",
+      "record.rung.4.sub.none": "parent_capsule_id \xB7 relation",
+      "record.rung.4.proves.own": "This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).",
+      "record.rung.4.proves.shared": "This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).",
+      "record.rung.4.check": "agent-action-capsule verify --store DIR",
+      "record.rung.4.parent-absent": "the parent is not a record of this bundle",
+      "record.rung.5.title": "Inclusion",
+      "record.rung.5.sub": "leaf {leaf} \xB7 seq {seq}",
+      "record.rung.5.sub.none": "no log coordinates for this record",
+      "record.rung.5.proves.own": "This record is in the book at that position, under the checkpoint root. Not: that the book was not rewritten before the checkpoint (rung 6).",
+      "record.rung.5.proves.shared": "This record is in the book at that position, under the checkpoint root. Not: that the book was not rewritten before the checkpoint (rung 6).",
+      "record.rung.5.check": "capsulectl cll verify --profile NAME --proof PROOF.json",
+      "record.rung.6.title": "Checkpoint consistency",
+      "record.rung.6.sub": "retained head \u2192 this root",
+      "record.rung.6.proves.own": "The book only grew between the head you kept and this one; nothing was replaced. Not: anything if you kept no head (first contact).",
+      "record.rung.6.proves.shared": "The book only grew between the head the reader kept and this one; nothing was replaced. Not: anything if the reader kept no head (first contact).",
+      "record.rung.6.check": "not yet available (agent-action-capsule#513)",
+      "record.rung.6.gap": "this page does not run it: a bundle carries no earlier head to compare against",
+      "record.rung.7.title": "Witness receipt \xB7 registration",
+      "record.rung.7.sub": "SCITT Signed Statement + Receipt",
+      "record.rung.7.proves.own": "A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.",
+      "record.rung.7.proves.shared": "A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.",
+      "record.rung.7.check": "agent-action-capsule verify --transparent STATEMENT --issuer-key PEM --log-key PEM",
+      "record.rung.7.none": "this bundle carries no witness receipt",
+      "record.rung.7.count": "{n} of {of} receipts verified",
+      "record.rung.8.title": "Controller binding",
+      "record.rung.8.sub": "key \u2192 controller",
+      "record.rung.8.proves.own": "The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is your trust root or a registry).",
+      "record.rung.8.proves.shared": "The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is the reader's trust root or a registry).",
+      "record.rung.8.check": "not yet available (agent-action-capsule#514)",
+      "record.rung.8.gap": "this page does not run it yet: it reads no controller binding record",
+      "record.rung.9.title": "References \xB7 the other side",
+      "record.rung.9.sub": "cited records",
+      "record.rung.9.proves.own": "The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless you hold its proof material.",
+      "record.rung.9.proves.shared": "The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless the reader holds its proof material.",
+      "record.rung.9.check": "ask for subject: record with proof material",
+      "record.rung.9.count": "{n} of {of} cited records are in this bundle",
+      "record.rung.10.title": "Judgment and adjudication",
+      "record.rung.10.sub": "the sealed Result",
+      "record.rung.10.proves.own": "The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.",
+      "record.rung.10.proves.shared": "The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.",
+      "record.rung.10.check": "capsulectl verify --bundle bundle.json",
+      "record.rung.10.is-result": "this is the sealed Result",
+      "record.rung.10.count": "cited by {n} claims of the sealed Result",
+      "record.rung.11.title": "Countersign",
+      "record.rung.11.sub": "the other party's signature over the Result",
+      "record.rung.11.proves.own": "The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.",
+      "record.rung.11.proves.shared": "The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.",
+      "record.rung.11.check": "capsulectl countersign verify --profile NAME --directory URL_OR_FILE bundle.json",
+      "record.foot.order.k": "Why the order.",
+      "record.foot.order": "Each rung assumes the one below: an envelope is over an id, an id is over the JSON, inclusion is of an id, a checkpoint is over inclusions, a witness is of a checkpoint, a judgment is over verified records.",
+      "record.foot.status.k": "What a status means here.",
+      "record.foot.status": "PASS the check ran and held \xB7 FAIL it ran and did not \xB7 NOT_PRESENT the material is not in the bundle \xB7 NOT_CHECKED the page did not run it (offline, no key, no adapter) \xB7 INCONCLUSIVE it ran and could not decide.",
+      "record.foot.sdk.k": "Who else checks this.",
+      "record.foot.sdk": "Four implementations, in Go, Rust, Python and TypeScript, pass one vector corpus.",
+      "record.rung.7.note-unread": "this page could not read the witness receipts here",
+      "record.rung.5.other": "the bundle's membership claim did not hold, and its findings do not name this record",
+      "record.rung.5.unanchored": "the checkpoint is not authenticated on this page"
     }
   };
 
@@ -16985,11 +17257,61 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "front.agg.copied.both",
     "front.agg.copied.dates",
     "front.agg.copied.switch",
+    // The record page, the lowest level (record-page.ts): what each proof
+    // proves and does not, what a status means, and what this page did not
+    // run. A pack cannot make a rung read as proving more than it does.
+    "record.capsule.recomputed",
+    "record.env.covered",
+    "record.env.not-signed",
+    "record.envelope.foot.own",
+    "record.envelope.foot.shared",
+    "record.envelope.none",
+    "record.rung.5.other",
+    "record.rung.5.unanchored",
+    "record.rung.7.note-unread",
+    ...["clear", "digest-only", "bodies-by-digest", "commitment"].map(
+      (t) => `record.tag.${t}`
+    ),
+    "record.env.alg.other",
+    "record.envelope.unreadable",
+    "record.foot.order",
+    "record.foot.sdk",
+    "record.foot.status",
+    "record.ladder.title",
+    "record.rung.1.sub",
+    ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].flatMap((n) => [
+      `record.rung.${n}.proves.own`,
+      `record.rung.${n}.proves.shared`
+    ]),
+    "record.rung.3.unchecked",
+    "record.rung.6.gap",
+    "record.rung.8.gap",
     // The bucket labels name a verdict: a pack cannot make one read as another.
     "front.agg.bucket.met",
     "front.agg.bucket.not_met",
     "front.agg.bucket.not_evaluable",
     "front.agg.bucket.out_of_scope",
+    // The CORE line and the headline state what the Result is and what its
+    // sessions did, so a pack cannot reword them ("generated" must not become
+    // "closed").
+    "front.core.label",
+    "front.core.pack",
+    "front.core.packs",
+    "front.core.generated",
+    "front.core.result",
+    "front.core.pin",
+    "front.core.pins",
+    "groups.headline.one",
+    "groups.headline.other",
+    "groups.headline.missed",
+    "groups.headline.unverified",
+    "groups.headline.undecided",
+    "groups.headline.nothing-applied",
+    // The worst line names a verdict, so a pack cannot reword it.
+    "groups.ob.worst.not_met",
+    "groups.ob.worst.unverified",
+    "groups.ob.worst.undecided",
+    "groups.ob.worst.clean",
     "front.check.s1",
     "front.check.s3.receipt",
     "front.check.s3.none",
@@ -17498,8 +17820,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "1660fec2753759039b2e65ec702bcd5d06cee9a9a724e08f7a1bda8c6568c2b6",
-    groups: "7d747e1ac010b6243bd0dff8f74084908a2351430675fca8331c21756e5979c9"
+    lines: "94eadfaad126b786b89a822a647f22c0f74d994cbbaac12e86ee29d3b2a37b4b",
+    groups: "fd1b4c7e9cb6b08370b86709bceb08e68de9967038267a70338a68ed89567b70"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -18146,7 +18468,7 @@ ${key}`);
     const term = el6("div", "sc-box");
     term.dataset.wording = r.wording.source;
     if (r.wording.source === "sealed") {
-      term.append(el6("div", "sc-k", w.t("spot.term")));
+      term.append(tagSource(el6("div", "sc-k", w.t("spot.term")), "pack"));
       term.append(el6("blockquote", "sc-q", r.wording.text));
     } else
       term.append(
@@ -18166,18 +18488,21 @@ ${key}`);
     const head2 = el6("div", `sc-box sc-v ${r.worded.tone}`);
     head2.append(wordPill(r.worded, r.verdict));
     if (r.rationale !== void 0) {
-      head2.append(el6("div", "sc-k", w.t("spot.says")));
+      head2.append(tagSource(el6("div", "sc-k", w.t("spot.says")), "pack"));
       head2.append(el6("p", "sc-q", judgeNote(r.rationale, r.drawnVerdict, w)));
     } else head2.append(el6("p", "sc-gap", r.noNote));
     col.append(head2);
     const parsed = r.rationale === void 0 ? {} : parseJudgeProbabilities(r.rationale);
     const facts = [];
     if (r.judgePinDigest !== void 0)
-      facts.push(w.t("spot.pin", { digest: r.judgePinDigest }));
+      facts.push(fieldText("judge_pin", r.judgePinDigest));
     if (parsed.confidence !== void 0)
-      facts.push(w.t("spot.confidence", { c: parsed.confidence.toFixed(2) }));
+      facts.push(fieldText("confidence", parsed.confidence.toFixed(2)));
     if (facts.length > 0) {
-      const line = el6("p", "sc-facts", facts.join(" \xB7 "));
+      const line = el6("p", "sc-facts");
+      facts.forEach(
+        (fact, i) => line.append(...i > 0 ? [" \xB7 ", fact] : [fact])
+      );
       line.dataset.judge = "";
       col.append(line);
     }
@@ -19816,6 +20141,60 @@ ${key}`);
     if (first === void 0 || last === void 0) return void 0;
     return first === last ? first : w.t("card.span", { from: first, to: last });
   }
+  function sessionStatus(session) {
+    const applied = session.tests.filter(
+      (t) => t.verdict !== "not_applicable" && t.verdict !== "out_of_scope" && t.verdict !== "not_yet_in_force"
+    );
+    if (applied.some((t) => t.verdict === "not_met")) return "missed";
+    if (applied.some((t) => t.verdict === "failed" || t.verdict === "unsupported"))
+      return "unverified";
+    if (applied.some((t) => t.verdict === "not_evaluable")) return "undecided";
+    return applied.length === 0 ? "nothing-applied" : "met";
+  }
+  function headlineSentence(model, w) {
+    if (model.totalSessions === 0) return "";
+    const by = (status2) => model.sessions.filter((s) => sessionStatus(s) === status2).length;
+    const parts = [
+      w.p("groups.headline", model.totalSessions, {
+        met: fmt3(by("met")),
+        n: fmt3(model.totalSessions)
+      }),
+      w.t("groups.headline.missed", { n: fmt3(by("missed")) })
+    ];
+    for (const [status2, key] of [
+      ["unverified", "groups.headline.unverified"],
+      ["undecided", "groups.headline.undecided"],
+      ["nothing-applied", "groups.headline.nothing-applied"]
+    ])
+      if (by(status2) > 0) parts.push(w.t(key, { n: fmt3(by(status2)) }));
+    return parts.join(" ");
+  }
+  function obligationWorst(obligation, totalSessions, w) {
+    const inForce = obligation.rows.filter((r) => !nothingChecked(r));
+    if (inForce.length === 0) return void 0;
+    const most = (count2) => inForce.reduce(
+      (best, r) => count2(r) > (best === void 0 ? 0 : count2(best)) ? r : best,
+      void 0
+    );
+    const picks = [
+      ["not_met", "groups.ob.worst.not_met", (r) => r.notMetCount],
+      ["unverified", "groups.ob.worst.unverified", (r) => r.unverifiedCount],
+      ["undecided", "groups.ob.worst.undecided", (r) => r.notEvaluableCount]
+    ];
+    for (const [kind, key, countOf2] of picks) {
+      const row2 = most(countOf2);
+      if (row2 === void 0) continue;
+      return {
+        kind,
+        text: w.t(key, {
+          n: fmt3(countOf2(row2)),
+          sessions: count(w, "session", population(row2, totalSessions))
+        })
+      };
+    }
+    if (inForce.some((r) => r.metCount === 0)) return void 0;
+    return { kind: "clean", text: w.t("groups.ob.worst.clean") };
+  }
   function renderHeader(host, model, w) {
     const hd = el8("div", "hd");
     hd.dataset.section = "header";
@@ -19839,6 +20218,12 @@ ${key}`);
         )
       )
     );
+    const sentence = headlineSentence(model, w);
+    if (sentence !== "") {
+      const headline = el8("p", "sub headline", sentence);
+      headline.dataset.headline = "groups";
+      hd.append(headline);
+    }
     host.append(hd);
   }
   function nothingChecked(row2) {
@@ -20034,6 +20419,12 @@ ${key}`);
         ...obligationName(w, obligation, el8("span", "art", obligation.article))
       );
       title.append(name);
+      const worst = obligationWorst(obligation, model.totalSessions, w);
+      if (worst !== void 0) {
+        const line = el8("div", "applic worst", worst.text);
+        line.dataset.worst = worst.kind;
+        title.append(line);
+      }
       row2.append(title);
       tbody.append(row2);
       const about = el8("tr", "drill-row ob-about");
@@ -20910,10 +21301,552 @@ ${key}`);
     render: renderComposed
   };
 
+  // src/record-page.ts
+  var object10 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
+  var HEX = /^[0-9a-f]+$/u;
+  var ANY_HEX = /^[0-9a-fA-F]+$/u;
+  function shortHex(value) {
+    return value.length > 12 && HEX.test(value) ? `${value.slice(0, 4)}\u2026${value.slice(-4)}` : value;
+  }
+  function readCbor(bytes, at, depth = 0) {
+    if (depth > 6 || at.i >= bytes.length) return void 0;
+    const head2 = bytes[at.i++];
+    const major = head2 >> 5;
+    const info = head2 & 31;
+    let n;
+    if (info < 24) n = info;
+    else if (info < 28) {
+      const size = 1 << info - 24;
+      if (size > 4 || at.i + size > bytes.length) return void 0;
+      n = 0;
+      for (let k = 0; k < size; k++) n = n * 256 + bytes[at.i++];
+    } else if (major === 7 && info === 22) return null;
+    else return void 0;
+    switch (major) {
+      case 0:
+        return BigInt(n);
+      case 1:
+        return -1n - BigInt(n);
+      case 2:
+      case 3: {
+        if (at.i + n > bytes.length) return void 0;
+        const slice2 = bytes.slice(at.i, at.i + n);
+        at.i += n;
+        return major === 2 ? slice2 : new TextDecoder().decode(slice2);
+      }
+      case 4: {
+        const out = [];
+        for (let k = 0; k < n; k++) {
+          const item = readCbor(bytes, at, depth + 1);
+          if (item === void 0) return void 0;
+          out.push(item);
+        }
+        return out;
+      }
+      case 5: {
+        const out = /* @__PURE__ */ new Map();
+        for (let k = 0; k < n; k++) {
+          const key = readCbor(bytes, at, depth + 1);
+          const value = readCbor(bytes, at, depth + 1);
+          if (key === void 0 || value === void 0) return void 0;
+          out.set(key, value);
+        }
+        return out;
+      }
+      case 6:
+        return readCbor(bytes, at, depth + 1);
+      default:
+        return void 0;
+    }
+  }
+  var toHex3 = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  function readEnvelope(hex5) {
+    if (hex5.length % 2 !== 0 || !ANY_HEX.test(hex5)) return void 0;
+    const bytes = Uint8Array.from(
+      hex5.match(/../gu).map((pair) => parseInt(pair, 16))
+    );
+    const tagged = bytes[0] === 210;
+    if (!tagged) return void 0;
+    const at = { i: 1 };
+    const outer = readCbor(bytes, at);
+    if (at.i !== bytes.length) return void 0;
+    if (!Array.isArray(outer) || outer.length !== 4) return void 0;
+    const [protectedBytes, unprotected, payload, signature] = outer;
+    if (!(protectedBytes instanceof Uint8Array) || !(unprotected instanceof Map) || !(signature instanceof Uint8Array))
+      return void 0;
+    const headers = readCbor(protectedBytes, { i: 0 });
+    if (!(headers instanceof Map)) return void 0;
+    const get = (label) => {
+      for (const [k, v] of headers) if (k === label) return v;
+      return void 0;
+    };
+    const alg = get(1n);
+    const contentType = get(3n);
+    const kid = get(4n);
+    return {
+      ...typeof alg === "bigint" ? { alg: Number(alg) } : {},
+      ...typeof contentType === "string" ? { contentType } : {},
+      ...kid instanceof Uint8Array ? { kid: toHex3(kid) } : {},
+      unprotectedEntries: unprotected.size,
+      ...payload instanceof Uint8Array ? { payloadHex: toHex3(payload) } : {},
+      signatureBytes: signature.length,
+      tagged
+    };
+  }
+  var ENVELOPE_MEMBERS = /* @__PURE__ */ new Set(["signature", "key_id"]);
+  var FIELD_ROWS = [
+    ["spec_version"],
+    ["format_version", "canonicalization_id"],
+    ["capsule_id"],
+    ["action_id", "action_type"],
+    ["operator", "developer"],
+    ["timestamp", "epoch_id"],
+    ["model_attestation"],
+    ["effect"],
+    ["assurance"],
+    ["disposition"],
+    ["constraints"],
+    ["chain"],
+    ["references"],
+    ["agent_input_digest", "agent_output_digest", "evidence_digest"],
+    ["selective_disclosure"]
+  ];
+  function show(value, depth = 0) {
+    if (typeof value === "string") return shortHex(value);
+    if (typeof value === "number" || typeof value === "boolean")
+      return String(value);
+    if (value === null) return "null";
+    if (Array.isArray(value)) {
+      const items = value.map((v) => show(v, depth + 1));
+      return depth > 0 ? `[${items.join(", ")}]` : items.join(" \xB7 ");
+    }
+    const entries = Object.entries(object10(value)).sort(
+      ([a], [b]) => a < b ? -1 : a > b ? 1 : 0
+    );
+    if (depth > 1) return `{${entries.length} members}`;
+    return entries.map(([k, v]) => `${k} ${show(v, depth + 1)}`).join(" \xB7 ");
+  }
+  var hasDigest = (value) => Object.entries(object10(value)).some(
+    ([k, v]) => k.endsWith("_digest") || hasDigest(v)
+  );
+  function tagsOf(members, record) {
+    const present = members.filter((m) => Object.hasOwn(record, m));
+    if (present.every((m) => m.endsWith("_digest"))) {
+      const tags2 = ["digest-only"];
+      return tags2;
+    }
+    if (present.some((m) => /disclos|commit/u.test(m))) {
+      const tags2 = ["commitment"];
+      return tags2;
+    }
+    const tags = ["clear"];
+    if (present.some((m) => hasDigest(record[m]))) tags.push("bodies-by-digest");
+    return tags;
+  }
+  function fieldRows(record) {
+    const drawn = /* @__PURE__ */ new Set();
+    const rows = [];
+    const add2 = (members) => {
+      const present = members.filter((m) => Object.hasOwn(record, m));
+      if (present.length === 0) return;
+      for (const m of present) drawn.add(m);
+      rows.push({
+        label: present.join(" \xB7 "),
+        value: present.map((m) => show(record[m])).join(" \xB7 "),
+        tags: tagsOf(present, record),
+        ...present[0] === "capsule_id" ? { note: "recomputed" } : {}
+      });
+    };
+    for (const members of FIELD_ROWS) add2(members);
+    for (const key of Object.keys(record))
+      if (!drawn.has(key) && !ENVELOPE_MEMBERS.has(key)) add2([key]);
+    return rows;
+  }
+  var REF_TYPE = "agent-action-capsule";
+  function ladder(input, w) {
+    const { context, capsuleId } = input;
+    const raw = object10(context.recordIndex.get(capsuleId));
+    const strict2 = context.strict?.records.find((r) => r.capsuleId === capsuleId);
+    const t = (key, vars) => w.t(key, vars);
+    const rungs = [];
+    const add2 = (n, key, status2, note, sub) => {
+      rungs.push({
+        n,
+        key,
+        status: status2,
+        sub,
+        ...note === void 0 ? {} : { note }
+      });
+    };
+    add2(
+      1,
+      "payload",
+      context.recordIndex.has(capsuleId) && (strict2 === void 0 || strict2.identityOk) ? "PASS" : "FAIL",
+      void 0,
+      t("record.rung.1.sub")
+    );
+    const fields2 = ["agent_input", "agent_output"];
+    const committed = fields2.filter(
+      (f) => context.recordIndex.has(capsuleId) && committedDigest(context.recordIndex.get(capsuleId), f) !== void 0
+    );
+    const states = committed.map(
+      (f) => disclosureOf(context, capsuleId, f).state
+    );
+    const matched = states.filter((s) => s === "disclosed").length;
+    const mismatched = states.filter((s) => s === "disclosure_mismatch").length;
+    add2(
+      2,
+      "content",
+      mismatched > 0 ? "FAIL" : matched > 0 ? "PASS" : "NOT_PRESENT",
+      committed.length === 0 ? t("record.rung.2.none") : t("record.rung.2.count", { n: matched, of: committed.length }),
+      t("record.rung.2.sub")
+    );
+    const envelope = raw.signature !== void 0;
+    add2(
+      3,
+      "envelope",
+      strict2 === void 0 ? envelope ? "NOT_CHECKED" : "NOT_PRESENT" : strict2.signature === "authored" ? "PASS" : strict2.signature === "invalid" ? "FAIL" : "NOT_PRESENT",
+      strict2 === void 0 && envelope ? t("record.rung.3.unchecked") : void 0,
+      t("record.rung.3.sub")
+    );
+    const chain = object10(raw.chain);
+    const parent2 = typeof chain.parent_capsule_id === "string" ? chain.parent_capsule_id : void 0;
+    add2(
+      4,
+      "chain",
+      parent2 === void 0 ? "NOT_PRESENT" : context.recordIndex.has(parent2) ? "PASS" : "NOT_CHECKED",
+      parent2 !== void 0 && !context.recordIndex.has(parent2) ? t("record.rung.4.parent-absent") : void 0,
+      parent2 === void 0 ? t("record.rung.4.sub.none") : t("record.rung.4.sub", { parent: shortHex(parent2) })
+    );
+    const at = logCoordinates(context.completeness.memberships, capsuleId);
+    const membership = context.strict?.claims.find(
+      (c) => c.name === "per_record_membership"
+    );
+    const named = membership?.findings.some((f) => f.endsWith(`:${capsuleId}`));
+    let inclusion = "NOT_CHECKED";
+    let inclusionNote;
+    if (at === void 0) inclusion = "NOT_PRESENT";
+    else if (context.strict === void 0 || membership === void 0)
+      inclusionNote = t("record.rung.5.unanchored");
+    else if (!context.strict.checkpointAuthenticated)
+      inclusionNote = t("record.rung.5.unanchored");
+    else if (membership.status === "pass") inclusion = "PASS";
+    else if (membership.status === "fail") {
+      if (named) inclusion = "FAIL";
+      else inclusionNote = t("record.rung.5.other");
+    }
+    add2(
+      5,
+      "inclusion",
+      inclusion,
+      inclusionNote,
+      at === void 0 ? t("record.rung.5.sub.none") : t("record.rung.5.sub", { leaf: at.leafIndex, seq: at.seq })
+    );
+    add2(
+      6,
+      "consistency",
+      "NOT_CHECKED",
+      t("record.rung.6.gap"),
+      t("record.rung.6.sub")
+    );
+    const receipts2 = context.strict?.witnesses?.receipts ?? [];
+    const passed = receipts2.filter((r) => r.status === "pass").length;
+    add2(
+      7,
+      "witness",
+      receipts2.length === 0 ? context.strict === void 0 ? "NOT_CHECKED" : "NOT_PRESENT" : receipts2.some((r) => r.status === "fail") ? "FAIL" : passed === receipts2.length ? "PASS" : "NOT_CHECKED",
+      context.strict === void 0 ? t("record.rung.7.note-unread") : receipts2.length === 0 ? t("record.rung.7.none") : t("record.rung.7.count", { n: passed, of: receipts2.length }),
+      t("record.rung.7.sub")
+    );
+    add2(
+      8,
+      "controller",
+      "NOT_CHECKED",
+      t("record.rung.8.gap"),
+      t("record.rung.8.sub")
+    );
+    const refs = (Array.isArray(raw.references) ? raw.references : []).filter(
+      (r) => object10(r).type === REF_TYPE && typeof object10(r).digest === "string"
+    );
+    const here = refs.filter(
+      (r) => context.recordIndex.has(object10(r).digest)
+    ).length;
+    add2(
+      9,
+      "references",
+      refs.length === 0 ? "NOT_PRESENT" : here === refs.length ? "PASS" : "NOT_CHECKED",
+      refs.length === 0 ? void 0 : t("record.rung.9.count", { n: here, of: refs.length }),
+      t("record.rung.9.sub")
+    );
+    const result = input.result;
+    const citing = result === void 0 ? 0 : result.claims.filter(
+      (c) => c.evidence.some((e) => e.digest === capsuleId)
+    ).length;
+    const isResult = result?.capsuleId === capsuleId;
+    add2(
+      10,
+      "judgment",
+      isResult || citing > 0 ? "PASS" : "NOT_PRESENT",
+      isResult ? t("record.rung.10.is-result") : citing > 0 ? t("record.rung.10.count", { n: citing }) : void 0,
+      t("record.rung.10.sub")
+    );
+    const stamps = input.stamps;
+    const kinds = new Set(stamps.map((s) => s.kind));
+    add2(
+      11,
+      "countersign",
+      stamps.length === 0 || kinds.size === 1 && kinds.has("hollow") ? "NOT_PRESENT" : kinds.has("invalid") ? "FAIL" : stamps.every(
+        (s) => s.kind === "resolved" && s.statement.checks.length > 0 && s.statement.checks.every((c) => c.result === "established")
+      ) ? "PASS" : "NOT_CHECKED",
+      void 0,
+      t("record.rung.11.sub")
+    );
+    return rungs;
+  }
+  function el9(tag, className, text2) {
+    const node = document.createElement(tag);
+    if (className !== void 0) node.className = className;
+    if (text2 !== void 0) node.textContent = text2;
+    return node;
+  }
+  var ALG_NAMES = /* @__PURE__ */ new Map([
+    [-8, "EdDSA, Ed25519"]
+  ]);
+  function envelopeCard(input, w) {
+    const { context, capsuleId } = input;
+    const voice = input.voice;
+    const raw = object10(context.recordIndex.get(capsuleId));
+    const card = el9("section", "l3-card");
+    card.dataset.l3 = "envelope";
+    card.append(el9("h4", "l3-k", w.t("record.envelope.title")));
+    const hex5 = typeof raw.signature === "string" ? raw.signature : void 0;
+    const view = hex5 === void 0 ? void 0 : readEnvelope(hex5);
+    if (hex5 === void 0) {
+      const none = el9("p", "l3-note", w.t("record.envelope.none"));
+      none.dataset.l3 = "no-envelope";
+      card.append(none);
+    } else if (view === void 0) {
+      const bad2 = el9("p", "l3-note", w.t("record.envelope.unreadable"));
+      bad2.dataset.l3 = "unreadable-envelope";
+      card.append(bad2);
+    } else {
+      const covered = (cls, tag) => {
+        const chip = el9("span", `l3-chip ${cls}`, tag);
+        return chip;
+      };
+      const prot = el9("div", "l3-box l3-prot");
+      prot.dataset.l3 = "protected";
+      const ph = el9("p", "l3-h");
+      ph.append(
+        el9("b", "", w.t("record.env.protected")),
+        " ",
+        covered("l3-green", w.t("record.env.covered"))
+      );
+      prot.append(ph);
+      const dl = el9("dl", "l3-kv");
+      const row2 = (k, v) => {
+        dl.append(el9("dt", "", k), el9("dd", "", v));
+      };
+      if (view.alg !== void 0)
+        row2(
+          w.t("record.env.alg"),
+          `${view.alg} \xB7 ${ALG_NAMES.get(view.alg) ?? w.t("record.env.alg.other")}`
+        );
+      if (view.contentType !== void 0)
+        row2(w.t("record.env.content-type"), view.contentType);
+      if (view.kid !== void 0)
+        row2(
+          w.t("record.env.kid"),
+          w.t("record.env.kid.value", {
+            kid: shortHex(view.kid),
+            bytes: view.kid.length / 2
+          })
+        );
+      prot.append(dl);
+      const un = el9("div", "l3-box l3-unprot");
+      un.dataset.l3 = "unprotected";
+      const uh = el9("p", "l3-h");
+      uh.append(
+        el9("b", "", w.t("record.env.unprotected")),
+        " ",
+        covered("l3-grey", w.t("record.env.not-signed"))
+      );
+      un.append(
+        uh,
+        el9(
+          "p",
+          "",
+          view.unprotectedEntries === 0 ? w.t("record.env.unprotected.empty") : w.t("record.env.unprotected.entries", {
+            n: view.unprotectedEntries
+          })
+        )
+      );
+      const pay = el9("div", "l3-box l3-payload");
+      pay.dataset.l3 = "payload";
+      const yh = el9("p", "l3-h");
+      yh.append(
+        el9("b", "", w.t("record.env.payload")),
+        " ",
+        covered("l3-green", w.t("record.env.covered"))
+      );
+      pay.append(
+        yh,
+        el9(
+          "p",
+          "",
+          view.payloadHex !== void 0 && view.payloadHex === capsuleId ? w.t("record.env.payload.is-id", {
+            bytes: view.payloadHex.length / 2
+          }) : w.t("record.env.payload.other")
+        )
+      );
+      const sig = el9("div", "l3-box l3-sig");
+      sig.dataset.l3 = "signature";
+      sig.append(
+        el9("p", "", w.t("record.env.signature", { bytes: view.signatureBytes }))
+      );
+      card.append(prot, un, pay, sig);
+    }
+    card.append(el9("p", "l3-note", w.t(`record.envelope.foot.${voice}`)));
+    return card;
+  }
+  function tagWord(tag, w) {
+    return w.t(`record.tag.${tag}`);
+  }
+  function capsuleCard(input, w) {
+    const raw = object10(input.context.recordIndex.get(input.capsuleId));
+    const card = el9("section", "l3-card");
+    card.dataset.l3 = "capsule";
+    card.append(el9("h4", "l3-k", w.t("record.capsule.title")));
+    const dl = el9("dl", "l3-fields");
+    for (const row2 of fieldRows(raw)) {
+      const dt = el9("dt", "", row2.label);
+      const dd = el9("dd");
+      dd.append(row2.value);
+      if (row2.note === "recomputed")
+        dd.append(" \xB7 ", w.t("record.capsule.recomputed"));
+      for (const tag of row2.tags) {
+        const chip = el9("span", `l3-chip l3-tag-${tag}`, tagWord(tag, w));
+        chip.dataset.tag = tag;
+        dd.append(" ", chip);
+      }
+      dl.append(dt, dd);
+    }
+    card.append(dl);
+    return card;
+  }
+  function ladderCard(input, w) {
+    const voice = input.voice;
+    const card = el9("section", "l3-card l3-ladder");
+    card.dataset.l3 = "ladder";
+    card.append(el9("h3", "l3-title", w.t("record.ladder.title")));
+    const table2 = el9("table", "l3-table");
+    const head2 = el9("tr");
+    for (const key of [
+      "record.ladder.col.n",
+      "record.ladder.col.proof",
+      "record.ladder.col.proves",
+      "record.ladder.col.status",
+      "record.ladder.col.check"
+    ])
+      head2.append(el9("th", "", w.t(key)));
+    const thead = el9("thead");
+    thead.append(head2);
+    table2.append(thead);
+    const body = el9("tbody");
+    for (const rung of ladder(input, w)) {
+      const tr = el9("tr");
+      tr.dataset.rung = String(rung.n);
+      tr.dataset.rungStatus = rung.status;
+      tr.append(el9("td", "l3-n", String(rung.n)));
+      const name = el9("td");
+      name.append(
+        el9("b", "", w.t(`record.rung.${rung.n}.title`)),
+        el9("div", "l3-sub", rung.sub)
+      );
+      tr.append(name, el9("td", "", w.t(`record.rung.${rung.n}.proves.${voice}`)));
+      const status2 = el9("td");
+      const chip = el9("span", `l3-status l3-s-${rung.status}`, rung.status);
+      chip.dataset.status = rung.status;
+      status2.append(chip);
+      if (rung.note !== void 0) status2.append(" ", rung.note);
+      tr.append(status2, el9("td", "l3-cmd", w.t(`record.rung.${rung.n}.check`)));
+      body.append(tr);
+    }
+    table2.append(body);
+    card.append(table2);
+    return card;
+  }
+  function footer(w) {
+    const foot = el9("section", "l3-card l3-foot");
+    foot.dataset.l3 = "foot";
+    for (const key of ["order", "status", "sdk"]) {
+      const col = el9("p");
+      col.append(
+        el9("b", "", w.t(`record.foot.${key}.k`)),
+        ` ${w.t(`record.foot.${key}`)}`
+      );
+      foot.append(col);
+    }
+    return foot;
+  }
+  function renderRecordPage(input, w) {
+    const raw = object10(input.context.recordIndex.get(input.capsuleId));
+    const page = el9("div", "cv-l3");
+    page.dataset.level = "3";
+    page.dataset.recordPage = input.capsuleId;
+    page.dataset.voice = input.voice;
+    const actionId = typeof raw.action_id === "string" ? raw.action_id : "";
+    page.append(
+      el9(
+        "p",
+        "l3-banner",
+        w.t(`record.banner.${input.voice}`, { action: actionId })
+      )
+    );
+    const cols = el9("div", "l3-cols");
+    cols.append(envelopeCard(input, w), capsuleCard(input, w));
+    page.append(cols, ladderCard(input, w), footer(w));
+    return page;
+  }
+  var RECORD_PAGE_CSS = `
+.cv-l3{display:grid;gap:12px;margin:8px 0}
+.cv-l3 .l3-banner{margin:0;padding:10px 14px;border-radius:8px;background:#E4ECF7;border:1px solid #B9CBE4;font-size:13.5px}
+.cv-l3 .l3-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:12px}
+.cv-l3 .l3-card{border:1px solid #E3DED3;border-radius:10px;padding:12px 14px;background:#fff;min-width:0}
+.cv-l3 .l3-k{margin:0 0 8px;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase}
+.cv-l3 .l3-title{margin:0 0 8px;font-size:20px}
+.cv-l3 .l3-box{border:1px solid #E3DED3;border-radius:8px;padding:8px 10px;margin:0 0 8px;font-size:13px}
+.cv-l3 .l3-prot{background:#E4ECF7;border-color:#B9CBE4}
+.cv-l3 .l3-unprot{background:#F4F1EA;border-style:dashed}
+.cv-l3 .l3-payload{background:#FBEFD9;border-color:#E9CE9B}
+.cv-l3 .l3-h{margin:0 0 4px}
+.cv-l3 .l3-kv{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:0;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.cv-l3 .l3-kv dd,.cv-l3 .l3-fields dd{margin:0;overflow-wrap:anywhere}
+.cv-l3 .l3-fields{display:grid;grid-template-columns:minmax(7rem,max-content) 1fr;gap:4px 12px;margin:0;font-size:12.5px}
+.cv-l3 .l3-fields dt{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#5B5547}
+.cv-l3 .l3-chip{display:inline-block;padding:0 6px;border-radius:5px;font-size:10.5px;background:#E8F1EA;color:#1F5F34}
+.cv-l3 .l3-grey,.cv-l3 .l3-tag-digest-only,.cv-l3 .l3-tag-commitment{background:#FBEFD9;color:#7A4A00}
+.cv-l3 .l3-note{margin:6px 0 0;font-size:12px;color:#5B5547}
+.cv-l3 .l3-table{width:100%;border-collapse:collapse;font-size:13px}
+.cv-l3 .l3-table th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:6px;border-bottom:2px solid #1F2A44}
+.cv-l3 .l3-table td{vertical-align:top;padding:8px 6px;border-bottom:1px solid #E3DED3}
+.cv-l3 .l3-n{font-family:Georgia,serif;font-size:18px}
+.cv-l3 .l3-sub{font-size:12px;color:#5B5547;overflow-wrap:anywhere}
+.cv-l3 .l3-cmd{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.cv-l3 .l3-status{display:inline-block;padding:0 6px;border-radius:5px;font-size:11px;font-family:ui-monospace,Menlo,monospace;background:#ECE9E1}
+.cv-l3 .l3-s-PASS{background:#E8F1EA;color:#1F5F34}
+.cv-l3 .l3-s-FAIL{background:#F8E3E0;color:#9A1F12}
+.cv-l3 .l3-foot{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:16px;font-size:12.5px}
+.cv-l3 .l3-foot p{margin:0}
+@media (max-width:40rem){.cv-l3 .l3-table,.cv-l3 .l3-table tbody,.cv-l3 .l3-table tr,.cv-l3 .l3-table td{display:block}.cv-l3 .l3-table thead{display:none}.cv-l3 .l3-table tr{border-bottom:1px solid #E3DED3;padding:6px 0}.cv-l3 .l3-table td{border:0;padding:3px 6px}}
+`;
+
   // src/core-strip.ts
   var CORE_STRIP_ATTRIBUTE = "data-core-strip";
   var CORE_STRIP_CSS = `
-.cv-strip{${OUTCOME_FRAME_VARS}max-width:1080px;margin:0 auto 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cv-strip{${OUTCOME_FRAME_VARS}position:relative;max-width:1080px;margin:0 auto 16px;padding:14px 16px 14px 34px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cv-strip:before{content:"\\25A0";content:"\\25A0" / "";position:absolute;left:13px;top:16px;font-size:12px;line-height:1;color:#8A93A0}
+.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
 .cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
 .cv-strip .agg-line{font-size:14px;margin:0 0 12px}
 .cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -20928,7 +21861,7 @@ ${key}`);
 @media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
 @media print{.cv-strip{break-inside:avoid}}
 `;
-  function el9(tag, className, text2) {
+  function el10(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== "") node.className = className;
     if (text2 !== void 0) node.textContent = text2;
@@ -20940,7 +21873,7 @@ ${key}`);
       (entry) => entry.field === field
     );
     if (mismatch === void 0) return void 0;
-    const marker = el9(
+    const marker = el10(
       "span",
       "count mismatch",
       w.t("front.agg.mismatch", { recomputed: fmt4(mismatch.recomputed) })
@@ -20958,7 +21891,7 @@ ${key}`);
         (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
       )
     ).size;
-    const line = el9("p", "agg-line");
+    const line = el10("p", "agg-line");
     const marked = (text2, field) => {
       line.append(text2);
       const marker = mismatchMarker(result, field, w);
@@ -21002,7 +21935,7 @@ ${key}`);
     line.dataset.excluded = String(stated.excludedNotApplicable);
     line.dataset.unknown = String(stated.unknownCount);
     out.append(line);
-    const buckets = el9("div", "agg-buckets");
+    const buckets = el10("div", "agg-buckets");
     const of = w.t("front.agg.of", { n: fmt4(stated.evaluatedPopulation) });
     const entries = [
       ["met", result.buckets.met, "buckets.met"],
@@ -21012,13 +21945,18 @@ ${key}`);
     ];
     for (const [verdict2, ids, field] of entries) {
       if (ids === void 0) continue;
-      const box = el9("div", `agg-bucket ${verdict2}`);
+      const box = el10("div", `agg-bucket ${verdict2}`);
       box.dataset.bucket = verdict2;
       box.dataset.count = String(ids.length);
       box.dataset.of = String(stated.evaluatedPopulation);
-      box.append(el9("b", "", fmt4(ids.length)));
-      box.append(el9("span", "", w.t(`front.agg.bucket.${verdict2}`)));
-      box.append(el9("span", "agg-of", of));
+      box.append(el10("b", "", fmt4(ids.length)));
+      const caption = el10("div", "agg-cap");
+      caption.append(
+        tagSource(el10("span", "", w.t(`front.agg.bucket.${verdict2}`)), "pack"),
+        document.createTextNode(" \xB7 "),
+        el10("span", "agg-of", of)
+      );
+      box.append(caption);
       const marker = mismatchMarker(result, field, w);
       if (marker !== void 0) box.append(marker);
       buckets.append(box);
@@ -21027,7 +21965,7 @@ ${key}`);
     const dated = result.claims.some((claim) => claim.appliesFrom !== void 0);
     const switched = result.buckets.outOfScope !== void 0;
     if (dated || switched) {
-      const copied = el9("p", "agg-note");
+      const copied = el10("p", "agg-note");
       if (dated) {
         const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
         copied.append(w.t("front.agg.as-of", { date }), " ");
@@ -21043,22 +21981,70 @@ ${key}`);
     }
     return out;
   }
+  var shortDigest = (digest) => digest.length > 12 ? `${digest.slice(0, 4)}\u2026${digest.slice(-4)}` : digest;
+  function renderCoreIdentity(model) {
+    const { result, words: w } = model;
+    const refs = [
+      ...new Set(result.claims.filter((c) => !c.later).map((c) => c.contractRef))
+    ];
+    const kicker = [w.t("front.core.label")];
+    if (refs.length === 1) {
+      const at = refs[0].lastIndexOf("@");
+      kicker.push(
+        at > 0 ? w.t("front.core.pack", {
+          id: refs[0].slice(0, at),
+          version: refs[0].slice(at + 1)
+        }) : refs[0]
+      );
+    } else if (refs.length > 1)
+      kicker.push(w.t("front.core.packs", { n: fmt4(refs.length) }));
+    const generated = utcDateOf(result.generatedAt) === void 0 ? void 0 : result.generatedAt;
+    if (generated !== void 0)
+      kicker.push(w.t("front.core.generated", { time: generated }));
+    const facts = [
+      w.t("front.core.result", { digest: shortDigest(result.capsuleId) })
+    ];
+    if (model.pins.length === 1)
+      facts.push(w.t("front.core.pin", { digest: shortDigest(model.pins[0]) }));
+    else if (model.pins.length > 1)
+      facts.push(w.t("front.core.pins", { n: fmt4(model.pins.length) }));
+    const block = el10("div", "core-id");
+    block.dataset.section = "core-identity";
+    const top = tagSource(
+      el10("p", "agg-note core-kicker", kicker.join(" \xB7 ")),
+      "core"
+    );
+    top.dataset.coreKicker = "";
+    const rest = tagSource(
+      el10("p", "agg-note core-facts", facts.join(" \xB7 ")),
+      "core"
+    );
+    rest.dataset.coreFacts = "";
+    block.append(top, rest);
+    return block;
+  }
   async function coreStripModel(result, words) {
     const tally = await tallyJudges(result.records, result.claims);
-    return { result, words, mock: judgedByMock(tally) };
+    return {
+      result,
+      words,
+      mock: judgedByMock(tally),
+      pins: tally.pins.map((pin) => pin.digest)
+    };
   }
   function renderCoreStrip(model) {
-    const strip = el9("section", "cv-strip");
+    const strip = el10("section", "cv-strip");
     strip.setAttribute(CORE_STRIP_ATTRIBUTE, "");
     strip.dataset.section = "aggregate";
     const style = document.createElement("style");
     style.textContent = CORE_STRIP_CSS;
     strip.append(style);
     if (model.mock) {
-      const mark = el9("p", "mockmark", model.words.t("front.mock"));
+      const mark = el10("p", "mockmark", model.words.t("front.mock"));
       mark.dataset.section = "mock-judge";
       strip.append(mark);
     }
+    strip.append(renderCoreIdentity(model));
     strip.append(renderAggregate(model.result, model.words));
     return strip;
   }
@@ -21169,7 +22155,7 @@ ${pad.repeat(depth)}`;
 `;
 
   // src/compliance-presentation.ts
-  function object10(value) {
+  function object11(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
   }
   function str(value) {
@@ -21179,7 +22165,7 @@ ${pad.repeat(depth)}`;
     return Array.isArray(value) ? value.filter((v) => typeof v === "string") : [];
   }
   function readFinding(value) {
-    const obj = object10(value);
+    const obj = object11(value);
     const id = str(obj?.id);
     const severity = str(obj?.severity);
     const recommendation = str(obj?.recommendation);
@@ -21189,7 +22175,7 @@ ${pad.repeat(depth)}`;
     return { id, severity, recommendation, ownerDue };
   }
   function readRow(value) {
-    const obj = object10(value);
+    const obj = object11(value);
     const criterionId = str(obj?.criterion_id);
     const name = str(obj?.name);
     if (criterionId === void 0 || name === void 0) return void 0;
@@ -21203,14 +22189,14 @@ ${pad.repeat(depth)}`;
     };
   }
   function readApplicability(value) {
-    const obj = object10(value);
+    const obj = object11(value);
     const status2 = obj?.status === "in_force" || obj?.status === "future" ? obj.status : void 0;
     const note = str(obj?.note);
     if (status2 === void 0 || note === void 0) return void 0;
     return { status: status2, note };
   }
   function readObligation(value) {
-    const obj = object10(value);
+    const obj = object11(value);
     const key = str(obj?.key);
     const article = str(obj?.article);
     const title = str(obj?.title);
@@ -21235,7 +22221,7 @@ ${pad.repeat(depth)}`;
     };
   }
   function readQualityProtocol(value) {
-    const obj = object10(value);
+    const obj = object11(value);
     if (obj === void 0) return void 0;
     const protocol = str(obj.protocol);
     const cadence = str(obj.cadence);
@@ -21249,9 +22235,9 @@ ${pad.repeat(depth)}`;
     };
   }
   function readCompliancePresentation(bundle) {
-    const top = object10(bundle);
-    const extensions2 = object10(top?.extensions);
-    const block = object10(extensions2?.["eu-ai-act-compliance/v1"]);
+    const top = object11(bundle);
+    const extensions2 = object11(top?.extensions);
+    const block = object11(extensions2?.["eu-ai-act-compliance/v1"]);
     if (block === void 0 || block.enabled !== true) return void 0;
     const regulation = str(block.regulation) ?? "Regulation (EU) 2024/1689";
     const obligations = Array.isArray(block.obligations) ? block.obligations.flatMap((o) => {
@@ -22015,16 +23001,16 @@ ${pad.repeat(depth)}`;
       const id = record.bookRecordId ?? record.capsuleId;
       if (!read.has(id)) read.set(id, record);
     }
-    const bundle = object11(context.bundle);
+    const bundle = object12(context.bundle);
     const memberships2 = context.completeness.memberships;
-    const extensions2 = object11(bundle.extensions);
-    const payloads = object11(extensions2[BOOK_PAYLOADS_EXTENSION]);
-    const originals = object11(extensions2[AGENT_INPUT_ORIGINALS_EXTENSION]);
+    const extensions2 = object12(bundle.extensions);
+    const payloads = object12(extensions2[BOOK_PAYLOADS_EXTENSION]);
+    const originals = object12(extensions2[AGENT_INPUT_ORIGINALS_EXTENSION]);
     for (const raw of context.records) {
       const id = raw.capsule_id;
       if (read.has(id)) continue;
       const agentInput = disclosureOf(context, id, "agent_input");
-      const header = agentInput.state === "disclosed" && object11(agentInput.payload).record_type === PUBLISHED_CAPSULE_RECORD_TYPE ? agentInput.payload : void 0;
+      const header = agentInput.state === "disclosed" && object12(agentInput.payload).record_type === PUBLISHED_CAPSULE_RECORD_TYPE ? agentInput.payload : void 0;
       const carried = header === void 0 ? void 0 : await carriedCapsuleCommitment(header, payloads);
       const carriedInput = header === void 0 ? void 0 : await resolveCarriedInput(header, payloads, originals);
       const references = Array.isArray(raw.references) ? raw.references : [];
@@ -22045,7 +23031,7 @@ ${pad.repeat(depth)}`;
           carriedInputDigest: carried.inputDigest
         },
         cites: references.flatMap((ref) => {
-          const r = object11(ref);
+          const r = object12(ref);
           return r.citation_purpose === "acted_on" && typeof r.digest === "string" ? [r.digest] : [];
         })
       });
@@ -22053,9 +23039,9 @@ ${pad.repeat(depth)}`;
     return read;
   }
   function recordKind(raw, read) {
-    const header = read?.agentInput.state === "disclosed" ? object11(read.agentInput.payload).record_type : void 0;
+    const header = read?.agentInput.state === "disclosed" ? object12(read.agentInput.payload).record_type : void 0;
     if (typeof header === "string") return header;
-    const own = object11(raw).action_type;
+    const own = object12(raw).action_type;
     return typeof own === "string" ? own : void 0;
   }
   function renderCoverageStatusCounts(records) {
@@ -22190,7 +23176,7 @@ ${pad.repeat(depth)}`;
     scope.dataset.checks = "scope";
     host.append(scope);
   }
-  async function renderVerificationPage(root, context, styled, applied, refused, citedSigners, verifierHint, depth, stamps, charts) {
+  async function renderVerificationPage(root, context, styled, applied, refused, citedSigners, verifierHint, depth, stamps, charts, l3) {
     const { bundle, verification: verified } = context;
     const section = element6("section");
     section.dataset.page = "verification";
@@ -22240,6 +23226,9 @@ ${pad.repeat(depth)}`;
     const contentStyle = element6("style");
     contentStyle.textContent = RECORD_CONTENT_CSS;
     page.append(contentStyle);
+    const recordPageStyle = element6("style");
+    recordPageStyle.textContent = RECORD_PAGE_CSS;
+    page.append(recordPageStyle);
     let result;
     try {
       result = bundleVerified(verified) ? await resultRootOf(context) : void 0;
@@ -22248,9 +23237,9 @@ ${pad.repeat(depth)}`;
     }
     const read = bundleVerified(verified) ? await recordEntries(context, result) : /* @__PURE__ */ new Map();
     const rawRecords = /* @__PURE__ */ new Map();
-    for (const raw of Array.isArray(object11(bundle).records) ? object11(bundle).records : [])
-      if (typeof object11(raw).capsule_id === "string")
-        rawRecords.set(object11(raw).capsule_id, raw);
+    for (const raw of Array.isArray(object12(bundle).records) ? object12(bundle).records : [])
+      if (typeof object12(raw).capsule_id === "string")
+        rawRecords.set(object12(raw).capsule_id, raw);
     renderCheckpointCoverage(
       page,
       model.records,
@@ -22260,7 +23249,17 @@ ${pad.repeat(depth)}`;
         verified: bundleVerified(verified),
         read,
         kind: (id) => recordKind(rawRecords.get(id), read.get(id)),
-        build: (id, record) => renderRecordEntry(id, record)
+        build: (id, record) => {
+          const body = renderRecordEntry(id, record);
+          if (l3 !== void 0 && context.recordIndex.has(id))
+            body.append(
+              renderRecordPage(
+                { context, capsuleId: id, stamps, result, voice: l3.voice },
+                l3.words
+              )
+            );
+          return body;
+        }
       },
       depth
     );
@@ -22373,13 +23372,13 @@ ${pad.repeat(depth)}`;
     section.append(renderProvenance2(act.capsuleId, act.logCoordinates, act));
     return section;
   }
-  function object11(value) {
+  function object12(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
   }
   function renderWithheldActs(acts, host) {
     for (const act of acts) {
       if (act.agentInput !== void 0 && act.agentOutput !== void 0) continue;
-      const committed = object11({
+      const committed = object12({
         agent_input_digest: act.agentInputDigest,
         agent_output_digest: act.agentOutputDigest
       });
@@ -23173,7 +24172,7 @@ ${pad.repeat(depth)}`;
     manifest: BUILTIN_MANIFEST_EVALUATION_SUMMARY_GRAPH,
     canRender: async (context) => await evidenceGraphOf(context) !== void 0,
     buildModel: async (context) => {
-      const records = object11(context.bundle).records;
+      const records = object12(context.bundle).records;
       return {
         graph: defined(
           await evidenceGraphOf(context),
@@ -23611,7 +24610,7 @@ ${pad.repeat(depth)}`;
       context.countersigners
     );
     const bannerModel = verificationBanner(context, stamps);
-    const records = object11(bundle).records;
+    const records = object12(bundle).records;
     const coverage = {
       uncheckpointed: bannerModel.uncheckpointed,
       total: Array.isArray(records) ? records.length : 0
@@ -23922,7 +24921,14 @@ ${pad.repeat(depth)}`;
       options.verifierHint,
       depth,
       stamps,
-      chartDigests
+      chartDigests,
+      verified ? {
+        words: await contractReportWords(
+          contractReportGroupingOf(bundle) ?? "lines",
+          options.wording
+        ),
+        voice: options.voice ?? "shared"
+      } : void 0
     );
     const summary = root.querySelector("[data-verify-summary]");
     if (summary !== null) summary.textContent = checkedLine;
