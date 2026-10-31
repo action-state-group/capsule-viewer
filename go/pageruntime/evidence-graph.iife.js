@@ -12910,12 +12910,6 @@ ${body}
       checked.forEach((lane, i) => {
         const at = `/lanes/${String(i)}`;
         const keyed = lane.chart.keys.some((k) => k !== "x");
-        if (lane.classes !== void 0 && !keyed)
-          refuse2(
-            "view-lane-role",
-            `${lane.id}: classes name the values of a key channel, and this lane has none`,
-            `${at}/classes`
-          );
         if (lane.role === void 0) return;
         if (roles.has(lane.role))
           refuse2(
@@ -14640,8 +14634,11 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
       }
       for (const [id, total] of totals) {
         const [day, cls] = id.split("|");
-        const slot = ["good", "bad", "open"].indexOf(cls);
-        const cx = TL.left + band * dayAt.get(day) + band / 2 + 3 * slot;
+        const present = ["good", "bad", "open"].filter(
+          (c) => totals.has(`${day}|${c}`)
+        );
+        const slot = present.indexOf(cls) - (present.length - 1) / 2;
+        const cx = TL.left + band * dayAt.get(day) + band / 2 + 8 * slot;
         const n = Math.min(total, 5);
         const mark = lane.mark === "diamond" ? svgEl("path", {
           d: `M${cx.toFixed(2)} ${String(mid - 6)} l6 6 l-6 6 l-6 -6 z`,
@@ -15499,7 +15496,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("1214bd8f14f5c2593c31630038dd94c6027290b4");
+    return commitPrefix("1fec3799e745136a6e9ba4287d2ffa486bb45cac");
   }
   var commit = builtCommit();
   var unreleased = true;
