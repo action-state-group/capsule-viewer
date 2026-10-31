@@ -79,6 +79,8 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    It is built by `python -m capsule_viewer.standard_history.module_slot --bundle`
    and is the same bytes on every run in one build environment; the release
    states its sha256, so rebuild only to compare with a note of the zlib used.
+   `adjudications-module-v<version>.tar.gz` (and its `.sha256`) is the Adjudications
+   module's bundle, built the same way by `capsule_viewer.adjudications.module_slot`.
 
 Bumping a version by hand in any pull request releases it the same way when it
 merges.
