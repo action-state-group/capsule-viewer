@@ -201,6 +201,29 @@ describe("the calendar's cells (lanes with a role)", () => {
     ).toBe("some");
   });
 
+  it("a ruling the pack classes as open is never called concurring", async () => {
+    const open = clone(cells);
+    ((open.lanes as Obj[])[2]!.classes as Obj).upheld = "open";
+    const root = await render([open]);
+    const chip = root.querySelector<HTMLElement>(
+      'td[data-day="2026-09-18"] .cv-adj',
+    )!;
+    expect(chip.textContent).toBe(
+      "◆ 1 adjudication recorded · 1 not yet ruled",
+    );
+  });
+
+  it("the day section's time reads the activity lane's field, wherever that lane sits", async () => {
+    const moved = clone(cells);
+    (moved.lanes as Obj[]).reverse();
+    const root = await render([moved]);
+    expect(root.querySelector("[data-chart-refused]")).toBeNull();
+    const time = root.querySelector<HTMLElement>(
+      '[data-day-section="2026-09-15"] .cv-day-table tbody td',
+    )!;
+    expect(time.textContent).toBe("09:15");
+  });
+
   it("an overturned ruling reads as a difference", async () => {
     const root = await drawn();
     const chip = root.querySelector<HTMLElement>(
@@ -310,7 +333,28 @@ describe("the timeline", () => {
       ).not.toBeNull();
   });
 
-  it("refuses an unknown mark and a value with no class", async () => {
+  it("one mark per day and class, and every evidence anchor is its own", async () => {
+    const root = await render([timeline]);
+    const marks = [
+      ...root.querySelectorAll("[data-lane] ~ *, svg.cv-timeline .cv-tl-mark"),
+    ].filter((m) => m.hasAttribute("data-day"));
+    const seen = new Set<string>();
+    for (const m of marks) {
+      const id = `${m.getAttribute("data-day")}|${m.getAttribute("class")}|${m.getAttribute("x1") ?? m.getAttribute("d")}|${m.parentElement!.children.length}`;
+      expect(seen.has(id)).toBe(false);
+      seen.add(id);
+    }
+    const anchors = [...root.querySelectorAll("[data-evidence-for]")].map((e) =>
+      e.getAttribute("data-evidence-for"),
+    );
+    expect(new Set(anchors).size).toBe(anchors.length);
+  });
+
+  it("refuses classes on a lane with no key channel, an unknown mark and a value with no class", async () => {
+    const keyless = clone(timeline);
+    const lane = (keyless.lanes as Obj[])[0]!;
+    lane.chart = viewCharts(viewHeaders()).perDay("case_record");
+    expect(refusal(keyless).reason).toBe("view-lane-role");
     const bad = clone(timeline);
     (bad.lanes as Obj[])[0]!.mark = "bar";
     expect(refusal(bad).reason).toBe("view-unsupported-member");

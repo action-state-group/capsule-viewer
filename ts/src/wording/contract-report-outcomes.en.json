@@ -460,6 +460,7 @@
     "calendar.adj.concur": "all concur",
     "calendar.adj.differ.one": "{n} differs from the judge",
     "calendar.adj.differ.other": "{n} differ from the judge",
+    "calendar.adj.open": "{n} not yet ruled",
     "calendar.legend.good": "all, or all but one, met",
     "calendar.legend.some": "some not met",
     "calendar.legend.most": "most not met",

@@ -235,12 +235,11 @@ function adjudicationChip(
   const n = t === undefined ? sumOf(lane, day) : t.good + t.bad + t.open;
   if (n === 0) return undefined;
   const parts = [w.p("calendar.adj.recorded", n)];
-  if (t !== undefined)
-    parts.push(
-      t.bad === 0
-        ? w.t("calendar.adj.concur")
-        : w.p("calendar.adj.differ", t.bad),
-    );
+  if (t !== undefined) {
+    if (t.bad === 0 && t.open === 0) parts.push(w.t("calendar.adj.concur"));
+    if (t.bad > 0) parts.push(w.p("calendar.adj.differ", t.bad));
+    if (t.open > 0) parts.push(w.t("calendar.adj.open", { n: t.open }));
+  }
   const chip = el("div", "cv-adj");
   chip.dataset.adjudications = String(n);
   chip.append(el("span", "cv-diamond", "◆"), ` ${parts.join(" · ")}`);
@@ -342,7 +341,7 @@ function daySection(
   for (const lane of view.lanes) counts.append(laneCell(lane, index, day, w));
   section.append(counts);
 
-  const field = view.lanes[0]!.chart.channels.x!.field!;
+  const field = (activity ?? view.lanes[0]!).chart.channels.x!.field!;
   const rows = new Map<number, ChartRow>();
   if (activity !== undefined)
     for (const g of groupsOn(activity.chart, day))
@@ -721,13 +720,22 @@ export function renderTimeline(
       class: word === undefined ? "cv-tl-text cv-tl-lane" : "cv-tl-text",
     });
     const key = lane.classes === undefined ? undefined : keyOf(lane.chart);
+    // One mark per day and class, its size the day's total in that class, so
+    // two values of one class never draw over each other.
+    const totals = new Map<string, number>();
     for (const g of lane.chart.groups) {
-      const at = dayAt.get(String(g.key.x));
-      if (g.notRun || at === undefined || (g.value ?? 0) === 0) continue;
+      if (g.notRun || (g.value ?? 0) === 0 || !dayAt.has(String(g.key.x)))
+        continue;
       const cls =
         key === undefined ? "open" : lane.classes![String(g.key[key])]!;
-      const cx = TL.left + band * at + band / 2;
-      const n = Math.min(g.value!, 5);
+      const id = `${String(g.key.x)}|${cls}`;
+      totals.set(id, (totals.get(id) ?? 0) + g.value!);
+    }
+    for (const [id, total] of totals) {
+      const [day, cls] = id.split("|") as [string, ValueClass];
+      const slot = (["good", "bad", "open"] as const).indexOf(cls);
+      const cx = TL.left + band * dayAt.get(day)! + band / 2 + 3 * slot;
+      const n = Math.min(total, 5);
       const mark =
         lane.mark === "diamond"
           ? svgEl("path", {
@@ -741,7 +749,7 @@ export function renderTimeline(
               y2: mid + 4 + 3 * n,
               class: `cv-tl-mark cv-tl-tick cv-tl-${cls}`,
             });
-      mark.setAttribute("data-day", String(g.key.x));
+      mark.setAttribute("data-day", day);
       root.append(mark);
     }
   });
@@ -759,10 +767,10 @@ export function renderTimeline(
     block.append(head);
     const list = el("ul");
     const key = keyOf(lane.chart);
-    for (const g of lane.chart.groups) {
-      if (g.notRun || (g.value ?? 0) === 0) continue;
+    lane.chart.groups.forEach((g, gi) => {
+      if (g.notRun || (g.value ?? 0) === 0) return;
       const item = el("li");
-      const evidenceKey = `view-${String(index)}-${lane.id}-${String(g.key.x)}-${String(g.key[key] ?? "")}`;
+      const evidenceKey = `view-${String(index)}-${lane.id}-g${String(gi)}`;
       const name = [g.key.x, g.key[key]]
         .filter((v) => v !== undefined)
         .join(" · ");
@@ -778,8 +786,13 @@ export function renderTimeline(
         valueEvidence(evidenceKey, `${lane.id} ${name}`, g, w),
       );
       list.append(item);
-    }
+    });
     block.append(list);
+    if (list.children.length === 0)
+      block.append(el("p", "cv-nr", w.t("chart.evidence.none")));
+    const notRun = (lane.chart.units ?? []).filter((u) => u.notRun).length;
+    if (notRun > 0)
+      block.append(el("p", "cv-nr", w.p("period.not_run_days", notRun)));
     lists.append(block);
   });
   figure.append(lists);

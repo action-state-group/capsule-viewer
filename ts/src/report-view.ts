@@ -320,6 +320,12 @@ function checkTogether(
 function checkClasses(lanes: readonly ViewChart[]): void {
   lanes.forEach((lane, i) => {
     if (lane.classes === undefined) return;
+    if (!lane.chart.keys.some((k) => k !== "x"))
+      refuse(
+        "view-lane-role",
+        `${lane.id}: classes name the values of a key channel, and this lane has none`,
+        `/lanes/${String(i)}/classes`,
+      );
     const key = keyChannel(lane.chart);
     for (const g of lane.chart.groups) {
       const v = String(g.key[key]);
