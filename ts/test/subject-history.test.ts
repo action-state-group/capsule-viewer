@@ -200,7 +200,7 @@ describe("subject-history page", () => {
     const handle = ((blockOf(operator).conversations as Obj)["t-1"] as Obj)
       .customer_handle as string;
     expect(root.innerHTML).not.toContain(handle.slice(0, 12));
-    expect(s.textContent).toContain("carries no customer handle");
+    expect(s.textContent).toContain("does not group conversations by customer");
   });
 
   it("a handle on one conversation only draws no customer: it says so", async () => {
