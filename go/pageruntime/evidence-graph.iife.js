@@ -15994,7 +15994,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("986b546fcde6852fc412c94bed06a5515806b269");
+    return commitPrefix("9df671a2a1f34fe6a08d268093f3e3e97ee5aa05");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16724,7 +16724,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "record.rung.5.unanchored": "the checkpoint is not authenticated on this page",
       "lines.subject.title": "Same customer in this report",
       "lines.subject.slice.operator": "Slice: this report, filtered to one customer handle. Nothing is re-judged; the page shows what the report's Result already holds for the handle.",
-      "lines.subject.slice.shared": "This copy carries no customer handle, so it does not say which conversations are one customer's. Each conversation shows its requests, its band and the halves present, and nothing else about the customer.",
+      "lines.subject.slice.shared": "This page does not group conversations by customer, so it does not say which are one customer's. Each conversation shows its requests, its band and the halves present, and nothing else about the customer.",
       "lines.subject.none": "No customer handle in this report has more than one conversation.",
       "lines.subject.core.customer": "Customer {handle}",
       "lines.subject.core.scope": "handle scope: {pack}, {tier} tier, salted {salting}, salt {salt}",
@@ -16735,7 +16735,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.subject.tile.missed": "missed \xB7 one or more terms not met",
       "lines.subject.tile.undecided": "could not decide",
       "lines.subject.headline": "One customer, {n} conversations",
-      "lines.subject.explain": "The handle is a salted commitment to the customer id, stable within this pack's scope and your tier. You can tell these {n} are the same person; you cannot learn who.",
+      "lines.subject.explain": "The handle is a salted commitment to the customer id, stable within this pack's scope and your tier. It tells you these {n} are the same customer; the handle alone does not say who.",
       "lines.subject.timeline.title": "Over time",
       "lines.subject.timeline.note": "The dashed link joins a conversation to the earlier one it follows up: the later record cites the earlier one (the producer's follow_up_of).",
       "lines.subject.follow.one": "{n} day to the follow-up",
@@ -18235,7 +18235,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "06049d1407810f6b9fe8d39ee81c2fc964f9961cddf3e171aaeb4344784d8305",
+    lines: "33d3d38eb7019d0c93c53b29b801935dd0a90496a7db5186327cb70ada4e31e0",
     groups: "71388f5b52c23a6c5f78adb8767c724d99855a0223a0ee7eae4997fe97458dae"
   });
   function fill(key, text2, vars) {
