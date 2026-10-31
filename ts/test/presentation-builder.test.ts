@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { JSDOM } from "jsdom";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
 import { linkConversations, recordAddress } from "../src/report-levels.js";
 import {
@@ -54,6 +54,18 @@ import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 // this file keeps the node environment and gives the embedded packaging a
 // jsdom document of its own, as result-root-emitter.test.ts does.
 const host = new JSDOM();
+// Every page a test parses is closed after it: a static page of a month-scale
+// report is tens of MB of DOM, and left open they pile up until the worker
+// runs out of heap.
+const opened: JSDOM[] = [];
+const openDom = (html: string): JSDOM => {
+  const dom = new JSDOM(html);
+  opened.push(dom);
+  return dom;
+};
+afterEach(() => {
+  for (const dom of opened.splice(0)) dom.window.close();
+});
 globalThis.document = host.window.document;
 globalThis.HTMLElement = host.window.HTMLElement;
 
@@ -194,7 +206,7 @@ async function openPage(html: string, url: string): Promise<Snapshot> {
  * page itself for the static checks.
  */
 function openStatic(html: string): { snapshot: Snapshot; page: Document } {
-  const dom = new JSDOM(html);
+  const dom = openDom(html);
   return {
     snapshot: snapshot(dom.window.document.getElementById("app")!),
     page: dom.window.document,
@@ -1594,7 +1606,7 @@ it("the static page: each record's entry is built, and a conversation's link tar
     runtime: { code: runtime },
   });
   if (built.format !== "static") throw new Error("static expected");
-  const page = new JSDOM(built.html).window.document;
+  const page = openDom(built.html).window.document;
   // only the record entries are built ahead; nothing else changes (#67)
   expect(
     page.querySelectorAll('details.cv-record[data-body="pending"]'),
@@ -1639,7 +1651,7 @@ it("the static page holds each transcript at most once, and no transcript outsid
         runtime: { code: runtime },
       });
       if (built.format !== "static") throw new Error("static expected");
-      const page = new JSDOM(built.html).window.document;
+      const page = openDom(built.html).window.document;
       // no transcript outside the records section: a card keeps only its
       // link, or, with no record to link to, its state note
       const outside = [...page.querySelectorAll(".chat li.turn")].filter(
@@ -1666,7 +1678,7 @@ it("the static page holds each transcript at most once, and no transcript outsid
   });
   if (l2.format !== "static") throw new Error("static expected");
   expect(
-    new JSDOM(l2.html).window.document.querySelectorAll(
+    openDom(l2.html).window.document.querySelectorAll(
       'details[data-section="conversation"]',
     ).length,
   ).toBeGreaterThan(0);
@@ -1687,7 +1699,7 @@ it("the static page: a record carrying a capsule has an address under both ids, 
     runtime: { code: runtime },
   });
   if (built.format !== "static") throw new Error("static expected");
-  const page = new JSDOM(built.html).window.document;
+  const page = openDom(built.html).window.document;
   const entry = page
     .getElementById(recordAddress(carriedId))!
     .closest("details.cv-record")!;
@@ -1722,7 +1734,7 @@ it("a static page at depth L1 shows an absent or mismatched conversation's state
       runtime: { code: runtime },
     });
     if (built.format !== "static") throw new Error("static expected");
-    const page = new JSDOM(built.html).window.document;
+    const page = openDom(built.html).window.document;
     const folds = [
       ...page.querySelectorAll<HTMLElement>(
         'details[data-section="conversation"]',
@@ -1758,7 +1770,7 @@ describe("the static page builds every toggle's body", () => {
       ...extra,
     });
     if (built.format !== "static") throw new Error("static expected");
-    return new JSDOM(built.html).window.document;
+    return openDom(built.html).window.document;
   };
   // The detail row a table row's toggle opens.
   const detailOf = (page: Document, toggle: Element): Element =>
