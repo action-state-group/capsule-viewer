@@ -21,20 +21,27 @@ supplies only the per-record card body. Two modules ship today:
 
 ## Module ownership: what is the product path
 
-The Python Rules and Receipt carriers in this repository (`capsule_viewer.rules`
-and `capsule_viewer.receipt`) are **not the consumer product path**. The
-canonical Rules and Receipt implementations are `capsulectl`'s deal view
-(`capsulectl.deal-view/v0`) together with the Muse JS modules. This repository
-keeps what those implementations are held to: the goldens and the wording packs
-it ships.
+The 9b receipt, the deal's page for each party, has one owner: `capsulectl`'s
+deal view (`capsulectl.deal-view/v0`, in `evidencebook-deal`). Muse pins that
+module and drops its own copies of the receipt and Rules pages. Design changes
+to the receipt (the three cases, the proofs ladder, the explainers) are made
+there, not here.
 
-Nothing here is deleted by this note. The JS receipt module-slot scripts
-(`static/receipt_*.js`) and the Rules module (`capsule_viewer.rules`) stay as the
-basic rendering, and the Python receipt modules stay as the oracle the parity
-tests hold the scripts to; removing them would be a separate decision. Two things
-are out of scope here: the S1-S7 surface forms (head seam, wordmark, image and text
-buckets, 1.91:1 share image) are deferred to after launch, and the view-model
-JSON a module draws from belongs to the Muse plugin, not to this repository.
+This repository keeps the generic, neutral view of a record: the Result pages,
+the History card (`capsuleviewer.standard-history/v0`), and a plain receipt. The
+Python Rules and Receipt carriers (`capsule_viewer.rules` and
+`capsule_viewer.receipt`) and the JS receipt module-slot scripts
+(`static/receipt_*.js`) are that plain receipt. They are **not the consumer
+product path** for the receipt, and they do not follow the 9b receipt design.
+This repository also keeps what the product modules are held to: the goldens
+and the wording packs it ships.
+
+Nothing here is deleted by this note. The Python receipt modules stay as the
+oracle the parity tests hold the scripts to; removing them would be a separate
+decision. Two things are out of scope here: the S1-S7 surface forms (head seam,
+wordmark, image and text buckets, 1.91:1 share image) are deferred to after
+launch, and the view-model JSON a module draws from belongs to the Muse plugin,
+not to this repository.
 
 ## What "conforming" means for `result/v0`
 
@@ -262,7 +269,7 @@ builds a read-only context from them.
 
 ## Receipt module
 
-`capsule_viewer.receipt` is the unilateral deal receipt,
+This is the plain receipt this repository keeps (see Module ownership above; the 9b receipt is `capsulectl.deal-view/v0`). `capsule_viewer.receipt` is the unilateral deal receipt,
 `capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
 `x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the
 `x-deal-v0` extension and forbids `composed/v1`, so a composition never resolves to it.
