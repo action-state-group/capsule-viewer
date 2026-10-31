@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The report front's third tile reads "Could not decide (evaluations)" in both default wording packs, as Steven's Terms Pack canvas draws it and as the results table's column already says; it read "Not evaluable". The packs keep their ids and change their digests (`DEFAULT_PACK_SHA256`), so the contract-report goldens are regenerated (#172).
+
 ## ts 0.5.0 and go 0.5.0 (2026-10-31)
 
 Both state viewer 0.5.0: `ts/v0.5.0`, then `go/v0.5.0` on the commit that
