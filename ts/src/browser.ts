@@ -18,12 +18,15 @@ export * from "./presentation-mount.js";
 // the same verifier the page does (ed25519Available is its check that the
 // browser can verify Ed25519 signatures; buildResultRoot is its Result
 // reader, which the Show-evidence component, static/show_evidence.js, draws
-// from). This list is the runtime's contract
+// from; buildVerifiedBundleContext verifies a bundle a module carries inside
+// the one the page verified, such as each member of a composed/v1 bundle,
+// capsule-viewer#167). This list is the runtime's contract
 // with presentation modules: a name is added here only from
 // agent-action-capsule's verifier, and removing one breaks the modules that
 // call it.
 export {
   buildResultRoot,
+  buildVerifiedBundleContext,
   disclosureOf,
   ed25519Available,
   verifiedPayload,

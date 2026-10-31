@@ -13,6 +13,13 @@ here. The format follows
 
 ### Added
 
+- The page runtime's global carries `buildVerifiedBundleContext`,
+  agent-action-capsule's bundle verifier, beside the other verifier functions
+  a presentation module may call (`ts/src/browser.ts`). A module that draws a
+  bundle carried inside the one the page verified, such as each member of a
+  `composed/v1` bundle, verifies it with the page's own verifier. capsulectl's
+  own runtime build had it until capsule-cli v0.1.0-rc24, which embeds this
+  runtime instead, and such modules then refused (capsule-viewer#167).
 - Calendar and by-period views over a monthly Result's daily runs
   (capsule-viewer#120; `docs/design/report-views.md`). A `charts` entry with a
   `view` member (`"calendar"` or `"by-period"`) lays several chart specs out
