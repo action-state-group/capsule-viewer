@@ -718,6 +718,29 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "period.not_run_days.other",
   "view.unplaced.one",
   "view.unplaced.other",
+  "calendar.weekday.long.1",
+  "calendar.weekday.long.2",
+  "calendar.weekday.long.3",
+  "calendar.weekday.long.4",
+  "calendar.weekday.long.5",
+  "calendar.weekday.long.6",
+  "calendar.weekday.long.7",
+  "calendar.month.1",
+  "calendar.month.2",
+  "calendar.month.3",
+  "calendar.month.4",
+  "calendar.month.5",
+  "calendar.month.6",
+  "calendar.month.7",
+  "calendar.month.8",
+  "calendar.month.9",
+  "calendar.month.10",
+  "calendar.month.11",
+  "calendar.month.12",
+  "calendar.day.heading",
+  "calendar.day.time",
+  "calendar.day.record",
+  "calendar.day.counts",
   // The Outcomes report.
   "lines.tier.unknown",
   "lines.wording.unstated",
@@ -1246,8 +1269,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "818fbebb5a0fe1644d5c63cd2effac138fe648f828f847608f9d387dde399f0e",
-  groups: "49d3f98b8336daf02d620ff63dce036003eb49802ba07c208287006f6db080d3",
+  lines: "a3b6ac4abec53fb0e6578332b1079c4a2cb28150c1301e400f7a10d21abadea3",
+  groups: "8ad71d0e1182941b5847e8f6a1e2a9e17683f896aa32ebed943de9e35b53de4e",
 });
 
 export interface Words {
