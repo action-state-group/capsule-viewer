@@ -104,10 +104,16 @@ describe("the runtime's global", () => {
         await readFile(new URL(file, import.meta.url), "utf8"),
       );
       for (const member of MODULE_CONTRACT) {
-        // Not yet in the shipped runtime: it reaches go/pageruntime with the
-        // refresh of the next viewer release, which drops this exception.
-        if (name === "go/pageruntime" && NOT_YET_SHIPPED.includes(member))
+        // Not yet in the shipped runtime. Asserting its absence makes the
+        // refresh that ships it fail here until the refresh also drops it
+        // from NOT_YET_SHIPPED and the note in go/pageruntime/pageruntime.go.
+        if (name === "go/pageruntime" && NOT_YET_SHIPPED.includes(member)) {
+          expect(
+            typeof global[member],
+            `${member} now ships in go/pageruntime: drop it from NOT_YET_SHIPPED and the pageruntime.go note`,
+          ).toBe("undefined");
           continue;
+        }
         expect(typeof global[member], member).toBe("function");
       }
     });

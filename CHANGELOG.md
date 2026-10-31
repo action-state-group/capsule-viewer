@@ -19,7 +19,9 @@ here. The format follows
   bundle carried inside the one the page verified, such as each member of a
   `composed/v1` bundle, verifies it with the page's own verifier. capsulectl's
   own runtime build had it until capsule-cli v0.1.0-rc24, which embeds this
-  runtime instead, and such modules then refused (capsule-viewer#167).
+  runtime instead, and such modules then refused: this repository's own
+  `receipt_bilateral.js` (`src/capsule_viewer/static/receipt_bilateral.js:356`)
+  among them (capsule-viewer#167).
 - Calendar and by-period views over a monthly Result's daily runs
   (capsule-viewer#120; `docs/design/report-views.md`). A `charts` entry with a
   `view` member (`"calendar"` or `"by-period"`) lays several chart specs out
