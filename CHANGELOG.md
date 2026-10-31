@@ -11,10 +11,6 @@ here. The format follows
 
 ## Unreleased
 
-### Changed
-
-- Release · Go attaches `adjudications-module-v<version>.tar.gz` and its `.sha256`, the Adjudications module's bundle, beside the History card module's.
-
 ### Added
 
 - The lowest level, as Steven's Terms Pack canvas draws Outcomes frame 8 (#191): every record in a bundle has a page at its entry in "Records in this bundle" (where each Proofs link already lands). It draws the record's producer envelope read from its own COSE_Sign1 bytes (protected header, unprotected header, payload, signature), its capsule JSON member by member in clear or by digest, the eleven-rung ladder of what each proof proves and does not with its status on the page (PASS, FAIL, NOT_PRESENT, NOT_CHECKED), how to check each yourself, and the canvas's three-column footer. Each status comes from what the verified bundle holds; rung 6 (checkpoint consistency) and rung 8 (controller binding) read NOT_CHECKED because the bundle carries no retained head and no binding (agent-action-capsule#513, #514). `renderEvidenceGraph`'s new `voice` option (`own` or `shared`, default `shared`) writes the page to the holder in their own preview or about the holder once shared. About 100 new `record.*` words in both default wording packs (the lines that say what a proof does not prove are locked); both packs change their digests, so the contract-report goldens are regenerated. A new stylesheet adds one CSP hash (`go/emitter/runtime-style-hashes.txt`), and the Go goldens move with it.
@@ -27,6 +23,7 @@ here. The format follows
 
 ### Changed
 
+- Release · Go attaches `adjudications-module-v<version>.tar.gz` and its `.sha256`, the Adjudications module's bundle, beside the History card module's.
 - The report levels' third-level bar is lifted for that page only: it sits in no level-1 or level-2 toggle and holds no toggle (`nestingProblems` checks both).
 - `emitter-csp-browser.test.ts` asserts that every stylesheet the shipped `go/pageruntime` inserts is listed in `runtime-style-hashes.txt` (it asserted equality; the runtime is rebuilt only at a release, so a new stylesheet is listed before it ships).
 - The Outcomes and EU AI Act report pages draw Steven's two design-system frames, "One glyph says what opens; its colour says who opens it" and "Five sources of text" (#123). Every toggle opens with a triangle drawn by the stylesheet (closed, open), in the reader's colour, or the view's when the depth opened it (`data-opened-by="view"`). L0 leads with a legend of the three glyphs (open by the view's depth, closed for the reader, no toggle for the core) and a one-line strip of the sources the page marks (payload and producer, each chip in the source's style; "Unmarked text is the viewer's or the report's own words"), with the payload (a conversation's turns, a tool call's arguments) and producer text (the judge's sealed rule wording, the producer's note) drawn in their source's style. Both default wording packs gain the `legend.*` keys and change their digests (`DEFAULT_PACK_SHA256`); the contract-report goldens, `go/emitter/runtime-style-hashes.txt` and the Go emitter's pinned pages are regenerated. The core, wording-pack and capsule-field sources are styled in the stylesheet but not yet tagged node by node, so the legend leaves their chips out until they are; the depth `L3` the canvas draws is not added: it is a presentation-contract change.
