@@ -251,7 +251,9 @@ describe("negative: no size row names two currencies", () => {
         }
       }
       // Bands of one currency that read the same (below the first whole unit) are one row.
-      expect(p.host.L1.querySelectorAll("[data-band-currency]").length).toBeLessThanOrEqual(p.model.card.bands.length);
+      const labels = {};
+      for (const b of p.model.bands) (labels[b.currency] ||= new Set()).add(b.label);
+      expect(p.host.L1.querySelectorAll("[data-band-currency]").length).toBe(Object.values(labels).reduce((n, set) => n + set.size, 0));
     }
     expect(rows).toBeGreaterThan(0);
   });
@@ -269,6 +271,9 @@ describe("negative: no size row names two currencies", () => {
     expect(l.api.bandLabel({ currency: "USD", decade: null })).toBe("under $10");
     expect(l.api.bandLabel({ currency: "USD", decade: 3 })).toBe("$1,000 \u2013 $9,999");
     expect(l.api.bandLabel({ currency: "XAU", decade: null })).toBe("zero amount, XAU");
+    // The largest decade that reads as "$" amounts, and the one past it in the currency's own units.
+    expect(l.api.bandLabel({ currency: "USD", decade: 17 })).toBe("$100,000,000,000,000,000 \u2013 $999,999,999,999,999,999");
+    expect(l.api.bandLabel({ currency: "USD", decade: 18 })).toBe("1000000000000000000 to under 1e19 USD");
     const p = everyPage(l).find((x) => x.c.name === "small-and-zero-shared" && x.depth === "L1");
     expect([...p.host.L1.querySelectorAll("[data-band-currency]")].map((r) => r.firstChild.textContent)).toContain("under $10");
   });
