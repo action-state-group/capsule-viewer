@@ -12,7 +12,7 @@
  *   contract section 9.1). The core's section is never touched here.
  */
 import type { Words } from "./contract-report-wording.js";
-import { deferBody, openToggle } from "./report-levels.js";
+import { deferBody, openToggle, toggleGlyph } from "./report-levels.js";
 import { witnessEntries } from "./report-provenance.js";
 
 /** The three host regions a contract report writes into, and the host's depth. */
@@ -142,7 +142,7 @@ export function expandableRow(
   const summary = document.createElement("summary");
   summary.setAttribute("aria-controls", detail.id);
   name.replaceWith(toggle);
-  summary.append(name);
+  summary.append(toggleGlyph(), name);
   toggle.append(summary);
   deferBody(toggle, build, eager, cell);
   // The summary's own click toggles natively; anywhere else on the row
@@ -180,8 +180,10 @@ export function applyDepth(levels: ReportLevels): void {
     if (levels.depth === "L2") region.dataset.openAll = "";
     for (const toggle of region.querySelectorAll<HTMLDetailsElement>(
       "details.lv",
-    ))
+    )) {
+      toggle.dataset.openedBy = "view";
       openToggle(toggle);
+    }
     // A number's Show-evidence list (report-levels.ts `evidenceAction`) is
     // the proofs' level: open at L2 only.
     if (levels.depth === "L2")

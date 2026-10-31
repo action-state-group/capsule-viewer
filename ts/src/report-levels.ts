@@ -7,6 +7,7 @@ import {
   type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { Words } from "./contract-report-wording.js";
+import { tagSource } from "./report-legend.js";
 
 /**
  * The three levels of a human-facing report:
@@ -75,11 +76,26 @@ export function levelToggle(
   details.className = `lv lv${level}${options.className === undefined ? "" : ` ${options.className}`}`;
   details.dataset.level = String(level);
   const head = document.createElement("summary");
-  if (typeof summary === "string") head.textContent = summary;
+  head.append(toggleGlyph());
+  if (typeof summary === "string") head.append(summary);
   else head.append(summary);
   details.append(head);
   deferBody(details, build, options.eager === true);
   return details;
+}
+
+/**
+ * The toggle's glyph, drawn first in its summary (the Terms Pack toggle
+ * frame): the triangle itself comes from the stylesheet, closed or open, so
+ * it is not text a reader copies and it is the same on a static page. Its
+ * colour says who opens the region (`details.lv[data-opened-by]`, set by
+ * `applyDepth` for a region the view's depth opened; the reader's click is
+ * the default).
+ */
+export function toggleGlyph(): HTMLElement {
+  const glyph = el("span", "tg");
+  glyph.setAttribute("aria-hidden", "true");
+  return glyph;
 }
 
 /**
@@ -100,6 +116,10 @@ export function deferBody(
     into.append(build());
     openBuiltToDepth(into);
   };
+  // A toggle the view opened that the reader then closes is the reader's.
+  details.addEventListener("toggle", () => {
+    if (!details.open) delete details.dataset.openedBy;
+  });
   details.dataset.body = "pending";
   if (eager) {
     fill();
@@ -225,7 +245,10 @@ export function nestingProblems(root: ParentNode): string[] {
 export function openBuiltToDepth(body: HTMLElement): void {
   if (body.closest("[data-open-all]") === null) return;
   for (const toggle of body.querySelectorAll<HTMLDetailsElement>("details.lv"))
-    if (!toggle.open) openToggle(toggle);
+    if (!toggle.open) {
+      toggle.dataset.openedBy = "view";
+      openToggle(toggle);
+    }
 }
 
 /** Opens a toggle and builds its body now (tests, print). */
@@ -589,10 +612,10 @@ export function renderTurns(
     if (turn.content !== undefined && turn.content.length > 0) {
       if (role === "tool") {
         const shown = exactText(turn.content);
-        const pre = el("pre", "say", shown.text);
+        const pre = tagSource(el("pre", "say", shown.text), "payload");
         pre.dataset.exact = shown.indented ? "indented" : "verbatim";
         item.append(pre);
-      } else item.append(el("div", "say", turn.content));
+      } else item.append(tagSource(el("div", "say", turn.content), "payload"));
     }
     for (const call of turn.toolCalls) {
       const line = el("div", "call");
@@ -605,7 +628,8 @@ export function renderTurns(
       // JSON cannot hold exactly is already rounded there. Never claimed
       // verbatim; this page rewords nothing further.
       if (call.arguments.length > 0) {
-        const args = el("code", "call-a", call.arguments);
+        const args = tagSource(el("code", "call-a", call.arguments), "payload");
+        args.dataset.kind = "tool-call";
         args.dataset.exact = "as-modelled";
         line.append(" ", args);
       }
@@ -906,6 +930,18 @@ export function linkConversations(root: ParentNode): number {
     toggle.remove();
     linked++;
   }
+  // The spot check draws the conversation once per card: its chat becomes
+  // the same link, where the record is there to link to.
+  for (const column of root.querySelectorAll<HTMLElement>(
+    ".sc-happened[data-record]",
+  )) {
+    const link = column.querySelector<HTMLElement>(":scope > a.chat-static");
+    if (!ids.has(recordAddress(column.dataset.record!)) || link == null)
+      continue;
+    column.querySelector(":scope > .chat")?.remove();
+    link.hidden = false;
+    linked++;
+  }
   // A conversation kept in place (no record to link to) shows its state
   // note: the page runs no script, so its body is built now.
   for (const toggle of root.querySelectorAll<HTMLDetailsElement>(
@@ -1000,8 +1036,10 @@ export function levelCss(scope: string): string {
 ${s} details.lv{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px;padding:0}
 ${s} details.lv > summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--navy)}
 ${s} details.lv > summary::-webkit-details-marker{display:none}
-${s} details.lv > summary:before{content:"";display:inline-block;width:0;height:0;border-left:5px solid var(--navy);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:8px;vertical-align:1px;transition:transform .1s}
-${s} details.lv[open] > summary:before{transform:rotate(90deg)}
+${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;color:var(--reader,#9A5311);font-size:12px;line-height:1}
+${s} details.lv > summary .tg:before{content:"\\25B8"}
+${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
+${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
 ${s} details.lv1.line > .convs,${s} details.lv1.line > .why-missed{margin-top:8px}
@@ -1020,6 +1058,24 @@ ${s} .cv-side-payload{margin:4px 0;font-family:ui-monospace,Menlo,monospace;font
 ${s} details.lv2{background:#FAF8F4;border-style:dashed}
 ${s} details.lv2 > summary{color:var(--slate);font-weight:600}
 ${s} details.lv2 > .pf-b{padding:4px 14px 14px;font-size:12.5px}
+${s} details.lv2 > .sc-body{padding:6px 14px 14px;display:grid;gap:14px}
+${s} .sc-card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px}
+${s} .sc-t{margin:0 0 8px;font-size:14px;color:var(--navy)}
+${s} .sc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+${s} .sc-happened{grid-column:1;grid-row:1 / span var(--span)}
+${s} .sc-criterion{grid-column:2;grid-row:var(--row)}
+${s} .sc-verdict{grid-column:3;grid-row:var(--row)}
+${s} .sc-name{font-weight:700;color:var(--navy);margin-bottom:4px}
+@media (max-width:820px){${s} .sc-grid{grid-template-columns:minmax(0,1fr)}${s} .sc-col{grid-column:1;grid-row:auto}}
+${s} .sc-h{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
+${s} .sc-box{border:1px solid var(--line);border-radius:8px;background:#FAF8F4;padding:8px 10px;margin-bottom:8px}
+${s} .sc-v.ok{background:var(--ok-l)}
+${s} .sc-v.bad{background:var(--bad-l)}
+${s} .sc-v.ne{background:var(--gold-l)}
+${s} .sc-k{font-size:11.5px;font-weight:600;color:var(--slate);margin:4px 0 2px}
+${s} .sc-q{margin:0;font-style:italic;white-space:pre-wrap}
+${s} .sc-gap{margin:6px 0;font-size:12px;color:var(--slate)}
+${s} .sc-facts{margin:6px 0;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;color:var(--slate)}
 ${s} .convs{display:grid;gap:12px}
 ${s} .conv{border:1px solid var(--line);border-radius:10px;background:#fff}
 ${s} .conv-h{display:grid;grid-template-columns:110px auto 1fr auto;gap:10px;align-items:center;padding:8px 12px;font-size:13.5px;background:#FAF8F4;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}

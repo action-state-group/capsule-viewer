@@ -7,6 +7,7 @@
  * page or any other card on the same document.
  */
 import { levelCss } from "./report-levels.js";
+import { legendCss } from "./report-legend.js";
 import { COMPLIANCE_FRAME_VARS } from "./frame-tokens.generated.js";
 import { frontCss } from "./report-front-styles.js";
 
@@ -88,6 +89,7 @@ export const COMPLIANCE_CSS =
 @media (max-width:760px){.cc .ran{grid-template-columns:1fr}}
 ` +
   levelCss("cc") +
+  legendCss("cc") +
   frontCss(".cc") +
   // The page layout (one left edge, bordered cards 16px apart, the header
   // on white like the Outcomes report's): last, so it wins over the rules
