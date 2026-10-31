@@ -137,6 +137,12 @@
     "checks.not_held.deals": "the deal entries",
     "window.as_of": "as of {month} {day} {hh}:{mm} UTC",
     "lead.level": "Level they see: Standard · {window} · snapshot {date}",
-    "card.not_counted": "{n} of {of} deals in the window are not counted."
+    "card.not_counted": "{n} of {of} deals in the window are not counted.",
+    "size.under": "under {amount}",
+    "size.between": "{low} – {high}",
+    "size.chip.all": "all as agreed",
+    "size.chip.held": "{n} as agreed",
+    "size.chip.did_not_hold": "{n} didn't",
+    "size.chip.undecided": "{n} unsure"
   }
 }

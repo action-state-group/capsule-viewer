@@ -242,10 +242,16 @@ describe("negative: no size row names two currencies", () => {
         rows += 1;
         const mine = r.getAttribute("data-band-currency");
         expect(r.closest("[data-currency-rows]").getAttribute("data-currency-rows")).toBe(mine);
-        expect(r.textContent).toContain(mine);
-        for (const other of currencies.filter((x) => x !== mine)) expect(r.textContent).not.toContain(other);
+        // A row names its currency by its code or, for a currency with a symbol, by that symbol.
+        const symbols = { USD: "$", EUR: "\u20ac", GBP: "\u00a3" };
+        expect(r.textContent.includes(mine) || (symbols[mine] !== undefined && r.textContent.includes(symbols[mine]))).toBe(true);
+        for (const other of currencies.filter((x) => x !== mine)) {
+          expect(r.textContent).not.toContain(other);
+          if (symbols[other] !== undefined) expect(r.textContent).not.toContain(symbols[other]);
+        }
       }
-      expect(p.host.L1.querySelectorAll("[data-band-currency]")).toHaveLength(p.model.card.bands.length);
+      // Bands of one currency that read the same (below the first whole unit) are one row.
+      expect(p.host.L1.querySelectorAll("[data-band-currency]").length).toBeLessThanOrEqual(p.model.card.bands.length);
     }
     expect(rows).toBeGreaterThan(0);
   });
@@ -254,14 +260,17 @@ describe("negative: no size row names two currencies", () => {
     const groups = [...p.host.L1.querySelectorAll("[data-currency-group]")].map((g) => g.textContent);
     expect(groups).toEqual(["EUR", "USD"]);
     const labels = [...p.host.L1.querySelectorAll("[data-band-currency]")].map((r) => r.firstChild.textContent);
-    expect(labels).toEqual(["10 to under 100 EUR", "1 to under 10 USD", "10 to under 100 USD"]);
+    expect(labels).toEqual(["\u20ac10 \u2013 \u20ac99", "under $10", "$10 \u2013 $99"]);
   });
   it("a negative decade and a zero amount read in the currency's own units", () => {
     expect(l.api.bandLabel({ currency: "BTC", decade: -7 })).toBe("0.0000001 to under 0.000001 BTC");
-    expect(l.api.bandLabel({ currency: "USD", decade: -1 })).toBe("0.1 to under 1 USD");
-    expect(l.api.bandLabel({ currency: "USD", decade: null })).toBe("zero amount, USD");
+    // A currency with a symbol reads as the canvas draws it, and its sub-unit bands are "under $10".
+    expect(l.api.bandLabel({ currency: "USD", decade: -1 })).toBe("under $10");
+    expect(l.api.bandLabel({ currency: "USD", decade: null })).toBe("under $10");
+    expect(l.api.bandLabel({ currency: "USD", decade: 3 })).toBe("$1,000 \u2013 $9,999");
+    expect(l.api.bandLabel({ currency: "XAU", decade: null })).toBe("zero amount, XAU");
     const p = everyPage(l).find((x) => x.c.name === "small-and-zero-shared" && x.depth === "L1");
-    expect([...p.host.L1.querySelectorAll("[data-band-currency]")].map((r) => r.firstChild.textContent)).toContain("zero amount, USD");
+    expect([...p.host.L1.querySelectorAll("[data-band-currency]")].map((r) => r.firstChild.textContent)).toContain("under $10");
   });
   it("a band whose currency is free text is refused", () => {
     const p = everyPage(l).find((x) => x.c.name === "neg-currency-free-text");
@@ -292,7 +301,7 @@ describe("negative: undecided is never drawn as agreed", () => {
     expect(p.host.L0.querySelector('[data-outcome="undecided"]').textContent).toBe("2 of 2 we couldn't tell");
     expect(p.host.L0.querySelectorAll(".cv-sh__dot--held")).toHaveLength(1);
     expect([...p.host.L1.querySelectorAll("[data-band-currency]")].map((r) => r.lastChild.textContent)).toEqual([
-      "2 deals: 0 went as agreed · 0 didn't · 2 we couldn't tell",
+      "2 \u00b7 2 unsure",
     ]);
   });
   it("the undecided mark's tone is not the agreed one in the stylesheet", () => {
@@ -381,6 +390,21 @@ describe("what the page claims", () => {
       expect(level !== null).toBe(p.model.own === true);
       if (level) expect(level.textContent).toMatch(/^Level they see: Standard · .+ · snapshot [A-Z][a-z]{2} \d{1,2}, \d{4}$/);
       expect(win + (level ? level.textContent : "")).not.toMatch(/witness/i);
+    }
+  });
+  it("draws the outcomes tally as one bar of the three counts, with no figure of its own, and none when there is no counted deal", () => {
+    for (const p of everyPage(l).filter((x) => x.depth === "L0" && x.model.state === "card")) {
+      const o = p.model.card.outcomes;
+      const bar = p.host.L0.querySelector('[data-sh-bar="outcomes"]');
+      if (o.of === 0) { expect(bar).toBeNull(); continue; }
+      expect(bar.getAttribute("viewBox")).toBe(`0 0 ${o.of} 1`);
+      const segs = [...bar.querySelectorAll("rect")];
+      // the widths are the counts themselves, in the order held, did not hold, undecided
+      expect(segs.map((r) => [r.getAttribute("data-seg"), Number(r.getAttribute("width"))])).toEqual(
+        [["held", o.held], ["did_not_hold", o.did_not_hold], ["undecided", o.undecided]].filter(([, n]) => n > 0));
+      expect(segs.reduce((n, r) => n + Number(r.getAttribute("width")), 0)).toBe(o.of);
+      expect(bar.getAttribute("aria-label")).toContain(`${o.held} of ${o.of} went as agreed`);
+      expect(bar.outerHTML).not.toMatch(/%|percent|style=/i);
     }
   });
   it("never says a signature or a witness was checked, and names anchor_inclusion not checked", () => {
