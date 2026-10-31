@@ -1,0 +1,46 @@
+{
+  "spec_version": "aac.presentation-manifest/v0",
+  "id": "capsuleviewer.adjudications/v0",
+  "presentation_api": "aac.presentation-api/v0",
+  "runtime_min": "0.1.0",
+  "trust_class": "trusted-executable",
+  "requires": {
+    "bundle_kind": "evidence-bundle/v2",
+    "extensions": {
+      "required": [
+        "x-adjudications/v0"
+      ]
+    }
+  },
+  "forbids": {
+    "profiles": [
+      "spec_version:report/v1",
+      "spec_version:evaluation-summary/v1",
+      "result_version:evidence-result-v0",
+      "spec_version:org.example.rules-comparison/v0"
+    ],
+    "extensions": [
+      "composed/v1",
+      "x-deal-v0",
+      "x-history-selection/v0",
+      "x-standard-history/v0"
+    ]
+  },
+  "audiences": [
+    "*"
+  ],
+  "formats": [
+    "html"
+  ],
+  "fallback": false,
+  "priority": 1,
+  "executable": {
+    "carrier": "module-slot",
+    "script_sha256": "7f525d61040ce0e8f1137111bcf9c6c3bdf941e6f841b037fe0ddcb1e3b9b72f",
+    "style_sha256": [
+      "246cfdc8ae83e682a220a2c13cef8134c7515999365b33965d4e924bb871f3ea",
+      "a19676eaa32da4c369b8adc5bb79fa1cbdfaa43ef2269f906012b2ab5bba935a"
+    ],
+    "wording_sha256": "13740bb23c761d7c9db4d16ab868f007820afcf8b1c7d8aa2611abceb7554f71"
+  }
+}

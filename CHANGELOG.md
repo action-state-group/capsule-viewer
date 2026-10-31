@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The Adjudications page (`capsuleviewer.adjudications/v0`, a module-slot script), Outcomes frame 4 of Steven's Terms Pack canvas: the strip of four tiles, By term, By adjudicator and rows that open the judge's and the adjudicator's sides side by side, drawn from `calibration-summary/v1`, `human-rating/v1` and `evaluation-report/v1` records. The only percentage is derived from the k and n beside it; what the records do not carry (either side's words, a case's term, the adjudicator's book) is named on the page, not drawn (#121). Design: `docs/design/adjudications.md`.
+
 ### Changed
 
 - The Outcomes and EU AI Act report pages draw Steven's two design-system frames, "One glyph says what opens; its colour says who opens it" and "Five sources of text" (#123). Every toggle opens with a triangle drawn by the stylesheet (closed, open), in the reader's colour, or the view's when the depth opened it (`data-opened-by="view"`). L0 leads with a legend of the three glyphs (open by the view's depth, closed for the reader, no toggle for the core) and a one-line strip of the sources the page marks (payload and producer, each chip in the source's style; "Unmarked text is the viewer's or the report's own words"), with the payload (a conversation's turns, a tool call's arguments) and producer text (the judge's sealed rule wording, the producer's note) drawn in their source's style. Both default wording packs gain the `legend.*` keys and change their digests (`DEFAULT_PACK_SHA256`); the contract-report goldens, `go/emitter/runtime-style-hashes.txt` and the Go emitter's pinned pages are regenerated. The core, wording-pack and capsule-field sources are styled in the stylesheet but not yet tagged node by node, so the legend leaves their chips out until they are; the depth `L3` the canvas draws is not added: it is a presentation-contract change.

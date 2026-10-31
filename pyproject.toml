@@ -33,7 +33,7 @@ where = ["src"]
 include = ["capsule_viewer*"]
 
 [tool.setuptools.package-data]
-capsule_viewer = ["static/*.js", "static/*.css", "ledger/*.json", "receipt/*.json", "receipt/module-slot/*.json", "rules/*.json", "history/*.json", "standard_history/*.json"]
+capsule_viewer = ["static/*.js", "static/*.css", "ledger/*.json", "receipt/*.json", "receipt/module-slot/*.json", "rules/*.json", "history/*.json", "standard_history/*.json", "adjudications/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
