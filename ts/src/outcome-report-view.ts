@@ -33,6 +33,7 @@ import {
 } from "./report-levels.js";
 import { buildVerificationPageModel } from "@action-state-group/agent-action-capsule";
 import type { ResultRoot } from "@action-state-group/agent-action-capsule";
+import { renderLegend, tagSource } from "./report-legend.js";
 import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import {
   expandableRow,
@@ -225,7 +226,7 @@ function renderProducerNote(
   box.dataset.producerNote = "true";
   box.append(el("div", "pn-k", w.t("lines.producer-note.kicker")));
   box.append(el("h2", "pn-t", note.title));
-  const list = el("ul", "pn-l");
+  const list = tagSource(el("ul", "pn-l"), "producer");
   for (const line of note.lines) list.append(element("li", line));
   box.append(list);
   box.append(el("p", "pn-src", w.t("lines.producer-note.source")));
@@ -603,7 +604,7 @@ function conversationBody(
     const rowBadge = editedBadge(model, ref, w);
     if (rowBadge !== undefined) nameCell.append(rowBadge);
     if (label.source === "sealed") {
-      const wording = el("small", "", label.text);
+      const wording = tagSource(el("small", "", label.text), "producer");
       wording.dataset.wording = label.source;
       nameCell.append(wording);
     } else if (anyWording) {
@@ -2174,6 +2175,7 @@ export async function drawLines(
   // L0, what matters, after the core's strip (the mock-judge mark and the
   // sealed aggregate, core-strip.ts): the header, then the per-conversation
   // lines, each opening its list.
+  levels.L0.append(renderLegend(w));
   const sheet = el("div", "sheet");
   const pad = el("div", "pad");
   // Notes that explain a figure sit under the sheet, in small type, never

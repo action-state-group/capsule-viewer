@@ -43,6 +43,7 @@ import type {
   ResultClaim,
   ResultRoot,
 } from "@action-state-group/agent-action-capsule";
+import { renderLegend } from "./report-legend.js";
 import { provenanceLines, renderProvenance } from "./report-provenance.js";
 import {
   renderCheckYourself,
@@ -1265,6 +1266,7 @@ export async function drawGroups(
 
   // L0, what matters, after the core's strip (the mock-judge mark and the
   // sealed aggregate, core-strip.ts): one card, the header.
+  levels.L0.append(renderLegend(w));
   const sheet = el("div", "l0-card");
   renderHeader(sheet, model, w);
   levels.L0.append(sheet);

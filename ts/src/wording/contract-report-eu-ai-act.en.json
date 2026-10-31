@@ -383,6 +383,16 @@
     "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
     "evidence.label.no-evidence": "Unsupported: its claims cite no evidence",
     "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
-    "front.findings.h": "Findings"
+    "front.findings.h": "Findings",
+    "legend.toggle.open": "open, by the view's depth",
+    "legend.toggle.closed": "closed, the reader opens it",
+    "legend.toggle.core": "no toggle, the core always draws it",
+    "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
+    "legend.src.lead": "Where every word comes from",
+    "legend.src.payload": "payload",
+    "legend.src.payload.is": "the record's content",
+    "legend.src.producer": "producer",
+    "legend.src.producer.is": "quoted, with whose words",
+    "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words."
   }
 }

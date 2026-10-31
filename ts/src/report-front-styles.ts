@@ -29,6 +29,7 @@ ${s} tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 ${s} details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
 ${s} details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}
 ${s} table tr.x td details.rx > summary > *{display:inline}
+${s} table tr.x td details.rx > summary > .tg{display:inline-block}
 ${s} details.rx > summary:focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:3px}
 ${s} .rule-na{font-size:12.5px;color:var(--slate);margin:4px 0 8px}
 ${s} .check h2{font-size:19px;margin:0 0 10px}
