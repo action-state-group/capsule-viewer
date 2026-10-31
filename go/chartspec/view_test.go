@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestViewEntriesAreRefused: a calendar or by-period entry
+// TestViewEntriesAreRefused: a calendar, timeline, co-failure or by-period entry
 // (docs/design/report-views.md section 4) is not a chart spec, so this
 // package refuses it as an unsupported member. A Go-built page given one in
 // `charts` therefore stops at build time and can never draw a view unchecked;
@@ -23,7 +23,7 @@ func TestViewEntriesAreRefused(t *testing.T) {
 	require.NoError(t, err)
 	var views []interface{}
 	require.NoError(t, json.Unmarshal(raw, &views))
-	require.Len(t, views, 2)
+	require.Len(t, views, 5)
 	for _, view := range views {
 		_, err := Check(view, nil)
 		var refusal *Refusal
