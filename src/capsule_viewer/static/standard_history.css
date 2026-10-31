@@ -29,4 +29,5 @@
 .cv-sh__meta { font-size: var(--cv-font-size-sm); font-weight: 400; color: var(--cv-color-text-muted); }
 .cv-sh__lead--own { border-color: var(--cv-color-positive-fg); background: var(--cv-color-positive-bg); }
 .cv-sh__lead > p { margin: 0 0 var(--cv-space-1); }
-.cv-sh__count { border-radius: var(--cv-radius-pill); background: var(--cv-color-neutral-bg); padding: 0 var(--cv-space-2); }
+.cv-sh__lead > p:last-child { margin-bottom: 0; }
+.cv-sh__count:not(.cv-sh__count--text) { border-radius: var(--cv-radius-pill); background: var(--cv-color-neutral-bg); padding: 0 var(--cv-space-2); }

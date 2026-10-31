@@ -373,6 +373,16 @@ describe("what the page claims", () => {
     const own = everyPage(l).find((x) => x.c.name === "neg-counted-shop-purchase-own" && x.depth === "L2");
     expect(own.host.L0.textContent).toContain("Failed: The counts recount from the deal entries");
   });
+  it("the window line carries the snapshot's time in UTC, and only the holder's own copy says which snapshot the others see, with no witness claim", () => {
+    for (const p of everyPage(l).filter((x) => x.depth === "L0" && x.model.state === "card" && x.model.held.as_of)) {
+      const win = p.host.L0.querySelector('[data-sh-window="true"]').textContent;
+      expect(win).toMatch(/ · as of [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2} UTC$/);
+      const level = p.host.L0.querySelector('[data-sh-lead="level"]');
+      expect(level !== null).toBe(p.model.own === true);
+      if (level) expect(level.textContent).toMatch(/^Level they see: Standard · .+ · snapshot [A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+      expect(win + (level ? level.textContent : "")).not.toMatch(/witness/i);
+    }
+  });
   it("never says a signature or a witness was checked, and names anchor_inclusion not checked", () => {
     for (const p of everyPage(l).filter((x) => x.depth === "L2" && x.model.state !== "unreadable")) {
       const row = p.host.L2.querySelector('[data-property="anchor_inclusion"]');
