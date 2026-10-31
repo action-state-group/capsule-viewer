@@ -11,6 +11,11 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.5.0 and go 0.5.0 (2026-10-31)
+
+Both state viewer 0.5.0: `ts/v0.5.0`, then `go/v0.5.0` on the commit that
+ships its page runtime.
+
 ### Added
 
 - The page runtime's global carries `buildVerifiedBundleContext`,
