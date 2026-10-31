@@ -135,6 +135,8 @@ it("reads the envelope's own bytes: algorithm, content type, key, payload and si
   // only a tag-18 COSE_Sign1, with nothing after it
   expect(readEnvelope(record.signature.slice(2))).toBeUndefined();
   expect(readEnvelope(`${record.signature}00`)).toBeUndefined();
+  // the verifier accepts uppercase hex, so the page reads it too
+  expect(readEnvelope(record.signature.toUpperCase())).toEqual(view);
   expect(readEnvelope("zz")).toBeUndefined();
   expect(readEnvelope("00")).toBeUndefined();
   expect(readEnvelope(record.signature.slice(0, 40))).toBeUndefined();

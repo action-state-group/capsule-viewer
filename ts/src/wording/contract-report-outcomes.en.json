@@ -541,7 +541,7 @@
     "record.foot.sdk.k": "Who else checks this.",
     "record.foot.sdk": "Four implementations, in Go, Rust, Python and TypeScript, pass one vector corpus.",
     "record.rung.7.note-unread": "this page could not read the witness receipts here",
-    "record.rung.5.other": "another record's proof in this bundle failed, so the checkpoint claim is not met",
+    "record.rung.5.other": "the bundle's membership claim did not hold, and its findings do not name this record",
     "record.rung.5.unanchored": "the checkpoint is not authenticated on this page"
   }
 }

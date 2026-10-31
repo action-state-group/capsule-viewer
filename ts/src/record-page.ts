@@ -52,6 +52,7 @@ const object = (value: unknown): Record<string, unknown> =>
     : {};
 
 const HEX = /^[0-9a-f]+$/u;
+const ANY_HEX = /^[0-9a-fA-F]+$/u;
 
 /** A digest or key shortened to its first and last four, as the canvas draws them. */
 export function shortHex(value: string): string {
@@ -138,7 +139,7 @@ const toHex = (bytes: Uint8Array): string =>
 
 /** The envelope's parts, or undefined when `hex` is not a COSE_Sign1 this page can read. */
 export function readEnvelope(hex: string): EnvelopeView | undefined {
-  if (hex.length % 2 !== 0 || !HEX.test(hex)) return undefined;
+  if (hex.length % 2 !== 0 || !ANY_HEX.test(hex)) return undefined;
   const bytes = Uint8Array.from(
     hex.match(/../gu)!.map((pair) => parseInt(pair, 16)),
   );
@@ -515,6 +516,7 @@ export function ladder(input: RecordPageInput, w: Words): Rung[] {
         : stamps.every(
               (s) =>
                 s.kind === "resolved" &&
+                s.statement.checks.length > 0 &&
                 s.statement.checks.every((c) => c.result === "established"),
             )
           ? "PASS"
