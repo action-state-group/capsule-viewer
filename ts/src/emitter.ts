@@ -8,6 +8,7 @@ import { CORE_STRIP_CSS } from "./core-strip.js";
 import { jcs } from "@action-state-group/agent-action-capsule";
 import { OUTCOME_REPORT_CSS } from "./outcome-report-styles.js";
 import { RECORD_CONTENT_CSS } from "./record-content.js";
+import { RECORD_PAGE_CSS } from "./record-page.js";
 
 const cspSlot = "__CSP_SLOT__";
 const titleSlot = "__TITLE_SLOT__";
@@ -42,6 +43,7 @@ export const CORE_RUNTIME_STYLES: readonly string[] = [
   OUTCOME_REPORT_CSS,
   COMPLIANCE_CSS,
   RECORD_CONTENT_CSS,
+  RECORD_PAGE_CSS,
   COMPOSED_CSS,
   CORE_STRIP_CSS,
   CHART_CSS,

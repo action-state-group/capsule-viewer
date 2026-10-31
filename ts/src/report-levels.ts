@@ -10,7 +10,7 @@ import type { Words } from "./contract-report-wording.js";
 import { tagSource } from "./report-legend.js";
 
 /**
- * The two levels every human-facing report card has, and nothing deeper:
+ * The three levels of a human-facing report:
  *
  *   summary  -- what was checked and the result per rule, in plain words
  *   level 1  -- toggle: the conversations behind a line, listed in place,
@@ -19,11 +19,20 @@ import { tagSource } from "./report-legend.js";
  *               is never a toggle of its own
  *   level 2  -- toggle: the proofs for one conversation (record ids,
  *               digests, judge pin, how to recompute)
+ *   level 3  -- the lowest level, one record's page (record-page.ts): its
+ *               producer envelope, its capsule JSON and the ladder of what
+ *               each proof proves. Steven's Outcomes frame 8 draws it, so the
+ *               old bar on a third level is lifted for it and for nothing
+ *               else. It is reached by a link from a card's proofs or from
+ *               "Records in this bundle", and it sits at the record's entry
+ *               in the core's records list, never inside a level-1 or
+ *               level-2 toggle, and holds no toggle (`nestingProblems`).
  *
- * There is no third level: a reader toggles once to see the conversations
- * and the tools, toggles again for one conversation's proofs, and that is
- * all. No <details> ever sits inside more than one other <details>, and a
- * level-1 toggle never holds another level-1 toggle.
+ * A reader toggles once to see the conversations and the tools, toggles again
+ * for one conversation's proofs, and follows a link from there to a record's
+ * page. No <details> ever sits inside more than one other <details>, a
+ * level-1 toggle never holds another level-1 toggle, and the cards' toggles
+ * go no deeper than level 2.
  *
  * Shared by both groupings of the contract-report module (contract-report.ts:
  * outcome-report-view.ts and compliance-view.ts). Everything here draws only
@@ -183,7 +192,9 @@ export function fillForNoScript(root: ParentNode): number {
  * toggle may sit inside a level-1 toggle, and nothing deeper. Returns every
  * breach in `root`, by the summary text of the offending toggle: a toggle
  * inside two others, a level-1 toggle inside another toggle, or a level-2
- * toggle inside anything but a level-1 toggle (another level 2, say).
+ * toggle inside anything but a level-1 toggle (another level 2, say). A
+ * level-3 record page (`data-level="3"`) keeps to the same rule from the
+ * other side: it sits in no level-1 or level-2 toggle and holds no toggle.
  * Empty when the page keeps the rule. Run it over a page with every toggle
  * opened, so lazily built bodies are counted.
  */
@@ -210,6 +221,17 @@ export function nestingProblems(root: ParentNode): string[] {
           `${name} is level 2 but sits inside a level-${outer[0]!.dataset.level} toggle, not a level-1 one`,
         );
     }
+  }
+  for (const page of root.querySelectorAll<HTMLElement>('[data-level="3"]')) {
+    const name = JSON.stringify(page.dataset.recordPage ?? "");
+    if (
+      page.closest('details[data-level="1"], details[data-level="2"]') !== null
+    )
+      problems.push(
+        `record page ${name} sits inside a level-1 or level-2 toggle`,
+      );
+    if (page.querySelector("details") !== null)
+      problems.push(`record page ${name} holds a toggle`);
   }
   return problems;
 }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+import { RECORD_PAGE_CSS } from "../src/record-page.js";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -182,9 +183,9 @@ describe.skipIf(executablePath === undefined)(
 
     // The runtime go/pageruntime ships was built at its own commit, so its
     // stylesheets can drift from the ones go/emitter/runtime-style-hashes.txt
-    // lists today. The stylesheets it inserts on these pages, each allowed
-    // by the page's CSP, are exactly the listed ones.
-    it("go/pageruntime's runtime inserts exactly the stylesheets runtime-style-hashes.txt lists", async () => {
+    // lists today. The stylesheets it inserts on these pages are each
+    // allowed by the page's CSP.
+    it("go/pageruntime's runtime inserts only stylesheets runtime-style-hashes.txt lists", async () => {
       const runtime = readFileSync(
         resolve(
           process.cwd(),
@@ -251,7 +252,20 @@ describe.skipIf(executablePath === undefined)(
             `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`,
           );
       }
-      expect([...inserted].sort()).toEqual([...listed].sort());
+      // Every stylesheet the shipped runtime inserts is one the CSP lists, and
+      // the only listed ones it does not insert yet are the stylesheets added
+      // since the runtime was last rebuilt (RELEASING.md step 5 rebuilds it at
+      // a release). When that rebuild lands this fails until UNRELEASED
+      // empties, so a release that forgot it cannot pass.
+      const hash = (css: string) =>
+        `sha256-${createHash("sha256").update(css, "utf8").digest("base64")}`;
+      const UNRELEASED = [hash(RECORD_PAGE_CSS)];
+      expect([...inserted].filter((h) => !listed.includes(h)).sort()).toEqual(
+        [],
+      );
+      expect(listed.filter((h) => !inserted.has(h)).sort()).toEqual(
+        [...UNRELEASED].sort(),
+      );
     });
 
     describe("with the reference core runtime", () => {
