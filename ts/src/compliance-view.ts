@@ -899,32 +899,34 @@ function sessionBody(
     ),
   );
   const spot = spotCheckToggle(
-    session.tests.flatMap((test) => {
-      if (test.claim === undefined) return [];
-      return [
-        {
-          name: names(test.criterionId, "span", "").textContent ?? "",
-          ref: test.criterionId,
-          worded: ruleWord(
-            test.verdict,
-            judgedOf(test.reportState, test.judgePinDigest),
-            w,
-          ),
-          verdict: test.verdict,
-          drawnVerdict: test.claim.verdict,
-          wording: wordings.get(test.criterionId) ?? {
-            text: "",
-            source: "unstated" as const,
+    {
+      transcript: session.transcript,
+      caseRecord: session.sourceCapsuleId,
+      rules: session.tests.flatMap((test) => {
+        if (test.claim === undefined) return [];
+        return [
+          {
+            name: names(test.criterionId, "span", "").textContent ?? "",
+            ref: test.criterionId,
+            worded: ruleWord(
+              test.verdict,
+              judgedOf(test.reportState, test.judgePinDigest),
+              w,
+            ),
+            verdict: test.verdict,
+            drawnVerdict: test.claim.verdict,
+            wording: wordings.get(test.criterionId) ?? {
+              text: "",
+              source: "unstated" as const,
+            },
+            rationale: test.rationale,
+            noNote: notesGap([test.reportState], w),
+            judgePinDigest: test.judgePinDigest,
+            reportState: test.reportState,
           },
-          rationale: test.rationale,
-          noNote: notesGap([test.reportState], w),
-          judgePinDigest: test.judgePinDigest,
-          reportState: test.reportState,
-          transcript: session.transcript,
-          caseRecord: session.sourceCapsuleId,
-        },
-      ];
-    }),
+        ];
+      }),
+    },
     w,
   );
   if (spot !== undefined) body.append(spot);

@@ -830,17 +830,22 @@ it("each session offers a spot check: one three-column card per test with a clai
   )!;
   open(toggle);
   const cards = toggle.querySelectorAll<HTMLElement>("article.sc-card");
-  expect(cards.length).toBeGreaterThan(0);
+  expect(cards).toHaveLength(1);
+  const card = cards[0]!;
+  expect(card.querySelectorAll("[data-column=happened]")).toHaveLength(1);
   const listed = [
     ...session.querySelectorAll<HTMLElement>(".ck[data-crit]"),
   ].map((c) => c.dataset.crit);
-  for (const card of cards) {
-    expect(listed).toContain(card.dataset.spotCheck);
+  const rows = [
+    ...card.querySelectorAll<HTMLElement>("[data-column=criterion]"),
+  ];
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(listed).toContain(row.dataset.spotRule);
     expect(
-      [...card.querySelectorAll<HTMLElement>("[data-column]")].map(
-        (c) => c.dataset.column,
+      card.querySelector(
+        `[data-column=verdict][data-spot-rule="${row.dataset.spotRule}"] .pill`,
       ),
-    ).toEqual(["happened", "criterion", "verdict"]);
-    expect(card.querySelector(".pill")).not.toBeNull();
+    ).not.toBeNull();
   }
 });

@@ -2214,27 +2214,33 @@ it("each conversation offers a spot check: one three-column card per rule with a
     "Spot check, side by side",
   );
   open(toggle);
+  // one card per conversation, its conversation drawn once
   const cards = toggle.querySelectorAll<HTMLElement>("article.sc-card");
-  expect(cards).toHaveLength(9);
-  // the rule table's rows and the cards are the same rules, in the same order
-  expect([...cards].map((c) => c.dataset.spotCheck)).toEqual(
+  expect(cards).toHaveLength(1);
+  const card = cards[0]!;
+  expect(card.querySelectorAll("[data-column=happened]")).toHaveLength(1);
+  // the rule table's rows and the card's rows are the same rules, in the same order
+  const rows = [
+    ...card.querySelectorAll<HTMLElement>("[data-column=criterion]"),
+  ];
+  expect(rows).toHaveLength(9);
+  expect(rows.map((c) => c.dataset.spotRule)).toEqual(
     [...conv.querySelectorAll<HTMLElement>("tr[data-crit]")].map(
       (r) => r.dataset.crit,
     ),
   );
-  const card = cards[0]!;
-  expect(
-    [...card.querySelectorAll<HTMLElement>("[data-column]")].map(
-      (c) => c.dataset.column,
-    ),
-  ).toEqual(["happened", "criterion", "verdict"]);
   // this fixture carries no conversation: the card says so, draws no turn
   expect(card.querySelector("[data-transcript=absent]")).not.toBeNull();
   expect(card.querySelector("li.turn")).toBeNull();
-  expect(card.querySelector(".pill")!.textContent).toBe(
-    conv.querySelector<HTMLElement>(
-      `tr[data-crit="${card.dataset.spotCheck}"] .pill`,
-    )!.textContent,
+  const ref = rows[0]!.dataset.spotRule!;
+  expect(
+    card.querySelector(`[data-column=verdict][data-spot-rule="${ref}"] .pill`)!
+      .textContent,
+  ).toBe(
+    conv.querySelector<HTMLElement>(`tr[data-crit="${ref}"] .pill`)!
+      .textContent,
   );
-  expect(card.textContent).toContain("does not show whether a second, blind judge");
+  expect(card.textContent).toContain(
+    "does not show whether a second, blind judge",
+  );
 });

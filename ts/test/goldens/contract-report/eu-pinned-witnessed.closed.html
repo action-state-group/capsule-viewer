@@ -117,7 +117,11 @@
 .cc .sc-card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px}
 .cc .sc-t{margin:0 0 8px;font-size:14px;color:var(--navy)}
 .cc .sc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
-@media (max-width:820px){.cc .sc-grid{grid-template-columns:minmax(0,1fr)}}
+.cc .sc-happened{grid-column:1;grid-row:1 / span var(--span)}
+.cc .sc-criterion{grid-column:2;grid-row:var(--row)}
+.cc .sc-verdict{grid-column:3;grid-row:var(--row)}
+.cc .sc-name{font-weight:700;color:var(--navy);margin-bottom:4px}
+@media (max-width:820px){.cc .sc-grid{grid-template-columns:minmax(0,1fr)}.cc .sc-col{grid-column:1;grid-row:auto}}
 .cc .sc-h{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
 .cc .sc-box{border:1px solid var(--line);border-radius:8px;background:#FAF8F4;padding:8px 10px;margin-bottom:8px}
 .cc .sc-v.ok{background:var(--ok-l)}

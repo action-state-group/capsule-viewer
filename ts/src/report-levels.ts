@@ -884,6 +884,18 @@ export function linkConversations(root: ParentNode): number {
     toggle.remove();
     linked++;
   }
+  // The spot check draws the conversation once per card: its chat becomes
+  // the same link, where the record is there to link to.
+  for (const column of root.querySelectorAll<HTMLElement>(
+    ".sc-happened[data-record]",
+  )) {
+    const link = column.querySelector<HTMLElement>(":scope > a.chat-static");
+    if (!ids.has(recordAddress(column.dataset.record!)) || link == null)
+      continue;
+    column.querySelector(":scope > .chat")?.remove();
+    link.hidden = false;
+    linked++;
+  }
   // A conversation kept in place (no record to link to) shows its state
   // note: the page runs no script, so its body is built now.
   for (const toggle of root.querySelectorAll<HTMLDetailsElement>(
@@ -1002,7 +1014,11 @@ ${s} details.lv2 > .sc-body{padding:6px 14px 14px;display:grid;gap:14px}
 ${s} .sc-card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px}
 ${s} .sc-t{margin:0 0 8px;font-size:14px;color:var(--navy)}
 ${s} .sc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
-@media (max-width:820px){${s} .sc-grid{grid-template-columns:minmax(0,1fr)}}
+${s} .sc-happened{grid-column:1;grid-row:1 / span var(--span)}
+${s} .sc-criterion{grid-column:2;grid-row:var(--row)}
+${s} .sc-verdict{grid-column:3;grid-row:var(--row)}
+${s} .sc-name{font-weight:700;color:var(--navy);margin-bottom:4px}
+@media (max-width:820px){${s} .sc-grid{grid-template-columns:minmax(0,1fr)}${s} .sc-col{grid-column:1;grid-row:auto}}
 ${s} .sc-h{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
 ${s} .sc-box{border:1px solid var(--line);border-radius:8px;background:#FAF8F4;padding:8px 10px;margin-bottom:8px}
 ${s} .sc-v.ok{background:var(--ok-l)}

@@ -3,23 +3,27 @@
 
 import { expect, it } from "vitest";
 import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
-import { openToggle, ruleWord } from "../src/report-levels.js";
+import {
+  linkConversations,
+  openToggle,
+  ruleWord,
+} from "../src/report-levels.js";
 import {
   spotCheckCard,
   spotCheckToggle,
-  type SpotCheckSubject,
+  type SpotCheck,
+  type SpotCheckRule,
 } from "../src/spot-check.js";
 
 const PIN = "1ef1a583" + "0".repeat(56);
 const RATIONALE =
   "jev choice: not_met (probabilities={'met': 0.05, 'not_met': 0.91, 'not_evaluable': 0.04}, confidence=0.91)";
 
-function subject(over: Partial<SpotCheckSubject> = {}): SpotCheckSubject {
-  const W = DEFAULT_WORDS.lines;
+function rule(over: Partial<SpotCheckRule> = {}): SpotCheckRule {
   return {
     name: "Within fare rules",
     ref: "policy_compliance.within_fare_rules",
-    worded: ruleWord("not_met", "yes", W),
+    worded: ruleWord("not_met", "yes", DEFAULT_WORDS.lines),
     verdict: "not_met",
     drawnVerdict: "not_met",
     wording: {
@@ -30,6 +34,12 @@ function subject(over: Partial<SpotCheckSubject> = {}): SpotCheckSubject {
     noNote: "The judge left no notes.",
     judgePinDigest: PIN,
     reportState: "disclosed",
+    ...over,
+  };
+}
+
+function spot(over: Partial<SpotCheck> = {}): SpotCheck {
+  return {
     transcript: {
       state: "verified",
       transcriptRecordId: "tx",
@@ -43,15 +53,13 @@ function subject(over: Partial<SpotCheckSubject> = {}): SpotCheckSubject {
           role: "assistant",
           content: "Yes. A $75 change fee applies.",
           toolCalls: [
-            {
-              name: "apply_fee",
-              arguments: '{"amount":75,"reason":"change"}',
-            },
+            { name: "apply_fee", arguments: '{"amount":75,"reason":"change"}' },
           ],
         },
       ],
     },
     caseRecord: "case1",
+    rules: [rule()],
     ...over,
   };
 }
@@ -59,7 +67,7 @@ function subject(over: Partial<SpotCheckSubject> = {}): SpotCheckSubject {
 for (const grouping of ["lines", "groups"] as const)
   it(`${grouping}: the card draws three columns, the turns, the sealed rule wording, the verdict and the judge's words`, () => {
     const W = DEFAULT_WORDS[grouping];
-    const card = spotCheckCard(subject(), W);
+    const card = spotCheckCard(spot(), W);
     const cols = [...card.querySelectorAll<HTMLElement>("[data-column]")].map(
       (c) => c.dataset.column,
     );
@@ -85,8 +93,41 @@ for (const grouping of ["lines", "groups"] as const)
     );
   });
 
-it("what the bundle does not carry is said, not drawn: who produced each turn, when a rule is met, the adjudication", () => {
-  const card = spotCheckCard(subject(), DEFAULT_WORDS.lines);
+it("several rules share one conversation: it is drawn once, each rule is a row of criterion and verdict", () => {
+  const card = spotCheckCard(
+    spot({
+      rules: [
+        rule(),
+        rule({
+          ref: "x.y",
+          name: "Other rule",
+          worded: ruleWord("met", "yes", DEFAULT_WORDS.lines),
+          verdict: "met",
+          drawnVerdict: "met",
+        }),
+      ],
+    }),
+    DEFAULT_WORDS.lines,
+  );
+  expect(card.querySelectorAll("li.turn")).toHaveLength(2);
+  expect(card.querySelectorAll("[data-column=happened]")).toHaveLength(1);
+  expect(
+    [...card.querySelectorAll<HTMLElement>("[data-column=criterion]")].map(
+      (c) => c.dataset.spotRule,
+    ),
+  ).toEqual(["policy_compliance.within_fare_rules", "x.y"]);
+  expect(
+    card
+      .querySelector<HTMLElement>("[data-column=happened]")!
+      .style.getPropertyValue("--span"),
+  ).toBe("2");
+});
+
+it("what the card does not show is said once, not drawn: who produced each message, when a rule is met, the blind adjudication", () => {
+  const card = spotCheckCard(
+    spot({ rules: [rule(), rule({ ref: "x.y" })] }),
+    DEFAULT_WORDS.lines,
+  );
   const gaps = [...card.querySelectorAll(".sc-gap")].map((g) => g.textContent);
   expect(gaps).toEqual([
     expect.stringContaining("Who produced each message"),
@@ -98,7 +139,7 @@ it("what the bundle does not carry is said, not drawn: who produced each turn, w
 
 it("a conversation not in the bundle says so in the first column and draws no turns or produced-by line", () => {
   const card = spotCheckCard(
-    subject({ transcript: { state: "absent" } }),
+    spot({ transcript: { state: "absent" } }),
     DEFAULT_WORDS.lines,
   );
   const happened = card.querySelector('[data-column="happened"]')!;
@@ -113,7 +154,7 @@ it("a conversation not in the bundle says so in the first column and draws no tu
 it("a rule whose wording is not stated, or reported differently, draws no wording", () => {
   for (const source of ["unstated", "mixed"] as const) {
     const card = spotCheckCard(
-      subject({ wording: { text: "NOT_STATED", source } }),
+      spot({ rules: [rule({ wording: { text: "NOT_STATED", source } })] }),
       DEFAULT_WORDS.lines,
     );
     const criterion = card.querySelector('[data-column="criterion"]')!;
@@ -127,11 +168,15 @@ it("a rule whose wording is not stated, or reported differently, draws no wordin
 
 it("without a rationale the verdict column says why there is none, and shows no confidence", () => {
   const card = spotCheckCard(
-    subject({
-      rationale: undefined,
-      noNote:
-        "The judge's notes are not in this bundle: its reports are withheld.",
-      judgePinDigest: undefined,
+    spot({
+      rules: [
+        rule({
+          rationale: undefined,
+          noNote:
+            "The judge's notes are not in this bundle: its reports are withheld.",
+          judgePinDigest: undefined,
+        }),
+      ],
     }),
     DEFAULT_WORDS.lines,
   );
@@ -140,10 +185,12 @@ it("without a rationale the verdict column says why there is none, and shows no 
   expect(verdict.querySelector("[data-judge]")).toBeNull();
 });
 
-it("the toggle is a level-2 toggle that builds one card per subject on first open, and none for no subjects", () => {
-  expect(spotCheckToggle([], DEFAULT_WORDS.lines)).toBeUndefined();
+it("the toggle is a level-2 toggle that builds the card on first open, and none for no rules", () => {
+  expect(
+    spotCheckToggle(spot({ rules: [] }), DEFAULT_WORDS.lines),
+  ).toBeUndefined();
   const toggle = spotCheckToggle(
-    [subject(), subject({ ref: "x.y", name: "Other rule" })],
+    spot(),
     DEFAULT_WORDS.lines,
   ) as HTMLDetailsElement;
   expect(toggle.dataset.level).toBe("2");
@@ -152,6 +199,32 @@ it("the toggle is a level-2 toggle that builds one card per subject on first ope
   );
   expect(toggle.querySelector(".sc-card")).toBeNull();
   openToggle(toggle);
-  expect(toggle.querySelectorAll(".sc-card")).toHaveLength(2);
+  expect(toggle.querySelectorAll(".sc-card")).toHaveLength(1);
   expect(toggle.querySelector("details")).toBeNull();
+});
+
+it("a page that runs no script keeps the conversation once: the card's chat becomes a link to the record", () => {
+  const page = document.createElement("main");
+  const record = document.createElement("details");
+  record.className = "cv-record";
+  const anchor = document.createElement("span");
+  anchor.className = "cv-record-anchor";
+  anchor.id = "record-tx";
+  record.append(anchor);
+  const toggle = spotCheckToggle(
+    spot(),
+    DEFAULT_WORDS.lines,
+  ) as HTMLDetailsElement;
+  page.append(toggle, record);
+  openToggle(toggle);
+  expect(page.querySelectorAll("li.turn")).toHaveLength(2);
+  expect(linkConversations(page)).toBe(1);
+  expect(page.querySelectorAll("li.turn")).toHaveLength(0);
+  const link = page.querySelector<HTMLAnchorElement>(
+    ".sc-happened a.chat-static",
+  )!;
+  expect(link.hidden).toBe(false);
+  expect(link.getAttribute("href")).toBe("#record-tx");
+  // the rule's wording and verdict stay
+  expect(page.querySelector('[data-column="verdict"] .pill')).not.toBeNull();
 });
