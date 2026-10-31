@@ -562,7 +562,8 @@ BUILDER = Move(
             'the `static` page drawn with it. The page runtime checks it again; a contract that does not check\n'
             'there is not read, and the page is drawn as it is without one. The page\'s "How this page was\n'
             'checked" section states the contract\'s `<id>@<version>` and its `contract_sha256`. With no\n'
-            '`contract`, every packaging is unchanged byte for byte. The Go offline builder\n'
+            '`contract`, the builder writes what it writes without the setting for the same runtime and packs;\n'
+            'the page draws no tier. The Go offline builder\n'
             '(`OfflineOptions.Contract`, checked with `CheckContract`) applies the same check and writes the same\n'
             'bytes; `go/emitter/testdata/contract-vectors.json` holds the two checks together.',
             "capsule-viewer#199",

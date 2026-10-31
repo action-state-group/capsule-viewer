@@ -115,7 +115,8 @@ refuses the build in every packaging (`PresentationBuildError`). Every packaging
 the `static` page drawn with it. The page runtime checks it again; a contract that does not check
 there is not read, and the page is drawn as it is without one. The page's "How this page was
 checked" section states the contract's `<id>@<version>` and its `contract_sha256`. With no
-`contract`, every packaging is unchanged byte for byte. The Go offline builder
+`contract`, the builder writes what it writes without the setting for the same runtime and packs;
+the page draws no tier. The Go offline builder
 (`OfflineOptions.Contract`, checked with `CheckContract`) applies the same check and writes the same
 bytes; `go/emitter/testdata/contract-vectors.json` holds the two checks together.
 
