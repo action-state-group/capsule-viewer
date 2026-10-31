@@ -14860,13 +14860,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("c1e8c297610f0054af9424959bbcdd1709c362d6");
+    return commitPrefix("89a6b6b7a2020b7ae8087e4fa1ed3f4b3bf5392c");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.5.0",
+    viewerVersion: "0.6.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.10.0",
     cllVersion: "0.3.0",
@@ -15100,6 +15100,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.line.held.help": "A person's spot check disagreed with a resolved result.",
       "lines.line.added": "Added after a person's check",
       "lines.line.added.help": "a person's spot check graded a missed result as resolved",
+      "lines.headline.one": "{resolved} of {n} conversation resolved: every rule that applied was met.",
+      "lines.headline.other": "{resolved} of {n} conversations resolved: every rule that applied was met.",
+      "lines.headline.missed": "{n} missed at least one.",
+      "lines.headline.unverified": "{n} could not be verified.",
+      "lines.headline.undecided": "{n} could not be decided.",
+      "lines.headline.nothing-applied": "{n} had no rule that applied.",
       "lines.drill.show.one": "Show the {n} conversation",
       "lines.drill.show.other": "Show the {n} conversations",
       "lines.na-note.one": "{n} rule check did not apply to the conversation and count as met beside a met rule.",
@@ -15347,7 +15353,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.excluded": "{excluded} excluded as not applicable",
       "front.agg.bucket.met": "Met (evaluations)",
       "front.agg.bucket.not_met": "Not met (evaluations)",
-      "front.agg.bucket.not_evaluable": "Not evaluable (evaluations)",
+      "front.agg.bucket.not_evaluable": "Could not decide (evaluations)",
       "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
       "front.agg.of": "of {n}",
       "front.check.h": "Check this report yourself",
@@ -15680,7 +15686,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.excluded": "{excluded} excluded as not applicable",
       "front.agg.bucket.met": "Met (evaluations)",
       "front.agg.bucket.not_met": "Not met (evaluations)",
-      "front.agg.bucket.not_evaluable": "Not evaluable (evaluations)",
+      "front.agg.bucket.not_evaluable": "Could not decide (evaluations)",
       "front.agg.bucket.out_of_scope": "Out of scope (evaluations)",
       "front.agg.of": "of {n}",
       "front.check.h": "Check this report yourself",
@@ -16589,8 +16595,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "5f72b1a7201f63d6f6519dbbcad7154e47f508d59edeaebce6a45f7306f62591",
-    groups: "3f2d1dee87d888298073be8cd0ab39e63412fa38b60492c230f17118d1a7a28a"
+    lines: "818fbebb5a0fe1644d5c63cd2effac138fe648f828f847608f9d387dde399f0e",
+    groups: "49d3f98b8336daf02d620ff63dce036003eb49802ba07c208287006f6db080d3"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -17983,6 +17989,9 @@ ${key}`);
     const table2 = document.createElement("table");
     table2.className = "lines";
     table2.dataset.rows = "report-lines";
+    const headline = el5("p", "headline");
+    headline.dataset.headline = "lines";
+    section.append(headline);
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
     headRow.append(
@@ -18006,6 +18015,33 @@ ${key}`);
       shown: shown2,
       ...behind === void 0 ? {} : { behind }
     });
+    const headlineParts = [
+      w.p("lines.headline", model.totalCount, {
+        resolved: fmtCount(resolved.length),
+        n: fmtCount(model.totalCount)
+      }),
+      w.t("lines.headline.missed", { n: fmtCount(missed.length) })
+    ];
+    const judgedUndecided = byStatus("undecided");
+    const nothingApplied = byStatus("nothing-applied");
+    if (unverified.length > 0)
+      headlineParts.push(
+        w.t("lines.headline.unverified", { n: fmtCount(unverified.length) })
+      );
+    if (judgedUndecided.length > 0)
+      headlineParts.push(
+        w.t("lines.headline.undecided", {
+          n: fmtCount(judgedUndecided.length)
+        })
+      );
+    if (nothingApplied.length > 0)
+      headlineParts.push(
+        w.t("lines.headline.nothing-applied", {
+          n: fmtCount(nothingApplied.length)
+        })
+      );
+    headline.textContent = model.totalCount === 0 ? "" : headlineParts.join(" ");
+    headline.hidden = model.totalCount === 0;
     const lines = [
       line("resolved", resolved.length, share(resolved.length), resolved),
       line("missed", missed.length, share(missed.length), missed)
