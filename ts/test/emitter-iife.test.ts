@@ -105,12 +105,13 @@ describe("the runtime's global", () => {
       );
       for (const member of MODULE_CONTRACT) {
         // Not yet in the shipped runtime. Asserting its absence makes the
-        // refresh that ships it fail here until the refresh also drops it
-        // from NOT_YET_SHIPPED and the note in go/pageruntime/pageruntime.go.
+        // refresh that ships it fail here until that refresh also drops it
+        // from NOT_YET_SHIPPED (RELEASING.md step 5; an edit under ts/, which
+        // scripts/go-release-check.sh does not compare).
         if (name === "go/pageruntime" && NOT_YET_SHIPPED.includes(member)) {
           expect(
             typeof global[member],
-            `${member} now ships in go/pageruntime: drop it from NOT_YET_SHIPPED and the pageruntime.go note`,
+            `${member} now ships in go/pageruntime: drop it from NOT_YET_SHIPPED`,
           ).toBe("undefined");
           continue;
         }
