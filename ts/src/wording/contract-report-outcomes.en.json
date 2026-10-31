@@ -623,7 +623,7 @@
     "lines.subject.none": "No customer handle in this report has more than one conversation.",
     "lines.subject.core.customer": "Customer {handle}",
     "lines.subject.core.scope": "handle scope: {pack}, {tier} tier, salted {salting}, salt {salt}",
-    "lines.subject.core.halves": "the customer's halves: {present} of {of} present",
+    "lines.subject.core.halves": "the customer's halves: {present} of {of} present, in {k} of {n} conversations that state them",
     "lines.subject.share": "{count} of {total}",
     "lines.subject.tile.conversations": "conversations · {first} to {last} · of the report's {total}",
     "lines.subject.tile.resolved": "resolved · every term met",
@@ -658,6 +658,8 @@
     "lines.subject.legend.not-met": "not met",
     "lines.subject.legend.undecided": "could not decide",
     "lines.subject.legend.order": "terms are in the contract's order",
-    "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them."
+    "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them.",
+    "lines.subject.note.unverified": "{n} of {total} could not be verified.",
+    "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied."
   }
 }

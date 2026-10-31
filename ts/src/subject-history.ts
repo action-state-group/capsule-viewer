@@ -94,7 +94,6 @@ function readEntry(
   const labels = value.request_labels;
   if (
     !Array.isArray(labels) ||
-    labels.length === 0 ||
     labels.length > MAX_LABELS ||
     labels.some((l) => str(l, MAX_LABEL) === undefined)
   )
@@ -258,7 +257,7 @@ const halvesOf = (e: SubjectEntry, w: Words): string =>
         of: fmt(e.halves.of),
       });
 
-/** `3f9a1c…d21e`: the head and tail of the handle, enough to tell two apart on a page, never the whole commitment. */
+/** `3f9a1c…d21e`: the head and tail of the handle, enough to tell two apart on the line of identity; `data-handle` holds the whole operator-tier value. */
 export const shortHandle = (handle: string): string =>
   `${handle.slice(0, 6)}…${handle.slice(-4)}`;
 
@@ -358,6 +357,8 @@ function customerBlock(
       ` · ${w.t("lines.subject.core.halves", {
         present: fmt(halves.reduce((a, h) => a + h.present, 0)),
         of: fmt(halves.reduce((a, h) => a + h.of, 0)),
+        k: fmt(halves.length),
+        n: fmt(n),
       })}`,
     );
   block.append(core);
@@ -386,10 +387,20 @@ function customerBlock(
   if (unverified + nothing > 0) {
     const rest = [
       ...(unverified > 0
-        ? [w.t("lines.headline.unverified", { n: fmt(unverified) })]
+        ? [
+            w.t("lines.subject.note.unverified", {
+              n: fmt(unverified),
+              total: fmt(n),
+            }),
+          ]
         : []),
       ...(nothing > 0
-        ? [w.t("lines.headline.nothing-applied", { n: fmt(nothing) })]
+        ? [
+            w.t("lines.subject.note.nothing-applied", {
+              n: fmt(nothing),
+              total: fmt(n),
+            }),
+          ]
         : []),
     ];
     block.append(el("p", "sh-note", rest.join(" ")));

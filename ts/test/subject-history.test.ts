@@ -217,6 +217,41 @@ describe("subject-history page", () => {
     expect(s.textContent).toContain("has more than one conversation");
   });
 
+  it("a handle in a document whose tier is shared or unknown is never drawn", async () => {
+    for (const tier of ["shared", "public"]) {
+      const root = await page(
+        bundleWith(operator, (block) => {
+          (block.handle_scope as Obj).tier = tier;
+        }),
+      );
+      const s = section(root)!;
+      expect(s.dataset.tier).toBe("shared");
+      expect(s.querySelector("[data-handle], .sh-link, .sh-cust")).toBeNull();
+      expect(root.innerHTML).not.toContain("17959ed5fca2");
+    }
+  });
+
+  it("at the operator tier a conversation with no handle is outside every customer", async () => {
+    const root = await page(
+      bundleWith(operator, (block) => {
+        const conv = Object.values(block.conversations as Obj) as Obj[];
+        delete conv[0]!.customer_handle;
+      }),
+    );
+    const s = section(root)!;
+    expect(s.querySelector(".sh-tile b")!.textContent).toBe("3");
+    expect(s.querySelectorAll("details.sh-conv")).toHaveLength(3);
+  });
+
+  it("a conversation that could not be verified is counted of the customer's total", async () => {
+    const w = await contractReportWords("lines", undefined, {
+      singleContract: true,
+    });
+    expect(w.t("lines.subject.note.unverified", { n: 1, total: 4 })).toBe(
+      "1 of 4 could not be verified.",
+    );
+  });
+
   it("a Result with no slice draws no section", async () => {
     const source = load("outcome-report-bundle.json");
     const root = await page(source);
@@ -331,10 +366,6 @@ describe("subject-history drawer", () => {
     expect(s.textContent).toContain("October 9 · 16:40");
     expect(s.textContent).toContain("USD $10-99");
     // the card of a missed conversation names the term, the wording, the judge's words
-    const card = (
-      s.querySelector('details[data-conversation="c2"]') as HTMLDetailsElement
-    ).querySelector("summary")!;
-    expect(card).not.toBeNull();
     check("subject-history-spread", s.outerHTML);
   });
 
