@@ -5,7 +5,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
-import { obligationStatus, rowStatus } from "../src/compliance-view.js";
+import {
+  obligationStatus,
+  rowStatus,
+  sessionStatus,
+} from "../src/compliance-view.js";
 import { DEFAULT_WORDS } from "../src/contract-report-wording.js";
 import { ladderWords } from "./helpers/ladder-pack.js";
 import type { ObligationModel, ObligationRowModel } from "../src/compliance.js";
@@ -848,4 +852,59 @@ it("each session offers a spot check: one three-column card per test with a clai
       ),
     ).not.toBeNull();
   }
+});
+
+// ---------------------------------------------------------------------------
+// The Terms Pack canvas (capsule-viewer#172): the headline sentence, the
+// derived worst line per obligation, the CORE identity line
+// ---------------------------------------------------------------------------
+
+it("opens with one sentence of whole-number session counts, and each obligation carries a derived worst line", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const root = await render(bundle);
+  const headline = root.querySelector<HTMLElement>('[data-headline="groups"]')!;
+  expect(headline).not.toBeNull();
+  // Two sessions in the fixture, each with a not-met test.
+  expect(headline.textContent).toBe(
+    "0 of 2 sessions met every test that applied to them. 2 did not meet at least one.",
+  );
+  expect(headline.textContent).not.toMatch(/%|percent/u);
+  const worst = [...root.querySelectorAll<HTMLElement>("[data-worst]")];
+  expect(worst.length).toBe(
+    root.querySelectorAll("tr.ob[data-obligation]").length,
+  );
+  const first = worst[0]!;
+  expect(first.dataset.worst).toBe("not_met");
+  expect(first.textContent).toBe("worst: not met, 1 of 2 sessions · derived");
+});
+
+it("a session's status: not met beats unverified beats undecided, and no test that applied is its own count", () => {
+  const test = (verdict: string) => ({ verdict }) as never;
+  const session = (...verdicts: string[]) =>
+    ({ tests: verdicts.map(test) }) as never;
+  expect(sessionStatus(session("met", "not_met", "not_evaluable"))).toBe(
+    "missed",
+  );
+  expect(sessionStatus(session("met", "failed", "not_evaluable"))).toBe(
+    "unverified",
+  );
+  expect(sessionStatus(session("met", "not_evaluable"))).toBe("undecided");
+  expect(sessionStatus(session("met", "not_applicable"))).toBe("met");
+  expect(
+    sessionStatus(
+      session("not_applicable", "out_of_scope", "not_yet_in_force"),
+    ),
+  ).toBe("nothing-applied");
+});
+
+it("the CORE identity line states only what the Result carries", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const root = await render(bundle);
+  const kicker = root.querySelector<HTMLElement>("[data-core-kicker]")!;
+  const facts = root.querySelector<HTMLElement>("[data-core-facts]")!;
+  expect(kicker.textContent).toMatch(/^CORE · eu-ai-act-obligations v0\.1\.0/u);
+  expect(facts.textContent).toMatch(/^Result [0-9a-f]{4}…[0-9a-f]{4}/u);
+  // Nothing the Result does not carry is drawn.
+  for (const absent of ["controller", "epoch", "countersign", "closed"])
+    expect(`${kicker.textContent}${facts.textContent}`).not.toContain(absent);
 });

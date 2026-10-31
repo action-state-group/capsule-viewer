@@ -3,7 +3,8 @@
  * The core strip: the first thing in L0 on every page whose bundle carries
  * an Evidence Result (capsule-viewer#81; presentation contract section
  * 9.1). The core draws it, never a module: the mock-judge mark when a judge
- * was a mock (decision D5 (b)), then the Result's sealed aggregate,
+ * was a mock (decision D5 (b)), then the CORE identity line, then the
+ * Result's sealed aggregate,
  * coverage first and then the buckets, each count beside its denominator
  * (contract-report/v1 section 2, evidence-result-v0 section 3). It carries
  * no percentage and no single figure. A page whose bundle carries no
@@ -168,8 +169,14 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
     box.dataset.count = String(ids.length);
     box.dataset.of = String(stated.evaluatedPopulation);
     box.append(el("b", "", fmt(ids.length)));
-    box.append(el("span", "", w.t(`front.agg.bucket.${verdict}`)));
-    box.append(el("span", "agg-of", of));
+    // The canvas draws the tile's caption on one line: "Met · of N ...".
+    const caption = el("div", "agg-cap");
+    caption.append(
+      el("span", "", w.t(`front.agg.bucket.${verdict}`)),
+      document.createTextNode(" · "),
+      el("span", "agg-of", of),
+    );
+    box.append(caption);
     const marker = mismatchMarker(result, field, w);
     if (marker !== undefined) box.append(marker);
     buckets.append(box);
@@ -201,12 +208,68 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   return out;
 }
 
+const shortDigest = (digest: string): string =>
+  digest.length > 12 ? `${digest.slice(0, 4)}…${digest.slice(-4)}` : digest;
+
+/**
+ * The CORE identity line (Terms Pack canvas, "CORE · covers ... "): the
+ * facts about this Result the core itself can read, each stated only when
+ * the bundle states it. The pack and version are the claims' `contract_ref`;
+ * the Result is named by its capsule id and its generation time, never by a
+ * "closed" time the Result does not carry; the judge pins are the cited
+ * reports'. What the Result and the claims do not carry (coverage window,
+ * pack digest, skills, book, agent key, controller, developer, epoch, model,
+ * countersign state) is not drawn and not replaced with a placeholder.
+ */
+function renderCoreIdentity(model: CoreStripModel): HTMLElement {
+  const { result, words: w } = model;
+  const refs = [
+    ...new Set(result.claims.filter((c) => !c.later).map((c) => c.contractRef)),
+  ];
+  const kicker: string[] = [w.t("front.core.label")];
+  if (refs.length === 1) {
+    const at = refs[0]!.lastIndexOf("@");
+    kicker.push(
+      at > 0
+        ? w.t("front.core.pack", {
+            id: refs[0]!.slice(0, at),
+            version: refs[0]!.slice(at + 1),
+          })
+        : refs[0]!,
+    );
+  } else if (refs.length > 1)
+    kicker.push(w.t("front.core.packs", { n: fmt(refs.length) }));
+  const generated =
+    utcDateOf(result.generatedAt) === undefined
+      ? undefined
+      : result.generatedAt;
+  if (generated !== undefined)
+    kicker.push(w.t("front.core.generated", { time: generated }));
+  const facts: string[] = [
+    w.t("front.core.result", { digest: shortDigest(result.capsuleId) }),
+  ];
+  if (model.pins.length === 1)
+    facts.push(w.t("front.core.pin", { digest: shortDigest(model.pins[0]!) }));
+  else if (model.pins.length > 1)
+    facts.push(w.t("front.core.pins", { n: fmt(model.pins.length) }));
+  const block = el("div", "core-id");
+  block.dataset.section = "core-identity";
+  const top = el("p", "agg-note core-kicker", kicker.join(" · "));
+  top.dataset.coreKicker = "";
+  const rest = el("p", "agg-note core-facts", facts.join(" · "));
+  rest.dataset.coreFacts = "";
+  block.append(top, rest);
+  return block;
+}
+
 /** What the strip draws from, read once before the page is written. */
 export interface CoreStripModel {
   readonly result: ResultRoot;
   readonly words: Words;
   /** Whether any claim's cited report names a mock judge (decision D5 (b)). */
   readonly mock: boolean;
+  /** The distinct judge pins the cited reports name, in `tallyJudges` order. */
+  readonly pins: readonly string[];
 }
 
 export async function coreStripModel(
@@ -214,7 +277,12 @@ export async function coreStripModel(
   words: Words,
 ): Promise<CoreStripModel> {
   const tally = await tallyJudges(result.records, result.claims);
-  return { result, words, mock: judgedByMock(tally) };
+  return {
+    result,
+    words,
+    mock: judgedByMock(tally),
+    pins: tally.pins.map((pin) => pin.digest),
+  };
 }
 
 /**
@@ -234,6 +302,7 @@ export function renderCoreStrip(model: CoreStripModel): HTMLElement {
     mark.dataset.section = "mock-judge";
     strip.append(mark);
   }
+  strip.append(renderCoreIdentity(model));
   strip.append(renderAggregate(model.result, model.words));
   return strip;
 }
