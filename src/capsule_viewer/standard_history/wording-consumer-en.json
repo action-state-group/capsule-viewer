@@ -134,6 +134,8 @@
     "checks.not_held": "Not carried beside the card: {what}.",
     "checks.not_held.policy": "the policy",
     "checks.not_held.as_of": "the snapshot's time",
-    "checks.not_held.deals": "the deal entries"
+    "checks.not_held.deals": "the deal entries",
+    "window.as_of": "as of {month} {day} {hh}:{mm} UTC",
+    "lead.level": "Level they see: Standard · {window} · snapshot {date}"
   }
 }
