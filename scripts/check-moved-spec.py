@@ -262,6 +262,23 @@ CONTRACT = Move(
             "anchor's makes the block unreadable.",
             "capsule-viewer#183: the reader-setting check a module asks the runtime for",
         ),
+        # Section 3: the deal receipt's preimage and witness checks
+        # (capsule-viewer#214, evidencebook-deal#94).
+        (
+            "checks. It can change the module's own state in one case: a carried checkpoint that is not the\n"
+            "anchor's makes the block unreadable.",
+            "checks. It can change the module's own state in one case: a carried checkpoint that is not the\n"
+            "anchor's makes the block unreadable.\n\n"
+            "The same holds for a check a module's line needs that is a digest or proof over verified content\n"
+            "(capsule-viewer#214, for the deal receipt): `paymentPreimageCheck` compares a Lightning\n"
+            "settlement leg's preimage with its `ln.payment_hash` (lightning-v0 `preimage_verified`), and\n"
+            "`readerCadenceWitness` walks a deal bundle's `x-cadence-witness/v0` chain from the context's own\n"
+            "authenticated checkpoint to the cadence checkpoint and checks its receipts under the reader's\n"
+            "witness list. The second takes the context itself, never bytes the module chose. Each answers\n"
+            "`PASS`, `FAIL`, `NOT_PRESENT` or `NOT_CHECKED`; a module draws a line as passed only on `PASS`, and\n"
+            "a check the page cannot run is `NOT_CHECKED`, never a pass.",
+            "capsule-viewer#214: the deal receipt's preimage and witness checks",
+        ),
         # Section 6.2: the witness notice joins the banner's frame
         # (capsule-viewer#162, evidencebook#209).
         (

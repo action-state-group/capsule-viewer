@@ -2,9 +2,9 @@
 // The in-browser renderer the emitted page runs. It is published only as
 // dist/evidence-graph.iife.js (`npm run emitter:iife`), which exposes
 // renderEvidenceGraph, and not as a package export. It bundles
-// @action-state-group/agent-action-capsule (0.9.0 or later) through that
-// package's own browser entry, by plain package resolution. The Go module
-// ships the build as go/pageruntime.
+// @action-state-group/agent-action-capsule (0.9.0 or later) and
+// @action-state-group/cll, each through its own browser entry, by plain
+// package resolution. The Go module ships the build as go/pageruntime.
 export * from "./evidence-graph-view.js";
 export * from "./contract-report.js";
 export * from "./contract-report-wording.js";
@@ -43,3 +43,12 @@ export {
   readerWitnessPolicy,
   setReaderWitnessPolicy,
 } from "./reader-witnesses.js";
+
+// The deal receipt's two checks a module may not run (capsule-viewer#214;
+// evidencebook-deal#94, 9b frame 8): a Lightning settlement's preimage
+// against its payment hash (lightning-v0 `preimage_verified`), and a deal
+// bundle's x-cadence-witness/v0 chain with its receipts under the reader's
+// own witness list. Built from cll's checkpoint and MMR verifiers and
+// agent-action-capsule's JCS and receipt check; the module verifies nothing.
+export { paymentPreimageCheck } from "./payment-preimage.js";
+export { readerCadenceWitness } from "./cadence-witness.js";

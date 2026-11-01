@@ -175,6 +175,15 @@ itself, and the answer is not a verification result: it never changes the banner
 checks. It can change the module's own state in one case: a carried checkpoint that is not the
 anchor's makes the block unreadable.
 
+The same holds for a check a module's line needs that is a digest or proof over verified content
+(capsule-viewer#214, for the deal receipt): `paymentPreimageCheck` compares a Lightning
+settlement leg's preimage with its `ln.payment_hash` (lightning-v0 `preimage_verified`), and
+`readerCadenceWitness` walks a deal bundle's `x-cadence-witness/v0` chain from the context's own
+authenticated checkpoint to the cadence checkpoint and checks its receipts under the reader's
+witness list. The second takes the context itself, never bytes the module chose. Each answers
+`PASS`, `FAIL`, `NOT_PRESENT` or `NOT_CHECKED`; a module draws a line as passed only on `PASS`, and
+a check the page cannot run is `NOT_CHECKED`, never a pass.
+
 ### 3.1 The context is effectively immutable
 
 **A `VerifiedBundleContext` MUST be effectively immutable.** No module can change the
