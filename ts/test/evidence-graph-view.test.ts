@@ -75,14 +75,12 @@ it("renders the dated drill-down view and verifies the bundle", async () => {
   expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
 });
 
-it("renders disclosed calibration agreement and confusion data", async () => {
+it("renders disclosed calibration agreement and drift per clause as k of n", async () => {
   const root = document.createElement("main");
   const { bundle } = await sealEvidenceBundle(
     (await fixture("week-bundle-calibration.json")) as Record<string, unknown>,
   );
   await renderEvidenceGraph(bundle, root);
-  expect(root.textContent).toContain("confusion matrix");
-  expect(root.textContent).toContain('"pass_pass":2');
   const cells = Object.fromEntries(
     Array.from(root.querySelectorAll("dt"), (term) => [
       term.textContent,
@@ -90,15 +88,16 @@ it("renders disclosed calibration agreement and confusion data", async () => {
     ]),
   );
   // integer k of n, never a rate
-  expect(cells["agreement"]!.textContent).toBe("3 of 4");
-  expect(cells["agreement"]!.dataset.k).toBe("3");
-  expect(cells["agreement"]!.dataset.n).toBe("4");
-  expect(cells["corrected rate"]!.textContent).toBe("4 of 5");
+  const agreement = cells["policy_compliance.refund agreement"]!;
+  expect(agreement.textContent).toBe("3 of 4");
+  expect(agreement.dataset.k).toBe("3");
+  expect(agreement.dataset.n).toBe("4");
+  expect(cells["policy_compliance.refund drift"]!.textContent).toBe("1 of 4");
+  expect(root.textContent).not.toContain("confusion matrix");
   expect(root.textContent).not.toContain("0.75");
-  expect(root.textContent).not.toContain("corrected rate CI");
 });
 
-it("renders a calibration figure stated only as a rate as 'rate given, k and n not stated'", async () => {
+it("says a calibration record that does not match calibration-summary/v1 is not read", async () => {
   const source = (await fixture("week-bundle-calibration.json")) as {
     disclosures: Record<string, { agent_input: Record<string, unknown> }>;
   };
@@ -108,12 +107,9 @@ it("renders a calibration figure stated only as a rate as 'rate given, k and n n
   );
   const root = document.createElement("main");
   await renderEvidenceGraph(bundle, root);
-  const agreement = Array.from(root.querySelectorAll("dt")).find(
-    (term) => term.textContent === "agreement",
-  )!.nextElementSibling as HTMLElement;
-  expect(agreement.textContent).toBe("rate given, k and n not stated");
-  expect(agreement.dataset.count).toBe("not-stated");
+  expect(root.textContent).toContain("does not match calibration-summary/v1");
   expect(root.textContent).not.toContain("0.75");
+  expect(root.textContent).not.toContain("3 of 4");
 });
 
 it("renders only digests for undisclosed case acts without leaking transcripts", async () => {

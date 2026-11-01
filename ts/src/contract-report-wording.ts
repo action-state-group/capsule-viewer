@@ -894,6 +894,11 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "prov.brief.verifier.stated",
   "prov.brief.verifier.not-stated",
   "lines.hc.none",
+  "lines.hc.not-matching",
+  "lines.hc.ambiguous",
+  "lines.hc.recount.matches",
+  "lines.hc.recount.mismatch",
+  "lines.hc.recount.not_recomputable",
   "lines.terms.lede",
   "lines.terms.lede.agreed",
   "lines.terms.version.value",
@@ -1361,7 +1366,7 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "5866a66f6ee1ceb1c49fffd18d083a0634fb239a488a1b1c12072c4b0e64af32",
+  lines: "3d0e23d0e930e5a13f242c5a562e604cdaf1ec84d67b43c040238af5820fbd8f",
   groups: "f26dba543667335ad5914fae260c0206f7f2470349892a6f9a28dcb6d0386bf4",
 });
 

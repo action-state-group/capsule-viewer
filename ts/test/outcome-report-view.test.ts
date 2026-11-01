@@ -167,7 +167,7 @@ it("renders the header meta: pack id/version, period, conversation count, result
 // report lines
 // ---------------------------------------------------------------------------
 
-it("renders report lines with counts recomputed from the claims, and held/added only when calibration cites one", async () => {
+it("renders report lines with counts recomputed from the claims, and held/added only when a calibration claim cites ratings", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
   const table = root.querySelector<HTMLElement>('[data-rows="report-lines"]')!;
@@ -270,18 +270,30 @@ it("says the bundle carries no re-grade records when it cites none, without nami
     "No human re-grade records in this bundle.",
   );
   expect(section.textContent).not.toContain("calibration-summary");
-  expect(section.querySelector("[data-weeks]")).toBeNull();
+  expect(section.querySelector("table")).toBeNull();
 });
 
-it("renders human spot checks: k of n per week, from an injected calibration-summary/v1, with held and added split out", async () => {
+// A calibration claim citing one disclosed `summary` record (a payload that
+// is or is not a valid calibration-summary/v1).
+// `citedFor` gives further disclosed records (alias -> payload) the same claim
+// cites, from the source bundle (so a rating can name one of its cases).
+async function calibrationBundle(
+  summary: Obj,
+  citedFor: (source: Obj) => Record<string, Obj> = () => ({}),
+): Promise<Obj> {
   const { bundle } = await sealedOutcomeReportBundle((source) => {
     const resultDoc = ((source.disclosures as Obj).result as Obj)
       .agent_input as Obj;
     const claims = resultDoc.claims as Obj[];
-    const conversationId = (claims[0]!.id as string).split("::")[0]!;
-    (source.records as Obj[]).push({ capsule_id: "cal-2026-W39" });
+    const cited = citedFor(source);
+    for (const alias of ["cal-summary", ...Object.keys(cited)])
+      (source.records as Obj[]).push({ capsule_id: alias });
+    const digests = ["cal-summary", ...Object.keys(cited)].map((digest) => ({
+      digest_alg: "SHA-256",
+      digest,
+    }));
     const calClaim = {
-      id: "cal::2026-W39",
+      id: "cal::summary",
       type: "calibration",
       contract_ref: (claims[0] as Obj).contract_ref,
       requirement_ref: "human-spot-check",
@@ -289,12 +301,12 @@ it("renders human spot checks: k of n per week, from an injected calibration-sum
       grade: "self-attested",
       sufficiency: "SATISFIED",
       verdict: "not_met",
-      evidence: [{ digest_alg: "SHA-256", digest: "cal-2026-W39" }],
+      evidence: digests,
       proofs: [],
       presentation: {
         kind: "disclosure",
         status: "SATISFIED",
-        evidence: [{ digest_alg: "SHA-256", digest: "cal-2026-W39" }],
+        evidence: digests,
       },
     };
     const allClaims = [...claims, calClaim];
@@ -308,34 +320,154 @@ it("renders human spot checks: k of n per week, from an injected calibration-sum
         },
       },
     };
-    (source.disclosures as Obj)["cal-2026-W39"] = {
-      agent_input: {
-        spec_version: "calibration-summary/v1",
-        week: "2026-W39",
-        sample: [
-          {
-            conversation_id: conversationId,
-            ai_verdict: "met",
-            human_verdict: "not_met",
-          },
-          { conversation_id: "x", ai_verdict: "not_met", human_verdict: "met" },
-          { conversation_id: "y", ai_verdict: "met", human_verdict: "met" },
-        ],
+    (source.disclosures as Obj)["cal-summary"] = { agent_input: summary };
+    for (const [alias, payload] of Object.entries(cited))
+      (source.disclosures as Obj)[alias] = { agent_input: payload };
+  });
+  return bundle;
+}
+
+const SUMMARY = {
+  record_version: "calibration-summary/v1",
+  record_id: "cal-summary-1",
+  epistemic_type: "derived_metric",
+  computed_at: "2026-09-21T00:00:00Z",
+  judge_pin: {
+    type: "judge-pin",
+    digest_alg: "SHA-256",
+    digest: "a".repeat(64),
+    citation_purpose: "calibrates",
+  },
+  clauses: [
+    {
+      clause_ref: "policy_compliance.refund",
+      agreement: { k: 7, n: 9 },
+      drift: { k: 1, n: 9 },
+    },
+    {
+      clause_ref: "task_resolution.answered",
+      agreement: { k: 0, n: 0 },
+      drift: { k: 0, n: 0 },
+    },
+  ],
+};
+
+it("renders human spot checks: one row per clause of a calibration-summary/v1, agreement and drift as k of n, no weeks", async () => {
+  const root = await render(await calibrationBundle(SUMMARY));
+  const table = root.querySelector<HTMLElement>(
+    '[data-section="human-checks"] table[data-calibration="read"]',
+  )!;
+  expect(table.dataset.clauses).toBe("2");
+  expect(table.querySelector("[data-week]")).toBeNull();
+  const row = table.querySelector<HTMLElement>(
+    '[data-clause="policy_compliance.refund"]',
+  )!;
+  expect(row.dataset.k).toBe("7");
+  expect(row.dataset.n).toBe("9");
+  const cells = [...row.querySelectorAll("td")].map((td) => td.textContent);
+  expect(cells.slice(0, 3)).toEqual([
+    "policy_compliance.refund",
+    "7 of 9",
+    "1 of 9",
+  ]);
+  // no ratings are cited, so nothing is recounted and the page says so
+  expect(row.dataset.agreementCheck).toBe("not_recomputable");
+  expect(cells[3]).toBe(
+    "not recounted here: the ratings are missing, or not tied to a judged term",
+  );
+  // every figure is k of n; no rate or percentage is drawn
+  expect(table.textContent).not.toContain("%");
+});
+
+it("a calibration summary that does not match its schema draws no counts and says so", async () => {
+  const root = await render(
+    await calibrationBundle({ ...SUMMARY, agreement: { k: 3, n: 4 } }),
+  );
+  const section = root.querySelector<HTMLElement>(
+    '[data-section="human-checks"]',
+  )!;
+  expect(section.querySelector("table")).toBeNull();
+  expect(
+    section.querySelector('[data-calibration="not_matching"]')!.textContent,
+  ).toContain("does not match its schema");
+});
+
+it("a claim citing two summaries draws none of them and says so", async () => {
+  const root = await render(
+    await calibrationBundle(SUMMARY, () => ({
+      "cal-summary-2": { ...SUMMARY, record_id: "cal-summary-2" },
+    })),
+  );
+  const section = root.querySelector<HTMLElement>(
+    '[data-section="human-checks"]',
+  )!;
+  expect(section.querySelector("table")).toBeNull();
+  expect(
+    section.querySelector('[data-calibration="ambiguous"]')!.textContent,
+  ).toContain("more than one summary");
+});
+
+// The summary's one clause is a judged requirement (verdict met) whose single
+// cited case a cited human rating also names, so the stated agreement can be
+// recounted from the ratings.
+async function recountRow(stated: {
+  k: number;
+  n: number;
+}): Promise<HTMLElement> {
+  const summary = {
+    ...SUMMARY,
+    clauses: [
+      {
+        clause_ref: "RECOUNT",
+        agreement: stated,
+        drift: { k: 0, n: stated.n },
+      },
+    ],
+  };
+  const bundle = await calibrationBundle(summary, (source) => {
+    const claims = (
+      ((source.disclosures as Obj).result as Obj).agent_input as Obj
+    ).claims as Obj[];
+    const cites = (c: Obj, digest: string) =>
+      (c.evidence as Obj[]).some((e) => e.digest === digest);
+    const claim = claims.find((c) => {
+      const digest = (c.evidence as Obj[])[0]?.digest as string | undefined;
+      return (
+        c.verdict === "met" &&
+        digest !== undefined &&
+        claims.filter((o) => cites(o, digest)).length === 1
+      );
+    })!;
+    claim.requirement_ref = "RECOUNT";
+    return {
+      "human-rating-1": {
+        record_version: "human-rating/v1",
+        record_id: "human-rating-1",
+        epistemic_type: "human_report",
+        rated_at: "2026-09-21T00:00:00Z",
+        blind: true,
+        rater_ref: "rater-1",
+        case: {
+          type: "agent-action-capsule",
+          digest_alg: "SHA-256",
+          digest: (claim.evidence as Obj[])[0]!.digest,
+          citation_purpose: "rated_case",
+        },
+        label: "met",
       },
     };
   });
   const root = await render(bundle);
-  const list = root.querySelector<HTMLElement>("[data-weeks]")!;
-  expect(list.dataset.weeks).toBe("1");
-  const week = list.querySelector<HTMLElement>('[data-week="2026-W39"]')!;
-  expect(week.dataset.k).toBe("1");
-  expect(week.dataset.n).toBe("3");
-  expect(week.querySelector<HTMLElement>("[data-held]")!.dataset.held).toBe(
-    "1",
-  );
-  expect(week.querySelector<HTMLElement>("[data-added]")!.dataset.added).toBe(
-    "1",
-  );
+  return root.querySelector<HTMLElement>('[data-clause="RECOUNT"]')!;
+}
+
+it("recounts a clause's agreement from the cited ratings: the stated count matches, or is said not to", async () => {
+  const matching = await recountRow({ k: 1, n: 1 });
+  expect(matching.dataset.agreementCheck).toBe("matches");
+  expect(matching.textContent).toContain("matches the stated count");
+  const differing = await recountRow({ k: 0, n: 1 });
+  expect(differing.dataset.agreementCheck).toBe("mismatch");
+  expect(differing.textContent).toContain("does not match the stated count");
 });
 
 // ---------------------------------------------------------------------------
