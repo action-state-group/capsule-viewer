@@ -9,7 +9,6 @@
     "lines.headline.other": "{resolved} of {n} conversations were resolved: every rule that applied was met.",
     "lines.headline.missed": "{n} missed at least one rule.",
     "lines.headline.unverified": "{n} could not be verified.",
-    "lines.headline.undecided": "{n} could not be decided.",
-    "lines.sentence.nothing-applied": "No rule applied to this conversation, so nothing was checked. It is neither resolved nor missed."
+    "lines.headline.undecided": "{n} could not be decided."
   }
 }

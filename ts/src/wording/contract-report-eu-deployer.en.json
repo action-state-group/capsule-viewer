@@ -5,6 +5,9 @@
   "entries": {
     "layout.grouping": "groups",
     "groups.kicker": "Deployer obligations under the EU AI Act (Regulation (EU) 2024/1689): test results",
-    "groups.summary.h": "Obligations checked and what was found"
+    "groups.summary.h": "Obligations checked and what was found",
+    "group.art5.title": "Prohibited AI practices",
+    "group.art26.title": "Obligations of deployers of high-risk AI systems",
+    "group.art50.title": "Transparency obligations for providers and deployers of certain AI systems"
   }
 }

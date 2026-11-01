@@ -76,3 +76,29 @@ it("a pack whose bytes do not hash to the pinned digest is refused and the page 
   );
   expect(root.textContent).not.toContain("Your results");
 });
+
+it("eu-deployer/en words each obligation's title, so the page shows the pack's title and not the producer's", () => {
+  const pack = readWordingPack(
+    JSON.parse(
+      readFileSync(
+        resolve(WORDING, "contract-report-eu-deployer.en.json"),
+        "utf8",
+      ),
+    ),
+  );
+  const titles = Object.keys(pack.entries).filter((k) =>
+    /^group\..+\.title$/u.test(k),
+  );
+  expect(titles.length).toBeGreaterThan(0);
+  const golden = readFileSync(
+    resolve(
+      process.cwd(),
+      "test",
+      "goldens",
+      "contract-report",
+      "eu-deployer.closed.html",
+    ),
+    "utf8",
+  );
+  for (const k of titles) expect(golden, k).toContain(pack.entries[k]!);
+});
