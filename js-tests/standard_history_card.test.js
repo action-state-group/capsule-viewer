@@ -385,6 +385,8 @@ describe("the three grades in the holder's Tell your agent block", () => {
     const stamped = say.querySelector('[data-sh-say="stamped"]');
     expect(stamped.textContent).toContain("stamped: the other side's own record points at yours");
     expect(stamped.textContent).toContain(`${h.stamped_by_both} of ${h.of} deals`);
+    // This page checks no pointer and no signature, so the note claims no check.
+    expect(stamped.textContent).not.toMatch(/check/);
     expect(say.textContent).toContain("narrated by your agent");
     expect(say.textContent).toContain("sealed and checked");
   });
