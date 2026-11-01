@@ -245,6 +245,23 @@ CONTRACT = Move(
         ),
     ],
     amendments=[
+        # Section 3: a module may ask the runtime for a check under the reader's
+        # own settings (capsule-viewer#183, the History card's witness line).
+        (
+            "figure from verified content (a coverage count, a per-bucket total) and MUST then show a\n"
+            "disagreement with the producer's stated figure as a disagreement, never silently prefer either.",
+            "figure from verified content (a coverage count, a per-bucket total) and MUST then show a\n"
+            "disagreement with the producer's stated figure as a disagreement, never silently prefer either.\n\n"
+            "A module MAY ask the runtime for a check that depends on the reader's own settings, through a\n"
+            "function the runtime's global names for that purpose (today `readerAnchorWitness`, for the\n"
+            "History card's witness line, capsule-viewer#183). The module passes the bundle-carried bytes and\n"
+            "draws the answer; the runtime hashes and verifies, under a setting that never comes from the\n"
+            "bundle (the reader's witness list). The module still calls no verifier and recomputes nothing\n"
+            "itself, and the answer is not a verification result: it never changes the banner or the core's\n"
+            "checks. It can change the module's own state in one case: a carried checkpoint that is not the\n"
+            "anchor's makes the block unreadable.",
+            "capsule-viewer#183: the reader-setting check a module asks the runtime for",
+        ),
         # Section 6.2: the witness notice joins the banner's frame
         # (capsule-viewer#162, evidencebook#209).
         (

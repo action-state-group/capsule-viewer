@@ -1,0 +1,1183 @@
+{
+  "bundle_kind": "evidence-bundle/v2",
+  "bundle_version": "2",
+  "checkpoint": {
+    "cose": "0oRYZ6QBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCBSHxz54dvrraqwP4D7yUxRSiuDkTcrGFtV0A3VmrQ7eA-iAWtob2xkZXItYm9vawJuaG9sZGVyLWJvb2sjMTGgWNOmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemULaWlzc3VlZF9hdHgYMjAyNi0xMS0wMVQwMDoyMjozMC45OTRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhng1ggkiRXgVoQMkcGDzgj9cYY1WvKqDdKYQJ9cbXU5BOyWURYIB_3BRfk1smPRb-UscWFSnpifjE6D8heNOT068MDR1AlWCAbCaRY-4Goo8hEfr4XbDkm8WwNhtQNyxTSXqADBgm3UG9wcmV2X2NvbW1pdG1lbnRAWECD_5hsoFq0SXAxVW6O06irUN_AGOXLLyuTIW5Hbgr3SyOMAPzODodv761HA1ZKmEKb1t7YTzvlhz8JyExd5b0A",
+    "key_id": "521f1cf9e1dbebadaab03f80fbc94c514a2b8391372b185b55d00dd59ab43b78",
+    "log_id": "holder-book",
+    "mmr_size": 11,
+    "prev_root": "",
+    "prev_size": 0,
+    "root": "121e3a60abcd625fe15859222b3be1e5e739641d57282171d56f4b1ffcb58fcc",
+    "timestamp": "2026-11-01T00:22:30.994Z"
+  },
+  "completeness": {
+    "closure_depth": 2,
+    "missing": [],
+    "payloads_mode": "all",
+    "records_mode": "complete",
+    "suppressed_fields": []
+  },
+  "completeness_certificate": {
+    "body_digests": [
+      "594ae1a7eb1970c916caf7b982f1808c9feb514d68d154f158cba771636aaeae",
+      "b2175a12b0562d30c814e76dba4977fd38c086ba2fb18824fb155f5217692e77",
+      "7ce8743fa1c8b46cb28b7e44c07f0f2d81c63665e03da494919c0439ee66ad14",
+      "ccadabc660a4400333a572fbc7d2a83eb1b55784bbaeb040ba7cff41406cb5bc",
+      "6924969940346d74c69ec9be3cd3821663a7a124c303b0f1b717a500acc2a081",
+      "4d504129ed736e0b22ca419089a64e68186ff8c184e92198837f8c969f740d26",
+      "a56ffb6eee7cb8ee64b2aaf7c18c6f4faf90b130fbc69d1b13886871ecdeee1f"
+    ],
+    "first_seq": 1,
+    "last_seq": 7,
+    "log_id": "holder-book",
+    "memberships": {
+      "4d504129ed736e0b22ca419089a64e68186ff8c184e92198837f8c969f740d26": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 5,
+          "peaks_left": [
+            "922457815a103247060f3823f5c618d56bcaa8374a61027d71b5d4e413b25944"
+          ],
+          "peaks_right": [
+            "1b09a458fb81a8a3c8447ebe176c3926f16c0d86d40dcb14d25ea0030609b750"
+          ],
+          "size": 11,
+          "v": 1,
+          "witness": [
+            "2baebd4d9ddcac4bbdc43df69669a2e2fbfef4f93332a5f1ee70cd6a94f35497"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 5,
+          "log_id": "holder-book",
+          "seq": 6
+        }
+      },
+      "594ae1a7eb1970c916caf7b982f1808c9feb514d68d154f158cba771636aaeae": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 0,
+          "peaks_left": [],
+          "peaks_right": [
+            "1ff70517e4d6c98f45bf94b1c5854a7a627e313a0fc85e34e4f4ebc303475025",
+            "1b09a458fb81a8a3c8447ebe176c3926f16c0d86d40dcb14d25ea0030609b750"
+          ],
+          "size": 11,
+          "v": 1,
+          "witness": [
+            "e98a7eddb371895f2ff8f6ef84bee3c13b02d0ca52bb9b83b2b2b0e41bf40ef1",
+            "1e412c55e63ae82edc49d32585924422cf1ce3cabe526e08131b76ebcced8221"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 0,
+          "log_id": "holder-book",
+          "seq": 1
+        }
+      },
+      "6924969940346d74c69ec9be3cd3821663a7a124c303b0f1b717a500acc2a081": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 4,
+          "peaks_left": [
+            "922457815a103247060f3823f5c618d56bcaa8374a61027d71b5d4e413b25944"
+          ],
+          "peaks_right": [
+            "1b09a458fb81a8a3c8447ebe176c3926f16c0d86d40dcb14d25ea0030609b750"
+          ],
+          "size": 11,
+          "v": 1,
+          "witness": [
+            "a78c1c07ba3a1b4b6d1bfc52e39a9c2a3a565bdda793767725e0027e370a8328"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 4,
+          "log_id": "holder-book",
+          "seq": 5
+        }
+      },
+      "7ce8743fa1c8b46cb28b7e44c07f0f2d81c63665e03da494919c0439ee66ad14": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 2,
+          "peaks_left": [],
+          "peaks_right": [
+            "1ff70517e4d6c98f45bf94b1c5854a7a627e313a0fc85e34e4f4ebc303475025",
+            "1b09a458fb81a8a3c8447ebe176c3926f16c0d86d40dcb14d25ea0030609b750"
+          ],
+          "size": 11,
+          "v": 1,
+          "witness": [
+            "eb8aeb1f3466a8132973246e5645f827ab4478a4e5ea9acd27039dd0493619c8",
+            "93f37cca5430bc286b08c35c9570a3252a7cff90b662dd60c91d9809e02bbcd0"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 2,
+          "log_id": "holder-book",
+          "seq": 3
+        }
+      },
+      "a56ffb6eee7cb8ee64b2aaf7c18c6f4faf90b130fbc69d1b13886871ecdeee1f": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 6,
+          "peaks_left": [
+            "922457815a103247060f3823f5c618d56bcaa8374a61027d71b5d4e413b25944",
+            "1ff70517e4d6c98f45bf94b1c5854a7a627e313a0fc85e34e4f4ebc303475025"
+          ],
+          "peaks_right": [],
+          "size": 11,
+          "v": 1,
+          "witness": []
+        },
+        "log_coordinates": {
+          "leaf_index": 6,
+          "log_id": "holder-book",
+          "seq": 7
+        }
+      },
+      "b2175a12b0562d30c814e76dba4977fd38c086ba2fb18824fb155f5217692e77": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 1,
+          "peaks_left": [],
+          "peaks_right": [
+            "1ff70517e4d6c98f45bf94b1c5854a7a627e313a0fc85e34e4f4ebc303475025",
+            "1b09a458fb81a8a3c8447ebe176c3926f16c0d86d40dcb14d25ea0030609b750"
+          ],
+          "size": 11,
+          "v": 1,
+          "witness": [
+            "f3da852c383339592ebc80b588a3341a1241c43291b69f038b205a07c4bdcc24",
+            "1e412c55e63ae82edc49d32585924422cf1ce3cabe526e08131b76ebcced8221"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 1,
+          "log_id": "holder-book",
+          "seq": 2
+        }
+      },
+      "ccadabc660a4400333a572fbc7d2a83eb1b55784bbaeb040ba7cff41406cb5bc": {
+        "inclusion_proof": {
+          "kind": "inclusion",
+          "leaf_index": 3,
+          "peaks_left": [],
+          "peaks_right": [
+            "1ff70517e4d6c98f45bf94b1c5854a7a627e313a0fc85e34e4f4ebc303475025",
+            "1b09a458fb81a8a3c8447ebe176c3926f16c0d86d40dcb14d25ea0030609b750"
+          ],
+          "size": 11,
+          "v": 1,
+          "witness": [
+            "b6062544351ed2c6e1a224771a0bcecd5937295fc1de46ad055fd458664356ce",
+            "93f37cca5430bc286b08c35c9570a3252a7cff90b662dd60c91d9809e02bbcd0"
+          ]
+        },
+        "log_coordinates": {
+          "leaf_index": 3,
+          "log_id": "holder-book",
+          "seq": 4
+        }
+      }
+    },
+    "range_proof": {
+      "from_index": 0,
+      "from_seq": 1,
+      "size": 11,
+      "to_index": 6,
+      "to_seq": 7,
+      "witness": []
+    },
+    "range_root": "121e3a60abcd625fe15859222b3be1e5e739641d57282171d56f4b1ffcb58fcc"
+  },
+  "disclosures": {
+    "4d504129ed736e0b22ca419089a64e68186ff8c184e92198837f8c969f740d26": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    },
+    "594ae1a7eb1970c916caf7b982f1808c9feb514d68d154f158cba771636aaeae": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    },
+    "6924969940346d74c69ec9be3cd3821663a7a124c303b0f1b717a500acc2a081": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    },
+    "7ce8743fa1c8b46cb28b7e44c07f0f2d81c63665e03da494919c0439ee66ad14": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    },
+    "a56ffb6eee7cb8ee64b2aaf7c18c6f4faf90b130fbc69d1b13886871ecdeee1f": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    },
+    "b2175a12b0562d30c814e76dba4977fd38c086ba2fb18824fb155f5217692e77": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    },
+    "ccadabc660a4400333a572fbc7d2a83eb1b55784bbaeb040ba7cff41406cb5bc": {
+      "agent_input": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "bands": [
+          {
+            "currency": "BTC",
+            "decade": -7,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "EUR",
+            "decade": 0,
+            "did_not_hold": 1,
+            "held": 0,
+            "of": 1,
+            "undecided": 0
+          },
+          {
+            "currency": "USD",
+            "decade": 1,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 2,
+            "undecided": 1
+          },
+          {
+            "currency": "USD",
+            "decade": 2,
+            "did_not_hold": 0,
+            "held": 1,
+            "of": 1,
+            "undecided": 0
+          }
+        ],
+        "class_missing": {
+          "count": 1,
+          "of": 5
+        },
+        "controller_class": "person_declared",
+        "derivation": "standard_history/1",
+        "disputes": {
+          "raised": {
+            "by_forum": {
+              "auto": 1,
+              "external": 0,
+              "network": 0,
+              "of": 2,
+              "rail": 1
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 1,
+              "no_finding": 0,
+              "of": 2,
+              "open": 0,
+              "split": 1,
+              "withdrawn": 0
+            },
+            "of": 2
+          },
+          "received": {
+            "by_forum": {
+              "auto": 0,
+              "external": 0,
+              "network": 1,
+              "of": 1,
+              "rail": 0
+            },
+            "by_outcome": {
+              "against": 0,
+              "for": 0,
+              "no_finding": 0,
+              "of": 1,
+              "open": 1,
+              "split": 0,
+              "withdrawn": 0
+            },
+            "of": 1
+          }
+        },
+        "happened": {
+          "no_record": 1,
+          "of": 5,
+          "receipt_only": 2,
+          "stamped_by_both": 2
+        },
+        "holder_kind": "person",
+        "in_window": {
+          "counted": 5,
+          "not_counted": 2,
+          "of": 7
+        },
+        "outcomes": {
+          "did_not_hold": 1,
+          "held": 3,
+          "of": 5,
+          "undecided": 1
+        },
+        "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "roles": {
+          "bought": 2,
+          "of": 5,
+          "provided": 3
+        },
+        "since": "2026-03",
+        "window": {
+          "months": 3
+        }
+      }
+    }
+  },
+  "extensions": {
+    "producer-key/v1": {
+      "public_key": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5"
+    },
+    "x-standard-history/v0": {
+      "as_of": {
+        "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+        "anchor_time": "2026-10-28T12:00:00Z",
+        "first_checkpoint_time": "2026-03-04T09:00:00Z",
+        "receipts": [
+          "d2844fa3012719018b010fa1061a6ae6f270a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff658403abbe01a887384c89ae2d9264911303a27a5d7177249b705bcd2a39205e45be0da112ef2bb883fd017e76fc3eca79a63499bcdaece2d058d1de69dd8a18bb20b"
+        ]
+      },
+      "policy": {
+        "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+        "window": {
+          "months": 3
+        }
+      }
+    }
+  },
+  "records": [
+    {
+      "action_id": "standard-history-person-shared-unwitnessed",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "594ae1a7eb1970c916caf7b982f1808c9feb514d68d154f158cba771636aaeae",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a05820594ae1a7eb1970c916caf7b982f1808c9feb514d68d154f158cba771636aaeae58408096d2a68c67394cc70235ffdb45bfda31d478f59d12818d543a7bf4b3a45ecf7b0bc176ed2ef5dbe28f7b2f4bf12d2c8dfcfa7fedeef7d19e51af7233838e05",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    },
+    {
+      "action_id": "standard-history-person-shared-witnessed",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "b2175a12b0562d30c814e76dba4977fd38c086ba2fb18824fb155f5217692e77",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a05820b2175a12b0562d30c814e76dba4977fd38c086ba2fb18824fb155f5217692e7758404fdb1fba173324804561dc057d1b95553dbd1028442c2ae8671f85f5f2085e4874baf05f8f2666ba751917cd69d8536be42a94fd8fa56212691d0db7a3761f06",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    },
+    {
+      "action_id": "standard-history-person-shared-witnessed-untimed",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "7ce8743fa1c8b46cb28b7e44c07f0f2d81c63665e03da494919c0439ee66ad14",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a058207ce8743fa1c8b46cb28b7e44c07f0f2d81c63665e03da494919c0439ee66ad145840c1fd70430ff8fd65547c789517ef3199a58258b7ef45537930c67049dbc8e11b955bc64cfee914d0b79500b75e6107e7e2d610a052175c199173c1cd88e58e09",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    },
+    {
+      "action_id": "standard-history-person-shared-witnessed-es256",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "ccadabc660a4400333a572fbc7d2a83eb1b55784bbaeb040ba7cff41406cb5bc",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a05820ccadabc660a4400333a572fbc7d2a83eb1b55784bbaeb040ba7cff41406cb5bc584016c00244080aff16bf56cb80a2733ed2c721885ba95b847c2b69daf8fd3c427116b680f90f81b5e1cc07a5a4944c2e8a49eb43d12e0cbd49d1bdb963c5555c05",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    },
+    {
+      "action_id": "standard-history-person-shared-witness-unlisted",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "6924969940346d74c69ec9be3cd3821663a7a124c303b0f1b717a500acc2a081",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a058206924969940346d74c69ec9be3cd3821663a7a124c303b0f1b717a500acc2a0815840bd483622ecebba81bba48f2591a909df1bb67ee3711d93260ec75d18c622505d775ec3a80c85991f842d78346a9fcc8a064fab9ed0385ad446c395e354ea6606",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    },
+    {
+      "action_id": "standard-history-person-shared-witness-tampered",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "4d504129ed736e0b22ca419089a64e68186ff8c184e92198837f8c969f740d26",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a058204d504129ed736e0b22ca419089a64e68186ff8c184e92198837f8c969f740d2658400e3535279ab1168abc00c10df684636b2dc09a714674ec429fe606ff10f558a464b51355933dbe4266a8955fffb0e669fccd9244c92f7b3687eb325f06d92307",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    },
+    {
+      "action_id": "standard-history-person-shared-witnessed-asof-fails",
+      "action_type": "fyi",
+      "assurance": {
+        "attestation_mode": "self_attested",
+        "effect_mode": "not_applicable",
+        "ledger_mode": "standalone"
+      },
+      "canonicalization_id": "jcs",
+      "capsule_id": "a56ffb6eee7cb8ee64b2aaf7c18c6f4faf90b130fbc69d1b13886871ecdeee1f",
+      "developer": "example-holder",
+      "format_version": "4",
+      "key_id": "ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b5",
+      "model_attestation": {
+        "compute_attestation": {
+          "agent_input_digest": "6a32894199d253262aef531f68598df9546fa0e33c3c3dd7e9fdb78b4ad20418"
+        }
+      },
+      "operator": "example-holder",
+      "signature": "d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820ece4ff8ac55e68f5cf7ca8aa15058c626351eb2dec11ff548bc61c2f28d6c6b50127a05820a56ffb6eee7cb8ee64b2aaf7c18c6f4faf90b130fbc69d1b13886871ecdeee1f58405acc308f0bd22119a6425230350abfebea795834ea9fbc7af5ac7a597627d4e28b7b9d51b41bf9c1a0e900f97840f5382c1990fd057ef3e91a488d6ffd9c9808",
+      "spec_version": "draft-mih-scitt-agent-action-capsule-05",
+      "timestamp": "2026-10-28T12:00:00Z"
+    }
+  ],
+  "root": "b2175a12b0562d30c814e76dba4977fd38c086ba2fb18824fb155f5217692e77",
+  "verification": {
+    "checks": [
+      "graph_closure",
+      "interval_coverage",
+      "per_record_membership"
+    ],
+    "producer": "capsulectl"
+  }
+}

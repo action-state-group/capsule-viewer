@@ -21,7 +21,12 @@ module ships the same build as `go/pageruntime`. Bundle verification comes from
 the runtime's global `EvidenceGraph` carries the verifier functions a
 presentation module may call: `buildResultRoot`, `disclosureOf`,
 `ed25519Available`, `verifiedPayload`, `verifyDisclosureEnvelope` and
-`verifyProducerEnvelope`.
+`verifyProducerEnvelope`. It also carries the History card's witness check,
+which the module calls and does not run itself: `readerAnchorWitness` (the
+snapshot's witness Receipts under the reader's own witness list, with
+agent-action-capsule's `checkAnchorWitnessed`) and `readerWitnessPolicy` and
+`setReaderWitnessPolicy` (the reader's list, empty by default, kept in the
+page's memory only).
 
 The code moved here from agent-action-capsule (agent-action-capsule#281) and
 keeps its BSD-3-Clause license (`LICENSE-BSD-3-Clause`); the rest of the

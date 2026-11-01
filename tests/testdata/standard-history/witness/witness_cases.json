@@ -1,0 +1,1066 @@
+[
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-03-04T09:00:00Z"
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "PASS",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": true
+  },
+  "name": "person-shared-unwitnessed",
+  "witness_case": null,
+  "witness_expected": null
+ },
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-03-04T09:00:00Z",
+    "receipts": [
+     "d2844fa3012719018b010fa1061a6ae6f270a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff658403abbe01a887384c89ae2d9264911303a27a5d7177249b705bcd2a39205e45be0da112ef2bb883fd017e76fc3eca79a63499bcdaece2d058d1de69dd8a18bb20b"
+    ]
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "PASS",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": true
+  },
+  "name": "person-shared-witnessed",
+  "witness_case": "pass-eddsa-time",
+  "witness_expected": {
+   "receipts": [
+    {
+     "registration_time": 1793520240,
+     "status": "PASS",
+     "witness": "witness-a"
+    }
+   ],
+   "status": "PASS",
+   "witness": "witness-a",
+   "witnessed_time": 1793520240
+  }
+ },
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-03-04T09:00:00Z",
+    "receipts": [
+     "d28447a2012719018b01a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff65840122a8ec65b86eb8aede2ad7a24896fb4a5e25c35232d48fa0b2f2e4c1c0b5f63c9869b992c79d016ef48aea13e14a7cdfa6598772c7547e31d5281d0edd01b0e"
+    ]
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "PASS",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": true
+  },
+  "name": "person-shared-witnessed-untimed",
+  "witness_case": "pass-eddsa-no-time",
+  "witness_expected": {
+   "receipts": [
+    {
+     "registration_time": null,
+     "status": "PASS",
+     "witness": "witness-a"
+    }
+   ],
+   "status": "PASS",
+   "witness": "witness-a",
+   "witnessed_time": null
+  }
+ },
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-03-04T09:00:00Z",
+    "receipts": [
+     "d2844fa3012619018b010fa1061a6ae6f270a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff6584071596ca1665754d679f0bb1562678e63c4ae660a0fd38b686478707822c5cd8e73847ddbbd46af06672c709562c0a13cd9acb4919934f97a9a8279e035ab59fb"
+    ]
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "PASS",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": true
+  },
+  "name": "person-shared-witnessed-es256",
+  "witness_case": "pass-es256-time",
+  "witness_expected": {
+   "receipts": [
+    {
+     "registration_time": 1793520240,
+     "status": "PASS",
+     "witness": "witness-b"
+    }
+   ],
+   "status": "PASS",
+   "witness": "witness-b",
+   "witnessed_time": 1793520240
+  }
+ },
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-03-04T09:00:00Z",
+    "receipts": [
+     "d2844fa3012719018b010fa1061a6ae6f270a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff65840e7c7e5467ebc30e542dd39792ae3f6ad80f4091338806755eee4df1653aef5a808a6736fcb173f6f0daafd62e792f5cd43efa4c099cb4b170f0bbc6858352b0d"
+    ]
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "PASS",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": true
+  },
+  "name": "person-shared-witness-unlisted",
+  "witness_case": "unlisted-witness",
+  "witness_expected": {
+   "receipts": [
+    {
+     "registration_time": null,
+     "status": "FAIL",
+     "witness": null
+    }
+   ],
+   "status": "FAIL",
+   "witness": null,
+   "witnessed_time": null
+  }
+ },
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-03-04T09:00:00Z",
+    "receipts": [
+     "d2844fa3012719018b010fa1061a6ae6f270a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff658403abbe01a887384c89ae2d9264911303a27a5d7177249b705bcd2a39205e45be0da112ef2bb883fd017e76fc3eca79a63499bcdaece2d058d1de69dd8a18bb20a"
+    ]
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "PASS",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": true
+  },
+  "name": "person-shared-witness-tampered",
+  "witness_case": "signature-tampered",
+  "witness_expected": {
+   "receipts": [
+    {
+     "registration_time": null,
+     "status": "FAIL",
+     "witness": null
+    }
+   ],
+   "status": "FAIL",
+   "witness": null,
+   "witnessed_time": null
+  }
+ },
+ {
+  "block": {
+   "as_of": {
+    "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+    "anchor_time": "2026-10-28T12:00:00Z",
+    "first_checkpoint_time": "2026-01-05T00:00:00Z",
+    "receipts": [
+     "d2844fa3012719018b010fa1061a6ae6f270a119018ca12081586a830704835820dc6d5607d0a7eb97273f0f7ac0c6cea80064df158ead0e7f2b5964943a7440e35820e3b487301fdc9c67529259c599e4684066edae6926978a2a07ce9ab62f9407ee5820bfdb6dcac01828912f799d47ff575361887423d671a28dca56a8c40f9abab7dff658403abbe01a887384c89ae2d9264911303a27a5d7177249b705bcd2a39205e45be0da112ef2bb883fd017e76fc3eca79a63499bcdaece2d058d1de69dd8a18bb20b"
+    ]
+   },
+   "policy": {
+    "digest": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+    "window": {
+     "months": 3
+    }
+   }
+  },
+  "card": {
+   "anchor": "635c3445fd908cfddf18b445c1290b0b4a7c47bf54c600ac6dbdd478ea7f6231",
+   "bands": [
+    {
+     "currency": "BTC",
+     "decade": -7,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "EUR",
+     "decade": 0,
+     "did_not_hold": 1,
+     "held": 0,
+     "of": 1,
+     "undecided": 0
+    },
+    {
+     "currency": "USD",
+     "decade": 1,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 2,
+     "undecided": 1
+    },
+    {
+     "currency": "USD",
+     "decade": 2,
+     "did_not_hold": 0,
+     "held": 1,
+     "of": 1,
+     "undecided": 0
+    }
+   ],
+   "class_missing": {
+    "count": 1,
+    "of": 5
+   },
+   "controller_class": "person_declared",
+   "derivation": "standard_history/1",
+   "disputes": {
+    "raised": {
+     "by_forum": {
+      "auto": 1,
+      "external": 0,
+      "network": 0,
+      "of": 2,
+      "rail": 1
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 1,
+      "no_finding": 0,
+      "of": 2,
+      "open": 0,
+      "split": 1,
+      "withdrawn": 0
+     },
+     "of": 2
+    },
+    "received": {
+     "by_forum": {
+      "auto": 0,
+      "external": 0,
+      "network": 1,
+      "of": 1,
+      "rail": 0
+     },
+     "by_outcome": {
+      "against": 0,
+      "for": 0,
+      "no_finding": 0,
+      "of": 1,
+      "open": 1,
+      "split": 0,
+      "withdrawn": 0
+     },
+     "of": 1
+    }
+   },
+   "happened": {
+    "no_record": 1,
+    "of": 5,
+    "receipt_only": 2,
+    "stamped_by_both": 2
+   },
+   "holder_kind": "person",
+   "in_window": {
+    "counted": 5,
+    "not_counted": 2,
+    "of": 7
+   },
+   "outcomes": {
+    "did_not_hold": 1,
+    "held": 3,
+    "of": 5,
+    "undecided": 1
+   },
+   "policy": "2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec",
+   "roles": {
+    "bought": 2,
+    "of": 5,
+    "provided": 3
+   },
+   "since": "2026-03",
+   "window": {
+    "months": 3
+   }
+  },
+  "expected": {
+   "properties": {
+    "as_of": "FAIL",
+    "card_form": "PASS",
+    "counts_integral": "PASS",
+    "counts_recompute": "NOT_CHECKED",
+    "denominator": "PASS",
+    "window_from_policy": "PASS"
+   },
+   "standard": false
+  },
+  "name": "person-shared-witnessed-asof-fails",
+  "witness_case": "pass-eddsa-time",
+  "witness_expected": {
+   "receipts": [
+    {
+     "registration_time": 1793520240,
+     "status": "PASS",
+     "witness": "witness-a"
+    }
+   ],
+   "status": "PASS",
+   "witness": "witness-a",
+   "witnessed_time": 1793520240
+  }
+ }
+]
