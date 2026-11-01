@@ -1427,7 +1427,7 @@ function renderLines(
   const undecided = [...byStatus("undecided"), ...byStatus("nothing-applied")];
   const share = (n: number) =>
     fmtShare(n, model.totalCount, model.options.percentages, w);
-  // held is read from calibration samples, resolved from claim rollups --
+  // held is read from the calibration claim's cited ratings, resolved from claim rollups --
   // two independent sources this card shows side by side and never
   // subtracts one from the other.
   type Line = {
@@ -1995,7 +1995,7 @@ function renderHumanChecks(
         el(
           "td",
           "n",
-          w.t("lines.hc.agreed", {
+          w.t("lines.hc.drift", {
             k: String(clause.drift.k),
             n: String(clause.drift.n),
           }),
