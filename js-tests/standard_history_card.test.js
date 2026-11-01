@@ -375,6 +375,31 @@ describe("the counts recount from the deal entries (the holder's own copy)", () 
   });
 });
 
+describe("the three grades in the holder's Tell your agent block", () => {
+  const l = load();
+  it("the stamped grade is drawn from happened.stamped_by_both, beside narrated and sealed and checked", () => {
+    const m = modelOf(l, contextOf("person-own"));
+    const h = m.card.happened;
+    expect(h.stamped_by_both).toBeGreaterThan(0);
+    const say = renderAll(l, m).L0.querySelector('[data-sh="say"]');
+    const stamped = say.querySelector('[data-sh-say="stamped"]');
+    expect(stamped.textContent).toContain("stamped: the other side's own record points at yours");
+    expect(stamped.textContent).toContain(`${h.stamped_by_both} of ${h.of} deals`);
+    // This page checks no pointer and no signature, so the note claims no check.
+    expect(stamped.textContent).not.toMatch(/check/);
+    expect(say.textContent).toContain("narrated by your agent");
+    expect(say.textContent).toContain("sealed and checked");
+  });
+  it("is left out when no deal is stamped by both sides, and never on a shared card", () => {
+    const m = modelOf(l, contextOf("person-own"));
+    m.card.happened = { ...m.card.happened, stamped_by_both: 0 };
+    const say = renderAll(l, m).L0.querySelector('[data-sh="say"]');
+    expect(say.querySelector('[data-sh-say="stamped"]')).toBeNull();
+    expect(say.textContent).toContain("sealed and checked");
+    expect(renderAll(l, modelOf(l, contextOf("person-shared"))).L0.querySelector('[data-sh="say"]')).toBeNull();
+  });
+});
+
 describe("what the page claims", () => {
   const l = load();
   it("a check skipped because an earlier one failed says so, never 'not checked here'", () => {
