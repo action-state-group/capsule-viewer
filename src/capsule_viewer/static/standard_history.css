@@ -9,6 +9,7 @@
 .cv-sh__lead { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); padding: var(--cv-space-3); background: var(--cv-color-surface-sunken); }
 .cv-sh__card { border: 2px solid var(--cv-color-text); border-radius: var(--cv-radius); padding: var(--cv-space-3) var(--cv-space-4); display: flex; flex-direction: column; gap: var(--cv-space-2); }
 .cv-sh__kicker { font-size: var(--cv-font-size-sm); letter-spacing: 0.06em; text-transform: uppercase; color: var(--cv-color-text-muted); }
+.cv-sh__headline { font-size: 1.125rem; line-height: 1.3; }
 .cv-sh__total { font-size: 1.875rem; font-weight: 700; line-height: 1.1; }
 .cv-sh__buckets { display: flex; flex-wrap: wrap; column-gap: var(--cv-space-3); row-gap: var(--cv-space-1); }
 .cv-sh__bucket { display: inline-flex; align-items: baseline; gap: var(--cv-space-1); }

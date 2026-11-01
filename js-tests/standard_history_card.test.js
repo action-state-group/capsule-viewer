@@ -183,7 +183,7 @@ describe("the committed bundles (capsulectl, VALID)", () => {
   it("says the snapshot covers the card only when the root record's own membership holds", () => {
     const ctx = contextOf("person-shared");
     const unbound = { ...ctx, verification: { ...ctx.verification, perRecordMembership: { status: "fail", findings: [`membership_record_unbound:${ctx.root}`] } } };
-    const proves = (c) => renderAll(l, modelOf(l, c), "L1").L1.querySelector('[data-sh-section="proves"]').textContent;
+    const proves = (c) => renderAll(l, modelOf(l, c), "L0").L0.querySelector('[data-sh-section="proves"]').textContent;
     expect(proves(ctx)).toContain("which snapshot of the holder's log it is as of");
     expect(modelOf(l, unbound).state).toBe("card");
     expect(proves(unbound)).not.toContain("which snapshot of the holder's log it is as of");
@@ -297,13 +297,13 @@ describe("negative: undecided is never drawn as agreed", () => {
       const total = p.host.L0.querySelector('[data-sh-total="held"]');
       if (o.of) expect(total.textContent).toBe(`${o.held} of ${o.of}`);
       const undecided = p.host.L0.querySelector('[data-outcome="undecided"]');
-      if (o.of) expect(undecided.textContent).toBe(`${o.undecided} of ${o.of} we couldn't tell`);
+      if (o.of) expect(undecided.textContent).toBe(`${o.undecided} we couldn't tell.`);
     }
   });
   it("a card where nothing held draws 0 as agreed and its undecided deals as undecided", () => {
     const p = everyPage(l).find((x) => x.c.name === "all-undecided-own" && x.depth === "L1");
     expect(p.host.L0.querySelector('[data-sh-total="held"]').textContent).toBe("0 of 2");
-    expect(p.host.L0.querySelector('[data-outcome="undecided"]').textContent).toBe("2 of 2 we couldn't tell");
+    expect(p.host.L0.querySelector('[data-outcome="undecided"]').textContent).toBe("2 we couldn't tell.");
     expect(p.host.L0.querySelectorAll(".cv-sh__dot--held")).toHaveLength(1);
     expect([...p.host.L1.querySelectorAll("[data-band-currency]")].map((r) => r.lastChild.textContent)).toEqual([
       "2 \u00b7 2 unsure",

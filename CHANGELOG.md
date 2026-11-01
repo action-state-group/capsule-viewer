@@ -14,6 +14,7 @@ here. The format follows
 ### Added
 
 - Same customer in this report on a shared page (#122): when the producer salts the customer handle per share (`handle_scope` `{tier: "shared", salting: "per-share"}`, evidencebook-skills#93, #96), a shared Outcomes page draws the customer grouping the operator page draws (the customer line, tiles with their denominators, the timeline with the follow-up link and the table), in the third person, with two new words, `lines.subject.slice.per-share` and `lines.subject.explain.per-share`. A shared member salted any other way, or with no `handle_scope`, is drawn as before: the handle and `follow_up_of` are ignored and no conversations are grouped. The Outcomes default pack's digest changes, so the contract-report goldens are regenerated.
+- The History card's headline is one sentence, as Steven's 9b frame 1 draws it: "44 of 46 deals where you had to come through went as agreed. **1 didn't.** **1 we couldn't tell.**", and "What it proves" is a fold-out in the first level (#171). The wording pack gains `sentence.did_not_hold` and `sentence.undecided`, so its digest and the manifest pins change.
 
 ## ts 0.11.0 and go 0.11.0 (2026-11-01)
 
