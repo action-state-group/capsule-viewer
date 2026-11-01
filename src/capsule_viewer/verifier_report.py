@@ -14,7 +14,10 @@ so a verdict for one bundle, or for an edited copy of it, is refused.
   identity ``passed``; no disclosure a mismatch. This is capsulectl's own
   verdict and deal-view.js's gate, and stricter than agent-action-capsule's
   ``bundleVerified`` (which does not read a verdict). Anything else is
-  ``failed``: a refusal, never a softer page;
+  ``failed``: a refusal, never a softer page. The one exception beside a
+  producer's selection is a composition whose other member is a signed
+  ``policy_declined`` refusal and nothing else failed (``_declined_only``):
+  ``incomplete``, so the copy is shown with the declined ask as a limit;
 * each bundle claim, as one check, by the verifier's name for it;
 * each record's disclosable members, as the verifier resolved them;
 * beside the context, the bundle digest the report was bound to and the
@@ -37,6 +40,8 @@ GATE_CLAIMS: tuple[str, ...] = ("graph_closure", "interval_coverage", "per_recor
 CLAIMS: tuple[str, ...] = (*GATE_CLAIMS, "checkpoint", "producer_signatures", "witnesses")
 # The finding capsulectl gives interval coverage for a selection the producer chose.
 SELECTION_NOT_CHECKABLE = "selection_not_checkable"
+# The one refusal reason a page reads as a limit, and the finding the check carries for it.
+POLICY_DECLINED = "policy_declined"
 _OUTCOME = {"pass": "verified", "fail": "failed", "withheld": "not_checked"}
 
 
@@ -118,6 +123,69 @@ def _standalone_report_status(output: CapsulectlReport) -> str | None:
     return None
 
 
+def _declined_only(
+    bundle: JsonObject,
+    output: CapsulectlReport,
+    statuses: Mapping[str, tuple[str, str]],
+    identity: Mapping[str, object],
+    disclosure_status: Mapping[str, Mapping[str, str]],
+) -> bool:
+    """Whether the bundle's only INCOMPLETE cause is a composed/v1 member that
+    is the other party's signed refusal for ``policy_declined``: nothing
+    failed, the composition passed, the refusal's signature verified and its
+    digest reproduced, and the refusal's reason, read from the bundle (the
+    signature covers it), is ``policy_declined``. A declined ask is that
+    party's limit on what they share, so the copy beside it is shown; any
+    other refusal reason, or any other failure, stays ``failed``."""
+    if output.get("verdict") != "INCOMPLETE":
+        return False
+    if not all(statuses[name][0] == "pass" for name in (*GATE_CLAIMS, "checkpoint", "producer_signatures")):
+        return False
+    if any(status == "fail" for status, _ in statuses.values()) or not all(v == "passed" for v in identity.values()):
+        return False
+    if any(s == "disclosure_mismatch" for members in disclosure_status.values() for s in members.values()):
+        return False
+    block = _composed_block(output)
+    if (
+        block.get("status") != "pass"
+        or _mapping(block.get("composed_digest")).get("matches") is not True
+        or _mapping(block.get("composition_closure")).get("status") != "pass"
+        or block.get("findings")
+    ):
+        return False
+    members = [_mapping(m) for m in _sequence(block.get("members"))]
+    refusals = [m for m in members if m.get("outcome") == "refusal"]
+    if len(refusals) != 1 or len(members) != 2 or any(m.get("outcome") not in ("artifact", "refusal") for m in members):
+        return False
+    refusal = refusals[0]
+    if (
+        refusal.get("body") != "carried"
+        or refusal.get("digest") != "reproduced"
+        or refusal.get("reads_as") != "INCOMPLETE"
+        or refusal.get("findings")
+        or _mapping(refusal.get("refusal_signature")).get("status") != "verified"
+    ):
+        return False
+    declared = _mapping(_mapping(_mapping(bundle.get("extensions")).get("composed/v1")))
+    raw = next((_mapping(m) for m in _sequence(declared.get("members")) if _mapping(m).get("id") == refusal.get("id")), {})
+    return _mapping(raw.get("refusal")).get("reason") == POLICY_DECLINED
+
+
+def _mapping(value: object) -> Mapping[str, object]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _sequence(value: object) -> Sequence[object]:
+    return value if isinstance(value, Sequence) and not isinstance(value, str) else ()
+
+
+def _composed_block(output: CapsulectlReport) -> Mapping[str, object]:
+    for entry in _sequence(output.get("extensions")):
+        if _mapping(entry).get("kind") == "composed/v1":
+            return _mapping(_mapping(entry).get("composed"))
+    return {}
+
+
 def context_from_capsulectl(
     bundle: JsonObject, output: CapsulectlReport
 ) -> tuple[VerifiedBundleContext, Assurance]:
@@ -180,7 +248,10 @@ def context_from_bundle_report(
         and all(value == "passed" for value in identity.values())
         and not any(s == "disclosure_mismatch" for members in disclosure_status.values() for s in members.values())
     )
-    outcome = "verified" if gate else "incomplete" if selected else "failed"
+    declined = not gate and not selected and allow_selection and _declined_only(bundle, output, statuses, identity, disclosure_status)
+    if declined:
+        checks = (*checks, Check("declined member", "not_checked", POLICY_DECLINED))
+    outcome = "verified" if gate else "incomplete" if selected or declined else "failed"
     verification = VerificationResult(VERIFIER, outcome, checks)
     countersignatures = tuple(
         str(c.get("status")) if isinstance(c, Mapping) else "unknown" for c in output.get("countersignatures") or ()

@@ -135,7 +135,7 @@ def composition_problem(c: Composition) -> str | None:
     ``None``: the block must have passed (its digest reproduced, closure
     passed) and hold exactly two members, under two member ids and two
     observers: two carried copies, or one carried copy and the other party's
-    carried ``absence`` (one-sided, every join deriving ``one_sided``), each member's digest reproduced, with one corroboration
+    carried ``absence`` or ``policy_declined`` refusal (one-sided, every join deriving ``one_sided``), each member's digest reproduced, with one corroboration
     result per join. A missing member the composer only declared is no
     answer the page can show, so it is declined. A malformed block reports no members, so
     it fails too."""
@@ -145,8 +145,8 @@ def composition_problem(c: Composition) -> str | None:
     copies = [m for m in members if m.outcome == "artifact"]
     if len(members) != 2 or not copies or any(m.body != "carried" for m in members):
         return "a bilateral receipt is two carried members, at least one a copy"
-    if len(copies) == 1 and any(m.outcome != "absence" for m in members if m.outcome != "artifact"):
-        return "a one-sided receipt's other member is an absence"
+    if len(copies) == 1 and any(m.outcome not in ("absence", "refusal") for m in members if m.outcome != "artifact"):
+        return "a one-sided receipt's other member is an absence or a refusal"
     if len(copies) == 1 and any(j.derived != "one_sided" for j in c.joins):
         return "a one-sided composition's joins do not all derive one_sided"
     if any(m.digest != "reproduced" for m in members):
@@ -234,7 +234,7 @@ def build_bilateral(
     # declined above, never paired by guess.
     joins = tuple(JoinView(j, c) for j, c in zip(composition.joins, composition.corroboration, strict=True))
     missing = missing_member(context, composition)
-    case = "one_sided" if missing is not None else two_copy_case(deal_state, [(v.join, v.corroboration) for v in joins])
+    case = ("limit" if missing.kind == "refusal" else "one_sided") if missing is not None else two_copy_case(deal_state, [(v.join, v.corroboration) for v in joins])
     return BilateralModel(
         deal=named[0] if deal_state == "agree" else None,
         deal_state=deal_state,
