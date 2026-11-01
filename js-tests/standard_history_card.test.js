@@ -63,7 +63,7 @@ function renderAll(loaded, model, depth = "L2") {
 
 const pageText = (host) => [host.L0, host.L1, host.L2].map((r) => r.textContent).join("\n");
 const pageHtml = (host) => [host.L0, host.L1, host.L2].map((r) => r.innerHTML).join("\n");
-const modelOf = (loaded, ctx) => JSON.parse(JSON.stringify(loaded.registered[0].buildModel(ctx)));
+const modelOf = (loaded, ctx) => JSON.parse(JSON.stringify(loaded.api.buildModelSync(ctx)));
 
 describe("the script and its manifest", () => {
   it("is the script the manifest pins, and registers exactly one module, the manifest's", () => {
@@ -429,6 +429,27 @@ if (!chromePath && process.env.CI) throw new Error("standard history card test: 
 if (!chromePath) console.warn("SKIPPED standard history card in headless Chromium: no Chromium found (set CHROME_PATH to run it)");
 
 const GOLDEN_PAGES = ["person-shared", "person-own", "node-shared", "neg-percentage-member"];
+
+// The witnessed pages (capsule-viewer#183): bundles a real capsulectl cut
+// (examples/standard-history/cut_witness_fixtures.sh) with TEST-KEYED Receipts
+// from AAC's anchor-witness-v1 vectors. This page has no AAC code, so the
+// runtime global here is a stand-in that answers with the report AAC's vectors
+// expect for that Receipt (the case's witness_expected) under the reader's list
+// named below; the real check, through the real runtime, runs on the same
+// bundles in ts/test/standard-history-witness.test.ts.
+const WITNESS_DATA = join(DATA, "witness");
+const WITNESS_CASES = JSON.parse(readFileSync(join(WITNESS_DATA, "witness_cases.json"), "utf8"));
+const WITNESS_VECTORS = JSON.parse(readFileSync(join(DATA, "aac", "anchor-witness-v1.json"), "utf8"));
+const READER_NAMES = WITNESS_VECTORS.policies.default.witnesses.map((w) => w.name);
+// name -> the reader's list the page holds: the vectors' witnesses, or none.
+const WITNESS_PAGES = [
+  ["person-shared-witnessed", READER_NAMES],
+  ["person-shared-witnessed", [], "not-checked"],
+  ["person-shared-unwitnessed", READER_NAMES],
+  ["person-shared-witness-unlisted", READER_NAMES],
+  ["person-shared-witness-tampered", READER_NAMES],
+];
+const witnessPageName = ([name, , variant]) => (variant ? `${name}-${variant}` : name);
 describe.skipIf(!chromePath)("the module in headless Chromium", () => {
   let browser;
   let tab;
@@ -445,10 +466,32 @@ describe.skipIf(!chromePath)("the module in headless Chromium", () => {
 <script>${SCRIPT}</script>
 <script>(function () { var d = ${data}, m = window.__sh, q = function (l) { return document.querySelector('[data-level="' + l + '"]'); };
 var ctx = { bundle: d.bundle, root: d.root, verification: d.verification, resolvedDisclosures: new Map(d.disclosures) };
-if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }, {}); })();</script></body></html>`;
+if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }, {}); }); })();</script></body></html>`;
       const file = join(dir, `${c.name}.html`);
       writeFileSync(file, html);
       urls[c.name] = pathToFileURL(file).href;
+    }
+    for (const page of WITNESS_PAGES) {
+      const [name, names] = page;
+      const wc = WITNESS_CASES.find((c) => c.name === name);
+      const ctx = standInContext(JSON.parse(readFileSync(join(WITNESS_DATA, `${name}.bundle.json`), "utf8")), {
+        verify: JSON.parse(readFileSync(join(WITNESS_DATA, "verify", `${name}.json`), "utf8")),
+      });
+      const data = JSON.stringify({ bundle: ctx.bundle, root: ctx.root, verification: ctx.verification, disclosures: [...ctx.resolvedDisclosures] }).replace(/</g, "\\u003c");
+      const report = names.length ? wc.witness_expected : { status: "NOT_CHECKED", receipts: [], witness: null, witnessed_time: null };
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>History card</title></head>
+<body class="cv-kit"><main class="cv-page"><div data-level="L0"></div><div data-level="L1"></div><div data-level="L2"></div></main>
+<script>var EvidenceGraph = { registerPresentation: function (m) { window.__sh = m; },
+  readerAnchorWitness: function () { return Promise.resolve(${JSON.stringify({ checkpoint: "not_carried", ...report })}); },
+  readerWitnessPolicy: function () { return { witnesses: ${JSON.stringify(names)}.map(function (n) { return { name: n, keys: [] }; }) }; },
+  setReaderWitnessPolicy: function () { return true; } };</script>
+<script>${SCRIPT}</script>
+<script>(function () { var d = ${data}, m = window.__sh, q = function (l) { return document.querySelector('[data-level="' + l + '"]'); };
+var ctx = { bundle: d.bundle, root: d.root, verification: d.verification, resolvedDisclosures: new Map(d.disclosures) };
+if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }, {}); }); })();</script></body></html>`;
+      const file = join(dir, `${witnessPageName(page)}.html`);
+      writeFileSync(file, html);
+      urls[witnessPageName(page)] = pathToFileURL(file).href;
     }
     browser = await launch(chromePath);
     tab = await browser.newPage();
@@ -469,6 +512,7 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
       nested: document.querySelectorAll("details details").length,
       held: dot("held"), undecided: dot("undecided"),
       bannerTop: (document.querySelector('[data-banner="private"]') || { getBoundingClientRect: () => ({ top: null }) }).getBoundingClientRect().top,
+      failedRow: (document.querySelector('[data-property="anchor_witnessed"]') || document.body).getAttribute("data-property-status") === "FAIL",
       text: document.body.innerText,
     };
   })()`;
@@ -493,6 +537,40 @@ if (m.canRender(ctx)) m.render(m.buildModel(ctx), { L0: q("L0"), L1: q("L1"), L2
           await tab.evaluate(`document.querySelectorAll("details").forEach((d) => { d.open = true; })`);
           const shot = await tab.screenshot();
           const path = join(GOLDENS, `standard-history-${c.name}-${width}.png`);
+          if (UPDATE) writeFileSync(path, shot);
+          expect(existsSync(path), `golden ${path} is not committed; run with UPDATE_GOLDENS=1`).toBe(true);
+          expect(readFileSync(path).readUInt32BE(16)).toBe(width);
+        }
+      }, 30000);
+    }
+  }
+
+  // The witness line on the page, with and without Receipts, at a phone's width and a laptop's.
+  const WITNESS_LINE = "Snapshot recorded Nov 1, 2026 08:04 UTC by witness-a";
+  for (const width of [390, 1280]) {
+    for (const page of WITNESS_PAGES) {
+      const key = witnessPageName(page);
+      it(`${key} at ${width}px`, async () => {
+        await tab.open(urls[key], { width });
+        const m = await tab.evaluate(MEASURE);
+        expect(m.state).toBe("card");
+        expect(m.overflow).toBe(false);
+        expect(m.nested).toBe(0);
+        expect(m.columns).toBe(width === 390 ? 1 : 2);
+        const line = key === "person-shared-witnessed";
+        expect(m.text.includes(WITNESS_LINE)).toBe(line);
+        // Only a Receipt that came and was not checked says so; none and a failed one say nothing.
+        expect(m.text.includes("A witness receipt came with the card")).toBe(key.endsWith("not-checked"));
+        // A Receipt that was checked and failed says nothing about a witness in the card; its checks row reads "failed".
+        expect(m.text.includes("receipt came") || m.text.includes("Snapshot recorded")).toBe(line || key.endsWith("not-checked"));
+        expect(m.failedRow).toBe(key.endsWith("witness-unlisted") || key.endsWith("witness-tampered"));
+        // The reader's own list is shown wherever Receipts came with the card.
+        expect(m.text.includes("Witnesses you accept")).toBe(!key.includes("unwitnessed"));
+        if (line || key.endsWith("not-checked")) {
+          await tab.open(urls[key], { width });
+          await tab.evaluate(`document.querySelectorAll("details").forEach((d) => { d.open = true; })`);
+          const shot = await tab.screenshot();
+          const path = join(GOLDENS, `standard-history-${key}-${width}.png`);
           if (UPDATE) writeFileSync(path, shot);
           expect(existsSync(path), `golden ${path} is not committed; run with UPDATE_GOLDENS=1`).toBe(true);
           expect(readFileSync(path).readUInt32BE(16)).toBe(width);

@@ -166,6 +166,15 @@ banner, the refusal or the core's verification checks. A module MAY recompute a 
 figure from verified content (a coverage count, a per-bucket total) and MUST then show a
 disagreement with the producer's stated figure as a disagreement, never silently prefer either.
 
+A module MAY ask the runtime for a check that depends on the reader's own settings, through a
+function the runtime's global names for that purpose (today `readerAnchorWitness`, for the
+History card's witness line, capsule-viewer#183). The module passes the bundle-carried bytes and
+draws the answer; the runtime hashes and verifies, under a setting that never comes from the
+bundle (the reader's witness list). The module still calls no verifier and recomputes nothing
+itself, and the answer is not a verification result: it never changes the banner or the core's
+checks. It can change the module's own state in one case: a carried checkpoint that is not the
+anchor's makes the block unreadable.
+
 ### 3.1 The context is effectively immutable
 
 **A `VerifiedBundleContext` MUST be effectively immutable.** No module can change the
