@@ -330,7 +330,23 @@
         var c = claim(pair[1]);
         return { name: pair[0], outcome: own(OUTCOME_OF, c.status) ? OUTCOME_OF[c.status] : "failed", detail: c.findings.map(String).join(", ") };
       });
-    return { verifier: VERIFIER, outcome: bundleVerified(v) ? "verified" : "failed", checks: checks };
+    var outcome = bundleVerified(v) ? "verified" : "failed";
+    // verifier_report._declined_only: capsulectl reads a composition holding a policy_declined
+    // refusal INCOMPLETE, which the page's claims do not show, so such a bundle is never
+    // "verified" here; the bilateral module still declines unless the refusal's signature
+    // verified (missingMember).
+    if (outcome === "verified" && declinedMember(map(map(context).bundle))) {
+      outcome = "incomplete";
+      checks.push({ name: "declined member", outcome: "not_checked", detail: "policy_declined" });
+    }
+    return { verifier: VERIFIER, outcome: outcome, checks: checks };
+  }
+
+  function declinedMember(bundle) {
+    var block = map(get(map(get(bundle, "extensions")), COMPOSED_KIND));
+    return seq(get(block, "members")).map(map).some(function (m) {
+      return get(m, "outcome") === "refusal" && get(map(get(m, "refusal")), "reason") === "policy_declined";
+    });
   }
 
   // capsulectl's status for the x-deal-v0 check when it names the report as

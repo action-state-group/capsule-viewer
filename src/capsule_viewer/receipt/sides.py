@@ -2,7 +2,7 @@
 """The receipt's sides: whose records the receipt holds, and the case they
 make (History card 9b, the receipt primitive).
 
-Three cases, read from what the verifier reported, never from a label a
+Four cases, read from what the verifier reported, never from a label a
 producer sets:
 
 * ``both``, **stamped by both**: a composition carrying both parties'
@@ -79,7 +79,7 @@ def _str(value: object) -> str | None:
 
 
 def missing_member(context: VerifiedBundleContext, composition: Composition) -> Missing | None:
-    """The composition's one ``absence`` member, or ``None``. Its body is read
+    """The composition's one ``absence`` or ``policy_declined`` ``refusal`` member, or ``None``. Its body is read
     from the bundle's own block: ``composition_problem`` accepts only a
     carried body whose digest the verifier reproduced, and the verifier
     refuses an absence without its window. ``ReceiptUnavailable`` if not."""

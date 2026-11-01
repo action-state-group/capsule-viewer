@@ -37,8 +37,9 @@ copies come from two observers as the composition declares them (which party
 an observer is, the module does not judge).
 
 A composition may also be one-sided: one party's copy, and the other
-party's member an ``absence`` (the "your receipt only" case,
-``sides.py``). The page then draws that member as the missing side.
+party's member an ``absence`` (the "your receipt only" case) or their signed
+``policy_declined`` refusal (the ``limit`` case; ``sides.py``). The page then
+draws that member as the missing side.
 
 The module declines a composition the verifier did not pass: the composed
 digest, composition closure and each carried member's digest must all hold.
