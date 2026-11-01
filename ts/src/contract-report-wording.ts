@@ -600,6 +600,10 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // aggregate counts informational rows the derived lines leave out: a
   // pack cannot make an informational row read as must-have.
   ...SECTION3_ENUMS.requirement_tier.map((v) => `requirement_tier.${v}`),
+  // The red mark on a WITHHELD claim says the holder withheld it and nothing
+  // more: a pack cannot hint at what is behind it.
+  "card.mark.withheld",
+  "card.mark.withheld.cited",
   "lines.rtier.unstated.note",
   "groups.rtier.unstated.note",
   "lines.rtier.sealed-note",
@@ -754,6 +758,8 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "card.pf.wording.default",
   "card.pf.wording.supplied.layered",
   "card.pf.assurance",
+  "card.mark.withheld",
+  "card.mark.withheld.cited",
   "card.pin.withheld",
   "card.pin.unread",
   "card.pin.not-in-bundle",

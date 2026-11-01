@@ -32,6 +32,7 @@ import {
   caseParts,
   judgeNote,
   assuranceRow,
+  withheldMark,
   reportSummary,
   type Worded,
 } from "./report-levels.js";
@@ -975,6 +976,8 @@ function conversationProofs(
       const cell = element("td", text);
       for (const [key, value] of Object.entries(data))
         cell.dataset[key] = value;
+      const mark = withheldMark(criterion.claim, w);
+      if (mark !== undefined) cell.append(el("br", ""), mark);
       tr.append(cell);
     }
     tbody.append(tr);

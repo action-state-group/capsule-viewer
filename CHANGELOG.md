@@ -9,6 +9,12 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Added
+
+- The red mark on a claim sealed `WITHHELD`, as Steven's Terms Pack canvas draws it in Outcomes frame 6 (#198): "Withheld by the holder", with the digests the claim cites, in the outcome table's assurance cell and the compliance proofs. It is drawn for `WITHHELD` only, never for an absent or mismatched carrier, and a claim that failed verification is not marked. It names no level or tier: nothing in the Result carries one, and a holder's uniform refusal exists so as not to characterize what it withholds (Sherlock2 confirmed the what). The two words are locked (`card.mark.withheld`, `card.mark.withheld.cited`), so a pack cannot reword them. The default packs gain the two keys, so the `wording_sha256` of both built-in packs moves; the content of every other word is unchanged.
+
 ## ts 0.8.0 and go 0.8.0 (2026-10-31)
 
 Both state viewer 0.8.0: `ts/v0.8.0`, then `go/v0.8.0` on the commit that
