@@ -5089,6 +5089,8 @@ var EvidenceGraph = (() => {
     obligationStatus: () => obligationStatus,
     placeholders: () => placeholders,
     readWordingPack: () => readWordingPack,
+    readerAnchorWitness: () => readerAnchorWitness,
+    readerWitnessPolicy: () => readerWitnessPolicy,
     registerPresentation: () => registerPresentation,
     renderChecking: () => renderChecking,
     renderCompliancePage: () => renderCompliancePage,
@@ -5098,6 +5100,7 @@ var EvidenceGraph = (() => {
     renderUnableToVerify: () => renderUnableToVerify,
     resolvePresentation: () => resolvePresentation,
     rowStatus: () => rowStatus,
+    setReaderWitnessPolicy: () => setReaderWitnessPolicy,
     tierReader: () => tierReader,
     verifiedPayload: () => verifiedPayload,
     verifyDisclosureEnvelope: () => verifyDisclosureEnvelope,
@@ -8430,8 +8433,153 @@ ${body}
       receipts: results
     };
   }
+  var ANCHOR_DIGEST = /^[0-9a-f]{64}$/u;
+  var LOWER_HEX = /^(?:[0-9a-f]{2})*$/u;
+  var ANCHOR_ED25519_PREFIX = "302a300506032b6570032100";
+  var P256_SPKI_PREFIX = "3059301306072a8648ce3d020106082a8648ce3d03010703420004";
   var MAX_ANCHOR_RECEIPT_OCTETS = 10 * 1024 * 1024;
+  var MAX_ANCHOR_PROOFS = 16;
   var MAX_ANCHOR_TREE_SIZE = 1n << 62n;
+  var PRIVATE_LABEL = -65536n;
+  function anchorPathLength(size, index) {
+    let count2 = 0;
+    while (size > 1n) {
+      let k = 1n;
+      while (k * 2n < size)
+        k *= 2n;
+      if (index < k)
+        size = k;
+      else
+        [size, index] = [size - k, index - k];
+      count2 += 1;
+    }
+    return count2;
+  }
+  function parseAnchorReceipt(receipt) {
+    try {
+      if (receipt.length === 0 || receipt.length > MAX_ANCHOR_RECEIPT_OCTETS)
+        return null;
+      const outer = decodeReceiptItem(receipt, true);
+      if (!(outer instanceof CborTag) || outer.tag !== 18n || !Array.isArray(outer.value) || outer.value.length !== 4)
+        return null;
+      const [protectedBytes, unprotected, payload, signature2] = outer.value;
+      if (!(protectedBytes instanceof Uint8Array) || protectedBytes.length === 0 || payload !== null || !(signature2 instanceof Uint8Array) || signature2.length !== 64)
+        return null;
+      const headers = decodeReceiptItem(protectedBytes, false);
+      if (!(headers instanceof CborMap))
+        return null;
+      let time = null;
+      for (const [label, value] of headers.entries) {
+        if (label === 1n) {
+          if (value !== -8n && value !== -7n)
+            return null;
+        } else if (label === 395n) {
+          if (value !== 1n)
+            return null;
+        } else if (label === 4n) {
+          if (!(value instanceof Uint8Array))
+            return null;
+        } else if (label === HDR_CWT_CLAIMS) {
+          if (!(value instanceof CborMap))
+            return null;
+          const iat = value.get(CWT_IAT);
+          if (typeof iat === "bigint" && iat >= 0n && iat <= MAX_IAT)
+            time = Number(iat);
+        } else if (!(typeof label === "bigint" && label < PRIVATE_LABEL))
+          return null;
+      }
+      const alg = headers.get(1n);
+      if (alg === void 0 || !headers.has(395n))
+        return null;
+      if (!(unprotected instanceof CborMap) || unprotected.entries.length !== 1)
+        return null;
+      const vdp = unprotected.get(396n);
+      if (!(vdp instanceof CborMap) || vdp.entries.length !== 1)
+        return null;
+      const raw = vdp.get(-1n);
+      if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_ANCHOR_PROOFS)
+        return null;
+      const proofs = [];
+      for (const blob of raw) {
+        if (!(blob instanceof Uint8Array))
+          return null;
+        const proof = decodeReceiptItem(blob, false);
+        if (!Array.isArray(proof) || proof.length !== 3)
+          return null;
+        const [size, index, path2] = proof;
+        if (typeof size !== "bigint" || typeof index !== "bigint" || index < 0n || index >= size || size > MAX_ANCHOR_TREE_SIZE || !Array.isArray(path2) || path2.length !== anchorPathLength(size, index) || !path2.every((node) => node instanceof Uint8Array && node.length === 32))
+          return null;
+        proofs.push({ size, index, path: path2 });
+      }
+      return { alg: alg === -8n ? "ed25519" : "p256", proofs, time };
+    } catch {
+      return null;
+    }
+  }
+  function anchorPolicyKeys(policy) {
+    const rows = typeof policy === "object" && policy !== null ? policy.witnesses : void 0;
+    const out = [];
+    for (const row2 of Array.isArray(rows) ? rows : []) {
+      if (typeof row2 !== "object" || row2 === null)
+        continue;
+      const { name, keys } = row2;
+      if (typeof name !== "string" || !Array.isArray(keys))
+        continue;
+      for (const key of keys) {
+        if (typeof key !== "string" || !LOWER_HEX.test(key))
+          continue;
+        const type = key.length === 88 && key.startsWith(ANCHOR_ED25519_PREFIX) ? "ed25519" : key.length === 182 && key.startsWith(P256_SPKI_PREFIX) ? "p256" : null;
+        if (type !== null)
+          out.push({ name, type, spki: hexToBytes(key) });
+      }
+    }
+    return out;
+  }
+  async function checkAnchorReceipt(anchorDigest, receipt, policy) {
+    const report = (status2, witness = null, time = null) => ({
+      status: status2,
+      witness,
+      registration_time: time
+    });
+    if (!ANCHOR_DIGEST.test(anchorDigest) || !(receipt instanceof Uint8Array))
+      return report("FAIL");
+    const parsed = parseAnchorReceipt(receipt);
+    if (parsed === null)
+      return report("FAIL");
+    const keys = anchorPolicyKeys(policy).filter(({ type }) => type === parsed.alg);
+    if (keys.length === 0)
+      return report("NOT_CHECKED");
+    const leaf = hexToBytes(anchorDigest);
+    let unavailable = false;
+    for (const { name, spki } of keys) {
+      const result = await verifyCoseReceipt(receipt, leaf, spki);
+      if (result.ok)
+        return report("PASS", name, parsed.time);
+      if (result.unavailable)
+        unavailable = true;
+    }
+    return report(unavailable ? "NOT_CHECKED" : "FAIL");
+  }
+  async function checkAnchorWitnessed(anchorDigest, receipts2, policy) {
+    const reports = [];
+    for (const receipt of receipts2)
+      reports.push(await checkAnchorReceipt(anchorDigest, receipt, policy));
+    const statuses = new Set(reports.map((r) => r.status));
+    const status2 = reports.length === 0 ? "NOT_PRESENT" : statuses.has("PASS") ? "PASS" : statuses.has("FAIL") ? "FAIL" : "NOT_CHECKED";
+    let chosen;
+    for (const r of reports) {
+      if (r.status !== "PASS")
+        continue;
+      if (chosen === void 0 || r.registration_time !== null && (chosen.registration_time === null || r.registration_time < chosen.registration_time))
+        chosen = r;
+    }
+    return {
+      status: status2,
+      receipts: reports,
+      witness: chosen?.witness ?? null,
+      witnessed_time: chosen?.registration_time ?? null
+    };
+  }
 
   // node_modules/@action-state-group/agent-action-capsule/dist/bundle.js
   var Ed25519UnavailableError = class extends Error {
@@ -11354,7 +11502,7 @@ ${body}
     return readings2;
   }
   function heldAndAdded(readings2) {
-    let held = 0, added = 0;
+    let held2 = 0, added = 0;
     const seen = /* @__PURE__ */ new Set();
     for (const reading of readings2) {
       if (reading.state !== "read")
@@ -11364,12 +11512,12 @@ ${body}
           continue;
         seen.add(digest);
         if (judged.verdict === "met" && rating.label === "not_met")
-          held += 1;
+          held2 += 1;
         else if (judged.verdict === "not_met" && rating.label === "met")
           added += 1;
       }
     }
-    return { held, added };
+    return { held: held2, added };
   }
   function missedReasonGroups(terms, conversations) {
     const labelOf = (checkId, criterionId) => {
@@ -11537,7 +11685,7 @@ ${body}
       judgedDays: [...new Set(convos.map((c) => c.judgedDay))].sort()
     }));
     const calibration = buildCalibration(result);
-    const { held, added } = heldAndAdded(calibration);
+    const { held: held2, added } = heldAndAdded(calibration);
     const checkPassCounts = /* @__PURE__ */ new Map();
     for (const check of terms.checks)
       checkPassCounts.set(check.id, conversations.filter((c) => c.checkVerdicts.get(check.id) === "met").length);
@@ -11562,7 +11710,7 @@ ${body}
       resolvedCount,
       missedCount: conversations.length - resolvedCount,
       totalCount: conversations.length,
-      heldCount: held,
+      heldCount: held2,
       addedCount: added,
       notApplicableCount,
       outOfScopeCount,
@@ -16470,7 +16618,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("f512ebc3c4858c1c60003e2999164cc801df8ceb");
+    return commitPrefix("eaa7cafc586756404386cd29c36fa67511978a41");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -26099,15 +26247,15 @@ ${pad.repeat(depth)}`;
         const next = parts[parts.length - 1].nextElementSibling;
         if (next?.hasAttribute(mark)) parts.push(next);
       }
-      const held = [...parts, ...stripNode === void 0 ? [] : [stripNode]];
+      const held2 = [...parts, ...stripNode === void 0 ? [] : [stripNode]];
       return {
         parts,
-        held,
+        held: held2,
         header: bar.previousElementSibling,
-        words: snapshot(held),
+        words: snapshot(held2),
         looks: {
-          plain: looks(held, false),
-          chrome: looks(held, true)
+          plain: looks(held2, false),
+          chrome: looks(held2, true)
         }
       };
     };
@@ -26313,6 +26461,86 @@ ${pad.repeat(depth)}`;
       ...payload.wording === void 0 ? {} : { wording: payload.wording },
       ...payload.contract === void 0 ? {} : { contract: payload.contract }
     });
+  }
+
+  // src/reader-witnesses.ts
+  var DEFAULT_READER_WITNESSES = Object.freeze({
+    witnesses: Object.freeze([])
+  });
+  var HEX_DER = /^(?:[0-9a-f]{2})+$/u;
+  function parseReaderWitnesses(value) {
+    if (typeof value !== "object" || value === null || Array.isArray(value))
+      return void 0;
+    const list2 = value.witnesses;
+    if (Object.keys(value).length !== 1 || !Array.isArray(list2)) return void 0;
+    const witnesses = [];
+    for (const row2 of list2) {
+      if (typeof row2 !== "object" || row2 === null || Array.isArray(row2))
+        return void 0;
+      const { name, keys, ...rest } = row2;
+      if (Object.keys(rest).length > 0) return void 0;
+      if (typeof name !== "string" || name.trim() === "") return void 0;
+      if (!Array.isArray(keys) || keys.length === 0 || !keys.every((k) => typeof k === "string" && HEX_DER.test(k)))
+        return void 0;
+      witnesses.push({ name, keys: [...keys] });
+    }
+    return { witnesses };
+  }
+  var held;
+  function readerWitnessPolicy() {
+    return held ?? DEFAULT_READER_WITNESSES;
+  }
+  function setReaderWitnessPolicy(value) {
+    if (value === null) {
+      held = void 0;
+      return true;
+    }
+    const parsed = parseReaderWitnesses(value);
+    if (parsed === void 0) return false;
+    held = parsed;
+    return true;
+  }
+  var fromHex2 = (hex5) => {
+    const out = new Uint8Array(new ArrayBuffer(hex5.length / 2));
+    for (let i = 0; i < out.length; i += 1)
+      out[i] = Number.parseInt(hex5.slice(2 * i, 2 * i + 2), 16);
+    return out;
+  };
+  async function readerAnchorWitness(anchor, checkpoint, receipts2) {
+    let same3 = "not_carried";
+    if (checkpoint !== null) {
+      try {
+        const digest = await globalThis.crypto.subtle.digest(
+          "SHA-256",
+          fromHex2(checkpoint)
+        );
+        same3 = Array.from(
+          new Uint8Array(digest),
+          (b) => b.toString(16).padStart(2, "0")
+        ).join("") === anchor ? "match" : "mismatch";
+      } catch {
+        same3 = "unchecked";
+      }
+    }
+    if (receipts2 === null || receipts2.length === 0 || same3 === "mismatch") {
+      return {
+        checkpoint: same3,
+        status: receipts2 === null ? "NOT_PRESENT" : "NOT_CHECKED",
+        witness: null,
+        witnessed_time: null
+      };
+    }
+    const report = await checkAnchorWitnessed(
+      anchor,
+      receipts2.map(fromHex2),
+      readerWitnessPolicy()
+    );
+    return {
+      checkpoint: same3,
+      status: report.status,
+      witness: report.witness,
+      witnessed_time: report.witnessed_time
+    };
   }
   return __toCommonJS(browser_exports2);
 })();
