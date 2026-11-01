@@ -2396,11 +2396,12 @@ export const LINES_FRAME = {
 } as const;
 
 /**
- * The canvas's four footnotes (Terms Pack Outcomes frame 1): what a record
- * and a conversation are, what resolved means, that the page is read-only,
- * and that a figure is a count beside its total. The last is said only when
- * the page draws no shares (`percentages` off); a bundle that carries no
- * records list leaves the first without a record count rather than guessing.
+ * The canvas's footnotes 1-3 (Terms Pack Outcomes frame 1): what a record
+ * and a conversation are, what resolved means, and that the page is
+ * read-only. The canvas's fourth, "the only percentage is concurrence", is
+ * not said: this page also prints the judge's probability as a percentage.
+ * A bundle that carries no records list leaves the first without a record
+ * count rather than guessing.
  */
 function renderCanvasNotes(
   notes: HTMLElement,
@@ -2431,7 +2432,6 @@ function renderCanvasNotes(
     ),
   );
   note("readonly", w.t("lines.fn.readonly"));
-  if (!model.options.percentages) note("counts", w.t("lines.fn.counts"));
 }
 
 /**

@@ -87,6 +87,13 @@ describe("the Outcomes report (lines)", () => {
     expect(verification(root).join("\n")).not.toContain("contract");
   });
 
+  it("with the contract, footnote 2 adds that an informational rule never changes the answer", async () => {
+    const root = await render(bundle, contract);
+    expect(root.querySelector('[data-footnote="resolved"]')?.textContent).toBe(
+      "² Resolved means every rule that applied was met, and at least one applied. A rule the contract marks informational never changes the answer.",
+    );
+  });
+
   it("with the contract, draws must-have, informational and not-stated sections, each row with its tier", async () => {
     const root = await render(bundle, contract);
     expect(tiersOf(root, "tr.rule[data-rule]")).toEqual({

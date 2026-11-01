@@ -983,6 +983,8 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pf.verdicts.one",
   "lines.na-note.one",
   "lines.na-note.other",
+  // The canvas's footnote that says what the page does not do.
+  "lines.fn.readonly",
   "lines.sentence.undecided.none",
   "lines.why.undecided.none",
   "lines.sentence.nothing-applied",
