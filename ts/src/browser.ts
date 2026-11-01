@@ -52,3 +52,8 @@ export {
 // agent-action-capsule's JCS and receipt check; the module verifies nothing.
 export { paymentPreimageCheck } from "./payment-preimage.js";
 export { readerCadenceWitness } from "./cadence-witness.js";
+
+// The History card's signature (capsule-viewer#211; rule F4.7): the context's
+// own strict verdict for the root record, which the module draws and does
+// not decide.
+export { readerCardSignature } from "./card-signature.js";
