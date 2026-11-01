@@ -77,9 +77,21 @@ const MODULE_CONTRACT = [
   "verifyProducerEnvelope",
 ] as const;
 
+// The History card's witness line (capsule-viewer#183): AAC's own check, from
+// its `witness` entry point, and the reader's list the page holds.
+const WITNESS_CONTRACT = [
+  "checkAnchorWitnessed",
+  "readerWitnessPolicy",
+  "setReaderWitnessPolicy",
+] as const;
+
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = [];
+const NOT_YET_SHIPPED: readonly string[] = [
+  "checkAnchorWitnessed",
+  "readerWitnessPolicy",
+  "setReaderWitnessPolicy",
+];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
@@ -103,7 +115,7 @@ describe("the runtime's global", () => {
       const global = globalOf(
         await readFile(new URL(file, import.meta.url), "utf8"),
       );
-      for (const member of MODULE_CONTRACT) {
+      for (const member of [...MODULE_CONTRACT, ...WITNESS_CONTRACT]) {
         // Not yet in the shipped runtime. Asserting its absence makes the
         // refresh that ships it fail here until that refresh also drops it
         // from NOT_YET_SHIPPED (RELEASING.md step 5; an edit under ts/, which
@@ -130,6 +142,17 @@ describe("the runtime's global", () => {
     >;
     for (const member of MODULE_CONTRACT.slice(1))
       expect(browser[member], member).toBe(aac[member]);
+  });
+
+  it("re-exports agent-action-capsule's anchor-witness check unchanged", async () => {
+    const witness = (await import(
+      "@action-state-group/agent-action-capsule/witness"
+    )) as Record<string, unknown>;
+    const browser = (await import("../src/browser.js")) as Record<
+      string,
+      unknown
+    >;
+    expect(browser.checkAnchorWitnessed).toBe(witness.checkAnchorWitnessed);
   });
 
   // Added to the build in capsule-viewer#83; go/pageruntime carries it

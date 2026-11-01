@@ -33,3 +33,12 @@ export {
   verifyDisclosureEnvelope,
   verifyProducerEnvelope,
 } from "@action-state-group/agent-action-capsule";
+
+// The reader's own witness list and AAC's anchor-witness check, which the
+// History card (static/standard_history_card.js) calls to draw its witness
+// line (capsule-viewer#183): the check is agent-action-capsule's, unchanged.
+export { checkAnchorWitnessed } from "@action-state-group/agent-action-capsule/witness";
+export {
+  readerWitnessPolicy,
+  setReaderWitnessPolicy,
+} from "./reader-witnesses.js";
