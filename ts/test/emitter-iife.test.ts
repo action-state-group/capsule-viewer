@@ -133,11 +133,9 @@ describe("the runtime's global", () => {
   }
 
   it("re-exports agent-action-capsule's own verifier functions", async () => {
-    const aac =
-      (await import("@action-state-group/agent-action-capsule")) as Record<
-        string,
-        unknown
-      >;
+    const aac = (await import(
+      "@action-state-group/agent-action-capsule"
+    )) as Record<string, unknown>;
     const browser = (await import("../src/browser.js")) as Record<
       string,
       unknown

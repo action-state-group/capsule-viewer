@@ -87,8 +87,12 @@ export interface ReaderAnchorWitness {
   readonly witnessed_time: number | null;
 }
 
-const fromHex = (hex: string): Uint8Array =>
-  Uint8Array.from(hex.match(/../gu) ?? [], (b) => Number.parseInt(b, 16));
+const fromHex = (hex: string): Uint8Array<ArrayBuffer> => {
+  const out = new Uint8Array(new ArrayBuffer(hex.length / 2));
+  for (let i = 0; i < out.length; i += 1)
+    out[i] = Number.parseInt(hex.slice(2 * i, 2 * i + 2), 16);
+  return out;
+};
 
 /**
  * The History card's witness standing, for a presentation module, which
