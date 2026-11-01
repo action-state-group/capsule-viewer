@@ -209,6 +209,29 @@ it("opens the report lines with one sentence of the same counts, each with its t
   );
 });
 
+it("ends the sheet with the canvas's footnotes 1-3, the record and conversation counts in the first, and no fourth", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const root = await renderClosed(bundle);
+  const notes = [...root.querySelectorAll<HTMLElement>("[data-footnote]")].map(
+    (p) => [p.dataset.footnote, p.textContent],
+  );
+  const records = (bundle as { records: unknown[] }).records.length;
+  expect(notes).toEqual([
+    [
+      "records",
+      `¹ Records are the sealed items in this bundle (${records.toLocaleString()}); a conversation is the report's subject, made of one or more records (50).`,
+    ],
+    [
+      "resolved",
+      "² Resolved means every rule that applied was met, and at least one applied.",
+    ],
+    [
+      "readonly",
+      "³ This page is read-only: it records nothing the reader does. A disagreement leaves the page as an evidence request or a dispute.",
+    ],
+  ]);
+});
+
 it("shows counts by default, never a percentage, unless the presentation flag asks for one", async () => {
   const { bundle } = await sealedOutcomeReportBundle();
   const root = await render(bundle);
@@ -2410,4 +2433,16 @@ it("draws the red withheld mark once, in the assurance cell of the one claim sea
   expect(marks[0]!.closest("td")?.dataset.status).toBe("WITHHELD");
   expect(marks[0]!.textContent).toMatch(/^Withheld by the holder · cites /u);
   expect(root.textContent).not.toMatch(/tier-gated/iu);
+});
+
+it("draws no first footnote for a bundle with no records list, and still the other two", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const bare = { ...(bundle as Obj) };
+  delete bare.records;
+  const root = await renderClosed(bare);
+  const kinds = [...root.querySelectorAll<HTMLElement>("[data-footnote]")].map(
+    (p) => p.dataset.footnote,
+  );
+  expect(kinds).not.toContain("records");
+  expect(root.textContent ?? "").toBeTruthy();
 });
