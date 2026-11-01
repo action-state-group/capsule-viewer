@@ -273,15 +273,16 @@ it("says the bundle carries no re-grade records when it cites none, without nami
   expect(section.querySelector("[data-weeks]")).toBeNull();
 });
 
-it("renders human spot checks: k of n per week, from an injected calibration-summary/v1, with held and added split out", async () => {
+// A calibration claim citing one disclosed `summary` record (a payload that
+// is or is not a valid calibration-summary/v1).
+async function calibrationBundle(summary: Obj): Promise<Obj> {
   const { bundle } = await sealedOutcomeReportBundle((source) => {
     const resultDoc = ((source.disclosures as Obj).result as Obj)
       .agent_input as Obj;
     const claims = resultDoc.claims as Obj[];
-    const conversationId = (claims[0]!.id as string).split("::")[0]!;
-    (source.records as Obj[]).push({ capsule_id: "cal-2026-W39" });
+    (source.records as Obj[]).push({ capsule_id: "cal-summary" });
     const calClaim = {
-      id: "cal::2026-W39",
+      id: "cal::summary",
       type: "calibration",
       contract_ref: (claims[0] as Obj).contract_ref,
       requirement_ref: "human-spot-check",
@@ -289,12 +290,12 @@ it("renders human spot checks: k of n per week, from an injected calibration-sum
       grade: "self-attested",
       sufficiency: "SATISFIED",
       verdict: "not_met",
-      evidence: [{ digest_alg: "SHA-256", digest: "cal-2026-W39" }],
+      evidence: [{ digest_alg: "SHA-256", digest: "cal-summary" }],
       proofs: [],
       presentation: {
         kind: "disclosure",
         status: "SATISFIED",
-        evidence: [{ digest_alg: "SHA-256", digest: "cal-2026-W39" }],
+        evidence: [{ digest_alg: "SHA-256", digest: "cal-summary" }],
       },
     };
     const allClaims = [...claims, calClaim];
@@ -308,34 +309,72 @@ it("renders human spot checks: k of n per week, from an injected calibration-sum
         },
       },
     };
-    (source.disclosures as Obj)["cal-2026-W39"] = {
-      agent_input: {
-        spec_version: "calibration-summary/v1",
-        week: "2026-W39",
-        sample: [
-          {
-            conversation_id: conversationId,
-            ai_verdict: "met",
-            human_verdict: "not_met",
-          },
-          { conversation_id: "x", ai_verdict: "not_met", human_verdict: "met" },
-          { conversation_id: "y", ai_verdict: "met", human_verdict: "met" },
-        ],
-      },
-    };
+    (source.disclosures as Obj)["cal-summary"] = { agent_input: summary };
   });
-  const root = await render(bundle);
-  const list = root.querySelector<HTMLElement>("[data-weeks]")!;
-  expect(list.dataset.weeks).toBe("1");
-  const week = list.querySelector<HTMLElement>('[data-week="2026-W39"]')!;
-  expect(week.dataset.k).toBe("1");
-  expect(week.dataset.n).toBe("3");
-  expect(week.querySelector<HTMLElement>("[data-held]")!.dataset.held).toBe(
-    "1",
+  return bundle;
+}
+
+const SUMMARY = {
+  record_version: "calibration-summary/v1",
+  record_id: "cal-summary-1",
+  epistemic_type: "derived_metric",
+  computed_at: "2026-09-21T00:00:00Z",
+  judge_pin: {
+    type: "judge-pin",
+    digest_alg: "SHA-256",
+    digest: "a".repeat(64),
+    citation_purpose: "calibrates",
+  },
+  clauses: [
+    {
+      clause_ref: "policy_compliance.refund",
+      agreement: { k: 7, n: 9 },
+      drift: { k: 1, n: 9 },
+    },
+    {
+      clause_ref: "task_resolution.answered",
+      agreement: { k: 0, n: 0 },
+      drift: { k: 0, n: 0 },
+    },
+  ],
+};
+
+it("renders human spot checks: one row per clause of a calibration-summary/v1, agreement and drift as k of n, no weeks", async () => {
+  const root = await render(await calibrationBundle(SUMMARY));
+  const table = root.querySelector<HTMLElement>(
+    '[data-section="human-checks"] table[data-calibration="read"]',
+  )!;
+  expect(table.dataset.clauses).toBe("2");
+  expect(table.querySelector("[data-week]")).toBeNull();
+  const row = table.querySelector<HTMLElement>(
+    '[data-clause="policy_compliance.refund"]',
+  )!;
+  expect(row.dataset.k).toBe("7");
+  expect(row.dataset.n).toBe("9");
+  const cells = [...row.querySelectorAll("td")].map((td) => td.textContent);
+  expect(cells.slice(0, 3)).toEqual([
+    "policy_compliance.refund",
+    "7 of 9",
+    "1 of 9",
+  ]);
+  // no ratings are cited, so nothing is recounted and the page says so
+  expect(row.dataset.agreementCheck).toBe("not_recomputable");
+  expect(cells[3]).toBe("not checked here");
+  // every figure is k of n; no rate or percentage is drawn
+  expect(table.textContent).not.toContain("%");
+});
+
+it("a calibration summary that does not match its schema draws no counts and says so", async () => {
+  const root = await render(
+    await calibrationBundle({ ...SUMMARY, agreement: { k: 3, n: 4 } }),
   );
-  expect(week.querySelector<HTMLElement>("[data-added]")!.dataset.added).toBe(
-    "1",
-  );
+  const section = root.querySelector<HTMLElement>(
+    '[data-section="human-checks"]',
+  )!;
+  expect(section.querySelector("table")).toBeNull();
+  expect(
+    section.querySelector('[data-calibration="not_matching"]')!.textContent,
+  ).toContain("does not match its schema");
 });
 
 // ---------------------------------------------------------------------------

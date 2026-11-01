@@ -40,7 +40,6 @@ import {
   EvidenceGraphError,
   type ActNode,
   type AxisJudgment,
-  type CalibrationCount,
   type CalibrationNode,
   type CaseNode,
   type DisclosureState,
@@ -1241,36 +1240,30 @@ function renderCalibration(calibration?: CalibrationNode): HTMLElement {
     section.append(element("p", "no human-check data"));
     return section;
   }
+  if (!calibration.matchesSchema) {
+    section.append(element("p", "does not match calibration-summary/v1"));
+    return section;
+  }
+  // The record's own figures, per clause, each printed as "k of n"; no rate
+  // is computed from them here.
   const details = element("dl");
-  appendValue(details, "confusion matrix", calibration.confusion);
-  appendCount(details, "agreement", calibration.agreement);
-  appendCount(details, "corrected rate", calibration.correctedRate);
-  appendValue(details, "period window", calibration.periodWindow);
+  for (const clause of calibration.summary.clauses) {
+    appendCount(details, `${clause.clauseRef} agreement`, clause.agreement);
+    appendCount(details, `${clause.clauseRef} drift`, clause.drift);
+  }
   section.append(details);
   return section;
 }
 
-// A calibration figure is printed as the integers it is made of, "k of n";
-// no rate is computed from them here, and a figure the producer stated only
-// as a rate is said to be that, not converted.
 function appendCount(
   parent: HTMLElement,
   label: string,
-  count: CalibrationCount | undefined,
+  count: { readonly k: number; readonly n: number },
 ): void {
   parent.append(element("dt", label));
-  const cell = element("dd");
-  if (count === undefined) {
-    cell.textContent = "not stated";
-    cell.dataset.count = "not-stated";
-  } else if ("rate" in count) {
-    cell.textContent = "rate given, k and n not stated";
-    cell.dataset.count = "not-stated";
-  } else {
-    cell.textContent = `${count.k} of ${count.n}`;
-    cell.dataset.k = String(count.k);
-    cell.dataset.n = String(count.n);
-  }
+  const cell = element("dd", `${count.k} of ${count.n}`);
+  cell.dataset.k = String(count.k);
+  cell.dataset.n = String(count.n);
   parent.append(cell);
 }
 

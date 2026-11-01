@@ -264,7 +264,9 @@ it("with checkpoint coverage withheld, the records list is still drawn and the w
     payloads_mode: "all",
     suppressed_fields: [],
     missing: [],
-    selection: "producer-selected",
+    // A certificate mode the verifier does not implement withholds coverage
+    // (AAC 0.11+ checks a producer-selected bundle's memberships instead).
+    selection: "unimplemented-certificate-mode",
   };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
