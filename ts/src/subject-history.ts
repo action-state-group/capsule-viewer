@@ -15,11 +15,13 @@ import { levelToggle, type Tone } from "./report-levels.js";
  *   operator  the handle and `follow_up_of` are drawn: the slice of one
  *             customer, a timeline with the follow-up link, tiles. The page is
  *             the holder's own preview, so it speaks to "you".
- *   shared    labels, band and halves only. No handle, no follow_up_of, so no
- *             page says which conversations are one customer; a shared copy's
- *             handle would let two receivers link the same customer until
- *             per-share salting exists (evidencebook-skills#93). The viewer
- *             ignores both fields at any tier but `operator`, whatever the
+ *   shared    the same slice, in the third person, only when the handle is
+ *             salted per share (`handle_scope.salting` is `per-share`,
+ *             evidencebook-skills#93): one customer then has unrelated handles
+ *             in two shares, so two receivers cannot link them. Any other
+ *             shared member draws labels, band and halves only, with no
+ *             customer grouping: the viewer ignores the handle and
+ *             `follow_up_of` there, and at any unknown tier, whatever the
  *             document says.
  *
  * Read from the verified Result document, never invented: a field the
@@ -57,6 +59,8 @@ export interface SubjectEntry {
 
 export interface SubjectHistory {
   readonly tier: SubjectTier;
+  /** True when the handles were read: the operator tier, or a shared tier salted per share. `scope` is then set. */
+  readonly grouped: boolean;
   readonly scope?: SubjectScope;
   readonly entries: ReadonlyMap<string, SubjectEntry>;
 }
@@ -86,10 +90,7 @@ function readScope(value: unknown): SubjectScope | undefined {
   return { pack, tier: value.tier, salting, saltId };
 }
 
-function readEntry(
-  value: unknown,
-  operator: boolean,
-): SubjectEntry | undefined {
+function readEntry(value: unknown, grouped: boolean): SubjectEntry | undefined {
   if (!isObj(value)) return undefined;
   const labels = value.request_labels;
   if (
@@ -121,7 +122,7 @@ function readEntry(
   }
   let handle: string | undefined;
   let followUpOf: string | undefined;
-  if (operator) {
+  if (grouped) {
     if (value.customer_handle !== undefined) {
       if (
         typeof value.customer_handle !== "string" ||
@@ -149,7 +150,8 @@ function readEntry(
  * says it twice (two `x-` members with a `subject_history`: which is this
  * report's is not the viewer's to guess). An entry that does not read whole
  * is dropped whole. The handle and `follow_up_of` are read only when the
- * document's own `handle_scope.tier` is `operator`.
+ * document's own `handle_scope.tier` is `operator`, or `shared` with
+ * `salting` `per-share`.
  */
 export function readSubjectHistory(
   document: unknown,
@@ -164,15 +166,18 @@ export function readSubjectHistory(
   if (!isObj(block.conversations)) return undefined;
   const scope = readScope(block.handle_scope);
   const operator = scope?.tier === "operator";
+  const grouped =
+    operator || (scope?.tier === "shared" && scope.salting === "per-share");
   const entries = new Map<string, SubjectEntry>();
   for (const [id, value] of Object.entries(block.conversations)) {
-    const entry = readEntry(value, operator);
+    const entry = readEntry(value, grouped);
     if (entry !== undefined) entries.set(id, entry);
   }
   if (entries.size === 0) return undefined;
   return {
     tier: operator ? "operator" : "shared",
-    ...(operator && scope !== undefined ? { scope } : {}),
+    grouped,
+    ...(grouped && scope !== undefined ? { scope } : {}),
     entries,
   };
 }
@@ -257,7 +262,7 @@ const halvesOf = (e: SubjectEntry, w: Words): string =>
         of: fmt(e.halves.of),
       });
 
-/** `3f9a1c…d21e`: the head and tail of the handle, enough to tell two apart on the line of identity; `data-handle` holds the whole operator-tier value. */
+/** `3f9a1c…d21e`: the head and tail of the handle, enough to tell two apart on the line of identity; `data-handle` holds the whole value read. */
 export const shortHandle = (handle: string): string =>
   `${handle.slice(0, 6)}…${handle.slice(-4)}`;
 
@@ -408,7 +413,18 @@ function customerBlock(
   block.append(
     el("h3", "sh-head", w.t("lines.subject.headline", { n: fmt(n) })),
   );
-  block.append(el("p", "sh-lede", w.t("lines.subject.explain", { n: fmt(n) })));
+  block.append(
+    el(
+      "p",
+      "sh-lede",
+      w.t(
+        history.tier === "operator"
+          ? "lines.subject.explain"
+          : "lines.subject.explain.per-share",
+        { n: fmt(n) },
+      ),
+    ),
+  );
 
   block.append(timeline(rows, history, w));
   block.append(table(rows, history, w));
@@ -525,8 +541,8 @@ function table(
 }
 
 /**
- * The section: the slice of every customer with two or more conversations at
- * the operator tier, else (shared, or no handle) one table of each
+ * The section: the slice of every customer with two or more conversations
+ * when the handles were read (`grouped`), else one table of each
  * conversation's request, band and halves. Undefined when nothing is drawn.
  * `rows` are the Result's conversations as the Outcomes grouping reads them;
  * `reportTotal` is how many the Result holds, the denominator of every slice.
@@ -547,7 +563,7 @@ export function renderSubjectHistory(
   section.dataset.section = "subject-history";
   section.dataset.tier = history.tier;
   section.append(el("h2", "sh-title", w.t("lines.subject.title")));
-  if (history.tier === "operator") {
+  if (history.grouped) {
     const groups = new Map<string, SubjectConversation[]>();
     for (const r of drawn) {
       const handle = history.entries.get(r.id)?.handle;
@@ -555,7 +571,17 @@ export function renderSubjectHistory(
       groups.set(handle, [...(groups.get(handle) ?? []), r]);
     }
     const repeat = [...groups].filter(([, list]) => list.length >= 2);
-    section.append(el("p", "sh-slice", w.t("lines.subject.slice.operator")));
+    section.append(
+      el(
+        "p",
+        "sh-slice",
+        w.t(
+          history.tier === "operator"
+            ? "lines.subject.slice.operator"
+            : "lines.subject.slice.per-share",
+        ),
+      ),
+    );
     if (repeat.length === 0)
       section.append(el("p", "sh-lede", w.t("lines.subject.none")));
     repeat.sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
