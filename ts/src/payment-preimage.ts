@@ -24,7 +24,8 @@ const object = (value: unknown): value is Record<string, unknown> =>
  * `PASS` when `paymentRef` (a settlement leg's `payment_ref`) is an
  * `ln.payment_hash` and SHA-256 of `preimage`'s 32 octets is its `value`;
  * `FAIL` when `preimage` is not 32 bytes of hex or hashes to anything else;
- * `NOT_PRESENT` with no preimage or no payment hash; `NOT_CHECKED` for a
+ * `NOT_PRESENT` with no preimage (or one that is not a string) or no payment
+ * hash; `NOT_CHECKED` for a
  * reference of another rail, which has no preimage, or on a page with no
  * SHA-256. Never throws.
  */
@@ -34,10 +35,12 @@ export async function paymentPreimageCheck(
 ): Promise<PaymentPreimageStatus> {
   if (object(paymentRef) && paymentRef.type !== "ln.payment_hash")
     return "NOT_CHECKED";
-  if (preimage === undefined || preimage === null) return "NOT_PRESENT";
+  // The adapter reads the preimage as a string (serde `as_str`): anything
+  // else is no preimage.
+  if (typeof preimage !== "string") return "NOT_PRESENT";
   const hash = object(paymentRef) ? paymentRef.value : undefined;
   if (typeof hash !== "string" || hash === "") return "NOT_PRESENT";
-  if (typeof preimage !== "string" || !PREIMAGE.test(preimage)) return "FAIL";
+  if (!PREIMAGE.test(preimage)) return "FAIL";
   const octets = new Uint8Array(new ArrayBuffer(32));
   for (let i = 0; i < 32; i += 1)
     octets[i] = Number.parseInt(preimage.slice(2 * i, 2 * i + 2), 16);

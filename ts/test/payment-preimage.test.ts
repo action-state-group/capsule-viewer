@@ -33,7 +33,6 @@ describe("paymentPreimageCheck", () => {
     ["is an odd number of hex digits", "5a".repeat(31) + "5"],
     ["is not hex", "zz".repeat(32)],
     ["is empty", ""],
-    ["is not a string", 42],
   ])("fails a preimage that %s", async (_why, preimage) => {
     expect(await paymentPreimageCheck(ln(HASH), preimage)).toBe("FAIL");
   });
@@ -47,6 +46,7 @@ describe("paymentPreimageCheck", () => {
   it.each([
     ["no preimage", ln(HASH), undefined],
     ["a null preimage", ln(HASH), null],
+    ["a preimage that is not a string, as the adapter reads it", ln(HASH), 42],
     ["no payment reference", undefined, PREIMAGE],
     ["no payment hash", ln(undefined), PREIMAGE],
     ["an empty payment hash", ln(""), PREIMAGE],

@@ -11,13 +11,14 @@
 // same findings, using the verifiers the page already carries: cll's
 // checkpoint and MMR proofs, and agent-action-capsule's JCS and witness
 // receipt check. The receipts are checked under the reader's own witness list
-// (reader-witnesses.ts), never anything the bundle names, and aggregated as
-// agent-action-capsule's checkAnchorWitnessed aggregates an anchor's.
+// (reader-witnesses.ts), never anything the bundle names (see `receipts` for
+// where that makes this differ from capsule-cli).
 import {
   isVerifiedBundleContext,
   jcs,
 } from "@action-state-group/agent-action-capsule";
 import {
+  base64Canonical,
   verifyReceipt,
   type SignedCheckpointFields,
 } from "@action-state-group/agent-action-capsule/witness";
@@ -47,7 +48,8 @@ export interface ReaderCadenceWitness {
   readonly status: "PASS" | "FAIL" | "NOT_PRESENT" | "NOT_CHECKED";
   /** Why it is not `PASS`: capsule-cli's finding for a broken link
    * (`cadence_*`, `checkpoint_unverified`), or for the receipts
-   * (`receipt_not_verified`, `receipt_not_checked`, `no_reader_witness`);
+   * (`receipt_malformed`, `receipt_not_verified`, `receipt_not_checked`,
+   * `no_reader_witness`);
    * `not_a_verified_context` for anything the runtime did not build, and
    * `check_unavailable` when this page could not run a step. Null on `PASS`
    * and `NOT_PRESENT`. */
@@ -330,11 +332,49 @@ async function walk(
   return { cadence, cose, inner };
 }
 
+// A witness record as capsule-cli and agent-action-capsule read one (AAC
+// witness `isRecord`): every member present; `ts_url`, `entry_hash` and
+// `receipt_b64` non-empty strings; `receipt_b64` canonical standard base64.
+const RECORD_FIELDS = [
+  "ts_url",
+  "entry_hash",
+  "receipt_b64",
+  "leaf_index",
+  "tree_size",
+];
+const isRecord = (entry: unknown): entry is Json => {
+  if (
+    !object(entry) ||
+    !RECORD_FIELDS.every((name) => Object.hasOwn(entry, name))
+  )
+    return false;
+  if (
+    !["ts_url", "entry_hash", "receipt_b64"].every(
+      (name) => typeof entry[name] === "string" && entry[name] !== "",
+    )
+  )
+    return false;
+  try {
+    base64Canonical(entry.receipt_b64);
+  } catch {
+    return false;
+  }
+  return true;
+};
+
 /**
- * The cadence checkpoint's receipts under the reader's own witness list: each
- * receipt passes under the first key that verifies it, and the result is
- * checkAnchorWitnessed's aggregate (any pass, else any fail, else not
- * checked), naming the passing receipt with the earliest registration time.
+ * The cadence checkpoint's receipts under the reader's own witness list.
+ *
+ * What does not depend on whom the reader trusts is decided as capsule-cli
+ * decides it (AAC witness `VerifyReceipts`): a malformed entry fails the
+ * whole result, whatever else passes, and a stub (one that never reached a
+ * witness) is not checked. Whom to trust is the reader's list, which names
+ * keys, not witness URLs, so it cannot tell a witness it does not list from
+ * a forged receipt: each receipt is decided as #183 decides an anchor's
+ * (agent-action-capsule `checkAnchorWitnessed`). It passes under the first
+ * listed key that verifies it, else fails (not checked when the page could
+ * not run the check), and any pass wins, naming the passing receipt with the
+ * earliest registration time.
  */
 async function receipts(
   entries: unknown,
@@ -344,6 +384,7 @@ async function receipts(
   // capsule-cli reads receipts that are not a list as none.
   if (!Array.isArray(entries) || entries.length === 0)
     return result("NOT_PRESENT");
+  if (!entries.every(isRecord)) return result("FAIL", "receipt_malformed");
   const keys = readerWitnessPolicy().witnesses.flatMap(({ name, keys }) =>
     keys.map((key) => ({ name, key: fromHex(key)! })),
   );
@@ -351,10 +392,7 @@ async function receipts(
   let failed = false;
   let chosen: { name: string; time: number | null } | undefined;
   for (const entry of entries) {
-    if (!object(entry)) {
-      failed = true;
-      continue;
-    }
+    if (entry.is_stub === true) continue;
     let passed: { name: string; time: number | null } | undefined;
     let unavailable = false;
     for (const { name, key } of keys) {

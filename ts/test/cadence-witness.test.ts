@@ -290,6 +290,52 @@ describe("readerCadenceWitness, with the reader's own witness list", () => {
     },
   );
 
+  it.each([
+    ["not an object", () => "x"],
+    ["missing tree_size", (r: Json) => (delete r.tree_size, r)],
+    ["with an empty ts_url", (r: Json) => ({ ...r, ts_url: "" })],
+    [
+      "with receipt_b64 that is not canonical base64",
+      (r: Json) => ({ ...r, receipt_b64: r.receipt_b64 + "=" }),
+    ],
+  ])(
+    "fails the whole result for an entry %s beside a passing receipt, as capsule-cli does",
+    async (_why, entry) => {
+      const bundle = bundleOf("cadence-all");
+      const list = chainIn(bundle).cadence.witnesses;
+      list.push(entry(structuredClone(list[0])));
+      expect(await check(bundle)).toMatchObject({
+        status: "FAIL",
+        finding: "receipt_malformed",
+      });
+    },
+  );
+
+  it("passes on the receipt the reader's list verifies, beside one it does not", async () => {
+    const bundle = bundleOf("cadence-all");
+    const list = chainIn(bundle).cadence.witnesses;
+    const other = structuredClone(list[0]);
+    other.receipt_b64 = Buffer.from(
+      flipB64(Buffer.from(other.receipt_b64, "base64").toString("base64url")),
+      "base64url",
+    ).toString("base64");
+    list.unshift(other);
+    expect(await check(bundle)).toMatchObject({
+      status: "PASS",
+      witness: "test witness",
+    });
+  });
+
+  it("does not check a stub receipt, which never reached a witness", async () => {
+    const bundle = bundleOf("cadence-all");
+    const list = chainIn(bundle).cadence.witnesses;
+    list[0].is_stub = true;
+    expect(await check(bundle)).toMatchObject({
+      status: "NOT_CHECKED",
+      finding: "receipt_not_checked",
+    });
+  });
+
   it("fails an earlier checkpoint that is the bundle's own: it is not earlier", async () => {
     const bundle = bundleOf("cadence-part");
     chainIn(bundle).earlier.checkpoint.cose = bundle.checkpoint.cose;
