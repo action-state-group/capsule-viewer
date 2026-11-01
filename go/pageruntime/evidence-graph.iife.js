@@ -14115,6 +14115,21 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
       }
     ];
   }
+  function withheldMark(claim, w) {
+    if (claim.presentation.status !== "WITHHELD" || claim.failed)
+      return void 0;
+    const digests = claim.evidence.map((e) => e.digest);
+    const mark = tagSource(
+      el2(
+        "span",
+        "wh",
+        digests.length === 0 ? w.t("card.mark.withheld") : w.t("card.mark.withheld.cited", { digests: digests.join(", ") })
+      ),
+      "core"
+    );
+    mark.dataset.mark = "withheld";
+    return mark;
+  }
   function refusedWordingNotice(w) {
     if (w.source.refused === void 0) return void 0;
     const p = tagSource(el2("p", "wref", w.t("card.wording.refused")), "core");
@@ -14142,6 +14157,8 @@ ${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;co
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
+${s} .wh{display:inline-block;color:#B3261E;font-weight:600;font-size:12.5px}
+${s} .wh:before{content:"\\25B8";display:inline-block;width:1em;margin-right:6px;font-size:12px}
 ${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
@@ -16453,7 +16470,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("10e0c46ce2ea959b91bdd10681726fabb7504c25");
+    return commitPrefix("2cdf45d67b0af1644337f670b3a9aa79860c7cbc");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16959,6 +16976,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "requirement_tier.unstated": "Tier not stated",
       "card.pf.assurance": "Assurance (as sealed on the claim)",
       "card.pf.assurance.line": "tier {tier} \xB7 grade {grade} \xB7 sufficiency {sufficiency} \xB7 carrier status {status}",
+      "card.mark.withheld": "Withheld by the holder",
+      "card.mark.withheld.cited": "Withheld by the holder \xB7 digest {digests}",
       "card.wording.refused": "The wording pack supplied with this page was refused, so this card is drawn with the viewer's built-in words only.",
       "card.pf.wording.refused": "a wording pack supplied with the page (wording_sha256 {sha256}) was refused: {reason}. Only the built-in {baseId} (wording_sha256 {baseSha256}) was applied.",
       "card.wording.refused.digest": "its bytes do not hash to its wording_sha256",
@@ -17546,6 +17565,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "requirement_tier.unstated": "Tier not stated",
       "card.pf.assurance": "Assurance (as sealed on the claim)",
       "card.pf.assurance.line": "tier {tier} \xB7 grade {grade} \xB7 sufficiency {sufficiency} \xB7 carrier status {status}",
+      "card.mark.withheld": "Withheld by the holder",
+      "card.mark.withheld.cited": "Withheld by the holder \xB7 digest {digests}",
       "card.wording.refused": "The wording pack supplied with this page was refused, so this card is drawn with the viewer's built-in words only.",
       "card.pf.wording.refused": "a wording pack supplied with the page (wording_sha256 {sha256}) was refused: {reason}. Only the built-in {baseId} (wording_sha256 {baseSha256}) was applied.",
       "card.wording.refused.digest": "its bytes do not hash to its wording_sha256",
@@ -18183,6 +18204,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     // aggregate counts informational rows the derived lines leave out: a
     // pack cannot make an informational row read as must-have.
     ...SECTION3_ENUMS.requirement_tier.map((v) => `requirement_tier.${v}`),
+    // The red mark on a WITHHELD claim says the holder withheld it and nothing
+    // more: a pack cannot hint at what is behind it.
+    "card.mark.withheld",
+    "card.mark.withheld.cited",
     "lines.rtier.unstated.note",
     "groups.rtier.unstated.note",
     "lines.rtier.sealed-note",
@@ -18337,6 +18362,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "card.pf.wording.default",
     "card.pf.wording.supplied.layered",
     "card.pf.assurance",
+    "card.mark.withheld",
+    "card.mark.withheld.cited",
     "card.pin.withheld",
     "card.pin.unread",
     "card.pin.not-in-bundle",
@@ -18768,8 +18795,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "eb3ce95f7bb646d5d8183a7109c88d519b7caf19c1f74e4a5ab4bb6121e5b738",
-    groups: "3d269d31a57915293bb7f81cefb93b450e845aa07be26bd9a7e203defd560784"
+    lines: "3d0e23d0e930e5a13f242c5a562e604cdaf1ec84d67b43c040238af5820fbd8f",
+    groups: "f26dba543667335ad5914fae260c0206f7f2470349892a6f9a28dcb6d0386bf4"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -20162,6 +20189,8 @@ ${key}`);
         const cell2 = element3("td", text2);
         for (const [key, value] of Object.entries(data))
           cell2.dataset[key] = value;
+        const mark = withheldMark(criterion2.claim, w);
+        if (mark !== void 0) cell2.append(el8("br", ""), mark);
         tr.append(cell2);
       }
       tbody.append(tr);
@@ -22017,8 +22046,11 @@ ${key}`);
         if (test.reportDigest === void 0)
           ev.append(element4("span", w.t("groups.pf.absent")));
       }
-      if (test.claim !== void 0)
+      if (test.claim !== void 0) {
         ev.append(proofList([assuranceRow(test.claim, w)]));
+        const mark = withheldMark(test.claim, w);
+        if (mark !== void 0) ev.append(mark);
+      }
       box.append(ev);
     }
     return box;
