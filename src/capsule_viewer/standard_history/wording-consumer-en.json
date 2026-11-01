@@ -97,6 +97,8 @@
     "say.what_happened.note": "narrated by your agent from your records · it will offer an EvidenceBook version",
     "say.report": "“Make an EvidenceBook report”",
     "say.report.note": "sealed and checked: the same page anyone can verify",
+    "say.receipt": "“Show me the receipt”",
+    "say.receipt.note": "stamped: the other side's own record points at yours, and it checks · {n} of {of} deals",
     "say.more_less": "“Share more history” · “Share less”",
     "say.attach": "“Attach my card when I buy or sell”",
     "say.who_asked": "“Who asked about me?”",
