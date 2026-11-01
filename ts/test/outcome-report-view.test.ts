@@ -2376,3 +2376,38 @@ it("each conversation offers a spot check: one three-column card per rule with a
     "does not show whether a second, blind judge",
   );
 });
+
+it("draws the red withheld mark once, in the assurance cell of the one claim sealed WITHHELD, and on no other claim", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  const claims = resultDoc.claims as Obj[];
+  const first = (claims[0]!.id as string).split("::")[0]!;
+  (source.disclosures as Obj).result = {
+    agent_input: {
+      ...resultDoc,
+      claims: claims.map((c, i) =>
+        i === 0
+          ? {
+              ...c,
+              presentation: {
+                kind: "analysis",
+                status: "WITHHELD",
+                summary: "The holder withheld this.",
+              },
+            }
+          : c,
+      ),
+    },
+  };
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  expand(root);
+  for (const conv of root.querySelectorAll<HTMLElement>("article.conv"))
+    if (conv.dataset.conversation === first) proofs(open(conv));
+  const marks = root.querySelectorAll<HTMLElement>('[data-mark="withheld"]');
+  expect(marks).toHaveLength(1);
+  expect(marks[0]!.closest("td")?.dataset.status).toBe("WITHHELD");
+  expect(marks[0]!.textContent).toMatch(/^Withheld by the holder · cites /u);
+  expect(root.textContent).not.toMatch(/tier-gated/iu);
+});

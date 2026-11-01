@@ -19,8 +19,20 @@ const claim = (status: string, extra: Partial<ResultClaim> = {}): ResultClaim =>
 it("draws the red mark for a claim sealed WITHHELD, with its cited digest and no level", () => {
   const mark = withheldMark(claim("WITHHELD"), L)!;
   expect(mark.dataset.mark).toBe("withheld");
-  expect(mark.textContent).toBe("Withheld by the holder · digest sha256:aa");
+  expect(mark.textContent).toBe("Withheld by the holder · cites sha256:aa");
   expect(mark.textContent).not.toMatch(/tier|level|gated/iu);
+});
+
+it("lists every cited digest", () => {
+  const two = claim("WITHHELD", {
+    evidence: [
+      { digest: "sha256:aa", resolved: false },
+      { digest: "sha256:bb", resolved: true },
+    ],
+  });
+  expect(withheldMark(two, L)!.textContent).toBe(
+    "Withheld by the holder · cites sha256:aa, sha256:bb",
+  );
 });
 
 it("says only that the holder withheld it when the claim cites no digest", () => {

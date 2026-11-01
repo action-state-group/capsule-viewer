@@ -758,8 +758,6 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "card.pf.wording.default",
   "card.pf.wording.supplied.layered",
   "card.pf.assurance",
-  "card.mark.withheld",
-  "card.mark.withheld.cited",
   "card.pin.withheld",
   "card.pin.unread",
   "card.pin.not-in-bundle",
@@ -1366,8 +1364,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "3d0e23d0e930e5a13f242c5a562e604cdaf1ec84d67b43c040238af5820fbd8f",
-  groups: "f26dba543667335ad5914fae260c0206f7f2470349892a6f9a28dcb6d0386bf4",
+  lines: "b6a94ccd2fb2b1ee6675a031e9ef55ca7143a61ed1f5c5518d3c5a28ab3ed849",
+  groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768",
 });
 
 export interface Words {

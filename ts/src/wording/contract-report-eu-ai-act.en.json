@@ -289,7 +289,7 @@
     "card.pf.assurance": "Assurance (as sealed on the claim)",
     "card.pf.assurance.line": "tier {tier} · grade {grade} · sufficiency {sufficiency} · carrier status {status}",
     "card.mark.withheld": "Withheld by the holder",
-    "card.mark.withheld.cited": "Withheld by the holder · digest {digests}",
+    "card.mark.withheld.cited": "Withheld by the holder · cites {digests}",
     "card.wording.refused": "The wording pack supplied with this page was refused, so this card is drawn with the viewer's built-in words only.",
     "card.pf.wording.refused": "a wording pack supplied with the page (wording_sha256 {sha256}) was refused: {reason}. Only the built-in {baseId} (wording_sha256 {baseSha256}) was applied.",
     "card.wording.refused.digest": "its bytes do not hash to its wording_sha256",

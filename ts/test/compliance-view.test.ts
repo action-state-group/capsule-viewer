@@ -951,3 +951,32 @@ it("an obligation's worst line: not met, then could not be verified, then could 
   // Nothing checked, nothing to say.
   expect(worst([row({ criterionId: "x.e" })])).toBeUndefined();
 });
+
+it("draws the red withheld mark beside the assurance of the claim sealed WITHHELD, and of no other", async () => {
+  const { bundle } = await sealedComplianceBundle((source) => {
+    const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+    const claims = doc.claims as Obj[];
+    claims[0] = {
+      ...claims[0]!,
+      presentation: {
+        kind: "analysis",
+        status: "WITHHELD",
+        summary: "The holder withheld this.",
+      },
+    };
+  });
+  const root = await render(bundle);
+  expand(root);
+  for (const details of root.querySelectorAll('details[data-level="2"]'))
+    open(details);
+  const marks = root.querySelectorAll<HTMLElement>('[data-mark="withheld"]');
+  // The claim's assurance shows wherever its proofs do; every mark is on its criterion's proofs and no other's.
+  expect(marks.length).toBeGreaterThan(0);
+  expect(
+    new Set(
+      [...marks].map((m) => m.closest(".ev")?.getAttribute("data-proof-crit")),
+    ),
+  ).toEqual(new Set(["art5.no_manipulation_or_deception"]));
+  expect(marks[0]!.textContent).toMatch(/^Withheld by the holder/u);
+  expect(root.textContent).not.toMatch(/tier-gated/iu);
+});
