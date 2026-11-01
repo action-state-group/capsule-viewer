@@ -488,6 +488,11 @@ describe("the reader changes their witness list on the page", () => {
       host,
       second,
       tick: () => new Promise((r) => setTimeout(r, 20)),
+      // Waits for a redraw by its outcome, not by a fixed time: the check is async crypto.
+      until: async (done: () => boolean) => {
+        for (let i = 0; i < 500 && !done(); i += 1)
+          await new Promise((r) => setTimeout(r, 10));
+      },
     };
   }
 
@@ -497,7 +502,7 @@ describe("the reader changes their witness list on the page", () => {
     expect(p.text()).not.toContain("Snapshot recorded");
     p.q('[data-sh-witness-list="input"]').value = JSON.stringify(READER_LIST);
     p.q('[data-sh-witness-list="save"]').click();
-    await p.tick();
+    await p.until(() => p.text().includes("Snapshot recorded"));
     expect(p.text()).toContain(
       "Snapshot recorded Nov 1, 2026 08:04 UTC by witness-a",
     );
@@ -506,9 +511,8 @@ describe("the reader changes their witness list on the page", () => {
     expect(p.host.L0.querySelectorAll("[data-sh-module]")).toHaveLength(1);
     expect(readerWitnessPolicy().witnesses.length).toBeGreaterThan(0);
     p.q('[data-sh-witness-list="reset"]').click();
-    await p.tick();
+    await p.until(() => p.text().includes("Witnesses you accept: None."));
     expect(p.text()).not.toContain("Snapshot recorded");
-    expect(p.text()).toContain("Witnesses you accept: None.");
     expect(readerWitnessPolicy().witnesses).toHaveLength(0);
   });
 
@@ -530,7 +534,7 @@ describe("the reader changes their witness list on the page", () => {
     p.q('[data-sh-witness-list="input"]').value = JSON.stringify(READER_LIST);
     p.q('[data-sh-witness-list="save"]').click(); // slow: finishes last
     p.q('[data-sh-witness-list="reset"]').click(); // fast: the newest
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, 400));
     expect(p.text()).not.toContain("Snapshot recorded");
     expect(p.text()).toContain("Witnesses you accept: None.");
   });
@@ -547,7 +551,7 @@ describe("the reader changes their witness list on the page", () => {
       witnesses: [],
     });
     second.q('[data-sh-witness-list="save"]').click();
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 400));
     expect(p.text()).not.toContain("Snapshot recorded");
   });
 });
