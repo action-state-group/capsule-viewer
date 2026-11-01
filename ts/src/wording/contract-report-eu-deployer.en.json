@@ -1,0 +1,10 @@
+{
+  "wording_pack_version": "aac.wording-pack/v0",
+  "id": "capsule-viewer/contract-report/eu-deployer/en@1",
+  "locale": "en",
+  "entries": {
+    "layout.grouping": "groups",
+    "groups.kicker": "Deployer obligations under the EU AI Act (Regulation (EU) 2024/1689): test results",
+    "groups.summary.h": "Obligations checked and what was found"
+  }
+}
