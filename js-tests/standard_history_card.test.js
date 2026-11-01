@@ -397,6 +397,24 @@ describe("what the page claims", () => {
       expect(win + (level ? level.textContent : "")).not.toMatch(/witness/i);
     }
   });
+  const disputesSection = (h) => [h.L0, h.L1, h.L2].map((r) => r.querySelector('[data-sh-section="disputes"]')).find(Boolean);
+  it("an all-zero disputes tally says disputes are not recorded yet, never 'raised 0'; a tally that counts something is drawn", () => {
+    const pages = everyPage(l).filter((x) => x.model.state === "card" && disputesSection(x.host));
+    const empty = pages.filter((x) => ["raised", "received"].every((k) => x.model.card.disputes[k].of === 0));
+    const counted = pages.filter((x) => !empty.includes(x));
+    expect(empty.length).toBeGreaterThan(0);
+    for (const p of empty) {
+      const sec = disputesSection(p.host);
+      expect(sec.textContent).toContain("Disputes not recorded yet");
+      expect(sec.querySelector("[data-dispute-side]")).toBeNull();
+      expect(sec.textContent).not.toMatch(/raised/i);
+    }
+    for (const p of counted) {
+      const sec = disputesSection(p.host);
+      expect(sec.textContent).not.toContain("not recorded yet");
+      expect([...sec.querySelectorAll("[data-dispute-side]")].map((e) => e.getAttribute("data-dispute-side"))).toEqual(["raised", "received"]);
+    }
+  });
   it("draws the outcomes tally as one bar of the three counts, with no figure of its own, and none when there is no counted deal", () => {
     for (const p of everyPage(l).filter((x) => x.depth === "L0" && x.model.state === "card")) {
       const o = p.model.card.outcomes;

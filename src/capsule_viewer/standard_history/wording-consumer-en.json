@@ -63,6 +63,8 @@
     "happened.no_record": "No record",
     "happened.note": "Stamped by both sides means the book holds the other side's own record of the deal. A receipt only means the book holds the holder's own receipt, not the other side's record. No record means the book holds neither. A missing record is not a failure.",
     "heading.disputes": "Disputes",
+    "disputes.not_recorded": "Disputes not recorded yet",
+    "disputes.not_recorded.note": "This card does not record disputes yet, so it says nothing about whether there were any.",
     "disputes.raised.own": "You raised",
     "disputes.received.own": "Raised with you",
     "disputes.raised.shared": "The holder raised",
