@@ -96,7 +96,7 @@ const SIGNATURE_CONTRACT = ["readerCardSignature"] as const;
 
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = ["readerCardSignature"];
+const NOT_YET_SHIPPED: readonly string[] = [];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
