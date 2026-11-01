@@ -14157,8 +14157,8 @@ ${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;co
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
-${s} .wh{display:inline-block;color:#B3261E;font-weight:600;font-size:12.5px}
-${s} .wh:before{content:"\\25B8";display:inline-block;width:1em;margin-right:6px;font-size:12px}
+${s} .wh{display:inline-block;color:var(--bad,#B3261E);font-weight:600;font-size:12.5px}
+${s} .wh:before{content:"\\25B8" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px}
 ${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
@@ -16470,7 +16470,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("2cdf45d67b0af1644337f670b3a9aa79860c7cbc");
+    return commitPrefix("aa11915276d6083609dc3ea0355fab68d068968e");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16977,7 +16977,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "card.pf.assurance": "Assurance (as sealed on the claim)",
       "card.pf.assurance.line": "tier {tier} \xB7 grade {grade} \xB7 sufficiency {sufficiency} \xB7 carrier status {status}",
       "card.mark.withheld": "Withheld by the holder",
-      "card.mark.withheld.cited": "Withheld by the holder \xB7 digest {digests}",
+      "card.mark.withheld.cited": "Withheld by the holder \xB7 cites {digests}",
       "card.wording.refused": "The wording pack supplied with this page was refused, so this card is drawn with the viewer's built-in words only.",
       "card.pf.wording.refused": "a wording pack supplied with the page (wording_sha256 {sha256}) was refused: {reason}. Only the built-in {baseId} (wording_sha256 {baseSha256}) was applied.",
       "card.wording.refused.digest": "its bytes do not hash to its wording_sha256",
@@ -17566,7 +17566,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "card.pf.assurance": "Assurance (as sealed on the claim)",
       "card.pf.assurance.line": "tier {tier} \xB7 grade {grade} \xB7 sufficiency {sufficiency} \xB7 carrier status {status}",
       "card.mark.withheld": "Withheld by the holder",
-      "card.mark.withheld.cited": "Withheld by the holder \xB7 digest {digests}",
+      "card.mark.withheld.cited": "Withheld by the holder \xB7 cites {digests}",
       "card.wording.refused": "The wording pack supplied with this page was refused, so this card is drawn with the viewer's built-in words only.",
       "card.pf.wording.refused": "a wording pack supplied with the page (wording_sha256 {sha256}) was refused: {reason}. Only the built-in {baseId} (wording_sha256 {baseSha256}) was applied.",
       "card.wording.refused.digest": "its bytes do not hash to its wording_sha256",
@@ -18362,8 +18362,6 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "card.pf.wording.default",
     "card.pf.wording.supplied.layered",
     "card.pf.assurance",
-    "card.mark.withheld",
-    "card.mark.withheld.cited",
     "card.pin.withheld",
     "card.pin.unread",
     "card.pin.not-in-bundle",
@@ -18795,8 +18793,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "3d0e23d0e930e5a13f242c5a562e604cdaf1ec84d67b43c040238af5820fbd8f",
-    groups: "f26dba543667335ad5914fae260c0206f7f2470349892a6f9a28dcb6d0386bf4"
+    lines: "b6a94ccd2fb2b1ee6675a031e9ef55ca7143a61ed1f5c5518d3c5a28ab3ed849",
+    groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {

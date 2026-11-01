@@ -30,7 +30,7 @@ import (
 
 // Commit is the capsule-viewer commit the runtime was built from. The page's
 // "Verified by" line names it.
-const Commit = "2cdf45d67b0af1644337f670b3a9aa79860c7cbc"
+const Commit = "aa11915276d6083609dc3ea0355fab68d068968e"
 
 var (
 	// IIFE is the runtime's bytes, for go/emitter's runtime argument.
