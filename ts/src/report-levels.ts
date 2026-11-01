@@ -997,6 +997,37 @@ export function assuranceRow(
 }
 
 /**
+ * The red mark on a claim sealed WITHHELD (the Terms Pack toggle frame's red
+ * tier mark): the holder declined to disclose what the claim rests on. It
+ * says only that, with the digests the claim cites. It never states a level
+ * or a tier that would open it (nothing in the Result carries one, and a
+ * holder's uniform refusal exists so as not to characterize what it
+ * withholds), and it is drawn for no other status: an absent or mismatched
+ * carrier is a different finding. A claim that failed verification is not
+ * marked: its sealed status no longer stands once verification failed.
+ */
+export function withheldMark(
+  claim: ResultClaim,
+  w: Words,
+): HTMLElement | undefined {
+  if (claim.presentation.status !== "WITHHELD" || claim.failed)
+    return undefined;
+  const digests = claim.evidence.map((e) => e.digest);
+  const mark = tagSource(
+    el(
+      "span",
+      "wh",
+      digests.length === 0
+        ? w.t("card.mark.withheld")
+        : w.t("card.mark.withheld.cited", { digests: digests.join(", ") }),
+    ),
+    "core",
+  );
+  mark.dataset.mark = "withheld";
+  return mark;
+}
+
+/**
  * A wording layer the host supplied was refused (contract-report/v1 section
  * 3): one line at the top of the card, so a reader never takes the default
  * words for the ones the page was built to show.
@@ -1040,6 +1071,8 @@ ${s} details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;co
 ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
+${s} .wh{display:inline-block;color:var(--bad,#B3261E);font-weight:600;font-size:12.5px}
+${s} .wh:before{content:"\\25B8";content:"\\25B8" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px}
 ${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}

@@ -38,6 +38,7 @@ import {
   ruleWord,
   wordPill,
   assuranceRow,
+  withheldMark,
   reportSummary,
 } from "./report-levels.js";
 import type {
@@ -1211,8 +1212,11 @@ function sessionProofs(
         ev.append(element("span", w.t("groups.pf.absent")));
     }
     // contract-report/v1 section 2: assurance stays on the claim.
-    if (test.claim !== undefined)
+    if (test.claim !== undefined) {
       ev.append(proofList([assuranceRow(test.claim, w)]));
+      const mark = withheldMark(test.claim, w);
+      if (mark !== undefined) ev.append(mark);
+    }
     box.append(ev);
   }
   return box;

@@ -600,6 +600,10 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // aggregate counts informational rows the derived lines leave out: a
   // pack cannot make an informational row read as must-have.
   ...SECTION3_ENUMS.requirement_tier.map((v) => `requirement_tier.${v}`),
+  // The red mark on a WITHHELD claim says the holder withheld it and nothing
+  // more: a pack cannot hint at what is behind it.
+  "card.mark.withheld",
+  "card.mark.withheld.cited",
   "lines.rtier.unstated.note",
   "groups.rtier.unstated.note",
   "lines.rtier.sealed-note",
@@ -1360,8 +1364,8 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "eb3ce95f7bb646d5d8183a7109c88d519b7caf19c1f74e4a5ab4bb6121e5b738",
-  groups: "3d269d31a57915293bb7f81cefb93b450e845aa07be26bd9a7e203defd560784",
+  lines: "b6a94ccd2fb2b1ee6675a031e9ef55ca7143a61ed1f5c5518d3c5a28ab3ed849",
+  groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768",
 });
 
 export interface Words {
