@@ -447,6 +447,7 @@ const WITNESS_PAGES = [
   ["person-shared-witnessed", [], "not-checked"],
   ["person-shared-unwitnessed", READER_NAMES],
   ["person-shared-witness-unlisted", READER_NAMES],
+  ["person-shared-witness-tampered", READER_NAMES],
 ];
 const witnessPageName = ([name, , variant]) => (variant ? `${name}-${variant}` : name);
 describe.skipIf(!chromePath)("the module in headless Chromium", () => {
@@ -562,7 +563,7 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
         expect(m.text.includes("A witness receipt came with the card")).toBe(key.endsWith("not-checked"));
         // A Receipt that was checked and failed says nothing about a witness in the card; its checks row reads "failed".
         expect(m.text.includes("receipt came") || m.text.includes("Snapshot recorded")).toBe(line || key.endsWith("not-checked"));
-        expect(m.failedRow).toBe(key.endsWith("witness-unlisted"));
+        expect(m.failedRow).toBe(key.endsWith("witness-unlisted") || key.endsWith("witness-tampered"));
         // The reader's own list is shown wherever Receipts came with the card.
         expect(m.text.includes("Witnesses you accept")).toBe(!key.includes("unwitnessed"));
         if (line || key.endsWith("not-checked")) {
