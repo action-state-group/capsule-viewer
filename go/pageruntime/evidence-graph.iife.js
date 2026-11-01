@@ -3232,14 +3232,14 @@ var EvidenceGraph = (() => {
       throw new Error("expected non-negative bigint, got " + n);
     return n === _0n ? 0 : n.toString(2).length;
   }
-  function validateObject(object13, fields2 = {}, optFields = {}, title = "object") {
-    aobject2(object13, title);
+  function validateObject(object14, fields2 = {}, optFields = {}, title = "object") {
+    aobject2(object14, title);
     aobject2(fields2, "fields");
     aobject2(optFields, "optFields");
     function checkField(fieldName, expectedType, isOpt) {
       const label = title === "object" ? `param "${String(fieldName)}"` : `"${title}.${String(fieldName)}"`;
-      const val = object13[fieldName];
-      if (!Object.hasOwn(object13, fieldName) && (isOpt ? val !== void 0 : expectedType !== "function")) {
+      const val = object14[fieldName];
+      if (!Object.hasOwn(object14, fieldName) && (isOpt ? val !== void 0 : expectedType !== "function")) {
         throw new TypeError(`${label} is invalid: expected own property`);
       }
       if (isOpt && val === void 0)
@@ -4807,10 +4807,10 @@ var EvidenceGraph = (() => {
       ...claims.has("cadence") ? { cadence: claims.get("cadence") } : {}
     };
   }
-  function verifyEd25519(publicKey, message, signature) {
-    if (publicKey.length !== 32 || signature.length !== 64) return false;
-    const r = signature.subarray(0, 32);
-    const s = littleEndian(signature.subarray(32));
+  function verifyEd25519(publicKey, message, signature2) {
+    if (publicKey.length !== 32 || signature2.length !== 64) return false;
+    const r = signature2.subarray(0, 32);
+    const s = littleEndian(signature2.subarray(32));
     if (s >= Point.Fn.ORDER) return false;
     let a;
     let rPoint;
@@ -5047,7 +5047,7 @@ var EvidenceGraph = (() => {
       verifyRange2 = (root, size, fromIndex, toIndex, bodyDigests, proof) => verifyRange(hash, root, size, fromIndex, toIndex, bodyDigests, proof);
       checkpointCrypto = {
         hash,
-        verifyEd25519: async (publicKey, message, signature) => verifyEd25519(publicKey, message, signature)
+        verifyEd25519: async (publicKey, message, signature2) => verifyEd25519(publicKey, message, signature2)
       };
       verifyCheckpoint = (cose) => verifyCheckpointWith(checkpointCrypto, cose);
       checkpointMetadata = (cose) => checkpointMetadataWith(checkpointCrypto, cose);
@@ -5158,6 +5158,63 @@ var EvidenceGraph = (() => {
   var spkiPrefix = hexToBytes("302a300506032b6570032100");
   function producerPublicKeySpki(publicKey) {
     return concat(spkiPrefix, publicKey);
+  }
+
+  // node_modules/@action-state-group/agent-action-capsule/dist/ed25519-strict.js
+  var SMALL_ORDER_Y = [
+    "0000000000000000000000000000000000000000000000000000000000000000",
+    "0100000000000000000000000000000000000000000000000000000000000000",
+    "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05"
+  ];
+  var ED25519_L = hexToBytes("edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010");
+  function strictPoint(encoded) {
+    const y = Uint8Array.from(encoded);
+    y[31] &= 127;
+    const canonical = !(y[0] >= 237 && y.subarray(1, 31).every((b) => b === 255) && y[31] === 127);
+    const hex5 = Array.from(y, (b) => b.toString(16).padStart(2, "0")).join("");
+    return canonical && !SMALL_ORDER_Y.includes(hex5);
+  }
+  function strictEd25519(publicKey, signature2) {
+    if (publicKey.length !== 32 || signature2.length !== 64)
+      return false;
+    if (!strictPoint(publicKey) || !strictPoint(signature2.subarray(0, 32)))
+      return false;
+    for (let i = 31; i >= 0; i--) {
+      const s = signature2[32 + i];
+      if (s !== ED25519_L[i])
+        return s < ED25519_L[i];
+    }
+    return false;
+  }
+  async function verifyEd25519Strict(publicKey, signature2, message) {
+    if (!strictEd25519(publicKey, signature2))
+      return false;
+    const subtle = globalThis.crypto.subtle;
+    const key = await subtle.importKey("raw", publicKey, { name: "Ed25519" }, false, ["verify"]);
+    return await subtle.verify({ name: "Ed25519" }, key, signature2, message);
+  }
+
+  // node_modules/@action-state-group/agent-action-capsule/dist/nesting.js
+  var MAX_NESTING_DEPTH = 128;
+  function nestedTooDeep(value) {
+    const stack = [[value, 0]];
+    while (stack.length !== 0) {
+      const [node, depth] = stack.pop();
+      let children;
+      if (Array.isArray(node))
+        children = node;
+      else if (node !== null && typeof node === "object" && !(node instanceof JsonNumber))
+        children = Object.values(node);
+      else
+        continue;
+      if (depth >= MAX_NESTING_DEPTH)
+        return true;
+      for (const child of children)
+        stack.push([child, depth + 1]);
+    }
+    return false;
   }
 
   // node_modules/@action-state-group/agent-action-capsule/dist/sha256.js
@@ -5294,7 +5351,6 @@ var EvidenceGraph = (() => {
   // node_modules/@action-state-group/agent-action-capsule/dist/json.js
   var utf8 = new TextDecoder("utf-8", { fatal: true });
   var encoder2 = new TextEncoder();
-  var MAX_DEPTH = 1e3;
   var numberToken = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/;
   var JsonNumber = class {
     raw;
@@ -5345,12 +5401,12 @@ var EvidenceGraph = (() => {
         offset += 1;
     };
     const parse = (depth) => {
-      if (depth > MAX_DEPTH)
-        throw new SyntaxError(`JSON nesting exceeds ${MAX_DEPTH}`);
       ws();
       const c = text2[offset];
       if (c === '"')
         return parseString();
+      if ((c === "{" || c === "[") && depth >= MAX_NESTING_DEPTH)
+        throw new SyntaxError(`JSON nesting exceeds ${MAX_NESTING_DEPTH}`);
       if (c === "{") {
         offset += 1;
         const value2 = {};
@@ -5471,8 +5527,6 @@ var EvidenceGraph = (() => {
     return JSON.stringify(value);
   }
   function render(value, path2, seen, depth) {
-    if (depth > MAX_DEPTH)
-      throw new TypeError(`JSON nesting exceeds ${MAX_DEPTH}`);
     if (value === null)
       return "null";
     if (typeof value === "boolean")
@@ -5496,6 +5550,8 @@ var EvidenceGraph = (() => {
     }
     if (typeof value !== "object" || value === void 0)
       throw new TypeError(`unsupported JSON value at ${path2}`);
+    if (depth >= MAX_NESTING_DEPTH)
+      throw new TypeError(`JSON nesting exceeds ${MAX_NESTING_DEPTH}`);
     if (seen.has(value))
       throw new TypeError(`cyclic JSON value at ${path2}`);
     seen.add(value);
@@ -5665,8 +5721,11 @@ var EvidenceGraph = (() => {
     } catch (error) {
       return error?.name === "NotSupportedError" ? void 0 : false;
     }
+    const signature2 = hexToBytes(signatureHex);
+    if (!strictEd25519(hexToBytes(keyId), signature2))
+      return false;
     try {
-      return await globalThis.crypto.subtle.verify({ name: "Ed25519" }, key, hexToBytes(signatureHex), countersignV1SigningInput(entry));
+      return await globalThis.crypto.subtle.verify({ name: "Ed25519" }, key, signature2, countersignV1SigningInput(entry));
     } catch {
       return false;
     }
@@ -6059,6 +6118,18 @@ var EvidenceGraph = (() => {
     const add2 = (code2, detail, check, severity = "error") => {
       findings.push(check === void 0 ? { code: code2, detail, severity } : { code: code2, detail, severity, check });
     };
+    if (nestedTooDeep(capsule))
+      return {
+        ok: false,
+        findings: [
+          {
+            code: "verifier_internal_error",
+            detail: "Capsule is nested too deeply or contains itself",
+            severity: "error"
+          }
+        ],
+        assurance: {}
+      };
     const top = object2(capsule);
     if (top === void 0)
       return {
@@ -7198,7 +7269,7 @@ var EvidenceGraph = (() => {
       if (reader.byte() !== 160)
         throw new SyntaxError("unprotected header MUST be an empty map");
       const payload = reader.bytes();
-      const signature = reader.bytes();
+      const signature2 = reader.bytes();
       if (reader.offset !== data.length)
         throw new SyntaxError("trailing CBOR data");
       const protectedHeaders = protectedHeaderMap(protectedBytes);
@@ -7214,10 +7285,10 @@ var EvidenceGraph = (() => {
         return fail2("envelope_protected_headers_invalid", "protected header MUST contain exactly alg, content type, and kid");
       if (!equalBytes(payload, hexToBytes(capsuleId)))
         return fail2("envelope_payload_mismatch", "attached payload MUST equal the raw 32-byte Capsule ID");
-      if (signature.length !== 64)
+      if (signature2.length !== 64)
         return fail2("envelope_signature_invalid", "Ed25519 signature MUST be 64 bytes");
       const key = await globalThis.crypto.subtle.importKey("spki", producerPublicKeySpki(publicKey), { name: "Ed25519" }, false, ["verify"]);
-      if (!await globalThis.crypto.subtle.verify({ name: "Ed25519" }, key, signature, producerEnvelopeSigningBytes(protectedBytes, payload)))
+      if (!await globalThis.crypto.subtle.verify({ name: "Ed25519" }, key, signature2, producerEnvelopeSigningBytes(protectedBytes, payload)))
         return fail2("envelope_signature_invalid", "Ed25519 signature verification failed");
       return {
         ok: true,
@@ -7294,6 +7365,8 @@ var EvidenceGraph = (() => {
   async function gradeRecordSignature(record) {
     if (!plainObject(record))
       return { verdict: "invalid", messages: ["not a JSON object"] };
+    if (nestedTooDeep(record))
+      return { verdict: "invalid", messages: ["record is nested too deeply"] };
     const id = idText(record);
     const hasSignature = Object.hasOwn(record, "signature"), hasKeyId = Object.hasOwn(record, "key_id");
     if (!hasSignature && !hasKeyId)
@@ -7306,8 +7379,8 @@ var EvidenceGraph = (() => {
         ]
       };
     try {
-      const signature = digitPairs(record.signature, "signature"), keyId = digitPairs(record.key_id, "key_id");
-      const result = await verifyProducerEnvelope(await recordCapsuleId(record), signature);
+      const signature2 = digitPairs(record.signature, "signature"), keyId = digitPairs(record.key_id, "key_id");
+      const result = await verifyProducerEnvelope(await recordCapsuleId(record), signature2);
       if (result.ok && result.publicKey !== void 0 && equalBytes(result.publicKey, keyId))
         return { verdict: "authored", messages: [] };
     } catch (error) {
@@ -7324,6 +7397,156 @@ var EvidenceGraph = (() => {
         `capsule_id=${id}: self-attested Ed25519 signature does not verify against key_id`
       ]
     };
+  }
+
+  // node_modules/@action-state-group/agent-action-capsule/dist/category-coverage.js
+  var CATEGORY_STATUSES = [
+    "AVAILABLE",
+    "PARTIAL",
+    "WITHHELD",
+    "DELETED",
+    "ABSENT",
+    "UNDISCLOSED"
+  ];
+  var CATEGORY_COVERAGE_GATING = [
+    "category_coverage_form",
+    "category_coverage_signature",
+    "category_coverage_consistency"
+  ];
+  var object6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
+  var HEX128 = /^[0-9a-f]{128}$/u;
+  var ABSOLUTE_URI = /^[A-Za-z][A-Za-z0-9+.-]*:(?:[A-Za-z0-9._~!$&'()*+,;=:@/?-]|%[0-9A-Fa-f]{2})*$/u;
+  var PRIVATE_SET = "x-";
+  var CONTRADICTED_BY_A_RECORD = ["ABSENT", "WITHHELD"];
+  function categoryCoverageSigningInput(member, root) {
+    const unsigned = {};
+    for (const [name, value] of Object.entries(member))
+      if (name !== "signature")
+        Object.defineProperty(unsigned, name, {
+          value,
+          enumerable: true,
+          writable: true,
+          configurable: true
+        });
+    return jcs({ category_coverage: unsigned, root });
+  }
+  function wellFormed(member) {
+    if (!object6(member))
+      return false;
+    if (typeof member.set !== "string" || member.set === "")
+      return false;
+    const categories = member.categories;
+    if (!object6(categories) || Object.keys(categories).length === 0)
+      return false;
+    for (const [name, entry] of Object.entries(categories)) {
+      if (name === "" || !object6(entry) || !CATEGORY_STATUSES.includes(entry.status))
+        return false;
+      const hasUri = Object.hasOwn(entry, "policy_uri");
+      if (hasUri && !(typeof entry.policy_uri === "string" && ABSOLUTE_URI.test(entry.policy_uri)))
+        return false;
+      if (entry.status === "UNDISCLOSED" && !hasUri)
+        return false;
+    }
+    if (Object.hasOwn(member, "request_digest") && !isHex64(member.request_digest))
+      return false;
+    const hasSigner = Object.hasOwn(member, "signer");
+    if (hasSigner !== Object.hasOwn(member, "signature"))
+      return false;
+    if (hasSigner) {
+      const signer = member.signer;
+      if (!object6(signer) || !isHex64(signer.key_id))
+        return false;
+      if (typeof member.signature !== "string" || !HEX128.test(member.signature))
+        return false;
+    }
+    return true;
+  }
+  async function signature(member, root) {
+    if (!Object.hasOwn(member, "signature"))
+      return "NOT_PRESENT";
+    let signingInput;
+    try {
+      signingInput = categoryCoverageSigningInput(member, root);
+    } catch {
+      return "FAIL";
+    }
+    const key = hexToBytes(member.signer.key_id);
+    const sig = hexToBytes(member.signature);
+    if (!strictEd25519(key, sig))
+      return "FAIL";
+    if (!await probeEd25519())
+      return "NOT_CHECKED";
+    try {
+      return await verifyEd25519Strict(key, sig, signingInput) ? "PASS" : "FAIL";
+    } catch {
+      return "FAIL";
+    }
+  }
+  function setRegistered(member, categorySets) {
+    const set = member.set;
+    if (set.startsWith(PRIVATE_SET))
+      return "NOT_PRESENT";
+    const known = categorySets && Object.hasOwn(categorySets, set) ? categorySets[set] : void 0;
+    if (known === void 0 || known === null)
+      return "INCONCLUSIVE";
+    return Object.keys(member.categories).every((name) => known.includes(name)) ? "PASS" : "FAIL";
+  }
+  async function request(member, octets) {
+    if (octets === null || octets === void 0)
+      return "NOT_CHECKED";
+    if (Object.hasOwn(member, "request_digest") && member.request_digest !== await sha256Hex(octets))
+      return "FAIL";
+    let parsed;
+    try {
+      if (octets[0] === 239 && octets[1] === 187 && octets[2] === 191)
+        return "NOT_CHECKED";
+      parsed = decodeStrictJson(octets);
+    } catch {
+      return "NOT_CHECKED";
+    }
+    if (!object6(parsed))
+      return "NOT_CHECKED";
+    if (!Object.hasOwn(parsed, "categories"))
+      return "NOT_PRESENT";
+    const asked = parsed.categories;
+    const names2 = object6(asked) ? asked.names : void 0;
+    if (!object6(asked) || typeof asked.set !== "string" || !Array.isArray(names2) || names2.length === 0 || !names2.every((name) => typeof name === "string") || new Set(names2).size !== names2.length)
+      return "NOT_CHECKED";
+    if (asked.set !== member.set)
+      return "FAIL";
+    const categories = member.categories;
+    return names2.every((name) => Object.hasOwn(categories, name)) ? "PASS" : "FAIL";
+  }
+  function consistency(member, recordIds, recordCategories) {
+    if (recordCategories === null || recordCategories === void 0 || recordIds.some((id) => !Object.hasOwn(recordCategories, id)))
+      return "NOT_CHECKED";
+    const carried = new Set(recordIds.map((id) => recordCategories[id]));
+    return Object.entries(member.categories).some(([name, entry]) => CONTRADICTED_BY_A_RECORD.includes(entry.status) && carried.has(name)) ? "FAIL" : "PASS";
+  }
+  async function checkCategoryCoverage(bundle, inputs = {}) {
+    if (!Object.hasOwn(bundle, "category_coverage"))
+      return null;
+    const member = bundle.category_coverage;
+    if (!wellFormed(member))
+      return {
+        category_coverage_form: "FAIL",
+        category_coverage_signature: "NOT_CHECKED",
+        category_coverage_set_registered: "NOT_CHECKED",
+        category_coverage_request: "NOT_CHECKED",
+        category_coverage_consistency: "NOT_CHECKED"
+      };
+    const records = Array.isArray(bundle.records) ? bundle.records : [];
+    const recordIds = records.filter(object6).map((record) => record.capsule_id).filter((id) => typeof id === "string");
+    return {
+      category_coverage_form: "PASS",
+      category_coverage_signature: await signature(member, Object.hasOwn(bundle, "root") ? bundle.root : null),
+      category_coverage_set_registered: setRegistered(member, inputs.categorySets),
+      category_coverage_request: await request(member, inputs.categoryRequest),
+      category_coverage_consistency: consistency(member, recordIds, inputs.recordCategories)
+    };
+  }
+  function categoryCoverageFails(result) {
+    return result !== null && CATEGORY_COVERAGE_GATING.some((name) => result[name] === "FAIL");
   }
 
   // node_modules/@action-state-group/agent-action-capsule/dist/cose-receipt.js
@@ -7343,7 +7566,7 @@ var EvidenceGraph = (() => {
   var MAX_INCLUSION_PROOFS = 16;
   var MAX_AUDIT_PATH = 64;
   var MAX_TREE_SIZE = 1n << 62n;
-  var MAX_DEPTH2 = 32;
+  var MAX_RECEIPT_DEPTH = 16;
   var CborMap = class {
     entries;
     constructor(entries) {
@@ -7371,10 +7594,32 @@ var EvidenceGraph = (() => {
     }
   };
   var utf84 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-  function decodeStrictCbor(data) {
-    return decodeCbor(data, true);
+  function decodeReceiptItem(data, topTag) {
+    const value = decodeCbor(data);
+    const walk = (item, depth) => {
+      if (typeof item === "bigint" && item < -(1n << 63n))
+        throw new SyntaxError("an integer below -2^63");
+      if (item instanceof CborTag) {
+        if (!(depth === 0 && topTag && item.tag === COSE_SIGN1_TAG))
+          throw new SyntaxError("a tag other than the outer tag 18");
+        walk(item.value, depth + 1);
+      } else if (Array.isArray(item)) {
+        for (const inner of item)
+          walk(inner, depth + 1);
+      } else if (item instanceof CborMap) {
+        for (const [key, inner] of item.entries) {
+          if (typeof key !== "bigint" && typeof key !== "string")
+            throw new SyntaxError("a map key that is not an integer or text");
+          walk(key, depth + 1);
+          walk(inner, depth + 1);
+        }
+      } else if (!(item === null || typeof item === "boolean" || typeof item === "bigint" || typeof item === "string" || item instanceof Uint8Array))
+        throw new SyntaxError("a float or a simple value");
+    };
+    walk(value, 0);
+    return value;
   }
-  function decodeCbor(data, shortest) {
+  function decodeCbor(data) {
     let offset = 0;
     const byte = () => {
       const value2 = data[offset++];
@@ -7398,12 +7643,12 @@ var EvidenceGraph = (() => {
       let value2 = 0n;
       for (let i = 0; i < width; i += 1)
         value2 = value2 << 8n | BigInt(byte());
-      if (shortest && value2 < [24n, 1n << 8n, 1n << 16n, 1n << 32n][add2 - 24])
+      if (value2 < [24n, 1n << 8n, 1n << 16n, 1n << 32n][add2 - 24])
         throw new SyntaxError("CBOR argument is not in its shortest form");
       return value2;
     };
     const item = (depth) => {
-      if (depth > MAX_DEPTH2)
+      if (depth > MAX_RECEIPT_DEPTH)
         throw new SyntaxError("CBOR nesting too deep");
       const first = byte(), major = first >>> 5, add2 = first & 31;
       if (major === 7) {
@@ -7430,50 +7675,9 @@ var EvidenceGraph = (() => {
         if (add2 === 25)
           return halfFloat(view.getUint16(0));
         const value2 = add2 === 26 ? view.getFloat32(0) : view.getFloat64(0);
-        if (shortest && (Number.isNaN(value2) || fitsHalf2(value2) || add2 === 27 && Math.fround(value2) === value2))
+        if (Number.isNaN(value2) || fitsHalf2(value2) || add2 === 27 && Math.fround(value2) === value2)
           throw new SyntaxError("CBOR float is not in its shortest form");
         return value2;
-      }
-      if (!shortest && add2 === 31 && major >= 2 && major <= 5) {
-        const atBreak = () => {
-          if (data[offset] !== 255)
-            return false;
-          offset += 1;
-          return true;
-        };
-        if (major === 2 || major === 3) {
-          const chunks = [];
-          while (!atBreak()) {
-            const head2 = byte();
-            if (head2 >>> 5 !== major || (head2 & 31) === 31)
-              throw new SyntaxError("invalid indefinite-length string chunk");
-            chunks.push(take(argument(head2 & 31)));
-          }
-          const joined = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
-          let at = 0;
-          for (const chunk of chunks) {
-            if (major === 3)
-              utf84.decode(chunk);
-            joined.set(chunk, at);
-            at += chunk.length;
-          }
-          return major === 2 ? joined : utf84.decode(joined);
-        }
-        if (major === 4) {
-          const out = [];
-          while (!atBreak())
-            out.push(item(depth + 1));
-          return out;
-        }
-        const entries2 = [], keys2 = /* @__PURE__ */ new Set();
-        while (!atBreak()) {
-          const key = item(depth + 1), identity2 = identityOf(key);
-          if (keys2.has(identity2))
-            throw new SyntaxError("duplicate CBOR map key");
-          keys2.add(identity2);
-          entries2.push([key, item(depth + 1)]);
-        }
-        return new CborMap(entries2);
       }
       const length = argument(add2);
       if (major === 0)
@@ -7576,7 +7780,7 @@ var EvidenceGraph = (() => {
     return fold(size, index);
   }
   function inclusionProof2(blob) {
-    const value = decodeCbor(blob, false);
+    const value = decodeReceiptItem(blob, false);
     if (!Array.isArray(value) || value.length !== 3)
       throw new SyntaxError("inclusion proof must be [tree_size, leaf_index, [path]]");
     const [size, index, path2] = value;
@@ -7622,15 +7826,15 @@ var EvidenceGraph = (() => {
     try {
       if (receipt.length > MAX_MESSAGE_BYTES)
         return fail2("receipt too large");
-      const outer = decodeStrictCbor(receipt);
+      const outer = decodeReceiptItem(receipt, true);
       if (!(outer instanceof CborTag) || outer.tag !== COSE_SIGN1_TAG || !Array.isArray(outer.value) || outer.value.length !== 4)
         return fail2("receipt is not a COSE_Sign1 message");
-      const [protectedBytes, unprotected, payload, signature] = outer.value;
+      const [protectedBytes, unprotected, payload, signature2] = outer.value;
       if (!(protectedBytes instanceof Uint8Array))
         return fail2("receipt is not a COSE_Sign1 message");
       if (payload !== null)
         return fail2("receipt payload is attached; a receipt's payload must be detached");
-      const headers = protectedBytes.length ? decodeStrictCbor(protectedBytes) : new CborMap([]);
+      const headers = protectedBytes.length ? decodeReceiptItem(protectedBytes, false) : new CborMap([]);
       if (!(headers instanceof CborMap))
         return fail2("protected header is not a map");
       if (headers.get(HDR_VDS) !== VDS_RFC9162_SHA256)
@@ -7661,11 +7865,11 @@ var EvidenceGraph = (() => {
           throw new SyntaxError("inclusion proof entry is not a byte string");
         return inclusionProof2(proof);
       });
-      if (!(signature instanceof Uint8Array))
+      if (!(signature2 instanceof Uint8Array))
         return fail2("signature is not a byte string");
       for (const { size, index, path: path2 } of candidates) {
         const root = await rootFromInclusion(leaf, index, size, path2);
-        const verified = await verifySignature(alg, publicKeySpki, signature, producerEnvelopeSigningBytes(protectedBytes, root));
+        const verified = await verifySignature(alg, publicKeySpki, signature2, producerEnvelopeSigningBytes(protectedBytes, root));
         if (verified === "unavailable")
           return {
             ok: false,
@@ -7680,40 +7884,13 @@ var EvidenceGraph = (() => {
       return fail2(`unreadable receipt: ${String(error)}`);
     }
   }
-  var SMALL_ORDER_Y = [
-    "0000000000000000000000000000000000000000000000000000000000000000",
-    "0100000000000000000000000000000000000000000000000000000000000000",
-    "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
-    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
-    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05"
-  ];
-  var ED25519_L = hexToBytes("edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010");
-  function strictPoint(encoded) {
-    const y = Uint8Array.from(encoded);
-    y[31] &= 127;
-    const canonical = !(y[0] >= 237 && y.subarray(1, 31).every((b) => b === 255) && y[31] === 127);
-    const hex5 = Array.from(y, (b) => b.toString(16).padStart(2, "0")).join("");
-    return canonical && !SMALL_ORDER_Y.includes(hex5);
-  }
-  function strictEd25519(publicKey, signature) {
-    if (publicKey.length !== 32 || signature.length !== 64)
-      return false;
-    if (!strictPoint(publicKey) || !strictPoint(signature.subarray(0, 32)))
-      return false;
-    for (let i = 31; i >= 0; i--) {
-      const s = signature[32 + i];
-      if (s !== ED25519_L[i])
-        return s < ED25519_L[i];
-    }
-    return false;
-  }
-  async function verifySignature(alg, spki, signature, signed) {
-    if (alg === ALG_EDDSA && !strictEd25519(spki.subarray(-32), signature))
+  async function verifySignature(alg, spki, signature2, signed) {
+    if (alg === ALG_EDDSA && !strictEd25519(spki.subarray(-32), signature2))
       return false;
     const subtle = globalThis.crypto?.subtle;
     if (subtle === void 0)
       return "unavailable";
-    const [importAlgorithm, verifyAlgorithm] = alg === ALG_EDDSA ? [{ name: "Ed25519" }, { name: "Ed25519" }] : alg === ALG_ES256 && signature.length === 64 ? [
+    const [importAlgorithm, verifyAlgorithm] = alg === ALG_EDDSA ? [{ name: "Ed25519" }, { name: "Ed25519" }] : alg === ALG_ES256 && signature2.length === 64 ? [
       { name: "ECDSA", namedCurve: "P-256" },
       { name: "ECDSA", hash: "SHA-256" }
     ] : [];
@@ -7726,7 +7903,7 @@ var EvidenceGraph = (() => {
       return await canImport(subtle, alg, importAlgorithm) ? false : "unavailable";
     }
     try {
-      return await subtle.verify(verifyAlgorithm, key, signature, signed);
+      return await subtle.verify(verifyAlgorithm, key, signature2, signed);
     } catch {
       return false;
     }
@@ -7840,7 +8017,7 @@ var EvidenceGraph = (() => {
     "leaf_index",
     "tree_size"
   ];
-  var object6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var object7 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function bindingOf(url) {
     const separator = url.indexOf("://");
     const scheme = separator < 0 ? "" : url.slice(0, separator).toLowerCase();
@@ -7855,11 +8032,11 @@ var EvidenceGraph = (() => {
     return base.replace(/\/+$/u, "");
   }
   function witnessRowFor(directory, tsUrl) {
-    const rows = object6(directory) ? directory.witnesses : directory;
+    const rows = object7(directory) ? directory.witnesses : directory;
     if (!Array.isArray(rows))
       return void 0;
     const binding = bindingOf(tsUrl), endpoint = endpointOf(tsUrl);
-    return rows.find((row2) => object6(row2) && (Object.hasOwn(row2, "binding") ? row2.binding : BINDING_CLL) === binding && endpointMatches(Object.hasOwn(row2, "endpoint") ? row2.endpoint : "", endpoint));
+    return rows.find((row2) => object7(row2) && (Object.hasOwn(row2, "binding") ? row2.binding : BINDING_CLL) === binding && endpointMatches(Object.hasOwn(row2, "endpoint") ? row2.endpoint : "", endpoint));
   }
   var endpointMatches = (value, endpoint) => typeof value === "string" && value.replace(/\/+$/u, "") === endpoint;
   function base64Canonical(value) {
@@ -7883,7 +8060,7 @@ var EvidenceGraph = (() => {
       return value;
     if (typeof value === "string")
       return [...value];
-    if (object6(value))
+    if (object7(value))
       return Object.keys(value);
     if (value === null || value === void 0 || value === false || value === 0)
       return [];
@@ -8067,12 +8244,12 @@ ${body}
       return fail2("the Rekor key is not an ECDSA P-256 key");
     }
     try {
-      if (!object6(receipt))
+      if (!object7(receipt))
         return fail2("receipt is not an object");
       if (receipt.logID !== await sha256Hex(key))
         return fail2("logID is not the pinned Rekor key");
       const verification = receipt.verification;
-      const timestamp = object6(verification) ? verification.signedEntryTimestamp : void 0;
+      const timestamp = object7(verification) ? verification.signedEntryTimestamp : void 0;
       if (!timestamp)
         return fail2("no signedEntryTimestamp");
       const integratedTime = jsonInteger(receipt.integratedTime), logIndex = jsonInteger(receipt.logIndex);
@@ -8084,19 +8261,21 @@ ${body}
       if (!await subtle.verify({ name: "ECDSA", hash: "SHA-256" }, rekorKey, p1363(base64Canonical(timestamp)), signed))
         return fail2("signedEntryTimestamp does not verify under the Rekor key");
       const entry = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(base64Canonical(receipt.body)));
-      if (!object6(entry) || entry.kind !== "dsse")
+      if (nestedTooDeep(entry))
+        return fail2("unreadable receipt: body nested too deeply");
+      if (!object7(entry) || entry.kind !== "dsse")
         return fail2("entry kind is not dsse");
       const spec = entry.spec || {};
-      if (!object6(spec))
+      if (!object7(spec))
         return fail2("entry spec is not an object");
       const payloadHash = spec.payloadHash || {};
-      if (!object6(payloadHash) || payloadHash.algorithm !== "sha256" || payloadHash.value !== await sha256Hex(cose))
+      if (!object7(payloadHash) || payloadHash.algorithm !== "sha256" || payloadHash.value !== await sha256Hex(cose))
         return fail2("entry payloadHash is not this checkpoint's bytes");
       const verifiers = /* @__PURE__ */ new Set();
-      for (const signature of pyIterate(spec.signatures)) {
-        if (!object6(signature))
+      for (const signature2 of pyIterate(spec.signatures)) {
+        if (!object7(signature2))
           return fail2("entry signature is not an object");
-        const verifier = Object.hasOwn(signature, "verifier") ? signature.verifier : "";
+        const verifier = Object.hasOwn(signature2, "verifier") ? signature2.verifier : "";
         verifiers.add(pyStrip(latin1(base64Canonical(verifier)).replaceAll("\r", "")));
       }
       const raw = fromHex(options.checkpointKeyId);
@@ -8148,7 +8327,7 @@ ${body}
     });
   }
   var isRecord = (entry) => {
-    if (!object6(entry) || !RECORD_FIELDS.every((name) => Object.hasOwn(entry, name)))
+    if (!object7(entry) || !RECORD_FIELDS.every((name) => Object.hasOwn(entry, name)))
       return false;
     if (!["ts_url", "entry_hash", "receipt_b64"].every((name) => typeof entry[name] === "string" && entry[name] !== ""))
       return false;
@@ -8251,6 +8430,8 @@ ${body}
       receipts: results
     };
   }
+  var MAX_ANCHOR_RECEIPT_OCTETS = 10 * 1024 * 1024;
+  var MAX_ANCHOR_TREE_SIZE = 1n << 62n;
 
   // node_modules/@action-state-group/agent-action-capsule/dist/bundle.js
   var Ed25519UnavailableError = class extends Error {
@@ -8264,7 +8445,7 @@ ${body}
     status: "fail",
     findings
   });
-  var object7 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
+  var object8 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
   var integer = (value) => typeof value === "number" && Number.isSafeInteger(value);
   var hex4 = (value) => Uint8Array.from(value.match(/../gu), (byte) => Number.parseInt(byte, 16));
   function base64UrlDecode(value) {
@@ -8314,10 +8495,12 @@ ${body}
   }
   async function verifyPlainAndStrict(bundle, options) {
     try {
-      const plain2 = await verifyPlain(bundle);
+      if (nestedTooDeep(bundle))
+        throw new RangeError(`Bundle nests more than ${MAX_NESTING_DEPTH} levels`);
+      const plain2 = await verifyPlain(bundle, options);
       return options.strict === true ? {
         plain: plain2,
-        strict: await strict(plain2, object7(bundle) ? bundle : void 0, options)
+        strict: await strict(plain2, object8(bundle) ? bundle : void 0, options)
       } : { plain: plain2 };
     } catch (error) {
       if (!(error instanceof RangeError))
@@ -8349,11 +8532,12 @@ ${body}
       disclosures: [],
       extensions: [],
       countersignatures: [],
-      capsuleResults: {}
+      capsuleResults: {},
+      categoryCoverage: null
     };
   }
-  async function verifyPlain(bundle) {
-    if (!object7(bundle))
+  async function verifyPlain(bundle, options) {
+    if (!object8(bundle))
       return malformedBundle();
     let digest;
     try {
@@ -8379,7 +8563,8 @@ ${body}
           status: "producer_self_report"
         }
       } : {},
-      capsuleResults: collected.results
+      capsuleResults: collected.results,
+      categoryCoverage: await checkCategoryCoverage(bundle, options)
     };
   }
   var SIGNED_CHECKPOINT_FIELDS = [
@@ -8393,6 +8578,7 @@ ${body}
   ];
   var SELECTION_PRODUCER_SELECTED = "producer-selected";
   var SELECTION_NOT_CHECKABLE = "selection_not_checkable";
+  var CERTIFICATE_MODE_UNSUPPORTED = "certificate_mode_unsupported";
   async function strict(plain2, bundle, options) {
     if (bundle === void 0 || bundle.bundle_kind !== "evidence-bundle/v2" || bundle.bundle_version !== "2")
       return {
@@ -8411,7 +8597,7 @@ ${body}
     const records = [];
     const seen = /* @__PURE__ */ new Set();
     for (const record of Array.isArray(bundle.records) ? bundle.records : []) {
-      if (!object7(record))
+      if (!object8(record))
         continue;
       const id = capsuleIdOf(record);
       const { verdict: verdict2, messages } = await verifyRecordSignature(record);
@@ -8437,16 +8623,19 @@ ${body}
       status: unclaimed.length ? "withheld" : "pass",
       findings: signatureFindings
     };
-    const stated = object7(bundle.checkpoint) ? bundle.checkpoint : {};
-    const checkpoint = await strictCheckpoint(stated, object7(bundle.completeness_certificate) ? bundle.completeness_certificate : {});
+    const stated = object8(bundle.checkpoint) ? bundle.checkpoint : {};
+    const checkpoint = await strictCheckpoint(stated, object8(bundle.completeness_certificate) ? bundle.completeness_certificate : {});
     const authenticated = checkpoint.signed !== void 0;
     let intervalCoverage = plain2.intervalCoverage, perRecordMembership = plain2.perRecordMembership;
-    if (object7(bundle.completeness) && bundle.completeness.selection === SELECTION_PRODUCER_SELECTED) {
+    if (object8(bundle.completeness) && bundle.completeness.selection === SELECTION_PRODUCER_SELECTED) {
       intervalCoverage = {
         status: "withheld",
         findings: [SELECTION_NOT_CHECKABLE]
       };
-      perRecordMembership = await selectedMembership(bundle, checkpoint.signed);
+      if (checkpoint.signed !== void 0)
+        perRecordMembership = await selectedMembership(bundle, checkpoint.signed.root, checkpoint.signed.mmr_size, checkpoint.signed.log_id);
+      else if (checkpoint.claim.status === "fail")
+        perRecordMembership = object8(bundle.completeness_certificate) && "non_record_leaves" in bundle.completeness_certificate ? fail("completeness_certificate_invalid") : { status: "withheld", findings: ["checkpoint_unverified"] };
     }
     if (!authenticated) {
       intervalCoverage = unanchored(intervalCoverage);
@@ -8469,7 +8658,7 @@ ${body}
     }
     const witnesses = await verifyWitnessReceipts(stated.witnesses, checkpoint.signed, checkpoint.cose, options.witnessDirectory);
     const checkpointKey = checkpoint.signed?.key_id;
-    const failed2 = claims.some((claim) => claim.status === "fail") || witnesses.status === "fail";
+    const failed2 = claims.some((claim) => claim.status === "fail") || witnesses.status === "fail" || categoryCoverageFails(plain2.categoryCoverage);
     return {
       ...plain2,
       intervalCoverage,
@@ -8561,31 +8750,29 @@ ${body}
       findings: [.../* @__PURE__ */ new Set([...claim.findings, "checkpoint_unverified"])]
     };
   }
-  async function selectedMembership(bundle, signed) {
-    if (signed === void 0)
-      return { status: "withheld", findings: ["checkpoint_unverified"] };
+  async function selectedMembership(bundle, rootHex, size, logId) {
     const certificate = bundle.completeness_certificate;
-    const members = object7(certificate) ? certificate.memberships : void 0;
-    if (!object7(certificate) || !object7(members) || certificate.range_root !== signed.root)
+    const members = object8(certificate) ? certificate.memberships : void 0;
+    if (!object8(certificate) || !object8(members) || Object.hasOwn(certificate, "non_record_leaves") || certificate.range_root !== rootHex || certificate.log_id !== logId || typeof logId !== "string" || !isHex64(rootHex) || !integer(size))
       return fail("completeness_certificate_invalid");
-    const root = hex4(signed.root);
-    const ids = (Array.isArray(bundle.records) ? bundle.records : []).filter(object7).map(capsuleIdOf);
+    const root = hex4(rootHex);
+    const ids = (Array.isArray(bundle.records) ? bundle.records : []).filter(object8).map(capsuleIdOf);
     const findings = [], seen = /* @__PURE__ */ new Set();
     for (const id of ids) {
       const member = Object.hasOwn(members, id) ? members[id] : void 0;
-      const coordinates = object7(member) ? member.log_coordinates : void 0;
-      if (!object7(coordinates)) {
+      const coordinates = object8(member) ? member.log_coordinates : void 0;
+      if (!object8(coordinates)) {
         findings.push(`membership_record_unbound:${id}`);
         continue;
       }
       const seq = coordinates.seq, index = coordinates.leaf_index;
-      if (coordinates.log_id !== signed.log_id || !integer(seq) || !integer(index) || seq < 1 || index !== seq - 1 || seen.has(seq)) {
+      if (coordinates.log_id !== logId || !integer(seq) || !integer(index) || seq < 1 || index !== seq - 1 || seen.has(seq)) {
         findings.push(`membership_coordinates_invalid:${id}`);
         continue;
       }
       seen.add(seq);
-      const proof = object7(member) ? parseProof(member.inclusion_proof) : void 0;
-      if (!proof || !isHex64(id) || proof.size !== signed.mmr_size || proof.leaf_index !== index || !await verifyProof(root, id, proof, index))
+      const proof = object8(member) ? parseProof(member.inclusion_proof) : void 0;
+      if (!proof || !isHex64(id) || proof.size !== size || proof.leaf_index !== index || !await verifyProof(root, id, proof, index))
         findings.push(`membership_proof_invalid:${id}`);
     }
     for (const id of Object.keys(members).sort(byCodePoint2))
@@ -8595,12 +8782,12 @@ ${body}
   }
   function membershipSeqs(bundle) {
     const certificate = bundle.completeness_certificate;
-    const members = object7(certificate) ? certificate.memberships : void 0;
+    const members = object8(certificate) ? certificate.memberships : void 0;
     const out = /* @__PURE__ */ new Map();
-    if (object7(members))
+    if (object8(members))
       for (const [id, member] of Object.entries(members)) {
-        const coordinates = object7(member) ? member.log_coordinates : void 0;
-        const seq = object7(coordinates) ? coordinates.seq : void 0;
+        const coordinates = object8(member) ? member.log_coordinates : void 0;
+        const seq = object8(coordinates) ? coordinates.seq : void 0;
         if (integer(seq))
           out.set(id, seq);
       }
@@ -8611,7 +8798,7 @@ ${body}
     if (!Array.isArray(raw))
       return { records, results, findings: ["records_malformed"] };
     for (const [index, record] of raw.entries()) {
-      if (!object7(record)) {
+      if (!object8(record)) {
         findings.push(`record_malformed:${index}`);
         continue;
       }
@@ -8642,7 +8829,7 @@ ${body}
     if (!isHex64(root) || !records.has(root))
       return fail(...findings, "root_not_supplied_with_matching_identity");
     const complete = bundle.completeness;
-    if (!object7(complete))
+    if (!object8(complete))
       return fail(...findings, "completeness_malformed");
     const depth = complete.closure_depth ?? 2;
     if (!integer(depth) || depth < 0)
@@ -8676,24 +8863,34 @@ ${body}
   }
   function citations(record) {
     const targets = [], chain = record.chain;
-    if (object7(chain) && typeof chain.parent_capsule_id === "string")
+    if (object8(chain) && typeof chain.parent_capsule_id === "string")
       targets.push(chain.parent_capsule_id);
     if (Array.isArray(record.references)) {
       for (const reference of record.references)
-        if (object7(reference) && reference.type === "agent-action-capsule" && reference.digest_alg === "SHA-256" && typeof reference.digest === "string")
+        if (object8(reference) && reference.type === "agent-action-capsule" && reference.digest_alg === "SHA-256" && typeof reference.digest === "string")
           targets.push(reference.digest);
     }
     return targets;
   }
   async function completeness(bundle, records) {
-    if (!object7(bundle.completeness_certificate) || !object7(bundle.checkpoint)) {
+    if (!object8(bundle.completeness_certificate) || !object8(bundle.checkpoint)) {
       const absent = {
         status: "withheld",
         findings: ["completeness_evidence_absent"]
       };
       return [absent, absent];
     }
-    const certificate = bundle.completeness_certificate, parsed = parseCertificate(certificate, bundle.checkpoint);
+    const certificate = bundle.completeness_certificate;
+    if (object8(bundle.completeness) && Object.hasOwn(bundle.completeness, "selection")) {
+      if (bundle.completeness.selection === SELECTION_PRODUCER_SELECTED)
+        return plainSelected(bundle, bundle.checkpoint);
+      const unsupported = {
+        status: "withheld",
+        findings: [CERTIFICATE_MODE_UNSUPPORTED]
+      };
+      return [unsupported, unsupported];
+    }
+    const parsed = parseCertificate(certificate, bundle.checkpoint);
     if (!parsed)
       return [
         fail("completeness_certificate_invalid"),
@@ -8707,9 +8904,33 @@ ${body}
         fail("checkpoint_authentication_invalid"),
         fail("checkpoint_authentication_invalid")
       ];
-    const findings = await memberships(parsed.root, parsed.logId, parsed.firstSeq, parsed.lastSeq, certificate.memberships, records, bundle.completeness, parsed.rangeProof.size);
-    const relative = () => checkpointStatus === "verified" ? pass() : { status: "pass", findings: ["checkpoint_unverified"] };
-    return [relative(), findings.length ? fail(...findings) : relative()];
+    const { findings, failed: failed2 } = await memberships(parsed.root, parsed.logId, parsed.firstSeq, parsed.lastSeq, certificate, records, bundle.completeness, parsed.rangeProof.size);
+    const qualifier = checkpointStatus === "verified" ? [] : ["checkpoint_unverified"];
+    const interval = { status: "pass", findings: qualifier };
+    if (failed2)
+      return [interval, fail(...findings)];
+    if (findings.length)
+      return [
+        interval,
+        { status: "withheld", findings: [...findings, ...qualifier] }
+      ];
+    return [interval, { status: "pass", findings: [...qualifier] }];
+  }
+  async function plainSelected(bundle, checkpoint) {
+    const interval = {
+      status: "withheld",
+      findings: ["selection_not_checkable"]
+    };
+    const membership = await selectedMembership(bundle, checkpoint.root, checkpoint.mmr_size, checkpoint.log_id);
+    if (membership.status !== "pass")
+      return [interval, membership];
+    const status2 = await authenticateCheckpoint(checkpoint, checkpoint.log_id, hex4(checkpoint.root), checkpoint.mmr_size);
+    if (status2 === "invalid")
+      return [interval, fail("checkpoint_authentication_invalid")];
+    return [
+      interval,
+      status2 === "verified" ? pass() : { status: "pass", findings: ["checkpoint_unverified"] }
+    ];
   }
   async function loadCheckpointMetadata() {
     try {
@@ -8767,7 +8988,7 @@ ${body}
     };
   }
   function parseRangeProof(raw) {
-    const range = object7(raw) ? raw : void 0, fromSeq = range?.from_seq, toSeq = range?.to_seq, size = range?.size, fromIndex = range?.from_index, toIndex = range?.to_index, witness = range?.witness;
+    const range = object8(raw) ? raw : void 0, fromSeq = range?.from_seq, toSeq = range?.to_seq, size = range?.size, fromIndex = range?.from_index, toIndex = range?.to_index, witness = range?.witness;
     if (!integer(fromSeq) || !integer(toSeq) || !integer(size) || !integer(fromIndex) || !integer(toIndex) || fromSeq < 1 || toSeq < fromSeq || size < 0 || fromIndex < 0 || toIndex < fromIndex || !Array.isArray(witness) || !witness.every(isHex64))
       return void 0;
     return { fromSeq, toSeq, size, fromIndex, toIndex, witness };
@@ -8779,16 +9000,17 @@ ${body}
       return false;
     return verifyRange2(root, BigInt(proof.size), BigInt(proof.fromIndex), BigInt(proof.toIndex), raw.map(hex4), proof.proof);
   }
-  async function memberships(root, logId, first, last, raw, records, completeness2, checkpointSize) {
-    if (!object7(raw))
-      return ["memberships_absent"];
+  async function memberships(root, logId, first, last, certificate, records, completeness2, checkpointSize) {
+    const raw = certificate.memberships;
+    if (!object8(raw))
+      return { findings: ["memberships_absent"], failed: true };
     const bySequence = /* @__PURE__ */ new Set(), boundRecords = /* @__PURE__ */ new Set(), findings = [];
     for (const [id, member] of Object.entries(raw)) {
-      if (!isHex64(id) || !records.has(id) || !object7(member)) {
+      if (!isHex64(id) || !records.has(id) || !object8(member)) {
         findings.push(`membership_record_unknown:${id}`);
         continue;
       }
-      const coordinates = object7(member.log_coordinates) ? member.log_coordinates : void 0;
+      const coordinates = object8(member.log_coordinates) ? member.log_coordinates : void 0;
       if (!coordinates) {
         findings.push(`membership_coordinates_missing:${id}`);
         continue;
@@ -8808,17 +9030,83 @@ ${body}
       if (!proof || proof.leaf_index !== leaf || proof.size !== checkpointSize || !await verifyProof(root, id, proof, leaf))
         findings.push(`membership_proof_invalid:${id}`);
     }
+    let leafSeqs = /* @__PURE__ */ new Set(), unsupported = 0;
+    if (Object.hasOwn(certificate, "non_record_leaves")) {
+      const leaves = await nonRecordLeaves(certificate.non_record_leaves, first, last, certificate.body_digests, statedSeqs(raw));
+      findings.push(...leaves.findings);
+      leafSeqs = leaves.accounted;
+      unsupported = leaves.findings.filter((f) => f.startsWith(UNSUPPORTED_LEAF)).length;
+    }
     for (let seq = first; seq <= last; seq += 1)
-      if (!bySequence.has(seq))
+      if (!bySequence.has(seq) && !leafSeqs.has(seq))
         findings.push(`membership_record_missing:${seq}`);
-    const declaredMissing = object7(completeness2) && Array.isArray(completeness2.missing) ? new Set(completeness2.missing.filter(isHex64)) : /* @__PURE__ */ new Set();
+    const declaredMissing = object8(completeness2) && Array.isArray(completeness2.missing) ? new Set(completeness2.missing.filter(isHex64)) : /* @__PURE__ */ new Set();
     for (const id of records.keys())
       if (!boundRecords.has(id) && !declaredMissing.has(id))
         findings.push(`membership_record_unbound:${id}`);
-    return findings;
+    return { findings, failed: findings.length > unsupported };
+  }
+  var UNSUPPORTED_LEAF = "non_record_leaf_type_unsupported:";
+  var PADDING = "padding";
+  var PADDING_MEMBERS = [
+    "capsule_id",
+    "epistemic_type",
+    "record_type",
+    "store_nonce"
+  ];
+  function statedSeqs(members) {
+    const out = /* @__PURE__ */ new Set();
+    for (const member of Object.values(members)) {
+      const coordinates = object8(member) ? member.log_coordinates : void 0;
+      const seq = object8(coordinates) ? coordinates.seq : void 0;
+      if (integer(seq))
+        out.add(seq);
+    }
+    return out;
+  }
+  async function nonRecordLeaves(raw, first, last, bodyDigests, recordSeqs) {
+    const accounted = /* @__PURE__ */ new Set();
+    if (!Array.isArray(raw))
+      return { findings: ["non_record_leaves_malformed"], accounted };
+    const digests = Array.isArray(bodyDigests) ? bodyDigests : [];
+    const findings = [];
+    for (const [index, element7] of raw.entries()) {
+      if (!object8(element7)) {
+        findings.push(`non_record_leaf_element_invalid:${index}`);
+        continue;
+      }
+      const seq = element7.seq;
+      if (!integer(seq) || seq < first || seq > last || recordSeqs.has(seq) || accounted.has(seq)) {
+        findings.push(`non_record_leaf_seq_invalid:${index}`);
+        continue;
+      }
+      accounted.add(seq);
+      const content = element7.content;
+      const recordType = object8(content) ? content.record_type : void 0;
+      if (!object8(content) || typeof recordType !== "string") {
+        findings.push(`non_record_leaf_malformed:${seq}`);
+        continue;
+      }
+      if (recordType !== PADDING) {
+        findings.push(`${UNSUPPORTED_LEAF}${seq}`);
+        continue;
+      }
+      const names2 = Object.keys(content).sort();
+      if (names2.length !== PADDING_MEMBERS.length || names2.some((name, i) => name !== PADDING_MEMBERS[i]) || content.epistemic_type !== "producer_claim" || !isHex64(content.store_nonce) || !isHex64(content.capsule_id)) {
+        findings.push(`non_record_leaf_malformed:${seq}`);
+        continue;
+      }
+      const leaf = await paddingLeaf(content);
+      if (leaf !== content.capsule_id || leaf !== digests[seq - first])
+        findings.push(`non_record_leaf_mismatch:${seq}`);
+    }
+    return { findings, accounted };
+  }
+  async function paddingLeaf(content) {
+    return jsonDigest(Object.fromEntries(Object.entries(content).filter(([name]) => name !== "capsule_id")));
   }
   function parseProof(raw) {
-    if (!object7(raw) || raw.v !== 1 || raw.kind !== "inclusion" || !integer(raw.size) || !integer(raw.leaf_index) || raw.size < 0 || raw.leaf_index < 0)
+    if (!object8(raw) || raw.v !== 1 || raw.kind !== "inclusion" || !integer(raw.size) || !integer(raw.leaf_index) || raw.size < 0 || raw.leaf_index < 0)
       return void 0;
     const hashes = (value) => Array.isArray(value) && value.every(isHex64) ? value : void 0;
     const witness = hashes(raw.witness), left = hashes(raw.peaks_left), right = hashes(raw.peaks_right);
@@ -8842,20 +9130,20 @@ ${body}
   async function disclosures(raw, records) {
     if (raw === void 0)
       raw = {};
-    if (!object7(raw))
+    if (!object8(raw))
       return [{ capsuleId: "", member: "", status: DISCLOSURE_MISMATCH }];
     const findings = [];
     for (const [id, record] of [...records.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-      if (Object.hasOwn(raw, id) && !object7(raw[id]))
+      if (Object.hasOwn(raw, id) && !object8(raw[id]))
         continue;
-      const supplied = object7(raw[id]) ? raw[id] : {};
+      const supplied = object8(raw[id]) ? raw[id] : {};
       for (const [member, path2] of Object.entries(disclosureEligibleFields))
         if (!Object.hasOwn(supplied, member) && typeof resolveDisclosurePath(record, path2) === "string")
           findings.push({ capsuleId: id, member, status: "withheld" });
     }
     for (const id of Object.keys(raw).sort()) {
       const members = raw[id], record = records.get(id);
-      if (!object7(members) || !record) {
+      if (!object8(members) || !record) {
         findings.push({ capsuleId: id, member: "", status: DISCLOSURE_MISMATCH });
         continue;
       }
@@ -8891,7 +9179,7 @@ ${body}
   }
   async function extensions(bundle, covered) {
     const raw = bundle.extensions;
-    if (!object7(raw))
+    if (!object8(raw))
       return [];
     const results = [];
     for (const kind of Object.keys(raw).sort()) {
@@ -9022,17 +9310,24 @@ ${body}
     return value;
   }
   function readSelection(plain2, strict2) {
-    return strict2 !== void 0 && strict2.strict.verdict !== "INVALID" && isProducerSelection(strict2) ? {
+    if (strict2 !== void 0 && strict2.strict.verdict !== "INVALID" && isProducerSelection(strict2))
+      return {
+        ...plain2,
+        intervalCoverage: strict2.intervalCoverage,
+        perRecordMembership: strict2.perRecordMembership
+      };
+    return isProducerSelection(plain2) ? {
       ...plain2,
-      intervalCoverage: strict2.intervalCoverage,
-      perRecordMembership: strict2.perRecordMembership
+      // No findings: the page's gate never reads this failure as records
+      // the certificate left unbound (membershipProvenOrUnbound).
+      perRecordMembership: { status: "fail", findings: [] }
     } : plain2;
   }
   function isProducerSelection(result) {
     return result.intervalCoverage.status === "withheld" && result.intervalCoverage.findings.includes(SELECTION_NOT_CHECKABLE);
   }
   function isVerifiedBundleContext(value) {
-    return object7(value) && contexts.has(value);
+    return object8(value) && contexts.has(value);
   }
   var WITHHELD = Object.freeze({ state: "withheld" });
   var MISMATCHED = Object.freeze({
@@ -9060,20 +9355,20 @@ ${body}
       ({ records, recordIndex, resolvedDisclosures } = reuse);
     } else {
       const index = /* @__PURE__ */ new Map();
-      if (object7(bundle) && Array.isArray(bundle.records)) {
+      if (object8(bundle) && Array.isArray(bundle.records)) {
         for (const record of bundle.records)
-          if (object7(record) && typeof record.capsule_id === "string" && !index.has(record.capsule_id) && verification.capsuleResults[record.capsule_id]?.ok === true && verification.capsuleResults[record.capsule_id]?.capsuleId === record.capsule_id)
+          if (object8(record) && typeof record.capsule_id === "string" && !index.has(record.capsule_id) && verification.capsuleResults[record.capsule_id]?.ok === true && verification.capsuleResults[record.capsule_id]?.capsuleId === record.capsule_id)
             index.set(record.capsule_id, record);
       }
       records = Object.freeze([...index.values()]);
       recordIndex = new ReadonlyMapView(index);
       resolvedDisclosures = resolveFromVerification(bundle, verification.disclosures, index);
     }
-    const certificate = object7(bundle) ? bundle.completeness_certificate : void 0;
+    const certificate = object8(bundle) ? bundle.completeness_certificate : void 0;
     deepFreeze(verification);
     const context = deepFreeze({
       bundle,
-      root: object7(bundle) && typeof bundle.root === "string" ? bundle.root : void 0,
+      root: object8(bundle) && typeof bundle.root === "string" ? bundle.root : void 0,
       verification,
       strict: strict2,
       resolvedDisclosures,
@@ -9086,7 +9381,7 @@ ${body}
         graphClosure: verification.graphClosure,
         intervalCoverage: verification.intervalCoverage,
         perRecordMembership: verification.perRecordMembership,
-        memberships: object7(certificate) && object7(certificate.memberships) ? certificate.memberships : {}
+        memberships: object8(certificate) && object8(certificate.memberships) ? certificate.memberships : {}
       }
     });
     contexts.add(context);
@@ -9096,13 +9391,13 @@ ${body}
     const status2 = /* @__PURE__ */ new Map();
     for (const result of results)
       status2.set(`${result.capsuleId}\0${result.member}`, result.status);
-    const overlay = object7(bundle) && object7(bundle.disclosures) ? bundle.disclosures : {};
+    const overlay = object8(bundle) && object8(bundle.disclosures) ? bundle.disclosures : {};
     const resolved = /* @__PURE__ */ new Map();
     const one = (id, field) => {
       switch (status2.get(`${id}\0${field}`)) {
         case DISCLOSURE_MATCH: {
           const entry = overlay[id];
-          return object7(entry) && Object.hasOwn(entry, field) ? Object.freeze({ state: "disclosed", payload: entry[field] }) : MISMATCHED;
+          return object8(entry) && Object.hasOwn(entry, field) ? Object.freeze({ state: "disclosed", payload: entry[field] }) : MISMATCHED;
         }
         case DISCLOSURE_MISMATCH:
         case DISCLOSURE_NO_COMMITTED_DIGEST:
@@ -9125,16 +9420,103 @@ ${body}
     return disclosureOf(context, capsuleId, field).payload;
   }
 
-  // node_modules/@action-state-group/agent-action-capsule/dist/evidence-graph.js
-  var zoneStatement = (value) => /^\d{4}-\d{2}-\d{2}$/u.test(value) ? "date-only" : /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[Zz]|[+-]\d{2}:\d{2})$/u.test(value) ? "stated" : "not-stated";
-  var isCount = (value) => isObject(value) && Number.isSafeInteger(value.k) && Number.isSafeInteger(value.n) && value.k >= 0 && value.n >= value.k;
-  var calibrationCount = (value) => value === void 0 ? void 0 : isCount(value) ? { k: value.k, n: value.n } : { rate: value };
-  var EvidenceGraphError = class extends Error {
-  };
+  // node_modules/@action-state-group/agent-action-capsule/dist/calibration-summary.js
   var isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var asString = (value) => typeof value === "string" ? value : void 0;
+  var CALIBRATION_SUMMARY_V1 = "calibration-summary/v1";
+  var HUMAN_RATING_V1 = "human-rating/v1";
+  var HEX_DIGEST = /^[0-9a-f]{64}$/u;
+  var hasExactly = (value, members) => {
+    const keys = Object.keys(value);
+    return keys.length === members.length && members.every((member) => Object.hasOwn(value, member));
+  };
+  var nonEmpty = (value) => {
+    const text2 = asString(value);
+    return text2 === void 0 || text2.length === 0 ? void 0 : text2;
+  };
+  var isCount = (value) => Number.isSafeInteger(value) && value >= 0;
+  var readKOfN = (value) => {
+    if (!isObject(value) || !hasExactly(value, ["k", "n"]))
+      return void 0;
+    if (!isCount(value.k) || !isCount(value.n))
+      return void 0;
+    const k = value.k;
+    const n = value.n;
+    return k <= n ? { k, n } : void 0;
+  };
+  var readCitation = (value, purpose) => {
+    if (!isObject(value) || !hasExactly(value, ["type", "digest_alg", "digest", "citation_purpose"]))
+      return void 0;
+    const type = nonEmpty(value.type);
+    const digest = asString(value.digest);
+    if (type === void 0 || value.digest_alg !== "SHA-256" || digest === void 0 || !HEX_DIGEST.test(digest) || value.citation_purpose !== purpose)
+      return void 0;
+    return { type, digest };
+  };
+  var readClause = (value) => {
+    if (!isObject(value) || !hasExactly(value, ["clause_ref", "agreement", "drift"]))
+      return void 0;
+    const clauseRef = nonEmpty(value.clause_ref);
+    const agreement = readKOfN(value.agreement);
+    const drift = readKOfN(value.drift);
+    if (clauseRef === void 0 || agreement === void 0 || drift === void 0)
+      return void 0;
+    return { clauseRef, agreement, drift };
+  };
+  function readCalibrationSummary(value) {
+    if (!isObject(value) || !hasExactly(value, [
+      "record_version",
+      "record_id",
+      "epistemic_type",
+      "computed_at",
+      "judge_pin",
+      "clauses"
+    ]) || value.record_version !== CALIBRATION_SUMMARY_V1 || value.epistemic_type !== "derived_metric")
+      return void 0;
+    const recordId = nonEmpty(value.record_id);
+    const computedAt = asString(value.computed_at);
+    const judgePin = readCitation(value.judge_pin, "calibrates");
+    if (recordId === void 0 || computedAt === void 0 || judgePin === void 0 || !Array.isArray(value.clauses) || value.clauses.length === 0)
+      return void 0;
+    const clauses = [];
+    for (const entry of value.clauses) {
+      const clause = readClause(entry);
+      if (clause === void 0)
+        return void 0;
+      clauses.push(clause);
+    }
+    return { recordId, computedAt, judgePin, clauses };
+  }
+  function readHumanRating(value) {
+    if (!isObject(value) || !hasExactly(value, [
+      "record_version",
+      "record_id",
+      "epistemic_type",
+      "rated_at",
+      "blind",
+      "rater_ref",
+      "case",
+      "label"
+    ]) || value.record_version !== HUMAN_RATING_V1 || value.epistemic_type !== "human_report" || value.blind !== true)
+      return void 0;
+    const recordId = nonEmpty(value.record_id);
+    const ratedAt = asString(value.rated_at);
+    const raterRef = nonEmpty(value.rater_ref);
+    const ratedCase = readCitation(value.case, "rated_case");
+    const label = nonEmpty(value.label);
+    if (recordId === void 0 || ratedAt === void 0 || raterRef === void 0 || ratedCase === void 0 || label === void 0)
+      return void 0;
+    return { recordId, ratedAt, raterRef, ratedCase, label };
+  }
+
+  // node_modules/@action-state-group/agent-action-capsule/dist/evidence-graph.js
+  var zoneStatement = (value) => /^\d{4}-\d{2}-\d{2}$/u.test(value) ? "date-only" : /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[Zz]|[+-]\d{2}:\d{2})$/u.test(value) ? "stated" : "not-stated";
+  var EvidenceGraphError = class extends Error {
+  };
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var asString2 = (value) => typeof value === "string" ? value : void 0;
   var asNumber = (value) => typeof value === "number" && Number.isFinite(value) ? value : void 0;
-  var objectOrEmpty = (value) => isObject(value) ? value : {};
+  var objectOrEmpty = (value) => isObject2(value) ? value : {};
   var calendarDay = (date) => {
     const match = /^(\d{4})-(\d{2})-(\d{2})(?:[Tt](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?([Zz]|[+-]\d{2}:\d{2})?)?$/u.exec(date);
     if (match === null)
@@ -9154,30 +9536,30 @@ ${body}
     return Math.floor(instant / 864e5);
   };
   var recordTimes = (record) => {
-    const sealTime = asString(record.timestamp);
-    const actionTime = asString(record.occurred_at);
+    const sealTime = asString2(record.timestamp);
+    const actionTime = asString2(record.occurred_at);
     const block = record.provenance_mode;
-    const provenanceMode = block !== null && typeof block === "object" && !Array.isArray(block) ? asString(block.mode) : void 0;
+    const provenanceMode = block !== null && typeof block === "object" && !Array.isArray(block) ? asString2(block.mode) : void 0;
     return {
       ...sealTime === void 0 ? {} : { sealTime },
       ...actionTime === void 0 ? {} : { actionTime },
       ...provenanceMode === void 0 ? {} : { provenanceMode }
     };
   };
-  var committedDigest = (record, field) => asString(objectOrEmpty(objectOrEmpty(record.model_attestation).compute_attestation)[`${field}_digest`]);
+  var committedDigest = (record, field) => asString2(objectOrEmpty(objectOrEmpty(record.model_attestation).compute_attestation)[`${field}_digest`]);
   var logCoordinates = (memberships2, capsuleId) => {
     const membership = memberships2[capsuleId];
-    if (!isObject(membership) || !isObject(membership.log_coordinates))
+    if (!isObject2(membership) || !isObject2(membership.log_coordinates))
       return void 0;
     const coordinates = membership.log_coordinates;
-    const logId = asString(coordinates.log_id);
+    const logId = asString2(coordinates.log_id);
     const seq = asNumber(coordinates.seq);
     const leafIndex = asNumber(coordinates.leaf_index);
     return logId === void 0 || seq === void 0 || leafIndex === void 0 ? void 0 : { logId, seq, leafIndex };
   };
   var status = (value) => value === "pass" || value === "fail" || value === "not_applicable" || value === "unjudgeable" ? value : void 0;
   var verdict = (value) => value === "pass" || value === "fail" || value === "unsure" ? value : void 0;
-  var actedOnReferences = (record) => Array.isArray(record.references) ? record.references.flatMap((reference) => isObject(reference) && reference.type === "agent-action-capsule" && reference.citation_purpose === "acted_on" ? asString(reference.digest) === void 0 ? [] : [asString(reference.digest)] : []) : [];
+  var actedOnReferences = (record) => Array.isArray(record.references) ? record.references.flatMap((reference) => isObject2(reference) && reference.type === "agent-action-capsule" && reference.citation_purpose === "acted_on" ? asString2(reference.digest) === void 0 ? [] : [asString2(reference.digest)] : []) : [];
   var committedDigests = (record) => {
     const agentInputDigest = committedDigest(record, "agent_input");
     const agentOutputDigest = committedDigest(record, "agent_output");
@@ -9189,27 +9571,27 @@ ${body}
   async function buildEvidenceGraph(input) {
     const context = await verifiedBundleContext(input);
     const bundle = context.bundle;
-    if (!isObject(bundle) || !Array.isArray(bundle.records) || !isObject(bundle.disclosures)) {
+    if (!isObject2(bundle) || !Array.isArray(bundle.records) || !isObject2(bundle.disclosures)) {
       throw new EvidenceGraphError("bundle must contain records and disclosures");
     }
     const records = context.records;
     const rootRecord2 = context.root === void 0 ? void 0 : context.recordIndex.get(context.root);
     if (rootRecord2 === void 0) {
-      throw new EvidenceGraphError(bundle.records.some((record) => isObject(record) && record.capsule_id === context.root) ? "root aggregate payload is not disclosed" : "root aggregate payload not disclosed");
+      throw new EvidenceGraphError(bundle.records.some((record) => isObject2(record) && record.capsule_id === context.root) ? "root aggregate payload is not disclosed" : "root aggregate payload not disclosed");
     }
     const payloadOf = (record) => verifiedPayload(context, record.capsule_id, "agent_input");
     const rootPayload = payloadOf(rootRecord2);
-    if (!isObject(rootPayload) || rootPayload.spec_version !== "evaluation-summary/v1") {
+    if (!isObject2(rootPayload) || rootPayload.spec_version !== "evaluation-summary/v1") {
       throw new EvidenceGraphError("root aggregate payload is not disclosed");
     }
     const memberships2 = context.completeness.memberships;
     const aggregate = {
       capsuleId: rootRecord2.capsule_id,
-      ...asString(rootPayload.cross_case_aggregation) === void 0 ? {} : {
-        crossCaseAggregation: asString(rootPayload.cross_case_aggregation)
+      ...asString2(rootPayload.cross_case_aggregation) === void 0 ? {} : {
+        crossCaseAggregation: asString2(rootPayload.cross_case_aggregation)
       },
       ...Object.hasOwn(rootPayload, "per_axis") ? { perAxis: rootPayload.per_axis } : {},
-      ...isObject(rootPayload.counts) && asNumber(rootPayload.counts.reports) !== void 0 && asNumber(rootPayload.counts.unique_cases) !== void 0 ? {
+      ...isObject2(rootPayload.counts) && asNumber(rootPayload.counts.reports) !== void 0 && asNumber(rootPayload.counts.unique_cases) !== void 0 ? {
         counts: {
           reports: asNumber(rootPayload.counts.reports),
           uniqueCases: asNumber(rootPayload.counts.unique_cases)
@@ -9229,7 +9611,7 @@ ${body}
         if (referenced === void 0)
           continue;
         const payload = payloadOf(referenced);
-        if (!isObject(payload))
+        if (!isObject2(payload))
           continue;
         if (payload.spec_version === "evaluation-report/v1")
           reportIds.add(id);
@@ -9242,9 +9624,9 @@ ${body}
     for (const reportId of reportIds) {
       const record = recordsById.get(reportId);
       const payload = payloadOf(record);
-      if (!isObject(payload) || payload.spec_version !== "evaluation-report/v1")
+      if (!isObject2(payload) || payload.spec_version !== "evaluation-report/v1")
         continue;
-      const date = asString(payload.date);
+      const date = asString2(payload.date);
       if (date === void 0)
         continue;
       const day = asNumber(payload.day);
@@ -9256,15 +9638,15 @@ ${body}
           continue;
         const input2 = disclosureOf(context, actRecord.capsule_id, "agent_input");
         const output = disclosureOf(context, actRecord.capsule_id, "agent_output");
-        const inputCase = isObject(input2.payload) && isObject(input2.payload.case) ? input2.payload.case : {};
-        const caseId = asString(inputCase.conversation_id);
+        const inputCase = isObject2(input2.payload) && isObject2(input2.payload.case) ? input2.payload.case : {};
+        const caseId = asString2(inputCase.conversation_id);
         const turnIdx = asNumber(inputCase.turn_idx);
         const actResolvedLogCoordinates = logCoordinates(memberships2, actRecord.capsule_id);
         acts.push({
           capsuleId: actRecord.capsule_id,
           caseId: caseId ?? actRecord.capsule_id,
           turnIdx: turnIdx ?? Number.MAX_SAFE_INTEGER,
-          ...isObject(input2.payload) ? { agentInput: input2.payload } : {},
+          ...isObject2(input2.payload) ? { agentInput: input2.payload } : {},
           ...output.state === "disclosed" ? { agentOutput: output.payload } : {},
           agentInputDisclosure: input2.state,
           agentOutputDisclosure: output.state,
@@ -9276,21 +9658,21 @@ ${body}
         });
       }
       const cases = reportCases.flatMap((casePayload) => {
-        if (!isObject(casePayload))
+        if (!isObject2(casePayload))
           return [];
-        const taskId = asString(casePayload.task_id);
+        const taskId = asString2(casePayload.task_id);
         const trial = asNumber(casePayload.trial);
         if (taskId === void 0 || trial === void 0)
           return [];
         const matchingActs = acts.filter((act) => {
-          const actCase = isObject(act.agentInput) && isObject(act.agentInput.case) ? act.agentInput.case : {};
+          const actCase = isObject2(act.agentInput) && isObject2(act.agentInput.case) ? act.agentInput.case : {};
           return actCase.task_id === taskId && actCase.trial === trial;
         });
         const caseId = matchingActs[0]?.caseId ?? `${taskId}:${trial}`;
         const judgments = (Array.isArray(casePayload.axis_judgments) ? casePayload.axis_judgments : []).flatMap((judgment) => {
-          if (!isObject(judgment))
+          if (!isObject2(judgment))
             return [];
-          const axisId = asString(judgment.axis_id), outcomeId = asString(judgment.outcome_id), judgmentStatus = status(judgment.status), rationale = asString(judgment.rationale);
+          const axisId = asString2(judgment.axis_id), outcomeId = asString2(judgment.outcome_id), judgmentStatus = status(judgment.status), rationale = asString2(judgment.rationale);
           return axisId === void 0 || outcomeId === void 0 || judgmentStatus === void 0 || rationale === void 0 ? [] : [
             {
               axisId,
@@ -9312,9 +9694,9 @@ ${body}
           }
         ];
       });
-      const outcomes = (Array.isArray(payload.outcomes) ? payload.outcomes : []).flatMap((outcome) => isObject(outcome) && asString(outcome.outcome_id) !== void 0 && (outcome.role === "required" || outcome.role === "optional") ? [
+      const outcomes = (Array.isArray(payload.outcomes) ? payload.outcomes : []).flatMap((outcome) => isObject2(outcome) && asString2(outcome.outcome_id) !== void 0 && (outcome.role === "required" || outcome.role === "optional") ? [
         {
-          outcomeId: asString(outcome.outcome_id),
+          outcomeId: asString2(outcome.outcome_id),
           role: outcome.role,
           aggregate: outcome.aggregate === "pass" || outcome.aggregate === "fail" ? outcome.aggregate : null
         }
@@ -9347,13 +9729,13 @@ ${body}
         report.day = position - origin + 1;
     }
     for (const record of records) {
-      if (!isObject(record.chain) || record.chain.relation !== "io.evaluation.human_rates")
+      if (!isObject2(record.chain) || record.chain.relation !== "io.evaluation.human_rates")
         continue;
-      const reportId = asString(record.chain.parent_capsule_id);
+      const reportId = asString2(record.chain.parent_capsule_id);
       if (reportId === void 0)
         continue;
       const payload = payloadOf(record);
-      const ratingVerdict = isObject(payload) ? verdict(payload.verdict) : void 0;
+      const ratingVerdict = isObject2(payload) ? verdict(payload.verdict) : void 0;
       const report = reports.find((candidate) => candidate.capsuleId === reportId);
       if (report !== void 0 && ratingVerdict !== void 0)
         report.ratings.push({
@@ -9365,15 +9747,10 @@ ${body}
     let calibration;
     for (const record of records) {
       const payload = payloadOf(record);
-      if (!isObject(payload) || payload.spec_version !== "calibration-summary/v1")
+      if (!isObject2(payload) || payload.record_version !== CALIBRATION_SUMMARY_V1)
         continue;
-      calibration = {
-        capsuleId: record.capsule_id,
-        ...Object.hasOwn(payload, "period_window") ? { periodWindow: payload.period_window } : {},
-        ...Object.hasOwn(payload, "confusion") ? { confusion: payload.confusion } : {},
-        ...Object.hasOwn(payload, "agreement") ? { agreement: calibrationCount(payload.agreement) } : {},
-        ...Object.hasOwn(payload, "corrected_rate") ? { correctedRate: calibrationCount(payload.corrected_rate) } : {}
-      };
+      const summary = readCalibrationSummary(payload);
+      calibration = summary === void 0 ? { capsuleId: record.capsule_id, matchesSchema: false } : { capsuleId: record.capsule_id, matchesSchema: true, summary };
       break;
     }
     return {
@@ -9484,8 +9861,8 @@ ${body}
   ]);
   var UNVERIFIED_KEY_LABEL = "stated key_id (not verified)";
   function statedTimes(capsule) {
-    const timestamp = asString(capsule.timestamp);
-    const provenanceMode = isObject(capsule.provenance_mode) ? capsule.provenance_mode : void 0;
+    const timestamp = asString2(capsule.timestamp);
+    const provenanceMode = isObject2(capsule.provenance_mode) ? capsule.provenance_mode : void 0;
     return {
       ...timestamp === void 0 ? {} : { timestamp },
       ...provenanceMode === void 0 ? {} : { provenanceMode }
@@ -9496,7 +9873,7 @@ ${body}
   var CONTRACT_REF = /^[^@\s]+@[^@\s]+$/u;
   var nonNegativeInteger = (value) => Number.isSafeInteger(value) && value >= 0;
   function digestRefFindings(path2, value) {
-    if (!isObject(value))
+    if (!isObject2(value))
       return [`${path2}: not an object`];
     const findings = [];
     if (value.digest_alg !== "SHA-256")
@@ -9506,7 +9883,7 @@ ${body}
     return findings;
   }
   function presentationFindings(path2, value) {
-    if (!isObject(value))
+    if (!isObject2(value))
       return [`${path2}: not an object`];
     const findings = [];
     switch (value.kind) {
@@ -9591,7 +9968,7 @@ ${body}
     return later;
   }
   function claimFindings(path2, value) {
-    if (!isObject(value))
+    if (!isObject2(value))
       return [`${path2}: not an object`];
     const findings = [];
     for (const member of CLAIM_REQUIRED)
@@ -9626,7 +10003,7 @@ ${body}
         findings.push(`${path2}.verdict: out_of_scope where the requirement does not allow it`);
       if (Object.hasOwn(value, "type") && value.type !== REQUIREMENT_CLAIM)
         findings.push(`${path2}.verdict: out_of_scope on a ${String(value.type)} claim`);
-      if (isObject(value.presentation) && value.presentation.status === "NOT_APPLICABLE")
+      if (isObject2(value.presentation) && value.presentation.status === "NOT_APPLICABLE")
         findings.push(`${path2}.presentation.status: NOT_APPLICABLE on an out_of_scope claim`);
     }
     if (!Array.isArray(value.evidence))
@@ -9639,14 +10016,14 @@ ${body}
       value.proofs.forEach((item, index) => {
         const itemPath = `${path2}.proofs[${index}]`;
         findings.push(...digestRefFindings(itemPath, item));
-        if (isObject(item) && !oneOf(PROOF_KINDS, item.kind))
+        if (isObject2(item) && !oneOf(PROOF_KINDS, item.kind))
           findings.push(`${itemPath}.kind`);
       });
     findings.push(...presentationFindings(`${path2}.presentation`, value.presentation));
     return findings;
   }
   function validateEvidenceResult(value) {
-    if (!isObject(value))
+    if (!isObject2(value))
       return ["result: not an object"];
     const findings = [];
     for (const key of Object.keys(value))
@@ -9660,10 +10037,10 @@ ${body}
       findings.push("claims: not a non-empty array");
     else
       value.claims.forEach((claim, index) => findings.push(...claimFindings(`claims[${index}]`, claim)));
-    const aggregate = isObject(value.aggregate) ? value.aggregate : void 0;
+    const aggregate = isObject2(value.aggregate) ? value.aggregate : void 0;
     if (aggregate === void 0)
       findings.push("aggregate: not an object");
-    const coverage = isObject(aggregate?.coverage) ? aggregate.coverage : void 0;
+    const coverage = isObject2(aggregate?.coverage) ? aggregate.coverage : void 0;
     if (coverage === void 0)
       findings.push("aggregate.coverage: not an object");
     else
@@ -9676,14 +10053,14 @@ ${body}
           findings.push(`aggregate.coverage.${member}: not a non-negative integer`);
     if (coverage !== void 0 && Object.hasOwn(coverage, "not_yet_in_force") && !nonNegativeInteger(coverage.not_yet_in_force))
       findings.push("aggregate.coverage.not_yet_in_force: not a non-negative integer");
-    if (coverage !== void 0 && Object.hasOwn(coverage, "requirements_covered") && (!Array.isArray(coverage.requirements_covered) || !coverage.requirements_covered.every((entry) => isObject(entry) && typeof entry.contract_ref === "string" && CONTRACT_REF.test(entry.contract_ref) && nonEmptyString3(entry.requirement_ref))))
+    if (coverage !== void 0 && Object.hasOwn(coverage, "requirements_covered") && (!Array.isArray(coverage.requirements_covered) || !coverage.requirements_covered.every((entry) => isObject2(entry) && typeof entry.contract_ref === "string" && CONTRACT_REF.test(entry.contract_ref) && nonEmptyString3(entry.requirement_ref))))
       findings.push("aggregate.coverage.requirements_covered: not an array of (contract_ref, requirement_ref) pairs");
     for (const member of ["plan_ref", "dataset_ref"])
       if (Object.hasOwn(value, member))
         findings.push(...digestRefFindings(member, value[member]));
     if (Object.hasOwn(value, "plan_ref") !== Object.hasOwn(value, "dataset_ref"))
       findings.push("plan_ref, dataset_ref: one is present without the other");
-    const buckets = isObject(aggregate?.buckets) ? aggregate.buckets : void 0;
+    const buckets = isObject2(aggregate?.buckets) ? aggregate.buckets : void 0;
     if (buckets === void 0)
       findings.push("aggregate.buckets: not an object");
     else {
@@ -9838,10 +10215,10 @@ ${body}
   }
   function reconcileBody(raw) {
     const body = raw.reconcile;
-    if (!isObject(body))
+    if (!isObject2(body))
       return void 0;
     const { join_key, peer, period, tallies, state_of_record } = body;
-    if (!nonEmptyString3(join_key) || !nonEmptyString3(peer) || !isObject(period) || typeof period.start !== "string" || typeof period.end !== "string" || !isObject(tallies) || !RECONCILE_TALLY_KEYS.every((key) => nonNegativeInteger(tallies[key])) || !oneOf(STATES_OF_RECORD, state_of_record))
+    if (!nonEmptyString3(join_key) || !nonEmptyString3(peer) || !isObject2(period) || typeof period.start !== "string" || typeof period.end !== "string" || !isObject2(tallies) || !RECONCILE_TALLY_KEYS.every((key) => nonNegativeInteger(tallies[key])) || !oneOf(STATES_OF_RECORD, state_of_record))
       return void 0;
     return {
       joinKey: join_key,
@@ -9853,7 +10230,7 @@ ${body}
   }
   function closeBody(raw) {
     const body = raw.close;
-    if (!isObject(body) || !oneOf(CLOSE_STATES, body.close_state) || !isObject(body.close_ref) || !isHex64(body.close_ref.digest))
+    if (!isObject2(body) || !oneOf(CLOSE_STATES, body.close_state) || !isObject2(body.close_ref) || !isHex64(body.close_ref.digest))
       return void 0;
     return body;
   }
@@ -9861,14 +10238,14 @@ ${body}
     const inbound = /* @__PURE__ */ new Map();
     for (const record of context.records) {
       const header = verifiedPayload(context, record.capsule_id, "agent_input");
-      if (!isObject(header) || !Array.isArray(header.links))
+      if (!isObject2(header) || !Array.isArray(header.links))
         continue;
-      const bookId = asString(header.book_id);
+      const bookId = asString2(header.book_id);
       const signer = await signerOf(record);
       for (const link of header.links) {
-        if (!isObject(link) || !oneOf(CLOSE_LINK_TYPES, link.type))
+        if (!isObject2(link) || !oneOf(CLOSE_LINK_TYPES, link.type))
           continue;
-        const target = asString(link.target);
+        const target = asString2(link.target);
         if (target === void 0)
           continue;
         const list2 = inbound.get(target) ?? [];
@@ -9893,8 +10270,8 @@ ${body}
   }
   var lowerHex = /^(?:[0-9a-f]{2})+$/u;
   async function keyVerifies(record, keyId) {
-    const signature = record.signature;
-    if (typeof signature !== "string" || !lowerHex.test(signature))
+    const signature2 = record.signature;
+    if (typeof signature2 !== "string" || !lowerHex.test(signature2))
       return false;
     let recomputed;
     try {
@@ -9904,7 +10281,7 @@ ${body}
     }
     if (recomputed !== record.capsule_id)
       return false;
-    const envelope = await verifyProducerEnvelope(recomputed, hexToBytes(signature));
+    const envelope = await verifyProducerEnvelope(recomputed, hexToBytes(signature2));
     if (!envelope.ok || envelope.publicKey === void 0)
       return false;
     const kid = Array.from(envelope.publicKey, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -9922,7 +10299,7 @@ ${body}
     }
     return { links, ignored };
   }
-  var actedOnReferences2 = (record) => Array.isArray(record.references) ? record.references.flatMap((reference) => isObject(reference) && reference.type === "agent-action-capsule" && reference.citation_purpose === "acted_on" && typeof reference.digest === "string" ? [reference.digest] : []) : [];
+  var actedOnReferences2 = (record) => Array.isArray(record.references) ? record.references.flatMap((reference) => isObject2(reference) && reference.type === "agent-action-capsule" && reference.citation_purpose === "acted_on" && typeof reference.digest === "string" ? [reference.digest] : []) : [];
   function resultDocument(context, root) {
     return resultCarriers(context, root)[0];
   }
@@ -9930,7 +10307,7 @@ ${body}
     const carriers = [];
     for (const member of ["agent_output", "agent_input"]) {
       const payload = verifiedPayload(context, record.capsule_id, member);
-      if (!isObject(payload))
+      if (!isObject2(payload))
         continue;
       if (payload.result_version === RESULT_VERSION)
         carriers.push({ member, form: "payload", document: payload });
@@ -9941,13 +10318,13 @@ ${body}
   }
   function nonResultDescription(context, root) {
     const header = verifiedPayload(context, root.capsule_id, "agent_input");
-    const recordType = isObject(header) ? header.record_type : void 0;
+    const recordType = isObject2(header) ? header.record_type : void 0;
     return typeof recordType === "string" ? `agent_input is a book record header of record_type ${JSON.stringify(recordType)}, not ${JSON.stringify(RESULT_RECORD_TYPE)}` : `no disclosed member carries an ${RESULT_VERSION} document or an ${RESULT_RECORD_TYPE} record header`;
   }
   async function isResultRoot(input) {
     const context = await verifiedBundleContext(input);
     const bundle = context.bundle;
-    if (!isObject(bundle) || !Array.isArray(bundle.records) || !isObject(bundle.disclosures))
+    if (!isObject2(bundle) || !Array.isArray(bundle.records) || !isObject2(bundle.disclosures))
       return false;
     return carriesResultDocument(context);
   }
@@ -9971,7 +10348,7 @@ ${body}
   async function bookPayload(payloads, digest) {
     if (!Object.hasOwn(payloads, digest))
       return "absent";
-    const encoded = asString(payloads[digest]);
+    const encoded = asString2(payloads[digest]);
     if (encoded === void 0)
       return "failed";
     const bytes = base64UrlBytes(encoded);
@@ -9984,7 +10361,7 @@ ${body}
     return typeof payload === "string" ? void 0 : payload;
   }
   async function carriedCapsuleId(header, payloads) {
-    if (!isObject(header) || header.record_type !== PUBLISHED_CAPSULE_RECORD_TYPE)
+    if (!isObject2(header) || header.record_type !== PUBLISHED_CAPSULE_RECORD_TYPE)
       return void 0;
     const commitments = Array.isArray(header.payload_commitments) ? header.payload_commitments.filter(isHex64) : [];
     const capsuleDigest = commitments[0];
@@ -10009,7 +10386,7 @@ ${body}
       return void 0;
     const { capsule, id } = carried;
     const committed = committedDigest(capsule, "agent_input");
-    const actionId = asString(capsule.action_id);
+    const actionId = asString2(capsule.action_id);
     return isHex64(committed) ? {
       capsuleId: id,
       inputDigest: committed,
@@ -10018,7 +10395,7 @@ ${body}
     } : void 0;
   }
   async function resolveCarriedInput(header, payloads, originals = {}) {
-    if (!isObject(header) || header.record_type !== PUBLISHED_CAPSULE_RECORD_TYPE)
+    if (!isObject2(header) || header.record_type !== PUBLISHED_CAPSULE_RECORD_TYPE)
       return void 0;
     const commitments = Array.isArray(header.payload_commitments) ? header.payload_commitments.filter(isHex64) : [];
     const capsuleDigest = commitments[0];
@@ -10076,7 +10453,7 @@ ${body}
       return { state: "disclosure_mismatch" };
     if (found)
       return { state: "disclosed", payload: disclosed };
-    const attached = asString(originals[capsuleId]);
+    const attached = asString2(originals[capsuleId]);
     if (attached !== void 0) {
       const bytes = base64UrlBytes(attached);
       if (bytes === void 0)
@@ -10094,12 +10471,12 @@ ${body}
   async function buildResultRoot(input) {
     const context = await verifiedBundleContext(input);
     const bundle = context.bundle;
-    if (!isObject(bundle) || !Array.isArray(bundle.records) || !isObject(bundle.disclosures))
+    if (!isObject2(bundle) || !Array.isArray(bundle.records) || !isObject2(bundle.disclosures))
       throw new EvidenceGraphError("bundle must contain records and disclosures");
     const records = context.records;
     const rootRecord2 = context.root === void 0 ? void 0 : context.recordIndex.get(context.root);
     if (rootRecord2 === void 0)
-      throw new EvidenceGraphError(bundle.records.some((record) => isObject(record) && record.capsule_id === context.root) ? "root record failed verification" : "root record not supplied");
+      throw new EvidenceGraphError(bundle.records.some((record) => isObject2(record) && record.capsule_id === context.root) ? "root record failed verification" : "root record not supplied");
     const rootCarriers = resultCarriers(context, rootRecord2);
     const carried = rootCarriers[0];
     if (carried === void 0)
@@ -10112,7 +10489,7 @@ ${body}
         otherCarriers.push(record.capsule_id);
     if (otherCarriers.length > 0)
       throw new EvidenceGraphError(`bundle carries ${otherCarriers.length + 1} Result v0 documents: root ${rootRecord2.capsule_id} and ${otherCarriers.join(", ")}; a bundle has exactly one headline document`);
-    const findings = carried.form === "book" ? isObject(carried.document) ? validateEvidenceResult(carried.document).map((finding) => `agent_input.statement.${finding}`) : [
+    const findings = carried.form === "book" ? isObject2(carried.document) ? validateEvidenceResult(carried.document).map((finding) => `agent_input.statement.${finding}`) : [
       `agent_input.statement: ${carried.document === void 0 ? "absent" : "not an object"} on the ${RESULT_RECORD_TYPE} record header`
     ] : validateEvidenceResult(carried.document);
     if (findings.length > 0)
@@ -10120,15 +10497,15 @@ ${body}
     const document2 = carried.document;
     const memberships2 = context.completeness.memberships;
     const recordsById = context.recordIndex;
-    const bookPayloads = isObject(bundle.extensions) && isObject(bundle.extensions[BOOK_PAYLOADS_EXTENSION]) ? bundle.extensions[BOOK_PAYLOADS_EXTENSION] : {};
-    const inputOriginals = isObject(bundle.extensions) && isObject(bundle.extensions[AGENT_INPUT_ORIGINALS_EXTENSION]) ? bundle.extensions[AGENT_INPUT_ORIGINALS_EXTENSION] : {};
+    const bookPayloads = isObject2(bundle.extensions) && isObject2(bundle.extensions[BOOK_PAYLOADS_EXTENSION]) ? bundle.extensions[BOOK_PAYLOADS_EXTENSION] : {};
+    const inputOriginals = isObject2(bundle.extensions) && isObject2(bundle.extensions[AGENT_INPUT_ORIGINALS_EXTENSION]) ? bundle.extensions[AGENT_INPUT_ORIGINALS_EXTENSION] : {};
     let carriersById;
     const bookCarrier = async (id) => {
       if (carriersById === void 0) {
         carriersById = /* @__PURE__ */ new Map();
         for (const record of records) {
           const header = disclosureOf(context, record.capsule_id, "agent_input");
-          if (header.state !== "disclosed" || !isObject(header.payload) || header.payload.record_type !== PUBLISHED_CAPSULE_RECORD_TYPE)
+          if (header.state !== "disclosed" || !isObject2(header.payload) || header.payload.record_type !== PUBLISHED_CAPSULE_RECORD_TYPE)
             continue;
           const carried2 = await carriedCapsuleId(header.payload, bookPayloads);
           if (carried2 !== void 0 && !recordsById.has(carried2.id))
@@ -10161,7 +10538,7 @@ ${body}
           carriedInputDigest: carriedCapsule.inputDigest,
           ...carriedCapsule.actionId === void 0 ? {} : { carriedActionId: carriedCapsule.actionId }
         },
-        ...carriedCapsule !== void 0 ? { stated: carriedCapsule.stated } : agentInput.state === "disclosed" && isObject(agentInput.payload) && agentInput.payload.record_type === PUBLISHED_CAPSULE_RECORD_TYPE ? {} : { stated: statedTimes(record) },
+        ...carriedCapsule !== void 0 ? { stated: carriedCapsule.stated } : agentInput.state === "disclosed" && isObject2(agentInput.payload) && agentInput.payload.record_type === PUBLISHED_CAPSULE_RECORD_TYPE ? {} : { stated: statedTimes(record) },
         agentOutput: disclosureOf(context, record.capsule_id, "agent_output"),
         ...agentInputDigest === void 0 ? {} : { agentInputDigest },
         ...agentOutputDigest === void 0 ? {} : { agentOutputDigest },
@@ -10197,19 +10574,19 @@ ${body}
         const asserted = body.close_state;
         const closeRecord = recordsById.get(closeRef);
         const supplied = closeRecord !== void 0;
-        const peer = asString(body.peer);
+        const peer = asString2(body.peer);
         const closeHeader = closeRecord === void 0 ? void 0 : verifiedPayload(context, closeRecord.capsule_id, "agent_input");
-        const closeBookId = isObject(closeHeader) ? asString(closeHeader.book_id) : void 0;
+        const closeBookId = isObject2(closeHeader) ? asString2(closeHeader.book_id) : void 0;
         const closeSigner = closeRecord === void 0 ? {} : await signerOf(closeRecord);
         const { links, ignored } = counterpartyLinks({
           ...closeBookId === void 0 ? {} : { bookId: closeBookId },
           ...closeSigner
         }, peer, inbound.get(closeRef) ?? []);
         const derived = supplied && closeSigner.keyNotChecked !== true ? deriveCloseState(links) : void 0;
-        const peerCloseRef = isObject(body.peer_close_ref) ? asString(body.peer_close_ref.digest) : void 0;
-        const period = isObject(body.period) ? {
-          start: asString(body.period.start) ?? "",
-          end: asString(body.period.end) ?? ""
+        const peerCloseRef = isObject2(body.peer_close_ref) ? asString2(body.peer_close_ref.digest) : void 0;
+        const period = isObject2(body.period) ? {
+          start: asString2(body.period.start) ?? "",
+          end: asString2(body.period.end) ?? ""
         } : void 0;
         const wanted = derived === "AGREED" ? "acknowledges" : derived === "CONTESTED" ? "rebuts" : void 0;
         close = {
@@ -10397,18 +10774,19 @@ ${body}
   }
   function reportPayload(records, claim) {
     const digest = claim.evidence[0]?.digest;
-    if (digest === void 0)
-      return void 0;
+    return digest === void 0 ? void 0 : citedPayload(records, digest);
+  }
+  function citedPayload(records, digest) {
     const record = records.get(digest);
     if (record === void 0)
       return void 0;
     const input = record.carriedInput ?? record.agentInput;
     if (input.state !== "disclosed")
       return void 0;
-    return isObject(input.payload) ? input.payload : void 0;
+    return isObject2(input.payload) ? input.payload : void 0;
   }
   function dayOf(payload) {
-    const period = asString(payload?.period);
+    const period = asString2(payload?.period);
     if (period === void 0)
       return "unknown";
     const colon = period.indexOf(":");
@@ -10416,7 +10794,7 @@ ${body}
   }
   var STATED_DAY = /^(\d{4}-\d{2}-\d{2})/u;
   function reportSealedDay(records, claim) {
-    const period = asString(reportPayload(records, claim)?.period);
+    const period = asString2(reportPayload(records, claim)?.period);
     if (period !== void 0) {
       const colon = period.indexOf(":");
       return colon === -1 ? period : period.slice(colon + 1);
@@ -10435,7 +10813,7 @@ ${body}
     const input = record.carriedInput ?? record.agentInput;
     switch (input.state) {
       case "disclosed":
-        return isObject(input.payload) ? "disclosed" : "unreadable";
+        return isObject2(input.payload) ? "disclosed" : "unreadable";
       case "withheld":
         return record.carriedInput !== void 0 && record.carriedCapsuleId === void 0 ? "invalid" : "withheld";
       case "disclosure_mismatch":
@@ -10525,12 +10903,12 @@ ${body}
     if (stated === void 0)
       return judged;
     const mode = stated.provenanceMode;
-    if (asString(mode?.mode) === "backfilled") {
-      const source = asString(mode?.source_asserted_at);
+    if (asString2(mode?.mode) === "backfilled") {
+      const source = asString2(mode?.source_asserted_at);
       const day2 = source === void 0 ? void 0 : STATED_DAY.exec(source)?.[1];
       if (source === void 0 || day2 === void 0)
         return judged;
-      const importedAt = asString(mode?.imported_at);
+      const importedAt = asString2(mode?.imported_at);
       return {
         basis: "source",
         date: day2,
@@ -10565,35 +10943,35 @@ ${body}
     return "met";
   }
   function sealedCaseIds(payload) {
-    const c = isObject(payload.case) ? payload.case : void 0;
+    const c = isObject2(payload.case) ? payload.case : void 0;
     if (c === void 0)
       return [];
     const parts = [c.benchmark, c.domain, c.task_id, c.trial].map((v) => typeof v === "string" || typeof v === "number" ? String(v) : void 0);
     if (parts.some((v) => v === void 0))
       return [];
     const ids = [`${parts[0]}:${parts[1]}:task-${parts[2]}:trial-${parts[3]}`];
-    const model = asString(c.agent_model);
+    const model = asString2(c.agent_model);
     if (model !== void 0 && model.length > 0)
       ids.unshift(`${parts[0]}:${parts[1]}:${model}:task-${parts[2]}:trial-${parts[3]}`);
     return ids;
   }
   function transcriptTurns(payload) {
-    const interaction = isObject(payload.agent_interaction) ? payload.agent_interaction : void 0;
+    const interaction = isObject2(payload.agent_interaction) ? payload.agent_interaction : void 0;
     if (interaction === void 0 || !Array.isArray(interaction.messages))
       return void 0;
     return interaction.messages.flatMap((m) => {
-      if (!isObject(m))
+      if (!isObject2(m))
         return [];
-      const role = asString(m.role) ?? "unknown";
-      const content = asString(m.content);
+      const role = asString2(m.role) ?? "unknown";
+      const content = asString2(m.content);
       const calls = Array.isArray(m.tool_calls) ? m.tool_calls : [];
       return [
         {
           role,
           ...content === void 0 ? {} : { content },
-          toolCalls: calls.flatMap((call) => isObject(call) ? [
+          toolCalls: calls.flatMap((call) => isObject2(call) ? [
             {
-              name: asString(call.name) ?? "unnamed",
+              name: asString2(call.name) ?? "unnamed",
               arguments: JSON.stringify(call.arguments ?? null)
             }
           ] : [])
@@ -10613,7 +10991,7 @@ ${body}
         if (record !== void 0)
           records.push(record);
       }
-    const carriers = records.filter((r) => r.carriedInput?.state === "disclosed" && isObject(r.carriedInput.payload) && transcriptTurns(r.carriedInput.payload) !== void 0);
+    const carriers = records.filter((r) => r.carriedInput?.state === "disclosed" && isObject2(r.carriedInput.payload) && transcriptTurns(r.carriedInput.payload) !== void 0);
     if (carriers.length === 0)
       return { state: "absent" };
     if (sourceCapsuleId === void 0)
@@ -10722,11 +11100,11 @@ ${body}
           }
           const target = claim.later && !claim.failed ? laterCriteria : criteria;
           const judgment = reportPayload(result.records, claim);
-          const rationale = judgment ? asString(judgment.rationale) : void 0;
-          const reasonCode = judgment ? asString(judgment.reason_code) : void 0;
-          const sourceCapsuleId = judgment ? asString(judgment.source_capsule_id) : void 0;
-          const judgePinDigest = judgment ? asString(judgment.judge_pin_digest) : void 0;
-          const clauseClaim = judgment !== void 0 && asString(judgment.clause_id) === `${check.id}.${criterion2.id}` ? asString(judgment.clause_claim) : void 0;
+          const rationale = judgment ? asString2(judgment.rationale) : void 0;
+          const reasonCode = judgment ? asString2(judgment.reason_code) : void 0;
+          const sourceCapsuleId = judgment ? asString2(judgment.source_capsule_id) : void 0;
+          const judgePinDigest = judgment ? asString2(judgment.judge_pin_digest) : void 0;
+          const clauseClaim = judgment !== void 0 && asString2(judgment.clause_id) === `${check.id}.${criterion2.id}` ? asString2(judgment.clause_claim) : void 0;
           const { probabilities, confidence } = parseJudgeProbabilities(rationale);
           const cited2 = claim.evidence[0]?.digest;
           const record = cited2 === void 0 ? void 0 : result.records.get(cited2);
@@ -10808,20 +11186,20 @@ ${body}
     return tiers;
   }
   function pinComponents(value) {
-    if (!isObject(value))
+    if (!isObject2(value))
       return void 0;
-    const modelId = asString(value.model_id);
-    const promptDigest = asString(value.prompt_digest);
-    const axesDigest = asString(value.axes_digest);
+    const modelId = asString2(value.model_id);
+    const promptDigest = asString2(value.prompt_digest);
+    const axesDigest = asString2(value.axes_digest);
     if (modelId === void 0 || promptDigest === void 0 || axesDigest === void 0)
       return void 0;
-    const modelVersion = asString(value.model_version);
+    const modelVersion = asString2(value.model_version);
     return {
       modelId,
       ...modelVersion === void 0 ? {} : { modelVersion },
       promptDigest,
       axesDigest,
-      ...isObject(value.sampling_params) ? { samplingParams: value.sampling_params } : {}
+      ...isObject2(value.sampling_params) ? { samplingParams: value.sampling_params } : {}
     };
   }
   function pinPreimage(pin) {
@@ -10845,10 +11223,10 @@ ${body}
           continue;
         claimContracts.add(claim.contractRef);
         const payload = reportPayload(result.records, claim);
-        const contract = asString(payload?.contract_ref) ?? asString(payload?.contract);
+        const contract = asString2(payload?.contract_ref) ?? asString2(payload?.contract);
         if (contract !== void 0)
           reportContracts.add(contract);
-        const pin = asString(payload?.judge_pin_digest);
+        const pin = asString2(payload?.judge_pin_digest);
         if (pin !== void 0)
           pins.add(pin);
         const parts = pinComponents(payload?.judge_pin);
@@ -10882,62 +11260,115 @@ ${body}
     }
     return { ...runInfo, judgePinRecomputes: recomputes };
   }
+  function judgedCase(result, caseDigest) {
+    const citing = result.claims.filter((claim) => claim.type === REQUIREMENT_CLAIM && !claim.failed && claim.evidence.some((ref) => ref.digest === caseDigest));
+    const first = citing[0];
+    if (first === void 0)
+      return void 0;
+    const settled2 = citing.every((claim) => claim.requirementRef === first.requirementRef && claim.verdict === first.verdict);
+    return settled2 ? {
+      claimId: first.id,
+      requirementRef: first.requirementRef,
+      verdict: first.verdict
+    } : void 0;
+  }
+  var COUNTED_LABELS = /* @__PURE__ */ new Set(["met", "not_met"]);
   function buildCalibration(result) {
-    const weeks = [];
+    const readings2 = [];
     for (const claim of result.claims) {
       if (claim.type !== "calibration")
         continue;
-      const payload = reportPayload(result.records, claim);
-      if (payload === void 0)
-        continue;
-      const weekId = asString(payload.week);
-      if (weekId === void 0)
-        continue;
-      const sample = (Array.isArray(payload.sample) ? payload.sample : []).flatMap((entry) => {
-        if (!isObject(entry))
-          return [];
-        const conversationId = asString(entry.conversation_id);
-        const aiVerdict = asString(entry.ai_verdict);
-        const humanVerdict = asString(entry.human_verdict);
-        if (conversationId === void 0 || aiVerdict === void 0 || humanVerdict === void 0)
-          return [];
-        const note = asString(entry.note);
-        return [
-          {
-            conversationId,
-            aiVerdict,
-            humanVerdict,
-            ...note === void 0 ? {} : { note },
-            agrees: aiVerdict === humanVerdict
+      const summaries = [];
+      const ratings = [];
+      let ratingsNotMatching = 0;
+      for (const digest of new Set(claim.evidence.map((ref) => ref.digest))) {
+        const payload = citedPayload(result.records, digest);
+        if (payload === void 0)
+          continue;
+        if (payload.record_version === CALIBRATION_SUMMARY_V1)
+          summaries.push({ digest, payload });
+        else if (payload.record_version === HUMAN_RATING_V1) {
+          const rating = readHumanRating(payload);
+          if (rating === void 0) {
+            ratingsNotMatching += 1;
+            continue;
           }
-        ];
+          const judged = judgedCase(result, rating.ratedCase.digest);
+          ratings.push({
+            digest,
+            rating,
+            ...judged === void 0 ? {} : {
+              judged,
+              ...COUNTED_LABELS.has(rating.label) && COUNTED_LABELS.has(judged.verdict) ? { agrees: rating.label === judged.verdict } : {}
+            }
+          });
+        }
+      }
+      const first = summaries[0];
+      if (first === void 0)
+        continue;
+      const base = {
+        claim,
+        summaryDigest: first.digest,
+        ratings,
+        ratingsNotMatching,
+        ratingsOutsideClauses: 0
+      };
+      if (summaries.length > 1) {
+        readings2.push({ ...base, state: "ambiguous", clauses: [] });
+        continue;
+      }
+      const summary = readCalibrationSummary(first.payload);
+      if (summary === void 0) {
+        readings2.push({ ...base, state: "not_matching", clauses: [] });
+        continue;
+      }
+      const recomputable = ratingsNotMatching === 0 && ratings.every((entry) => entry.judged !== void 0);
+      const clauses = summary.clauses.map((tally) => {
+        const bound = recomputable ? ratings.filter((entry) => entry.judged.requirementRef === tally.clauseRef && entry.agrees !== void 0) : [];
+        if (bound.length === 0)
+          return { ...tally, agreementCheck: "not_recomputable" };
+        const recomputed = {
+          k: bound.filter((entry) => entry.agrees === true).length,
+          n: bound.length
+        };
+        const stated = tally.agreement;
+        const agreementCheck = recomputed.k > stated.k || recomputed.n - recomputed.k > stated.n - stated.k ? "mismatch" : recomputed.k === stated.k && recomputed.n === stated.n ? "matches" : "not_recomputable";
+        return { ...tally, recomputedAgreement: recomputed, agreementCheck };
       });
-      const k = sample.filter((entry) => entry.agrees).length;
-      const n = sample.length;
-      const from = asString(payload.from);
-      const to = asString(payload.to);
-      weeks.push({
-        weekId,
-        ...from === void 0 ? {} : { from },
-        ...to === void 0 ? {} : { to },
-        k,
-        n,
-        sample,
-        claim
+      const clauseRefs = new Set(summary.clauses.map((c) => c.clauseRef));
+      const ratingsOutsideClauses = ratings.filter((entry) => entry.judged !== void 0 && !clauseRefs.has(entry.judged.requirementRef)).length;
+      readings2.push({
+        ...base,
+        ratingsOutsideClauses,
+        state: "read",
+        summary,
+        clauses
       });
     }
-    weeks.sort((a, b) => a.weekId.localeCompare(b.weekId));
-    return weeks;
+    readings2.sort((a, b) => {
+      if (a.summary === void 0 || b.summary === void 0)
+        return Number(a.summary === void 0) - Number(b.summary === void 0);
+      return a.summary.computedAt.localeCompare(b.summary.computedAt) || a.summaryDigest.localeCompare(b.summaryDigest);
+    });
+    return readings2;
   }
-  function heldAndAdded(weeks) {
+  function heldAndAdded(readings2) {
     let held = 0, added = 0;
-    for (const week of weeks)
-      for (const sample of week.sample) {
-        if (sample.aiVerdict === "met" && sample.humanVerdict !== "met")
+    const seen = /* @__PURE__ */ new Set();
+    for (const reading of readings2) {
+      if (reading.state !== "read")
+        continue;
+      for (const { digest, rating, judged } of reading.ratings) {
+        if (judged === void 0 || seen.has(digest))
+          continue;
+        seen.add(digest);
+        if (judged.verdict === "met" && rating.label === "not_met")
           held += 1;
-        else if (sample.aiVerdict !== "met" && sample.humanVerdict === "met")
+        else if (judged.verdict === "not_met" && rating.label === "met")
           added += 1;
       }
+    }
     return { held, added };
   }
   function missedReasonGroups(terms, conversations) {
@@ -10997,11 +11428,11 @@ ${body}
   function citedContract(result, contractRef) {
     for (const record of result.records.values()) {
       const input = record.carriedInput ?? record.agentInput;
-      if (input.state !== "disclosed" || !isObject(input.payload))
+      if (input.state !== "disclosed" || !isObject2(input.payload))
         continue;
       const doc = input.payload;
-      const id = asString(doc.id);
-      const version = asString(doc.version);
+      const id = asString2(doc.id);
+      const version = asString2(doc.version);
       if (id !== void 0 && version !== void 0 && Array.isArray(doc.requirements) && `${id}@${version}` === contractRef)
         return doc;
     }
@@ -11035,12 +11466,12 @@ ${body}
       checks.set(split2.checkId, criteria);
     }
     const at = contractRef?.lastIndexOf("@") ?? -1;
-    const outcome = Array.isArray(contract?.requirements) ? contract.requirements.find((r) => isObject(r) && r.profile === "outcome" && asString(r.statement) !== void 0) : void 0;
+    const outcome = Array.isArray(contract?.requirements) ? contract.requirements.find((r) => isObject2(r) && r.profile === "outcome" && asString2(r.statement) !== void 0) : void 0;
     return {
       pack: {
         id: contractRef === void 0 || at <= 0 ? NOT_STATED : contractRef.slice(0, at),
         version: contractRef === void 0 || at <= 0 || at === contractRef.length - 1 ? NOT_STATED : contractRef.slice(at + 1),
-        outcomeStatement: asString(outcome?.statement) ?? NOT_STATED,
+        outcomeStatement: asString2(outcome?.statement) ?? NOT_STATED,
         locked: NOT_STATED,
         agreement: NOT_STATED,
         resolutionRule: RESOLUTION_RULE
@@ -11070,7 +11501,7 @@ ${body}
   function contractCriteria(contract) {
     const ids = [];
     for (const requirement of contract?.requirements ?? []) {
-      const id = isObject(requirement) ? asString(requirement.id) : void 0;
+      const id = isObject2(requirement) ? asString2(requirement.id) : void 0;
       if (id !== void 0 && criterionRef(id) !== void 0 && !ids.includes(id))
         ids.push(id);
     }
@@ -11142,31 +11573,31 @@ ${body}
   }
 
   // node_modules/@action-state-group/agent-action-capsule/dist/report-rows.js
-  var rowCitationDigests = (row2) => Array.isArray(row2.references) ? row2.references.flatMap((reference) => isObject(reference) && reference.type === "agent-action-capsule" && reference.citation_purpose === "acted_on" ? asString(reference.digest) === void 0 ? [] : [asString(reference.digest)] : []) : [];
+  var rowCitationDigests = (row2) => Array.isArray(row2.references) ? row2.references.flatMap((reference) => isObject2(reference) && reference.type === "agent-action-capsule" && reference.citation_purpose === "acted_on" ? asString2(reference.digest) === void 0 ? [] : [asString2(reference.digest)] : []) : [];
   async function buildReportRows(input) {
     const context = await verifiedBundleContext(input);
     const bundle = context.bundle;
-    if (!isObject(bundle) || !Array.isArray(bundle.records) || !isObject(bundle.disclosures)) {
+    if (!isObject2(bundle) || !Array.isArray(bundle.records) || !isObject2(bundle.disclosures)) {
       return void 0;
     }
     const rootRecord2 = context.root === void 0 ? void 0 : context.recordIndex.get(context.root);
     if (rootRecord2 === void 0)
       return void 0;
     const rootPayload = verifiedPayload(context, rootRecord2.capsule_id, "agent_input");
-    if (!isObject(rootPayload) || rootPayload.spec_version !== "report/v1")
+    if (!isObject2(rootPayload) || rootPayload.spec_version !== "report/v1")
       return void 0;
     const memberships2 = context.completeness.memberships;
     const recordsById = context.recordIndex;
     const rows = [];
     for (const raw of Array.isArray(rootPayload.rows) ? rootPayload.rows : []) {
-      if (!isObject(raw))
+      if (!isObject2(raw))
         continue;
-      const rowId = asString(raw.row_id);
-      const label = asString(raw.label);
-      const rowStatus2 = asString(raw.status);
+      const rowId = asString2(raw.row_id);
+      const label = asString2(raw.label);
+      const rowStatus2 = asString2(raw.status);
       if (rowId === void 0 || label === void 0 || rowStatus2 === void 0)
         continue;
-      const reason = asString(raw.reason);
+      const reason = asString2(raw.reason);
       const citations2 = [];
       for (const digest of rowCitationDigests(raw)) {
         const record = recordsById.get(digest);
@@ -11190,7 +11621,7 @@ ${body}
         citations: citations2
       });
     }
-    const title = asString(rootPayload.title);
+    const title = asString2(rootPayload.title);
     const rootResolvedLogCoordinates = logCoordinates(memberships2, rootRecord2.capsule_id);
     return {
       capsuleId: rootRecord2.capsule_id,
@@ -11285,7 +11716,7 @@ ${body}
     const unbound = new Set(unboundRecordIds(verified));
     const invalid2 = invalidRecordIds(verified);
     return (Array.isArray(bundle.records) ? bundle.records : []).flatMap((record) => {
-      const capsuleId = object8(record)?.capsule_id;
+      const capsuleId = object9(record)?.capsule_id;
       if (typeof capsuleId !== "string")
         return [];
       return [
@@ -11329,7 +11760,7 @@ ${body}
   };
   var UNVERIFIED_BUNDLE_REFUSAL = "This bundle did not verify. Its records, rows and payloads are not shown; the verification page below lists which checks failed.";
   var recordsWord = (count2) => `${count2} ${count2 === 1 ? "record" : "records"}`;
-  var fields = (value) => object8(value) ?? {};
+  var fields = (value) => object9(value) ?? {};
   var CLAIM_WORDS = {
     records: "each record's identity",
     signatures: "the records' producer signatures",
@@ -11520,7 +11951,7 @@ ${body}
     "range_proof_invalid"
   ]);
   function verificationCheckLists(bundle, verified, inputs = {}) {
-    const top = object8(bundle) ?? {};
+    const top = object9(bundle) ?? {};
     const outcome = /* @__PURE__ */ new Map();
     const ran = (id, passed) => {
       outcome.set(id, passed ? "page" : "failed");
@@ -11531,7 +11962,7 @@ ${body}
     }
     ran("closure", verified.graphClosure.status !== "fail");
     const range = verified.intervalCoverage;
-    const signed = typeof object8(top.checkpoint)?.cose === "string" && object8(top.checkpoint).cose !== "";
+    const signed = typeof object9(top.checkpoint)?.cose === "string" && object9(top.checkpoint).cose !== "";
     let passedWithoutCheckpoint = false;
     if (range.status !== "withheld") {
       const stopped = range.findings.some((f) => STOPPED_BEFORE_CHECKPOINT.has(f));
@@ -11578,7 +12009,7 @@ ${body}
       ran("composed", true);
     if (inputs.citedSigners === true)
       ran("cited-signers", true);
-    if (Array.isArray(top.records) && top.records.some((record) => typeof object8(record)?.signature === "string" && object8(record).signature !== ""))
+    if (Array.isArray(top.records) && top.records.some((record) => typeof object9(record)?.signature === "string" && object9(record).signature !== ""))
       outcome.set("producer-signatures", "notChecked");
     if (Array.isArray(top.receipts) && top.receipts.length > 0)
       outcome.set("witness-receipts", "notChecked");
@@ -11631,7 +12062,7 @@ ${body}
     fail: "failed at least one check",
     not_checked: "not checked no evidence supplied"
   });
-  function object8(value) {
+  function object9(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
   }
   function capsuleGroupStatus(capsuleResults, checks) {
@@ -11648,7 +12079,7 @@ ${body}
     if (!Array.isArray(raw))
       return [];
     return raw.flatMap((entry) => {
-      const record = object8(entry);
+      const record = object9(entry);
       if (record === void 0)
         return [];
       const witness = record.witness, time = record.time, grade = receiptGradeWord(record.grade);
@@ -11656,7 +12087,7 @@ ${body}
     });
   }
   function completenessStatement(raw) {
-    const record = object8(raw);
+    const record = object9(raw);
     if (record === void 0)
       return void 0;
     return {
@@ -11670,8 +12101,8 @@ ${body}
     return { name, status: status2, result: FIVE_WORD_RESULT[status2] };
   }
   function buildVerificationPageModel(bundle, verified, appliedInterpreters, checkInputs = {}) {
-    const top = object8(bundle) ?? {};
-    const checkpoint = object8(top.checkpoint);
+    const top = object9(bundle) ?? {};
+    const checkpoint = object9(top.checkpoint);
     const checks = [
       summarize("Required fields", capsuleGroupStatus(verified.capsuleResults, [1])),
       summarize("Capsule ID matches contents", capsuleGroupStatus(verified.capsuleResults, [2])),
@@ -14897,11 +15328,11 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     const stated = record?.stated;
     if (stated === void 0) return judged;
     const mode = stated.provenanceMode;
-    if (asString(mode?.mode) === "backfilled") {
-      const source = asString(mode?.source_asserted_at);
+    if (asString2(mode?.mode) === "backfilled") {
+      const source = asString2(mode?.source_asserted_at);
       const day2 = source === void 0 ? void 0 : STATED_DAY2.exec(source)?.[1];
       if (source === void 0 || day2 === void 0) return judged;
-      const importedAt = asString(mode?.imported_at);
+      const importedAt = asString2(mode?.imported_at);
       return {
         basis: "source",
         date: day2,
@@ -14948,16 +15379,16 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     if (record === void 0) return void 0;
     const input = record.carriedInput ?? record.agentInput;
     if (input.state !== "disclosed") return void 0;
-    return isObject(input.payload) ? input.payload : void 0;
+    return isObject2(input.payload) ? input.payload : void 0;
   }
   function dayOf2(payload) {
-    const period = asString(payload?.period);
+    const period = asString2(payload?.period);
     if (period === void 0) return NOT_STATED;
     const colon = period.indexOf(":");
     return colon === -1 ? period : period.slice(colon + 1);
   }
   function sealedTier(payload) {
-    const type = asString(payload?.epistemic_type);
+    const type = asString2(payload?.epistemic_type);
     if (type === "semantic_judgment") return "judged";
     if (type === "recomputed_determination") return "recomputed";
     return "not stated";
@@ -15039,10 +15470,10 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
           continue;
         }
         const payload = reportPayload2(result.records, claim);
-        const rationale = asString(payload?.rationale);
-        const contract = claim.contractRef || asString(payload?.contract_ref) || asString(payload?.contract);
-        const judgePinDigest = asString(payload?.judge_pin_digest);
-        const source = asString(payload?.source_capsule_id);
+        const rationale = asString2(payload?.rationale);
+        const contract = claim.contractRef || asString2(payload?.contract_ref) || asString2(payload?.contract);
+        const judgePinDigest = asString2(payload?.judge_pin_digest);
+        const source = asString2(payload?.source_capsule_id);
         if (source !== void 0) sources.add(source);
         if (judgedDay === NOT_STATED)
           judgedDay = reportSealedDay(result.records, claim) ?? dayOf2(payload);
@@ -15104,7 +15535,7 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     const texts = /* @__PURE__ */ new Set();
     for (const p of claims) {
       if (p.claim.requirementRef !== criterionId) continue;
-      const text2 = asString(reportPayload2(result.records, p.claim)?.clause_claim);
+      const text2 = asString2(reportPayload2(result.records, p.claim)?.clause_claim);
       if (text2 !== void 0) texts.add(text2);
     }
     if (texts.size === 1) return { text: [...texts][0], source: "sealed" };
@@ -16022,15 +16453,15 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("7852ee1bf564b9eb2d32cfad8dcc1c7bcb315ae2");
+    return commitPrefix("10e0c46ce2ea959b91bdd10681726fabb7504c25");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.8.0",
     verifier: "@action-state-group/agent-action-capsule",
-    verifierVersion: "0.10.0",
+    verifierVersion: "0.13.0",
     cllVersion: "0.3.0",
     ...commit === void 0 ? {} : { commit },
     ...unreleased ? { unreleased: true } : {}
@@ -16092,12 +16523,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "module_sha256",
     "bundle"
   ]);
-  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isObject3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function checkPresentationFragment(value) {
     const fail2 = (why) => {
       throw new FragmentDecodeError(`presentation fragment: ${why}`);
     };
-    if (!isObject2(value)) fail2("not a JSON object");
+    if (!isObject3(value)) fail2("not a JSON object");
     const v = value;
     for (const key of Object.keys(v))
       if (!FRAGMENT_MEMBERS.has(key))
@@ -16116,12 +16547,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       fail2("theme_css is not a string");
     if (v.wording !== void 0) {
       const w = v.wording;
-      if (!isObject2(w) || Object.keys(w).some((k) => k !== "pack" && k !== "sha256") || typeof w.pack !== "string" || !isHex64(w.sha256))
+      if (!isObject3(w) || Object.keys(w).some((k) => k !== "pack" && k !== "sha256") || typeof w.pack !== "string" || !isHex64(w.sha256))
         fail2("wording is not {pack, sha256}");
     }
     if (v.contract !== void 0) {
       const c = v.contract;
-      if (!isObject2(c) || Object.keys(c).some((k) => k !== "text" && k !== "sha256") || typeof c.text !== "string" || !isHex64(c.sha256))
+      if (!isObject3(c) || Object.keys(c).some((k) => k !== "text" && k !== "sha256") || typeof c.text !== "string" || !isHex64(c.sha256))
         fail2("contract is not {text, sha256}");
     }
     if (!isHex64(v.core_runtime_sha256))
@@ -16301,13 +16732,19 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.cal.sealed": "sealed {span}",
       "lines.cal.policy-changed": "policy changed",
       "lines.hc.h": "Human spot checks",
-      "lines.hc.lede": "Re-grades by a person, as this bundle's re-grade records state them.",
+      "lines.hc.lede": "Re-grades by a person, as this bundle's calibration summary states them, clause by clause.",
       "lines.hc.none": "No human re-grade records in this bundle.",
-      "lines.hc.col.week": "Week",
+      "lines.hc.not-matching": "A calibration summary is cited but does not match its schema (for example, a count larger than its total), so none of it is read.",
+      "lines.hc.ambiguous": "A calibration claim cites more than one summary, so none of them is read.",
+      "lines.hc.col.clause": "Clause",
       "lines.hc.col.agreed": "Agreed",
-      "lines.hc.col.held": "Held",
-      "lines.hc.col.added": "Added",
+      "lines.hc.col.drift": "Drift",
+      "lines.hc.col.recount": "Recount from the ratings",
       "lines.hc.agreed": "{k} of {n}",
+      "lines.hc.drift": "{k} of {n}",
+      "lines.hc.recount.matches": "matches the stated count",
+      "lines.hc.recount.mismatch": "does not match the stated count",
+      "lines.hc.recount.not_recomputable": "not recounted here: the ratings are missing, or not tied to a judged term",
       "lines.terms.h": "The terms: what counts as resolved",
       "lines.terms.lede": 'Every term below is read from the sealed claims and reports in this bundle, or marked "not stated".',
       "lines.terms.lede.agreed": 'Every term below is read from the sealed claims and reports in this bundle, or marked "not stated". Agreed with the counterparty: {agreement}.',
@@ -18034,6 +18471,11 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "prov.brief.verifier.stated",
     "prov.brief.verifier.not-stated",
     "lines.hc.none",
+    "lines.hc.not-matching",
+    "lines.hc.ambiguous",
+    "lines.hc.recount.matches",
+    "lines.hc.recount.mismatch",
+    "lines.hc.recount.not_recomputable",
     "lines.terms.lede",
     "lines.terms.lede.agreed",
     "lines.terms.version.value",
@@ -18326,7 +18768,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "047b4938c07e05a7d122246e0e80a11b9db2fc65edf02286e8f49f4bc618ac6c",
+    lines: "eb3ce95f7bb646d5d8183a7109c88d519b7caf19c1f74e4a5ab4bb6121e5b738",
     groups: "3d269d31a57915293bb7f81cefb93b450e845aa07be26bd9a7e203defd560784"
   });
   function fill(key, text2, vars) {
@@ -18415,22 +18857,22 @@ ${key}`);
     if (record === void 0) return void 0;
     const input = record.carriedInput ?? record.agentInput;
     if (input.state !== "disclosed") return void 0;
-    return isObject(input.payload) ? input.payload : void 0;
+    return isObject2(input.payload) ? input.payload : void 0;
   }
   function pinComponents2(value) {
-    if (!isObject(value)) return void 0;
-    const modelId = asString(value.model_id);
-    const promptDigest = asString(value.prompt_digest);
-    const axesDigest = asString(value.axes_digest);
+    if (!isObject2(value)) return void 0;
+    const modelId = asString2(value.model_id);
+    const promptDigest = asString2(value.prompt_digest);
+    const axesDigest = asString2(value.axes_digest);
     if (modelId === void 0 || promptDigest === void 0 || axesDigest === void 0)
       return void 0;
-    const modelVersion = asString(value.model_version);
+    const modelVersion = asString2(value.model_version);
     return {
       modelId,
       ...modelVersion === void 0 ? {} : { modelVersion },
       promptDigest,
       axesDigest,
-      ...isObject(value.sampling_params) ? { samplingParams: value.sampling_params } : {}
+      ...isObject2(value.sampling_params) ? { samplingParams: value.sampling_params } : {}
     };
   }
   async function tallyJudges(records, claims) {
@@ -18459,14 +18901,14 @@ ${key}`);
         continue;
       }
       const payload = reportPayload3(records, claim);
-      if (asString(payload?.epistemic_type) === "recomputed_determination") {
-        const checker = asString(payload?.checker_ref);
+      if (asString2(payload?.epistemic_type) === "recomputed_determination") {
+        const checker = asString2(payload?.checker_ref);
         if (checker !== void 0)
           checkers.set(checker, (checkers.get(checker) ?? 0) + 1);
         else recomputedUnnamed += 1;
         continue;
       }
-      const digest = asString(payload?.judge_pin_digest);
+      const digest = asString2(payload?.judge_pin_digest);
       if (digest !== void 0) {
         const entry = pins.get(digest) ?? {
           count: 0,
@@ -18523,8 +18965,8 @@ ${key}`);
   }
   var fmt2 = (n) => n.toLocaleString();
   var quoted = (value) => JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}\u2026` : value);
-  var HEX_DIGEST = /^[0-9a-f]+$/iu;
-  var short = (digest) => HEX_DIGEST.test(digest) ? digest.length > 12 ? `${digest.slice(0, 12)}\u2026` : digest : quoted(digest);
+  var HEX_DIGEST2 = /^[0-9a-f]+$/iu;
+  var short = (digest) => HEX_DIGEST2.test(digest) ? digest.length > 12 ? `${digest.slice(0, 12)}\u2026` : digest : quoted(digest);
   function judgedByMock(tally) {
     return tally.pins.some(
       (pin) => pin.model !== void 0 && /\bmock\b/i.test(pin.model)
@@ -18611,10 +19053,10 @@ ${key}`);
     "tree_size"
   ];
   function isReceipt(value) {
-    return isObject(value) && typeof value.ts_url === "string" && RECEIPT_FIELDS.every((name) => Object.hasOwn(value, name));
+    return isObject2(value) && typeof value.ts_url === "string" && RECEIPT_FIELDS.every((name) => Object.hasOwn(value, name));
   }
   function witnessEntries(checkpoint) {
-    if (!isObject(checkpoint) || !Array.isArray(checkpoint.witnesses)) return [];
+    if (!isObject2(checkpoint) || !Array.isArray(checkpoint.witnesses)) return [];
     return checkpoint.witnesses.map((w) => {
       if (!isReceipt(w)) return { stub: false, malformed: true };
       if (w.is_stub === true) return { stub: true, malformed: false };
@@ -18636,7 +19078,7 @@ ${key}`);
   function witnessStatus(bundle, verified) {
     const aac = verified.strict?.witnesses ?? void 0;
     if (aac?.status === "fail") return "invalid";
-    const checkpoint = isObject(bundle) ? bundle.checkpoint : void 0;
+    const checkpoint = isObject2(bundle) ? bundle.checkpoint : void 0;
     const entries = checkedWitnessEntries(witnessEntries(checkpoint), aac);
     if (entries.length === 0) return "absent";
     return entries.some((e) => e.passed) ? "verified" : "not-checked";
@@ -18651,9 +19093,9 @@ ${key}`);
     return verified.strict === void 0 ? "witness-unreported" : "not-witnessed";
   }
   function witnessLine(bundle, verified, w = DEFAULT_WORDS.lines) {
-    const checkpoint = isObject(bundle) ? bundle.checkpoint : void 0;
+    const checkpoint = isObject2(bundle) ? bundle.checkpoint : void 0;
     const page = buildVerificationPageModel(bundle, verified);
-    const logId = isObject(checkpoint) ? asString(checkpoint.log_id) : void 0;
+    const logId = isObject2(checkpoint) ? asString2(checkpoint.log_id) : void 0;
     const facts = [];
     if (logId !== void 0)
       facts.push(w.t("prov.witness.log", { log: quoted(logId) }));
@@ -18667,7 +19109,7 @@ ${key}`);
     ].some((claim) => claim.findings.includes("checkpoint_unverified"));
     const about = facts.length === 0 ? [] : [
       w.t(
-        isObject(checkpoint) && typeof checkpoint.cose === "string" ? unchecked ? "prov.witness.about.unchecked" : "prov.witness.about" : "prov.witness.about.unsigned",
+        isObject2(checkpoint) && typeof checkpoint.cose === "string" ? unchecked ? "prov.witness.about.unchecked" : "prov.witness.about" : "prov.witness.about.unsigned",
         { facts: facts.join(", ") }
       )
     ];
@@ -18767,9 +19209,9 @@ ${key}`);
         ...build.cllVersion === void 0 ? {} : { cll: build.cllVersion }
       }
     );
-    const report = isObject(bundle) && isObject(bundle.verification) ? bundle.verification : void 0;
-    const producer = asString(report?.producer);
-    const version = asString(report?.version) ?? asString(report?.producer_version);
+    const report = isObject2(bundle) && isObject2(bundle.verification) ? bundle.verification : void 0;
+    const producer = asString2(report?.producer);
+    const version = asString2(report?.version) ?? asString2(report?.producer_version);
     const built = producer === void 0 ? w.t("prov.verifier.built.not-stated") : w.t("prov.verifier.built", {
       producer: quoted(producer),
       version: version === void 0 ? w.t("prov.verifier.version.not-stated") : w.t("prov.verifier.version", { version: quoted(version) })
@@ -19069,7 +19511,7 @@ ${key}`);
       this.name = "ContractError";
     }
   };
-  var isObject3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isObject4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   async function checkContractInput(contract) {
     if (!/^[0-9a-f]{64}$/u.test(contract.sha256))
       throw new ContractError("contract sha256 is not a lowercase hex SHA-256");
@@ -19089,7 +19531,7 @@ ${key}`);
         `contract is not a compiled Evidence Contract: ${why}`
       );
     };
-    if (!isObject3(parsed)) return bad2("not a JSON object");
+    if (!isObject4(parsed)) return bad2("not a JSON object");
     const { id, version, requirements } = parsed;
     if (typeof id !== "string" || id === "")
       return bad2("id is not a non-empty string");
@@ -19098,7 +19540,7 @@ ${key}`);
     if (!Array.isArray(requirements)) return bad2("requirements is not a list");
     const tiers = /* @__PURE__ */ new Map();
     requirements.forEach((requirement, i) => {
-      if (!isObject3(requirement))
+      if (!isObject4(requirement))
         return bad2(`requirement ${i + 1} is not an object`);
       const rid = requirement.id;
       if (typeof rid !== "string" || rid === "")
@@ -20426,48 +20868,65 @@ ${key}`);
       host.append(section);
       return;
     }
-    const table3 = document.createElement("table");
-    table3.className = "hct";
-    table3.dataset.weeks = String(calibration.length);
-    const thead = document.createElement("thead");
-    const headRow = document.createElement("tr");
-    headRow.append(
-      element3("th", w.t("lines.hc.col.week")),
-      el8("th", "n", w.t("lines.hc.col.agreed")),
-      el8("th", "n", w.t("lines.hc.col.held")),
-      el8("th", "n", w.t("lines.hc.col.added"))
-    );
-    thead.append(headRow);
-    table3.append(thead);
-    const tbody = document.createElement("tbody");
-    for (const week of calibration) {
-      const tr = document.createElement("tr");
-      tr.dataset.week = week.weekId;
-      tr.dataset.k = String(week.k);
-      tr.dataset.n = String(week.n);
-      tr.append(el8("td", "", week.weekId));
-      tr.append(
-        el8(
-          "td",
-          "n",
-          w.t("lines.hc.agreed", { k: String(week.k), n: String(week.n) })
-        )
+    for (const reading of calibration) {
+      if (reading.state !== "read") {
+        const note = el8(
+          "p",
+          "",
+          w.t(
+            reading.state === "ambiguous" ? "lines.hc.ambiguous" : "lines.hc.not-matching"
+          )
+        );
+        note.dataset.calibration = reading.state;
+        section.append(note);
+        continue;
+      }
+      const table3 = document.createElement("table");
+      table3.className = "hct";
+      table3.dataset.calibration = "read";
+      table3.dataset.clauses = String(reading.clauses.length);
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      headRow.append(
+        element3("th", w.t("lines.hc.col.clause")),
+        el8("th", "n", w.t("lines.hc.col.agreed")),
+        el8("th", "n", w.t("lines.hc.col.drift")),
+        element3("th", w.t("lines.hc.col.recount"))
       );
-      const held = week.sample.filter(
-        (s) => s.aiVerdict === "met" && s.humanVerdict !== "met"
-      ).length;
-      const added = week.sample.filter(
-        (s) => s.aiVerdict !== "met" && s.humanVerdict === "met"
-      ).length;
-      const heldCell = el8("td", "n", String(held));
-      heldCell.dataset.held = String(held);
-      const addedCell = el8("td", "n", String(added));
-      addedCell.dataset.added = String(added);
-      tr.append(heldCell, addedCell);
-      tbody.append(tr);
+      thead.append(headRow);
+      table3.append(thead);
+      const tbody = document.createElement("tbody");
+      for (const clause of reading.clauses) {
+        const tr = document.createElement("tr");
+        tr.dataset.clause = clause.clauseRef;
+        tr.dataset.k = String(clause.agreement.k);
+        tr.dataset.n = String(clause.agreement.n);
+        tr.dataset.agreementCheck = clause.agreementCheck;
+        tr.append(
+          el8("td", "", clause.clauseRef),
+          el8(
+            "td",
+            "n",
+            w.t("lines.hc.agreed", {
+              k: String(clause.agreement.k),
+              n: String(clause.agreement.n)
+            })
+          ),
+          el8(
+            "td",
+            "n",
+            w.t("lines.hc.drift", {
+              k: String(clause.drift.k),
+              n: String(clause.drift.n)
+            })
+          ),
+          el8("td", "", w.t(`lines.hc.recount.${clause.agreementCheck}`))
+        );
+        tbody.append(tr);
+      }
+      table3.append(tbody);
+      section.append(table3);
     }
-    table3.append(tbody);
-    section.append(table3);
     host.append(section);
   }
   function renderTerms(host, model, w) {
@@ -21824,7 +22283,7 @@ ${key}`);
   }
 
   // src/outcome-report-presentation.ts
-  function object9(value) {
+  function object10(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
   }
   var CRITERION_REF = /^[a-z0-9_]+\.[a-z0-9_]+$/u;
@@ -21836,7 +22295,7 @@ ${key}`);
     return typeof value === "string" && value.trim().length > 0 && value.length <= max ? value : void 0;
   }
   function readProducerNote(value) {
-    const note = object9(value);
+    const note = object10(value);
     if (note === void 0 || !Array.isArray(note.lines)) return void 0;
     const raw = note.lines;
     if (raw.length === 0 || raw.length > MAX_NOTE_LINES) return void 0;
@@ -21851,7 +22310,7 @@ ${key}`);
     if (!Array.isArray(value)) return void 0;
     const entries = value;
     const edited = entries.flatMap((entry) => {
-      const item = object9(entry);
+      const item = object10(entry);
       const criterion2 = typeof item?.criterion === "string" && CRITERION_REF.test(item.criterion) ? item.criterion : void 0;
       const badge = text(item?.badge, MAX_BADGE);
       return criterion2 === void 0 || badge === void 0 ? [] : [{ criterion: criterion2, badge }];
@@ -21859,9 +22318,9 @@ ${key}`);
     return edited.length === 0 ? void 0 : edited;
   }
   function readOutcomeReportPresentation(bundle) {
-    const top = object9(bundle);
-    const extensions2 = object9(top?.extensions);
-    const block = object9(extensions2?.["outcome-report/v1"]);
+    const top = object10(bundle);
+    const extensions2 = object10(top?.extensions);
+    const block = object10(extensions2?.["outcome-report/v1"]);
     if (block === void 0 || block.enabled !== true) return void 0;
     const percentages = block.percentages === true;
     const producerNote = readProducerNote(block.producer_note);
@@ -22101,7 +22560,7 @@ ${key}`);
   };
 
   // src/record-page.ts
-  var object10 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
+  var object11 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
   var HEX = /^[0-9a-f]+$/u;
   var ANY_HEX = /^[0-9a-fA-F]+$/u;
   function shortHex(value) {
@@ -22170,8 +22629,8 @@ ${key}`);
     const outer = readCbor(bytes, at);
     if (at.i !== bytes.length) return void 0;
     if (!Array.isArray(outer) || outer.length !== 4) return void 0;
-    const [protectedBytes, unprotected, payload, signature] = outer;
-    if (!(protectedBytes instanceof Uint8Array) || !(unprotected instanceof Map) || !(signature instanceof Uint8Array))
+    const [protectedBytes, unprotected, payload, signature2] = outer;
+    if (!(protectedBytes instanceof Uint8Array) || !(unprotected instanceof Map) || !(signature2 instanceof Uint8Array))
       return void 0;
     const headers = readCbor(protectedBytes, { i: 0 });
     if (!(headers instanceof Map)) return void 0;
@@ -22188,7 +22647,7 @@ ${key}`);
       ...kid instanceof Uint8Array ? { kid: toHex3(kid) } : {},
       unprotectedEntries: unprotected.size,
       ...payload instanceof Uint8Array ? { payloadHex: toHex3(payload) } : {},
-      signatureBytes: signature.length,
+      signatureBytes: signature2.length,
       tagged
     };
   }
@@ -22219,13 +22678,13 @@ ${key}`);
       const items = value.map((v) => show(v, depth + 1));
       return depth > 0 ? `[${items.join(", ")}]` : items.join(" \xB7 ");
     }
-    const entries = Object.entries(object10(value)).sort(
+    const entries = Object.entries(object11(value)).sort(
       ([a], [b]) => a < b ? -1 : a > b ? 1 : 0
     );
     if (depth > 1) return `{${entries.length} members}`;
     return entries.map(([k, v]) => `${k} ${show(v, depth + 1)}`).join(" \xB7 ");
   }
-  var hasDigest = (value) => Object.entries(object10(value)).some(
+  var hasDigest = (value) => Object.entries(object11(value)).some(
     ([k, v]) => k.endsWith("_digest") || hasDigest(v)
   );
   function tagsOf(members, record) {
@@ -22264,7 +22723,7 @@ ${key}`);
   var REF_TYPE = "agent-action-capsule";
   function ladder(input, w) {
     const { context, capsuleId } = input;
-    const raw = object10(context.recordIndex.get(capsuleId));
+    const raw = object11(context.recordIndex.get(capsuleId));
     const strict2 = context.strict?.records.find((r) => r.capsuleId === capsuleId);
     const t = (key, vars) => w.t(key, vars);
     const rungs = [];
@@ -22308,7 +22767,7 @@ ${key}`);
       strict2 === void 0 && envelope ? t("record.rung.3.unchecked") : void 0,
       t("record.rung.3.sub")
     );
-    const chain = object10(raw.chain);
+    const chain = object11(raw.chain);
     const parent2 = typeof chain.parent_capsule_id === "string" ? chain.parent_capsule_id : void 0;
     add2(
       4,
@@ -22365,10 +22824,10 @@ ${key}`);
       t("record.rung.8.sub")
     );
     const refs = (Array.isArray(raw.references) ? raw.references : []).filter(
-      (r) => object10(r).type === REF_TYPE && typeof object10(r).digest === "string"
+      (r) => object11(r).type === REF_TYPE && typeof object11(r).digest === "string"
     );
     const here = refs.filter(
-      (r) => context.recordIndex.has(object10(r).digest)
+      (r) => context.recordIndex.has(object11(r).digest)
     ).length;
     add2(
       9,
@@ -22414,7 +22873,7 @@ ${key}`);
   function envelopeCard(input, w) {
     const { context, capsuleId } = input;
     const voice = input.voice;
-    const raw = object10(context.recordIndex.get(capsuleId));
+    const raw = object11(context.recordIndex.get(capsuleId));
     const card2 = el10("section", "l3-card");
     card2.dataset.l3 = "envelope";
     card2.append(el10("h4", "l3-k", w.t("record.envelope.title")));
@@ -22512,7 +22971,7 @@ ${key}`);
     return w.t(`record.tag.${tag}`);
   }
   function capsuleCard(input, w) {
-    const raw = object10(input.context.recordIndex.get(input.capsuleId));
+    const raw = object11(input.context.recordIndex.get(input.capsuleId));
     const card2 = el10("section", "l3-card");
     card2.dataset.l3 = "capsule";
     card2.append(el10("h4", "l3-k", w.t("record.capsule.title")));
@@ -22589,7 +23048,7 @@ ${key}`);
     return foot;
   }
   function renderRecordPage(input, w) {
-    const raw = object10(input.context.recordIndex.get(input.capsuleId));
+    const raw = object11(input.context.recordIndex.get(input.capsuleId));
     const page = el10("div", "cv-l3");
     page.dataset.level = "3";
     page.dataset.recordPage = input.capsuleId;
@@ -22849,7 +23308,7 @@ ${key}`);
   }
 
   // src/record-content.ts
-  var isObject4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isObject5 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function canonicalJson(value, indent) {
     const pad = indent === void 0 ? "" : " ".repeat(indent);
     const write = (v, depth) => {
@@ -22860,7 +23319,7 @@ ${pad.repeat(depth)}`;
       const colon = pad === "" ? ":" : ": ";
       if (Array.isArray(v))
         return v.length === 0 ? "[]" : `[${v.map((item) => open + write(item, depth + 1)).join(",")}${close}]`;
-      if (isObject4(v)) {
+      if (isObject5(v)) {
         const keys = Object.keys(v).sort(byCodeUnits);
         return keys.length === 0 ? "{}" : `{${keys.map(
           (key) => `${open}${JSON.stringify(key)}${colon}${write(v[key], depth + 1)}`
@@ -22874,12 +23333,12 @@ ${pad.repeat(depth)}`;
     return a < b ? -1 : a > b ? 1 : 0;
   }
   function conversationTurns(content) {
-    if (!isObject4(content)) return void 0;
-    const interaction = isObject4(content.agent_interaction) ? content.agent_interaction : void 0;
+    if (!isObject5(content)) return void 0;
+    const interaction = isObject5(content.agent_interaction) ? content.agent_interaction : void 0;
     if (interaction === void 0 || !Array.isArray(interaction.messages))
       return void 0;
     return interaction.messages.flatMap((m) => {
-      if (!isObject4(m)) return [];
+      if (!isObject5(m)) return [];
       const role = typeof m.role === "string" ? m.role : "unknown";
       const text2 = typeof m.content === "string" ? m.content : void 0;
       const calls = Array.isArray(m.tool_calls) ? m.tool_calls : [];
@@ -22888,7 +23347,7 @@ ${pad.repeat(depth)}`;
           role,
           ...text2 === void 0 ? {} : { content: text2 },
           toolCalls: calls.flatMap(
-            (call) => isObject4(call) ? [
+            (call) => isObject5(call) ? [
               {
                 name: typeof call.name === "string" ? call.name : "unnamed",
                 // Re-serialised as there, but in canonical member order,
@@ -22954,7 +23413,7 @@ ${pad.repeat(depth)}`;
 `;
 
   // src/compliance-presentation.ts
-  function object11(value) {
+  function object12(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
   }
   function str2(value) {
@@ -22964,7 +23423,7 @@ ${pad.repeat(depth)}`;
     return Array.isArray(value) ? value.filter((v) => typeof v === "string") : [];
   }
   function readFinding(value) {
-    const obj = object11(value);
+    const obj = object12(value);
     const id = str2(obj?.id);
     const severity = str2(obj?.severity);
     const recommendation = str2(obj?.recommendation);
@@ -22974,7 +23433,7 @@ ${pad.repeat(depth)}`;
     return { id, severity, recommendation, ownerDue };
   }
   function readRow(value) {
-    const obj = object11(value);
+    const obj = object12(value);
     const criterionId = str2(obj?.criterion_id);
     const name = str2(obj?.name);
     if (criterionId === void 0 || name === void 0) return void 0;
@@ -22988,14 +23447,14 @@ ${pad.repeat(depth)}`;
     };
   }
   function readApplicability(value) {
-    const obj = object11(value);
+    const obj = object12(value);
     const status2 = obj?.status === "in_force" || obj?.status === "future" ? obj.status : void 0;
     const note = str2(obj?.note);
     if (status2 === void 0 || note === void 0) return void 0;
     return { status: status2, note };
   }
   function readObligation(value) {
-    const obj = object11(value);
+    const obj = object12(value);
     const key = str2(obj?.key);
     const article = str2(obj?.article);
     const title = str2(obj?.title);
@@ -23020,7 +23479,7 @@ ${pad.repeat(depth)}`;
     };
   }
   function readQualityProtocol(value) {
-    const obj = object11(value);
+    const obj = object12(value);
     if (obj === void 0) return void 0;
     const protocol = str2(obj.protocol);
     const cadence = str2(obj.cadence);
@@ -23034,9 +23493,9 @@ ${pad.repeat(depth)}`;
     };
   }
   function readCompliancePresentation(bundle) {
-    const top = object11(bundle);
-    const extensions2 = object11(top?.extensions);
-    const block = object11(extensions2?.["eu-ai-act-compliance/v1"]);
+    const top = object12(bundle);
+    const extensions2 = object12(top?.extensions);
+    const block = object12(extensions2?.["eu-ai-act-compliance/v1"]);
     if (block === void 0 || block.enabled !== true) return void 0;
     const regulation = str2(block.regulation) ?? "Regulation (EU) 2024/1689";
     const obligations = Array.isArray(block.obligations) ? block.obligations.flatMap((o) => {
@@ -23800,16 +24259,16 @@ ${pad.repeat(depth)}`;
       const id = record.bookRecordId ?? record.capsuleId;
       if (!read.has(id)) read.set(id, record);
     }
-    const bundle = object12(context.bundle);
+    const bundle = object13(context.bundle);
     const memberships2 = context.completeness.memberships;
-    const extensions2 = object12(bundle.extensions);
-    const payloads = object12(extensions2[BOOK_PAYLOADS_EXTENSION]);
-    const originals = object12(extensions2[AGENT_INPUT_ORIGINALS_EXTENSION]);
+    const extensions2 = object13(bundle.extensions);
+    const payloads = object13(extensions2[BOOK_PAYLOADS_EXTENSION]);
+    const originals = object13(extensions2[AGENT_INPUT_ORIGINALS_EXTENSION]);
     for (const raw of context.records) {
       const id = raw.capsule_id;
       if (read.has(id)) continue;
       const agentInput = disclosureOf(context, id, "agent_input");
-      const header = agentInput.state === "disclosed" && object12(agentInput.payload).record_type === PUBLISHED_CAPSULE_RECORD_TYPE ? agentInput.payload : void 0;
+      const header = agentInput.state === "disclosed" && object13(agentInput.payload).record_type === PUBLISHED_CAPSULE_RECORD_TYPE ? agentInput.payload : void 0;
       const carried = header === void 0 ? void 0 : await carriedCapsuleCommitment(header, payloads);
       const carriedInput = header === void 0 ? void 0 : await resolveCarriedInput(header, payloads, originals);
       const references = Array.isArray(raw.references) ? raw.references : [];
@@ -23830,7 +24289,7 @@ ${pad.repeat(depth)}`;
           carriedInputDigest: carried.inputDigest
         },
         cites: references.flatMap((ref) => {
-          const r = object12(ref);
+          const r = object13(ref);
           return r.citation_purpose === "acted_on" && typeof r.digest === "string" ? [r.digest] : [];
         })
       });
@@ -23838,9 +24297,9 @@ ${pad.repeat(depth)}`;
     return read;
   }
   function recordKind(raw, read) {
-    const header = read?.agentInput.state === "disclosed" ? object12(read.agentInput.payload).record_type : void 0;
+    const header = read?.agentInput.state === "disclosed" ? object13(read.agentInput.payload).record_type : void 0;
     if (typeof header === "string") return header;
-    const own = object12(raw).action_type;
+    const own = object13(raw).action_type;
     return typeof own === "string" ? own : void 0;
   }
   function renderCoverageStatusCounts(records) {
@@ -24049,9 +24508,9 @@ ${pad.repeat(depth)}`;
     }
     const read = bundleVerified(verified) ? await recordEntries(context, result) : /* @__PURE__ */ new Map();
     const rawRecords = /* @__PURE__ */ new Map();
-    for (const raw of Array.isArray(object12(bundle).records) ? object12(bundle).records : [])
-      if (typeof object12(raw).capsule_id === "string")
-        rawRecords.set(object12(raw).capsule_id, raw);
+    for (const raw of Array.isArray(object13(bundle).records) ? object13(bundle).records : [])
+      if (typeof object13(raw).capsule_id === "string")
+        rawRecords.set(object13(raw).capsule_id, raw);
     renderCheckpointCoverage(
       page,
       model.records,
@@ -24113,28 +24572,23 @@ ${pad.repeat(depth)}`;
       section.append(element6("p", "no human-check data"));
       return section;
     }
+    if (!calibration.matchesSchema) {
+      section.append(element6("p", "does not match calibration-summary/v1"));
+      return section;
+    }
     const details = element6("dl");
-    appendValue(details, "confusion matrix", calibration.confusion);
-    appendCount(details, "agreement", calibration.agreement);
-    appendCount(details, "corrected rate", calibration.correctedRate);
-    appendValue(details, "period window", calibration.periodWindow);
+    for (const clause of calibration.summary.clauses) {
+      appendCount(details, `${clause.clauseRef} agreement`, clause.agreement);
+      appendCount(details, `${clause.clauseRef} drift`, clause.drift);
+    }
     section.append(details);
     return section;
   }
   function appendCount(parent2, label, count2) {
     parent2.append(element6("dt", label));
-    const cell2 = element6("dd");
-    if (count2 === void 0) {
-      cell2.textContent = "not stated";
-      cell2.dataset.count = "not-stated";
-    } else if ("rate" in count2) {
-      cell2.textContent = "rate given, k and n not stated";
-      cell2.dataset.count = "not-stated";
-    } else {
-      cell2.textContent = `${count2.k} of ${count2.n}`;
-      cell2.dataset.k = String(count2.k);
-      cell2.dataset.n = String(count2.n);
-    }
+    const cell2 = element6("dd", `${count2.k} of ${count2.n}`);
+    cell2.dataset.k = String(count2.k);
+    cell2.dataset.n = String(count2.n);
     parent2.append(cell2);
   }
   function renderProvenance2(capsuleId, coordinates, times) {
@@ -24184,13 +24638,13 @@ ${pad.repeat(depth)}`;
     section.append(renderProvenance2(act.capsuleId, act.logCoordinates, act));
     return section;
   }
-  function object12(value) {
+  function object13(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
   }
   function renderWithheldActs(acts, host) {
     for (const act of acts) {
       if (act.agentInput !== void 0 && act.agentOutput !== void 0) continue;
-      const committed = object12({
+      const committed = object13({
         agent_input_digest: act.agentInputDigest,
         agent_output_digest: act.agentOutputDigest
       });
@@ -24987,7 +25441,7 @@ ${pad.repeat(depth)}`;
     manifest: BUILTIN_MANIFEST_EVALUATION_SUMMARY_GRAPH,
     canRender: async (context) => await evidenceGraphOf(context) !== void 0,
     buildModel: async (context) => {
-      const records = object12(context.bundle).records;
+      const records = object13(context.bundle).records;
       return {
         graph: defined(
           await evidenceGraphOf(context),
@@ -25439,7 +25893,7 @@ ${pad.repeat(depth)}`;
       context.countersigners
     );
     const bannerModel = verificationBanner(context, stamps);
-    const records = object12(bundle).records;
+    const records = object13(bundle).records;
     const coverage = {
       uncheckpointed: bannerModel.uncheckpointed,
       total: Array.isArray(records) ? records.length : 0

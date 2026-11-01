@@ -6,7 +6,7 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import {
   buildOutcomeReportModel,
-  type CalibrationWeek,
+  type CalibrationReading,
   type Conversation,
   type ConversationVerdict,
   type CriterionTierReading,
@@ -1427,7 +1427,7 @@ function renderLines(
   const undecided = [...byStatus("undecided"), ...byStatus("nothing-applied")];
   const share = (n: number) =>
     fmtShare(n, model.totalCount, model.options.percentages, w);
-  // held is read from calibration samples, resolved from claim rollups --
+  // held is read from the calibration claim's cited ratings, resolved from claim rollups --
   // two independent sources this card shows side by side and never
   // subtracts one from the other.
   type Line = {
@@ -1931,7 +1931,7 @@ function renderCalendar(host: HTMLElement, model: LinesModel, w: Words): void {
 
 function renderHumanChecks(
   host: HTMLElement,
-  calibration: readonly CalibrationWeek[],
+  calibration: readonly CalibrationReading[],
   w: Words,
 ): void {
   const section = el("section", "sec");
@@ -1943,48 +1943,70 @@ function renderHumanChecks(
     host.append(section);
     return;
   }
-  const table = document.createElement("table");
-  table.className = "hct";
-  table.dataset.weeks = String(calibration.length);
-  const thead = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  headRow.append(
-    element("th", w.t("lines.hc.col.week")),
-    el("th", "n", w.t("lines.hc.col.agreed")),
-    el("th", "n", w.t("lines.hc.col.held")),
-    el("th", "n", w.t("lines.hc.col.added")),
-  );
-  thead.append(headRow);
-  table.append(thead);
-  const tbody = document.createElement("tbody");
-  for (const week of calibration) {
-    const tr = document.createElement("tr");
-    tr.dataset.week = week.weekId;
-    tr.dataset.k = String(week.k);
-    tr.dataset.n = String(week.n);
-    tr.append(el("td", "", week.weekId));
-    tr.append(
-      el(
-        "td",
-        "n",
-        w.t("lines.hc.agreed", { k: String(week.k), n: String(week.n) }),
-      ),
+  // One table per calibration claim, one row per clause the summary tallies.
+  // Every figure is k of n as the record states it; no rate is computed. A
+  // summary the reader did not read draws no counts and says why.
+  for (const reading of calibration) {
+    if (reading.state !== "read") {
+      const note = el(
+        "p",
+        "",
+        w.t(
+          reading.state === "ambiguous"
+            ? "lines.hc.ambiguous"
+            : "lines.hc.not-matching",
+        ),
+      );
+      note.dataset.calibration = reading.state;
+      section.append(note);
+      continue;
+    }
+    const table = document.createElement("table");
+    table.className = "hct";
+    table.dataset.calibration = "read";
+    table.dataset.clauses = String(reading.clauses.length);
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    headRow.append(
+      element("th", w.t("lines.hc.col.clause")),
+      el("th", "n", w.t("lines.hc.col.agreed")),
+      el("th", "n", w.t("lines.hc.col.drift")),
+      element("th", w.t("lines.hc.col.recount")),
     );
-    const held = week.sample.filter(
-      (s) => s.aiVerdict === "met" && s.humanVerdict !== "met",
-    ).length;
-    const added = week.sample.filter(
-      (s) => s.aiVerdict !== "met" && s.humanVerdict === "met",
-    ).length;
-    const heldCell = el("td", "n", String(held));
-    heldCell.dataset.held = String(held);
-    const addedCell = el("td", "n", String(added));
-    addedCell.dataset.added = String(added);
-    tr.append(heldCell, addedCell);
-    tbody.append(tr);
+    thead.append(headRow);
+    table.append(thead);
+    const tbody = document.createElement("tbody");
+    for (const clause of reading.clauses) {
+      const tr = document.createElement("tr");
+      tr.dataset.clause = clause.clauseRef;
+      tr.dataset.k = String(clause.agreement.k);
+      tr.dataset.n = String(clause.agreement.n);
+      tr.dataset.agreementCheck = clause.agreementCheck;
+      tr.append(
+        el("td", "", clause.clauseRef),
+        el(
+          "td",
+          "n",
+          w.t("lines.hc.agreed", {
+            k: String(clause.agreement.k),
+            n: String(clause.agreement.n),
+          }),
+        ),
+        el(
+          "td",
+          "n",
+          w.t("lines.hc.drift", {
+            k: String(clause.drift.k),
+            n: String(clause.drift.n),
+          }),
+        ),
+        el("td", "", w.t(`lines.hc.recount.${clause.agreementCheck}`)),
+      );
+      tbody.append(tr);
+    }
+    table.append(tbody);
+    section.append(table);
   }
-  table.append(tbody);
-  section.append(table);
   host.append(section);
 }
 
@@ -2444,7 +2466,7 @@ export async function drawLines(
 }
 
 export type {
-  CalibrationWeek,
+  CalibrationReading,
   Conversation,
   ConversationVerdict,
   CriterionTierReading,
