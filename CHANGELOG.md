@@ -9,11 +9,20 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
-## Unreleased
+## ts 0.9.0 and go 0.9.0 (2026-10-31)
+
+Both state viewer 0.9.0: `ts/v0.9.0`, then `go/v0.9.0` on the commit that
+ships its page runtime. This release carries the changes merged since 0.8.0:
+#205, #206, #207.
 
 ### Added
 
 - The red mark on a claim sealed `WITHHELD`, as Steven's Terms Pack canvas draws it in Outcomes frame 6 (#198): "Withheld by the holder", with the digests the claim cites ("cites <digests>"), in the outcome table's assurance cell and the compliance proofs. It is drawn for `WITHHELD` only, never for an absent or mismatched carrier, and a claim that failed verification is not marked (its sealed status no longer stands). It names no level or tier: nothing in the Result carries one, and a holder's uniform refusal exists so as not to characterize what it withholds (Sherlock2 confirmed the what). The two words are locked (`card.mark.withheld`, `card.mark.withheld.cited`), so a pack cannot reword them. The default packs gain the two keys, so the `wording_sha256` of both built-in packs moves (a host that pins either digest re-pins it: the Muse viewer pin and the S08 image); the content of every other word is unchanged.
+- The History card says a witness recorded the snapshot, as Steven's 9b canvas draws frame 1 (#183, #206). When the block's `as_of` carries `receipts` (1 to 64 lowercase hex strings, each one witness Receipt for the card's anchor) and the reader's own witness list accepts one that checks, the card shows "Snapshot recorded <time> by <witness>", and "What it doesn't" says the witness recorded the snapshot and did not check the counts. The line draws only when agent-action-capsule's `checkAnchorWitnessed` returns PASS and the card's own `as_of` check passes. A Receipt that fails reads "failed" in the checks and says nothing in the card; a Receipt the page cannot check says only that one came with the card, not checked. `as_of` may also carry `checkpoint` (hex): one whose SHA-256 is not the anchor makes the block unreadable. The witness list is the reader's: empty by default, shown and editable in the card's checks, held in the page's memory only, and never read from the bundle. The module verifies nothing itself: it asks the runtime's new global `readerAnchorWitness` (with `readerWitnessPolicy` and `setReaderWitnessPolicy`), and `spec/presentation-contract-v0.md` §3 names this shape. The line says "recorded", not "witnessed" (Sherlock2, #206). Producers write the new `as_of` members only for a viewer at or after this release (evidencebook#237, evidencebook-deal#85).
+
+### Changed
+
+- The calibration readers read `calibration-summary/v1` per clause, as agent-action-capsule 0.13.0 defines it (#204, #205), and the pin moves to `@action-state-group/agent-action-capsule` 0.13.0. The Outcomes "Human spot checks" section now has one row per clause of the cited summary: Clause, Agreed (k of n), Drift (k of n) and a recount from the cited ratings (matches, does not match, not checked here), with no weeks, no held and added split and no rate. A summary that does not match the schema, or is cited twice, draws no figures. The generic "Human check" section shows the same per-clause figures, and its confusion matrix, corrected rate and period window are gone, since the schema carries none. The `lines.hc.*` words changed, so the Outcomes pack's digest did.
 
 ## ts 0.8.0 and go 0.8.0 (2026-10-31)
 
