@@ -172,7 +172,8 @@ History card's witness line, capsule-viewer#183). The module passes the bundle-c
 draws the answer; the runtime hashes and verifies, under a setting that never comes from the
 bundle (the reader's witness list). The module still calls no verifier and recomputes nothing
 itself, and the answer is not a verification result: it never changes the banner or the core's
-checks.
+checks. It can change the module's own state in one case: a carried checkpoint that is not the
+anchor's makes the block unreadable.
 
 ### 3.1 The context is effectively immutable
 

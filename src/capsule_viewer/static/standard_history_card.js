@@ -902,12 +902,13 @@
 
   function drawChecks(doc, m, again) {
     // anchor_inclusion stays NOT_CHECKED for a derivation (SH 3). The witness result is its own row, anchor_witnessed
-    // (IP1 6.2.2): drawn only for a PASS under the reader's list, or a Receipt that came and was not checked.
+    // (IP1 6.2.2): drawn for a PASS under the reader's list, a Receipt that came and was not checked, and a Receipt
+    // that was checked and failed (a failure is never shown as "not checked"); the line itself draws only for a PASS.
     var w = m.witness;
     var rowNames = PROPERTIES.concat(["anchor_inclusion"]);
-    if (w && (w.shown || w.status === "NOT_CHECKED")) rowNames.push("anchor_witnessed");
+    if (w && (w.shown || w.status === "NOT_CHECKED" || w.status === "FAIL")) rowNames.push("anchor_witnessed");
     var rows = rowNames.map(function (p) {
-      var s = p === "anchor_inclusion" ? "NOT_CHECKED" : p === "anchor_witnessed" ? (w.shown ? "PASS" : "NOT_CHECKED") : m.properties[p];
+      var s = p === "anchor_inclusion" ? "NOT_CHECKED" : p === "anchor_witnessed" ? (w.shown ? "PASS" : w.status === "FAIL" ? "FAIL" : "NOT_CHECKED") : m.properties[p];
       var skip = (m.skipped || []).indexOf(p) >= 0;
       return el(doc, "tr", { "data-property": p, "data-property-status": s, "data-skipped": skip ? "true" : "false" }, [
         el(doc, "td", { "data-label": words("checks.column.check") }, [words("property." + p)]),

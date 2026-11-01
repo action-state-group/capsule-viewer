@@ -337,17 +337,30 @@ describe("the block's as_of.checkpoint and as_of.receipts", () => {
         ?.getAttribute("data-property-status");
     expect(row("anchor_inclusion")).toBe("NOT_CHECKED");
     expect(row("anchor_witnessed")).toBe("PASS");
-    // A Receipt the reader's list does not name is a FAIL: no row about a witness at all.
-    const fail = new JSDOM("<!doctype html><body></body>").window.document;
-    const h2 = {
-      L0: fail.createElement("div"),
-      L1: fail.createElement("div"),
-      L2: fail.createElement("div"),
-      depth: "L2",
-    };
-    fail.body.append(h2.L0, h2.L1, h2.L2);
-    registered[0]!.render(await modelOf("person-shared-witness-unlisted"), h2);
-    expect(fail.querySelector('[data-property="anchor_witnessed"]')).toBeNull();
+    // A Receipt that was checked and failed is a FAIL row, never "not checked": no line, no
+    // "came with the card" sentence, and the banner and counts are untouched.
+    for (const name of [
+      "person-shared-witness-unlisted",
+      "person-shared-witness-tampered",
+    ]) {
+      const doc2 = new JSDOM("<!doctype html><body></body>").window.document;
+      const h2 = {
+        L0: doc2.createElement("div"),
+        L1: doc2.createElement("div"),
+        L2: doc2.createElement("div"),
+        depth: "L2",
+      };
+      doc2.body.append(h2.L0, h2.L1, h2.L2);
+      registered[0]!.render(await modelOf(name), h2);
+      expect(
+        doc2
+          .querySelector('[data-property="anchor_witnessed"]')
+          ?.getAttribute("data-property-status"),
+        name,
+      ).toBe("FAIL");
+      expect(doc2.body.textContent).not.toContain("Snapshot recorded");
+      expect(doc2.body.textContent).not.toContain("receipt came with the card");
+    }
   });
 });
 

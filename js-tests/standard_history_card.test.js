@@ -511,6 +511,7 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
       nested: document.querySelectorAll("details details").length,
       held: dot("held"), undecided: dot("undecided"),
       bannerTop: (document.querySelector('[data-banner="private"]') || { getBoundingClientRect: () => ({ top: null }) }).getBoundingClientRect().top,
+      failedRow: (document.querySelector('[data-property="anchor_witnessed"]') || document.body).getAttribute("data-property-status") === "FAIL",
       text: document.body.innerText,
     };
   })()`;
@@ -559,7 +560,9 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
         expect(m.text.includes(WITNESS_LINE)).toBe(line);
         // Only a Receipt that came and was not checked says so; none and a failed one say nothing.
         expect(m.text.includes("A witness receipt came with the card")).toBe(key.endsWith("not-checked"));
-        expect(m.text.includes("receipt came") || m.text.includes("recorded")).toBe(line || key.endsWith("not-checked"));
+        // A Receipt that was checked and failed says nothing about a witness in the card; its checks row reads "failed".
+        expect(m.text.includes("receipt came") || m.text.includes("Snapshot recorded")).toBe(line || key.endsWith("not-checked"));
+        expect(m.failedRow).toBe(key.endsWith("witness-unlisted"));
         // The reader's own list is shown wherever Receipts came with the card.
         expect(m.text.includes("Witnesses you accept")).toBe(!key.includes("unwitnessed"));
         if (line || key.endsWith("not-checked")) {
