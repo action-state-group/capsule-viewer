@@ -184,6 +184,12 @@ witness list. The second takes the context itself, never bytes the module chose.
 `PASS`, `FAIL`, `NOT_PRESENT` or `NOT_CHECKED`; a module draws a line as passed only on `PASS`, and
 a check the page cannot run is `NOT_CHECKED`, never a pass.
 
+`readerCardSignature` answers the History card's "signed" (capsule-viewer#211). It takes the
+context and reads the context's own strict verdict for the root record's producer signature:
+`PASS`, with the record's `key_id`, when it verifies under the key the record names; `FAIL` when
+it does not; `NOT_PRESENT` when the record claims no signature; `NOT_CHECKED` when the page has
+no strict verdict. A pass names a key; it never says who holds it.
+
 ### 3.1 The context is effectively immutable
 
 **A `VerifiedBundleContext` MUST be effectively immutable.** No module can change the

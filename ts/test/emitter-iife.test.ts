@@ -91,9 +91,12 @@ const RECEIPT_CONTRACT = [
   "readerCadenceWitness",
 ] as const;
 
+// The History card's signature check (capsule-viewer#211).
+const SIGNATURE_CONTRACT = ["readerCardSignature"] as const;
+
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = [];
+const NOT_YET_SHIPPED: readonly string[] = ["readerCardSignature"];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
@@ -121,6 +124,7 @@ describe("the runtime's global", () => {
         ...MODULE_CONTRACT,
         ...WITNESS_CONTRACT,
         ...RECEIPT_CONTRACT,
+        ...SIGNATURE_CONTRACT,
       ]) {
         // Not yet in the shipped runtime. Asserting its absence makes the
         // refresh that ships it fail here until that refresh also drops it

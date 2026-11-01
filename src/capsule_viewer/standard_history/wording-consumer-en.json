@@ -153,6 +153,12 @@
     "witness.list.save": "Save",
     "witness.list.reset": "Back to none",
     "witness.list.bad": "That is not a witness list, so nothing changed.",
-    "property.anchor_witnessed": "A witness you accept recorded the snapshot"
+    "property.anchor_witnessed": "A witness you accept recorded the snapshot",
+    "signature.line": "Signed with key {key}…; this page checked the signature.",
+    "signature.failed.title": "This History card's signature does not check",
+    "signature.failed.lead": "The card names the key it is signed with, but its signature does not check under that key, so none of its counts is shown.",
+    "doesnt.signature_key": "Whose key that is. The card names the key it is signed with; this page cannot tell who holds it.",
+    "doesnt.signature_none": "That anyone signed it. The card carries no signature.",
+    "property.signature": "The card's signature checks under the key it names"
   }
 }

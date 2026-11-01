@@ -26,7 +26,9 @@ which the module calls and does not run itself: `readerAnchorWitness` (the
 snapshot's witness Receipts under the reader's own witness list, with
 agent-action-capsule's `checkAnchorWitnessed`) and `readerWitnessPolicy` and
 `setReaderWitnessPolicy` (the reader's list, empty by default, kept in the
-page's memory only).
+page's memory only). The History card's signature line asks
+`readerCardSignature`, which reads the context's own strict verdict for the
+card's record and names the key it is signed with on a pass.
 
 The code moved here from agent-action-capsule (agent-action-capsule#281) and
 keeps its BSD-3-Clause license (`LICENSE-BSD-3-Clause`); the rest of the

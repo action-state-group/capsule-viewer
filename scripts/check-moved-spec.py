@@ -279,6 +279,20 @@ CONTRACT = Move(
             "a check the page cannot run is `NOT_CHECKED`, never a pass.",
             "capsule-viewer#214: the deal receipt's preimage and witness checks",
         ),
+        # Section 3: the History card's signature check (capsule-viewer#211).
+        (
+            "`PASS`, `FAIL`, `NOT_PRESENT` or `NOT_CHECKED`; a module draws a line as passed only on `PASS`, and\n"
+            "a check the page cannot run is `NOT_CHECKED`, never a pass.",
+            "`PASS`, `FAIL`, `NOT_PRESENT` or `NOT_CHECKED`; a module draws a line as passed only on `PASS`, and\n"
+            "a check the page cannot run is `NOT_CHECKED`, never a pass.\n"
+            "\n"
+            "`readerCardSignature` answers the History card's \"signed\" (capsule-viewer#211). It takes the\n"
+            "context and reads the context's own strict verdict for the root record's producer signature:\n"
+            "`PASS`, with the record's `key_id`, when it verifies under the key the record names; `FAIL` when\n"
+            "it does not; `NOT_PRESENT` when the record claims no signature; `NOT_CHECKED` when the page has\n"
+            "no strict verdict. A pass names a key; it never says who holds it.",
+            "capsule-viewer#211: the History card's signature check",
+        ),
         # Section 6.2: the witness notice joins the banner's frame
         # (capsule-viewer#162, evidencebook#209).
         (
