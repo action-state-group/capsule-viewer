@@ -2434,3 +2434,15 @@ it("draws the red withheld mark once, in the assurance cell of the one claim sea
   expect(marks[0]!.textContent).toMatch(/^Withheld by the holder · cites /u);
   expect(root.textContent).not.toMatch(/tier-gated/iu);
 });
+
+it("draws no first footnote for a bundle with no records list, and still the other two", async () => {
+  const { bundle } = await sealedOutcomeReportBundle();
+  const bare = { ...(bundle as Obj) };
+  delete bare.records;
+  const root = await renderClosed(bare);
+  const kinds = [...root.querySelectorAll<HTMLElement>("[data-footnote]")].map(
+    (p) => p.dataset.footnote,
+  );
+  expect(kinds).not.toContain("records");
+  expect(root.textContent ?? "").toBeTruthy();
+});
