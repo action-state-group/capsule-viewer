@@ -23,6 +23,21 @@ import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 type Obj = Record<string, unknown>;
 
 const GOLDENS = resolve(process.cwd(), "test", "goldens", "contract-report");
+const WORDING = resolve(process.cwd(), "src", "wording");
+
+/**
+ * An audience pack as a host hands it over: the committed file's exact
+ * bytes, bound to the digest wording/audience-packs.lock.json pins for it.
+ */
+function audiencePack(file: string): { pack: string; sha256: string } {
+  const lock = JSON.parse(
+    readFileSync(resolve(WORDING, "audience-packs.lock.json"), "utf8"),
+  ) as Record<string, { sha256: string }>;
+  return {
+    pack: readFileSync(resolve(WORDING, file), "utf8"),
+    sha256: lock[file]!.sha256,
+  };
+}
 
 function fixture(name: string): Obj {
   return JSON.parse(
@@ -151,6 +166,8 @@ interface Case {
   readonly page: string;
   readonly mutate?: (source: Obj) => void | Promise<void>;
   readonly witnesses?: boolean;
+  /** An audience wording pack (wording/audience-packs.lock.json) the page is drawn with. */
+  readonly audience?: string;
 }
 
 const CASES: readonly Case[] = [
@@ -183,6 +200,30 @@ const CASES: readonly Case[] = [
   // The generic Result page: the contract-report module's fallback for a
   // Result that opts into no card.
   { name: "result", file: "result-root-bundle.json", page: "result" },
+  // The audience wording packs, over the same fixtures: the buyer's page
+  // (consumer/en) and ours (operator/en) on the outcome fixture, the EU
+  // deployer's on the compliance one. The words differ from the default
+  // goldens above and nothing else does (contract-report.test.ts).
+  {
+    name: "outcome-consumer",
+    file: "outcome-report-bundle.json",
+    page: "outcome-report",
+    mutate: fourConversations,
+    audience: "contract-report-consumer.en.json",
+  },
+  {
+    name: "outcome-operator",
+    file: "outcome-report-bundle.json",
+    page: "outcome-report",
+    mutate: fourConversations,
+    audience: "contract-report-operator.en.json",
+  },
+  {
+    name: "eu-deployer",
+    file: "compliance-bundle.json",
+    page: "compliance",
+    audience: "contract-report-eu-deployer.en.json",
+  },
   {
     name: "eu-withheld",
     file: "compliance-bundle.json",
@@ -233,8 +274,15 @@ function check(name: string, html: string): void {
 for (const c of CASES)
   it(`golden: ${c.name}, closed and fully open`, async () => {
     const root = document.createElement("main");
-    await renderEvidenceGraph(await sealed(c), root);
+    await renderEvidenceGraph(
+      await sealed(c),
+      root,
+      undefined,
+      c.audience === undefined ? {} : { wording: audiencePack(c.audience) },
+    );
     expect(root.querySelector('[data-verify="incomplete"]')).not.toBeNull();
+    // an audience pack the page refused would leave the default words in the golden
+    expect(root.querySelector('[data-wording="refused"]')).toBeNull();
     // The core strip, then the card in its three host regions (L0, L1, L2):
     // the verification section in L2 is the core's, and no change to the
     // cards' code or words reaches it. The strip is L0's first node.
