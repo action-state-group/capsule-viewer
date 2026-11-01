@@ -9,6 +9,12 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Added
+
+- The History card checks its signature, as frame 4 of Steven's 9b canvas says it is "signed" (rule F4.7, #211). The runtime has a new global, `readerCardSignature(context)`, which reads the context's own strict verdict for the card's record (`spec/presentation-contract-v0.md` §3). On a pass, the card says "Signed with key <first 12 hex>…; this page checked the signature", and "What it doesn't" says the page cannot tell who holds that key. A card whose signature fails draws none of its counts: "This History card's signature does not check". A card that claims no signature says no one signed it. A runtime that cannot check it keeps today's "This page does not check the signature". "Which checks ran" gains the row "The card's signature checks under the key it names". The goldens are rebuilt for that row, and new ones cover pass, fail and not checked. `go/pageruntime` ships the global with the next runtime build.
+
 ## ts 0.10.0 and go 0.10.0 (2026-11-01)
 
 Both state viewer 0.10.0: `ts/v0.10.0`, then `go/v0.10.0` on the commit that

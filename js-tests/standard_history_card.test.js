@@ -448,6 +448,69 @@ describe("what the page claims", () => {
   });
 });
 
+// The card's signature (capsule-viewer#211; rule F4.7): the module draws the
+// runtime's readerCardSignature answer and decides nothing. The runtime global
+// here is a stand-in; the real check runs in ts/test/card-signature.test.ts.
+const KEY = "1bbf5cb0ca8942beafe9fc3ad5e2755f80e13d1dcc88118927d4390a458b1742";
+describe("the card's signature, from the runtime", () => {
+  async function page(answer, name = "person-shared") {
+    const l = load();
+    if (answer !== undefined) l.window.EvidenceGraph.readerCardSignature = () => (answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer));
+    const model = await l.registered[0].buildModel(contextOf(name));
+    return { model, host: renderAll(l, model) };
+  }
+  const row = (host) => host.L2.querySelector('[data-property="signature"]');
+  const line = (host) => host.L0.querySelector('[data-sh-signature="line"]');
+
+  it("a pass names the key the card is signed with, and never whose it is", async () => {
+    const { model, host } = await page({ status: "PASS", key_id: KEY });
+    expect(model.state).toBe("card");
+    expect(line(host).textContent).toBe("Signed with key 1bbf5cb0ca89…; this page checked the signature.");
+    expect(row(host).getAttribute("data-property-status")).toBe("PASS");
+    expect(row(host).lastChild.textContent).toBe("checked");
+    const text = pageText(host);
+    expect(text).toContain("Whose key that is. The card names the key it is signed with; this page cannot tell who holds it.");
+    expect(text).not.toContain("does not check the signature");
+    expect(text).not.toMatch(/holder's key signed/);
+  });
+  it("a failure draws none of the counts and says the signature does not check", async () => {
+    for (const name of ["person-shared", "neg-percentage-member"]) {
+      const { model, host } = await page({ status: "FAIL", key_id: null }, name);
+      expect(model.state).toBe("signature_failed");
+      expect(host.L0.getAttribute("data-sh-state")).toBe("signature_failed");
+      expect(host.L0.textContent).toContain("This History card's signature does not check");
+      expect(host.L0.querySelector('[data-sh-total]')).toBeNull();
+      expect(host.L1.textContent).toBe("");
+      expect(row(host).getAttribute("data-property-status")).toBe("FAIL");
+      expect(row(host).lastChild.textContent).toBe("failed");
+    }
+  });
+  it("a card that claims no signature says no one signed it, with no line and no row", async () => {
+    const { model, host } = await page({ status: "NOT_PRESENT", key_id: null });
+    expect(model.state).toBe("card");
+    expect(line(host)).toBeNull();
+    expect(row(host)).toBeNull();
+    expect(pageText(host)).toContain("That anyone signed it. The card carries no signature.");
+  });
+  it("a check the page cannot run, a runtime without it, an error or a malformed answer is not checked here, never a pass", async () => {
+    for (const answer of [{ status: "NOT_CHECKED", key_id: null }, undefined, new Error("boom"), { status: "PASS", key_id: "not hex" }, { status: "MAYBE" }, null]) {
+      const { model, host } = await page(answer);
+      expect(model.state).toBe("card");
+      expect(line(host)).toBeNull();
+      expect(row(host).getAttribute("data-property-status")).toBe("NOT_CHECKED");
+      expect(row(host).lastChild.textContent).toBe("not checked here");
+      expect(pageText(host)).toContain("That the holder's key signed it. This page does not check the signature.");
+    }
+  });
+  it("a redraw for a new witness list keeps the signature standing", async () => {
+    const l = load();
+    l.window.EvidenceGraph.readerCardSignature = () => Promise.resolve({ status: "PASS", key_id: KEY });
+    const model = await l.registered[0].buildModel(contextOf("person-shared"));
+    const again = await l.api.withWitness(model.pre || model);
+    expect(again.signature).toEqual({ status: "PASS", key: KEY });
+  });
+});
+
 // In a real browser: the module on a page, at a phone's and a laptop's width.
 const chromePath = findChrome();
 if (!chromePath && process.env.CI) throw new Error("standard history card test: no Chromium found under CI; set CHROME_PATH");
@@ -475,6 +538,12 @@ const WITNESS_PAGES = [
   ["person-shared-witness-tampered", READER_NAMES],
 ];
 const witnessPageName = ([name, , variant]) => (variant ? `${name}-${variant}` : name);
+// The card's signature (capsule-viewer#211), with the runtime's answer stood in.
+const SIGNATURE_PAGES = [
+  ["signed", { status: "PASS", key_id: KEY }, "card"],
+  ["signature-failed", { status: "FAIL", key_id: null }, "signature_failed"],
+  ["signature-not-checked", { status: "NOT_CHECKED", key_id: null }, "card"],
+];
 describe.skipIf(!chromePath)("the module in headless Chromium", () => {
   let browser;
   let tab;
@@ -517,6 +586,21 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
       const file = join(dir, `${witnessPageName(page)}.html`);
       writeFileSync(file, html);
       urls[witnessPageName(page)] = pathToFileURL(file).href;
+    }
+    for (const [variant, answer] of SIGNATURE_PAGES) {
+      const ctx = contextOf("person-shared");
+      const data = JSON.stringify({ bundle: ctx.bundle, root: ctx.root, verification: ctx.verification, disclosures: [...ctx.resolvedDisclosures] }).replace(/</g, "\\u003c");
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>History card</title></head>
+<body class="cv-kit"><main class="cv-page"><div data-level="L0"></div><div data-level="L1"></div><div data-level="L2"></div></main>
+<script>var EvidenceGraph = { registerPresentation: function (m) { window.__sh = m; },
+  readerCardSignature: function () { return Promise.resolve(${JSON.stringify(answer)}); } };</script>
+<script>${SCRIPT}</script>
+<script>(function () { var d = ${data}, m = window.__sh, q = function (l) { return document.querySelector('[data-level="' + l + '"]'); };
+var ctx = { bundle: d.bundle, root: d.root, verification: d.verification, resolvedDisclosures: new Map(d.disclosures) };
+if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, { L0: q("L0"), L1: q("L1"), L2: q("L2"), depth: "L0" }, {}); }); })();</script></body></html>`;
+      const file = join(dir, `person-shared-${variant}.html`);
+      writeFileSync(file, html);
+      urls[`person-shared-${variant}`] = pathToFileURL(file).href;
     }
     browser = await launch(chromePath);
     tab = await browser.newPage();
@@ -600,6 +684,28 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
           expect(existsSync(path), `golden ${path} is not committed; run with UPDATE_GOLDENS=1`).toBe(true);
           expect(readFileSync(path).readUInt32BE(16)).toBe(width);
         }
+      }, 30000);
+    }
+  }
+
+  // The signature line, its failure and its unchecked state, each with a golden.
+  for (const width of [390, 1280]) {
+    for (const [variant, , state] of SIGNATURE_PAGES) {
+      const key = `person-shared-${variant}`;
+      it(`${key} at ${width}px`, async () => {
+        await tab.open(urls[key], { width });
+        const m = await tab.evaluate(MEASURE);
+        expect(m.state).toBe(state);
+        expect(m.overflow).toBe(false);
+        expect(m.nested).toBe(0);
+        expect(m.text.includes("Signed with key 1bbf5cb0ca89")).toBe(variant === "signed");
+        expect(m.text.includes("signature does not check")).toBe(variant === "signature-failed");
+        await tab.evaluate(`document.querySelectorAll("details").forEach((d) => { d.open = true; })`);
+        const shot = await tab.screenshot();
+        const path = join(GOLDENS, `standard-history-${key}-${width}.png`);
+        if (UPDATE) writeFileSync(path, shot);
+        expect(existsSync(path), `golden ${path} is not committed; run with UPDATE_GOLDENS=1`).toBe(true);
+        expect(readFileSync(path).readUInt32BE(16)).toBe(width);
       }, 30000);
     }
   }
