@@ -77,10 +77,10 @@ const MODULE_CONTRACT = [
   "verifyProducerEnvelope",
 ] as const;
 
-// The History card's witness line (capsule-viewer#183): AAC's own check, from
-// its `witness` entry point, and the reader's list the page holds.
+// The History card's witness standing (capsule-viewer#183): the check under the
+// reader's list, and the list the page holds.
 const WITNESS_CONTRACT = [
-  "checkAnchorWitnessed",
+  "readerAnchorWitness",
   "readerWitnessPolicy",
   "setReaderWitnessPolicy",
 ] as const;
@@ -88,7 +88,7 @@ const WITNESS_CONTRACT = [
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
 const NOT_YET_SHIPPED: readonly string[] = [
-  "checkAnchorWitnessed",
+  "readerAnchorWitness",
   "readerWitnessPolicy",
   "setReaderWitnessPolicy",
 ];
@@ -133,26 +133,17 @@ describe("the runtime's global", () => {
   }
 
   it("re-exports agent-action-capsule's own verifier functions", async () => {
-    const aac = (await import(
-      "@action-state-group/agent-action-capsule"
-    )) as Record<string, unknown>;
+    const aac =
+      (await import("@action-state-group/agent-action-capsule")) as Record<
+        string,
+        unknown
+      >;
     const browser = (await import("../src/browser.js")) as Record<
       string,
       unknown
     >;
     for (const member of MODULE_CONTRACT.slice(1))
       expect(browser[member], member).toBe(aac[member]);
-  });
-
-  it("re-exports agent-action-capsule's anchor-witness check unchanged", async () => {
-    const witness = (await import(
-      "@action-state-group/agent-action-capsule/witness"
-    )) as Record<string, unknown>;
-    const browser = (await import("../src/browser.js")) as Record<
-      string,
-      unknown
-    >;
-    expect(browser.checkAnchorWitnessed).toBe(witness.checkAnchorWitnessed);
   });
 
   // Added to the build in capsule-viewer#83; go/pageruntime carries it

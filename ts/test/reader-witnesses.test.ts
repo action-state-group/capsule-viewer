@@ -51,4 +51,26 @@ describe("the reader's witness list", () => {
     expect(setReaderWitnessPolicy(value)).toBe(false);
     expect(readerWitnessPolicy()).toEqual(LIST);
   });
+
+  it("never reads a list another page stored", () => {
+    const store = new Map<string, string>();
+    const key = "capsule-viewer.reader-witnesses/v0";
+    store.set(key, JSON.stringify(LIST));
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: () => {},
+        removeItem: () => {},
+      },
+    });
+    try {
+      expect(readerWitnessPolicy()).toBe(DEFAULT_READER_WITNESSES);
+      expect(setReaderWitnessPolicy(LIST)).toBe(true);
+      setReaderWitnessPolicy(null);
+      expect(readerWitnessPolicy()).toBe(DEFAULT_READER_WITNESSES);
+    } finally {
+      delete (globalThis as Record<string, unknown>).localStorage;
+    }
+  });
 });

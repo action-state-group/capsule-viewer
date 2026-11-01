@@ -7,14 +7,15 @@
 // checkAnchorWitnessed through the runtime's global under the reader's own
 // witness list (src/reader-witnesses.ts). The Receipts are TEST-KEYED: AAC's
 // anchor-witness-v1 vectors, whose keys derive from public labels.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInThisContext } from "node:vm";
 import { JSDOM } from "jsdom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { checkAnchorWitnessed } from "@action-state-group/agent-action-capsule/witness";
 import {
+  readerAnchorWitness,
   readerWitnessPolicy,
   setReaderWitnessPolicy,
 } from "../src/reader-witnesses.js";
@@ -48,7 +49,7 @@ interface Module {
   render(model: unknown, host: unknown): void;
 }
 interface Api {
-  checkpointMatches(card: unknown, w: unknown): Promise<boolean | null>;
+  withWitness(model: unknown): Promise<Record<string, any>>;
 }
 
 const bundleOf = (name: string) =>
@@ -70,7 +71,7 @@ function load(withRuntime = true): void {
   runtime = {
     registerPresentation: (m: Module) => registered.push(m),
     ...(withRuntime
-      ? { checkAnchorWitnessed, readerWitnessPolicy, setReaderWitnessPolicy }
+      ? { readerAnchorWitness, readerWitnessPolicy, setReaderWitnessPolicy }
       : {}),
   };
   g.EvidenceGraph = runtime;
@@ -302,48 +303,128 @@ describe("the block's as_of.checkpoint and as_of.receipts", () => {
     );
   });
 
-  it("accepts a checkpoint exactly when its SHA-256 is the anchor", async () => {
-    const octets = "6162636465666768";
-    const { createHash } = await import("node:crypto");
-    const anchor = createHash("sha256")
-      .update(Buffer.from(octets, "hex"))
-      .digest("hex");
-    expect(
-      await api.checkpointMatches({ anchor }, { checkpoint: octets }),
-    ).toBe(true);
-    expect(
-      await api.checkpointMatches(
-        { anchor: "0".repeat(64) },
-        { checkpoint: octets },
-      ),
-    ).toBe(false);
-    expect(await api.checkpointMatches({ anchor }, { checkpoint: null })).toBe(
-      null,
+  it("holds a carried checkpoint to the anchor on a refused card too, and without Receipts", async () => {
+    setReaderWitnessPolicy(READER_LIST);
+    const refused = bundleOf("person-shared-witnessed-asof-fails");
+    refused.extensions["x-standard-history/v0"].as_of.checkpoint = "00".repeat(
+      8,
     );
+    expect(
+      (await modelOf("person-shared-witnessed-asof-fails", refused)).state,
+    ).toBe("unreadable");
+    const bare = bundleOf("person-shared-unwitnessed");
+    bare.extensions["x-standard-history/v0"].as_of.checkpoint = "00".repeat(8);
+    expect((await modelOf("person-shared-unwitnessed", bare)).state).toBe(
+      "unreadable",
+    );
+  });
+
+  it("keeps anchor_inclusion NOT_CHECKED and reports the witness as its own row", async () => {
+    setReaderWitnessPolicy(READER_LIST);
+    const dom = new JSDOM("<!doctype html><body></body>");
+    const doc = dom.window.document;
+    const host = {
+      L0: doc.createElement("div"),
+      L1: doc.createElement("div"),
+      L2: doc.createElement("div"),
+      depth: "L2",
+    };
+    doc.body.append(host.L0, host.L1, host.L2);
+    registered[0]!.render(await modelOf("person-shared-witnessed"), host);
+    const row = (p: string) =>
+      doc
+        .querySelector(`[data-property="${p}"]`)
+        ?.getAttribute("data-property-status");
+    expect(row("anchor_inclusion")).toBe("NOT_CHECKED");
+    expect(row("anchor_witnessed")).toBe("PASS");
+    // A Receipt the reader's list does not name is a FAIL: no row about a witness at all.
+    const fail = new JSDOM("<!doctype html><body></body>").window.document;
+    const h2 = {
+      L0: fail.createElement("div"),
+      L1: fail.createElement("div"),
+      L2: fail.createElement("div"),
+      depth: "L2",
+    };
+    fail.body.append(h2.L0, h2.L1, h2.L2);
+    registered[0]!.render(await modelOf("person-shared-witness-unlisted"), h2);
+    expect(fail.querySelector('[data-property="anchor_witnessed"]')).toBeNull();
+  });
+});
+
+describe("readerAnchorWitness, the runtime's check for the module", () => {
+  const octets = "6162636465666768";
+  const anchor = createHash("sha256")
+    .update(Buffer.from(octets, "hex"))
+    .digest("hex");
+
+  it("accepts a checkpoint exactly when its SHA-256 is the anchor", async () => {
+    expect((await readerAnchorWitness(anchor, octets, null)).checkpoint).toBe(
+      "match",
+    );
+    expect(
+      (await readerAnchorWitness("0".repeat(64), octets, null)).checkpoint,
+    ).toBe("mismatch");
+    expect((await readerAnchorWitness(anchor, null, null)).checkpoint).toBe(
+      "not_carried",
+    );
+  });
+
+  it("checks no Receipt under a checkpoint that is not the anchor's", async () => {
+    setReaderWitnessPolicy(READER_LIST);
+    const report = await readerAnchorWitness("0".repeat(64), octets, ["ab"]);
+    expect(report).toMatchObject({
+      checkpoint: "mismatch",
+      status: "NOT_CHECKED",
+      witness: null,
+    });
+  });
+
+  it("with no Receipt says NOT_PRESENT; under an empty list, NOT_CHECKED", async () => {
+    expect((await readerAnchorWitness(anchor, octets, null)).status).toBe(
+      "NOT_PRESENT",
+    );
+    const witnessed = bundleOf("person-shared-witnessed").extensions[
+      "x-standard-history/v0"
+    ].as_of;
+    const report = await readerAnchorWitness(
+      witnessed.anchor,
+      null,
+      witnessed.receipts,
+    );
+    expect(report.status).toBe("NOT_CHECKED");
+    setReaderWitnessPolicy(READER_LIST);
+    expect(
+      await readerAnchorWitness(witnessed.anchor, null, witnessed.receipts),
+    ).toMatchObject({
+      status: "PASS",
+      witness: "witness-a",
+      witnessed_time: 1793520240,
+    });
   });
 });
 
 describe("the reader changes their witness list on the page", () => {
-  // The module runs in a jsdom window of its own; AAC's check is this
-  // realm's, so the Receipts' octets cross as this realm's Uint8Arrays.
-  async function page() {
+  // The module runs in a jsdom window of its own, with this realm's runtime.
+  async function page(options: { slowFirstAfterLoad?: boolean } = {}) {
     const dom = new JSDOM("<!doctype html><body></body>", {
       runScripts: "outside-only",
     });
     const w = dom.window as unknown as Record<string, any>;
     const modules: Module[] = [];
+    let loaded = false;
+    let slowed = false;
     w.EvidenceGraph = {
       registerPresentation: (m: Module) => modules.push(m),
-      checkAnchorWitnessed: (
-        anchor: string,
-        receipts: Uint8Array[],
-        policy: unknown,
-      ) =>
-        checkAnchorWitnessed(
-          anchor,
-          receipts.map((r) => Uint8Array.from(r)),
-          policy,
-        ),
+      readerAnchorWitness: async (
+        ...args: Parameters<typeof readerAnchorWitness>
+      ) => {
+        // The first check after the page drew is the slow one, decided at the call.
+        const slow = options.slowFirstAfterLoad && loaded && !slowed;
+        if (slow) slowed = true;
+        const report = await readerAnchorWitness(...args);
+        if (slow) await new Promise((r) => setTimeout(r, 60));
+        return report;
+      },
       readerWitnessPolicy: () =>
         JSON.parse(JSON.stringify(readerWitnessPolicy())),
       setReaderWitnessPolicy,
@@ -361,6 +442,7 @@ describe("the reader changes their witness list on the page", () => {
       contextOf("person-shared-witnessed"),
     );
     modules[0]!.render(model, host);
+    loaded = true;
     const text = () =>
       [host.L0, host.L1, host.L2].map((r) => r.textContent).join("\n");
     const q = (sel: string) =>
@@ -400,5 +482,15 @@ describe("the reader changes their witness list on the page", () => {
     );
     expect(p.text()).not.toContain("Snapshot recorded");
     expect(readerWitnessPolicy().witnesses).toHaveLength(0);
+  });
+
+  it("draws only the newest check when the list changes while an older one runs", async () => {
+    const p = await page({ slowFirstAfterLoad: true });
+    p.q('[data-sh-witness-list="input"]').value = JSON.stringify(READER_LIST);
+    p.q('[data-sh-witness-list="save"]').click(); // slow: finishes last
+    p.q('[data-sh-witness-list="reset"]').click(); // fast: the newest
+    await new Promise((r) => setTimeout(r, 120));
+    expect(p.text()).not.toContain("Snapshot recorded");
+    expect(p.text()).toContain("Witnesses you accept: None.");
   });
 });

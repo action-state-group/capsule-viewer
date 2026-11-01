@@ -481,7 +481,7 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
       const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>History card</title></head>
 <body class="cv-kit"><main class="cv-page"><div data-level="L0"></div><div data-level="L1"></div><div data-level="L2"></div></main>
 <script>var EvidenceGraph = { registerPresentation: function (m) { window.__sh = m; },
-  checkAnchorWitnessed: function () { return Promise.resolve(${JSON.stringify(report)}); },
+  readerAnchorWitness: function () { return Promise.resolve(${JSON.stringify({ checkpoint: "not_carried", ...report })}); },
   readerWitnessPolicy: function () { return { witnesses: ${JSON.stringify(names)}.map(function (n) { return { name: n, keys: [] }; }) }; },
   setReaderWitnessPolicy: function () { return true; } };</script>
 <script>${SCRIPT}</script>

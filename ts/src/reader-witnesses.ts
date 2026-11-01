@@ -5,11 +5,14 @@
 // reader's, never the bundle's: nothing a bundle carries can add a witness to
 // it. The default is a visible empty list, so a page that was never given a
 // list checks no Receipt and says so. The reader changes it from the History
-// card's checks section; the choice is kept in this browser's localStorage
-// when it allows one, and in this page's memory when it does not.
-import type { AnchorWitnessPolicy } from "@action-state-group/agent-action-capsule/witness";
-
-const STORAGE_KEY = "capsule-viewer.reader-witnesses/v0";
+// card's checks section, or a host page sets it before the page renders; it
+// lives in this page's memory only. It is never stored where another page
+// could write it: a page that planted a witness there would make every later
+// card it vouched for read as witnessed by someone the reader never accepted.
+import {
+  checkAnchorWitnessed,
+  type AnchorWitnessPolicy,
+} from "@action-state-group/agent-action-capsule/witness";
 
 /** The default: no witness accepted. */
 export const DEFAULT_READER_WITNESSES: AnchorWitnessPolicy = Object.freeze({
@@ -50,50 +53,91 @@ export function parseReaderWitnesses(
 
 let held: AnchorWitnessPolicy | undefined;
 
-function storage(): Storage | undefined {
-  try {
-    return globalThis.localStorage;
-  } catch {
-    return undefined;
-  }
-}
-
-/** The reader's witness list: their saved one, else the visible default. */
+/** The reader's witness list: the one they set, else the visible default. */
 export function readerWitnessPolicy(): AnchorWitnessPolicy {
-  if (held !== undefined) return held;
-  try {
-    const raw = storage()?.getItem(STORAGE_KEY);
-    if (typeof raw === "string") {
-      const parsed = parseReaderWitnesses(JSON.parse(raw));
-      if (parsed !== undefined) return parsed;
-    }
-  } catch {
-    // An unreadable store is the default list.
-  }
-  return DEFAULT_READER_WITNESSES;
+  return held ?? DEFAULT_READER_WITNESSES;
 }
 
 /**
- * Save the reader's list, or with `null` go back to the default. Returns
+ * Set the reader's list, or with `null` go back to the default. Returns
  * false, and changes nothing, when `value` is not a list.
  */
 export function setReaderWitnessPolicy(value: unknown): boolean {
   if (value === null) {
     held = undefined;
-    try {
-      storage()?.removeItem(STORAGE_KEY);
-    } catch {
-      // Nothing was stored that could be removed.
-    }
     return true;
   }
   const parsed = parseReaderWitnesses(value);
   if (parsed === undefined) return false;
   held = parsed;
-  try {
-    storage()?.setItem(STORAGE_KEY, JSON.stringify(parsed));
-  } catch {
-    // Kept in this page only.
-  }
   return true;
+}
+
+/** What {@link readerAnchorWitness} says about a block's snapshot. */
+export interface ReaderAnchorWitness {
+  /** The block's `as_of.checkpoint` against its anchor: `match`, `mismatch`
+   * (the block is malformed), `not_carried`, or `unchecked` (it is carried
+   * and this page has no SHA-256 to compare it with). */
+  readonly checkpoint: "match" | "mismatch" | "not_carried" | "unchecked";
+  /** AAC's anchor_witnessed over the Receipts under the reader's list
+   * (`NOT_PRESENT` with none), and the witness and registration time of the
+   * Receipt it names. */
+  readonly status: "PASS" | "FAIL" | "NOT_PRESENT" | "NOT_CHECKED";
+  readonly witness: string | null;
+  readonly witnessed_time: number | null;
+}
+
+const fromHex = (hex: string): Uint8Array =>
+  Uint8Array.from(hex.match(/../gu) ?? [], (b) => Number.parseInt(b, 16));
+
+/**
+ * The History card's witness standing, for a presentation module, which
+ * verifies nothing itself: the block's `as_of.checkpoint` (lowercase hex of
+ * the anchor's octets, whose SHA-256 is the anchor) and `as_of.receipts`
+ * (lowercase hex, one Receipt each) for `anchor`, checked by AAC's
+ * `checkAnchorWitnessed` under the reader's own list ({@link
+ * readerWitnessPolicy}). Never throws; a check this page cannot run is
+ * `NOT_CHECKED` or `unchecked`, never a pass.
+ */
+export async function readerAnchorWitness(
+  anchor: string,
+  checkpoint: string | null,
+  receipts: readonly string[] | null,
+): Promise<ReaderAnchorWitness> {
+  let same: ReaderAnchorWitness["checkpoint"] = "not_carried";
+  if (checkpoint !== null) {
+    try {
+      const digest = await globalThis.crypto.subtle.digest(
+        "SHA-256",
+        fromHex(checkpoint),
+      );
+      same =
+        Array.from(new Uint8Array(digest), (b) =>
+          b.toString(16).padStart(2, "0"),
+        ).join("") === anchor
+          ? "match"
+          : "mismatch";
+    } catch {
+      same = "unchecked";
+    }
+  }
+  if (receipts === null || receipts.length === 0 || same === "mismatch") {
+    return {
+      checkpoint: same,
+      status: receipts === null ? "NOT_PRESENT" : "NOT_CHECKED",
+      witness: null,
+      witnessed_time: null,
+    };
+  }
+  const report = await checkAnchorWitnessed(
+    anchor,
+    receipts.map(fromHex),
+    readerWitnessPolicy(),
+  );
+  return {
+    checkpoint: same,
+    status: report.status,
+    witness: report.witness,
+    witnessed_time: report.witnessed_time,
+  };
 }

@@ -34,11 +34,12 @@ export {
   verifyProducerEnvelope,
 } from "@action-state-group/agent-action-capsule";
 
-// The reader's own witness list and AAC's anchor-witness check, which the
-// History card (static/standard_history_card.js) calls to draw its witness
-// line (capsule-viewer#183): the check is agent-action-capsule's, unchanged.
-export { checkAnchorWitnessed } from "@action-state-group/agent-action-capsule/witness";
+// The reader's own witness list, and the History card's witness standing under
+// it (static/standard_history_card.js; capsule-viewer#183). The check is
+// agent-action-capsule's checkAnchorWitnessed, unchanged; the module calls
+// readerAnchorWitness and verifies nothing itself.
 export {
+  readerAnchorWitness,
   readerWitnessPolicy,
   setReaderWitnessPolicy,
 } from "./reader-witnesses.js";
