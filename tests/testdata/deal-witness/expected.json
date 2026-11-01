@@ -1,0 +1,25 @@
+{
+  "witness_spki_hex": "302a300506032b65700321005a4b721d1942b88bc451001db98be908f122219df5c80fe94d395ea964de548c",
+  "go_witnesses": {
+    "cadence-all": {
+      "status": "pass",
+      "findings": [],
+      "receipts": [
+        {
+          "status": "pass",
+          "registration_time": 1791104405
+        }
+      ]
+    },
+    "cadence-part": {
+      "status": "pass",
+      "findings": [],
+      "receipts": [
+        {
+          "status": "pass",
+          "registration_time": 1791104405
+        }
+      ]
+    }
+  }
+}

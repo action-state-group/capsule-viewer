@@ -85,9 +85,15 @@ const WITNESS_CONTRACT = [
   "setReaderWitnessPolicy",
 ] as const;
 
+// The deal receipt's preimage and witness checks (capsule-viewer#214).
+const RECEIPT_CONTRACT = [
+  "paymentPreimageCheck",
+  "readerCadenceWitness",
+] as const;
+
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = [];
+const NOT_YET_SHIPPED: readonly string[] = [...RECEIPT_CONTRACT];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
@@ -111,7 +117,11 @@ describe("the runtime's global", () => {
       const global = globalOf(
         await readFile(new URL(file, import.meta.url), "utf8"),
       );
-      for (const member of [...MODULE_CONTRACT, ...WITNESS_CONTRACT]) {
+      for (const member of [
+        ...MODULE_CONTRACT,
+        ...WITNESS_CONTRACT,
+        ...RECEIPT_CONTRACT,
+      ]) {
         // Not yet in the shipped runtime. Asserting its absence makes the
         // refresh that ships it fail here until that refresh also drops it
         // from NOT_YET_SHIPPED (RELEASING.md step 5; an edit under ts/, which
