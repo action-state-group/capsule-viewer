@@ -13,14 +13,18 @@ capsulectl verified as such."""
 from __future__ import annotations
 
 import copy
+import hashlib
 import re
 from html.parser import HTMLParser
 
 import pytest
-from receipt_helpers import BILATERAL, SELLER, load, render
+from receipt_helpers import BILATERAL, SELLER, load, render, report_for
 
+from capsule_viewer.receipt import example_wording_pack
+from capsule_viewer.receipt.module import PLACEHOLDERS, UnilateralReceiptModule
 from capsule_viewer.receipt.module_slot import KIT_CSS
 from capsule_viewer.receipt.sides import plain_date
+from capsule_viewer.wording import load_wording_pack
 
 
 class _Halves(HTMLParser):
@@ -169,15 +173,77 @@ def test_one_sided_declared_as_agreed_is_declined_not_drawn():
     assert "Stamped by both" not in page
 
 
-def test_a_signed_refusal_is_no_receipt():
-    """capsulectl verifies the refusal's signature and reads the member as
-    INCOMPLETE: the bundle does not verify, and nothing is drawn."""
+def test_a_signed_policy_declined_refusal_is_drawn_as_a_limit():
+    """capsulectl reads the refusal member INCOMPLETE and verifies its
+    signature. The page draws the copy beside it and the declined ask as the
+    other party's limit: a neutral case line, never the agreed or the
+    one-sided case, never a no to the deal and never red."""
     _, output = load("one-sided-refusal-keep")
     composed = next(e["composed"] for e in output["extensions"] if e["kind"] == "composed/v1")
     assert output["verdict"] == "INCOMPLETE"
     assert composed["members"][1]["refusal_signature"]["status"] == "verified"
     page = render("one-sided-refusal-keep", depth="L0")
-    assert halves(page).cases == [] and "Stamped by both" not in page and "Your receipt only" not in page
+    h = halves(page)
+    assert h.cases == ["limit"]
+    assert [x["kind"] for x in h.halves] == ["ours", "missing"]
+    assert h.halves[1]["outcome"] == "refusal"
+    assert text(h.halves[1]) == (
+        "Their side Not shared. Their side was asked for its record, and on Oct 10, 2026 signed a reply that its sharing "
+        "policy does not allow it. This is a limit on what they share. They have not refused the deal."
+    )
+    assert "cv-tone--neutral" in h.case_classes[0] and "negative" not in " ".join(h.case_classes)
+    assert " ".join(h.case_text).startswith("Your receipt only: the other side's record is not shared.")
+    assert "Stamped by both" not in page and "did not verify" not in page
+    assert h.actions == ["send"]
+    # A banner the page cannot read as verified: the verification is incomplete.
+    assert "Incomplete" in page
+
+
+def test_a_shared_page_words_the_limit_without_your():
+    """A counterparty or adjudicator page never says "your"; the case line
+    for the limit has its own shared words, with the same neutral tone."""
+    raw = example_wording_pack()
+    module = UnilateralReceiptModule(load_wording_pack(raw, hashlib.sha256(raw).hexdigest(), PLACEHOLDERS))
+    h = halves(str(module.sides("limit", [], keep=False)))
+    assert h.cases == ["limit"]
+    assert " ".join(h.case_text).startswith("One side's record only: the other side's record is not shared.")
+    assert "Your" not in " ".join(h.case_text) and "cv-tone--neutral" in h.case_classes[0]
+
+
+def _refusal_case(change):
+    bundle, output = load("one-sided-refusal-keep")
+    bundle, output = copy.deepcopy(bundle), copy.deepcopy(output)
+    change(bundle, output)
+    return render("one-sided-refusal-keep", depth="L0", bundle=bundle, output=report_for(bundle, output))
+
+
+def _refusal_member(bundle):
+    return bundle["extensions"]["composed/v1"]["members"][1]
+
+
+def _composed(output):
+    return next(e["composed"] for e in output["extensions"] if e["kind"] == "composed/v1")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda b, o: _refusal_member(b)["refusal"].update(reason="other_reason"),
+        lambda b, o: _composed(o)["members"][1].update(refusal_signature={"profile": "ed25519-jcs", "status": "invalid"}),
+        lambda b, o: _composed(o)["members"][1].update(digest="mismatch"),
+        lambda b, o: _composed(o).update(status="fail"),
+        lambda b, o: o.update(checkpoint={"findings": ["x"], "status": "fail"}),
+        lambda b, o: o.update(verdict="INVALID"),
+        lambda b, o: _composed(o)["findings"].append("anything"),
+    ],
+    ids=["other-reason", "unverified-signature", "digest-mismatch", "composition-failed", "other-failure", "invalid", "composition-finding"],
+)
+def test_only_a_verified_policy_declined_refusal_with_nothing_else_wrong_is_a_limit(change):
+    """Anything else about a refusal, or any other failure beside it, draws
+    nothing: the generic did-not-verify page."""
+    page = _refusal_case(change)
+    assert halves(page).cases == [] and "not shared" not in page.lower() and "limit" not in page.lower().split("did not")[0]
+    assert "did not verify" in page
 
 
 def test_an_absence_the_bundle_does_not_carry_is_declined():
@@ -220,7 +286,7 @@ def test_two_copies_that_do_not_show_one_agreement_are_not_drawn_as_agreed(name,
     assert "Stamped by both" not in page
 
 
-ALL = sorted({*BILATERAL, *SELLER, "keep", "golden-2", "main-buyer-keep", "main-seller-keep", "one-sided-keep", "one-sided-counterparty"})
+ALL = sorted({*BILATERAL, *SELLER, "keep", "golden-2", "main-buyer-keep", "main-seller-keep", "one-sided-keep", "one-sided-counterparty", "one-sided-refusal-keep"})
 
 
 @pytest.mark.parametrize("name", ALL)
