@@ -2396,6 +2396,45 @@ export const LINES_FRAME = {
 } as const;
 
 /**
+ * The canvas's four footnotes (Terms Pack Outcomes frame 1): what a record
+ * and a conversation are, what resolved means, that the page is read-only,
+ * and that a figure is a count beside its total. The last is said only when
+ * the page draws no shares (`percentages` off); a bundle that carries no
+ * records list leaves the first without a record count rather than guessing.
+ */
+function renderCanvasNotes(
+  notes: HTMLElement,
+  model: LinesModel,
+  bundle: unknown,
+  w: Words,
+): void {
+  const records = (bundle as { records?: unknown } | null)?.records;
+  const note = (key: string, text: string): void => {
+    const p = el("p", "", text);
+    p.dataset.footnote = key;
+    notes.append(p);
+  };
+  if (Array.isArray(records))
+    note(
+      "records",
+      w.t("lines.fn.records", {
+        records: fmtCount(records.length),
+        n: fmtCount(model.totalCount),
+      }),
+    );
+  note(
+    "resolved",
+    w.t(
+      model.gating === undefined
+        ? "lines.fn.resolved"
+        : "lines.fn.resolved.tiered",
+    ),
+  );
+  note("readonly", w.t("lines.fn.readonly"));
+  if (!model.options.percentages) note("counts", w.t("lines.fn.counts"));
+}
+
+/**
  * Draw the `lines` grouping into `wrapper` (contract-report.ts made it and
  * put its stylesheet in it). Every word is `w`'s.
  */
@@ -2434,6 +2473,7 @@ export async function drawLines(
   notes.dataset.section = "footnotes";
   renderMeta(pad, model, w, notes);
   renderLines(pad, model, runInfo, w, notes);
+  renderCanvasNotes(notes, model, bundle, w);
   if (notes.childElementCount > 0) pad.append(notes);
   sheet.append(pad);
   levels.L0.append(sheet);
