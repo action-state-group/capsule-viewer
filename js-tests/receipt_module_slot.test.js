@@ -61,6 +61,23 @@ function threeScripts() {
   return libs.map((lib, i) => ({ kind: KINDS[i], lib, module: lib.registered[0] }));
 }
 
+describe("a declined ask, with the page's own verifier", () => {
+  it("one-sided-refusal-keep is incomplete, never verified, under the default environment", async () => {
+    // The oracle's inputs for the member copy and the audience; the bundle's verification is the script's own
+    // (pageVerification), which cannot see capsulectl's INCOMPLETE verdict for the refusal member.
+    const c = pythonOracle().cases.find((x) => x.name === "one-sided-refusal-keep" && x.audience === "keep");
+    const { context, env } = caseInputs(c);
+    delete env.verification;
+    const lib = loadScript("bilateral");
+    const module = lib.api.createModule("bilateral", env);
+    expect(await module.canRender(context)).toBe(true);
+    const model = await module.buildModel(context);
+    expect(model.case).toBe("limit");
+    expect(model.verification.outcome).toBe("incomplete");
+    expect(model.verification.checks.at(-1)).toEqual({ name: "declined member", outcome: "not_checked", detail: "policy_declined" });
+  });
+});
+
 describe("real copies capsulectl cut, in jsdom", () => {
   for (const c of MAIN) {
     it(`${c.name}: the ${c.module} receipt and no other; PRIVATE ${c.keep ? "shown" : "not shown"}`, async () => {
