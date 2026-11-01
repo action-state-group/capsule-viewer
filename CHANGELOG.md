@@ -9,6 +9,16 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## ts 0.10.0 and go 0.10.0 (2026-11-01)
+
+Both state viewer 0.10.0: `ts/v0.10.0`, then `go/v0.10.0` on the commit that
+ships its page runtime. This release carries the changes merged since 0.9.0:
+#215 (the viewer half of evidencebook-deal#94, issue #214).
+
+### Added
+
+- Two runtime checks for the deal receipt, which a presentation module cannot run itself (`spec/presentation-contract-v0.md` §3): the runtime's new globals `paymentPreimageCheck` and `readerCadenceWitness` (#214, #215). `paymentPreimageCheck(paymentRef, preimage)` is lightning-v0's preimage check: `PASS` when `paymentRef` is `ln.payment_hash` and the SHA-256 of the preimage's 32 octets is its value, `FAIL` when the preimage is not 32 bytes of hex or hashes to something else, `NOT_PRESENT` with no preimage or hash, and `NOT_CHECKED` for another rail. It returns a status only, never the preimage. `readerCadenceWitness(context)` walks a deal bundle's `x-cadence-witness/v0` chain from the context's own authenticated checkpoint, as capsule-cli does, and checks the cadence checkpoint's receipts under the reader's own witness list (never the bundle's). `PASS` names the witness and the receipt's registration time. A page whose runtime predates this release has neither global, so a module that asks for them must fall back to its lines without a check.
+
 ## ts 0.9.0 and go 0.9.0 (2026-10-31)
 
 Both state viewer 0.9.0: `ts/v0.9.0`, then `go/v0.9.0` on the commit that
