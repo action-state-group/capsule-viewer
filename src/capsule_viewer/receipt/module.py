@@ -88,6 +88,7 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     # The receipt's sides (``sides.py``).
     "sides.half": frozenset({"role"}),
     "sides.missing.absence": frozenset({"start", "end"}),
+    "sides.missing.refusal.policy_declined": frozenset({"date"}),
     # The errand's journey: capsulectl's own keys, mirrored (tests/test_receipt_journey.py).
     "journey.agent.act.pay": frozenset({"amount"}),
     "journey.agent.act.pay.within": frozenset({"amount", "limit"}),
@@ -279,7 +280,7 @@ class UnilateralReceiptModule:
         tone is never ``negative``: a missing side is not a finding."""
         parts: list[str] = list(halves)
         if line:
-            key = "sides.case.one_sided.shared" if case == "one_sided" and not keep else f"sides.case.{case}"
+            key = f"sides.case.{case}.shared" if case in ("one_sided", "limit") and not keep else f"sides.case.{case}"
             parts.insert(0, _el("p", self.w(key), class_=f"cv-sides__case cv-tone--{CASE_TONE[case]}", data_case=case))
         return _el("div", _join(parts), class_="cv-sides", data_receipt_case=case)
 
@@ -301,13 +302,15 @@ class UnilateralReceiptModule:
         that went unanswered."""
         if missing is None:
             text = self.w("sides.missing.none")
+        elif missing.kind == "refusal":
+            text = self.w(f"sides.missing.refusal.{missing.reason}", date=plain_date(missing.window[0]))
         else:
             text = self.w("sides.missing.absence", start=plain_date(missing.window[0]), end=plain_date(missing.window[1]))
         if keep or missing is None or missing.role is None:
             label = self.w("sides.missing.heading")
         else:
             label = missing.role
-        attrs = {"data_outcome": "absence", "data_party": missing.member} if missing is not None else {"data_outcome": "none"}
+        attrs = {"data_outcome": missing.kind, "data_party": missing.member} if missing is not None else {"data_outcome": "none"}
         return self.half("missing", label, _el("p", text), **attrs)
 
     # ---- words --------------------------------------------------------------
