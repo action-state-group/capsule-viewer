@@ -1072,7 +1072,7 @@ ${s} details.lv > summary .tg:before{content:"\\25B8"}
 ${s} details.lv[open] > summary .tg:before{content:"\\25BE"}
 ${s} details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
 ${s} .wh{display:inline-block;color:var(--bad,#B3261E);font-weight:600;font-size:12.5px}
-${s} .wh:before{content:"\\25B8" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px}
+${s} .wh:before{content:"\\25B8";content:"\\25B8" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px}
 ${s} .wref:before{content:"\\25A0";content:"\\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
 ${s} details.lv1.line{border:0;background:transparent;margin-top:4px}
 ${s} details.lv1.line > summary{padding:2px 0;font-size:13px}
