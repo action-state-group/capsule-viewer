@@ -148,7 +148,7 @@
     "witness.list.heading": "Witnesses you accept",
     "witness.list.none": "None. Nothing in the card or its bundle can add one.",
     "witness.list.some": "{names}. Nothing in the card or its bundle can add one.",
-    "witness.list.help": "A list of the witnesses you accept: their names and the hex DER public keys they sign receipts under. It stays in this browser.",
+    "witness.list.help": "A list of the witnesses you accept: their names and the hex DER public keys they sign receipts under. It stays on this page only and is gone when the page closes.",
     "witness.list.label": "Witness list (JSON)",
     "witness.list.save": "Save",
     "witness.list.reset": "Back to none",

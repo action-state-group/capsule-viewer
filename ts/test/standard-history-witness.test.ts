@@ -447,7 +447,35 @@ describe("the reader changes their witness list on the page", () => {
       [host.L0, host.L1, host.L2].map((r) => r.textContent).join("\n");
     const q = (sel: string) =>
       doc.querySelector(sel) as HTMLElement & HTMLTextAreaElement;
-    return { text, q, host, tick: () => new Promise((r) => setTimeout(r, 20)) };
+    // A second card on the same page: its own host, the same module and list.
+    const second = async () => {
+      loaded = false; // its first check is not the slow one
+      const host2 = {
+        L0: doc.createElement("div"),
+        L1: doc.createElement("div"),
+        L2: doc.createElement("div"),
+        depth: "L2",
+      };
+      doc.body.append(host2.L0, host2.L1, host2.L2);
+      modules[0]!.render(
+        await modules[0]!.buildModel(contextOf("person-shared-witnessed")),
+        host2,
+      );
+      loaded = true;
+      return {
+        text: () =>
+          [host2.L0, host2.L1, host2.L2].map((r) => r.textContent).join("\n"),
+        q: (sel: string) =>
+          host2.L2.querySelector(sel) as HTMLElement & HTMLTextAreaElement,
+      };
+    };
+    return {
+      text,
+      q,
+      host,
+      second,
+      tick: () => new Promise((r) => setTimeout(r, 20)),
+    };
   }
 
   it("saves a list, draws the line, and goes back to none", async () => {
@@ -492,5 +520,21 @@ describe("the reader changes their witness list on the page", () => {
     await new Promise((r) => setTimeout(r, 120));
     expect(p.text()).not.toContain("Snapshot recorded");
     expect(p.text()).toContain("Witnesses you accept: None.");
+  });
+
+  it("one card's list change never supersedes another card's check", async () => {
+    setReaderWitnessPolicy(READER_LIST); // both cards draw under the list that names witness-a
+    const p = await page({ slowFirstAfterLoad: true });
+    expect(p.text()).toContain("Snapshot recorded");
+    const second = await p.second();
+    expect(second.text()).toContain("Snapshot recorded");
+    // Reset on the first (slow check in flight), then a list that names no one on the second.
+    p.q('[data-sh-witness-list="reset"]').click();
+    second.q('[data-sh-witness-list="input"]').value = JSON.stringify({
+      witnesses: [],
+    });
+    second.q('[data-sh-witness-list="save"]').click();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(p.text()).not.toContain("Snapshot recorded");
   });
 });
