@@ -51,9 +51,9 @@ export interface SubjectEntry {
   /** The decimal exponent of the conversation's USD band: `e+2` is 10^2 to 10^3 - 1. */
   readonly bandExponent?: number;
   readonly halves?: { readonly present: number; readonly of: number };
-  /** Operator tier only. */
+  /** Read only when the handles are (`SubjectHistory.grouped`): the operator tier, or a shared tier salted per share. */
   readonly handle?: string;
-  /** Operator tier only: the id of the conversation this one follows up. */
+  /** Read only when `grouped`, as `handle`: the id of the conversation this one follows up. */
   readonly followUpOf?: string;
 }
 
