@@ -383,10 +383,10 @@ describe("the three grades in the holder's Tell your agent block", () => {
     expect(h.stamped_by_both).toBeGreaterThan(0);
     const say = renderAll(l, m).L0.querySelector('[data-sh="say"]');
     const stamped = say.querySelector('[data-sh-say="stamped"]');
-    expect(stamped.textContent).toContain("stamped: the other side's own record points at yours");
+    expect(stamped.textContent).toContain("your agent’s receipt checks whether their record points at yours");
     expect(stamped.textContent).toContain(`${h.stamped_by_both} of ${h.of} deals`);
-    // This page checks no pointer and no signature, so the note claims no check.
-    expect(stamped.textContent).not.toMatch(/check/);
+    // This page checks no pointer and no signature, so the note names the receipt as where the check runs and claims none itself.
+    expect(stamped.textContent).not.toMatch(/checked/);
     expect(say.textContent).toContain("narrated by your agent");
     expect(say.textContent).toContain("sealed and checked");
   });
