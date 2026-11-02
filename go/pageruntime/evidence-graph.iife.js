@@ -16640,7 +16640,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("711be86a5a613b11792d24662f7ce71743d71e9b");
+    return commitPrefix("27c008fde4fa7dc6567d652d26bfd59557d5f73c");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -23350,17 +23350,20 @@ ${key}`);
   var fmt5 = (n) => n.toLocaleString("en-US");
   var CALIBRATION_CLAIM = "calibration";
   var isCalibration = (claim) => claim.type === CALIBRATION_CLAIM;
-  function fieldCount(result3, field, sealed, calibrationSealed) {
+  function fieldCount(result3, field, sealed, bucketIds) {
     const mismatch = result3.countMismatches.find((e) => e.field === field);
-    const sealedRecomputed = mismatch === void 0 ? sealed : mismatch.recomputed;
-    const standing = result3.claims.filter((c) => isCalibration(c) && !c.failed);
-    const inForce = standing.filter((c) => !c.later);
-    const calibrationRecomputed = field === "evaluated_population" ? result3.claims.filter((c) => isCalibration(c) && !c.later).length : field === "unknown_count" ? inForce.filter((c) => c.sufficiency === "UNKNOWN").length : field === "not_yet_in_force" ? result3.claims.filter((c) => isCalibration(c) && c.later).length : inForce.filter((c) => c.verdict === field.slice("buckets.".length)).length;
+    const recomputed = mismatch === void 0 ? sealed : mismatch.recomputed;
+    const calibration = result3.claims.filter((c) => isCalibration(c) && !c.later);
+    const counted2 = (c) => field === "evaluated_population" ? true : field === "unknown_count" ? c.sufficiency === "UNKNOWN" : field !== "not_yet_in_force" && c.verdict === field.slice("buckets.".length);
+    const sealedSide = calibration.filter(
+      (c) => field === "evaluated_population" || (bucketIds === void 0 ? counted2(c) : bucketIds.includes(c.id))
+    ).length;
+    const claimsSide = calibration.filter(
+      (c) => (field === "evaluated_population" || !c.failed) && counted2(c)
+    ).length;
     return {
-      drawn: sealed - calibrationSealed,
-      recomputed: sealedRecomputed - calibrationRecomputed,
-      sealed,
-      sealedRecomputed
+      drawn: sealed >= sealedSide ? sealed - sealedSide : sealed,
+      recomputed: recomputed >= claimsSide ? recomputed - claimsSide : recomputed
     };
   }
   function mismatchMarker(count2, field, w) {
@@ -23378,24 +23381,19 @@ ${key}`);
   function renderAggregate(result3, w) {
     const out = document.createDocumentFragment();
     const sealed = result3.statedCoverage;
-    const calibrationClaims = result3.claims.filter(isCalibration);
-    const calibrationInForce = calibrationClaims.filter((c) => !c.later);
-    const statedIds = (ids) => ids === void 0 ? 0 : calibrationClaims.filter((c) => ids.includes(c.id)).length;
-    const count2 = (field, value, calibration) => fieldCount(result3, field, value, calibration);
-    const population2 = count2(
+    const calibrationInForce = result3.claims.filter(
+      (c) => isCalibration(c) && !c.later
+    );
+    const population2 = fieldCount(
+      result3,
       "evaluated_population",
-      sealed.evaluatedPopulation,
-      calibrationInForce.length
+      sealed.evaluatedPopulation
     );
-    const unknown = count2(
-      "unknown_count",
-      sealed.unknownCount,
-      calibrationInForce.filter((c) => c.sufficiency === "UNKNOWN" && !c.failed).length
-    );
-    const laterCount = count2(
+    const unknown = fieldCount(result3, "unknown_count", sealed.unknownCount);
+    const laterCount = fieldCount(
+      result3,
       "not_yet_in_force",
-      sealed.notYetInForce ?? 0,
-      calibrationClaims.length - calibrationInForce.length
+      sealed.notYetInForce ?? 0
     );
     const stated = {
       evaluatedPopulation: population2.drawn,
@@ -23474,7 +23472,7 @@ ${key}`);
     ];
     for (const [verdict2, ids, field] of entries) {
       if (ids === void 0) continue;
-      const figure = count2(field, ids.length, statedIds(ids));
+      const figure = fieldCount(result3, field, ids.length, ids);
       const box = el11("div", `agg-bucket ${verdict2}`);
       box.dataset.bucket = verdict2;
       box.dataset.count = String(figure.drawn);
