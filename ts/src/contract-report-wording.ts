@@ -983,6 +983,8 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.pf.verdicts.one",
   "lines.na-note.one",
   "lines.na-note.other",
+  // The canvas's footnote that says what the page does not do.
+  "lines.fn.readonly",
   "lines.sentence.undecided.none",
   "lines.why.undecided.none",
   "lines.sentence.nothing-applied",
@@ -1415,7 +1417,7 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "9b54b407fe2077875ba455d27ce959eec17b3fe383ba4192b87d6235eb3edd77",
+  lines: "c8e7c5313deee0137654878727c8a79760286cc165b46c316b5956f498a83d80",
   groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
   generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77",
 });
