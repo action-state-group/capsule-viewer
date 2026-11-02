@@ -76,6 +76,8 @@ const isCalibration = (claim: Claim): boolean =>
 interface FieldCount {
   readonly drawn: number;
   readonly recomputed: number;
+  /** The sealed figure minus its calibration claims is not the claims' figure minus theirs. */
+  readonly gap: boolean;
 }
 
 /**
@@ -115,6 +117,7 @@ function fieldCount(
   return {
     drawn: sealed >= sealedSide ? sealed - sealedSide : sealed,
     recomputed: recomputed >= claimsSide ? recomputed - claimsSide : recomputed,
+    gap: sealed - sealedSide !== recomputed - claimsSide,
   };
 }
 
@@ -130,7 +133,7 @@ function mismatchMarker(
   field: CountMismatch["field"],
   w: Words,
 ): HTMLElement | undefined {
-  if (count.drawn === count.recomputed) return undefined;
+  if (!count.gap) return undefined;
   const marker = el(
     "span",
     "count mismatch",

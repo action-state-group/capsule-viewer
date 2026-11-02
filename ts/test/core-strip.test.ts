@@ -443,7 +443,7 @@ describe("calibration claims are cited on their own line, not counted as evaluat
     expect(marker.dataset.recomputed).toBe("3");
   });
 
-  it("takes a calibration claim with an unknown sufficiency out of unknown_count, even when it failed verification", async () => {
+  it("takes a calibration claim with an unknown sufficiency out of unknown_count", async () => {
     const source = withCalibration(4);
     const doc = resultDoc(source);
     const claim = (doc.claims as Obj[])[3]!;
@@ -463,6 +463,34 @@ describe("calibration claims are cited on their own line, not counted as evaluat
     const line = strip(root)!.querySelector<HTMLElement>(".agg-line")!;
     expect(line.dataset.evaluated).toBe("0");
     expect(line.textContent).not.toMatch(/-\d/u);
+    expect(
+      strip(root)!.querySelector(
+        '[data-count-mismatch="evaluated_population"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("marks a sealed population below its calibration claims even when the fallback figure equals the claims'", async () => {
+    // One requirement claim and two calibration claims in force, a sealed
+    // population of 1: sealed minus calibration is -1, the claims give 1.
+    const source = fixture("result-root-bundle.json");
+    const doc = resultDoc(source);
+    const first = (doc.claims as Obj[])[0]!;
+    const calibration = (id: string): Obj => ({
+      ...structuredClone(first),
+      id,
+      type: "calibration",
+      requirement_ref: id,
+    });
+    doc.claims = [first, calibration("claim-4"), calibration("claim-5")];
+    const aggregate = doc.aggregate as Obj;
+    (aggregate.coverage as Obj).evaluated_population = 1;
+    aggregate.buckets = {
+      met: ["claim-1", "claim-4", "claim-5"],
+      not_met: [],
+      not_evaluable: [],
+    };
+    const root = await render(source);
     expect(
       strip(root)!.querySelector(
         '[data-count-mismatch="evaluated_population"]',
