@@ -432,7 +432,7 @@
     "generic.verdict.not_evaluable": "could not be decided",
     "generic.verdict.out_of_scope": "out of scope",
     "generic.verdict.failed": "failed verification",
-    "generic.verdict.unsupported": "unsupported",
+    "generic.verdict.unsupported": "unsupported claim",
     "generic.tier.recomputed": "recomputed",
     "generic.tier.judged": "judged",
     "generic.tally": "{n} of {total} claims",
