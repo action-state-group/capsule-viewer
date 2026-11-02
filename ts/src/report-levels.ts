@@ -114,6 +114,7 @@ export function deferBody(
     pendingToggles.delete(details);
     details.dataset.body = "built";
     into.append(build());
+    anchorCases(into);
     openBuiltToDepth(into);
   };
   // A toggle the view opened that the reader then closes is the reader's.
@@ -126,6 +127,9 @@ export function deferBody(
     return;
   }
   pendingToggles.set(details, fill);
+  // A body built into a cell outside the toggle (an expandable row's detail
+  // row) is shown by that toggle, which is not its ancestor.
+  if (into !== details) bodyOwners.set(into, details);
   details.addEventListener("toggle", () => {
     if (details.open) fill();
   });
@@ -133,6 +137,9 @@ export function deferBody(
 
 /** Each toggle's pending fill, keyed weakly by the toggle. */
 const pendingToggles = new WeakMap<HTMLDetailsElement, () => void>();
+
+/** The toggle that shows a body built outside it, keyed weakly by the body's host. */
+const bodyOwners = new WeakMap<HTMLElement, HTMLDetailsElement>();
 
 /**
  * Builds every body under `root` that `selector` names and is still
@@ -872,28 +879,151 @@ export function revealRecord(from: Node, recordId: string): void {
   target.scrollIntoView?.();
 }
 
+/**
+ * The address of a case's card on a report page (capsule-viewer#243,
+ * docs/design/report-views.md "Case address"): the per-conversation card
+ * of the Outcomes page and the per-session card of the EU AI Act page,
+ * each marked `data-case` with the case id its claim ids carry
+ * (`<case id>::<criterion>`). A page address only: it means something only
+ * inside a page that draws that card.
+ */
+export function caseAddress(caseId: string): string {
+  return `case-${caseId}`;
+}
+
+/** A link to a case's card: `caseAddress`, percent-encoded as a fragment. */
+export function caseHref(caseId: string): string {
+  return `#case-${encodeURIComponent(caseId)}`;
+}
+
+/** The cases each toggle's body lists cards for, keyed weakly by the toggle. */
+const toggleCases = new WeakMap<HTMLDetailsElement, ReadonlySet<string>>();
+
+/** Says which cases' cards a toggle's body lists, so `revealCase` can build just that toggle. */
+export function listsCases(
+  details: HTMLDetailsElement,
+  caseIds: Iterable<string>,
+): void {
+  toggleCases.set(details, new Set(caseIds));
+}
+
+/**
+ * Opens the card that holds a case's address and every toggle that shows
+ * it: each <details> around it, and the toggle of an expandable row whose
+ * detail row holds it. Cards are built when their toggle first opens, and
+ * one case can be listed under several toggles, so when no card holds the
+ * address yet the first pending toggle in page order that lists the case
+ * (`listsCases`) is built, which anchors its card (`anchorCases`). A case
+ * the page draws no card for (on the EU AI Act page, a session no test
+ * lists) builds and opens nothing.
+ */
+export function revealCase(from: Node, caseId: string): void {
+  const doc = from.nodeType === 9 ? (from as Document) : from.ownerDocument!;
+  // Only anchorCases gives a card its address, so both packagings agree.
+  let target = doc.getElementById(caseAddress(caseId));
+  if (target === null) {
+    const home = [
+      ...doc.querySelectorAll<HTMLDetailsElement>(
+        'details[data-body="pending"]',
+      ),
+    ].find(
+      (details) =>
+        pendingToggles.has(details) &&
+        toggleCases.get(details)?.has(caseId) === true,
+    );
+    if (home === undefined) return;
+    pendingToggles.get(home)!();
+    target = doc.getElementById(caseAddress(caseId));
+    if (target === null) return;
+  }
+  // Every toggle that shows the card: each <details> around it, and the
+  // toggle of each expandable row whose detail row holds it.
+  const shows: HTMLDetailsElement[] = [];
+  for (let at = target.parentElement; at !== null; at = at.parentElement) {
+    if (at.localName === "details") shows.push(at as HTMLDetailsElement);
+    const owner = bodyOwners.get(at);
+    if (owner !== undefined) shows.push(owner);
+  }
+  for (const toggle of shows.reverse()) if (!toggle.open) openToggle(toggle);
+  target.scrollIntoView?.();
+}
+
+/**
+ * Gives each card under `root` that has no address yet the case's address,
+ * unless another card of that case already holds it on the page (or in the
+ * tree `root` sits in, before it is placed). Every toggle body runs it once
+ * it is built (`deferBody`), so the page that runs script and the static
+ * page, which build their bodies in the same order, anchor the same card:
+ * the first one built. Returns how many it anchored.
+ */
+export function anchorCases(root: ParentNode): number {
+  const cards = root.querySelectorAll<HTMLElement>("[data-case]");
+  if (cards.length === 0) return 0;
+  const top = (root as Node).getRootNode();
+  // A page not yet placed in a document has no id index: its addresses are
+  // collected once per tree and kept here, not looked up card by card.
+  let held: Set<string> | undefined;
+  if (top.nodeType !== 9) {
+    held = treeAddresses.get(top);
+    if (held === undefined) {
+      held = new Set(
+        [
+          ...(top as ParentNode).querySelectorAll<HTMLElement>(
+            "[data-case][id]",
+          ),
+        ].map((e) => e.id),
+      );
+      treeAddresses.set(top, held);
+    }
+  }
+  let anchored = 0;
+  for (const card of cards) {
+    const address = caseAddress(card.dataset.case!);
+    if (card.id !== "") continue;
+    if (
+      held === undefined
+        ? (top as Document).getElementById(address) !== null
+        : held.has(address)
+    )
+      continue;
+    card.id = address;
+    held?.add(address);
+    anchored++;
+  }
+  return anchored;
+}
+
+/** The case addresses already held in a tree not placed in a document, keyed weakly by its root. */
+const treeAddresses = new WeakMap<Node, Set<string>>();
+
 const hashWatched = new WeakSet<Document>();
 
 /**
- * Where script runs: a page opened at a record's address (`#record-<id>`),
- * or whose address changes to one, opens that record's entry and every
- * fold around it, as a link to it does (`revealRecord`). One listener per
- * document.
+ * Where script runs: a page opened at a record's address (`#record-<id>`)
+ * or a case's (`#case-<id>`), or whose address changes to one, opens that
+ * record's entry or that case's card and every fold around it, as a link
+ * to it does (`revealRecord`, `revealCase`). One listener per document.
  */
 export function revealRecordsByHash(doc: Document): void {
   const view = doc.defaultView;
   if (view === null) return;
   const go = (): void => {
     const hash = view.location.hash;
-    if (!hash.startsWith("#record-")) return;
+    const prefix = hash.startsWith("#record-")
+      ? "#record-"
+      : hash.startsWith("#case-")
+        ? "#case-"
+        : undefined;
+    if (prefix === undefined) return;
     let id: string;
     try {
-      id = decodeURIComponent(hash.slice("#record-".length));
+      id = decodeURIComponent(hash.slice(prefix.length));
     } catch {
-      // A fragment that does not decode names no record.
+      // A fragment that does not decode names no record and no case.
       return;
     }
-    revealRecord(doc, id);
+    if (prefix === "#record-") revealRecord(doc, id);
+    else revealCase(doc, id);
   };
   go();
   if (hashWatched.has(doc)) return;
