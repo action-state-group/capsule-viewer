@@ -16024,7 +16024,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       return void 0;
     return { pack, tier: value.tier, salting, saltId };
   }
-  function readEntry2(value, operator) {
+  function readEntry2(value, grouped) {
     if (!isObj4(value)) return void 0;
     const labels = value.request_labels;
     if (!Array.isArray(labels) || labels.length > MAX_LABELS || labels.some((l) => str(l, MAX_LABEL) === void 0))
@@ -16044,7 +16044,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     }
     let handle;
     let followUpOf;
-    if (operator) {
+    if (grouped) {
       if (value.customer_handle !== void 0) {
         if (typeof value.customer_handle !== "string" || !HEX642.test(value.customer_handle))
           return void 0;
@@ -16073,15 +16073,17 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     if (!isObj4(block.conversations)) return void 0;
     const scope = readScope(block.handle_scope);
     const operator = scope?.tier === "operator";
+    const grouped = operator || scope?.tier === "shared" && scope.salting === "per-share";
     const entries = /* @__PURE__ */ new Map();
     for (const [id, value] of Object.entries(block.conversations)) {
-      const entry = readEntry2(value, operator);
+      const entry = readEntry2(value, grouped);
       if (entry !== void 0) entries.set(id, entry);
     }
     if (entries.size === 0) return void 0;
     return {
       tier: operator ? "operator" : "shared",
-      ...operator && scope !== void 0 ? { scope } : {},
+      grouped,
+      ...grouped && scope !== void 0 ? { scope } : {},
       entries
     };
   }
@@ -16238,7 +16240,16 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     block.append(
       el5("h3", "sh-head", w.t("lines.subject.headline", { n: fmt(n) }))
     );
-    block.append(el5("p", "sh-lede", w.t("lines.subject.explain", { n: fmt(n) })));
+    block.append(
+      el5(
+        "p",
+        "sh-lede",
+        w.t(
+          history.tier === "operator" ? "lines.subject.explain" : "lines.subject.explain.per-share",
+          { n: fmt(n) }
+        )
+      )
+    );
     block.append(timeline(rows, history, w));
     block.append(table(rows, history, w));
     const legend = el5("p", "sh-legend");
@@ -16344,7 +16355,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     section.dataset.section = "subject-history";
     section.dataset.tier = history.tier;
     section.append(el5("h2", "sh-title", w.t("lines.subject.title")));
-    if (history.tier === "operator") {
+    if (history.grouped) {
       const groups = /* @__PURE__ */ new Map();
       for (const r of drawn) {
         const handle = history.entries.get(r.id)?.handle;
@@ -16352,7 +16363,15 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
         groups.set(handle, [...groups.get(handle) ?? [], r]);
       }
       const repeat = [...groups].filter(([, list2]) => list2.length >= 2);
-      section.append(el5("p", "sh-slice", w.t("lines.subject.slice.operator")));
+      section.append(
+        el5(
+          "p",
+          "sh-slice",
+          w.t(
+            history.tier === "operator" ? "lines.subject.slice.operator" : "lines.subject.slice.per-share"
+          )
+        )
+      );
       if (repeat.length === 0)
         section.append(el5("p", "sh-lede", w.t("lines.subject.none")));
       repeat.sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
@@ -16621,13 +16640,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("60fb05dda0f3c2be341a9d5cccbb991bed45f0b9");
+    return commitPrefix("0e00716a96b9bad56001701a414493867678703d");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.11.0",
+    viewerVersion: "0.12.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.13.0",
     cllVersion: "0.3.0",
@@ -17380,6 +17399,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "record.rung.5.unanchored": "the checkpoint is not authenticated on this page",
       "lines.subject.title": "Same customer in this report",
       "lines.subject.slice.operator": "Slice: this report, filtered to one customer handle. Nothing is re-judged; the page shows what the report's Result already holds for the handle.",
+      "lines.subject.slice.per-share": "Slice: this report, filtered to one customer handle. The handles on this page were made for this share only, so they match no handle in any other share. Nothing is re-judged; the page shows what the report's Result already holds for the handle.",
       "lines.subject.slice.shared": "This page does not group conversations by customer, so it does not say which are one customer's. Each conversation shows its requests, its band and the halves present, and nothing else about the customer.",
       "lines.subject.none": "No customer handle in this report has more than one conversation.",
       "lines.subject.core.customer": "Customer {handle}",
@@ -17392,6 +17412,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.subject.tile.undecided": "could not decide",
       "lines.subject.headline": "One customer, {n} conversations",
       "lines.subject.explain": "The handle is a salted commitment to the customer id, stable within this pack's scope and your tier. It tells you these {n} are the same customer; the handle alone does not say who.",
+      "lines.subject.explain.per-share": "The handle is a salted commitment to the customer id, made for this share only. It says these {n} are the same customer; the handle alone does not say who.",
       "lines.subject.timeline.title": "Over time",
       "lines.subject.timeline.note": "The dashed link joins a conversation to the earlier one it follows up: the later record cites the earlier one (the producer's follow_up_of).",
       "lines.subject.follow.one": "{n} day to the follow-up",
@@ -18944,7 +18965,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "b6a94ccd2fb2b1ee6675a031e9ef55ca7143a61ed1f5c5518d3c5a28ab3ed849",
+    lines: "0448c4e5d6fa4b59cccdc5ed98b089946d9b217a76042dec222c5bd074ce4b45",
     groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768"
   });
   function fill(key, text2, vars) {
