@@ -127,6 +127,9 @@ export function deferBody(
     return;
   }
   pendingToggles.set(details, fill);
+  // A body built into a cell outside the toggle (an expandable row's detail
+  // row) is shown by that toggle, which is not its ancestor.
+  if (into !== details) bodyOwners.set(into, details);
   details.addEventListener("toggle", () => {
     if (details.open) fill();
   });
@@ -134,6 +137,9 @@ export function deferBody(
 
 /** Each toggle's pending fill, keyed weakly by the toggle. */
 const pendingToggles = new WeakMap<HTMLDetailsElement, () => void>();
+
+/** The toggle that shows a body built outside it, keyed weakly by the body's host. */
+const bodyOwners = new WeakMap<HTMLElement, HTMLDetailsElement>();
 
 /**
  * Builds every body under `root` that `selector` names and is still
@@ -890,15 +896,6 @@ export function caseHref(caseId: string): string {
   return `#case-${encodeURIComponent(caseId)}`;
 }
 
-/** The case's card already drawn under `doc`, matched on the whole case id. */
-function caseCard(doc: Document, caseId: string): HTMLElement | null {
-  const anchored = doc.getElementById(caseAddress(caseId));
-  if (anchored !== null) return anchored;
-  for (const card of doc.querySelectorAll<HTMLElement>("[data-case]"))
-    if (card.dataset.case === caseId) return card;
-  return null;
-}
-
 /** The cases each toggle's body lists cards for, keyed weakly by the toggle. */
 const toggleCases = new WeakMap<HTMLDetailsElement, ReadonlySet<string>>();
 
@@ -911,17 +908,19 @@ export function listsCases(
 }
 
 /**
- * Opens a case's card and every toggle around it, and gives the card its
- * address. Cards are built when their toggle first opens, and one case can
- * be listed under several toggles, so when no card is drawn yet the first
- * pending toggle in page order that lists the case (`listsCases`) is built:
- * the address lands on the first card of that case in the page. A case the
- * page draws no card for (on the EU AI Act page, a session no test lists)
- * builds and opens nothing.
+ * Opens the card that holds a case's address and every toggle that shows
+ * it: each <details> around it, and the toggle of an expandable row whose
+ * detail row holds it. Cards are built when their toggle first opens, and
+ * one case can be listed under several toggles, so when no card holds the
+ * address yet the first pending toggle in page order that lists the case
+ * (`listsCases`) is built, which anchors its card (`anchorCases`). A case
+ * the page draws no card for (on the EU AI Act page, a session no test
+ * lists) builds and opens nothing.
  */
 export function revealCase(from: Node, caseId: string): void {
   const doc = from.nodeType === 9 ? (from as Document) : from.ownerDocument!;
-  let target = caseCard(doc, caseId);
+  // Only anchorCases gives a card its address, so both packagings agree.
+  let target = doc.getElementById(caseAddress(caseId));
   if (target === null) {
     const home = [
       ...doc.querySelectorAll<HTMLDetailsElement>(
@@ -934,16 +933,18 @@ export function revealCase(from: Node, caseId: string): void {
     );
     if (home === undefined) return;
     pendingToggles.get(home)!();
-    target = caseCard(doc, caseId);
+    target = doc.getElementById(caseAddress(caseId));
     if (target === null) return;
   }
-  if (target.id === "") target.id = caseAddress(caseId);
-  for (
-    let at: Element | null = target.parentElement?.closest("details") ?? null;
-    at !== null;
-    at = at.parentElement?.closest("details") ?? null
-  )
-    if (!(at as HTMLDetailsElement).open) openToggle(at as HTMLDetailsElement);
+  // Every toggle that shows the card: each <details> around it, and the
+  // toggle of each expandable row whose detail row holds it.
+  const shows: HTMLDetailsElement[] = [];
+  for (let at = target.parentElement; at !== null; at = at.parentElement) {
+    if (at.localName === "details") shows.push(at as HTMLDetailsElement);
+    const owner = bodyOwners.get(at);
+    if (owner !== undefined) shows.push(owner);
+  }
+  for (const toggle of shows.reverse()) if (!toggle.open) openToggle(toggle);
   target.scrollIntoView?.();
 }
 

@@ -234,9 +234,10 @@ it counts. A row with no subject is refused (`view-chart-shape`).
 **Not drawn, because no record carries it** (filed as producer gaps on
 capsule-viewer#172): spans with a duration (the "routed to a person" lane's
 resolution minutes) need a start and end per record; per-case columns in the
-day section (request, per-requirement squares, band, outcome) need the
+day section (request, per-requirement squares, band, outcome, card) need the
 case's own fields; "judged Oct 30 02:00" needs the daily run's time; lane
-titles beyond a wording pack's. The card column needs no field: it links to
+titles beyond a wording pack's. Once the case columns are drawn
+(capsule-viewer#172), the card column needs no field of its own: it links to
 the case's card by its case address (below). Voice follows Sherlock2: the
 words above are second person in the holder's own preview and third person
 when shared, set by the wording pack the page is built with.
@@ -269,8 +270,10 @@ that draws no card for the case (the EU AI Act page lists a session only
 under the tests it misses) opens nothing for it.
 
 **Resolving.** Where script runs, a page opened at the address, or whose
-address changes to it, opens the card and every toggle around it, as
-`#record-` does. Cards are built when their toggle first opens and one case
+address changes to it, opens the card and every toggle that shows it, as
+`#record-` does: each toggle around it, and the toggle of an expandable row
+whose detail row holds it (the EU AI Act page's test rows, the Outcomes
+page's rule rows). Cards are built when their toggle first opens and one case
 can be listed under several toggles, so each toggle that lists cards says
 which cases it lists, and when no card is drawn yet the page builds and opens
 the first toggle in page order that lists the case. A card takes the element
@@ -278,9 +281,12 @@ id `case-<case id>` when the body that holds it is built, unless a card of
 that case built earlier already holds it, so the address lands on the first
 card of the case built. A case no toggle lists builds and opens nothing. A
 page that runs no script builds every body in page order, as the scripted
-page does when every toggle is opened, so both anchor the same card and the
-fragment is a plain link there. A fragment that does not decode names no
-card.
+page does when every toggle is opened, so both anchor the same card, and on
+the static page the fragment is a plain link: the browser opens the toggles
+around the card. A card in an expandable row's detail row (the EU AI Act
+page's test rows) stays hidden there until the reader opens that row, since
+the row's toggle is not around the card and no script opens it. A fragment
+that does not decode names no card.
 
 ### Words
 

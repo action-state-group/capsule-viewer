@@ -13,6 +13,7 @@ import {
   caseAddress,
   caseHref,
   fillForNoScript,
+  openToggle,
   revealCase,
 } from "../src/report-levels.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
@@ -73,14 +74,20 @@ async function renderAt(source: Obj, hash: string): Promise<HTMLElement> {
   return root;
 }
 
-/** Every <details> around `el` is open. */
+/** Every toggle that shows `el` is open: each <details> around it, and the
+ * toggle of each expandable row whose detail row holds it. */
 function shown(el: Element): boolean {
-  for (
-    let at = el.parentElement?.closest("details");
-    at !== null && at !== undefined;
-    at = at.parentElement?.closest("details")
-  )
-    if (!at.open) return false;
+  for (let at = el.parentElement; at !== null; at = at.parentElement) {
+    if (at.localName === "details" && !(at as HTMLDetailsElement).open)
+      return false;
+    if (at.matches("tr.x-detail")) {
+      const toggle =
+        at.previousElementSibling?.querySelector<HTMLDetailsElement>(
+          "details.rx",
+        );
+      if (toggle === null || toggle === undefined || !toggle.open) return false;
+    }
+  }
   return true;
 }
 
@@ -190,6 +197,36 @@ it("EU AI Act: a session's card carries its case and opens at its address", asyn
   const card = document.getElementById(caseAddress(id))!;
   expect(card.matches("article[data-session]")).toBe(true);
   expect(card.dataset.case).toBe(id);
+  // The card sits in a test row's detail row: that row's toggle opened.
+  expect(card.closest("tr.x-detail")).not.toBeNull();
+  expect(shown(card)).toBe(true);
+});
+
+it("Outcomes: a card built in a rule row the reader then closed opens again at its address", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const root = await renderAt(source, "");
+  // The first rule row whose problems list a conversation.
+  let rule: HTMLDetailsElement | undefined;
+  let card: HTMLElement | null = null;
+  for (const each of root.querySelectorAll<HTMLDetailsElement>(
+    'details.rx[data-drill^="rule:"]',
+  )) {
+    openToggle(each);
+    each.open = false;
+    card = each
+      .closest("tr")!
+      .nextElementSibling!.querySelector<HTMLElement>("[data-case][id]");
+    if (card !== null) {
+      rule = each;
+      break;
+    }
+  }
+  if (rule === undefined || card === null)
+    throw new Error("the fixture has no rule row with a conversation");
+  expect(shown(card)).toBe(false);
+  window.location.hash = caseHref(card.dataset.case!);
+  window.dispatchEvent(new HashChangeEvent("hashchange"));
+  expect(rule.open).toBe(true);
   expect(shown(card)).toBe(true);
 });
 
@@ -212,7 +249,7 @@ it("revealCase on a case whose card is already drawn reuses it and opens its tog
   const source = fixture("outcome-report-bundle.json");
   const root = await renderAt(source, "");
   fillForNoScript(root);
-  const card = root.querySelector<HTMLElement>("[data-case]")!;
+  const card = root.querySelector<HTMLElement>("[data-case][id]")!;
   revealCase(document, card.dataset.case!);
   expect(shown(card)).toBe(true);
 });

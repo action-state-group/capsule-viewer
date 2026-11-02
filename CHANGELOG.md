@@ -13,7 +13,7 @@ here. The format follows
 
 ### Added
 
-- A case's card has a page address, `#case-<case id>` (#243): the Outcomes page's per-conversation card and the EU AI Act page's per-session card carry `data-case`, and a page opened at the address opens that card and the toggles around it, as `#record-` does. It is the target of the Terms Pack day table's card column. It is a page address, not a permalink, and is matched on the whole case id. `caseAddress`, `caseHref`, `revealCase` and `anchorCases` are in `report-levels.ts`.
+- A case's card has a page address, `#case-<case id>` (#243): the Outcomes page's per-conversation card and the EU AI Act page's per-session card carry `data-case`, and a page opened at the address opens that card and every toggle that shows it, as `#record-` does. It is meant for the Terms Pack day table's card column, which is not drawn yet (#172). It is a page address, not a permalink, and is matched on the whole case id. `caseAddress`, `caseHref`, `revealCase` and `anchorCases` are in `report-levels.ts`.
 
 ## ts 0.13.0 and go 0.13.0 (2026-11-02)
 
