@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
+import { packTitlesOnPage } from "../src/compliance-view.js";
 import {
   DEFAULT_PACKS,
   readWordingPack,
@@ -136,5 +137,18 @@ describe("the eu-deployer notes name the source of the obligation titles", () =>
     const golden = read("eu.open.html");
     expect(golden).toContain("obligation titles, test names");
     expect(golden).not.toContain("from this page's wording pack.");
+  });
+
+  it("packTitlesOnPage is true only when every obligation title comes from the pack (mixed page falls back)", () => {
+    const model = (keys: string[]) =>
+      ({ obligations: keys.map((key) => ({ key })) }) as never;
+    const words = (packed: string[]) =>
+      ({
+        group: (k: string) => (packed.includes(k) ? "title" : undefined),
+      }) as never;
+    expect(packTitlesOnPage(model(["a", "b"]), words(["a", "b"]))).toBe(true);
+    expect(packTitlesOnPage(model(["a", "b"]), words(["a"]))).toBe(false);
+    expect(packTitlesOnPage(model(["a", "b"]), words([]))).toBe(false);
+    expect(packTitlesOnPage(model([]), words(["a"]))).toBe(false);
   });
 });

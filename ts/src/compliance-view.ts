@@ -205,7 +205,7 @@ function obligationName(
  * the notes say the titles are the pack's; if even one falls back to the
  * producer's title, the base notes stand (they list titles as producer text).
  */
-function packTitlesOnPage(model: ComplianceModel, w: Words): boolean {
+export function packTitlesOnPage(model: ComplianceModel, w: Words): boolean {
   return (
     model.obligations.length > 0 &&
     model.obligations.every((o) => w.group(o.key) !== undefined)
