@@ -86,10 +86,11 @@
   var CUTS = { keep: ["keep", "counterparty"], counterparty: ["counterparty"], adjudicator: ["adjudicator"] };
   // sides.CASE_TONE and sides.ACTIONS: a case's tone (never "negative": one
   // side missing is not a finding) and the sentences a holder's page offers.
-  var CASE_TONE = { both: "positive", one_sided: "caution", not_agreed: "neutral" };
+  var CASE_TONE = { both: "positive", one_sided: "caution", limit: "neutral", not_agreed: "neutral" };
   var ACTIONS = {
     both: ["actions.dispute", "actions.send", "actions.show_theirs"],
     one_sided: ["actions.send", "actions.ask_again"],
+    limit: ["actions.send"],
     none: ["actions.send", "actions.ask"],
     not_agreed: ["actions.dispute", "actions.send", "actions.show_theirs"],
   };
@@ -329,7 +330,23 @@
         var c = claim(pair[1]);
         return { name: pair[0], outcome: own(OUTCOME_OF, c.status) ? OUTCOME_OF[c.status] : "failed", detail: c.findings.map(String).join(", ") };
       });
-    return { verifier: VERIFIER, outcome: bundleVerified(v) ? "verified" : "failed", checks: checks };
+    var outcome = bundleVerified(v) ? "verified" : "failed";
+    // verifier_report._declined_only: capsulectl reads a composition holding a policy_declined
+    // refusal INCOMPLETE, which the page's claims do not show, so such a bundle is never
+    // "verified" here; the bilateral module still declines unless the refusal's signature
+    // verified (missingMember).
+    if (outcome === "verified" && declinedMember(map(map(context).bundle))) {
+      outcome = "incomplete";
+      checks.push({ name: "declined member", outcome: "not_checked", detail: "policy_declined" });
+    }
+    return { verifier: VERIFIER, outcome: outcome, checks: checks };
+  }
+
+  function declinedMember(bundle) {
+    var block = map(get(map(get(bundle, "extensions")), COMPOSED_KIND));
+    return seq(get(block, "members")).map(map).some(function (m) {
+      return get(m, "outcome") === "refusal" && get(map(get(m, "refusal")), "reason") === "policy_declined";
+    });
   }
 
   // capsulectl's status for the x-deal-v0 check when it names the report as
@@ -1098,7 +1115,7 @@
     var members = c.members;
     var copies = members.filter(function (m) { return m.outcome === "artifact"; });
     if (members.length !== 2 || !copies.length || members.some(function (m) { return m.body !== "carried"; })) return "a bilateral receipt is two carried members, at least one a copy";
-    if (copies.length === 1 && members.some(function (m) { return m.outcome !== "artifact" && m.outcome !== "absence"; })) return "a one-sided receipt's other member is an absence";
+    if (copies.length === 1 && members.some(function (m) { return m.outcome !== "artifact" && m.outcome !== "absence" && m.outcome !== "refusal"; })) return "a one-sided receipt's other member is an absence or a refusal";
     if (copies.length === 1 && c.joins.some(function (j) { return j.derived !== "one_sided"; })) return "a one-sided composition's joins do not all derive one_sided";
     if (members.some(function (m) { return m.digest !== "reproduced"; })) return "a carried member's digest was not reproduced";
     if (distinct(members.map(function (m) { return m.id; })).length !== 2 || distinct(members.map(function (m) { return m.observer; })).length !== 2) {
@@ -1138,16 +1155,24 @@
   // from the bundle's own block (carried, its digest reproduced:
   // compositionProblem).
   function missingMember(v, composition) {
-    var others = composition.members.filter(function (m) { return m.outcome === "absence"; });
+    var others = composition.members.filter(function (m) { return m.outcome === "absence" || m.outcome === "refusal"; });
     if (others.length !== 1) return null;
     var member = others[0];
     var observer = composition.observers.find(function (o) { return o.id === member.observer; }) || null;
     var block = map(get(map(get(v.bundle, "extensions")), COMPOSED_KIND));
     var raw = seq(get(block, "members")).map(map).find(function (r) { return get(r, "id") === member.id; }) || {};
+    if (member.outcome === "refusal") {
+      var body = map(get(raw, "refusal"));
+      var issued = str(get(body, "issued_at")), reason = str(get(body, "reason"));
+      if (issued === null || reason !== "policy_declined" || member.refusal_signature !== "verified") {
+        throw new Unavailable("the refusal member " + pyRepr(member.id) + " is not a verified policy_declined refusal");
+      }
+      return { member: member.id, role: observer ? observer.role : null, window: [issued, issued], kind: "refusal", reason: reason };
+    }
     var win = map(get(map(get(raw, "absence")), "window"));
     var start = str(get(win, "from")), end = str(get(win, "to"));
     if (start === null || end === null) throw new Unavailable("the absence member " + pyRepr(member.id) + " carries no window");
-    return { member: member.id, role: observer ? observer.role : null, window: [start, end] };
+    return { member: member.id, role: observer ? observer.role : null, window: [start, end], kind: "absence", reason: null };
   }
 
   // sides.plain_date: an RFC 3339 timestamp's date, as "Oct 9, 2026".
@@ -1221,7 +1246,7 @@
         composition: composition,
         bundle_digest: v.assurance.bundle_digest,
         verification: v.verification,
-        case: missing !== null ? "one_sided" : twoCopyCase(deal[0], joins),
+        case: missing !== null ? (missing.kind === "refusal" ? "limit" : "one_sided") : twoCopyCase(deal[0], joins),
         missing: missing,
       };
     });
@@ -1368,7 +1393,7 @@
     var d = this.d;
     var parts = halves.slice();
     if (line !== false) {
-      var key = kase === "one_sided" && !keep ? "sides.case.one_sided.shared" : "sides.case." + kase;
+      var key = (kase === "one_sided" || kase === "limit") && !keep ? "sides.case." + kase + ".shared" : "sides.case." + kase;
       parts.unshift(d.el("p", { class: "cv-sides__case cv-tone--" + CASE_TONE[kase], "data-case": kase }, [w(key)]));
     }
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
@@ -1387,9 +1412,10 @@
   P.missingHalf = function (missing, keep) {
     var text;
     if (missing === null) text = w("sides.missing.none");
+    else if (missing.kind === "refusal") text = w("sides.missing.refusal." + missing.reason, { date: plainDate(missing.window[0]) });
     else text = w("sides.missing.absence", { start: plainDate(missing.window[0]), end: plainDate(missing.window[1]) });
     var label = keep || missing === null || missing.role === null ? w("sides.missing.heading") : missing.role;
-    var attrs = missing !== null ? { "data-outcome": "absence", "data-party": missing.member } : { "data-outcome": "none" };
+    var attrs = missing !== null ? { "data-outcome": missing.kind, "data-party": missing.member } : { "data-outcome": "none" };
     return this.half("missing", label, [this.d.el("p", {}, [text])], attrs);
   };
   P.part = function (part, prefix) {
