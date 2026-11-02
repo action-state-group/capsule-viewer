@@ -443,6 +443,33 @@ describe("calibration claims are cited on their own line, not counted as evaluat
     expect(marker.dataset.recomputed).toBe("3");
   });
 
+  it("takes a calibration claim with an unknown sufficiency out of unknown_count, even when it failed verification", async () => {
+    const source = withCalibration(4);
+    const doc = resultDoc(source);
+    const claim = (doc.claims as Obj[])[3]!;
+    claim.sufficiency = "UNKNOWN";
+    ((doc.aggregate as Obj).coverage as Obj).unknown_count = 1;
+    const root = await render(source);
+    const line = strip(root)!.querySelector<HTMLElement>(".agg-line")!;
+    expect(line.dataset.unknown).toBe("0");
+    expect(strip(root)!.querySelector("[data-count-mismatch]")).toBeNull();
+  });
+
+  it("draws no negative figure when the sealed population is below the calibration claims", async () => {
+    const source = withCalibration(4);
+    const doc = resultDoc(source);
+    ((doc.aggregate as Obj).coverage as Obj).evaluated_population = 0;
+    const root = await render(source);
+    const line = strip(root)!.querySelector<HTMLElement>(".agg-line")!;
+    expect(line.dataset.evaluated).toBe("0");
+    expect(line.textContent).not.toMatch(/-\d/u);
+    expect(
+      strip(root)!.querySelector(
+        '[data-count-mismatch="evaluated_population"]',
+      ),
+    ).not.toBeNull();
+  });
+
   it("draws no calibration line when no claim is a calibration claim", async () => {
     const root = await render(fixture("result-root-bundle.json"));
     expect(strip(root)!.querySelector(".agg-calibration")).toBeNull();

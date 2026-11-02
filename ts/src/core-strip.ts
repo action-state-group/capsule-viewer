@@ -72,41 +72,49 @@ type Claim = ResultRoot["claims"][number];
 const isCalibration = (claim: Claim): boolean =>
   claim.type === CALIBRATION_CLAIM;
 
-/** What one field of the sealed aggregate counts that is a calibration claim. */
+/** One field of the aggregate: the figure drawn and what the claims give, both without calibration claims. */
 interface FieldCount {
-  /** The figure the strip draws: the sealed figure without calibration claims. */
   readonly drawn: number;
-  /** What the claims give for the same field, without calibration claims. */
   readonly recomputed: number;
-  readonly sealed: number;
-  readonly sealedRecomputed: number;
 }
 
+/**
+ * The one place that takes calibration claims out of a field. The sealed
+ * side loses every in-force calibration claim the sealed figure counts (for a
+ * bucket, the ones its sealed list names); the claims' side loses the ones
+ * `recomputeCounts` counted, which leaves a claim that failed verification
+ * out of the unknown and verdict counts. `not_yet_in_force` is left as
+ * sealed: a later calibration claim is readiness, not an evaluation, and
+ * appears on no line. A sealed figure below the calibration claims it should
+ * hold is malformed; it is drawn unchanged and the marker fires.
+ */
 function fieldCount(
   result: ResultRoot,
   field: CountMismatch["field"],
   sealed: number,
-  calibrationSealed: number,
+  bucketIds?: readonly string[],
 ): FieldCount {
   const mismatch = result.countMismatches.find((e) => e.field === field);
-  const sealedRecomputed =
-    mismatch === undefined ? sealed : mismatch.recomputed;
-  const standing = result.claims.filter((c) => isCalibration(c) && !c.failed);
-  const inForce = standing.filter((c) => !c.later);
-  const calibrationRecomputed =
+  const recomputed = mismatch === undefined ? sealed : mismatch.recomputed;
+  const calibration = result.claims.filter((c) => isCalibration(c) && !c.later);
+  const counted = (c: Claim): boolean =>
     field === "evaluated_population"
-      ? result.claims.filter((c) => isCalibration(c) && !c.later).length
+      ? true
       : field === "unknown_count"
-        ? inForce.filter((c) => c.sufficiency === "UNKNOWN").length
-        : field === "not_yet_in_force"
-          ? result.claims.filter((c) => isCalibration(c) && c.later).length
-          : inForce.filter((c) => c.verdict === field.slice("buckets.".length))
-              .length;
+        ? c.sufficiency === "UNKNOWN"
+        : field !== "not_yet_in_force" &&
+          c.verdict === field.slice("buckets.".length);
+  const sealedSide = calibration.filter(
+    (c) =>
+      field === "evaluated_population" ||
+      (bucketIds === undefined ? counted(c) : bucketIds.includes(c.id)),
+  ).length;
+  const claimsSide = calibration.filter(
+    (c) => (field === "evaluated_population" || !c.failed) && counted(c),
+  ).length;
   return {
-    drawn: sealed - calibrationSealed,
-    recomputed: sealedRecomputed - calibrationRecomputed,
-    sealed,
-    sealedRecomputed,
+    drawn: sealed >= sealedSide ? sealed - sealedSide : sealed,
+    recomputed: recomputed >= claimsSide ? recomputed - claimsSide : recomputed,
   };
 }
 
@@ -148,32 +156,19 @@ function mismatchMarker(
 function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   const out = document.createDocumentFragment();
   const sealed = result.statedCoverage;
-  const calibrationClaims = result.claims.filter(isCalibration);
-  const calibrationInForce = calibrationClaims.filter((c) => !c.later);
-  const statedIds = (ids: readonly string[] | undefined): number =>
-    ids === undefined
-      ? 0
-      : calibrationClaims.filter((c) => ids.includes(c.id)).length;
-  const count = (
-    field: CountMismatch["field"],
-    value: number,
-    calibration: number,
-  ): FieldCount => fieldCount(result, field, value, calibration);
-  const population = count(
+  const calibrationInForce = result.claims.filter(
+    (c) => isCalibration(c) && !c.later,
+  );
+  const population = fieldCount(
+    result,
     "evaluated_population",
     sealed.evaluatedPopulation,
-    calibrationInForce.length,
   );
-  const unknown = count(
-    "unknown_count",
-    sealed.unknownCount,
-    calibrationInForce.filter((c) => c.sufficiency === "UNKNOWN" && !c.failed)
-      .length,
-  );
-  const laterCount = count(
+  const unknown = fieldCount(result, "unknown_count", sealed.unknownCount);
+  const laterCount = fieldCount(
+    result,
     "not_yet_in_force",
     sealed.notYetInForce ?? 0,
-    calibrationClaims.length - calibrationInForce.length,
   );
   const stated = {
     evaluatedPopulation: population.drawn,
@@ -266,7 +261,7 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   ];
   for (const [verdict, ids, field] of entries) {
     if (ids === undefined) continue;
-    const figure = count(field, ids.length, statedIds(ids));
+    const figure = fieldCount(result, field, ids.length, ids);
     const box = el("div", `agg-bucket ${verdict}`);
     box.dataset.bucket = verdict;
     box.dataset.count = String(figure.drawn);
