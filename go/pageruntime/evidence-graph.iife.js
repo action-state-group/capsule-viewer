@@ -16640,10 +16640,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("0e00716a96b9bad56001701a414493867678703d");
+    return commitPrefix("711be86a5a613b11792d24662f7ce71743d71e9b");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.12.0",
@@ -17161,6 +17161,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.requirements.other": "{n} requirements",
       "front.agg.unknown.one": "{n} evaluation with an unknown result",
       "front.agg.unknown.other": "{n} evaluations with an unknown result",
+      "front.agg.calibration.one": "{n} calibration check",
+      "front.agg.calibration.other": "{n} calibration checks",
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
@@ -17509,6 +17511,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.summary.h": "What was checked and what we found",
       "groups.summary.lede": "Each session (one conversation with the agent) was checked against {tests} under {obligations}. Results are counts of sessions: there is no overall score. Open a test to read the sessions behind its exceptions.",
       "groups.summary.basis": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, obligation titles, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
+      "groups.summary.basis.pack-titles": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them. Obligation titles are the Act's article headings, from this page's wording pack.`,
       "groups.summary.col.test": "Obligation and test",
       "groups.summary.col.checked-in": "Checked in",
       "groups.summary.col.result": "Result",
@@ -17533,6 +17536,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.rp.toggle": "Proofs for this report: method, test wording, what ran, and how to verify the whole bundle",
       "groups.od.h": "Method and the wording each test ran",
       "groups.od.mapped": "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
+      "groups.od.mapped.pack-titles": "Article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record. The title is the Act's article heading, from this page's wording pack.",
       "groups.od.unmapped": "The producer's extension does not map this obligation: article, summary and method not stated.",
       "groups.od.judged-terms": "Judged terms: ",
       "groups.od.wording.sealed": "Wording run (sealed): {text}",
@@ -17752,6 +17756,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.requirements.other": "{n} requirements",
       "front.agg.unknown.one": "{n} evaluation with an unknown result",
       "front.agg.unknown.other": "{n} evaluations with an unknown result",
+      "front.agg.calibration.one": "{n} calibration check",
+      "front.agg.calibration.other": "{n} calibration checks",
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
@@ -18732,6 +18738,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.ob.ok.found",
     "groups.ob.ok.unverified",
     "groups.summary.basis",
+    "groups.summary.basis.pack-titles",
     "groups.summary.lede",
     "groups.pf.case-record.from-claims",
     "groups.pf.no-claim",
@@ -18740,6 +18747,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.pin.none",
     "groups.pin.differs",
     "groups.od.mapped",
+    "groups.od.mapped.pack-titles",
     "groups.od.unmapped",
     "groups.od.wording.sealed",
     "groups.od.wording.mixed",
@@ -18965,8 +18973,8 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "0448c4e5d6fa4b59cccdc5ed98b089946d9b217a76042dec222c5bd074ce4b45",
-    groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768"
+    lines: "d19c2e6a0417b63dbaf9dd1058ef1a81be3749ea27e39d7b544aa96ac67852fd",
+    groups: "384b9d6abbcc750014f29f4f000e05f3b8b26aaf5f1c69283d4300e6190c3504"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -21514,6 +21522,9 @@ ${key}`);
       return [article, packWord("span", "", ` \xB7 ${title}`)];
     return obligation.mapped ? [producerText(w, article, ` \xB7 ${obligation.title}`)] : [article, element4("span", ` \xB7 ${obligation.title}`)];
   }
+  function packTitlesOnPage(model, w) {
+    return model.obligations.length > 0 && model.obligations.every((o) => w.group(o.key) !== void 0);
+  }
   function testNames(model, w) {
     const rows = new Map(
       model.obligations.flatMap(
@@ -21948,7 +21959,13 @@ ${key}`);
     section.append(table3);
     const notes = el9("aside", "footnotes");
     notes.dataset.section = "footnotes";
-    const basis = el9("p", "", w.t("groups.summary.basis"));
+    const basis = el9(
+      "p",
+      "",
+      w.t(
+        packTitlesOnPage(model, w) ? "groups.summary.basis.pack-titles" : "groups.summary.basis"
+      )
+    );
     basis.dataset.basis = "terms";
     notes.append(basis);
     section.append(notes);
@@ -22268,7 +22285,9 @@ ${key}`);
         el9(
           "p",
           "na",
-          w.t(obligation.mapped ? "groups.od.mapped" : "groups.od.unmapped")
+          w.t(
+            obligation.mapped ? packTitlesOnPage(model, w) ? "groups.od.mapped.pack-titles" : "groups.od.mapped" : "groups.od.unmapped"
+          )
         )
       );
       if (obligation.judgedTerms.length > 0) {
@@ -23314,6 +23333,7 @@ ${key}`);
 .cv-strip .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
 .cv-strip .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
 .cv-strip .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
+.cv-strip .agg-calibration{font-size:13px;color:var(--slate);margin:-6px 0 12px}
 .cv-strip .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
 .cv-strip .agg-bucket.met b{color:var(--ok)}
 .cv-strip .agg-bucket.not_met b{color:var(--bad)}
@@ -23328,33 +23348,68 @@ ${key}`);
     return node;
   }
   var fmt5 = (n) => n.toLocaleString("en-US");
-  function mismatchMarker(result3, field, w) {
-    const mismatch = result3.countMismatches.find(
-      (entry) => entry.field === field
-    );
-    if (mismatch === void 0) return void 0;
+  var CALIBRATION_CLAIM = "calibration";
+  var isCalibration = (claim) => claim.type === CALIBRATION_CLAIM;
+  function fieldCount(result3, field, sealed, calibrationSealed) {
+    const mismatch = result3.countMismatches.find((e) => e.field === field);
+    const sealedRecomputed = mismatch === void 0 ? sealed : mismatch.recomputed;
+    const standing = result3.claims.filter((c) => isCalibration(c) && !c.failed);
+    const inForce = standing.filter((c) => !c.later);
+    const calibrationRecomputed = field === "evaluated_population" ? result3.claims.filter((c) => isCalibration(c) && !c.later).length : field === "unknown_count" ? inForce.filter((c) => c.sufficiency === "UNKNOWN").length : field === "not_yet_in_force" ? result3.claims.filter((c) => isCalibration(c) && c.later).length : inForce.filter((c) => c.verdict === field.slice("buckets.".length)).length;
+    return {
+      drawn: sealed - calibrationSealed,
+      recomputed: sealedRecomputed - calibrationRecomputed,
+      sealed,
+      sealedRecomputed
+    };
+  }
+  function mismatchMarker(count2, field, w) {
+    if (count2.drawn === count2.recomputed) return void 0;
     const marker = el11(
       "span",
       "count mismatch",
-      w.t("front.agg.mismatch", { recomputed: fmt5(mismatch.recomputed) })
+      w.t("front.agg.mismatch", { recomputed: fmt5(count2.recomputed) })
     );
     marker.dataset.countMismatch = field;
-    marker.dataset.stated = String(mismatch.stated);
-    marker.dataset.recomputed = String(mismatch.recomputed);
+    marker.dataset.stated = String(count2.drawn);
+    marker.dataset.recomputed = String(count2.recomputed);
     return marker;
   }
   function renderAggregate(result3, w) {
     const out = document.createDocumentFragment();
-    const stated = result3.statedCoverage;
+    const sealed = result3.statedCoverage;
+    const calibrationClaims = result3.claims.filter(isCalibration);
+    const calibrationInForce = calibrationClaims.filter((c) => !c.later);
+    const statedIds = (ids) => ids === void 0 ? 0 : calibrationClaims.filter((c) => ids.includes(c.id)).length;
+    const count2 = (field, value, calibration) => fieldCount(result3, field, value, calibration);
+    const population2 = count2(
+      "evaluated_population",
+      sealed.evaluatedPopulation,
+      calibrationInForce.length
+    );
+    const unknown = count2(
+      "unknown_count",
+      sealed.unknownCount,
+      calibrationInForce.filter((c) => c.sufficiency === "UNKNOWN" && !c.failed).length
+    );
+    const laterCount = count2(
+      "not_yet_in_force",
+      sealed.notYetInForce ?? 0,
+      calibrationClaims.length - calibrationInForce.length
+    );
+    const stated = {
+      evaluatedPopulation: population2.drawn,
+      excludedNotApplicable: sealed.excludedNotApplicable
+    };
     const requirements = new Set(
-      result3.claims.filter((claim) => !claim.later).map(
+      result3.claims.filter((claim) => !claim.later && !isCalibration(claim)).map(
         (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
       )
     ).size;
     const line = el11("p", "agg-line");
-    const marked = (text2, field) => {
+    const marked = (text2, field, figure) => {
       line.append(text2);
-      const marker = mismatchMarker(result3, field, w);
+      const marker = mismatchMarker(figure, field, w);
       if (marker !== void 0) line.append(" ", marker);
     };
     marked(
@@ -23366,7 +23421,8 @@ ${key}`);
           n: fmt5(requirements)
         })
       }),
-      "evaluated_population"
+      "evaluated_population",
+      population2
     );
     line.append(
       " \xB7 ",
@@ -23376,25 +23432,38 @@ ${key}`);
       " \xB7 "
     );
     marked(
-      w.p("front.agg.unknown", stated.unknownCount, {
-        n: fmt5(stated.unknownCount)
+      w.p("front.agg.unknown", unknown.drawn, {
+        n: fmt5(unknown.drawn)
       }),
-      "unknown_count"
+      "unknown_count",
+      unknown
     );
-    const later = stated.notYetInForce;
+    const later = sealed.notYetInForce;
     if (later !== void 0 || result3.countMismatches.some((m) => m.field === "not_yet_in_force")) {
       line.append(" \xB7 ");
       marked(
-        w.p("front.agg.later", later ?? 0, { n: fmt5(later ?? 0) }),
-        "not_yet_in_force"
+        w.p("front.agg.later", laterCount.drawn, { n: fmt5(laterCount.drawn) }),
+        "not_yet_in_force",
+        laterCount
       );
-      line.dataset.notYetInForce = String(later ?? 0);
+      line.dataset.notYetInForce = String(laterCount.drawn);
     }
     line.dataset.evaluated = String(stated.evaluatedPopulation);
     line.dataset.requirements = String(requirements);
     line.dataset.excluded = String(stated.excludedNotApplicable);
-    line.dataset.unknown = String(stated.unknownCount);
+    line.dataset.unknown = String(unknown.drawn);
     out.append(line);
+    if (calibrationInForce.length > 0) {
+      const calibration = el11(
+        "p",
+        "agg-calibration",
+        w.p("front.agg.calibration", calibrationInForce.length, {
+          n: fmt5(calibrationInForce.length)
+        })
+      );
+      calibration.dataset.calibration = String(calibrationInForce.length);
+      out.append(calibration);
+    }
     const buckets = el11("div", "agg-buckets");
     const of = w.t("front.agg.of", { n: fmt5(stated.evaluatedPopulation) });
     const entries = [
@@ -23405,11 +23474,12 @@ ${key}`);
     ];
     for (const [verdict2, ids, field] of entries) {
       if (ids === void 0) continue;
+      const figure = count2(field, ids.length, statedIds(ids));
       const box = el11("div", `agg-bucket ${verdict2}`);
       box.dataset.bucket = verdict2;
-      box.dataset.count = String(ids.length);
+      box.dataset.count = String(figure.drawn);
       box.dataset.of = String(stated.evaluatedPopulation);
-      box.append(el11("b", "", fmt5(ids.length)));
+      box.append(el11("b", "", fmt5(figure.drawn)));
       const caption = el11("div", "agg-cap");
       caption.append(
         tagSource(el11("span", "", w.t(`front.agg.bucket.${verdict2}`)), "pack"),
@@ -23417,7 +23487,7 @@ ${key}`);
         el11("span", "agg-of", of)
       );
       box.append(caption);
-      const marker = mismatchMarker(result3, field, w);
+      const marker = mismatchMarker(figure, field, w);
       if (marker !== void 0) box.append(marker);
       buckets.append(box);
     }
