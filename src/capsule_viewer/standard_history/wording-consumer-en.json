@@ -51,6 +51,8 @@
     "role.provided.shared": "Sold or provided",
     "role.bought.shared": "Bought from people",
     "count.of": "{n} of {of}",
+    "sentence.did_not_hold": "{n} didn't.",
+    "sentence.undecided": "{n} we couldn't tell.",
     "heading.sizes": "Size range",
     "sizes.note": "Each currency on its own: sizes in different currencies are never added up or converted.",
     "sizes.none": "No counted deal, so no size range.",
