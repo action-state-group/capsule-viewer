@@ -17,6 +17,7 @@ here. The format follows
 
 ### Changed
 
+- The core strip counts requirement claims only and gives calibration claims their own line. A weekly calibration claim (`type: "calibration"`) is a check of the judge, not an evaluation of a requirement, but capsulectl and evidence-result-v0 section 4.1 count it in the sealed aggregate, so a monthly compliance report that cites weekly calibration overstated its evaluations ("19 evaluations of 5 requirements … Could not decide 7"). The strip now draws the sealed figure minus its calibration claims ("16 evaluations of 4 requirements … Could not decide 4", the same for the buckets and `unknown_count`) and a line "N calibration checks of the judge, not counted as evaluations", so the strip plus that line is the sealed coverage. The `count mismatch` marker is suppressed only when the sealed figure minus the calibration claims equals the claims' figure minus theirs, and still fires for any other gap. Both default wording packs gain `front.agg.calibration.one|other` and change digests, and the strip's stylesheet changes, so the goldens, `go/emitter/runtime-style-hashes.txt` and the Go goldens move. Origin: evidencebook-skills#73 (Sherlock2).
 - The History card's "Which side" rows read "in 3 of 5" instead of "3 of 5" (#171): the role count no longer looks like the outcome count it can coincide with ("3 of 5 … went as agreed"). The wording pack gains `role.count`, so `wording_sha256` and the script's `script_sha256` move; consumers that pin them re-pin on the next release.
 
 ## ts 0.12.0 and go 0.12.0 (2026-11-01)

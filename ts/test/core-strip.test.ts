@@ -383,3 +383,123 @@ describe("on a page with no Result, a module that draws the Result's counts is r
     expect(root.querySelector("[data-test-module]")).not.toBeNull();
   });
 });
+
+describe("calibration claims are cited on their own line, not counted as evaluations", () => {
+  // result-root-bundle.json holds three requirement claims; this adds one
+  // weekly calibration claim the way capsulectl seals it: counted in the
+  // sealed population and in its verdict bucket.
+  function withCalibration(population: number): Obj {
+    const source = fixture("result-root-bundle.json");
+    const doc = resultDoc(source);
+    const claims = doc.claims as Obj[];
+    claims.push({
+      ...structuredClone(claims[2]!),
+      id: "claim-4",
+      type: "calibration",
+      requirement_ref: "calibration-week",
+    });
+    const aggregate = doc.aggregate as Obj;
+    (aggregate.coverage as Obj).evaluated_population = population;
+    ((aggregate.buckets as Obj).not_evaluable as string[]).push("claim-4");
+    return source;
+  }
+
+  it("draws the requirement figures, a calibration line, and no mismatch marker when the sealed total is the strip plus the calibration claims", async () => {
+    const root = await render(withCalibration(4));
+    const s = strip(root)!;
+    const line = s.querySelector<HTMLElement>(".agg-line")!;
+    expect(line.textContent).toContain("3 evaluations of 3 requirements");
+    expect(line.dataset.evaluated).toBe("3");
+    expect(
+      s.querySelector<HTMLElement>('[data-bucket="not_evaluable"]')!.dataset
+        .count,
+    ).toBe("1");
+    expect(
+      s.querySelector<HTMLElement>('[data-bucket="not_evaluable"]')!.dataset.of,
+    ).toBe("3");
+    expect(s.querySelector(".agg-calibration")!.textContent).toBe(
+      "1 calibration check of the judge, not counted as evaluations",
+    );
+    expect(s.querySelector("[data-count-mismatch]")).toBeNull();
+    expect(refused(root)).toBe(false);
+  });
+
+  it("still marks a real gap: a sealed total that is not the strip plus the calibration claims", async () => {
+    const root = await render(withCalibration(9));
+    const marker = strip(root)!.querySelector<HTMLElement>(
+      '[data-count-mismatch="evaluated_population"]',
+    )!;
+    expect(marker.dataset.stated).toBe("8");
+    expect(marker.dataset.recomputed).toBe("3");
+    expect(marker.textContent).toBe("count mismatch: the claims give 3");
+  });
+
+  it("marks a sealed aggregate that left the calibration claim out of the population", async () => {
+    const root = await render(withCalibration(3));
+    const marker = strip(root)!.querySelector<HTMLElement>(
+      '[data-count-mismatch="evaluated_population"]',
+    )!;
+    expect(marker.dataset.stated).toBe("2");
+    expect(marker.dataset.recomputed).toBe("3");
+  });
+
+  it("takes a calibration claim with an unknown sufficiency out of unknown_count", async () => {
+    const source = withCalibration(4);
+    const doc = resultDoc(source);
+    const claim = (doc.claims as Obj[])[3]!;
+    claim.sufficiency = "UNKNOWN";
+    ((doc.aggregate as Obj).coverage as Obj).unknown_count = 1;
+    const root = await render(source);
+    const line = strip(root)!.querySelector<HTMLElement>(".agg-line")!;
+    expect(line.dataset.unknown).toBe("0");
+    expect(strip(root)!.querySelector("[data-count-mismatch]")).toBeNull();
+  });
+
+  it("draws no negative figure when the sealed population is below the calibration claims", async () => {
+    const source = withCalibration(4);
+    const doc = resultDoc(source);
+    ((doc.aggregate as Obj).coverage as Obj).evaluated_population = 0;
+    const root = await render(source);
+    const line = strip(root)!.querySelector<HTMLElement>(".agg-line")!;
+    expect(line.dataset.evaluated).toBe("0");
+    expect(line.textContent).not.toMatch(/-\d/u);
+    expect(
+      strip(root)!.querySelector(
+        '[data-count-mismatch="evaluated_population"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("marks a sealed population below its calibration claims even when the fallback figure equals the claims'", async () => {
+    // One requirement claim and two calibration claims in force, a sealed
+    // population of 1: sealed minus calibration is -1, the claims give 1.
+    const source = fixture("result-root-bundle.json");
+    const doc = resultDoc(source);
+    const first = (doc.claims as Obj[])[0]!;
+    const calibration = (id: string): Obj => ({
+      ...structuredClone(first),
+      id,
+      type: "calibration",
+      requirement_ref: id,
+    });
+    doc.claims = [first, calibration("claim-4"), calibration("claim-5")];
+    const aggregate = doc.aggregate as Obj;
+    (aggregate.coverage as Obj).evaluated_population = 1;
+    aggregate.buckets = {
+      met: ["claim-1", "claim-4", "claim-5"],
+      not_met: [],
+      not_evaluable: [],
+    };
+    const root = await render(source);
+    expect(
+      strip(root)!.querySelector(
+        '[data-count-mismatch="evaluated_population"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("draws no calibration line when no claim is a calibration claim", async () => {
+    const root = await render(fixture("result-root-bundle.json"));
+    expect(strip(root)!.querySelector(".agg-calibration")).toBeNull();
+  });
+});

@@ -11475,17 +11475,17 @@ ${body}
         continue;
       }
       const recomputable = ratingsNotMatching === 0 && ratings.every((entry) => entry.judged !== void 0);
-      const clauses = summary.clauses.map((tally) => {
-        const bound = recomputable ? ratings.filter((entry) => entry.judged.requirementRef === tally.clauseRef && entry.agrees !== void 0) : [];
+      const clauses = summary.clauses.map((tally2) => {
+        const bound = recomputable ? ratings.filter((entry) => entry.judged.requirementRef === tally2.clauseRef && entry.agrees !== void 0) : [];
         if (bound.length === 0)
-          return { ...tally, agreementCheck: "not_recomputable" };
+          return { ...tally2, agreementCheck: "not_recomputable" };
         const recomputed = {
           k: bound.filter((entry) => entry.agrees === true).length,
           n: bound.length
         };
-        const stated = tally.agreement;
+        const stated = tally2.agreement;
         const agreementCheck = recomputed.k > stated.k || recomputed.n - recomputed.k > stated.n - stated.k ? "mismatch" : recomputed.k === stated.k && recomputed.n === stated.n ? "matches" : "not_recomputable";
-        return { ...tally, recomputedAgreement: recomputed, agreementCheck };
+        return { ...tally2, recomputedAgreement: recomputed, agreementCheck };
       });
       const clauseRefs = new Set(summary.clauses.map((c) => c.clauseRef));
       const ratingsOutsideClauses = ratings.filter((entry) => entry.judged !== void 0 && !clauseRefs.has(entry.judged.requirementRef)).length;
@@ -14876,12 +14876,12 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
   var laneOf = (view, role) => view.lanes.find((l) => l.role === role);
   var keyOf = (chart) => chart.keys.find((k) => k !== "x");
   function tallyOf(lane, day) {
-    const tally = { good: 0, bad: 0, open: 0 };
+    const tally2 = { good: 0, bad: 0, open: 0 };
     for (const g of groupsOn(lane.chart, day)) {
       const cls = lane.classes[String(g.key[keyOf(lane.chart)])];
-      tally[cls] += g.value ?? 0;
+      tally2[cls] += g.value ?? 0;
     }
-    return tally;
+    return tally2;
   }
   var sumOf = (lane, day) => groupsOn(lane.chart, day).reduce((n, g) => n + (g.value ?? 0), 0);
   function scaleOf(t) {
@@ -16640,10 +16640,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("0e00716a96b9bad56001701a414493867678703d");
+    return commitPrefix("5be4bbb6f65db01cc1d6f850ff6d85ebb78794e2");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.12.0",
@@ -17161,6 +17161,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.requirements.other": "{n} requirements",
       "front.agg.unknown.one": "{n} evaluation with an unknown result",
       "front.agg.unknown.other": "{n} evaluations with an unknown result",
+      "front.agg.calibration.one": "{n} calibration check of the judge, not counted as evaluations",
+      "front.agg.calibration.other": "{n} calibration checks of the judge, not counted as evaluations",
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
@@ -17509,6 +17511,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.summary.h": "What was checked and what we found",
       "groups.summary.lede": "Each session (one conversation with the agent) was checked against {tests} under {obligations}. Results are counts of sessions: there is no overall score. Open a test to read the sessions behind its exceptions.",
       "groups.summary.basis": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, obligation titles, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
+      "groups.summary.basis.pack-titles": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them. Obligation titles are the Act's article headings, from this page's wording pack.`,
       "groups.summary.col.test": "Obligation and test",
       "groups.summary.col.checked-in": "Checked in",
       "groups.summary.col.result": "Result",
@@ -17533,6 +17536,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.rp.toggle": "Proofs for this report: method, test wording, what ran, and how to verify the whole bundle",
       "groups.od.h": "Method and the wording each test ran",
       "groups.od.mapped": "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
+      "groups.od.mapped.pack-titles": "Article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record. The title is the Act's article heading, from this page's wording pack.",
       "groups.od.unmapped": "The producer's extension does not map this obligation: article, summary and method not stated.",
       "groups.od.judged-terms": "Judged terms: ",
       "groups.od.wording.sealed": "Wording run (sealed): {text}",
@@ -17752,6 +17756,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.requirements.other": "{n} requirements",
       "front.agg.unknown.one": "{n} evaluation with an unknown result",
       "front.agg.unknown.other": "{n} evaluations with an unknown result",
+      "front.agg.calibration.one": "{n} calibration check of the judge, not counted as evaluations",
+      "front.agg.calibration.other": "{n} calibration checks of the judge, not counted as evaluations",
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
@@ -17991,6 +17997,468 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     }
   };
 
+  // src/wording/contract-report-generic.en.json
+  var contract_report_generic_en_default = {
+    wording_pack_version: "aac.wording-pack/v0",
+    id: "capsule-viewer/contract-report/generic@1",
+    locale: "en",
+    entries: {
+      "layout.grouping": "generic",
+      "judge.note.sure": "The judge gave this verdict a probability of {p}%.",
+      "case.label": "task {task}",
+      "case.label.trial": "task {task}, trial {trial}",
+      "chat.role.user": "User",
+      "chat.role.assistant": "Agent",
+      "chat.role.tool": "Tool result",
+      "chat.role.system": "Instructions given to the agent",
+      "chat.absent": "The conversation is not in this bundle. It is sealed in the case record {record}, which this report does not disclose, so this page cannot show it.",
+      "chat.record.not-stated": "(not stated)",
+      "chat.not-shown": "The conversation is not shown: {reason}.",
+      "chat.not-shown.default-reason": "the transcript in this bundle does not check against the case the judge read",
+      "chat.lede": "{messages} messages, {calls}. {state} Tool results are shown as sealed; JSON is only indented, and only where indenting changes nothing else. Tool arguments are shown as the report model hands them over, re-serialised, so a number JSON cannot hold exactly may already be rounded.",
+      "chat.calls.one": "{n} tool call",
+      "chat.calls.other": "{n} tool calls",
+      "chat.state.cited": "The conversation of the case every claim cites. The judge's reports are withheld, so which conversation the judge read is not shown.",
+      "chat.state.verified": "The exact conversation the judge read, checked on this page (see the proofs).",
+      "chat.called": "called ",
+      "chat.close": "Close the conversation",
+      "chat.in-records": "In the records",
+      "chat.read": "Read the conversation",
+      "spot.toggle": "Spot check, side by side",
+      "spot.col.happened": "What happened",
+      "spot.col.happened.counted": "What happened \xB7 {turns}, {calls}",
+      "spot.turns.one": "{n} message",
+      "spot.turns.other": "{n} messages",
+      "spot.col.criterion": "The criterion",
+      "spot.col.verdict": "The verdict \xB7 why",
+      "spot.term": "The rule, as the judge was given it",
+      "spot.term.unstated": "The rule's wording is not in this bundle: no report in it states the wording.",
+      "spot.term.mixed": "The rule's wording is not shown: the reports in this bundle state different wordings.",
+      "spot.says": "The judge's words",
+      "spot.confidence": "confidence {c}",
+      "spot.gap.produced": "Who produced each message (model, tools used, effects) is not in this bundle: a message here carries only who spoke, what was said and the tool calls.",
+      "spot.gap.when": "This report states only each rule's wording, not when it counts as met or when it cannot be decided.",
+      "spot.gap.adjudication": "This card does not show whether a second, blind judge checked these verdicts.",
+      "card.not-stated": "not stated",
+      "card.span": "{from} \u2013 {to}",
+      "card.span.unknown": "unknown",
+      "card.basis.source": "source says (backfilled record; the source's own timestamp, self-attested)",
+      "card.basis.record": "the case record's own timestamp",
+      "card.basis.judged": "the day the judgments were sealed (no case record date to read)",
+      "card.dating.sealed": "Sealed {span}.",
+      "card.dating.source": `Dates are the source's own timestamps for backfilled records ("source says"), as given, not when the records were sealed.`,
+      "card.dating.record": "The period is when the conversations happened (each case record's own time, as given), not when they were judged.",
+      "card.dating.mixed": "Dates are each conversation's own date, as given, not when the judgments were sealed:",
+      "card.dating.mixed.source": `{n} backfilled by the source's own timestamp ("source says");`,
+      "card.dating.mixed.record": "{n} by the case record's own timestamp;",
+      "card.dating.mixed.judged": "{n} with no case record date to read, by the day they were judged.",
+      "card.dating.self-attested": "A backfilled record's source time is self-attested: carrying it does not make it witnessed.",
+      "card.dating.tz": "Timezone not stated on {count} of {total}; no zone is assumed.",
+      "card.h.conversation": "The conversation",
+      "card.proofs.toggle": "Proofs: record ids, digests and the judge pin",
+      "card.gap.notes.withheld": "The judge's notes are not in this bundle: its reports are withheld.",
+      "card.gap.notes.unread": "The judge's notes are not shown: some reports in this bundle do not match what was sealed, cannot be read, or do not check out.",
+      "card.gap.notes.some-withheld": "The judge's notes are not in this bundle: some of its reports are withheld.",
+      "card.gap.notes.none": "The judge left no notes.",
+      "card.pf.case-record": "Case record",
+      "card.pf.case-record.not-stated": "not stated by the reports",
+      "card.pf.dated": "{date}: {basis}",
+      "card.pf.dated.no-zone": "{date} (timezone not stated): {basis}",
+      "card.pf.imported": "Imported",
+      "card.pf.judged-sealed": "Judged and sealed",
+      "card.pf.result-capsule": "Result capsule",
+      "card.pf.transcript-record": "Transcript record",
+      "card.pf.input-digest": "Case input digest",
+      "card.pf.input-digest.verified": "{digest} (the transcript's digest equals what the judged case committed to, checked on this page)",
+      "card.pf.input-digest.cited": "{digest} (the case every claim cites; the judge's reports are withheld, so which conversation the judge read is not shown)",
+      "card.pf.transcript": "Transcript",
+      "card.pf.transcript.absent": "not in this bundle",
+      "card.pf.transcript.not-shown": "not shown: {reason}",
+      "card.pf.transcript.default-reason": "does not check",
+      "card.pf.wording": "Words",
+      "card.pf.wording.default": "wording pack {id}, built into this viewer (wording_sha256 {sha256})",
+      "card.pf.wording.supplied.layered": "wording pack {id} (wording_sha256 {sha256}), supplied with the page over the built-in {baseId} (wording_sha256 {baseSha256})",
+      "card.pin.withheld": "the judge's reports that state it are withheld ({count} of {total})",
+      "card.pin.unread": "{count} of {total} reports in this bundle do not match what was sealed, cannot be read, or do not check out",
+      "card.pin.not-in-bundle": "not in this bundle: {reasons}",
+      "card.vd.h": "Verification details",
+      "card.vd.bundle-digest": "Bundle digest",
+      "card.vd.checkpoint-root": "Checkpoint root",
+      "card.vd.checkpoint-size": "Checkpoint size",
+      "card.vd.uncomputable": "uncomputable",
+      "card.vd.absent": "absent",
+      "prov.of": "{count} of {total}",
+      "prov.judge.label": "Judged by",
+      "prov.judge.none": "not stated: no result in this bundle cites a report",
+      "prov.judge.model.does-not-recompute": "model not shown (the model the reports state does not recompute to the pin)",
+      "prov.judge.model.differs": "model not shown (the reports with this pin state different models)",
+      "prov.judge.model.partly-stated": "model not shown (some reports with this pin state no model)",
+      "prov.judge.model.not-stated": "model not stated",
+      "prov.judge.pin": "{model}, pinned, pin {pin} ({of} results)",
+      "prov.judge.all-withheld": "not in this bundle: the judge's reports are withheld ({of})",
+      "prov.judge.some-withheld": "the reports for {of} results are withheld, so their judge is not in this bundle",
+      "prov.judge.not-carried": "the reports for {of} results are not in this bundle, so their judge is not stated",
+      "prov.judge.unread": "{of} reports do not match what was sealed, cannot be read, or do not check out",
+      "prov.judge.checker": "{checker} ({count})",
+      "prov.judge.checker-not-stated": "checker not stated ({count})",
+      "prov.judge.recomputed": "{of} results recomputed, not judged: {by}",
+      "prov.judge.unnamed": "judge not stated for {of} results",
+      "prov.judge.nothing": "not stated in this bundle",
+      "prov.witness.label": "Witnessed by",
+      "prov.witness.stated": "{witnesses}: stated by the bundle, not checked here.",
+      "prov.witness.verified": "{witnesses}: receipt checked here, and it verifies.",
+      "prov.witness.invalid": "not witnessed: the witness check failed.",
+      "prov.witness.failed": "{witnesses}: checked here, and does not verify.",
+      "prov.witness.invalid.findings": "The check states: {findings}.",
+      "prov.witness.failed-entry": "{witness} (reason: {reason})",
+      "prov.witness.invalid.unreadable.one": "{n} entry in its witness list cannot be read.",
+      "prov.witness.invalid.unreadable.other": "{n} entries in its witness list cannot be read.",
+      "prov.witness.none": "not stated in this bundle: it carries no witness receipt for its checkpoint.",
+      "prov.witness.entry": "{witness} (tree size {size})",
+      "prov.witness.receipt-not-stated": "a receipt, witness not stated",
+      "prov.witness.stubs.one": "{n} placeholder, not receipts",
+      "prov.witness.stubs.other": "{n} placeholders, not receipts",
+      "prov.witness.malformed.one": "{n} entry that cannot be read",
+      "prov.witness.malformed.other": "{n} entries that cannot be read",
+      "prov.witness.besides": "It also carries {others}.",
+      "prov.witness.both": "{a} and {b}",
+      "prov.witness.log": "log {log}",
+      "prov.witness.size": "size {size}",
+      "prov.witness.root": "root {root}",
+      "prov.witness.about": "The checkpoint: {facts}.",
+      "prov.witness.about.unchecked": "The checkpoint: {facts}; this page did not check its signature.",
+      "prov.witness.about.unsigned": "The checkpoint: {facts}; the bundle carries no signature for it.",
+      "prov.verifier.label": "Verified by",
+      "prov.brief.judge.stated": "judge pinned",
+      "prov.brief.judge.mixed": "several judge pins",
+      "prov.brief.judge.withheld": "judge withheld",
+      "prov.brief.judge.not-stated": "judge not stated",
+      "prov.brief.judge.mock": "mock judge",
+      "prov.brief.witness.stated": "witness receipt in this bundle",
+      "prov.brief.witness.verified": "witness receipt checked here",
+      "prov.brief.witness.partly-checked": "witness receipts partly checked here",
+      "prov.brief.witness.invalid": "witness check failed",
+      "prov.brief.witness.mixed": "witness receipts partly unreadable",
+      "prov.brief.witness.not-stated": "no witness receipt in this bundle",
+      "prov.brief.verifier.stated": "checked by this page",
+      "prov.brief.verifier.not-stated": "checker not stated",
+      "prov.verifier.text": "{ran}. {built}",
+      "prov.verifier.ran": "this page's code: {viewer} {viewerVersion} at {commit}, verifier {verifier} {verifierVersion}",
+      "prov.verifier.ran.cll": "this page's code: {viewer} {viewerVersion} at {commit}, verifier {verifier} {verifierVersion} with cll {cll}",
+      "prov.verifier.commit.not-stated": "commit not stated",
+      "prov.verifier.ran.not-stated": "this page's code; its viewer and verifier versions are not stated",
+      "prov.verifier.built.not-stated": "The tool that built this bundle is not stated in it.",
+      "prov.verifier.built": "The bundle's own report, which this page does not check, names the tool that built it as {producer}, {version}.",
+      "prov.verifier.version": "version {version}",
+      "prov.verifier.version.not-stated": "version not stated",
+      "grade.self-attested": "self-attested",
+      "grade.witnessed": "witnessed",
+      "grade.countersigned": "countersigned",
+      "sufficiency.satisfied": "satisfied",
+      "sufficiency.gap": "gap",
+      "sufficiency.insufficient": "insufficient",
+      "sufficiency.unknown": "unknown",
+      "status.satisfied": "satisfied",
+      "status.insufficient": "insufficient",
+      "status.not_found": "not found",
+      "status.not_committed": "not committed",
+      "status.withheld": "withheld",
+      "status.contradicted": "contradicted",
+      "status.not_applicable": "not applicable",
+      "status.unknown": "unknown",
+      "requirement_tier.must_have": "Must-have",
+      "requirement_tier.informational": "Informational",
+      "requirement_tier.unstated": "Tier not stated",
+      "card.pf.assurance": "Assurance (as sealed on the claim)",
+      "card.pf.assurance.line": "tier {tier} \xB7 grade {grade} \xB7 sufficiency {sufficiency} \xB7 carrier status {status}",
+      "card.mark.withheld": "Withheld by the holder",
+      "card.mark.withheld.cited": "Withheld by the holder \xB7 cites {digests}",
+      "card.wording.refused": "The wording pack supplied with this page was refused, so this card is drawn with the viewer's built-in words only.",
+      "card.pf.wording.refused": "a wording pack supplied with the page (wording_sha256 {sha256}) was refused: {reason}. Only the built-in {baseId} (wording_sha256 {baseSha256}) was applied.",
+      "card.wording.refused.digest": "its bytes do not hash to its wording_sha256",
+      "card.wording.refused.shape": "it is not an aac.wording-pack/v0 object",
+      "card.wording.refused.fit": "it does not fit this card's words",
+      "front.mock": "Verdicts are from a mock judge and are placeholders.",
+      "front.agg.evaluated": "{evaluations} of {requirements}",
+      "front.agg.evaluations.one": "{n} evaluation",
+      "front.agg.evaluations.other": "{n} evaluations",
+      "front.agg.requirements.one": "{n} requirement",
+      "front.agg.requirements.other": "{n} requirements",
+      "front.agg.unknown.one": "{n} evaluation with an unknown result",
+      "front.agg.unknown.other": "{n} evaluations with an unknown result",
+      "front.agg.calibration.one": "{n} calibration check of the judge, not counted as evaluations",
+      "front.agg.calibration.other": "{n} calibration checks of the judge, not counted as evaluations",
+      "front.agg.later.one": "{n} evaluation not yet in force",
+      "front.agg.later.other": "{n} evaluations not yet in force",
+      "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
+      "front.agg.as-of": "In force as of {date}.",
+      "front.agg.copied.both": "The dates and the out-of-scope switch are copied from the contract, not re-checked here.",
+      "front.agg.copied.dates": "The dates are copied from the contract, not re-checked here.",
+      "front.agg.copied.switch": "The out-of-scope switch is copied from the contract, not re-checked here.",
+      "prov.brief.judge.partial": "judge pinned for some results",
+      "front.agg.excluded": "{excluded} excluded as not applicable",
+      "front.agg.bucket.met": "Met",
+      "front.agg.bucket.not_met": "Not met",
+      "front.agg.bucket.not_evaluable": "Could not decide",
+      "front.agg.bucket.out_of_scope": "Out of scope",
+      "front.agg.of": "of {n} evaluations",
+      "front.core.label": "CORE",
+      "front.core.pack": "{id} v{version}",
+      "front.core.packs": "{n} packs",
+      "front.core.generated": "generated {time}",
+      "front.core.result": "Result {digest}",
+      "front.core.pin": "judge pin {digest}",
+      "front.core.pins": "{n} judge pins",
+      "front.check.h": "Check this report yourself",
+      "front.check.key": "Producer key",
+      "front.check.log": "Log",
+      "front.check.root": "Checkpoint root \xB7 size",
+      "front.check.records": "Records in this bundle",
+      "front.check.s1": "Keep a copy of the bundle this page shows.",
+      "front.check.s2": "Run the open-source verifier on it, offline.",
+      "front.check.s3.receipt": "Compare the checkpoint root above with the root the witness receipt in this bundle names.",
+      "front.check.s3.none": "This bundle carries no witness receipt. If you can get the log's checkpoint for this size on your own, compare its root with the one above.",
+      "front.check.s4": "Open any row above to see the sealed records it cites.",
+      "front.findings.label": "Producer's findings \xB7 presentation text, not evidence",
+      "evidence.show": "Show evidence",
+      "evidence.show.for": "Show evidence: {what}",
+      "evidence.records": "The records the claims behind this number cite, each a link to its entry in this bundle's records",
+      "evidence.not-in-bundle": "not disclosed in this bundle; this page does not fetch it",
+      "evidence.no-evidence.one": "{n} counted from a claim that cites no evidence",
+      "evidence.no-evidence.other": "{n} counted from claims that cite no evidence",
+      "chart.population.one": "{n} record",
+      "chart.population.other": "{n} records",
+      "chart.window": "{from} to {to} (UTC)",
+      "chart.derived": "Derived from this report's records, not evidence itself",
+      "chart.not_run": "Not run",
+      "chart.no_runs": "This report's plan does not say which days ran, so a day with no records reads 0",
+      "chart.table.caption": "The values in this chart",
+      "chart.count": "Count",
+      "chart.sum": "Sum of",
+      "chart.evidence.records": "The records this value counts, each a link to its entry in this bundle's records",
+      "chart.evidence.none": "Nothing counted: no record in this report's data falls here",
+      "chart.refused": "This chart was not drawn: its spec does not match the report's data ({reason}).",
+      "calendar.weekday.1": "Mon",
+      "calendar.weekday.2": "Tue",
+      "calendar.weekday.3": "Wed",
+      "calendar.weekday.4": "Thu",
+      "calendar.weekday.5": "Fri",
+      "calendar.weekday.6": "Sat",
+      "calendar.weekday.7": "Sun",
+      "period.week": "Week of {date}",
+      "period.not_run_days.one": "{n} day not run",
+      "period.not_run_days.other": "{n} days not run",
+      "view.unplaced.one": "{n} record is dated on a day that did not run, so it is in no cell",
+      "view.unplaced.other": "{n} records are dated on days that did not run, so they are in no cell",
+      "calendar.weekday.long.1": "Monday",
+      "calendar.weekday.long.2": "Tuesday",
+      "calendar.weekday.long.3": "Wednesday",
+      "calendar.weekday.long.4": "Thursday",
+      "calendar.weekday.long.5": "Friday",
+      "calendar.weekday.long.6": "Saturday",
+      "calendar.weekday.long.7": "Sunday",
+      "calendar.month.1": "January",
+      "calendar.month.2": "February",
+      "calendar.month.3": "March",
+      "calendar.month.4": "April",
+      "calendar.month.5": "May",
+      "calendar.month.6": "June",
+      "calendar.month.7": "July",
+      "calendar.month.8": "August",
+      "calendar.month.9": "September",
+      "calendar.month.10": "October",
+      "calendar.month.11": "November",
+      "calendar.month.12": "December",
+      "calendar.day.heading": "{weekday}, {month} {day}",
+      "calendar.day.time": "Time (UTC)",
+      "calendar.day.record": "Record",
+      "calendar.day.counts": "Counts for this day",
+      "calendar.activity.one": "{n} case",
+      "calendar.activity.other": "{n} cases",
+      "calendar.judged": "judged",
+      "calendar.class.good": "{n} met",
+      "calendar.class.bad": "{n} not met",
+      "calendar.class.open": "{n} undecided",
+      "calendar.adj.recorded.one": "{n} adjudication recorded",
+      "calendar.adj.recorded.other": "{n} adjudications recorded",
+      "calendar.adj.concur": "all concur",
+      "calendar.adj.differ.one": "{n} differs from the judge",
+      "calendar.adj.differ.other": "{n} differ from the judge",
+      "calendar.adj.open": "{n} not yet ruled",
+      "calendar.legend.good": "all, or all but one, met",
+      "calendar.legend.some": "some not met or undecided",
+      "calendar.legend.most": "most not met",
+      "calendar.legend.adjudication": "adjudications recorded that day",
+      "cofail.failing.one": "{n} case did not meet at least one requirement",
+      "cofail.failing.other": "{n} cases did not meet at least one requirement",
+      "evidence.uncited.one": "{n} counted with no claim: this page's own reading, with no evidence to show",
+      "evidence.uncited.other": "{n} counted with no claim: this page's own reading, with no evidence to show",
+      "evidence.label.unsupported": "Unsupported: no record its claims cite is disclosed in this bundle",
+      "evidence.label.no-evidence": "Unsupported: its claims cite no evidence",
+      "evidence.label.interpretation": "Interpretation: this page's own reading; no claim cites evidence for it",
+      "front.findings.h": "Findings",
+      "legend.toggle.open": "open, by the view's depth",
+      "legend.toggle.closed": "closed, the reader opens it",
+      "legend.toggle.core": "no toggle, the core always draws it",
+      "legend.toggle.note": "Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.",
+      "legend.src.lead": "Where every word comes from",
+      "legend.src.core": "core",
+      "legend.src.core.is": "the viewer's own words",
+      "legend.src.pack": "wording pack",
+      "legend.src.pack.is": "the report's words",
+      "legend.src.field": "capsule field",
+      "legend.src.field.is": "a field as recorded, with its path",
+      "legend.src.payload": "payload",
+      "legend.src.payload.is": "the record's content",
+      "legend.src.producer": "producer",
+      "legend.src.producer.is": "quoted, with whose words",
+      "legend.src.unmarked": "Unmarked text is the viewer's or the report's own words.",
+      "record.banner.own": "Core \xB7 L3 \xB7 the lowest level. Opened from a card's \u201CProofs\u201D or from \u201CRecords in this bundle\u201D. Shown for one record, {action}; every record in this bundle has the same page. What is below this is the bytes, as you hold them.",
+      "record.banner.shared": "Core \xB7 L3 \xB7 the lowest level. Opened from a card's \u201CProofs\u201D or from \u201CRecords in this bundle\u201D. Shown for one record, {action}; every record in this bundle has the same page. What is below this is the bytes, as the holder shared them.",
+      "record.envelope.title": "The producer envelope \xB7 COSE_Sign1 (tag 18) \xB7 what is signed is the capsule's identity, not its JSON",
+      "record.envelope.none": "This record carries no producer envelope: it is not signed, which is not the same as a bad signature.",
+      "record.envelope.unreadable": "This record carries an envelope this page could not read as a COSE_Sign1.",
+      "record.envelope.foot.own": "A capsule may carry zero, one or several envelopes; each verifies on its own; none is in the id's preimage, so adding a signer never changes capsule_id. Verifying an envelope proves the key signed this id. It does not prove the key was allowed to act for the operator: that is rung 8.",
+      "record.envelope.foot.shared": "A capsule may carry zero, one or several envelopes; each verifies on its own; none is in the id's preimage, so adding a signer never changes capsule_id. Verifying an envelope proves the key signed this id. It does not prove the key was allowed to act for the operator: that is rung 8.",
+      "record.env.protected": "protected header",
+      "record.env.covered": "covered by the signature",
+      "record.env.not-signed": "not signed",
+      "record.env.alg": "1 \xB7 alg",
+      "record.env.alg.other": "an algorithm this page does not name",
+      "record.env.content-type": "3 \xB7 content type",
+      "record.env.kid": "4 \xB7 kid",
+      "record.env.kid.value": "{kid} \xB7 the raw {bytes}-byte public key \xB7 the signing key",
+      "record.env.unprotected": "unprotected header",
+      "record.env.unprotected.empty": "empty by rule in a bare envelope; nothing here is ever evidence. A registrar's receipt is a separate Signed Statement (rung 7), never a header on this one.",
+      "record.env.unprotected.entries": "{n} entries, none of them signed and none of them evidence. A registrar's receipt is a separate Signed Statement (rung 7), never a header on this one.",
+      "record.env.payload": "payload",
+      "record.env.payload.is-id": "the raw {bytes} bytes of capsule_id = SHA-256 over the JCS form of the capsule JSON (minus the id field itself). This is the digest. Change one byte of the capsule and it no longer matches.",
+      "record.env.payload.other": "the payload is not the capsule_id this record names.",
+      "record.env.signature": 'signature \xB7 {bytes} bytes \xB7 Ed25519 over Sig_structure("Signature1", protected header, external AAD = empty, payload)',
+      "record.capsule.title": "The capsule JSON \xB7 format 4 \xB7 fields in clear vs committed by digest",
+      "record.capsule.recomputed": "recomputed, never trusted as carried",
+      "record.tag.clear": "clear",
+      "record.tag.digest-only": "digest only",
+      "record.tag.bodies-by-digest": "bodies by digest",
+      "record.tag.commitment": "commitment",
+      "record.ladder.title": "The ladder: what each proof proves, and its status on this page",
+      "record.ladder.col.n": "Rung",
+      "record.ladder.col.proof": "Proof",
+      "record.ladder.col.proves": "What it proves \xB7 what it does not",
+      "record.ladder.col.status": "Status here",
+      "record.ladder.col.check": "Check it yourself",
+      "record.rung.1.title": "Payload digest",
+      "record.rung.1.sub": "capsule_id recomputed",
+      "record.rung.1.proves.own": "The capsule JSON you hold is the one this id names. Not: that its contents are true.",
+      "record.rung.1.proves.shared": "The capsule JSON in this file is the one this id names. Not: that its contents are true.",
+      "record.rung.1.check": "agent-action-capsule verify capsule.json",
+      "record.rung.2.title": "Content digests",
+      "record.rung.2.sub": "agent_input and agent_output",
+      "record.rung.2.proves.own": "The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.",
+      "record.rung.2.proves.shared": "The turns and tool bodies this page shows are the ones the capsule committed to. Not: that they are complete; absent content shows as withheld.",
+      "record.rung.2.check": "sha256 over the disclosed body = the field",
+      "record.rung.2.none": "this record commits to no input or output",
+      "record.rung.2.count": "{n} of {of} committed members disclosed",
+      "record.rung.3.title": "Producer envelope",
+      "record.rung.3.sub": "Ed25519 over the id",
+      "record.rung.3.proves.own": "Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).",
+      "record.rung.3.proves.shared": "Whoever holds the key in the header signed this id. Not: that the key may act for the operator (rung 8).",
+      "record.rung.3.check": "capsulectl verify --profile NAME --capsule capsule.json",
+      "record.rung.3.unchecked": "this page could not run it here (no Ed25519 in this browser); check it offline",
+      "record.rung.4.title": "Chain",
+      "record.rung.4.sub": "parent_capsule_id {parent} \xB7 relation",
+      "record.rung.4.sub.none": "parent_capsule_id \xB7 relation",
+      "record.rung.4.proves.own": "This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).",
+      "record.rung.4.proves.shared": "This record names a parent that is a record in this bundle. Not: how the two are ordered in the log, that no record supersedes it, or anything about other books (that is references[]).",
+      "record.rung.4.check": "agent-action-capsule verify --store DIR",
+      "record.rung.4.parent-absent": "the parent is not a record of this bundle",
+      "record.rung.5.title": "Inclusion",
+      "record.rung.5.sub": "leaf {leaf} \xB7 seq {seq}",
+      "record.rung.5.sub.none": "no log coordinates for this record",
+      "record.rung.5.proves.own": "This record is in the book at that position, under the checkpoint root. Not: that the book was not rewritten before the checkpoint (rung 6).",
+      "record.rung.5.proves.shared": "This record is in the book at that position, under the checkpoint root. Not: that the book was not rewritten before the checkpoint (rung 6).",
+      "record.rung.5.check": "capsulectl cll verify --profile NAME --proof PROOF.json",
+      "record.rung.6.title": "Checkpoint consistency",
+      "record.rung.6.sub": "retained head \u2192 this root",
+      "record.rung.6.proves.own": "The book only grew between the head you kept and this one; nothing was replaced. Not: anything if you kept no head (first contact).",
+      "record.rung.6.proves.shared": "The book only grew between the head the reader kept and this one; nothing was replaced. Not: anything if the reader kept no head (first contact).",
+      "record.rung.6.check": "not yet available (agent-action-capsule#513)",
+      "record.rung.6.gap": "this page does not run it: a bundle carries no earlier head to compare against",
+      "record.rung.7.title": "Witness receipt \xB7 registration",
+      "record.rung.7.sub": "SCITT Signed Statement + Receipt",
+      "record.rung.7.proves.own": "A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.",
+      "record.rung.7.proves.shared": "A third party saw this checkpoint and the id was registered on a transparency log. Together they make attestation_mode: anchored. Not: that the witness read the contents.",
+      "record.rung.7.check": "agent-action-capsule verify --transparent STATEMENT --issuer-key PEM --log-key PEM",
+      "record.rung.7.none": "this bundle carries no witness receipt",
+      "record.rung.7.count": "{n} of {of} receipts verified",
+      "record.rung.8.title": "Controller binding",
+      "record.rung.8.sub": "key \u2192 controller",
+      "record.rung.8.proves.own": "The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is your trust root or a registry).",
+      "record.rung.8.proves.shared": "The controller declared that this key acts for it, in a record of its own, witnessed. Not: that the controller is who they say (that is the reader's trust root or a registry).",
+      "record.rung.8.check": "not yet available (agent-action-capsule#514)",
+      "record.rung.8.gap": "this page does not run it yet: it reads no controller binding record",
+      "record.rung.9.title": "References \xB7 the other side",
+      "record.rung.9.sub": "cited records",
+      "record.rung.9.proves.own": "The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless you hold its proof material.",
+      "record.rung.9.proves.shared": "The cited records are in this bundle. Not: that they cite back, or the other book's consistency unless the reader holds its proof material.",
+      "record.rung.9.check": "ask for subject: record with proof material",
+      "record.rung.9.count": "{n} of {of} cited records are in this bundle",
+      "record.rung.10.title": "Judgment and adjudication",
+      "record.rung.10.sub": "the sealed Result",
+      "record.rung.10.proves.own": "The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.",
+      "record.rung.10.proves.shared": "The sealed Result in this bundle cites this record, and the verdict on the card is the one it carries. Not: that the verdict is right.",
+      "record.rung.10.check": "capsulectl verify --bundle bundle.json",
+      "record.rung.10.is-result": "this is the sealed Result",
+      "record.rung.10.count": "cited by {n} claims of the sealed Result",
+      "record.rung.11.title": "Countersign",
+      "record.rung.11.sub": "the other party's signature over the Result",
+      "record.rung.11.proves.own": "The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.",
+      "record.rung.11.proves.shared": "The other party to the contract accepted this Result's figures as the record of the month. Not: agreement with every verdict.",
+      "record.rung.11.check": "capsulectl countersign verify --profile NAME --directory URL_OR_FILE bundle.json",
+      "record.foot.order.k": "Why the order.",
+      "record.foot.order": "Each rung assumes the one below: an envelope is over an id, an id is over the JSON, inclusion is of an id, a checkpoint is over inclusions, a witness is of a checkpoint, a judgment is over verified records.",
+      "record.foot.status.k": "What a status means here.",
+      "record.foot.status": "PASS the check ran and held \xB7 FAIL it ran and did not \xB7 NOT_PRESENT the material is not in the bundle \xB7 NOT_CHECKED the page did not run it (offline, no key, no adapter) \xB7 INCONCLUSIVE it ran and could not decide.",
+      "record.foot.sdk.k": "Who else checks this.",
+      "record.foot.sdk": "Four implementations, in Go, Rust, Python and TypeScript, pass one vector corpus.",
+      "record.rung.7.note-unread": "this page could not read the witness receipts here",
+      "record.rung.5.other": "the bundle's membership claim did not hold, and its findings do not name this record",
+      "record.rung.5.unanchored": "the checkpoint is not authenticated on this page",
+      "generic.title": "Evidence result",
+      "generic.counts.claims.one": "{n} claim",
+      "generic.counts.claims.other": "{n} claims",
+      "generic.counts.rows.one": "{n} requirement",
+      "generic.counts.rows.other": "{n} requirements",
+      "generic.verdict.met": "met",
+      "generic.verdict.not_met": "not met",
+      "generic.verdict.not_evaluable": "could not be decided",
+      "generic.verdict.out_of_scope": "out of scope",
+      "generic.verdict.failed": "failed verification",
+      "generic.verdict.unsupported": "unsupported claim",
+      "generic.tier.recomputed": "recomputed",
+      "generic.tier.judged": "judged",
+      "generic.tally": "{n} of {total} claims",
+      "generic.claims.h": "Claims",
+      "generic.contract.h": "Contract",
+      "generic.rtier.must_have.title": "Must-have requirements \xB7 {n}",
+      "generic.rtier.must_have.note": "These count in the answer.",
+      "generic.rtier.informational.title": "Informational requirements \xB7 {n}",
+      "generic.rtier.informational.note": "Reported, never in the answer: a requirement not met here changes nothing above it.",
+      "generic.rtier.unstated.title": "Requirements with no stated tier \xB7 {n}",
+      "generic.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
+      "generic.rtier.sealed-note": "The sealed result counts informational requirements too; the counts this report derives leave them out.",
+      "generic.later.title": "Not yet in force \xB7 {n}",
+      "generic.later.readiness": "readiness",
+      "generic.later.note": "Applies from {date}, as the producer copied it from the contract, not re-checked here: readiness only, not counted.",
+      "generic.producer.note": "Requirement names, groups and claim ids are the producer's identifiers, shown as written unless a wording pack names them; they are not sealed evidence.",
+      "generic.claim.type": "Claim type",
+      "generic.claim.unrecognized": "unrecognized claim type {type}",
+      "generic.claim.contract": "Contract",
+      "generic.claim.requirement": "Requirement",
+      "generic.claim.failure": "Why it failed verification"
+    }
+  };
+
   // src/contract-report-wording.ts
   var WORDING_PACK_VERSION = "aac.wording-pack/v0";
   var WORDING_KEY = /^[a-z0-9][a-z0-9._-]*$/u;
@@ -18114,6 +18582,15 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "verdict.out_of_scope": ["groups.verdict.out_of_scope"],
       "tier.recomputed": ["groups.tier.recomputed"],
       "tier.judged": ["groups.tier.judged"]
+    },
+    generic: {
+      "report.title": ["generic.title"],
+      "verdict.met": ["generic.verdict.met"],
+      "verdict.not_met": ["generic.verdict.not_met"],
+      "verdict.not_evaluable": ["generic.verdict.not_evaluable"],
+      "verdict.out_of_scope": ["generic.verdict.out_of_scope"],
+      "tier.recomputed": ["generic.tier.recomputed"],
+      "tier.judged": ["generic.tier.judged"]
     }
   });
   function expandSection3(pack, grouping) {
@@ -18127,9 +18604,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       }
     return { ...pack, entries };
   }
+  function isGrouping(value) {
+    return value === "lines" || value === "groups" || value === "generic";
+  }
   var DEFAULT_PACKS = Object.freeze({
     lines: readWordingPack(contract_report_outcomes_en_default),
-    groups: readWordingPack(contract_report_eu_ai_act_en_default)
+    groups: readWordingPack(contract_report_eu_ai_act_en_default),
+    generic: readWordingPack(contract_report_generic_en_default)
   });
   var DISTINCT = [
     // This module's own rule verdict words (contract-report.ts: the bare
@@ -18165,6 +18646,15 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
         "groups.verdict.not_evaluable.unavailable"
       ]
     ],
+    [
+      "generic.verdict.met",
+      "generic.verdict.not_met",
+      "generic.verdict.failed",
+      "generic.verdict.unsupported",
+      "generic.verdict.out_of_scope",
+      "generic.verdict.not_evaluable"
+    ],
+    ["generic.tier.judged", "generic.tier.recomputed"],
     [
       "lines.status.resolved",
       "lines.status.missed",
@@ -18255,12 +18745,20 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.rtier.must_have.title",
       "groups.rtier.informational.title",
       "groups.rtier.unstated.title"
+    ],
+    [
+      "generic.rtier.must_have.title",
+      "generic.rtier.informational.title",
+      "generic.rtier.unstated.title"
     ]
   ];
   var GUARDED_CATEGORY = {
     // met/clean: a rule was met, a row resolved, or nothing exceptioned.
     "lines.verdict.met": "clean",
     "groups.verdict.met": "clean",
+    "generic.verdict.met": "clean",
+    "generic.later.title": "later",
+    "generic.later.readiness": "later",
     "lines.pf.verdict.met": "clean",
     "lines.line.resolved": "clean",
     "lines.status.resolved": "clean",
@@ -18274,6 +18772,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     // obligation's red exceptions count.
     "lines.verdict.not_met": "exception",
     "groups.verdict.not_met": "exception",
+    "generic.verdict.not_met": "exception",
     "lines.pf.verdict.not_met": "exception",
     "lines.line.missed": "exception",
     "lines.status.missed": "exception",
@@ -18307,6 +18806,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "lines.verdict.failed": "unverifiable",
     "lines.verdict.unsupported": "unverifiable",
     "groups.verdict.failed": "unverifiable",
+    "generic.verdict.failed": "unverifiable",
+    "generic.verdict.unsupported": "unverifiable",
+    "generic.verdict.not_evaluable": "undecided",
+    "generic.verdict.out_of_scope": "not-applicable",
     "groups.verdict.unsupported": "unverifiable",
     "lines.pf.verdict.failed": "unverifiable",
     "lines.pf.verdict.unsupported": "unverifiable",
@@ -18345,10 +18848,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     // recomputed tier: a fixed check anyone can repeat from the records.
     "lines.tier.recomputed": "tier.recomputed",
     "groups.tier.recomputed": "tier.recomputed",
+    "generic.tier.recomputed": "tier.recomputed",
     // judged tier: a judgement, which must never read like the recomputed
     // tier above.
     "lines.tier.judged": "tier.judged",
-    "groups.tier.judged": "tier.judged"
+    "groups.tier.judged": "tier.judged",
+    "generic.tier.judged": "tier.judged"
   };
   var CATEGORY_LABEL = {
     clean: "a met/clean result",
@@ -18384,6 +18889,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.rtier.unstated.note",
     "lines.rtier.sealed-note",
     "groups.rtier.sealed-note",
+    "generic.rtier.unstated.note",
+    "generic.rtier.sealed-note",
+    // The generic page's honesty lines: what its names and ids are, and what a
+    // claim not yet in force counts as.
+    "generic.producer.note",
+    "generic.later.note",
+    "generic.claim.failure",
     // The shared front (report-front.ts): the mock-judge line, what the
     // aggregate's unknown count is, what the page and the bundle carry, and
     // the producer's findings label.
@@ -18732,6 +19244,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.ob.ok.found",
     "groups.ob.ok.unverified",
     "groups.summary.basis",
+    "groups.summary.basis.pack-titles",
     "groups.summary.lede",
     "groups.pf.case-record.from-claims",
     "groups.pf.no-claim",
@@ -18740,6 +19253,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.pin.none",
     "groups.pin.differs",
     "groups.od.mapped",
+    "groups.od.mapped.pack-titles",
     "groups.od.unmapped",
     "groups.od.wording.sealed",
     "groups.od.wording.mixed",
@@ -18858,9 +19372,9 @@ ${key}`);
   }
   function wordingProblems(supplied, defaults) {
     const grouping = defaults.entries["layout.grouping"];
-    const pack = grouping === "lines" || grouping === "groups" ? expandSection3(supplied, grouping) : supplied;
+    const pack = isGrouping(grouping) ? expandSection3(supplied, grouping) : supplied;
     const problems = [];
-    if (grouping === "lines" || grouping === "groups") {
+    if (isGrouping(grouping)) {
       for (const [key, targets] of Object.entries(SECTION3_ALIASES[grouping]))
         if (Object.hasOwn(supplied.entries, key)) {
           for (const target of targets)
@@ -18965,8 +19479,9 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "0448c4e5d6fa4b59cccdc5ed98b089946d9b217a76042dec222c5bd074ce4b45",
-    groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768"
+    lines: "9b54b407fe2077875ba455d27ce959eec17b3fe383ba4192b87d6235eb3edd77",
+    groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
+    generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -18979,7 +19494,7 @@ ${key}`);
     const declared = defaults.entries["layout.grouping"];
     const entries = supplied === void 0 ? defaults.entries : {
       ...defaults.entries,
-      ...(declared === "lines" || declared === "groups" ? expandSection3(supplied.pack, declared) : supplied.pack).entries
+      ...(isGrouping(declared) ? expandSection3(supplied.pack, declared) : supplied.pack).entries
     };
     const t = (key, vars = {}) => {
       const text2 = Object.hasOwn(entries, key) ? entries[key] : void 0;
@@ -18989,7 +19504,7 @@ ${key}`);
     };
     const section3 = (key) => WORDING_KEY.test(key) && Object.hasOwn(entries, key) ? entries[key] : void 0;
     const grouping = entries["layout.grouping"];
-    if (grouping !== "lines" && grouping !== "groups")
+    if (!isGrouping(grouping))
       throw new WordingPackError(
         `${defaults.id}: layout.grouping is ${JSON.stringify(grouping)}`
       );
@@ -19043,7 +19558,8 @@ ${key}`);
   }
   var DEFAULT_WORDS = Object.freeze({
     lines: wordsOf(DEFAULT_PACKS.lines),
-    groups: wordsOf(DEFAULT_PACKS.groups)
+    groups: wordsOf(DEFAULT_PACKS.groups),
+    generic: wordsOf(DEFAULT_PACKS.generic)
   });
 
   // src/report-provenance.ts
@@ -19164,15 +19680,15 @@ ${key}`);
   var quoted = (value) => JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}\u2026` : value);
   var HEX_DIGEST2 = /^[0-9a-f]+$/iu;
   var short = (digest) => HEX_DIGEST2.test(digest) ? digest.length > 12 ? `${digest.slice(0, 12)}\u2026` : digest : quoted(digest);
-  function judgedByMock(tally) {
-    return tally.pins.some(
+  function judgedByMock(tally2) {
+    return tally2.pins.some(
       (pin) => pin.model !== void 0 && /\bmock\b/i.test(pin.model)
     );
   }
-  function judgeLine(tally, w = DEFAULT_WORDS.lines) {
+  function judgeLine(tally2, w = DEFAULT_WORDS.lines) {
     const label = w.t("prov.judge.label");
-    const of = (n) => w.t("prov.of", { count: fmt2(n), total: fmt2(tally.cited) });
-    if (tally.cited === 0)
+    const of = (n) => w.t("prov.of", { count: fmt2(n), total: fmt2(tally2.cited) });
+    if (tally2.cited === 0)
       return {
         key: "judge",
         label,
@@ -19181,7 +19697,7 @@ ${key}`);
         state: "not-stated"
       };
     const parts = [];
-    for (const pin of tally.pins) {
+    for (const pin of tally2.pins) {
       const model = pin.model ?? w.t(
         pin.modelNotShown === "does_not_recompute" ? "prov.judge.model.does-not-recompute" : pin.modelNotShown === "differs" ? "prov.judge.model.differs" : pin.modelNotShown === "partly_stated" ? "prov.judge.model.partly-stated" : "prov.judge.model.not-stated"
       );
@@ -19193,39 +19709,39 @@ ${key}`);
         })
       );
     }
-    if (tally.withheld > 0)
+    if (tally2.withheld > 0)
       parts.push(
         w.t(
-          tally.withheld === tally.cited ? "prov.judge.all-withheld" : "prov.judge.some-withheld",
-          { of: of(tally.withheld) }
+          tally2.withheld === tally2.cited ? "prov.judge.all-withheld" : "prov.judge.some-withheld",
+          { of: of(tally2.withheld) }
         )
       );
-    if (tally.notCarried > 0)
-      parts.push(w.t("prov.judge.not-carried", { of: of(tally.notCarried) }));
-    if (tally.unread > 0)
-      parts.push(w.t("prov.judge.unread", { of: of(tally.unread) }));
-    const recomputed = tally.checkers.reduce((n, c) => n + c.count, 0) + tally.recomputedUnnamed;
+    if (tally2.notCarried > 0)
+      parts.push(w.t("prov.judge.not-carried", { of: of(tally2.notCarried) }));
+    if (tally2.unread > 0)
+      parts.push(w.t("prov.judge.unread", { of: of(tally2.unread) }));
+    const recomputed = tally2.checkers.reduce((n, c) => n + c.count, 0) + tally2.recomputedUnnamed;
     if (recomputed > 0) {
-      const by = tally.checkers.map(
+      const by = tally2.checkers.map(
         (c) => w.t("prov.judge.checker", {
           checker: quoted(c.ref),
           count: fmt2(c.count)
         })
       );
-      if (tally.recomputedUnnamed > 0)
+      if (tally2.recomputedUnnamed > 0)
         by.push(
           w.t("prov.judge.checker-not-stated", {
-            count: fmt2(tally.recomputedUnnamed)
+            count: fmt2(tally2.recomputedUnnamed)
           })
         );
       parts.push(
         w.t("prov.judge.recomputed", { of: of(recomputed), by: by.join(", ") })
       );
     }
-    if (tally.unnamed > 0)
-      parts.push(w.t("prov.judge.unnamed", { of: of(tally.unnamed) }));
-    const judged = tally.pins.length;
-    const state = tally.withheld === tally.cited ? "withheld" : judged > 1 || judged === 1 && (tally.withheld > 0 || tally.notCarried > 0 || tally.unread > 0 || tally.unnamed > 0) ? "mixed" : judged === 1 ? "stated" : "not-stated";
+    if (tally2.unnamed > 0)
+      parts.push(w.t("prov.judge.unnamed", { of: of(tally2.unnamed) }));
+    const judged = tally2.pins.length;
+    const state = tally2.withheld === tally2.cited ? "withheld" : judged > 1 || judged === 1 && (tally2.withheld > 0 || tally2.notCarried > 0 || tally2.unread > 0 || tally2.unnamed > 0) ? "mixed" : judged === 1 ? "stated" : "not-stated";
     if (parts.length === 0) parts.push(w.t("prov.judge.nothing"));
     return {
       key: "judge",
@@ -19236,7 +19752,7 @@ ${key}`);
       // A mock judge is said once, by the L0 mark (report-front.ts,
       // decision D5 (b)); the brief leaves the judge out rather than say it
       // again. The judge's full line stays in the opened block.
-      brief: judgedByMock(tally) ? "" : w.t(
+      brief: judgedByMock(tally2) ? "" : w.t(
         state === "mixed" && judged === 1 ? "prov.brief.judge.partial" : `prov.brief.judge.${state}`
       ),
       state
@@ -21514,6 +22030,9 @@ ${key}`);
       return [article, packWord("span", "", ` \xB7 ${title}`)];
     return obligation.mapped ? [producerText(w, article, ` \xB7 ${obligation.title}`)] : [article, element4("span", ` \xB7 ${obligation.title}`)];
   }
+  function packTitlesOnPage(model, w) {
+    return model.obligations.length > 0 && model.obligations.every((o) => w.group(o.key) !== void 0);
+  }
   function testNames(model, w) {
     const rows = new Map(
       model.obligations.flatMap(
@@ -21948,7 +22467,13 @@ ${key}`);
     section.append(table3);
     const notes = el9("aside", "footnotes");
     notes.dataset.section = "footnotes";
-    const basis = el9("p", "", w.t("groups.summary.basis"));
+    const basis = el9(
+      "p",
+      "",
+      w.t(
+        packTitlesOnPage(model, w) ? "groups.summary.basis.pack-titles" : "groups.summary.basis"
+      )
+    );
     basis.dataset.basis = "terms";
     notes.append(basis);
     section.append(notes);
@@ -22268,7 +22793,9 @@ ${key}`);
         el9(
           "p",
           "na",
-          w.t(obligation.mapped ? "groups.od.mapped" : "groups.od.unmapped")
+          w.t(
+            obligation.mapped ? packTitlesOnPage(model, w) ? "groups.od.mapped.pack-titles" : "groups.od.mapped" : "groups.od.unmapped"
+          )
         )
       );
       if (obligation.judgedTerms.length > 0) {
@@ -22404,8 +22931,304 @@ ${key}`);
     renderReportProofs2(levels.L2, model, bundle, verified, w);
   }
 
+  // src/generic-report-view.ts
+  var GENERIC_FRAME = {
+    tag: "div",
+    className: "gr",
+    page: "contract-report",
+    css: `
+.gr{${COMPLIANCE_FRAME_VARS}
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;display:block;max-width:1080px;margin:26px auto;padding:0 28px}
+.gr *{box-sizing:border-box}
+.gr h1,.gr h2,.gr h3{font-family:Georgia,"Iowan Old Style",Cambria,serif;color:var(--navy);margin:0}
+.gr h1{font-size:28px;margin:6px 0 4px}
+.gr h2{font-size:21px;margin:0 0 6px}
+.gr h3{font-size:17px;margin:18px 0 6px}
+.gr .rsum,.gr .counts{color:var(--slate);margin:0 0 8px}
+.gr .rnote{font-size:12.5px;color:var(--slate);margin:2px 0 8px}
+.gr .tally{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;margin:4px 0}
+.gr .rname{font-weight:600;color:var(--navy)}
+.gr .rname code,.gr .cid{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
+.gr ul.claims{list-style:none;margin:6px 0 0;padding:0}
+.gr .tier-note{font-size:12.5px;color:var(--slate)}
+` + levelCss("gr") + frontCss(".gr")
+  };
+  var VERDICT_TONE = {
+    met: "ok",
+    not_met: "bad",
+    not_evaluable: "ne",
+    out_of_scope: "na",
+    failed: "bad",
+    unsupported: "ne"
+  };
+  function shownVerdict(claim) {
+    if (claim.failed) return "failed";
+    return claim.support === "supported" ? claim.verdict : "unsupported";
+  }
+  function el10(tag, className, text2) {
+    const node = document.createElement(tag);
+    if (className !== "") node.className = className;
+    if (text2 !== void 0) node.textContent = text2;
+    return node;
+  }
+  function rowsOf(claims) {
+    const rows = /* @__PURE__ */ new Map();
+    for (const claim of claims) {
+      const key = JSON.stringify([claim.contractRef, claim.requirementRef]);
+      const row2 = rows.get(key);
+      if (row2 === void 0)
+        rows.set(key, {
+          contractRef: claim.contractRef,
+          requirementRef: claim.requirementRef,
+          claims: [claim]
+        });
+      else row2.claims.push(claim);
+    }
+    return [...rows.values()];
+  }
+  function groupOf2(requirementRef) {
+    const dot = requirementRef.indexOf(".");
+    return dot <= 0 ? void 0 : requirementRef.slice(0, dot);
+  }
+  function verdictPill(verdict2, w) {
+    const word = w.enumWord("verdict", verdict2);
+    const shown2 = verdict2 === "failed" || verdict2 === "unsupported" ? w.t(`generic.verdict.${verdict2}`) : word;
+    const pill = wordPill(
+      { word: shown2, tone: VERDICT_TONE[verdict2] ?? "na" },
+      verdict2
+    );
+    pill.dataset.verdict = verdict2;
+    return pill;
+  }
+  function tally(row2, w, later) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const claim of row2.claims) {
+      const verdict2 = shownVerdict(claim);
+      counts.set(verdict2, (counts.get(verdict2) ?? 0) + 1);
+    }
+    const box = el10("div", "tally");
+    for (const [verdict2, n] of counts) {
+      const part = el10("span", "");
+      part.dataset.tally = verdict2;
+      if (later) part.append(w.t("generic.later.readiness"), " ");
+      part.append(verdictPill(verdict2, w), " ");
+      part.append(
+        w.t("generic.tally", {
+          n: n.toLocaleString(),
+          total: row2.claims.length.toLocaleString()
+        })
+      );
+      box.append(part);
+    }
+    return box;
+  }
+  function claimProofs(claim, w) {
+    const body = el10("div", "pf-b");
+    const rows = [
+      [w.t("generic.claim.contract"), claim.contractRef],
+      [w.t("generic.claim.requirement"), claim.requirementRef],
+      assuranceRow(claim, w)
+    ];
+    if (claim.type !== "requirement")
+      rows.push([
+        w.t("generic.claim.type"),
+        claim.recognized ? claim.type : w.t("generic.claim.unrecognized", { type: claim.type })
+      ]);
+    if (claim.failed && claim.failure !== void 0)
+      rows.push([w.t("generic.claim.failure"), claim.failure]);
+    body.append(proofList(rows));
+    const mark = withheldMark(claim, w);
+    if (mark !== void 0) body.append(mark);
+    return body;
+  }
+  function claimItem(claim, w) {
+    const item = el10("li", "");
+    item.dataset.claimRef = claim.id;
+    const head2 = el10("span", "");
+    const id = tagSource(el10("code", "cid", claim.id), "producer");
+    head2.append(id, " ", verdictPill(shownVerdict(claim), w));
+    item.append(
+      levelToggle(2, head2, () => claimProofs(claim, w), { className: "claim" })
+    );
+    return item;
+  }
+  function rowItem(row2, w, later, tierOf) {
+    const label = w.row(row2.requirementRef, "label");
+    const name = el10("span", "rname");
+    if (label !== void 0)
+      name.append(tagSource(el10("span", "", label), "pack"));
+    else name.append(tagSource(el10("code", "", row2.requirementRef), "producer"));
+    const summary = el10("span", "");
+    summary.append(name);
+    const tier = tierOf?.(row2.contractRef, row2.requirementRef);
+    if (tier !== void 0) {
+      const chip = el10("span", "rtier", w.t(`requirement_tier.${tier}`));
+      chip.dataset.requirementTier = tier;
+      summary.append(" ", chip);
+    }
+    summary.append(tally(row2, w, later));
+    const toggle = levelToggle(
+      1,
+      summary,
+      () => {
+        const body = el10("div", "row-b");
+        const detail = w.row(row2.requirementRef, "detail");
+        if (detail !== void 0) body.append(el10("p", "", detail));
+        const undecided = row2.claims.some(
+          (claim) => !claim.failed && claim.verdict === "not_evaluable"
+        );
+        const note = w.row(row2.requirementRef, "not_evaluable");
+        if (undecided && note !== void 0) body.append(el10("p", "rnote", note));
+        if (later)
+          for (const date of new Set(
+            row2.claims.flatMap(
+              (claim) => claim.appliesFrom === void 0 ? [] : [claim.appliesFrom]
+            )
+          ))
+            body.append(el10("p", "rnote", w.t("generic.later.note", { date })));
+        const list2 = el10("ul", "claims");
+        for (const claim of row2.claims) list2.append(claimItem(claim, w));
+        body.append(el10("h3", "", w.t("generic.claims.h")), list2);
+        return body;
+      },
+      { className: "row" }
+    );
+    toggle.dataset.row = row2.requirementRef;
+    toggle.dataset.contract = row2.contractRef;
+    return toggle;
+  }
+  function groupedRows(rows, w, later, tierOf) {
+    const box = el10("div", "groups");
+    const order = [];
+    const byGroup = /* @__PURE__ */ new Map();
+    for (const row2 of rows) {
+      const group = groupOf2(row2.requirementRef);
+      if (!byGroup.has(group)) {
+        byGroup.set(group, []);
+        order.push(group);
+      }
+      byGroup.get(group).push(row2);
+    }
+    order.sort((a, b) => Number(a === void 0) - Number(b === void 0));
+    for (const group of order) {
+      const part = el10("div", "group");
+      if (group !== void 0) {
+        part.dataset.group = group;
+        const title = w.group(group);
+        const heading = el10("h3", "");
+        heading.append(
+          title !== void 0 ? tagSource(el10("span", "", title), "pack") : tagSource(el10("span", "", group), "producer")
+        );
+        part.append(heading);
+      }
+      for (const row2 of byGroup.get(group))
+        part.append(rowItem(row2, w, later, tierOf));
+      box.append(part);
+    }
+    return box;
+  }
+  function contractHeading(contract, w) {
+    const heading = el10("h2", "", w.t("generic.contract.h"));
+    heading.append(" ", tagSource(el10("code", "", contract), "producer"));
+    return heading;
+  }
+  function byContract(rows, w, later, tierOf) {
+    const contracts = [...new Set(rows.map((row2) => row2.contractRef))];
+    if (contracts.length <= 1) return groupedRows(rows, w, later, tierOf);
+    const box = el10("div", "contracts");
+    for (const contract of contracts) {
+      const part = el10("div", "contract");
+      part.dataset.contract = contract;
+      part.append(
+        contractHeading(contract, w),
+        groupedRows(
+          rows.filter((row2) => row2.contractRef === contract),
+          w,
+          later,
+          tierOf
+        )
+      );
+      box.append(part);
+    }
+    return box;
+  }
+  async function drawGeneric(levels, result3, bundle, verified, w, tierOf) {
+    const tierFor = (claim) => tierOf === void 0 ? "unstated" : tierOf(claim.contractRef, claim.requirementRef);
+    const inForce = result3.claims.filter((claim) => !claim.later);
+    const later = result3.claims.filter((claim) => claim.later);
+    const counted2 = inForce.filter(
+      (claim) => !(tierOf !== void 0 && tierFor(claim) === "informational")
+    );
+    const sheet = el10("div", "l0-card front-card");
+    sheet.append(el10("h1", "", w.t("generic.title")));
+    const summary = reportSummary(w);
+    if (summary !== void 0) sheet.append(summary);
+    const counts = el10(
+      "p",
+      "counts",
+      `${w.p("generic.counts.claims", counted2.length)} \xB7 ${w.p(
+        "generic.counts.rows",
+        rowsOf(counted2).length
+      )}`
+    );
+    counts.dataset.counts = "";
+    sheet.append(counts);
+    levels.L0.append(sheet);
+    const section = el10("section", "front-card");
+    section.dataset.section = "rows";
+    const rows = rowsOf(inForce);
+    if (tierOf === void 0) section.append(byContract(rows, w, false));
+    else
+      for (const tier of ROW_TIERS) {
+        const inTier = rows.filter(
+          (row2) => tierOf(row2.contractRef, row2.requirementRef) === tier
+        );
+        if (inTier.length === 0) continue;
+        const part = el10("div", "tier-section");
+        part.dataset.tierSection = tier;
+        part.append(
+          el10(
+            "h2",
+            "",
+            w.t(`generic.rtier.${tier}.title`, {
+              n: inTier.length.toLocaleString()
+            })
+          ),
+          el10("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
+          byContract(inTier, w, false, tierOf)
+        );
+        section.append(part);
+      }
+    if (later.length > 0) {
+      const part = el10("div", "later-section");
+      part.dataset.section = "not-yet-in-force";
+      const laterRows = rowsOf(later);
+      part.append(
+        el10(
+          "h2",
+          "",
+          w.t("generic.later.title", { n: later.length.toLocaleString() })
+        ),
+        byContract(laterRows, w, true, tierOf)
+      );
+      section.append(part);
+    }
+    section.append(
+      tagSource(el10("p", "rnote", w.t("generic.producer.note")), "core")
+    );
+    levels.L1.append(section);
+    leadWithProvenance(
+      levels.L1,
+      section,
+      renderProvenance(
+        await provenanceLines(result3.records, result3.claims, bundle, verified, w)
+      )
+    );
+    levels.L2.append(renderCheckYourself(bundle, w));
+  }
+
   // src/contract-report.ts
-  var FRAMES = { lines: LINES_FRAME, groups: GROUPS_FRAME };
+  var FRAMES = { lines: LINES_FRAME, groups: GROUPS_FRAME, generic: GENERIC_FRAME };
   function tierReader(result3, contract) {
     if (contract === void 0) return void 0;
     const single = citesOneContract(result3) ? result3.claims[0]?.contractRef : void 0;
@@ -22450,7 +23273,7 @@ ${key}`);
     }
     if (input.grouping === "lines")
       await drawLines(levels, result3, input.options, bundle, verified, w, tierOf);
-    else
+    else if (input.grouping === "groups")
       await drawGroups(
         levels,
         result3,
@@ -22460,6 +23283,7 @@ ${key}`);
         w,
         tierOf
       );
+    else await drawGeneric(levels, result3, bundle, verified, w, tierOf);
     regions.L0.append(levels.L0);
     regions.L1.append(levels.L1);
     regions.L2.append(levels.L2);
@@ -23063,7 +23887,7 @@ ${key}`);
     );
     return rungs;
   }
-  function el10(tag, className, text2) {
+  function el11(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== void 0) node.className = className;
     if (text2 !== void 0) node.textContent = text2;
@@ -23076,36 +23900,36 @@ ${key}`);
     const { context, capsuleId } = input;
     const voice = input.voice;
     const raw = object11(context.recordIndex.get(capsuleId));
-    const card2 = el10("section", "l3-card");
+    const card2 = el11("section", "l3-card");
     card2.dataset.l3 = "envelope";
-    card2.append(el10("h4", "l3-k", w.t("record.envelope.title")));
+    card2.append(el11("h4", "l3-k", w.t("record.envelope.title")));
     const hex5 = typeof raw.signature === "string" ? raw.signature : void 0;
     const view = hex5 === void 0 ? void 0 : readEnvelope(hex5);
     if (hex5 === void 0) {
-      const none = el10("p", "l3-note", w.t("record.envelope.none"));
+      const none = el11("p", "l3-note", w.t("record.envelope.none"));
       none.dataset.l3 = "no-envelope";
       card2.append(none);
     } else if (view === void 0) {
-      const bad2 = el10("p", "l3-note", w.t("record.envelope.unreadable"));
+      const bad2 = el11("p", "l3-note", w.t("record.envelope.unreadable"));
       bad2.dataset.l3 = "unreadable-envelope";
       card2.append(bad2);
     } else {
       const covered = (cls, tag) => {
-        const chip = el10("span", `l3-chip ${cls}`, tag);
+        const chip = el11("span", `l3-chip ${cls}`, tag);
         return chip;
       };
-      const prot = el10("div", "l3-box l3-prot");
+      const prot = el11("div", "l3-box l3-prot");
       prot.dataset.l3 = "protected";
-      const ph = el10("p", "l3-h");
+      const ph = el11("p", "l3-h");
       ph.append(
-        el10("b", "", w.t("record.env.protected")),
+        el11("b", "", w.t("record.env.protected")),
         " ",
         covered("l3-green", w.t("record.env.covered"))
       );
       prot.append(ph);
-      const dl = el10("dl", "l3-kv");
+      const dl = el11("dl", "l3-kv");
       const row2 = (k, v) => {
-        dl.append(el10("dt", "", k), el10("dd", "", v));
+        dl.append(el11("dt", "", k), el11("dd", "", v));
       };
       if (view.alg !== void 0)
         row2(
@@ -23123,17 +23947,17 @@ ${key}`);
           })
         );
       prot.append(dl);
-      const un = el10("div", "l3-box l3-unprot");
+      const un = el11("div", "l3-box l3-unprot");
       un.dataset.l3 = "unprotected";
-      const uh = el10("p", "l3-h");
+      const uh = el11("p", "l3-h");
       uh.append(
-        el10("b", "", w.t("record.env.unprotected")),
+        el11("b", "", w.t("record.env.unprotected")),
         " ",
         covered("l3-grey", w.t("record.env.not-signed"))
       );
       un.append(
         uh,
-        el10(
+        el11(
           "p",
           "",
           view.unprotectedEntries === 0 ? w.t("record.env.unprotected.empty") : w.t("record.env.unprotected.entries", {
@@ -23141,17 +23965,17 @@ ${key}`);
           })
         )
       );
-      const pay = el10("div", "l3-box l3-payload");
+      const pay = el11("div", "l3-box l3-payload");
       pay.dataset.l3 = "payload";
-      const yh = el10("p", "l3-h");
+      const yh = el11("p", "l3-h");
       yh.append(
-        el10("b", "", w.t("record.env.payload")),
+        el11("b", "", w.t("record.env.payload")),
         " ",
         covered("l3-green", w.t("record.env.covered"))
       );
       pay.append(
         yh,
-        el10(
+        el11(
           "p",
           "",
           view.payloadHex !== void 0 && view.payloadHex === capsuleId ? w.t("record.env.payload.is-id", {
@@ -23159,14 +23983,14 @@ ${key}`);
           }) : w.t("record.env.payload.other")
         )
       );
-      const sig = el10("div", "l3-box l3-sig");
+      const sig = el11("div", "l3-box l3-sig");
       sig.dataset.l3 = "signature";
       sig.append(
-        el10("p", "", w.t("record.env.signature", { bytes: view.signatureBytes }))
+        el11("p", "", w.t("record.env.signature", { bytes: view.signatureBytes }))
       );
       card2.append(prot, un, pay, sig);
     }
-    card2.append(el10("p", "l3-note", w.t(`record.envelope.foot.${voice}`)));
+    card2.append(el11("p", "l3-note", w.t(`record.envelope.foot.${voice}`)));
     return card2;
   }
   function tagWord(tag, w) {
@@ -23174,18 +23998,18 @@ ${key}`);
   }
   function capsuleCard(input, w) {
     const raw = object11(input.context.recordIndex.get(input.capsuleId));
-    const card2 = el10("section", "l3-card");
+    const card2 = el11("section", "l3-card");
     card2.dataset.l3 = "capsule";
-    card2.append(el10("h4", "l3-k", w.t("record.capsule.title")));
-    const dl = el10("dl", "l3-fields");
+    card2.append(el11("h4", "l3-k", w.t("record.capsule.title")));
+    const dl = el11("dl", "l3-fields");
     for (const row2 of fieldRows(raw)) {
-      const dt = el10("dt", "", row2.label);
-      const dd = el10("dd");
+      const dt = el11("dt", "", row2.label);
+      const dd = el11("dd");
       dd.append(row2.value);
       if (row2.note === "recomputed")
         dd.append(" \xB7 ", w.t("record.capsule.recomputed"));
       for (const tag of row2.tags) {
-        const chip = el10("span", `l3-chip l3-tag-${tag}`, tagWord(tag, w));
+        const chip = el11("span", `l3-chip l3-tag-${tag}`, tagWord(tag, w));
         chip.dataset.tag = tag;
         dd.append(" ", chip);
       }
@@ -23196,11 +24020,11 @@ ${key}`);
   }
   function ladderCard(input, w) {
     const voice = input.voice;
-    const card2 = el10("section", "l3-card l3-ladder");
+    const card2 = el11("section", "l3-card l3-ladder");
     card2.dataset.l3 = "ladder";
-    card2.append(el10("h3", "l3-title", w.t("record.ladder.title")));
-    const table3 = el10("table", "l3-table");
-    const head2 = el10("tr");
+    card2.append(el11("h3", "l3-title", w.t("record.ladder.title")));
+    const table3 = el11("table", "l3-table");
+    const head2 = el11("tr");
     for (const key of [
       "record.ladder.col.n",
       "record.ladder.col.proof",
@@ -23208,28 +24032,28 @@ ${key}`);
       "record.ladder.col.status",
       "record.ladder.col.check"
     ])
-      head2.append(el10("th", "", w.t(key)));
-    const thead = el10("thead");
+      head2.append(el11("th", "", w.t(key)));
+    const thead = el11("thead");
     thead.append(head2);
     table3.append(thead);
-    const body = el10("tbody");
+    const body = el11("tbody");
     for (const rung of ladder(input, w)) {
-      const tr = el10("tr");
+      const tr = el11("tr");
       tr.dataset.rung = String(rung.n);
       tr.dataset.rungStatus = rung.status;
-      tr.append(el10("td", "l3-n", String(rung.n)));
-      const name = el10("td");
+      tr.append(el11("td", "l3-n", String(rung.n)));
+      const name = el11("td");
       name.append(
-        el10("b", "", w.t(`record.rung.${rung.n}.title`)),
-        el10("div", "l3-sub", rung.sub)
+        el11("b", "", w.t(`record.rung.${rung.n}.title`)),
+        el11("div", "l3-sub", rung.sub)
       );
-      tr.append(name, el10("td", "", w.t(`record.rung.${rung.n}.proves.${voice}`)));
-      const status2 = el10("td");
-      const chip = el10("span", `l3-status l3-s-${rung.status}`, rung.status);
+      tr.append(name, el11("td", "", w.t(`record.rung.${rung.n}.proves.${voice}`)));
+      const status2 = el11("td");
+      const chip = el11("span", `l3-status l3-s-${rung.status}`, rung.status);
       chip.dataset.status = rung.status;
       status2.append(chip);
       if (rung.note !== void 0) status2.append(" ", rung.note);
-      tr.append(status2, el10("td", "l3-cmd", w.t(`record.rung.${rung.n}.check`)));
+      tr.append(status2, el11("td", "l3-cmd", w.t(`record.rung.${rung.n}.check`)));
       body.append(tr);
     }
     table3.append(body);
@@ -23237,12 +24061,12 @@ ${key}`);
     return card2;
   }
   function footer(w) {
-    const foot = el10("section", "l3-card l3-foot");
+    const foot = el11("section", "l3-card l3-foot");
     foot.dataset.l3 = "foot";
     for (const key of ["order", "status", "sdk"]) {
-      const col = el10("p");
+      const col = el11("p");
       col.append(
-        el10("b", "", w.t(`record.foot.${key}.k`)),
+        el11("b", "", w.t(`record.foot.${key}.k`)),
         ` ${w.t(`record.foot.${key}`)}`
       );
       foot.append(col);
@@ -23251,19 +24075,19 @@ ${key}`);
   }
   function renderRecordPage(input, w) {
     const raw = object11(input.context.recordIndex.get(input.capsuleId));
-    const page = el10("div", "cv-l3");
+    const page = el11("div", "cv-l3");
     page.dataset.level = "3";
     page.dataset.recordPage = input.capsuleId;
     page.dataset.voice = input.voice;
     const actionId = typeof raw.action_id === "string" ? raw.action_id : "";
     page.append(
-      el10(
+      el11(
         "p",
         "l3-banner",
         w.t(`record.banner.${input.voice}`, { action: actionId })
       )
     );
-    const cols = el10("div", "l3-cols");
+    const cols = el11("div", "l3-cols");
     cols.append(envelopeCard(input, w), capsuleCard(input, w));
     page.append(cols, ladderCard(input, w), footer(w));
     return page;
@@ -23314,6 +24138,7 @@ ${key}`);
 .cv-strip .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
 .cv-strip .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
 .cv-strip .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
+.cv-strip .agg-calibration{font-size:13px;color:var(--slate);margin:-6px 0 12px}
 .cv-strip .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
 .cv-strip .agg-bucket.met b{color:var(--ok)}
 .cv-strip .agg-bucket.not_met b{color:var(--bad)}
@@ -23321,40 +24146,74 @@ ${key}`);
 @media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
 @media print{.cv-strip{break-inside:avoid}}
 `;
-  function el11(tag, className, text2) {
+  function el12(tag, className, text2) {
     const node = document.createElement(tag);
     if (className !== "") node.className = className;
     if (text2 !== void 0) node.textContent = text2;
     return node;
   }
   var fmt5 = (n) => n.toLocaleString("en-US");
-  function mismatchMarker(result3, field, w) {
-    const mismatch = result3.countMismatches.find(
-      (entry) => entry.field === field
-    );
-    if (mismatch === void 0) return void 0;
-    const marker = el11(
+  var CALIBRATION_CLAIM = "calibration";
+  var isCalibration = (claim) => claim.type === CALIBRATION_CLAIM;
+  function fieldCount(result3, field, sealed, bucketIds) {
+    const mismatch = result3.countMismatches.find((e) => e.field === field);
+    const recomputed = mismatch === void 0 ? sealed : mismatch.recomputed;
+    const calibration = result3.claims.filter((c) => isCalibration(c) && !c.later);
+    const counted2 = (c) => field === "evaluated_population" ? true : field === "unknown_count" ? c.sufficiency === "UNKNOWN" : field !== "not_yet_in_force" && c.verdict === field.slice("buckets.".length);
+    const sealedSide = calibration.filter(
+      (c) => field === "evaluated_population" || (bucketIds === void 0 ? counted2(c) : bucketIds.includes(c.id))
+    ).length;
+    const claimsSide = calibration.filter(
+      (c) => (field === "evaluated_population" || !c.failed) && counted2(c)
+    ).length;
+    return {
+      drawn: sealed >= sealedSide ? sealed - sealedSide : sealed,
+      recomputed: recomputed >= claimsSide ? recomputed - claimsSide : recomputed,
+      gap: sealed - sealedSide !== recomputed - claimsSide
+    };
+  }
+  function mismatchMarker(count2, field, w) {
+    if (!count2.gap) return void 0;
+    const marker = el12(
       "span",
       "count mismatch",
-      w.t("front.agg.mismatch", { recomputed: fmt5(mismatch.recomputed) })
+      w.t("front.agg.mismatch", { recomputed: fmt5(count2.recomputed) })
     );
     marker.dataset.countMismatch = field;
-    marker.dataset.stated = String(mismatch.stated);
-    marker.dataset.recomputed = String(mismatch.recomputed);
+    marker.dataset.stated = String(count2.drawn);
+    marker.dataset.recomputed = String(count2.recomputed);
     return marker;
   }
   function renderAggregate(result3, w) {
     const out = document.createDocumentFragment();
-    const stated = result3.statedCoverage;
+    const sealed = result3.statedCoverage;
+    const calibrationInForce = result3.claims.filter(
+      (c) => isCalibration(c) && !c.later
+    );
+    const population2 = fieldCount(
+      result3,
+      "evaluated_population",
+      sealed.evaluatedPopulation
+    );
+    const unknown = fieldCount(result3, "unknown_count", sealed.unknownCount);
+    const laterCount = fieldCount(
+      result3,
+      "not_yet_in_force",
+      sealed.notYetInForce ?? 0
+    );
+    const stated = {
+      evaluatedPopulation: population2.drawn,
+      excludedNotApplicable: sealed.excludedNotApplicable
+    };
     const requirements = new Set(
-      result3.claims.filter((claim) => !claim.later).map(
+      result3.claims.filter((claim) => !claim.later && !isCalibration(claim)).map(
         (claim) => JSON.stringify([claim.contractRef, claim.requirementRef])
       )
     ).size;
-    const line = el11("p", "agg-line");
-    const marked = (text2, field) => {
+    const line = el12("p", "agg-line");
+    const marked = (text2, field, figure) => {
       line.append(text2);
-      const marker = mismatchMarker(result3, field, w);
+      const marker = mismatchMarker(figure, field, w);
       if (marker !== void 0) line.append(" ", marker);
     };
     marked(
@@ -23366,7 +24225,8 @@ ${key}`);
           n: fmt5(requirements)
         })
       }),
-      "evaluated_population"
+      "evaluated_population",
+      population2
     );
     line.append(
       " \xB7 ",
@@ -23376,26 +24236,39 @@ ${key}`);
       " \xB7 "
     );
     marked(
-      w.p("front.agg.unknown", stated.unknownCount, {
-        n: fmt5(stated.unknownCount)
+      w.p("front.agg.unknown", unknown.drawn, {
+        n: fmt5(unknown.drawn)
       }),
-      "unknown_count"
+      "unknown_count",
+      unknown
     );
-    const later = stated.notYetInForce;
+    const later = sealed.notYetInForce;
     if (later !== void 0 || result3.countMismatches.some((m) => m.field === "not_yet_in_force")) {
       line.append(" \xB7 ");
       marked(
-        w.p("front.agg.later", later ?? 0, { n: fmt5(later ?? 0) }),
-        "not_yet_in_force"
+        w.p("front.agg.later", laterCount.drawn, { n: fmt5(laterCount.drawn) }),
+        "not_yet_in_force",
+        laterCount
       );
-      line.dataset.notYetInForce = String(later ?? 0);
+      line.dataset.notYetInForce = String(laterCount.drawn);
     }
     line.dataset.evaluated = String(stated.evaluatedPopulation);
     line.dataset.requirements = String(requirements);
     line.dataset.excluded = String(stated.excludedNotApplicable);
-    line.dataset.unknown = String(stated.unknownCount);
+    line.dataset.unknown = String(unknown.drawn);
     out.append(line);
-    const buckets = el11("div", "agg-buckets");
+    if (calibrationInForce.length > 0) {
+      const calibration = el12(
+        "p",
+        "agg-calibration",
+        w.p("front.agg.calibration", calibrationInForce.length, {
+          n: fmt5(calibrationInForce.length)
+        })
+      );
+      calibration.dataset.calibration = String(calibrationInForce.length);
+      out.append(calibration);
+    }
+    const buckets = el12("div", "agg-buckets");
     const of = w.t("front.agg.of", { n: fmt5(stated.evaluatedPopulation) });
     const entries = [
       ["met", result3.buckets.met, "buckets.met"],
@@ -23405,19 +24278,20 @@ ${key}`);
     ];
     for (const [verdict2, ids, field] of entries) {
       if (ids === void 0) continue;
-      const box = el11("div", `agg-bucket ${verdict2}`);
+      const figure = fieldCount(result3, field, ids.length, ids);
+      const box = el12("div", `agg-bucket ${verdict2}`);
       box.dataset.bucket = verdict2;
-      box.dataset.count = String(ids.length);
+      box.dataset.count = String(figure.drawn);
       box.dataset.of = String(stated.evaluatedPopulation);
-      box.append(el11("b", "", fmt5(ids.length)));
-      const caption = el11("div", "agg-cap");
+      box.append(el12("b", "", fmt5(figure.drawn)));
+      const caption = el12("div", "agg-cap");
       caption.append(
-        tagSource(el11("span", "", w.t(`front.agg.bucket.${verdict2}`)), "pack"),
+        tagSource(el12("span", "", w.t(`front.agg.bucket.${verdict2}`)), "pack"),
         document.createTextNode(" \xB7 "),
-        el11("span", "agg-of", of)
+        el12("span", "agg-of", of)
       );
       box.append(caption);
-      const marker = mismatchMarker(result3, field, w);
+      const marker = mismatchMarker(figure, field, w);
       if (marker !== void 0) box.append(marker);
       buckets.append(box);
     }
@@ -23425,7 +24299,7 @@ ${key}`);
     const dated = result3.claims.some((claim) => claim.appliesFrom !== void 0);
     const switched = result3.buckets.outOfScope !== void 0;
     if (dated || switched) {
-      const copied = el11("p", "agg-note");
+      const copied = el12("p", "agg-note");
       if (dated) {
         const date = utcDateOf(result3.generatedAt) ?? result3.generatedAt;
         copied.append(w.t("front.agg.as-of", { date }), " ");
@@ -23468,15 +24342,15 @@ ${key}`);
       facts.push(w.t("front.core.pin", { digest: shortDigest(model.pins[0]) }));
     else if (model.pins.length > 1)
       facts.push(w.t("front.core.pins", { n: fmt5(model.pins.length) }));
-    const block = el11("div", "core-id");
+    const block = el12("div", "core-id");
     block.dataset.section = "core-identity";
     const top = tagSource(
-      el11("p", "agg-note core-kicker", kicker.join(" \xB7 ")),
+      el12("p", "agg-note core-kicker", kicker.join(" \xB7 ")),
       "core"
     );
     top.dataset.coreKicker = "";
     const rest = tagSource(
-      el11("p", "agg-note core-facts", facts.join(" \xB7 ")),
+      el12("p", "agg-note core-facts", facts.join(" \xB7 ")),
       "core"
     );
     rest.dataset.coreFacts = "";
@@ -23484,23 +24358,23 @@ ${key}`);
     return block;
   }
   async function coreStripModel(result3, words) {
-    const tally = await tallyJudges(result3.records, result3.claims);
+    const tally2 = await tallyJudges(result3.records, result3.claims);
     return {
       result: result3,
       words,
-      mock: judgedByMock(tally),
-      pins: tally.pins.map((pin) => pin.digest)
+      mock: judgedByMock(tally2),
+      pins: tally2.pins.map((pin) => pin.digest)
     };
   }
   function renderCoreStrip(model) {
-    const strip = el11("section", "cv-strip");
+    const strip = el12("section", "cv-strip");
     strip.setAttribute(CORE_STRIP_ATTRIBUTE, "");
     strip.dataset.section = "aggregate";
     const style = document.createElement("style");
     style.textContent = CORE_STRIP_CSS;
     strip.append(style);
     if (model.mock) {
-      const mark = el11("p", "mockmark", model.words.t("front.mock"));
+      const mark = el12("p", "mockmark", model.words.t("front.mock"));
       mark.dataset.section = "mock-judge";
       strip.append(mark);
     }
@@ -25196,11 +26070,11 @@ ${pad.repeat(depth)}`;
       host.append(list2);
     }
   }
-  function shownVerdict(claim) {
+  function shownVerdict2(claim) {
     return claim.failed ? "failed" : claim.support === "supported" ? claim.verdict : "unsupported";
   }
   function appendVerdict(parent2, claim) {
-    const shown2 = shownVerdict(claim);
+    const shown2 = shownVerdict2(claim);
     const cell2 = element6(
       parent2.tagName === "TR" ? "td" : "dd",
       claim.later ? `${shown2} (readiness)` : shown2
@@ -25381,7 +26255,7 @@ ${pad.repeat(depth)}`;
       for (const claim of later) {
         const item = element6(
           "li",
-          `${claim.id} \xB7 applies from ${claim.appliesFrom ?? ""} \xB7 readiness: ${shownVerdict(claim)}`
+          `${claim.id} \xB7 applies from ${claim.appliesFrom ?? ""} \xB7 readiness: ${shownVerdict2(claim)}`
         );
         item.dataset.claimRef = claim.id;
         if (claim.failed) item.className = "claim-failed";
@@ -25556,7 +26430,7 @@ ${pad.repeat(depth)}`;
     id: "capsuleviewer.contract-report/v0"
   });
   function contractReportGroupingOf(bundle) {
-    return contractReportInput(bundle)?.grouping;
+    return contractReportInput(bundle)?.grouping ?? "generic";
   }
   function contractReportInput(bundle) {
     const options = readOutcomeReportPresentation(bundle);
@@ -25598,9 +26472,12 @@ ${pad.repeat(depth)}`;
         CONTRACT_REPORT_MANIFEST.id
       );
       const supported = contractReportInput(context.bundle);
-      const input = supported !== void 0 && claimsFitCard(result3, supported.grouping) ? supported : void 0;
+      const input = supported === void 0 ? { grouping: "generic" } : claimsFitCard(result3, supported.grouping) ? supported : void 0;
       if (typeof context.bundle === "object" && context.bundle !== null)
-        contractReportDrawn.set(context.bundle, input ?? null);
+        contractReportDrawn.set(
+          context.bundle,
+          input === void 0 || input.grouping === "generic" ? null : input
+        );
       return {
         result: result3,
         ...input === void 0 ? {} : { input },
@@ -25619,9 +26496,10 @@ ${pad.repeat(depth)}`;
         renderResultPage(model.result, host.L1);
         return;
       }
-      host.setChromeClass(
-        model.input.grouping === "lines" ? OUTCOME_CHROME : COMPLIANCE_CHROME
-      );
+      if (model.input.grouping !== "generic")
+        host.setChromeClass(
+          model.input.grouping === "lines" ? OUTCOME_CHROME : COMPLIANCE_CHROME
+        );
       await renderContractReport(
         model.result,
         model.input,
@@ -26107,7 +26985,7 @@ ${pad.repeat(depth)}`;
     const charted = options.charts !== void 0 && options.charts.length > 0;
     if (verified) {
       const result3 = await resultRootOf(context);
-      const grouping = contractReportGroupingOf(bundle) ?? "lines";
+      const grouping = contractReportGroupingOf(bundle);
       const words = result3 === void 0 && !charted ? void 0 : await contractReportWords(grouping, options.wording, {
         singleContract: result3 !== void 0 && citesOneContract(result3)
       });
@@ -26412,7 +27290,7 @@ ${pad.repeat(depth)}`;
       contract,
       verified ? {
         words: await contractReportWords(
-          contractReportGroupingOf(bundle) ?? "lines",
+          contractReportGroupingOf(bundle),
           options.wording
         ),
         voice: options.voice ?? "shared"
