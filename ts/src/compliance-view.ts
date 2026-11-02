@@ -200,6 +200,18 @@ function obligationName(
     : [article, element("span", ` · ${obligation.title}`)];
 }
 
+/**
+ * True when the pack words every obligation title on the page. Only then do
+ * the notes say the titles are the pack's; if even one falls back to the
+ * producer's title, the base notes stand (they list titles as producer text).
+ */
+function packTitlesOnPage(model: ComplianceModel, w: Words): boolean {
+  return (
+    model.obligations.length > 0 &&
+    model.obligations.every((o) => w.group(o.key) !== undefined)
+  );
+}
+
 /** Each test's short name, by its criterion id, as producer text when it is the producer's label. */
 function testNames(
   model: ComplianceModel,
@@ -860,7 +872,15 @@ function renderSummary(
   section.append(table);
   const notes = el("aside", "footnotes");
   notes.dataset.section = "footnotes";
-  const basis = el("p", "", w.t("groups.summary.basis"));
+  const basis = el(
+    "p",
+    "",
+    w.t(
+      packTitlesOnPage(model, w)
+        ? "groups.summary.basis.pack-titles"
+        : "groups.summary.basis",
+    ),
+  );
   basis.dataset.basis = "terms";
   notes.append(basis);
   section.append(notes);
@@ -1281,7 +1301,13 @@ function renderObligationDetails(
       el(
         "p",
         "na",
-        w.t(obligation.mapped ? "groups.od.mapped" : "groups.od.unmapped"),
+        w.t(
+          obligation.mapped
+            ? packTitlesOnPage(model, w)
+              ? "groups.od.mapped.pack-titles"
+              : "groups.od.mapped"
+            : "groups.od.unmapped",
+        ),
       ),
     );
     if (obligation.judgedTerms.length > 0) {
