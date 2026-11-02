@@ -457,6 +457,11 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "groups.rtier.informational.title",
     "groups.rtier.unstated.title",
   ],
+  [
+    "generic.rtier.must_have.title",
+    "generic.rtier.informational.title",
+    "generic.rtier.unstated.title",
+  ],
 ];
 
 /**
@@ -493,6 +498,8 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "lines.verdict.met": "clean",
   "groups.verdict.met": "clean",
   "generic.verdict.met": "clean",
+  "generic.later.title": "later",
+  "generic.later.readiness": "later",
   "lines.pf.verdict.met": "clean",
   "lines.line.resolved": "clean",
   "lines.status.resolved": "clean",
@@ -1410,7 +1417,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "0448c4e5d6fa4b59cccdc5ed98b089946d9b217a76042dec222c5bd074ce4b45",
   groups: "a63992e7e69f6c17c52b7c9003e5e2148ed53ec11c882cdc3888414093544da1",
-  generic: "6c1e8f1dc6928319e41a217ae8e2cb6e780aee95f313ca68088f0b01adb57d75",
+  generic: "32a553ac0706865599cfb4a3d90aa1a6cd2b658b5fb0445d248b37fbd45c1ae3",
 });
 
 export interface Words {

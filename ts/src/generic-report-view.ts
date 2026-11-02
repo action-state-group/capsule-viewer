@@ -134,7 +134,7 @@ function verdictPill(verdict: string, w: Words): HTMLElement {
 }
 
 /** The row's tally: its claims counted by shown verdict, each with its denominator. */
-function tally(row: Row, w: Words): HTMLElement {
+function tally(row: Row, w: Words, later: boolean): HTMLElement {
   const counts = new Map<string, number>();
   for (const claim of row.claims) {
     const verdict = shownVerdict(claim);
@@ -144,6 +144,9 @@ function tally(row: Row, w: Words): HTMLElement {
   for (const [verdict, n] of counts) {
     const part = el("span", "");
     part.dataset.tally = verdict;
+    // A later claim's verdict is readiness only (ER section 4.3): its
+    // tally says so, so a later not_met never reads as a violation.
+    if (later) part.append(w.t("generic.later.readiness"), " ");
     part.append(verdictPill(verdict, w), " ");
     part.append(
       w.t("generic.tally", {
@@ -193,14 +196,26 @@ function claimItem(claim: ResultClaim, w: Words): HTMLElement {
   return item;
 }
 
-function rowItem(row: Row, w: Words, later: boolean): HTMLElement {
+function rowItem(
+  row: Row,
+  w: Words,
+  later: boolean,
+  tierOf?: TierOf,
+): HTMLElement {
   const label = w.row(row.requirementRef, "label");
   const name = el("span", "rname");
   if (label !== undefined)
     name.append(tagSource(el("span", "", label), "pack"));
   else name.append(tagSource(el("code", "", row.requirementRef), "producer"));
   const summary = el("span", "");
-  summary.append(name, tally(row, w));
+  summary.append(name);
+  const tier = tierOf?.(row.contractRef, row.requirementRef);
+  if (tier !== undefined) {
+    const chip = el("span", "rtier", w.t(`requirement_tier.${tier}`));
+    chip.dataset.requirementTier = tier;
+    summary.append(" ", chip);
+  }
+  summary.append(tally(row, w, later));
   const toggle = levelToggle(
     1,
     summary,
@@ -214,15 +229,12 @@ function rowItem(row: Row, w: Words, later: boolean): HTMLElement {
       const note = w.row(row.requirementRef, "not_evaluable");
       if (undecided && note !== undefined) body.append(el("p", "rnote", note));
       if (later)
-        for (const claim of row.claims)
-          if (claim.appliesFrom !== undefined)
-            body.append(
-              el(
-                "p",
-                "rnote",
-                w.t("generic.later.note", { date: claim.appliesFrom }),
-              ),
-            );
+        for (const date of new Set(
+          row.claims.flatMap((claim) =>
+            claim.appliesFrom === undefined ? [] : [claim.appliesFrom],
+          ),
+        ))
+          body.append(el("p", "rnote", w.t("generic.later.note", { date })));
       const list = el("ul", "claims");
       for (const claim of row.claims) list.append(claimItem(claim, w));
       body.append(el("h3", "", w.t("generic.claims.h")), list);
@@ -240,6 +252,7 @@ function groupedRows(
   rows: readonly Row[],
   w: Words,
   later: boolean,
+  tierOf?: TierOf,
 ): HTMLElement {
   const box = el("div", "groups");
   const order: (string | undefined)[] = [];
@@ -259,12 +272,25 @@ function groupedRows(
     if (group !== undefined) {
       part.dataset.group = group;
       const title = w.group(group);
-      part.append(el("h3", "", title ?? group));
+      const heading = el("h3", "");
+      heading.append(
+        title !== undefined
+          ? tagSource(el("span", "", title), "pack")
+          : tagSource(el("span", "", group), "producer"),
+      );
+      part.append(heading);
     }
-    for (const row of byGroup.get(group)!) part.append(rowItem(row, w, later));
+    for (const row of byGroup.get(group)!)
+      part.append(rowItem(row, w, later, tierOf));
     box.append(part);
   }
   return box;
+}
+
+function contractHeading(contract: string, w: Words): HTMLElement {
+  const heading = el("h2", "", w.t("generic.contract.h"));
+  heading.append(" ", tagSource(el("code", "", contract), "producer"));
+  return heading;
 }
 
 /** Rows by contract first, in order of first appearance (module spec section 2: several contracts). */
@@ -272,19 +298,21 @@ function byContract(
   rows: readonly Row[],
   w: Words,
   later: boolean,
+  tierOf?: TierOf,
 ): HTMLElement {
   const contracts = [...new Set(rows.map((row) => row.contractRef))];
-  if (contracts.length <= 1) return groupedRows(rows, w, later);
+  if (contracts.length <= 1) return groupedRows(rows, w, later, tierOf);
   const box = el("div", "contracts");
   for (const contract of contracts) {
     const part = el("div", "contract");
     part.dataset.contract = contract;
     part.append(
-      el("h2", "", w.t("generic.contract.h", { contract })),
+      contractHeading(contract, w),
       groupedRows(
         rows.filter((row) => row.contractRef === contract),
         w,
         later,
+        tierOf,
       ),
     );
     box.append(part);
@@ -359,7 +387,7 @@ export async function drawGeneric(
           }),
         ),
         el("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
-        byContract(inTier, w, false),
+        byContract(inTier, w, false, tierOf),
       );
       section.append(part);
     }
@@ -375,7 +403,7 @@ export async function drawGeneric(
         "",
         w.t("generic.later.title", { n: later.length.toLocaleString() }),
       ),
-      byContract(laterRows, w, true),
+      byContract(laterRows, w, true, tierOf),
     );
     section.append(part);
   }

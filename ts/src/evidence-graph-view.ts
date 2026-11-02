@@ -2318,7 +2318,7 @@ interface ContractReportModel {
 /** The grouping the contract-report module draws for `bundle`: the card its data supports, else `generic`. */
 export function contractReportGroupingOf(
   bundle: unknown,
-): ContractReportInput["grouping"] | undefined {
+): ContractReportInput["grouping"] {
   return contractReportInput(bundle)?.grouping ?? "generic";
 }
 
@@ -3340,7 +3340,7 @@ async function renderVerifiedContext(
   const charted = options.charts !== undefined && options.charts.length > 0;
   if (verified) {
     const result = await resultRootOf(context);
-    const grouping = contractReportGroupingOf(bundle) ?? "lines";
+    const grouping = contractReportGroupingOf(bundle);
     const words =
       result === undefined && !charted
         ? undefined
@@ -3795,7 +3795,7 @@ async function renderVerifiedContext(
     verified
       ? {
           words: await contractReportWords(
-            contractReportGroupingOf(bundle) ?? "lines",
+            contractReportGroupingOf(bundle),
             options.wording,
           ),
           voice: options.voice ?? "shared",

@@ -59,12 +59,14 @@ async function draw(
   bundle: Obj,
   wording?: { pack: string; sha256: string },
   depth: "L0" | "L1" | "L2" = "L2",
+  contract?: { text: string; sha256: string },
 ): Promise<HTMLElement> {
   const { bundle: sealed } = await sealEvidenceBundle(bundle);
   const root = document.createElement("main");
   await renderEvidenceGraph(sealed, root, undefined, {
     ...(wording === undefined ? {} : { wording }),
     depth,
+    ...(contract === undefined ? {} : { contract }),
   });
   return root;
 }
@@ -220,6 +222,13 @@ it("a claim not yet in force is in a section of its own, readiness only, and in 
   );
   const later = root.querySelector('[data-section="not-yet-in-force"]')!;
   expect(later.querySelector('details[data-row="req-3"]')).not.toBeNull();
+  // its tally says readiness, so a later not_met never reads as a violation
+  expect(later.querySelector("[data-tally]")!.textContent).toContain(
+    "readiness",
+  );
+  expect(
+    root.querySelector('[data-section="rows"] [data-tally]')!.textContent,
+  ).not.toContain("readiness");
   expect(root.querySelector("[data-counts]")!.textContent).toBe(
     "2 claims · 2 requirements",
   );
@@ -235,4 +244,63 @@ it("the generic default pack checks against itself and hashes to the digest the 
   expect(createHash("sha256").update(bytes).digest("hex")).toBe(
     DEFAULT_PACK_SHA256.generic,
   );
+});
+
+it("with a contract, rows are drawn in tier sections with their tier, informational rows leave the counts, and the page says so", async () => {
+  const text = JSON.stringify({
+    id: "ec:airline-week:2026-09-14",
+    version: "1",
+    requirements: [
+      {
+        id: "req-1",
+        profile: "obligation",
+        statement: "One",
+        tier: "must_have",
+        mode: "judged",
+      },
+      {
+        id: "req-2",
+        profile: "obligation",
+        statement: "Two",
+        tier: "informational",
+        mode: "judged",
+      },
+    ],
+  });
+  const root = await draw(source(), undefined, "L2", {
+    text,
+    sha256: createHash("sha256").update(text).digest("hex"),
+  });
+  expect(
+    [...root.querySelectorAll<HTMLElement>("[data-tier-section]")].map(
+      (s) => s.dataset.tierSection,
+    ),
+  ).toEqual(["must_have", "informational", "unstated"]);
+  expect(rowOf(root, "req-2").textContent).toContain("Informational");
+  expect(rowOf(root, "req-3").dataset.row).toBe("req-3");
+  expect(
+    rowOf(root, "req-1").querySelector<HTMLElement>("[data-requirement-tier]")!
+      .dataset.requirementTier,
+  ).toBe("must_have");
+  // the informational requirement is out of the derived counts
+  expect(root.querySelector("[data-counts]")!.textContent).toBe(
+    "2 claims · 2 requirements",
+  );
+  expect(
+    root.querySelector('[data-sealed-counts="informational"]'),
+  ).not.toBeNull();
+});
+
+it("a pack cannot swap the tier-section titles or retitle the not-yet-in-force section as in force", () => {
+  const problems = (entries: Record<string, string>) =>
+    wordingProblems(
+      { id: "test/pack@1", locale: "en", entries },
+      DEFAULT_PACKS.generic,
+    );
+  expect(
+    problems({
+      "generic.rtier.informational.title": "Must-have requirements · {n}",
+    }),
+  ).not.toEqual([]);
+  expect(problems({ "generic.later.title": "met" })).not.toEqual([]);
 });
