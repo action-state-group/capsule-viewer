@@ -956,6 +956,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.ob.ok.found",
   "groups.ob.ok.unverified",
   "groups.summary.basis",
+  "groups.summary.basis.pack-titles",
   "groups.summary.lede",
   "groups.pf.case-record.from-claims",
   "groups.pf.no-claim",
@@ -964,6 +965,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.pin.none",
   "groups.pin.differs",
   "groups.od.mapped",
+  "groups.od.mapped.pack-titles",
   "groups.od.unmapped",
   "groups.od.wording.sealed",
   "groups.od.wording.mixed",
@@ -1365,7 +1367,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
   lines: "0448c4e5d6fa4b59cccdc5ed98b089946d9b217a76042dec222c5bd074ce4b45",
-  groups: "90ded4f81aed5f5335cd85d71a930f6af31571d19eeb07e50f710d415420a768",
+  groups: "a63992e7e69f6c17c52b7c9003e5e2148ed53ec11c882cdc3888414093544da1",
 });
 
 export interface Words {

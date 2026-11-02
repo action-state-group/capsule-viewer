@@ -1,0 +1,410 @@
+<section class="cv-strip" data-core-strip="" data-section="aggregate"><style>
+.cv-strip{--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;position:relative;max-width:1080px;margin:0 auto 16px;padding:14px 16px 14px 34px;border:1px solid var(--line);border-radius:10px;background:#FAF8F4;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cv-strip:before{content:"\25A0";content:"\25A0" / "";position:absolute;left:13px;top:16px;font-size:12px;line-height:1;color:#8A93A0}
+.cv-strip .agg-note[data-src="core"],.cv-strip [data-src="core"]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
+.cv-strip .mockmark{display:inline-block;margin:0 0 10px;padding:3px 10px;border:1px solid #F0D7A8;background:var(--gold-l);color:#8A5A0B;border-radius:8px;font-weight:600;font-size:13px;line-height:1.45}
+.cv-strip .agg-line{font-size:14px;margin:0 0 12px}
+.cv-strip .agg-buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.cv-strip .agg-bucket{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff}
+.cv-strip .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.cv-strip .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
+.cv-strip .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
+.cv-strip .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
+.cv-strip .agg-bucket.met b{color:var(--ok)}
+.cv-strip .agg-bucket.not_met b{color:var(--bad)}
+.cv-strip .agg-bucket.not_evaluable b{color:#5F6672}
+@media (max-width:640px){.cv-strip .agg-buckets{grid-template-columns:minmax(0,1fr)}.cv-strip .agg-bucket{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.cv-strip .agg-bucket b{font-size:22px}}
+@media print{.cv-strip{break-inside:avoid}}
+</style><div class="core-id" data-section="core-identity"><p class="agg-note core-kicker" data-src="core" data-core-kicker="">CORE · tau2-airline-outcomes/v1 v1 · generated 2026-09-23T23:59:59Z</p><p class="agg-note core-facts" data-src="core" data-core-facts="">Result 3e92…8fe5 · judge pin d1eb…5b96</p></div><p class="agg-line" data-evaluated="36" data-requirements="9" data-excluded="0" data-unknown="0">36 evaluations of 9 requirements · 0 excluded as not applicable · 0 evaluations with an unknown result</p><div class="agg-buckets"><div class="agg-bucket met" data-bucket="met" data-count="14" data-of="36"><b>14</b><div class="agg-cap"><span data-src="pack">Met</span> · <span class="agg-of">of 36 evaluations</span></div></div><div class="agg-bucket not_met" data-bucket="not_met" data-count="7" data-of="36"><b>7</b><div class="agg-cap"><span data-src="pack">Not met</span> · <span class="agg-of">of 36 evaluations</span></div></div><div class="agg-bucket not_evaluable" data-bucket="not_evaluable" data-count="15" data-of="36"><b>15</b><div class="agg-cap"><span data-src="pack">Could not decide</span> · <span class="agg-of">of 36 evaluations</span></div></div></div></section>
+<section class="oi" data-page="outcome-report" data-level="L0" data-levels="2"><style>
+.oi{--navy:#232F42;--gold:#E8A33D;--gold-l:#FBEFD9;--cream:#F6F2EA;--line:#E3DED3;--slate:#6B7482;--ink:#1F2733;--ok:#2E7D5B;--ok-l:#E3F1EA;--bad:#B5462F;--bad-l:#F8E6E1;--person:#5B4BA0;--person-l:#ECE8F7;--r:14px;
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#EEF0F3;display:block}
+.oi *{box-sizing:border-box}
+.oi h1,.oi h2,.oi h3{font-family:Georgia,"Iowan Old Style",Cambria,serif;color:var(--navy);margin:0}
+.oi a{color:var(--navy)}
+.oi .sheet{background:#fff;max-width:1080px;margin:26px auto;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);position:relative;overflow:hidden}
+.oi .sheet .pad{padding:64px 72px 56px}
+.oi .ih-row{display:flex;justify-content:space-between;align-items:flex-start;gap:40px;margin-bottom:48px}
+.oi .ih-title{text-align:right}
+.oi .ih-title .inv-title{font-size:28px}
+.oi .inv-title{font-family:Georgia,serif;font-size:30px;color:var(--navy);margin:0}
+.oi .inv-sub{color:var(--slate);font-size:14px;margin-top:4px}
+.oi .party .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin-bottom:6px;font-weight:700;color:var(--navy)}
+.oi .party .v{font-weight:600;color:var(--navy);font-size:16px}
+.oi .party .d{font-size:14px;color:var(--slate);line-height:1.7;margin-top:4px}
+.oi .meta{width:320px;flex:none;font-size:14px}
+.oi .meta div{display:grid;grid-template-columns:130px 1fr}
+.oi .meta span:first-child{color:var(--slate)}
+.oi .meta span:last-child{text-align:right;word-break:break-all;min-width:0}
+.oi .meta code{font-size:12.5px}
+.oi table.lines{width:100%;border-collapse:collapse;margin-top:40px;font-size:14.5px}
+.oi table.lines th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);border-bottom:2px solid var(--navy);padding:8px 10px}
+.oi table.lines td{border-bottom:1px solid var(--line);padding:16px 10px;vertical-align:top}
+.oi table.lines td.n,.oi table.lines th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.oi table.lines td.n{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:24px;font-weight:700;line-height:1.1;color:var(--navy)}
+.oi table.lines .desc b{color:var(--navy)}
+.oi table.lines .desc small{display:block;color:var(--slate);font-size:12.5px}
+.oi table.lines .src{font-size:11.5px;color:var(--slate);white-space:normal}
+.oi .notes{font-size:13px;color:var(--slate);margin-top:44px;max-width:640px}
+.oi .notes p{margin:0 0 8px;font-size:14px;color:var(--ink)}
+.oi .notes .nh{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-bottom:6px}
+.oi .tamper-note{margin-top:24px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#FAF8F4;font-size:13.5px;color:var(--slate)}
+.oi .sec{background:#fff;max-width:1080px;margin:0 auto 22px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:30px 42px}
+.oi .sec h2{font-size:22px}
+.oi .sec .lede{color:var(--slate);margin:6px 0 16px}
+.oi .cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.oi .day{border:1px solid var(--line);border-radius:10px;padding:8px 9px;min-height:84px;background:#fff;position:relative}
+.oi .day .dn{font-size:12px;color:var(--slate)}
+.oi .day .v{font-weight:700;font-size:17px;color:var(--navy);font-variant-numeric:tabular-nums}
+.oi .day .v small{font-weight:400;color:var(--slate);font-size:12px}
+.oi .day .amt{font-size:11px;color:var(--slate);font-variant-numeric:tabular-nums}
+.oi .mini{height:6px;border-radius:99px;background:var(--bad-l);overflow:hidden;margin-top:6px}
+.oi .mini i{display:block;height:100%;background:var(--ok)}
+.oi .day .sealed{font-size:11px;color:var(--slate);margin-top:6px}
+.oi .day .src-says{display:inline-block;font-size:10.5px;font-weight:700;color:var(--navy);background:var(--gold-l);border:1px solid var(--gold);border-radius:999px;padding:0 6px;margin-top:2px}
+.oi .day .tz{font-size:11px;color:var(--bad);margin-top:2px}
+.oi p.date-note{margin:0}
+.oi .flag{position:absolute;top:7px;right:8px;font-size:11px;color:var(--gold)}
+.oi .flag:before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;background:var(--gold);transform:rotate(45deg);vertical-align:1px}
+.oi .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--slate);margin-top:12px}
+.oi .legend span i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.oi .hc-top{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.oi .hc-top div{padding:12px 14px;border-right:1px solid var(--line)}
+.oi .hc-top div:last-child{border-right:0}
+.oi .hc-top b{display:block;font-size:22px;color:var(--navy);font-variant-numeric:tabular-nums}
+.oi .hc-top span{font-size:12.5px;color:var(--slate)}
+.oi table.hct{width:100%;border-collapse:collapse;font-size:14px}
+.oi table.hct th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);border-bottom:2px solid var(--navy);padding:7px 10px}
+.oi table.hct td{padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.oi table.hct .n{text-align:right}
+.oi .track{height:14px;background:var(--bad-l);border-radius:99px;overflow:hidden}
+.oi .track i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.oi h3{font-size:19px;margin:26px 0 12px}
+.oi .pack{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.oi .pk{padding:10px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.oi .pk:nth-child(3n){border-right:0}
+.oi .pk .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
+.oi .pk .v{color:var(--navy);font-weight:600;font-size:14px}
+.oi .outcome{border:2px solid var(--navy);border-radius:var(--r);padding:18px 20px;margin-bottom:14px;display:flex;gap:16px;align-items:center}
+.oi .outcome .t{font-size:13px;color:var(--slate);text-transform:uppercase;letter-spacing:.06em}
+.oi .outcome .v{font-family:Georgia,Cambria,serif;font-size:22px;color:var(--navy)}
+.oi .checks{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.oi .check{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;background:#fff}
+.oi .check .ic{width:34px;height:34px;border-radius:10px;background:var(--gold-l);color:var(--navy);display:grid;place-items:center;margin-bottom:8px}
+.oi .outcome .oic{width:40px;height:40px;flex:none;border-radius:10px;background:var(--gold-l);color:var(--navy);display:grid;place-items:center}
+.oi svg{display:block}
+.oi .check .q{font-weight:700;color:var(--navy);font-size:17px}
+.oi .check .d{color:var(--slate);font-size:14px;margin-top:4px}
+.oi ul.subs{list-style:none;padding:0;margin:10px 0 0;border-top:1px solid var(--line)}
+.oi ul.subs li{padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.oi ul.subs li b{display:block;color:var(--navy);font-size:13px}
+.oi ul.subs li b:before{content:"";display:inline-block;width:5px;height:5px;margin-right:6px;border:1.5px solid var(--gold);border-radius:50%;vertical-align:2px}
+.oi ul.subs li span{color:var(--slate)}
+.oi .rule{margin-top:14px;font-size:14px;color:var(--slate)}
+.oi .rule b{color:var(--ink)}
+.oi .ran{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.oi .ran .it{background:var(--cream);border-radius:12px;padding:12px 14px}
+.oi .ran .k{font-size:13px;color:var(--slate)}
+.oi .ran .v{font-weight:600;color:var(--navy);word-break:break-word}
+.oi .ran .v code{font-size:13px}
+.oi .lock{margin-top:12px;font-size:14px;color:var(--slate)}
+.oi .tech{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;margin-top:12px;font-size:13px}
+.oi .tech .k{color:var(--slate)}
+.oi .tech .v{font-family:ui-monospace,Menlo,monospace;word-break:break-all;min-width:0}
+.oi .note{font-size:13px;color:var(--slate);margin-top:12px}
+.oi.oi-vp{padding:0 0 26px}
+.oi.oi-vp .sec{margin-bottom:0}
+.oi.oi-vp h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:22px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.oi.oi-vp h2 + dl{margin-top:14px}
+.oi.oi-vp dl{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;margin:0;font-size:13px}
+.oi.oi-vp dt{color:var(--slate)}
+.oi.oi-vp dd{margin:0;font-family:ui-monospace,Menlo,monospace;word-break:break-all;color:var(--navy)}
+.oi.oi-vp p{font-size:14px;margin:6px 0}
+.oi.oi-vp ul,.oi.oi-vp ol{margin:6px 0;padding-left:22px;font-size:14px}
+.oi.oi-vp li{padding:2px 0}
+.oi.oi-vp ol li strong{color:var(--navy)}
+.oi.oi-vp [data-check-status="pass"] span,.oi.oi-vp [data-check-status="passed"] span{color:var(--ok)}
+.oi.oi-vp details{margin-top:8px;font-size:13px}
+.oi.oi-vp summary{cursor:pointer;color:var(--navy);font-weight:600}
+.oi.oi-vp details ul{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all;max-height:420px;overflow:auto}
+.oi.oi-vp .seal-checkpointed{color:var(--ok)}
+.oi.oi-vp .seal-uncheckpointed,.oi.oi-vp .seal-membership_invalid{color:var(--bad)}
+.oi.oi-vp > .sec > p:last-child{margin-top:18px;padding:12px 14px;border-radius:10px;background:var(--cream);color:var(--slate)}
+.oi .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center}
+.oi .pill.ok{background:var(--ok-l);color:var(--ok)}
+.oi .pill.bad{background:var(--bad-l);color:var(--bad)}
+.oi .pill.na{background:#EEF0F3;color:var(--slate);border:1px dashed #BFC4CC}
+.oi .pill.ne{background:var(--gold-l);color:#8A5A12}
+.oi .tscroll{overflow-x:auto}
+.oi table.crit{width:100%;border-collapse:collapse;margin:0;font-size:12.5px}
+.oi table.lines table.crit th,.oi table.crit th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);border-bottom:1px solid var(--navy);padding:5px 8px}
+.oi table.lines table.crit td,.oi table.crit td{border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:top}
+.oi table.crit td.cn{width:30%}
+.oi table.crit td.cn b{display:block;color:var(--navy);font-size:13px}
+.oi table.crit td.cn small{display:block;color:var(--slate);font-size:11.5px}
+.oi small.wsrc{display:block;font-style:italic;color:var(--slate);font-size:11px;margin-top:2px}
+.oi .pnote{max-width:1080px;margin:26px auto 0;box-sizing:border-box;background:var(--gold-l);border:1px solid var(--gold);border-left:6px solid var(--gold);border-radius:6px;padding:18px 26px}
+.oi .pnote .pn-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);font-weight:700}
+.oi .pnote .pn-t{font-size:20px;color:var(--navy);margin:4px 0 8px}
+.oi .pnote .pn-l{margin:0;padding-left:20px;font-size:14.5px;line-height:1.55}
+.oi .pnote .pn-l li{margin:4px 0}
+.oi .pnote .pn-src{font-size:12px;color:var(--slate);margin:10px 0 0;font-style:italic}
+.oi span.edited{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--gold-l);border:1px solid var(--gold);color:var(--navy);font-size:10.5px;font-weight:700;letter-spacing:.03em;vertical-align:1px;white-space:nowrap}
+.oi p[data-wording-note]{font-size:12.5px;color:var(--slate);margin:10px 0}
+.oi table.crit td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.oi table.crit td.rat code{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--slate);word-break:break-word;white-space:normal}
+.oi ul.why{margin:0;padding-left:20px}
+.oi ul.why li{padding:2px 0}
+.oi dl.chk{display:grid;grid-template-columns:190px 1fr;gap:4px 12px;margin:0;font-size:12px}
+.oi dl.chk dt{color:var(--slate)}
+.oi dl.chk dd{margin:0;font-family:ui-monospace,Menlo,monospace;word-break:break-all;color:var(--navy)}
+.oi ol.turns{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px;max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;background:#FAF8F4}
+.oi li.turn{border-radius:10px;padding:6px 10px;max-width:88%;background:#fff;border:1px solid var(--line)}
+.oi li.turn.user{justify-self:end;background:var(--person-l);border-color:transparent}
+.oi li.turn.assistant{justify-self:start}
+.oi li.turn.tool{justify-self:center;max-width:96%;border-style:dashed}
+.oi li.turn .who{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
+.oi li.turn .say{white-space:pre-wrap;word-break:break-word}
+.oi li.turn pre{margin:4px 0 0;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto;color:var(--slate)}
+.oi li.turn pre.call{color:var(--navy);background:var(--gold-l);padding:3px 6px;border-radius:6px}
+.oi p.verdict-line{font-size:14.5px;color:var(--ink);margin:12px 0 4px;font-weight:600}
+.oi table.lines .desc small{margin-top:2px}
+.oi p.na-note{margin:0}
+.oi table.rules{width:100%;border-collapse:collapse;font-size:14px}
+.oi table.rules th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);border-bottom:2px solid var(--navy);padding:7px 10px}
+.oi table.rules th.n{text-align:right}
+.oi table.rules td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top}
+.oi table.rules td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:110px}
+.oi table.rules td.n.ok{color:var(--ok);font-weight:600}
+.oi table.rules td.n.bad{color:var(--bad);font-weight:700}
+.oi table.rules td.nr{text-align:right;color:var(--slate);font-style:italic}
+.oi table.rules tr.grp td{font-family:Georgia,Cambria,serif;color:var(--navy);font-size:16px;padding-top:18px;border-bottom:1px solid var(--navy)}
+.oi table.rules td.cn b{display:block;color:var(--navy)}
+.oi table.rules td.cn small{display:block;color:var(--slate);font-size:12px;max-width:620px}
+.oi .sec.rp{padding:18px 26px}
+.oi .rp-s{margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+.oi .rp-s h3{font-size:17px;margin:0 0 8px}
+.oi .rp .tamper-note{margin-top:18px}
+.oi table.crit td.mono{font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;color:var(--navy)}
+.oi table.crit td.rat .sealed{font-size:12.5px;color:var(--ink)}
+@media (max-width:820px){
+  .oi .ih-row{flex-direction:column;gap:16px}
+  .oi .ih-row .party:empty{display:none}
+  .oi .ih-title{text-align:left}
+  .oi .meta{width:100%}
+  .oi .sheet .pad,.oi .sec{padding:22px}
+  .oi .hc-top{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  .oi .checks,.oi .ran{grid-template-columns:1fr}
+  .oi .cal{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:4px}
+  .oi .day{min-height:64px;padding:6px 4px;min-width:0}
+  .oi .day .dn{font-size:11px}
+  .oi .day .v{font-size:14px}
+  .oi .tech,.oi.oi-vp dl,.oi dl.chk{grid-template-columns:1fr}
+}
+@media print{
+  .oi{background:#fff}
+  .oi .sheet,.oi .sec{box-shadow:none;margin:0 0 12px}
+}
+
+.oi details.lv{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px;padding:0}
+.oi details.lv > summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--navy)}
+.oi details.lv > summary::-webkit-details-marker{display:none}
+.oi details.lv > summary .tg{display:inline-block;width:1em;margin-right:6px;color:var(--reader,#9A5311);font-size:12px;line-height:1}
+.oi details.lv > summary .tg:before{content:"\25B8"}
+.oi details.lv[open] > summary .tg:before{content:"\25BE"}
+.oi details.lv[data-opened-by="view"] > summary .tg{color:var(--navy)}
+.oi .wh{display:inline-block;color:var(--bad,#B3261E);font-weight:600;font-size:12.5px}
+.oi .wh:before{content:"\25B8";content:"\25B8" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px}
+.oi .wref:before{content:"\25A0";content:"\25A0" / "";display:inline-block;width:1em;margin-right:6px;font-size:12px;color:#8A93A0}
+.oi details.lv1.line{border:0;background:transparent;margin-top:4px}
+.oi details.lv1.line > summary{padding:2px 0;font-size:13px}
+.oi details.lv1.line > .convs,.oi details.lv1.line > .why-missed{margin-top:8px}
+.oi tr.drill-row > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
+.oi details.cv-ev{display:block;margin-top:2px;font-weight:400;text-align:left}
+.oi details.cv-ev > summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--navy);white-space:nowrap}
+.oi details.cv-ev > .cv-ev-body{white-space:normal;margin:6px 0;padding:8px 10px;border:1px dashed #BFC4CC;border-radius:8px;background:#FAF8F4;font-size:12px;min-width:16em}
+.oi .cv-ev-k{margin:0 0 4px;color:var(--slate)}
+.oi ul.cv-ev-list{margin:0;padding-left:16px;display:grid;gap:2px}
+.oi ul.cv-ev-list code{font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all}
+.oi .cv-ev-label{white-space:normal;display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--slate);text-align:left}
+.oi .cv-ev-sides{display:grid;gap:10px;margin-top:8px}
+.oi .cv-side-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:10px}
+.oi .cv-side-producer i{color:var(--slate)}
+.oi .cv-side-payload{margin:4px 0;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-word}
+.oi details.lv2{background:#FAF8F4;border-style:dashed}
+.oi details.lv2 > summary{color:var(--slate);font-weight:600}
+.oi details.lv2 > .pf-b{padding:4px 14px 14px;font-size:12.5px}
+.oi details.lv2 > .sc-body{padding:6px 14px 14px;display:grid;gap:14px}
+.oi .sc-card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px}
+.oi .sc-t{margin:0 0 8px;font-size:14px;color:var(--navy)}
+.oi .sc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.oi .sc-happened{grid-column:1;grid-row:1 / span var(--span)}
+.oi .sc-criterion{grid-column:2;grid-row:var(--row)}
+.oi .sc-verdict{grid-column:3;grid-row:var(--row)}
+.oi .sc-name{font-weight:700;color:var(--navy);margin-bottom:4px}
+@media (max-width:820px){.oi .sc-grid{grid-template-columns:minmax(0,1fr)}.oi .sc-col{grid-column:1;grid-row:auto}}
+.oi .sc-h{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate)}
+.oi .sc-box{border:1px solid var(--line);border-radius:8px;background:#FAF8F4;padding:8px 10px;margin-bottom:8px}
+.oi .sc-v.ok{background:var(--ok-l)}
+.oi .sc-v.bad{background:var(--bad-l)}
+.oi .sc-v.ne{background:var(--gold-l)}
+.oi .sc-k{font-size:11.5px;font-weight:600;color:var(--slate);margin:4px 0 2px}
+.oi .sc-q{margin:0;font-style:italic;white-space:pre-wrap}
+.oi .sc-gap{margin:6px 0;font-size:12px;color:var(--slate)}
+.oi .sc-facts{margin:6px 0;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;color:var(--slate)}
+.oi .convs{display:grid;gap:12px}
+.oi .conv{border:1px solid var(--line);border-radius:10px;background:#fff}
+.oi .conv-h{display:grid;grid-template-columns:110px auto 1fr auto;gap:10px;align-items:center;padding:8px 12px;font-size:13.5px;background:#FAF8F4;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.oi .conv-h .cid{font-weight:700;color:var(--navy)}
+.oi .conv-h .cwhy{color:var(--slate)}
+.oi .conv-h .cmodel{color:var(--slate);font-family:ui-monospace,Menlo,monospace;font-size:11.5px;white-space:nowrap}
+.oi .conv > [data-body="pending"]{min-height:160px}
+.oi .conv-b{padding:4px 16px 16px;font-size:13.5px;font-weight:400;color:var(--ink)}
+.oi .conv-b h4{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:16px 0 6px}
+.oi .conv-b .small{font-size:12.5px;color:var(--slate);margin:6px 0}
+.oi .conv-b .muted{color:var(--slate)}
+.oi .why-missed h5{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:14px 0 6px}
+.oi .why-missed table{border-collapse:collapse;font-size:13px;margin:0 0 8px}
+.oi .why-missed td{padding:3px 12px 3px 0;border-bottom:1px solid var(--line)}
+.oi .why-missed td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--bad)}
+.oi .why-missed .rsn-h{margin:16px 0 6px;font-size:13.5px;font-weight:700;color:var(--navy)}
+.oi .chat .absent{margin:0;padding:10px 12px;border:1px dashed #BFC4CC;border-radius:10px;background:#FAF8F4;color:var(--slate);word-break:break-word;font-size:13px}
+.oi .chat .chat-k{font-size:12.5px;color:var(--slate);margin:4px 0 6px}
+.oi .chat ol.turns{list-style:none;margin:0;padding:10px;display:grid;gap:6px;max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#FAF8F4}
+.oi .chat li.turn{border-radius:10px;padding:6px 10px;max-width:86%;background:#fff;border:1px solid var(--line);font-size:13.5px}
+.oi .chat li.turn.user{justify-self:end;background:var(--person-l);border-color:transparent}
+.oi .chat li.turn.assistant{justify-self:start}
+.oi .chat li.turn.tool,.oi .chat li.turn.system{justify-self:center;max-width:96%;border-style:dashed;background:#fff}
+.oi .chat li.turn .who{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-bottom:2px}
+.oi .chat-body{padding:4px 12px 12px}
+.oi .chat-bar{display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px}
+.oi .chat-bar .chat-close{font-weight:600}
+.oi .chat-bar .chat-records{margin-left:auto}
+.oi a.chat-static:not([hidden]){display:inline-block;margin-top:8px;font-size:13.5px;font-weight:600}
+.oi .chat li.turn .say{white-space:pre-wrap;word-break:break-word}
+.oi .chat li.turn pre.say{margin:0;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;max-height:180px;overflow:auto;color:var(--slate)}
+.oi .chat li.turn.system .say{max-height:120px;overflow:auto;font-size:12px;color:var(--slate)}
+.oi .chat .call{margin-top:4px;font-size:12.5px;background:var(--gold-l);border-radius:6px;padding:3px 8px;word-break:break-word}
+.oi .chat .call .call-k{color:var(--slate)}
+.oi .chat .call b{font-family:ui-monospace,Menlo,monospace;color:var(--navy);font-size:12px}
+.oi .chat .call .call-a{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink);white-space:pre-wrap;word-break:break-all}
+.oi dl.pf{display:grid;grid-template-columns:200px 1fr;gap:4px 12px;margin:6px 0;font-size:12px}
+.oi dl.pf dt{color:var(--slate)}
+.oi dl.pf dd{margin:0;font-family:ui-monospace,Menlo,monospace;word-break:break-all;color:var(--navy)}
+.oi .pf-b p{margin:8px 0;color:var(--slate)}
+.oi .pf-b h5{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:14px 0 4px}
+.oi .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center}
+.oi .pill.ok{background:var(--ok-l);color:var(--ok)}
+.oi .pill.bad{background:var(--bad-l);color:var(--bad)}
+.oi .pill.na{background:#EEF0F3;color:var(--slate);border:1px dashed #BFC4CC}
+.oi .pill.ne{background:var(--gold-l);color:#8A5A12}
+.oi dl.prov{display:grid;grid-template-columns:110px 1fr;gap:4px 12px;margin:14px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12.5px}
+.oi dl.prov dt{color:var(--slate);font-weight:600}
+.oi dl.prov dd{margin:0;color:var(--ink);word-break:break-word}
+@media (max-width:760px){.oi dl.pf,.oi dl.prov{grid-template-columns:1fr}.oi .chat li.turn{max-width:100%}.oi .conv-h{grid-template-columns:1fr auto}.oi .conv-h .cmodel{display:none}}
+
+.oi .cv-legend{margin:0 auto 16px;max-width:1080px;font-size:12.5px;color:var(--slate)}
+.oi .cv-legend p{margin:4px 0}
+.oi .cv-legend-item{display:inline-block;margin-right:18px}
+.oi .cv-lg{display:inline-block;width:1em;margin-right:6px;font-size:12px}
+.oi .cv-lg.view{color:var(--navy)}
+.oi .cv-lg.reader{color:#9A5311}
+.oi .cv-lg.core{color:var(--slate)}
+.oi .cv-legend-note{text-align:right}
+.oi .cv-legend-lead{font-weight:700;margin-right:12px;color:var(--ink)}
+.oi .cv-src{display:inline-block;margin-right:6px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:600;line-height:1.6}
+.oi .cv-src[data-src="core"]{background:#E4EEF9;color:#1F5C99}
+.oi .cv-src[data-src="pack"]{background:#E1F0E6;color:#1E6B3A}
+.oi .cv-src[data-src="field"]{background:#FBEFD2;color:#8A5A0B}
+.oi .cv-src[data-src="payload"]{background:#F2EEE8;color:#4A4339;border:1px solid #D9D2C6}
+.oi .cv-src[data-src="producer"]{background:#ECE6F8;color:#5B3FA0}
+.oi [data-src="core"]:not(.cv-src){font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1F5C99}
+.oi [data-src="field"]:not(.cv-src){font-family:ui-monospace,Menlo,monospace;font-size:.92em;color:#1F5C99}
+.oi [data-src="payload"]:not(.cv-src){background:#F2EEE8;border:1px solid #E3DCCF;border-radius:6px;padding:2px 6px;color:var(--ink)}
+.oi [data-src="payload"][data-kind="tool-call"]:not(.cv-src){border-style:dashed;font-family:ui-monospace,Menlo,monospace}
+.oi [data-src="producer"]:not(.cv-src){font-style:italic}
+
+.oi{--inset:clamp(20px,5vw,56px)}
+.oi .front-card{background:#fff;max-width:1080px;margin:0 auto 16px;border:1px solid var(--line);border-radius:var(--r);padding:32px var(--inset)}
+.oi .prov-row{padding-bottom:16px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.oi .front-card > .prov-row:last-child{padding-bottom:0;margin-bottom:0;border-bottom:0}
+.oi .findings{border:1px solid var(--line);border-left:4px solid var(--gold,#E8A33D);background:#FFFBF2;border-radius:var(--r);padding:32px calc(var(--inset) - 3px);margin:0 0 16px}
+.oi .findings h2{font-size:19px;margin:4px 0 10px}
+.oi .plabel{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A0B}
+.oi .footnotes{margin:22px 0 0;font-size:12.5px;color:var(--slate);display:grid;gap:4px}
+.oi details.prov-fold{border:0;margin:0;background:transparent}
+.oi details.prov-fold > summary{padding:2px 0;font-weight:500;color:var(--ink)}
+.oi details.prov-fold .prov-brief{font-size:13.5px}
+.oi tr.x{cursor:pointer}
+.oi tr.x:hover > td{background:#FAF8F4}
+.oi tr.x-detail{display:none}
+.oi tr.x:has(details.rx[open]) + tr.x-detail{display:table-row}
+.oi tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
+.oi details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
+.oi details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}
+.oi table tr.x td details.rx > summary > *{display:inline}
+.oi table tr.x td details.rx > summary > .tg{display:inline-block}
+.oi details.rx > summary:focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:3px}
+.oi .rule-na{font-size:12.5px;color:var(--slate);margin:4px 0 8px}
+.oi .check h2{font-size:19px;margin:0 0 10px}
+.oi .anchors{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.oi .anchor{background:var(--cream);border-radius:8px;padding:8px 10px;font-size:12px;min-width:0}
+.oi .anchor .k{display:block;color:var(--slate);margin-bottom:2px}
+.oi .anchor code{font-size:11px;word-break:break-all}
+.oi .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:1.6}
+@media (max-width:640px){.oi .front-card{padding:24px var(--inset)}}
+
+.oi .sh{max-width:1080px;margin:16px auto;padding:22px 24px;background:#fff;border:1px solid var(--line);border-radius:var(--r)}
+.oi .sh-title{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:22px;margin:0 0 10px}
+.oi .sh-slice{background:var(--gold-l);border:1px solid #F0D7A8;border-radius:8px;padding:8px 12px;font-size:13px;margin:0 0 14px}
+.oi .sh-cust{margin:0 0 22px;padding:14px 0 0;border-top:1px solid var(--line)}
+.oi .sh-core{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--slate);margin:0 0 10px;overflow-wrap:anywhere}
+.oi .sh-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.oi .sh-tile{display:flex;flex-direction:column;gap:4px;background:var(--cream);border-radius:10px;padding:10px 14px}
+.oi .sh-tile b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.oi .sh-tile span{font-size:12.5px;color:var(--slate)}
+.oi .sh-tile.ok b{color:var(--ok)}.oi .sh-tile.bad b{color:var(--bad)}
+.oi .sh-head{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:18px;margin:16px 0 8px}
+.oi .sh-lede,.oi .sh-note,.oi .sh-gap{font-size:13px;color:var(--slate);margin:6px 0}
+.oi .sh-track{position:relative;height:34px;margin:8px 12px 4px;border-bottom:2px solid var(--line)}
+.oi .sh-dot{position:absolute;bottom:-7px;left:var(--at);width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2px solid var(--slate);background:#fff}
+.oi .sh-dot.ok{border-color:var(--ok)}.oi .sh-dot.bad{border-color:var(--bad)}
+.oi .sh-link{position:absolute;bottom:2px;left:var(--from);width:calc(var(--to) - var(--from));border-top:2px dashed var(--bad);text-align:center}
+.oi .sh-link em{position:relative;top:-20px;font-size:11px;font-style:normal;color:var(--slate);white-space:nowrap}
+.oi .sh-steps{margin:10px 0 0;padding-left:18px;font-size:13px}
+.oi .sh-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(110px,1.4fr) minmax(130px,2fr) minmax(70px,.8fr) minmax(60px,.7fr) minmax(80px,.8fr);gap:8px;align-items:center;font-size:13px}
+.oi .sh-thead{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);border-bottom:2px solid var(--ink);padding:6px 0}
+.oi .sh-conv{border-bottom:1px solid var(--line)}
+.oi .sh-conv>summary{padding:8px 0;cursor:pointer;list-style:none}
+.oi .sh-sq{display:inline-flex;gap:3px;flex-wrap:wrap}
+.oi .sq{display:inline-block;width:14px;height:14px;border:1px solid var(--slate);border-radius:3px;background:#fff}
+.oi .sq.ok{background:var(--ok-l);border-color:var(--ok)}.oi .sq.bad{background:var(--bad-l);border-color:var(--bad)}.oi .sq.ne,.oi .sq.na{background:#ECEAE4}
+.oi .sh-band{font-family:ui-monospace,Menlo,monospace}
+.oi .sh-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:4px 0 10px;padding:12px 14px;background:var(--cream);border:1px solid var(--line);border-radius:8px;font-size:13px}
+.oi .sh-h{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);margin:0 0 6px}
+.oi .sh-term{font-weight:600;margin:0}.oi .sh-sub{margin:0 0 6px;color:var(--slate)}
+.oi .sh-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--slate);margin:10px 0 0}
+.oi .sh-key{display:inline-flex;gap:6px;align-items:center}
+@media (max-width:640px){.oi .sh{padding:16px}.oi .sh-row{grid-template-columns:1fr 1fr}.oi .sh-thead{display:none}}
+
+.oi{background:transparent;display:flow-root}
+.oi .sheet{margin:16px auto;border:1px solid var(--line);border-radius:var(--r);box-shadow:none}
+.oi .sheet .pad{padding:40px var(--inset)}
+.oi .sec{margin:0 auto 16px;padding:32px var(--inset);border:1px solid var(--line);border-radius:var(--r);box-shadow:none}
+.oi .sec.rp{padding:32px var(--inset)}
+.oi .pnote{margin:0 auto 16px;padding:24px calc(var(--inset) - 5px);border-radius:var(--r)}
+@media (min-width:821px){.oi table.rules th{white-space:nowrap}}
+.oi table.rules tr.grp td{font-family:inherit;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--slate);padding-top:22px;border-bottom:1px solid var(--line)}
+@media (max-width:820px){.oi .sheet .pad,.oi .sec,.oi .sec.rp{padding:24px var(--inset)}}
+.oi table.rules tr.tier td{padding-top:28px;border-bottom:2px solid var(--navy)}
+.oi table.rules tr.tier b{display:block;font-family:Georgia,Cambria,serif;font-size:19px;color:var(--navy)}
+.oi table.rules tr.tier small{display:block;color:var(--slate);font-size:12.5px;margin-top:3px}
+.oi .rtier{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-top:3px;background:var(--cream);color:var(--slate)}
+.oi .rtier[data-requirement-tier="must_have"]{background:#E6EEF6;color:#2B5A85}
+.oi .rtier[data-requirement-tier="informational"]{background:#FBEFD9;color:#8A5A00}
+.oi .tier-note{margin:0 0 12px;font-size:13px;color:var(--slate)}
+</style><div class="cv-legend" data-legend="words-and-toggles"><p class="cv-legend-toggles" data-legend="toggles"><span class="cv-legend-item"><span class="cv-lg view" aria-hidden="true">▾</span>open, by the view's depth</span><span class="cv-legend-item"><span class="cv-lg reader" aria-hidden="true">▸</span>closed, the reader opens it</span><span class="cv-legend-item"><span class="cv-lg core" aria-hidden="true">■</span>no toggle, the core always draws it</span></p><p class="cv-legend-note">Every toggle's glyph sits at the left edge of the line it opens. Opening is a click; the page records nothing about it.</p><p class="cv-legend-sources" data-legend="sources"><span class="cv-legend-lead">Where every word comes from</span><span class="cv-legend-item"><span class="cv-src" data-src="core">core</span>the viewer's own words</span><span class="cv-legend-item"><span class="cv-src" data-src="pack">wording pack</span>the report's words</span><span class="cv-legend-item"><span class="cv-src" data-src="field">capsule field</span>a field as recorded, with its path</span><span class="cv-legend-item"><span class="cv-src" data-src="payload">payload</span>the record's content</span><span class="cv-legend-item"><span class="cv-src" data-src="producer">producer</span>quoted, with whose words</span><span class="cv-legend-item">Unmarked text is the viewer's or the report's own words.</span></p></div><div class="sheet"><div class="pad"><section class="" data-section="meta"><div class="ih-row"><div class="party"><div class="k">Outcomes pack</div><div class="v">tau2-airline-outcomes/v1 v1</div></div><div class="ih-title"><h1 class="inv-title">Outcome report · operator view</h1></div></div><div class="ih-row"><div class="party"><div class="k">What was checked</div><div class="d" data-what-checked="9">Each conversation against 9 rules in 3 groups: Policy compliance · Task resolution · Grounded communication. A conversation is resolved when every rule that applies to it is met, and at least one applies.</div></div><div class="meta"><div><span>Period</span><span>2026-09-23</span></div><div><span>Conversations</span><span>4</span></div></div></div></section><section class="" data-section="lines"><p class="headline" data-headline="lines">1 of 4 conversations resolved: every rule that applied was met. 2 missed at least one. 1 could not be decided.</p><table class="lines" data-rows="report-lines"><thead><tr><th>Result</th><th class="n">Conversations</th></tr></thead><tbody><tr data-line="resolved" data-count="1"><td class="desc"><b class="">Resolved</b><small class="">Every rule that applied was met.</small><details class="lv lv1 line" data-level="1" data-body="pending" data-drill="resolved"><summary><span class="tg" aria-hidden="true"></span>Show the 1 conversation</summary></details></td><td class="n">1 of 4</td></tr><tr data-line="missed" data-count="2"><td class="desc"><b class="">Missed</b><small class="">At least one rule was not met.</small><details class="lv lv1 line" data-level="1" data-body="pending" data-drill="missed"><summary><span class="tg" aria-hidden="true"></span>Show the 2 conversations</summary></details></td><td class="n">2 of 4</td></tr><tr data-line="undecided" data-count="1"><td class="desc"><b class="">Neither resolved nor missed</b><small class="">No rule result was "not met", but the judge could not decide a rule, or no rule applied. The records do not show whether those rules were met. Neither resolved nor missed.</small><details class="lv lv1 line" data-level="1" data-body="pending" data-drill="undecided"><summary><span class="tg" aria-hidden="true"></span>Show the 1 conversation</summary></details></td><td class="n">1 of 4</td></tr></tbody></table></section><aside class="footnotes" data-section="footnotes"><p class="na-note" data-line="not-applicable" data-count="0">0 rule checks did not apply to the conversation and count as met beside a met rule.</p></aside></div></div></section>
+<section class="oi" data-page="outcome-report" data-level="L1" data-levels="2"><section class="sec" data-section="rules"><div class="prov-row"><details class="lv lv1 prov-fold" data-level="1" data-body="built" data-section="provenance"><summary><span class="tg" aria-hidden="true"></span><span class="prov-brief">judge pinned · no witness receipt in this bundle · checked by this page</span></summary><dl class="prov"><dt>Judged by</dt><dd data-prov="judge" data-state="stated">model not stated, pinned, pin d1eb15a561a0… (36 of 36 results)</dd><dt>Witnessed by</dt><dd data-prov="witness" data-state="not-stated" data-witness="absent">not stated in this bundle: it carries no witness receipt for its checkpoint. The checkpoint: size 897, root 5a53e0d5bdf5…; the bundle carries no signature for it.</dd><dt>Verified by</dt><dd data-prov="verifier" data-state="stated">this page's code: @action-state-group/capsule-viewer 0.11.0 at commit not stated, verifier @action-state-group/agent-action-capsule 0.13.0 with cll 0.3.0. The tool that built this bundle is not stated in it.</dd></dl></details></div><h2 class="">Results rule by rule</h2><p class="lede">How many conversations met each rule. Open a rule to read the conversations where it was not met.</p><div class="tscroll"><table class="rules" data-rows="rules"><thead><tr><th>Rule</th><th class="n">not met</th><th class="n">met</th><th class="n">could not decide</th></tr></thead><tbody><tr class="grp" data-check-id="policy_compliance" data-pass-count="1"><td class="" colspan="4">Policy compliance</td></tr><tr class="rule x" data-rule="policy_compliance.confirmed_before_acting" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:policy_compliance.confirmed_before_acting"><summary aria-controls="cr-x-rule-policy_compliance.confirmed_before_acting"><span class="tg" aria-hidden="true"></span><b class="">Confirmed before acting</b></summary></details></td><td class="n bad" data-column="not_met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.confirmed_before_acting:not_met" data-evidence-for="rule:policy_compliance.confirmed_before_acting:not_met" data-evidence-name="Confirmed before acting · not met: 1" data-cites="d2c29ef323fa8768bb3962f45d21e4f2e768cfeb77bbccd16291237d51013c8f"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="d2c29ef323fa8768bb3962f45d21e4f2e768cfeb77bbccd16291237d51013c8f"><a href="#record-d2c29ef323fa8768bb3962f45d21e4f2e768cfeb77bbccd16291237d51013c8f"><code>d2c29ef323fa8768bb3962f45d21e4f2e768cfeb77bbccd16291237d51013c8f</code></a></li></ul></div></details></td><td class="n ok" data-column="met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.confirmed_before_acting:met" data-evidence-for="rule:policy_compliance.confirmed_before_acting:met" data-evidence-name="Confirmed before acting · met: 1" data-cites="13190311cc67c89bd6478a7921db04e2e773eccfd65c3882b78ca5ef06e2fadd"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="13190311cc67c89bd6478a7921db04e2e773eccfd65c3882b78ca5ef06e2fadd"><a href="#record-13190311cc67c89bd6478a7921db04e2e773eccfd65c3882b78ca5ef06e2fadd"><code>13190311cc67c89bd6478a7921db04e2e773eccfd65c3882b78ca5ef06e2fadd</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.confirmed_before_acting:undecided" data-evidence-for="rule:policy_compliance.confirmed_before_acting:undecided" data-evidence-name="Confirmed before acting · could not decide: 2" data-cites="f873a331ad9f9c5bc0681ea441e98e1b7ad4134bbf717070177b86769ff7578c 398e4f6cc7a78fb9c40663b7a69c9ecb3500a9e3ff83828fbc2bd9b037863e62"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="f873a331ad9f9c5bc0681ea441e98e1b7ad4134bbf717070177b86769ff7578c"><a href="#record-f873a331ad9f9c5bc0681ea441e98e1b7ad4134bbf717070177b86769ff7578c"><code>f873a331ad9f9c5bc0681ea441e98e1b7ad4134bbf717070177b86769ff7578c</code></a></li><li data-cited="398e4f6cc7a78fb9c40663b7a69c9ecb3500a9e3ff83828fbc2bd9b037863e62"><a href="#record-398e4f6cc7a78fb9c40663b7a69c9ecb3500a9e3ff83828fbc2bd9b037863e62"><code>398e4f6cc7a78fb9c40663b7a69c9ecb3500a9e3ff83828fbc2bd9b037863e62</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="policy_compliance.confirmed_before_acting" id="cr-x-rule-policy_compliance.confirmed_before_acting"><td colspan="4"></td></tr><tr class="rule x" data-rule="policy_compliance.within_fare_rules" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:policy_compliance.within_fare_rules"><summary aria-controls="cr-x-rule-policy_compliance.within_fare_rules"><span class="tg" aria-hidden="true"></span><b class="">Within fare rules</b></summary></details></td><td class="n bad" data-column="not_met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.within_fare_rules:not_met" data-evidence-for="rule:policy_compliance.within_fare_rules:not_met" data-evidence-name="Within fare rules · not met: 1" data-cites="f82b19ebaca11c08ee45da5d5862e06abe90993c43f4f6a50bc46b1692638996"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="f82b19ebaca11c08ee45da5d5862e06abe90993c43f4f6a50bc46b1692638996"><a href="#record-f82b19ebaca11c08ee45da5d5862e06abe90993c43f4f6a50bc46b1692638996"><code>f82b19ebaca11c08ee45da5d5862e06abe90993c43f4f6a50bc46b1692638996</code></a></li></ul></div></details></td><td class="n ok" data-column="met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.within_fare_rules:met" data-evidence-for="rule:policy_compliance.within_fare_rules:met" data-evidence-name="Within fare rules · met: 1" data-cites="5635d25811dcc9b3fef5922cdd0fbd6d660454fa92a6965c8bc0744ed3f0f85a"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="5635d25811dcc9b3fef5922cdd0fbd6d660454fa92a6965c8bc0744ed3f0f85a"><a href="#record-5635d25811dcc9b3fef5922cdd0fbd6d660454fa92a6965c8bc0744ed3f0f85a"><code>5635d25811dcc9b3fef5922cdd0fbd6d660454fa92a6965c8bc0744ed3f0f85a</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.within_fare_rules:undecided" data-evidence-for="rule:policy_compliance.within_fare_rules:undecided" data-evidence-name="Within fare rules · could not decide: 2" data-cites="e45af8b39d43d0c185c8d547119a223af20769ba48bd951ef9ed86873cf00185 772ab1366be5ec5fedc5e46f1903359026222e863309b028a58ca71d7e5a845c"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="e45af8b39d43d0c185c8d547119a223af20769ba48bd951ef9ed86873cf00185"><a href="#record-e45af8b39d43d0c185c8d547119a223af20769ba48bd951ef9ed86873cf00185"><code>e45af8b39d43d0c185c8d547119a223af20769ba48bd951ef9ed86873cf00185</code></a></li><li data-cited="772ab1366be5ec5fedc5e46f1903359026222e863309b028a58ca71d7e5a845c"><a href="#record-772ab1366be5ec5fedc5e46f1903359026222e863309b028a58ca71d7e5a845c"><code>772ab1366be5ec5fedc5e46f1903359026222e863309b028a58ca71d7e5a845c</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="policy_compliance.within_fare_rules" id="cr-x-rule-policy_compliance.within_fare_rules"><td colspan="4"></td></tr><tr class="rule x" data-rule="policy_compliance.no_unrequested_actions" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:policy_compliance.no_unrequested_actions"><summary aria-controls="cr-x-rule-policy_compliance.no_unrequested_actions"><span class="tg" aria-hidden="true"></span><b class="">No unrequested actions</b></summary></details></td><td class="n" data-column="not_met"><span class="nv">0</span></td><td class="n ok" data-column="met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.no_unrequested_actions:met" data-evidence-for="rule:policy_compliance.no_unrequested_actions:met" data-evidence-name="No unrequested actions · met: 1" data-cites="37f838a6c0588fa01f97e3aede14cb16d4760d5c859fb5c204ef38ec7dbd9219"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="37f838a6c0588fa01f97e3aede14cb16d4760d5c859fb5c204ef38ec7dbd9219"><a href="#record-37f838a6c0588fa01f97e3aede14cb16d4760d5c859fb5c204ef38ec7dbd9219"><code>37f838a6c0588fa01f97e3aede14cb16d4760d5c859fb5c204ef38ec7dbd9219</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">3</span><details class="cv-ev" data-level="2" id="n-rule:policy_compliance.no_unrequested_actions:undecided" data-evidence-for="rule:policy_compliance.no_unrequested_actions:undecided" data-evidence-name="No unrequested actions · could not decide: 3" data-cites="0dbb427d2dddd125c6078112118e75e866cab6b3029456a09ff5bb492ff8d703 43437148cd2d420ecdac9586417c0b1ed0e3cf4a1c5d198ca74c7b9886cd1198 0ce7bca8cc4ea39fedc49e436ca52c65ecaa17b919c1c58f3921277bc69c18aa"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="0dbb427d2dddd125c6078112118e75e866cab6b3029456a09ff5bb492ff8d703"><a href="#record-0dbb427d2dddd125c6078112118e75e866cab6b3029456a09ff5bb492ff8d703"><code>0dbb427d2dddd125c6078112118e75e866cab6b3029456a09ff5bb492ff8d703</code></a></li><li data-cited="43437148cd2d420ecdac9586417c0b1ed0e3cf4a1c5d198ca74c7b9886cd1198"><a href="#record-43437148cd2d420ecdac9586417c0b1ed0e3cf4a1c5d198ca74c7b9886cd1198"><code>43437148cd2d420ecdac9586417c0b1ed0e3cf4a1c5d198ca74c7b9886cd1198</code></a></li><li data-cited="0ce7bca8cc4ea39fedc49e436ca52c65ecaa17b919c1c58f3921277bc69c18aa"><a href="#record-0ce7bca8cc4ea39fedc49e436ca52c65ecaa17b919c1c58f3921277bc69c18aa"><code>0ce7bca8cc4ea39fedc49e436ca52c65ecaa17b919c1c58f3921277bc69c18aa</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="policy_compliance.no_unrequested_actions" id="cr-x-rule-policy_compliance.no_unrequested_actions"><td colspan="4"></td></tr><tr class="grp" data-check-id="task_resolution" data-pass-count="1"><td class="" colspan="4">Task resolution</td></tr><tr class="rule x" data-rule="task_resolution.right_reservation" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:task_resolution.right_reservation"><summary aria-controls="cr-x-rule-task_resolution.right_reservation"><span class="tg" aria-hidden="true"></span><b class="">Right reservation</b></summary></details></td><td class="n bad" data-column="not_met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.right_reservation:not_met" data-evidence-for="rule:task_resolution.right_reservation:not_met" data-evidence-name="Right reservation · not met: 1" data-cites="72ab8b99a4f47217df4c4de8e3d2656cc92a6864607fd2efb85805b7c2057267"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="72ab8b99a4f47217df4c4de8e3d2656cc92a6864607fd2efb85805b7c2057267"><a href="#record-72ab8b99a4f47217df4c4de8e3d2656cc92a6864607fd2efb85805b7c2057267"><code>72ab8b99a4f47217df4c4de8e3d2656cc92a6864607fd2efb85805b7c2057267</code></a></li></ul></div></details></td><td class="n ok" data-column="met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.right_reservation:met" data-evidence-for="rule:task_resolution.right_reservation:met" data-evidence-name="Right reservation · met: 1" data-cites="a14520f980824861a09674ab34f5d4d59ea88f08027e5956ccf3ca3a2083858b"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="a14520f980824861a09674ab34f5d4d59ea88f08027e5956ccf3ca3a2083858b"><a href="#record-a14520f980824861a09674ab34f5d4d59ea88f08027e5956ccf3ca3a2083858b"><code>a14520f980824861a09674ab34f5d4d59ea88f08027e5956ccf3ca3a2083858b</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.right_reservation:undecided" data-evidence-for="rule:task_resolution.right_reservation:undecided" data-evidence-name="Right reservation · could not decide: 2" data-cites="b24bd21c0bea57d292c33663e0e41632e08bb873d51f688ada7be83230690de1 c30f789a9150396c69cc3ee7b4a742340040f3b61bdb950ab713a1ef25daf51a"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="b24bd21c0bea57d292c33663e0e41632e08bb873d51f688ada7be83230690de1"><a href="#record-b24bd21c0bea57d292c33663e0e41632e08bb873d51f688ada7be83230690de1"><code>b24bd21c0bea57d292c33663e0e41632e08bb873d51f688ada7be83230690de1</code></a></li><li data-cited="c30f789a9150396c69cc3ee7b4a742340040f3b61bdb950ab713a1ef25daf51a"><a href="#record-c30f789a9150396c69cc3ee7b4a742340040f3b61bdb950ab713a1ef25daf51a"><code>c30f789a9150396c69cc3ee7b4a742340040f3b61bdb950ab713a1ef25daf51a</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="task_resolution.right_reservation" id="cr-x-rule-task_resolution.right_reservation"><td colspan="4"></td></tr><tr class="rule x" data-rule="task_resolution.right_change" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:task_resolution.right_change"><summary aria-controls="cr-x-rule-task_resolution.right_change"><span class="tg" aria-hidden="true"></span><b class="">Right change</b></summary></details></td><td class="n" data-column="not_met"><span class="nv">0</span></td><td class="n ok" data-column="met"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.right_change:met" data-evidence-for="rule:task_resolution.right_change:met" data-evidence-name="Right change · met: 2" data-cites="78e040bc7b431d507e36584eed6905ea30499e5c95342bf995de3de81c998612 78ff28204ec4eded2ae908e98807ef18589c5e5eb4ecacefa03ab8b2de718786"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="78e040bc7b431d507e36584eed6905ea30499e5c95342bf995de3de81c998612"><a href="#record-78e040bc7b431d507e36584eed6905ea30499e5c95342bf995de3de81c998612"><code>78e040bc7b431d507e36584eed6905ea30499e5c95342bf995de3de81c998612</code></a></li><li data-cited="78ff28204ec4eded2ae908e98807ef18589c5e5eb4ecacefa03ab8b2de718786"><a href="#record-78ff28204ec4eded2ae908e98807ef18589c5e5eb4ecacefa03ab8b2de718786"><code>78ff28204ec4eded2ae908e98807ef18589c5e5eb4ecacefa03ab8b2de718786</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.right_change:undecided" data-evidence-for="rule:task_resolution.right_change:undecided" data-evidence-name="Right change · could not decide: 2" data-cites="f197e6912eb8c64bcaafc64db10ec33dc2dc5a88449cd14c6b4409504ca4d9b8 e2bd37fd5edf2a2154a5fcf81a5155757c28907d6b41d82213cc9a70373a9cf8"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="f197e6912eb8c64bcaafc64db10ec33dc2dc5a88449cd14c6b4409504ca4d9b8"><a href="#record-f197e6912eb8c64bcaafc64db10ec33dc2dc5a88449cd14c6b4409504ca4d9b8"><code>f197e6912eb8c64bcaafc64db10ec33dc2dc5a88449cd14c6b4409504ca4d9b8</code></a></li><li data-cited="e2bd37fd5edf2a2154a5fcf81a5155757c28907d6b41d82213cc9a70373a9cf8"><a href="#record-e2bd37fd5edf2a2154a5fcf81a5155757c28907d6b41d82213cc9a70373a9cf8"><code>e2bd37fd5edf2a2154a5fcf81a5155757c28907d6b41d82213cc9a70373a9cf8</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="task_resolution.right_change" id="cr-x-rule-task_resolution.right_change"><td colspan="4"></td></tr><tr class="rule x" data-rule="task_resolution.done_in_full" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:task_resolution.done_in_full"><summary aria-controls="cr-x-rule-task_resolution.done_in_full"><span class="tg" aria-hidden="true"></span><b class="">Done in full</b></summary></details></td><td class="n" data-column="not_met"><span class="nv">0</span></td><td class="n ok" data-column="met"><span class="nv">3</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.done_in_full:met" data-evidence-for="rule:task_resolution.done_in_full:met" data-evidence-name="Done in full · met: 3" data-cites="efddb8ea8164f196ffcc29078287098edf9e975395e68f7f7301f4b87d5f3664 2f1a2787f9830ca7f793fbfd5548262aa56e7cb1d290ac64889906f65759a8fc 7379302fd6c76f1318f07ebabf0ac738a3efea72c9f5ccbcb65057932d5e30e8"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="efddb8ea8164f196ffcc29078287098edf9e975395e68f7f7301f4b87d5f3664"><a href="#record-efddb8ea8164f196ffcc29078287098edf9e975395e68f7f7301f4b87d5f3664"><code>efddb8ea8164f196ffcc29078287098edf9e975395e68f7f7301f4b87d5f3664</code></a></li><li data-cited="2f1a2787f9830ca7f793fbfd5548262aa56e7cb1d290ac64889906f65759a8fc"><a href="#record-2f1a2787f9830ca7f793fbfd5548262aa56e7cb1d290ac64889906f65759a8fc"><code>2f1a2787f9830ca7f793fbfd5548262aa56e7cb1d290ac64889906f65759a8fc</code></a></li><li data-cited="7379302fd6c76f1318f07ebabf0ac738a3efea72c9f5ccbcb65057932d5e30e8"><a href="#record-7379302fd6c76f1318f07ebabf0ac738a3efea72c9f5ccbcb65057932d5e30e8"><code>7379302fd6c76f1318f07ebabf0ac738a3efea72c9f5ccbcb65057932d5e30e8</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:task_resolution.done_in_full:undecided" data-evidence-for="rule:task_resolution.done_in_full:undecided" data-evidence-name="Done in full · could not decide: 1" data-cites="52fac21df5dd9c564a8970c359214485ee0082c6bd251a4052964a5a7b896a33"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="52fac21df5dd9c564a8970c359214485ee0082c6bd251a4052964a5a7b896a33"><a href="#record-52fac21df5dd9c564a8970c359214485ee0082c6bd251a4052964a5a7b896a33"><code>52fac21df5dd9c564a8970c359214485ee0082c6bd251a4052964a5a7b896a33</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="task_resolution.done_in_full" id="cr-x-rule-task_resolution.done_in_full"><td colspan="4"></td></tr><tr class="grp" data-check-id="grounded_communication" data-pass-count="1"><td class="" colspan="4">Grounded communication</td></tr><tr class="rule x" data-rule="grounded_communication.prices_from_system" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:grounded_communication.prices_from_system"><summary aria-controls="cr-x-rule-grounded_communication.prices_from_system"><span class="tg" aria-hidden="true"></span><b class="">Prices from system</b></summary></details></td><td class="n bad" data-column="not_met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.prices_from_system:not_met" data-evidence-for="rule:grounded_communication.prices_from_system:not_met" data-evidence-name="Prices from system · not met: 1" data-cites="3475664cd0681856eeadb2746db66d9a8fb1ced09b1aea50448d380f6926679d"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="3475664cd0681856eeadb2746db66d9a8fb1ced09b1aea50448d380f6926679d"><a href="#record-3475664cd0681856eeadb2746db66d9a8fb1ced09b1aea50448d380f6926679d"><code>3475664cd0681856eeadb2746db66d9a8fb1ced09b1aea50448d380f6926679d</code></a></li></ul></div></details></td><td class="n ok" data-column="met"><span class="nv">3</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.prices_from_system:met" data-evidence-for="rule:grounded_communication.prices_from_system:met" data-evidence-name="Prices from system · met: 3" data-cites="10823a10e9f171c8fd13ca77283f2be418f3d9227a68b04d34bb3b2169598007 3a3466782f963f198acd2dd391a2a29c292d95ff167b807ed9d695175324aea4 8158fd1dacfe32506352a2e895f05290c9cc20d1ef7880a72c72327ef33e24aa"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="10823a10e9f171c8fd13ca77283f2be418f3d9227a68b04d34bb3b2169598007"><a href="#record-10823a10e9f171c8fd13ca77283f2be418f3d9227a68b04d34bb3b2169598007"><code>10823a10e9f171c8fd13ca77283f2be418f3d9227a68b04d34bb3b2169598007</code></a></li><li data-cited="3a3466782f963f198acd2dd391a2a29c292d95ff167b807ed9d695175324aea4"><a href="#record-3a3466782f963f198acd2dd391a2a29c292d95ff167b807ed9d695175324aea4"><code>3a3466782f963f198acd2dd391a2a29c292d95ff167b807ed9d695175324aea4</code></a></li><li data-cited="8158fd1dacfe32506352a2e895f05290c9cc20d1ef7880a72c72327ef33e24aa"><a href="#record-8158fd1dacfe32506352a2e895f05290c9cc20d1ef7880a72c72327ef33e24aa"><code>8158fd1dacfe32506352a2e895f05290c9cc20d1ef7880a72c72327ef33e24aa</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">0</span></td></tr><tr class="drill-row x-detail" data-drill-for="grounded_communication.prices_from_system" id="cr-x-rule-grounded_communication.prices_from_system"><td colspan="4"></td></tr><tr class="rule x" data-rule="grounded_communication.refunds_match_payment_records" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:grounded_communication.refunds_match_payment_records"><summary aria-controls="cr-x-rule-grounded_communication.refunds_match_payment_records"><span class="tg" aria-hidden="true"></span><b class="">Refunds match payment records</b></summary></details></td><td class="n bad" data-column="not_met"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.refunds_match_payment_records:not_met" data-evidence-for="rule:grounded_communication.refunds_match_payment_records:not_met" data-evidence-name="Refunds match payment records · not met: 2" data-cites="36352f9de50eee87d9332aae48f6f1c72f388d9b9ece53c5c805ad9aaeb15ec6 e7fd3f24dd3d14cf466877e9098eba4a0f3890979c13554cd6e5338f60d6e18f"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="36352f9de50eee87d9332aae48f6f1c72f388d9b9ece53c5c805ad9aaeb15ec6"><a href="#record-36352f9de50eee87d9332aae48f6f1c72f388d9b9ece53c5c805ad9aaeb15ec6"><code>36352f9de50eee87d9332aae48f6f1c72f388d9b9ece53c5c805ad9aaeb15ec6</code></a></li><li data-cited="e7fd3f24dd3d14cf466877e9098eba4a0f3890979c13554cd6e5338f60d6e18f"><a href="#record-e7fd3f24dd3d14cf466877e9098eba4a0f3890979c13554cd6e5338f60d6e18f"><code>e7fd3f24dd3d14cf466877e9098eba4a0f3890979c13554cd6e5338f60d6e18f</code></a></li></ul></div></details></td><td class="n ok" data-column="met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.refunds_match_payment_records:met" data-evidence-for="rule:grounded_communication.refunds_match_payment_records:met" data-evidence-name="Refunds match payment records · met: 1" data-cites="cc47e24281d07fd921b3019c4ea30e275f54131983b1ce6c7c55c6a92159c3dc"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="cc47e24281d07fd921b3019c4ea30e275f54131983b1ce6c7c55c6a92159c3dc"><a href="#record-cc47e24281d07fd921b3019c4ea30e275f54131983b1ce6c7c55c6a92159c3dc"><code>cc47e24281d07fd921b3019c4ea30e275f54131983b1ce6c7c55c6a92159c3dc</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.refunds_match_payment_records:undecided" data-evidence-for="rule:grounded_communication.refunds_match_payment_records:undecided" data-evidence-name="Refunds match payment records · could not decide: 1" data-cites="2a5d1cbb83430f13fe0b1efb962bda04381f58d3afc1d9cf40a287c178d64600"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="2a5d1cbb83430f13fe0b1efb962bda04381f58d3afc1d9cf40a287c178d64600"><a href="#record-2a5d1cbb83430f13fe0b1efb962bda04381f58d3afc1d9cf40a287c178d64600"><code>2a5d1cbb83430f13fe0b1efb962bda04381f58d3afc1d9cf40a287c178d64600</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="grounded_communication.refunds_match_payment_records" id="cr-x-rule-grounded_communication.refunds_match_payment_records"><td colspan="4"></td></tr><tr class="rule x" data-rule="grounded_communication.no_invented_policy" data-tier="judged"><td class="cn"><details class="lv lv1 rx" data-level="1" data-body="pending" data-drill="rule:grounded_communication.no_invented_policy"><summary aria-controls="cr-x-rule-grounded_communication.no_invented_policy"><span class="tg" aria-hidden="true"></span><b class="">No invented policy</b></summary></details></td><td class="n bad" data-column="not_met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.no_invented_policy:not_met" data-evidence-for="rule:grounded_communication.no_invented_policy:not_met" data-evidence-name="No invented policy · not met: 1" data-cites="51ef744f1d0ea7448fce817a08bdc46ff639baefd601cbb5f3056d797f37a16b"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="51ef744f1d0ea7448fce817a08bdc46ff639baefd601cbb5f3056d797f37a16b"><a href="#record-51ef744f1d0ea7448fce817a08bdc46ff639baefd601cbb5f3056d797f37a16b"><code>51ef744f1d0ea7448fce817a08bdc46ff639baefd601cbb5f3056d797f37a16b</code></a></li></ul></div></details></td><td class="n ok" data-column="met"><span class="nv">1</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.no_invented_policy:met" data-evidence-for="rule:grounded_communication.no_invented_policy:met" data-evidence-name="No invented policy · met: 1" data-cites="1c0618b012eb64058b7234fe487c197005bb919f075eaa52dd5c18b003ce5b97"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="1c0618b012eb64058b7234fe487c197005bb919f075eaa52dd5c18b003ce5b97"><a href="#record-1c0618b012eb64058b7234fe487c197005bb919f075eaa52dd5c18b003ce5b97"><code>1c0618b012eb64058b7234fe487c197005bb919f075eaa52dd5c18b003ce5b97</code></a></li></ul></div></details></td><td class="n" data-column="undecided"><span class="nv">2</span><details class="cv-ev" data-level="2" id="n-rule:grounded_communication.no_invented_policy:undecided" data-evidence-for="rule:grounded_communication.no_invented_policy:undecided" data-evidence-name="No invented policy · could not decide: 2" data-cites="7289ccc81f0e6c9b1ea2cb0fa58e81db64dba8ba695f905b85bbc84677fafd3a 190f27914fd311ec98742ea924d4cb9f1c31aa7178749bc52d2832f315d9e9e3"><summary>Show evidence</summary><div class="cv-ev-body"><p class="cv-ev-k">The records the claims behind this number cite, each a link to its entry in this bundle's records</p><ul class="cv-ev-list"><li data-cited="7289ccc81f0e6c9b1ea2cb0fa58e81db64dba8ba695f905b85bbc84677fafd3a"><a href="#record-7289ccc81f0e6c9b1ea2cb0fa58e81db64dba8ba695f905b85bbc84677fafd3a"><code>7289ccc81f0e6c9b1ea2cb0fa58e81db64dba8ba695f905b85bbc84677fafd3a</code></a></li><li data-cited="190f27914fd311ec98742ea924d4cb9f1c31aa7178749bc52d2832f315d9e9e3"><a href="#record-190f27914fd311ec98742ea924d4cb9f1c31aa7178749bc52d2832f315d9e9e3"><code>190f27914fd311ec98742ea924d4cb9f1c31aa7178749bc52d2832f315d9e9e3</code></a></li></ul></div></details></td></tr><tr class="drill-row x-detail" data-drill-for="grounded_communication.no_invented_policy" id="cr-x-rule-grounded_communication.no_invented_policy"><td colspan="4"></td></tr></tbody></table></div></section></section>
+<section class="oi" data-page="outcome-report" data-level="L2" data-levels="2"><section class="check front-card" data-section="check-yourself"><h2>Check this report yourself</h2><div class="anchors"><div class="anchor" data-anchor="checkpoint"><span class="k">Checkpoint root · size</span><code>5a53e0d5bdf55b851eceb2388a27e7efe223b5f66c74c69a756fd5729b796c29 · 897</code></div><div class="anchor" data-anchor="records"><span class="k">Records in this bundle</span><code>451</code></div></div><ol class="steps"><li>Keep a copy of the bundle this page shows.</li><li>Run the open-source verifier on it, offline.</li><li data-receipt="absent">This bundle carries no witness receipt. If you can get the log's checkpoint for this size on your own, compare its root with the one above.</li><li>Open any row above to see the sealed records it cites.</li></ol></section><section class="sec" data-section="calendar"><h2 class="">Day by day</h2><p class="lede">Resolved conversations per day, cited by this bundle's claims.</p><div class="cal" data-days="1"><div class="day" data-day="2026-09-23" data-resolved="1" data-total="4"><div class="dn">2026-09-23</div><div class="v">1 of 4</div><div class="mini"><i style="width: 25%;"></i></div></div></div></section><section class="sec" data-section="human-checks"><h2 class="">Human spot checks</h2><p class="lede">Re-grades by a person, as this bundle's calibration summary states them, clause by clause.</p><p class="">No human re-grade records in this bundle.</p></section><section class="sec rp" data-section="report-proofs"><details class="lv lv2 proofs" data-level="2" data-body="pending"><summary><span class="tg" aria-hidden="true"></span>Proofs for this report: the terms, what ran, and how to verify the whole bundle</summary></details></section></section>

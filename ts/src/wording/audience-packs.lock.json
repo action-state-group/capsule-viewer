@@ -1,0 +1,14 @@
+{
+  "contract-report-consumer.en.json": {
+    "id": "capsule-viewer/contract-report/consumer/en@1",
+    "sha256": "d00c66d75a2e2ac552af41fac53cca5cccb9ddb1df5822b81d17e206f40fdba5"
+  },
+  "contract-report-operator.en.json": {
+    "id": "capsule-viewer/contract-report/operator/en@1",
+    "sha256": "49f0b4c152b7cd17be4a63564f0c7678f7fdaa74687e3af8cca51c53727a3c66"
+  },
+  "contract-report-eu-deployer.en.json": {
+    "id": "capsule-viewer/contract-report/eu-deployer/en@1",
+    "sha256": "9ee4538ecae376d348b73ff10b2c558d73ff04614f66f752af519383f7301d82"
+  }
+}
