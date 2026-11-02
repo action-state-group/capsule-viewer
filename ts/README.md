@@ -84,6 +84,12 @@ judged more than once in one conversation, claims under more than one
 contract, claims of another type or id shape) is drawn as the generic
 Result page, with a note, so no claim is merged or left out.
 
+A Result that opts into `contract-report/v1` and carries neither Outcomes nor
+EU AI Act data draws the module's `generic` view (generic-report-view.ts):
+rows from its claims, groups from the `requirement_ref` prefix, every tally
+with its denominator. Its words are `wording/contract-report-generic.en.json`
+under a host pack's `report.*`, `row.*`, `group.*` and the other section 3 keys.
+
 **The single-contract rule.** `row.*` and `group.*` apply only when every
 claim in the Result cites the same `contract_ref` (`citesOneContract`,
 contract-report.ts): a pack is written for one contract, and two contracts

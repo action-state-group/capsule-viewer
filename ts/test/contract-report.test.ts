@@ -236,6 +236,7 @@ it("every locked line is a default entry, and every default line that states wha
   const all = {
     ...DEFAULT_PACKS.lines.entries,
     ...DEFAULT_PACKS.groups.entries,
+    ...DEFAULT_PACKS.generic.entries,
   };
   for (const key of LOCKED_ENTRIES)
     expect(Object.hasOwn(all, key), key).toBe(true);
@@ -248,6 +249,8 @@ it("every locked line is a default entry, and every default line that states wha
   // for "not evaluable", "not met" and the tier's name read, in English,
   // like an honesty line.
   expect(unlocked.sort()).toEqual([
+    "generic.tier.recomputed",
+    "generic.verdict.failed",
     "groups.session.undecided",
     "groups.tier.recomputed",
     "groups.verdict.failed",
