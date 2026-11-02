@@ -234,11 +234,53 @@ it counts. A row with no subject is refused (`view-chart-shape`).
 **Not drawn, because no record carries it** (filed as producer gaps on
 capsule-viewer#172): spans with a duration (the "routed to a person" lane's
 resolution minutes) need a start and end per record; per-case columns in the
-day section (request, per-requirement squares, band, outcome, card) need the
+day section (request, per-requirement squares, band, outcome) need the
 case's own fields; "judged Oct 30 02:00" needs the daily run's time; lane
-titles beyond a wording pack's. Voice follows Sherlock2: the words above are
-second person in the holder's own preview and third person when shared, set by
-the wording pack the page is built with.
+titles beyond a wording pack's. The card column needs no field: it links to
+the case's card by its case address (below). Voice follows Sherlock2: the
+words above are second person in the holder's own preview and third person
+when shared, set by the wording pack the page is built with.
+
+
+### Case address (capsule-viewer#243)
+
+Status: a public page-address format with no new product meaning and no spec
+text. Sherlock2 confirmed the door and that it is engineering's call
+(buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=f07bb7b2af5119fd30f8a7e0712ab5669f1ac702fdb0382b2e48396c496c1bd5;
+the proposal and the options it was chosen over are on the issue, first filed
+as evidencebook#381).
+
+**The address.** `#case-<case id>`, the same shape as a record's
+`#record-<id>`. The case id is the one every claim id already carries
+(`<case id>::<criterion>`), the key the pack's `day_record.cases` uses
+(evidencebook-skills#99), such as `tau2:airline:task-29:trial-0`. A link
+percent-encodes it (`caseHref`); the page decodes it. No record, pack or book
+carries the address, so it names nothing a bundle does not already name.
+
+**What it names.** The case's card on the report page: the Outcomes page's
+per-conversation card (the one holding the spot check, headed "task 29,
+trial 0") and the EU AI Act page's per-session card. Each carries
+`data-case` with its case id. Matching is on the whole id, so `task-2` never
+opens `task-29`, and a judge's `<root>/<capsule>` id never opens `<root>`.
+
+**Valid only inside a page that draws the card.** It is a fragment of one
+report page, not a permalink: it means nothing outside that page, and a page
+that draws no card for the case (the EU AI Act page lists a session only
+under the tests it misses) opens nothing for it.
+
+**Resolving.** Where script runs, a page opened at the address, or whose
+address changes to it, opens the card and every toggle around it, as
+`#record-` does. Cards are built when their toggle first opens and one case
+can be listed under several toggles, so each toggle that lists cards says
+which cases it lists, and when no card is drawn yet the page builds and opens
+the first toggle in page order that lists the case. A card takes the element
+id `case-<case id>` when the body that holds it is built, unless a card of
+that case built earlier already holds it, so the address lands on the first
+card of the case built. A case no toggle lists builds and opens nothing. A
+page that runs no script builds every body in page order, as the scripted
+page does when every toggle is opened, so both anchor the same card and the
+fragment is a plain link there. A fragment that does not decode names no
+card.
 
 ### Words
 

@@ -24,6 +24,7 @@ import {
   judgedOf,
   lazyBody,
   levelToggle,
+  listsCases,
   proofList,
   conversationFold,
   evidenceAction,
@@ -584,6 +585,8 @@ function renderConversation(
   const status = conversationStatus(conversation, model.gating);
   const item = el("article", "conv");
   item.dataset.conversation = conversation.conversationId;
+  // The card a `#case-` address names (report-levels.ts caseAddress).
+  item.dataset.case = conversation.conversationId;
   // The header's line is a derived one: it reads the rules in the answer.
   const inAnswer = counted(conversation, model.gating);
   item.dataset.conversationVerdict = inAnswer.verdict;
@@ -1097,11 +1100,16 @@ function conversationsDrill(
   key: string,
   w: Words,
 ): HTMLDetailsElement {
-  return drill(
+  const details = drill(
     label,
     () => renderConversationList(conversations, model, runInfo, key, w),
     key,
   );
+  listsCases(
+    details,
+    conversations.map((c) => c.conversationId),
+  );
+  return details;
 }
 
 /** A criterion's label for a missed-reason group, from the terms; the id itself when the terms don't name it. */
@@ -1521,11 +1529,27 @@ function renderLines(
         n: fmtCount(line.behind.length),
       });
       const behind = line.behind;
-      desc.append(
-        line.key === "missed"
-          ? drill(label, () => whyMissed(behind, model, runInfo, w), line.key)
-          : conversationsDrill(label, behind, model, runInfo, line.key, w),
-      );
+      let details: HTMLDetailsElement;
+      if (line.key === "missed") {
+        details = drill(
+          label,
+          () => whyMissed(behind, model, runInfo, w),
+          line.key,
+        );
+        listsCases(
+          details,
+          behind.map((c) => c.conversationId),
+        );
+      } else
+        details = conversationsDrill(
+          label,
+          behind,
+          model,
+          runInfo,
+          line.key,
+          w,
+        );
+      desc.append(details);
     }
     tr.append(desc, el("td", "n", line.shown));
     tbody.append(tr);
@@ -1804,6 +1828,10 @@ function renderRules(
           `rule-${ref}`,
         );
         toggle.dataset.drill = `rule:${ref}`;
+        listsCases(
+          toggle,
+          problems.map((c) => c.conversationId),
+        );
         tbody.append(drillRow);
       }
     }

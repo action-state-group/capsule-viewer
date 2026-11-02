@@ -32,6 +32,7 @@ import {
   judgeNote,
   lazyBody,
   levelToggle,
+  listsCases,
   proofList,
   conversationFold,
   evidenceAction,
@@ -863,6 +864,7 @@ function renderSummary(
           );
           toggle.dataset.records = "sessions";
           toggle.dataset.drill = test.criterionId;
+          listsCases(toggle, sessionIds);
           tbody.append(drillRow);
         }
       }
@@ -996,6 +998,8 @@ function renderSession(
   const parts = caseParts(session.conversationId, w);
   const item = el("article", "conv session");
   item.dataset.session = session.conversationId;
+  // The card a `#case-` address names (report-levels.ts caseAddress).
+  item.dataset.case = session.conversationId;
   const head = el("div", "conv-h");
   head.append(el("span", "cid", parts.label));
   head.append(

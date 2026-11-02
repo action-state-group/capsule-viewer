@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A case's card has a page address, `#case-<case id>` (#243): the Outcomes page's per-conversation card and the EU AI Act page's per-session card carry `data-case`, and a page opened at the address opens that card and the toggles around it, as `#record-` does. It is the target of the Terms Pack day table's card column. It is a page address, not a permalink, and is matched on the whole case id. `caseAddress`, `caseHref`, `revealCase` and `anchorCases` are in `report-levels.ts`.
+
 ## ts 0.13.0 and go 0.13.0 (2026-11-02)
 
 Both state viewer 0.13.0: `ts/v0.13.0`, then `go/v0.13.0` on the commit that
