@@ -93,8 +93,12 @@ and appends to L2 after the core.
    (capsule-viewer#81): "216 evaluations of 9 requirements · 54
    excluded as not applicable · 0 evaluations with an unknown result", then
    the met, not met and not evaluable buckets, each labelled with its unit
-   (evaluations). Never recomputed. `unknown_count` is never called
-   "unresolved" ([cr] §2, [er] §3). Each bucket's count sits beside its
+   (evaluations). Never recomputed, except that calibration claims
+   (`type: "calibration"`, weekly checks of the judge that the sealed
+   aggregate counts like requirements) are taken out of the figures and drawn
+   on their own line, "N calibration checks", so the strip plus that line is
+   the sealed coverage; the count-mismatch marker fires for any other gap.
+   `unknown_count` is never called "unresolved" ([cr] §2, [er] §3). Each bucket's count sits beside its
    denominator, the evaluated population ("of 216").
 2. Statement header, the module's first: report name (wording pack),
    contract id and version, period, population, requirement count, and the

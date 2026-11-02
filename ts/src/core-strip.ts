@@ -43,6 +43,7 @@ export const CORE_STRIP_CSS = `
 .cv-strip .agg-bucket b{font-family:Georgia,"Iowan Old Style",Cambria,serif;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
 .cv-strip .agg-bucket span{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
 .cv-strip .count.mismatch{font-size:12px;font-weight:600;color:var(--bad)}
+.cv-strip .agg-calibration{font-size:13px;color:var(--slate);margin:-6px 0 12px}
 .cv-strip .agg-note{font-size:12.5px;color:var(--slate);margin:6px 0 0}
 .cv-strip .agg-bucket.met b{color:var(--ok)}
 .cv-strip .agg-bucket.not_met b{color:var(--bad)}
@@ -60,27 +61,76 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 
 const fmt = (n: number): string => n.toLocaleString("en-US");
 
-// The aggregate is drawn as sealed (contract-report/v1 section 2). Where
-// the claims give another number (`countMismatches`), a marker beside the
-// sealed one says what the claims give, so a disagreement reads as one and
-// neither number is silently preferred (presentation contract section 3).
-function mismatchMarker(
+// A calibration claim (`type: "calibration"`) is a weekly check of the judge,
+// not an evaluation of a requirement. capsulectl and evidence-result-v0
+// section 4.1 count it in the sealed aggregate like a requirement, so the
+// strip draws the sealed figure minus the calibration claims and gives those
+// their own line: strip count + calibration checks = the sealed figure.
+const CALIBRATION_CLAIM = "calibration";
+
+type Claim = ResultRoot["claims"][number];
+const isCalibration = (claim: Claim): boolean =>
+  claim.type === CALIBRATION_CLAIM;
+
+/** What one field of the sealed aggregate counts that is a calibration claim. */
+interface FieldCount {
+  /** The figure the strip draws: the sealed figure without calibration claims. */
+  readonly drawn: number;
+  /** What the claims give for the same field, without calibration claims. */
+  readonly recomputed: number;
+  readonly sealed: number;
+  readonly sealedRecomputed: number;
+}
+
+function fieldCount(
   result: ResultRoot,
+  field: CountMismatch["field"],
+  sealed: number,
+  calibrationSealed: number,
+): FieldCount {
+  const mismatch = result.countMismatches.find((e) => e.field === field);
+  const sealedRecomputed =
+    mismatch === undefined ? sealed : mismatch.recomputed;
+  const standing = result.claims.filter((c) => isCalibration(c) && !c.failed);
+  const inForce = standing.filter((c) => !c.later);
+  const calibrationRecomputed =
+    field === "evaluated_population"
+      ? result.claims.filter((c) => isCalibration(c) && !c.later).length
+      : field === "unknown_count"
+        ? inForce.filter((c) => c.sufficiency === "UNKNOWN").length
+        : field === "not_yet_in_force"
+          ? result.claims.filter((c) => isCalibration(c) && c.later).length
+          : inForce.filter((c) => c.verdict === field.slice("buckets.".length))
+              .length;
+  return {
+    drawn: sealed - calibrationSealed,
+    recomputed: sealedRecomputed - calibrationRecomputed,
+    sealed,
+    sealedRecomputed,
+  };
+}
+
+// The aggregate is drawn as sealed less its calibration claims
+// (contract-report/v1 section 2). Where the claims give another number
+// (`countMismatches`), a marker beside the drawn one says what the claims
+// give, so a disagreement reads as one and neither number is silently
+// preferred (presentation contract section 3). The marker is suppressed only
+// when the sealed figure minus its calibration claims equals the claims'
+// figure minus theirs; any other gap still fires.
+function mismatchMarker(
+  count: FieldCount,
   field: CountMismatch["field"],
   w: Words,
 ): HTMLElement | undefined {
-  const mismatch = result.countMismatches.find(
-    (entry) => entry.field === field,
-  );
-  if (mismatch === undefined) return undefined;
+  if (count.drawn === count.recomputed) return undefined;
   const marker = el(
     "span",
     "count mismatch",
-    w.t("front.agg.mismatch", { recomputed: fmt(mismatch.recomputed) }),
+    w.t("front.agg.mismatch", { recomputed: fmt(count.recomputed) }),
   );
   marker.dataset.countMismatch = field;
-  marker.dataset.stated = String(mismatch.stated);
-  marker.dataset.recomputed = String(mismatch.recomputed);
+  marker.dataset.stated = String(count.drawn);
+  marker.dataset.recomputed = String(count.recomputed);
   return marker;
 }
 
@@ -97,18 +147,53 @@ function mismatchMarker(
  */
 function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   const out = document.createDocumentFragment();
-  const stated = result.statedCoverage;
+  const sealed = result.statedCoverage;
+  const calibrationClaims = result.claims.filter(isCalibration);
+  const calibrationInForce = calibrationClaims.filter((c) => !c.later);
+  const statedIds = (ids: readonly string[] | undefined): number =>
+    ids === undefined
+      ? 0
+      : calibrationClaims.filter((c) => ids.includes(c.id)).length;
+  const count = (
+    field: CountMismatch["field"],
+    value: number,
+    calibration: number,
+  ): FieldCount => fieldCount(result, field, value, calibration);
+  const population = count(
+    "evaluated_population",
+    sealed.evaluatedPopulation,
+    calibrationInForce.length,
+  );
+  const unknown = count(
+    "unknown_count",
+    sealed.unknownCount,
+    calibrationInForce.filter((c) => c.sufficiency === "UNKNOWN" && !c.failed)
+      .length,
+  );
+  const laterCount = count(
+    "not_yet_in_force",
+    sealed.notYetInForce ?? 0,
+    calibrationClaims.length - calibrationInForce.length,
+  );
+  const stated = {
+    evaluatedPopulation: population.drawn,
+    excludedNotApplicable: sealed.excludedNotApplicable,
+  };
   const requirements = new Set(
     result.claims
-      .filter((claim) => !claim.later)
+      .filter((claim) => !claim.later && !isCalibration(claim))
       .map((claim) =>
         JSON.stringify([claim.contractRef, claim.requirementRef]),
       ),
   ).size;
   const line = el("p", "agg-line");
-  const marked = (text: string, field: CountMismatch["field"]): void => {
+  const marked = (
+    text: string,
+    field: CountMismatch["field"],
+    figure: FieldCount,
+  ): void => {
     line.append(text);
-    const marker = mismatchMarker(result, field, w);
+    const marker = mismatchMarker(figure, field, w);
     if (marker !== undefined) line.append(" ", marker);
   };
   marked(
@@ -121,6 +206,7 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
       }),
     }),
     "evaluated_population",
+    population,
   );
   line.append(
     " · ",
@@ -130,28 +216,41 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
     " · ",
   );
   marked(
-    w.p("front.agg.unknown", stated.unknownCount, {
-      n: fmt(stated.unknownCount),
+    w.p("front.agg.unknown", unknown.drawn, {
+      n: fmt(unknown.drawn),
     }),
     "unknown_count",
+    unknown,
   );
-  const later = stated.notYetInForce;
+  const later = sealed.notYetInForce;
   if (
     later !== undefined ||
     result.countMismatches.some((m) => m.field === "not_yet_in_force")
   ) {
     line.append(" · ");
     marked(
-      w.p("front.agg.later", later ?? 0, { n: fmt(later ?? 0) }),
+      w.p("front.agg.later", laterCount.drawn, { n: fmt(laterCount.drawn) }),
       "not_yet_in_force",
+      laterCount,
     );
-    line.dataset.notYetInForce = String(later ?? 0);
+    line.dataset.notYetInForce = String(laterCount.drawn);
   }
   line.dataset.evaluated = String(stated.evaluatedPopulation);
   line.dataset.requirements = String(requirements);
   line.dataset.excluded = String(stated.excludedNotApplicable);
-  line.dataset.unknown = String(stated.unknownCount);
+  line.dataset.unknown = String(unknown.drawn);
   out.append(line);
+  if (calibrationInForce.length > 0) {
+    const calibration = el(
+      "p",
+      "agg-calibration",
+      w.p("front.agg.calibration", calibrationInForce.length, {
+        n: fmt(calibrationInForce.length),
+      }),
+    );
+    calibration.dataset.calibration = String(calibrationInForce.length);
+    out.append(calibration);
+  }
 
   const buckets = el("div", "agg-buckets");
   const of = w.t("front.agg.of", { n: fmt(stated.evaluatedPopulation) });
@@ -167,11 +266,12 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   ];
   for (const [verdict, ids, field] of entries) {
     if (ids === undefined) continue;
+    const figure = count(field, ids.length, statedIds(ids));
     const box = el("div", `agg-bucket ${verdict}`);
     box.dataset.bucket = verdict;
-    box.dataset.count = String(ids.length);
+    box.dataset.count = String(figure.drawn);
     box.dataset.of = String(stated.evaluatedPopulation);
-    box.append(el("b", "", fmt(ids.length)));
+    box.append(el("b", "", fmt(figure.drawn)));
     // The canvas draws the tile's caption on one line: "Met · of N ...".
     const caption = el("div", "agg-cap");
     caption.append(
@@ -180,7 +280,7 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
       el("span", "agg-of", of),
     );
     box.append(caption);
-    const marker = mismatchMarker(result, field, w);
+    const marker = mismatchMarker(figure, field, w);
     if (marker !== undefined) box.append(marker);
     buckets.append(box);
   }
