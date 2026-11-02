@@ -594,6 +594,41 @@ function renderReceipts(
   host.append(list);
 }
 
+// A checkpoint witnessed through a parent log (parent-log-witness/v1): the
+// receipts are over the parent log's checkpoint, so the line says how many
+// of the log's entries that witnessing reaches, as AAC's strict check
+// computed it. This page draws that result and verifies nothing.
+function renderParentWitness(
+  host: HTMLElement,
+  parent: NonNullable<
+    ReturnType<typeof buildVerificationPageModel>["parentWitness"]
+  >,
+): void {
+  const block = element("div");
+  block.dataset.witness = "parent-log";
+  block.append(
+    element(
+      "p",
+      parent.whole
+        ? `witnessed through a parent log: every entry (${parent.of} of ${parent.of})`
+        : `witnessed through a parent log: through entry ${parent.entries} of ${parent.of}`,
+    ),
+  );
+  const list = element("ul");
+  parent.receipts.forEach((receipt) => {
+    const item = element("li", `${receipt.witness}`);
+    if (receipt.registrationTime !== null) {
+      item.append(" · ");
+      item.append(
+        renderTime(new Date(receipt.registrationTime * 1000).toISOString()),
+      );
+    }
+    list.append(item);
+  });
+  block.append(list);
+  host.append(block);
+}
+
 const COVERAGE_LABEL: Readonly<Record<RecordCoverageStatus, string>> =
   Object.freeze({
     checkpointed: "checkpointed",
@@ -1137,6 +1172,8 @@ async function renderVerificationPage(
     );
   page.append(summary);
   renderReceipts(page, model.receipts);
+  if (model.parentWitness !== undefined)
+    renderParentWitness(page, model.parentWitness);
   if (model.selfWitnessed) {
     // A checkpoint with no transparency-service receipt was witnessed by
     // nobody but the log that produced it -- stated here in those words.
