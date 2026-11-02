@@ -131,7 +131,9 @@ describe("the witness line, with the reader's own witness list", () => {
     expect(text).toContain("That a witness checked the counts.");
     expect(text).toContain("it did not check the counts");
     expect(text).not.toContain("That an outside witness saw the snapshot.");
-    expect(text).not.toContain("signed by its holder, and no outside witness recorded its snapshot");
+    expect(text).not.toContain(
+      "signed by its holder, and no outside witness recorded its snapshot",
+    );
   });
 
   it("names the witness as the reader's list names it, with an ES256 Receipt too", async () => {
@@ -210,7 +212,9 @@ describe("the witness line, with the reader's own witness list", () => {
     expect(text).not.toContain("receipt came with the card");
     expect(text).not.toContain("Witnesses you accept");
     // A default card is signed, not witnessed, and the page says so plainly (capsule-cli#519).
-    expect(text).toContain("signed by its holder, and no outside witness recorded its snapshot");
+    expect(text).toContain(
+      "signed by its holder, and no outside witness recorded its snapshot",
+    );
     expect(text).toContain("no witness is set by default");
   });
 
