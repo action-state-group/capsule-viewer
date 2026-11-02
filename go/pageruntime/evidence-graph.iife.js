@@ -16640,7 +16640,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("5be4bbb6f65db01cc1d6f850ff6d85ebb78794e2");
+    return commitPrefix("2be7eb1ffb543b6cd7c4ab77f2052cf09a7ffac5");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -16901,6 +16901,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.headline.nothing-applied": "{n} had no rule that applied.",
       "lines.drill.show.one": "Show the {n} conversation",
       "lines.drill.show.other": "Show the {n} conversations",
+      "lines.fn.records": "\xB9 Records are the sealed items in this bundle ({records}); a conversation is the report's subject, made of one or more records ({n}).",
+      "lines.fn.resolved.tiered": "\xB2 Resolved means every rule that applied was met, and at least one applied. A rule the contract marks informational never changes the answer.",
+      "lines.fn.resolved": "\xB2 Resolved means every rule that applied was met, and at least one applied.",
+      "lines.fn.readonly": "\xB3 This page is read-only: it records nothing the reader does. A disagreement leaves the page as an evidence request or a dispute.",
       "lines.na-note.one": "{n} rule check did not apply to the conversation and count as met beside a met rule.",
       "lines.na-note.other": "{n} rule checks did not apply to the conversation and count as met beside a met rule.",
       "lines.rules.h": "Results rule by rule",
@@ -19221,6 +19225,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "lines.pf.verdicts.one",
     "lines.na-note.one",
     "lines.na-note.other",
+    // The canvas's footnote that says what the page does not do.
+    "lines.fn.readonly",
     "lines.sentence.undecided.none",
     "lines.why.undecided.none",
     "lines.sentence.nothing-applied",
@@ -19479,7 +19485,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "9b54b407fe2077875ba455d27ce959eec17b3fe383ba4192b87d6235eb3edd77",
+    lines: "c8e7c5313deee0137654878727c8a79760286cc165b46c316b5956f498a83d80",
     groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
     generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77"
   });
@@ -21922,6 +21928,29 @@ ${key}`);
     page: "outcome-report",
     css: OUTCOME_REPORT_CSS
   };
+  function renderCanvasNotes(notes, model, bundle, w) {
+    const records = bundle?.records;
+    const note = (key, text2) => {
+      const p = el8("p", "", text2);
+      p.dataset.footnote = key;
+      notes.append(p);
+    };
+    if (Array.isArray(records))
+      note(
+        "records",
+        w.t("lines.fn.records", {
+          records: fmtCount(records.length),
+          n: fmtCount(model.totalCount)
+        })
+      );
+    note(
+      "resolved",
+      w.t(
+        model.gating === void 0 ? "lines.fn.resolved" : "lines.fn.resolved.tiered"
+      )
+    );
+    note("readonly", w.t("lines.fn.readonly"));
+  }
   async function drawLines(levels, result3, options, bundle, verified, w, tierOf) {
     const built = buildOutcomeReportModel(result3, options);
     const model = tierOf === void 0 ? built : { ...built, gating: gating(built.conversations, tierOf) };
@@ -21936,6 +21965,7 @@ ${key}`);
     notes.dataset.section = "footnotes";
     renderMeta(pad, model, w, notes);
     renderLines(pad, model, runInfo, w, notes);
+    renderCanvasNotes(notes, model, bundle, w);
     if (notes.childElementCount > 0) pad.append(notes);
     sheet.append(pad);
     levels.L0.append(sheet);
