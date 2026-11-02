@@ -266,6 +266,7 @@ it("every locked line is a default entry, and every default line that states wha
     "lines.subject.halves.none",
     "lines.subject.legend.undecided",
     "lines.subject.request.none",
+    "lines.subject.slice.per-share",
     "lines.subject.slice.shared",
     "lines.subject.tile.undecided",
     "lines.tier.recomputed",

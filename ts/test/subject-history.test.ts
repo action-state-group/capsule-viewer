@@ -3,8 +3,8 @@
 
 // Outcomes frame 5 of Steven's Terms Pack canvas, "Same customer in this
 // report" (capsule-viewer#122). The producer's fixtures
-// (evidencebook-skills tests/fixtures/subject-history, commit ab15019) are
-// copied in unchanged; the bundle they ride on is the outcome fixture cut to
+// (evidencebook-skills tests/fixtures/subject-history: operator at ab15019,
+// shared at 2762d15, salted per share) are copied in unchanged; the bundle they ride on is the outcome fixture cut to
 // four conversations, their keys renamed to the bundle's conversation ids.
 //
 // UPDATE_GOLDENS=1 npx vitest run test/subject-history.test.ts
@@ -32,6 +32,15 @@ const operator = load("subject-history", "result-v0-operator.json");
 const shared = load("subject-history", "result-v0-shared.json");
 const MEMBER = "x-airline-support-outcomes";
 const blockOf = (doc: Obj): Obj => (doc[MEMBER] as Obj).subject_history as Obj;
+/** `doc` with its `handle_scope.salting` set, or the scope removed when `salting` is null. */
+function salted(doc: Obj, salting: string | null): Obj {
+  const copy = JSON.parse(JSON.stringify(doc)) as Obj;
+  if (salting === null) delete blockOf(copy).handle_scope;
+  else (blockOf(copy).handle_scope as Obj).salting = salting;
+  return copy;
+}
+const sharedHandle = ((blockOf(shared).conversations as Obj)["t-1"] as Obj)
+  .customer_handle as string;
 
 /** The outcome bundle cut to its first four conversations, with `doc`'s slice on its Result. */
 function bundleWith(doc: Obj, edit?: (block: Obj) => void): Obj {
@@ -116,17 +125,36 @@ describe("subject-history reader (the producer's fixtures)", () => {
     expect(h.entries.get("t-4")!.bandExponent).toBeUndefined();
   });
 
-  it("shared tier: labels, band and halves; no handle, no follow_up_of", () => {
+  it("shared tier salted per share: all five fields", () => {
     const h = readSubjectHistory({ ...shared })!;
     expect(h.tier).toBe("shared");
-    for (const entry of h.entries.values()) {
-      expect(entry.handle).toBeUndefined();
-      expect(entry.followUpOf).toBeUndefined();
-      expect(entry.requestLabels.length).toBeGreaterThan(0);
+    expect(h.grouped).toBe(true);
+    expect(h.scope).toEqual({
+      pack: "airline-support-outcomes",
+      tier: "shared",
+      salting: "per-share",
+      saltId: "8602ee556cf7e75c",
+    });
+    expect(h.entries.get("t-3")!.followUpOf).toBe("t-1");
+    for (const entry of h.entries.values())
+      expect(entry.handle).toBe(sharedHandle);
+  });
+
+  it("shared tier not salted per share: labels, band and halves; no handle, no follow_up_of", () => {
+    for (const salting of ["per-pack", "per-share ", "PER-SHARE", null]) {
+      const h = readSubjectHistory(salted(shared, salting))!;
+      expect(h.tier).toBe("shared");
+      expect(h.grouped).toBe(false);
+      expect(h.scope).toBeUndefined();
+      for (const entry of h.entries.values()) {
+        expect(entry.handle).toBeUndefined();
+        expect(entry.followUpOf).toBeUndefined();
+        expect(entry.requestLabels.length).toBeGreaterThan(0);
+      }
     }
   });
 
-  it("a shared-tier document that carries a handle anyway has it ignored", () => {
+  it("a shared-tier document whose handle is salted per pack has it ignored", () => {
     const doc = JSON.parse(JSON.stringify(operator)) as Obj;
     (blockOf(doc).handle_scope as Obj).tier = "shared";
     const h = readSubjectHistory(doc)!;
@@ -188,8 +216,30 @@ describe("subject-history page", () => {
     expect(text).toContain("cancellation, compensation");
   });
 
-  it("shared: no handle, no follow-up link, no customer block", async () => {
+  it("shared, salted per share: one customer in the third person, every count of its total", async () => {
     const root = await page(bundleWith(shared));
+    const s = section(root)!;
+    expect(s.dataset.tier).toBe("shared");
+    expect(s.querySelectorAll("article.sh-cust")).toHaveLength(1);
+    expect(s.querySelector<HTMLElement>(".sh-cust")!.dataset.handle).toBe(
+      sharedHandle,
+    );
+    const text = s.textContent!;
+    expect(text).toContain("made for this share only");
+    expect(text).toContain(
+      "shared tier, salted per-share, salt 8602ee556cf7e75c",
+    );
+    expect(text).not.toMatch(/\byou(r)?\b/iu);
+    expect(text).not.toContain("does not group conversations by customer");
+    const tiles = [...s.querySelectorAll(".sh-tile")].map((t) => t.textContent);
+    expect(tiles[0]).toMatch(/^4.*of the report's 4$/u);
+    for (const tile of tiles.slice(1)) expect(tile).toMatch(/\d+ of 4/u);
+    expect(s.querySelectorAll(".sh-link")).toHaveLength(1);
+    expect(s.querySelectorAll("details.sh-conv")).toHaveLength(4);
+  });
+
+  it("shared, not salted per share: no handle, no follow-up link, no customer block", async () => {
+    const root = await page(bundleWith(salted(shared, "per-pack")));
     const s = section(root)!;
     expect(s.dataset.tier).toBe("shared");
     expect(s.querySelector("article.sh-cust")).toBeNull();
@@ -197,9 +247,7 @@ describe("subject-history page", () => {
     expect(s.querySelector("[data-handle]")).toBeNull();
     expect(s.querySelector(".sh-tile")).toBeNull();
     expect(s.querySelectorAll("details.sh-conv")).toHaveLength(4);
-    const handle = ((blockOf(operator).conversations as Obj)["t-1"] as Obj)
-      .customer_handle as string;
-    expect(root.innerHTML).not.toContain(handle.slice(0, 12));
+    expect(root.innerHTML).not.toContain(sharedHandle.slice(0, 6));
     expect(s.textContent).toContain("does not group conversations by customer");
   });
 
@@ -217,11 +265,16 @@ describe("subject-history page", () => {
     expect(s.textContent).toContain("has more than one conversation");
   });
 
-  it("a handle in a document whose tier is shared or unknown is never drawn", async () => {
-    for (const tier of ["shared", "public"]) {
+  it("a handle in a document whose tier is shared but not salted per share, or unknown, is never drawn", async () => {
+    for (const [tier, salting] of [
+      ["shared", "per-pack"],
+      ["public", "per-pack"],
+      ["public", "per-share"],
+    ]) {
       const root = await page(
         bundleWith(operator, (block) => {
           (block.handle_scope as Obj).tier = tier;
+          (block.handle_scope as Obj).salting = salting;
         }),
       );
       const s = section(root)!;
@@ -272,6 +325,7 @@ describe("subject-history page", () => {
     for (const [name, doc] of [
       ["subject-history-operator", operator],
       ["subject-history-shared", shared],
+      ["subject-history-shared-unsalted", salted(shared, "per-pack")],
     ] as const) {
       const root = await page(bundleWith(doc));
       check(name, section(root)!.outerHTML);
