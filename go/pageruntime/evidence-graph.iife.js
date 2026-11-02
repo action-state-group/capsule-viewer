@@ -16640,7 +16640,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("27c008fde4fa7dc6567d652d26bfd59557d5f73c");
+    return commitPrefix("716e0b804251a2b06c28c64320e04e3ff6707a76");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -23363,11 +23363,12 @@ ${key}`);
     ).length;
     return {
       drawn: sealed >= sealedSide ? sealed - sealedSide : sealed,
-      recomputed: recomputed >= claimsSide ? recomputed - claimsSide : recomputed
+      recomputed: recomputed >= claimsSide ? recomputed - claimsSide : recomputed,
+      gap: sealed - sealedSide !== recomputed - claimsSide
     };
   }
   function mismatchMarker(count2, field, w) {
-    if (count2.drawn === count2.recomputed) return void 0;
+    if (!count2.gap) return void 0;
     const marker = el11(
       "span",
       "count mismatch",
