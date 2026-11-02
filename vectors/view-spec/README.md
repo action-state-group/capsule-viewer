@@ -36,7 +36,9 @@ exactly what the generator writes.
   lane's `role`, `mark` and `classes`; a co-failure view adds `subject`,
   `requirements`, `failing`, and the subjects and record `seq`s of each
   matrix cell), or `{reason, pointer?}`, the refusal. The refusal's message is
-  not compared.
+  not compared. Where a refusal could name one of several bad members, the
+Go checker visits them in sorted order and TypeScript in source order: the
+reason is the same and the vectors name only one bad member.
 
 A negative names its `base`: the positive it changes (in one way, except
 `neg-no-dataset` and the negatives that change the dataset). A runner checks

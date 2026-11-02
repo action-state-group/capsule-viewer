@@ -85,7 +85,9 @@ export function runView(view: unknown, dataset: ChartDataset | undefined): Obj {
     if (e instanceof ChartRefusal)
       return {
         reason: e.reason,
-        ...(e.pointer === undefined ? {} : { pointer: e.pointer }),
+        ...(e.pointer === undefined || e.pointer === ""
+          ? {}
+          : { pointer: e.pointer }),
       };
     throw e;
   }
@@ -451,6 +453,76 @@ export async function viewVectors(): Promise<{
     "A subject that is not a field path.",
     "view-unsupported-member",
     badSubject,
+  );
+  neg(
+    "neg-view-not-an-object",
+    "pos-calendar",
+    "A view that is not an object.",
+    "view-unsupported-member",
+    [] as unknown as Obj,
+  );
+  const entryNotObject = clone(calendar);
+  (entryNotObject.lanes as unknown[])[0] = "activity";
+  neg(
+    "neg-lane-not-an-object",
+    "pos-calendar",
+    "A lane that is not an object.",
+    "view-unsupported-member",
+    entryNotObject,
+  );
+  const noChart = clone(calendar);
+  delete laneOf(noChart, 0).chart;
+  neg(
+    "neg-lane-chart-missing",
+    "pos-calendar",
+    "A lane with no chart.",
+    "view-unsupported-member",
+    noChart,
+  );
+  const emptyClasses = clone(cells);
+  laneOf(emptyClasses, 1).classes = {};
+  neg(
+    "neg-classes-empty",
+    "pos-calendar-cells",
+    "Classes that name no value.",
+    "view-unsupported-member",
+    emptyClasses,
+  );
+  const columnsNotList = clone(specs.byPeriod);
+  columnsNotList.columns = {};
+  neg(
+    "neg-by-period-columns-not-a-list",
+    "pos-by-period",
+    "Columns that are not a list.",
+    "view-unsupported-member",
+    columnsNotList,
+  );
+  const noSubject = clone(specs.coFailure);
+  delete noSubject.subject;
+  neg(
+    "neg-co-failure-subject-missing-member",
+    "pos-co-failure",
+    "A co-failure view with no subject.",
+    "view-unsupported-member",
+    noSubject,
+  );
+  const keyedActivity = clone(cells);
+  laneOf(keyedActivity, 0).chart = c.keyedPerDay(CASE_TYPE, "verdict");
+  neg(
+    "neg-activity-lane-keyed",
+    "pos-calendar-cells",
+    "An activity lane with a key channel.",
+    "view-lane-role",
+    keyedActivity,
+  );
+  const unclassedRulings = clone(cells);
+  delete laneOf(unclassedRulings, 2).classes;
+  neg(
+    "neg-keyed-adjudication-lane-without-classes",
+    "pos-calendar-cells",
+    "A keyed adjudication lane with no classes.",
+    "view-lane-role",
+    unclassedRulings,
   );
   neg(
     "neg-no-dataset",

@@ -123,7 +123,7 @@ func readViewEntry(value interface{}, at string, seen map[string]bool, lane stri
 	viewOnlyKeys(m, allowed, at)
 	id, isString := m["id"].(string)
 	if !isString || !viewID.MatchString(id) {
-		refuse(ReasonViewUnsupportedMember, at+"/id must match "+viewID.String(), at+"/id")
+		refuse(ReasonViewUnsupportedMember, at+"/id must match ^[a-z][a-z0-9_]{0,31}$", at+"/id")
 	}
 	if seen[id] {
 		refuse(ReasonViewUnsupportedMember, at+"/id "+id+" is repeated", at)
@@ -152,6 +152,8 @@ func readViewEntry(value interface{}, at string, seen map[string]bool, lane stri
 		if !ok || len(c) == 0 {
 			refuse(ReasonViewUnsupportedMember, at+"/classes must be a non-empty object", at+"/classes")
 		}
+		// Sorted, as onlyKeys: with several invalid classes the one named may
+		// differ from TypeScript's (source order); the reason is the same.
 		names := make([]string, 0, len(c))
 		for k := range c {
 			names = append(names, k)
