@@ -1,0 +1,15 @@
+{
+  "wording_pack_version": "aac.wording-pack/v0",
+  "id": "capsule-viewer/contract-report/operator/en@1",
+  "locale": "en",
+  "entries": {
+    "layout.grouping": "lines",
+    "lines.title": "Outcome report · operator view",
+    "lines.verdict.not_evaluable.judged": "not evaluable",
+    "lines.verdict.not_evaluable.unjudged": "not evaluable",
+    "lines.verdict.not_evaluable.withheld": "not evaluable",
+    "lines.verdict.not_evaluable.unavailable": "not evaluable",
+    "lines.verdict.unsupported": "unsupported",
+    "lines.verdict.not_applicable": "not applicable"
+  }
+}
