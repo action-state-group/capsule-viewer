@@ -9,7 +9,13 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
-## Unreleased
+## ts 0.12.0 and go 0.12.0 (2026-11-01)
+
+Both state viewer 0.12.0: `ts/v0.12.0`, then `go/v0.12.0` on the commit that
+ships its page runtime. This release carries the changes merged since 0.11.0:
+#232 (issue #156), #231 (issue #222), #223 (issue #171) and #227 (issue #122).
+The Go module now accepts `view` entries in `charts` (#156), which evidencebook's
+report builder needs to draw a Terms Pack or EU AI Act page from a Go build.
 
 ### Added
 
