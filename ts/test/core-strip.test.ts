@@ -418,7 +418,7 @@ describe("calibration claims are cited on their own line, not counted as evaluat
       s.querySelector<HTMLElement>('[data-bucket="not_evaluable"]')!.dataset.of,
     ).toBe("3");
     expect(s.querySelector(".agg-calibration")!.textContent).toBe(
-      "1 calibration check",
+      "1 calibration check of the judge, not counted as evaluations",
     );
     expect(s.querySelector("[data-count-mismatch]")).toBeNull();
     expect(refused(root)).toBe(false);

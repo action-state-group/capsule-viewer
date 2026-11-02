@@ -96,7 +96,7 @@ and appends to L2 after the core.
    (evaluations). Never recomputed, except that calibration claims
    (`type: "calibration"`, weekly checks of the judge that the sealed
    aggregate counts like requirements) are taken out of the figures and drawn
-   on their own line, "N calibration checks", so the strip plus that line is
+   on their own line, "N calibration checks of the judge, not counted as evaluations", so the strip plus that line is
    the sealed coverage; the count-mismatch marker fires for any other gap.
    `unknown_count` is never called "unresolved" ([cr] §2, [er] §3). Each bucket's count sits beside its
    denominator, the evaluated population ("of 216").
