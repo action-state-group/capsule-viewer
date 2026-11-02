@@ -91,7 +91,7 @@
     "doesnt.all": "That these are all the holder's deals. It is the window the holder's policy sets, and shop purchases are not counted.",
     "doesnt.one": "Anything about a single deal.",
     "doesnt.statement": "That the counts are right. Without the deal entries they are the holder's own statement.",
-    "doesnt.witness": "That an outside witness saw the snapshot.",
+    "doesnt.witness": "That an outside witness saw the snapshot. A card from a default deal profile is signed by its holder, and no outside witness recorded its snapshot: a witness records the snapshot only when the holder sets checkpoint.endpoint to the scrapi+https URL of a Transparency Service, and no witness is set by default.",
     "doesnt.signature": "That the holder's key signed it. This page does not check the signature.",
     "doesnt.next": "What the other side will do with it. That's up to their rules. Most deal small without it and ask for more before a big one.",
     "heading.say": "Tell your agent",

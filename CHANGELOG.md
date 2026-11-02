@@ -16,6 +16,9 @@ here. The format follows
 - Same customer in this report on a shared page (#122): when the producer salts the customer handle per share (`handle_scope` `{tier: "shared", salting: "per-share"}`, evidencebook-skills#93, #96), a shared Outcomes page draws the customer grouping the operator page draws (the customer line, tiles with their denominators, the timeline with the follow-up link and the table), in the third person, with two new words, `lines.subject.slice.per-share` and `lines.subject.explain.per-share`. A shared member salted any other way, or with no `handle_scope`, is drawn as before: the handle and `follow_up_of` are ignored and no conversations are grouped. The Outcomes default pack's digest changes, so the contract-report goldens are regenerated.
 - The History card's headline is one sentence, as Steven's 9b frame 1 draws it: "44 of 46 deals where you had to come through went as agreed. **1 didn't.** **1 we couldn't tell.**", and "What it proves" is a fold-out in the first level (#171). The wording pack gains `sentence.did_not_hold` and `sentence.undecided`, so its digest and the manifest pins change.
 
+### Changed
+- The History card says plainly that a card from a default deal profile is signed by its holder and that no outside witness recorded its snapshot (the repository's prose lint bans a bare "witnessed"). Its "What it doesn't" list, when no witness line is drawn, now reads that a witness records the snapshot only when the holder sets `checkpoint.endpoint` to the `scrapi+https` URL of a Transparency Service, and that no witness is set by default (Steven's 2026-11-01 ruling on capsule-cli#519). A card that carries a Receipt a reader's witness accepts still reads "Snapshot recorded … by …". Wording only: no check changes.
+
 ## ts 0.11.0 and go 0.11.0 (2026-11-01)
 
 Both state viewer 0.11.0: `ts/v0.11.0`, then `go/v0.11.0` on the commit that

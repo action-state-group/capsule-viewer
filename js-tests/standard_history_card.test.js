@@ -441,9 +441,9 @@ describe("what the page claims", () => {
     for (const p of everyPage(l).filter((x) => x.depth === "L2" && x.model.state !== "unreadable")) {
       const row = p.host.L2.querySelector('[data-property="anchor_inclusion"]');
       expect(row.getAttribute("data-property-status")).toBe("NOT_CHECKED");
-      // "signed" only where the page says it did not check the signature.
+      // "signed" only where the page says it did not check the signature, or says what a default profile's card is (capsule-cli#519).
       const sentences = pageText(p.host).split(/(?<=\.)\s*|\n/).filter((s) => /\bsign(ed|ature)\b|witnessed/i.test(s));
-      expect(sentences.filter((s) => !/does not check the signature/.test(s) && !/^That the holder's key signed it\.?$/.test(s.trim()))).toEqual([]);
+      expect(sentences.filter((s) => !/does not check the signature/.test(s) && !/^That the holder's key signed it\.?$/.test(s.trim()) && !/^A card from a default deal profile is signed by its holder, and no outside witness recorded its snapshot:/.test(s.trim()))).toEqual([]);
     }
   });
 });
