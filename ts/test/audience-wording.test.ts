@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
   DEFAULT_PACKS,
@@ -101,4 +101,40 @@ it("eu-deployer/en words each obligation's title, so the page shows the pack's t
     "utf8",
   );
   for (const k of titles) expect(golden, k).toContain(pack.entries[k]!);
+});
+
+describe("the eu-deployer notes name the source of the obligation titles", () => {
+  const pack = readWordingPack(
+    JSON.parse(
+      readFileSync(
+        resolve(WORDING, "contract-report-eu-deployer.en.json"),
+        "utf8",
+      ),
+    ),
+  );
+  const read = (name: string) =>
+    readFileSync(
+      resolve(process.cwd(), "test", "goldens", "contract-report", name),
+      "utf8",
+    );
+
+  it("when the pack words every title, the pack-titles notes are drawn and the producer-titles claim is gone", () => {
+    for (const name of ["eu-deployer.closed.html", "eu-deployer.open.html"]) {
+      const golden = read(name);
+      expect(golden, name).toContain(
+        "Obligation titles are the Act's article headings, from this page's wording pack.",
+      );
+      expect(golden, name).not.toContain("obligation titles, test names");
+    }
+    expect(read("eu-deployer.open.html")).toContain(
+      "The title is the Act's article heading, from this page's wording pack.",
+    );
+    expect(Object.keys(pack.entries)).not.toContain("groups.summary.basis");
+  });
+
+  it("when even one title falls back to the producer's, the base notes stand (default eu golden)", () => {
+    const golden = read("eu.open.html");
+    expect(golden).toContain("obligation titles, test names");
+    expect(golden).not.toContain("from this page's wording pack.");
+  });
 });

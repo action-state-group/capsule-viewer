@@ -13,6 +13,7 @@ here. The format follows
 
 ### Added
 
+- The EU AI Act page has two new locked notes, `groups.summary.basis.pack-titles` and `groups.od.mapped.pack-titles` (#123). The page draws them instead of `groups.summary.basis` and `groups.od.mapped` only when the host's wording pack words every obligation title on the page (`eu-deployer/en` does); they say the titles are the Act's article headings from the pack and the rest stays the producer's mapping. If even one title falls back to the producer's, the base notes stand. The default EU pack's digest changes with the two keys.
 - Same customer in this report on a shared page (#122): when the producer salts the customer handle per share (`handle_scope` `{tier: "shared", salting: "per-share"}`, evidencebook-skills#93, #96), a shared Outcomes page draws the customer grouping the operator page draws (the customer line, tiles with their denominators, the timeline with the follow-up link and the table), in the third person, with two new words, `lines.subject.slice.per-share` and `lines.subject.explain.per-share`. A shared member salted any other way, or with no `handle_scope`, is drawn as before: the handle and `follow_up_of` are ignored and no conversations are grouped. The Outcomes default pack's digest changes, so the contract-report goldens are regenerated.
 
 ## ts 0.11.0 and go 0.11.0 (2026-11-01)
