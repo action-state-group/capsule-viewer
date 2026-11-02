@@ -154,9 +154,10 @@ type OfflineOptions struct {
 	// CoreRuntimeSHA256 is the runtime's pin; checked when set.
 	CoreRuntimeSHA256 string
 	Modules           []Module
-	// Charts are chart specs (docs/design/chart-spec.md), drawn in L1 in
-	// this order. Each is checked against the dataset the bundle's Result
-	// names before anything is written (chartspec.Check); one that fails
+	// Charts are chart specs (docs/design/chart-spec.md) and view entries
+	// (calendar, by-period, timeline, co-failure; docs/design/report-views.md),
+	// drawn in L1 in this order. Each is checked against the dataset the bundle's Result
+	// names before anything is written (chartspec.Check, or chartspec.CheckView for a view); one that fails
 	// refuses the build. They reach the page as renderOptions' charts.
 	Charts []json.RawMessage
 }
@@ -331,7 +332,11 @@ func checkCharts(bundleObject map[string]interface{}, charts []json.RawMessage) 
 	dataset, err := chartspec.DatasetOf(bundleObject)
 	for i, spec := range specs {
 		if err == nil {
-			_, err = chartspec.Check(spec, dataset)
+			if chartspec.IsView(spec) {
+				_, err = chartspec.CheckView(spec, dataset)
+			} else {
+				_, err = chartspec.Check(spec, dataset)
+			}
 		}
 		if err != nil {
 			return nil, fmt.Errorf("chart %d is refused: %w; no page is written", i+1, err)

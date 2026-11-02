@@ -35,6 +35,18 @@ const (
 	ReasonAggregateMismatch  = "chart-aggregate-mismatch"
 )
 
+// The refusal reasons of a view entry (ChartRefusalReason in chart-spec.ts;
+// docs/design/report-views.md).
+const (
+	ReasonViewUnsupportedMember = "view-unsupported-member"
+	ReasonViewChartShape        = "view-chart-shape"
+	ReasonViewRunsUnsealed      = "view-runs-unsealed"
+	ReasonViewRunsMismatch      = "view-runs-mismatch"
+	ReasonViewWindowNotMonths   = "view-window-not-months"
+	ReasonViewOverlap           = "view-overlap"
+	ReasonViewLaneRole          = "view-lane-role"
+)
+
 // Refusal is a refused chart: its reason, the JSON pointer into the spec it
 // names (empty when none) and why.
 type Refusal struct {

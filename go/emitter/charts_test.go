@@ -3,6 +3,8 @@ package emitter
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -112,4 +114,56 @@ func TestBuildOfflineHTMLCarriesAnIntegerSpelledAsAFloat(t *testing.T) {
 		require.NoError(t, err, spelling)
 		require.Contains(t, got, `"count":1}`, spelling)
 	}
+}
+
+// viewFixtures are the committed month bundle and the view entries the
+// TypeScript goldens draw (ts/test/testdata/views/).
+func viewFixtures(t *testing.T) (map[string]interface{}, []json.RawMessage) {
+	t.Helper()
+	dir := filepath.Join("..", "..", "ts", "test", "testdata", "views")
+	raw, err := os.ReadFile(filepath.Join(dir, "month.bundle.json"))
+	require.NoError(t, err)
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	var bundle map[string]interface{}
+	require.NoError(t, decoder.Decode(&bundle))
+	raw, err = os.ReadFile(filepath.Join(dir, "views.json"))
+	require.NoError(t, err)
+	var views []json.RawMessage
+	require.NoError(t, json.Unmarshal(raw, &views))
+	require.Len(t, views, 5)
+	return bundle, views
+}
+
+// A Go-built page carries each view entry the Go checker accepted, so the
+// page runtime draws it (capsule-viewer#156).
+func TestBuildOfflineHTMLCarriesCheckedViews(t *testing.T) {
+	bundle, views := viewFixtures(t)
+	got, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Charts: views})
+	require.NoError(t, err)
+	for _, kind := range []string{"calendar", "by-period", "timeline", "co-failure"} {
+		require.Contains(t, got, `"view":"`+kind+`"`, kind)
+	}
+	embedded, err := BuildEmbeddedHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Charts: views})
+	require.NoError(t, err)
+	require.Contains(t, embedded.HTML, `"view":"by-period"`)
+}
+
+func TestBuildOfflineHTMLRefusesAFailingView(t *testing.T) {
+	bundle, views := viewFixtures(t)
+	var calendar map[string]interface{}
+	require.NoError(t, json.Unmarshal(views[0], &calendar))
+	calendar["title"] = "x"
+	bad, err := json.Marshal(calendar)
+	require.NoError(t, err)
+	_, err = BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Charts: []json.RawMessage{views[1], bad}})
+	require.ErrorContains(t, err, "chart 2 is refused: view-unsupported-member")
+	require.ErrorContains(t, err, "no page is written")
+	var refusal *chartspec.Refusal
+	require.ErrorAs(t, err, &refusal)
+	require.Equal(t, chartspec.ReasonViewUnsupportedMember, refusal.Reason)
+
+	// A view over a bundle whose root is no Result has no dataset.
+	_, err = BuildOfflineHTML(loadWeekBundle(t), []byte(marker), OfflineOptions{Audience: "*", Charts: views[:1]})
+	require.ErrorContains(t, err, "chart 1 is refused: chart-no-dataset")
 }
