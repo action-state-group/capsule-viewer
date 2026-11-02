@@ -11,15 +11,27 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.13.0 and go 0.13.0 (2026-11-02)
+
+Both state viewer 0.13.0: `ts/v0.13.0`, then `go/v0.13.0` on the commit that
+ships its page runtime. This release carries the changes merged since 0.12.0:
+#220, #218, #225 (issue #123), #226 (issue #172), #230, #235 (issue #171),
+#236 (issue #56), #238 and #240 (issue #239).
+
 ### Added
 
 - A generic `contract-report/v1` view (#56): a Result that opts in with the empty block and carries neither Outcomes nor EU AI Act data now draws rows from its claims (grouped by `requirement_ref` prefix, each tally with its denominator, tier sections when a contract is given, claims not yet in force apart) instead of the plain Result page. It has its own default wording pack, `capsule-viewer/contract-report/generic@1`, beneath a host pack's `report.*`, `row.*` and `group.*` words. A Result whose claims do not fit its card still draws the plain Result page.
+- The EU AI Act page has two new locked notes, `groups.summary.basis.pack-titles` and `groups.od.mapped.pack-titles` (#123). The page draws them instead of `groups.summary.basis` and `groups.od.mapped` only when the host's wording pack words every obligation title on the page (`eu-deployer/en` does); they say the titles are the Act's article headings from the pack and the rest stays the producer's mapping. If even one title falls back to the producer's, the base notes stand. The default EU pack's digest changes with the two keys.
+- A signed `policy_declined` refusal reads as the other party's limit, never a no (#220, closes #209): a bundle whose only cause for an incomplete verdict is a verified `policy_declined` refusal now draws a neutral "limit" receipt beside a "Not shared" half, where it drew the generic "did not verify" page. Anything else stays failed.
+- The Outcomes page draws the canvas's footnotes 1 to 3 (#226, part of #172): what a record and a conversation are, what "resolved" means, and that the page is read-only. Footnote 4 is not drawn.
 
 ### Changed
 
 - The pin moves to `@action-state-group/agent-action-capsule` 0.13.1 (#239), whose TypeScript reader recognizes `type: "calibration"` claims (agent-action-capsule#575). The stated verifier version and the goldens that print it changed with it.
 - The core strip counts requirement claims only and gives calibration claims their own line. A weekly calibration claim (`type: "calibration"`) is a check of the judge, not an evaluation of a requirement, but capsulectl and evidence-result-v0 section 4.1 count it in the sealed aggregate, so a monthly compliance report that cites weekly calibration overstated its evaluations ("19 evaluations of 5 requirements … Could not decide 7"). The strip now draws the sealed figure minus its calibration claims ("16 evaluations of 4 requirements … Could not decide 4", the same for the buckets and `unknown_count`) and a line "N calibration checks of the judge, not counted as evaluations", so the strip plus that line is the sealed coverage. The `count mismatch` marker is suppressed only when the sealed figure minus the calibration claims equals the claims' figure minus theirs, and still fires for any other gap. Both default wording packs gain `front.agg.calibration.one|other` and change digests, and the strip's stylesheet changes, so the goldens, `go/emitter/runtime-style-hashes.txt` and the Go goldens move. Origin: evidencebook-skills#73 (Sherlock2).
 - The History card's "Which side" rows read "in 3 of 5" instead of "3 of 5" (#171): the role count no longer looks like the outcome count it can coincide with ("3 of 5 … went as agreed"). The wording pack gains `role.count`, so `wording_sha256` and the script's `script_sha256` move; consumers that pin them re-pin on the next release.
+- The History card says disputes are not recorded yet instead of "You raised 0 / Raised with you 0" (#218, closes #212): the `standard_history/1` profile seals no statement that disputes were recorded, so an all-zero tally is the producer's silence, not a count of none. A tally that counts something is drawn as before.
+- The History card says plainly that a card from a default deal profile is signed by its holder and that no outside witness recorded its snapshot (the repository's prose lint bans a bare "witnessed"). Its "What it doesn't" list, when no witness line is drawn, now reads that no outside witness recorded the snapshot, that the holder has to choose a witness, and that none is set by default (Steven's 2026-11-01 ruling on capsule-cli#519, wording by Sherlock2). A card that carries a Receipt a reader's witness accepts still reads "Snapshot recorded … by …". Wording only: no check changes.
 
 ## ts 0.12.0 and go 0.12.0 (2026-11-01)
 
@@ -33,12 +45,8 @@ report builder needs to draw a Terms Pack or EU AI Act page from a Go build.
 
 - Go twin of the view checks (#156): `go/chartspec` has `CheckView` and `IsView`, the Go port of `ts/src/report-view.ts` for the calendar, by-period, timeline and co-failure views, and `Chart.Units` (the temporal chart's every unit and whether it was not run). `go/emitter` routes a `view` entry in `charts` to it, so a Go-built page (and `capsulectl`'s build) carries a checked view and the page runtime draws it, where the build refused it before. The refusals are pinned by new shared vectors, `vectors/view-spec/`, which the TypeScript and Go checkers both run.
 - The History card's stamped note no longer says the other side's record points at yours as if the card had checked it (#222, F4.15b): it reads "your agent’s receipt checks whether their record points at yours", because the card carries a count, not the other half. The check itself runs on the receipt (action-state-group/evidencebook-deal#117), per Sherlock2's ruling (Buzz 3224c6af).
-- The EU AI Act page has two new locked notes, `groups.summary.basis.pack-titles` and `groups.od.mapped.pack-titles` (#123). The page draws them instead of `groups.summary.basis` and `groups.od.mapped` only when the host's wording pack words every obligation title on the page (`eu-deployer/en` does); they say the titles are the Act's article headings from the pack and the rest stays the producer's mapping. If even one title falls back to the producer's, the base notes stand. The default EU pack's digest changes with the two keys.
 - Same customer in this report on a shared page (#122): when the producer salts the customer handle per share (`handle_scope` `{tier: "shared", salting: "per-share"}`, evidencebook-skills#93, #96), a shared Outcomes page draws the customer grouping the operator page draws (the customer line, tiles with their denominators, the timeline with the follow-up link and the table), in the third person, with two new words, `lines.subject.slice.per-share` and `lines.subject.explain.per-share`. A shared member salted any other way, or with no `handle_scope`, is drawn as before: the handle and `follow_up_of` are ignored and no conversations are grouped. The Outcomes default pack's digest changes, so the contract-report goldens are regenerated.
 - The History card's headline is one sentence, as Steven's 9b frame 1 draws it: "44 of 46 deals where you had to come through went as agreed. **1 didn't.** **1 we couldn't tell.**", and "What it proves" is a fold-out in the first level (#171). The wording pack gains `sentence.did_not_hold` and `sentence.undecided`, so its digest and the manifest pins change.
-
-### Changed
-- The History card says plainly that a card from a default deal profile is signed by its holder and that no outside witness recorded its snapshot (the repository's prose lint bans a bare "witnessed"). Its "What it doesn't" list, when no witness line is drawn, now reads that no outside witness recorded the snapshot, that the holder has to choose a witness, and that none is set by default (Steven's 2026-11-01 ruling on capsule-cli#519, wording by Sherlock2). A card that carries a Receipt a reader's witness accepts still reads "Snapshot recorded … by …". Wording only: no check changes.
 
 ## ts 0.11.0 and go 0.11.0 (2026-11-01)
 
