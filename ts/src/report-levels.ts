@@ -960,21 +960,41 @@ export function anchorCases(root: ParentNode): number {
   const cards = root.querySelectorAll<HTMLElement>("[data-case]");
   if (cards.length === 0) return 0;
   const top = (root as Node).getRootNode();
-  const held = (address: string): boolean =>
-    top.nodeType === 9
-      ? (top as Document).getElementById(address) !== null
-      : (top as ParentNode).querySelector(
-          `[id="${address.replace(/["\\]/gu, "\\$&")}"]`,
-        ) !== null;
+  // A page not yet placed in a document has no id index: its addresses are
+  // collected once per tree and kept here, not looked up card by card.
+  let held: Set<string> | undefined;
+  if (top.nodeType !== 9) {
+    held = treeAddresses.get(top);
+    if (held === undefined) {
+      held = new Set(
+        [
+          ...(top as ParentNode).querySelectorAll<HTMLElement>(
+            "[data-case][id]",
+          ),
+        ].map((e) => e.id),
+      );
+      treeAddresses.set(top, held);
+    }
+  }
   let anchored = 0;
   for (const card of cards) {
     const address = caseAddress(card.dataset.case!);
-    if (card.id !== "" || held(address)) continue;
+    if (card.id !== "") continue;
+    if (
+      held === undefined
+        ? (top as Document).getElementById(address) !== null
+        : held.has(address)
+    )
+      continue;
     card.id = address;
+    held?.add(address);
     anchored++;
   }
   return anchored;
 }
+
+/** The case addresses already held in a tree not placed in a document, keyed weakly by its root. */
+const treeAddresses = new WeakMap<Node, Set<string>>();
 
 const hashWatched = new WeakSet<Document>();
 
