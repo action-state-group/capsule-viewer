@@ -57,8 +57,19 @@ type Chart struct {
 	Window     *Window
 	// Runs is true only when the chart can say "not run": a temporal chart
 	// with runs on a one-window plan.
-	Runs   bool
+	Runs bool
+	// Units are, on a temporal chart, every unit of the window in order and
+	// whether it was not run. A chart whose other key channel has no value
+	// after the transform has no groups, yet its units still say which days
+	// ran (CheckedChart.units in chart-spec.ts).
+	Units  []Unit
 	Groups []Group
+}
+
+// Unit is one unit of a temporal chart's window and whether it was not run.
+type Unit struct {
+	Unit   string
+	NotRun bool
 }
 
 // Values returns the chart's groups in the statement's values form: the key
@@ -501,6 +512,11 @@ func check(value interface{}, dataset *Dataset) *Chart {
 		Window:     window,
 		Runs:       drawsRuns,
 		Groups:     groups,
+	}
+	if temporal != "" {
+		for _, u := range timeUnits {
+			out.Units = append(out.Units, Unit{Unit: u, NotRun: drawsRuns && len(runRowsOf[u]) == 0})
+		}
 	}
 	for name, c := range chans {
 		out.Channels[name] = *c
