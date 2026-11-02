@@ -263,12 +263,15 @@ the reasons are `view-*` strings or a chart reason.
 ## 4. Packagings and the Go twin
 
 `html`, `embedded` and `static` draw views like charts. `fragment` is
-unavailable (`fragment-has-charts`). Go's offline builder checks `charts`
-entries with `go/chartspec`; an entry with a `view` member is not a chart spec
-there and is refused (`chart-unsupported-member`), so a Go-built page can never
-draw a view unchecked. The Go twin of the view checks is not in this item; the
-browser runtime draws views on Go-built pages once Go accepts them. It is filed
-as a follow-up (needs `go/chartspec` to read `view`).
+unavailable (`fragment-has-charts`). Go's offline builder checks each `charts`
+entry with `go/chartspec`: a chart spec with `Check`, an entry with a `view`
+member with `CheckView`, the Go twin of `ts/src/report-view.ts`
+(capsule-viewer#156). Both implementations run the shared vectors in
+`vectors/view-spec/`, so a Go-built page carries a view only when the same
+refusals that stop the TypeScript builder passed, and the browser runtime
+draws it. `Check` itself still refuses a view entry
+(`chart-unsupported-member`), so a caller that does not route by `IsView`
+never draws a view unchecked.
 
 ## 5. Tests
 
@@ -314,7 +317,14 @@ the viewer's: a second pack with other ids needs no code change.
   and a mismatching view (notice, never the table).
 - **5a:** every nonzero cell value has Show evidence whose records are in the
   core's records section; every zero has the `none` label.
-- **Go:** an entry with `view` is refused by `go/chartspec` (a Go test).
+- **Shared vectors** (`vectors/view-spec/`, capsule-viewer#156): the positives
+  of every view kind and a negative per refusal above, each naming its base,
+  generated from the fixtures above and run by `ts/test/view-spec-vectors.test.ts`
+  and by `go/chartspec`. A vector states the reason and the pointer a refusal
+  carries, and, for a view that draws, each chart's recomputed values and the
+  co-failure matrix.
+- **Go:** `go/emitter` builds a page from the committed bundle and view entries
+  and carries every kind; a failing view refuses the build.
 - **Empty category domain:** a by-period month with no not-met cases still
   reads "Not run" on the weeks no run covered (`units`).
 - **Browser:** the calendar and the table, scripts on and off, print and 390 px,
