@@ -50,6 +50,7 @@
     "role.bought.own": "You bought from people",
     "role.provided.shared": "Sold or provided",
     "role.bought.shared": "Bought from people",
+    "role.count": "in {n} of {of}",
     "count.of": "{n} of {of}",
     "sentence.did_not_hold": "{n} didn't.",
     "sentence.undecided": "{n} we couldn't tell.",

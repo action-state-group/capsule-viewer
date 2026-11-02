@@ -9,6 +9,12 @@ here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Changed
+
+- The History card's "Which side" rows read "in 3 of 5" instead of "3 of 5" (#171): the role count no longer looks like the outcome count it can coincide with ("3 of 5 … went as agreed"). The wording pack gains `role.count`, so `wording_sha256` and the script's `script_sha256` move; consumers that pin them re-pin on the next release.
+
 ## ts 0.12.0 and go 0.12.0 (2026-11-01)
 
 Both state viewer 0.12.0: `ts/v0.12.0`, then `go/v0.12.0` on the commit that
