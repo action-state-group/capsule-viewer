@@ -69,12 +69,13 @@ for (const { file, page } of CARDS) {
   });
 }
 
-it("a Result carrying only the contract-report/v1 block (neither outcome-report/v1 nor eu-ai-act-compliance/v1) draws the generic Result page", async () => {
+it("a Result carrying only the contract-report/v1 block (neither outcome-report/v1 nor eu-ai-act-compliance/v1) draws the generic contract-report view", async () => {
   const source = fixture("result-root-bundle.json");
   source.extensions = { "contract-report/v1": {} };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  expect(root.querySelector('[data-page="result"]')).not.toBeNull();
+  expect(root.querySelector('[data-page="contract-report"]')).not.toBeNull();
+  expect(root.querySelector('[data-page="result"]')).toBeNull();
   expect(root.querySelector('[data-page="outcome-report"]')).toBeNull();
   expect(root.querySelector('[data-page="compliance"]')).toBeNull();
 });
@@ -107,12 +108,12 @@ for (const { file, kind } of [
     expect(earlierRow.textContent).toContain("Shown by the page's module");
   });
 
-it("a Result carrying only contract-report/v1 lists it as interpreted: the contract-report module drew the generic Result page", async () => {
+it("a Result carrying only contract-report/v1 lists it as interpreted: the contract-report module drew the generic view", async () => {
   const source = fixture("result-root-bundle.json");
   source.extensions = { "contract-report/v1": {} };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  expect(root.querySelector('[data-page="result"]')).not.toBeNull();
+  expect(root.querySelector('[data-page="contract-report"]')).not.toBeNull();
   const row = root.querySelector<HTMLElement>(
     '[data-extensions] [data-extension-id="contract-report/v1"]',
   )!;

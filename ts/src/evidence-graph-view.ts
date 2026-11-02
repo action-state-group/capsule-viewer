@@ -2301,7 +2301,7 @@ export const CONTRACT_REPORT_MANIFEST: PresentationManifest = Object.freeze({
 
 interface ContractReportModel {
   readonly result: ResultRoot;
-  /** The grouping the bundle's sealed data supports, or none: the generic Result page. */
+  /** The grouping the bundle's sealed data supports (`generic` with none), or none when the claims do not fit the card: the generic Result page. */
   readonly input?: ContractReportInput;
   /** A grouping was supported, but the claims do not fit its card (see `claimsFitCard`). */
   readonly unfit?: true;
@@ -2315,11 +2315,11 @@ interface ContractReportModel {
  * reader (section 5), the outcome block first, as the built-in manifests'
  * precedence has it (the compliance card forbids `outcome-report/v1`).
  */
-/** The grouping the contract-report module draws for `bundle`, or undefined when it draws the generic Result page. */
+/** The grouping the contract-report module draws for `bundle`: the card its data supports, else `generic`. */
 export function contractReportGroupingOf(
   bundle: unknown,
-): ContractReportInput["grouping"] | undefined {
-  return contractReportInput(bundle)?.grouping;
+): ContractReportInput["grouping"] {
+  return contractReportInput(bundle)?.grouping ?? "generic";
 }
 
 function contractReportInput(bundle: unknown): ContractReportInput | undefined {
@@ -2335,7 +2335,8 @@ function contractReportInput(bundle: unknown): ContractReportInput | undefined {
  * `contract-report/v1`. `canRender` is the generic Result page's, whatever
  * the pack or the number of contracts (section 4), so every Result root that
  * opts in reaches it. A Result that carries neither grouping's data draws
- * the generic Result page, exactly as the built-in it replaces.
+ * the `generic` grouping (generic-report-view.ts); one whose claims do not
+ * fit its card draws the generic Result page.
  */
 /**
  * Whether every claim has a place of its own on the outcome or EU card. The
@@ -2392,12 +2393,19 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
       CONTRACT_REPORT_MANIFEST.id,
     );
     const supported = contractReportInput(context.bundle);
-    const input =
-      supported !== undefined && claimsFitCard(result, supported.grouping)
-        ? supported
-        : undefined;
+    const input: ContractReportInput | undefined =
+      supported === undefined
+        ? { grouping: "generic" }
+        : claimsFitCard(result, supported.grouping)
+          ? supported
+          : undefined;
+    // The interpreters run are those of the card's data; the generic
+    // grouping reads the Result alone.
     if (typeof context.bundle === "object" && context.bundle !== null)
-      contractReportDrawn.set(context.bundle, input ?? null);
+      contractReportDrawn.set(
+        context.bundle,
+        input === undefined || input.grouping === "generic" ? null : input,
+      );
     return {
       result,
       ...(input === undefined ? {} : { input }),
@@ -2420,9 +2428,10 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
     }
     // The report's banner takes its frame's look (a callout at the top);
     // the outcome report's verification page takes its look too.
-    host.setChromeClass(
-      model.input.grouping === "lines" ? OUTCOME_CHROME : COMPLIANCE_CHROME,
-    );
+    if (model.input.grouping !== "generic")
+      host.setChromeClass(
+        model.input.grouping === "lines" ? OUTCOME_CHROME : COMPLIANCE_CHROME,
+      );
     await renderContractReport(
       model.result,
       model.input,
@@ -3331,7 +3340,7 @@ async function renderVerifiedContext(
   const charted = options.charts !== undefined && options.charts.length > 0;
   if (verified) {
     const result = await resultRootOf(context);
-    const grouping = contractReportGroupingOf(bundle) ?? "lines";
+    const grouping = contractReportGroupingOf(bundle);
     const words =
       result === undefined && !charted
         ? undefined
@@ -3786,7 +3795,7 @@ async function renderVerifiedContext(
     verified
       ? {
           words: await contractReportWords(
-            contractReportGroupingOf(bundle) ?? "lines",
+            contractReportGroupingOf(bundle),
             options.wording,
           ),
           voice: options.voice ?? "shared",

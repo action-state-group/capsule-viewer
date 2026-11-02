@@ -11,6 +11,7 @@ import {
   contractReportWords,
   type ContractReportGrouping,
 } from "./contract-report-wording.js";
+import { drawGeneric, GENERIC_FRAME } from "./generic-report-view.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
 import { refusedWordingNotice } from "./report-levels.js";
 import {
@@ -57,8 +58,7 @@ import { applyDepth, type ReportLevels } from "./report-front.js";
  * kinds' blocks (`outcome-report/v1` for `lines`,
  * `eu-ai-act-compliance/v1` for `groups`), read by their own readers,
  * unchanged (section 5). A Result that opts in and carries neither draws
- * the generic Result page, as the built-in this module replaces does
- * (capsule-viewer#56 tracks a view of its own for it).
+ * the `generic` grouping (generic-report-view.ts): rows from its claims.
  *
  * Words (section 3). The module reads the keys `contract-report/v1`
  * defines, layered over its default pack entry by entry, each layer bound
@@ -98,11 +98,15 @@ export type ContractReportInput =
   | {
       readonly grouping: "groups";
       readonly presentation: CompliancePresentation;
-    };
+    }
+  | { readonly grouping: "generic" };
 
 const FRAMES: Readonly<
-  Record<ContractReportGrouping, typeof LINES_FRAME | typeof GROUPS_FRAME>
-> = { lines: LINES_FRAME, groups: GROUPS_FRAME };
+  Record<
+    ContractReportGrouping,
+    typeof LINES_FRAME | typeof GROUPS_FRAME | typeof GENERIC_FRAME
+  >
+> = { lines: LINES_FRAME, groups: GROUPS_FRAME, generic: GENERIC_FRAME };
 
 /**
  * How the module reads tiers for one Result: undefined with no contract,
@@ -189,7 +193,7 @@ export async function renderContractReport(
   }
   if (input.grouping === "lines")
     await drawLines(levels, result, input.options, bundle, verified, w, tierOf);
-  else
+  else if (input.grouping === "groups")
     await drawGroups(
       levels,
       result,
@@ -199,6 +203,7 @@ export async function renderContractReport(
       w,
       tierOf,
     );
+  else await drawGeneric(levels, result, bundle, verified, w, tierOf);
   regions.L0.append(levels.L0);
   regions.L1.append(levels.L1);
   regions.L2.append(levels.L2);

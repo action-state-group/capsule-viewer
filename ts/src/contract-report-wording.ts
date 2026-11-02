@@ -9,6 +9,7 @@ import {
 import { type WordingPackInput } from "./presentation-fragment.js";
 import OUTCOMES_PACK from "./wording/contract-report-outcomes.en.json" with { type: "json" };
 import EU_AI_ACT_PACK from "./wording/contract-report-eu-ai-act.en.json" with { type: "json" };
+import GENERIC_PACK from "./wording/contract-report-generic.en.json" with { type: "json" };
 
 /**
  * The words of the contract-report module (contract-report.ts), and the
@@ -262,6 +263,15 @@ const SECTION3_ALIASES: Readonly<
     "tier.recomputed": ["groups.tier.recomputed"],
     "tier.judged": ["groups.tier.judged"],
   },
+  generic: {
+    "report.title": ["generic.title"],
+    "verdict.met": ["generic.verdict.met"],
+    "verdict.not_met": ["generic.verdict.not_met"],
+    "verdict.not_evaluable": ["generic.verdict.not_evaluable"],
+    "verdict.out_of_scope": ["generic.verdict.out_of_scope"],
+    "tier.recomputed": ["generic.tier.recomputed"],
+    "tier.judged": ["generic.tier.judged"],
+  },
 });
 
 /**
@@ -288,14 +298,23 @@ function expandSection3(
 // The default packs, and which grouping each is for
 // ---------------------------------------------------------------------------
 
-/** The two ways the module lays a report out; a pack names its own in `layout.grouping`. */
-export type ContractReportGrouping = "lines" | "groups";
+/**
+ * The ways the module lays a report out; a pack names its own in
+ * `layout.grouping`. `generic` is the layout of a Result that opts in with
+ * neither Outcomes nor EU data: rows from its claims, nothing else.
+ */
+export type ContractReportGrouping = "lines" | "groups" | "generic";
+
+function isGrouping(value: unknown): value is ContractReportGrouping {
+  return value === "lines" || value === "groups" || value === "generic";
+}
 
 export const DEFAULT_PACKS: Readonly<
   Record<ContractReportGrouping, WordingPack>
 > = Object.freeze({
   lines: readWordingPack(OUTCOMES_PACK),
   groups: readWordingPack(EU_AI_ACT_PACK),
+  generic: readWordingPack(GENERIC_PACK),
 });
 
 /**
@@ -338,6 +357,15 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
       "groups.verdict.not_evaluable.unavailable",
     ],
   ],
+  [
+    "generic.verdict.met",
+    "generic.verdict.not_met",
+    "generic.verdict.failed",
+    "generic.verdict.unsupported",
+    "generic.verdict.out_of_scope",
+    "generic.verdict.not_evaluable",
+  ],
+  ["generic.tier.judged", "generic.tier.recomputed"],
   [
     "lines.status.resolved",
     "lines.status.missed",
@@ -429,6 +457,11 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "groups.rtier.informational.title",
     "groups.rtier.unstated.title",
   ],
+  [
+    "generic.rtier.must_have.title",
+    "generic.rtier.informational.title",
+    "generic.rtier.unstated.title",
+  ],
 ];
 
 /**
@@ -464,6 +497,9 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   // met/clean: a rule was met, a row resolved, or nothing exceptioned.
   "lines.verdict.met": "clean",
   "groups.verdict.met": "clean",
+  "generic.verdict.met": "clean",
+  "generic.later.title": "later",
+  "generic.later.readiness": "later",
   "lines.pf.verdict.met": "clean",
   "lines.line.resolved": "clean",
   "lines.status.resolved": "clean",
@@ -478,6 +514,7 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   // obligation's red exceptions count.
   "lines.verdict.not_met": "exception",
   "groups.verdict.not_met": "exception",
+  "generic.verdict.not_met": "exception",
   "lines.pf.verdict.not_met": "exception",
   "lines.line.missed": "exception",
   "lines.status.missed": "exception",
@@ -513,6 +550,10 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   "lines.verdict.failed": "unverifiable",
   "lines.verdict.unsupported": "unverifiable",
   "groups.verdict.failed": "unverifiable",
+  "generic.verdict.failed": "unverifiable",
+  "generic.verdict.unsupported": "unverifiable",
+  "generic.verdict.not_evaluable": "undecided",
+  "generic.verdict.out_of_scope": "not-applicable",
   "groups.verdict.unsupported": "unverifiable",
   "lines.pf.verdict.failed": "unverifiable",
   "lines.pf.verdict.unsupported": "unverifiable",
@@ -557,11 +598,13 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
   // recomputed tier: a fixed check anyone can repeat from the records.
   "lines.tier.recomputed": "tier.recomputed",
   "groups.tier.recomputed": "tier.recomputed",
+  "generic.tier.recomputed": "tier.recomputed",
 
   // judged tier: a judgement, which must never read like the recomputed
   // tier above.
   "lines.tier.judged": "tier.judged",
   "groups.tier.judged": "tier.judged",
+  "generic.tier.judged": "tier.judged",
 };
 
 /** A human-readable noun phrase for each GuardedCategory, for problem messages. */
@@ -608,6 +651,13 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.rtier.unstated.note",
   "lines.rtier.sealed-note",
   "groups.rtier.sealed-note",
+  "generic.rtier.unstated.note",
+  "generic.rtier.sealed-note",
+  // The generic page's honesty lines: what its names and ids are, and what a
+  // claim not yet in force counts as.
+  "generic.producer.note",
+  "generic.later.note",
+  "generic.claim.failure",
   // The shared front (report-front.ts): the mock-judge line, what the
   // aggregate's unknown count is, what the page and the bundle carry, and
   // the producer's findings label.
@@ -1199,12 +1249,11 @@ export function wordingProblems(
   defaults: WordingPack,
 ): string[] {
   const grouping = defaults.entries["layout.grouping"];
-  const pack =
-    grouping === "lines" || grouping === "groups"
-      ? expandSection3(supplied, grouping)
-      : supplied;
+  const pack = isGrouping(grouping)
+    ? expandSection3(supplied, grouping)
+    : supplied;
   const problems: string[] = [];
-  if (grouping === "lines" || grouping === "groups")
+  if (isGrouping(grouping))
     for (const [key, targets] of Object.entries(SECTION3_ALIASES[grouping]))
       if (Object.hasOwn(supplied.entries, key))
         for (const target of targets)
@@ -1368,6 +1417,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "0448c4e5d6fa4b59cccdc5ed98b089946d9b217a76042dec222c5bd074ce4b45",
   groups: "a63992e7e69f6c17c52b7c9003e5e2148ed53ec11c882cdc3888414093544da1",
+  generic: "4189799bc4532325fca7d71485f4780163fcff910bad2788cc4485f5af935c4d",
 });
 
 export interface Words {
@@ -1444,7 +1494,7 @@ export function wordsOf(
       ? defaults.entries
       : {
           ...defaults.entries,
-          ...(declared === "lines" || declared === "groups"
+          ...(isGrouping(declared)
             ? expandSection3(supplied.pack, declared)
             : supplied.pack
           ).entries,
@@ -1463,7 +1513,7 @@ export function wordsOf(
       ? entries[key]
       : undefined;
   const grouping = entries["layout.grouping"];
-  if (grouping !== "lines" && grouping !== "groups")
+  if (!isGrouping(grouping))
     throw new WordingPackError(
       `${defaults.id}: layout.grouping is ${JSON.stringify(grouping)}`,
     );
@@ -1549,4 +1599,5 @@ export const DEFAULT_WORDS: Readonly<Record<ContractReportGrouping, Words>> =
   Object.freeze({
     lines: wordsOf(DEFAULT_PACKS.lines),
     groups: wordsOf(DEFAULT_PACKS.groups),
+    generic: wordsOf(DEFAULT_PACKS.generic),
   });

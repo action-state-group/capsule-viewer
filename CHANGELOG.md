@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A generic `contract-report/v1` view (#56): a Result that opts in with the empty block and carries neither Outcomes nor EU AI Act data now draws rows from its claims (grouped by `requirement_ref` prefix, each tally with its denominator, tier sections when a contract is given, claims not yet in force apart) instead of the plain Result page. It has its own default wording pack, `capsule-viewer/contract-report/generic@1`, beneath a host pack's `report.*`, `row.*` and `group.*` words. A Result whose claims do not fit its card still draws the plain Result page.
+
 ### Changed
 
 - The History card's "Which side" rows read "in 3 of 5" instead of "3 of 5" (#171): the role count no longer looks like the outcome count it can coincide with ("3 of 5 … went as agreed"). The wording pack gains `role.count`, so `wording_sha256` and the script's `script_sha256` move; consumers that pin them re-pin on the next release.
