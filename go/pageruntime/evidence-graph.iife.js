@@ -17484,13 +17484,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("33ed86d2e67643eb8d62eaa112b5f1b97904dba9");
+    return commitPrefix("76160aea7e56464a6cfd0d0f0cb57285114ab8d5");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.16.0",
+    viewerVersion: "0.17.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.13.1",
     cllVersion: "0.3.0",
@@ -28650,7 +28650,6 @@ ${pad.repeat(depth)}`;
       sources: {
         "header.title.owner": "plugin.json history.page.title",
         "badge.private": "plugin.json history.page.private",
-        "built.owner": "plugin.json history.page.built",
         "hero.none.deals": "plugin.json history.page.none",
         "hero.deals.one": "plugin.json history.page.count.one",
         "hero.deals.other": "plugin.json history.page.count.other",
@@ -28676,8 +28675,8 @@ ${pad.repeat(depth)}`;
       "badge.shared": "SHARED COPY \xB7 for {who}",
       "badge.anyone": "What this node gives anyone who asks",
       "scope.period": "{from} to {to}",
-      "built.owner": "Built {at}. It is a snapshot from when you asked, not a page that updates itself.",
-      "built.recipient": "Built {at}. It is a snapshot from when it was built, not a page that updates itself.",
+      "built.owner": "As of {at}. It is a snapshot, not a page that updates itself.",
+      "built.recipient": "As of {at}. It is a snapshot, not a page that updates itself.",
       "hero.checkpoints.one": "1 checkpoint \xB7 {entries} \xB7 last cut {at} \xB7 {verdict}",
       "hero.checkpoints.other": "{n} checkpoints \xB7 {entries} \xB7 last cut {at} \xB7 {verdict}",
       "hero.entries.one": "1 entry",
@@ -28748,6 +28747,10 @@ ${pad.repeat(depth)}`;
       "shares.completion.off": "The sealed record isn't sent when an exchange completes (off on this node).",
       "shares.adjudications.on": "If this node judges an exchange, its verdict goes to the node judged.",
       "shares.adjudications.off": "Verdicts this node reaches aren't sent to the nodes judged (off on this node).",
+      "shares.dealhalf.counterparty": "Only with the other side of an exchange: that exchange's half of the record.",
+      "shares.stranger": "With anyone who asks, even a stranger: {items}.",
+      "shares.stranger.none": "Nothing else goes to a stranger.",
+      "shares.stranger.token.history_card/1": "the History Card",
       "shares.twins.on": "When two copies of a model answer differently, this node sends the question and both answers to a referee.",
       "shares.twins.unstated": "Whether this node sends differing answers to a referee: this node's settings don't say.",
       "shares.witnesses": "Signed checkpoints go to the witnesses named here: {witnesses}",
@@ -28760,18 +28763,17 @@ ${pad.repeat(depth)}`;
       "shares.adjudications.unstated": "Whether verdicts this node reaches go to the nodes judged: this node's settings don't say.",
       "shares.never.unstated": "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say.",
       "shares.never": "Never: a record to anyone who doesn't prove who they are.",
-      "shares.as_of": "As this node was set when this page was built, {at}.",
+      "shares.as_of": "Set by this node as of {at}.",
       "seal.title": "Locked as it happened.",
       "seal.checkpoints": "Each checkpoint is signed and extends the one before, so a change to what it covers shows.",
       "seal.deals": "Each step was saved as it happened. Any change to a saved step shows.",
-      "seal.unchecked": "This page did not check how these records were locked.",
       "seal.second.label": "Second signature",
       "seal.second.rows": "See each row",
       "seal.second.some_failed": "{k} of {n} didn't verify; see each row",
       "seal.directory": "Signers are looked up at {directory} on every read, so that site can see each time you look.",
       "checked.heading": "How this was checked",
       "checked.where.page": "These checks ran in this browser when the page opened ({by}).",
-      "checked.where.builder": "These checks ran when the page was built, {at} ({by}).",
+      "checked.where.builder": "These checks cover the records as of {at} ({by}).",
       "check.line": "{status}: {name}",
       "status.pass": "Checked",
       "status.fail": "Didn't verify",
@@ -29344,7 +29346,9 @@ ${pad.repeat(depth)}`;
         "adjudications",
         "exchange_corroboration",
         "adjudicate_differing_twins",
-        "witnesses"
+        "witnesses",
+        "share_deal_half",
+        "stranger_safe"
       ];
       const so = r.object(o["sharing"], "input.sharing", keys, []);
       if (so) {
@@ -29357,6 +29361,16 @@ ${pad.repeat(depth)}`;
               if (s !== void 0) witnesses.push(s);
             }
           else r.refuse("input.sharing.witnesses", "is not a list");
+        }
+        let strangerSafe;
+        if ("stranger_safe" in so) {
+          strangerSafe = [];
+          if (Array.isArray(so["stranger_safe"]))
+            for (const [i, w] of so["stranger_safe"].entries()) {
+              const t = r.string(w, `input.sharing.stranger_safe[${i}]`, 80);
+              if (t !== void 0) strangerSafe.push(t);
+            }
+          else r.refuse("input.sharing.stranger_safe", "is not a list");
         }
         const stated = {};
         let wrong = false;
@@ -29374,10 +29388,12 @@ ${pad.repeat(depth)}`;
         one("adjudications", ["deliver_to_subjects", "off"]);
         on("exchange_corroboration");
         on("adjudicate_differing_twins");
+        one("share_deal_half", ["counterparty"]);
         if (!wrong)
           sharing = {
             ...stated,
-            ...witnesses !== void 0 ? { witnesses } : {}
+            ...witnesses !== void 0 ? { witnesses } : {},
+            ...strangerSafe !== void 0 ? { stranger_safe: strangerSafe } : {}
           };
       }
     }
@@ -29698,6 +29714,16 @@ ${pad.repeat(depth)}`;
     let shares = null;
     if (sharing) {
       const lines = [say("shares.summary")];
+      if (sharing.share_deal_half === "counterparty")
+        lines.push(say("shares.dealhalf.counterparty"));
+      if (sharing.stranger_safe !== void 0)
+        lines.push(
+          sharing.stranger_safe.length > 0 ? say("shares.stranger", {
+            items: sharing.stranger_safe.map(
+              (t) => (words[`shares.stranger.token.${t}`] ?? BASE[`shares.stranger.token.${t}`]) !== void 0 ? say(`shares.stranger.token.${t}`) : t
+            ).join(", ")
+          }) : say("shares.stranger.none")
+        );
       if (sharing.standard_history === void 0)
         lines.push(say("shares.standard.unstated"));
       else
@@ -29782,7 +29808,7 @@ ${pad.repeat(depth)}`;
           "p",
           null,
           say(kind === "checkpoint" ? "seal.checkpoints" : "seal.deals")
-        ) : drawRows ? el13("p", null, say("seal.unchecked")) : null,
+        ) : null,
         el13(
           "p",
           {
@@ -29823,11 +29849,15 @@ ${pad.repeat(depth)}`;
           )
         )
       ),
-      el13(
+      // The "ran" sentence only when a check passed or failed; all not-run says nothing it does not already.
+      checks.some((c) => c.status === "pass" || c.status === "fail") ? el13(
         "p",
         { class: "cvh-note" },
-        where === "page" ? say("checked.where.page", { by: checkedBy }) : say("checked.where.builder", { at: minuteOf(built), by: checkedBy })
-      )
+        where === "page" ? say("checked.where.page", { by: checkedBy }) : say("checked.where.builder", {
+          at: minuteOf(built),
+          by: checkedBy
+        })
+      ) : null
     );
     const tree = el13(
       "section",
