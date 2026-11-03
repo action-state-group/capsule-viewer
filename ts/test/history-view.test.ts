@@ -499,3 +499,21 @@ describe("the page verdict", () => {
     expect(html).toContain("&lt;img");
   });
 });
+
+describe("the History view's refusal vectors", () => {
+  const refusals = read("../../vectors/history-view/refusals.json") as {
+    cases: {
+      name: string;
+      input: unknown;
+      overlay?: unknown;
+      reasons: string[];
+    }[];
+  };
+  for (const c of refusals.cases)
+    it(`${c.name}: refused with these reasons, in order`, () => {
+      const input = typeof c.input === "string" ? JSON.parse(c.input) : c.input;
+      const built = buildHistoryView(input, c.overlay);
+      expect(built.ok).toBe(false);
+      if (!built.ok) expect(built.reasons).toEqual(c.reasons);
+    });
+});

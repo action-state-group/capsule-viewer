@@ -13,7 +13,11 @@ here. The format follows
 
 ### Added
 
-- The History view's Go twin, `go/historyview` (#253, design note `docs/design/history-view.md` section 2): `Render(input, overlay)` writes the same bytes as the TypeScript `historyViewHtml` for every vector in `vectors/history-view/`, `Document` writes the whole static page the goldens hold, and `Styles` is the stylesheet. It refuses the same inputs with the same reasons, in the same order, as a `*Refused` error, and writes the page with its own serializer, not `html/template`. The wording pack is a byte copy of `ts/src/wording/history-view.en.json`, held by a test. It is for Muse's static `history page`.
+- The History view's Go twin, `go/historyview` (#253, design note `docs/design/history-view.md` section 2): `Render(input, overlay)` writes the same bytes as the TypeScript `historyViewHtml` for every vector in `vectors/history-view/`, `Document` writes the whole static page the goldens hold, and `Styles` is the stylesheet. It refuses the same inputs with the same reasons, in the same order, as a `*Refused` error, and writes the page with its own serializer, not `html/template`. The wording pack is a byte copy of `ts/src/wording/history-view.en.json`, held by a test, and `vectors/history-view/refusals.json` holds both views to the same refusal reasons in the same order. It is for Muse's static `history page`.
+
+### Fixed
+
+- `historyViewHtml` and `renderHistoryView` refuse an overlay entry named like an `Object.prototype` member (`toString`, `constructor`) as an unknown key; they threw a `TypeError` instead.
 
 ## ts 0.14.0 and go 0.14.0 (2026-11-03)
 

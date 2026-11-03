@@ -167,3 +167,40 @@ func TestTimeParsing(t *testing.T) {
 	assert.Equal(t, "5", a.fraction)
 	assert.Equal(t, "Nov 3, 2026, 11:00 UTC", minuteOf(b))
 }
+
+// The shared refusal vectors (vectors/history-view/refusals.json): the same
+// reasons, in the same order, as the TypeScript view gives.
+func TestRefusalVectors(t *testing.T) {
+	var file struct {
+		Cases []struct {
+			Name    string          `json:"name"`
+			Input   json.RawMessage `json:"input"`
+			Overlay json.RawMessage `json:"overlay"`
+			Reasons []string        `json:"reasons"`
+		} `json:"cases"`
+	}
+	require.NoError(t, json.Unmarshal(readFile(t, root("vectors", "history-view", "refusals.json")), &file))
+	require.NotEmpty(t, file.Cases)
+	for _, c := range file.Cases {
+		t.Run(c.Name, func(t *testing.T) {
+			input := any(c.Input)
+			var s string
+			if json.Unmarshal(c.Input, &s) == nil {
+				input = []byte(s) // a string input is JSON text
+			}
+			var overlay any
+			if len(c.Overlay) > 0 {
+				overlay = c.Overlay
+			}
+			assert.Equal(t, c.Reasons, reasons(t, input, overlay))
+		})
+	}
+}
+
+func TestEmptyOverlayIsNone(t *testing.T) {
+	want, err := Render(cases(t)["mesh-service-history"], nil)
+	require.NoError(t, err)
+	got, err := Render(cases(t)["mesh-service-history"], json.RawMessage(nil))
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}

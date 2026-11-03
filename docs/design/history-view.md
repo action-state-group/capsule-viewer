@@ -75,9 +75,8 @@ exist, with no new package:
   the page runtime (section 7).
 
 The wording pack is one file, `ts/src/wording/history-view.en.json`, holding
-neutral words only; the Go module carries a copy generated from it, with a
-`--check` test that fails when they differ (as `scripts/pageruntime.sh` does
-for the runtime). A product caller passes an overlay pack (section 4).
+neutral words only; the Go module carries a byte copy, held by a test that fails when they
+differ. A product caller passes an overlay pack (section 4).
 
 ## 3. The input contract: `history-view/v0`
 

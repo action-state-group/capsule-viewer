@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -72,6 +73,7 @@ func decodeValue(dec *json.Decoder) (any, error) {
 		if _, err := dec.Token(); err != nil {
 			return nil, err
 		}
+		o.keys = jsKeyOrder(o.keys)
 		return o, nil
 	case '[':
 		list := []any{}
@@ -88,6 +90,25 @@ func decodeValue(dec *json.Decoder) (any, error) {
 		return list, nil
 	}
 	return nil, fmt.Errorf("unexpected %v", d)
+}
+
+// jsKeyOrder is Object.keys order: keys that are array indexes (canonical
+// decimal, below 2^32-1) first in numeric order, then the rest as written.
+func jsKeyOrder(keys []string) []string {
+	var idx, rest []string
+	for _, k := range keys {
+		if n, err := strconv.ParseUint(k, 10, 32); err == nil && n < 4294967295 && strconv.FormatUint(n, 10) == k {
+			idx = append(idx, k)
+		} else {
+			rest = append(rest, k)
+		}
+	}
+	sort.Slice(idx, func(i, j int) bool {
+		a, _ := strconv.ParseUint(idx[i], 10, 32)
+		b, _ := strconv.ParseUint(idx[j], 10, 32)
+		return a < b
+	})
+	return append(idx, rest...)
 }
 
 // toValue turns a caller's argument into a decoded value. json.RawMessage and

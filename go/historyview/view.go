@@ -320,7 +320,8 @@ var topKeys = []string{
 // bytes as the TypeScript historyViewHtml(input, overlay). input is a
 // history-view/v0 object: JSON text as json.RawMessage or []byte, or any
 // value encoding/json can encode. overlay is a product caller's words
-// (surface "product" only), in the same forms, or nil for none. A refused
+// (surface "product" only), in the same forms, or nil (or empty JSON text)
+// for none. A refused
 // input returns a *Refused naming every reason, and no page.
 func Render(input, overlay any) (html string, err error) {
 	defer func() {
@@ -338,6 +339,12 @@ func Render(input, overlay any) (html string, err error) {
 	}
 	var ov any
 	hasOverlay := overlay != nil
+	switch t := overlay.(type) {
+	case json.RawMessage:
+		hasOverlay = len(t) > 0
+	case []byte:
+		hasOverlay = len(t) > 0
+	}
 	if hasOverlay {
 		var oerr error
 		if ov, oerr = toValue(overlay); oerr != nil {
