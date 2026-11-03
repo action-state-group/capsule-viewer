@@ -265,9 +265,8 @@ describe("the stand-in's round 1 (PR 249)", () => {
         expect(e.getAttribute("data-filled")).toBe("no");
     }
     expect(p.querySelector(".cvh-seal-title")).toBeNull();
-    expect(p.textContent).toContain(
-      "This page did not check how these records were locked.",
-    );
+    expect(p.textContent).not.toContain("did not check how these records");
+    expect(p.textContent).not.toContain("These checks");
   });
 
   it("a failed witness check shows in its chip", () => {

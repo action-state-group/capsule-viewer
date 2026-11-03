@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- History view wording (#261, Sherlock2's ruling in the Buzz thread on the loop#361 review): the "These checks ..." sentence under "How this was checked" is drawn only when at least one check passed or failed, and reads "These checks cover the records as of {at} ({by})." on a builder page; "This page did not check how these records were locked." is gone, since the Second signature box says it; "Built {at}" is now "As of {at}. It is a snapshot, not a page that updates itself." and the sharing note reads "Set by this node as of {at}." No input or contract change. `built.owner` is no longer a copy of Muse's words.
+
 ## ts 0.16.0 and go 0.16.0 (2026-11-03)
 
 Both state viewer 0.16.0: `ts/v0.16.0`, then `go/v0.16.0` on the commit that ships its page runtime. `ts/v0.15.0` was tagged but never published: its `npm run check` failed because the release pull request did not regenerate the contract-report goldens, which name the viewer version. This release carries what 0.15.0 was to carry (#254 and #255, #257 and #258, #253 and #256) with the goldens regenerated.
