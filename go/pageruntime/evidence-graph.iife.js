@@ -17484,13 +17484,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("123a021c17596176c6a429b10ed7f6852339ee38");
+    return commitPrefix("d24cf262f91e002ee6bb9341a383aba9b89248fa");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.18.0",
+    viewerVersion: "0.18.1",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.13.1",
     cllVersion: "0.3.0",
@@ -25880,6 +25880,7 @@ ${pad.repeat(depth)}`;
     parent2.append(cell2);
   }
   var recordsWord2 = (count2) => `${count2} ${count2 === 1 ? "record" : "records"}`;
+  var topLevelRecordsWord = (count2) => `${count2} top-level ${count2 === 1 ? "record" : "records"}`;
   function renderVerificationBanner(root, model, coverage, witness) {
     const bar = element6("div");
     bar.className = model.state === "failed" ? "cv-shell-bar cv-failed" : model.state === "incomplete" ? "cv-shell-bar cv-incomplete" : "cv-shell-bar";
@@ -25992,7 +25993,7 @@ ${pad.repeat(depth)}`;
       );
     if (failed2 === 0 && (pageFailed > 0 || !verified) && notRun > 0)
       leads.push(`${notRun} of ${total} checks not run`);
-    const parts = [...leads, recordsWord2(model.records.length)];
+    const parts = [...leads, topLevelRecordsWord(model.records.length)];
     const signatures2 = model.checkLists.notChecked.flatMap((id) => {
       const words = SIGNATURE_CHECKS.get(id);
       return words === void 0 ? [] : [words];
