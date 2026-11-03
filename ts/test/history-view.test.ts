@@ -456,7 +456,7 @@ describe("the page verdict", () => {
       drawn(vectors.cases["goose-policy-share-deal-half-only"]).querySelector(
         '[data-history="shares"]',
       )?.textContent ?? "";
-    expect(shares.split("this node's settings don't say").length - 1).toBe(7);
+    expect(shares.split("this node's settings don't say").length - 1).toBe(8);
     for (const invented of [
       "With anyone: the Service History.",
       "Only with the other side",
@@ -467,8 +467,9 @@ describe("the page verdict", () => {
       "No witnesses named.",
     ])
       expect(shares).not.toContain(invented);
+    expect(shares).not.toContain("Never: a record");
     expect(shares).toContain(
-      "Never: a record to anyone who doesn't prove who they are.",
+      "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say.",
     );
   });
 

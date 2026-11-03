@@ -270,7 +270,7 @@ the panel):
 | If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)."; when absent, "Whether verdicts this node reaches go to the nodes judged: this node's settings don't say." |
 | When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: this node's settings don't say." |
 | Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting."; when absent, "Which witnesses get its checkpoints: this node's settings don't say." |
-| Never: a record to anyone who doesn't prove who they are | always |
+| Never: a record to anyone who doesn't prove who they are | `history_segments` is stated (the rule is the mesh plugin's signed-request rule, which its policy carries); when absent, "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say." |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
 `off`, `counterparties` or `peers`; `record_at_completion` is `counterparty`

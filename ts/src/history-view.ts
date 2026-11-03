@@ -1343,7 +1343,15 @@ export function buildHistoryView(
           ? say("shares.witnesses", { witnesses: sharing.witnesses.join(", ") })
           : say("shares.witnesses.none"),
       );
-    lines.push(say("shares.never"));
+    // The signed-request rule is the mesh plugin's, carried by its policy; a
+    // policy that states no segments setting does not vouch for it.
+    lines.push(
+      say(
+        sharing.history_segments === undefined
+          ? "shares.never.unstated"
+          : "shares.never",
+      ),
+    );
     shares = el(
       "section",
       { class: "cvh-shares", "data-history": "shares" },
