@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.18.1 and go 0.18.1 (2026-11-03)
+
+Both state viewer 0.18.1: `ts/v0.18.1`, then `go/v0.18.1` on the commit that ships its page runtime. This release carries #274 (PR #275) and #276 (PR #277).
+
 ### Changed
 
 - Receipt amounts (#276, evidencebook-deal#133): for currency BTC, `amount_minor` counts millisatoshi (1e-11 BTC), so the receipt shows `500 msat`, never `5.00 BTC`, in `format_amount` and in the unilateral, seller and bilateral receipt scripts. Fiat amounts are unchanged.
