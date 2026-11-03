@@ -176,6 +176,8 @@ caller passes is drawn as text, never parsed as HTML.
 - `sharing` (checkpoint pages, required there): the node's live settings,
   section 5, with the values the node itself uses. Every member is optional;
   one the node does not state is drawn as "this node's settings don't say".
+  A Goose node may also state `share_deal_half` and `stranger_safe`, each
+  drawn as one line when present.
 - `signer_directory` (optional, deal pages): the HTTPS address signers are
   looked up at, drawn with Muse's disclosure line.
 - `period` (optional): `{from, to}`, drawn in the header.
@@ -287,8 +289,12 @@ settings don't say." (the words are in the pack as `shares.*.unstated`), and
 never a default, so no disclosure is left out by omission or invented. A
 member that is present keeps its line exactly as in the table; a present
 member of the wrong type or outside its list is refused, never drawn as the
-nearest line. The Goose
-vector `goose-policy-share-deal-half-only` states `sharing: {}`. The block names when the settings were read
+nearest line. Two more optional members carry what a Goose
+policy does state: `share_deal_half` (`counterparty`, the only value) and
+`stranger_safe` (a list of strings); an absent one draws no line, since they
+are not settings the page must account for, and a present one of the wrong
+type or outside its list is refused. The Goose
+vector `goose-policy-share-deal-half-only` states exactly those two. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
