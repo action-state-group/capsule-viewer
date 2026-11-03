@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
@@ -94,15 +95,52 @@ const RECEIPT_CONTRACT = [
 // The History card's signature check (capsule-viewer#211).
 const SIGNATURE_CONTRACT = ["readerCardSignature"] as const;
 
+// The History view a scripted page draws (capsule-viewer#247).
+const HISTORY_VIEW_CONTRACT = ["renderHistoryView", "historyViewHtml"] as const;
+
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = [];
+const NOT_YET_SHIPPED: readonly string[] = [
+  "renderHistoryView",
+  "historyViewHtml",
+];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
   runInNewContext(iife, context);
   return context.EvidenceGraph as Record<string, unknown>;
 }
+
+describe("the History view's own build", () => {
+  it("ships dist/history-view.iife.js with its sha256 and the HistoryView global", async () => {
+    execFileSync("npm", ["run", "emitter:iife"], {
+      cwd: tsRoot,
+      stdio: "inherit",
+    });
+    const iife = await readFile(
+      new URL("../dist/history-view.iife.js", import.meta.url),
+      "utf8",
+    );
+    const sum = await readFile(
+      new URL("../dist/history-view.iife.js.sha256", import.meta.url),
+      "utf8",
+    );
+    expect(sum).toBe(
+      `${createHash("sha256").update(iife).digest("hex")}  history-view.iife.js\n`,
+    );
+    const context: Record<string, unknown> = {};
+    runInNewContext(iife, context);
+    const view = context.HistoryView as Record<string, unknown>;
+    for (const name of [
+      "renderHistoryView",
+      "historyViewHtml",
+      "historyViewDocument",
+      "buildHistoryView",
+    ])
+      expect(typeof view[name], name).toBe("function");
+    expect(typeof view.historyViewStyles).toBe("string");
+  });
+});
 
 describe("the runtime's global", () => {
   beforeAll(() => {
@@ -125,6 +163,7 @@ describe("the runtime's global", () => {
         ...WITNESS_CONTRACT,
         ...RECEIPT_CONTRACT,
         ...SIGNATURE_CONTRACT,
+        ...HISTORY_VIEW_CONTRACT,
       ]) {
         // Not yet in the shipped runtime. Asserting its absence makes the
         // refresh that ships it fail here until that refresh also drops it

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Bundles src/browser.ts as dist/evidence-graph.iife.js, the in-browser
 // renderer an emitted page runs (`npm run emitter:iife`).
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -58,6 +59,21 @@ async function main() {
     },
     outfile: "dist/evidence-graph.iife.js",
   });
+
+  // The History view alone (docs/design/history-view.md section 7): a page
+  // that only draws a History embeds this, with no verifier in it.
+  await build({
+    entryPoints: ["src/history-view.ts"],
+    bundle: true,
+    format: "iife",
+    globalName: "HistoryView",
+    outfile: "dist/history-view.iife.js",
+  });
+  const iife = readFileSync(join(tsRoot, "dist", "history-view.iife.js"));
+  writeFileSync(
+    join(tsRoot, "dist", "history-view.iife.js.sha256"),
+    `${createHash("sha256").update(iife).digest("hex")}  history-view.iife.js\n`,
+  );
 }
 
 await main();

@@ -42,8 +42,15 @@ module stay as the basic rendering, and the Python receipt modules stay as the
 oracle the parity tests hold the scripts to; removing them would be a separate
 decision. Two things are out of scope here: the S1-S7 surface forms (head seam,
 wordmark, image and text buckets, 1.91:1 share image) are deferred to after
-launch, and the view-model JSON a module draws from belongs to the Muse plugin,
-not to this repository.
+launch, and the view-model JSON a receipt module draws from belongs to the Muse
+plugin, not to this repository.
+
+The History view (`ts/src/history-view.ts`, design note
+`docs/design/history-view.md`) is the one exception: its input,
+`history-view/v0`, is a viewer contract owned here, like `chart-spec`, so
+Muse, the mesh-llm console and Goose draw one History page with one set of
+words. It sits beside the History card above, which still draws AAC's
+`standard_history/1` card from a sealed bundle.
 
 ## What "conforming" means for `result/v0`
 

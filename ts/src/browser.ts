@@ -57,3 +57,11 @@ export { readerCadenceWitness } from "./cadence-witness.js";
 // own strict verdict for the root record, which the module draws and does
 // not decide.
 export { readerCardSignature } from "./card-signature.js";
+
+// The History view (capsule-viewer#247): a scripted page draws it with
+// renderHistoryView; it verifies nothing, its caller does.
+export {
+  historyViewHtml,
+  historyViewStyles,
+  renderHistoryView,
+} from "./history-view.js";
