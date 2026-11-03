@@ -182,10 +182,17 @@ describe("refusals", () => {
     (m["sharing"] as Json)["history_segments"] = "prospective";
     expect(refused(m).join()).toContain("history_segments");
   });
-  it("a missing required setting", () => {
+  it("a stated setting of the wrong type", () => {
     const m = mesh();
-    delete (m["sharing"] as Json)["record_at_completion"];
+    (m["sharing"] as Json)["record_at_completion"] = null;
     expect(refused(m).join()).toContain("record_at_completion");
+  });
+  it("a checkpoint page with no sharing member at all", () => {
+    const m = mesh();
+    m["sharing"] = "yes";
+    expect(refused(m).length).toBeGreaterThan(0);
+    delete m["sharing"];
+    expect(refused(m).join()).toContain("input.sharing");
   });
   it("a row of another kind", () => {
     const m = mesh();
@@ -442,6 +449,36 @@ describe("the page verdict", () => {
         '[data-history="shares"]',
       )?.textContent ?? "";
     expect(shares).toContain("this node's settings don't say");
+  });
+
+  it("a policy that states none of the five settings says so five times and invents no value", () => {
+    const shares =
+      drawn(vectors.cases["goose-policy-share-deal-half-only"]).querySelector(
+        '[data-history="shares"]',
+      )?.textContent ?? "";
+    expect(shares.split("this node's settings don't say").length - 1).toBe(7);
+    for (const invented of [
+      "With anyone: the Service History.",
+      "Only with the other side",
+      "Sent on its own",
+      "If this node judges an exchange",
+      "With any node that asks by an exchange's id",
+      "(off on this node)",
+      "No witnesses named.",
+    ])
+      expect(shares).not.toContain(invented);
+    expect(shares).toContain(
+      "Never: a record to anyone who doesn't prove who they are.",
+    );
+  });
+
+  it("a stated member keeps its line when its neighbours are absent", () => {
+    const m = mesh();
+    m["sharing"] = { history_segments: "peers" };
+    const shares =
+      drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
+    expect(shares).toContain("With any node that signs its request");
+    expect(shares).toContain("Whether the Service History goes to anyone");
   });
 
   it("draws caller text as text, never in an attribute", () => {

@@ -174,7 +174,8 @@ caller passes is drawn as text, never parsed as HTML.
   `withheld: true` where the node withholds a count under 5 ("fewer than 5").
   Drawn as separate rows, never summed or compared ([guide] §18).
 - `sharing` (checkpoint pages, required there): the node's live settings,
-  section 5, with the values the node itself uses.
+  section 5, with the values the node itself uses. Every member is optional;
+  one the node does not state is drawn as "this node's settings don't say".
 - `signer_directory` (optional, deal pages): the HTTPS address signers are
   looked up at, drawn with Muse's disclosure line.
 - `period` (optional): `{from, to}`, drawn in the header.
@@ -275,10 +276,18 @@ The values are the node's own (`share_policy.rs`: `history_segments` is
 `off`, `counterparties` or `peers`; `record_at_completion` is `counterparty`
 or `off`; `adjudications` is `deliver_to_subjects` or `off`;
 `exchange_corroboration` and `adjudicate_differing_twins` are on/off). Every
-member is required except `adjudicate_differing_twins` and `witnesses`, which
-a node's advertised policy (`disclosure-policy/0`, what Goose reads) does
-not carry; when either is absent the page says the node's settings don't say, so no
-disclosure is left out by omission. A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
+member is optional, because a node's advertised policy (`disclosure-policy/0`,
+what Goose reads) carries only `share_deal_half` and `stranger_safe`, none of
+these members; the five that mesh nodes advertise (`standard_history`,
+`history_segments`, `record_at_completion`, `adjudications`,
+`exchange_corroboration`) became optional in an additive change to `v0`, after
+`adjudicate_differing_twins` and `witnesses` already were. When a member is
+absent the page draws one line for it, "Whether <what it decides>: this node's
+settings don't say." (the words are in the pack as `shares.*.unstated`), and
+never a default, so no disclosure is left out by omission or invented. A
+member that is present keeps its line exactly as in the table; a present
+member of the wrong type or outside its list is still refused. The Goose
+vector `goose-policy-share-deal-half-only` states `sharing: {}`. A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
