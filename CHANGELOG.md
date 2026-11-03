@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- History view wording (#271, #272, Sherlock2's point on the #266 sentence): when a node states `stranger_safe` (an empty list included), the closing "this node's settings don't say" sentence no longer lists whether a record goes to someone who doesn't prove who they are, since the stranger line already says what a stranger gets; no "Never" line is drawn in its place. No input or contract change.
+
 ## ts 0.17.0 and go 0.17.0 (2026-11-03)
 
 Both state viewer 0.17.0: `ts/v0.17.0`, then `go/v0.17.0` on the commit that ships its page runtime. This release carries #260 and #261.
