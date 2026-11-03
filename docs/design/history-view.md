@@ -115,7 +115,10 @@ caller passes is drawn as text, never parsed as HTML.
     "standard_history": true,
     "history_segments": "counterparties",
     "record_at_completion": "counterparty",
-    "adjudications": "deliver_to_subjects"
+    "adjudications": "deliver_to_subjects",
+    "exchange_corroboration": true,
+    "adjudicate_differing_twins": false,
+    "witnesses": ["https://witness.example"]
   }
 }
 ```
@@ -138,8 +141,11 @@ caller passes is drawn as text, never parsed as HTML.
   `built_at`). The page says which. `checked.by` names the tool, in the
   panel only.
 - `outcome` (checkpoint pages): `answered`, `refused` (with the node's own
-  `reason`, drawn as the node's text) or `unreadable`. Only `answered` draws
-  rows; the other two draw their own hero and the panel.
+  `reason` token, drawn as the node's text) or `unreadable`. Only `answered`
+  draws rows; the other two draw their own hero and the panel. A node with no
+  checkpoint yet that answers with a signed refusal is `refused`, drawn with
+  its reason; "No checkpoints yet" is `answered` with no rows (a Goose stream
+  with no checkpoint).
 - `rows`: for `checkpoint`, `cut_at` (RFC 3339, any precision), `log_size`,
   `anchor` (hex), `signature` (`pass`, `fail`, `not_run`). For `deal`,
   `asked`, `outcome`, `money` (caller text, optional), `opened_at`,
@@ -193,14 +199,18 @@ members in `v0`; a change of meaning is `v1`.
 | Panel | "How this was checked": every check, checked and not checked | the same |
 
 The hero's verdict is one verdict for the page ([203] kill list), from
-every check and every row: any `fail` (a check, or a row's `signature`)
-reads "this history didn't verify", and the page then draws none of its
-rows or counts, as the mesh page does today; "every signature checks" needs
+every log check and every row: any `fail` of a check other than `witness`
+and `second_signature`, or of a row's `signature`, reads "This history
+didn't verify", and the page then draws none of its rows or counts, as the
+mesh page does today, but keeps "How this was checked", so the reader sees
+which check failed. A failed `witness` or `second_signature` (a check, or a
+row's slot) is drawn in its chip or that row's slot only, so one deal's
+failed stamp never hides the others; "every signature checks" needs
 every row `pass` and every check that ran `pass`, and names the checks that
 did not run under "How this was checked"; otherwise "signatures not checked
 here". **No rows** has its own hero, never a vacuous pass: "No checkpoints
-yet" (a node with no checkpoint, which answers with a signed refusal),
-"The node declined to answer" (`refused`, with its reason), "This page could
+yet" (`answered`, no rows), "The node declined to answer" (`refused`, with
+its reason), "This page could
 not read the answer" (`unreadable`), and Muse's "There are no deals in this
 store yet." for an empty deal page.
 
@@ -245,15 +255,20 @@ the panel):
 | Line | Drawn when |
 | --- | --- |
 | With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange | always |
-| With anyone: the Service History | `standard_history` is true (the product default is on); when false, "With anyone: the Service History. Off on this node, so not shared." |
-| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any peer that asks: an exchange's record"; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`) |
+| With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)." |
+| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`) |
+| With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false |
 | Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)." |
 | If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)." |
-| Never: record bodies to strangers | `history_segments` is not `peers` |
+| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default) |
+| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named." |
+| Never: a record to anyone who doesn't prove who they are | always |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
 `off`, `counterparties` or `peers`; `record_at_completion` is `counterparty`
-or `off`; `adjudications` is `deliver_to_subjects` or `off`). A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
+or `off`; `adjudications` is `deliver_to_subjects` or `off`;
+`exchange_corroboration` and `adjudicate_differing_twins` are on/off; every
+member is required, so no disclosure is left out by omission). A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
@@ -294,9 +309,11 @@ style hash.
 
 **Serialization.** TypeScript, Go and the browser write the same bytes
 because the HTML is serialized by the HTML fragment serialization rules,
-written out in the view itself: in text, escape `&`, `<`, `>` and U+00A0; in
-attribute values, `&`, `"` and U+00A0. Go writes it with its own serializer,
-never `html/template`, whose `&#39;` and `&#34;` differ. The layout follows [203]: one column under 900px,
+written out in the view itself: in text, escape `&`, `<`, `>` and U+00A0.
+Caller text never goes in an attribute (attributes hold only the view's own
+tokens, and a test checks that), so attribute escaping cannot differ between
+engines. Go writes it with its own serializer, never `html/template`, whose
+`&#39;` and `&#34;` differ. The layout follows [203]: one column under 900px,
 two above, and print; the first screen shows the header and the hero.
 
 ## 8. Tests and goldens
@@ -305,13 +322,14 @@ two above, and print; the first screen shows the header and the hero.
   normal case; card only; counterparties on and off; a failed signature; a witness
   `passed`; two checkpoints in one second), a Goose node, and Muse's page
   (no grade, witnessed through part, countersigned, self-countersign drawn
-  as failed, picked by the holder, empty store), refused and unreadable
+  as failed, one failed stamp among passing deals, picked by the holder,
+  empty store), refused and unreadable
   answers, a node with no checkpoint, `peers` and every setting off, each
   with its expected HTML. Muse's vectors draw with a test
   overlay; the real overlay's goldens live in actionstate-muse. TypeScript and Go both render every
   vector and match the expected bytes.
-- Refusals: an unknown member, an unknown check id, a `passed` slot without
-  `by` and `at`, an unknown `history_segments` value, an overlay with an
+- Refusals: an unknown member, an unknown check id, a `passed` witness slot
+  without `at`, a `passed` second-signature slot without `by` or `at`, an unknown `history_segments` value, an overlay with an
   unknown key or placeholder; each returns an error (static) or draws the
   refusal line (scripted).
 - Words: every pack key used is in the pack; every Muse-sourced entry equals
