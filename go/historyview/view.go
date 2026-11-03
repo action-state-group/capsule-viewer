@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -169,7 +170,14 @@ type sharing struct {
 	exchangeCorroboration *bool
 	twins                 *bool
 	witnesses             *[]string
+	// Stated only by a Goose node's policy; nil draws no line.
+	shareDealHalf *string
+	strangerSafe  *[]string
 }
+
+// knownStrangerTokens are drawn by their plain name in the pack, any other
+// token as it is.
+var knownStrangerTokens = []string{"history_card/1"}
 
 var placeholderRE = regexp.MustCompile(`\{([a-z_]+)\}`)
 
@@ -614,7 +622,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		if kind != "checkpoint" {
 			r.refuse("input.sharing", "is only for a checkpoint page")
 		}
-		keys := []string{"standard_history", "history_segments", "record_at_completion", "adjudications", "exchange_corroboration", "adjudicate_differing_twins", "witnesses"}
+		keys := []string{"standard_history", "history_segments", "record_at_completion", "adjudications", "exchange_corroboration", "adjudicate_differing_twins", "witnesses", "share_deal_half", "stranger_safe"}
 		if so := r.object(o.get("sharing"), "input.sharing", keys, nil); so != nil {
 			var witnesses *[]string
 			if so.has("witnesses") {
@@ -630,9 +638,23 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				}
 				witnesses = &ws
 			}
+			var strangerSafe *[]string
+			if so.has("stranger_safe") {
+				ss := []string{}
+				if list, ok := so.get("stranger_safe").([]any); ok {
+					for i, w := range list {
+						if t, ok := r.str(w, fmt.Sprintf("input.sharing.stranger_safe[%d]", i), 80); ok {
+							ss = append(ss, t)
+						}
+					}
+				} else {
+					r.refuse("input.sharing.stranger_safe", "is not a list")
+				}
+				strangerSafe = &ss
+			}
 			// Every member is optional: one the node does not state stays
 			// absent and is drawn as "this node's settings don't say".
-			sh := &sharing{witnesses: witnesses}
+			sh := &sharing{witnesses: witnesses, strangerSafe: strangerSafe}
 			wrong := false
 			on := func(k string) *bool {
 				if !so.has(k) {
@@ -662,6 +684,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			sh.adjudications = one("adjudications", []string{"deliver_to_subjects", "off"})
 			sh.exchangeCorroboration = on("exchange_corroboration")
 			sh.twins = on("adjudicate_differing_twins")
+			sh.shareDealHalf = one("share_deal_half", []string{"counterparty"})
 			if !wrong {
 				share = sh
 			}
@@ -1074,7 +1097,28 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			return say(no)
 		}
 		completes := share.recordAtCompletion != nil && *share.recordAtCompletion == "counterparty"
-		lines := []string{say("shares.summary"), flag(share.standardHistory, "shares.standard.on", "shares.standard.off", "shares.standard.unstated")}
+		lines := []string{say("shares.summary")}
+		// Stated only by a Goose node's policy; a node that does not state them
+		// gets no line. They sit right after the first line, which they extend.
+		// A token the pack names is drawn by its plain name, any other as it is.
+		if share.shareDealHalf != nil {
+			lines = append(lines, say("shares.dealhalf.counterparty"))
+		}
+		if share.strangerSafe != nil {
+			if len(*share.strangerSafe) == 0 {
+				lines = append(lines, say("shares.stranger.none"))
+			} else {
+				names := make([]string, 0, len(*share.strangerSafe))
+				for _, t := range *share.strangerSafe {
+					if slices.Contains(knownStrangerTokens, t) {
+						t = say("shares.stranger.token." + t)
+					}
+					names = append(names, t)
+				}
+				lines = append(lines, say("shares.stranger", "items", strings.Join(names, ", ")))
+			}
+		}
+		lines = append(lines, flag(share.standardHistory, "shares.standard.on", "shares.standard.off", "shares.standard.unstated"))
 		switch {
 		case share.historySegments == nil:
 			lines = append(lines, say("shares.segments.unstated"))
