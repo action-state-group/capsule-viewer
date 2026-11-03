@@ -25,6 +25,7 @@ ${s} tr.x{cursor:pointer}
 ${s} tr.x:hover > td{background:#FAF8F4}
 ${s} tr.x-detail{display:none}
 ${s} tr.x:has(details.rx[open]) + tr.x-detail{display:table-row}
+body:has(.aac-static-notice) ${s} tr.x-detail:has(:target){display:table-row}
 ${s} tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 ${s} details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
 ${s} details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}

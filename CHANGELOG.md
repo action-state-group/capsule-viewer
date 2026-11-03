@@ -15,6 +15,10 @@ here. The format follows
 
 - A case's card has a page address, `#case-<case id>` (#243): the Outcomes page's per-conversation card and the EU AI Act page's per-session card carry `data-case`, and a page opened at the address opens that card and every toggle that shows it, as `#record-` does. It is meant for the Terms Pack day table's card column, which is not drawn yet (#172). It is a page address, not a permalink, and is matched on the whole case id. `caseAddress`, `caseHref`, `revealCase` and `anchorCases` are in `report-levels.ts`.
 
+### Fixed
+
+- A page that runs no script shows a case card that sits in an expandable row's detail row when opened at its `#case-<case id>` address (#245, follow-up of #244): on the static page only (scoped to a page that carries the static notice), `tr.x-detail:has(:target)` shows the detail row that holds the target; the scripted page's rows still follow their toggles. The report-front stylesheet changes, so `go/emitter/runtime-style-hashes.txt`, the contract-report goldens, the Go goldens and the page runtime are regenerated.
+
 ## ts 0.13.0 and go 0.13.0 (2026-11-02)
 
 Both state viewer 0.13.0: `ts/v0.13.0`, then `go/v0.13.0` on the commit that

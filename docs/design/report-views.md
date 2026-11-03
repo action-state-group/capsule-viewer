@@ -283,10 +283,14 @@ card of the case built. A case no toggle lists builds and opens nothing. A
 page that runs no script builds every body in page order, as the scripted
 page does when every toggle is opened, so both anchor the same card, and on
 the static page the fragment is a plain link: a browser that opens
-`<details>` for a fragment opens the toggles around the card. A card in an expandable row's detail row (the EU AI Act
-page's test rows) stays hidden there until the reader opens that row, since
-the row's toggle is not around the card and no script opens it. A fragment
-that does not decode names no card.
+`<details>` for a fragment opens the toggles around the card. A card in an
+expandable row's detail row (the EU AI Act page's test rows, the Outcomes
+page's rule rows) is reached, on the static page only, by a stylesheet rule,
+`tr.x-detail:has(:target)`, which shows the detail row that holds the target,
+since the row's toggle is not around the card. The rule is scoped to a page
+that carries the static notice, so on the scripted page the row still follows
+its toggle. On the static page a row so shown cannot be collapsed while the
+address names its card. A fragment that does not decode names no card.
 
 ### Words
 
