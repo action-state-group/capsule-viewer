@@ -274,7 +274,7 @@ the panel):
 | If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)."; when absent, named in the closing "this node's settings don't say" line |
 | When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, named in the closing "this node's settings don't say" line |
 | Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting."; when absent, named in the closing "this node's settings don't say" line |
-| Never: a record to anyone who doesn't prove who they are | `history_segments` is stated (the rule is the mesh plugin's signed-request rule, which its policy carries); when absent, named in the closing "this node's settings don't say" line |
+| Never: a record to anyone who doesn't prove who they are | `history_segments` is stated (the rule is the mesh plugin's signed-request rule, which its policy carries); when absent, named in the closing "this node's settings don't say" line, unless `stranger_safe` is stated: that allowlist already says what a stranger gets, so the page does not also say the rule is unstated |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
 `off`, `counterparties` or `peers`; `record_at_completion` is `counterparty`
