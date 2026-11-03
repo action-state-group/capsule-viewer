@@ -13,6 +13,7 @@ here. The format follows
 
 ### Changed
 
+- Receipt amounts (#276, evidencebook-deal#133): for currency BTC, `amount_minor` counts millisatoshi (1e-11 BTC), so the receipt shows `500 msat`, never `5.00 BTC`, in `format_amount` and in the unilateral, seller and bilateral receipt scripts. Fiat amounts are unchanged.
 - Verification summary wording (#274, from Sherlock2's review of actionstate-muse#337): the record count reads "1 top-level record" / "5 top-level records" instead of "1 record". The count is the file's own records; capsules a record carries inside it (a History's picked deals) are not counted, so the line no longer reads as a contradiction beside a module's own count of them. No input or contract change.
 
 ## ts 0.18.0 and go 0.18.0 (2026-11-03)

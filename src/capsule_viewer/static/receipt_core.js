@@ -447,6 +447,8 @@
   // ---- the receipt model (model.py) -----------------------------------------
 
   function formatAmount(minor, currency) {
+    // BTC counts millisatoshi (1e-11 BTC): shown as counted, never sats or a BTC decimal.
+    if (currency === "BTC") return minor + " msat";
     var exponent = own(EXPONENT, currency) ? EXPONENT[currency] : 2;
     var sign = minor < 0 ? "-" : "";
     var abs = Math.abs(minor);
