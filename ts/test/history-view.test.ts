@@ -540,7 +540,6 @@ describe("the page verdict", () => {
     const all =
       drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
     expect(all).not.toContain("settings don't say");
-    m["sharing"] = { ...(m["sharing"] as object), witnesses: undefined };
     delete (m["sharing"] as Record<string, unknown>)["witnesses"];
     const some =
       drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
