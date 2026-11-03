@@ -11,6 +11,12 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.14.0 and go 0.14.0 (2026-11-03)
+
+Both state viewer 0.14.0: `ts/v0.14.0`, then `go/v0.14.0` on the commit that
+ships its page runtime. This release carries the changes merged since 0.13.0:
+#244 (issue #243), #246 (issue #245), #248 and #249 (issue #247), and #250.
+
 ### Added
 
 - The History view (#247, design note `docs/design/history-view.md`): one History page for Muse's private History, the mesh-llm console's saved History page and the Goose History card, on the actionstate-muse#203 anatomy (header, one-line headline, chips, rows, "What this does not show", "What this node shares", the seal and "How this was checked"). It draws a `history-view/v0` object its caller builds from what it checked, and never verifies or fetches. `historyViewHtml` and `historyViewDocument` write a static page, and `renderHistoryView` draws the same page as DOM; all three are exported from the package root and from `@action-state-group/capsule-viewer/history-view`, and the page runtime carries `renderHistoryView` and `historyViewHtml`. `dist/history-view.iife.js` (global `HistoryView`, with its `.sha256`) ships the view alone. Its words are `src/wording/history-view.en.json`, neutral only; a product caller passes an overlay pack. The vectors are `vectors/history-view/`. The Go twin follows in a later release.
@@ -19,6 +25,7 @@ here. The format follows
 
 ### Fixed
 
+- `go/pageruntime` again states a commit on `main` (#250): it named a commit of #246's branch that the squash merge left off `main`, so the `pageruntime` CI job failed on `main` and on every pull request. It is rebuilt at a `main` commit, and only the stated commit changes.
 - A page that runs no script shows a case card that sits in an expandable row's detail row when opened at its `#case-<case id>` address (#245, follow-up of #244): on the static page only (scoped to a page that carries the static notice), `tr.x-detail:has(:target)` shows the detail row that holds the target; the scripted page's rows still follow their toggles. The report-front stylesheet changes, so `go/emitter/runtime-style-hashes.txt`, the contract-report goldens, the Go goldens and the page runtime are regenerated.
 
 ## ts 0.13.0 and go 0.13.0 (2026-11-02)
