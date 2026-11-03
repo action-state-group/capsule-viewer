@@ -130,6 +130,16 @@ describe.skipIf(executablePath === undefined)(
             card.id,
           );
           expect(await visible()).toBe(true);
+          // The card is built after the browser looked for the fragment, so
+          // navigate again to make it the :target, as a reader following a
+          // link to it would.
+          await page.evaluate((id) => {
+            location.hash = "";
+            location.hash = id;
+          }, card.id);
+          expect(
+            await page.evaluate(() => document.querySelector(":target")?.id),
+          ).toBe(card.id);
           await target.evaluate((el) => {
             const row = el.closest("tr.x-detail")!.previousElementSibling!;
             row.querySelector<HTMLDetailsElement>("details.rx")!.open = false;
