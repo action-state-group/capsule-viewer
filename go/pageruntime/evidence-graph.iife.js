@@ -17484,13 +17484,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("76160aea7e56464a6cfd0d0f0cb57285114ab8d5");
+    return commitPrefix("123a021c17596176c6a429b10ed7f6852339ee38");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.17.0",
+    viewerVersion: "0.18.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.13.1",
     cllVersion: "0.3.0",
@@ -28752,16 +28752,18 @@ ${pad.repeat(depth)}`;
       "shares.stranger.none": "Nothing else goes to a stranger.",
       "shares.stranger.token.history_card/1": "the History Card",
       "shares.twins.on": "When two copies of a model answer differently, this node sends the question and both answers to a referee.",
-      "shares.twins.unstated": "Whether this node sends differing answers to a referee: this node's settings don't say.",
+      "shares.unstated": "This node's settings don't say: {items}.",
+      "shares.unstated.one": "This node's settings don't say {item}.",
+      "shares.unstated.standard": "whether its Service History goes to anyone",
+      "shares.unstated.segments": "whether the other side of an exchange can ask for that exchange's record",
+      "shares.unstated.corroboration": "whether it tells a node that asks by exchange id if it holds that exchange's half",
+      "shares.unstated.completion": "whether it sends the sealed record when an exchange completes",
+      "shares.unstated.adjudications": "whether its verdicts go to the nodes judged",
+      "shares.unstated.twins": "whether it sends differing answers to a referee",
+      "shares.unstated.witnesses": "which witnesses get its checkpoints",
+      "shares.unstated.never": "whether a record goes to someone who doesn't prove who they are",
       "shares.witnesses": "Signed checkpoints go to the witnesses named here: {witnesses}",
       "shares.witnesses.none": "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting.",
-      "shares.witnesses.unstated": "Which witnesses get its checkpoints: this node's settings don't say.",
-      "shares.standard.unstated": "Whether the Service History goes to anyone: this node's settings don't say.",
-      "shares.segments.unstated": "Whether the other side of an exchange can ask for its record: this node's settings don't say.",
-      "shares.corroboration.unstated": "Whether this node tells a node that asks by an exchange's id if it holds its half: this node's settings don't say.",
-      "shares.completion.unstated": "Whether the sealed record is sent when an exchange completes: this node's settings don't say.",
-      "shares.adjudications.unstated": "Whether verdicts this node reaches go to the nodes judged: this node's settings don't say.",
-      "shares.never.unstated": "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say.",
       "shares.never": "Never: a record to anyone who doesn't prove who they are.",
       "shares.as_of": "Set by this node as of {at}.",
       "seal.title": "Locked as it happened.",
@@ -29724,8 +29726,8 @@ ${pad.repeat(depth)}`;
             ).join(", ")
           }) : say("shares.stranger.none")
         );
-      if (sharing.standard_history === void 0)
-        lines.push(say("shares.standard.unstated"));
+      const unstated = [];
+      if (sharing.standard_history === void 0) unstated.push("standard");
       else
         lines.push(
           say(
@@ -29740,21 +29742,19 @@ ${pad.repeat(depth)}`;
         lines.push(
           sharing.record_at_completion === "counterparty" ? `${say("shares.segments.off")} ${say("shares.segments.off.sealed")}` : say("shares.segments.off")
         );
-      else lines.push(say("shares.segments.unstated"));
+      else unstated.push("segments");
       if (sharing.exchange_corroboration === void 0)
-        lines.push(say("shares.corroboration.unstated"));
+        unstated.push("corroboration");
       else if (sharing.exchange_corroboration)
         lines.push(say("shares.corroboration.on"));
-      if (sharing.record_at_completion === void 0)
-        lines.push(say("shares.completion.unstated"));
+      if (sharing.record_at_completion === void 0) unstated.push("completion");
       else
         lines.push(
           say(
             sharing.record_at_completion === "counterparty" ? "shares.completion.on" : "shares.completion.off"
           )
         );
-      if (sharing.adjudications === void 0)
-        lines.push(say("shares.adjudications.unstated"));
+      if (sharing.adjudications === void 0) unstated.push("adjudications");
       else
         lines.push(
           say(
@@ -29762,20 +29762,24 @@ ${pad.repeat(depth)}`;
           )
         );
       if (sharing.adjudicate_differing_twins === void 0)
-        lines.push(say("shares.twins.unstated"));
+        unstated.push("twins");
       else if (sharing.adjudicate_differing_twins)
         lines.push(say("shares.twins.on"));
-      if (sharing.witnesses === void 0)
-        lines.push(say("shares.witnesses.unstated"));
+      if (sharing.witnesses === void 0) unstated.push("witnesses");
       else
         lines.push(
           sharing.witnesses.length > 0 ? say("shares.witnesses", { witnesses: sharing.witnesses.join(", ") }) : say("shares.witnesses.none")
         );
-      lines.push(
-        say(
-          sharing.history_segments === void 0 ? "shares.never.unstated" : "shares.never"
-        )
-      );
+      if (sharing.history_segments !== void 0) lines.push(say("shares.never"));
+      else if (sharing.stranger_safe === void 0) unstated.push("never");
+      if (unstated.length > 0)
+        lines.push(
+          unstated.length === 1 ? say("shares.unstated.one", {
+            item: say(`shares.unstated.${unstated[0]}`)
+          }) : say("shares.unstated", {
+            items: unstated.map((k) => say(`shares.unstated.${k}`)).join("; ")
+          })
+        );
       shares = el13(
         "section",
         { class: "cvh-shares", "data-history": "shares" },
