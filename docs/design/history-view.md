@@ -212,7 +212,7 @@ which check failed. A failed `witness` or `second_signature` (a check, or a
 row's slot) is drawn in its chip or that row's slot only, so one deal's
 failed stamp never hides the others; "every checkpoint signature checks" needs
 every row `pass` and every check that ran `pass` ("every signature
-checks, the answer's own and its key included" needs `envelope_signature`
+checks, including the answer's own, by the node's published key" needs `envelope_signature`
 and `key_is_node` to pass as well), and names the checks that
 did not run under "How this was checked"; otherwise "signatures not checked
 here". **No rows** has its own hero, never a vacuous pass: "No checkpoints

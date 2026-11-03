@@ -41,7 +41,7 @@
     "hero.entries.one": "1 entry",
     "hero.entries.other": "{n} entries",
     "verdict.pass": "every checkpoint signature checks",
-    "verdict.pass.all": "every signature checks, the answer's own and its key included",
+    "verdict.pass.all": "every signature checks, including the answer's own, by the node's published key",
     "verdict.unchecked": "signatures not checked here",
     "hero.failed": "This history didn't verify, so this page shows none of it.",
     "hero.none.checkpoints": "No checkpoints yet.",

@@ -968,7 +968,8 @@ export function buildHistoryView(
   const lockChecked =
     kind === "checkpoint"
       ? statusOf("checkpoint_signatures") === "pass" &&
-        statusOf("checkpoint_chain") === "pass"
+        statusOf("checkpoint_chain") === "pass" &&
+        statusOf("consistency") === "pass"
       : dealRecorded;
 
   // Header.

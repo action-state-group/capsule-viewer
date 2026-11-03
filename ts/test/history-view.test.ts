@@ -230,7 +230,7 @@ describe("the stand-in's round 1 (PR 249)", () => {
       "every signature checks",
     );
     expect(hero(page(vectors.cases["mesh-every-signature"]))).toContain(
-      "every signature checks, the answer's own and its key included",
+      "every signature checks, including the answer's own, by the node's published key",
     );
   });
 
