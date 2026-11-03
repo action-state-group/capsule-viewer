@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- Verification summary wording (#274, from Sherlock2's review of actionstate-muse#337): the record count reads "1 top-level record" / "5 top-level records" instead of "1 record". The count is the file's own records; capsules a record carries inside it (a History's picked deals) are not counted, so the line no longer reads as a contradiction beside a module's own count of them. No input or contract change.
+
 ## ts 0.18.0 and go 0.18.0 (2026-11-03)
 
 Both state viewer 0.18.0: `ts/v0.18.0`, then `go/v0.18.0` on the commit that ships its page runtime. This release carries #266 (PR #268) and #271 (PR #272).

@@ -228,6 +228,9 @@ function appendTime(
 const recordsWord = (count: number): string =>
   `${count} ${count === 1 ? "record" : "records"}`;
 
+const topLevelRecordsWord = (count: number): string =>
+  `${count} top-level ${count === 1 ? "record" : "records"}`;
+
 // The banner is drawn from AAC's banner model alone (presentation contract
 // section 6.2) and precedes every row in the DOM; a bundle that fails the
 // page's own checks gets the refusal line here and no rows at all, so a
@@ -433,7 +436,11 @@ export function checkedSummaryLine(
     );
   if (failed === 0 && (pageFailed > 0 || !verified) && notRun > 0)
     leads.push(`${notRun} of ${total} checks not run`);
-  const parts = [...leads, recordsWord(model.records.length)];
+  // "Top-level": the count is the file's own records, each checked and
+  // checkpointed on its own. Capsules a record carries inside it (a History's
+  // picked deals, say) are not separate records here, and the bare word read
+  // as a contradiction beside a module's own count of them (#274).
+  const parts = [...leads, topLevelRecordsWord(model.records.length)];
   // Only the signature checks that are in the not-checked list are named, each
   // by its own words: a signature check that ran (or failed) is never said to
   // be unchecked, so the summary cannot contradict the lists under it.
