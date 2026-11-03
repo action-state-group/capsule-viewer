@@ -149,19 +149,6 @@ describe("refusals", () => {
       container.querySelector('[data-history="refused"]')?.textContent,
     ).toContain("This page can't show this history");
     return built.ok ? [] : built.reasons;
-
-    it("refuses a share_deal_half or stranger_safe of the wrong shape", () => {
-      for (const [bad, where] of [
-        [{ share_deal_half: "anyone" }, "share_deal_half"],
-        [{ share_deal_half: true }, "share_deal_half"],
-        [{ stranger_safe: "history_card/1" }, "stranger_safe"],
-        [{ stranger_safe: [1] }, "stranger_safe[0]"],
-      ] as const) {
-        const m = mesh();
-        m["sharing"] = bad;
-        expect(refused(m).join()).toContain(where);
-      }
-    });
   };
 
   it("an unknown member", () => {

@@ -51,8 +51,6 @@ export interface DealRow {
   readonly second_signature: HistorySlot;
 }
 
-const KNOWN_STRANGER_TOKENS: readonly string[] = ["history_card/1"];
-
 export interface HistorySharing {
   /** Each of the first five is absent when the node does not state it (a Goose
    * node's advertised policy carries none of them). */
@@ -1321,7 +1319,8 @@ export function buildHistoryView(
           ? say("shares.stranger", {
               items: sharing.stranger_safe
                 .map((t) =>
-                  KNOWN_STRANGER_TOKENS.includes(t)
+                  (words[`shares.stranger.token.${t}`] ??
+                    BASE[`shares.stranger.token.${t}`]) !== undefined
                     ? say(`shares.stranger.token.${t}`)
                     : t,
                 )

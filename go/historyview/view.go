@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -174,10 +173,6 @@ type sharing struct {
 	shareDealHalf *string
 	strangerSafe  *[]string
 }
-
-// knownStrangerTokens are drawn by their plain name in the pack, any other
-// token as it is.
-var knownStrangerTokens = []string{"history_card/1"}
 
 var placeholderRE = regexp.MustCompile(`\{([a-z_]+)\}`)
 
@@ -1110,8 +1105,11 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			} else {
 				names := make([]string, 0, len(*share.strangerSafe))
 				for _, t := range *share.strangerSafe {
-					if slices.Contains(knownStrangerTokens, t) {
-						t = say("shares.stranger.token." + t)
+					key := "shares.stranger.token." + t
+					if _, ok := words[key]; ok {
+						t = say(key)
+					} else if _, ok := base[key]; ok {
+						t = say(key)
 					}
 					names = append(names, t)
 				}
