@@ -141,7 +141,7 @@ caller passes is drawn as text, never parsed as HTML.
   recorded, not outcomes", [guide] §17).
 - `checked.where`: `page` (the caller's script checked it when this page
   opened) or `builder` (the caller checked it when it built the page, at
-  `built_at`). The page says which. `checked.by` names the tool, in the
+  `built_at`). The page says which, but only when at least one check passed or failed; when every check is `not_run` it draws no such line ("As of {at}" wording, Sherlock2's ruling on #261). `checked.by` names the tool, in the
   panel only.
 - `outcome` (checkpoint pages): `answered`, `refused` (with the node's own
   `reason` token, drawn as the node's text) or `unreadable`. Only `answered`
@@ -229,7 +229,7 @@ repository, so its pack holds neutral words only. Where a part means the same
 as on the Muse card and Muse's words are neutral, the entry is copied from
 Muse's packs, with the source key and the Muse commit recorded in the pack's
 provenance:
-`history.page.*` from `plugin.json` (title, PRIVATE line, built line, counts,
+`history.page.*` from `plugin.json` (title, PRIVATE line, counts,
 opened, last step, stamp lines) and `stamp.*`, `seal.*` from `receipt.json`.
 Once Muse deletes its `history.page.*` (section 9), the viewer pack is the
 source, and its provenance says so. New entries (the checkpoint hero and

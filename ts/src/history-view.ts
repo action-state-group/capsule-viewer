@@ -1450,9 +1450,7 @@ export function buildHistoryView(
             null,
             say(kind === "checkpoint" ? "seal.checkpoints" : "seal.deals"),
           )
-        : drawRows
-          ? el("p", null, say("seal.unchecked"))
-          : null,
+        : null,
       el(
         "p",
         {
@@ -1496,13 +1494,19 @@ export function buildHistoryView(
         ),
       ),
     ),
-    el(
-      "p",
-      { class: "cvh-note" },
-      where === "page"
-        ? say("checked.where.page", { by: checkedBy })
-        : say("checked.where.builder", { at: minuteOf(built), by: checkedBy }),
-    ),
+    // The "ran" sentence only when a check passed or failed; all not-run says nothing it does not already.
+    checks.some((c) => c.status === "pass" || c.status === "fail")
+      ? el(
+          "p",
+          { class: "cvh-note" },
+          where === "page"
+            ? say("checked.where.page", { by: checkedBy })
+            : say("checked.where.builder", {
+                at: minuteOf(built),
+                by: checkedBy,
+              }),
+        )
+      : null,
   );
 
   const tree = el(

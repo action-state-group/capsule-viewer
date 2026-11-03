@@ -1236,8 +1236,6 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				key = "seal.checkpoints"
 			}
 			lock = el("p", nil, say(key))
-		} else if drawRows {
-			lock = el("p", nil, say("seal.unchecked"))
 		}
 		if directory != nil {
 			dir = el("p", attrs("class", "cvh-note", "data-history", "directory"), say("seal.directory", "directory", *directory))
@@ -1259,16 +1257,22 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		checkLis = append(checkLis, el("li", attrs("class", "cvh-check", "data-status", c.status),
 			say("check.line", "status", say("status."+c.status), "name", say("check."+c.id))))
 	}
-	var whereLine string
-	if where == "page" {
-		whereLine = say("checked.where.page", "by", checkedBy)
-	} else {
-		whereLine = say("checked.where.builder", "at", minuteOf(built), "by", checkedBy)
+	// The "ran" sentence only when a check passed or failed; all not-run says nothing it does not already.
+	var whereP *element
+	for _, c := range checks {
+		if c.status == "pass" || c.status == "fail" {
+			whereLine := say("checked.where.builder", "at", minuteOf(built), "by", checkedBy)
+			if where == "page" {
+				whereLine = say("checked.where.page", "by", checkedBy)
+			}
+			whereP = el("p", attrs("class", "cvh-note"), whereLine)
+			break
+		}
 	}
 	panel := el("details", checkedAttrs,
 		el("summary", nil, say("checked.heading")),
 		el("ul", nil, checkLis...),
-		el("p", attrs("class", "cvh-note"), whereLine))
+		whereP)
 
 	verdict := "unchecked"
 	if failed {
