@@ -516,6 +516,10 @@ describe("the page verdict", () => {
     expect(
       drawn(m).querySelector('[data-history="shares"]')?.textContent,
     ).toContain("Nothing else goes to a stranger.");
+    // A stated, empty allowlist is still a statement: no unstated stranger rule.
+    expect(
+      drawn(m).querySelector('[data-history="shares"]')?.textContent,
+    ).not.toContain("prove who they are");
   });
 
   it("a stated member keeps its line when its neighbours are absent", () => {
