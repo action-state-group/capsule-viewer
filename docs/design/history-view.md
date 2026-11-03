@@ -52,22 +52,23 @@ exist, with no new package:
 
 - **TypeScript**, `@action-state-group/capsule-viewer`: `ts/src/history-view.ts`
   builds the page as a small element tree, then serializes it two ways:
-  `historyViewHtml(input)` returns the HTML text (static pages), and the
-  page runtime's global `EvidenceGraph.renderHistoryView(input, container)`
+  `historyViewHtml(input, overlay?)` returns the HTML text (static pages), and the
+  page runtime's global `EvidenceGraph.renderHistoryView(input, container, overlay?)`
   builds the same tree as DOM with `textContent` only (scripted pages). A
   subpath export, `@action-state-group/capsule-viewer/history-view`, has no
   dependencies, so a bundler inlines only this code.
 - **Go**, `github.com/action-state-group/capsule-viewer/go`: a twin,
-  `go/historyview`, `Render(input) (string, error)`, which writes the same
-  bytes as `historyViewHtml`. Both are held to one set of vectors,
+  `go/historyview`, `Render(input, overlay) (string, error)`, which writes
+  the same bytes as `historyViewHtml(input, overlay)`. Both are held to one set of vectors,
   `vectors/history-view/` (inputs and expected HTML), the way `go/chartspec`
   and `ts/src/chart-*.ts` share `vectors/chart-spec`.
 - **Python** has no twin. A Python caller writes the input JSON and embeds
   the page runtime (section 7).
 
-The wording pack is one file, `ts/src/wording/history-view.en.json`; the Go
-module carries a copy generated from it, with a `--check` test that fails
-when they differ (as `scripts/pageruntime.sh` does for the runtime).
+The wording pack is one file, `ts/src/wording/history-view.en.json`, holding
+neutral words only; the Go module carries a copy generated from it, with a
+`--check` test that fails when they differ (as `scripts/pageruntime.sh` does
+for the runtime). A product caller passes an overlay pack (section 4).
 
 ## 3. The input contract: `history-view/v0`
 
@@ -100,8 +101,9 @@ caller passes is drawn as text, never parsed as HTML.
 }
 ```
 
-- `surface`: `action_state` or `neutral`. It picks the words that differ by
-  surface (section 4); it never changes what is drawn.
+- `surface`: `neutral` or `product`. A `product` page draws with the
+  overlay pack its caller passes (section 4); a `neutral` page takes none.
+  It never changes what is drawn, only the words.
 - `reader`: `owner` (the holder's own page; header `PRIVATE`) or `recipient`
   (someone shown it). `audience` is `{kind: "private"}`, `{kind: "shared",
   for: "<who>"}` or `{kind: "anyone"}` (a node's answer to any requester).
@@ -128,6 +130,14 @@ caller passes is drawn as text, never parsed as HTML.
   settings, section 5.
 - `period` (optional): `{from, to}`, drawn in the header.
 
+**Refusal.** An input that breaks any rule in this section (an unknown
+member, check id or `history_segments` value; a `passed` slot without `by`
+and `at`; a malformed time; an overlay that does not check) draws no
+history. `historyViewHtml` and `Render` return an error naming every reason,
+so a static caller writes no page; `renderHistoryView` draws one visible
+refusal line naming the reasons (`data-history="refused"`), never an empty
+or partial page.
+
 The contract is frozen once a release ships it. Additions are new optional
 members in `v0`; a change of meaning is `v1`.
 
@@ -137,7 +147,7 @@ members in `v0`; a change of meaning is `v1`.
 | --- | --- | --- |
 | Header | "History · <holder>" · scope · audience badge | "Your History" (owner) or "History · Shared by <name>" · audience badge |
 | Hero | one line: "2 checkpoints · 127 entries · last cut 18:07 UTC · every signature checks" | "<n> deals" and "newest first" |
-| Chips | signatures (all check / n don't verify / not checked here) · witness (postmarked / not checked here) · started <date> | recorded · postmarked count · not checked here |
+| Chips | signatures (all check / n don't verify / not checked here) · witness (time-stamped / not checked here) · started <date> | recorded · time-stamped count · not checked here |
 | Rows | cut time to the second, entries, 🔏 anchor; the two slots | asked, outcome and money, opened, last step, 🔏 record; the stamp row |
 | Callout | "What this does not show" | "What this does not show" |
 | Block | "What this node shares" (section 5) | none |
@@ -149,20 +159,28 @@ signature checks" only when every row's `signature` is `pass` and the
 `checkpoint_signatures` check is `pass`; any `fail` reads "<n> signatures
 don't verify"; otherwise "signatures not checked here".
 
-**One pack, Muse's words.** Where a part means the same as on the Muse card,
-its entry is copied from Muse's packs, with the source key recorded in the
-pack's provenance: `history.page.*` from `plugin.json` (title, PRIVATE line,
-built line, counts, opened, last step, stamp names and lines) and `stamp.*`,
-`seal.*` from `receipt.json`. New entries (the checkpoint hero and rows, the
-sharing block, the check names) are new copy for Sherlock2.
+**One key set, Muse's words.** capsule-viewer is a public, neutral
+repository, so its pack holds neutral words only. Where a part means the same
+as on the Muse card and Muse's words are neutral, the entry is copied from
+Muse's packs, with the source key recorded in the pack's provenance:
+`history.page.*` from `plugin.json` (title, PRIVATE line, built line, counts,
+opened, last step, stamp lines) and `stamp.*`, `seal.*` from `receipt.json`.
+Once Muse deletes its `history.page.*` (section 9), the viewer pack is the
+source, and its provenance says so. New entries (the checkpoint hero and
+rows, the sharing block, the check names) are new copy for Sherlock2. One
+thing has one name: the witness slot is "time-stamped" everywhere, as
+actionstate-muse#333 shipped it, never "postmarked".
 
-**Surface words.** A few entries have a neutral form, used when `surface` is
-`neutral`, so the mesh console stays inside its banned terms ([guide] §18,
-`banned-terms.ts`): "Second signature: none yet" for "Countersigned by: no
-one yet", no product name ("ask Muse to…" is Action State only), and "this
-is not a judgment of the node" where Muse says "Not a rating". A test draws
-every vector with `surface: neutral` and fails on any banned term, including
-inside other words.
+**Product overlay.** Product words stay with the product. A `product` caller
+passes an overlay pack, keyed to the view's closed key set: Muse keeps its
+overlay in actionstate-muse ("Countersigned by", "ask Muse to send it for a
+second signature", "Not a rating"). The view checks it like any input: an
+unknown key or a placeholder the base entry does not have is refused, so an
+overlay changes words, never what fills. The neutral entries are the ones
+the mesh console needs inside its banned terms ([guide] §18,
+`banned-terms.ts`): "Second signature: none yet", no product name, and "this
+is not a judgment of the node". A test draws every vector with `surface:
+neutral` and fails on any banned term, including inside other words.
 
 **Time.** A static page cannot know the reader's zone, so times are UTC in
 Muse's format ("Nov 3, 2026, 18:07 UTC"); rows show seconds. A scripted page
@@ -171,14 +189,15 @@ draws the same text, so static and scripted pages match.
 ## 5. "What this node shares"
 
 Built from `sharing`, with Steven's five lines from [334] as the pack's
-entries:
+entries, in Sherlock2's wording (spec names such as "history card" stay in
+the panel):
 
 | Line | Drawn when |
 | --- | --- |
-| With anyone who asks: the checkpoint list and the history card | always |
-| With anyone: the Service History | `standard_history` is true; when false, the line reads "The Service History: not shared (Standard History is off)" |
-| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; when `none`, "No exchange's record is shared" |
-| Sent on its own: the sealed record at completion, and verdicts to the nodes judged | always |
+| With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange | always |
+| With anyone: the Service History | `standard_history` is true (the normal case: Steven ruled it on by default, 2026-10-28); when false, "With anyone: the Service History. Off on this node, so not shared." |
+| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; when `none`, "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." |
+| Sent on its own: the sealed record when an exchange completes; if this node judges an exchange, its verdict goes to the node judged | always |
 | Never: record bodies to strangers | always |
 
 A `history_segments` value outside the pack's list is refused, never drawn as
@@ -206,7 +225,7 @@ node's cadence, not the view; the mesh migration item answers it (section 9).
 
 | Caller | Page | How it calls the view |
 | --- | --- | --- |
-| Muse (Go) | static, no script ("Your History", PRIVATE) | `historyview.Render(input)` from the Go module it already pins; Muse maps `deal report --read-only` and its `grade` to rows and slots, as `stampsOf` does today |
+| Muse (Go) | static, no script ("Your History", PRIVATE) | `historyview.Render(input, overlay)` from the Go module it already pins; Muse maps `deal report --read-only` and its `grade` to rows and slots, as `stampsOf` does today |
 | mesh console (TypeScript) | scripted: the saved page checks itself when it opens | the saved page's inline script imports `renderHistoryView` from the subpath export, runs the node's own verifier as today, maps its verdict to `checks` and rows, then draws; `checked.where` is `page` |
 | Goose, loop (Python) | scripted | `site/watch.py` writes the input JSON from the cards it already reads; the page embeds the pinned page runtime (`go/pageruntime/evidence-graph.iife.js` at the release tag, with its `.sha256`) and calls `EvidenceGraph.renderHistoryView` |
 
@@ -217,14 +236,17 @@ two above, and print; the first screen shows the header and the hero.
 
 ## 8. Tests and goldens
 
-- `vectors/history-view/`: inputs for a mesh node (card only; with the
-  Service History; counterparties on and off; a failed signature; a witness
+- `vectors/history-view/`: inputs for a mesh node (Service History on, the
+  normal case; card only; counterparties on and off; a failed signature; a witness
   `passed`; two checkpoints in one second), a Goose node, and Muse's page
   (no grade, witnessed through part, countersigned, self-countersign
-  refused), each with its expected HTML. TypeScript and Go both render every
+  refused), each with its expected HTML. Muse's vectors draw with a test
+  overlay; the real overlay's goldens live in actionstate-muse. TypeScript and Go both render every
   vector and match the expected bytes.
 - Refusals: an unknown member, an unknown check id, a `passed` slot without
-  `by` and `at`, an unknown `history_segments` value.
+  `by` and `at`, an unknown `history_segments` value, an overlay with an
+  unknown key or placeholder; each returns an error (static) or draws the
+  refusal line (scripted).
 - Words: every pack key used is in the pack; every Muse-sourced entry equals
   its source at the pinned Muse commit; no banned term on `neutral`.
 - Scripted: the runtime's `renderHistoryView` builds DOM whose `outerHTML`
@@ -256,7 +278,8 @@ None touches the Devcon S08 image (capsules 0.1.10).
   Engineering's call; Sherlock2 confirms it carries no product meaning and,
   as a neutral viewer contract, stays inside the neutrality boundary.
 - The words, Muse-sourced and new, and the neutral forms: Sherlock2, under
-  the wording delegation.
+  the wording delegation. Product words live in the caller's overlay, never
+  in this repository.
 - The "What this node shares" lines are Steven's own text from [334]; the
   off-state lines in section 5 are new copy for Sherlock2.
 - The look follows the Muse History card ([207] mock). If review changes
