@@ -1368,9 +1368,21 @@ export function buildHistoryView(
           : states.every((s) => s === "none")
             ? "none"
             : "mixed";
+    // A failed row must not read as if the whole deal failed: when only some
+    // of the countersigned rows failed, the slot gives its scope and points to
+    // the rows. Rows nobody countersigned are not part of the count.
+    const failedRows = states.filter((s) => s === "failed").length;
+    const signedRows = states.filter(
+      (s) => s === "failed" || s === "passed",
+    ).length;
     const sealLine =
       sealState === "failed"
-        ? say("slot.failed")
+        ? failedRows > 0 && failedRows < signedRows
+          ? say("seal.second.some_failed", {
+              k: String(failedRows),
+              n: String(signedRows),
+            })
+          : say("slot.failed")
         : sealState === "none"
           ? say("slot.second.none")
           : sealState === "not_checked"
