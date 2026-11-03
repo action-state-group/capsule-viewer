@@ -16731,7 +16731,7 @@ ${s} tr.x{cursor:pointer}
 ${s} tr.x:hover > td{background:#FAF8F4}
 ${s} tr.x-detail{display:none}
 ${s} tr.x:has(details.rx[open]) + tr.x-detail{display:table-row}
-${s} tr.x-detail:has(:target){display:table-row}
+body:has(.aac-static-notice) ${s} tr.x-detail:has(:target){display:table-row}
 ${s} tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 ${s} details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
 ${s} details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}
@@ -17481,7 +17481,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("262cb75ea9404bc338bcda9601267140ab7e6d37");
+    return commitPrefix("060bbc4390f6c49c7731afd7ee518fdac9414b73");
   }
   var commit = builtCommit();
   var unreleased = true;
