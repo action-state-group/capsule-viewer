@@ -284,6 +284,23 @@ describe("the stand-in's round 1 (PR 249)", () => {
         ),
         name,
       ).not.toBeNull();
+    // With no rows drawn, the seal holds only its slot: no locking line.
+    for (const name of [
+      "muse-empty",
+      "mesh-refused",
+      "mesh-chain-fails",
+      "mesh-row-signature-fails",
+    ])
+      expect(
+        page(vectors.cases[name], overlayFor(name)).querySelector(".cvh-seal")
+          ?.textContent,
+        name,
+      ).not.toMatch(/did not check|Locked as it happened/u);
+    expect(
+      page(vectors.cases["mesh-chain-fails"])
+        .querySelector(".cvh-seal-slot")
+        ?.getAttribute("data-state"),
+    ).toBe("not_checked");
   });
 
   it("shows the node's full key id behind its chip", () => {

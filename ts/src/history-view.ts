@@ -1387,7 +1387,9 @@ export function buildHistoryView(
             null,
             say(kind === "checkpoint" ? "seal.checkpoints" : "seal.deals"),
           )
-        : el("p", null, say("seal.unchecked")),
+        : drawRows
+          ? el("p", null, say("seal.unchecked"))
+          : null,
       el(
         "p",
         {
