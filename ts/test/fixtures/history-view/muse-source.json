@@ -1,0 +1,22 @@
+{
+  "_comment": "A snapshot of the actionstate-muse wording entries the History view's pack copies (pack provenance.sources), at the commit below. actionstate-muse is private, so CI reads this snapshot. Drop it once Muse's migration deletes these keys and the view's pack is the source.",
+  "muse_commit": "79cc01cfbae59536e690fd6c8e68192b6cf7a12a",
+  "entries": {
+    "plugin.json history.page.title": "Your History",
+    "plugin.json history.page.private": "PRIVATE · for you only. Never send this page.",
+    "plugin.json history.page.built": "Built {at}. It is a snapshot from when you asked, not a page that updates itself.",
+    "plugin.json history.page.none": "There are no deals in this store yet.",
+    "plugin.json history.page.count.one": "{n} deal, newest first",
+    "plugin.json history.page.count.other": "{n} deals, newest first",
+    "plugin.json history.page.row.opened": "Opened {at}",
+    "plugin.json history.page.row.last": "Last step {at}",
+    "plugin.json history.page.stamp.recorded": "RECORDED",
+    "plugin.json history.page.stamp.timestamped": "TIME-STAMPED",
+    "plugin.json history.page.stamp.timestamped.not": "Not time-stamped yet",
+    "plugin.json history.page.stamp.timestamped.part": "through step {k} of {n}",
+    "plugin.json history.page.stamp.timestamped.unchecked": "Not checked here",
+    "plugin.json history.page.stamp.timestamped.failed": "Didn't verify",
+    "receipt.json seal.text.unpostmarked": "Each step was saved as it happened. Any change to a saved step shows.",
+    "plugin.json history.page.checked.directory": "Signers are looked up at {directory} on every read, so that site can see each time you look."
+  }
+}

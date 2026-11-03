@@ -1,0 +1,9 @@
+{
+  "id": "test.product-overlay",
+  "entries": {
+    "stamp.second": "COUNTERSIGNED",
+    "seal.second.label": "Countersigned by",
+    "slot.second.none": "no one yet · ask Muse to send it for a second signature",
+    "callout.deals": "“Steps recorded” is this side's record of each deal, not a confirmed outcome. Not a rating."
+  }
+}

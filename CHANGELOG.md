@@ -13,6 +13,8 @@ here. The format follows
 
 ### Added
 
+- The History view (#247, design note `docs/design/history-view.md`): one History page for Muse's private History, the mesh-llm console's saved History page and the Goose History card, on the actionstate-muse#203 anatomy (header, one-line headline, chips, rows, "What this does not show", "What this node shares", the seal and "How this was checked"). It draws a `history-view/v0` object its caller builds from what it checked, and never verifies or fetches. `historyViewHtml` and `historyViewDocument` write a static page, and `renderHistoryView` draws the same page as DOM; all three are exported from the package root and from `@action-state-group/capsule-viewer/history-view`, and the page runtime carries `renderHistoryView` and `historyViewHtml`. `dist/history-view.iife.js` (global `HistoryView`, with its `.sha256`) ships the view alone. Its words are `src/wording/history-view.en.json`, neutral only; a product caller passes an overlay pack. The vectors are `vectors/history-view/`. The Go twin follows in a later release.
+
 - A case's card has a page address, `#case-<case id>` (#243): the Outcomes page's per-conversation card and the EU AI Act page's per-session card carry `data-case`, and a page opened at the address opens that card and every toggle that shows it, as `#record-` does. It is meant for the Terms Pack day table's card column, which is not drawn yet (#172). It is a page address, not a permalink, and is matched on the whole case id. `caseAddress`, `caseHref`, `revealCase` and `anchorCases` are in `report-levels.ts`.
 
 ### Fixed

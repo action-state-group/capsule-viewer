@@ -1,0 +1,1005 @@
+{
+  "_comment": "history-view/v0 inputs (docs/design/history-view.md section 8). Each case's expected HTML is ts/test/goldens/history-view/<name>.html; regenerate with UPDATE_GOLDENS=1 npx vitest run test/history-view.test.ts. Cases starting muse- draw with the test overlay in overlay.json.",
+  "cases": {
+    "mesh-service-history": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2e3f4a5b6c7d8e9f0a1b2c3d4e0",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "pass"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "key_is_node",
+          "status": "not_run"
+        },
+        {
+          "id": "reply_bound",
+          "status": "not_run"
+        },
+        {
+          "id": "period_counts",
+          "status": "pass"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      },
+      "periods": [
+        {
+          "from": "2026-10-19",
+          "to": "2026-10-25",
+          "cells": [
+            {
+              "what": "llama-3.1-8b",
+              "value": "38"
+            },
+            {
+              "what": "qwen-2.5-7b",
+              "value": "4"
+            }
+          ]
+        },
+        {
+          "from": "2026-10-26",
+          "to": "2026-11-01",
+          "cells": [
+            {
+              "what": "llama-3.1-8b",
+              "value": "41"
+            }
+          ]
+        }
+      ]
+    },
+    "mesh-everything-off": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2e3f4a5b6c7d8e9f0a1b2c3d4e0",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "pass"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "key_is_node",
+          "status": "not_run"
+        },
+        {
+          "id": "reply_bound",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": false,
+        "history_segments": "off",
+        "record_at_completion": "off",
+        "adjudications": "off",
+        "exchange_corroboration": false,
+        "adjudicate_differing_twins": true,
+        "witnesses": []
+      }
+    },
+    "mesh-peers": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2e3f4a5b6c7d8e9f0a1b2c3d4e0",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "pass"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "key_is_node",
+          "status": "not_run"
+        },
+        {
+          "id": "reply_bound",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "peers",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": ["https://witness.agentactioncapsule.org"]
+      }
+    },
+    "mesh-same-second": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12.418Z",
+          "log_size": 126,
+          "anchor": "77aa",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12.902Z",
+          "log_size": 127,
+          "anchor": "88bb",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "pass"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "key_is_node",
+          "status": "not_run"
+        },
+        {
+          "id": "reply_bound",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "off",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      }
+    },
+    "mesh-witnessed": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3",
+          "signature": "pass",
+          "witness": {
+            "state": "passed",
+            "at": "2026-11-03T12:00:09Z",
+            "by": "witness.agentactioncapsule.org"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2",
+          "signature": "pass",
+          "witness": {
+            "state": "none"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "pass"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "key_is_node",
+          "status": "not_run"
+        },
+        {
+          "id": "reply_bound",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      }
+    },
+    "mesh-chain-fails": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2e3f4a5b6c7d8e9f0a1b2c3d4e0",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "fail"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "key_is_node",
+          "status": "not_run"
+        },
+        {
+          "id": "reply_bound",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      }
+    },
+    "mesh-refused": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "refused",
+        "reason": "no_checkpoint"
+      },
+      "rows": [],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "refusal",
+          "status": "pass"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      }
+    },
+    "mesh-unreadable": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "unreadable"
+      },
+      "rows": [],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "fail"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      }
+    },
+    "goose-advertised-policy": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234",
+        "stream": "goose"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "builder",
+        "by": "loop site/watch.py"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+          "signature": "not_run",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2e3f4a5b6c7d8e9f0a1b2c3d4e0",
+          "signature": "not_run",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "checkpoint_signatures",
+          "status": "not_run"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true
+      }
+    },
+    "goose-no-checkpoints": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234",
+        "stream": "goose"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "builder",
+        "by": "loop site/watch.py"
+      },
+      "rows": [],
+      "checks": [
+        {
+          "id": "checkpoint_signatures",
+          "status": "not_run"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "not_run"
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true
+      }
+    },
+    "muse-owner": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "product",
+      "reader": "owner",
+      "holder": {
+        "name": "you"
+      },
+      "audience": {
+        "kind": "private"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl deal report --read-only"
+      },
+      "rows": [
+        {
+          "kind": "deal",
+          "asked": "Buy a fawn sticker under $2",
+          "outcome": "Paid",
+          "money": "$1.90",
+          "opened_at": "2026-10-20T15:40:00Z",
+          "last_at": "2026-10-20T15:48:00Z",
+          "record": "49108b4c046a9e1f",
+          "witness": {
+            "state": "passed",
+            "at": "2026-10-20T15:48:30Z",
+            "through": {
+              "k": 9,
+              "n": 10
+            }
+          },
+          "second_signature": {
+            "state": "none"
+          }
+        },
+        {
+          "kind": "deal",
+          "asked": "Sell the old bike",
+          "outcome": "Steps recorded",
+          "opened_at": "2026-10-22T09:00:00Z",
+          "last_at": "2026-10-23T10:15:00Z",
+          "record": "fdc37e0fc6d7aa01",
+          "witness": {
+            "state": "passed",
+            "at": "2026-10-23T10:16:00Z"
+          },
+          "second_signature": {
+            "state": "passed",
+            "by": "Ada",
+            "at": "2026-10-23T11:00:00Z"
+          }
+        },
+        {
+          "kind": "deal",
+          "asked": "Order printer ink",
+          "outcome": "Paid",
+          "money": "$24.00",
+          "opened_at": "2026-10-25T08:00:00Z",
+          "last_at": "2026-10-25T08:05:00Z",
+          "record": "8f25c9b3ac930011",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "failed"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "deal_report",
+          "status": "pass"
+        },
+        {
+          "id": "witness",
+          "status": "pass"
+        },
+        {
+          "id": "second_signature",
+          "status": "fail"
+        }
+      ],
+      "signer_directory": "https://directory.example"
+    },
+    "muse-picked-shared": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "product",
+      "reader": "recipient",
+      "holder": {
+        "name": "Steven"
+      },
+      "audience": {
+        "kind": "shared",
+        "for": "Sam"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl deal report --read-only"
+      },
+      "rows": [
+        {
+          "kind": "deal",
+          "asked": "Buy a fawn sticker under $2",
+          "outcome": "Paid",
+          "money": "$1.90",
+          "opened_at": "2026-10-20T15:40:00Z",
+          "last_at": "2026-10-20T15:48:00Z",
+          "record": "49108b4c046a9e1f",
+          "witness": {
+            "state": "passed",
+            "at": "2026-10-20T15:48:30Z",
+            "through": {
+              "k": 9,
+              "n": 10
+            }
+          },
+          "second_signature": {
+            "state": "none"
+          }
+        },
+        {
+          "kind": "deal",
+          "asked": "Sell the old bike",
+          "outcome": "Steps recorded",
+          "opened_at": "2026-10-22T09:00:00Z",
+          "last_at": "2026-10-23T10:15:00Z",
+          "record": "fdc37e0fc6d7aa01",
+          "witness": {
+            "state": "passed",
+            "at": "2026-10-23T10:16:00Z"
+          },
+          "second_signature": {
+            "state": "passed",
+            "by": "Ada",
+            "at": "2026-10-23T11:00:00Z"
+          }
+        },
+        {
+          "kind": "deal",
+          "asked": "Order printer ink",
+          "outcome": "Paid",
+          "money": "$24.00",
+          "opened_at": "2026-10-25T08:00:00Z",
+          "last_at": "2026-10-25T08:05:00Z",
+          "record": "8f25c9b3ac930011",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "failed"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "deal_report",
+          "status": "pass"
+        },
+        {
+          "id": "witness",
+          "status": "pass"
+        },
+        {
+          "id": "second_signature",
+          "status": "fail"
+        }
+      ],
+      "signer_directory": "https://directory.example",
+      "picked": true
+    },
+    "muse-empty": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "product",
+      "reader": "owner",
+      "holder": {
+        "name": "you"
+      },
+      "audience": {
+        "kind": "private"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl deal report --read-only"
+      },
+      "rows": [],
+      "checks": [
+        {
+          "id": "deal_report",
+          "status": "pass"
+        }
+      ]
+    }
+  }
+}

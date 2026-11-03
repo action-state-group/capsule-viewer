@@ -312,9 +312,9 @@ The view also ships alone as `dist/history-view.iife.js` (global
 `HistoryView`, with its `.sha256`), with no verifier in it, so a page that
 only draws a History does not embed the 1.2 MB page runtime. The view's
 stylesheet ships beside the function, in TypeScript and Go
-(`historyViewStyles`, held to the same vectors, its SHA-256 in
-`go/emitter/runtime-style-hashes.txt`), so a page with a strict CSP lists one
-style hash.
+(`historyViewStyles`, held to the same vectors). `renderHistoryView` inserts
+no style itself, so a page with a strict CSP lists the hash of the one
+stylesheet it embeds.
 
 **Serialization.** TypeScript, Go and the browser write the same bytes
 because the HTML is serialized by the HTML fragment serialization rules,

@@ -15,6 +15,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./history-view": {
+      "types": "./dist/history-view.d.ts",
+      "import": "./dist/history-view.js"
     }
   },
   "engines": {
