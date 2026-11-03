@@ -187,10 +187,10 @@ describe("refusals", () => {
     (m["sharing"] as Json)["record_at_completion"] = null;
     expect(refused(m).join()).toContain("record_at_completion");
   });
-  it("a checkpoint page with no sharing member at all", () => {
+  it("a checkpoint page whose sharing is missing or not an object", () => {
     const m = mesh();
     m["sharing"] = "yes";
-    expect(refused(m).length).toBeGreaterThan(0);
+    expect(refused(m).join()).toContain("input.sharing");
     delete m["sharing"];
     expect(refused(m).join()).toContain("input.sharing");
   });
@@ -479,6 +479,15 @@ describe("the page verdict", () => {
       drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
     expect(shares).toContain("With any node that signs its request");
     expect(shares).toContain("Whether the Service History goes to anyone");
+  });
+
+  it("an off segments line does not claim a sealed record the node does not state", () => {
+    const m = mesh();
+    m["sharing"] = { history_segments: "off" };
+    const shares =
+      drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
+    expect(shares).toContain("(off on this node)");
+    expect(shares).not.toContain("They still get the sealed record");
   });
 
   it("draws caller text as text, never in an attribute", () => {

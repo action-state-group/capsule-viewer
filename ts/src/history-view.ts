@@ -842,66 +842,29 @@ export function buildHistoryView(
           }
         else r.refuse("input.sharing.witnesses", "is not a list");
       }
-      const twins =
-        "adjudicate_differing_twins" in so
-          ? r.bool(
-              so["adjudicate_differing_twins"],
-              "input.sharing.adjudicate_differing_twins",
-            )
-          : undefined;
-      const has = (k: string) => k in so;
-      const s = {
-        ...(has("standard_history")
-          ? {
-              standard_history: r.bool(
-                so["standard_history"],
-                "input.sharing.standard_history",
-              ),
-            }
-          : {}),
-        ...(has("history_segments")
-          ? {
-              history_segments: r.oneOf(
-                so["history_segments"],
-                "input.sharing.history_segments",
-                ["off", "counterparties", "peers"] as const,
-              ),
-            }
-          : {}),
-        ...(has("record_at_completion")
-          ? {
-              record_at_completion: r.oneOf(
-                so["record_at_completion"],
-                "input.sharing.record_at_completion",
-                ["counterparty", "off"] as const,
-              ),
-            }
-          : {}),
-        ...(has("adjudications")
-          ? {
-              adjudications: r.oneOf(
-                so["adjudications"],
-                "input.sharing.adjudications",
-                ["deliver_to_subjects", "off"] as const,
-              ),
-            }
-          : {}),
-        ...(has("exchange_corroboration")
-          ? {
-              exchange_corroboration: r.bool(
-                so["exchange_corroboration"],
-                "input.sharing.exchange_corroboration",
-              ),
-            }
-          : {}),
+      // Every member is optional: one the node does not state stays absent
+      // and is drawn as "this node's settings don't say".
+      const stated: Record<string, unknown> = {};
+      let wrong = false;
+      const take = (k: string, parse: () => unknown) => {
+        if (!(k in so)) return;
+        const v = parse();
+        if (v === undefined) wrong = true;
+        else stated[k] = v;
       };
-      if (Object.values(s).every((x) => x !== undefined))
+      const on = (k: string) =>
+        take(k, () => r.bool(so[k], `input.sharing.${k}`));
+      const one = (k: string, values: readonly string[]) =>
+        take(k, () => r.oneOf(so[k], `input.sharing.${k}`, values));
+      on("standard_history");
+      one("history_segments", ["off", "counterparties", "peers"]);
+      one("record_at_completion", ["counterparty", "off"]);
+      one("adjudications", ["deliver_to_subjects", "off"]);
+      on("exchange_corroboration");
+      on("adjudicate_differing_twins");
+      if (!wrong)
         sharing = {
-          ...(s as Omit<
-            HistorySharing,
-            "witnesses" | "adjudicate_differing_twins"
-          >),
-          ...(twins !== undefined ? { adjudicate_differing_twins: twins } : {}),
+          ...(stated as HistorySharing),
           ...(witnesses !== undefined ? { witnesses } : {}),
         };
     }

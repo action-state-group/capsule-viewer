@@ -263,11 +263,11 @@ the panel):
 | Line | Drawn when |
 | --- | --- |
 | With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange | always |
-| With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)." |
-| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`) |
-| With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false |
-| Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)." |
-| If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)." |
+| With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)."; when absent, "Whether the Service History goes to anyone: this node's settings don't say." |
+| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`); when absent, "Whether the other side of an exchange can ask for its record: this node's settings don't say." |
+| With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false; when absent, "Whether this node tells a node that asks by an exchange's id if it holds its half: this node's settings don't say." |
+| Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)."; when absent, "Whether the sealed record is sent when an exchange completes: this node's settings don't say." |
+| If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)."; when absent, "Whether verdicts this node reaches go to the nodes judged: this node's settings don't say." |
 | When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: this node's settings don't say." |
 | Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting."; when absent, "Which witnesses get its checkpoints: this node's settings don't say." |
 | Never: a record to anyone who doesn't prove who they are | always |
@@ -286,8 +286,9 @@ absent the page draws one line for it, "Whether <what it decides>: this node's
 settings don't say." (the words are in the pack as `shares.*.unstated`), and
 never a default, so no disclosure is left out by omission or invented. A
 member that is present keeps its line exactly as in the table; a present
-member of the wrong type or outside its list is still refused. The Goose
-vector `goose-policy-share-deal-half-only` states `sharing: {}`. A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
+member of the wrong type or outside its list is refused, never drawn as the
+nearest line. The Goose
+vector `goose-policy-share-deal-half-only` states `sharing: {}`. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
