@@ -114,7 +114,7 @@
             },
             {
               "what": "qwen-2.5-7b",
-              "value": "4"
+              "withheld": true
             }
           ]
         },

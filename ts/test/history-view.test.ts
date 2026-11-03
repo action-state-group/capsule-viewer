@@ -230,7 +230,7 @@ describe("the page verdict", () => {
     const panel = page.querySelector('[data-history="checked"]');
     expect(panel?.hasAttribute("open")).toBe(true);
     expect(panel?.querySelector('[data-status="fail"]')?.textContent).toContain(
-      "Each checkpoint extends the one before",
+      "Each checkpoint names the one before",
     );
   });
 
@@ -242,12 +242,12 @@ describe("the page verdict", () => {
     ).toBe(1);
   });
 
-  it("every signature checks only when every row and every check that ran passed", () => {
+  it("every checkpoint signature checks only when every row and every check that ran passed", () => {
     expect(
       drawn(vectors.cases["mesh-service-history"]).querySelector(
         '[data-history="hero"]',
       )?.textContent,
-    ).toContain("every signature checks");
+    ).toContain("every checkpoint signature checks");
     expect(
       drawn(vectors.cases["goose-advertised-policy"]).querySelector(
         '[data-history="hero"]',
@@ -306,7 +306,7 @@ describe("the page verdict", () => {
       drawn(vectors.cases["goose-advertised-policy"]).querySelector(
         '[data-history="shares"]',
       )?.textContent ?? "";
-    expect(shares).toContain("not stated by this node");
+    expect(shares).toContain("this node's settings don't say");
   });
 
   it("draws caller text as text, never in an attribute", () => {

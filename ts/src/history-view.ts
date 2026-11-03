@@ -93,9 +93,11 @@ export interface HistoryViewInput {
   readonly periods?: readonly {
     readonly from: string;
     readonly to: string;
+    /** A count, or `withheld: true` where the node withholds a small count. */
     readonly cells: readonly {
       readonly what: string;
-      readonly value: string;
+      readonly value?: string;
+      readonly withheld?: true;
     }[];
   }[];
   readonly sharing?: HistorySharing;
@@ -754,7 +756,7 @@ export function buildHistoryView(
   const periods: {
     from: Instant;
     to: Instant;
-    cells: { what: string; value: string }[];
+    cells: { what: string; value: string | undefined }[];
   }[] = [];
   if ("periods" in o) {
     if (kind !== "checkpoint")
@@ -771,23 +773,31 @@ export function buildHistoryView(
         if (!po) return;
         const from = r.date(po["from"], `${path}.from`);
         const to = r.date(po["to"], `${path}.to`);
-        const cells: { what: string; value: string }[] = [];
+        const cells: { what: string; value: string | undefined }[] = [];
         if (Array.isArray(po["cells"]))
           po["cells"].forEach((c, j) => {
             const co = r.object(
               c,
               `${path}.cells[${j}]`,
-              ["what", "value"],
-              ["what", "value"],
+              ["what", "value", "withheld"],
+              ["what"],
             );
             const what = co
               ? r.string(co["what"], `${path}.cells[${j}].what`, 200)
               : undefined;
-            const value = co
-              ? r.string(co["value"], `${path}.cells[${j}].value`, 40)
-              : undefined;
-            if (what !== undefined && value !== undefined)
-              cells.push({ what, value });
+            const withheld = co !== null && "withheld" in co;
+            if (withheld && co["withheld"] !== true)
+              r.refuse(`${path}.cells[${j}].withheld`, "is not true");
+            if (co && withheld === "value" in co)
+              r.refuse(
+                `${path}.cells[${j}]`,
+                "carries either a value or withheld: true",
+              );
+            const value =
+              co && "value" in co
+                ? r.string(co["value"], `${path}.cells[${j}].value`, 40)
+                : undefined;
+            if (what !== undefined) cells.push({ what, value });
           });
         else r.refuse(`${path}.cells`, "is not a list");
         if (from && to) periods.push({ from, to, cells });
@@ -1023,14 +1033,16 @@ export function buildHistoryView(
   if (drawRows) {
     const stamped = rows.filter((x) => x.witness.state === "passed").length;
     const stampChip =
-      stamped === 0
-        ? say("chip.timestamped.none")
-        : stamped === rows.length
-          ? say("chip.timestamped.all", { n: String(rows.length) })
-          : say("chip.timestamped.some", {
-              k: String(stamped),
-              n: String(rows.length),
-            });
+      stamped === 0 && rows.some((x) => x.witness.state === "not_checked")
+        ? say("chip.timestamped.unchecked")
+        : stamped === 0
+          ? say("chip.timestamped.none")
+          : stamped === rows.length
+            ? say("chip.timestamped.all", { n: String(rows.length) })
+            : say("chip.timestamped.some", {
+                k: String(stamped),
+                n: String(rows.length),
+              });
     const items: string[] = [];
     if (kind === "checkpoint") {
       items.push(
@@ -1208,7 +1220,9 @@ export function buildHistoryView(
                     el(
                       "li",
                       null,
-                      say("periods.cell", { what: c.what, value: c.value }),
+                      c.value === undefined
+                        ? say("periods.cell.withheld", { what: c.what })
+                        : say("periods.cell", { what: c.what, value: c.value }),
                     ),
                   ),
                 ),

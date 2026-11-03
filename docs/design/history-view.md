@@ -169,7 +169,8 @@ caller passes is drawn as text, never parsed as HTML.
   placeholders. An unknown `id` is refused: the words for a check live in
   the pack, not in the caller. The mesh verifier's ids are this list's.
 - `periods` (optional, checkpoint pages): the Service History's counts, one
-  entry per closed period, each cell a caller-named `what` and its count.
+  entry per closed week, each cell a caller-named `what` and its count, or
+  `withheld: true` where the node withholds a count under 5 ("fewer than 5").
   Drawn as separate rows, never summed or compared ([guide] §18).
 - `sharing` (checkpoint pages, required there): the node's live settings,
   section 5, with the values the node itself uses.
@@ -193,7 +194,7 @@ members in `v0`; a change of meaning is `v1`.
 | Part | Checkpoint page (mesh, Goose) | Deal page (Muse) |
 | --- | --- | --- |
 | Header | "History · <holder>" · scope · audience badge | "Your History" (owner) or "History · Shared by <name>" · audience badge |
-| Hero | one line: "2 checkpoints · 127 entries · last cut 18:07 UTC · every signature checks" | "<n> deals" and "newest first" |
+| Hero | one line: "2 checkpoints · 127 entries · last cut 18:07 UTC · every checkpoint signature checks" | "<n> deals" and "newest first" |
 | Chips | signatures (all check / n don't verify / not checked here) · witness (time-stamped / not checked here) · started <date> | recorded · time-stamped count · not checked here |
 | Rows | cut time to the second, entries, 🔏 anchor; the two slots | asked, outcome and money, opened, last step, 🔏 record; the stamp row |
 | Callout | "What this does not show" | "What this does not show" |
@@ -208,7 +209,7 @@ didn't verify", and the page then draws none of its rows or counts, as the
 mesh page does today, but keeps "How this was checked", so the reader sees
 which check failed. A failed `witness` or `second_signature` (a check, or a
 row's slot) is drawn in its chip or that row's slot only, so one deal's
-failed stamp never hides the others; "every signature checks" needs
+failed stamp never hides the others; "every checkpoint signature checks" needs
 every row `pass` and every check that ran `pass`, and names the checks that
 did not run under "How this was checked"; otherwise "signatures not checked
 here". **No rows** has its own hero, never a vacuous pass: "No checkpoints
@@ -263,8 +264,8 @@ the panel):
 | With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false |
 | Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)." |
 | If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)." |
-| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: not stated by this node." |
-| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named."; when absent, "Which witnesses get its checkpoints: not stated by this node." |
+| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: this node's settings don't say." |
+| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named."; when absent, "Which witnesses get its checkpoints: this node's settings don't say." |
 | Never: a record to anyone who doesn't prove who they are | always |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
@@ -273,7 +274,7 @@ or `off`; `adjudications` is `deliver_to_subjects` or `off`;
 `exchange_corroboration` and `adjudicate_differing_twins` are on/off). Every
 member is required except `adjudicate_differing_twins` and `witnesses`, which
 a node's advertised policy (`disclosure-policy/0`, what Goose reads) does
-not carry; when either is absent the page says it is not stated, so no
+not carry; when either is absent the page says the node's settings don't say, so no
 disclosure is left out by omission. A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
