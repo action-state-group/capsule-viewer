@@ -109,7 +109,7 @@
     "shares.twins.on": "When two copies of a model answer differently, this node sends the question and both answers to a referee.",
     "shares.twins.unstated": "Whether this node sends differing answers to a referee: this node's settings don't say.",
     "shares.witnesses": "Signed checkpoints go to the witnesses named here: {witnesses}",
-    "shares.witnesses.none": "No witnesses named in this node's settings now. A time-stamp above may come from an earlier setting.",
+    "shares.witnesses.none": "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting.",
     "shares.witnesses.unstated": "Which witnesses get its checkpoints: this node's settings don't say.",
     "shares.never": "Never: a record to anyone who doesn't prove who they are.",
     "shares.as_of": "As this node was set when this page was built, {at}.",

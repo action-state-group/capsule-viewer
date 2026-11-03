@@ -303,6 +303,38 @@ describe("the stand-in's round 1 (PR 249)", () => {
     ).toBe("not_checked");
   });
 
+  it("the seal's second-signature slot gives its scope when rows differ", () => {
+    const slotText = (states: string[], checkFails = true): string => {
+      const m = clone(vectors.cases["muse-owner"]) as Json;
+      (m["rows"] as Json[]).forEach((r, i) => {
+        r["second_signature"] =
+          states[i] === "passed"
+            ? { state: "passed", by: "Ada", at: "2026-10-23T11:00:00Z" }
+            : { state: states[i] };
+      });
+      const checks = m["checks"] as Json[];
+      checks[2]!["status"] = checkFails ? "fail" : "pass";
+      return (
+        page(m, overlayFor("muse-owner")).querySelector(".cvh-seal-slot")
+          ?.textContent ?? ""
+      );
+    };
+    // Rows nobody countersigned are not counted.
+    expect(slotText(["none", "passed", "failed"])).toContain(
+      "1 of 2 didn't verify; see each row",
+    );
+    expect(slotText(["failed", "passed", "failed"])).toContain(
+      "2 of 3 didn't verify; see each row",
+    );
+    expect(slotText(["failed", "failed", "failed"])).toContain("Didn't verify");
+    expect(slotText(["none", "none", "failed"])).toContain("Didn't verify");
+    expect(slotText(["none", "passed", "passed"])).not.toContain(
+      "didn't verify;",
+    );
+    // The check failed, but no row did.
+    expect(slotText(["none", "passed", "passed"])).toContain("Didn't verify");
+  });
+
   it("shows the node's full key id behind its chip", () => {
     const m = mesh();
     const node = (m["holder"] as Json)["node"] as string;

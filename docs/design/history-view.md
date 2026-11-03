@@ -268,7 +268,7 @@ the panel):
 | Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)." |
 | If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)." |
 | When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: this node's settings don't say." |
-| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A time-stamp above may come from an earlier setting."; when absent, "Which witnesses get its checkpoints: this node's settings don't say." |
+| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting."; when absent, "Which witnesses get its checkpoints: this node's settings don't say." |
 | Never: a record to anyone who doesn't prove who they are | always |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
@@ -293,9 +293,10 @@ yet"; `not_checked` reads "Not checked here". Only `passed` fills, and a
 cannot tell a self-countersignature; the caller draws it as `failed`, as
 Muse's `stampsOf` does today. The seal's
 second-signature slot is always present ([203] item 6). It sums the rows'
-slots without filling: when some but not all rows are `failed` it reads
-"<k> of <n> didn't verify; see each row", when every row (or the check itself,
-with no failed row) is `failed` it reads "Didn't verify", any
+slots without filling: when some but not all of the rows that carry a second
+signature (`passed` or `failed`) are `failed` it reads
+"<k> of <n> didn't verify; see each row", when every such row (or the check
+itself, with no failed row) is `failed` it reads "Didn't verify", any
 `not_checked` reads "Not checked here", all `none` reads "None yet", and
 otherwise it points to each row's slot.
 
