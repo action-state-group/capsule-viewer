@@ -103,6 +103,41 @@ describe.skipIf(executablePath === undefined)(
         };
         expect(await shown("")).toBe(false);
         expect(await shown(`#${card.id}`)).toBe(true);
+
+        // The scripted page is unchanged: its row follows its toggle, so a
+        // reader can close the row while the address still names the card.
+        const scripted = await buildPresentation(bundle, {
+          presentation: "auto",
+          audience: "*",
+          runtime: { code: runtime },
+          format: "html",
+        });
+        if (scripted.format !== "html") throw new Error("html expected");
+        const scriptedPath = join(directory, `scripted-${name}.html`);
+        writeFileSync(scriptedPath, scripted.html);
+        const context = await browser.newContext();
+        try {
+          const page = await context.newPage();
+          await page.goto(`${pathToFileURL(scriptedPath).href}#${card.id}`);
+          const target = page.locator(`[id="${card.id}"]`);
+          await target.waitFor({ state: "attached" });
+          const visible = (): Promise<boolean> =>
+            target.evaluate((el) => el.getBoundingClientRect().height > 0);
+          await page.waitForFunction(
+            (id) =>
+              (document.getElementById(id)?.getBoundingClientRect().height ??
+                0) > 0,
+            card.id,
+          );
+          expect(await visible()).toBe(true);
+          await target.evaluate((el) => {
+            const row = el.closest("tr.x-detail")!.previousElementSibling!;
+            row.querySelector<HTMLDetailsElement>("details.rx")!.open = false;
+          });
+          expect(await visible()).toBe(false);
+        } finally {
+          await context.close();
+        }
       }, 120_000);
   },
   120_000,
