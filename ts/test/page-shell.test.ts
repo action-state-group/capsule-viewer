@@ -78,9 +78,9 @@ describe("the page shell", () => {
       root.querySelector<HTMLDetailsElement>("details.cv-checked")!;
     expect(
       bar.querySelector<HTMLElement>("[data-verify-summary]")!.textContent,
-    ).toBe("10 of 10 checks passed · 5 records");
+    ).toBe("10 of 10 checks passed · 5 top-level records");
     expect(folded.querySelector(":scope > summary")!.textContent).toContain(
-      "10 of 10 checks passed · 5 records",
+      "10 of 10 checks passed · 5 top-level records",
     );
     const link = bar.querySelector<HTMLAnchorElement>("a.cv-shell-link")!;
     expect(link.textContent).toBe(CHECKED_SECTION_TITLE);
@@ -102,7 +102,7 @@ describe("the page shell", () => {
       folded.querySelector(':scope > [data-page="verification"]'),
     ).not.toBeNull();
     expect(folded.querySelector(":scope > summary")!.textContent).toBe(
-      `${CHECKED_SECTION_TITLE} · 10 of 10 checks passed · 5 records`,
+      `${CHECKED_SECTION_TITLE} · 10 of 10 checks passed · 5 top-level records`,
     );
   });
 
@@ -125,7 +125,7 @@ describe("the page shell", () => {
     expect(root.classList.contains("cv-shell-chrome")).toBe(false);
     expect(
       bar.querySelector<HTMLElement>("[data-verify-summary]")!.textContent,
-    ).toBe("1 check on this page failed · 5 records");
+    ).toBe("1 check on this page failed · 5 top-level records");
     expect(
       root.querySelector('[data-refusal="unverified-bundle"]'),
     ).not.toBeNull();
@@ -137,7 +137,7 @@ describe("the page shell", () => {
     expect(folded.open).toBe(true);
     // The ten numbered checks pass; the edited disclosure fails on its own.
     expect(folded.querySelector("summary")!.textContent).toBe(
-      `${CHECKED_SECTION_TITLE} · 1 check on this page failed · 5 records`,
+      `${CHECKED_SECTION_TITLE} · 1 check on this page failed · 5 top-level records`,
     );
   });
 });
@@ -214,7 +214,7 @@ describe("checkedSummaryLine", () => {
         },
       }),
     ).toBe(
-      "10 of 10 checks passed · 7 records · checkpoint signature and producer signatures not checked here",
+      "10 of 10 checks passed · 7 top-level records · checkpoint signature and producer signatures not checked here",
     );
   });
 
@@ -239,10 +239,10 @@ describe("checkedSummaryLine", () => {
     expect(
       summary(true, { failed: [], notChecked: ["checkpoint-signature"] }),
     ).toBe(
-      "10 of 10 checks passed · 1 record · checkpoint signature not checked here",
+      "10 of 10 checks passed · 1 top-level record · checkpoint signature not checked here",
     );
     expect(summary(true, { failed: [], notChecked: [] })).toBe(
-      "10 of 10 checks passed · 1 record",
+      "10 of 10 checks passed · 1 top-level record",
     );
     expect(
       summary(true, {
@@ -254,7 +254,7 @@ describe("checkedSummaryLine", () => {
         ],
       }),
     ).toBe(
-      "10 of 10 checks passed · 1 record · checkpoint signature, producer signatures and countersignatures not checked here",
+      "10 of 10 checks passed · 1 top-level record · checkpoint signature, producer signatures and countersignatures not checked here",
     );
     // A signature check that failed is counted as failed, and said nowhere
     // as not checked, whichever other one is not checked.
@@ -264,7 +264,7 @@ describe("checkedSummaryLine", () => {
         notChecked: ["checkpoint-signature"],
       }),
     ).toBe(
-      "1 check on this page failed · 1 record · checkpoint signature not checked here",
+      "1 check on this page failed · 1 top-level record · checkpoint signature not checked here",
     );
     for (const id of ids) {
       expect(summary(true, { failed: [], notChecked: [] })).not.toMatch(
@@ -287,7 +287,7 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: [], notChecked: [] },
       }),
-    ).toBe("8 of 10 checks passed, 2 not run · 2 records");
+    ).toBe("8 of 10 checks passed, 2 not run · 2 top-level records");
   });
 
   it("says one record, and counts other checks not run here", () => {
@@ -297,7 +297,9 @@ describe("checkedSummaryLine", () => {
         records: [1],
         checkLists: { failed: [], notChecked: ["witness-receipts"] },
       }),
-    ).toBe("10 of 10 checks passed · 1 record · 1 other check not run here");
+    ).toBe(
+      "10 of 10 checks passed · 1 top-level record · 1 other check not run here",
+    );
   });
 
   it("leads with what failed, and never says passed for a bundle that did not verify", () => {
@@ -307,7 +309,7 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: ["closure"], notChecked: [] },
       }),
-    ).toBe("2 of 10 checks failed · 2 records");
+    ).toBe("2 of 10 checks failed · 2 top-level records");
     expect(
       checkedSummaryLine(false, {
         checks: checks(10),
@@ -317,7 +319,7 @@ describe("checkedSummaryLine", () => {
           notChecked: [],
         },
       }),
-    ).toBe("2 checks on this page failed · 2 records");
+    ).toBe("2 checks on this page failed · 2 top-level records");
     // Both kinds of failure are named.
     expect(
       checkedSummaryLine(false, {
@@ -325,7 +327,9 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: ["disclosures"], notChecked: [] },
       }),
-    ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 records");
+    ).toBe(
+      "2 of 10 checks failed · 1 check on this page failed · 2 top-level records",
+    );
     // A page-list failure on a numbered check's ground is counted once.
     expect(
       checkedSummaryLine(false, {
@@ -333,7 +337,9 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: ["closure", "disclosures"], notChecked: [] },
       }),
-    ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 records");
+    ).toBe(
+      "2 of 10 checks failed · 1 check on this page failed · 2 top-level records",
+    );
     // Checks that did not run are said with a failure too.
     expect(
       checkedSummaryLine(false, {
@@ -345,14 +351,16 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: [], notChecked: [] },
       }),
-    ).toBe("1 of 10 checks failed, 2 not run · 2 records");
+    ).toBe("1 of 10 checks failed, 2 not run · 2 top-level records");
     expect(
       checkedSummaryLine(false, {
         checks: [...checks(8), { status: "withheld" }, { status: "withheld" }],
         records: [1, 2],
         checkLists: { failed: [], notChecked: [] },
       }),
-    ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 of 10 checks not run · 2 records`);
+    ).toBe(
+      `${SUMMARY_NOT_VERIFIED} · 2 of 10 checks not run · 2 top-level records`,
+    );
     // A failure outside both counts (a provenance error, say).
     expect(
       checkedSummaryLine(false, {
@@ -360,7 +368,7 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: [], notChecked: [] },
       }),
-    ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 records`);
+    ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 top-level records`);
   });
 });
 
