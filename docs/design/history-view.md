@@ -153,7 +153,8 @@ caller passes is drawn as text, never parsed as HTML.
   `anchor` (hex), `signature` (`pass`, `fail`, `not_run`). For `deal`,
   `asked`, `outcome`, `money` (caller text, optional), `opened_at`,
   `last_at`, `record` (record id). Both kinds carry the two slots. Rows come
-  in the caller's order; the view does not sort.
+  in the caller's order; the view does not sort. Deal rows come newest
+  first (the headline says so), so the caller orders them.
 - A slot is `{state, by?, at?, through?}` with `state` one of `passed`,
   `failed`, `none` (the checker established there is none), `not_checked`.
   `through` is `{k, n}` for a check that covers part of the steps. A
@@ -210,7 +211,9 @@ mesh page does today, but keeps "How this was checked", so the reader sees
 which check failed. A failed `witness` or `second_signature` (a check, or a
 row's slot) is drawn in its chip or that row's slot only, so one deal's
 failed stamp never hides the others; "every checkpoint signature checks" needs
-every row `pass` and every check that ran `pass`, and names the checks that
+every row `pass` and every check that ran `pass` ("every signature
+checks, the answer's own and its key included" needs `envelope_signature`
+and `key_is_node` to pass as well), and names the checks that
 did not run under "How this was checked"; otherwise "signatures not checked
 here". **No rows** has its own hero, never a vacuous pass: "No checkpoints
 yet" (`answered`, no rows), "The node declined to answer" (`refused`, with

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
@@ -109,6 +110,37 @@ function globalOf(iife: string): Record<string, unknown> {
   runInNewContext(iife, context);
   return context.EvidenceGraph as Record<string, unknown>;
 }
+
+describe("the History view's own build", () => {
+  it("ships dist/history-view.iife.js with its sha256 and the HistoryView global", async () => {
+    execFileSync("npm", ["run", "emitter:iife"], {
+      cwd: tsRoot,
+      stdio: "inherit",
+    });
+    const iife = await readFile(
+      new URL("../dist/history-view.iife.js", import.meta.url),
+      "utf8",
+    );
+    const sum = await readFile(
+      new URL("../dist/history-view.iife.js.sha256", import.meta.url),
+      "utf8",
+    );
+    expect(sum).toBe(
+      `${createHash("sha256").update(iife).digest("hex")}  history-view.iife.js\n`,
+    );
+    const context: Record<string, unknown> = {};
+    runInNewContext(iife, context);
+    const view = context.HistoryView as Record<string, unknown>;
+    for (const name of [
+      "renderHistoryView",
+      "historyViewHtml",
+      "historyViewDocument",
+      "buildHistoryView",
+    ])
+      expect(typeof view[name], name).toBe("function");
+    expect(typeof view.historyViewStyles).toBe("string");
+  });
+});
 
 describe("the runtime's global", () => {
   beforeAll(() => {

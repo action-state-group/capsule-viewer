@@ -213,6 +213,92 @@ describe("refusals", () => {
   });
 });
 
+describe("the stand-in's round 1 (PR 249)", () => {
+  const page = (input: unknown, ov?: unknown): HTMLElement => {
+    const container = document.createElement("div");
+    renderHistoryView(input, container, ov);
+    return container;
+  };
+  const hero = (p: HTMLElement): string =>
+    p.querySelector('[data-history="hero"]')?.textContent ?? "";
+
+  it("names every signature only when the answer's own and the key passed too", () => {
+    expect(hero(page(vectors.cases["mesh-service-history"]))).toContain(
+      "every checkpoint signature checks",
+    );
+    expect(hero(page(vectors.cases["mesh-service-history"]))).not.toContain(
+      "every signature checks",
+    );
+    expect(hero(page(vectors.cases["mesh-every-signature"]))).toContain(
+      "every signature checks, the answer's own and its key included",
+    );
+  });
+
+  it("a failed row signature draws no rows", () => {
+    const p = page(vectors.cases["mesh-row-signature-fails"]);
+    expect(hero(p)).toBe(
+      "This history didn't verify, so this page shows none of it.",
+    );
+    expect(p.querySelector('[data-history="rows"]')).toBeNull();
+  });
+
+  it("refuses a recipient deal page that names no one", () => {
+    const m = clone(vectors.cases["muse-picked-shared"]) as Json;
+    m["holder"] = {};
+    delete m["picked"];
+    expect(buildHistoryView(m, overlay).ok).toBe(false);
+  });
+
+  it("fills RECORDED only when the deal report check passed", () => {
+    const m = clone(vectors.cases["muse-owner"]) as Json;
+    m["checks"] = [{ id: "deal_report", status: "not_run" }];
+    const p = page(m, overlay);
+    for (const e of p.querySelectorAll(".cvh-stamp")) {
+      if (e.textContent?.startsWith("RECORDED"))
+        expect(e.getAttribute("data-filled")).toBe("no");
+    }
+    expect(p.querySelector(".cvh-seal-title")).toBeNull();
+    expect(p.textContent).toContain(
+      "This page did not check how these records were locked.",
+    );
+  });
+
+  it("a failed witness check shows in its chip", () => {
+    const m = clone(vectors.cases["mesh-witnessed"]) as Json;
+    (m["checks"] as Json[]).push({ id: "witness", status: "fail" });
+    expect(
+      page(m).querySelector('[data-history="chips"]')?.textContent,
+    ).toContain("Time stamps didn't verify");
+  });
+
+  it("always draws the seal with its second-signature slot", () => {
+    for (const name of [
+      "muse-empty",
+      "mesh-refused",
+      "goose-no-checkpoints",
+      "mesh-chain-fails",
+    ])
+      expect(
+        page(vectors.cases[name], overlayFor(name)).querySelector(
+          ".cvh-seal-slot",
+        ),
+        name,
+      ).not.toBeNull();
+  });
+
+  it("shows the node's full key id behind its chip", () => {
+    const m = mesh();
+    const node = (m["holder"] as Json)["node"] as string;
+    expect(page(m).querySelector("header code")?.textContent).toBe(node);
+  });
+
+  it("keeps a reason's $ sequences as written", () => {
+    const container = document.createElement("div");
+    renderHistoryView({ ...mesh(), "$&": 1 }, container);
+    expect(container.textContent).toContain("input.$&");
+  });
+});
+
 describe("the page verdict", () => {
   const drawn = (input: unknown, ov?: unknown): HTMLElement => {
     const container = document.createElement("div");

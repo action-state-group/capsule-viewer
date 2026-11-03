@@ -704,7 +704,12 @@ export function buildHistoryView(
     "picked" in o ? r.bool(o["picked"], "input.picked") === true : false;
   if (picked && kind !== "deal")
     r.refuse("input.picked", "is only for a deal page");
-  if (picked && name === undefined)
+  if (kind === "deal" && reader === "recipient" && name === undefined)
+    r.refuse(
+      "input.holder.name",
+      "is missing (a deal page shown to someone else names whose it is)",
+    );
+  else if (picked && name === undefined)
     r.refuse(
       "input.holder.name",
       "is missing (a picked selection names who picked it)",
@@ -942,6 +947,29 @@ export function buildHistoryView(
       checks.some(
         (c) => c.id === "checkpoint_signatures" && c.status === "pass",
       ));
+  // "Every signature" only when the answer's own signature and the node's key
+  // were checked too; otherwise the verdict names only what passed.
+  const passed = (id: string): boolean =>
+    checks.some((c) => c.id === id && c.status === "pass");
+  const everySignature =
+    allPass && passed("envelope_signature") && passed("key_is_node");
+  const verdictKey = everySignature ? "verdict.pass.all" : "verdict.pass";
+  const chipKey = everySignature
+    ? "chip.signatures.pass.all"
+    : "chip.signatures.pass";
+
+  const statusOf = (id: string): CheckStatus | undefined =>
+    checks.find((c) => c.id === id)?.status;
+  const dealRecorded = statusOf("deal_report") === "pass";
+  const witnessFailed = statusOf("witness") === "fail";
+  const secondFailed = statusOf("second_signature") === "fail";
+  // The seal's first lines say how the records are locked; only checks that
+  // passed may say it.
+  const lockChecked =
+    kind === "checkpoint"
+      ? statusOf("checkpoint_signatures") === "pass" &&
+        statusOf("checkpoint_chain") === "pass"
+      : dealRecorded;
 
   // Header.
   let title: string;
@@ -951,12 +979,11 @@ export function buildHistoryView(
         ? say("header.title.stream", { node: short(node ?? ""), stream })
         : say("header.title.node", { node: short(node ?? "") });
   else if (reader === "owner") title = say("header.title.owner");
-  else if (name !== undefined)
+  else
     title =
       audienceKind === "shared"
-        ? say("header.title.shared", { name })
-        : say("header.title.person", { name });
-  else title = say("header.title.owner");
+        ? say("header.title.shared", { name: name ?? "" })
+        : say("header.title.person", { name: name ?? "" });
   const badge =
     audienceKind === "private"
       ? say("badge.private")
@@ -967,6 +994,14 @@ export function buildHistoryView(
     "header",
     { class: "cvh-header", "data-history": "header" },
     el("h1", { class: "cvh-title" }, title),
+    node !== undefined
+      ? el(
+          "details",
+          { class: "cvh-proof" },
+          el("summary", null, say("proof.node", { id: short(node) })),
+          el("code", null, node),
+        )
+      : null,
     period
       ? el(
           "p",
@@ -1010,7 +1045,7 @@ export function buildHistoryView(
         plural("hero.checkpoints", cps.length, {
           entries: plural("hero.entries", entries),
           at: shortMinuteOf(last.cut),
-          verdict: say(allPass ? "verdict.pass" : "verdict.unchecked"),
+          verdict: say(allPass ? verdictKey : "verdict.unchecked"),
         }),
       );
     } else
@@ -1032,8 +1067,9 @@ export function buildHistoryView(
   let chips: HistoryElement | null = null;
   if (drawRows) {
     const stamped = rows.filter((x) => x.witness.state === "passed").length;
-    const stampChip =
-      stamped === 0 && rows.some((x) => x.witness.state === "not_checked")
+    const stampChip = witnessFailed
+      ? say("chip.timestamped.failed")
+      : stamped === 0 && rows.some((x) => x.witness.state === "not_checked")
         ? say("chip.timestamped.unchecked")
         : stamped === 0
           ? say("chip.timestamped.none")
@@ -1046,14 +1082,17 @@ export function buildHistoryView(
     const items: string[] = [];
     if (kind === "checkpoint") {
       items.push(
-        say(allPass ? "chip.signatures.pass" : "chip.signatures.unchecked"),
+        say(allPass ? chipKey : "chip.signatures.unchecked"),
         stampChip,
       );
       const first = (rows as ReadCheckpoint[]).reduce((a, b) =>
         b.cut.ms < a.cut.ms ? b : a,
       );
       items.push(say("chip.started", { date: dateOf(first.cut) }));
-    } else items.push(say("chip.recorded"), stampChip);
+    } else {
+      if (dealRecorded) items.push(say("chip.recorded"));
+      items.push(stampChip);
+    }
     chips = el(
       "ul",
       { class: "cvh-chips", "data-history": "chips" },
@@ -1171,7 +1210,14 @@ export function buildHistoryView(
         el(
           "ul",
           { class: "cvh-stamps" },
-          stamp("stamp.recorded", true, "passed", null),
+          dealRecorded
+            ? stamp("stamp.recorded", true, "passed", null)
+            : stamp(
+                "stamp.recorded",
+                false,
+                "not_checked",
+                say("slot.unchecked"),
+              ),
           ...slotStamps(x),
         ),
       );
@@ -1311,15 +1357,16 @@ export function buildHistoryView(
   }
 
   let seal: HistoryElement | null = null;
-  if (drawRows) {
-    const states = rows.map((x) => x.second.state);
-    const sealState = states.some((s) => s === "failed")
-      ? "failed"
-      : states.some((s) => s === "not_checked")
-        ? "not_checked"
-        : states.every((s) => s === "none")
-          ? "none"
-          : "mixed";
+  {
+    const states = drawRows ? rows.map((x) => x.second.state) : [];
+    const sealState =
+      secondFailed || states.some((s) => s === "failed")
+        ? "failed"
+        : states.length === 0 || states.some((s) => s === "not_checked")
+          ? "not_checked"
+          : states.every((s) => s === "none")
+            ? "none"
+            : "mixed";
     const sealLine =
       sealState === "failed"
         ? say("slot.failed")
@@ -1331,12 +1378,16 @@ export function buildHistoryView(
     seal = el(
       "section",
       { class: "cvh-seal", "data-history": "seal" },
-      el("p", { class: "cvh-seal-title" }, say("seal.title")),
-      el(
-        "p",
-        null,
-        say(kind === "checkpoint" ? "seal.checkpoints" : "seal.deals"),
-      ),
+      drawRows && lockChecked
+        ? el("p", { class: "cvh-seal-title" }, say("seal.title"))
+        : null,
+      drawRows && lockChecked
+        ? el(
+            "p",
+            null,
+            say(kind === "checkpoint" ? "seal.checkpoints" : "seal.deals"),
+          )
+        : el("p", null, say("seal.unchecked")),
       el(
         "p",
         {
@@ -1429,8 +1480,7 @@ export function renderHistoryView(
         el(
           "p",
           { class: "cvh-refused", "data-history": "refused" },
-          (BASE["refused"] ?? "").replace(
-            "{reasons}",
+          (BASE["refused"] ?? "").replace("{reasons}", () =>
             built.reasons.join("; "),
           ),
         ),
