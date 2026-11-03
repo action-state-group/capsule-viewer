@@ -21,6 +21,7 @@ Both state viewer 0.17.0: `ts/v0.17.0`, then `go/v0.17.0` on the commit that shi
 
 ### Changed
 
+- History view wording (#266, from Sherlock2's review of loop#362): the sharing block no longer draws one "this node's settings don't say" line per unstated setting (eight on a Goose page). It draws one closing sentence, "This node's settings don't say: <a>; <b>; ...", naming only the settings the node does not state (one missing setting reads without the colon), and nothing when all are stated; wording accepted by Sherlock2 (Buzz channel 0d760ea3, event ac84913956bd). The pack's eight `shares.*.unstated` keys become `shares.unstated`, `shares.unstated.one` and `shares.unstated.*`. No input or contract change; the goldens are regenerated.
 - History view wording (#261, Sherlock2's ruling in the Buzz thread on the loop#361 review): the "These checks ..." sentence under "How this was checked" is drawn only when at least one check passed or failed, and reads "These checks cover the records as of {at} ({by})." on a builder page; "This page did not check how these records were locked." is gone, since the Second signature box says it; "Built {at}" is now "As of {at}. It is a snapshot, not a page that updates itself." and the sharing note reads "Set by this node as of {at}." No input or contract change. `built.owner` is no longer a copy of Muse's words.
 
 ## ts 0.16.0 and go 0.16.0 (2026-11-03)

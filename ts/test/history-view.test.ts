@@ -447,15 +447,22 @@ describe("the page verdict", () => {
       drawn(vectors.cases["goose-advertised-policy"]).querySelector(
         '[data-history="shares"]',
       )?.textContent ?? "";
-    expect(shares).toContain("this node's settings don't say");
+    expect(shares).toContain("This node's settings don't say");
   });
 
-  it("a policy that states none of the five settings says so five times and invents no value", () => {
+  it("a policy that states none of the five settings says so once, in one sentence, and invents no value", () => {
     const shares =
       drawn(vectors.cases["goose-policy-share-deal-half-only"]).querySelector(
         '[data-history="shares"]',
       )?.textContent ?? "";
-    expect(shares.split("this node's settings don't say").length - 1).toBe(8);
+    expect(shares.split("settings don't say").length - 1).toBe(1);
+    expect(
+      [
+        ...drawn(
+          vectors.cases["goose-policy-share-deal-half-only"],
+        ).querySelectorAll('[data-history="shares"] li'),
+      ].filter((l) => l.textContent?.includes("don't say")),
+    ).toHaveLength(1);
     for (const invented of [
       "With anyone: the Service History.",
       "Only with the other side of an exchange, when they ask",
@@ -468,7 +475,7 @@ describe("the page verdict", () => {
       expect(shares).not.toContain(invented);
     expect(shares).not.toContain("Never: a record");
     expect(shares).toContain(
-      "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say.",
+      "This node's settings don't say: whether its Service History goes to anyone; whether the other side of an exchange can ask for that exchange's record; whether it tells a node that asks by exchange id if it holds that exchange's half; whether it sends the sealed record when an exchange completes; whether its verdicts go to the nodes judged; whether it sends differing answers to a referee; which witnesses get its checkpoints; whether a record goes to someone who doesn't prove who they are.",
     );
   });
 
@@ -513,7 +520,32 @@ describe("the page verdict", () => {
     const shares =
       drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
     expect(shares).toContain("With any node that signs its request");
-    expect(shares).toContain("Whether the Service History goes to anyone");
+    expect(shares).toContain(
+      "This node's settings don't say: whether its Service History goes to anyone; whether it tells a node that asks by exchange id",
+    );
+    expect(shares).not.toContain("can ask for that exchange's record");
+  });
+
+  it("names only the settings that are not stated, and no sentence when all are", () => {
+    const m = mesh();
+    m["sharing"] = {
+      standard_history: true,
+      history_segments: "peers",
+      record_at_completion: "off",
+      adjudications: "off",
+      exchange_corroboration: true,
+      adjudicate_differing_twins: true,
+      witnesses: ["w1"],
+    };
+    const all =
+      drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
+    expect(all).not.toContain("settings don't say");
+    delete (m["sharing"] as Record<string, unknown>)["witnesses"];
+    const some =
+      drawn(m).querySelector('[data-history="shares"]')?.textContent ?? "";
+    expect(some).toContain(
+      "This node's settings don't say which witnesses get its checkpoints.",
+    );
   });
 
   it("an off segments line does not claim a sealed record the node does not state", () => {
