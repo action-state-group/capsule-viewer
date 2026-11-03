@@ -14636,6 +14636,7 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
       pendingToggles.delete(details);
       details.dataset.body = "built";
       into.append(build());
+      anchorCases(into);
       openBuiltToDepth(into);
     };
     details.addEventListener("toggle", () => {
@@ -14647,11 +14648,13 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
       return;
     }
     pendingToggles.set(details, fill2);
+    if (into !== details) bodyOwners.set(into, details);
     details.addEventListener("toggle", () => {
       if (details.open) fill2();
     });
   }
   var pendingToggles = /* @__PURE__ */ new WeakMap();
+  var bodyOwners = /* @__PURE__ */ new WeakMap();
   function openBuiltToDepth(body) {
     if (body.closest("[data-open-all]") === null) return;
     for (const toggle of body.querySelectorAll("details.lv"))
@@ -14994,20 +14997,85 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
       if (!at.open) openToggle(at);
     target.scrollIntoView?.();
   }
+  function caseAddress(caseId) {
+    return `case-${caseId}`;
+  }
+  var toggleCases = /* @__PURE__ */ new WeakMap();
+  function listsCases(details, caseIds) {
+    toggleCases.set(details, new Set(caseIds));
+  }
+  function revealCase(from, caseId) {
+    const doc = from.nodeType === 9 ? from : from.ownerDocument;
+    let target = doc.getElementById(caseAddress(caseId));
+    if (target === null) {
+      const home = [
+        ...doc.querySelectorAll(
+          'details[data-body="pending"]'
+        )
+      ].find(
+        (details) => pendingToggles.has(details) && toggleCases.get(details)?.has(caseId) === true
+      );
+      if (home === void 0) return;
+      pendingToggles.get(home)();
+      target = doc.getElementById(caseAddress(caseId));
+      if (target === null) return;
+    }
+    const shows = [];
+    for (let at = target.parentElement; at !== null; at = at.parentElement) {
+      if (at.localName === "details") shows.push(at);
+      const owner = bodyOwners.get(at);
+      if (owner !== void 0) shows.push(owner);
+    }
+    for (const toggle of shows.reverse()) if (!toggle.open) openToggle(toggle);
+    target.scrollIntoView?.();
+  }
+  function anchorCases(root) {
+    const cards = root.querySelectorAll("[data-case]");
+    if (cards.length === 0) return 0;
+    const top = root.getRootNode();
+    let held2;
+    if (top.nodeType !== 9) {
+      held2 = treeAddresses.get(top);
+      if (held2 === void 0) {
+        held2 = new Set(
+          [
+            ...top.querySelectorAll(
+              "[data-case][id]"
+            )
+          ].map((e) => e.id)
+        );
+        treeAddresses.set(top, held2);
+      }
+    }
+    let anchored = 0;
+    for (const card2 of cards) {
+      const address = caseAddress(card2.dataset.case);
+      if (card2.id !== "") continue;
+      if (held2 === void 0 ? top.getElementById(address) !== null : held2.has(address))
+        continue;
+      card2.id = address;
+      held2?.add(address);
+      anchored++;
+    }
+    return anchored;
+  }
+  var treeAddresses = /* @__PURE__ */ new WeakMap();
   var hashWatched = /* @__PURE__ */ new WeakSet();
   function revealRecordsByHash(doc) {
     const view = doc.defaultView;
     if (view === null) return;
     const go = () => {
       const hash2 = view.location.hash;
-      if (!hash2.startsWith("#record-")) return;
+      const prefix = hash2.startsWith("#record-") ? "#record-" : hash2.startsWith("#case-") ? "#case-" : void 0;
+      if (prefix === void 0) return;
       let id;
       try {
-        id = decodeURIComponent(hash2.slice("#record-".length));
+        id = decodeURIComponent(hash2.slice(prefix.length));
       } catch {
         return;
       }
-      revealRecord(doc, id);
+      if (prefix === "#record-") revealRecord(doc, id);
+      else revealCase(doc, id);
     };
     go();
     if (hashWatched.has(doc)) return;
@@ -16663,6 +16731,7 @@ ${s} tr.x{cursor:pointer}
 ${s} tr.x:hover > td{background:#FAF8F4}
 ${s} tr.x-detail{display:none}
 ${s} tr.x:has(details.rx[open]) + tr.x-detail{display:table-row}
+${s} tr.x-detail:has(:target){display:table-row}
 ${s} tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 ${s} details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
 ${s} details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}
@@ -17412,10 +17481,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("f2d81949dc581616086404b72071594aa5f7ea57");
+    return commitPrefix("262cb75ea9404bc338bcda9601267140ab7e6d37");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.13.0",
@@ -21335,6 +21404,7 @@ ${key}`);
     const status2 = conversationStatus(conversation, model.gating);
     const item = el8("article", "conv");
     item.dataset.conversation = conversation.conversationId;
+    item.dataset.case = conversation.conversationId;
     const inAnswer = counted(conversation, model.gating);
     item.dataset.conversationVerdict = inAnswer.verdict;
     item.dataset.status = status2;
@@ -21723,11 +21793,16 @@ ${key}`);
     return details;
   }
   function conversationsDrill(label, conversations, model, runInfo, key, w) {
-    return drill(
+    const details = drill(
       label,
       () => renderConversationList(conversations, model, runInfo, key, w),
       key
     );
+    listsCases(
+      details,
+      conversations.map((c) => c.conversationId)
+    );
+    return details;
   }
   function missedReasonLabel(terms, checkId, criterionId, w) {
     const check = terms.checks.find((c) => c.id === checkId);
@@ -22020,9 +22095,27 @@ ${key}`);
           n: fmtCount(line2.behind.length)
         });
         const behind = line2.behind;
-        desc.append(
-          line2.key === "missed" ? drill(label, () => whyMissed(behind, model, runInfo, w), line2.key) : conversationsDrill(label, behind, model, runInfo, line2.key, w)
-        );
+        let details;
+        if (line2.key === "missed") {
+          details = drill(
+            label,
+            () => whyMissed(behind, model, runInfo, w),
+            line2.key
+          );
+          listsCases(
+            details,
+            behind.map((c) => c.conversationId)
+          );
+        } else
+          details = conversationsDrill(
+            label,
+            behind,
+            model,
+            runInfo,
+            line2.key,
+            w
+          );
+        desc.append(details);
       }
       tr.append(desc, el8("td", "n", line2.shown));
       tbody.append(tr);
@@ -22242,6 +22335,10 @@ ${key}`);
             `rule-${ref}`
           );
           toggle.dataset.drill = `rule:${ref}`;
+          listsCases(
+            toggle,
+            problems.map((c) => c.conversationId)
+          );
           tbody.append(drillRow);
         }
       }
@@ -23260,6 +23357,7 @@ ${key}`);
             );
             toggle.dataset.records = "sessions";
             toggle.dataset.drill = test.criterionId;
+            listsCases(toggle, sessionIds);
             tbody.append(drillRow);
           }
         }
@@ -23348,6 +23446,7 @@ ${key}`);
     const parts = caseParts(session.conversationId, w);
     const item = el9("article", "conv session");
     item.dataset.session = session.conversationId;
+    item.dataset.case = session.conversationId;
     const head2 = el9("div", "conv-h");
     head2.append(el9("span", "cid", parts.label));
     head2.append(
