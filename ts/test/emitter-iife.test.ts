@@ -100,10 +100,7 @@ const HISTORY_VIEW_CONTRACT = ["renderHistoryView", "historyViewHtml"] as const;
 
 // Names src/browser.ts lists that the committed go/pageruntime predates
 // (capsule-viewer#167).
-const NOT_YET_SHIPPED: readonly string[] = [
-  "renderHistoryView",
-  "historyViewHtml",
-];
+const NOT_YET_SHIPPED: readonly string[] = [];
 
 function globalOf(iife: string): Record<string, unknown> {
   const context: Record<string, unknown> = { TextEncoder, TextDecoder };
