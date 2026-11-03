@@ -297,7 +297,7 @@ policy does state: `share_deal_half` (`counterparty`, the only value) and
 `stranger_safe` (a list of strings), drawn right after the first line; an absent one draws no line, since they
 are not settings the page must account for, and a present one of the wrong
 type or outside its list is refused. The Goose
-vector `goose-policy-share-deal-half-only` states exactly those two. The block names when the settings were read
+vector `goose-policy-share-deal-half-only` states exactly those two and is the live Goose shape. The golden `goose-advertised-policy` is a fixture, not a real Goose policy: it carries the five mesh members a Goose policy does not have, to exercise those lines, so do not quote it as what a Goose node advertises. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
