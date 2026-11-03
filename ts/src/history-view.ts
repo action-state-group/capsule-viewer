@@ -1368,9 +1368,17 @@ export function buildHistoryView(
           : states.every((s) => s === "none")
             ? "none"
             : "mixed";
+    // A failed row must not read as if the whole deal failed: when only some
+    // rows failed, the slot gives its scope and points to the rows.
+    const failedRows = states.filter((s) => s === "failed").length;
     const sealLine =
       sealState === "failed"
-        ? say("slot.failed")
+        ? failedRows > 0 && failedRows < states.length
+          ? say("seal.second.some_failed", {
+              k: String(failedRows),
+              n: String(states.length),
+            })
+          : say("slot.failed")
         : sealState === "none"
           ? say("slot.second.none")
           : sealState === "not_checked"
