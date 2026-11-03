@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The History view's Go twin, `go/historyview` (#253, design note `docs/design/history-view.md` section 2): `Render(input, overlay)` writes the same bytes as the TypeScript `historyViewHtml` for every vector in `vectors/history-view/`, `Document` writes the whole static page the goldens hold, and `Styles` is the stylesheet. It refuses the same inputs with the same reasons, in the same order, as a `*Refused` error, and writes the page with its own serializer, not `html/template`. The wording pack is a byte copy of `ts/src/wording/history-view.en.json`, held by a test. It is for Muse's static `history page`.
+
 ## ts 0.14.0 and go 0.14.0 (2026-11-03)
 
 Both state viewer 0.14.0: `ts/v0.14.0`, then `go/v0.14.0` on the commit that

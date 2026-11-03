@@ -1,8 +1,9 @@
 # History view: one History page for Muse, mesh-llm and Goose (design note)
 
 Status: design for capsule-viewer#247, the component half of
-actionstate-muse#334. Nothing here is built yet. The three callers move onto
-it later, each in its own item (section 9).
+actionstate-muse#334. The TypeScript view shipped in viewer 0.14.0 and the Go
+twin, `go/historyview`, in capsule-viewer#253. The three callers move onto it
+in their own items (section 9).
 
 ## Sources
 
