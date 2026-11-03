@@ -11,6 +11,14 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.17.0 and go 0.17.0 (2026-11-03)
+
+Both state viewer 0.17.0: `ts/v0.17.0`, then `go/v0.17.0` on the commit that ships its page runtime. This release carries #260 and #261.
+
+### Added
+
+- The History view draws a Goose node's `share_deal_half` and `stranger_safe` (#259, #260), in `ts/src/history-view.ts` and `go/historyview`: `share_deal_half` (`counterparty`, the only value) says the other side of an exchange can ask for that exchange's half of the record; `stranger_safe` lists what goes to anyone who asks, drawn right after the first sharing line, with the known token `history_card/1` named "the History Card", an empty list reading "Nothing else goes to a stranger.", and an absent member drawing no line. A present member of the wrong type or outside its list is refused. Vector `goose-policy-share-deal-half-only`.
+
 ### Changed
 
 - History view wording (#261, Sherlock2's ruling in the Buzz thread on the loop#361 review): the "These checks ..." sentence under "How this was checked" is drawn only when at least one check passed or failed, and reads "These checks cover the records as of {at} ({by})." on a builder page; "This page did not check how these records were locked." is gone, since the Second signature box says it; "Built {at}" is now "As of {at}. It is a snapshot, not a page that updates itself." and the sharing note reads "Set by this node as of {at}." No input or contract change. `built.owner` is no longer a copy of Muse's words.
