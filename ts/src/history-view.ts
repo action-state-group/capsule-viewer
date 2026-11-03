@@ -51,6 +51,8 @@ export interface DealRow {
   readonly second_signature: HistorySlot;
 }
 
+const KNOWN_STRANGER_TOKENS: readonly string[] = ["history_card/1"];
+
 export interface HistorySharing {
   /** Each of the first five is absent when the node does not state it (a Goose
    * node's advertised policy carries none of them). */
@@ -1308,6 +1310,25 @@ export function buildHistoryView(
   let shares: HistoryElement | null = null;
   if (sharing) {
     const lines: string[] = [say("shares.summary")];
+    // Stated only by a Goose node's policy; a node that does not state them
+    // gets no line. They sit right after the first line, which they extend.
+    // A token the pack names is drawn by its plain name, any other as it is.
+    if (sharing.share_deal_half === "counterparty")
+      lines.push(say("shares.dealhalf.counterparty"));
+    if (sharing.stranger_safe !== undefined)
+      lines.push(
+        sharing.stranger_safe.length > 0
+          ? say("shares.stranger", {
+              items: sharing.stranger_safe
+                .map((t) =>
+                  KNOWN_STRANGER_TOKENS.includes(t)
+                    ? say(`shares.stranger.token.${t}`)
+                    : t,
+                )
+                .join(", "),
+            })
+          : say("shares.stranger.none"),
+      );
     if (sharing.standard_history === undefined)
       lines.push(say("shares.standard.unstated"));
     else
@@ -1364,16 +1385,6 @@ export function buildHistoryView(
         sharing.witnesses.length > 0
           ? say("shares.witnesses", { witnesses: sharing.witnesses.join(", ") })
           : say("shares.witnesses.none"),
-      );
-    // Stated only by a Goose node's policy; a node that does not state them
-    // gets no line, since neither is a setting the page must account for.
-    if (sharing.share_deal_half === "counterparty")
-      lines.push(say("shares.dealhalf.counterparty"));
-    if (sharing.stranger_safe !== undefined)
-      lines.push(
-        sharing.stranger_safe.length > 0
-          ? say("shares.stranger", { items: sharing.stranger_safe.join(", ") })
-          : say("shares.stranger.none"),
       );
     // The signed-request rule is the mesh plugin's, carried by its policy; a
     // policy that states no segments setting does not vouch for it.

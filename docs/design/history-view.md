@@ -265,6 +265,8 @@ the panel):
 | Line | Drawn when |
 | --- | --- |
 | With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange | always |
+| Only with the other side of an exchange: that exchange's half of the record | `share_deal_half` is `counterparty` (what a Goose node's policy states); nothing when absent |
+| With anyone who asks, even a stranger: <items> | `stranger_safe` is stated (a list of short tokens); `history_card/1` is drawn as "the History Card", any other token as it is; when empty, "Nothing else goes to a stranger."; nothing when absent |
 | With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)."; when absent, "Whether the Service History goes to anyone: this node's settings don't say." |
 | Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`); when absent, "Whether the other side of an exchange can ask for its record: this node's settings don't say." |
 | With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false; when absent, "Whether this node tells a node that asks by an exchange's id if it holds its half: this node's settings don't say." |
@@ -291,7 +293,7 @@ member that is present keeps its line exactly as in the table; a present
 member of the wrong type or outside its list is refused, never drawn as the
 nearest line. Two more optional members carry what a Goose
 policy does state: `share_deal_half` (`counterparty`, the only value) and
-`stranger_safe` (a list of strings); an absent one draws no line, since they
+`stranger_safe` (a list of strings), drawn right after the first line; an absent one draws no line, since they
 are not settings the page must account for, and a present one of the wrong
 type or outside its list is refused. The Goose
 vector `goose-policy-share-deal-half-only` states exactly those two. The block names when the settings were read

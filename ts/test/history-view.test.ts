@@ -495,8 +495,15 @@ describe("the page verdict", () => {
       "Only with the other side of an exchange: that exchange's half of the record.",
     );
     expect(shares).toContain(
-      "With anyone who asks, even a stranger: history_card/1.",
+      "With anyone who asks, even a stranger: the History Card.",
     );
+    const items = [
+      ...drawn(
+        vectors.cases["goose-policy-share-deal-half-only"],
+      ).querySelectorAll('[data-history="shares"] li'),
+    ].map((l) => l.textContent);
+    expect(items[1]).toContain("half of the record");
+    expect(items[2]).toContain("even a stranger");
   });
 
   it("draws nothing for share_deal_half and stranger_safe when absent, and says so for an empty list", () => {
@@ -504,10 +511,14 @@ describe("the page verdict", () => {
     const base = drawn(m).querySelector('[data-history="shares"]')?.textContent;
     expect(base).not.toContain("even a stranger");
     expect(base).not.toContain("half of the record");
+    m["sharing"] = { stranger_safe: ["history_card/1", "odd/9"] };
+    expect(
+      drawn(m).querySelector('[data-history="shares"]')?.textContent,
+    ).toContain("even a stranger: the History Card, odd/9.");
     m["sharing"] = { stranger_safe: [] };
     expect(
       drawn(m).querySelector('[data-history="shares"]')?.textContent,
-    ).toContain("Nothing goes to a stranger.");
+    ).toContain("Nothing else goes to a stranger.");
   });
 
   it("a stated member keeps its line when its neighbours are absent", () => {
