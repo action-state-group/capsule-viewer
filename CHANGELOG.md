@@ -17,7 +17,7 @@ here. The format follows
 
 ### Fixed
 
-- A page that runs no script shows a case card that sits in an expandable row's detail row when opened at its `#case-<case id>` address (#245, follow-up of #244): `tr.x-detail:has(:target)` shows the detail row that holds the target. The report-front stylesheet changes, so `go/emitter/runtime-style-hashes.txt`, the contract-report goldens, the Go goldens and the page runtime are regenerated.
+- A page that runs no script shows a case card that sits in an expandable row's detail row when opened at its `#case-<case id>` address (#245, follow-up of #244): on the static page only (scoped to a page that carries the static notice), `tr.x-detail:has(:target)` shows the detail row that holds the target; the scripted page's rows still follow their toggles. The report-front stylesheet changes, so `go/emitter/runtime-style-hashes.txt`, the contract-report goldens, the Go goldens and the page runtime are regenerated.
 
 ## ts 0.13.0 and go 0.13.0 (2026-11-02)
 

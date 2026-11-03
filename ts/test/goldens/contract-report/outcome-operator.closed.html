@@ -342,7 +342,7 @@
 .oi tr.x:hover > td{background:#FAF8F4}
 .oi tr.x-detail{display:none}
 .oi tr.x:has(details.rx[open]) + tr.x-detail{display:table-row}
-.oi tr.x-detail:has(:target){display:table-row}
+body:has(.aac-static-notice) .oi tr.x-detail:has(:target){display:table-row}
 .oi tr.x-detail > td{padding:0 10px 12px;border-bottom:1px solid var(--line)}
 .oi details.rx{display:inline;border:0;margin:0;padding:0;background:transparent}
 .oi details.rx > summary{display:inline;padding:0;font-size:inherit;font-weight:inherit;color:inherit}
