@@ -459,7 +459,7 @@ describe("the page verdict", () => {
     expect(shares.split("this node's settings don't say").length - 1).toBe(8);
     for (const invented of [
       "With anyone: the Service History.",
-      "Only with the other side",
+      "Only with the other side of an exchange, when they ask",
       "Sent on its own",
       "If this node judges an exchange",
       "With any node that asks by an exchange's id",
@@ -471,6 +471,41 @@ describe("the page verdict", () => {
     expect(shares).toContain(
       "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say.",
     );
+  });
+
+  it("draws one line each for what a Goose policy does state", () => {
+    const shares =
+      drawn(vectors.cases["goose-policy-share-deal-half-only"]).querySelector(
+        '[data-history="shares"]',
+      )?.textContent ?? "";
+    expect(shares).toContain(
+      "Only with the other side of an exchange: that exchange's half of the record.",
+    );
+    expect(shares).toContain(
+      "With anyone who asks, even a stranger: the History Card.",
+    );
+    const items = [
+      ...drawn(
+        vectors.cases["goose-policy-share-deal-half-only"],
+      ).querySelectorAll('[data-history="shares"] li'),
+    ].map((l) => l.textContent);
+    expect(items[1]).toContain("half of the record");
+    expect(items[2]).toContain("even a stranger");
+  });
+
+  it("draws nothing for share_deal_half and stranger_safe when absent, and says so for an empty list", () => {
+    const m = mesh();
+    const base = drawn(m).querySelector('[data-history="shares"]')?.textContent;
+    expect(base).not.toContain("even a stranger");
+    expect(base).not.toContain("half of the record");
+    m["sharing"] = { stranger_safe: ["history_card/1", "odd/9"] };
+    expect(
+      drawn(m).querySelector('[data-history="shares"]')?.textContent,
+    ).toContain("even a stranger: the History Card, odd/9.");
+    m["sharing"] = { stranger_safe: [] };
+    expect(
+      drawn(m).querySelector('[data-history="shares"]')?.textContent,
+    ).toContain("Nothing else goes to a stranger.");
   });
 
   it("a stated member keeps its line when its neighbours are absent", () => {

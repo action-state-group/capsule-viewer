@@ -822,7 +822,12 @@
           "status": "not_run"
         }
       ],
-      "sharing": {}
+      "sharing": {
+        "share_deal_half": "counterparty",
+        "stranger_safe": [
+          "history_card/1"
+        ]
+      }
     },
     "goose-no-checkpoints": {
       "view": "history-view/v0",

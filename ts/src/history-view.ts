@@ -59,6 +59,12 @@ export interface HistorySharing {
   readonly record_at_completion?: "counterparty" | "off";
   readonly adjudications?: "deliver_to_subjects" | "off";
   readonly exchange_corroboration?: boolean;
+  /** What a Goose node's advertised policy states: its half of an exchange goes
+   * to that exchange's counterparty only. Absent when not stated; no line then. */
+  readonly share_deal_half?: "counterparty";
+  /** What the policy says it gives any stranger (short tokens such as
+   * `history_card/1`). Absent when not stated; no line then. */
+  readonly stranger_safe?: readonly string[];
   /** Absent when the node does not state it (an advertised policy lacks it). */
   readonly adjudicate_differing_twins?: boolean;
   /** Absent when the node does not state it (an advertised policy lacks it). */
@@ -829,6 +835,8 @@ export function buildHistoryView(
       "exchange_corroboration",
       "adjudicate_differing_twins",
       "witnesses",
+      "share_deal_half",
+      "stranger_safe",
     ];
     const so = r.object(o["sharing"], "input.sharing", keys, []);
     if (so) {
@@ -841,6 +849,16 @@ export function buildHistoryView(
             if (s !== undefined) witnesses.push(s);
           }
         else r.refuse("input.sharing.witnesses", "is not a list");
+      }
+      let strangerSafe: string[] | undefined;
+      if ("stranger_safe" in so) {
+        strangerSafe = [];
+        if (Array.isArray(so["stranger_safe"]))
+          for (const [i, w] of so["stranger_safe"].entries()) {
+            const t = r.string(w, `input.sharing.stranger_safe[${i}]`, 80);
+            if (t !== undefined) strangerSafe.push(t);
+          }
+        else r.refuse("input.sharing.stranger_safe", "is not a list");
       }
       // Every member is optional: one the node does not state stays absent
       // and is drawn as "this node's settings don't say".
@@ -862,10 +880,14 @@ export function buildHistoryView(
       one("adjudications", ["deliver_to_subjects", "off"]);
       on("exchange_corroboration");
       on("adjudicate_differing_twins");
+      one("share_deal_half", ["counterparty"]);
       if (!wrong)
         sharing = {
           ...(stated as HistorySharing),
           ...(witnesses !== undefined ? { witnesses } : {}),
+          ...(strangerSafe !== undefined
+            ? { stranger_safe: strangerSafe }
+            : {}),
         };
     }
   }
@@ -1286,6 +1308,26 @@ export function buildHistoryView(
   let shares: HistoryElement | null = null;
   if (sharing) {
     const lines: string[] = [say("shares.summary")];
+    // Stated only by a Goose node's policy; a node that does not state them
+    // gets no line. They sit right after the first line, which they extend.
+    // A token the pack names is drawn by its plain name, any other as it is.
+    if (sharing.share_deal_half === "counterparty")
+      lines.push(say("shares.dealhalf.counterparty"));
+    if (sharing.stranger_safe !== undefined)
+      lines.push(
+        sharing.stranger_safe.length > 0
+          ? say("shares.stranger", {
+              items: sharing.stranger_safe
+                .map((t) =>
+                  (words[`shares.stranger.token.${t}`] ??
+                    BASE[`shares.stranger.token.${t}`]) !== undefined
+                    ? say(`shares.stranger.token.${t}`)
+                    : t,
+                )
+                .join(", "),
+            })
+          : say("shares.stranger.none"),
+      );
     if (sharing.standard_history === undefined)
       lines.push(say("shares.standard.unstated"));
     else

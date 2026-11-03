@@ -176,6 +176,8 @@ caller passes is drawn as text, never parsed as HTML.
 - `sharing` (checkpoint pages, required there): the node's live settings,
   section 5, with the values the node itself uses. Every member is optional;
   one the node does not state is drawn as "this node's settings don't say".
+  A Goose node may also state `share_deal_half` and `stranger_safe`, each
+  drawn as one line when present.
 - `signer_directory` (optional, deal pages): the HTTPS address signers are
   looked up at, drawn with Muse's disclosure line.
 - `period` (optional): `{from, to}`, drawn in the header.
@@ -263,6 +265,8 @@ the panel):
 | Line | Drawn when |
 | --- | --- |
 | With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange | always |
+| Only with the other side of an exchange: that exchange's half of the record | `share_deal_half` is `counterparty` (what a Goose node's policy states); nothing when absent |
+| With anyone who asks, even a stranger: <items> | `stranger_safe` is stated (a list of short tokens); `history_card/1` is drawn as "the History Card", any other token as it is; when empty, "Nothing else goes to a stranger."; nothing when absent |
 | With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)."; when absent, "Whether the Service History goes to anyone: this node's settings don't say." |
 | Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`); when absent, "Whether the other side of an exchange can ask for its record: this node's settings don't say." |
 | With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false; when absent, "Whether this node tells a node that asks by an exchange's id if it holds its half: this node's settings don't say." |
@@ -287,8 +291,12 @@ settings don't say." (the words are in the pack as `shares.*.unstated`), and
 never a default, so no disclosure is left out by omission or invented. A
 member that is present keeps its line exactly as in the table; a present
 member of the wrong type or outside its list is refused, never drawn as the
-nearest line. The Goose
-vector `goose-policy-share-deal-half-only` states `sharing: {}`. The block names when the settings were read
+nearest line. Two more optional members carry what a Goose
+policy does state: `share_deal_half` (`counterparty`, the only value) and
+`stranger_safe` (a list of strings), drawn right after the first line; an absent one draws no line, since they
+are not settings the page must account for, and a present one of the wrong
+type or outside its list is refused. The Goose
+vector `goose-policy-share-deal-half-only` states exactly those two. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
