@@ -162,11 +162,11 @@ type period struct {
 }
 
 type sharing struct {
-	standardHistory       bool
-	historySegments       string
-	recordAtCompletion    string
-	adjudications         string
-	exchangeCorroboration bool
+	standardHistory       *bool
+	historySegments       *string
+	recordAtCompletion    *string
+	adjudications         *string
+	exchangeCorroboration *bool
 	twins                 *bool
 	witnesses             *[]string
 }
@@ -615,7 +615,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			r.refuse("input.sharing", "is only for a checkpoint page")
 		}
 		keys := []string{"standard_history", "history_segments", "record_at_completion", "adjudications", "exchange_corroboration", "adjudicate_differing_twins", "witnesses"}
-		if so := r.object(o.get("sharing"), "input.sharing", keys, keys[:5]); so != nil {
+		if so := r.object(o.get("sharing"), "input.sharing", keys, nil); so != nil {
 			var witnesses *[]string
 			if so.has("witnesses") {
 				ws := []string{}
@@ -630,20 +630,39 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				}
 				witnesses = &ws
 			}
-			var twins *bool
-			if so.has("adjudicate_differing_twins") {
-				if b, ok := r.boolean(so.get("adjudicate_differing_twins"), "input.sharing.adjudicate_differing_twins"); ok {
-					twins = &b
+			// Every member is optional: one the node does not state stays
+			// absent and is drawn as "this node's settings don't say".
+			sh := &sharing{witnesses: witnesses}
+			wrong := false
+			on := func(k string) *bool {
+				if !so.has(k) {
+					return nil
 				}
+				b, ok := r.boolean(so.get(k), "input.sharing."+k)
+				if !ok {
+					wrong = true
+					return nil
+				}
+				return &b
 			}
-			sh := &sharing{twins: twins, witnesses: witnesses}
-			var ok1, ok2, ok3, ok4, ok5 bool
-			sh.standardHistory, ok1 = r.boolean(so.get("standard_history"), "input.sharing.standard_history")
-			sh.historySegments, ok2 = r.oneOf(so.get("history_segments"), "input.sharing.history_segments", []string{"off", "counterparties", "peers"})
-			sh.recordAtCompletion, ok3 = r.oneOf(so.get("record_at_completion"), "input.sharing.record_at_completion", []string{"counterparty", "off"})
-			sh.adjudications, ok4 = r.oneOf(so.get("adjudications"), "input.sharing.adjudications", []string{"deliver_to_subjects", "off"})
-			sh.exchangeCorroboration, ok5 = r.boolean(so.get("exchange_corroboration"), "input.sharing.exchange_corroboration")
-			if ok1 && ok2 && ok3 && ok4 && ok5 {
+			one := func(k string, values []string) *string {
+				if !so.has(k) {
+					return nil
+				}
+				v, ok := r.oneOf(so.get(k), "input.sharing."+k, values)
+				if !ok {
+					wrong = true
+					return nil
+				}
+				return &v
+			}
+			sh.standardHistory = on("standard_history")
+			sh.historySegments = one("history_segments", []string{"off", "counterparties", "peers"})
+			sh.recordAtCompletion = one("record_at_completion", []string{"counterparty", "off"})
+			sh.adjudications = one("adjudications", []string{"deliver_to_subjects", "off"})
+			sh.exchangeCorroboration = on("exchange_corroboration")
+			sh.twins = on("adjudicate_differing_twins")
+			if !wrong {
 				share = sh
 			}
 		}
@@ -1044,31 +1063,46 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 
 	var shares *element
 	if share != nil {
-		on := func(cond bool, yes, no string) string {
-			if cond {
+		// A member the node does not state draws its "unstated" line.
+		flag := func(v *bool, yes, no, unstated string) string {
+			switch {
+			case v == nil:
+				return say(unstated)
+			case *v:
 				return say(yes)
 			}
 			return say(no)
 		}
-		lines := []string{say("shares.summary"), on(share.standardHistory, "shares.standard.on", "shares.standard.off")}
-		switch share.historySegments {
-		case "counterparties":
+		completes := share.recordAtCompletion != nil && *share.recordAtCompletion == "counterparty"
+		lines := []string{say("shares.summary"), flag(share.standardHistory, "shares.standard.on", "shares.standard.off", "shares.standard.unstated")}
+		switch {
+		case share.historySegments == nil:
+			lines = append(lines, say("shares.segments.unstated"))
+		case *share.historySegments == "counterparties":
 			lines = append(lines, say("shares.segments.counterparties"))
-		case "peers":
+		case *share.historySegments == "peers":
 			lines = append(lines, say("shares.segments.peers"))
+		case completes:
+			lines = append(lines, say("shares.segments.off")+" "+say("shares.segments.off.sealed"))
 		default:
-			if share.recordAtCompletion == "counterparty" {
-				lines = append(lines, say("shares.segments.off")+" "+say("shares.segments.off.sealed"))
-			} else {
-				lines = append(lines, say("shares.segments.off"))
-			}
+			lines = append(lines, say("shares.segments.off"))
 		}
-		if share.exchangeCorroboration {
+		if share.exchangeCorroboration == nil {
+			lines = append(lines, say("shares.corroboration.unstated"))
+		} else if *share.exchangeCorroboration {
 			lines = append(lines, say("shares.corroboration.on"))
 		}
-		lines = append(lines,
-			on(share.recordAtCompletion == "counterparty", "shares.completion.on", "shares.completion.off"),
-			on(share.adjudications == "deliver_to_subjects", "shares.adjudications.on", "shares.adjudications.off"))
+		if share.recordAtCompletion == nil {
+			lines = append(lines, say("shares.completion.unstated"))
+		} else {
+			lines = append(lines, flag(&completes, "shares.completion.on", "shares.completion.off", ""))
+		}
+		if share.adjudications == nil {
+			lines = append(lines, say("shares.adjudications.unstated"))
+		} else {
+			deliver := *share.adjudications == "deliver_to_subjects"
+			lines = append(lines, flag(&deliver, "shares.adjudications.on", "shares.adjudications.off", ""))
+		}
 		if share.twins == nil {
 			lines = append(lines, say("shares.twins.unstated"))
 		} else if *share.twins {
@@ -1082,7 +1116,13 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		default:
 			lines = append(lines, say("shares.witnesses.none"))
 		}
-		lines = append(lines, say("shares.never"))
+		// The signed-request rule is the mesh plugin's, carried by its policy; a
+		// policy that states no segments setting does not vouch for it.
+		if share.historySegments == nil {
+			lines = append(lines, say("shares.never.unstated"))
+		} else {
+			lines = append(lines, say("shares.never"))
+		}
 		var lis []any
 		for _, l := range lines {
 			lis = append(lis, el("li", nil, l))
@@ -1119,10 +1159,26 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		default:
 			sealState = "mixed"
 		}
+		// A failed row must not read as if the whole deal failed: when only some
+		// of the countersigned rows failed, the slot gives its scope. Rows
+		// nobody countersigned are not part of the count.
+		failedRows, signedRows := 0, 0
+		for _, st := range states {
+			if st == "failed" {
+				failedRows++
+			}
+			if st == "failed" || st == "passed" {
+				signedRows++
+			}
+		}
 		var sealLine string
 		switch sealState {
 		case "failed":
-			sealLine = say("slot.failed")
+			if failedRows > 0 && failedRows < signedRows {
+				sealLine = say("seal.second.some_failed", "k", strconv.Itoa(failedRows), "n", strconv.Itoa(signedRows))
+			} else {
+				sealLine = say("slot.failed")
+			}
 		case "none":
 			sealLine = say("slot.second.none")
 		case "not_checked":
