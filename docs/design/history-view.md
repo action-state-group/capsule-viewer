@@ -87,6 +87,7 @@ caller passes is drawn as text, never parsed as HTML.
 ```json
 {
   "view": "history-view/v0",
+  "kind": "checkpoint",
   "surface": "neutral",
   "reader": "recipient",
   "holder": { "node": "3f9a…", "stream": "mesh-llm" },
@@ -123,6 +124,8 @@ caller passes is drawn as text, never parsed as HTML.
 }
 ```
 
+- `kind`: `checkpoint` or `deal`, the page's one row kind; every row's
+  `kind` must equal it, and it picks the headline when there are no rows.
 - `surface`: `neutral` or `product`. A `product` page draws with the
   overlay pack its caller passes (section 4); a `neutral` page takes none.
   It never changes what is drawn, only the words.
@@ -260,15 +263,18 @@ the panel):
 | With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false |
 | Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)." |
 | If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)." |
-| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default) |
-| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named." |
+| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: not stated by this node." |
+| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named."; when absent, "Which witnesses get its checkpoints: not stated by this node." |
 | Never: a record to anyone who doesn't prove who they are | always |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
 `off`, `counterparties` or `peers`; `record_at_completion` is `counterparty`
 or `off`; `adjudications` is `deliver_to_subjects` or `off`;
-`exchange_corroboration` and `adjudicate_differing_twins` are on/off; every
-member is required, so no disclosure is left out by omission). A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
+`exchange_corroboration` and `adjudicate_differing_twins` are on/off). Every
+member is required except `adjudicate_differing_twins` and `witnesses`, which
+a node's advertised policy (`disclosure-policy/0`, what Goose reads) does
+not carry; when either is absent the page says it is not stated, so no
+disclosure is left out by omission. A value outside these lists is refused, never drawn as the nearest line. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
 ## 6. Slots, and two checkpoints in one second
@@ -282,7 +288,10 @@ yet"; `not_checked` reads "Not checked here". Only `passed` fills, and a
 `passed` slot missing what section 3 requires is refused ([333]). The view
 cannot tell a self-countersignature; the caller draws it as `failed`, as
 Muse's `stampsOf` does today. The seal's
-second-signature slot is always present ([203] item 6).
+second-signature slot is always present ([203] item 6). It sums the rows'
+slots without filling: any `failed` reads "Didn't verify", any
+`not_checked` reads "Not checked here", all `none` reads "None yet", and
+otherwise it points to each row's slot.
 
 **Same second.** Each checkpoint is its own row, never merged by time. Every
 checkpoint row shows its entry count and its 🔏 anchor, so two rows with the
@@ -324,7 +333,8 @@ two above, and print; the first screen shows the header and the hero.
   (no grade, witnessed through part, countersigned, self-countersign drawn
   as failed, one failed stamp among passing deals, picked by the holder,
   empty store), refused and unreadable
-  answers, a node with no checkpoint, `peers` and every setting off, each
+  answers, a node with no checkpoint, `peers` and every setting off, a page
+  built from an advertised policy alone (twins and witnesses absent), each
   with its expected HTML. Muse's vectors draw with a test
   overlay; the real overlay's goldens live in actionstate-muse. TypeScript and Go both render every
   vector and match the expected bytes.
