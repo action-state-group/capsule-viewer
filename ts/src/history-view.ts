@@ -52,11 +52,13 @@ export interface DealRow {
 }
 
 export interface HistorySharing {
-  readonly standard_history: boolean;
-  readonly history_segments: "off" | "counterparties" | "peers";
-  readonly record_at_completion: "counterparty" | "off";
-  readonly adjudications: "deliver_to_subjects" | "off";
-  readonly exchange_corroboration: boolean;
+  /** Each of the first five is absent when the node does not state it (a Goose
+   * node's advertised policy carries none of them). */
+  readonly standard_history?: boolean;
+  readonly history_segments?: "off" | "counterparties" | "peers";
+  readonly record_at_completion?: "counterparty" | "off";
+  readonly adjudications?: "deliver_to_subjects" | "off";
+  readonly exchange_corroboration?: boolean;
   /** Absent when the node does not state it (an advertised policy lacks it). */
   readonly adjudicate_differing_twins?: boolean;
   /** Absent when the node does not state it (an advertised policy lacks it). */
@@ -828,7 +830,7 @@ export function buildHistoryView(
       "adjudicate_differing_twins",
       "witnesses",
     ];
-    const so = r.object(o["sharing"], "input.sharing", keys, keys.slice(0, 5));
+    const so = r.object(o["sharing"], "input.sharing", keys, []);
     if (so) {
       let witnesses: string[] | undefined;
       if ("witnesses" in so) {
@@ -840,45 +842,29 @@ export function buildHistoryView(
           }
         else r.refuse("input.sharing.witnesses", "is not a list");
       }
-      const twins =
-        "adjudicate_differing_twins" in so
-          ? r.bool(
-              so["adjudicate_differing_twins"],
-              "input.sharing.adjudicate_differing_twins",
-            )
-          : undefined;
-      const s = {
-        standard_history: r.bool(
-          so["standard_history"],
-          "input.sharing.standard_history",
-        ),
-        history_segments: r.oneOf(
-          so["history_segments"],
-          "input.sharing.history_segments",
-          ["off", "counterparties", "peers"] as const,
-        ),
-        record_at_completion: r.oneOf(
-          so["record_at_completion"],
-          "input.sharing.record_at_completion",
-          ["counterparty", "off"] as const,
-        ),
-        adjudications: r.oneOf(
-          so["adjudications"],
-          "input.sharing.adjudications",
-          ["deliver_to_subjects", "off"] as const,
-        ),
-        exchange_corroboration: r.bool(
-          so["exchange_corroboration"],
-          "input.sharing.exchange_corroboration",
-        ),
+      // Every member is optional: one the node does not state stays absent
+      // and is drawn as "this node's settings don't say".
+      const stated: Record<string, unknown> = {};
+      let wrong = false;
+      const take = (k: string, parse: () => unknown) => {
+        if (!(k in so)) return;
+        const v = parse();
+        if (v === undefined) wrong = true;
+        else stated[k] = v;
       };
-      if (Object.values(s).every((x) => x !== undefined))
+      const on = (k: string) =>
+        take(k, () => r.bool(so[k], `input.sharing.${k}`));
+      const one = (k: string, values: readonly string[]) =>
+        take(k, () => r.oneOf(so[k], `input.sharing.${k}`, values));
+      on("standard_history");
+      one("history_segments", ["off", "counterparties", "peers"]);
+      one("record_at_completion", ["counterparty", "off"]);
+      one("adjudications", ["deliver_to_subjects", "off"]);
+      on("exchange_corroboration");
+      on("adjudicate_differing_twins");
+      if (!wrong)
         sharing = {
-          ...(s as Omit<
-            HistorySharing,
-            "witnesses" | "adjudicate_differing_twins"
-          >),
-          ...(twins !== undefined ? { adjudicate_differing_twins: twins } : {}),
+          ...(stated as HistorySharing),
           ...(witnesses !== undefined ? { witnesses } : {}),
         };
     }
@@ -1300,37 +1286,51 @@ export function buildHistoryView(
   let shares: HistoryElement | null = null;
   if (sharing) {
     const lines: string[] = [say("shares.summary")];
-    lines.push(
-      say(
-        sharing.standard_history ? "shares.standard.on" : "shares.standard.off",
-      ),
-    );
+    if (sharing.standard_history === undefined)
+      lines.push(say("shares.standard.unstated"));
+    else
+      lines.push(
+        say(
+          sharing.standard_history
+            ? "shares.standard.on"
+            : "shares.standard.off",
+        ),
+      );
     if (sharing.history_segments === "counterparties")
       lines.push(say("shares.segments.counterparties"));
     else if (sharing.history_segments === "peers")
       lines.push(say("shares.segments.peers"));
-    else
+    else if (sharing.history_segments === "off")
       lines.push(
         sharing.record_at_completion === "counterparty"
           ? `${say("shares.segments.off")} ${say("shares.segments.off.sealed")}`
           : say("shares.segments.off"),
       );
-    if (sharing.exchange_corroboration)
+    else lines.push(say("shares.segments.unstated"));
+    if (sharing.exchange_corroboration === undefined)
+      lines.push(say("shares.corroboration.unstated"));
+    else if (sharing.exchange_corroboration)
       lines.push(say("shares.corroboration.on"));
-    lines.push(
-      say(
-        sharing.record_at_completion === "counterparty"
-          ? "shares.completion.on"
-          : "shares.completion.off",
-      ),
-    );
-    lines.push(
-      say(
-        sharing.adjudications === "deliver_to_subjects"
-          ? "shares.adjudications.on"
-          : "shares.adjudications.off",
-      ),
-    );
+    if (sharing.record_at_completion === undefined)
+      lines.push(say("shares.completion.unstated"));
+    else
+      lines.push(
+        say(
+          sharing.record_at_completion === "counterparty"
+            ? "shares.completion.on"
+            : "shares.completion.off",
+        ),
+      );
+    if (sharing.adjudications === undefined)
+      lines.push(say("shares.adjudications.unstated"));
+    else
+      lines.push(
+        say(
+          sharing.adjudications === "deliver_to_subjects"
+            ? "shares.adjudications.on"
+            : "shares.adjudications.off",
+        ),
+      );
     if (sharing.adjudicate_differing_twins === undefined)
       lines.push(say("shares.twins.unstated"));
     else if (sharing.adjudicate_differing_twins)
@@ -1343,7 +1343,15 @@ export function buildHistoryView(
           ? say("shares.witnesses", { witnesses: sharing.witnesses.join(", ") })
           : say("shares.witnesses.none"),
       );
-    lines.push(say("shares.never"));
+    // The signed-request rule is the mesh plugin's, carried by its policy; a
+    // policy that states no segments setting does not vouch for it.
+    lines.push(
+      say(
+        sharing.history_segments === undefined
+          ? "shares.never.unstated"
+          : "shares.never",
+      ),
+    );
     shares = el(
       "section",
       { class: "cvh-shares", "data-history": "shares" },
