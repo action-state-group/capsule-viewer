@@ -11,9 +11,19 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.15.0 and go 0.15.0 (2026-11-03)
+
+Both state viewer 0.15.0: `ts/v0.15.0`, then `go/v0.15.0` on the commit that ships its page runtime. This release carries #254 and #255, #257 and #258, and #253 and #256.
+
 ### Added
 
 - The History view's Go twin, `go/historyview` (#253, design note `docs/design/history-view.md` section 2): `Render(input, overlay)` writes the same bytes as the TypeScript `historyViewHtml` for every vector in `vectors/history-view/`, `Document` writes the whole static page the goldens hold, and `Styles` is the stylesheet. It refuses the same inputs with the same reasons, in the same order, as a `*Refused` error, and writes the page with its own serializer, not `html/template`. The wording pack is a byte copy of `ts/src/wording/history-view.en.json`, held by a test, and `vectors/history-view/refusals.json` holds both views to the same refusal reasons in the same order. It is for Muse's static `history page`.
+
+- Every member of the History view's `sharing` is optional (#257, #258): a Goose node's advertised policy states none of the five that mesh nodes advertise, so its page drew nothing. A member the node does not state draws "this node's settings don't say" and never a default, and the "Never: a record to anyone who doesn't prove who they are" line is drawn only when the policy states `history_segments`. Vector `goose-policy-share-deal-half-only`.
+
+### Changed
+
+- The History view's wording (#254, #255): the witnesses line with an empty list says the settings name no witness now and that a row's time-stamp may come from an earlier setting, and the seal's second-signature slot reads "<k> of <n> didn't verify; see each row" when only some of the countersigned rows failed. The goldens are regenerated.
 
 ### Fixed
 
