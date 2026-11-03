@@ -1329,8 +1329,7 @@ export function buildHistoryView(
           : say("shares.stranger.none"),
       );
     const unstated: string[] = [];
-    if (sharing.standard_history === undefined)
-      unstated.push("standard");
+    if (sharing.standard_history === undefined) unstated.push("standard");
     else
       lines.push(
         say(
@@ -1354,8 +1353,7 @@ export function buildHistoryView(
       unstated.push("corroboration");
     else if (sharing.exchange_corroboration)
       lines.push(say("shares.corroboration.on"));
-    if (sharing.record_at_completion === undefined)
-      unstated.push("completion");
+    if (sharing.record_at_completion === undefined) unstated.push("completion");
     else
       lines.push(
         say(
@@ -1364,8 +1362,7 @@ export function buildHistoryView(
             : "shares.completion.off",
         ),
       );
-    if (sharing.adjudications === undefined)
-      unstated.push("adjudications");
+    if (sharing.adjudications === undefined) unstated.push("adjudications");
     else
       lines.push(
         say(
@@ -1378,8 +1375,7 @@ export function buildHistoryView(
       unstated.push("twins");
     else if (sharing.adjudicate_differing_twins)
       lines.push(say("shares.twins.on"));
-    if (sharing.witnesses === undefined)
-      unstated.push("witnesses");
+    if (sharing.witnesses === undefined) unstated.push("witnesses");
     else
       lines.push(
         sharing.witnesses.length > 0
