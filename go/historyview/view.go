@@ -648,7 +648,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				strangerSafe = &ss
 			}
 			// Every member is optional: one the node does not state stays
-			// absent and is drawn as "this node's settings don't say".
+			// absent and is named in the one closing "this node's settings don't say" line.
 			sh := &sharing{witnesses: witnesses, strangerSafe: strangerSafe}
 			wrong := false
 			on := func(k string) *bool {
@@ -1081,16 +1081,9 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 
 	var shares *element
 	if share != nil {
-		// A member the node does not state draws its "unstated" line.
-		flag := func(v *bool, yes, no, unstated string) string {
-			switch {
-			case v == nil:
-				return say(unstated)
-			case *v:
-				return say(yes)
-			}
-			return say(no)
-		}
+		// A member the node does not state is named in the one closing
+		// "unstated" line, not given a line of its own.
+		var unstated []string
 		completes := share.recordAtCompletion != nil && *share.recordAtCompletion == "counterparty"
 		lines := []string{say("shares.summary")}
 		// Stated only by a Goose node's policy; a node that does not state them
@@ -1116,10 +1109,17 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				lines = append(lines, say("shares.stranger", "items", strings.Join(names, ", ")))
 			}
 		}
-		lines = append(lines, flag(share.standardHistory, "shares.standard.on", "shares.standard.off", "shares.standard.unstated"))
+		switch {
+		case share.standardHistory == nil:
+			unstated = append(unstated, "standard")
+		case *share.standardHistory:
+			lines = append(lines, say("shares.standard.on"))
+		default:
+			lines = append(lines, say("shares.standard.off"))
+		}
 		switch {
 		case share.historySegments == nil:
-			lines = append(lines, say("shares.segments.unstated"))
+			unstated = append(unstated, "segments")
 		case *share.historySegments == "counterparties":
 			lines = append(lines, say("shares.segments.counterparties"))
 		case *share.historySegments == "peers":
@@ -1130,29 +1130,36 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			lines = append(lines, say("shares.segments.off"))
 		}
 		if share.exchangeCorroboration == nil {
-			lines = append(lines, say("shares.corroboration.unstated"))
+			unstated = append(unstated, "corroboration")
 		} else if *share.exchangeCorroboration {
 			lines = append(lines, say("shares.corroboration.on"))
 		}
 		if share.recordAtCompletion == nil {
-			lines = append(lines, say("shares.completion.unstated"))
+			unstated = append(unstated, "completion")
 		} else {
-			lines = append(lines, flag(&completes, "shares.completion.on", "shares.completion.off", ""))
+			if completes {
+				lines = append(lines, say("shares.completion.on"))
+			} else {
+				lines = append(lines, say("shares.completion.off"))
+			}
 		}
 		if share.adjudications == nil {
-			lines = append(lines, say("shares.adjudications.unstated"))
+			unstated = append(unstated, "adjudications")
 		} else {
-			deliver := *share.adjudications == "deliver_to_subjects"
-			lines = append(lines, flag(&deliver, "shares.adjudications.on", "shares.adjudications.off", ""))
+			if *share.adjudications == "deliver_to_subjects" {
+				lines = append(lines, say("shares.adjudications.on"))
+			} else {
+				lines = append(lines, say("shares.adjudications.off"))
+			}
 		}
 		if share.twins == nil {
-			lines = append(lines, say("shares.twins.unstated"))
+			unstated = append(unstated, "twins")
 		} else if *share.twins {
 			lines = append(lines, say("shares.twins.on"))
 		}
 		switch {
 		case share.witnesses == nil:
-			lines = append(lines, say("shares.witnesses.unstated"))
+			unstated = append(unstated, "witnesses")
 		case len(*share.witnesses) > 0:
 			lines = append(lines, say("shares.witnesses", "witnesses", strings.Join(*share.witnesses, ", ")))
 		default:
@@ -1161,9 +1168,20 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		// The signed-request rule is the mesh plugin's, carried by its policy; a
 		// policy that states no segments setting does not vouch for it.
 		if share.historySegments == nil {
-			lines = append(lines, say("shares.never.unstated"))
+			unstated = append(unstated, "never")
 		} else {
 			lines = append(lines, say("shares.never"))
+		}
+		if len(unstated) > 0 {
+			items := make([]string, 0, len(unstated))
+			for _, k := range unstated {
+				items = append(items, say("shares.unstated."+k))
+			}
+			if len(items) == 1 {
+				lines = append(lines, say("shares.unstated.one", "item", items[0]))
+			} else {
+				lines = append(lines, say("shares.unstated", "items", strings.Join(items, "; ")))
+			}
 		}
 		var lis []any
 		for _, l := range lines {

@@ -861,7 +861,7 @@ export function buildHistoryView(
         else r.refuse("input.sharing.stranger_safe", "is not a list");
       }
       // Every member is optional: one the node does not state stays absent
-      // and is drawn as "this node's settings don't say".
+      // and is named in the one closing "this node's settings don't say" line.
       const stated: Record<string, unknown> = {};
       let wrong = false;
       const take = (k: string, parse: () => unknown) => {
@@ -1328,8 +1328,9 @@ export function buildHistoryView(
             })
           : say("shares.stranger.none"),
       );
+    const unstated: string[] = [];
     if (sharing.standard_history === undefined)
-      lines.push(say("shares.standard.unstated"));
+      unstated.push("standard");
     else
       lines.push(
         say(
@@ -1348,13 +1349,13 @@ export function buildHistoryView(
           ? `${say("shares.segments.off")} ${say("shares.segments.off.sealed")}`
           : say("shares.segments.off"),
       );
-    else lines.push(say("shares.segments.unstated"));
+    else unstated.push("segments");
     if (sharing.exchange_corroboration === undefined)
-      lines.push(say("shares.corroboration.unstated"));
+      unstated.push("corroboration");
     else if (sharing.exchange_corroboration)
       lines.push(say("shares.corroboration.on"));
     if (sharing.record_at_completion === undefined)
-      lines.push(say("shares.completion.unstated"));
+      unstated.push("completion");
     else
       lines.push(
         say(
@@ -1364,7 +1365,7 @@ export function buildHistoryView(
         ),
       );
     if (sharing.adjudications === undefined)
-      lines.push(say("shares.adjudications.unstated"));
+      unstated.push("adjudications");
     else
       lines.push(
         say(
@@ -1374,11 +1375,11 @@ export function buildHistoryView(
         ),
       );
     if (sharing.adjudicate_differing_twins === undefined)
-      lines.push(say("shares.twins.unstated"));
+      unstated.push("twins");
     else if (sharing.adjudicate_differing_twins)
       lines.push(say("shares.twins.on"));
     if (sharing.witnesses === undefined)
-      lines.push(say("shares.witnesses.unstated"));
+      unstated.push("witnesses");
     else
       lines.push(
         sharing.witnesses.length > 0
@@ -1387,13 +1388,21 @@ export function buildHistoryView(
       );
     // The signed-request rule is the mesh plugin's, carried by its policy; a
     // policy that states no segments setting does not vouch for it.
-    lines.push(
-      say(
-        sharing.history_segments === undefined
-          ? "shares.never.unstated"
-          : "shares.never",
-      ),
-    );
+    if (sharing.history_segments === undefined) unstated.push("never");
+    else lines.push(say("shares.never"));
+    // One closing sentence names every setting the node does not state.
+    if (unstated.length > 0)
+      lines.push(
+        unstated.length === 1
+          ? say("shares.unstated.one", {
+              item: say(`shares.unstated.${unstated[0]}`),
+            })
+          : say("shares.unstated", {
+              items: unstated
+                .map((k) => say(`shares.unstated.${k}`))
+                .join("; "),
+            }),
+      );
     shares = el(
       "section",
       { class: "cvh-shares", "data-history": "shares" },

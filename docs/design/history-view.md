@@ -175,7 +175,7 @@ caller passes is drawn as text, never parsed as HTML.
   Drawn as separate rows, never summed or compared ([guide] §18).
 - `sharing` (checkpoint pages, required there): the node's live settings,
   section 5, with the values the node itself uses. Every member is optional;
-  one the node does not state is drawn as "this node's settings don't say".
+  one the node does not state is named in one closing sentence, "This node's settings don't say: <a>; <b>.".
   A Goose node may also state `share_deal_half` and `stranger_safe`, each
   drawn as one line when present.
 - `signer_directory` (optional, deal pages): the HTTPS address signers are
@@ -267,14 +267,14 @@ the panel):
 | With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange | always |
 | Only with the other side of an exchange: that exchange's half of the record | `share_deal_half` is `counterparty` (what a Goose node's policy states); nothing when absent |
 | With anyone who asks, even a stranger: <items> | `stranger_safe` is stated (a list of short tokens); `history_card/1` is drawn as "the History Card", any other token as it is; when empty, "Nothing else goes to a stranger."; nothing when absent |
-| With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)."; when absent, "Whether the Service History goes to anyone: this node's settings don't say." |
-| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`); when absent, "Whether the other side of an exchange can ask for its record: this node's settings don't say." |
-| With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false; when absent, "Whether this node tells a node that asks by an exchange's id if it holds its half: this node's settings don't say." |
-| Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)."; when absent, "Whether the sealed record is sent when an exchange completes: this node's settings don't say." |
-| If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)."; when absent, "Whether verdicts this node reaches go to the nodes judged: this node's settings don't say." |
-| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, "Whether this node sends differing answers to a referee: this node's settings don't say." |
-| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting."; when absent, "Which witnesses get its checkpoints: this node's settings don't say." |
-| Never: a record to anyone who doesn't prove who they are | `history_segments` is stated (the rule is the mesh plugin's signed-request rule, which its policy carries); when absent, "Whether a record goes to someone who doesn't prove who they are: this node's settings don't say." |
+| With anyone: the Service History | `standard_history` is true (the product default is on); when false, "The Service History: only the other side of an exchange gets it (off for anyone else on this node)."; when absent, named in the closing "this node's settings don't say" line |
+| Only with the other side of an exchange, when they ask: that exchange's record | `history_segments` is `counterparties`; `peers`: "With any node that signs its request: an exchange's record."; `off`: "The other side of an exchange can't ask for its record (off on this node). They still get the sealed record when it completes." (the last sentence only when `record_at_completion` is `counterparty`); when absent, named in the closing "this node's settings don't say" line |
+| With any node that asks by an exchange's id: whether this node holds its half (ids and digests only) | `exchange_corroboration` is true; nothing when false; when absent, named in the closing "this node's settings don't say" line |
+| Sent on its own: the sealed record when an exchange completes | `record_at_completion` is `counterparty`; when `off`, "The sealed record isn't sent when an exchange completes (off on this node)."; when absent, named in the closing "this node's settings don't say" line |
+| If this node judges an exchange, its verdict goes to the node judged | `adjudications` is `deliver_to_subjects`; when `off`, "Verdicts this node reaches aren't sent to the nodes judged (off on this node)."; when absent, named in the closing "this node's settings don't say" line |
+| When two copies of a model answer differently, this node sends the question and both answers to a referee | `adjudicate_differing_twins` is true; nothing when false (the default); when absent, named in the closing "this node's settings don't say" line |
+| Signed checkpoints go to the witnesses named here: <witnesses> | `witnesses` is not empty; when empty, "No witnesses named in this node's settings now. A row's time-stamp may come from an earlier setting."; when absent, named in the closing "this node's settings don't say" line |
+| Never: a record to anyone who doesn't prove who they are | `history_segments` is stated (the rule is the mesh plugin's signed-request rule, which its policy carries); when absent, named in the closing "this node's settings don't say" line |
 
 The values are the node's own (`share_policy.rs`: `history_segments` is
 `off`, `counterparties` or `peers`; `record_at_completion` is `counterparty`
@@ -285,10 +285,11 @@ what Goose reads) carries only `share_deal_half` and `stranger_safe`, none of
 these members; the five that mesh nodes advertise (`standard_history`,
 `history_segments`, `record_at_completion`, `adjudications`,
 `exchange_corroboration`) became optional in an additive change to `v0`, after
-`adjudicate_differing_twins` and `witnesses` already were. When a member is
-absent the page draws one line for it, "Whether <what it decides>: this node's
-settings don't say." (the words are in the pack as `shares.*.unstated`), and
-never a default, so no disclosure is left out by omission or invented. A
+`adjudicate_differing_twins` and `witnesses` already were. When members are
+absent the page draws one closing line for all of them, "This node's settings
+don't say: <what the first decides>; <what the second decides>." (the words are
+in the pack as `shares.unstated`, `shares.unstated.one` and `shares.unstated.*`; a single missing setting reads "This node's settings don't say <what it decides>.", with no colon; nothing is drawn when
+none is absent), and never a default, so no disclosure is left out by omission or invented. A
 member that is present keeps its line exactly as in the table; a present
 member of the wrong type or outside its list is refused, never drawn as the
 nearest line. Two more optional members carry what a Goose
