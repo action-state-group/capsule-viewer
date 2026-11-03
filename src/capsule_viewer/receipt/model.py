@@ -262,7 +262,13 @@ def _seq(value: Frozen) -> tuple[Frozen, ...]:
 
 
 def format_amount(minor: int, currency: str) -> str:
-    """Minor units as a decimal amount and its code: ``627, USD`` -> ``6.27 USD``."""
+    """Minor units as a decimal amount and its code: ``627, USD`` -> ``6.27 USD``.
+
+    For BTC the minor unit is the millisatoshi (1e-11 BTC), shown as it is
+    counted: ``500, BTC`` -> ``500 msat``, never sats or a BTC decimal.
+    """
+    if currency == "BTC":
+        return f"{minor} msat"
     exponent = _EXPONENT.get(currency, 2)
     sign = "-" if minor < 0 else ""
     whole, part = divmod(abs(minor), 10**exponent)
