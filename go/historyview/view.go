@@ -1166,11 +1166,13 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			lines = append(lines, say("shares.witnesses.none"))
 		}
 		// The signed-request rule is the mesh plugin's, carried by its policy; a
-		// policy that states no segments setting does not vouch for it.
-		if share.historySegments == nil {
-			unstated = append(unstated, "never")
-		} else {
+		// policy that states no segments setting does not vouch for it. A stated
+		// stranger_safe allowlist already says what a stranger gets, so the rule
+		// is not also listed as unstated beside it (#266).
+		if share.historySegments != nil {
 			lines = append(lines, say("shares.never"))
+		} else if share.strangerSafe == nil {
+			unstated = append(unstated, "never")
 		}
 		if len(unstated) > 0 {
 			items := make([]string, 0, len(unstated))

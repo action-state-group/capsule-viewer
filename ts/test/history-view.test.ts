@@ -450,7 +450,7 @@ describe("the page verdict", () => {
     expect(shares).toContain("This node's settings don't say");
   });
 
-  it("a policy that states none of the five settings says so once, in one sentence, and invents no value", () => {
+  it("a policy that states none of the five settings says so once, in one sentence, and invents no value (and no stranger rule beside a stated stranger_safe)", () => {
     const shares =
       drawn(vectors.cases["goose-policy-share-deal-half-only"]).querySelector(
         '[data-history="shares"]',
@@ -475,8 +475,12 @@ describe("the page verdict", () => {
       expect(shares).not.toContain(invented);
     expect(shares).not.toContain("Never: a record");
     expect(shares).toContain(
-      "This node's settings don't say: whether its Service History goes to anyone; whether the other side of an exchange can ask for that exchange's record; whether it tells a node that asks by exchange id if it holds that exchange's half; whether it sends the sealed record when an exchange completes; whether its verdicts go to the nodes judged; whether it sends differing answers to a referee; which witnesses get its checkpoints; whether a record goes to someone who doesn't prove who they are.",
+      "This node's settings don't say: whether its Service History goes to anyone; whether the other side of an exchange can ask for that exchange's record; whether it tells a node that asks by exchange id if it holds that exchange's half; whether it sends the sealed record when an exchange completes; whether its verdicts go to the nodes judged; whether it sends differing answers to a referee; which witnesses get its checkpoints.",
     );
+    // stranger_safe is stated, so it is not also said that the rule about
+    // strangers is unstated.
+    expect(shares).not.toContain("prove who they are");
+    expect(shares).toContain("even a stranger: the History Card");
   });
 
   it("draws one line each for what a Goose policy does state", () => {

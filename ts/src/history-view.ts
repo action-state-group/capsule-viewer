@@ -1383,9 +1383,11 @@ export function buildHistoryView(
           : say("shares.witnesses.none"),
       );
     // The signed-request rule is the mesh plugin's, carried by its policy; a
-    // policy that states no segments setting does not vouch for it.
-    if (sharing.history_segments === undefined) unstated.push("never");
-    else lines.push(say("shares.never"));
+    // policy that states no segments setting does not vouch for it. A stated
+    // stranger_safe allowlist already says what a stranger gets, so the rule
+    // is not also listed as unstated beside it (#266).
+    if (sharing.history_segments !== undefined) lines.push(say("shares.never"));
+    else if (sharing.stranger_safe === undefined) unstated.push("never");
     // One closing sentence names every setting the node does not state.
     if (unstated.length > 0)
       lines.push(
