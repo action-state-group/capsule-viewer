@@ -25,7 +25,7 @@ ships its page runtime. This release carries the changes merged since 0.13.0:
 
 ### Fixed
 
-- `go/pageruntime` again states a commit on `main` (#250): it named a commit of #245's branch that the squash merge left off `main`, so the `pageruntime` CI job failed everywhere. It is rebuilt at a `main` commit, and only the stated commit changes.
+- `go/pageruntime` again states a commit on `main` (#250): it named a commit of #246's branch that the squash merge left off `main`, so the `pageruntime` CI job failed on `main` and on every pull request. It is rebuilt at a `main` commit, and only the stated commit changes.
 - A page that runs no script shows a case card that sits in an expandable row's detail row when opened at its `#case-<case id>` address (#245, follow-up of #244): on the static page only (scoped to a page that carries the static notice), `tr.x-detail:has(:target)` shows the detail row that holds the target; the scripted page's rows still follow their toggles. The report-front stylesheet changes, so `go/emitter/runtime-style-hashes.txt`, the contract-report goldens, the Go goldens and the page runtime are regenerated.
 
 ## ts 0.13.0 and go 0.13.0 (2026-11-02)
