@@ -1,8 +1,9 @@
 # History view: one History page for Muse, mesh-llm and Goose (design note)
 
 Status: design for capsule-viewer#247, the component half of
-actionstate-muse#334. Nothing here is built yet. The three callers move onto
-it later, each in its own item (section 9).
+actionstate-muse#334. The TypeScript view shipped in viewer 0.14.0 and the Go
+twin, `go/historyview`, in capsule-viewer#253. The three callers move onto it
+in their own items (section 9).
 
 ## Sources
 
@@ -74,9 +75,8 @@ exist, with no new package:
   the page runtime (section 7).
 
 The wording pack is one file, `ts/src/wording/history-view.en.json`, holding
-neutral words only; the Go module carries a copy generated from it, with a
-`--check` test that fails when they differ (as `scripts/pageruntime.sh` does
-for the runtime). A product caller passes an overlay pack (section 4).
+neutral words only; the Go module carries a byte copy, held by a test that fails when they
+differ. A product caller passes an overlay pack (section 4).
 
 ## 3. The input contract: `history-view/v0`
 

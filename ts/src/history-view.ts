@@ -379,7 +379,7 @@ function readOverlay(r: Reader, v: Json): Record<string, string> {
   const out: Record<string, string> = {};
   if (!e) return out;
   for (const [k, text] of Object.entries(e)) {
-    const base = BASE[k];
+    const base = Object.hasOwn(BASE, k) ? BASE[k] : undefined;
     const s = r.string(text, `overlay.entries.${k}`);
     if (base === undefined || s === undefined) continue;
     if (placeholders(base).join(",") !== placeholders(s).join(","))
