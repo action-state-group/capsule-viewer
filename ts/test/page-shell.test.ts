@@ -297,7 +297,9 @@ describe("checkedSummaryLine", () => {
         records: [1],
         checkLists: { failed: [], notChecked: ["witness-receipts"] },
       }),
-    ).toBe("10 of 10 checks passed · 1 top-level record · 1 other check not run here");
+    ).toBe(
+      "10 of 10 checks passed · 1 top-level record · 1 other check not run here",
+    );
   });
 
   it("leads with what failed, and never says passed for a bundle that did not verify", () => {
@@ -325,7 +327,9 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: ["disclosures"], notChecked: [] },
       }),
-    ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 top-level records");
+    ).toBe(
+      "2 of 10 checks failed · 1 check on this page failed · 2 top-level records",
+    );
     // A page-list failure on a numbered check's ground is counted once.
     expect(
       checkedSummaryLine(false, {
@@ -333,7 +337,9 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: ["closure", "disclosures"], notChecked: [] },
       }),
-    ).toBe("2 of 10 checks failed · 1 check on this page failed · 2 top-level records");
+    ).toBe(
+      "2 of 10 checks failed · 1 check on this page failed · 2 top-level records",
+    );
     // Checks that did not run are said with a failure too.
     expect(
       checkedSummaryLine(false, {
@@ -352,7 +358,9 @@ describe("checkedSummaryLine", () => {
         records: [1, 2],
         checkLists: { failed: [], notChecked: [] },
       }),
-    ).toBe(`${SUMMARY_NOT_VERIFIED} · 2 of 10 checks not run · 2 top-level records`);
+    ).toBe(
+      `${SUMMARY_NOT_VERIFIED} · 2 of 10 checks not run · 2 top-level records`,
+    );
     // A failure outside both counts (a provenance error, say).
     expect(
       checkedSummaryLine(false, {
