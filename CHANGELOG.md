@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.18.2 and go 0.18.2 (2026-11-04)
+
+Both state viewer 0.18.2: `ts/v0.18.2`, then `go/v0.18.2` on the commit that ships its page runtime. This release carries #281 (PR #282) and #283 (PR #284).
+
 ### Changed
 
 - History card layout (#283): the "Everything on the card" fold-out has the same gap (`--cv-space-3`) under the card as the other sections; it sat about 2px under the card's border. CSS only, no wording or contract change; the module's `style_sha256` and the goldens are regenerated.
