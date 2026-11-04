@@ -296,8 +296,6 @@ class Reader {
 
 interface Instant {
   readonly ms: number;
-  /** The fraction of the second as written, without the dot ("" when none). */
-  readonly fraction: string;
 }
 
 function parseInstant(s: string): Instant | undefined {
@@ -306,7 +304,7 @@ function parseInstant(s: string): Instant | undefined {
       s,
     );
   if (!m) return undefined;
-  const [, y, mo, d, h, mi, se, frac = "", zone = "Z"] = m;
+  const [, y, mo, d, h, mi, se, , zone = "Z"] = m;
   const month = Number(mo);
   const day = Number(d);
   if (
@@ -335,7 +333,7 @@ function parseInstant(s: string): Instant | undefined {
       (Number(zone.slice(1, 3)) * 60 + Number(zone.slice(4, 6))) *
       60_000;
   }
-  return { ms, fraction: frac };
+  return { ms };
 }
 
 const MONTHS = [
@@ -451,7 +449,7 @@ interface ReadDeal {
   readonly second: Slot;
 }
 
-const EPOCH: Instant = { ms: 0, fraction: "" };
+const EPOCH: Instant = { ms: 0 };
 
 function readRow(
   r: Reader,
@@ -1288,7 +1286,7 @@ export function buildHistoryView(
                 ? say("callout.deals.picked", { name: name ?? "" })
                 : say("callout.deals"),
           ),
-          kind === "checkpoint"
+          kind === "checkpoint" && rows.length > 0
             ? el("p", null, say("callout.checkpoints.time"))
             : null,
         )

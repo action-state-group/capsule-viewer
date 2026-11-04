@@ -1061,7 +1061,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			text = say("callout.deals")
 		}
 		var timeLine *element
-		if kind == "checkpoint" {
+		if kind == "checkpoint" && len(rows) > 0 {
 			timeLine = el("p", nil, say("callout.checkpoints.time"))
 		}
 		callout = el("aside", attrs("class", "cvh-callout", "data-history", "does-not-show"),

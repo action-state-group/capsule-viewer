@@ -164,7 +164,6 @@ func TestTimeParsing(t *testing.T) {
 	require.NotNil(t, a)
 	require.NotNil(t, b)
 	assert.Equal(t, b.ms+0, a.ms)
-	assert.Equal(t, "5", a.fraction)
 	assert.Equal(t, "Nov 3, 2026, 11:00 UTC", minuteOf(b))
 }
 

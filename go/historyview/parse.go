@@ -201,11 +201,9 @@ func (r *reader) count(v any, path string) (int64, bool) {
 	return 0, false
 }
 
-// instant is a parsed time: milliseconds since the epoch and the fraction of
-// the second as written, without the dot.
+// instant is a parsed time: milliseconds since the epoch.
 type instant struct {
-	ms       int64
-	fraction string
+	ms int64
 }
 
 var instantRE = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?([Zz]|[+-]\d{2}:\d{2})$`)
@@ -239,7 +237,7 @@ func parseInstant(s string) *instant {
 		zm, _ := strconv.Atoi(zone[4:6])
 		ms -= sign * int64(zh*60+zm) * 60000
 	}
-	return &instant{ms: ms, fraction: m[7]}
+	return &instant{ms: ms}
 }
 
 func (r *reader) time(v any, path string) *instant {

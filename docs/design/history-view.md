@@ -300,7 +300,7 @@ type or outside its list is refused. The Goose
 vector `goose-policy-share-deal-half-only` states exactly those two and is the live Goose shape. The golden `goose-advertised-policy` is a fixture, not a real Goose policy: it carries the five mesh members a Goose policy does not have, to exercise those lines, so do not quote it as what a Goose node advertises. The block names when the settings were read
 (`built_at`), since a static page is a snapshot.
 
-## 6. Slots, and two checkpoints in one second
+## 6. Slots, and two checkpoints at one time
 
 **Slots.** The view alone decides how a slot looks, from its state: `passed`
 fills it, with `at` and, when given, `by` ("<at> · by <witness>", "<signer>
@@ -321,10 +321,10 @@ otherwise it points to each row's slot.
 
 **Same minute.** Each checkpoint is its own row, never merged by time. Every
 checkpoint row shows its entry count and its 🔏 anchor, so two rows with the
-same "Cut at" minute are told apart. Cut times show to the minute because
-checkpoint times are minute-granular by design and each side of an exchange
-gets its own checkpoint, so two rows can share a time; the "What this does not
-show" block says so (#281, Sherlock2's wording on actionstate-muse#334).
+same "Cut at" minute are told apart. Cut times show to the minute (a node may
+record seconds), and each side of an exchange gets its own checkpoint, so two
+rows can share a time; the "What this does not show" block says so (#281,
+Sherlock2's wording on actionstate-muse#334).
 
 ## 7. Static and scripted pages, by caller
 
@@ -393,8 +393,8 @@ renderer:
 - Mesh-LLM/capsules-plugin: the saved History page draws through the view;
   the route adds the node's sharing settings; the verifier returns each
   checkpoint's anchor and signature status (today it gives `{size, time}`
-  and stops at the first failure); and the "same Cut at second" export is
-  explained or fixed.
+  and stops at the first failure); and the "same Cut at" export is explained
+  (answered by #281: each side of an exchange gets its own checkpoint).
 - evidence-network/loop: the Goose History card draws through the view, one
   page per stream, from each card's checkpoints and the node's advertised
   policy.
