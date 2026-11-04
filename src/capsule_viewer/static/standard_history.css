@@ -4,7 +4,8 @@
  * two 22rem columns' width up, the same sections wrap into two columns
  * (SharedHistoryLaptop9b): nothing is added for the bigger screen. */
 .cv-sh { display: flex; flex-direction: column; gap: var(--cv-space-3); }
-/* The L1 fold-out is the card's sibling, outside .cv-sh's flex gap: give it the same gap. */
+/* The L1 fold-out is the card's sibling, outside .cv-sh's flex gap: its own top margin is the one gap under the card, so the last section keeps no bottom margin of its own (in a single column it would add to it). */
+.cv-sh > .cv-sh__cols > :last-child { margin-bottom: 0; }
 .cv-drilldown[data-sh-level="L1"] { margin-top: var(--cv-space-3); }
 .cv-sh__cols { columns: 22rem 2; column-gap: var(--cv-space-5); }
 .cv-sh__cols > * { break-inside: avoid; margin: 0 0 var(--cv-space-3); }
