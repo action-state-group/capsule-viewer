@@ -634,6 +634,8 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
     const dot = (o) => { const e = document.querySelector('[data-outcome="' + o + '"] .cv-sh__dot'); return e ? getComputedStyle(e).backgroundColor + "|" + getComputedStyle(e).borderStyle : null; };
     return {
       state: document.querySelector('[data-level="L0"]').getAttribute("data-sh-state"),
+      // The space between the lowest of the card's sections and the "Everything on the card" fold-out under them, in px.
+      l1Gap: (() => { const a = document.querySelector('[data-level="L0"] .cv-sh'), b = document.querySelector('[data-sh-level="L1"]'); return a && b ? Math.round(b.getBoundingClientRect().top - Math.max(...[...a.querySelector(".cv-sh__cols").children].map((e) => e.getBoundingClientRect().bottom))) : null; })(),
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       columns: lefts('[data-sh-level="L1"] .cv-sh__cols > section').length,
       nested: document.querySelectorAll("details details").length,
@@ -655,6 +657,8 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
         expect(m.text).not.toMatch(/%/);
         if (m.state === "card") {
           expect(m.columns).toBe(width === 390 ? 1 : 2);
+          // Exactly one --cv-space-3 (12px) between the last section and the fold-out, as between the other sections: not flush, not doubled (capsule-viewer#283).
+          expect(Math.abs(m.l1Gap - 12)).toBeLessThanOrEqual(2);
           if (c.card.outcomes.of) expect(m.undecided).not.toBe(m.held);
         }
         if ("deals" in c.block) expect(m.bannerTop).toBeLessThan(200);

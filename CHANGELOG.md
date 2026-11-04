@@ -13,6 +13,7 @@ here. The format follows
 
 ### Changed
 
+- History card layout (#283): the "Everything on the card" fold-out has the same gap (`--cv-space-3`) under the card as the other sections; it sat about 2px under the card's border. CSS only, no wording or contract change; the module's `style_sha256` and the goldens are regenerated.
 - History view wording (#281, from Sherlock2's review of Mesh-LLM/capsules-plugin#263): a checkpoint row's "Cut" time shows to the minute ("Nov 3, 2026, 18:07 UTC"), no longer to the second or with a fraction; the fraction shown when two rows shared a second is gone. The "What this does not show" block on a checkpoint page adds "The exact time of each exchange. Checkpoint times are rounded to the minute, and each side of an exchange gets its own checkpoint, so two can share a time." (`callout.checkpoints.time`). No input or contract change; the goldens are regenerated.
 
 ## ts 0.18.1 and go 0.18.1 (2026-11-03)
