@@ -604,31 +604,55 @@ function renderReceipts(
 
 // A checkpoint witnessed through a parent log (parent-log-witness/v1). AAC
 // computes the extent and verifies every link; this only draws the result
-// (J.8), set on the model only when its strict check passed. The wording is
-// Sherlock2's call (capsule-viewer#237).
+// (J.8), set on the model only when its strict check passed. `entries` is the
+// leaf count of the covered checkpoint, so the witness covers entries 1 to
+// `entries` and not the rest. The wording is Sherlock2's (capsule-viewer#237,
+// buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=1820d0aa7ea16203935db04ea2c034154922a7d1cd70ccec55a9faa06337f087).
+export function parentWitnessLine(parent: ParentWitnessEntry): string {
+  const lead = "witnessed through a parent log: ";
+  if (parent.whole)
+    return `${lead}all ${parent.of} ${parent.of === 1 ? "entry" : "entries"}`;
+  const covered =
+    parent.entries === 1 ? "entry 1" : `entries 1\u2013${parent.entries}`;
+  const first = parent.entries + 1;
+  const rest =
+    first === parent.of
+      ? `entry ${parent.of} is`
+      : `entries ${first}\u2013${parent.of} are`;
+  return `${lead}${covered} of ${parent.of}; ${rest} not covered by this witness`;
+}
+
+// The time the witness recorded the parent checkpoint, seconds since the
+// epoch, as "2026-11-04 23:22:21 UTC". AAC accepts any integer up to 2^53-1,
+// beyond what a Date holds: that is said, never thrown.
+export function parentWitnessTime(seconds: number | null): string {
+  if (seconds === null) return "time not stated";
+  const date = new Date(seconds * 1000);
+  if (Number.isNaN(date.getTime()))
+    return `time out of range (${seconds} seconds since the epoch)`;
+  return `recorded ${date
+    .toISOString()
+    .replace("T", " ")
+    .replace(/\.\d+Z$/u, "")} UTC`;
+}
+
 function renderParentWitness(
   host: HTMLElement,
   parent: ParentWitnessEntry,
 ): void {
-  host.append(
-    element(
-      "p",
-      parent.whole
-        ? `witnessed through a parent log: every entry (${parent.of} of ${parent.of})`
-        : `witnessed through a parent log: entry ${parent.entries} of ${parent.of}`,
+  const line = element("p", parentWitnessLine(parent));
+  line.dataset.witness = "parent";
+  line.dataset.whole = String(parent.whole);
+  host.append(line);
+  const list = element("ul");
+  parent.receipts.forEach((receipt) =>
+    list.append(
+      element(
+        "li",
+        `${receipt.witness} \u00b7 ${parentWitnessTime(receipt.registrationTime)}`,
+      ),
     ),
   );
-  const paragraph = host.lastElementChild as HTMLElement;
-  paragraph.dataset.witness = "parent";
-  paragraph.dataset.whole = String(parent.whole);
-  const list = element("ul");
-  parent.receipts.forEach((receipt) => {
-    const when =
-      receipt.registrationTime === null
-        ? "registration time not stated"
-        : `registered ${new Date(receipt.registrationTime * 1000).toISOString()}`;
-    list.append(element("li", `${receipt.witness} · ${when}`));
-  });
   host.append(list);
 }
 
