@@ -1328,7 +1328,10 @@ export function datingStatement(
  * dateless period keeps the plain title, never a guessed month.
  */
 function reportTitle(model: LinesModel, w: Words): string {
-  const title = w.t("lines.title");
+  const title = w.section3("report.title") ?? w.t("lines.title");
+  // A host's own report name (contract-report/v1 section 3) is drawn as
+  // given: the month title is a built-in pack's wording of its default name.
+  if (w.section3("report.title") !== undefined) return title;
   const first = model.days[0]?.date;
   const last = model.days[model.days.length - 1]?.date;
   if (first === undefined || last === undefined) return title;
@@ -1337,7 +1340,6 @@ function reportTitle(model: LinesModel, w: Words): string {
   const n = Number(month[2]);
   if (n < 1 || n > 12) return title;
   return w.t("lines.title.month", {
-    title,
     month: w.t(`calendar.month.${n}`),
     year: month[1]!,
   });

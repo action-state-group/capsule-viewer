@@ -12,7 +12,7 @@
     "lines.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
     "lines.rtier.sealed-note": "The sealed result counts informational terms too; the lines this report derives leave them out.",
     "lines.title": "Outcome report",
-    "lines.title.month": "{title}, {month} {year}",
+    "lines.title.month": "Outcome report, {month} {year}",
     "lines.share": "{count} of {total}",
     "lines.share.percent": "{p}%",
     "lines.tier.judged": "judged",
