@@ -611,7 +611,9 @@ function renderReceipts(
 export function parentWitnessLine(parent: ParentWitnessEntry): string {
   const lead = "witnessed through a parent log: ";
   if (parent.whole)
-    return `${lead}all ${parent.of} ${parent.of === 1 ? "entry" : "entries"}`;
+    return parent.of === 1
+      ? `${lead}its only entry`
+      : `${lead}all ${parent.of} entries`;
   const covered =
     parent.entries === 1 ? "entry 1" : `entries 1\u2013${parent.entries}`;
   const first = parent.entries + 1;
@@ -629,7 +631,7 @@ export function parentWitnessTime(seconds: number | null): string {
   if (seconds === null) return "time not stated";
   const date = new Date(seconds * 1000);
   if (Number.isNaN(date.getTime()))
-    return `time out of range (${seconds} seconds since the epoch)`;
+    return `time not a valid date (signed as ${seconds} seconds since 1970)`;
   return `recorded ${date
     .toISOString()
     .replace("T", " ")

@@ -128,7 +128,7 @@ describe("parent-log witness wording", () => {
       "witnessed through a parent log: all 3 entries",
     );
     expect(parentWitnessLine(entry(1, 1))).toBe(
-      "witnessed through a parent log: all 1 entry",
+      "witnessed through a parent log: its only entry",
     );
     expect(parentWitnessLine(entry(1, 3))).toBe(
       "witnessed through a parent log: entry 1 of 3; entries 2\u20133 are not covered by this witness",
@@ -147,10 +147,10 @@ describe("parent-log witness wording", () => {
 
   it("does not throw on a time beyond what a Date holds", () => {
     expect(parentWitnessTime(8640000000001)).toBe(
-      "time out of range (8640000000001 seconds since the epoch)",
+      "time not a valid date (signed as 8640000000001 seconds since 1970)",
     );
     expect(parentWitnessTime(Number.MAX_SAFE_INTEGER)).toContain(
-      "out of range",
+      "not a valid date",
     );
   });
 });
