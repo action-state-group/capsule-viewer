@@ -6,6 +6,7 @@
 // (capsule-viewer#237). The viewer computes nothing: the cases are AAC's
 // vectors/bundle/parent-log-witness, verified under its witness directory.
 
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -29,9 +30,7 @@ beforeAll(async () => {
         process.cwd(),
         "test",
         "testdata",
-        "aac-vectors",
-        "bundle",
-        "parent-log-witness",
+        "aac-parent-log-witness",
         "vectors.json",
       ),
       "utf8",
@@ -48,6 +47,25 @@ async function page(id: string, directory = true): Promise<HTMLElement> {
   await renderEvidenceGraph(context, root);
   return root.querySelector<HTMLElement>('[data-page="verification"]')!;
 }
+
+it("the vendored vectors are the bytes AAC's manifest names", async () => {
+  const dir = resolve(
+    process.cwd(),
+    "test",
+    "testdata",
+    "aac-parent-log-witness",
+  );
+  const manifest = JSON.parse(
+    await readFile(resolve(dir, "manifest.json"), "utf8"),
+  ) as {
+    files: Record<string, { sha256: string }>;
+  };
+  expect(
+    createHash("sha256")
+      .update(await readFile(resolve(dir, "vectors.json")))
+      .digest("hex"),
+  ).toBe(manifest.files["vectors.json"]!.sha256);
+});
 
 describe("verification page: checkpoint witnessed through a parent log", () => {
   it("draws a wholly witnessed checkpoint with every entry and its receipt", async () => {
