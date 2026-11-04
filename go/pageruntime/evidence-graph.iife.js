@@ -562,21 +562,21 @@ var EvidenceGraph = (() => {
   function encodeUint(writer, token) {
     return encodeUintValue(writer, 0, token.value);
   }
-  function encodeUintValue(writer, major, uint2) {
-    if (uint2 < uintBoundaries[0]) {
-      const nuint = Number(uint2);
+  function encodeUintValue(writer, major, uint3) {
+    if (uint3 < uintBoundaries[0]) {
+      const nuint = Number(uint3);
       writer.pushByte(major | nuint);
-    } else if (uint2 < uintBoundaries[1]) {
-      const nuint = Number(uint2);
+    } else if (uint3 < uintBoundaries[1]) {
+      const nuint = Number(uint3);
       writer.push([major | 24, nuint]);
-    } else if (uint2 < uintBoundaries[2]) {
-      const nuint = Number(uint2);
+    } else if (uint3 < uintBoundaries[2]) {
+      const nuint = Number(uint3);
       writer.push([major | 25, nuint >>> 8, nuint & 255]);
-    } else if (uint2 < uintBoundaries[3]) {
-      const nuint = Number(uint2);
+    } else if (uint3 < uintBoundaries[3]) {
+      const nuint = Number(uint3);
       writer.push([major | 26, nuint >>> 24 & 255, nuint >>> 16 & 255, nuint >>> 8 & 255, nuint & 255]);
     } else {
-      const buint = BigInt(uint2);
+      const buint = BigInt(uint3);
       if (buint < uintBoundaries[4]) {
         const set = [major | 27, 0, 0, 0, 0, 0, 0, 0];
         let lo = Number(buint & BigInt(4294967295));
@@ -610,17 +610,17 @@ var EvidenceGraph = (() => {
       encodeUint.encodedSize = function encodedSize(token) {
         return encodeUintValue.encodedSize(token.value);
       };
-      encodeUintValue.encodedSize = function encodedSize2(uint2) {
-        if (uint2 < uintBoundaries[0]) {
+      encodeUintValue.encodedSize = function encodedSize2(uint3) {
+        if (uint3 < uintBoundaries[0]) {
           return 1;
         }
-        if (uint2 < uintBoundaries[1]) {
+        if (uint3 < uintBoundaries[1]) {
           return 2;
         }
-        if (uint2 < uintBoundaries[2]) {
+        if (uint3 < uintBoundaries[2]) {
           return 3;
         }
-        if (uint2 < uintBoundaries[3]) {
+        if (uint3 < uintBoundaries[3]) {
           return 5;
         }
         return 9;
@@ -1414,11 +1414,11 @@ var EvidenceGraph = (() => {
       encoders[tokens.type.major](writer, tokens, options);
     }
   }
-  function directEncodeUintValue(writer, major, uint2) {
-    if (uint2 < 24) {
-      writer.pushByte(major | Number(uint2));
+  function directEncodeUintValue(writer, major, uint3) {
+    if (uint3 < 24) {
+      writer.pushByte(major | Number(uint3));
     } else {
-      encodeUintValue(writer, major, uint2);
+      encodeUintValue(writer, major, uint3);
     }
   }
   function canDirectEncode(options) {
@@ -4821,11 +4821,11 @@ var EvidenceGraph = (() => {
       return false;
     }
     if (a.isSmallOrder() || rPoint.isSmallOrder()) return false;
-    const digest = new Uint8Array(64 + message.length);
-    digest.set(r);
-    digest.set(publicKey, 32);
-    digest.set(message, 64);
-    const k = littleEndian(sha512(digest)) % Point.Fn.ORDER;
+    const digest2 = new Uint8Array(64 + message.length);
+    digest2.set(r);
+    digest2.set(publicKey, 32);
+    digest2.set(message, 64);
+    const k = littleEndian(sha512(digest2)) % Point.Fn.ORDER;
     return Point.BASE.multiplyUnsafe(s).equals(rPoint.add(a.multiplyUnsafe(k)));
   }
   var CHECKPOINT_CONTENT_TYPE, encodeCanonical, toHex2, bytesEqual, formatTime, Point, littleEndian;
@@ -5624,14 +5624,14 @@ var EvidenceGraph = (() => {
   }
   async function sha256Hex(value) {
     const subtle = webCrypto();
-    let digest;
+    let digest2;
     if (subtle !== void 0)
-      digest = new Uint8Array(await subtle.digest("SHA-256", value));
+      digest2 = new Uint8Array(await subtle.digest("SHA-256", value));
     else if (sha256Fallback)
-      digest = sha256(value);
+      digest2 = sha256(value);
     else
       throw new Sha256UnavailableError();
-    return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    return Array.from(digest2, (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
   async function jsonDigest(value) {
     return sha256Hex(jcs(value));
@@ -6453,6 +6453,80 @@ var EvidenceGraph = (() => {
   // node_modules/@action-state-group/agent-action-capsule/dist/bundle.js
   init_browser();
 
+  // node_modules/@action-state-group/agent-action-capsule/dist/cll-checkpoint.js
+  init_browser();
+  var object3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
+  var integer = (value) => typeof value === "number" && Number.isSafeInteger(value);
+  var hex2 = (value) => Uint8Array.from(value.match(/../gu), (byte) => Number.parseInt(byte, 16));
+  var encodeBase64Url = (bytes) => btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+  function base64UrlDecode(value) {
+    const padded = `${value}${"=".repeat((4 - value.length % 4) % 4)}`;
+    const binary = atob(padded.replaceAll("-", "+").replaceAll("_", "/"));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    if (encodeBase64Url(bytes) !== value)
+      throw new TypeError("non-canonical base64url");
+    return bytes;
+  }
+  function decodeCose(encoded) {
+    if (typeof encoded !== "string" || !/^[A-Za-z0-9_-]*$/u.test(encoded))
+      return void 0;
+    try {
+      return base64UrlDecode(encoded);
+    } catch {
+      return void 0;
+    }
+  }
+  async function loadCheckpointMetadata() {
+    try {
+      const module = await Promise.resolve().then(() => (init_browser(), browser_exports));
+      return typeof module.checkpointMetadata === "function" ? module.checkpointMetadata : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  async function signedCheckpointFields(cose, checkpointMetadata2) {
+    const verify = checkpointMetadata2 ?? await loadCheckpointMetadata();
+    if (verify === void 0)
+      return void 0;
+    let metadata;
+    try {
+      metadata = await verify(cose);
+    } catch {
+      return void 0;
+    }
+    return metadata === void 0 ? void 0 : {
+      log_id: metadata.logId,
+      mmr_size: Number(metadata.size),
+      root: metadata.root,
+      key_id: metadata.keyId,
+      timestamp: metadata.timestamp,
+      prev_size: Number(metadata.previousSize),
+      prev_root: metadata.previousRoot
+    };
+  }
+  function parseProof(raw) {
+    if (!object3(raw) || raw.v !== 1 || raw.kind !== "inclusion" || !integer(raw.size) || !integer(raw.leaf_index) || raw.size < 0 || raw.leaf_index < 0)
+      return void 0;
+    const hashes = (value) => Array.isArray(value) && value.every(isHex64) ? value : void 0;
+    const witness = hashes(raw.witness), left = hashes(raw.peaks_left), right = hashes(raw.peaks_right);
+    return witness && left && right ? {
+      v: 1,
+      kind: "inclusion",
+      size: raw.size,
+      leaf_index: raw.leaf_index,
+      witness,
+      peaks_left: left,
+      peaks_right: right
+    } : void 0;
+  }
+  async function verifyProof(root, identity2, proof, leafIndex = proof.leaf_index) {
+    const flattened = proof.witness.map(hex2);
+    if (proof.peaks_right.length)
+      flattened.push(await rootFromPeaks2(proof.peaks_right.map(hex2)));
+    flattened.push(...proof.peaks_left.map(hex2).toReversed());
+    return verifyHexInclusion2(root, BigInt(proof.size), BigInt(leafIndex), identity2, flattened);
+  }
+
   // node_modules/@action-state-group/agent-action-capsule/dist/bip340.js
   var P = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn;
   var N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
@@ -6659,7 +6733,7 @@ var EvidenceGraph = (() => {
         });
     return out;
   }
-  var hex2 = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  var hex3 = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   function hexToBytes4(text2) {
     const out = new Uint8Array(text2.length / 2);
     for (let i = 0; i < out.length; i++)
@@ -6808,7 +6882,7 @@ var EvidenceGraph = (() => {
       return false;
     if (!HEX64.test(key))
       return false;
-    const event = `[0,"${key}",${createdAt},${NOSTR_KIND},[],"${version}:${hex2(sha256(signed))}"]`;
+    const event = `[0,"${key}",${createdAt},${NOSTR_KIND},[],"${version}:${hex3(sha256(signed))}"]`;
     return verifyBip340(key, sha256(encoder4.encode(event)), text2);
   }
   async function verifySig(key, keyType, sig, version, signed) {
@@ -6840,7 +6914,7 @@ var EvidenceGraph = (() => {
     }
     return STATUS_PASS;
   }
-  async function revocation(digest, keys, types, ts, statements) {
+  async function revocation(digest2, keys, types, ts, statements) {
     for (const octets of statements) {
       let s;
       try {
@@ -6854,7 +6928,7 @@ var EvidenceGraph = (() => {
         "key_id",
         "revoked_at",
         "sig"
-      ]) || s.revocation_version !== REVOCATION_VERSION || s.binding !== digest || s.key_id !== keys[0] && s.key_id !== keys[1])
+      ]) || s.revocation_version !== REVOCATION_VERSION || s.binding !== digest2 || s.key_id !== keys[0] && s.key_id !== keys[1])
         continue;
       const keyType = s.key_id === keys[1] ? types[1] : types[0];
       let signed;
@@ -6892,11 +6966,11 @@ var EvidenceGraph = (() => {
     return entries;
   }
   var floorSeconds = (t) => t >= 0n ? t / NS : -((-t + NS - 1n) / NS);
-  function whyNot(declared, received, l, digest, ts) {
+  function whyNot(declared, received, l, digest2, ts) {
     if (declared.error !== void 0)
       return declared.error;
     const d = declared.declaration;
-    if (d.binding !== digest)
+    if (d.binding !== digest2)
       return "the declaration names another binding";
     if (d.listDigest !== received)
       return "list_digest is not the digest of the list received";
@@ -6914,11 +6988,11 @@ var EvidenceGraph = (() => {
       return "the evaluation time is more than max_age after as_of";
     return "";
   }
-  function listReport(l, digest, ts) {
-    const received = hex2(sha256(toBytes(l.list)));
+  function listReport(l, digest2, ts) {
+    const received = hex3(sha256(toBytes(l.list)));
     const declared = parseDeclaration(l.declaration);
     const d = declared.declaration;
-    const reason = whyNot(declared, received, l, digest, ts);
+    const reason = whyNot(declared, received, l, digest2, ts);
     return {
       profile: d.profile,
       assertedBy: d.assertedBy,
@@ -6935,7 +7009,7 @@ var EvidenceGraph = (() => {
     if (verify === void 0 || !Object.hasOwn(opts.credentialVerifiers, c.method))
       return STATUS_NOT_CHECKED;
     const octets = toBytes(opts.credential);
-    if (hex2(sha256(octets)) !== c.digest)
+    if (hex3(sha256(octets)) !== c.digest)
       return STATUS_FAIL;
     const status2 = await verify(octets, c, keys);
     return status2 === STATUS_PASS || status2 === STATUS_FAIL || status2 === STATUS_INCONCLUSIVE ? status2 : STATUS_FAIL;
@@ -6957,7 +7031,7 @@ var EvidenceGraph = (() => {
     const r = value;
     let bindingDigest2;
     try {
-      bindingDigest2 = hex2(sha256(jcs(without(r, "sigs"))));
+      bindingDigest2 = hex3(sha256(jcs(without(r, "sigs"))));
     } catch {
     }
     const claim = typeof r.claim === "string" ? r.claim : void 0;
@@ -7034,7 +7108,7 @@ var EvidenceGraph = (() => {
 
   // node_modules/@action-state-group/agent-action-capsule/dist/composed.js
   var COMPOSED_KIND = "composed/v1";
-  var object3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var object4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var isString = (value) => typeof value === "string";
   var LABEL = /^[A-Za-z0-9._:-]{1,128}$/u;
   var isLabel = (value) => isString(value) && LABEL.test(value);
@@ -7078,7 +7152,7 @@ var EvidenceGraph = (() => {
         if (index >= current.length)
           return { ok: false };
         current = current[index];
-      } else if (object3(current)) {
+      } else if (object4(current)) {
         if (!Object.hasOwn(current, token))
           return { ok: false };
         current = current[token];
@@ -7106,9 +7180,9 @@ var EvidenceGraph = (() => {
     return ok2(labels);
   }
   function parseMember(raw, observers) {
-    if (!object3(raw))
+    if (!object4(raw))
       return bad("not_an_object");
-    const { id, observer, request_digest: requestDigest, outcome, digest } = raw;
+    const { id, observer, request_digest: requestDigest, outcome, digest: digest2 } = raw;
     if (!isLabel(id))
       return bad("id");
     if (!isLabel(observer))
@@ -7117,7 +7191,7 @@ var EvidenceGraph = (() => {
       return bad("observer_undeclared");
     if (!isHex64(requestDigest))
       return bad("request_digest");
-    if (!isHex64(digest))
+    if (!isHex64(digest2))
       return bad("digest");
     if (!isString(outcome) || !Object.hasOwn(OUTCOME_BODY, outcome))
       return bad("outcome");
@@ -7128,7 +7202,7 @@ var EvidenceGraph = (() => {
     let response;
     if (Object.hasOwn(raw, "response")) {
       const value = raw.response;
-      if (outcome !== "artifact" || !object3(value) || !isHex64(value.request_digest) || !isHex64(value.artifact_digest))
+      if (outcome !== "artifact" || !object4(value) || !isHex64(value.request_digest) || !isHex64(value.artifact_digest))
         return bad("response");
       response = value;
     }
@@ -7137,20 +7211,20 @@ var EvidenceGraph = (() => {
       observer,
       requestDigest,
       outcome,
-      digest,
+      digest: digest2,
       ...response === void 0 ? {} : { response }
     };
     if (!Object.hasOwn(raw, bodyKey))
       return ok2(member);
     const body = raw[bodyKey];
-    if (!object3(body))
+    if (!object4(body))
       return bad("body");
     if (outcome === "refusal") {
       if (!isHex64(body.request_digest) || !isString(body.reason) || !isString(body.issued_at))
         return bad("refusal_body");
     } else if (outcome === "absence") {
       const window = body.window;
-      if (!isHex64(body.request_digest) || !object3(window) || !isString(window.from) || !isString(window.to))
+      if (!isHex64(body.request_digest) || !object4(window) || !isString(window.from) || !isString(window.to))
         return bad("absence_body");
       if (Object.hasOwn(body, "route") && !isString(body.route))
         return bad("absence_body");
@@ -7160,7 +7234,7 @@ var EvidenceGraph = (() => {
     return ok2({ ...member, body });
   }
   function parseJoin(raw, members) {
-    if (!object3(raw))
+    if (!object4(raw))
       return bad("not_an_object");
     const pair = raw.members;
     if (!Array.isArray(pair) || pair.length !== 2)
@@ -7216,10 +7290,10 @@ var EvidenceGraph = (() => {
     return j.pointer === void 0 ? key : `${key}\0${j.pointer}`;
   };
   function parseComposed(raw) {
-    if (!object3(raw))
+    if (!object4(raw))
       return bad("not_an_object");
-    const digest = raw.composed_digest;
-    if (!isHex64(digest))
+    const digest2 = raw.composed_digest;
+    if (!isHex64(digest2))
       return bad("composed_digest");
     const observerList = raw.observers;
     if (!Array.isArray(observerList) || observerList.length === 0)
@@ -7227,7 +7301,7 @@ var EvidenceGraph = (() => {
     const observerIds = /* @__PURE__ */ new Set();
     const observers = [];
     for (const [i, o] of observerList.entries()) {
-      if (!object3(o) || !isLabel(o.id) || !isString(o.role) || !isString(o.custody_domain))
+      if (!object4(o) || !isLabel(o.id) || !isString(o.role) || !isString(o.custody_domain))
         return bad(`observer:${i}`);
       if (observerIds.has(o.id))
         return bad(`observer_id_duplicate:${o.id}`);
@@ -7278,7 +7352,7 @@ var EvidenceGraph = (() => {
       joins,
       notRequested: notRequested.value,
       missing: missing.value,
-      digest
+      digest: digest2
     });
   }
   function composedBlockProblem(raw) {
@@ -7338,7 +7412,7 @@ var EvidenceGraph = (() => {
     if (!Array.isArray(records))
       return void 0;
     for (const record of records)
-      if (object3(record) && record.capsule_id === root)
+      if (object4(record) && record.capsule_id === root)
         return record;
     return void 0;
   }
@@ -7351,11 +7425,11 @@ var EvidenceGraph = (() => {
       return false;
     }
   }
-  async function identifierMatches(record, pointer, digest) {
+  async function identifierMatches(record, pointer, digest2) {
     const value = resolvePointer(record, pointer);
     if (!value.ok || !isString(value.value))
       return false;
-    return await sha256Hex(utf82.encode(value.value)) === digest;
+    return await sha256Hex(utf82.encode(value.value)) === digest2;
   }
   var isEmptyHistory = (body) => Array.isArray(body.records) && body.records.length === 0 && !Object.hasOwn(body, "root");
   function recordSide(record, pointer) {
@@ -7387,7 +7461,7 @@ var EvidenceGraph = (() => {
         return { wellFormed: false };
       const standin = { ...record };
       if (Array.isArray(record.sigs))
-        standin.sigs = record.sigs.map((e) => object3(e) && Object.hasOwn(e, "sig") ? { ...e, sig: "" } : e);
+        standin.sigs = record.sigs.map((e) => object4(e) && Object.hasOwn(e, "sig") ? { ...e, sig: "" } : e);
       try {
         jcs(standin);
       } catch {
@@ -7407,7 +7481,7 @@ var EvidenceGraph = (() => {
       return { report, wellFormed: false };
     if (Array.isArray(record.sigs) && ed25519Keys(record)) {
       for (const entry of record.sigs)
-        if (!object3(entry) || !isString(entry.sig) || !SIGNATURE_HEX.test(entry.sig))
+        if (!object4(entry) || !isString(entry.sig) || !SIGNATURE_HEX.test(entry.sig))
           return { report, wellFormed: false };
     }
     let formReport = report;
@@ -7445,7 +7519,7 @@ var EvidenceGraph = (() => {
       }
     let derivable = false;
     for (const record of options.controllerBindings ?? []) {
-      if (!object3(record))
+      if (!object4(record))
         continue;
       if (await bindingDigest(record) !== j.identifier)
         continue;
@@ -7568,7 +7642,7 @@ var EvidenceGraph = (() => {
   }
   async function verifyMember(m, declaredMissing, verifyMemberBundle, checkpoints) {
     const closure = [];
-    const failed2 = [];
+    const failed3 = [];
     const withheld = [];
     const findings = [];
     const base = { id: m.id, observer: m.observer, outcome: m.outcome };
@@ -7581,7 +7655,7 @@ var EvidenceGraph = (() => {
           findings
         },
         closure,
-        failed: failed2,
+        failed: failed3,
         withheld
       };
     if (m.body === void 0) {
@@ -7590,7 +7664,7 @@ var EvidenceGraph = (() => {
       return {
         member: { ...base, body: "absent", digest: "not_shown", findings },
         closure,
-        failed: failed2,
+        failed: failed3,
         withheld
       };
     }
@@ -7612,11 +7686,11 @@ var EvidenceGraph = (() => {
       if (m.response !== void 0) {
         if (m.response.request_digest !== m.requestDigest) {
           findings.push("response_request_digest_mismatch");
-          failed2.push(`member_response_request_digest_mismatch:${m.id}`);
+          failed3.push(`member_response_request_digest_mismatch:${m.id}`);
         }
         if (m.response.artifact_digest !== m.digest) {
           findings.push("response_artifact_digest_mismatch");
-          failed2.push(`member_response_artifact_digest_mismatch:${m.id}`);
+          failed3.push(`member_response_artifact_digest_mismatch:${m.id}`);
         }
       }
     } else {
@@ -7627,12 +7701,12 @@ var EvidenceGraph = (() => {
       }
       if (m.body.request_digest !== m.requestDigest) {
         findings.push("request_digest_mismatch");
-        failed2.push(`member_request_digest_mismatch:${m.id}`);
+        failed3.push(`member_request_digest_mismatch:${m.id}`);
       }
     }
-    let digest = "reproduced";
+    let digest2 = "reproduced";
     if (computed === void 0 || computed !== m.digest) {
-      digest = "mismatch";
+      digest2 = "mismatch";
       findings.push("member_digest_mismatch");
       closure.push(`member_digest_mismatch:${m.id}`);
     }
@@ -7650,14 +7724,14 @@ var EvidenceGraph = (() => {
       member: {
         ...base,
         body: "carried",
-        digest,
+        digest: digest2,
         findings,
         ...bundle === void 0 ? {} : { bundle },
         ...refusalSignature === void 0 ? {} : { refusalSignature },
         ...responseSignature === void 0 ? {} : { responseSignature }
       },
       closure,
-      failed: failed2,
+      failed: failed3,
       withheld
     };
   }
@@ -7673,7 +7747,7 @@ var EvidenceGraph = (() => {
         findings: [`composed_block_malformed:${parsed.reason}`]
       };
     const block = parsed.value;
-    const failed2 = [];
+    const failed3 = [];
     const withheld = [];
     let recomputed = "";
     try {
@@ -7687,7 +7761,7 @@ var EvidenceGraph = (() => {
       matches: recomputed !== "" && recomputed === block.digest
     };
     if (!composedDigestResult.matches)
-      failed2.push("composed_digest_mismatch");
+      failed3.push("composed_digest_mismatch");
     const missing = /* @__PURE__ */ new Set();
     const declared = new Set(block.members.map((m) => m.id));
     const closureFindings = [];
@@ -7706,7 +7780,7 @@ var EvidenceGraph = (() => {
       const result3 = await verifyMember(m, missing.has(m.id), verifyMemberBundle, checkpoints);
       members.push(result3.member);
       closureFindings.push(...result3.closure);
-      failed2.push(...result3.failed);
+      failed3.push(...result3.failed);
       withheld.push(...result3.withheld);
     }
     let compositionClosure;
@@ -7717,7 +7791,7 @@ var EvidenceGraph = (() => {
         findings: closureFindings,
         missing: closureMissing
       };
-      failed2.push("composition_closure_fail");
+      failed3.push("composition_closure_fail");
     } else if (block.missing.length > 0) {
       compositionClosure = {
         status: "withheld",
@@ -7743,16 +7817,16 @@ var EvidenceGraph = (() => {
       });
       const pair = `${j.members[0]},${j.members[1]}`;
       if (result3 === "join_state_mismatch")
-        failed2.push(`join_state_mismatch:${pair}`);
+        failed3.push(`join_state_mismatch:${pair}`);
       else if (result3 === "not_derivable")
         withheld.push(`join_not_derivable:${pair}`);
       corroborations.push(corroboration(j, derived, byId, observers));
     }
-    const status2 = failed2.length > 0 ? "fail" : withheld.length > 0 ? "withheld" : "pass";
+    const status2 = failed3.length > 0 ? "fail" : withheld.length > 0 ? "withheld" : "pass";
     return {
       status: status2,
       malformed: false,
-      findings: status2 === "fail" ? [...failed2, ...withheld] : withheld,
+      findings: status2 === "fail" ? [...failed3, ...withheld] : withheld,
       composedDigest: composedDigestResult,
       members,
       observers: block.observers,
@@ -7775,14 +7849,14 @@ var EvidenceGraph = (() => {
   }
 
   // node_modules/@action-state-group/agent-action-capsule/dist/presentation.js
-  function object4(value) {
+  function object5(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
   }
   var dataImageUrl = /^data:image\//u;
   function readPresentationBlock(bundle) {
-    const top = object4(bundle);
-    const extensions2 = object4(top?.extensions);
-    const block = object4(extensions2?.["presentation/v1"]);
+    const top = object5(bundle);
+    const extensions2 = object5(top?.extensions);
+    const block = object5(extensions2?.["presentation/v1"]);
     if (block === void 0)
       return void 0;
     const name = typeof block.producer_display_name === "string" ? block.producer_display_name : void 0;
@@ -7800,7 +7874,7 @@ var EvidenceGraph = (() => {
   // node_modules/@action-state-group/agent-action-capsule/dist/extension-interpreters.js
   var BOOK_PAYLOADS_EXTENSION = "evidencebook/payloads";
   var AGENT_INPUT_ORIGINALS_EXTENSION = "capsulectl/agent-input-originals/v1";
-  var object5 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var object6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var INTERPRETERS = Object.freeze({
     // the page header (capsule-viewer draws it) -> presentation.ts readPresentationBlock
     "presentation/v1": {
@@ -7823,16 +7897,16 @@ var EvidenceGraph = (() => {
     // a malformed block yields no composition result, so it is not interpreted.
     [COMPOSED_KIND]: {
       id: "aac.builtin.composed/v0",
-      accepts: (bundle) => object5(bundle) && object5(bundle.extensions) && composedBlockProblem(bundle.extensions[COMPOSED_KIND]) === void 0
+      accepts: (bundle) => object6(bundle) && object6(bundle.extensions) && composedBlockProblem(bundle.extensions[COMPOSED_KIND]) === void 0
     },
     // result-root.ts buildResultRoot reads both blocks when it is an object
     [BOOK_PAYLOADS_EXTENSION]: {
       id: "result-root",
-      accepts: (bundle) => object5(bundle) && object5(bundle.extensions) && object5(bundle.extensions[BOOK_PAYLOADS_EXTENSION])
+      accepts: (bundle) => object6(bundle) && object6(bundle.extensions) && object6(bundle.extensions[BOOK_PAYLOADS_EXTENSION])
     },
     [AGENT_INPUT_ORIGINALS_EXTENSION]: {
       id: "result-root",
-      accepts: (bundle) => object5(bundle) && object5(bundle.extensions) && object5(bundle.extensions[AGENT_INPUT_ORIGINALS_EXTENSION])
+      accepts: (bundle) => object6(bundle) && object6(bundle.extensions) && object6(bundle.extensions[AGENT_INPUT_ORIGINALS_EXTENSION])
     }
   });
   function extensionInterpreter(kind, bundle) {
@@ -8143,7 +8217,7 @@ var EvidenceGraph = (() => {
     "category_coverage_signature",
     "category_coverage_consistency"
   ];
-  var object6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
+  var object7 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
   var HEX1282 = /^[0-9a-f]{128}$/u;
   var ABSOLUTE_URI = /^[A-Za-z][A-Za-z0-9+.-]*:(?:[A-Za-z0-9._~!$&'()*+,;=:@/?-]|%[0-9A-Fa-f]{2})*$/u;
   var PRIVATE_SET = "x-";
@@ -8161,15 +8235,15 @@ var EvidenceGraph = (() => {
     return jcs({ category_coverage: unsigned, root });
   }
   function wellFormed2(member) {
-    if (!object6(member))
+    if (!object7(member))
       return false;
     if (typeof member.set !== "string" || member.set === "")
       return false;
     const categories = member.categories;
-    if (!object6(categories) || Object.keys(categories).length === 0)
+    if (!object7(categories) || Object.keys(categories).length === 0)
       return false;
     for (const [name, entry] of Object.entries(categories)) {
-      if (name === "" || !object6(entry) || !CATEGORY_STATUSES.includes(entry.status))
+      if (name === "" || !object7(entry) || !CATEGORY_STATUSES.includes(entry.status))
         return false;
       const hasUri = Object.hasOwn(entry, "policy_uri");
       if (hasUri && !(typeof entry.policy_uri === "string" && ABSOLUTE_URI.test(entry.policy_uri)))
@@ -8184,7 +8258,7 @@ var EvidenceGraph = (() => {
       return false;
     if (hasSigner) {
       const signer = member.signer;
-      if (!object6(signer) || !isHex64(signer.key_id))
+      if (!object7(signer) || !isHex64(signer.key_id))
         return false;
       if (typeof member.signature !== "string" || !HEX1282.test(member.signature))
         return false;
@@ -8234,13 +8308,13 @@ var EvidenceGraph = (() => {
     } catch {
       return "NOT_CHECKED";
     }
-    if (!object6(parsed))
+    if (!object7(parsed))
       return "NOT_CHECKED";
     if (!Object.hasOwn(parsed, "categories"))
       return "NOT_PRESENT";
     const asked = parsed.categories;
-    const names2 = object6(asked) ? asked.names : void 0;
-    if (!object6(asked) || typeof asked.set !== "string" || !Array.isArray(names2) || names2.length === 0 || !names2.every((name) => typeof name === "string") || new Set(names2).size !== names2.length)
+    const names2 = object7(asked) ? asked.names : void 0;
+    if (!object7(asked) || typeof asked.set !== "string" || !Array.isArray(names2) || names2.length === 0 || !names2.every((name) => typeof name === "string") || new Set(names2).size !== names2.length)
       return "NOT_CHECKED";
     if (asked.set !== member.set)
       return "FAIL";
@@ -8266,7 +8340,7 @@ var EvidenceGraph = (() => {
         category_coverage_consistency: "NOT_CHECKED"
       };
     const records = Array.isArray(bundle.records) ? bundle.records : [];
-    const recordIds = records.filter(object6).map((record) => record.capsule_id).filter((id) => typeof id === "string");
+    const recordIds = records.filter(object7).map((record) => record.capsule_id).filter((id) => typeof id === "string");
     return {
       category_coverage_form: "PASS",
       category_coverage_signature: await signature(member, Object.hasOwn(bundle, "root") ? bundle.root : null),
@@ -8278,6 +8352,9 @@ var EvidenceGraph = (() => {
   function categoryCoverageFails(result3) {
     return result3 !== null && CATEGORY_COVERAGE_GATING.some((name) => result3[name] === "FAIL");
   }
+
+  // node_modules/@action-state-group/agent-action-capsule/dist/parent-witness.js
+  init_browser();
 
   // node_modules/@action-state-group/agent-action-capsule/dist/cose-receipt.js
   var COSE_SIGN1_TAG = 18n;
@@ -8659,11 +8736,11 @@ var EvidenceGraph = (() => {
   }
 
   // node_modules/@action-state-group/agent-action-capsule/dist/spki.js
-  var hex3 = (value) => Uint8Array.from(value.match(/../gu), (byte) => Number.parseInt(byte, 16));
+  var hex4 = (value) => Uint8Array.from(value.match(/../gu), (byte) => Number.parseInt(byte, 16));
   var equal = (a, b) => a.length === b.length && a.every((byte, i) => byte === b[i]);
   var big = (bytes) => bytes.reduce((value, byte) => value << 8n | BigInt(byte), 0n);
-  var ED25519_ALGORITHM2 = hex3("06032b6570");
-  var P256_ALGORITHM2 = hex3("06072a8648ce3d020106082a8648ce3d030107");
+  var ED25519_ALGORITHM2 = hex4("06032b6570");
+  var P256_ALGORITHM2 = hex4("06072a8648ce3d020106082a8648ce3d030107");
   var P2 = 2n ** 256n - 2n ** 224n + 2n ** 192n + 2n ** 96n - 1n;
   var B = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604bn;
   function modPow2(base, exponent) {
@@ -8747,7 +8824,7 @@ var EvidenceGraph = (() => {
     "leaf_index",
     "tree_size"
   ];
-  var object7 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var object8 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function bindingOf(url) {
     const separator = url.indexOf("://");
     const scheme = separator < 0 ? "" : url.slice(0, separator).toLowerCase();
@@ -8762,11 +8839,11 @@ var EvidenceGraph = (() => {
     return base.replace(/\/+$/u, "");
   }
   function witnessRowFor(directory, tsUrl) {
-    const rows = object7(directory) ? directory.witnesses : directory;
+    const rows = object8(directory) ? directory.witnesses : directory;
     if (!Array.isArray(rows))
       return void 0;
     const binding = bindingOf(tsUrl), endpoint = endpointOf(tsUrl);
-    return rows.find((row2) => object7(row2) && (Object.hasOwn(row2, "binding") ? row2.binding : BINDING_CLL) === binding && endpointMatches(Object.hasOwn(row2, "endpoint") ? row2.endpoint : "", endpoint));
+    return rows.find((row2) => object8(row2) && (Object.hasOwn(row2, "binding") ? row2.binding : BINDING_CLL) === binding && endpointMatches(Object.hasOwn(row2, "endpoint") ? row2.endpoint : "", endpoint));
   }
   var endpointMatches = (value, endpoint) => typeof value === "string" && value.replace(/\/+$/u, "") === endpoint;
   function base64Canonical(value) {
@@ -8779,7 +8856,7 @@ var EvidenceGraph = (() => {
   }
   var ED25519_SPKI_PREFIX = hexToBytes("302a300506032b6570032100");
   var ed25519Spki = (raw) => concat(ED25519_SPKI_PREFIX, raw);
-  var hex4 = (bytes) => Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  var hex5 = (bytes) => Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
   function fromHex(value) {
     if (typeof value !== "string" || !/^(?:\s*[0-9A-Fa-f]{2})*\s*$/u.test(value))
       throw new TypeError("not hex");
@@ -8790,7 +8867,7 @@ var EvidenceGraph = (() => {
       return value;
     if (typeof value === "string")
       return [...value];
-    if (object7(value))
+    if (object8(value))
       return Object.keys(value);
     if (value === null || value === void 0 || value === false || value === 0)
       return [];
@@ -8812,7 +8889,7 @@ var EvidenceGraph = (() => {
         continue;
       byId.set(await sha256Hex(der), der);
       if (der.length === 44 && der.subarray(0, 12).every((b, i) => b === ED25519_SPKI_PREFIX[i]))
-        byId.set(hex4(der.subarray(12)), der);
+        byId.set(hex5(der.subarray(12)), der);
     }
     const keys = [];
     for (const keyId of keyIds) {
@@ -8974,12 +9051,12 @@ ${body}
       return fail2("the Rekor key is not an ECDSA P-256 key");
     }
     try {
-      if (!object7(receipt))
+      if (!object8(receipt))
         return fail2("receipt is not an object");
       if (receipt.logID !== await sha256Hex(key))
         return fail2("logID is not the pinned Rekor key");
       const verification = receipt.verification;
-      const timestamp = object7(verification) ? verification.signedEntryTimestamp : void 0;
+      const timestamp = object8(verification) ? verification.signedEntryTimestamp : void 0;
       if (!timestamp)
         return fail2("no signedEntryTimestamp");
       const integratedTime = jsonInteger(receipt.integratedTime), logIndex = jsonInteger(receipt.logIndex);
@@ -8993,17 +9070,17 @@ ${body}
       const entry = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(base64Canonical(receipt.body)));
       if (nestedTooDeep(entry))
         return fail2("unreadable receipt: body nested too deeply");
-      if (!object7(entry) || entry.kind !== "dsse")
+      if (!object8(entry) || entry.kind !== "dsse")
         return fail2("entry kind is not dsse");
       const spec = entry.spec || {};
-      if (!object7(spec))
+      if (!object8(spec))
         return fail2("entry spec is not an object");
       const payloadHash = spec.payloadHash || {};
-      if (!object7(payloadHash) || payloadHash.algorithm !== "sha256" || payloadHash.value !== await sha256Hex(cose))
+      if (!object8(payloadHash) || payloadHash.algorithm !== "sha256" || payloadHash.value !== await sha256Hex(cose))
         return fail2("entry payloadHash is not this checkpoint's bytes");
       const verifiers = /* @__PURE__ */ new Set();
       for (const signature2 of pyIterate(spec.signatures)) {
-        if (!object7(signature2))
+        if (!object8(signature2))
           return fail2("entry signature is not an object");
         const verifier = Object.hasOwn(signature2, "verifier") ? signature2.verifier : "";
         verifiers.add(pyStrip(latin1(base64Canonical(verifier)).replaceAll("\r", "")));
@@ -9057,7 +9134,7 @@ ${body}
     });
   }
   var isRecord = (entry) => {
-    if (!object7(entry) || !RECORD_FIELDS.every((name) => Object.hasOwn(entry, name)))
+    if (!object8(entry) || !RECORD_FIELDS.every((name) => Object.hasOwn(entry, name)))
       return false;
     if (!["ts_url", "entry_hash", "receipt_b64"].every((name) => typeof entry[name] === "string" && entry[name] !== ""))
       return false;
@@ -9308,6 +9385,127 @@ ${body}
     };
   }
 
+  // node_modules/@action-state-group/agent-action-capsule/dist/parent-witness.js
+  var PARENT_LOG_WITNESS_KIND = "parent-log-witness/v1";
+  var PARENT_WITNESS_MAX_PATH = 32;
+  var failed2 = (finding) => ({
+    status: "fail",
+    findings: [finding],
+    extent: null,
+    receipts: []
+  });
+  var uint = (value) => integer(value) && value >= 0;
+  var hexList = (value) => Array.isArray(value) && value.every(isHex64);
+  async function digest(...parts) {
+    const joined = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let offset = 0;
+    for (const part of parts) {
+      joined.set(part, offset);
+      offset += part.length;
+    }
+    return hex2(await sha256Hex(joined));
+  }
+  async function treeLeaf(logId, size, checkpointCose, salt) {
+    return digest(Uint8Array.of(0), jcs({
+      checkpoint_sha256: await sha256Hex(checkpointCose),
+      log_id: logId,
+      salt,
+      size
+    }));
+  }
+  async function treeRoot(leaf, index, path2) {
+    let h = leaf;
+    for (const [level, sibling] of path2.entries())
+      h = Math.floor(index / 2 ** level) % 2 === 0 ? await digest(Uint8Array.of(1), h, sibling) : await digest(Uint8Array.of(1), sibling, h);
+    return h;
+  }
+  async function signedCheckpoint(stated) {
+    const checkpoint = object3(stated) ? stated.checkpoint : void 0;
+    const cose = decodeCose(object3(checkpoint) ? checkpoint.cose : void 0);
+    if (cose === void 0)
+      return "malformed";
+    const signed = await signedCheckpointFields(cose);
+    return signed === void 0 ? "invalid" : { signed, cose };
+  }
+  function consistencyProof2(raw) {
+    if (!object3(raw) || raw.kind !== "consistency" || raw.v !== 1 || !uint(raw.old_size) || !uint(raw.new_size) || !hexList(raw.old_peaks) || !hexList(raw.new_peaks) || !Array.isArray(raw.witness) || !raw.witness.every(hexList))
+      return void 0;
+    return {
+      oldSize: BigInt(raw.old_size),
+      newSize: BigInt(raw.new_size),
+      oldPeaks: raw.old_peaks.map(hex2),
+      witness: raw.witness.map((path2) => path2.map(hex2)),
+      newPeaks: raw.new_peaks.map(hex2)
+    };
+  }
+  async function verifyParentLogWitness(block, signed, cose, directory) {
+    if (signed === void 0 || cose === void 0)
+      return {
+        status: "withheld",
+        findings: ["checkpoint_unverified"],
+        extent: null,
+        receipts: []
+      };
+    if (!object3(block))
+      return failed2("parent_witness_malformed");
+    let covered = signed, coveredCose = cose;
+    if (Object.hasOwn(block, "earlier")) {
+      const earlier = block.earlier;
+      const prior = await signedCheckpoint(earlier);
+      if (prior === "malformed")
+        return failed2("parent_witness_earlier_checkpoint_malformed");
+      if (prior === "invalid")
+        return failed2("parent_witness_earlier_checkpoint_signature_invalid");
+      if (prior.signed.key_id !== signed.key_id || prior.signed.log_id !== signed.log_id || prior.signed.mmr_size >= signed.mmr_size)
+        return failed2("parent_witness_earlier_checkpoint_not_this_log");
+      const proof = consistencyProof2(earlier.consistency_proof);
+      if (proof === void 0 || proof.oldSize !== BigInt(prior.signed.mmr_size) || proof.newSize !== BigInt(signed.mmr_size) || !await verifyConsistency2(hex2(prior.signed.root), hex2(signed.root), proof))
+        return failed2("parent_witness_earlier_checkpoint_not_a_prefix");
+      covered = prior.signed;
+      coveredCose = prior.cose;
+    }
+    const logId = block.log_id, size = block.size;
+    if (typeof logId !== "string" || logId !== covered.log_id || !uint(size) || size !== covered.mmr_size)
+      return failed2("parent_witness_leaf_does_not_name_this_checkpoint");
+    const path2 = block.path;
+    if (!Array.isArray(path2) || path2.length > PARENT_WITNESS_MAX_PATH || !path2.every(isHex64))
+      return failed2("parent_witness_path_malformed");
+    const salt = block.salt, index = block.index;
+    if (typeof salt !== "string" || salt === "" || !uint(index) || index >= 2 ** path2.length)
+      return failed2("parent_witness_leaf_malformed");
+    let leaf;
+    try {
+      leaf = await treeLeaf(logId, size, coveredCose, salt);
+    } catch {
+      return failed2("parent_witness_leaf_malformed");
+    }
+    const root = await treeRoot(leaf, index, path2.map(hex2));
+    const parent2 = block.parent;
+    const parentCheckpoint = await signedCheckpoint(parent2);
+    if (parentCheckpoint === "malformed")
+      return failed2("parent_witness_parent_checkpoint_malformed");
+    if (parentCheckpoint === "invalid")
+      return failed2("parent_witness_parent_checkpoint_signature_invalid");
+    const parentSigned = parentCheckpoint.signed;
+    if (parentSigned.key_id !== signed.key_id)
+      return failed2("parent_witness_parent_signer_differs");
+    const stated = parent2;
+    if (typeof stated.log_id !== "string" || stated.log_id !== parentSigned.log_id)
+      return failed2("parent_witness_parent_log_id_mismatch");
+    const entryIndex = stated.entry_index;
+    const inclusion = parseProof(stated.inclusion_proof);
+    if (!uint(entryIndex) || inclusion === void 0 || inclusion.size !== parentSigned.mmr_size || inclusion.leaf_index !== entryIndex || !await verifyProof(hex2(parentSigned.root), Array.from(root, (byte) => byte.toString(16).padStart(2, "0")).join(""), inclusion, entryIndex))
+      return failed2("parent_witness_entry_not_included");
+    const { status: status2, findings, receipts: receipts3 } = await verifyWitnessReceipts(stated.witnesses, parentSigned, parentCheckpoint.cose, directory);
+    const entries = leafCount(BigInt(covered.mmr_size)), of = leafCount(BigInt(signed.mmr_size));
+    return {
+      status: status2,
+      findings,
+      extent: status2 === "pass" && entries !== void 0 && of !== void 0 ? { entries: Number(entries), of: Number(of) } : null,
+      receipts: receipts3
+    };
+  }
+
   // node_modules/@action-state-group/agent-action-capsule/dist/bundle.js
   var Ed25519UnavailableError = class extends Error {
     constructor() {
@@ -9320,18 +9518,6 @@ ${body}
     status: "fail",
     findings
   });
-  var object8 = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof JsonNumber);
-  var integer = (value) => typeof value === "number" && Number.isSafeInteger(value);
-  var hex5 = (value) => Uint8Array.from(value.match(/../gu), (byte) => Number.parseInt(byte, 16));
-  function base64UrlDecode(value) {
-    const padded = `${value}${"=".repeat((4 - value.length % 4) % 4)}`;
-    const binary = atob(padded.replaceAll("-", "+").replaceAll("_", "/"));
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    if (encodeBase64Url(bytes) !== value)
-      throw new TypeError("non-canonical base64url");
-    return bytes;
-  }
-  var encodeBase64Url = (bytes) => btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
   function decodeFragment(fragment) {
     if (!/^[A-Za-z0-9_-]*$/u.test(fragment))
       throw new TypeError("fragment base64url");
@@ -9375,7 +9561,7 @@ ${body}
       const plain2 = await verifyPlain(bundle, options);
       return options.strict === true ? {
         plain: plain2,
-        strict: await strict(plain2, object8(bundle) ? bundle : void 0, options)
+        strict: await strict(plain2, object3(bundle) ? bundle : void 0, options)
       } : { plain: plain2 };
     } catch (error) {
       if (!(error instanceof RangeError))
@@ -9392,7 +9578,8 @@ ${body}
             witnesses: null,
             records: [],
             checkpointAuthenticated: false,
-            signerMatchesCheckpoint: null
+            signerMatchesCheckpoint: null,
+            parentWitness: null
           }
         }
       } : { plain: plain2 };
@@ -9412,11 +9599,11 @@ ${body}
     };
   }
   async function verifyPlain(bundle, options) {
-    if (!object8(bundle))
+    if (!object3(bundle))
       return malformedBundle();
-    let digest;
+    let digest2;
     try {
-      digest = await bundleDigest(bundle);
+      digest2 = await bundleDigest(bundle);
     } catch {
     }
     const collected = await collectRecords(bundle.records);
@@ -9432,7 +9619,7 @@ ${body}
         findings: ["no_records"]
       };
       [intervalCoverage, perRecordMembership] = [noRecords, noRecords];
-      const signed = (await strictCheckpoint(object8(bundle.checkpoint) ? bundle.checkpoint : {}, object8(bundle.completeness_certificate) ? bundle.completeness_certificate : {})).signed;
+      const signed = (await strictCheckpoint(object3(bundle.checkpoint) ? bundle.checkpoint : {}, object3(bundle.completeness_certificate) ? bundle.completeness_certificate : {})).signed;
       if (signed !== void 0)
         emptyHistoryCheckpoint = {
           keyId: signed.key_id,
@@ -9445,14 +9632,14 @@ ${body}
       [intervalCoverage, perRecordMembership] = await completeness(bundle, collected.records);
     }
     return {
-      ...digest === void 0 ? {} : { bundleDigest: digest },
+      ...digest2 === void 0 ? {} : { bundleDigest: digest2 },
       graphClosure,
       intervalCoverage,
       perRecordMembership,
       ...history === void 0 ? {} : { history },
       ...emptyHistoryCheckpoint === void 0 ? {} : { emptyHistoryCheckpoint },
       disclosures: await disclosures(Object.hasOwn(bundle, "disclosures") ? bundle.disclosures : {}, collected.records),
-      extensions: await extensions(bundle, digest !== void 0, options),
+      extensions: await extensions(bundle, digest2 !== void 0, options),
       countersignatures: Array.isArray(bundle.countersignatures) ? bundle.countersignatures.map((value) => ({
         value,
         status: "unverified"
@@ -9490,14 +9677,15 @@ ${body}
           witnesses: null,
           records: [],
           checkpointAuthenticated: false,
-          signerMatchesCheckpoint: null
+          signerMatchesCheckpoint: null,
+          parentWitness: null
         }
       };
     const seqs = membershipSeqs(bundle);
     const records = [];
     const seen = /* @__PURE__ */ new Set();
     for (const record of Array.isArray(bundle.records) ? bundle.records : []) {
-      if (!object8(record))
+      if (!object3(record))
         continue;
       const id = capsuleIdOf(record);
       const { verdict: verdict2, messages } = await verifyRecordSignature(record);
@@ -9523,11 +9711,11 @@ ${body}
       status: unclaimed.length ? "withheld" : "pass",
       findings: signatureFindings
     };
-    const stated = object8(bundle.checkpoint) ? bundle.checkpoint : {};
-    const checkpoint = await strictCheckpoint(stated, object8(bundle.completeness_certificate) ? bundle.completeness_certificate : {});
+    const stated = object3(bundle.checkpoint) ? bundle.checkpoint : {};
+    const checkpoint = await strictCheckpoint(stated, object3(bundle.completeness_certificate) ? bundle.completeness_certificate : {});
     const authenticated = checkpoint.signed !== void 0;
     let intervalCoverage = plain2.intervalCoverage, perRecordMembership = plain2.perRecordMembership;
-    if (object8(bundle.completeness) && bundle.completeness.selection === SELECTION_PRODUCER_SELECTED) {
+    if (object3(bundle.completeness) && bundle.completeness.selection === SELECTION_PRODUCER_SELECTED) {
       intervalCoverage = {
         status: "withheld",
         findings: [SELECTION_NOT_CHECKABLE]
@@ -9535,7 +9723,7 @@ ${body}
       if (checkpoint.signed !== void 0)
         perRecordMembership = await selectedMembership(bundle, checkpoint.signed.root, checkpoint.signed.mmr_size, checkpoint.signed.log_id);
       else if (checkpoint.claim.status === "fail")
-        perRecordMembership = object8(bundle.completeness_certificate) && "non_record_leaves" in bundle.completeness_certificate ? fail("completeness_certificate_invalid") : { status: "withheld", findings: ["checkpoint_unverified"] };
+        perRecordMembership = object3(bundle.completeness_certificate) && "non_record_leaves" in bundle.completeness_certificate ? fail("completeness_certificate_invalid") : { status: "withheld", findings: ["checkpoint_unverified"] };
     }
     if (!authenticated) {
       intervalCoverage = unanchored(intervalCoverage);
@@ -9550,21 +9738,29 @@ ${body}
       { name: "per_record_membership", ...perRecordMembership }
     ];
     if (Object.hasOwn(bundle, "disclosures")) {
-      const failed3 = plain2.disclosures.filter((d) => d.status !== DISCLOSURE_MATCH && d.status !== "withheld").map((d) => `${d.status}:${d.capsuleId}:${d.member}`);
+      const failed4 = plain2.disclosures.filter((d) => d.status !== DISCLOSURE_MATCH && d.status !== "withheld").map((d) => `${d.status}:${d.capsuleId}:${d.member}`);
       claims.push({
         name: "disclosures",
-        ...failed3.length ? fail(...failed3) : pass()
+        ...failed4.length ? fail(...failed4) : pass()
       });
     }
     const witnesses = await verifyWitnessReceipts(stated.witnesses, checkpoint.signed, checkpoint.cose, options.witnessDirectory);
+    const parentWitness = object3(bundle.extensions) && Object.hasOwn(bundle.extensions, PARENT_LOG_WITNESS_KIND) ? await verifyParentLogWitness(bundle.extensions[PARENT_LOG_WITNESS_KIND], checkpoint.signed, checkpoint.cose, options.witnessDirectory) : null;
     const checkpointKey = checkpoint.signed?.key_id;
-    const failed2 = claims.some((claim) => claim.status === "fail") || witnesses.status === "fail" || categoryCoverageFails(plain2.categoryCoverage);
+    const failed3 = claims.some((claim) => claim.status === "fail") || witnesses.status === "fail" || parentWitness?.status === "fail" || categoryCoverageFails(plain2.categoryCoverage);
     return {
       ...plain2,
+      ...parentWitness === null ? {} : {
+        extensions: plain2.extensions.map((extension) => extension.kind === PARENT_LOG_WITNESS_KIND ? {
+          kind: PARENT_LOG_WITNESS_KIND,
+          status: parentWitness.status,
+          integrityCovered: extension.integrityCovered
+        } : extension)
+      },
       intervalCoverage,
       perRecordMembership,
       strict: {
-        verdict: failed2 ? "INVALID" : claims.every((claim) => claim.status === "pass") ? "VALID" : "INCOMPLETE",
+        verdict: failed3 ? "INVALID" : claims.every((claim) => claim.status === "pass") ? "VALID" : "INCOMPLETE",
         kindOk: true,
         claims,
         witnesses: {
@@ -9580,7 +9776,8 @@ ${body}
             witnesses: Array.isArray(stated.witnesses) ? stated.witnesses : []
           }
         },
-        signerMatchesCheckpoint: checkpointKey && records.length ? records.every((r) => r.keyId === checkpointKey) : null
+        signerMatchesCheckpoint: checkpointKey && records.length ? records.every((r) => r.keyId === checkpointKey) : null,
+        parentWitness
       }
     };
   }
@@ -9591,9 +9788,9 @@ ${body}
     const findings = [];
     if (bundle.bundle_version !== "2" || bundle.bundle_kind !== "evidence-bundle/v2")
       findings.push("bundle_version_or_kind_invalid");
-    const complete = object8(bundle.completeness) ? bundle.completeness : {};
+    const complete = object3(bundle.completeness) ? bundle.completeness : {};
     const missing = complete.missing;
-    if (!object8(bundle.completeness) || complete.records_mode !== "complete" || complete.payloads_mode !== "none" || Object.hasOwn(complete, "missing") && (!Array.isArray(missing) || missing.length !== 0))
+    if (!object3(bundle.completeness) || complete.records_mode !== "complete" || complete.payloads_mode !== "none" || Object.hasOwn(complete, "missing") && (!Array.isArray(missing) || missing.length !== 0))
       findings.push("empty_history_completeness_invalid");
     for (const name of [
       "completeness_certificate",
@@ -9627,31 +9824,12 @@ ${body}
           findings: ["checkpoint_verifier_unavailable"]
         }
       };
-    let cose;
-    try {
-      if (typeof encoded !== "string" || !/^[A-Za-z0-9_-]*$/u.test(encoded))
-        throw new TypeError("checkpoint.cose is not unpadded base64url");
-      cose = base64UrlDecode(encoded);
-    } catch {
+    const cose = decodeCose(encoded);
+    if (cose === void 0)
       return { claim: fail("checkpoint_signature_malformed") };
-    }
-    let metadata;
-    try {
-      metadata = await checkpointMetadata2(cose);
-    } catch {
-      metadata = void 0;
-    }
-    if (metadata === void 0)
+    const signed = await signedCheckpointFields(cose, checkpointMetadata2);
+    if (signed === void 0)
       return { claim: fail("checkpoint_signature_invalid") };
-    const signed = {
-      log_id: metadata.logId,
-      mmr_size: Number(metadata.size),
-      root: metadata.root,
-      key_id: metadata.keyId,
-      timestamp: metadata.timestamp,
-      prev_size: Number(metadata.previousSize),
-      prev_root: metadata.previousRoot
-    };
     const findings = [
       ...SIGNED_CHECKPOINT_FIELDS.filter((name) => Object.hasOwn(stated, name) && !sameJson(stated[name], signed[name]) || // The certificate's log_id is a second stated copy of the signed one
       // (bundle -01 §Completeness): either copy differing is one mismatch.
@@ -9672,16 +9850,16 @@ ${body}
   }
   async function selectedMembership(bundle, rootHex, size, logId) {
     const certificate = bundle.completeness_certificate;
-    const members = object8(certificate) ? certificate.memberships : void 0;
-    if (!object8(certificate) || !object8(members) || Object.hasOwn(certificate, "non_record_leaves") || certificate.range_root !== rootHex || certificate.log_id !== logId || typeof logId !== "string" || !isHex64(rootHex) || !integer(size))
+    const members = object3(certificate) ? certificate.memberships : void 0;
+    if (!object3(certificate) || !object3(members) || Object.hasOwn(certificate, "non_record_leaves") || certificate.range_root !== rootHex || certificate.log_id !== logId || typeof logId !== "string" || !isHex64(rootHex) || !integer(size))
       return fail("completeness_certificate_invalid");
-    const root = hex5(rootHex);
-    const ids = (Array.isArray(bundle.records) ? bundle.records : []).filter(object8).map(capsuleIdOf);
+    const root = hex2(rootHex);
+    const ids = (Array.isArray(bundle.records) ? bundle.records : []).filter(object3).map(capsuleIdOf);
     const findings = [], seen = /* @__PURE__ */ new Set();
     for (const id of ids) {
       const member = Object.hasOwn(members, id) ? members[id] : void 0;
-      const coordinates = object8(member) ? member.log_coordinates : void 0;
-      if (!object8(coordinates)) {
+      const coordinates = object3(member) ? member.log_coordinates : void 0;
+      if (!object3(coordinates)) {
         findings.push(`membership_record_unbound:${id}`);
         continue;
       }
@@ -9691,7 +9869,7 @@ ${body}
         continue;
       }
       seen.add(seq);
-      const proof = object8(member) ? parseProof(member.inclusion_proof) : void 0;
+      const proof = object3(member) ? parseProof(member.inclusion_proof) : void 0;
       if (!proof || !isHex64(id) || proof.size !== size || proof.leaf_index !== index || !await verifyProof(root, id, proof, index))
         findings.push(`membership_proof_invalid:${id}`);
     }
@@ -9702,12 +9880,12 @@ ${body}
   }
   function membershipSeqs(bundle) {
     const certificate = bundle.completeness_certificate;
-    const members = object8(certificate) ? certificate.memberships : void 0;
+    const members = object3(certificate) ? certificate.memberships : void 0;
     const out = /* @__PURE__ */ new Map();
-    if (object8(members))
+    if (object3(members))
       for (const [id, member] of Object.entries(members)) {
-        const coordinates = object8(member) ? member.log_coordinates : void 0;
-        const seq = object8(coordinates) ? coordinates.seq : void 0;
+        const coordinates = object3(member) ? member.log_coordinates : void 0;
+        const seq = object3(coordinates) ? coordinates.seq : void 0;
         if (integer(seq))
           out.set(id, seq);
       }
@@ -9718,7 +9896,7 @@ ${body}
     if (!Array.isArray(raw))
       return { records, results, findings: ["records_malformed"] };
     for (const [index, record] of raw.entries()) {
-      if (!object8(record)) {
+      if (!object3(record)) {
         findings.push(`record_malformed:${index}`);
         continue;
       }
@@ -9749,7 +9927,7 @@ ${body}
     if (!isHex64(root) || !records.has(root))
       return fail(...findings, "root_not_supplied_with_matching_identity");
     const complete = bundle.completeness;
-    if (!object8(complete))
+    if (!object3(complete))
       return fail(...findings, "completeness_malformed");
     const depth = complete.closure_depth ?? 2;
     if (!integer(depth) || depth < 0)
@@ -9783,17 +9961,17 @@ ${body}
   }
   function citations(record) {
     const targets = [], chain = record.chain;
-    if (object8(chain) && typeof chain.parent_capsule_id === "string")
+    if (object3(chain) && typeof chain.parent_capsule_id === "string")
       targets.push(chain.parent_capsule_id);
     if (Array.isArray(record.references)) {
       for (const reference of record.references)
-        if (object8(reference) && reference.type === "agent-action-capsule" && reference.digest_alg === "SHA-256" && typeof reference.digest === "string")
+        if (object3(reference) && reference.type === "agent-action-capsule" && reference.digest_alg === "SHA-256" && typeof reference.digest === "string")
           targets.push(reference.digest);
     }
     return targets;
   }
   async function completeness(bundle, records) {
-    if (!object8(bundle.completeness_certificate) || !object8(bundle.checkpoint)) {
+    if (!object3(bundle.completeness_certificate) || !object3(bundle.checkpoint)) {
       const absent = {
         status: "withheld",
         findings: ["completeness_evidence_absent"]
@@ -9801,7 +9979,7 @@ ${body}
       return [absent, absent];
     }
     const certificate = bundle.completeness_certificate;
-    if (object8(bundle.completeness) && Object.hasOwn(bundle.completeness, "selection")) {
+    if (object3(bundle.completeness) && Object.hasOwn(bundle.completeness, "selection")) {
       if (bundle.completeness.selection === SELECTION_PRODUCER_SELECTED)
         return plainSelected(bundle, bundle.checkpoint);
       const unsupported = {
@@ -9824,10 +10002,10 @@ ${body}
         fail("checkpoint_authentication_invalid"),
         fail("checkpoint_authentication_invalid")
       ];
-    const { findings, failed: failed2 } = await memberships(parsed.root, parsed.logId, parsed.firstSeq, parsed.lastSeq, certificate, records, bundle.completeness, parsed.rangeProof.size);
+    const { findings, failed: failed3 } = await memberships(parsed.root, parsed.logId, parsed.firstSeq, parsed.lastSeq, certificate, records, bundle.completeness, parsed.rangeProof.size);
     const qualifier = checkpointStatus === "verified" ? [] : ["checkpoint_unverified"];
     const interval = { status: "pass", findings: qualifier };
-    if (failed2)
+    if (failed3)
       return [interval, fail(...findings)];
     if (findings.length)
       return [
@@ -9844,21 +10022,13 @@ ${body}
     const membership = await selectedMembership(bundle, checkpoint.root, checkpoint.mmr_size, checkpoint.log_id);
     if (membership.status !== "pass")
       return [interval, membership];
-    const status2 = await authenticateCheckpoint(checkpoint, checkpoint.log_id, hex5(checkpoint.root), checkpoint.mmr_size);
+    const status2 = await authenticateCheckpoint(checkpoint, checkpoint.log_id, hex2(checkpoint.root), checkpoint.mmr_size);
     if (status2 === "invalid")
       return [interval, fail("checkpoint_authentication_invalid")];
     return [
       interval,
       status2 === "verified" ? pass() : { status: "pass", findings: ["checkpoint_unverified"] }
     ];
-  }
-  async function loadCheckpointMetadata() {
-    try {
-      const module = await Promise.resolve().then(() => (init_browser(), browser_exports));
-      return typeof module.checkpointMetadata === "function" ? module.checkpointMetadata : void 0;
-    } catch {
-      return void 0;
-    }
   }
   async function authenticateCheckpoint(checkpoint, logId, root, size) {
     if (!Object.hasOwn(checkpoint, "cose"))
@@ -9884,7 +10054,7 @@ ${body}
       return void 0;
     const { fromSeq, toSeq, size, fromIndex, toIndex, witness } = range;
     return {
-      root: hex5(rootHex),
+      root: hex2(rootHex),
       logId,
       firstSeq,
       lastSeq,
@@ -9908,7 +10078,7 @@ ${body}
     };
   }
   function parseRangeProof(raw) {
-    const range = object8(raw) ? raw : void 0, fromSeq = range?.from_seq, toSeq = range?.to_seq, size = range?.size, fromIndex = range?.from_index, toIndex = range?.to_index, witness = range?.witness;
+    const range = object3(raw) ? raw : void 0, fromSeq = range?.from_seq, toSeq = range?.to_seq, size = range?.size, fromIndex = range?.from_index, toIndex = range?.to_index, witness = range?.witness;
     if (!integer(fromSeq) || !integer(toSeq) || !integer(size) || !integer(fromIndex) || !integer(toIndex) || fromSeq < 1 || toSeq < fromSeq || size < 0 || fromIndex < 0 || toIndex < fromIndex || !Array.isArray(witness) || !witness.every(isHex64))
       return void 0;
     return { fromSeq, toSeq, size, fromIndex, toIndex, witness };
@@ -9918,19 +10088,19 @@ ${body}
     const raw = certificate.body_digests;
     if (leaves === void 0 || leaves !== BigInt(last) || proof.fromSeq !== first || proof.toSeq !== last || proof.fromIndex !== first - 1 || proof.toIndex !== last - 1 || !Array.isArray(raw) || raw.length !== last - first + 1 || !raw.every(isHex64))
       return false;
-    return verifyRange2(root, BigInt(proof.size), BigInt(proof.fromIndex), BigInt(proof.toIndex), raw.map(hex5), proof.proof);
+    return verifyRange2(root, BigInt(proof.size), BigInt(proof.fromIndex), BigInt(proof.toIndex), raw.map(hex2), proof.proof);
   }
   async function memberships(root, logId, first, last, certificate, records, completeness2, checkpointSize) {
     const raw = certificate.memberships;
-    if (!object8(raw))
+    if (!object3(raw))
       return { findings: ["memberships_absent"], failed: true };
     const bySequence = /* @__PURE__ */ new Set(), boundRecords = /* @__PURE__ */ new Set(), findings = [];
     for (const [id, member] of Object.entries(raw)) {
-      if (!isHex64(id) || !records.has(id) || !object8(member)) {
+      if (!isHex64(id) || !records.has(id) || !object3(member)) {
         findings.push(`membership_record_unknown:${id}`);
         continue;
       }
-      const coordinates = object8(member.log_coordinates) ? member.log_coordinates : void 0;
+      const coordinates = object3(member.log_coordinates) ? member.log_coordinates : void 0;
       if (!coordinates) {
         findings.push(`membership_coordinates_missing:${id}`);
         continue;
@@ -9960,7 +10130,7 @@ ${body}
     for (let seq = first; seq <= last; seq += 1)
       if (!bySequence.has(seq) && !leafSeqs.has(seq))
         findings.push(`membership_record_missing:${seq}`);
-    const declaredMissing = object8(completeness2) && Array.isArray(completeness2.missing) ? new Set(completeness2.missing.filter(isHex64)) : /* @__PURE__ */ new Set();
+    const declaredMissing = object3(completeness2) && Array.isArray(completeness2.missing) ? new Set(completeness2.missing.filter(isHex64)) : /* @__PURE__ */ new Set();
     for (const id of records.keys())
       if (!boundRecords.has(id) && !declaredMissing.has(id))
         findings.push(`membership_record_unbound:${id}`);
@@ -9977,8 +10147,8 @@ ${body}
   function statedSeqs(members) {
     const out = /* @__PURE__ */ new Set();
     for (const member of Object.values(members)) {
-      const coordinates = object8(member) ? member.log_coordinates : void 0;
-      const seq = object8(coordinates) ? coordinates.seq : void 0;
+      const coordinates = object3(member) ? member.log_coordinates : void 0;
+      const seq = object3(coordinates) ? coordinates.seq : void 0;
       if (integer(seq))
         out.add(seq);
     }
@@ -9991,7 +10161,7 @@ ${body}
     const digests = Array.isArray(bodyDigests) ? bodyDigests : [];
     const findings = [];
     for (const [index, element7] of raw.entries()) {
-      if (!object8(element7)) {
+      if (!object3(element7)) {
         findings.push(`non_record_leaf_element_invalid:${index}`);
         continue;
       }
@@ -10002,8 +10172,8 @@ ${body}
       }
       accounted.add(seq);
       const content = element7.content;
-      const recordType = object8(content) ? content.record_type : void 0;
-      if (!object8(content) || typeof recordType !== "string") {
+      const recordType = object3(content) ? content.record_type : void 0;
+      if (!object3(content) || typeof recordType !== "string") {
         findings.push(`non_record_leaf_malformed:${seq}`);
         continue;
       }
@@ -10025,45 +10195,23 @@ ${body}
   async function paddingLeaf(content) {
     return jsonDigest(Object.fromEntries(Object.entries(content).filter(([name]) => name !== "capsule_id")));
   }
-  function parseProof(raw) {
-    if (!object8(raw) || raw.v !== 1 || raw.kind !== "inclusion" || !integer(raw.size) || !integer(raw.leaf_index) || raw.size < 0 || raw.leaf_index < 0)
-      return void 0;
-    const hashes = (value) => Array.isArray(value) && value.every(isHex64) ? value : void 0;
-    const witness = hashes(raw.witness), left = hashes(raw.peaks_left), right = hashes(raw.peaks_right);
-    return witness && left && right ? {
-      v: 1,
-      kind: "inclusion",
-      size: raw.size,
-      leaf_index: raw.leaf_index,
-      witness,
-      peaks_left: left,
-      peaks_right: right
-    } : void 0;
-  }
-  async function verifyProof(root, identity2, proof, leafIndex = proof.leaf_index) {
-    const flattened = proof.witness.map(hex5);
-    if (proof.peaks_right.length)
-      flattened.push(await rootFromPeaks2(proof.peaks_right.map(hex5)));
-    flattened.push(...proof.peaks_left.map(hex5).toReversed());
-    return verifyHexInclusion2(root, BigInt(proof.size), BigInt(leafIndex), identity2, flattened);
-  }
   async function disclosures(raw, records) {
     if (raw === void 0)
       raw = {};
-    if (!object8(raw))
+    if (!object3(raw))
       return [{ capsuleId: "", member: "", status: DISCLOSURE_MISMATCH }];
     const findings = [];
     for (const [id, record] of [...records.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-      if (Object.hasOwn(raw, id) && !object8(raw[id]))
+      if (Object.hasOwn(raw, id) && !object3(raw[id]))
         continue;
-      const supplied = object8(raw[id]) ? raw[id] : {};
+      const supplied = object3(raw[id]) ? raw[id] : {};
       for (const [member, path2] of Object.entries(disclosureEligibleFields))
         if (!Object.hasOwn(supplied, member) && typeof resolveDisclosurePath(record, path2) === "string")
           findings.push({ capsuleId: id, member, status: "withheld" });
     }
     for (const id of Object.keys(raw).sort()) {
       const members = raw[id], record = records.get(id);
-      if (!object8(members) || !record) {
+      if (!object3(members) || !record) {
         findings.push({ capsuleId: id, member: "", status: DISCLOSURE_MISMATCH });
         continue;
       }
@@ -10099,7 +10247,7 @@ ${body}
   }
   async function extensions(bundle, covered, options) {
     const raw = bundle.extensions;
-    if (!object8(raw))
+    if (!object3(raw))
       return [];
     const results = [];
     for (const kind of Object.keys(raw).sort()) {
@@ -10252,7 +10400,7 @@ ${body}
     return result3.intervalCoverage.status === "withheld" && result3.intervalCoverage.findings.includes(SELECTION_NOT_CHECKABLE);
   }
   function isVerifiedBundleContext(value) {
-    return object8(value) && contexts.has(value);
+    return object3(value) && contexts.has(value);
   }
   var WITHHELD = Object.freeze({ state: "withheld" });
   var MISMATCHED = Object.freeze({
@@ -10264,7 +10412,8 @@ ${body}
       throw new Sha256UnavailableError();
     const ed255192 = await probeEd25519();
     const { plain: plain2, strict: strict2 } = await verifyPlainAndStrict(owned, {
-      strict: ed255192
+      strict: ed255192,
+      ...options.witnessDirectory === void 0 ? {} : { witnessDirectory: deepFreeze(ownedCopy(options.witnessDirectory)) }
     });
     return contextFrom(owned, readSelection(plain2, strict2), strict2?.strict, options.countersigners === void 0 ? void 0 : deepFreeze(ownedCopy(options.countersigners)));
   }
@@ -10280,20 +10429,20 @@ ${body}
       ({ records, recordIndex, resolvedDisclosures } = reuse);
     } else {
       const index = /* @__PURE__ */ new Map();
-      if (object8(bundle) && Array.isArray(bundle.records)) {
+      if (object3(bundle) && Array.isArray(bundle.records)) {
         for (const record of bundle.records)
-          if (object8(record) && typeof record.capsule_id === "string" && !index.has(record.capsule_id) && verification.capsuleResults[record.capsule_id]?.ok === true && verification.capsuleResults[record.capsule_id]?.capsuleId === record.capsule_id)
+          if (object3(record) && typeof record.capsule_id === "string" && !index.has(record.capsule_id) && verification.capsuleResults[record.capsule_id]?.ok === true && verification.capsuleResults[record.capsule_id]?.capsuleId === record.capsule_id)
             index.set(record.capsule_id, record);
       }
       records = Object.freeze([...index.values()]);
       recordIndex = new ReadonlyMapView(index);
       resolvedDisclosures = resolveFromVerification(bundle, verification.disclosures, index);
     }
-    const certificate = object8(bundle) ? bundle.completeness_certificate : void 0;
+    const certificate = object3(bundle) ? bundle.completeness_certificate : void 0;
     deepFreeze(verification);
     const context = deepFreeze({
       bundle,
-      root: object8(bundle) && typeof bundle.root === "string" ? bundle.root : void 0,
+      root: object3(bundle) && typeof bundle.root === "string" ? bundle.root : void 0,
       verification,
       strict: strict2,
       resolvedDisclosures,
@@ -10306,7 +10455,7 @@ ${body}
         graphClosure: verification.graphClosure,
         intervalCoverage: verification.intervalCoverage,
         perRecordMembership: verification.perRecordMembership,
-        memberships: object8(certificate) && object8(certificate.memberships) ? certificate.memberships : {}
+        memberships: object3(certificate) && object3(certificate.memberships) ? certificate.memberships : {}
       }
     });
     contexts.add(context);
@@ -10316,13 +10465,13 @@ ${body}
     const status2 = /* @__PURE__ */ new Map();
     for (const result3 of results)
       status2.set(`${result3.capsuleId}\0${result3.member}`, result3.status);
-    const overlay = object8(bundle) && object8(bundle.disclosures) ? bundle.disclosures : {};
+    const overlay = object3(bundle) && object3(bundle.disclosures) ? bundle.disclosures : {};
     const resolved = /* @__PURE__ */ new Map();
     const one = (id, field) => {
       switch (status2.get(`${id}\0${field}`)) {
         case DISCLOSURE_MATCH: {
           const entry = overlay[id];
-          return object8(entry) && Object.hasOwn(entry, field) ? Object.freeze({ state: "disclosed", payload: entry[field] }) : MISMATCHED;
+          return object3(entry) && Object.hasOwn(entry, field) ? Object.freeze({ state: "disclosed", payload: entry[field] }) : MISMATCHED;
         }
         case DISCLOSURE_MISMATCH:
         case DISCLOSURE_NO_COMMITTED_DIGEST:
@@ -10373,10 +10522,10 @@ ${body}
     if (!isObject2(value) || !hasExactly(value, ["type", "digest_alg", "digest", "citation_purpose"]))
       return void 0;
     const type = nonEmpty(value.type);
-    const digest = asString(value.digest);
-    if (type === void 0 || value.digest_alg !== "SHA-256" || digest === void 0 || !HEX_DIGEST.test(digest) || value.citation_purpose !== purpose)
+    const digest2 = asString(value.digest);
+    if (type === void 0 || value.digest_alg !== "SHA-256" || digest2 === void 0 || !HEX_DIGEST.test(digest2) || value.citation_purpose !== purpose)
       return void 0;
-    return { type, digest };
+    return { type, digest: digest2 };
   };
   var readClause = (value) => {
     if (!isObject2(value) || !hasExactly(value, ["clause_ref", "agreement", "drift"]))
@@ -11073,14 +11222,14 @@ ${body}
     return findings;
   }
   var countOf = (value) => nonNegativeInteger(value) ? value : 0;
-  function recomputeCounts(document2, failed2 = /* @__PURE__ */ new Set()) {
+  function recomputeCounts(document2, failed3 = /* @__PURE__ */ new Set()) {
     const claims = document2.claims;
     const aggregate = document2.aggregate;
     const coverage = aggregate.coverage;
     const buckets = aggregate.buckets;
     const later = laterClaimIds(document2);
     const inForce = claims.filter((claim) => !later.has(claim.id));
-    const standing = inForce.filter((claim) => !failed2.has(claim.id));
+    const standing = inForce.filter((claim) => !failed3.has(claim.id));
     const fourth = Object.hasOwn(buckets, "out_of_scope");
     const verdictCount = (verdict2) => standing.filter((claim) => claim.verdict === verdict2).length;
     const stated = {
@@ -11127,7 +11276,7 @@ ${body}
         ...fourth ? { outOfScope: recomputed["buckets.out_of_scope"] } : {},
         // A later claim that failed verification is still a failure: applicability
         // takes a claim out of the verdict counts, never out of verification.
-        failed: claims.filter((claim) => failed2.has(claim.id)).length
+        failed: claims.filter((claim) => failed3.has(claim.id)).length
       },
       mismatches
     };
@@ -11271,19 +11420,19 @@ ${body}
       return void 0;
     }
   }
-  async function bookPayload(payloads, digest) {
-    if (!Object.hasOwn(payloads, digest))
+  async function bookPayload(payloads, digest2) {
+    if (!Object.hasOwn(payloads, digest2))
       return "absent";
-    const encoded = asString2(payloads[digest]);
+    const encoded = asString2(payloads[digest2]);
     if (encoded === void 0)
       return "failed";
     const bytes = base64UrlBytes(encoded);
     if (bytes === void 0)
       return "failed";
-    return await sha256Hex(bytes) === digest ? bytes : "failed";
+    return await sha256Hex(bytes) === digest2 ? bytes : "failed";
   }
-  async function verifiedBookPayload(payloads, digest) {
-    const payload = await bookPayload(payloads, digest);
+  async function verifiedBookPayload(payloads, digest2) {
+    const payload = await bookPayload(payloads, digest2);
     return typeof payload === "string" ? void 0 : payload;
   }
   async function carriedCapsuleId(header, payloads) {
@@ -11346,13 +11495,13 @@ ${body}
       return { state: "withheld" };
     let disclosed;
     let found = false;
-    let failed2 = false;
-    for (const digest of commitments.slice(1)) {
-      const bytes = await bookPayload(payloads, digest);
+    let failed3 = false;
+    for (const digest2 of commitments.slice(1)) {
+      const bytes = await bookPayload(payloads, digest2);
       if (bytes === "absent")
         continue;
       if (bytes === "failed") {
-        failed2 = true;
+        failed3 = true;
         continue;
       }
       let value;
@@ -11372,10 +11521,10 @@ ${body}
           disclosed = value;
         found = true;
       } else {
-        failed2 = true;
+        failed3 = true;
       }
     }
-    if (failed2)
+    if (failed3)
       return { state: "disclosure_mismatch" };
     if (found)
       return { state: "disclosed", payload: disclosed };
@@ -11482,12 +11631,12 @@ ${body}
     for (const raw of document2.claims) {
       const evidence = [];
       for (const ref of raw.evidence) {
-        const digest = ref.digest;
-        const carrier = recordsById.has(digest) ? void 0 : await bookCarrier(digest);
-        const resolved = recordsById.has(digest) || carrier !== void 0;
-        evidence.push({ digest, resolved });
+        const digest2 = ref.digest;
+        const carrier = recordsById.has(digest2) ? void 0 : await bookCarrier(digest2);
+        const resolved = recordsById.has(digest2) || carrier !== void 0;
+        evidence.push({ digest: digest2, resolved });
         if (resolved)
-          await resolveRecord(digest, carrier);
+          await resolveRecord(digest2, carrier);
       }
       const missing = evidence.filter((ref) => !ref.resolved).map((ref) => ref.digest);
       const type = Object.hasOwn(raw, "type") ? typeof raw.type === "string" ? raw.type : JSON.stringify(raw.type) : REQUIREMENT_CLAIM;
@@ -11541,10 +11690,10 @@ ${body}
         const outside = [
           ["close_ref", close.closeRef],
           ["peer_close_ref", close.peerCloseRef]
-        ].filter(([, digest]) => digest !== void 0 && !inEvidence.has(digest));
+        ].filter(([, digest2]) => digest2 !== void 0 && !inEvidence.has(digest2));
         if (outside.length > 0) {
           failedOn = "evidence";
-          failure = outside.map(([field, digest]) => `${field} ${digest} is not among the claim's evidence[] digests`).join("; ");
+          failure = outside.map(([field, digest2]) => `${field} ${digest2} is not among the claim's evidence[] digests`).join("; ");
         } else if (close.stateMismatch) {
           failedOn = "close_state";
           const why = close.ignored.length === 0 ? "" : ` (ignored ${close.ignored.map((link) => `${link.type} from ${link.recordId}: ${link.reason}`).join("; ")})`;
@@ -11699,11 +11848,11 @@ ${body}
     return claim.verdict;
   }
   function reportPayload(records, claim) {
-    const digest = claim.evidence[0]?.digest;
-    return digest === void 0 ? void 0 : citedPayload(records, digest);
+    const digest2 = claim.evidence[0]?.digest;
+    return digest2 === void 0 ? void 0 : citedPayload(records, digest2);
   }
-  function citedPayload(records, digest) {
-    const record = records.get(digest);
+  function citedPayload(records, digest2) {
+    const record = records.get(digest2);
     if (record === void 0)
       return void 0;
     const input = record.carriedInput ?? record.agentInput;
@@ -11727,13 +11876,13 @@ ${body}
     }
     if (reportState(records, claim) !== "withheld")
       return void 0;
-    const digest = claim.evidence[0]?.digest;
-    const timestamp = digest === void 0 ? void 0 : records.get(digest)?.stated?.timestamp;
+    const digest2 = claim.evidence[0]?.digest;
+    const timestamp = digest2 === void 0 ? void 0 : records.get(digest2)?.stated?.timestamp;
     return timestamp === void 0 ? void 0 : STATED_DAY.exec(timestamp)?.[1];
   }
   function reportState(records, claim) {
-    const digest = claim.evidence[0]?.digest;
-    const record = digest === void 0 ? void 0 : records.get(digest);
+    const digest2 = claim.evidence[0]?.digest;
+    const record = digest2 === void 0 ? void 0 : records.get(digest2);
     if (record === void 0)
       return "not_carried";
     const input = record.carriedInput ?? record.agentInput;
@@ -12207,12 +12356,12 @@ ${body}
       const summaries = [];
       const ratings = [];
       let ratingsNotMatching = 0;
-      for (const digest of new Set(claim.evidence.map((ref) => ref.digest))) {
-        const payload = citedPayload(result3.records, digest);
+      for (const digest2 of new Set(claim.evidence.map((ref) => ref.digest))) {
+        const payload = citedPayload(result3.records, digest2);
         if (payload === void 0)
           continue;
         if (payload.record_version === CALIBRATION_SUMMARY_V1)
-          summaries.push({ digest, payload });
+          summaries.push({ digest: digest2, payload });
         else if (payload.record_version === HUMAN_RATING_V1) {
           const rating = readHumanRating(payload);
           if (rating === void 0) {
@@ -12221,7 +12370,7 @@ ${body}
           }
           const judged = judgedCase(result3, rating.ratedCase.digest);
           ratings.push({
-            digest,
+            digest: digest2,
             rating,
             ...judged === void 0 ? {} : {
               judged,
@@ -12285,10 +12434,10 @@ ${body}
     for (const reading of readings2) {
       if (reading.state !== "read")
         continue;
-      for (const { digest, rating, judged } of reading.ratings) {
-        if (judged === void 0 || seen.has(digest))
+      for (const { digest: digest2, rating, judged } of reading.ratings) {
+        if (judged === void 0 || seen.has(digest2))
           continue;
-        seen.add(digest);
+        seen.add(digest2);
         if (judged.verdict === "met" && rating.label === "not_met")
           held2 += 1;
         else if (judged.verdict === "not_met" && rating.label === "met")
@@ -12525,8 +12674,8 @@ ${body}
         continue;
       const reason = asString2(raw.reason);
       const citations2 = [];
-      for (const digest of rowCitationDigests(raw)) {
-        const record = recordsById.get(digest);
+      for (const digest2 of rowCitationDigests(raw)) {
+        const record = recordsById.get(digest2);
         if (record === void 0)
           continue;
         const resolved = disclosureOf(context, record.capsule_id, "agent_input");
@@ -12666,6 +12815,7 @@ ${body}
     "cited-signers",
     "producer-signatures",
     "witness-receipts",
+    "parent-log-witness",
     "countersignature-types",
     "countersignature-receipts"
   ]);
@@ -12752,9 +12902,9 @@ ${body}
         if (notChecked2.length > 0)
           sentences.push(`This page did not check ${notChecked2.join("; ")}.`);
       } else if (verdict2 === "invalid") {
-        const failed2 = strict2.claims.filter((entry) => entry.status === "fail");
-        const unboundOnly = coverage.uncheckpointed > 0 && failed2.length === 1 && failed2[0].name === "per_record_membership" && strict2.witnesses?.status !== "fail";
-        const named = failed2.map((entry) => {
+        const failed3 = strict2.claims.filter((entry) => entry.status === "fail");
+        const unboundOnly = coverage.uncheckpointed > 0 && failed3.length === 1 && failed3[0].name === "per_record_membership" && strict2.witnesses?.status !== "fail" && strict2.parentWitness?.status !== "fail";
+        const named = failed3.map((entry) => {
           const invalid2 = entry.findings.filter((f) => f.startsWith("producer_signature_invalid:")).length;
           if (entry.name === "signatures" && invalid2 > 0)
             return coverage.total === 1 ? "the record's producer signature does not verify (producer_signature_invalid)" : `${invalid2} of ${coverage.total} records' producer signatures do not verify (producer_signature_invalid)`;
@@ -12783,6 +12933,11 @@ ${body}
             named.push(`${receipts3(malformed, "are malformed", "is malformed")} (witness_receipt_malformed)`);
           if (invalid2 > 0)
             named.push(`${receipts3(invalid2, "do not verify", "does not verify")} (witness_receipt_invalid)`);
+        }
+        const parent2 = strict2.parentWitness;
+        if (parent2?.status === "fail") {
+          const links = parent2.findings.filter((f) => f.startsWith("parent_witness_"));
+          named.push(links.length > 0 ? `the chain to the parent log's witnessed checkpoint does not hold (${findingNames(links).join(", ")})` : `the witness receipt over the parent log's checkpoint is malformed or does not verify (${findingNames(parent2.findings).join(", ")})`);
         }
         sentences.push(unboundOnly ? uncheckpointed : `What failed: ${named.join("; ")}.`);
       }
@@ -12847,6 +13002,7 @@ ${body}
     "cited-signers": "The producer signature on the records this page cites as signers, each marked beside it as verified or not. Not the signature on every record.",
     "producer-signatures": "The producer signature on every record.",
     "witness-receipts": "Each witness receipt this file carries.",
+    "parent-log-witness": "The chain from this file's log to another log whose checkpoint a witness signed, and that witness's receipt.",
     "countersignature-types": "A countersignature of a type this page does not check.",
     "countersignature-receipts": "The receipt carried with a countersignature."
   });
@@ -12863,6 +13019,7 @@ ${body}
     "cited-signers": "cited producer signatures",
     "producer-signatures": "producer signatures",
     "witness-receipts": "witness receipts",
+    "parent-log-witness": "parent-log witness (parent-log-witness/v1)",
     "countersignature-types": "countersignature types",
     "countersignature-receipts": "countersignature receipts"
   });
@@ -12967,18 +13124,25 @@ ${body}
         ran("witness-receipts", true);
       else if (witnesses !== null && witnesses !== void 0 && !witnesses.findings.includes("witness_receipt_absent"))
         outcome.set("witness-receipts", "notChecked");
+      const parent2 = strict2.parentWitness;
+      if (parent2?.status === "fail")
+        ran("parent-log-witness", false);
+      else if (parent2?.status === "pass")
+        ran("parent-log-witness", true);
+      else if (parent2 !== null && parent2 !== void 0)
+        outcome.set("parent-log-witness", "notChecked");
     }
     const pick = (which) => VERIFICATION_CHECK_IDS.filter((id) => outcome.get(id) === which);
-    const failed2 = pick("failed");
+    const failed3 = pick("failed");
     return {
       page: pick("page"),
-      failed: failed2,
+      failed: failed3,
       notChecked: pick("notChecked"),
       // The note says the range and membership checks passed on a checkpoint
       // the producer asserted: true only when the page's own checks
       // (bundleVerified) pass, no check on this page failed and the
       // checkpoint line is in the not-checked list.
-      passedWithoutCheckpoint: passedWithoutCheckpoint && outcome.get("checkpoint-signature") === "notChecked" && failed2.length === 0 && bundleVerified(verified)
+      passedWithoutCheckpoint: passedWithoutCheckpoint && outcome.get("checkpoint-signature") === "notChecked" && failed3.length === 0 && bundleVerified(verified)
     };
   }
   var VERIFY_INDEPENDENTLY_LINE = "verify independently at verify.agentactioncapsule.org or with a full verifier";
@@ -12995,8 +13159,8 @@ ${body}
     const results = Object.values(capsuleResults);
     if (results.length === 0)
       return "not_checked";
-    const failed2 = results.some((result3) => result3.findings.some((finding) => finding.severity === "error" && finding.check !== void 0 && checks.includes(finding.check)));
-    return failed2 ? "fail" : "pass";
+    const failed3 = results.some((result3) => result3.findings.some((finding) => finding.severity === "error" && finding.check !== void 0 && checks.includes(finding.check)));
+    return failed3 ? "fail" : "pass";
   }
   function receiptGradeWord(value) {
     return value === "mmr-verified" ? "consistency-verified" : value === "countersigned-observed" ? "existence-and-time" : void 0;
@@ -13011,6 +13175,21 @@ ${body}
       const witness = record.witness, time = record.time, grade = receiptGradeWord(record.grade);
       return typeof witness === "string" && typeof time === "string" && grade !== void 0 ? [{ witness, grade, time }] : [];
     });
+  }
+  function parentWitnessEntry(strict2) {
+    const parent2 = strict2?.parentWitness;
+    if (parent2?.status !== "pass" || parent2.extent === null)
+      return void 0;
+    return {
+      entries: parent2.extent.entries,
+      of: parent2.extent.of,
+      whole: parent2.extent.entries === parent2.extent.of,
+      receipts: parent2.receipts.filter((r) => r.status === "pass").map((r) => ({
+        witness: r.tsUrl,
+        keyId: r.keyId,
+        registrationTime: r.registrationTime
+      }))
+    };
   }
   function completenessStatement(raw) {
     const record = object9(raw);
@@ -13042,12 +13221,14 @@ ${body}
       summarize("Per-record membership", verified.perRecordMembership.status)
     ];
     const coverage = coverageStatement(verified);
+    const parentWitness = parentWitnessEntry(checkInputs.strict);
     return {
       ...verified.bundleDigest === void 0 ? {} : { bundleDigest: verified.bundleDigest },
       ...typeof checkpoint?.root === "string" ? { checkpointRoot: checkpoint.root } : {},
       ...typeof checkpoint?.mmr_size === "number" ? { checkpointSize: checkpoint.mmr_size } : {},
       receipts: receipts(top.receipts),
-      selfWitnessed: checkpoint !== void 0 && receipts(top.receipts).length === 0,
+      selfWitnessed: checkpoint !== void 0 && receipts(top.receipts).length === 0 && checkInputs.strict?.witnesses?.status !== "pass" && parentWitness === void 0,
+      ...parentWitness === void 0 ? {} : { parentWitness },
       records: recordCoverage(top, verified, coverage),
       uncheckpointedCount: unboundRecordIds(verified).length,
       coverage,
@@ -14442,8 +14623,8 @@ ${body}
     const consider = async (value) => {
       if (!isObj3(value) || value.dataset_version === void 0 && !(isObj3(value.header) && value.header.ir_version !== void 0))
         return;
-      const digest = await digestOf(value);
-      if (digest !== void 0) found.set(digest, value);
+      const digest2 = await digestOf(value);
+      if (digest2 !== void 0) found.set(digest2, value);
     };
     for (const record of context.records) {
       for (const member of ["agent_input", "agent_output"]) {
@@ -14462,15 +14643,15 @@ ${body}
     for (const record of context.records) {
       const inline = record[RECORD_HEADER_MEMBER];
       if (isObj3(inline)) {
-        const digest2 = await digestOf(inline);
-        if (digest2 !== void 0)
-          found.set(digest2, { header: inline, recordId: record.capsule_id });
+        const digest3 = await digestOf(inline);
+        if (digest3 !== void 0)
+          found.set(digest3, { header: inline, recordId: record.capsule_id });
         continue;
       }
-      const digest = committedDigest(record, "agent_input");
+      const digest2 = committedDigest(record, "agent_input");
       const disclosed = disclosureOf(context, record.capsule_id, "agent_input");
-      if (digest !== void 0 && disclosed.state === "disclosed" && isObj3(disclosed.payload))
-        found.set(digest, {
+      if (digest2 !== void 0 && disclosed.state === "disclosed" && isObj3(disclosed.payload))
+        found.set(digest2, {
           header: disclosed.payload,
           recordId: record.capsule_id
         });
@@ -14907,19 +15088,19 @@ ${s} [data-src="producer"]:not(.cv-src){font-style:italic}
     const body = el2("div", "cv-ev-body");
     body.append(el2("p", "cv-ev-k", w.t("evidence.records")));
     const list2 = el2("ul", "cv-ev-list");
-    for (const digest of cited) {
+    for (const digest2 of cited) {
       const item = element2("li");
-      item.dataset.cited = digest;
+      item.dataset.cited = digest2;
       const link = element2("a");
-      link.setAttribute("href", `#${recordAddress(digest)}`);
-      link.append(element2("code", digest));
+      link.setAttribute("href", `#${recordAddress(digest2)}`);
+      link.append(element2("code", digest2));
       item.append(link);
       list2.append(item);
     }
-    for (const digest of missing) {
+    for (const digest2 of missing) {
       const item = element2("li");
-      item.dataset.missing = digest;
-      item.append(element2("code", digest), ` ${w.t("evidence.not-in-bundle")}`);
+      item.dataset.missing = digest2;
+      item.append(element2("code", digest2), ` ${w.t("evidence.not-in-bundle")}`);
       list2.append(item);
     }
     if (citeNothing > 0) {
@@ -16384,9 +16565,9 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
     return claim.verdict;
   }
   function reportPayload2(records, claim) {
-    const digest = claim.evidence[0]?.digest;
-    if (digest === void 0) return void 0;
-    const record = records.get(digest);
+    const digest2 = claim.evidence[0]?.digest;
+    if (digest2 === void 0) return void 0;
+    const record = records.get(digest2);
     if (record === void 0) return void 0;
     const input = record.carriedInput ?? record.agentInput;
     if (input.state !== "disclosed") return void 0;
@@ -17484,15 +17665,15 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("99da5596517c25d1fce5b9b2d03d09ec7913d114");
+    return commitPrefix("229dace47dba62788faf7d6fbfb5c92ea78aab28");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.18.2",
     verifier: "@action-state-group/agent-action-capsule",
-    verifierVersion: "0.13.1",
+    verifierVersion: "0.14.0",
     cllVersion: "0.3.0",
     ...commit === void 0 ? {} : { commit },
     ...unreleased ? { unreleased: true } : {}
@@ -19339,8 +19520,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   async function checkWordingPackInput(wording) {
     if (!/^[0-9a-f]{64}$/u.test(wording.sha256))
       throw new WordingPackError("wording sha256 is not a lowercase hex SHA-256");
-    const digest = await sha256Hex(new TextEncoder().encode(wording.pack));
-    if (digest !== wording.sha256)
+    const digest2 = await sha256Hex(new TextEncoder().encode(wording.pack));
+    if (digest2 !== wording.sha256)
       throw new WordingPackError(
         "wording pack bytes do not hash to its wording_sha256"
       );
@@ -20414,9 +20595,9 @@ ${key}`);
 
   // src/report-provenance.ts
   function reportPayload3(records, claim) {
-    const digest = claim.evidence[0]?.digest;
-    if (digest === void 0) return void 0;
-    const record = records.get(digest);
+    const digest2 = claim.evidence[0]?.digest;
+    if (digest2 === void 0) return void 0;
+    const record = records.get(digest2);
     if (record === void 0) return void 0;
     const input = record.carriedInput ?? record.agentInput;
     if (input.state !== "disclosed") return void 0;
@@ -20471,9 +20652,9 @@ ${key}`);
         else recomputedUnnamed += 1;
         continue;
       }
-      const digest = asString2(payload?.judge_pin_digest);
-      if (digest !== void 0) {
-        const entry = pins.get(digest) ?? {
+      const digest2 = asString2(payload?.judge_pin_digest);
+      if (digest2 !== void 0) {
+        const entry = pins.get(digest2) ?? {
           count: 0,
           parts: /* @__PURE__ */ new Map(),
           bare: 0
@@ -20482,13 +20663,13 @@ ${key}`);
         const parts = pinComponents2(payload?.judge_pin);
         if (parts === void 0) entry.bare += 1;
         else entry.parts.set(new TextDecoder().decode(jcs(parts)), parts);
-        pins.set(digest, entry);
+        pins.set(digest2, entry);
         continue;
       }
       unnamed += 1;
     }
     const counted2 = [];
-    for (const [digest, entry] of pins) {
+    for (const [digest2, entry] of pins) {
       let model;
       let modelNotShown;
       if (entry.parts.size === 0) modelNotShown = "not_stated";
@@ -20498,7 +20679,7 @@ ${key}`);
         const parts = [...entry.parts.values()][0];
         const checked = await verifyJudgePin({
           pinned: true,
-          judgePinDigest: digest,
+          judgePinDigest: digest2,
           judgePin: parts
         });
         if (checked.judgePinRecomputes === true)
@@ -20508,7 +20689,7 @@ ${key}`);
         else modelNotShown = "does_not_recompute";
       }
       counted2.push({
-        digest,
+        digest: digest2,
         count: entry.count,
         ...model === void 0 ? {} : { model },
         ...modelNotShown === void 0 ? {} : { modelNotShown }
@@ -20529,7 +20710,7 @@ ${key}`);
   var fmt2 = (n) => n.toLocaleString();
   var quoted = (value) => JSON.stringify(value.length > 120 ? `${value.slice(0, 120)}\u2026` : value);
   var HEX_DIGEST2 = /^[0-9a-f]+$/iu;
-  var short = (digest) => HEX_DIGEST2.test(digest) ? digest.length > 12 ? `${digest.slice(0, 12)}\u2026` : digest : quoted(digest);
+  var short = (digest2) => HEX_DIGEST2.test(digest2) ? digest2.length > 12 ? `${digest2.slice(0, 12)}\u2026` : digest2 : quoted(digest2);
   function judgedByMock(tally2) {
     return tally2.pins.some(
       (pin) => pin.model !== void 0 && /\bmock\b/i.test(pin.model)
@@ -20681,7 +20862,7 @@ ${key}`);
     const all = witnessEntries(checkpoint);
     const status2 = witnessStatus(bundle, verified);
     if (status2 === "invalid" && aac !== void 0) {
-      const failed2 = aac.receipts.filter((r) => r.status === "fail").map(
+      const failed3 = aac.receipts.filter((r) => r.status === "fail").map(
         (r) => w.t("prov.witness.failed-entry", {
           witness: quoted(r.tsUrl),
           reason: quoted(r.reason)
@@ -20692,7 +20873,7 @@ ${key}`);
       ).length;
       const parts = [
         w.t("prov.witness.invalid"),
-        ...failed2.length === 0 ? [] : [w.t("prov.witness.failed", { witnesses: failed2.join("; ") })],
+        ...failed3.length === 0 ? [] : [w.t("prov.witness.failed", { witnesses: failed3.join("; ") })],
         ...unreadable === 0 ? [] : [
           w.p("prov.witness.invalid.unreadable", unreadable, {
             n: fmt2(unreadable)
@@ -20700,7 +20881,7 @@ ${key}`);
         ],
         // AAC fails only on a failed receipt or an unreadable entry; should
         // it fail on anything else, its findings are named as it states them.
-        ...failed2.length === 0 && unreadable === 0 && aac.findings.length > 0 ? [
+        ...failed3.length === 0 && unreadable === 0 && aac.findings.length > 0 ? [
           w.t("prov.witness.invalid.findings", {
             findings: aac.findings.map(quoted).join("; ")
           })
@@ -21078,8 +21259,8 @@ ${key}`);
   async function checkContractInput(contract) {
     if (!/^[0-9a-f]{64}$/u.test(contract.sha256))
       throw new ContractError("contract sha256 is not a lowercase hex SHA-256");
-    const digest = await sha256Hex(new TextEncoder().encode(contract.text));
-    if (digest !== contract.sha256)
+    const digest2 = await sha256Hex(new TextEncoder().encode(contract.text));
+    if (digest2 !== contract.sha256)
       throw new ContractError(
         "contract bytes do not hash to its contract_sha256"
       );
@@ -21342,13 +21523,13 @@ ${key}`);
     return Number.isInteger(n) && n >= 0 && n <= 12 ? w.t(`lines.count.${n}`) : String(n);
   }
   function unverifiedClause(model, list2, w, lower = false) {
-    const failed2 = list2.filter((c) => c.verdict === "failed");
+    const failed3 = list2.filter((c) => c.verdict === "failed");
     const unsupported = list2.filter((c) => c.verdict === "unsupported");
     const parts = [];
-    if (failed2.length > 0)
+    if (failed3.length > 0)
       parts.push(
         w.t("lines.sentence.unverified.failed", {
-          names: names(model, failed2, w)
+          names: names(model, failed3, w)
         })
       );
     if (unsupported.length > 0)
@@ -24351,10 +24532,10 @@ ${key}`);
       )
     );
     section.append(element5("h3", "Composed digest"));
-    const digest = element5("dl");
-    digest.dataset.composedDigest = result3.composedDigest.declared;
-    digest.dataset.matches = String(result3.composedDigest.matches);
-    digest.append(
+    const digest2 = element5("dl");
+    digest2.dataset.composedDigest = result3.composedDigest.declared;
+    digest2.dataset.matches = String(result3.composedDigest.matches);
+    digest2.append(
       element5("dt", "declared"),
       element5("dd", result3.composedDigest.declared),
       element5("dt", "recomputed"),
@@ -24362,7 +24543,7 @@ ${key}`);
       element5("dt", "matches"),
       element5("dd", result3.composedDigest.matches ? "yes" : "no")
     );
-    section.append(digest);
+    section.append(digest2);
     section.append(element5("h3", "Members"));
     section.append(
       table2(
@@ -25219,7 +25400,7 @@ ${key}`);
     }
     return out;
   }
-  var shortDigest = (digest) => digest.length > 12 ? `${digest.slice(0, 4)}\u2026${digest.slice(-4)}` : digest;
+  var shortDigest = (digest2) => digest2.length > 12 ? `${digest2.slice(0, 4)}\u2026${digest2.slice(-4)}` : digest2;
   function renderCoreIdentity(model) {
     const { result: result3, words: w } = model;
     const refs = [
@@ -25973,25 +26154,25 @@ ${pad.repeat(depth)}`;
   }
   function checkedSummaryLine(verified, model) {
     const total = model.checks.length;
-    const failed2 = model.checks.filter((c) => c.status === "fail").length;
+    const failed3 = model.checks.filter((c) => c.status === "fail").length;
     const passed = model.checks.filter((c) => c.status === "pass").length;
-    const notRun = total - failed2 - passed;
+    const notRun = total - failed3 - passed;
     const pageFailed = model.checkLists.failed.filter(
       (id) => !NUMBERED_CHECK_GROUND.has(id)
     ).length;
     const notRunNote = notRun > 0 ? `, ${notRun} not run` : "";
     const leads = [];
-    if (failed2 > 0)
-      leads.push(`${failed2} of ${total} checks failed${notRunNote}`);
+    if (failed3 > 0)
+      leads.push(`${failed3} of ${total} checks failed${notRunNote}`);
     if (pageFailed > 0)
       leads.push(
         `${pageFailed} ${pageFailed === 1 ? "check" : "checks"} on this page failed`
       );
-    if (failed2 === 0 && pageFailed === 0)
+    if (failed3 === 0 && pageFailed === 0)
       leads.push(
         verified ? `${passed} of ${total} checks passed${notRunNote}` : SUMMARY_NOT_VERIFIED
       );
-    if (failed2 === 0 && (pageFailed > 0 || !verified) && notRun > 0)
+    if (failed3 === 0 && (pageFailed > 0 || !verified) && notRun > 0)
       leads.push(`${notRun} of ${total} checks not run`);
     const parts = [...leads, topLevelRecordsWord(model.records.length)];
     const signatures2 = model.checkLists.notChecked.flatMap((id) => {
@@ -26113,6 +26294,23 @@ ${pad.repeat(depth)}`;
       );
       item.append(renderTime(receipt.time));
       list2.append(item);
+    });
+    host.append(list2);
+  }
+  function renderParentWitness(host, parent2) {
+    host.append(
+      element6(
+        "p",
+        parent2.whole ? `witnessed through a parent log: every entry (${parent2.of} of ${parent2.of})` : `witnessed through a parent log: entry ${parent2.entries} of ${parent2.of}`
+      )
+    );
+    const paragraph = host.lastElementChild;
+    paragraph.dataset.witness = "parent";
+    paragraph.dataset.whole = String(parent2.whole);
+    const list2 = element6("ul");
+    parent2.receipts.forEach((receipt) => {
+      const when2 = receipt.registrationTime === null ? "registration time not stated" : `registered ${new Date(receipt.registrationTime * 1e3).toISOString()}`;
+      list2.append(element6("li", `${receipt.witness} \xB7 ${when2}`));
     });
     host.append(list2);
   }
@@ -26467,6 +26665,8 @@ ${pad.repeat(depth)}`;
       );
     page.append(summary);
     renderReceipts(page, model.receipts);
+    if (model.parentWitness !== void 0)
+      renderParentWitness(page, model.parentWitness);
     if (model.selfWitnessed) {
       const witness = element6(
         "p",
@@ -27904,8 +28104,8 @@ ${pad.repeat(depth)}`;
           words
         );
     } else
-      for (const digest of chartDigests)
-        digest.refused = "the bundle did not verify";
+      for (const digest2 of chartDigests)
+        digest2.refused = "the bundle did not verify";
     const depth = options.depth ?? "L0";
     const region = (name) => {
       const node = document.createElement("div");
@@ -28214,8 +28414,8 @@ ${pad.repeat(depth)}`;
     for (const action of root.querySelectorAll(
       "details.cv-ev[data-cites]"
     ))
-      for (const digest of (action.dataset.cites ?? "").split(" ")) {
-        const entry = anchors.get(recordAddress(digest))?.closest("details.cv-record");
+      for (const digest2 of (action.dataset.cites ?? "").split(" ")) {
+        const entry = anchors.get(recordAddress(digest2))?.closest("details.cv-record");
         if (entry === void 0 || entry === null) continue;
         const list2 = citing.get(entry) ?? [];
         if (!list2.includes(action)) list2.push(action);
@@ -28317,12 +28517,12 @@ ${pad.repeat(depth)}`;
     let same3 = "not_carried";
     if (checkpoint !== null) {
       try {
-        const digest = await globalThis.crypto.subtle.digest(
+        const digest2 = await globalThis.crypto.subtle.digest(
           "SHA-256",
           fromHex2(checkpoint)
         );
         same3 = Array.from(
-          new Uint8Array(digest),
+          new Uint8Array(digest2),
           (b) => b.toString(16).padStart(2, "0")
         ).join("") === anchor ? "match" : "mismatch";
       } catch {
@@ -28363,14 +28563,14 @@ ${pad.repeat(depth)}`;
     const octets = new Uint8Array(new ArrayBuffer(32));
     for (let i = 0; i < 32; i += 1)
       octets[i] = Number.parseInt(preimage.slice(2 * i, 2 * i + 2), 16);
-    let digest;
+    let digest2;
     try {
-      digest = await globalThis.crypto.subtle.digest("SHA-256", octets);
+      digest2 = await globalThis.crypto.subtle.digest("SHA-256", octets);
     } catch {
       return "NOT_CHECKED";
     }
     const hex6 = Array.from(
-      new Uint8Array(digest),
+      new Uint8Array(digest2),
       (b) => b.toString(16).padStart(2, "0")
     ).join("");
     return hex6 === hash2.toLowerCase() ? "PASS" : "FAIL";
@@ -28410,7 +28610,7 @@ ${pad.repeat(depth)}`;
       return void 0;
     }
   };
-  var uint = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
+  var uint2 = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
   var sha2564 = async (...parts) => {
     const joined = new Uint8Array(
       new ArrayBuffer(parts.reduce((n, p) => n + p.length, 0))
@@ -28436,7 +28636,7 @@ ${pad.repeat(depth)}`;
   };
   var included = async (root, size, leafIndex, identity2, raw) => {
     if (!object15(raw) || raw.v !== 1 || raw.kind !== "inclusion") return false;
-    const proofSize = uint(raw.size), proofIndex = uint(raw.leaf_index), witness = hashList(raw.witness), left = hashList(raw.peaks_left), right = hashList(raw.peaks_right);
+    const proofSize = uint2(raw.size), proofIndex = uint2(raw.leaf_index), witness = hashList(raw.witness), left = hashList(raw.peaks_left), right = hashList(raw.peaks_right);
     if (proofSize === void 0 || BigInt(proofSize) !== size || proofIndex !== leafIndex || !witness || !left || !right)
       return false;
     const flattened = [...witness];
@@ -28446,7 +28646,7 @@ ${pad.repeat(depth)}`;
   };
   var consistent = async (oldRoot, oldSize, newRoot, newSize, raw) => {
     if (!object15(raw) || raw.v !== 1 || raw.kind !== "consistency") return false;
-    const from = uint(raw.old_size), to = uint(raw.new_size), oldPeaks = hashList(raw.old_peaks), newPeaks = hashList(raw.new_peaks), steps = Array.isArray(raw.witness) ? raw.witness.map(hashList) : void 0, a = fromHex3(oldRoot), b = fromHex3(newRoot);
+    const from = uint2(raw.old_size), to = uint2(raw.new_size), oldPeaks = hashList(raw.old_peaks), newPeaks = hashList(raw.new_peaks), steps = Array.isArray(raw.witness) ? raw.witness.map(hashList) : void 0, a = fromHex3(oldRoot), b = fromHex3(newRoot);
     if (from === void 0 || to === void 0 || BigInt(from) !== oldSize || BigInt(to) !== newSize || !oldPeaks || !newPeaks || !steps || steps.some((s) => s === void 0) || !a || !b)
       return false;
     return verifyConsistency2(a, b, {
@@ -28504,7 +28704,7 @@ ${pad.repeat(depth)}`;
     if (logId === "" && typeof chain.deal_log_id === "string")
       logId = chain.deal_log_id;
     const salt = typeof chain.salt === "string" ? chain.salt : "";
-    const size = uint(chain.size), index = uint(chain.index);
+    const size = uint2(chain.size), index = uint2(chain.index);
     if (logId !== deal.logId || size === void 0 || BigInt(size) !== deal.size)
       return fail2("cadence_leaf_does_not_name_this_checkpoint");
     if (index === void 0 || index >= 2 ** CADENCE_DEPTH || salt === "")
@@ -28529,7 +28729,7 @@ ${pad.repeat(depth)}`;
     if (cadence.keyId !== deal.keyId)
       return fail2("cadence_checkpoint_signer_differs");
     if (inner.log_id !== cadence.logId) return fail2("cadence_log_id_mismatch");
-    const entry = uint(inner.entry_index);
+    const entry = uint2(inner.entry_index);
     const cadenceRootBytes = fromHex3(cadence.root);
     if (entry === void 0 || !cadenceRootBytes || !await included(
       cadenceRootBytes,
@@ -28570,7 +28770,7 @@ ${pad.repeat(depth)}`;
       ({ name, keys: keys2 }) => keys2.map((key) => ({ name, key: fromHex3(key) }))
     );
     if (keys.length === 0) return result("NOT_CHECKED", "no_reader_witness");
-    let failed2 = false;
+    let failed3 = false;
     let chosen;
     for (const entry of entries) {
       if (entry.is_stub === true) continue;
@@ -28585,7 +28785,7 @@ ${pad.repeat(depth)}`;
         if (outcome.notChecked) unavailable = true;
       }
       if (passed === void 0) {
-        if (!unavailable) failed2 = true;
+        if (!unavailable) failed3 = true;
         continue;
       }
       if (chosen === void 0 || passed.time !== null && (chosen.time === null || passed.time < chosen.time))
@@ -28593,7 +28793,7 @@ ${pad.repeat(depth)}`;
     }
     if (chosen !== void 0)
       return result("PASS", null, chosen.name, chosen.time);
-    if (failed2) return result("FAIL", "receipt_not_verified");
+    if (failed3) return result("FAIL", "receipt_not_verified");
     return result("NOT_CHECKED", "receipt_not_checked");
   }
   async function readerCadenceWitness(context) {
@@ -29435,7 +29635,7 @@ ${pad.repeat(depth)}`;
     const failedRow = rows.some(
       (x) => x.kind === "checkpoint" && x.signature === "fail"
     );
-    const failed2 = failedCheck || failedRow;
+    const failed3 = failedCheck || failedRow;
     const allPass = rows.length > 0 && rows.every((x) => x.kind !== "checkpoint" || x.signature === "pass") && checks.filter((c) => !SLOT_CHECKS.has(c.id) && c.status !== "not_run").every((c) => c.status === "pass") && (kind === "deal" || checks.some(
       (c) => c.id === "checkpoint_signatures" && c.status === "pass"
     ));
@@ -29489,7 +29689,7 @@ ${pad.repeat(depth)}`;
       if (refusedReason !== void 0)
         heroLines.push(say("hero.refused.reason", { reason: refusedReason }));
     } else if (outcome === "unreadable") heroLines.push(say("hero.unreadable"));
-    else if (failed2) heroLines.push(say("hero.failed"));
+    else if (failed3) heroLines.push(say("hero.failed"));
     else if (rows.length === 0)
       heroLines.push(
         say(kind === "checkpoint" ? "hero.none.checkpoints" : "hero.none.deals")
@@ -29692,7 +29892,7 @@ ${pad.repeat(depth)}`;
         )
       )
     ) : null;
-    const callout = outcome === "answered" && !failed2 ? el13(
+    const callout = outcome === "answered" && !failed3 ? el13(
       "aside",
       { class: "cvh-callout", "data-history": "does-not-show" },
       el13("h2", null, say("callout.heading")),
@@ -29824,7 +30024,7 @@ ${pad.repeat(depth)}`;
       class: "cvh-checked",
       "data-history": "checked"
     };
-    if (failed2 || outcome !== "answered") checkedAttrs["open"] = "";
+    if (failed3 || outcome !== "answered") checkedAttrs["open"] = "";
     const panel = el13(
       "details",
       checkedAttrs,
@@ -29860,7 +30060,7 @@ ${pad.repeat(depth)}`;
         "data-history": "view",
         "data-kind": kind,
         "data-surface": surface,
-        "data-verdict": failed2 ? "failed" : allPass ? "pass" : "unchecked"
+        "data-verdict": failed3 ? "failed" : allPass ? "pass" : "unchecked"
       },
       header,
       el13("div", { class: "cvh-main" }, hero, chips, rowList, periodBlock),
