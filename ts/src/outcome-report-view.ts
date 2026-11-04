@@ -1626,7 +1626,9 @@ function renderRules(
   const ofNote = el(
     "p",
     "lede",
-    w.t("lines.rules.of.note", { total: fmtCount(model.totalCount) }),
+    w.p("lines.rules.of.note", model.totalCount, {
+      total: fmtCount(model.totalCount),
+    }),
   );
   ofNote.dataset.note = "rule-counts";
   section.append(ofNote);
@@ -1802,20 +1804,13 @@ function renderRules(
         }
         // A rule that did not apply to some conversation counts them in no
         // column; say so, so a short row is not read as a lost conversation.
-        const counted = new Set([
-          ...notMet,
-          ...met,
-          ...undecided,
-          ...unverifiedHere,
-          ...outOfScopeHere,
-        ]);
-        if (counted.size < model.totalCount) {
+        // The same count the row's expansion states, so a rule not yet in
+        // force or a missing claim is never called "did not apply".
+        if (na.length > 0) {
           const gap = el(
             "small",
             "rdet",
-            w.t("lines.rules.not_applied", {
-              k: fmtCount(model.totalCount - counted.size),
-            }),
+            w.t("lines.rules.not_applied", { k: fmtCount(na.length) }),
           );
           gap.dataset.note = "not-applied";
           nameCell.append(gap);

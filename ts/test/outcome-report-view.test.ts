@@ -1101,6 +1101,35 @@ it("drill-down: says plainly the transcript is absent, and gives the record ids 
   expect(root.querySelectorAll("button, script")).toHaveLength(0);
 });
 
+it("a rule not yet in force is not called did-not-apply on its roll-up row", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  const ref = "policy_compliance.confirmed_before_acting";
+  const claims = resultDoc.claims as Obj[];
+  for (const claim of claims)
+    if (claim.requirement_ref === ref) claim.applies_from = "2099-01-01";
+  const kept = claims.filter((c) => c.requirement_ref !== ref);
+  (source.disclosures as Obj).result = {
+    agent_input: {
+      ...resultDoc,
+      claims,
+      aggregate: {
+        ...(resultDoc.aggregate as Obj),
+        buckets: rebuildBuckets(kept),
+      },
+    },
+  };
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  const row = root.querySelector<HTMLElement>(`tr[data-rule="${ref}"]`);
+  expect(row).not.toBeNull();
+  expect(row!.querySelector('[data-note="not-applied"]')).toBeNull();
+  expect(
+    root.querySelector<HTMLElement>('[data-note="rule-counts"]')?.textContent,
+  ).toMatch(/^Counts are out of the report's \d+ conversations\.$/);
+});
+
 it("drill-down: a not_applicable criterion is its own state -- no claim, no P, never drawn as met or missed", async () => {
   const source = fixture("outcome-report-bundle.json");
   const resultDoc = ((source.disclosures as Obj).result as Obj)
@@ -1139,6 +1168,19 @@ it("drill-down: a not_applicable criterion is its own state -- no claim, no P, n
   const ruleRow = root.querySelector<HTMLElement>(
     'tr[data-rule="grounded_communication.refunds_match_payment_records"]',
   )!;
+  // the roll-up row says the rule was counted in one conversation fewer
+  expect(
+    ruleRow.querySelector<HTMLElement>('[data-note="not-applied"]')
+      ?.textContent,
+  ).toBe("did not apply in 1");
+  // a rule that every conversation counts says nothing of the kind
+  expect(
+    root
+      .querySelector<HTMLElement>(
+        'tr[data-rule="policy_compliance.confirmed_before_acting"]',
+      )
+      ?.querySelector('[data-note="not-applied"]') ?? null,
+  ).toBeNull();
   // one conversation where the rule did not apply: counted on its own, in
   // the row's expansion
   ruleRow.click();
@@ -1209,6 +1251,15 @@ it("drill-down: a missing claim the Result's exclusions do not account for is a 
   const row = conv.querySelector<HTMLElement>(
     'tr[data-crit="grounded_communication.refunds_match_payment_records"]',
   )!;
+  // a missing claim is a gap counted as undecided, so the roll-up row does
+  // not call it "did not apply"
+  expect(
+    root
+      .querySelector<HTMLElement>(
+        'tr[data-rule="grounded_communication.refunds_match_payment_records"]',
+      )
+      ?.querySelector('[data-note="not-applied"]') ?? null,
+  ).toBeNull();
   const pill = row.querySelector<HTMLElement>('[data-pill="no_claim"]')!;
   // no claim, so no report: no judge ran on it (the unjudged key)
   expect(pill.textContent).toBe(
