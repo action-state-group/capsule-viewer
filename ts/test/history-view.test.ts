@@ -430,16 +430,20 @@ describe("the page verdict", () => {
       expect(e.getAttribute("data-filled")).toBe("no");
   });
 
-  it("two checkpoints cut in one second stay two rows, told apart", () => {
-    const titles = [
-      ...drawn(vectors.cases["mesh-same-second"]).querySelectorAll(
-        ".cvh-row-title",
-      ),
-    ].map((e) => e.textContent);
+  it("two checkpoints cut in one minute stay two rows, shown to the minute", () => {
+    const page = drawn(vectors.cases["mesh-same-second"]);
+    const titles = [...page.querySelectorAll(".cvh-row-title")].map(
+      (e) => e.textContent,
+    );
     expect(titles).toEqual([
-      "Cut Nov 3, 2026, 18:07:12.418 UTC",
-      "Cut Nov 3, 2026, 18:07:12.902 UTC",
+      "Cut Nov 3, 2026, 18:07 UTC",
+      "Cut Nov 3, 2026, 18:07 UTC",
     ]);
+    expect(
+      page.querySelector('[data-history="does-not-show"]')?.textContent,
+    ).toContain(
+      "The exact time of each exchange. Checkpoint times are rounded to the minute, and each side of an exchange gets its own checkpoint, so two can share a time.",
+    );
   });
 
   it("says what is not stated, rather than leaving it out", () => {

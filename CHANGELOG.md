@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- History view wording (#281, from Sherlock2's review of Mesh-LLM/capsules-plugin#263): a checkpoint row's "Cut" time shows to the minute ("Nov 3, 2026, 18:07 UTC"), no longer to the second or with a fraction; the fraction shown when two rows shared a second is gone. The "What this does not show" block on a checkpoint page adds "The exact time of each exchange. Checkpoint times are rounded to the minute, and each side of an exchange gets its own checkpoint, so two can share a time." (`callout.checkpoints.time`). No input or contract change; the goldens are regenerated.
+
 ## ts 0.18.1 and go 0.18.1 (2026-11-03)
 
 Both state viewer 0.18.1: `ts/v0.18.1`, then `go/v0.18.1` on the commit that ships its page runtime. This release carries #274 (PR #275) and #276 (PR #277).

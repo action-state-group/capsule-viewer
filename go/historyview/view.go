@@ -386,14 +386,6 @@ func short(id string) string {
 	return id
 }
 
-func floorSecond(ms int64) int64 {
-	q := ms / 1000
-	if ms%1000 < 0 {
-		q--
-	}
-	return q
-}
-
 func build(input, overlay any, hasOverlay bool) (*element, []string) {
 	r := &reader{}
 	o := r.object(input, "input", topKeys, []string{"view", "kind", "surface", "reader", "holder", "audience", "built_at", "checked", "rows", "checks"})
@@ -995,23 +987,16 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 
 	var rowList *element
 	if drawRows {
-		seconds := map[int64]int{}
-		if kind == "checkpoint" {
-			for _, x := range rows {
-				seconds[floorSecond(x.cut.ms)]++
-			}
-		}
 		var items []any
 		for _, x := range rows {
 			if x.kind == "checkpoint" {
-				tie := seconds[floorSecond(x.cut.ms)] > 1
 				var recLine *string
 				if x.signature != "pass" {
 					recLine = str(say("stamp.signature.unchecked"))
 				}
 				stamps := append([]any{stamp("stamp.recorded", x.signature == "pass", x.signature, recLine)}, slotStamps(x)...)
 				items = append(items, el("li", attrs("class", "cvh-row", "data-history", "row"),
-					el("p", attrs("class", "cvh-row-title"), say("row.cut", "at", secondOf(x.cut, tie))),
+					el("p", attrs("class", "cvh-row-title"), say("row.cut", "at", minuteOf(x.cut))),
 					el("p", attrs("class", "cvh-row-detail"), plural("row.entries", x.logSize)),
 					proof("proof.checkpoint", x.anchor),
 					el("ul", attrs("class", "cvh-stamps"), stamps...)))
@@ -1075,8 +1060,12 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		default:
 			text = say("callout.deals")
 		}
+		var timeLine *element
+		if kind == "checkpoint" && len(rows) > 0 {
+			timeLine = el("p", nil, say("callout.checkpoints.time"))
+		}
 		callout = el("aside", attrs("class", "cvh-callout", "data-history", "does-not-show"),
-			el("h2", nil, say("callout.heading")), el("p", nil, text))
+			el("h2", nil, say("callout.heading")), el("p", nil, text), timeLine)
 	}
 
 	var shares *element

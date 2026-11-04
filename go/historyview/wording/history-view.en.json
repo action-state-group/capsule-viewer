@@ -90,6 +90,7 @@
     "periods.cell.withheld": "{what}: fewer than 5",
     "callout.heading": "What this does not show",
     "callout.checkpoints": "These checkpoints show when this node's log was cut and how much it holds. They don't show what any exchange said or how it went, and this is not a judgment of the node.",
+    "callout.checkpoints.time": "The exact time of each exchange. Checkpoint times are rounded to the minute, and each side of an exchange gets its own checkpoint, so two can share a time.",
     "callout.deals": "“Steps recorded” is this side's record of each deal, not a confirmed outcome.",
     "callout.deals.picked": "{name} picked these; it isn't every deal. “Steps recorded” is {name}'s side's record, not a confirmed outcome.",
     "shares.heading": "What this node shares",
