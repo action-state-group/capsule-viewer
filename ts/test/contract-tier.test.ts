@@ -94,6 +94,20 @@ describe("the Outcomes report (lines)", () => {
     );
   });
 
+  it("draws each rule's count of the report's conversations and how its results were reached", async () => {
+    const root = await render(bundle, contract);
+    const row = root.querySelector<HTMLElement>(
+      'table.rules tr.rule[data-rule="resolution.done_in_full"]',
+    )!;
+    expect(
+      row.querySelector(".rtier:not([data-requirement-tier])")?.textContent,
+    ).toBe("Judged");
+    const cells = [...row.querySelectorAll<HTMLElement>("td.n")].map((cell) =>
+      cell.textContent?.replace(/Show evidence.*$/s, "").trim(),
+    );
+    expect(cells.every((c) => / of 8$/.test(c ?? ""))).toBe(true);
+  });
+
   it("keeps the plain title when the period spans two months", async () => {
     const { bundle: spanning } = await sealEvidenceBundle(
       JSON.parse(JSON.stringify(bundle).replaceAll("2026-09-29", "2026-10-02")),

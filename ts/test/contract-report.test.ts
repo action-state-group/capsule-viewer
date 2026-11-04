@@ -262,6 +262,7 @@ it("every locked line is a default entry, and every default line that states wha
     "lines.pf.verdict.failed",
     "lines.rules.col.undecided",
     "lines.rules.col.unverified",
+    "lines.rules.kind.recomputed",
     "lines.sentence.unverified.undecided-note",
     "lines.status.undecided.judged",
     "lines.status.undecided.none",

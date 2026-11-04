@@ -1745,7 +1745,14 @@ function renderRules(
           const pick = picks[column];
           const cell = el("td", className);
           cell.dataset.column = column;
-          cell.append(el("span", "nv", fmtCount(counted.length)));
+          cell.append(
+            el("span", "nv", fmtCount(counted.length)),
+            el(
+              "span",
+              "nof",
+              ` ${w.t("lines.rules.of", { total: fmtCount(model.totalCount) })}`,
+            ),
+          );
           const action = evidenceAction(
             `rule:${ref}:${column}`,
             `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
@@ -1776,6 +1783,15 @@ function renderRules(
         if (tier !== undefined) {
           tr.dataset.requirementTier = tier;
           nameCell.append(tierChip(tier, w));
+        }
+        // The canvas's Recomputed / Judged chip: how the rule's results were
+        // reached, read from its claims' tier. A rule whose claims differ, or
+        // that has none, carries no chip rather than a guessed one.
+        const how = model.criterionTiers.get(ref);
+        if (how === "judged" || how === "recomputed") {
+          const chip = el("span", "rtier", w.t(`lines.rules.kind.${how}`));
+          chip.dataset.kind = how;
+          nameCell.append(chip);
         }
         if (label.source === "sealed")
           nameCell.append(el("small", "", label.text));
