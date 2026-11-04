@@ -169,6 +169,7 @@ import {
   type CheckSummary,
   type CompletenessStatement,
   type CoverageStatement,
+  type ParentWitnessEntry,
   type ReceiptEntry,
   type RecordCoverage,
   type RecordCoverageStatus,
@@ -597,6 +598,36 @@ function renderReceipts(
     );
     item.append(renderTime(receipt.time));
     list.append(item);
+  });
+  host.append(list);
+}
+
+// A checkpoint witnessed through a parent log (parent-log-witness/v1). AAC
+// computes the extent and verifies every link; this only draws the result
+// (J.8), set on the model only when its strict check passed. The wording is
+// Sherlock2's call (capsule-viewer#237).
+function renderParentWitness(
+  host: HTMLElement,
+  parent: ParentWitnessEntry,
+): void {
+  host.append(
+    element(
+      "p",
+      parent.whole
+        ? `witnessed through a parent log: every entry (${parent.of} of ${parent.of})`
+        : `witnessed through a parent log: entry ${parent.entries} of ${parent.of}`,
+    ),
+  );
+  const paragraph = host.lastElementChild as HTMLElement;
+  paragraph.dataset.witness = "parent";
+  paragraph.dataset.whole = String(parent.whole);
+  const list = element("ul");
+  parent.receipts.forEach((receipt) => {
+    const when =
+      receipt.registrationTime === null
+        ? "registration time not stated"
+        : `registered ${new Date(receipt.registrationTime * 1000).toISOString()}`;
+    list.append(element("li", `${receipt.witness} · ${when}`));
   });
   host.append(list);
 }
@@ -1144,6 +1175,8 @@ async function renderVerificationPage(
     );
   page.append(summary);
   renderReceipts(page, model.receipts);
+  if (model.parentWitness !== undefined)
+    renderParentWitness(page, model.parentWitness);
   if (model.selfWitnessed) {
     // A checkpoint with no transparency-service receipt was witnessed by
     // nobody but the log that produced it -- stated here in those words.

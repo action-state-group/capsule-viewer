@@ -11,6 +11,7 @@ or a file has no row.
 | File | Copied at | Last changed | Read by | SHA-256 |
 | --- | --- | --- | --- | --- |
 | `bundle/composed/vectors.json` | `f154515` | `a726b9f` | `test/composed-view.test.ts`, the resolution corpus | `205b72141a12169b8b53b2e4dd5725d3b14029c0f8b7ee9803114545553fa22e` |
+| `bundle/parent-log-witness/vectors.json` | `e45db9a` | `3c808e2` | `test/parent-witness-view.test.ts` | `97212237fc80de1d231bf4d65bc59a663452b841617911d5f4eb6081c3ea7464` |
 | `bundle/producer-key/vectors.json` | `f154515` | `7204edc` | `test/presentation-registry.test.ts`, `test/registry-core.test.ts`, the resolution corpus | `979cc32898e30f4a961870c48e5766d022fb49e38040da20fdcd5e443896c433` |
 | `bundle/report-single-record.json` | `60a5b11` | `d8f4a58` | the resolution corpus, `test/presentation-oracle.test.ts` | `5d679543af4b8592f2949690abbb65320c96056faae381cdbb1dd142e05d7e55` |
 | `bundle/strict/vectors.json` | `b646f94` | `c290041` | the resolution corpus (its producer-selected cases) | `759c69c029097dc54112c29bc3366679a7a58535507f3cbe7952df9631023b46` |
