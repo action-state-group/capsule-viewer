@@ -5089,6 +5089,8 @@ var EvidenceGraph = (() => {
     mountPresentation: () => mountPresentation,
     mountPresentationFragment: () => mountPresentationFragment,
     obligationStatus: () => obligationStatus,
+    parentWitnessLine: () => parentWitnessLine,
+    parentWitnessTime: () => parentWitnessTime,
     paymentPreimageCheck: () => paymentPreimageCheck,
     placeholders: () => placeholders,
     readWordingPack: () => readWordingPack,
@@ -17665,7 +17667,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("229dace47dba62788faf7d6fbfb5c92ea78aab28");
+    return commitPrefix("6f052a28909e7d266d1d2114719485eb89209dc2");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -17794,6 +17796,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
       "lines.rtier.sealed-note": "The sealed result counts informational terms too; the lines this report derives leave them out.",
       "lines.title": "Outcome report",
+      "lines.title.month": "Outcome report, {month} {year}",
       "lines.share": "{count} of {total}",
       "lines.share.percent": "{p}%",
       "lines.tier.judged": "judged",
@@ -20510,7 +20513,7 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "c8e7c5313deee0137654878727c8a79760286cc165b46c316b5956f498a83d80",
+    lines: "4044f87eca301fc164cd53d4e2ab1e4e9a4a23177a67f7595cd2ea05c59f0a66",
     groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
     generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77"
   });
@@ -22120,6 +22123,21 @@ ${key}`);
       );
     return parts.join(" ");
   }
+  function reportTitle(model, w) {
+    const title = w.section3("report.title") ?? w.t("lines.title");
+    if (w.section3("report.title") !== void 0) return title;
+    const first = model.days[0]?.date;
+    const last = model.days[model.days.length - 1]?.date;
+    if (first === void 0 || last === void 0) return title;
+    const month = /^(\d{4})-(\d{2})-\d{2}/.exec(first);
+    if (month === null || last.slice(0, 7) !== first.slice(0, 7)) return title;
+    const n = Number(month[2]);
+    if (n < 1 || n > 12) return title;
+    return w.t("lines.title.month", {
+      month: w.t(`calendar.month.${n}`),
+      year: month[1]
+    });
+  }
   function renderMeta(host, model, w, notes) {
     const section = el8("section", "");
     section.dataset.section = "meta";
@@ -22129,7 +22147,7 @@ ${key}`);
     bill.append(el8("div", "v", packLine(model, w)));
     row1.append(bill);
     const title = el8("div", "ih-title");
-    title.append(el8("h1", "inv-title", w.t("lines.title")));
+    title.append(el8("h1", "inv-title", reportTitle(model, w)));
     const summary = reportSummary(w);
     if (summary !== void 0) title.append(summary);
     if (model.terms.pack.locked !== NOT_STATED)
@@ -26297,21 +26315,36 @@ ${pad.repeat(depth)}`;
     });
     host.append(list2);
   }
+  function parentWitnessLine(parent2) {
+    const lead = "witnessed through a parent log: ";
+    if (parent2.whole)
+      return `${lead}all ${parent2.of} ${parent2.of === 1 ? "entry" : "entries"}`;
+    const covered = parent2.entries === 1 ? "entry 1" : `entries 1\u2013${parent2.entries}`;
+    const first = parent2.entries + 1;
+    const rest = first === parent2.of ? `entry ${parent2.of} is` : `entries ${first}\u2013${parent2.of} are`;
+    return `${lead}${covered} of ${parent2.of}; ${rest} not covered by this witness`;
+  }
+  function parentWitnessTime(seconds) {
+    if (seconds === null) return "time not stated";
+    const date = new Date(seconds * 1e3);
+    if (Number.isNaN(date.getTime()))
+      return `time out of range (${seconds} seconds since the epoch)`;
+    return `recorded ${date.toISOString().replace("T", " ").replace(/\.\d+Z$/u, "")} UTC`;
+  }
   function renderParentWitness(host, parent2) {
-    host.append(
-      element6(
-        "p",
-        parent2.whole ? `witnessed through a parent log: every entry (${parent2.of} of ${parent2.of})` : `witnessed through a parent log: entry ${parent2.entries} of ${parent2.of}`
+    const line = element6("p", parentWitnessLine(parent2));
+    line.dataset.witness = "parent";
+    line.dataset.whole = String(parent2.whole);
+    host.append(line);
+    const list2 = element6("ul");
+    parent2.receipts.forEach(
+      (receipt) => list2.append(
+        element6(
+          "li",
+          `${receipt.witness} \xB7 ${parentWitnessTime(receipt.registrationTime)}`
+        )
       )
     );
-    const paragraph = host.lastElementChild;
-    paragraph.dataset.witness = "parent";
-    paragraph.dataset.whole = String(parent2.whole);
-    const list2 = element6("ul");
-    parent2.receipts.forEach((receipt) => {
-      const when2 = receipt.registrationTime === null ? "registration time not stated" : `registered ${new Date(receipt.registrationTime * 1e3).toISOString()}`;
-      list2.append(element6("li", `${receipt.witness} \xB7 ${when2}`));
-    });
     host.append(list2);
   }
   var COVERAGE_LABEL = Object.freeze({
