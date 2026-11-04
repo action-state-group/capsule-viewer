@@ -108,6 +108,29 @@ describe("the Outcomes report (lines)", () => {
     expect(cells.every((c) => / of 8$/.test(c ?? ""))).toBe(true);
   });
 
+  it("draws Computed when every claim of a rule is recomputed, and no chip when a rule's claims differ", async () => {
+    const chips = async (text: string): Promise<(string | undefined)[]> => {
+      const { bundle: sealed } = await sealEvidenceBundle(JSON.parse(text));
+      const root = await render(sealed, contract);
+      return [
+        ...root.querySelectorAll<HTMLElement>("table.rules tr.rule[data-rule]"),
+      ].map(
+        (row) =>
+          row.querySelector(".rtier:not([data-requirement-tier])")
+            ?.textContent ?? undefined,
+      );
+    };
+    const text = JSON.stringify(bundle);
+    expect(
+      await chips(text.replaceAll('"tier":"judged"', '"tier":"recomputed"')),
+    ).toEqual(["Computed", "Computed", "Computed", "Computed"]);
+    const mixed = await chips(
+      text.replace('"tier":"judged"', '"tier":"recomputed"'),
+    );
+    expect(mixed.filter((c) => c === "Judged")).toHaveLength(3);
+    expect(mixed.filter((c) => c === undefined)).toHaveLength(1);
+  });
+
   it("keeps the plain title when the period spans two months", async () => {
     const { bundle: spanning } = await sealEvidenceBundle(
       JSON.parse(JSON.stringify(bundle).replaceAll("2026-09-29", "2026-10-02")),

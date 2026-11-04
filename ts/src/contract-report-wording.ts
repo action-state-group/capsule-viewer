@@ -246,8 +246,8 @@ const SECTION3_ALIASES: Readonly<
       "lines.verdict.out_of_scope",
       "lines.pf.verdict.out_of_scope",
     ],
-    "tier.recomputed": ["lines.tier.recomputed"],
-    "tier.judged": ["lines.tier.judged"],
+    "tier.recomputed": ["lines.tier.recomputed", "lines.rules.kind.recomputed"],
+    "tier.judged": ["lines.tier.judged", "lines.rules.kind.judged"],
   },
   groups: {
     "report.title": ["groups.kicker"],
@@ -404,6 +404,8 @@ const DISTINCT: readonly (readonly (string | readonly string[])[])[] = [
     "lines.tier.mixed",
     "lines.tier.unknown",
   ],
+  // The roll-up's chip says the same thing about a rule.
+  ["lines.rules.kind.judged", "lines.rules.kind.recomputed"],
   // The Outcomes headline row labels.
   [
     "lines.line.resolved",
@@ -597,12 +599,14 @@ const GUARDED_CATEGORY: Readonly<Record<string, GuardedCategory>> = {
 
   // recomputed tier: a fixed check anyone can repeat from the records.
   "lines.tier.recomputed": "tier.recomputed",
+  "lines.rules.kind.recomputed": "tier.recomputed",
   "groups.tier.recomputed": "tier.recomputed",
   "generic.tier.recomputed": "tier.recomputed",
 
   // judged tier: a judgement, which must never read like the recomputed
   // tier above.
   "lines.tier.judged": "tier.judged",
+  "lines.rules.kind.judged": "tier.judged",
   "groups.tier.judged": "tier.judged",
   "generic.tier.judged": "tier.judged",
 };
@@ -1417,7 +1421,7 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "6df05da7a3ce44f17c56119facaf6cf3dc9f4cc138daa80c81a6b80a78b5aa2c",
+  lines: "ae59d8abee89d0c2d2f0cc2dfdf8689407aa4d3a5f39a05a4f2740e7a197ce30",
   groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
   generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77",
 });

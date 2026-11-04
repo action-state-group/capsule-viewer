@@ -1623,6 +1623,13 @@ function renderRules(
   section.dataset.section = "rules";
   section.append(el("h2", "", w.t("lines.rules.h")));
   section.append(el("p", "lede", w.t("lines.rules.lede")));
+  const ofNote = el(
+    "p",
+    "lede",
+    w.t("lines.rules.of.note", { total: fmtCount(model.totalCount) }),
+  );
+  ofNote.dataset.note = "rule-counts";
+  section.append(ofNote);
   const table = el("table", "rules");
   table.dataset.rows = "rules";
   const thead = element("thead");
@@ -1791,7 +1798,27 @@ function renderRules(
         if (how === "judged" || how === "recomputed") {
           const chip = el("span", "rtier", w.t(`lines.rules.kind.${how}`));
           chip.dataset.kind = how;
-          nameCell.append(chip);
+          nameCell.append(" ", chip);
+        }
+        // A rule that did not apply to some conversation counts them in no
+        // column; say so, so a short row is not read as a lost conversation.
+        const counted = new Set([
+          ...notMet,
+          ...met,
+          ...undecided,
+          ...unverifiedHere,
+          ...outOfScopeHere,
+        ]);
+        if (counted.size < model.totalCount) {
+          const gap = el(
+            "small",
+            "rdet",
+            w.t("lines.rules.not_applied", {
+              k: fmtCount(model.totalCount - counted.size),
+            }),
+          );
+          gap.dataset.note = "not-applied";
+          nameCell.append(gap);
         }
         if (label.source === "sealed")
           nameCell.append(el("small", "", label.text));
