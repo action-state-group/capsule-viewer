@@ -17667,7 +17667,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("6f052a28909e7d266d1d2114719485eb89209dc2");
+    return commitPrefix("1f36441d5408af167a1b75bf3d208ee5a8f97a3f");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -26318,7 +26318,7 @@ ${pad.repeat(depth)}`;
   function parentWitnessLine(parent2) {
     const lead = "witnessed through a parent log: ";
     if (parent2.whole)
-      return `${lead}all ${parent2.of} ${parent2.of === 1 ? "entry" : "entries"}`;
+      return parent2.of === 1 ? `${lead}its only entry` : `${lead}all ${parent2.of} entries`;
     const covered = parent2.entries === 1 ? "entry 1" : `entries 1\u2013${parent2.entries}`;
     const first = parent2.entries + 1;
     const rest = first === parent2.of ? `entry ${parent2.of} is` : `entries ${first}\u2013${parent2.of} are`;
@@ -26328,7 +26328,7 @@ ${pad.repeat(depth)}`;
     if (seconds === null) return "time not stated";
     const date = new Date(seconds * 1e3);
     if (Number.isNaN(date.getTime()))
-      return `time out of range (${seconds} seconds since the epoch)`;
+      return `time not a valid date (signed as ${seconds} seconds since 1970)`;
     return `recorded ${date.toISOString().replace("T", " ").replace(/\.\d+Z$/u, "")} UTC`;
   }
   function renderParentWitness(host, parent2) {
