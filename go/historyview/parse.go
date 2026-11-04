@@ -289,12 +289,3 @@ func shortMinuteOf(t *instant) string {
 	u := t.utc()
 	return fmt.Sprintf("%s %d, %02d:%02d UTC", months[u.Month()-1], u.Day(), u.Hour(), u.Minute())
 }
-
-func secondOf(t *instant, withFraction bool) string {
-	u := t.utc()
-	frac := ""
-	if withFraction && t.fraction != "" {
-		frac = "." + t.fraction
-	}
-	return fmt.Sprintf("%s, %02d:%02d:%02d%s UTC", dateOf(t), u.Hour(), u.Minute(), u.Second(), frac)
-}

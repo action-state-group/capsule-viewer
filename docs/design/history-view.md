@@ -200,7 +200,7 @@ members in `v0`; a change of meaning is `v1`.
 | Header | "History · <holder>" · scope · audience badge | "Your History" (owner) or "History · Shared by <name>" · audience badge |
 | Hero | one line: "2 checkpoints · 127 entries · last cut 18:07 UTC · every checkpoint signature checks" | "<n> deals" and "newest first" |
 | Chips | signatures (all check / n don't verify / not checked here) · witness (time-stamped / not checked here) · started <date> | recorded · time-stamped count · not checked here |
-| Rows | cut time to the second, entries, 🔏 anchor; the two slots | asked, outcome and money, opened, last step, 🔏 record; the stamp row |
+| Rows | cut time to the minute, entries, 🔏 anchor; the two slots | asked, outcome and money, opened, last step, 🔏 record; the stamp row |
 | Callout | "What this does not show" | "What this does not show" |
 | Block | "What this node shares" (section 5) | none |
 | Seal | "Locked as it happened", the second-signature slot | the same |
@@ -253,7 +253,7 @@ the T8 History word gate (`docs/design/history-card.md`) runs over every
 vector, as it holds Muse's History text today.
 
 **Time.** A static page cannot know the reader's zone, so times are UTC in
-Muse's format ("Nov 3, 2026, 18:07 UTC"); rows show seconds. A scripted page
+Muse's format ("Nov 3, 2026, 18:07 UTC"); rows show the minute too. A scripted page
 draws the same text, so static and scripted pages match.
 
 ## 5. "What this node shares"
@@ -319,12 +319,12 @@ itself, with no failed row) is `failed` it reads "Didn't verify", any
 `not_checked` reads "Not checked here", all `none` reads "None yet", and
 otherwise it points to each row's slot.
 
-**Same second.** Each checkpoint is its own row, never merged by time. Every
+**Same minute.** Each checkpoint is its own row, never merged by time. Every
 checkpoint row shows its entry count and its 🔏 anchor, so two rows with the
-same "Cut at" second are told apart. Where two rows share the displayed
-second, the time shows its fraction when `cut_at` carries one. Why the
-2026-11-03 export has two checkpoints in one second is a question about the
-node's cadence, not the view; the mesh migration item answers it (section 9).
+same "Cut at" minute are told apart. Cut times show to the minute because
+checkpoint times are minute-granular by design and each side of an exchange
+gets its own checkpoint, so two rows can share a time; the "What this does not
+show" block says so (#281, Sherlock2's wording on actionstate-muse#334).
 
 ## 7. Static and scripted pages, by caller
 

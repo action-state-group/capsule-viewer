@@ -366,12 +366,6 @@ function shortMinuteOf(t: Instant): string {
   const d = new Date(t.ms);
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} UTC`;
 }
-function secondOf(t: Instant, withFraction: boolean): string {
-  const d = new Date(t.ms);
-  const frac = withFraction && t.fraction ? `.${t.fraction}` : "";
-  return `${dateOf(t)}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())}:${two(d.getUTCSeconds())}${frac} UTC`;
-}
-
 const PLACEHOLDER = /\{([a-z_]+)\}/gu;
 function placeholders(text: string): string[] {
   return [...text.matchAll(PLACEHOLDER)].map((m) => m[1] ?? "").sort();
@@ -1167,23 +1161,15 @@ export function buildHistoryView(
 
   let rowList: HistoryElement | null = null;
   if (drawRows) {
-    const seconds = new Map<number, number>();
-    if (kind === "checkpoint")
-      for (const x of rows as ReadCheckpoint[])
-        seconds.set(
-          Math.floor(x.cut.ms / 1000),
-          (seconds.get(Math.floor(x.cut.ms / 1000)) ?? 0) + 1,
-        );
     const items = rows.map((x) => {
       if (x.kind === "checkpoint") {
-        const tie = (seconds.get(Math.floor(x.cut.ms / 1000)) ?? 0) > 1;
         return el(
           "li",
           { class: "cvh-row", "data-history": "row" },
           el(
             "p",
             { class: "cvh-row-title" },
-            say("row.cut", { at: secondOf(x.cut, tie) }),
+            say("row.cut", { at: minuteOf(x.cut) }),
           ),
           el(
             "p",
@@ -1302,6 +1288,9 @@ export function buildHistoryView(
                 ? say("callout.deals.picked", { name: name ?? "" })
                 : say("callout.deals"),
           ),
+          kind === "checkpoint"
+            ? el("p", null, say("callout.checkpoints.time"))
+            : null,
         )
       : null;
 
