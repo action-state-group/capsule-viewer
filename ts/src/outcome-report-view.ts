@@ -1321,6 +1321,28 @@ export function datingStatement(
   return parts.join(" ");
 }
 
+/**
+ * The canvas's H1 names the month ("Outcome report, October 2026"). The month
+ * is the calendar month of the dates the report covers, drawn only when
+ * every dated conversation falls in the one month; a report over a longer or
+ * dateless period keeps the plain title, never a guessed month.
+ */
+function reportTitle(model: LinesModel, w: Words): string {
+  const title = w.t("lines.title");
+  const first = model.days[0]?.date;
+  const last = model.days[model.days.length - 1]?.date;
+  if (first === undefined || last === undefined) return title;
+  const month = /^(\d{4})-(\d{2})-\d{2}/.exec(first);
+  if (month === null || last.slice(0, 7) !== first.slice(0, 7)) return title;
+  const n = Number(month[2]);
+  if (n < 1 || n > 12) return title;
+  return w.t("lines.title.month", {
+    title,
+    month: w.t(`calendar.month.${n}`),
+    year: month[1]!,
+  });
+}
+
 function renderMeta(
   host: HTMLElement,
   model: LinesModel,
@@ -1336,7 +1358,7 @@ function renderMeta(
   bill.append(el("div", "v", packLine(model, w)));
   row1.append(bill);
   const title = el("div", "ih-title");
-  title.append(el("h1", "inv-title", w.t("lines.title")));
+  title.append(el("h1", "inv-title", reportTitle(model, w)));
   const summary = reportSummary(w);
   if (summary !== undefined) title.append(summary);
   // No Evidence Contract field states when the terms were locked; the line
