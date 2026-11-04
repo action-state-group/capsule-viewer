@@ -5,6 +5,7 @@
   "entries": {
     "layout.grouping": "lines",
     "lines.title": "Your outcome report",
+    "lines.title.month": "Your outcome report, {month} {year}",
     "lines.headline.one": "{resolved} of {n} conversation was resolved: every rule that applied was met.",
     "lines.headline.other": "{resolved} of {n} conversations were resolved: every rule that applied was met.",
     "lines.headline.missed": "{n} missed at least one rule.",

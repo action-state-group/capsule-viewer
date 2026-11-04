@@ -87,6 +87,23 @@ describe("the Outcomes report (lines)", () => {
     expect(verification(root).join("\n")).not.toContain("contract");
   });
 
+  it("names the month in the title when every dated conversation falls in one month", async () => {
+    const root = await render(bundle, contract);
+    expect(root.querySelector("h1.inv-title")?.textContent).toBe(
+      "Outcome report, September 2026",
+    );
+  });
+
+  it("keeps the plain title when the period spans two months", async () => {
+    const { bundle: spanning } = await sealEvidenceBundle(
+      JSON.parse(JSON.stringify(bundle).replaceAll("2026-09-29", "2026-10-02")),
+    );
+    const root = await render(spanning, contract);
+    expect(root.querySelector("h1.inv-title")?.textContent).toBe(
+      "Outcome report",
+    );
+  });
+
   it("with the contract, footnote 2 adds that an informational rule never changes the answer", async () => {
     const root = await render(bundle, contract);
     expect(root.querySelector('[data-footnote="resolved"]')?.textContent).toBe(

@@ -5,6 +5,7 @@
   "entries": {
     "layout.grouping": "lines",
     "lines.title": "Outcome report · operator view",
+    "lines.title.month": "Outcome report, {month} {year} · operator view",
     "lines.verdict.not_evaluable.judged": "not evaluable",
     "lines.verdict.not_evaluable.unjudged": "not evaluable",
     "lines.verdict.not_evaluable.withheld": "not evaluable",
