@@ -1125,6 +1125,10 @@ it("a rule not yet in force is not called did-not-apply on its roll-up row", asy
   const row = root.querySelector<HTMLElement>(`tr[data-rule="${ref}"]`);
   expect(row).not.toBeNull();
   expect(row!.querySelector('[data-note="not-applied"]')).toBeNull();
+  // ...but says how many conversations it is not yet in force in
+  expect(
+    row!.querySelector<HTMLElement>('[data-note="not-in-force"]')?.textContent,
+  ).toMatch(/^not yet in force in \d+$/);
   expect(
     root.querySelector<HTMLElement>('[data-note="rule-counts"]')?.textContent,
   ).toMatch(/^Counts are out of the report's \d+ conversations\.$/);

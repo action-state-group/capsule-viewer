@@ -19,6 +19,7 @@
     "lines.rules.of.note.one": "Counts are out of the report's {total} conversation.",
     "lines.rules.of.note.other": "Counts are out of the report's {total} conversations.",
     "lines.rules.not_applied": "did not apply in {k}",
+    "lines.rules.not_in_force": "not yet in force in {k}",
     "lines.rules.kind.judged": "Judged",
     "lines.rules.kind.recomputed": "Computed",
     "lines.tier.judged": "judged",

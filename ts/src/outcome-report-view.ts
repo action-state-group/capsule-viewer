@@ -1815,6 +1815,23 @@ function renderRules(
           gap.dataset.note = "not-applied";
           nameCell.append(gap);
         }
+        // A criterion not yet in force is outside the population (never a
+        // count); name those conversations too, so every one a short row
+        // leaves out has a label.
+        const laterHere = model.conversations.filter((c) =>
+          c.notYetInForce.some(
+            (cr) => cr.checkId === check.id && cr.criterionId === criterion.id,
+          ),
+        );
+        if (laterHere.length > 0) {
+          const later = el(
+            "small",
+            "rdet",
+            w.t("lines.rules.not_in_force", { k: fmtCount(laterHere.length) }),
+          );
+          later.dataset.note = "not-in-force";
+          nameCell.append(later);
+        }
         if (label.source === "sealed")
           nameCell.append(el("small", "", label.text));
         // contract-report/v1 section 3: the pack's explanation of the rule,
