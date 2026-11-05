@@ -73,7 +73,15 @@ rules bind it:
   contract marks informational; a row whose tier is not stated stays in them. The sealed aggregate
   the core strip shows is the producer's and counts every claim, so when the Result has an
   informational row the module says, in L0, that the sealed result counts informational rows and
-  its derived lines do not. With no contract, nothing here applies and no row shows a tier.
+  its derived lines do not. With a contract, the module also states the must-have totals in L0: the
+  Result's sealed `buckets` claim ids (calibration claims left out) counted by the contract's tier,
+  as Met, Not met, Could not decide and, when the Result has that bucket, Out of scope, of the
+  must-have evaluations, with the informational count apart, the contract's id and sha256, the
+  number of claims whose tier the contract does not state (in neither count, never guessed to be
+  must-have) and the number of must-have claims that failed verification (still counted under
+  their sealed verdict). The Result's `tier` (judged or recomputed) is a different field and is not
+  read. With no contract, no row shows a tier and the module says the totals count every
+  requirement in force.
 - **Groups.** A row's group is the part of its `requirement_ref` before the first `.`. It is read
   from the claims; the producer never supplies it. Groups and rows keep the order of their first
   claim. A `requirement_ref` with no `.` is in a final group with no title. There is one level of

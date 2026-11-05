@@ -658,8 +658,17 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // Which evaluations a total counts: a pack cannot make an all-requirements
   // total read as must-have only, or the reverse.
   "lines.rtier.totals",
+  "lines.rtier.totals.out-of-scope",
+  "lines.rtier.totals.unstated",
+  "lines.rtier.totals.failed",
   "groups.rtier.totals",
+  "groups.rtier.totals.out-of-scope",
+  "groups.rtier.totals.unstated",
+  "groups.rtier.totals.failed",
   "generic.rtier.totals",
+  "generic.rtier.totals.out-of-scope",
+  "generic.rtier.totals.unstated",
+  "generic.rtier.totals.failed",
   "lines.rtier.all-terms",
   "groups.rtier.all-terms",
   "generic.rtier.all-terms",
@@ -1430,9 +1439,9 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "f8a419f6870d24a416f87d9e3d3d559968771b24b06e2347588a0d221da92a22",
-  groups: "c77635c15f71a8ae9390950e9c21157233d696e37f5a0eeb53c97978e75b0b74",
-  generic: "3395f663d46427a4a54f52714991b5f95bb5754cbcdf52d4f32345b0763d2b98",
+  lines: "598e249b28e855348afcec25387fdec12d31c3cebf52fb9d18de0be879a93105",
+  groups: "c240f67ead44d40bd532c776935eb1d5ce81cdf706080febda63171fcc55fcaa",
+  generic: "16d208e71e7e95f5e3e6bdf105e90588569261a21bb97013d401a26635e46932",
 });
 
 export interface Words {
