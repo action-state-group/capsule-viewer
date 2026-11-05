@@ -2593,6 +2593,7 @@ export async function drawLines(
       slice,
       model.totalCount,
       w,
+      model.gating !== undefined,
     );
     if (subject !== undefined) levels.L0.append(subject);
   }

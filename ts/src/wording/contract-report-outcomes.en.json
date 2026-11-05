@@ -671,6 +671,8 @@
     "lines.subject.tile.conversations": "conversations · {first} to {last} · of the report's {total}",
     "lines.subject.tile.resolved": "resolved · every term met",
     "lines.subject.tile.missed": "missed · one or more terms not met",
+    "lines.subject.tile.resolved.tiered": "resolved · every must-have met",
+    "lines.subject.tile.missed.tiered": "missed · one or more must-haves not met",
     "lines.subject.tile.undecided": "could not decide",
     "lines.subject.headline": "One customer, {n} conversations",
     "lines.subject.explain": "The handle is a salted commitment to the customer id, stable within this pack's scope and your tier. It tells you these {n} are the same customer; the handle alone does not say who.",

@@ -326,6 +326,7 @@ function customerBlock(
   history: SubjectHistory,
   reportTotal: number,
   w: Words,
+  tiered: boolean,
 ): HTMLElement {
   const block = el("article", "sh-cust");
   block.dataset.handle = handle;
@@ -382,8 +383,16 @@ function customerBlock(
         total: fmt(reportTotal),
       }),
     ),
-    tile("ok", of(count("resolved")), w.t("lines.subject.tile.resolved")),
-    tile("bad", of(count("missed")), w.t("lines.subject.tile.missed")),
+    tile(
+      "ok",
+      of(count("resolved")),
+      w.t(`lines.subject.tile.resolved${tiered ? ".tiered" : ""}`),
+    ),
+    tile(
+      "bad",
+      of(count("missed")),
+      w.t(`lines.subject.tile.missed${tiered ? ".tiered" : ""}`),
+    ),
     tile("ne", of(count("undecided")), w.t("lines.subject.tile.undecided")),
   );
   block.append(tiles);
@@ -546,12 +555,16 @@ function table(
  * conversation's request, band and halves. Undefined when nothing is drawn.
  * `rows` are the Result's conversations as the Outcomes grouping reads them;
  * `reportTotal` is how many the Result holds, the denominator of every slice.
+ * `tiered` is true when the page was built with a contract (contract-report/v1
+ * section 2): `rows` are then already read over the rules the contract counts,
+ * and the tile captions say so.
  */
 export function renderSubjectHistory(
   rows: readonly SubjectConversation[],
   history: SubjectHistory,
   reportTotal: number,
   w: Words,
+  tiered = false,
 ): HTMLElement | undefined {
   const drawn = rows
     .filter((r) => history.entries.has(r.id))
@@ -586,7 +599,9 @@ export function renderSubjectHistory(
       section.append(el("p", "sh-lede", w.t("lines.subject.none")));
     repeat.sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
     for (const [handle, list] of repeat)
-      section.append(customerBlock(handle, list, history, reportTotal, w));
+      section.append(
+        customerBlock(handle, list, history, reportTotal, w, tiered),
+      );
   } else {
     section.append(el("p", "sh-slice", w.t("lines.subject.slice.shared")));
     section.append(table(drawn, history, w));
