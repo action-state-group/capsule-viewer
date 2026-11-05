@@ -708,7 +708,7 @@
     "lines.subject.gap.tiered": "Not drawn: when each term is met, and the adjudication. This bundle does not carry them.",
     "lines.subject.note.unverified": "{n} of {total} could not be verified.",
     "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied.",
-    "lines.subject.note.none-counted": "{n} of {total} had no counted term that applied; this contract keeps informational terms out of the answer.",
-    "lines.subject.outcome.none-counted": "no counted term applied"
+    "lines.subject.note.none-counted": "{n} of {total} had no must-have term that applied; under this contract informational terms never change the answer.",
+    "lines.subject.outcome.none-counted": "no must-have term applied"
   }
 }

@@ -468,7 +468,7 @@ describe("subject-history tiles under a contract", () => {
         .map((e) => e.textContent)
         .join(" ");
     const NONE = "had no term that applied";
-    const KEPT = "had no counted term that applied";
+    const KEPT = "had no must-have term that applied";
 
     it("under a contract whose rules are all informational, says none was counted, not that none applied", async () => {
       const root = await page(bundleWith(operator), allTier("informational"));
@@ -491,7 +491,7 @@ describe("subject-history tiles under a contract", () => {
       );
       expect(note(root)).toContain(`4 of 4 ${KEPT}`);
       expect(note(root)).not.toContain(NONE);
-      expect(section(root)!.textContent).toContain("no counted term applied");
+      expect(section(root)!.textContent).toContain("no must-have term applied");
       expect(section(root)!.textContent).not.toContain("no rule applied");
     });
 
