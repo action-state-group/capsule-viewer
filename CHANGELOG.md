@@ -11,6 +11,8 @@ here. The format follows
 
 ## Unreleased
 
+- The pin moves to `@action-state-group/agent-action-capsule` 0.14.0, which carries `parentWitness` (agent-action-capsule#572). The verification page draws a checkpoint witnessed through a parent log (parent-log-witness/v1) in the core's Verification section, below the receipts: "witnessed through a parent log: all 3 entries", or "entries 1–2 of 3; entry 3 is not covered by this witness" for a part, and one line per verified receipt with the witness and "recorded 2026-11-04 23:22:21 UTC" (UTC; "time not stated" when the receipt has none). Such a bundle gets no "self-witnessed" line. The viewer computes nothing: it draws AAC's result (J.8), and a page shows it only for a context built with a witness directory (`witnessDirectory` of `buildVerifiedBundleContext`). The wording is Sherlock2's (capsule-viewer#237). `readerCadenceWitness` stays until capsulectl writes `parent-log-witness/v1` (action-state-group/evidencebook#401). The stated verifier version and the goldens that print it changed with the pin.
+
 ## ts 0.18.2 and go 0.18.2 (2026-11-04)
 
 Both state viewer 0.18.2: `ts/v0.18.2`, then `go/v0.18.2` on the commit that ships its page runtime. This release carries #281 (PR #282) and #283 (PR #284).
