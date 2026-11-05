@@ -2451,7 +2451,14 @@ function subjectConversations(
 ): SubjectConversation[] {
   return model.conversations.map((c) => {
     const status = conversationStatus(c, model.gating);
-    const outcome = statusWord(status, c, w, model.gating);
+    // The contract keeps some of this conversation's rules out of its answer
+    // and nothing is left to count: the rules kept out may have applied, so
+    // the page must not say that none did.
+    const keptOut =
+      status === "nothing-applied" && model.gating?.counted.has(c) === true;
+    const outcome = keptOut
+      ? { word: w.t("lines.subject.outcome.none-counted"), tone: "na" as const }
+      : statusWord(status, c, w, model.gating);
     const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
     const turns =
       c.transcript.state === "verified" || c.transcript.state === "cited"
@@ -2462,6 +2469,7 @@ function subjectConversations(
       date: c.day,
       ...(time === undefined ? {} : { time }),
       status,
+      ...(keptOut ? { keptOut: true } : {}),
       outcome,
       terms: c.criteria.map((cr) => ({
         ref: `${cr.checkId}.${cr.criterionId}`,

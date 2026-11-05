@@ -202,6 +202,12 @@ export interface SubjectConversation {
     | "unverified"
     | "undecided"
     | "nothing-applied";
+  /**
+   * With `nothing-applied`: the contract keeps some of this conversation's
+   * rules out of its answer (informational) and none is left to count. Those
+   * rules may have applied, so the page cannot say that none did.
+   */
+  readonly keptOut?: boolean;
   readonly outcome: { readonly word: string; readonly tone: Tone };
   readonly terms: readonly {
     readonly ref: string;
@@ -397,8 +403,11 @@ function customerBlock(
   );
   block.append(tiles);
   const unverified = count("unverified");
-  const nothing = count("nothing-applied");
-  if (unverified + nothing > 0) {
+  const keptOut = rows.filter(
+    (r) => r.status === "nothing-applied" && r.keptOut === true,
+  ).length;
+  const nothing = count("nothing-applied") - keptOut;
+  if (unverified + nothing + keptOut > 0) {
     const rest = [
       ...(unverified > 0
         ? [
@@ -412,6 +421,14 @@ function customerBlock(
         ? [
             w.t("lines.subject.note.nothing-applied", {
               n: fmt(nothing),
+              total: fmt(n),
+            }),
+          ]
+        : []),
+      ...(keptOut > 0
+        ? [
+            w.t("lines.subject.note.none-counted", {
+              n: fmt(keptOut),
               total: fmt(n),
             }),
           ]

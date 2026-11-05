@@ -434,6 +434,18 @@ describe("a conversation's result, read with tiers", () => {
   const tierOf = (_ref: string | undefined, req: string) =>
     tiers[req] ?? "unstated";
 
+  it("is nothing applied, with a rule kept out, when its must-have did not apply and its informational rule did", () => {
+    const c = conversation([
+      criterion("a", "must", "not_applicable"),
+      criterion("a", "info", "met"),
+    ]);
+    const g = gating([c], tierOf);
+    expect(conversationStatus(c, g)).toBe("nothing-applied");
+    expect(g.counted.has(c)).toBe(true);
+    const plain = conversation([criterion("a", "must", "not_applicable")]);
+    expect(gating([plain], tierOf).counted.has(plain)).toBe(false);
+  });
+
   it("is nothing applied when every rule it has is informational", () => {
     const c = conversation([
       criterion("a", "info", "not_met"),

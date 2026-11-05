@@ -62,7 +62,8 @@ function bundleWith(
     not_met: [],
     not_evaluable: [],
   };
-  for (const c of kept) buckets[c.verdict as string]!.push(c.id as string);
+  for (const c of kept)
+    (buckets[c.verdict as string] ??= []).push(c.id as string);
   const rename = new Map(
     Object.keys(blockOf(doc).conversations as Obj).map((k, i) => [k, keep[i]!]),
   );
@@ -436,6 +437,105 @@ describe("subject-history tiles under a contract", () => {
     expect(section(root)!.querySelector(".sh-gap")!.textContent).toContain(
       "which terms are must-have",
     );
+  });
+
+  describe("a conversation with nothing left to count", () => {
+    /** The airline contract with every rule given `tier` (no tier key when null). */
+    function allTier(tier: string | null): { text: string; sha256: string } {
+      const base = JSON.parse(airlineContract().text) as {
+        requirements: Obj[];
+      };
+      const text = JSON.stringify({
+        ...base,
+        requirements: base.requirements.map((r) => {
+          const { tier: _drop, ...rest } = r;
+          return tier === null ? rest : { ...rest, tier };
+        }),
+      });
+      return { text, sha256: createHash("sha256").update(text).digest("hex") };
+    }
+    /** Every rule judged out of scope: no rule applied (Result v0 section 4.2). */
+    const outOfScope = (claims: Obj[]): void => {
+      for (const c of claims) {
+        c.verdict = "out_of_scope";
+        c.out_of_scope_allowed = true;
+        c.sufficiency = "SATISFIED";
+        (c.presentation as Obj).status = "SATISFIED";
+      }
+    };
+    const note = (root: HTMLElement): string =>
+      [...section(root)!.querySelectorAll(".sh-note")]
+        .map((e) => e.textContent)
+        .join(" ");
+    const NONE = "had no term that applied";
+    const KEPT = "had no must-have term that applied";
+
+    it("under a contract whose rules are all informational, says none was counted, not that none applied", async () => {
+      const root = await page(bundleWith(operator), allTier("informational"));
+      expect(note(root)).toContain(`4 of 4 ${KEPT}`);
+      expect(note(root)).not.toContain(NONE);
+      expect(section(root)!.textContent).not.toContain("no rule applied");
+    });
+
+    it("without a contract a conversation whose rules were all out of scope keeps the old note and word", async () => {
+      const root = await page(bundleWith(operator, undefined, outOfScope));
+      expect(note(root)).toContain(`4 of 4 ${NONE}`);
+      expect(note(root)).not.toContain(KEPT);
+      expect(section(root)!.textContent).toContain("no rule applied");
+    });
+
+    it("under a contract, a must-have that did not apply with an informational rule kept out says none was counted", async () => {
+      const root = await page(
+        bundleWith(operator, undefined, outOfScope),
+        airlineContract(),
+      );
+      expect(note(root)).toContain(`4 of 4 ${KEPT}`);
+      expect(note(root)).not.toContain(NONE);
+      expect(section(root)!.textContent).toContain("no must-have term applied");
+      expect(section(root)!.textContent).not.toContain("no rule applied");
+    });
+
+    it("under a contract that keeps no rule out, the old note and word stay", async () => {
+      const root = await page(
+        bundleWith(operator, undefined, outOfScope),
+        allTier("must_have"),
+      );
+      expect(note(root)).toContain(`4 of 4 ${NONE}`);
+      expect(section(root)!.textContent).toContain("no rule applied");
+    });
+
+    it("counts both kinds apart over one total", async () => {
+      const w = await contractReportWords("lines", undefined, {
+        singleContract: true,
+      });
+      const row = (id: string, keptOut: boolean): SubjectConversation => ({
+        id,
+        date: "2026-10-03",
+        status: "nothing-applied",
+        ...(keptOut ? { keptOut: true } : {}),
+        outcome: { word: "x", tone: "na" },
+        terms: [],
+        open: [],
+      });
+      const history = readSubjectHistory({ ...operator })!;
+      const ids = [...history.entries.keys()].slice(0, 3);
+      const rows = [
+        row(ids[0]!, true),
+        row(ids[1]!, false),
+        row(ids[2]!, false),
+      ];
+      const s = renderSubjectHistory(rows, history, 3, w)!;
+      const text = [...s.querySelectorAll(".sh-note")]
+        .map((e) => e.textContent)
+        .join(" ");
+      expect(text).toContain(`1 of 3 ${KEPT}`);
+      expect(text).toContain(`2 of 3 ${NONE}`);
+    });
+
+    it("goldens: the note and the rows under a contract", async () => {
+      const root = await page(bundleWith(operator), allTier("informational"));
+      check("subject-history-operator-informational", section(root)!.outerHTML);
+    });
   });
 
   it("goldens: the operator tier under a contract", async () => {
