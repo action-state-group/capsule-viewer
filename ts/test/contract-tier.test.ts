@@ -83,7 +83,9 @@ describe("the Outcomes report (lines)", () => {
   it("without a contract, draws no tier", async () => {
     const root = await render(bundle);
     expect(root.querySelector("[data-requirement-tier]")).toBeNull();
-    expect(root.querySelector("[data-sealed-counts]")).toBeNull();
+    expect(
+      root.querySelector('[data-sealed-counts="informational"]'),
+    ).toBeNull();
     expect(verification(root).join("\n")).not.toContain("contract");
   });
 
@@ -248,7 +250,9 @@ describe("the Outcomes report (lines)", () => {
     expect(new Set(Object.values(tiersOf(root, "tr.rule[data-rule]")))).toEqual(
       new Set(["unstated"]),
     );
-    expect(root.querySelector("[data-sealed-counts]")).toBeNull();
+    expect(
+      root.querySelector('[data-sealed-counts="informational"]'),
+    ).toBeNull();
     expect(statuses(root)).toEqual(statuses(await render(bundle)));
   });
 
@@ -273,6 +277,23 @@ describe("the EU AI Act Results (groups)", () => {
   it("without a contract, draws no tier", async () => {
     const root = await render(bundle);
     expect(root.querySelector("[data-requirement-tier]")).toBeNull();
+  });
+
+  it("with the contract, states the must-have totals from the sealed buckets by tier; without it, says the totals count every requirement", async () => {
+    const totals = (root: HTMLElement) =>
+      root.querySelector<HTMLElement>("[data-must-have-totals]");
+    const withContract = totals(await render(bundle, contract));
+    expect(withContract).not.toBeNull();
+    expect(withContract!.textContent).toMatch(
+      /^Must-have only, under contract \S+ \(sha256 [0-9a-f]{64}\): \d+ Met · \d+ Not met · \d+ Could not decide, of \d+ must-have evaluations\. \d+ informational evaluations are reported apart\.$/u,
+    );
+    const plain = await render(bundle);
+    expect(totals(plain)).toBeNull();
+    expect(
+      plain.querySelector('[data-sealed-counts="all-terms"]')?.textContent,
+    ).toBe(
+      "These totals count every requirement the Result holds: no contract was given to separate the must-have ones.",
+    );
   });
 
   it("with the contract, footnote 2 adds that an informational requirement never changes the answer; without, it does not", async () => {

@@ -11,6 +11,8 @@
     "groups.rtier.unstated.title": "Requirements with no stated tier · {n}",
     "groups.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
     "groups.rtier.sealed-note": "The sealed result counts informational requirements too; the lines this report derives leave them out.",
+    "groups.rtier.totals": "Must-have only, under contract {contract} (sha256 {digest}): {met} Met · {not_met} Not met · {undecided} Could not decide, of {n} must-have evaluations. {informational} informational evaluations are reported apart.",
+    "groups.rtier.all-terms": "These totals count every requirement the Result holds: no contract was given to separate the must-have ones.",
     "groups.producer.title": "The producer's mapping, not a sealed record",
     "groups.count.obligation.one": "{n} obligation",
     "groups.count.obligation.other": "{n} obligations",

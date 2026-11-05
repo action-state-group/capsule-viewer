@@ -655,6 +655,14 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.rtier.unstated.note",
   "lines.rtier.sealed-note",
   "groups.rtier.sealed-note",
+  // Which evaluations a total counts: a pack cannot make an all-requirements
+  // total read as must-have only, or the reverse.
+  "lines.rtier.totals",
+  "groups.rtier.totals",
+  "generic.rtier.totals",
+  "lines.rtier.all-terms",
+  "groups.rtier.all-terms",
+  "generic.rtier.all-terms",
   "generic.rtier.unstated.note",
   "generic.rtier.sealed-note",
   // The generic page's honesty lines: what its names and ids are, and what a
@@ -1422,9 +1430,9 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "8e0c9b40a74e149a8011f11952912043d11e372b2b09d0d2ec5c279a91ef4287",
-  groups: "942457cee93dec08e3a9bf271119ec26f1bdba9f794ae2449ebdafdeeb704939",
-  generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77",
+  lines: "f8a419f6870d24a416f87d9e3d3d559968771b24b06e2347588a0d221da92a22",
+  groups: "c77635c15f71a8ae9390950e9c21157233d696e37f5a0eeb53c97978e75b0b74",
+  generic: "3395f663d46427a4a54f52714991b5f95bb5754cbcdf52d4f32345b0763d2b98",
 });
 
 export interface Words {

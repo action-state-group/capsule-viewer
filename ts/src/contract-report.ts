@@ -127,6 +127,55 @@ export function tierReader(
     rowTier(contract, contractRef ?? single ?? "", requirementRef);
 }
 
+const fmtCount = (n: number): string => n.toLocaleString("en-US");
+
+/**
+ * The sealed bucket lists read by the contract's tier (Sherlock2, #172): the
+ * Result's evaluations (its `buckets` claim ids, calibration checks left
+ * out) split into must-have, and the informational ones counted apart. A
+ * claim the contract states no tier for is in neither: it is never guessed
+ * to be must-have. Undefined with no contract, or no bucket lists. The
+ * Result's "tier" (judged / recomputed) is a different field and is not read.
+ */
+export function mustHaveTotals(
+  result: ResultRoot,
+  tierOf: TierOf | undefined,
+):
+  | {
+      readonly met: number;
+      readonly notMet: number;
+      readonly notEvaluable: number;
+      readonly evaluations: number;
+      readonly informational: number;
+    }
+  | undefined {
+  if (tierOf === undefined) return undefined;
+  const { met, notMet, notEvaluable, outOfScope } = result.buckets;
+  if (met === undefined || notMet === undefined || notEvaluable === undefined)
+    return undefined;
+  const byId = new Map(result.claims.map((claim) => [claim.id, claim]));
+  const tierOfId = (id: string): string | undefined => {
+    const claim = byId.get(id);
+    return claim === undefined || claim.type === "calibration"
+      ? undefined
+      : tierOf(claim.contractRef, claim.requirementRef);
+  };
+  const count = (ids: readonly string[], tier: string): number =>
+    ids.filter((id) => tierOfId(id) === tier).length;
+  const decided = (tier: string): number =>
+    count(met, tier) +
+    count(notMet, tier) +
+    count(notEvaluable, tier) +
+    count(outOfScope ?? [], tier);
+  return {
+    met: count(met, "must_have"),
+    notMet: count(notMet, "must_have"),
+    notEvaluable: count(notEvaluable, "must_have"),
+    evaluations: decided("must_have"),
+    informational: decided("informational"),
+  };
+}
+
 /** Every claim cites the same `contract_ref` (contract-report/v1 section 3: only then do `row.*` and `group.*` apply). */
 export function citesOneContract(result: ResultRoot): boolean {
   return new Set(result.claims.map((claim) => claim.contractRef)).size <= 1;
@@ -176,8 +225,32 @@ export async function renderContractReport(
   const refused = refusedWordingNotice(w);
   if (refused !== undefined) levels.L0.append(refused);
   // The sealed aggregate the core strip shows counts every claim; the
-  // module's derived lines leave out informational rows. When the Result
-  // has one, the page says so, so the two never disagree unexplained.
+  // module's derived lines leave out informational rows. The page says so,
+  // and draws the must-have figures from the sealed bucket lists by the
+  // contract's tier, so the two never disagree unexplained (#172). With no
+  // contract it says the totals count every requirement.
+  const totals = mustHaveTotals(result, tierOf);
+  if (contract !== undefined && totals !== undefined) {
+    const note = document.createElement("p");
+    note.className = "tier-note";
+    note.dataset.mustHaveTotals = String(totals.evaluations);
+    note.textContent = w.t(`${input.grouping}.rtier.totals`, {
+      contract: contract.ref,
+      digest: contract.sha256,
+      met: fmtCount(totals.met),
+      not_met: fmtCount(totals.notMet),
+      undecided: fmtCount(totals.notEvaluable),
+      n: fmtCount(totals.evaluations),
+      informational: fmtCount(totals.informational),
+    });
+    levels.L0.append(note);
+  } else if (tierOf === undefined && result.claims.length > 0) {
+    const note = document.createElement("p");
+    note.className = "tier-note";
+    note.dataset.sealedCounts = "all-terms";
+    note.textContent = w.t(`${input.grouping}.rtier.all-terms`);
+    levels.L0.append(note);
+  }
   if (
     tierOf !== undefined &&
     result.claims.some(
