@@ -5088,6 +5088,7 @@ var EvidenceGraph = (() => {
     historyViewStyles: () => historyViewStyles,
     mountPresentation: () => mountPresentation,
     mountPresentationFragment: () => mountPresentationFragment,
+    mustHaveTotals: () => mustHaveTotals,
     obligationStatus: () => obligationStatus,
     parentWitnessLine: () => parentWitnessLine,
     parentWitnessTime: () => parentWitnessTime,
@@ -17190,7 +17191,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     box.append(el5("b", "", big2), el5("span", "", caption));
     return box;
   }
-  function customerBlock(handle, rows, history, reportTotal, w) {
+  function customerBlock(handle, rows, history, reportTotal, w, tiered) {
     const block = el5("article", "sh-cust");
     block.dataset.handle = handle;
     const n = rows.length;
@@ -17240,14 +17241,25 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
           total: fmt(reportTotal)
         })
       ),
-      tile("ok", of(count2("resolved")), w.t("lines.subject.tile.resolved")),
-      tile("bad", of(count2("missed")), w.t("lines.subject.tile.missed")),
+      tile(
+        "ok",
+        of(count2("resolved")),
+        w.t(`lines.subject.tile.resolved${tiered ? ".tiered" : ""}`)
+      ),
+      tile(
+        "bad",
+        of(count2("missed")),
+        w.t(`lines.subject.tile.missed${tiered ? ".tiered" : ""}`)
+      ),
       tile("ne", of(count2("undecided")), w.t("lines.subject.tile.undecided"))
     );
     block.append(tiles);
     const unverified = count2("unverified");
-    const nothing = count2("nothing-applied");
-    if (unverified + nothing > 0) {
+    const keptOut = rows.filter(
+      (r) => r.status === "nothing-applied" && r.keptOut === true
+    ).length;
+    const nothing = count2("nothing-applied") - keptOut;
+    if (unverified + nothing + keptOut > 0) {
       const rest = [
         ...unverified > 0 ? [
           w.t("lines.subject.note.unverified", {
@@ -17258,6 +17270,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
         ...nothing > 0 ? [
           w.t("lines.subject.note.nothing-applied", {
             n: fmt(nothing),
+            total: fmt(n)
+          })
+        ] : [],
+        ...keptOut > 0 ? [
+          w.t("lines.subject.note.none-counted", {
+            n: fmt(keptOut),
             total: fmt(n)
           })
         ] : []
@@ -17373,7 +17391,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     }
     return section;
   }
-  function renderSubjectHistory(rows, history, reportTotal, w) {
+  function renderSubjectHistory(rows, history, reportTotal, w, tiered = false) {
     const drawn = rows.filter((r) => history.entries.has(r.id)).sort(
       (a, b) => a.date === b.date ? a.id < b.id ? -1 : 1 : a.date < b.date ? -1 : 1
     );
@@ -17403,12 +17421,16 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
         section.append(el5("p", "sh-lede", w.t("lines.subject.none")));
       repeat.sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
       for (const [handle, list2] of repeat)
-        section.append(customerBlock(handle, list2, history, reportTotal, w));
+        section.append(
+          customerBlock(handle, list2, history, reportTotal, w, tiered)
+        );
     } else {
       section.append(el5("p", "sh-slice", w.t("lines.subject.slice.shared")));
       section.append(table(drawn, history, w));
     }
-    section.append(el5("p", "sh-gap", w.t("lines.subject.gap")));
+    section.append(
+      el5("p", "sh-gap", w.t(`lines.subject.gap${tiered ? ".tiered" : ""}`))
+    );
     return section;
   }
   var SUBJECT_HISTORY_CSS = `
@@ -17667,13 +17689,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("1f36441d5408af167a1b75bf3d208ee5a8f97a3f");
+    return commitPrefix("d9acdea4c629e3ae42db08872d96da9e982c589a");
   }
   var commit = builtCommit();
-  var unreleased = true;
+  var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.18.2",
+    viewerVersion: "0.18.3",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.14.0",
     cllVersion: "0.3.0",
@@ -17795,10 +17817,22 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.rtier.unstated.title": "Terms with no stated tier \xB7 {n}",
       "lines.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
       "lines.rtier.sealed-note": "The sealed result counts informational terms too; the lines this report derives leave them out.",
+      "lines.rtier.totals": "Must-have only, under contract {contract} (sha256 {digest}): {met} Met \xB7 {not_met} Not met \xB7 {undecided} Could not decide{out_of_scope}, of {n} must-have evaluations. {informational} informational evaluations are reported apart.{unstated}{failed}",
+      "lines.rtier.totals.out-of-scope": " \xB7 {n} Out of scope",
+      "lines.rtier.totals.unstated": " Evaluations this contract gives no tier, in neither count: {n}.",
+      "lines.rtier.totals.failed": " Must-have evaluations that failed verification, still counted under their sealed verdict: {n}.",
+      "lines.rtier.all-terms": "These totals count every rule in force: no contract was given to separate the must-have ones.",
       "lines.title": "Outcome report",
       "lines.title.month": "Outcome report, {month} {year}",
       "lines.share": "{count} of {total}",
       "lines.share.percent": "{p}%",
+      "lines.rules.of": "of {total}",
+      "lines.rules.of.note.one": "Counts are out of the report's {total} conversation.",
+      "lines.rules.of.note.other": "Counts are out of the report's {total} conversations.",
+      "lines.rules.not_applied": "did not apply in {k}",
+      "lines.rules.not_in_force": "not yet in force in {k}",
+      "lines.rules.kind.judged": "Judged",
+      "lines.rules.kind.recomputed": "Computed",
       "lines.tier.judged": "judged",
       "lines.tier.recomputed": "recomputed",
       "lines.tier.unknown": "tier unknown \u2014 no claims observed",
@@ -18443,6 +18477,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.subject.tile.conversations": "conversations \xB7 {first} to {last} \xB7 of the report's {total}",
       "lines.subject.tile.resolved": "resolved \xB7 every term met",
       "lines.subject.tile.missed": "missed \xB7 one or more terms not met",
+      "lines.subject.tile.resolved.tiered": "resolved \xB7 every must-have met",
+      "lines.subject.tile.missed.tiered": "missed \xB7 one or more required terms not met",
       "lines.subject.tile.undecided": "could not decide",
       "lines.subject.headline": "One customer, {n} conversations",
       "lines.subject.explain": "The handle is a salted commitment to the customer id, stable within this pack's scope and your tier. It tells you these {n} are the same customer; the handle alone does not say who.",
@@ -18475,8 +18511,11 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.subject.legend.undecided": "could not decide",
       "lines.subject.legend.order": "terms are in the contract's order",
       "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them.",
+      "lines.subject.gap.tiered": "Not drawn: when each term is met, and the adjudication. This bundle does not carry them.",
       "lines.subject.note.unverified": "{n} of {total} could not be verified.",
-      "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied."
+      "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied.",
+      "lines.subject.note.none-counted": "{n} of {total} had no must-have term that applied; under this contract informational terms never change the answer.",
+      "lines.subject.outcome.none-counted": "no must-have term applied"
     }
   };
 
@@ -18487,20 +18526,25 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     locale: "en",
     entries: {
       "layout.grouping": "groups",
-      "groups.rtier.must_have.title": "Must-have tests \xB7 {n}",
+      "groups.rtier.must_have.title": "Must-have requirements \xB7 {n}",
       "groups.rtier.must_have.note": "These count in the answer.",
-      "groups.rtier.informational.title": "Informational tests \xB7 {n}",
-      "groups.rtier.informational.note": "Reported, never in the answer: a test not met here changes nothing above it.",
-      "groups.rtier.unstated.title": "Tests with no stated tier \xB7 {n}",
+      "groups.rtier.informational.title": "Informational requirements \xB7 {n}",
+      "groups.rtier.informational.note": "Reported, never in the answer: a requirement not met here changes nothing above it.",
+      "groups.rtier.unstated.title": "Requirements with no stated tier \xB7 {n}",
       "groups.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
-      "groups.rtier.sealed-note": "The sealed result counts informational tests too; the lines this report derives leave them out.",
+      "groups.rtier.sealed-note": "The sealed result counts informational requirements too; the lines this report derives leave them out.",
+      "groups.rtier.totals": "Must-have only, under contract {contract} (sha256 {digest}): {met} Met \xB7 {not_met} Not met \xB7 {undecided} Could not decide{out_of_scope}, of {n} must-have evaluations. {informational} informational evaluations are reported apart.{unstated}{failed}",
+      "groups.rtier.totals.out-of-scope": " \xB7 {n} Out of scope",
+      "groups.rtier.totals.unstated": " Evaluations this contract gives no tier, in neither count: {n}.",
+      "groups.rtier.totals.failed": " Must-have evaluations that failed verification, still counted under their sealed verdict: {n}.",
+      "groups.rtier.all-terms": "These totals count every requirement in force: no contract was given to separate the must-have ones.",
       "groups.producer.title": "The producer's mapping, not a sealed record",
       "groups.count.obligation.one": "{n} obligation",
       "groups.count.obligation.other": "{n} obligations",
       "groups.count.session.one": "{n} session",
       "groups.count.session.other": "{n} sessions",
-      "groups.count.test.one": "{n} test",
-      "groups.count.test.other": "{n} tests",
+      "groups.count.test.one": "{n} requirement",
+      "groups.count.test.other": "{n} requirements",
       "groups.count.exception.one": "{n} exception",
       "groups.count.exception.other": "{n} exceptions",
       "groups.count.result.one": "{n} result",
@@ -18517,12 +18561,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.sub": "{pack} \xB7 {obligations} \xB7 {sessions}",
       "groups.sub.judged": "{pack} \xB7 {obligations} \xB7 {sessions} \xB7 judged {period}",
       "groups.sub.dated": "{pack} \xB7 {obligations} \xB7 {sessions} \xB7 {period}",
-      "groups.headline.one": "{met} of {n} session met every test that applied to it.",
-      "groups.headline.other": "{met} of {n} sessions met every test that applied to them.",
+      "groups.headline.one": "{met} of {n} session met every requirement that applied to it.",
+      "groups.headline.other": "{met} of {n} sessions met every requirement that applied to them.",
       "groups.headline.missed": "{n} did not meet at least one.",
       "groups.headline.unverified": "{n} could not be verified.",
       "groups.headline.undecided": "{n} could not be decided.",
-      "groups.headline.nothing-applied": "{n} had no test that applied.",
+      "groups.headline.nothing-applied": "{n} had no requirement that applied.",
       "groups.ob.worst.not_met": "worst: not met, {n} of {sessions} \xB7 derived",
       "groups.ob.worst.unverified": "worst: could not be verified, {n} of {sessions} \xB7 derived",
       "groups.ob.worst.undecided": "worst: could not be decided, {n} of {sessions} \xB7 derived",
@@ -18541,10 +18585,15 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.row.ok.all-decided": "No exceptions",
       "groups.row.ok": "No exceptions",
       "groups.summary.h": "What was checked and what we found",
-      "groups.summary.lede": "Each session (one conversation with the agent) was checked against {tests} under {obligations}. Results are counts of sessions: there is no overall score. Open a test to read the sessions behind its exceptions.",
-      "groups.summary.basis": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, obligation titles, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
-      "groups.summary.basis.pack-titles": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, test names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided tests and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them. Obligation titles are the Act's article headings, from this page's wording pack.`,
-      "groups.summary.col.test": "Obligation and test",
+      "groups.summary.lede": "Each session (one conversation with the agent) was checked against {tests} under {obligations}. Results are counts of sessions: there is no overall score. Open a requirement to read the sessions behind its exceptions.",
+      "groups.summary.basis": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, obligation titles, requirement names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided requirements and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
+      "groups.summary.basis.pack-titles": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, requirement names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided requirements and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them. Obligation titles are the Act's article headings, from this page's wording pack.`,
+      "groups.fn.records.one": "\xB9 Records are the {records} sealed items in this bundle. A session is one conversation with the agent, made of one or more records; this bundle has {n} session.",
+      "groups.fn.records.other": "\xB9 Records are the {records} sealed items in this bundle. A session is one conversation with the agent, made of one or more records; this bundle has {n} sessions.",
+      "groups.fn.resolved.tiered": "\xB2 A session is met when every requirement that applied to it was satisfied and at least one applied. A requirement the contract marks informational never changes the answer.",
+      "groups.fn.resolved": "\xB2 A session is met when every requirement that applied to it was satisfied and at least one applied.",
+      "groups.fn.readonly": "\xB3 This page is read-only: it records nothing the reader does. To disagree, send an evidence request or open a dispute.",
+      "groups.summary.col.test": "Obligation and requirement",
       "groups.summary.col.checked-in": "Checked in",
       "groups.summary.col.result": "Result",
       "groups.finding": "Finding {id}",
@@ -18552,23 +18601,23 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.session.unverified": "could not verify",
       "groups.session.undecided": "could not decide",
       "groups.session.ok": "no exceptions",
-      "groups.session.none": "no test applied",
-      "groups.h.test-by-test": "Test by test",
+      "groups.session.none": "no requirement applied",
+      "groups.h.test-by-test": "Requirement by requirement",
       "groups.unverified-note": "no verdict drawn: neither met nor an exception",
       "groups.pf.dated": "Dated",
       "groups.pf.session": "Session",
       "groups.pf.case-record.from-claims": "{record} (cited by every claim of this session; the reports that name it are withheld)",
-      "groups.pf.h.each-report": "Each test's sealed report",
-      "groups.pf.no-claim": "no claim: Result v0 carries none for a test that did not apply",
+      "groups.pf.h.each-report": "Each requirement's sealed report",
+      "groups.pf.no-claim": "no claim: Result v0 carries none for a requirement that did not apply",
       "groups.pf.judge-pin": "judge pin {digest}",
       "groups.pf.rationale": "Rationale, as sealed: {rationale}",
       "groups.pf.absent": "absent",
       "groups.pin.differs": "disagrees across sessions",
       "groups.pin.none": "no judged sessions cited",
-      "groups.rp.toggle": "Proofs for this report: method, test wording, what ran, and how to verify the whole bundle",
-      "groups.od.h": "Method and the wording each test ran",
-      "groups.od.mapped": "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
-      "groups.od.mapped.pack-titles": "Article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record. The title is the Act's article heading, from this page's wording pack.",
+      "groups.rp.toggle": "Proofs for this report: method, requirement wording, what ran, and how to verify the whole bundle",
+      "groups.od.h": "Method and the wording of each requirement's check",
+      "groups.od.mapped": "Title, article, summary, method, requirement names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
+      "groups.od.mapped.pack-titles": "Article, summary, method, requirement names and the undecided-session note: the producer's mapping, in italics, not a sealed record. The title is the Act's article heading, from this page's wording pack.",
       "groups.od.unmapped": "The producer's extension does not map this obligation: article, summary and method not stated.",
       "groups.od.judged-terms": "Judged terms: ",
       "groups.od.wording.sealed": "Wording run (sealed): {text}",
@@ -18578,7 +18627,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.q.none": "No quality protocol declared in this pack.",
       "groups.q.protocol": "Protocol ",
       "groups.q.unspecified": "unspecified",
-      "groups.q.tail": ". Recomputed tests are not sampled.",
+      "groups.q.tail": ". Recomputed checks are not sampled.",
       "groups.ran.h": "What ran",
       "groups.ran.contract": "Contract",
       "groups.ran.contract.none": "no conversations",
@@ -19479,6 +19528,11 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "generic.rtier.unstated.title": "Requirements with no stated tier \xB7 {n}",
       "generic.rtier.unstated.note": "The contract given for this page states no tier for these, so they stay in the answer.",
       "generic.rtier.sealed-note": "The sealed result counts informational requirements too; the counts this report derives leave them out.",
+      "generic.rtier.totals": "Must-have only, under contract {contract} (sha256 {digest}): {met} Met \xB7 {not_met} Not met \xB7 {undecided} Could not decide{out_of_scope}, of {n} must-have evaluations. {informational} informational evaluations are reported apart.{unstated}{failed}",
+      "generic.rtier.totals.out-of-scope": " \xB7 {n} Out of scope",
+      "generic.rtier.totals.unstated": " Evaluations this contract gives no tier, in neither count: {n}.",
+      "generic.rtier.totals.failed": " Must-have evaluations that failed verification, still counted under their sealed verdict: {n}.",
+      "generic.rtier.all-terms": "These totals count every requirement in force: no contract was given to separate the must-have ones.",
       "generic.later.title": "Not yet in force \xB7 {n}",
       "generic.later.readiness": "readiness",
       "generic.later.note": "Applies from {date}, as the producer copied it from the contract, not re-checked here: readiness only, not counted.",
@@ -19598,8 +19652,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
         "lines.verdict.out_of_scope",
         "lines.pf.verdict.out_of_scope"
       ],
-      "tier.recomputed": ["lines.tier.recomputed"],
-      "tier.judged": ["lines.tier.judged"]
+      "tier.recomputed": ["lines.tier.recomputed", "lines.rules.kind.recomputed"],
+      "tier.judged": ["lines.tier.judged", "lines.rules.kind.judged"]
     },
     groups: {
       "report.title": ["groups.kicker"],
@@ -19725,6 +19779,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "lines.tier.mixed",
       "lines.tier.unknown"
     ],
+    // The roll-up's chip says the same thing about a rule.
+    ["lines.rules.kind.judged", "lines.rules.kind.recomputed"],
     // The Outcomes headline row labels.
     [
       "lines.line.resolved",
@@ -19879,11 +19935,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "lines.line.added": "added",
     // recomputed tier: a fixed check anyone can repeat from the records.
     "lines.tier.recomputed": "tier.recomputed",
+    "lines.rules.kind.recomputed": "tier.recomputed",
     "groups.tier.recomputed": "tier.recomputed",
     "generic.tier.recomputed": "tier.recomputed",
     // judged tier: a judgement, which must never read like the recomputed
     // tier above.
     "lines.tier.judged": "tier.judged",
+    "lines.rules.kind.judged": "tier.judged",
     "groups.tier.judged": "tier.judged",
     "generic.tier.judged": "tier.judged"
   };
@@ -19921,6 +19979,23 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.rtier.unstated.note",
     "lines.rtier.sealed-note",
     "groups.rtier.sealed-note",
+    // Which evaluations a total counts: a pack cannot make an all-requirements
+    // total read as must-have only, or the reverse.
+    "lines.rtier.totals",
+    "lines.rtier.totals.out-of-scope",
+    "lines.rtier.totals.unstated",
+    "lines.rtier.totals.failed",
+    "groups.rtier.totals",
+    "groups.rtier.totals.out-of-scope",
+    "groups.rtier.totals.unstated",
+    "groups.rtier.totals.failed",
+    "generic.rtier.totals",
+    "generic.rtier.totals.out-of-scope",
+    "generic.rtier.totals.unstated",
+    "generic.rtier.totals.failed",
+    "lines.rtier.all-terms",
+    "groups.rtier.all-terms",
+    "generic.rtier.all-terms",
     "generic.rtier.unstated.note",
     "generic.rtier.sealed-note",
     // The generic page's honesty lines: what its names and ids are, and what a
@@ -20045,6 +20120,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "spot.gap.adjudication",
     // Same customer in this report (subject-history.ts): what the bundle does not carry.
     "lines.subject.gap",
+    "lines.subject.gap.tiered",
     // Both cards: a rule or conversation nobody could decide, by why.
     "lines.status.undecided.unjudged",
     "lines.status.undecided.withheld",
@@ -20255,6 +20331,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "lines.na-note.other",
     // The canvas's footnote that says what the page does not do.
     "lines.fn.readonly",
+    "groups.fn.readonly",
     "lines.sentence.undecided.none",
     "lines.why.undecided.none",
     "lines.sentence.nothing-applied",
@@ -20513,9 +20590,9 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "4044f87eca301fc164cd53d4e2ab1e4e9a4a23177a67f7595cd2ea05c59f0a66",
-    groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
-    generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77"
+    lines: "80b1373cd923bbf0fcf5ffaa2499d851f6f0907bca1263948cbea502f62df3b7",
+    groups: "004c1c663a60e8c0248219c6be9b2c91aa89108c648d30144d141137cd02ea99",
+    generic: "10e802539747ebff6fc92b1947d083609c99ab33ad4b3579ed4e1d66425defa0"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -22354,6 +22431,15 @@ ${key}`);
     section.dataset.section = "rules";
     section.append(el8("h2", "", w.t("lines.rules.h")));
     section.append(el8("p", "lede", w.t("lines.rules.lede")));
+    const ofNote = el8(
+      "p",
+      "lede",
+      w.p("lines.rules.of.note", model.totalCount, {
+        total: fmtCount(model.totalCount)
+      })
+    );
+    ofNote.dataset.note = "rule-counts";
+    section.append(ofNote);
     const table3 = el8("table", "rules");
     table3.dataset.rows = "rules";
     const thead = element3("thead");
@@ -22445,7 +22531,14 @@ ${key}`);
             const pick = picks[column];
             const cell4 = el8("td", className);
             cell4.dataset.column = column;
-            cell4.append(el8("span", "nv", fmtCount(counted2.length)));
+            cell4.append(
+              el8("span", "nv", fmtCount(counted2.length)),
+              el8(
+                "span",
+                "nof",
+                ` ${w.t("lines.rules.of", { total: fmtCount(model.totalCount) })}`
+              )
+            );
             const action = evidenceAction(
               `rule:${ref}:${column}`,
               `${label.label} \xB7 ${columnWord[column]}: ${fmtCount(counted2.length)}`,
@@ -22472,6 +22565,35 @@ ${key}`);
           if (tier !== void 0) {
             tr.dataset.requirementTier = tier;
             nameCell.append(tierChip(tier, w));
+          }
+          const how = model.criterionTiers.get(ref);
+          if (how === "judged" || how === "recomputed") {
+            const chip = el8("span", "rtier", w.t(`lines.rules.kind.${how}`));
+            chip.dataset.kind = how;
+            nameCell.append(" ", chip);
+          }
+          if (na.length > 0) {
+            const gap = el8(
+              "small",
+              "rdet",
+              w.t("lines.rules.not_applied", { k: fmtCount(na.length) })
+            );
+            gap.dataset.note = "not-applied";
+            nameCell.append(gap);
+          }
+          const laterHere = model.conversations.filter(
+            (c) => c.notYetInForce.some(
+              (cr) => cr.checkId === check.id && cr.criterionId === criterion2.id
+            )
+          );
+          if (laterHere.length > 0) {
+            const later = el8(
+              "small",
+              "rdet",
+              w.t("lines.rules.not_in_force", { k: fmtCount(laterHere.length) })
+            );
+            later.dataset.note = "not-in-force";
+            nameCell.append(later);
           }
           if (label.source === "sealed")
             nameCell.append(el8("small", "", label.text));
@@ -22961,7 +23083,8 @@ ${key}`);
   function subjectConversations(model, w) {
     return model.conversations.map((c) => {
       const status2 = conversationStatus(c, model.gating);
-      const outcome = statusWord(status2, c, w, model.gating);
+      const keptOut = status2 === "nothing-applied" && model.gating?.counted.has(c) === true;
+      const outcome = keptOut ? { word: w.t("lines.subject.outcome.none-counted"), tone: "na" } : statusWord(status2, c, w, model.gating);
       const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
       const turns = c.transcript.state === "verified" || c.transcript.state === "cited" ? c.transcript.turns : void 0;
       return {
@@ -22969,6 +23092,7 @@ ${key}`);
         date: c.day,
         ...time === void 0 ? {} : { time },
         status: status2,
+        ...keptOut ? { keptOut: true } : {},
         outcome,
         terms: c.criteria.map((cr) => ({
           ref: `${cr.checkId}.${cr.criterionId}`,
@@ -23022,6 +23146,14 @@ ${key}`);
     );
     note("readonly", w.t("lines.fn.readonly"));
   }
+  function statesTiers(model) {
+    return model.conversations.some(
+      (c) => c.criteria.some((cr) => {
+        const tier = criterionTier(cr, model.gating);
+        return tier === "must_have" || tier === "informational";
+      })
+    );
+  }
   async function drawLines(levels, result3, options, bundle, verified, w, tierOf) {
     const built = buildOutcomeReportModel(result3, options);
     const model = tierOf === void 0 ? built : { ...built, gating: gating(built.conversations, tierOf) };
@@ -23046,7 +23178,8 @@ ${key}`);
         subjectConversations(model, w),
         slice2,
         model.totalCount,
-        w
+        w,
+        statesTiers(model)
       );
       if (subject !== void 0) levels.L0.append(subject);
     }
@@ -23581,6 +23714,29 @@ ${key}`);
     section.append(notes);
     host.append(section);
   }
+  function renderCanvasNotes2(host, model, bundle, w, tiered) {
+    const notes = el9("aside", "footnotes");
+    notes.dataset.section = "canvas-notes";
+    const note = (key, text2) => {
+      const p = el9("p", "", text2);
+      p.dataset.footnote = key;
+      notes.append(p);
+    };
+    const records = bundle?.records;
+    if (Array.isArray(records))
+      note(
+        "records",
+        w.p("groups.fn.records", model.totalSessions, {
+          records: records.length.toLocaleString()
+        })
+      );
+    note(
+      "resolved",
+      w.t(tiered ? "groups.fn.resolved.tiered" : "groups.fn.resolved")
+    );
+    note("readonly", w.t("groups.fn.readonly"));
+    host.append(notes);
+  }
   function renderFindings(host, model, w) {
     if (model.findings.length === 0) return;
     const section = el9("section", "findings");
@@ -24030,6 +24186,7 @@ ${key}`);
       )
     );
     renderFindings(levels.L1, model, w);
+    renderCanvasNotes2(levels.L1, model, bundle, w, tierOf !== void 0);
     levels.L2.append(renderCheckYourself(bundle, w));
     renderReportProofs2(levels.L2, model, bundle, verified, w);
   }
@@ -24337,6 +24494,33 @@ ${key}`);
     const single = citesOneContract(result3) ? result3.claims[0]?.contractRef : void 0;
     return (contractRef, requirementRef) => rowTier(contract, contractRef ?? single ?? "", requirementRef);
   }
+  var fmtCount2 = (n) => n.toLocaleString("en-US");
+  function mustHaveTotals(result3, tierOf) {
+    if (tierOf === void 0) return void 0;
+    const { met, notMet, notEvaluable, outOfScope } = result3.buckets;
+    const byId = new Map(result3.claims.map((claim) => [claim.id, claim]));
+    const listed = [met, notMet, notEvaluable, outOfScope ?? []].flatMap(
+      (ids) => ids.flatMap((id) => {
+        const claim = byId.get(id);
+        return claim === void 0 || claim.type === "calibration" ? [] : [{ claim, tier: tierOf(claim.contractRef, claim.requirementRef) }];
+      })
+    );
+    const inList = (ids, tier) => ids.filter((id) => {
+      const claim = byId.get(id);
+      return claim !== void 0 && claim.type !== "calibration" && tierOf(claim.contractRef, claim.requirementRef) === tier;
+    }).length;
+    const ofTier = (tier) => listed.filter((e) => e.tier === tier);
+    return {
+      met: inList(met, "must_have"),
+      notMet: inList(notMet, "must_have"),
+      notEvaluable: inList(notEvaluable, "must_have"),
+      outOfScope: outOfScope === void 0 ? void 0 : inList(outOfScope, "must_have"),
+      evaluations: ofTier("must_have").length,
+      informational: ofTier("informational").length,
+      unstated: ofTier("unstated").length,
+      failed: ofTier("must_have").filter((e) => e.claim.failed).length
+    };
+  }
   function citesOneContract(result3) {
     return new Set(result3.claims.map((claim) => claim.contractRef)).size <= 1;
   }
@@ -24365,6 +24549,38 @@ ${key}`);
     levels.L0.append(style);
     const refused = refusedWordingNotice(w);
     if (refused !== void 0) levels.L0.append(refused);
+    const totals = mustHaveTotals(result3, tierOf);
+    if (contract !== void 0 && totals !== void 0) {
+      const note = document.createElement("p");
+      note.className = "tier-note";
+      note.dataset.mustHaveTotals = String(totals.evaluations);
+      note.textContent = w.t(`${input.grouping}.rtier.totals`, {
+        contract: contract.ref,
+        digest: contract.sha256,
+        met: fmtCount2(totals.met),
+        not_met: fmtCount2(totals.notMet),
+        undecided: fmtCount2(totals.notEvaluable),
+        out_of_scope: totals.outOfScope === void 0 ? "" : w.t(`${input.grouping}.rtier.totals.out-of-scope`, {
+          n: fmtCount2(totals.outOfScope)
+        }),
+        n: fmtCount2(totals.evaluations),
+        informational: fmtCount2(totals.informational),
+        unstated: totals.unstated === 0 ? "" : w.t(`${input.grouping}.rtier.totals.unstated`, {
+          n: fmtCount2(totals.unstated)
+        }),
+        failed: totals.failed === 0 ? "" : w.t(`${input.grouping}.rtier.totals.failed`, {
+          n: fmtCount2(totals.failed)
+        })
+      });
+      note.style.overflowWrap = "anywhere";
+      levels.L0.append(note);
+    } else if (tierOf === void 0 && result3.claims.length > 0) {
+      const note = document.createElement("p");
+      note.className = "tier-note";
+      note.dataset.sealedCounts = "all-terms";
+      note.textContent = w.t(`${input.grouping}.rtier.all-terms`);
+      levels.L0.append(note);
+    }
     if (tierOf !== void 0 && result3.claims.some(
       (claim) => tierOf(claim.contractRef, claim.requirementRef) === "informational"
     )) {
