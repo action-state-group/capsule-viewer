@@ -383,8 +383,11 @@ describe("subject-history tiles under a contract", () => {
     const root = await page(bundleWith(operator), airlineContract());
     const c = captions(root);
     expect(c).toContain("resolved · every must-have met");
-    expect(c).toContain("missed · one or more must-haves not met");
+    expect(c).toContain("missed · one or more required terms not met");
     expect(c.join("\n")).not.toContain("every term met");
+    const gap = section(root)!.querySelector(".sh-gap")!.textContent;
+    expect(gap).not.toContain("which terms are must-have");
+    expect(gap).toContain("when each term is met, and the adjudication");
   });
 
   it("goldens: the operator tier under a contract", async () => {

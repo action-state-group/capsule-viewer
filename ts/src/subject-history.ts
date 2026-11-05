@@ -606,7 +606,9 @@ export function renderSubjectHistory(
     section.append(el("p", "sh-slice", w.t("lines.subject.slice.shared")));
     section.append(table(drawn, history, w));
   }
-  section.append(el("p", "sh-gap", w.t("lines.subject.gap")));
+  section.append(
+    el("p", "sh-gap", w.t(`lines.subject.gap${tiered ? ".tiered" : ""}`)),
+  );
   return section;
 }
 
