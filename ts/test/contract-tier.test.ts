@@ -301,7 +301,7 @@ describe("the EU AI Act Results (groups)", () => {
       art50[1]!.querySelector("[data-worst]")?.getAttribute("data-worst"),
     ).toBe("not_met");
     expect(root.querySelector("[data-sealed-counts]")?.textContent).toBe(
-      "The sealed result counts informational tests too; the lines this report derives leave them out.",
+      "The sealed result counts informational requirements too; the lines this report derives leave them out.",
     );
     expect(
       new Set([...root.querySelectorAll("[id]")].map((e) => e.id)).size,
@@ -335,8 +335,8 @@ describe("the EU AI Act Results (groups)", () => {
     const without = headline(await render(bundle));
     const withIt = headline(await render(bundle, contract));
     // Session 3 missed only on art50.disclosure_before_first_turn.
-    expect(without).toMatch(/^1 of 4 sessions met every test/u);
-    expect(withIt).toMatch(/^2 of 4 sessions met every test/u);
+    expect(without).toMatch(/^1 of 4 sessions met every requirement/u);
+    expect(withIt).toMatch(/^2 of 4 sessions met every requirement/u);
   });
 });
 

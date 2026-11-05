@@ -890,6 +890,43 @@ function renderSummary(
 }
 
 /**
+ * The canvas's footnotes 1-3 on the groups pack (EU AI Act frames): what a
+ * record and a session are, what met means, and that the page is read-only.
+ * A bundle that carries no records list leaves the first out rather than
+ * guessing a count.
+ */
+function renderCanvasNotes(
+  host: HTMLElement,
+  model: ComplianceModel,
+  bundle: unknown,
+  w: Words,
+  tiered: boolean,
+): void {
+  const notes = el("aside", "footnotes");
+  notes.dataset.section = "canvas-notes";
+  const note = (key: string, text: string): void => {
+    const p = el("p", "", text);
+    p.dataset.footnote = key;
+    notes.append(p);
+  };
+  const records = (bundle as { records?: unknown } | null)?.records;
+  if (Array.isArray(records))
+    note(
+      "records",
+      w.t("groups.fn.records", {
+        records: records.length.toLocaleString(),
+        n: model.totalSessions.toLocaleString(),
+      }),
+    );
+  note(
+    "resolved",
+    w.t(tiered ? "groups.fn.resolved.tiered" : "groups.fn.resolved"),
+  );
+  note("readonly", w.t("groups.fn.readonly"));
+  host.append(notes);
+}
+
+/**
  * The producer's findings (severity, recommendation), in one block under a
  * fixed label: presentation text, not evidence (presentation contract
  * section 6). Each finding's session count is the claims'; nothing here
@@ -1500,6 +1537,7 @@ export async function drawGroups(
     ),
   );
   renderFindings(levels.L1, model, w);
+  renderCanvasNotes(levels.L1, model, bundle, w, tierOf !== undefined);
 
   // L2, module detail after the core's verification section.
   levels.L2.append(renderCheckYourself(bundle, w));
