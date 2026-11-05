@@ -408,7 +408,15 @@ CONTRACT_REPORT_MODULE = Move(
             '  contract marks informational; a row whose tier is not stated stays in them. The sealed aggregate\n'
             "  the core strip shows is the producer's and counts every claim, so when the Result has an\n"
             '  informational row the module says, in L0, that the sealed result counts informational rows and\n'
-            '  its derived lines do not. With no contract, nothing here applies and no row shows a tier.\n'
+            "  its derived lines do not. With a contract, the module also states the must-have totals in L0: the\n"
+            "  Result's sealed `buckets` claim ids (calibration claims left out) counted by the contract's tier,\n"
+            "  as Met, Not met, Could not decide and, when the Result has that bucket, Out of scope, of the\n"
+            "  must-have evaluations, with the informational count apart, the contract's id and sha256, the\n"
+            "  number of claims whose tier the contract does not state (in neither count, never guessed to be\n"
+            "  must-have) and the number of must-have claims that failed verification (still counted under\n"
+            "  their sealed verdict). The Result's `tier` (judged or recomputed) is a different field and is not\n"
+            "  read. With no contract, no row shows a tier and the module says the totals count every\n"
+            "  requirement in force.\n"
             "- **Groups.** A row's group is",
             "capsule-viewer#199",
         ),

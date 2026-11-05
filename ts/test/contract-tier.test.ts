@@ -255,6 +255,17 @@ describe("the Outcomes report (lines)", () => {
       root.querySelector('[data-sealed-counts="informational"]'),
     ).toBeNull();
     expect(statuses(root)).toEqual(statuses(await render(bundle)));
+    // Its totals say no claim is must-have: every one is counted as having no
+    // stated tier, so "0 of 0" never reads as a finding.
+    const evaluated = Number(
+      root.querySelector<HTMLElement>("[data-evaluated]")?.dataset.evaluated,
+    );
+    expect(root.querySelector("[data-must-have-totals]")?.textContent).toMatch(
+      new RegExp(
+        `: 0 Met · 0 Not met · 0 Could not decide, of 0 must-have evaluations\\. 0 informational evaluations are reported apart\\. Claims with no tier stated by this contract, in neither count: ${evaluated}\\.$`,
+        "u",
+      ),
+    );
   });
 
   it("a contract that does not check is not read, and the verification page says why", async () => {
