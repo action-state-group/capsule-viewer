@@ -454,6 +454,15 @@ describe("subject-history tiles under a contract", () => {
       });
       return { text, sha256: createHash("sha256").update(text).digest("hex") };
     }
+    /** Every rule judged out of scope: no rule applied (Result v0 section 4.2). */
+    const outOfScope = (claims: Obj[]): void => {
+      for (const c of claims) {
+        c.verdict = "out_of_scope";
+        c.out_of_scope_allowed = true;
+        c.sufficiency = "SATISFIED";
+        (c.presentation as Obj).status = "SATISFIED";
+      }
+    };
     const note = (root: HTMLElement): string =>
       [...section(root)!.querySelectorAll(".sh-note")]
         .map((e) => e.textContent)
@@ -466,6 +475,33 @@ describe("subject-history tiles under a contract", () => {
       expect(note(root)).toContain(`4 of 4 ${KEPT}`);
       expect(note(root)).not.toContain(NONE);
       expect(section(root)!.textContent).not.toContain("no rule applied");
+    });
+
+    it("without a contract a conversation whose rules were all out of scope keeps the old note and word", async () => {
+      const root = await page(bundleWith(operator, undefined, outOfScope));
+      expect(note(root)).toContain(`4 of 4 ${NONE}`);
+      expect(note(root)).not.toContain(KEPT);
+      expect(section(root)!.textContent).toContain("no rule applied");
+    });
+
+    it("under a contract, a must-have that did not apply with an informational rule kept out says none was counted", async () => {
+      const root = await page(
+        bundleWith(operator, undefined, outOfScope),
+        airlineContract(),
+      );
+      expect(note(root)).toContain(`4 of 4 ${KEPT}`);
+      expect(note(root)).not.toContain(NONE);
+      expect(section(root)!.textContent).toContain("no counted term applied");
+      expect(section(root)!.textContent).not.toContain("no rule applied");
+    });
+
+    it("under a contract that keeps no rule out, the old note and word stay", async () => {
+      const root = await page(
+        bundleWith(operator, undefined, outOfScope),
+        allTier("must_have"),
+      );
+      expect(note(root)).toContain(`4 of 4 ${NONE}`);
+      expect(section(root)!.textContent).toContain("no rule applied");
     });
 
     it("counts both kinds apart over one total", async () => {

@@ -205,7 +205,7 @@ export interface SubjectConversation {
   /**
    * With `nothing-applied`: the contract keeps some of this conversation's
    * rules out of its answer (informational) and none is left to count. Those
-   * rules did apply.
+   * rules may have applied, so the page cannot say that none did.
    */
   readonly keptOut?: boolean;
   readonly outcome: { readonly word: string; readonly tone: Tone };

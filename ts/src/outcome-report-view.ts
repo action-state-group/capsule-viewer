@@ -2452,8 +2452,8 @@ function subjectConversations(
   return model.conversations.map((c) => {
     const status = conversationStatus(c, model.gating);
     // The contract keeps some of this conversation's rules out of its answer
-    // and nothing is left to count: the rules that were kept out did apply,
-    // so the page must not say that none did.
+    // and nothing is left to count: the rules kept out may have applied, so
+    // the page must not say that none did.
     const keptOut =
       status === "nothing-applied" && model.gating?.counted.has(c) === true;
     const outcome = keptOut
