@@ -1623,6 +1623,15 @@ function renderRules(
   section.dataset.section = "rules";
   section.append(el("h2", "", w.t("lines.rules.h")));
   section.append(el("p", "lede", w.t("lines.rules.lede")));
+  const ofNote = el(
+    "p",
+    "lede",
+    w.p("lines.rules.of.note", model.totalCount, {
+      total: fmtCount(model.totalCount),
+    }),
+  );
+  ofNote.dataset.note = "rule-counts";
+  section.append(ofNote);
   const table = el("table", "rules");
   table.dataset.rows = "rules";
   const thead = element("thead");
@@ -1745,7 +1754,14 @@ function renderRules(
           const pick = picks[column];
           const cell = el("td", className);
           cell.dataset.column = column;
-          cell.append(el("span", "nv", fmtCount(counted.length)));
+          cell.append(
+            el("span", "nv", fmtCount(counted.length)),
+            el(
+              "span",
+              "nof",
+              ` ${w.t("lines.rules.of", { total: fmtCount(model.totalCount) })}`,
+            ),
+          );
           const action = evidenceAction(
             `rule:${ref}:${column}`,
             `${label.label} · ${columnWord[column]}: ${fmtCount(counted.length)}`,
@@ -1776,6 +1792,45 @@ function renderRules(
         if (tier !== undefined) {
           tr.dataset.requirementTier = tier;
           nameCell.append(tierChip(tier, w));
+        }
+        // The canvas's Recomputed / Judged chip: how the rule's results were
+        // reached, read from its claims' tier. A rule whose claims differ, or
+        // that has none, carries no chip rather than a guessed one.
+        const how = model.criterionTiers.get(ref);
+        if (how === "judged" || how === "recomputed") {
+          const chip = el("span", "rtier", w.t(`lines.rules.kind.${how}`));
+          chip.dataset.kind = how;
+          nameCell.append(" ", chip);
+        }
+        // A rule that did not apply to some conversation counts them in no
+        // column; say so, so a short row is not read as a lost conversation.
+        // The same count the row's expansion states, so a rule not yet in
+        // force or a missing claim is never called "did not apply".
+        if (na.length > 0) {
+          const gap = el(
+            "small",
+            "rdet",
+            w.t("lines.rules.not_applied", { k: fmtCount(na.length) }),
+          );
+          gap.dataset.note = "not-applied";
+          nameCell.append(gap);
+        }
+        // A criterion not yet in force is outside the population (never a
+        // count); name those conversations too, so every one a short row
+        // leaves out has a label.
+        const laterHere = model.conversations.filter((c) =>
+          c.notYetInForce.some(
+            (cr) => cr.checkId === check.id && cr.criterionId === criterion.id,
+          ),
+        );
+        if (laterHere.length > 0) {
+          const later = el(
+            "small",
+            "rdet",
+            w.t("lines.rules.not_in_force", { k: fmtCount(laterHere.length) }),
+          );
+          later.dataset.note = "not-in-force";
+          nameCell.append(later);
         }
         if (label.source === "sealed")
           nameCell.append(el("small", "", label.text));

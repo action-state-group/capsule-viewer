@@ -986,6 +986,16 @@ it("the assurance tier words are a distinct, non-swappable set: a judgement must
   ).toContain(
     'lines.tier.recomputed reads "judged", the word for lines.tier.judged',
   );
+  expect(
+    wordingProblems(
+      {
+        id: "test/tier@1",
+        locale: "en",
+        entries: { "lines.rules.kind.judged": "recomputed" },
+      },
+      DEFAULT_PACKS.lines,
+    ).join("\n"),
+  ).toContain('lines.rules.kind.judged read alike ("recomputed")');
   // the explanations behind the EU card's tier words are locked
   expect(
     wordingProblems(
@@ -1462,7 +1472,10 @@ it("a section 3 alias word is refused exactly where the grouping key would be (v
       "recomputed",
     );
     expect(alias.length).toBeGreaterThan(0);
-    expect(alias).toEqual(direct);
+    // The Outcomes chip repeats the tier word, so an alias reaches it too
+    // and is refused there as well.
+    expect(alias).toEqual(expect.arrayContaining(direct));
+    expect(alias.length - direct.length).toBe(grouping === "lines" ? 1 : 0);
     expect(alias.join("\n")).toContain(
       `${grouping}.tier.judged reads "recomputed", the word for ${grouping}.tier.recomputed`,
     );
