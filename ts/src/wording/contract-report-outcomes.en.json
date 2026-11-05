@@ -707,6 +707,7 @@
     "lines.subject.gap": "Not drawn: which terms are must-have and which informational, when each term is met, and the adjudication. This bundle does not carry them.",
     "lines.subject.gap.tiered": "Not drawn: when each term is met, and the adjudication. This bundle does not carry them.",
     "lines.subject.note.unverified": "{n} of {total} could not be verified.",
-    "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied."
+    "lines.subject.note.nothing-applied": "{n} of {total} had no term that applied.",
+    "lines.subject.note.informational-only": "{n} of {total} had only informational terms, which this contract keeps out of the answer."
   }
 }

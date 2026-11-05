@@ -373,6 +373,19 @@ export function gating(
   return out;
 }
 
+/**
+ * True when gating left the conversation no rule: every rule it has is
+ * informational. Its status is still `nothing-applied`, but the rules did
+ * apply; the contract only keeps them out of the answer.
+ */
+export function informationalOnly(
+  given: Conversation,
+  gating?: Gating,
+): boolean {
+  const conversation = counted(given, gating);
+  return conversation !== given && conversation.criteria.length === 0;
+}
+
 export function conversationStatus(
   given: Conversation,
   gating?: Gating,
@@ -2462,6 +2475,7 @@ function subjectConversations(
       date: c.day,
       ...(time === undefined ? {} : { time }),
       status,
+      ...(informationalOnly(c, model.gating) ? { informationalOnly: true } : {}),
       outcome,
       terms: c.criteria.map((cr) => ({
         ref: `${cr.checkId}.${cr.criterionId}`,

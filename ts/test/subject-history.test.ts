@@ -438,6 +438,39 @@ describe("subject-history tiles under a contract", () => {
     );
   });
 
+  describe("a conversation whose rules are all informational", () => {
+    /** The airline contract with every rule informational, so no conversation has a rule left in its answer. */
+    function allInformational(): { text: string; sha256: string } {
+      const text = JSON.stringify({
+        ...(JSON.parse(airlineContract().text) as Obj),
+        requirements: (
+          JSON.parse(airlineContract().text) as { requirements: Obj[] }
+        ).requirements.map((r) => ({ ...r, tier: "informational" })),
+      });
+      return { text, sha256: createHash("sha256").update(text).digest("hex") };
+    }
+    const note = (root: HTMLElement): string =>
+      [...section(root)!.querySelectorAll(".sh-note")]
+        .map((e) => e.textContent)
+        .join(" ");
+
+    it("under a contract says the terms were informational, not that none applied", async () => {
+      const text = note(await page(bundleWith(operator), allInformational()));
+      expect(text).toContain("4 of 4 had only informational terms");
+      expect(text).not.toContain("no term that applied");
+    });
+
+    it("without a contract the note is unchanged", async () => {
+      const text = note(await page(bundleWith(operator)));
+      expect(text).not.toContain("informational");
+    });
+
+    it("goldens: the note under a contract", async () => {
+      const root = await page(bundleWith(operator), allInformational());
+      check("subject-history-operator-informational", section(root)!.outerHTML);
+    });
+  });
+
   it("goldens: the operator tier under a contract", async () => {
     const root = await page(bundleWith(operator), airlineContract());
     check("subject-history-operator-contract", section(root)!.outerHTML);
