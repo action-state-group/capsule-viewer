@@ -1001,10 +1001,4 @@ it("draws the canvas's footnotes 1-3 on the groups page, in the groups pack's ow
     "² Met means every requirement that applied was met, and at least one applied.",
   );
   expect(notes[2]![1]).toMatch(/^³ This page is read-only/u);
-  // The canvas's word is "requirement" in the tier headings, not "test".
-  expect(
-    [...root.querySelectorAll("[data-rtier] h3, .rtier-h")]
-      .map((h) => h.textContent)
-      .join(" "),
-  ).not.toMatch(/\btests?\b/iu);
 });

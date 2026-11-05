@@ -275,6 +275,17 @@ describe("the EU AI Act Results (groups)", () => {
     expect(root.querySelector("[data-requirement-tier]")).toBeNull();
   });
 
+  it("with the contract, footnote 2 adds that an informational requirement never changes the answer; without, it does not", async () => {
+    const note = (root: HTMLElement) =>
+      root.querySelector('[data-footnote="resolved"]')?.textContent;
+    expect(note(await render(bundle, contract))).toBe(
+      "² Met means every requirement that applied was met, and at least one applied. A requirement the contract marks informational never changes the answer.",
+    );
+    expect(note(await render(bundle))).toBe(
+      "² Met means every requirement that applied was met, and at least one applied.",
+    );
+  });
+
   it("with the contract, draws each test in its tier's section and its obligation's worst line from that section only", async () => {
     const root = await render(bundle, contract);
     expect(tiersOf(root, "tr.test[data-criterion]")).toEqual({
@@ -288,6 +299,14 @@ describe("the EU AI Act Results (groups)", () => {
         (r) => r.dataset.requirementTier,
       ),
     ).toEqual(["must_have", "informational", "unstated"]);
+    // The canvas's word for a term is "requirement" (#172).
+    expect(
+      [...root.querySelectorAll("tr.tier b")].map((b) => b.textContent),
+    ).toEqual([
+      "Must-have requirements · 2",
+      "Informational requirements · 1",
+      "Requirements with no stated tier · 1",
+    ]);
     // Art. 50 heads both the must-have and the informational section; its
     // must-have worst line no longer reads the informational test's not met.
     const art50 = [
