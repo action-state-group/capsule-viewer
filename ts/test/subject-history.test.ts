@@ -9,6 +9,7 @@
 //
 // UPDATE_GOLDENS=1 npx vitest run test/subject-history.test.ts
 
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -43,7 +44,11 @@ const sharedHandle = ((blockOf(shared).conversations as Obj)["t-1"] as Obj)
   .customer_handle as string;
 
 /** The outcome bundle cut to its first four conversations, with `doc`'s slice on its Result. */
-function bundleWith(doc: Obj, edit?: (block: Obj) => void): Obj {
+function bundleWith(
+  doc: Obj,
+  edit?: (block: Obj) => void,
+  claimEdit?: (claims: Obj[]) => void,
+): Obj {
   const source = load("outcome-report-bundle.json");
   const result = (source.disclosures as Obj).result as Obj;
   const resultDoc = result.agent_input as Obj;
@@ -51,6 +56,7 @@ function bundleWith(doc: Obj, edit?: (block: Obj) => void): Obj {
   const id = (c: Obj): string => (c.id as string).split("::")[0]!;
   const keep = [...new Set(all.map(id))].slice(0, 4);
   const kept = all.filter((c) => keep.includes(id(c)));
+  claimEdit?.(kept);
   const buckets: Record<string, string[]> = {
     met: [],
     not_met: [],
@@ -86,9 +92,42 @@ function bundleWith(doc: Obj, edit?: (block: Obj) => void): Obj {
   return source;
 }
 
-async function page(bundle: Obj): Promise<HTMLElement> {
+/** A contract for the bundle's rules (`tau2-airline-outcomes/v1@1`): one informational, one with no tier, the rest must-have. */
+function airlineContract(): { text: string; sha256: string } {
+  const source = load("outcome-report-bundle.json");
+  const claims = (
+    ((source.disclosures as Obj).result as Obj).agent_input as Obj
+  ).claims as Obj[];
+  const refs = [...new Set(claims.map((c) => c.requirement_ref as string))];
+  const text = JSON.stringify({
+    id: "tau2-airline-outcomes/v1",
+    version: "1",
+    requirements: refs.map((id) => ({
+      id,
+      profile: "outcome",
+      statement: id,
+      ...(id === "task_resolution.right_change"
+        ? { tier: "informational" }
+        : id === "grounded_communication.no_invented_policy"
+          ? {}
+          : { tier: "must_have" }),
+      mode: "judged",
+    })),
+  });
+  return { text, sha256: createHash("sha256").update(text).digest("hex") };
+}
+
+async function page(
+  bundle: Obj,
+  contract?: { text: string; sha256: string },
+): Promise<HTMLElement> {
   const root = document.createElement("main");
-  await renderEvidenceGraph((await sealEvidenceBundle(bundle)).bundle, root);
+  await renderEvidenceGraph(
+    (await sealEvidenceBundle(bundle)).bundle,
+    root,
+    undefined,
+    contract === undefined ? undefined : { contract },
+  );
   return root;
 }
 
@@ -330,6 +369,78 @@ describe("subject-history page", () => {
       const root = await page(bundleWith(doc));
       check(name, section(root)!.outerHTML);
     }
+  });
+});
+
+describe("subject-history tiles under a contract", () => {
+  const captions = (root: HTMLElement): string[] =>
+    [...section(root)!.querySelectorAll(".sh-tile span")].map(
+      (e) => e.textContent ?? "",
+    );
+
+  it("without a contract the tiles say every term", async () => {
+    const c = captions(await page(bundleWith(operator)));
+    expect(c).toContain("resolved · every term met");
+    expect(c).toContain("missed · one or more terms not met");
+  });
+
+  it("with a contract that supplies tiers the tiles say must-have", async () => {
+    const root = await page(bundleWith(operator), airlineContract());
+    const c = captions(root);
+    expect(c).toContain("resolved · every must-have met");
+    expect(c).toContain("missed · one or more required terms not met");
+    expect(c.join("\n")).not.toContain("every term met");
+    const gap = section(root)!.querySelector(".sh-gap")!.textContent;
+    expect(gap).not.toContain("which terms are must-have");
+    expect(gap).toContain("when each term is met, and the adjudication");
+  });
+
+  it("counts resolved over the counted terms: a conversation whose only miss is informational moves from missed to resolved", async () => {
+    // keep[0]'s rules all met except the one the contract marks informational
+    const only = (claims: Obj[]): void => {
+      const first = (claims[0]!.id as string).split("::")[0]!;
+      for (const c of claims) {
+        if ((c.id as string).split("::")[0] !== first) continue;
+        c.sufficiency = "SATISFIED";
+        (c.presentation as Obj).status = "SATISFIED";
+        c.verdict =
+          c.requirement_ref === "task_resolution.right_change"
+            ? "not_met"
+            : "met";
+      }
+    };
+    const resolvedOf = (root: HTMLElement): string =>
+      section(root)!.querySelector(".sh-tile.ok b")!.textContent!;
+    const bundle = (): Obj => bundleWith(operator, undefined, only);
+    const without = resolvedOf(await page(bundle()));
+    const under = resolvedOf(await page(bundle(), airlineContract()));
+    expect(Number(under.split(" ")[0])).toBe(Number(without.split(" ")[0]) + 1);
+  });
+
+  it("a contract that states no tier keeps the every-term wording", async () => {
+    const text = JSON.stringify({
+      id: "tau2-airline-outcomes/v1",
+      version: "1",
+      requirements: [],
+    });
+    const none = {
+      text,
+      sha256: createHash("sha256").update(text).digest("hex"),
+    };
+    const root = await page(bundleWith(operator), none);
+    expect(
+      [...section(root)!.querySelectorAll(".sh-tile span")].map(
+        (e) => e.textContent,
+      ),
+    ).toContain("resolved · every term met");
+    expect(section(root)!.querySelector(".sh-gap")!.textContent).toContain(
+      "which terms are must-have",
+    );
+  });
+
+  it("goldens: the operator tier under a contract", async () => {
+    const root = await page(bundleWith(operator), airlineContract());
+    check("subject-history-operator-contract", section(root)!.outerHTML);
   });
 });
 
