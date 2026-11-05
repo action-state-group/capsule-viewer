@@ -125,7 +125,9 @@ describe("the eu-deployer notes name the source of the obligation titles", () =>
       expect(golden, name).toContain(
         "Obligation titles are the Act's article headings, from this page's wording pack.",
       );
-      expect(golden, name).not.toContain("obligation titles, test names");
+      expect(golden, name).not.toContain(
+        "obligation titles, requirement names",
+      );
     }
     expect(read("eu-deployer.open.html")).toContain(
       "The title is the Act's article heading, from this page's wording pack.",
@@ -135,7 +137,7 @@ describe("the eu-deployer notes name the source of the obligation titles", () =>
 
   it("when even one title falls back to the producer's, the base notes stand (default eu golden)", () => {
     const golden = read("eu.open.html");
-    expect(golden).toContain("obligation titles, test names");
+    expect(golden).toContain("obligation titles, requirement names");
     expect(golden).not.toContain("from this page's wording pack.");
   });
 

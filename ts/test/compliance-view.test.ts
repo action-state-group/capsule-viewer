@@ -267,9 +267,9 @@ it("every producer-supplied field is set in italics as the producer's, and no se
     "obligation titles",
     "finding ids",
     "severities",
-    "test names",
+    "requirement names",
     "method",
-    "notes on undecided tests and quality checks",
+    "notes on undecided requirements and quality checks",
     "set in italics",
   ])
     expect(basis.textContent).toContain(field);
@@ -313,7 +313,7 @@ it("every producer-supplied field is set in italics as the producer's, and no se
   )!;
   expect(detail.querySelector('h5 i[data-source="producer"]')).not.toBeNull();
   expect(detail.querySelector(".na")!.textContent).toBe(
-    "Title, article, summary, method, test names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
+    "Title, article, summary, method, requirement names and the undecided-session note: the producer's mapping, in italics, not a sealed record.",
   );
   // sealed values and the page's own words are never set as the producer's
   for (const sealed of root.querySelectorAll(
@@ -534,7 +534,7 @@ it("'No exceptions' in the ok tone only when every test was met by some session:
   const undecided = row({ criterionId: "x.b", notEvaluableCount: 3 });
   expect(obligationStatus(obligationOf([met, undecided]))).toEqual({
     cls: "ne",
-    text: "No exceptions found · 1 of 2 tests could not be checked",
+    text: "No exceptions found · 1 of 2 requirements could not be checked",
   });
   expect(obligationStatus(obligationOf([met, met]))).toEqual({
     cls: "ok",
@@ -544,7 +544,7 @@ it("'No exceptions' in the ok tone only when every test was met by some session:
   const exc = row({ criterionId: "x.c", metCount: 1, notMetCount: 2 });
   expect(obligationStatus(obligationOf([exc, undecided]))).toEqual({
     cls: "exc",
-    text: "2 exceptions · 1 of 2 tests could not be checked",
+    text: "2 exceptions · 1 of 2 requirements could not be checked",
   });
   // a future obligation's pill says nothing about timing
   const future = {
@@ -867,7 +867,7 @@ it("opens with one sentence of whole-number session counts, and each obligation 
   expect(headline).not.toBeNull();
   // Two sessions in the fixture, each with a not-met test.
   expect(headline.textContent).toBe(
-    "0 of 2 sessions met every test that applied to them. 2 did not meet at least one.",
+    "0 of 2 sessions met every requirement that applied to them. 2 did not meet at least one.",
   );
   expect(headline.textContent).not.toMatch(/%|percent/u);
   const worst = [...root.querySelectorAll<HTMLElement>("[data-worst]")];
@@ -979,4 +979,26 @@ it("draws the red withheld mark beside the assurance of the claim sealed WITHHEL
   ).toEqual(new Set(["art5.no_manipulation_or_deception"]));
   expect(marks[0]!.textContent).toMatch(/^Withheld by the holder/u);
   expect(root.textContent).not.toMatch(/tier-gated/iu);
+});
+
+it("draws the canvas's footnotes 1-3 on the groups page, in the groups pack's own words (#172)", async () => {
+  const { bundle } = await sealedComplianceBundle();
+  const root = await render(bundle);
+  const notes = [
+    ...root.querySelectorAll<HTMLElement>(
+      '[data-section="canvas-notes"] [data-footnote]',
+    ),
+  ].map((p) => [p.dataset.footnote, p.textContent]);
+  const records = (bundle as { records: unknown[] }).records.length;
+  expect(notes.map(([k]) => k)).toEqual(["records", "resolved", "readonly"]);
+  expect(notes[0]![1]).toMatch(
+    new RegExp(
+      `^¹ Records are the ${records} sealed items in this bundle\\. A session `,
+      "u",
+    ),
+  );
+  expect(notes[1]![1]).toBe(
+    "² A session is met when every requirement that applied to it was satisfied and at least one applied.",
+  );
+  expect(notes[2]![1]).toMatch(/^³ This page is read-only/u);
 });

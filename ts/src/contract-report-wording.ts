@@ -989,6 +989,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "lines.na-note.other",
   // The canvas's footnote that says what the page does not do.
   "lines.fn.readonly",
+  "groups.fn.readonly",
   "lines.sentence.undecided.none",
   "lines.why.undecided.none",
   "lines.sentence.nothing-applied",
@@ -1422,7 +1423,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
   lines: "8e0c9b40a74e149a8011f11952912043d11e372b2b09d0d2ec5c279a91ef4287",
-  groups: "7527077ae3637ff772bc311878a76c8f25e1d16314244f9b5dc80cf1b8e131e0",
+  groups: "942457cee93dec08e3a9bf271119ec26f1bdba9f794ae2449ebdafdeeb704939",
   generic: "2b2de4e046cab88633f09b96729f18a12e0331708e13920a84f6c67f32302f77",
 });
 
