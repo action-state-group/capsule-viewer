@@ -636,6 +636,10 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
       state: document.querySelector('[data-level="L0"]').getAttribute("data-sh-state"),
       // The space between the lowest of the card's sections and the "Everything on the card" fold-out under them, in px.
       l1Gap: (() => { const a = document.querySelector('[data-level="L0"] .cv-sh'), b = document.querySelector('[data-sh-level="L1"]'); return a && b ? Math.round(b.getBoundingClientRect().top - Math.max(...[...a.querySelector(".cv-sh__cols").children].map((e) => e.getBoundingClientRect().bottom))) : null; })(),
+      // The PRIVATE banner is a box like the card's others; the "Which checks ran" fold-out has the card's gap above it (the page shell puts the "How this page was checked" line right above it).
+      banner: (() => { const e = document.querySelector('[data-banner="private"]'); if (!e) return null; const c = getComputedStyle(e); return { border: c.borderTopWidth + " " + c.borderTopStyle, radius: c.borderTopLeftRadius, pad: c.paddingTop + " " + c.paddingLeft }; })(),
+      refusal: (() => { const e = document.querySelector(".cv-sh > .cv-refusal"); if (!e) return null; const c = getComputedStyle(e); return { border: c.borderTopWidth + " " + c.borderTopStyle, radius: c.borderTopLeftRadius, pad: c.paddingTop + " " + c.paddingLeft }; })(),
+      l2Top: (() => { const e = document.querySelector('[data-sh-level="L2"]'); return e ? getComputedStyle(e).marginTop : null; })(),
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       columns: lefts('[data-sh-level="L1"] .cv-sh__cols > section').length,
       nested: document.querySelectorAll("details details").length,
@@ -661,6 +665,11 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
           expect(Math.abs(m.l1Gap - 12)).toBeLessThanOrEqual(2);
           if (c.card.outcomes.of) expect(m.undecided).not.toBe(m.held);
         }
+        if ("deals" in c.block) {
+          expect(m.banner).toEqual({ border: "1px solid", radius: "8px", pad: "12px 12px" });
+        }
+        if (m.l2Top !== null) expect(m.l2Top).toBe("12px");
+        if (m.refusal) expect(m.refusal).toEqual({ border: "1px dashed", radius: "8px", pad: "12px 12px" });
         if ("deals" in c.block) expect(m.bannerTop).toBeLessThan(200);
         if (GOLDEN_PAGES.includes(c.name)) {
           // Every toggle open, so the golden shows every section in its column.
