@@ -555,9 +555,9 @@ function table(
  * conversation's request, band and halves. Undefined when nothing is drawn.
  * `rows` are the Result's conversations as the Outcomes grouping reads them;
  * `reportTotal` is how many the Result holds, the denominator of every slice.
- * `tiered` is true when the page was built with a contract (contract-report/v1
- * section 2): `rows` are then already read over the rules the contract counts,
- * and the tile captions say so.
+ * `tiered` is true when the contract given states a tier for some rule
+ * (contract-report/v1 section 2): `rows` are then already read over the rules
+ * the contract counts, and the tile captions and gap line say so.
  */
 export function renderSubjectHistory(
   rows: readonly SubjectConversation[],
