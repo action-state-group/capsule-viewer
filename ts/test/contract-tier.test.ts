@@ -3,8 +3,8 @@
 // The contract-report module reads each row's requirement tier from the
 // page's contract (capsule-viewer#199; contract-report-module-v1 section 2):
 // rows drawn in tier sections, an informational row left out of the
-// derived lines, a row whose tier is not stated kept in them, and the page
-// unchanged without a contract.
+// derived lines, a row whose tier is not stated kept in them, and, without a
+// contract, no tier drawn and a note that the totals count every requirement.
 //
 // The bundles are evidencebook's committed VALID fixtures
 // (testdata/show-evidence/monthly-*.bundle.json); the contracts are
@@ -17,6 +17,7 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { renderEvidenceGraph } from "../src/browser.js";
+import { mustHaveTotals } from "../src/contract-report.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 import {
   conversationStatus,
@@ -83,7 +84,9 @@ describe("the Outcomes report (lines)", () => {
   it("without a contract, draws no tier", async () => {
     const root = await render(bundle);
     expect(root.querySelector("[data-requirement-tier]")).toBeNull();
-    expect(root.querySelector("[data-sealed-counts]")).toBeNull();
+    expect(
+      root.querySelector('[data-sealed-counts="informational"]'),
+    ).toBeNull();
     expect(verification(root).join("\n")).not.toContain("contract");
   });
 
@@ -248,8 +251,21 @@ describe("the Outcomes report (lines)", () => {
     expect(new Set(Object.values(tiersOf(root, "tr.rule[data-rule]")))).toEqual(
       new Set(["unstated"]),
     );
-    expect(root.querySelector("[data-sealed-counts]")).toBeNull();
+    expect(
+      root.querySelector('[data-sealed-counts="informational"]'),
+    ).toBeNull();
     expect(statuses(root)).toEqual(statuses(await render(bundle)));
+    // Its totals say no claim is must-have: every one is counted as having no
+    // stated tier, so "0 of 0" never reads as a finding.
+    const evaluated = Number(
+      root.querySelector<HTMLElement>("[data-evaluated]")?.dataset.evaluated,
+    );
+    expect(root.querySelector("[data-must-have-totals]")?.textContent).toMatch(
+      new RegExp(
+        `: 0 Met · 0 Not met · 0 Could not decide, of 0 must-have evaluations\\. 0 informational evaluations are reported apart\\. Evaluations this contract gives no tier, in neither count: ${evaluated}\\.$`,
+        "u",
+      ),
+    );
   });
 
   it("a contract that does not check is not read, and the verification page says why", async () => {
@@ -273,6 +289,42 @@ describe("the EU AI Act Results (groups)", () => {
   it("without a contract, draws no tier", async () => {
     const root = await render(bundle);
     expect(root.querySelector("[data-requirement-tier]")).toBeNull();
+  });
+
+  it("with the contract, states the must-have totals from the sealed buckets by tier; without it, says the totals count every requirement", async () => {
+    const totals = (root: HTMLElement) =>
+      root.querySelector<HTMLElement>("[data-must-have-totals]");
+    const withContract = totals(await render(bundle, contract));
+    expect(withContract).not.toBeNull();
+    expect(withContract!.textContent).toMatch(
+      /^Must-have only, under contract \S+ \(sha256 [0-9a-f]{64}\): \d+ Met · \d+ Not met · \d+ Could not decide(?: · \d+ Out of scope)?, of \d+ must-have evaluations\. \d+ informational evaluations are reported apart\./u,
+    );
+    // The figures add up: the decided counts sum to the must-have total, and
+    // must-have + informational + unstated is the core strip's own population.
+    const n = (re: RegExp): number =>
+      Number(re.exec(withContract!.textContent ?? "")?.[1] ?? "NaN");
+    const must = n(/of (\d+) must-have/u);
+    expect(
+      n(/: (\d+) Met/u) +
+        n(/(\d+) Not met/u) +
+        n(/(\d+) Could not decide/u) +
+        (n(/(\d+) Out of scope/u) || 0),
+    ).toBe(must);
+    const evaluated = Number(
+      (await render(bundle, contract)).querySelector<HTMLElement>(
+        "[data-evaluated]",
+      )?.dataset.evaluated,
+    );
+    expect(
+      must + n(/(\d+) informational/u) + (n(/in neither count: (\d+)/u) || 0),
+    ).toBe(evaluated);
+    const plain = await render(bundle);
+    expect(totals(plain)).toBeNull();
+    expect(
+      plain.querySelector('[data-sealed-counts="all-terms"]')?.textContent,
+    ).toBe(
+      "These totals count every requirement in force: no contract was given to separate the must-have ones.",
+    );
   });
 
   it("with the contract, footnote 2 adds that an informational requirement never changes the answer; without, it does not", async () => {
@@ -424,5 +476,63 @@ describe("a conversation's result, read with tiers", () => {
     expect(conversationStatus(c, g)).toBe("undecided");
     expect(statusWord("undecided", c, w, g).word).toBe("not yet judged");
     expect(statusWord("undecided", c, w).word).toBe("judge could not decide");
+  });
+});
+
+describe("mustHaveTotals", () => {
+  const claim = (
+    id: string,
+    requirementRef: string,
+    extra: object = {},
+  ): never =>
+    ({
+      id,
+      contractRef: "c@1",
+      requirementRef,
+      type: "requirement",
+      ...extra,
+    }) as never;
+  const result = (outOfScope?: string[]): never =>
+    ({
+      claims: [
+        claim("a", "must.one"),
+        claim("b", "must.one", { failed: true }),
+        claim("c", "must.two"),
+        claim("d", "must.two"),
+        claim("e", "info.one"),
+        claim("f", "info.one"),
+        claim("g", "none.one"),
+        claim("h", "must.one", { type: "calibration" }),
+      ],
+      buckets: {
+        met: ["a", "e", "g", "h"],
+        notMet: ["b", "f"],
+        notEvaluable: ["c"],
+        ...(outOfScope === undefined ? {} : { outOfScope }),
+      },
+    }) as never;
+  const tierOf = (_ref: string | undefined, requirementRef: string) =>
+    requirementRef.startsWith("must")
+      ? "must_have"
+      : requirementRef.startsWith("info")
+        ? "informational"
+        : "unstated";
+
+  it("counts the sealed buckets by the contract's tier, leaving out calibration claims, never guessing an unstated tier, and counting a failed claim apart", () => {
+    expect(mustHaveTotals(result(["d"]), tierOf)).toEqual({
+      met: 1,
+      notMet: 1,
+      notEvaluable: 1,
+      outOfScope: 1,
+      evaluations: 4,
+      informational: 2,
+      unstated: 1,
+      failed: 1,
+    });
+  });
+
+  it("leaves the out-of-scope count undefined when the Result has no out-of-scope bucket, and states nothing without a contract", () => {
+    expect(mustHaveTotals(result(), tierOf)?.outOfScope).toBeUndefined();
+    expect(mustHaveTotals(result(["d"]), undefined)).toBeUndefined();
   });
 });
