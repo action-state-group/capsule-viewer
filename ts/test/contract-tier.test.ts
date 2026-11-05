@@ -262,7 +262,7 @@ describe("the Outcomes report (lines)", () => {
     );
     expect(root.querySelector("[data-must-have-totals]")?.textContent).toMatch(
       new RegExp(
-        `: 0 Met · 0 Not met · 0 Could not decide, of 0 must-have evaluations\\. 0 informational evaluations are reported apart\\. Claims with no tier stated by this contract, in neither count: ${evaluated}\\.$`,
+        `: 0 Met · 0 Not met · 0 Could not decide, of 0 must-have evaluations\\. 0 informational evaluations are reported apart\\. Evaluations this contract gives no tier, in neither count: ${evaluated}\\.$`,
         "u",
       ),
     );
