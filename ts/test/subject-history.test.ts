@@ -62,7 +62,8 @@ function bundleWith(
     not_met: [],
     not_evaluable: [],
   };
-  for (const c of kept) buckets[c.verdict as string]!.push(c.id as string);
+  for (const c of kept)
+    (buckets[c.verdict as string] ??= []).push(c.id as string);
   const rename = new Map(
     Object.keys(blockOf(doc).conversations as Obj).map((k, i) => [k, keep[i]!]),
   );
@@ -438,14 +439,18 @@ describe("subject-history tiles under a contract", () => {
     );
   });
 
-  describe("a conversation whose rules are all informational", () => {
-    /** The airline contract with every rule informational, so no conversation has a rule left in its answer. */
-    function allInformational(): { text: string; sha256: string } {
+  describe("a conversation with nothing left to count", () => {
+    /** The airline contract with every rule given `tier` (no tier key when null). */
+    function allTier(tier: string | null): { text: string; sha256: string } {
+      const base = JSON.parse(airlineContract().text) as {
+        requirements: Obj[];
+      };
       const text = JSON.stringify({
-        ...(JSON.parse(airlineContract().text) as Obj),
-        requirements: (
-          JSON.parse(airlineContract().text) as { requirements: Obj[] }
-        ).requirements.map((r) => ({ ...r, tier: "informational" })),
+        ...base,
+        requirements: base.requirements.map((r) => {
+          const { tier: _drop, ...rest } = r;
+          return tier === null ? rest : { ...rest, tier };
+        }),
       });
       return { text, sha256: createHash("sha256").update(text).digest("hex") };
     }
@@ -453,20 +458,46 @@ describe("subject-history tiles under a contract", () => {
       [...section(root)!.querySelectorAll(".sh-note")]
         .map((e) => e.textContent)
         .join(" ");
+    const NONE = "had no term that applied";
+    const KEPT = "had no counted term that applied";
 
-    it("under a contract says the terms were informational, not that none applied", async () => {
-      const text = note(await page(bundleWith(operator), allInformational()));
-      expect(text).toContain("4 of 4 had only informational terms");
-      expect(text).not.toContain("no term that applied");
+    it("under a contract whose rules are all informational, says none was counted, not that none applied", async () => {
+      const root = await page(bundleWith(operator), allTier("informational"));
+      expect(note(root)).toContain(`4 of 4 ${KEPT}`);
+      expect(note(root)).not.toContain(NONE);
+      expect(section(root)!.textContent).not.toContain("no rule applied");
     });
 
-    it("without a contract the note is unchanged", async () => {
-      const text = note(await page(bundleWith(operator)));
-      expect(text).not.toContain("informational");
+    it("counts both kinds apart over one total", async () => {
+      const w = await contractReportWords("lines", undefined, {
+        singleContract: true,
+      });
+      const row = (id: string, keptOut: boolean): SubjectConversation => ({
+        id,
+        date: "2026-10-03",
+        status: "nothing-applied",
+        ...(keptOut ? { keptOut: true } : {}),
+        outcome: { word: "x", tone: "na" },
+        terms: [],
+        open: [],
+      });
+      const history = readSubjectHistory({ ...operator })!;
+      const ids = [...history.entries.keys()].slice(0, 3);
+      const rows = [
+        row(ids[0]!, true),
+        row(ids[1]!, false),
+        row(ids[2]!, false),
+      ];
+      const s = renderSubjectHistory(rows, history, 3, w)!;
+      const text = [...s.querySelectorAll(".sh-note")]
+        .map((e) => e.textContent)
+        .join(" ");
+      expect(text).toContain(`1 of 3 ${KEPT}`);
+      expect(text).toContain(`2 of 3 ${NONE}`);
     });
 
-    it("goldens: the note under a contract", async () => {
-      const root = await page(bundleWith(operator), allInformational());
+    it("goldens: the note and the rows under a contract", async () => {
+      const root = await page(bundleWith(operator), allTier("informational"));
       check("subject-history-operator-informational", section(root)!.outerHTML);
     });
   });

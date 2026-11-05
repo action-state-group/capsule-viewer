@@ -797,7 +797,6 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // Same customer in this report (subject-history.ts): what the bundle does not carry.
   "lines.subject.gap",
   "lines.subject.gap.tiered",
-  "lines.subject.note.informational-only",
   // Both cards: a rule or conversation nobody could decide, by why.
   "lines.status.undecided.unjudged",
   "lines.status.undecided.withheld",
@@ -1441,7 +1440,7 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "3bbfee769a00bc440572aa17a392f0345da0d6ed15ac7e22470525a51671e542",
+  lines: "f86915ec55c30f769b286201742f8bb9c9ceb8ce78f9a905ef755942f240fc91",
   groups: "004c1c663a60e8c0248219c6be9b2c91aa89108c648d30144d141137cd02ea99",
   generic: "10e802539747ebff6fc92b1947d083609c99ab33ad4b3579ed4e1d66425defa0",
 });

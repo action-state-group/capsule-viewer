@@ -373,19 +373,6 @@ export function gating(
   return out;
 }
 
-/**
- * True when gating left the conversation no rule: every rule it has is
- * informational. Its status is still `nothing-applied`, but the rules did
- * apply; the contract only keeps them out of the answer.
- */
-export function informationalOnly(
-  given: Conversation,
-  gating?: Gating,
-): boolean {
-  const conversation = counted(given, gating);
-  return conversation !== given && conversation.criteria.length === 0;
-}
-
 export function conversationStatus(
   given: Conversation,
   gating?: Gating,
@@ -2464,7 +2451,14 @@ function subjectConversations(
 ): SubjectConversation[] {
   return model.conversations.map((c) => {
     const status = conversationStatus(c, model.gating);
-    const outcome = statusWord(status, c, w, model.gating);
+    // The contract keeps some of this conversation's rules out of its answer
+    // and nothing is left to count: the rules that were kept out did apply,
+    // so the page must not say that none did.
+    const keptOut =
+      status === "nothing-applied" && model.gating?.counted.has(c) === true;
+    const outcome = keptOut
+      ? { word: w.t("lines.subject.outcome.none-counted"), tone: "na" as const }
+      : statusWord(status, c, w, model.gating);
     const time = /T(\d{2}:\d{2})/u.exec(c.dated.stated ?? "")?.[1];
     const turns =
       c.transcript.state === "verified" || c.transcript.state === "cited"
@@ -2475,7 +2469,7 @@ function subjectConversations(
       date: c.day,
       ...(time === undefined ? {} : { time }),
       status,
-      ...(informationalOnly(c, model.gating) ? { informationalOnly: true } : {}),
+      ...(keptOut ? { keptOut: true } : {}),
       outcome,
       terms: c.criteria.map((cr) => ({
         ref: `${cr.checkId}.${cr.criterionId}`,

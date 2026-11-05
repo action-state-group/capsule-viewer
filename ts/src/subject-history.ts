@@ -203,10 +203,11 @@ export interface SubjectConversation {
     | "undecided"
     | "nothing-applied";
   /**
-   * With `nothing-applied`: the contract leaves out every rule it has as
-   * informational, so rules did apply (they are not in the answer).
+   * With `nothing-applied`: the contract keeps some of this conversation's
+   * rules out of its answer (informational) and none is left to count. Those
+   * rules did apply.
    */
-  readonly informationalOnly?: boolean;
+  readonly keptOut?: boolean;
   readonly outcome: { readonly word: string; readonly tone: Tone };
   readonly terms: readonly {
     readonly ref: string;
@@ -402,11 +403,11 @@ function customerBlock(
   );
   block.append(tiles);
   const unverified = count("unverified");
-  const informational = rows.filter(
-    (r) => r.status === "nothing-applied" && r.informationalOnly === true,
+  const keptOut = rows.filter(
+    (r) => r.status === "nothing-applied" && r.keptOut === true,
   ).length;
-  const nothing = count("nothing-applied") - informational;
-  if (unverified + nothing + informational > 0) {
+  const nothing = count("nothing-applied") - keptOut;
+  if (unverified + nothing + keptOut > 0) {
     const rest = [
       ...(unverified > 0
         ? [
@@ -424,10 +425,10 @@ function customerBlock(
             }),
           ]
         : []),
-      ...(informational > 0
+      ...(keptOut > 0
         ? [
-            w.t("lines.subject.note.informational-only", {
-              n: fmt(informational),
+            w.t("lines.subject.note.none-counted", {
+              n: fmt(keptOut),
               total: fmt(n),
             }),
           ]
