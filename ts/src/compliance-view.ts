@@ -913,9 +913,8 @@ function renderCanvasNotes(
   if (Array.isArray(records))
     note(
       "records",
-      w.t("groups.fn.records", {
+      w.p("groups.fn.records", model.totalSessions, {
         records: records.length.toLocaleString(),
-        n: model.totalSessions.toLocaleString(),
       }),
     );
   note(
