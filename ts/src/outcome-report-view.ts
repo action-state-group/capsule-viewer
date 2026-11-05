@@ -2542,6 +2542,20 @@ function renderCanvasNotes(
 }
 
 /**
+ * Whether the contract given states any tier for the rules drawn: a contract
+ * that states none reads every rule as not stated, and nothing is counted
+ * as a must-have.
+ */
+function statesTiers(model: LinesModel): boolean {
+  return model.conversations.some((c) =>
+    c.criteria.some((cr) => {
+      const tier = criterionTier(cr, model.gating);
+      return tier === "must_have" || tier === "informational";
+    }),
+  );
+}
+
+/**
  * Draw the `lines` grouping into `wrapper` (contract-report.ts made it and
  * put its stylesheet in it). Every word is `w`'s.
  */
@@ -2593,7 +2607,7 @@ export async function drawLines(
       slice,
       model.totalCount,
       w,
-      model.gating !== undefined,
+      statesTiers(model),
     );
     if (subject !== undefined) levels.L0.append(subject);
   }
