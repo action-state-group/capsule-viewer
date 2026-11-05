@@ -993,12 +993,12 @@ it("draws the canvas's footnotes 1-3 on the groups page, in the groups pack's ow
   expect(notes.map(([k]) => k)).toEqual(["records", "resolved", "readonly"]);
   expect(notes[0]![1]).toMatch(
     new RegExp(
-      `^¹ Records are the sealed items in this bundle \\(${records}\\); a session `,
+      `^¹ Records are the ${records} sealed items in this bundle\\. A session `,
       "u",
     ),
   );
   expect(notes[1]![1]).toBe(
-    "² Met means every requirement that applied was met, and at least one applied.",
+    "² A session is met when every requirement that applied to it was satisfied and at least one applied.",
   );
   expect(notes[2]![1]).toMatch(/^³ This page is read-only/u);
 });

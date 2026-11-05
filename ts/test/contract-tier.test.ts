@@ -279,10 +279,10 @@ describe("the EU AI Act Results (groups)", () => {
     const note = (root: HTMLElement) =>
       root.querySelector('[data-footnote="resolved"]')?.textContent;
     expect(note(await render(bundle, contract))).toBe(
-      "² Met means every requirement that applied was met, and at least one applied. A requirement the contract marks informational never changes the answer.",
+      "² A session is met when every requirement that applied to it was satisfied and at least one applied. A requirement the contract marks informational never changes the answer.",
     );
     expect(note(await render(bundle))).toBe(
-      "² Met means every requirement that applied was met, and at least one applied.",
+      "² A session is met when every requirement that applied to it was satisfied and at least one applied.",
     );
   });
 
