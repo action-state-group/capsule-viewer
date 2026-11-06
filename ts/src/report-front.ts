@@ -4,7 +4,8 @@
  * contract-report layout note (docs/design/contract-report-layout.md):
  *
  * - L0 opens with the core's strip (core-strip.ts): the mock-judge mark and
- *   the sealed aggregate are the core's, never a grouping's.
+ *   the imported line (a Result on backfill alone) and the sealed aggregate
+ *   are the core's, never a grouping's.
  * - Rows that open in place (expandableRow).
  * - L2, after the core's verification section: "Check this report
  *   yourself", the bundle's anchors and the steps to re-check them.

@@ -683,6 +683,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   // aggregate's unknown count is, what the page and the bundle carry, and
   // the producer's findings label.
   "front.mock",
+  "front.agg.imported",
   "front.agg.unknown.one",
   "front.agg.unknown.other",
   "front.agg.mismatch",
@@ -1440,9 +1441,9 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "80b1373cd923bbf0fcf5ffaa2499d851f6f0907bca1263948cbea502f62df3b7",
-  groups: "004c1c663a60e8c0248219c6be9b2c91aa89108c648d30144d141137cd02ea99",
-  generic: "10e802539747ebff6fc92b1947d083609c99ab33ad4b3579ed4e1d66425defa0",
+  lines: "16042a84872629267d4d1cc2d3920634c3d10f1ed7977bda4bc9021103bf8b12",
+  groups: "31ac6e4d0a2a7e21b51ed8294922427a31f16cdb120962df0c645babfa704a10",
+  generic: "d6a99863ce687c87270e7bcc8554877735a893e4140a25e76aa8cc9a82ac1d67",
 });
 
 export interface Words {

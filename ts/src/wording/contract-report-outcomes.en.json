@@ -415,6 +415,7 @@
     "card.wording.refused.fit": "it does not fit this card's words",
     "front.mock": "Verdicts are from a mock judge and are placeholders.",
     "front.agg.evaluated": "{evaluations} of {requirements}",
+    "front.agg.imported": "Imported: the records behind this result were all backfilled after the fact; none was recorded at the time.",
     "front.agg.evaluations.one": "{n} evaluation",
     "front.agg.evaluations.other": "{n} evaluations",
     "front.agg.requirements.one": "{n} requirement",

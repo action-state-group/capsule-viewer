@@ -83,8 +83,8 @@ holds it. **Gap**: nothing sealed holds it today; a producer change fills it.
 ## 3. The hierarchy
 
 The three tiers are [pc] §9.1's three levels. The host creates the regions and
-sets the depth. The core's strip opens L0 (the mock-judge mark, then the
-sealed aggregate; capsule-viewer#81); the module fills the rest of L0 and L1
+sets the depth. The core's strip opens L0 (the mock-judge mark, the imported
+line when the Result rests on backfill alone, then the sealed aggregate; capsule-viewer#81); the module fills the rest of L0 and L1
 and appends to L2 after the core.
 
 **L0, what matters.** One screen. Every figure traces to L1.
