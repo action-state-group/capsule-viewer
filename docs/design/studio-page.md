@@ -100,3 +100,9 @@ each carrying its own bundle, each citing its own pack digest and judge and the 
   product meaning. It adds no AAC member and no record type.
 - Wording is the neutral pack `studio-view.en.json` (the five status words and section labels); it is public text, so Sherlock2
   reviews it.
+
+## 9. The backfill timeline (capsule-viewer#302, PRD v5 section 8)
+
+`ts/src/backfill-timeline.ts` draws one `backfill-import/v0` record (evidencebook `capsulectl/BACKFILL.md`, "The pass and its import record"); the home takes an optional `studio-view/v0` member `backfill: [{record, checkpoints?, form?}]` and draws each with it. It draws, per source, the rows of `tier_a` with `at` (source says) beside the pass's `imported_at`, the cursors the pass covered and the source's horizon, then the declared `gaps` (each named, with its cursors or "source not read" and its reason), `late`, `anomalies`, `refused`, records kept from rows an earlier pass read (retrospective), the record's `notes` and `cannot_see`, and the checkpoints. A Go nil slice arrives as JSON `null` and reads as an empty list. A gap never stops the page. Every pass carries the label that its rows are imported, in both forms (`form` is `record` by default, or `rehearsal`). Rows that became Tier B capsules are marked from `retained[].action_id` (`<source>/<id>`).
+
+The checkpoints are caller input `{digest, size, at}`: BACKFILL.md names no checkpoint record shape, so the view takes the ones the caller says cover the pass and says "no checkpoint covers this pass yet" for none. Like the rest of the view it draws and never verifies; it adds no schema member to the record and no AAC member.

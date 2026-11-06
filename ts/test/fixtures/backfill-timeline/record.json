@@ -1,0 +1,78 @@
+{
+  "schema": "backfill-import/v0",
+  "import_batch": "2026-11-05T10:00:00Z",
+  "imported_at": "2026-11-05T10:00:00Z",
+  "first_pass": false,
+  "previous_pass": {
+    "import_batch": "2026-11-05T09:00:00Z",
+    "imported_at": "2026-11-05T09:00:00Z"
+  },
+  "late": "ran 3h0m0s after the previous pass; the schedule expects one every 30m",
+  "window": {
+    "calls": { "after": 10, "through": 12 },
+    "approvals": { "after": null, "through": null }
+  },
+  "source_time_span": {
+    "earliest": "2026-11-05T08:01:00Z",
+    "latest": "2026-11-05T08:30:00Z"
+  },
+  "horizons": {
+    "calls": {
+      "oldest_cursor": 7,
+      "oldest_at": "2026-11-05T07:00:00Z",
+      "limited": false
+    }
+  },
+  "promote_around": "30m0s",
+  "rows_read": 2,
+  "reread_verified": 0,
+  "already_retained": 0,
+  "tier_a": [
+    {
+      "source": "calls",
+      "cursor": 11,
+      "id": "c11",
+      "at": "2026-11-05T08:01:00Z",
+      "digest": "a"
+    },
+    {
+      "source": "calls",
+      "cursor": 12,
+      "id": "c12",
+      "at": "2026-11-05T08:30:00Z",
+      "digest": "b"
+    }
+  ],
+  "retained": [
+    {
+      "capsule_id": "x",
+      "source_digest": "a",
+      "action_id": "calls/c12",
+      "pinned_by": "p",
+      "retrospective": false
+    }
+  ],
+  "refused": [],
+  "anomalies": [
+    {
+      "source": "calls",
+      "id": "c5",
+      "cursor": 5,
+      "passed_cursor": 10,
+      "reason": "arrived below the watermark"
+    }
+  ],
+  "gaps": [
+    {
+      "source": "calls",
+      "from_cursor": 8,
+      "to_cursor": 9,
+      "reason": "expired before any pass read them, or ids the host never used"
+    },
+    { "source": "approvals", "reason": "the reader could not read this source" }
+  ],
+  "notes": [],
+  "scope": {},
+  "limits": "A record of what the store held when each pass read it; not prevention.",
+  "cannot_see": []
+}
