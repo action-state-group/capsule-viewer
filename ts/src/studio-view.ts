@@ -13,6 +13,11 @@
  * caller text is only ever text.
  */
 import { jcs, sha256Hex } from "@action-state-group/agent-action-capsule";
+import {
+  BackfillTimelineRefused,
+  backfillTimelineHtml,
+  type BackfillForm,
+} from "./backfill-timeline.js";
 import PACK from "./wording/studio-view.en.json" with { type: "json" };
 
 export const STUDIO_VIEW = "studio-view/v0";
@@ -83,6 +88,8 @@ interface Input {
     counts: Record<string, number>;
   };
   history: HistoryLine[];
+  /** One backfill pass each (capsule-viewer#302); drawn by backfill-timeline.ts. */
+  backfill?: { record: unknown; checkpoints?: unknown; form: BackfillForm }[];
 }
 
 type Obj = Record<string, unknown>;
@@ -157,7 +164,7 @@ function read(input: unknown): Input {
   const top = r.obj(
     input,
     "input",
-    ["schema", "active", "packs", "readiness", "history"],
+    ["schema", "active", "packs", "readiness", "history", "backfill"],
     ["schema", "active", "packs", "readiness", "history"],
   );
   if (top === null) throw new StudioViewRefused(r.reasons);
@@ -352,6 +359,31 @@ function read(input: unknown): Input {
         published: opt("published"),
       });
     });
+  const backfill: Input["backfill"] = [];
+  if (top["backfill"] !== undefined) {
+    if (!Array.isArray(top["backfill"]))
+      r.refuse("input.backfill", "is not a list");
+    else
+      top["backfill"].forEach((raw, i) => {
+        const p = `input.backfill[${i}]`;
+        const o = r.obj(raw, p, ["record", "checkpoints", "form"], ["record"]);
+        if (o === null) return;
+        const form = "form" in o ? o["form"] : "record";
+        if (form !== "record" && form !== "rehearsal")
+          r.refuse(`${p}.form`, "is not record or rehearsal");
+        try {
+          backfillTimelineHtml(o["record"], o["checkpoints"]);
+        } catch (e) {
+          if (!(e instanceof BackfillTimelineRefused)) throw e;
+          for (const why of e.reasons) r.reasons.push(`${p}.${why}`);
+        }
+        backfill.push({
+          record: o["record"],
+          ...("checkpoints" in o ? { checkpoints: o["checkpoints"] } : {}),
+          form: form as BackfillForm,
+        });
+      });
+  }
   const packVersion =
     ready === null
       ? ""
@@ -369,6 +401,7 @@ function read(input: unknown): Input {
       counts,
     },
     history,
+    ...(backfill.length === 0 ? {} : { backfill }),
   };
 }
 
@@ -515,7 +548,7 @@ code{overflow-wrap:anywhere}.cv-snapshot{padding:0 16px 16px}.cv-scroll{overflow
 /** The Studio home as an HTML fragment; throws StudioViewRefused on a refused input. */
 export function studioViewHtml(input: unknown): string {
   const v = read(input);
-  return `<main class="cv-studio" data-studio="home">${loop(v)}${switcher(v)}${desk(v)}${termMap(v)}</main>`;
+  return `<main class="cv-studio" data-studio="home">${loop(v)}${switcher(v)}${desk(v)}${termMap(v)}${(v.backfill ?? []).map((b) => backfillTimelineHtml(b.record, b.checkpoints, b.form)).join("")}</main>`;
 }
 
 /**
