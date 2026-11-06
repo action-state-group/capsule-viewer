@@ -21,7 +21,10 @@
     "disputes.raised.shared",
     "disputes.received.shared",
     "counts.not_counted.shared",
-    "counts.class_missing"
+    "counts.class_missing",
+    "disputes.outcomes",
+    "disputes.forums",
+    "disputes.who.shared"
   ],
   "entries": {
     "window.months.one": "last month",
@@ -53,6 +56,11 @@
     "band.decade": "around 10^{n}",
     "band.value": "{held} went as agreed, {did_not_hold} didn't, {undecided} we couldn't tell, of {of}",
     "count.of": "{n} of {of}",
-    "card.statement.short": "The holder's own counts, not recounted here."
+    "card.statement.short": "The holder's own counts, not recounted here.",
+    "disputes.outcomes": "How they ended, of {of}: still open {open} · for {who} {for} · against {who} {against} · split {split} · no finding {no_finding} · withdrawn {withdrawn}",
+    "disputes.forums": "Where, of {of}: a rule both sides agreed {auto} · the network {network} · the payment rail {rail} · somewhere else {external}",
+    "disputes.who.shared": "the holder",
+    "card.refused": "History card refused: {reasons}",
+    "deals.unpriced.value": "{n} of {of}: {held} went as agreed, {did_not_hold} didn't, {undecided} we couldn't tell"
   }
 }

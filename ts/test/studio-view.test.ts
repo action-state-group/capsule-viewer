@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   READINESS_STATUSES,
+  STUDIO_VIEW_WORDING,
   StudioViewRefused,
   studioViewDocument,
   studioViewHtml,
@@ -151,6 +152,13 @@ describe("the Studio home", () => {
         expect((e as StudioViewRefused).reasons.join(";")).toContain(where);
       }
     });
+});
+
+describe("the Studio wording pack", () => {
+  it("has no score, rating, rank, reputation or trust word", () => {
+    for (const text of Object.values(STUDIO_VIEW_WORDING.entries))
+      expect(text).not.toMatch(/\b(score|rating|rank|reputation|trust)\b/iu);
+  });
 });
 
 describe("the Studio page as a file", () => {

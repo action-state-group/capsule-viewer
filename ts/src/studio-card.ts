@@ -123,8 +123,13 @@ function disputeTally(
   card: Obj,
   side: "raised" | "received",
   reasons: string[],
-): number | undefined {
-  const d = isObj(card["disputes"]) ? card["disputes"][side] : undefined;
+): Obj | undefined {
+  const outer = card["disputes"];
+  if (!isObj(outer) || !exactKeys(outer, ["raised", "received"])) {
+    reasons.push("disputes is not exactly raised and received");
+    return undefined;
+  }
+  const d = outer[side];
   if (!isObj(d) || !exactKeys(d, ["of", "by_outcome", "by_forum"])) {
     reasons.push(`disputes.${side} is not a dispute tally`);
     return undefined;
@@ -152,10 +157,13 @@ function disputeTally(
     FORUM_KEYS.reduce((s, k) => s + f[k]!, 0) !== f["of"]
   )
     reasons.push(`disputes.${side} does not sum to its of`);
-  return d["of"] as number;
+  return d;
 }
 
 type Band = Record<string, number | string | null>;
+
+const strs = (o: Record<string, number>): Record<string, string> =>
+  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, String(v)]));
 
 function bandTallies(v: unknown, reasons: string[]): Band[] | undefined {
   const keys = [
@@ -185,6 +193,10 @@ function bandTallies(v: unknown, reasons: string[]): Band[] | undefined {
       reasons.push(`bands[${String(i)}] is not a band tally`);
       continue;
     }
+    if ((b["of"] as number) < 1) {
+      reasons.push(`bands[${String(i)}] has no counted deal`);
+      continue;
+    }
     if (
       (b["held"] as number) +
         (b["did_not_hold"] as number) +
@@ -194,10 +206,18 @@ function bandTallies(v: unknown, reasons: string[]): Band[] | undefined {
       reasons.push(`bands[${String(i)}] does not sum to its of`);
     out.push(b as Band);
   }
-  const key = (b: Band): string =>
-    `${String(b["currency"])}\u0000${b["decade"] === null ? "" : String(b["decade"]).padStart(20, "0")}`;
+  // Sorted by currency (code point order), then decade with null first and
+  // the rest numerically (SH section 4); one band per pair.
+  const before = (x: Band, y: Band): boolean => {
+    const cx = String(x["currency"]);
+    const cy = String(y["currency"]);
+    if (cx !== cy) return cx < cy;
+    if (x["decade"] === null) return y["decade"] !== null;
+    if (y["decade"] === null) return false;
+    return (x["decade"] as number) < (y["decade"] as number);
+  };
   for (let i = 1; i < out.length; i++)
-    if (key(out[i - 1]!) >= key(out[i]!))
+    if (!before(out[i - 1]!, out[i]!))
       reasons.push("bands are not sorted by currency then decade, one each");
   return out.length === v.length ? out : undefined;
 }
@@ -320,6 +340,25 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
   )
     return { ok: false, reasons };
   const n = (v: number): string => String(v);
+  const raisedOf = raised["of"] as number;
+  const receivedOf = received["of"] as number;
+  const dispute = (id: string, side: string, t: Obj): CardFact[] => {
+    const o = t["by_outcome"] as Record<string, number>;
+    const fo = t["by_forum"] as Record<string, number>;
+    const who = w("disputes.who.shared");
+    return [
+      f(
+        `${id}_outcomes`,
+        w("disputes.outcomes", { of: n(o["of"]!), who, ...strs(o) }),
+        "",
+      ),
+      f(
+        `${id}_forums`,
+        w("disputes.forums", { of: n(fo["of"]!), ...strs(fo) }),
+        "",
+      ),
+    ].map((x) => ({ ...x, label: `${side}: ${x.label}` }));
+  };
   const of = (t: Record<string, number>, k: string): string =>
     w("count.of", { n: n(t[k]!), of: n(t["of"]!) });
   const f = (
@@ -346,7 +385,6 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
         of: n(inWindow["of"]!),
       }),
       "",
-      false,
     ),
     f(
       "class_missing",
@@ -355,14 +393,25 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
         of: n(missing!["of"]!),
       }),
       "",
-      false,
     ),
     f("held", w("outcome.held"), of(outcomes, "held")),
     f("did_not_hold", w("outcome.did_not_hold"), of(outcomes, "did_not_hold")),
     f("undecided", w("outcome.undecided"), of(outcomes, "undecided")),
     ...(unpriced === undefined
       ? []
-      : [f("unpriced", w("deals.unpriced"), n(unpriced["of"]!), false)]),
+      : [
+          f(
+            "unpriced",
+            w("deals.unpriced"),
+            w("deals.unpriced.value", {
+              n: n(unpriced["of"]!),
+              of: n(outcomes["of"]!),
+              held: n(unpriced["held"]!),
+              did_not_hold: n(unpriced["did_not_hold"]!),
+              undecided: n(unpriced["undecided"]!),
+            }),
+          ),
+        ]),
     ...bands!.map((b, i) =>
       f(
         `band_${i}`,
@@ -379,7 +428,6 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
           undecided: String(b["undecided"]),
           of: String(b["of"]),
         }),
-        false,
       ),
     ),
     f("provided", w("role.provided.shared"), of(roles, "provided")),
@@ -395,8 +443,10 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
       of(happened, "receipt_only"),
     ),
     f("no_record", w("happened.no_record"), of(happened, "no_record")),
-    f("disputes_raised", w("disputes.raised.shared"), n(raised)),
-    f("disputes_received", w("disputes.received.shared"), n(received)),
+    f("disputes_raised", w("disputes.raised.shared"), n(raisedOf)),
+    ...dispute("disputes_raised", w("disputes.raised.shared"), raised),
+    f("disputes_received", w("disputes.received.shared"), n(receivedOf)),
+    ...dispute("disputes_received", w("disputes.received.shared"), received),
   ];
   return {
     ok: true,
@@ -459,5 +509,5 @@ export function stapledCardHtml(card: CardFacts): string {
 
 /** A refused card, drawn as one visible refusal in either form. */
 export function cardRefusalHtml(reasons: readonly string[]): string {
-  return `<p class="cv-card-refused" data-card="refused">History card refused: ${esc(reasons.join("; "))}</p>`;
+  return `<p class="cv-card-refused" data-card="refused">${esc(w("card.refused", { reasons: reasons.join("; ") }))}</p>`;
 }

@@ -101,14 +101,30 @@ describe("the History card in two forms", () => {
     expect(view.facts.get("band_0")).toBe(
       "2 went as agreed, 0 didn't, 1 we couldn't tell, of 3",
     );
-    expect(staple.facts.has("not_counted")).toBe(false);
+    // every count of the card is in the stapled line too; only who the holder
+    // is, since when and the window are left to the full card
+    for (const id of [
+      "not_counted",
+      "class_missing",
+      "held",
+      "band_0",
+      "disputes_raised_outcomes",
+    ])
+      expect(staple.facts.has(id)).toBe(true);
+    for (const id of ["holder", "since", "window"])
+      expect(staple.facts.has(id)).toBe(false);
   });
 
   it("reads a /2 card with its unpriced tally", async () => {
     const c = card();
     c["derivation"] = "standard_history/2";
     c["unpriced"] = { did_not_hold: 0, held: 0, of: 0, undecided: 0 };
-    expect((await cardFacts(bytes(c))).ok).toBe(true);
+    const r2 = await cardFacts(bytes(c));
+    expect(r2.ok).toBe(true);
+    if (r2.ok) {
+      const u = read(stapledCardHtml(r2.card)).facts.get("unpriced");
+      expect(u).toContain("0 of 3");
+    }
     delete c["unpriced"];
     expect((await cardFacts(bytes(c))).ok).toBe(false);
   });
@@ -138,6 +154,68 @@ describe("the History card in two forms", () => {
       if (!r.ok)
         expect(cardRefusalHtml(r.reasons)).toContain('data-card="refused"');
     });
+
+  it("sorts bands numerically: sub-unit decades -6 then -1 are valid, -1 then -6 is not", async () => {
+    const band = (decade: number | null, held: number) => ({
+      currency: "USD",
+      decade,
+      did_not_hold: 0,
+      held,
+      of: held,
+      undecided: 0,
+    });
+    const make = (order: (number | null)[]) => {
+      const c = card();
+      c["bands"] = order.map((d) => band(d, 1));
+      c["outcomes"] = {
+        did_not_hold: 0,
+        held: order.length,
+        of: order.length,
+        undecided: 0,
+      };
+      c["in_window"] = {
+        counted: order.length,
+        not_counted: 0,
+        of: order.length,
+      };
+      c["class_missing"] = { count: 0, of: order.length };
+      c["roles"] = { bought: 0, of: order.length, provided: order.length };
+      c["happened"] = {
+        no_record: 0,
+        of: order.length,
+        receipt_only: 0,
+        stamped_by_both: order.length,
+      };
+      return c;
+    };
+    expect((await cardFacts(bytes(make([null, -6, -1, 0, 3])))).ok).toBe(true);
+    expect((await cardFacts(bytes(make([-1, -6])))).ok).toBe(false);
+    expect((await cardFacts(bytes(make([0, null])))).ok).toBe(false);
+    expect((await cardFacts(bytes(make([-6, -6])))).ok).toBe(false);
+  });
+
+  it("shows which dispute outcomes and forums the card holds, not only the totals", async () => {
+    const c = card();
+    c["disputes"].raised = {
+      of: 2,
+      by_outcome: { ...zero, of: 2, against: 2 },
+      by_forum: { ...forum, of: 2, rail: 2 },
+    };
+    const r = await cardFacts(bytes(c));
+    if (!r.ok) throw new Error(r.reasons.join(";"));
+    const html = cardViewHtml(r.card);
+    expect(html).toContain("against the holder 2");
+    expect(html).toContain("the payment rail 2");
+    const other = card();
+    other["disputes"].raised = {
+      of: 2,
+      by_outcome: { ...zero, of: 2, open: 2 },
+      by_forum: { ...forum, of: 2, rail: 2 },
+    };
+    const r2 = await cardFacts(bytes(other));
+    if (!r2.ok) throw new Error("card");
+    expect(cardViewHtml(r2.card)).not.toBe(html);
+  });
 
   it("refuses a card whose bytes are not JCS", async () => {
     const pretty = new TextEncoder().encode(JSON.stringify(card(), null, 2));

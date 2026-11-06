@@ -58,7 +58,7 @@ The card is `standard_history/1` or `/2` (AAC spec/standard-history-v0.md sectio
 with their SHA-256 (spec/bindings/evidence-commitment-carriers-v0.md, `history_cards[]`, V3). One function reads the card bytes
 and returns the facts (the digest, counted deals, outcomes, roles, how it happened, disputes), and both forms draw from it, so they
 cannot differ: the card view shows the facts in full; the stapled form shows one compact line with the same numbers and the same
-digest. The stapled line carries the facts marked compact, with the card view's own values, and says the counts are the holder's own, not recounted. A card whose bytes are not JCS, whose members, window, bands, hex values or tallies do not satisfy section 4, is refused, drawn as a refusal in both forms. The words for the shared facts are byte copies of the shipped card's consumer wording pack, held by a test; the rest are new (Sherlock2 reviews them).
+digest. The stapled line carries every count of the card, with the card view's own values, and leaves out only who the holder is, since when and the window; both forms say the counts are the holder's own, not recounted. This is a form-and-counts display, not the verifier display of SH section 6: it runs no anchor or signature check and does not list which checks ran; the card module and the verification page own those. A card whose bytes are not JCS, whose members, window, bands, hex values or tallies do not satisfy section 4, is refused, drawn as a refusal in both forms. The words for the shared facts are byte copies of the shipped card's consumer wording pack, held by a test; the rest are new (Sherlock2 reviews them).
 
 ## 6. Tests
 
