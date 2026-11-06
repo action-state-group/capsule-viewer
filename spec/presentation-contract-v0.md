@@ -713,9 +713,7 @@ this order, after the header chrome and the verification banner:
 | L2 | verify | The core's verification section (the three bundle claims, every record's identity and membership, disclosure states, countersignatures, every extension with its integrity and interpretation status, every refused module as section 3.2 words it), then any module-specific detail. | The core, then the module. |
 
 On a verified bundle whose root is an Evidence Result, L0 opens with the **core strip**, drawn by
-the core and never by a module: the mock-judge mark when a cited report names a mock judge, the
-"imported" line when the Result's own `coverage_report` shows every source backfilled and none
-contemporaneous (capsule-viewer#303), then
+the core and never by a module: the mock-judge mark when a cited report names a mock judge, then
 the Result's sealed `aggregate` as it is, coverage first and then each bucket's count beside its
 denominator, the evaluated population (agent-action-capsule's `spec/evidence-result-v0.md`
 section 3). The strip shows no percentage and no single figure, and it is the same in every
