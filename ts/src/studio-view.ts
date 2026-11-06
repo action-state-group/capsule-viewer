@@ -419,7 +419,7 @@ function loop(input: Input): string {
   const entries = input.history.filter((e) => e.digest === digest);
   const tried = entries.some((e) => e.run !== null);
   const published = entries.some((e) => e.published !== null);
-  // Publishing writes the pack out; the terms check sales only once they are
+  // Publishing writes the pack out; the terms check actions only once they are
   // installed on the profile (skills/terms-pack-author SKILL.md, `terms
   // publish` answers `in_force: false`). The workspace does not record the
   // install, so "switched on" is drawn only from a line that says so, and

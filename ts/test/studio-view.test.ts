@@ -73,17 +73,17 @@ describe("the Studio home", () => {
     expect(html).toContain(
       'data-stage="switched_on" data-state="not-recorded"',
     );
-    expect(html).toContain("do not check sales until they are installed");
+    expect(html).toContain("do not check actions until they are installed");
     // `terms publish` answers in_force: false
     published["history"][0].in_force = false;
     html = studioViewHtml(published);
     expect(html).toContain('data-stage="switched_on" data-state="not-yet"');
-    expect(html).toContain("do not check sales until they are installed");
+    expect(html).toContain("do not check actions until they are installed");
     // installed
     published["history"][0].in_force = true;
     html = studioViewHtml(published);
     expect(html).toContain('data-stage="switched_on" data-state="done"');
-    expect(html).not.toContain("do not check sales");
+    expect(html).not.toContain("do not check actions");
     // never published: in_force alone says nothing
     const never = input();
     never["history"][0].in_force = true;

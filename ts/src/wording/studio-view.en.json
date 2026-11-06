@@ -34,6 +34,6 @@
     "switch.dataset_ref": "dataset digest",
     "loop.published": "Published",
     "loop.not_recorded": "not recorded",
-    "loop.published_note": "Published terms do not check sales until they are installed on the profile."
+    "loop.published_note": "Published terms do not check actions until they are installed on the profile."
   }
 }
