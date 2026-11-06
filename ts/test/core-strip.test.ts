@@ -517,8 +517,9 @@ describe("the strip says imported for a backfill-only Result", () => {
   });
   const withReport = async (
     sources: Obj[][] | undefined,
+    file = "result-root-bundle.json",
   ): Promise<HTMLElement> => {
-    const doc = fixture("result-root-bundle.json");
+    const doc = fixture(file);
     if (sources !== undefined)
       resultDoc(doc).coverage_report = {
         contract_ref: "ec:example:2026-09-21@1",
@@ -544,6 +545,19 @@ describe("the strip says imported for a backfill-only Result", () => {
       (c) => c.tagName !== "STYLE",
     );
     expect(kids[0]).toBe(note);
+  });
+
+  it("reads the report from a book-carried Result too", async () => {
+    const root = await withReport(
+      [[source(3, 0, 3)]],
+      "result-root-book-bundle.json",
+    );
+    expect(imported(root)).not.toBeNull();
+  });
+
+  it("counts a declared source with no records as no objection", async () => {
+    const root = await withReport([[source(3, 0, 3), source(0, 0, 0)]]);
+    expect(imported(root)).not.toBeNull();
   });
 
   for (const [name, sources] of [

@@ -3,7 +3,8 @@
  * The core strip: the first thing in L0 on every page whose bundle carries
  * an Evidence Result (capsule-viewer#81; presentation contract section
  * 9.1). The core draws it, never a module: the mock-judge mark when a judge
- * was a mock (decision D5 (b)), then the CORE identity line, then the
+ * was a mock (decision D5 (b)), the imported line when the Result rests on
+ * backfill alone (capsule-viewer#303), then the CORE identity line, then the
  * Result's sealed aggregate,
  * coverage first and then the buckets, each count beside its denominator
  * (contract-report/v1 section 2, evidence-result-v0 section 3). It carries
@@ -373,9 +374,11 @@ function renderCoreIdentity(model: CoreStripModel): HTMLElement {
  * Whether the Result's own `coverage_report` says it rests on backfill alone
  * (capsule-viewer#303): at least one source, and every source in
  * `requirements[].sources[]` has `contemporaneous_count` 0 and
- * `backfilled_count` equal to a `record_count` above 0. Anything else,
- * including a missing report or a count that is not a whole number, is not
- * "imported": the strip never says it on a guess. AAC's `ResultRoot` does not
+ * `backfilled_count` equal to its `record_count` (a declared source with no
+ * records is 0 of 0 and does not count against it), and the sources hold at
+ * least one record between them. Anything else, including a missing report
+ * or a count that is not a whole number, is not "imported": the strip never
+ * says it on a guess. AAC's `ResultRoot` does not
  * carry the member, so it is read from the Result document.
  */
 export function backfillOnly(document: unknown): boolean {
@@ -384,7 +387,7 @@ export function backfillOnly(document: unknown): boolean {
   if (!isObj(document) || !isObj(document["coverage_report"])) return false;
   const requirements = document["coverage_report"]["requirements"];
   if (!Array.isArray(requirements)) return false;
-  let sources = 0;
+  let records = 0;
   for (const requirement of requirements) {
     if (!isObj(requirement)) return false;
     const list = requirement["sources"];
@@ -397,14 +400,14 @@ export function backfillOnly(document: unknown): boolean {
       if (
         live !== 0 ||
         !Number.isSafeInteger(total) ||
-        (total as number) <= 0 ||
+        (total as number) < 0 ||
         back !== total
       )
         return false;
-      sources += 1;
+      records += total as number;
     }
   }
-  return sources > 0;
+  return records > 0;
 }
 
 /** What the strip draws from, read once before the page is written. */
@@ -437,7 +440,8 @@ export async function coreStripModel(
 /**
  * The strip, drawn afresh each time the page frame is: the mock-judge mark
  * first when a judge was a mock, so a reader meets it before any figure
- * (D5 (b)), then the aggregate.
+ * (D5 (b)), then the imported line when the Result rests on backfill alone,
+ * the identity line and the aggregate.
  */
 export function renderCoreStrip(model: CoreStripModel): HTMLElement {
   const strip = el("section", "cv-strip");
