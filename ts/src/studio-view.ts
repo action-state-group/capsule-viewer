@@ -12,7 +12,7 @@
  * draws and never fetches or verifies; unknown members are refused, and
  * caller text is only ever text.
  */
-import { sha256Hex } from "@action-state-group/agent-action-capsule";
+import { jcs, sha256Hex } from "@action-state-group/agent-action-capsule";
 import PACK from "./wording/studio-view.en.json" with { type: "json" };
 
 export const STUDIO_VIEW = "studio-view/v0";
@@ -77,10 +77,10 @@ interface Input {
     pack_version: string;
     records: number;
     terms: Term[];
+    /** Checked against the terms; the page draws the line from the terms. */
     counts: Record<string, number>;
   };
   history: HistoryLine[];
-  dataset?: { kind: string; digest: string };
 }
 
 type Obj = Record<string, unknown>;
@@ -88,6 +88,14 @@ const isObj = (v: unknown): v is Obj =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
 class Reader {
+  /** A string that may be empty (a term's detail). */
+  text(v: unknown, path: string): string {
+    if (typeof v !== "string" || v.length > 2000) {
+      this.refuse(path, "is not a string of at most 2000 characters");
+      return "";
+    }
+    return v;
+  }
   readonly reasons: string[] = [];
   refuse(path: string, why: string): void {
     this.reasons.push(`${path}: ${why}`);
@@ -147,7 +155,7 @@ function read(input: unknown): Input {
   const top = r.obj(
     input,
     "input",
-    ["schema", "active", "packs", "readiness", "history", "dataset"],
+    ["schema", "active", "packs", "readiness", "history"],
     ["schema", "active", "packs", "readiness", "history"],
   );
   if (top === null) throw new StudioViewRefused(r.reasons);
@@ -215,6 +223,9 @@ function read(input: unknown): Input {
         },
       });
     });
+  const ids = packs.map((p) => p.pack_id);
+  if (new Set(ids).size !== ids.length)
+    r.refuse("input.packs", "has a pack_id twice");
   const active = r.str(top["active"], "input.active", 200);
   if (packs.length > 0 && !packs.some((p) => p.pack_id === active))
     r.refuse("input.active", "is not a pack_id in packs");
@@ -267,7 +278,7 @@ function read(input: unknown): Input {
           statement: r.str(o["statement"], `${p}.statement`),
           in_pack: o["in_pack"] === true,
           status: o["status"] as ReadinessStatus,
-          detail: typeof o["detail"] === "string" ? o["detail"] : "",
+          detail: r.text(o["detail"], `${p}.detail`),
           reads: r.strs(o["reads"], `${p}.reads`),
           missing_fields: r.strs(o["missing_fields"], `${p}.missing_fields`),
         });
@@ -286,6 +297,14 @@ function read(input: unknown): Input {
         ]),
       );
     r.nat(ready["records"], "input.readiness.records");
+    for (const status of READINESS_STATUSES) {
+      const have = terms.filter((t) => t.status === status).length;
+      if (counts[status] !== have)
+        r.refuse(
+          `input.readiness.counts.${status}`,
+          `is ${String(counts[status])} but the terms hold ${String(have)}`,
+        );
+    }
   }
   const history: HistoryLine[] = [];
   if (!Array.isArray(top["history"]))
@@ -308,33 +327,28 @@ function read(input: unknown): Input {
         ["digest", "version", "first_at", "last_at"],
       );
       if (o === null) return;
+      const rehearsal = (v: unknown, path: string): boolean | null => {
+        if (v === undefined || v === null || typeof v === "boolean")
+          return v ?? null;
+        r.refuse(path, "is not true, false or null");
+        return null;
+      };
       const opt = (k: string): string | null =>
         o[k] === null || o[k] === undefined ? null : r.str(o[k], `${p}.${k}`);
       history.push({
-        digest: r.str(o["digest"], `${p}.digest`, 200),
+        digest: r.hex(o["digest"], `${p}.digest`),
         version: r.str(o["version"], `${p}.version`, 200),
         first_at: r.str(o["first_at"], `${p}.first_at`, 200),
         last_at: r.str(o["last_at"], `${p}.last_at`, 200),
         run: opt("run"),
-        rehearsal:
-          typeof o["rehearsal"] === "boolean"
-            ? (o["rehearsal"] as boolean)
-            : null,
+        rehearsal: rehearsal(o["rehearsal"], `${p}.rehearsal`),
         published: opt("published"),
       });
     });
-  if ("dataset" in top) {
-    const d = r.obj(
-      top["dataset"],
-      "input.dataset",
-      ["kind", "digest"],
-      ["kind", "digest"],
-    );
-    if (d !== null) {
-      r.str(d["kind"], "input.dataset.kind", 200);
-      r.str(d["digest"], "input.dataset.digest", 200);
-    }
-  }
+  const packVersion =
+    ready === null
+      ? ""
+      : r.str(ready["pack_version"], "input.readiness.pack_version", 200);
   if (r.reasons.length > 0) throw new StudioViewRefused(r.reasons);
   return {
     schema: STUDIO_VIEW,
@@ -342,19 +356,12 @@ function read(input: unknown): Input {
     packs,
     readiness: {
       pack_id: ready!["pack_id"] as string,
-      pack_version: r.str(
-        ready!["pack_version"],
-        "input.readiness.pack_version",
-        200,
-      ),
+      pack_version: packVersion,
       records: ready!["records"] as number,
       terms,
       counts,
     },
     history,
-    ...(isObj(top["dataset"])
-      ? { dataset: top["dataset"] as { kind: string; digest: string } }
-      : {}),
   };
 }
 
@@ -390,11 +397,16 @@ const STATUS_TOKEN: Readonly<Record<ReadinessStatus, string>> = {
 };
 
 function loop(input: Input): string {
-  const entries = input.history;
-  const tried = entries.some((e) => e.run !== null && e.rehearsal === true);
+  // Only the lines for the digest the active pack has now: an edit makes a
+  // new digest, and the earlier digest's run says nothing about it.
+  const digest = input.packs.find(
+    (p) => p.pack_id === input.active,
+  )!.pack_digest;
+  const entries = input.history.filter((e) => e.digest === digest);
+  const tried = entries.some((e) => e.run !== null);
   const live = entries.some((e) => e.published !== null);
   const stages: [string, boolean][] = [
-    ["terms", input.readiness.terms.length > 0],
+    ["terms", input.readiness.terms.some((t) => t.in_pack)],
     ["tried", tried],
     ["switched_on", live],
   ];
@@ -408,15 +420,16 @@ function loop(input: Input): string {
 }
 
 function desk(input: Input): string {
-  const { terms, counts } = input.readiness;
+  const { terms } = input.readiness;
   const rows = terms
     .map(
       (t) =>
-        `<tr data-term="${esc(t.term)}" data-status="${STATUS_TOKEN[t.status]}"><td>${esc(t.statement)}</td><td><span class="cv-chip">${esc(word(`status.${STATUS_TOKEN[t.status]}`))}</span></td><td>${esc(t.detail)}</td><td>${esc(t.reads.join(", "))}</td><td>${esc(t.missing_fields.join(", "))}</td></tr>`,
+        `<tr data-term="${esc(t.term)}" data-status="${STATUS_TOKEN[t.status]}" data-in-pack="${String(t.in_pack)}"><td>${esc(t.statement)}${t.in_pack ? "" : ` <em>${esc(word("desk.idea"))}</em>`}</td><td><span class="cv-chip">${esc(word(`status.${STATUS_TOKEN[t.status]}`))}</span></td><td>${esc(t.detail)}</td><td>${esc(t.reads.join(", "))}</td><td>${esc(t.missing_fields.join(", "))}</td></tr>`,
     )
     .join("");
   const line = READINESS_STATUSES.map(
-    (s) => `${esc(word(`status.${STATUS_TOKEN[s]}`))} ${counts[s] ?? 0}`,
+    (s) =>
+      `${esc(word(`status.${STATUS_TOKEN[s]}`))} ${terms.filter((t) => t.status === s).length}`,
   ).join(" · ");
   return `<section data-view="readiness"><h2>${esc(word("desk.title"))}</h2><p data-counts>${line}</p><table><thead><tr><th>${esc(word("desk.term"))}</th><th>${esc(word("desk.status"))}</th><th>${esc(word("desk.detail"))}</th><th>${esc(word("desk.reads"))}</th><th>${esc(word("desk.lacks"))}</th></tr></thead><tbody>${rows}</tbody></table></section>`;
 }
@@ -428,7 +441,7 @@ function termMap(input: Input): string {
     const items = ts
       .map(
         (t) =>
-          `<li data-term="${esc(t.term)}">${esc(t.statement)} <small>${esc(word("map.reads"))} ${esc(t.reads.join(", "))}</small></li>`,
+          `<li data-term="${esc(t.term)}" data-in-pack="${String(t.in_pack)}">${esc(t.statement)}${t.in_pack ? "" : ` <em>${esc(word("desk.idea"))}</em>`} <small>${esc(word("map.reads"))} ${esc(t.reads.join(", "))}</small></li>`,
       )
       .join("");
     return `<details data-status="${STATUS_TOKEN[s]}"><summary>${esc(word(`status.${STATUS_TOKEN[s]}`))} (${ts.length})</summary><ul>${items}</ul></details>`;
@@ -448,17 +461,6 @@ function switcher(input: Input): string {
     })
     .join("");
   return `<nav data-view="switch"><h2>${esc(word("switch.title"))}</h2><ul>${items}</ul></nav>`;
-}
-
-/** Sorted-key JSON, so one input always has one byte form. */
-function canon(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canon).join(",")}]`;
-  if (isObj(value))
-    return `{${Object.keys(value)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${canon(value[k])}`)
-      .join(",")}}`;
-  return JSON.stringify(value);
 }
 
 export const studioViewStyles = `.cv-studio{font:16px/1.45 system-ui,sans-serif;max-width:1120px;margin:0 auto;padding:16px;display:grid;gap:16px;color:#1f2733}
@@ -481,13 +483,11 @@ export function studioViewHtml(input: unknown): string {
  * script, and that JSON's SHA-256, labelled as workspace data that is not
  * sealed evidence. Rebuilding from the embedded JSON gives the same bytes.
  */
-export async function studioViewDocument(
-  input: unknown,
-  title = "Terms Pack Studio",
-): Promise<string> {
+export async function studioViewDocument(input: unknown): Promise<string> {
   const v = read(input);
-  const json = canon(v).replace(/</gu, "\\u003c");
+  const bytes = jcs(v);
+  const json = new TextDecoder().decode(bytes).replace(/</gu, "\\u003c");
   const digest = await sha256Hex(new TextEncoder().encode(json));
   const snapshot = `<footer class="cv-snapshot" data-snapshot><p>${esc(word("snapshot.label"))} <code data-snapshot-digest>${digest}</code></p><script type="application/json" data-studio-input>${json}</script></footer>`;
-  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${studioViewStyles}</style></head><body>${studioViewHtml(v)}${snapshot}</body></html>\n`;
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(word("page.title"))}</title><style>${studioViewStyles}</style></head><body>${studioViewHtml(v)}${snapshot}</body></html>\n`;
 }

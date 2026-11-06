@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BSD-3-Clause
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { build } from "esbuild";
@@ -64,8 +63,11 @@ const embedded = (html: string): string =>
   /<script type="application\/json"[^>]*>([\s\S]*?)<\/script>/.exec(html)![1]!;
 
 /** Opens a page in jsdom with every outward API a trap; returns the calls. */
-async function drawn(page: string, expectClean: boolean): Promise<string[]> {
+async function drawn(
+  page: string,
+): Promise<{ calls: string[]; banner: string | null }> {
   const calls: string[] = [];
+  let banner: string | null = null;
   const dom = new JSDOM(page, {
     runScripts: "dangerously",
     beforeParse(window) {
@@ -109,19 +111,12 @@ async function drawn(page: string, expectClean: boolean): Promise<string[]> {
       await new Promise((r) => setTimeout(r, 25));
     await new Promise((r) => setTimeout(r, 200));
     expect(doc.querySelector('[data-page="verification"]')).not.toBeNull();
-    if (expectClean) expect(calls).toEqual([]);
-    // No key was supplied anywhere, and the checks still ran: the banner
-    // is not "failed" and not "unable to verify".
-    const verdicts = [...doc.querySelectorAll("[data-verify]")].map((e) =>
-      e.getAttribute("data-verify"),
-    );
-    expect(verdicts.length).toBeGreaterThan(0);
-    if (expectClean)
-      for (const v of verdicts) expect(["failed", "unable"]).not.toContain(v);
+    banner =
+      doc.querySelector("[data-verify]")?.getAttribute("data-verify") ?? null;
   } finally {
     dom.window.close();
   }
-  return calls;
+  return { calls, banner };
 }
 
 describe("a report page carries its bundle and reads only that", () => {
@@ -138,7 +133,36 @@ describe("a report page carries its bundle and reads only that", () => {
   it("calls no network, storage or worker API while drawing, and an anyone page shows its checks with no key", async () => {
     const rt = await runtime();
     const page = await htmlPage(rt, bundle());
-    await drawn(page, true);
+    const { calls, banner } = await drawn(page);
+    expect(calls).toEqual([]);
+    // No key was supplied anywhere. The fixture is unsigned, so the banner
+    // is the repository's "passes with checks not run" state, exactly as in
+    // report-tamper.test.ts, and not "failed" or "unable".
+    expect(banner).toBe("incomplete");
+  }, 60_000);
+
+  it("the page names no outward resource: no src, link, import or url() in its markup or styles", async () => {
+    const rt = await runtime();
+    const page = await htmlPage(rt, bundle());
+    const markup = page.replace(/<script[\s\S]*?<\/script>/gu, "");
+    expect(markup).not.toMatch(/\s(src|srcset|poster|action|formaction)\s*=/iu);
+    expect(markup).not.toMatch(
+      /<(link|iframe|object|embed|form|img|video|audio)\b/iu,
+    );
+    expect(markup).not.toMatch(/url\(\s*['"]?(?!data:)/iu);
+    expect(markup).not.toMatch(/@import/iu);
+  }, 60_000);
+
+  it("a page whose embedded bundle was edited fails its checks offline (they really ran)", async () => {
+    const rt = await runtime();
+    const page = await htmlPage(rt, bundle());
+    const json = embedded(page);
+    const edited = JSON.parse(json.replace(/\\u003c/gu, "<")) as {
+      records: Record<string, unknown>[];
+    };
+    edited.records[0] = { ...edited.records[0], action_type: "decide" };
+    const tampered = page.replace(json, JSON.stringify(edited));
+    expect((await drawn(tampered)).banner).toBe("failed");
   }, 60_000);
 
   it("the watcher sees a page that does reach out (control)", async () => {
@@ -147,10 +171,10 @@ describe("a report page carries its bundle and reads only that", () => {
       "</body>",
       "<script>try{fetch('x')}catch(e){}</script></body>",
     );
-    expect(await drawn(page, false)).toContain("fetch");
+    expect((await drawn(page)).calls).toContain("fetch");
   }, 60_000);
 
-  it("the static packaging drops the bundle and says it is not self-verifying, so the Studio links html pages only", async () => {
+  it("the static packaging drops the bundle and says it is not self-verifying (why the switch refuses it)", async () => {
     const built = await buildPresentation(bundle(), {
       presentation: "auto",
       format: "static",
@@ -160,8 +184,5 @@ describe("a report page carries its bundle and reads only that", () => {
     if (built.format !== "static") throw new Error("a static page expected");
     expect(built.html).not.toContain('<script type="application/json"');
     expect(built.html).toContain('data-static-notice="not-self-verifying"');
-    const digest = (s: string): string =>
-      createHash("sha256").update(s).digest("hex");
-    expect(digest(built.html)).toHaveLength(64);
   }, 60_000);
 });

@@ -12,13 +12,30 @@
  * different digest. This module draws and checks the card's own counting
  * rules; it does not verify a signature or a checkpoint.
  */
-import { sha256Hex } from "@action-state-group/agent-action-capsule";
+import {
+  decodeStrictJson,
+  jcs,
+  sha256Hex,
+} from "@action-state-group/agent-action-capsule";
+import PACK from "./wording/studio-card.en.json" with { type: "json" };
+
+export const STUDIO_CARD_WORDING = PACK;
+const WORDS = PACK.entries as Readonly<Record<string, string>>;
+
+/** A word of the pack with its `{name}` slots filled. */
+function w(key: string, vars: Readonly<Record<string, string>> = {}): string {
+  const t = WORDS[key];
+  if (t === undefined) throw new Error(`studio-card: no word ${key}`);
+  return t.replace(/\{([a-z_]+)\}/gu, (_, n: string) => vars[n] ?? "");
+}
 
 /** One number or word of a card, in the order both forms show it. */
 export interface CardFact {
   readonly id: string;
   readonly label: string;
   readonly value: string;
+  /** Also shown in the stapled form. Every compact fact is in the card view with the same value. */
+  readonly compact: boolean;
 }
 
 export interface CardFacts {
@@ -138,6 +155,53 @@ function disputeTally(
   return d["of"] as number;
 }
 
+type Band = Record<string, number | string | null>;
+
+function bandTallies(v: unknown, reasons: string[]): Band[] | undefined {
+  const keys = [
+    "currency",
+    "decade",
+    "of",
+    "held",
+    "did_not_hold",
+    "undecided",
+  ];
+  if (!Array.isArray(v)) {
+    reasons.push("bands is not a list");
+    return undefined;
+  }
+  const out: Band[] = [];
+  for (const [i, b] of v.entries()) {
+    const ok =
+      isObj(b) &&
+      exactKeys(b, keys) &&
+      typeof b["currency"] === "string" &&
+      /^([A-Z]{3}|[-a-z0-9]{3,8}:[-a-zA-Z0-9]{1,32}\/[a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128})$/u.test(
+        b["currency"],
+      ) &&
+      (b["decade"] === null || Number.isSafeInteger(b["decade"])) &&
+      ["of", "held", "did_not_hold", "undecided"].every((k) => count(b[k]));
+    if (!ok) {
+      reasons.push(`bands[${String(i)}] is not a band tally`);
+      continue;
+    }
+    if (
+      (b["held"] as number) +
+        (b["did_not_hold"] as number) +
+        (b["undecided"] as number) !==
+      b["of"]
+    )
+      reasons.push(`bands[${String(i)}] does not sum to its of`);
+    out.push(b as Band);
+  }
+  const key = (b: Band): string =>
+    `${String(b["currency"])}\u0000${b["decade"] === null ? "" : String(b["decade"]).padStart(20, "0")}`;
+  for (let i = 1; i < out.length; i++)
+    if (key(out[i - 1]!) >= key(out[i]!))
+      reasons.push("bands are not sorted by currency then decade, one each");
+  return out.length === v.length ? out : undefined;
+}
+
 /**
  * Reads a card from its bytes: refuses a card that is not a `/1` or `/2` card
  * with exactly its members or whose tallies break the partition rules of
@@ -152,6 +216,21 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
   }
   if (!isObj(card))
     return { ok: false, reasons: ["the card is not an object"] };
+  // The card travels as JCS (SH section 4): the bytes must be the canonical
+  // form of what they say, with no duplicate member, float or other spelling.
+  try {
+    const canonical = jcs(decodeStrictJson(bytes));
+    if (
+      canonical.length !== bytes.length ||
+      canonical.some((b, i) => b !== bytes[i])
+    )
+      throw new Error("differs");
+  } catch {
+    return {
+      ok: false,
+      reasons: ["the card's bytes are not its JCS (RFC 8785) form"],
+    };
+  }
   const derivation = card["derivation"];
   if (
     derivation !== "standard_history/1" &&
@@ -168,12 +247,47 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
       : [...MEMBERS];
   if (!exactKeys(card, members))
     reasons.push(`the card's members are not exactly ${members.join(", ")}`);
+  const word = (v: unknown, ok: readonly string[]): boolean =>
+    typeof v === "string" && ok.includes(v);
+  if (!word(card["holder_kind"], ["person", "node"]))
+    reasons.push("holder_kind is not person or node");
+  else if (
+    card["controller_class"] !==
+    (card["holder_kind"] === "person" ? "person_declared" : "node_declared")
+  )
+    reasons.push("controller_class does not match holder_kind");
+  for (const k of ["anchor", "policy"])
+    if (typeof card[k] !== "string" || !/^[0-9a-f]{64}$/u.test(card[k]))
+      reasons.push(`${k} is not 64 lowercase hex characters`);
+  if (
+    typeof card["since"] !== "string" ||
+    !/^\d{4}-(0[1-9]|1[0-2])$/u.test(card["since"])
+  )
+    reasons.push("since is not YYYY-MM");
+  const win = card["window"];
+  const windowText =
+    isObj(win) &&
+    exactKeys(win, ["months"]) &&
+    Number.isSafeInteger(win["months"]) &&
+    (win["months"] as number) > 0
+      ? win["months"] === 1
+        ? w("window.months.one")
+        : w("window.months", { n: String(win["months"]) })
+      : isObj(win) && exactKeys(win, ["all"]) && win["all"] === true
+        ? w("window.all")
+        : undefined;
+  if (windowText === undefined)
+    reasons.push("window is not {months: N} or {all: true}");
   const inWindow = tally(card, "in_window", reasons);
   const missing = tally(card, "class_missing", reasons);
   const outcomes = tally(card, "outcomes", reasons);
   const roles = tally(card, "roles", reasons);
   const happened = tally(card, "happened", reasons);
-  if (derivation === "standard_history/2") tally(card, "unpriced", reasons);
+  const unpriced =
+    derivation === "standard_history/2"
+      ? tally(card, "unpriced", reasons)
+      : undefined;
+  const bands = bandTallies(card["bands"], reasons);
   const raised = disputeTally(card, "raised", reasons);
   const received = disputeTally(card, "received", reasons);
   if (
@@ -183,13 +297,20 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
     )
   )
     reasons.push("in_window.counted is not the of of the counted tallies");
-  if (
-    inWindow !== undefined &&
-    inWindow["counted"]! + inWindow["not_counted"]! !== inWindow["of"]
-  )
-    reasons.push("in_window does not sum to its of");
+  if (outcomes !== undefined && bands !== undefined) {
+    const priced = (k: string): number =>
+      bands.reduce((s, b) => s + (b[k] as number), 0);
+    for (const k of ["of", "held", "did_not_hold", "undecided"]) {
+      const total = priced(k) + (unpriced?.[k] ?? 0);
+      if (total !== outcomes[k])
+        reasons.push(
+          `the bands${unpriced ? " and unpriced" : ""} do not sum to outcomes.${k}`,
+        );
+    }
+  }
   if (
     reasons.length > 0 ||
+    windowText === undefined ||
     inWindow === undefined ||
     outcomes === undefined ||
     roles === undefined ||
@@ -199,35 +320,83 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
   )
     return { ok: false, reasons };
   const n = (v: number): string => String(v);
+  const of = (t: Record<string, number>, k: string): string =>
+    w("count.of", { n: n(t[k]!), of: n(t["of"]!) });
+  const f = (
+    id: string,
+    label: string,
+    value: string,
+    compact = true,
+  ): CardFact => ({ id, label, value, compact });
   const facts: CardFact[] = [
-    {
-      id: "in_window",
-      label: "Deals in the window",
-      value: n(inWindow["of"]!),
-    },
-    { id: "counted", label: "Counted", value: n(inWindow["counted"]!) },
-    { id: "held", label: "Held", value: n(outcomes["held"]!) },
-    {
-      id: "did_not_hold",
-      label: "Did not hold",
-      value: n(outcomes["did_not_hold"]!),
-    },
-    { id: "undecided", label: "Undecided", value: n(outcomes["undecided"]!) },
-    { id: "provided", label: "Provided", value: n(roles["provided"]!) },
-    { id: "bought", label: "Bought", value: n(roles["bought"]!) },
-    {
-      id: "stamped_by_both",
-      label: "Stamped by both",
-      value: n(happened["stamped_by_both"]!),
-    },
-    {
-      id: "receipt_only",
-      label: "Receipt only",
-      value: n(happened["receipt_only"]!),
-    },
-    { id: "no_record", label: "No record", value: n(happened["no_record"]!) },
-    { id: "disputes_raised", label: "Disputes raised", value: n(raised) },
-    { id: "disputes_received", label: "Disputes received", value: n(received) },
+    f(
+      "holder",
+      w(card["holder_kind"] === "person" ? "holder.person" : "holder.node"),
+      "",
+      false,
+    ),
+    f("since", w("holder.since", { month: String(card["since"]) }), "", false),
+    f("window", windowText, "", false),
+    f("in_window", w("deals.in_window"), n(inWindow["of"]!)),
+    f("counted", w("deals.counted"), of(inWindow, "counted")),
+    f(
+      "not_counted",
+      w("counts.not_counted.shared", {
+        n: n(inWindow["not_counted"]!),
+        of: n(inWindow["of"]!),
+      }),
+      "",
+      false,
+    ),
+    f(
+      "class_missing",
+      w("counts.class_missing", {
+        n: n(missing!["count"]!),
+        of: n(missing!["of"]!),
+      }),
+      "",
+      false,
+    ),
+    f("held", w("outcome.held"), of(outcomes, "held")),
+    f("did_not_hold", w("outcome.did_not_hold"), of(outcomes, "did_not_hold")),
+    f("undecided", w("outcome.undecided"), of(outcomes, "undecided")),
+    ...(unpriced === undefined
+      ? []
+      : [f("unpriced", w("deals.unpriced"), n(unpriced["of"]!), false)]),
+    ...bands!.map((b, i) =>
+      f(
+        `band_${i}`,
+        w("band", {
+          currency: String(b["currency"]),
+          decade:
+            b["decade"] === null
+              ? w("band.zero")
+              : w("band.decade", { n: String(b["decade"]) }),
+        }),
+        w("band.value", {
+          held: String(b["held"]),
+          did_not_hold: String(b["did_not_hold"]),
+          undecided: String(b["undecided"]),
+          of: String(b["of"]),
+        }),
+        false,
+      ),
+    ),
+    f("provided", w("role.provided.shared"), of(roles, "provided")),
+    f("bought", w("role.bought.shared"), of(roles, "bought")),
+    f(
+      "stamped_by_both",
+      w("happened.stamped_by_both"),
+      of(happened, "stamped_by_both"),
+    ),
+    f(
+      "receipt_only",
+      w("happened.receipt_only.shared"),
+      of(happened, "receipt_only"),
+    ),
+    f("no_record", w("happened.no_record"), of(happened, "no_record")),
+    f("disputes_raised", w("disputes.raised.shared"), n(raised)),
+    f("disputes_received", w("disputes.received.shared"), n(received)),
   ];
   return {
     ok: true,
@@ -235,30 +404,60 @@ export async function cardFacts(bytes: Uint8Array): Promise<CardResult> {
   };
 }
 
+const TOKEN = /^[a-z0-9_-]+$/u;
+
+function esc(text: string): string {
+  return text.replace(/[&<>"']/gu, (c) =>
+    c === "&"
+      ? "&amp;"
+      : c === "<"
+        ? "&lt;"
+        : c === ">"
+          ? "&gt;"
+          : c === '"'
+            ? "&quot;"
+            : "&#39;",
+  );
+}
+
+/** Callers hold a `CardFacts` from `cardFacts`, but the renderers do not trust it: ids and digests are checked, text is escaped. */
+function checked(card: CardFacts): string {
+  const token = card.derivation.replace("/", "-");
+  if (
+    !TOKEN.test(token) ||
+    !/^[0-9a-f]{64}$/u.test(card.digest) ||
+    card.facts.some((f) => !TOKEN.test(f.id))
+  )
+    throw new Error("studio-card: not facts from cardFacts");
+  return token;
+}
+
 /** The card view: every fact with its label, and the digest. */
 export function cardViewHtml(card: CardFacts): string {
+  const token = checked(card);
   const rows = card.facts
     .map(
       (f) =>
-        `<div data-fact="${f.id}"><dt>${f.label}</dt><dd>${f.value}</dd></div>`,
+        `<div data-fact="${f.id}"><dt>${esc(f.label)}</dt>${f.value === "" ? "" : `<dd>${esc(f.value)}</dd>`}</div>`,
     )
     .join("");
-  return `<section class="cv-card" data-card="view" data-derivation="${card.derivation.replace("/", "-")}"><h3>History card</h3><dl>${rows}</dl><p>Card SHA-256 <code data-card-digest>${card.digest}</code></p></section>`;
+  return `<section class="cv-card" data-card="view" data-derivation="${token}"><h3>${esc(w("card.title"))}</h3><dl>${rows}</dl><p data-card-statement>${esc(w("card.statement"))}</p><p>${esc(w("card.digest"))} <code data-card-digest>${card.digest}</code></p></section>`;
 }
 
-/** The stapled form: the same facts and digest on one compact line. */
+/** The stapled form: the compact facts, with the card view's own values, and the same digest, on one line. */
 export function stapledCardHtml(card: CardFacts): string {
+  const token = checked(card);
   const line = card.facts
-    .map((f) => `<span data-fact="${f.id}">${f.label} ${f.value}</span>`)
+    .filter((f) => f.compact)
+    .map(
+      (f) =>
+        `<span data-fact="${f.id}">${esc(f.label)}${f.value === "" ? "" : ` <b>${esc(f.value)}</b>`}</span>`,
+    )
     .join(" · ");
-  return `<p class="cv-card-stapled" data-card="stapled" data-derivation="${card.derivation.replace("/", "-")}">${line} · <code data-card-digest>${card.digest}</code></p>`;
+  return `<p class="cv-card-stapled" data-card="stapled" data-derivation="${token}">${line} · <span data-card-statement>${esc(w("card.statement.short"))}</span> · <code data-card-digest>${card.digest}</code></p>`;
 }
 
 /** A refused card, drawn as one visible refusal in either form. */
 export function cardRefusalHtml(reasons: readonly string[]): string {
-  const text = reasons
-    .join("; ")
-    .replace(/&/gu, "&amp;")
-    .replace(/</gu, "&lt;");
-  return `<p class="cv-card-refused" data-card="refused">History card refused: ${text}</p>`;
+  return `<p class="cv-card-refused" data-card="refused">History card refused: ${esc(reasons.join("; "))}</p>`;
 }

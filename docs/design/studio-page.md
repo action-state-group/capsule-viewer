@@ -25,9 +25,8 @@ already writes. The view draws; it never fetches and never verifies. Unknown mem
 | `schema`    | `"studio-view/v0"`                                                                                                                                                                                                                                                                                    |
 | `active`    | the pack the page shows (a `pack_id` in `packs`)                                                                                                                                                                                                                                                      |
 | `packs[]`   | the switch: `{pack_id, title?, pack_digest, judge?, page, format?, shared}` per pack; `format` is `html` (default) or `embedded`, never `static` (it drops the bundle and is not offered for sending); `page` is a relative path to that pack's report page; `shared` is `{kind, digest}` (section 7) |
-| `readiness` | `packs/<id>/readiness.json` verbatim: `{pack_id, pack_version, records, terms[{term, statement, in_pack, status, detail, reads, missing_fields, filled_rate}], counts}` (`readiness.py:148`)                                                                                                          |
+| `readiness` | `packs/<id>/readiness.json`: `{pack_id, pack_version, records, terms[{term, statement, in_pack, status, detail, reads, missing_fields}], counts}` (`readiness.py:148`). `filled_rate` is accepted and dropped. `counts` must equal the terms' own tally; the page draws its line from the terms.      |
 | `history[]` | `packs/<id>/history.jsonl` lines: `{digest, version, first_at, last_at, run, rehearsal, published}` (`workspace.py:98`)                                                                                                                                                                               |
-| `dataset`   | `workspace.json`'s dataset reference: `{kind, digest}` (optional)                                                                                                                                                                                                                                     |
 
 The five readiness statuses are the PRD section 5 chips (checkable now, needs examples, needs a field, needs the other side,
 not this pack's concern); the view maps each to a word from `ts/src/wording/studio-view.en.json` and refuses a status it does not
@@ -35,11 +34,13 @@ know, never defaults it.
 
 ## 3. The views
 
-- **Loop diagram (home).** The stages are derived only from members the input has: _Terms_ (a `readiness` with a pack digest),
-  _Tried on past sales_ (a `history` entry with a `run` and `rehearsal` true), _Switched on_ (an entry with `published`). A stage
-  with no evidence reads "not yet"; the diagram never infers a state.
+- **Loop diagram (home).** The stages are derived only from members the input has: _Terms written_ (a term with
+  `in_pack` true; the other terms are ideas and are marked as such), _Tried on past sales_ (a `history` entry for the active pack's
+  digest with a `run`, dry run or not), _Switched on_ (an entry for that digest with `published`). An edit makes a new digest, so an
+  earlier digest's run or publication says nothing about it. A stage with no evidence reads "not yet"; the diagram never infers a
+  state. The history digest is the Result's `x-pack.definition_digest` (terms.py:463), the same value as `packs[].pack_digest`.
 - **Readiness table (desk).** One row per term with its status chip, detail, the fields it reads and the fields it lacks, and the
-  counts line (`readiness.counts`).
+  counts line (derived from the terms).
 - **Term map (on request).** A `<details>` per status group, closed by default, listing the terms and the fields each reads: a
   view of one pack, never a second pack beside it.
 - **Switch.** One link per pack to its report page. It never draws two packs' verdicts in one page; a link carries the pack id,
@@ -49,7 +50,7 @@ know, never defaults it.
 
 The home page embeds its input in `<script type="application/json">` and prints its SHA-256 beside it, labelled "Workspace
 snapshot, not sealed evidence". Rebuilt from that embedded JSON the page is byte-identical (tested). It is not rebuilt from a bare
-bundle, because a workspace is not a bundle. The page runs no script to draw (static HTML, no network).
+bundle, because a workspace is not a bundle. The embedded JSON is the normalized input (unused members dropped, `format` defaulted), key-sorted by JCS, so the same input always has the same bytes and digest. The page runs no script to draw (static HTML, no network).
 
 ## 5. The history card: card view and stapled form
 
@@ -57,17 +58,21 @@ The card is `standard_history/1` or `/2` (AAC spec/standard-history-v0.md sectio
 with their SHA-256 (spec/bindings/evidence-commitment-carriers-v0.md, `history_cards[]`, V3). One function reads the card bytes
 and returns the facts (the digest, counted deals, outcomes, roles, how it happened, disputes), and both forms draw from it, so they
 cannot differ: the card view shows the facts in full; the stapled form shows one compact line with the same numbers and the same
-digest. A card whose members or tallies do not satisfy section 4's partition rules is refused, drawn as a refusal in both forms.
+digest. The stapled line carries the facts marked compact, with the card view's own values, and says the counts are the holder's own, not recounted. A card whose bytes are not JCS, whose members, window, bands, hex values or tallies do not satisfy section 4, is refused, drawn as a refusal in both forms. The words for the shared facts are byte copies of the shipped card's consumer wording pack, held by a test; the rest are new (Sherlock2 reviews them).
 
 ## 6. Tests
 
-- Page reads only its bundle: the built page runtime, run in jsdom with `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon` and
-  `localStorage` replaced by functions that fail the test, draws an embedded page; and the runtime source is checked for those
-  names. A `static` page is not offered for sending (builder test).
-- Byte-identical rebuild (report page from its bundle and settings; Studio home from its embedded JSON).
-- An "anyone" page built as an `html` file, loaded in jsdom with no keys and no network, shows its checks passed (acceptance 4).
-- Card and stapled parity on vectors.
-- Studio-view vectors (accepted and refused), a golden page.
+- A report page (`html` format) embeds its bundle; a page rebuilt from that bundle is byte-identical. Loaded in jsdom with
+  `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, workers, storage and `sendBeacon` replaced by traps, it draws without a
+  call (and a control page that does call is caught); its markup names no outward resource (`src`, `link`, `url()`, `@import`).
+  The existing real-Chromium request log in `presentation-builder-browser.test.ts` covers the same page in a browser.
+- An "anyone" page loaded as a file with no key and no network shows the repository's "incomplete" banner (an unsigned fixture:
+  nothing failed, some checks cannot run), and the same page with an edited record fails, so the checks really ran
+  (acceptance 4).
+- `static` drops the bundle and carries the not-self-verifying notice; the switch refuses `format: "static"`.
+- Studio home: accepted and refused inputs, loop stages by digest, byte-identical rebuild from the embedded JSON.
+- Card and stapled parity on a hand-built card, with refusals for each rule of section 4. Not done: running the AAC
+  `vectors/standard-history-v0` negatives; a differential test against them is a follow-up (they are not vendored here).
 
 No Go twin and no DOM renderer: the page is static HTML, written by `studioViewDocument` in the npm package from the JSON the `terms` verb writes; a Go twin is added with its first Go caller.
 

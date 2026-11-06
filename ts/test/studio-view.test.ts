@@ -38,10 +38,43 @@ describe("the Studio home", () => {
     expect(html).toContain("dataset <code>" + "2".repeat(64));
   });
 
-  it("never shows two packs' verdicts: only the active pack's terms", () => {
+  it("draws only the stages the active pack's digest has evidence for", () => {
+    expect(studioViewHtml(input())).toContain(
+      'data-stage="tried" data-state="done"',
+    );
+    // an edit makes a new digest; the earlier digest's run says nothing about it
+    const edited = input();
+    edited["packs"][0].pack_digest = "4".repeat(64);
+    const html = studioViewHtml(edited);
+    expect(html).toContain('data-stage="tried" data-state="not-yet"');
+    // a run counts whether or not it was a dry run, and a candidate-only table is not "terms written"
+    const run = input();
+    run["history"][0].rehearsal = false;
+    expect(studioViewHtml(run)).toContain(
+      'data-stage="tried" data-state="done"',
+    );
+    const ideas = input();
+    for (const t of ideas["readiness"].terms) t.in_pack = false;
+    expect(studioViewHtml(ideas)).toContain(
+      'data-stage="terms" data-state="not-yet"',
+    );
+  });
+
+  it("marks an idea that is not in the pack, in the desk and the term map", () => {
     const html = studioViewHtml(input());
-    expect(html.match(/data-view="readiness"/g)).toHaveLength(1);
-    expect(html.match(/data-view="term-map"/g)).toHaveLength(1);
+    expect(html.match(/data-in-pack="false"/g)).toHaveLength(4);
+    expect(html).toContain("an idea, not checked");
+  });
+
+  it("keeps a quote in a pack id or term out of attributes", () => {
+    const v = input();
+    v["packs"][0].pack_id = 'a" onmouseover="x';
+    v["active"] = v["packs"][0].pack_id;
+    v["readiness"].pack_id = v["packs"][0].pack_id;
+    v["readiness"].terms[0].term = '"><script>x</script>';
+    const html = studioViewHtml(v);
+    expect(html).not.toContain('onmouseover="x');
+    expect(html).not.toContain("<script>x");
   });
 
   it("draws caller text as text", () => {
@@ -54,7 +87,11 @@ describe("the Studio home", () => {
     expect(READINESS_STATUSES).toHaveLength(5);
     for (const status of READINESS_STATUSES) {
       const v = input();
+      v["readiness"].terms = v["readiness"].terms.slice(0, 1);
       v["readiness"].terms[0].status = status;
+      v["readiness"].counts = Object.fromEntries(
+        READINESS_STATUSES.map((s) => [s, s === status ? 1 : 0]),
+      );
       expect(() => studioViewHtml(v)).not.toThrow();
     }
   });

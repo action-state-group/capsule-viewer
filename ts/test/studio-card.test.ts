@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { JSDOM } from "jsdom";
+import {
+  decodeStrictJson,
+  jcs,
+} from "@action-state-group/agent-action-capsule";
 import { describe, expect, it } from "vitest";
+import PACK from "../src/wording/studio-card.en.json" with { type: "json" };
 import {
   cardFacts,
   cardRefusalHtml,
@@ -20,41 +28,51 @@ const zero = {
 const forum = { of: 0, auto: 0, network: 0, rail: 0, external: 0 };
 const dispute = { of: 0, by_outcome: zero, by_forum: forum };
 
-const card = (): Record<string, any> => ({
-  anchor: "a".repeat(64),
-  bands: [
-    {
-      currency: "USD",
-      decade: 1,
-      did_not_hold: 0,
-      held: 2,
-      of: 3,
-      undecided: 1,
-    },
-  ],
-  class_missing: { count: 1, of: 3 },
-  controller_class: "person_declared",
-  derivation: "standard_history/1",
-  disputes: { raised: dispute, received: dispute },
-  happened: { no_record: 0, of: 3, receipt_only: 1, stamped_by_both: 2 },
-  holder_kind: "person",
-  in_window: { counted: 3, not_counted: 1, of: 4 },
-  outcomes: { did_not_hold: 0, held: 2, of: 3, undecided: 1 },
-  policy: "b".repeat(64),
-  roles: { bought: 1, of: 3, provided: 2 },
-  since: "2026-03",
-  window: { months: 3 },
-});
+const card = (): Record<string, any> =>
+  structuredClone({
+    anchor: "a".repeat(64),
+    bands: [
+      {
+        currency: "USD",
+        decade: 1,
+        did_not_hold: 0,
+        held: 2,
+        of: 3,
+        undecided: 1,
+      },
+    ],
+    class_missing: { count: 1, of: 3 },
+    controller_class: "person_declared",
+    derivation: "standard_history/1",
+    disputes: { raised: dispute, received: dispute },
+    happened: { no_record: 0, of: 3, receipt_only: 1, stamped_by_both: 2 },
+    holder_kind: "person",
+    in_window: { counted: 3, not_counted: 1, of: 4 },
+    outcomes: { did_not_hold: 0, held: 2, of: 3, undecided: 1 },
+    policy: "b".repeat(64),
+    roles: { bought: 1, of: 3, provided: 2 },
+    since: "2026-03",
+    window: { months: 3 },
+  });
 const bytes = (c: unknown): Uint8Array =>
+  jcs(decodeStrictJson(JSON.stringify(c)));
+/** Bytes that say a thing JCS cannot (a float, spaces): only for refusals. */
+const loose = (c: unknown): Uint8Array =>
   new TextEncoder().encode(JSON.stringify(c));
 
-/** The `data-fact` values and the digest, as text, from either form. */
-const read = (html: string): { facts: string[]; digest: string } => ({
-  facts: [
-    ...html.matchAll(/data-fact="([a-z_]+)">(?:<dt>[^<]*<\/dt><dd>)?([^<]*)/g),
-  ].map((m) => m[1] + "=" + m[2]!.replace(/^[A-Za-z ]+ (?=\d)/, "")),
-  digest: /data-card-digest>([0-9a-f]{64})</.exec(html)![1]!,
-});
+/** Each `data-fact` id with its value text ("" when it has none), and the digest. */
+const read = (html: string): { facts: Map<string, string>; digest: string } => {
+  const doc = new JSDOM(`<body>${html}</body>`).window.document;
+  return {
+    facts: new Map(
+      [...doc.querySelectorAll("[data-fact]")].map((e) => [
+        e.getAttribute("data-fact")!,
+        (e.querySelector("dd, b")?.textContent ?? "").trim(),
+      ]),
+    ),
+    digest: doc.querySelector("[data-card-digest]")!.textContent!,
+  };
+};
 
 describe("the History card in two forms", () => {
   it("shows the same counts and the same digest in the card view and the stapled form", async () => {
@@ -63,11 +81,27 @@ describe("the History card in two forms", () => {
     if (!r.ok) throw new Error(r.reasons.join(";"));
     const view = read(cardViewHtml(r.card));
     const staple = read(stapledCardHtml(r.card));
-    expect(staple.facts).toEqual(view.facts);
+    expect(staple.facts.size).toBeGreaterThan(8);
+    expect(view.facts.size).toBeGreaterThan(staple.facts.size);
+    // every stapled fact is in the card view with the same value
+    for (const [id, value] of staple.facts)
+      expect(view.facts.get(id)).toBe(value);
     expect(staple.digest).toBe(view.digest);
     expect(view.digest).toBe(createHash("sha256").update(raw).digest("hex"));
-    expect(view.facts).toContain("held=2");
-    expect(view.facts).toContain("stamped_by_both=2");
+    expect(view.facts.get("held")).toBe("2 of 3");
+    expect(cardViewHtml(r.card)).toContain("went as agreed");
+    expect(cardViewHtml(r.card)).toContain("holder&#39;s own statement");
+    expect(stapledCardHtml(r.card)).toContain("went as agreed");
+    expect(stapledCardHtml(r.card)).toContain("not recounted here");
+    expect(view.facts.get("stamped_by_both")).toBe("2 of 3");
+    // the full card also carries what the stapled line leaves out
+    expect(cardViewHtml(r.card)).toContain("1 of 4 deals in the window");
+    expect(cardViewHtml(r.card)).toContain("1 of 3 counted deals");
+    expect(cardViewHtml(r.card)).toContain("last 3 months");
+    expect(view.facts.get("band_0")).toBe(
+      "2 went as agreed, 0 didn't, 1 we couldn't tell, of 3",
+    );
+    expect(staple.facts.has("not_counted")).toBe(false);
   });
 
   it("reads a /2 card with its unpriced tally", async () => {
@@ -99,13 +133,65 @@ describe("the History card in two forms", () => {
     it(`refuses ${name}`, async () => {
       const c = card();
       mutate(c);
-      const r = await cardFacts(bytes(c));
+      const r = await cardFacts(name === "a ratio" ? loose(c) : bytes(c));
       expect(r.ok).toBe(false);
       if (!r.ok)
         expect(cardRefusalHtml(r.reasons)).toContain('data-card="refused"');
     });
 
+  it("refuses a card whose bytes are not JCS", async () => {
+    const pretty = new TextEncoder().encode(JSON.stringify(card(), null, 2));
+    const r = await cardFacts(pretty);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasons.join(";")).toContain("JCS");
+  });
+
+  it("keeps the shared words byte-for-byte with the shipped card's wording pack, and says no score", () => {
+    const shipped = JSON.parse(
+      readFileSync(
+        resolve(
+          "..",
+          "src",
+          "capsule_viewer",
+          "standard_history",
+          "wording-consumer-en.json",
+        ),
+        "utf8",
+      ),
+    ) as { entries?: Record<string, string> } & Record<string, string>;
+    const entries = shipped.entries ?? shipped;
+    for (const key of PACK.from)
+      expect((PACK.entries as Record<string, string>)[key]).toBe(entries[key]);
+    for (const text of Object.values(PACK.entries))
+      expect(text).not.toMatch(/\b(score|rating|rank|reputation|trust)\b/iu);
+  });
+
   it("refuses bytes that are not a card", async () => {
     expect((await cardFacts(new TextEncoder().encode("nope"))).ok).toBe(false);
+  });
+
+  it("escapes text and refuses facts that did not come from cardFacts", async () => {
+    const r = await cardFacts(bytes(card()));
+    if (!r.ok) throw new Error("card");
+    const evil = {
+      ...r.card,
+      facts: [
+        {
+          id: "x",
+          label: "<img src=x onerror=alert(1)>",
+          value: "<b>",
+          compact: true,
+        },
+      ],
+    };
+    expect(cardViewHtml(evil)).not.toContain("<img");
+    expect(stapledCardHtml(evil)).not.toContain("<img");
+    expect(() =>
+      cardViewHtml({
+        ...r.card,
+        facts: [{ id: '" onclick="x', label: "a", value: "b", compact: true }],
+      }),
+    ).toThrow();
+    expect(() => stapledCardHtml({ ...r.card, digest: "<script>" })).toThrow();
   });
 });

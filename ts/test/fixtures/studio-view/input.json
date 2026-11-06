@@ -36,7 +36,9 @@
         "detail": "decides 38 of 40 sales",
         "reads": ["paid_at", "delivered_at"],
         "missing_fields": [],
-        "filled_rate": { "paid_at": 0.95 }
+        "filled_rate": {
+          "paid_at": 0.95
+        }
       },
       {
         "term": "looked_like_photo",
@@ -67,7 +69,7 @@
   },
   "history": [
     {
-      "digest": "aaaa",
+      "digest": "1111111111111111111111111111111111111111111111111111111111111111",
       "version": "0.1.0",
       "first_at": "2026-11-05T10:00:00Z",
       "last_at": "2026-11-05T11:00:00Z",
@@ -75,9 +77,5 @@
       "rehearsal": true,
       "published": null
     }
-  ],
-  "dataset": {
-    "kind": "deals",
-    "digest": "2222222222222222222222222222222222222222222222222222222222222222"
-  }
+  ]
 }
