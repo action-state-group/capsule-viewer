@@ -64,7 +64,7 @@ describe("the Studio home", () => {
   it("marks an idea that is not in the pack, in the desk and the term map", () => {
     const html = studioViewHtml(input());
     expect(html.match(/data-in-pack="false"/g)).toHaveLength(4);
-    expect(html).toContain("an idea, not checked");
+    expect(html).toContain("an idea, not in the pack");
   });
 
   it("keeps a quote in a pack id or term out of attributes", () => {
@@ -84,6 +84,14 @@ describe("the Studio home", () => {
     expect(html).not.toContain("<b>Refund");
   });
 
+  it("accepts the html and embedded formats", () => {
+    for (const format of ["html", "embedded"]) {
+      const v = input();
+      v["packs"][1].format = format;
+      expect(studioViewHtml(v)).toContain(`data-format="${format}"`);
+    }
+  });
+
   it("knows every readiness status the producer writes", () => {
     expect(READINESS_STATUSES).toHaveLength(5);
     for (const status of READINESS_STATUSES) {
@@ -98,6 +106,16 @@ describe("the Studio home", () => {
   });
 
   const refusals: [string, (v: Record<string, any>) => void, string][] = [
+    [
+      "a static report page",
+      (v) => (v["packs"][1].format = "static"),
+      "packs[1].format",
+    ],
+    [
+      "an unknown format",
+      (v) => (v["packs"][1].format = "pdf"),
+      "packs[1].format",
+    ],
     ["an unknown member", (v) => (v["extra"] = 1), "input.extra"],
     [
       "an unknown status",
@@ -169,11 +187,30 @@ describe("the Studio page as a file", () => {
     expect(page).toContain(
       '<script type="application/json" data-studio-input>',
     );
-    expect(page).toContain("Workspace snapshot, not sealed evidence");
+    expect(page).toContain(
+      "Workspace snapshot. Not sealed, not a bundle, not evidence.",
+    );
     const json = /data-studio-input>([\s\S]*?)<\/script>/.exec(page)![1]!;
     const digest = /data-snapshot-digest>([0-9a-f]{64})</.exec(page)![1];
     expect(digest).toBe(
       createHash("sha256").update(json, "utf8").digest("hex"),
+    );
+  });
+
+  it("cannot be mistaken for a bundle digest: its hash is never a pack's shared digest and its footer names no bundle", async () => {
+    const v = input();
+    const page = await studioViewDocument(v);
+    const digest = /data-snapshot-digest>([0-9a-f]{64})</.exec(page)![1]!;
+    for (const p of v["packs"]) expect(p.shared.digest).not.toBe(digest);
+    const footer = /<footer class="cv-snapshot"[\s\S]*?<\/footer>/.exec(
+      page,
+    )![0]!;
+    // the label says what the snapshot is not; no other mention of a bundle
+    expect(footer.replace("not a bundle", "").toLowerCase()).not.toContain(
+      "bundle",
+    );
+    expect(footer.indexOf("data-snapshot-digest")).toBeLessThan(
+      footer.indexOf("<script"),
     );
   });
 

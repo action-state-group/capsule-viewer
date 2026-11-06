@@ -5,7 +5,7 @@
   "entries": {
     "loop.title": "Where these terms are",
     "loop.terms": "Terms written",
-    "loop.tried": "Tried on past sales",
+    "loop.tried": "Tried on past records",
     "loop.switched_on": "Switched on",
     "loop.done": "done",
     "loop.not_yet": "not yet",
@@ -15,7 +15,7 @@
     "desk.detail": "Detail",
     "desk.reads": "Reads",
     "desk.lacks": "Missing",
-    "desk.idea": "an idea, not checked",
+    "desk.idea": "an idea, not in the pack",
     "page.title": "Terms Pack Studio",
     "map.title": "Term map",
     "map.reads": "reads",
@@ -25,11 +25,11 @@
     "status.other-side": "needs the other side",
     "status.not-concern": "not this pack's concern",
     "switch.title": "Packs",
-    "switch.pack_digest": "pack",
+    "switch.pack_digest": "pack digest",
     "switch.judge": "judge",
-    "switch.bundle_digest": "bundle",
+    "switch.bundle_digest": "bundle digest",
     "switch.dataset_ref": "dataset",
     "switch.report": "Open report",
-    "snapshot.label": "Workspace snapshot, not sealed evidence. SHA-256"
+    "snapshot.label": "Workspace snapshot. Not sealed, not a bundle, not evidence. Snapshot SHA-256:"
   }
 }
