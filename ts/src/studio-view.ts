@@ -28,7 +28,6 @@ export const READINESS_STATUSES = [
 ] as const;
 export type ReadinessStatus = (typeof READINESS_STATUSES)[number];
 
-const SHARED_KINDS = ["bundle_digest", "dataset_ref"] as const;
 /** The packagings that carry the bundle; `static` drops it and is not for sending. */
 const PAGE_FORMATS = ["html", "embedded"] as const;
 
@@ -48,7 +47,8 @@ interface PackEntry {
   judge?: string;
   page: string;
   format: (typeof PAGE_FORMATS)[number];
-  shared: { kind: (typeof SHARED_KINDS)[number]; digest: string };
+  bundle_digest: string;
+  shared?: { dataset_ref: string; plan_ref: string };
 }
 interface Term {
   term: string;
@@ -177,9 +177,10 @@ function read(input: unknown): Input {
           "judge",
           "page",
           "format",
+          "bundle_digest",
           "shared",
         ],
-        ["pack_id", "pack_digest", "page", "shared"],
+        ["pack_id", "pack_digest", "page", "bundle_digest"],
       );
       if (o === null) return;
       const page = r.str(o["page"], `${p}.page`, 200);
@@ -191,21 +192,15 @@ function read(input: unknown): Input {
           `${p}.format`,
           `is not one of ${PAGE_FORMATS.join(", ")} (a static page drops the bundle and is not offered for sending)`,
         );
-      const shared = r.obj(
-        o["shared"],
-        `${p}.shared`,
-        ["kind", "digest"],
-        ["kind", "digest"],
-      );
-      const kind = shared?.["kind"];
-      if (
-        shared !== null &&
-        !(SHARED_KINDS as readonly unknown[]).includes(kind)
-      )
-        r.refuse(
-          `${p}.shared.kind`,
-          `is not one of ${SHARED_KINDS.join(", ")}`,
-        );
+      const shared =
+        "shared" in o
+          ? r.obj(
+              o["shared"],
+              `${p}.shared`,
+              ["dataset_ref", "plan_ref"],
+              ["dataset_ref", "plan_ref"],
+            )
+          : null;
       packs.push({
         pack_id: r.str(o["pack_id"], `${p}.pack_id`, 200),
         ...("title" in o
@@ -217,10 +212,18 @@ function read(input: unknown): Input {
           : {}),
         page,
         format: format as PackEntry["format"],
-        shared: {
-          kind: kind as PackEntry["shared"]["kind"],
-          digest: r.hex(shared?.["digest"], `${p}.shared.digest`),
-        },
+        bundle_digest: r.hex(o["bundle_digest"], `${p}.bundle_digest`),
+        ...(shared === null
+          ? {}
+          : {
+              shared: {
+                dataset_ref: r.hex(
+                  shared["dataset_ref"],
+                  `${p}.shared.dataset_ref`,
+                ),
+                plan_ref: r.hex(shared["plan_ref"], `${p}.shared.plan_ref`),
+              },
+            }),
       });
     });
   const ids = packs.map((p) => p.pack_id);
@@ -457,7 +460,11 @@ function switcher(input: Input): string {
       const link = here
         ? `<strong>${label}</strong>`
         : `<a href="${esc(p.page)}">${label}</a>`;
-      return `<li data-pack="${esc(p.pack_id)}" data-format="${p.format}"${here ? ' aria-current="page"' : ""}>${link} <small>${esc(word("switch.pack_digest"))} <code>${p.pack_digest}</code>${p.judge === undefined ? "" : ` · ${esc(word("switch.judge"))} ${esc(p.judge)}`} · ${esc(word(`switch.${p.shared.kind}`))} <code>${p.shared.digest}</code></small> <a href="${esc(p.page)}">${esc(word("switch.report"))}</a></li>`;
+      return `<li data-pack="${esc(p.pack_id)}" data-format="${p.format}"${here ? ' aria-current="page"' : ""}>${link} <small>${esc(word("switch.pack_digest"))} <code>${p.pack_digest}</code> · ${esc(word("switch.bundle_digest"))} <code>${p.bundle_digest}</code>${p.judge === undefined ? "" : ` · ${esc(word("switch.judge"))} ${esc(p.judge)}`} ${
+        p.shared === undefined
+          ? ""
+          : ` · ${esc(word("switch.dataset_ref"))} <code>${p.shared.dataset_ref}</code> · ${esc(word("switch.plan_ref"))} <code>${p.shared.plan_ref}</code>`
+      }</small> <a href="${esc(p.page)}">${esc(word("switch.report"))}</a></li>`;
     })
     .join("");
   return `<nav data-view="switch"><h2>${esc(word("switch.title"))}</h2><ul>${items}</ul></nav>`;

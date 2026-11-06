@@ -28,8 +28,9 @@
     "switch.pack_digest": "pack digest",
     "switch.judge": "judge",
     "switch.bundle_digest": "bundle digest",
-    "switch.dataset_ref": "dataset",
     "switch.report": "Open report",
-    "snapshot.label": "Workspace snapshot. Not sealed, not a bundle, not evidence. Snapshot SHA-256:"
+    "snapshot.label": "Workspace snapshot, not sealed evidence. SHA-256",
+    "switch.plan_ref": "plan digest",
+    "switch.dataset_ref": "dataset digest"
   }
 }

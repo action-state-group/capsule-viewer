@@ -20,13 +20,13 @@ capsule-viewer owns it (PRD section 12 Q8: "capsule-viewer, offline"). There is 
 Like `history-view/v0`, the caller (the `terms` verbs in evidencebook-skills, a Python caller) builds the input from files it
 already writes. The view draws; it never fetches and never verifies. Unknown members are refused.
 
-| Member      | Source (evidencebook-skills `scripts/studio/`)                                                                                                                                                                                                                                                        |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`    | `"studio-view/v0"`                                                                                                                                                                                                                                                                                    |
-| `active`    | the pack the page shows (a `pack_id` in `packs`)                                                                                                                                                                                                                                                      |
-| `packs[]`   | the switch: `{pack_id, title?, pack_digest, judge?, page, format?, shared}` per pack; `format` is `html` (default) or `embedded`, never `static` (it drops the bundle and is not offered for sending); `page` is a relative path to that pack's report page; `shared` is `{kind, digest}` (section 7) |
-| `readiness` | `packs/<id>/readiness.json`: `{pack_id, pack_version, records, terms[{term, statement, in_pack, status, detail, reads, missing_fields}], counts}` (`readiness.py:148`). `filled_rate` is accepted and dropped. `counts` must equal the terms' own tally; the page draws its line from the terms.      |
-| `history[]` | `packs/<id>/history.jsonl` lines: `{digest, version, first_at, last_at, run, rehearsal, published}` (`workspace.py:98`)                                                                                                                                                                               |
+| Member      | Source (evidencebook-skills `scripts/studio/`)                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`    | `"studio-view/v0"`                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `active`    | the pack the page shows (a `pack_id` in `packs`)                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `packs[]`   | the switch: `{pack_id, title?, pack_digest, judge?, page, format?, bundle_digest, shared?}` per pack; `format` is `html` (default) or `embedded`, never `static` (it drops the bundle and is not offered for sending); `page` is a relative path to that pack's report page; `bundle_digest` is that page's own bundle's digest; `shared` (optional, both or neither) is `{dataset_ref, plan_ref}`, the digests its Result names (Result spec section 7.3; section 7) |
+| `readiness` | `packs/<id>/readiness.json`: `{pack_id, pack_version, records, terms[{term, statement, in_pack, status, detail, reads, missing_fields}], counts}` (`readiness.py:148`). `filled_rate` is accepted and dropped. `counts` must equal the terms' own tally; the page draws its line from the terms.                                                                                                                                                                      |
+| `history[]` | `packs/<id>/history.jsonl` lines: `{digest, version, first_at, last_at, run, rehearsal, published}` (`workspace.py:98`)                                                                                                                                                                                                                                                                                                                                               |
 
 The five readiness statuses are the PRD section 5 chips (checkable now, needs examples, needs a field, needs the other side,
 not this pack's concern); the view maps each to a word from `ts/src/wording/studio-view.en.json` and refuses a status it does not
@@ -77,21 +77,26 @@ The reader is ours because `@action-state-group/agent-action-capsule` 0.14.0 has
 
 No Go twin and no DOM renderer: the page is static HTML, written by `studioViewDocument` in the npm package from the JSON the `terms` verb writes; a Go twin is added with its first Go caller.
 
-## 7. Gated on Steven: two Results under one bundle digest
+## 7. Two packs over one dataset (acceptance 2, ruled by Steven)
 
 Issue acceptance 2: "Two report packs over one bundle draw as two pages that cite the same bundle digest, each citing its own
-pack digest and judge."
+pack digest and judge." Steven ruled it (capsule-viewer#291, reply
+buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=ec3e3079c4e11cf8e30ff542b177f5de9a8f06158fd461c1fcc13f444c5df185&thread=f6c54ed8d280b078cc99f20c60fcd38ef3a41e6fd12601e5682ede6554f1dac1,
+"yes looks good", on Sherlock2's summary buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=e3db34e921ad5f4b9c4b7bed6d5a1ae9c3180005f931fdc948ee9b8f1c24a8d0):
+**one Result per bundle**, no umbrella record, and AAC's one-headline rule (`agent-action-capsule` `ts/src/result-root.ts:1713-1733`,
+`ts/docs/result-root.md:183`) stays. What two packs over the same data share is not a bundle digest but the Result's
+`dataset_ref` and `plan_ref` (Result spec section 7.3). So the acceptance reads: two packs over the same data draw as two pages,
+each carrying its own bundle, each citing its own pack digest and judge and the same dataset digest (and plan digest). No AAC change.
 
-- A bundle has one `root` and its digest covers it (draft-mih-zhang-agent-disclosure-bundle-03.md:225, :1452).
-- AAC's TypeScript `buildResultRoot` refuses any bundle with a second Result v0 anywhere (agent-action-capsule
-  `ts/src/result-root.ts:1713-1733`, `ts/docs/result-root.md:183`, rule dated 2026-09-28); the spec has no such rule.
-- Options (ruling thread: buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=f6c54ed8d280b078cc99f20c60fcd38ef3a41e6fd12601e5682ede6554f1dac1&thread=f6c54ed8d280b078cc99f20c60fcd38ef3a41e6fd12601e5682ede6554f1dac1):
-  (i) relax the library rule and select the Result by a page parameter; (ii) one Result per bundle, the pages sharing the
-  Result's `dataset_ref` (Result spec section 7.3).
-
-Built here so either answer fits: `packs[].shared` is `{kind: "bundle_digest" | "dataset_ref", digest}` and the switch prints
-the kind with the digest. Under (ii) every page is an ordinary single-Result page and nothing else changes; under (i) the report
-page gains a Result selector in a follow-up PR. This PR does not change AAC and does not claim acceptance 2.
+- A bundle has one `root` and its digest covers it (draft-mih-zhang-agent-disclosure-bundle-03.md:225, :1452), so two Results are
+  two bundles with two digests.
+- `packCitation(bundle)` (`ts/src/studio-pack.ts`) reads a page's own bundle digest and the Result's `dataset_ref` and `plan_ref`
+  from the verified bundle, so the switch cannot cite a digest the page's bundle does not carry.
+- `ts/test/studio-two-packs.test.ts` builds two packs over the one dataset, checks the two bundle digests differ and the two
+  citations match, builds both report pages, and checks the switch cites the same dataset and plan digests for both.
+- Not yet true end to end: the `terms run` Result (evidencebook-skills `scripts/studio/terms.py` `build_result`) sets no `plan_ref`
+  or `dataset_ref`, so a Studio over `terms` packs would have no shared digest to cite until it does (filed in evidencebook-skills).
+  `capsulectl result build --plan` (evidencebook) sets both.
 
 ## 8. Doors and wording
 

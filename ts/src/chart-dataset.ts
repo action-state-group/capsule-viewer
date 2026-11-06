@@ -153,6 +153,24 @@ async function headersByDigest(
 }
 
 /**
+ * The plan and dataset digests a report's Result names (Result spec section
+ * 7.3: both or neither), as 64-hex; undefined when it names none. Throws a
+ * {@link ChartRefusal} for a member that is not a SHA-256 digest ref.
+ */
+export function resultDatasetRefs(
+  context: VerifiedBundleContext,
+  result: ResultRoot,
+): { plan_ref: string; dataset_ref: string } | undefined {
+  const document = resultDocument(context, result);
+  if (document === undefined) return undefined;
+  const plan = digestRef(document.plan_ref, "the Result's plan_ref");
+  const dataset = digestRef(document.dataset_ref, "the Result's dataset_ref");
+  return plan === undefined || dataset === undefined
+    ? undefined
+    : { plan_ref: plan, dataset_ref: dataset };
+}
+
+/**
  * The dataset a report's Result names, as the chart checker reads it; or
  * undefined when the Result names none or the bundle does not disclose its
  * plan or dataset (the checker refuses a chart then, `chart-no-dataset`).

@@ -36,7 +36,10 @@ describe("the Studio home", () => {
     // each pack cites its own digest and the shared one, labelled
     expect(html).toContain("1".repeat(64));
     expect(html).toContain("3".repeat(64));
-    expect(html).toContain("dataset <code>" + "2".repeat(64));
+    expect(html).toContain("dataset digest <code>" + "2".repeat(64));
+    expect(html).toContain("plan digest <code>" + "7".repeat(64));
+    expect(html).toContain("bundle digest <code>" + "5".repeat(64));
+    expect(html).toContain("pack digest <code>" + "1".repeat(64));
   });
 
   it("draws only the stages the active pack's digest has evidence for", () => {
@@ -143,9 +146,14 @@ describe("the Studio home", () => {
       "packs[1].page",
     ],
     [
-      "an unknown shared kind",
-      (v) => (v["packs"][0].shared.kind = "card"),
-      "shared.kind",
+      "a shared member without its plan_ref",
+      (v) => delete v["packs"][0].shared.plan_ref,
+      "shared.plan_ref",
+    ],
+    [
+      "a pack without a bundle digest",
+      (v) => delete v["packs"][1].bundle_digest,
+      "packs[1].bundle_digest",
     ],
     [
       "an active pack that is not listed",
@@ -187,9 +195,7 @@ describe("the Studio page as a file", () => {
     expect(page).toContain(
       '<script type="application/json" data-studio-input>',
     );
-    expect(page).toContain(
-      "Workspace snapshot. Not sealed, not a bundle, not evidence.",
-    );
+    expect(page).toContain("Workspace snapshot, not sealed evidence.");
     const json = /data-studio-input>([\s\S]*?)<\/script>/.exec(page)![1]!;
     const digest = /data-snapshot-digest>([0-9a-f]{64})</.exec(page)![1];
     expect(digest).toBe(
@@ -197,21 +203,18 @@ describe("the Studio page as a file", () => {
     );
   });
 
-  it("cannot be mistaken for a bundle digest: its hash is never a pack's shared digest and its footer names no bundle", async () => {
+  it("cannot be mistaken for a pack, bundle, dataset or plan digest: its hash never equals one", async () => {
     const v = input();
     const page = await studioViewDocument(v);
     const digest = /data-snapshot-digest>([0-9a-f]{64})</.exec(page)![1]!;
-    for (const p of v["packs"]) expect(p.shared.digest).not.toBe(digest);
-    const footer = /<footer class="cv-snapshot"[\s\S]*?<\/footer>/.exec(
-      page,
-    )![0]!;
-    // the label says what the snapshot is not; no other mention of a bundle
-    expect(footer.replace("not a bundle", "").toLowerCase()).not.toContain(
-      "bundle",
-    );
-    expect(footer.indexOf("data-snapshot-digest")).toBeLessThan(
-      footer.indexOf("<script"),
-    );
+    for (const p of v["packs"])
+      for (const other of [
+        p.pack_digest,
+        p.bundle_digest,
+        p.shared.dataset_ref,
+        p.shared.plan_ref,
+      ])
+        expect(other).not.toBe(digest);
   });
 
   it("rebuilt from its embedded JSON is byte-identical", async () => {
