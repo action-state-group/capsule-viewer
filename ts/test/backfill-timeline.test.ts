@@ -58,6 +58,75 @@ describe("the backfill timeline", () => {
     expect(html).toContain('data-checkpoints="none"');
   });
 
+  it("draws an empty pass whose lists are null (a Go nil slice) with its gap", () => {
+    const r = rec();
+    r["tier_a"] = null;
+    r["retained"] = null;
+    r["refused"] = null;
+    r["anomalies"] = null;
+    r["window"] = JSON.parse(
+      '{"constructor":{"after":1,"through":2},"__proto__":{"after":null,"through":null}}',
+    );
+    r["horizons"] = {};
+    const html = backfillTimelineHtml(r);
+    expect(html).toContain("data-gap ");
+    expect(html).toContain('data-source="constructor"');
+    expect(html).toContain("This pass read no new rows.");
+  });
+
+  it("draws refused rows, a retrospective record kept from an earlier pass's row, a limited horizon and what it cannot see", () => {
+    const r = rec();
+    r["refused"] = [
+      {
+        source: "calls",
+        id: "c3",
+        digest: "a",
+        tier_a_digest: "b",
+        reason: "the host changed the row",
+      },
+    ];
+    r["retained"].push({
+      capsule_id: "z",
+      source_digest: "a",
+      action_id: "calls/c3",
+      pinned_by: "p",
+      retrospective: true,
+    });
+    r["horizons"]["tools"] = {
+      oldest_cursor: 1,
+      oldest_at: "2026-11-05T07:00:00Z",
+      limited: true,
+    };
+    r["notes"] = ["the reader hit its row limit"];
+    r["cannot_see"] = ["the host's store before the first pass"];
+    const html = backfillTimelineHtml(r);
+    expect(html).toContain("data-refused");
+    expect(html).toContain("the host changed the row");
+    expect(html).toContain("data-kept-elsewhere");
+    expect(html).toContain("kept in hindsight");
+    expect(html).toContain('data-source="tools"');
+    expect(html).toContain("row limit, so more rows wait");
+    expect(html).toContain("data-notes");
+    expect(html).toContain("the host&#39;s store before the first pass");
+  });
+
+  it("refuses what the record shape does not allow", () => {
+    const cases: [string, (r: Record<string, any>) => void][] = [
+      ["record.first_pass", (r) => (r["first_pass"] = "yes")],
+      ["record.horizons", (r) => (r["horizons"] = "x")],
+      ["record.anomalies[0].digest", (r) => (r["anomalies"][0].digest = "a")],
+      ["record.imported_at", (r) => (r["imported_at"] = "2026-11-05T10:00:00")],
+    ];
+    for (const [where, edit] of cases) {
+      const r = rec();
+      edit(r);
+      expect(() => backfillTimelineHtml(r), where).toThrow(where);
+    }
+    expect(() => backfillTimelineHtml(rec(), undefined, "x" as any)).toThrow(
+      BackfillTimelineRefused,
+    );
+  });
+
   it("never lets caller text become markup", () => {
     const r = rec();
     r["gaps"][0].reason = '<img src=x onerror="1">';

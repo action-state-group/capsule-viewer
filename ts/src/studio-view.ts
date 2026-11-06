@@ -16,6 +16,7 @@ import { jcs, sha256Hex } from "@action-state-group/agent-action-capsule";
 import {
   BackfillTimelineRefused,
   backfillTimelineHtml,
+  checkBackfillTimeline,
   type BackfillForm,
 } from "./backfill-timeline.js";
 import PACK from "./wording/studio-view.en.json" with { type: "json" };
@@ -372,7 +373,7 @@ function read(input: unknown): Input {
         if (form !== "record" && form !== "rehearsal")
           r.refuse(`${p}.form`, "is not record or rehearsal");
         try {
-          backfillTimelineHtml(o["record"], o["checkpoints"]);
+          checkBackfillTimeline(o["record"], o["checkpoints"]);
         } catch (e) {
           if (!(e instanceof BackfillTimelineRefused)) throw e;
           for (const why of e.reasons) r.reasons.push(`${p}.${why}`);

@@ -65,11 +65,16 @@ interface Pass {
   previous_pass: { import_batch: string; imported_at: string } | null;
   late: string | null;
   window: Record<string, Cursor>;
-  horizons: Record<string, { oldest_cursor: number; oldest_at: string }>;
+  horizons: Record<
+    string,
+    { oldest_cursor: number; oldest_at: string; limited: boolean }
+  >;
   span: { earliest: string; latest: string } | null;
   rows_read: number | null;
   tier_a: Row[];
-  retained: Set<string>;
+  retained: { action_id: string; retrospective: boolean }[];
+  cannot_see: string[];
+  notes: string[];
   refused: Entry[];
   anomalies: Entry[];
   gaps: Gap[];
@@ -139,7 +144,8 @@ class Reader {
     const s = this.str(v, path, 100);
     if (
       s !== "" &&
-      (!/^\d{4}-\d\d-\d\dT/u.test(s) || Number.isNaN(Date.parse(s)))
+      (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)$/u.test(s) ||
+        Number.isNaN(Date.parse(s)))
     )
       this.refuse(path, "is not an RFC 3339 time");
     return s;
@@ -151,7 +157,9 @@ class Reader {
     }
     return v;
   }
+  /** A Go nil slice is JSON `null`; it is an empty list. */
   list(v: unknown, path: string): unknown[] {
+    if (v === null) return [];
     if (!Array.isArray(v)) {
       this.refuse(path, "is not a list");
       return [];
@@ -164,17 +172,12 @@ function readEntries(
   r: Reader,
   raw: unknown,
   path: string,
-  extra: readonly string[],
+  allowed: readonly string[],
 ): Entry[] {
   const out: Entry[] = [];
   r.list(raw, path).forEach((e, i) => {
     const p = `${path}[${i}]`;
-    const o = r.obj(
-      e,
-      p,
-      ["source", "id", "reason", "digest", "tier_a_digest", ...extra],
-      ["source", "id", "reason"],
-    );
+    const o = r.obj(e, p, allowed, ["source", "id", "reason"]);
     if (o === null) return;
     out.push({
       source: r.str(o["source"], `${p}.source`, 200),
@@ -203,7 +206,8 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
   if (top === null) throw new BackfillTimelineRefused(r.reasons);
   if (top["schema"] !== BACKFILL_IMPORT)
     r.refuse("record.schema", `is not ${BACKFILL_IMPORT}`);
-  const window: Record<string, Cursor> = {};
+  // No prototype: a source named `constructor` or `__proto__` is only a name.
+  const window = Object.create(null) as Record<string, Cursor>;
   if (isObj(top["window"]))
     for (const [src, c] of Object.entries(top["window"])) {
       const o = r.obj(c, `record.window.${src}`, ["after", "through"], []);
@@ -218,24 +222,32 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
         };
     }
   else r.refuse("record.window", "is not an object");
-  const horizons: Pass["horizons"] = {};
-  if (top["horizons"] !== undefined && isObj(top["horizons"]))
-    for (const [src, h] of Object.entries(top["horizons"])) {
-      const o = r.obj(
-        h,
-        `record.horizons.${src}`,
-        ["oldest_cursor", "oldest_at", "limited"],
-        ["oldest_cursor", "oldest_at"],
-      );
-      if (o !== null)
-        horizons[src] = {
-          oldest_cursor: r.nat(
-            o["oldest_cursor"],
-            `record.horizons.${src}.oldest_cursor`,
-          ),
-          oldest_at: r.time(o["oldest_at"], `record.horizons.${src}.oldest_at`),
-        };
-    }
+  const horizons = Object.create(null) as Pass["horizons"];
+  if (top["horizons"] !== undefined && top["horizons"] !== null) {
+    if (!isObj(top["horizons"]))
+      r.refuse("record.horizons", "is not an object");
+    else
+      for (const [src, h] of Object.entries(top["horizons"])) {
+        const o = r.obj(
+          h,
+          `record.horizons.${src}`,
+          ["oldest_cursor", "oldest_at", "limited"],
+          ["oldest_cursor", "oldest_at"],
+        );
+        if (o !== null)
+          horizons[src] = {
+            oldest_cursor: r.nat(
+              o["oldest_cursor"],
+              `record.horizons.${src}.oldest_cursor`,
+            ),
+            oldest_at: r.time(
+              o["oldest_at"],
+              `record.horizons.${src}.oldest_at`,
+            ),
+            limited: o["limited"] === true,
+          };
+      }
+  }
   const tier_a: Row[] = [];
   r.list(top["tier_a"], "record.tier_a").forEach((e, i) => {
     const p = `record.tier_a[${i}]`;
@@ -274,7 +286,7 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
         : {}),
     });
   });
-  const retained = new Set<string>();
+  const retained: Pass["retained"] = [];
   if (top["retained"] !== undefined && top["retained"] !== null)
     r.list(top["retained"], "record.retained").forEach((e, i) => {
       const p = `record.retained[${i}]`;
@@ -291,14 +303,29 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
         ["action_id"],
       );
       if (o !== null)
-        retained.add(r.str(o["action_id"], `${p}.action_id`, 600));
+        retained.push({
+          action_id: r.str(o["action_id"], `${p}.action_id`, 600),
+          retrospective: o["retrospective"] === true,
+        });
     });
-  const optList = (k: string, extra: readonly string[]): Entry[] =>
+  const optList = (k: string, allowed: readonly string[]): Entry[] =>
     top[k] === undefined || top[k] === null
       ? []
-      : readEntries(r, top[k], `record.${k}`, extra);
-  const refused = optList("refused", []);
-  const anomalies = optList("anomalies", ["cursor", "passed_cursor"]);
+      : readEntries(r, top[k], `record.${k}`, allowed);
+  const refused = optList("refused", [
+    "source",
+    "id",
+    "reason",
+    "digest",
+    "tier_a_digest",
+  ]);
+  const anomalies = optList("anomalies", [
+    "source",
+    "id",
+    "reason",
+    "cursor",
+    "passed_cursor",
+  ]);
   let previous: Pass["previous_pass"] = null;
   if (top["previous_pass"] !== undefined && top["previous_pass"] !== null) {
     const o = r.obj(
@@ -349,6 +376,17 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
         at: r.time(o["at"], `${p}.at`),
       });
     });
+  if ("first_pass" in top && typeof top["first_pass"] !== "boolean")
+    r.refuse("record.first_pass", "is not true or false");
+  const first_pass = top["first_pass"] === true;
+  const strs = (k: string): string[] =>
+    top[k] === undefined || top[k] === null
+      ? []
+      : r
+          .list(top[k], `record.${k}`)
+          .map((x, i) => r.str(x, `record.${k}[${i}]`));
+  const cannot_see = strs("cannot_see");
+  const notes = strs("notes");
   const imported_at = r.time(top["imported_at"], "record.imported_at");
   const import_batch = r.str(top["import_batch"], "record.import_batch", 400);
   const limits = r.str(top["limits"], "record.limits");
@@ -364,7 +402,7 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
   return {
     import_batch,
     imported_at,
-    first_pass: top["first_pass"] === true,
+    first_pass,
     previous_pass: previous,
     late,
     window,
@@ -377,6 +415,8 @@ function read(record: unknown, checkpointsRaw: unknown): Pass {
     anomalies,
     gaps,
     limits,
+    cannot_see,
+    notes,
     checkpoints,
   };
 }
@@ -407,14 +447,23 @@ function esc(text: string): string {
 const cursors = (g: Gap): string =>
   g.from_cursor === undefined && g.to_cursor === undefined
     ? word("gaps.unread")
-    : `${word("gaps.cursors")} ${g.from_cursor ?? "?"} to ${g.to_cursor ?? "?"}`;
+    : `${word("gaps.cursors")} ${g.from_cursor ?? word("gaps.unknown")} ${word("gaps.to")} ${g.to_cursor ?? word("gaps.unknown")}`;
 
 function draw(p: Pass, form: BackfillForm): string {
   const sources = [
-    ...new Set([...Object.keys(p.window), ...p.tier_a.map((r) => r.source)]),
+    ...new Set([
+      ...Object.keys(p.window),
+      ...Object.keys(p.horizons),
+      ...p.tier_a.map((r) => r.source),
+    ]),
   ].sort();
+  const keptIds = new Set(p.retained.map((k) => k.action_id));
+  const drawnIds = new Set(p.tier_a.map((r) => `${r.source}/${r.id}`));
+  // A retrospective capsule is pinned by an earlier pass's row, so it need
+  // not be among this pass's rows; it is still a record the pass kept.
+  const keptElsewhere = p.retained.filter((k) => !drawnIds.has(k.action_id));
   const label = `<p data-imported-label><strong>${esc(word("imported_label"))}</strong> · ${esc(word(`form.${form}`))}</p>`;
-  const head = `<p>${esc(word("pass.batch"))} <code>${esc(p.import_batch)}</code> · ${esc(word("pass.imported_at"))} <time data-imported-at datetime="${esc(p.imported_at)}">${esc(p.imported_at)}</time>${p.first_pass ? ` · ${esc(word("pass.first"))}` : ""}${p.previous_pass === null ? "" : ` · ${esc(word("pass.previous"))} <code>${esc(p.previous_pass.import_batch)}</code> <time datetime="${esc(p.previous_pass.imported_at)}">${esc(p.previous_pass.imported_at)}</time>`}${p.span === null ? "" : ` · ${esc(word("pass.span"))} <time>${esc(p.span.earliest)}</time> to <time>${esc(p.span.latest)}</time>`}${p.rows_read === null ? "" : ` · ${esc(word("pass.rows_read"))} ${p.rows_read}`}</p>`;
+  const head = `<p>${esc(word("pass.batch"))} <code>${esc(p.import_batch)}</code> · ${esc(word("pass.imported_at"))} <time data-imported-at datetime="${esc(p.imported_at)}">${esc(p.imported_at)}</time>${p.first_pass ? ` · ${esc(word("pass.first"))}` : ""}${p.previous_pass === null ? "" : ` · ${esc(word("pass.previous"))} <code>${esc(p.previous_pass.import_batch)}</code> <time datetime="${esc(p.previous_pass.imported_at)}">${esc(p.previous_pass.imported_at)}</time>`}${p.span === null ? "" : ` · ${esc(word("pass.span"))} <time>${esc(p.span.earliest)}</time> ${esc(word("gaps.to"))} <time>${esc(p.span.latest)}</time>`}${p.rows_read === null ? "" : ` · ${esc(word("pass.rows_read"))} ${p.rows_read}`}</p>`;
   const perSource = sources
     .map((src) => {
       const w = p.window[src];
@@ -424,14 +473,14 @@ function draw(p: Pass, form: BackfillForm): string {
         .sort((a, b) => a.cursor - b.cursor)
         .map(
           (r) =>
-            `<tr data-row="${esc(r.id)}" data-imported="true"${p.retained.has(`${src}/${r.id}`) ? ' data-retained="true"' : ""}><td>${r.cursor}</td><td><code>${esc(r.id)}</code></td><td><time data-source-says datetime="${esc(r.at)}">${esc(r.at)}</time></td><td><time data-imported-at datetime="${esc(p.imported_at)}">${esc(p.imported_at)}</time></td><td>${p.retained.has(`${src}/${r.id}`) ? "yes" : ""}</td></tr>`,
+            `<tr data-row="${esc(r.id)}" data-imported="true"${keptIds.has(`${src}/${r.id}`) ? ' data-retained="true"' : ""}><td>${r.cursor}</td><td><code>${esc(r.id)}</code></td><td><time data-source-says datetime="${esc(r.at)}">${esc(r.at)}</time></td><td><time data-imported-at datetime="${esc(p.imported_at)}">${esc(p.imported_at)}</time></td><td>${keptIds.has(`${src}/${r.id}`) ? esc(word("rows.yes")) : ""}</td></tr>`,
         )
         .join("");
       const table =
         rows === ""
           ? `<p>${esc(word("rows.none"))}</p>`
           : `<div class="cv-scroll"><table><thead><tr><th>${esc(word("rows.cursor"))}</th><th>${esc(word("rows.id"))}</th><th>${esc(word("rows.source_says"))}</th><th>${esc(word("rows.imported_at"))}</th><th>${esc(word("rows.retained"))}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-      return `<section data-source="${esc(src)}"><h4>${esc(src)}</h4><p>${esc(word("window.title"))}: ${w === undefined ? "" : `${esc(word("window.after"))} ${w.after ?? "none"}, ${esc(word("window.through"))} ${w.through ?? "none"}`}${h === undefined ? "" : ` · ${esc(word("horizon.oldest"))}: ${h.oldest_cursor} (<time>${esc(h.oldest_at)}</time>)`}</p>${table}</section>`;
+      return `<section data-source="${esc(src)}"><h4>${esc(src)}</h4><p>${w === undefined ? "" : `${esc(word("window.title"))}: ${esc(word("window.after"))} ${w.after ?? word("window.none")}, ${esc(word("window.through"))} ${w.through ?? word("window.none")}`}${h === undefined ? "" : `${w === undefined ? "" : " · "}${esc(word("horizon.oldest"))}: ${h.oldest_cursor} (<time>${esc(h.oldest_at)}</time>)${h.limited ? ` · ${esc(word("horizon.limited"))}` : ""}`}</p>${table}</section>`;
     })
     .join("");
   const gaps =
@@ -456,6 +505,19 @@ function draw(p: Pass, form: BackfillForm): string {
               `<li>${esc(e.source)}/<code>${esc(e.id)}</code>${e.cursor === undefined ? "" : ` ${esc(word("rows.cursor"))} ${e.cursor}`}${e.passed_cursor === undefined ? "" : ` (${esc(word("anomalies.passed"))} ${e.passed_cursor})`}: ${esc(e.reason)}</li>`,
           )
           .join("")}</ul></section>`;
+  const kept =
+    keptElsewhere.length === 0
+      ? ""
+      : `<section data-kept-elsewhere><h3>${esc(word("kept.title"))}</h3><ul>${keptElsewhere
+          .map(
+            (k) =>
+              `<li><code>${esc(k.action_id)}</code>${k.retrospective ? ` · ${esc(word("kept.retrospective"))}` : ""}</li>`,
+          )
+          .join("")}</ul></section>`;
+  const words = (items: string[], key: string, token: string): string =>
+    items.length === 0
+      ? ""
+      : `<section data-${token}><h3>${esc(word(key))}</h3><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></section>`;
   const cps =
     p.checkpoints.length === 0
       ? `<p data-checkpoints="none">${esc(word("checkpoints.none"))}</p>`
@@ -465,7 +527,7 @@ function draw(p: Pass, form: BackfillForm): string {
               `<li data-checkpoint><code>${esc(c.digest)}</code> · ${esc(word("checkpoints.size"))} ${c.size} · ${esc(word("checkpoints.cut_at"))} <time datetime="${esc(c.at)}">${esc(c.at)}</time></li>`,
           )
           .join("")}</ul>`;
-  return `<section data-view="backfill-timeline" data-form="${form}" data-pass="${esc(p.import_batch)}"><h2>${esc(word("title"))}</h2>${label}${head}<h3>${esc(word("rows.title"))}</h3>${perSource}<h3>${esc(word("gaps.title"))}</h3>${gaps}${late}${list(p.anomalies, "anomalies.title", "anomalies")}${list(p.refused, "refused.title", "refused")}<h3>${esc(word("checkpoints.title"))}</h3>${cps}<p><small>${esc(word("pass.limits"))}: ${esc(p.limits)}</small></p></section>`;
+  return `<section data-view="backfill-timeline" data-form="${form}" data-pass="${esc(p.import_batch)}"><h2>${esc(word("title"))}</h2>${label}${head}<h3>${esc(word("rows.title"))}</h3>${perSource}<h3>${esc(word("gaps.title"))}</h3>${gaps}${late}${list(p.anomalies, "anomalies.title", "anomalies")}${list(p.refused, "refused.title", "refused")}${kept}<h3>${esc(word("checkpoints.title"))}</h3>${cps}${words(p.notes, "notes.title", "notes")}<p><small>${esc(word("pass.limits"))}: ${esc(p.limits)}</small></p>${words(p.cannot_see, "cannot_see.title", "cannot-see")}</section>`;
 }
 
 /**
@@ -478,5 +540,15 @@ export function backfillTimelineHtml(
   checkpoints?: unknown,
   form: BackfillForm = "record",
 ): string {
+  if (form !== "record" && form !== "rehearsal")
+    throw new BackfillTimelineRefused(["form: is not record or rehearsal"]);
   return draw(read(record, checkpoints), form);
+}
+
+/** Throws BackfillTimelineRefused when the record or checkpoints would be refused; draws nothing. */
+export function checkBackfillTimeline(
+  record: unknown,
+  checkpoints?: unknown,
+): void {
+  read(record, checkpoints);
 }
