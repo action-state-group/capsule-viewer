@@ -482,6 +482,13 @@ function checked(card: CardFacts): string {
   return token;
 }
 
+/** The stylesheet for both forms: a list that wraps at phone width. */
+export const studioCardStyles = `.cv-card{font:16px/1.45 system-ui,sans-serif;max-width:720px}.cv-card dl{margin:0}
+.cv-card [data-fact]{display:flex;flex-wrap:wrap;justify-content:space-between;gap:0 16px;padding:3px 0;border-bottom:1px solid #e3ded3}
+.cv-card dt{flex:1 1 14em}.cv-card dd{margin:0;flex:0 1 auto;text-align:right}
+.cv-card code,.cv-card-stapled code{overflow-wrap:anywhere}.cv-card-stapled{overflow-wrap:anywhere;font:14px/1.45 system-ui,sans-serif}.cv-card-refused{color:#b5462f}
+`;
+
 /** The card view: every fact with its label, and the digest. */
 export function cardViewHtml(card: CardFacts): string {
   const token = checked(card);

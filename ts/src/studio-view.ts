@@ -431,7 +431,7 @@ function desk(input: Input): string {
     (s) =>
       `${esc(word(`status.${STATUS_TOKEN[s]}`))} ${terms.filter((t) => t.status === s).length}`,
   ).join(" · ");
-  return `<section data-view="readiness"><h2>${esc(word("desk.title"))}</h2><p data-counts>${line}</p><table><thead><tr><th>${esc(word("desk.term"))}</th><th>${esc(word("desk.status"))}</th><th>${esc(word("desk.detail"))}</th><th>${esc(word("desk.reads"))}</th><th>${esc(word("desk.lacks"))}</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  return `<section data-view="readiness"><h2>${esc(word("desk.title"))}</h2><p data-counts>${line}</p><div class="cv-scroll"><table><thead><tr><th>${esc(word("desk.term"))}</th><th>${esc(word("desk.status"))}</th><th>${esc(word("desk.detail"))}</th><th>${esc(word("desk.reads"))}</th><th>${esc(word("desk.lacks"))}</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
 
 function termMap(input: Input): string {
@@ -467,9 +467,10 @@ export const studioViewStyles = `.cv-studio{font:16px/1.45 system-ui,sans-serif;
 .cv-studio table{border-collapse:collapse;width:100%}.cv-studio td,.cv-studio th{border-bottom:1px solid #e3ded3;padding:6px 8px;text-align:left;vertical-align:top}
 .cv-chip{display:inline-block;border:1px solid #e3ded3;border-radius:6px;padding:1px 8px;font-size:13px}
 [data-status=checkable] .cv-chip{background:#e3f1ea}[data-status=field] .cv-chip{background:#fbefd9}
-.cv-studio-loop{display:flex;gap:16px;list-style:none;padding:0}.cv-studio-loop li{border:1px solid #e3ded3;border-radius:8px;padding:8px 12px}
+.cv-studio-loop{display:flex;flex-wrap:wrap;gap:16px;list-style:none;padding:0}.cv-studio-loop li{border:1px solid #e3ded3;border-radius:8px;padding:8px 12px}
 .cv-studio-loop [data-state=not-yet]{color:#6b7482}.cv-snapshot{color:#6b7482;font-size:13px}
-@media print{.cv-studio{max-width:none}}
+code{overflow-wrap:anywhere}.cv-snapshot{padding:0 16px 16px}.cv-scroll{overflow-x:auto}.cv-studio main,.cv-studio section,.cv-studio nav{min-width:0}
+@media print{.cv-studio{max-width:none}.cv-scroll{overflow:visible}}
 `;
 
 /** The Studio home as an HTML fragment; throws StudioViewRefused on a refused input. */

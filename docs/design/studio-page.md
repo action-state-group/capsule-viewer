@@ -60,6 +60,8 @@ and returns the facts (the digest, counted deals, outcomes, roles, how it happen
 cannot differ: the card view shows the facts in full; the stapled form shows one compact line with the same numbers and the same
 digest. The stapled line carries every count of the card, with the card view's own values, and leaves out only who the holder is, since when and the window; both forms say the counts are the holder's own, not recounted. This is a form-and-counts display, not the verifier display of SH section 6: it runs no anchor or signature check and does not list which checks ran; the card module and the verification page own those. A card whose bytes are not JCS, whose members, window, bands, hex values or tallies do not satisfy section 4, is refused, drawn as a refusal in both forms. The words for the shared facts are byte copies of the shipped card's consumer wording pack, held by a test; the rest are new (Sherlock2 reviews them).
 
+The reader is ours because `@action-state-group/agent-action-capsule` 0.14.0 has none (checked: no `standard_history`, `card_form` or card reader in its `dist/` or `package.json`; the AAC readers are Python `standard_history.py` and Go `go/standardhistory`), and this repository's own `standard_history_card.js` is a bundle-bound module-slot script, not callable on bytes.
+
 ## 6. Tests
 
 - A report page (`html` format) embeds its bundle; a page rebuilt from that bundle is byte-identical. Loaded in jsdom with
@@ -71,8 +73,7 @@ digest. The stapled line carries every count of the card, with the card view's o
   (acceptance 4).
 - `static` drops the bundle and carries the not-self-verifying notice; the switch refuses `format: "static"`.
 - Studio home: accepted and refused inputs, loop stages by digest, byte-identical rebuild from the embedded JSON.
-- Card and stapled parity on a hand-built card, with refusals for each rule of section 4. Not done: running the AAC
-  `vectors/standard-history-v0` negatives; a differential test against them is a follow-up (they are not vendored here).
+- Card and stapled parity on a hand-built card, with refusals for each rule of section 4. The AAC `vectors/standard-history-v0` cases (vendored byte for byte in `vectors/standard-history-v0/`) run against the reader in `studio-card-vectors.test.ts`: a case failing `card_form`, `counts_integral` or `denominator` is refused, every other case is read.
 
 No Go twin and no DOM renderer: the page is static HTML, written by `studioViewDocument` in the npm package from the JSON the `terms` verb writes; a Go twin is added with its first Go caller.
 
