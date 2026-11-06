@@ -31,6 +31,9 @@
     "switch.report": "Open report",
     "snapshot.label": "Workspace snapshot, not sealed evidence. SHA-256",
     "switch.plan_ref": "plan digest",
-    "switch.dataset_ref": "dataset digest"
+    "switch.dataset_ref": "dataset digest",
+    "loop.published": "Published",
+    "loop.not_recorded": "not recorded",
+    "loop.published_note": "Published terms do not check sales until they are installed on the profile."
   }
 }

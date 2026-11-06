@@ -66,6 +66,8 @@ interface HistoryLine {
   last_at: string;
   run: string | null;
   rehearsal: boolean | null;
+  /** Whether the published pack is pinned on the profile; absent when the caller does not know. */
+  in_force: boolean | null;
   published: string | null;
 }
 interface Input {
@@ -325,6 +327,7 @@ function read(input: unknown): Input {
           "last_at",
           "run",
           "rehearsal",
+          "in_force",
           "published",
         ],
         ["digest", "version", "first_at", "last_at"],
@@ -345,6 +348,7 @@ function read(input: unknown): Input {
         last_at: r.str(o["last_at"], `${p}.last_at`, 200),
         run: opt("run"),
         rehearsal: rehearsal(o["rehearsal"], `${p}.rehearsal`),
+        in_force: rehearsal(o["in_force"], `${p}.in_force`),
         published: opt("published"),
       });
     });
@@ -399,6 +403,13 @@ const STATUS_TOKEN: Readonly<Record<ReadinessStatus, string>> = {
   "not this pack's concern": "not-concern",
 };
 
+type StageState = "done" | "not-yet" | "not-recorded";
+const STAGE_WORD: Readonly<Record<StageState, string>> = {
+  done: "loop.done",
+  "not-yet": "loop.not_yet",
+  "not-recorded": "loop.not_recorded",
+};
+
 function loop(input: Input): string {
   // Only the lines for the digest the active pack has now: an edit makes a
   // new digest, and the earlier digest's run says nothing about it.
@@ -407,19 +418,40 @@ function loop(input: Input): string {
   )!.pack_digest;
   const entries = input.history.filter((e) => e.digest === digest);
   const tried = entries.some((e) => e.run !== null);
-  const live = entries.some((e) => e.published !== null);
-  const stages: [string, boolean][] = [
-    ["terms", input.readiness.terms.some((t) => t.in_pack)],
-    ["tried", tried],
-    ["switched_on", live],
+  const published = entries.some((e) => e.published !== null);
+  // Publishing writes the pack out; the terms check sales only once they are
+  // installed on the profile (skills/terms-pack-author SKILL.md, `terms
+  // publish` answers `in_force: false`). The workspace does not record the
+  // install, so "switched on" is drawn only from a line that says so, and
+  // reads "not recorded" when no line does.
+  const forced = entries.filter((e) => e.in_force !== null);
+  const inForce: StageState = !published
+    ? "not-yet"
+    : forced.some((e) => e.in_force === true)
+      ? "done"
+      : forced.length > 0
+        ? "not-yet"
+        : "not-recorded";
+  const stages: [string, StageState][] = [
+    [
+      "terms",
+      input.readiness.terms.some((t) => t.in_pack) ? "done" : "not-yet",
+    ],
+    ["tried", tried ? "done" : "not-yet"],
+    ["published", published ? "done" : "not-yet"],
+    ["switched_on", inForce],
   ];
   const items = stages
     .map(
-      ([id, done]) =>
-        `<li data-stage="${id}" data-state="${done ? "done" : "not-yet"}"><strong>${esc(word(`loop.${id}`))}</strong> <span>${esc(word(done ? "loop.done" : "loop.not_yet"))}</span></li>`,
+      ([id, state]) =>
+        `<li data-stage="${id}" data-state="${state}"><strong>${esc(word(`loop.${id}`))}</strong> <span>${esc(word(STAGE_WORD[state]))}</span></li>`,
     )
     .join("");
-  return `<section data-view="loop"><h2>${esc(word("loop.title"))}</h2><ol class="cv-studio-loop">${items}</ol></section>`;
+  const note =
+    published && inForce !== "done"
+      ? `<p data-loop-note>${esc(word("loop.published_note"))}</p>`
+      : "";
+  return `<section data-view="loop"><h2>${esc(word("loop.title"))}</h2><ol class="cv-studio-loop">${items}</ol>${note}</section>`;
 }
 
 function desk(input: Input): string {

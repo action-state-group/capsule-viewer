@@ -64,6 +64,34 @@ describe("the Studio home", () => {
     );
   });
 
+  it("never says switched on because a pack was published: only a line that says in_force does", () => {
+    const published = input();
+    published["history"][0].published = "published/sticker-sale/111111111111";
+    // published, install not recorded
+    let html = studioViewHtml(published);
+    expect(html).toContain('data-stage="published" data-state="done"');
+    expect(html).toContain(
+      'data-stage="switched_on" data-state="not-recorded"',
+    );
+    expect(html).toContain("do not check sales until they are installed");
+    // `terms publish` answers in_force: false
+    published["history"][0].in_force = false;
+    html = studioViewHtml(published);
+    expect(html).toContain('data-stage="switched_on" data-state="not-yet"');
+    expect(html).toContain("do not check sales until they are installed");
+    // installed
+    published["history"][0].in_force = true;
+    html = studioViewHtml(published);
+    expect(html).toContain('data-stage="switched_on" data-state="done"');
+    expect(html).not.toContain("do not check sales");
+    // never published: in_force alone says nothing
+    const never = input();
+    never["history"][0].in_force = true;
+    expect(studioViewHtml(never)).toContain(
+      'data-stage="switched_on" data-state="not-yet"',
+    );
+  });
+
   it("marks an idea that is not in the pack, in the desk and the term map", () => {
     const html = studioViewHtml(input());
     expect(html.match(/data-in-pack="false"/g)).toHaveLength(4);
