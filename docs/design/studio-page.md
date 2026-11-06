@@ -1,8 +1,7 @@
 # Studio page: one page per pack, the loop diagram, the readiness desk and the term map (design note)
 
 Status: design for capsule-viewer#291 (Terms Pack Studio PRD v5 sections 2, 9, 12 Q8, 13, 15 items 3 to 5). Builds on
-`docs/design/history-view.md`, whose shape it follows. **One part is gated on a ruling from Steven (section 7); nothing in
-sections 1 to 6 depends on the answer.**
+`docs/design/history-view.md`, whose shape it follows.
 
 ## 1. What is built, and where it lives
 
@@ -35,7 +34,7 @@ know, never defaults it.
 ## 3. The views
 
 - **Loop diagram (home).** The stages are derived only from members the input has: _Terms written_ (a term with
-  `in_pack` true; the other terms are ideas and are marked as such), _Tried on past sales_ (a `history` entry for the active pack's
+  `in_pack` true; the other terms are ideas and are marked as such), _Tried on past records_ (a `history` entry for the active pack's
   digest with a `run`, dry run or not), _Switched on_ (an entry for that digest with `published`). An edit makes a new digest, so an
   earlier digest's run or publication says nothing about it. A stage with no evidence reads "not yet"; the diagram never infers a
   state. The history digest is the Result's `x-pack.definition_digest` (terms.py:463), the same value as `packs[].pack_digest`.
@@ -44,7 +43,7 @@ know, never defaults it.
 - **Term map (on request).** A `<details>` per status group, closed by default, listing the terms and the fields each reads: a
   view of one pack, never a second pack beside it.
 - **Switch.** One link per pack to its report page. It never draws two packs' verdicts in one page; a link carries the pack id,
-  its pack digest and judge, and the shared digest.
+  its pack digest and judge, its bundle digest, and the dataset and plan digests its Result names.
 
 ## 4. The snapshot is unsealed, and says so
 
@@ -91,7 +90,7 @@ each carrying its own bundle, each citing its own pack digest and judge and the 
 - A bundle has one `root` and its digest covers it (draft-mih-zhang-agent-disclosure-bundle-03.md:225, :1452), so two Results are
   two bundles with two digests.
 - `packCitation(bundle)` (`ts/src/studio-pack.ts`) reads a page's own bundle digest and the Result's `dataset_ref` and `plan_ref`
-  from the verified bundle, so the switch cannot cite a digest the page's bundle does not carry.
+  from the verified bundle, so a caller that builds the input from it cites what the page's bundle carries. The view only draws what it is given (it checks the form, not the bundle).
 - `ts/test/studio-two-packs.test.ts` builds two packs over the one dataset, checks the two bundle digests differ and the two
   citations match, builds both report pages, and checks the switch cites the same dataset and plan digests for both.
 - Not yet true end to end: the `terms run` Result (evidencebook-skills `scripts/studio/terms.py` `build_result`) sets no `plan_ref`

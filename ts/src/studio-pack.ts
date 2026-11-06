@@ -5,8 +5,9 @@
  * the dataset and plan digests its Result names (Evidence Result v0 section
  * 7.3). Two packs judged over the same data are two bundles, each with one
  * Result; what they share is `dataset_ref` and `plan_ref`, never a bundle
- * digest. Read from the bundle itself, so a caller cannot cite a digest the
- * page's own bundle does not carry.
+ * digest. Read from the bundle itself, so a caller that builds the studio-view
+ * input from it cites what the page's own bundle carries (the view draws what
+ * it is given and checks only its form).
  */
 import {
   buildResultRoot,

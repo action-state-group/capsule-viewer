@@ -7,6 +7,7 @@ import { jsonDigest } from "@action-state-group/agent-action-capsule";
 import { buildPresentation } from "../src/presentation-builder.js";
 import { packCitation } from "../src/studio-pack.js";
 import { studioViewHtml } from "../src/studio-view.js";
+import { readFileSync } from "node:fs";
 import { chartBundleSource } from "./helpers/chart-bundle.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
@@ -145,5 +146,16 @@ describe("two packs over the same data", () => {
     const tampered = structuredClone(a.bundle) as Obj;
     ((tampered["records"] as Obj[])[0] as Obj)["action_type"] = "decide";
     await expect(packCitation(tampered)).rejects.toThrow(/does not verify/u);
+  }, 60_000);
+
+  it("a verified bundle whose root is no Result has no citation either", async () => {
+    const { bundle } = await sealEvidenceBundle(
+      JSON.parse(
+        readFileSync(resolve("test", "testdata", "week-bundle.json"), "utf8"),
+      ) as Obj,
+    );
+    await expect(packCitation(bundle)).rejects.toThrow(
+      /not an Evidence Result/u,
+    );
   }, 60_000);
 });
