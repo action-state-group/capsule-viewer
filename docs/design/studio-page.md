@@ -92,9 +92,7 @@ each carrying its own bundle, each citing its own pack digest and judge and the 
   from the verified bundle, so a caller that builds the input from it cites what the page's bundle carries. The view only draws what it is given (it checks the form, not the bundle).
 - `ts/test/studio-two-packs.test.ts` builds two packs over the one dataset, checks the two bundle digests differ and the two
   citations match, builds both report pages, and checks the switch cites the same dataset and plan digests for both.
-- Not yet true end to end: the `terms run` Result (evidencebook-skills `scripts/studio/terms.py` `build_result`) sets no `plan_ref`
-  or `dataset_ref`, so a Studio over `terms` packs would have no shared digest to cite until it does (filed in evidencebook-skills).
-  `capsulectl result build --plan` (evidencebook) sets both.
+- End to end: the `terms run` Result now sets `plan_ref` and `dataset_ref` (evidencebook-skills#146, merged as aeb12f3 `scripts/studio/terms.py:203-204`), so two `terms` packs run over the same sales name the same pair; `capsulectl result build --plan` (evidencebook) sets both too. Not run here: two real `terms run` bundles through `packCitation`; the test uses the charts book fixture.
 
 ## 8. Doors and wording
 
