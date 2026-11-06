@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The Studio home (#291, design note `docs/design/studio-page.md`), in `ts/src/studio-view.ts`: `studioViewHtml` and `studioViewDocument` draw the loop diagram ("switched on" only from a history line that says `in_force`, never from a publish), the readiness table, a term map of the active pack on request, and the switch between packs' report pages, from a viewer-owned `studio-view/v0` input built from the `terms` workspace files. The page is static and labels its embedded snapshot as workspace data, not sealed evidence, with the snapshot's SHA-256; rebuilt from that JSON it is byte-identical. `static` report pages are refused in the switch. `ts/src/studio-card.ts` reads a `standard_history/1` or `/2` card from its bytes once and draws the card view and the stapled form from the same facts and digest. The card reader is run against agent-action-capsule's `vectors/standard-history-v0` (vendored in `vectors/standard-history-v0/`). New tests hold that a report page carries its bundle, is rebuilt byte-identically from it and calls no network, storage or worker API while drawing. Pages for two packs over the same data cite the same dataset digest (and plan digest); each carries its own bundle (`packCitation`, `ts/src/studio-pack.ts`, reads them from the bundle).
+
 ## ts 0.18.3 and go 0.18.3 (2026-11-05)
 
 Both state viewer 0.18.3: `ts/v0.18.3`, then `go/v0.18.3` on the commit that ships its page runtime. This release carries #294 (PR #295), #296 (PR #297) and #298 (PR #299), and the agent-action-capsule 0.14.0 pin.

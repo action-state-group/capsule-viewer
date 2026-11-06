@@ -1,0 +1,1 @@
+Byte copies of agent-action-capsule `vectors/standard-history-v0/` at commit `09d2a9cb6174baa4b66ee39fda3b8b8830e244c9` (origin/main on 2026-11-06). `shasum -a 256 -c SHA256SUMS` holds them. Run by `ts/test/studio-card-vectors.test.ts` against the Studio card reader; to refresh, copy the files again and update this commit id.

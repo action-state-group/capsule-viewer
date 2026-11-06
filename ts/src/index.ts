@@ -11,3 +11,6 @@ export * from "./builtin-manifests.js";
 export * from "./presentation-fragment.js";
 export * from "./evidence-contract.js";
 export * from "./history-view.js";
+export * from "./studio-card.js";
+export * from "./studio-pack.js";
+export * from "./studio-view.js";

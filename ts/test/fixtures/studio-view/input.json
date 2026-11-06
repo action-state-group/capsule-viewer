@@ -1,0 +1,83 @@
+{
+  "schema": "studio-view/v0",
+  "active": "sticker-sale",
+  "packs": [
+    {
+      "pack_id": "sticker-sale",
+      "title": "Sticker sale terms",
+      "pack_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "judge": "mock-judge/v0",
+      "page": "runs/sticker-sale/1/report.html",
+      "shared": {
+        "dataset_ref": "2222222222222222222222222222222222222222222222222222222222222222",
+        "plan_ref": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "bundle_digest": "5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    {
+      "pack_id": "late-delivery",
+      "pack_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+      "page": "runs/late-delivery/2/report.html",
+      "shared": {
+        "dataset_ref": "2222222222222222222222222222222222222222222222222222222222222222",
+        "plan_ref": "7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "bundle_digest": "6666666666666666666666666666666666666666666666666666666666666666"
+    }
+  ],
+  "readiness": {
+    "pack_id": "sticker-sale",
+    "pack_version": "0.1.0",
+    "records": 40,
+    "terms": [
+      {
+        "term": "paid_before_delivered",
+        "statement": "The buyer paid before the sticker was delivered.",
+        "in_pack": true,
+        "status": "checkable now",
+        "detail": "decides 38 of 40 sales",
+        "reads": ["paid_at", "delivered_at"],
+        "missing_fields": [],
+        "filled_rate": {
+          "paid_at": 0.95
+        }
+      },
+      {
+        "term": "looked_like_photo",
+        "statement": "The sticker looked like the photo.",
+        "in_pack": false,
+        "status": "needs examples",
+        "detail": "1 of 4 sales labelled",
+        "reads": ["photo"],
+        "missing_fields": []
+      },
+      {
+        "term": "refund_window",
+        "statement": "<b>Refund</b> within 7 days.",
+        "in_pack": false,
+        "status": "needs a field",
+        "detail": "no record fills refunded_at",
+        "reads": ["refunded_at"],
+        "missing_fields": ["refunded_at"]
+      }
+    ],
+    "counts": {
+      "checkable now": 1,
+      "needs examples": 1,
+      "needs a field": 1,
+      "needs the other side": 0,
+      "not this pack's concern": 0
+    }
+  },
+  "history": [
+    {
+      "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "version": "0.1.0",
+      "first_at": "2026-11-05T10:00:00Z",
+      "last_at": "2026-11-05T11:00:00Z",
+      "run": "runs/sticker-sale/1",
+      "rehearsal": true,
+      "published": null
+    }
+  ]
+}
