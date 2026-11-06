@@ -369,9 +369,49 @@ function renderCoreIdentity(model: CoreStripModel): HTMLElement {
   return block;
 }
 
+/**
+ * Whether the Result's own `coverage_report` says it rests on backfill alone
+ * (capsule-viewer#303): at least one source, and every source in
+ * `requirements[].sources[]` has `contemporaneous_count` 0 and
+ * `backfilled_count` equal to a `record_count` above 0. Anything else,
+ * including a missing report or a count that is not a whole number, is not
+ * "imported": the strip never says it on a guess. AAC's `ResultRoot` does not
+ * carry the member, so it is read from the Result document.
+ */
+export function backfillOnly(document: unknown): boolean {
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null && !Array.isArray(v);
+  if (!isObj(document) || !isObj(document["coverage_report"])) return false;
+  const requirements = document["coverage_report"]["requirements"];
+  if (!Array.isArray(requirements)) return false;
+  let sources = 0;
+  for (const requirement of requirements) {
+    if (!isObj(requirement)) return false;
+    const list = requirement["sources"];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) return false;
+    for (const source of list) {
+      if (!isObj(source)) return false;
+      const { contemporaneous_count: live, backfilled_count: back } = source;
+      const total = source["record_count"];
+      if (
+        live !== 0 ||
+        !Number.isSafeInteger(total) ||
+        (total as number) <= 0 ||
+        back !== total
+      )
+        return false;
+      sources += 1;
+    }
+  }
+  return sources > 0;
+}
+
 /** What the strip draws from, read once before the page is written. */
 export interface CoreStripModel {
   readonly result: ResultRoot;
+  /** Whether the Result rests on backfill alone (`backfillOnly`). */
+  readonly imported: boolean;
   readonly words: Words;
   /** Whether any claim's cited report names a mock judge (decision D5 (b)). */
   readonly mock: boolean;
@@ -382,10 +422,12 @@ export interface CoreStripModel {
 export async function coreStripModel(
   result: ResultRoot,
   words: Words,
+  document?: unknown,
 ): Promise<CoreStripModel> {
   const tally = await tallyJudges(result.records, result.claims);
   return {
     result,
+    imported: backfillOnly(document),
     words,
     mock: judgedByMock(tally),
     pins: tally.pins.map((pin) => pin.digest),
@@ -408,6 +450,14 @@ export function renderCoreStrip(model: CoreStripModel): HTMLElement {
     const mark = el("p", "mockmark", model.words.t("front.mock"));
     mark.dataset.section = "mock-judge";
     strip.append(mark);
+  }
+  if (model.imported) {
+    const note = tagSource(
+      el("p", "agg-note imported", model.words.t("front.agg.imported")),
+      "core",
+    );
+    note.dataset.imported = "";
+    strip.append(note);
   }
   strip.append(renderCoreIdentity(model));
   strip.append(renderAggregate(model.result, model.words));

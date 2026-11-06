@@ -54,7 +54,7 @@ import {
   JcsUnsafeIntegerError,
   jsonDigest,
 } from "@action-state-group/agent-action-capsule";
-import { chartDatasetOf } from "./chart-dataset.js";
+import { chartDatasetOf, resultDocument } from "./chart-dataset.js";
 import { ChartRefusal, checkChart, type ChartDataset } from "./chart-spec.js";
 import { renderChart, renderChartRefused, renderCharts } from "./chart-view.js";
 import { checkView, isView } from "./report-view.js";
@@ -3413,7 +3413,12 @@ async function renderVerifiedContext(
         : await contractReportWords(grouping, options.wording, {
             singleContract: result !== undefined && citesOneContract(result),
           });
-    if (result !== undefined) strip = await coreStripModel(result, words!);
+    if (result !== undefined)
+      strip = await coreStripModel(
+        result,
+        words!,
+        resultDocument(context, result),
+      );
     // With no Result there is no dataset: each chart shows its notice
     // (chart-no-dataset), never nothing.
     if (charted)

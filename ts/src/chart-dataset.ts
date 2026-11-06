@@ -70,7 +70,7 @@ function digestRef(value: unknown, what: string): string | undefined {
 }
 
 /** The Result document the root carries: the member itself, or a book header's statement. */
-function resultDocument(
+export function resultDocument(
   context: VerifiedBundleContext,
   result: ResultRoot,
 ): Obj | undefined {

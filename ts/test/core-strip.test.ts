@@ -503,3 +503,64 @@ describe("calibration claims are cited on their own line, not counted as evaluat
     expect(strip(root)!.querySelector(".agg-calibration")).toBeNull();
   });
 });
+
+// capsule-viewer#303: a Result whose own coverage_report says every source is
+// backfill-only opens its strip with "imported", in the rehearsal form and on
+// the record alike (the strip does not tell them apart); one contemporaneous
+// source, a missing report, or counts that do not add up draw nothing.
+describe("the strip says imported for a backfill-only Result", () => {
+  const source = (backfilled: number, live: number, total: number): Obj => ({
+    backfilled_count: backfilled,
+    contemporaneous_count: live,
+    duplicates_collapsed: 0,
+    record_count: total,
+  });
+  const withReport = async (
+    sources: Obj[][] | undefined,
+  ): Promise<HTMLElement> => {
+    const doc = fixture("result-root-bundle.json");
+    if (sources !== undefined)
+      resultDoc(doc).coverage_report = {
+        contract_ref: "ec:example:2026-09-21@1",
+        requirements: sources.map((list, i) => ({
+          requirement_ref: `req-${i}`,
+          claim_ids: [],
+          gaps: [],
+          sources: list,
+        })),
+      };
+    return render(doc);
+  };
+  const imported = (root: HTMLElement): HTMLElement | null =>
+    strip(root)!.querySelector<HTMLElement>("[data-imported]");
+
+  it("says it when every source is backfilled", async () => {
+    const root = await withReport([[source(3, 0, 3)], [source(2, 0, 2)]]);
+    const note = imported(root)!;
+    expect(note).not.toBeNull();
+    expect(note.textContent).toMatch(/^Imported:/u);
+    // Before the identity line, the first thing in the strip.
+    const kids = [...strip(root)!.children].filter(
+      (c) => c.tagName !== "STYLE",
+    );
+    expect(kids[0]).toBe(note);
+  });
+
+  for (const [name, sources] of [
+    ["one source has a contemporaneous record", [[source(2, 1, 3)]]],
+    [
+      "one of two sources is contemporaneous",
+      [[source(3, 0, 3)], [source(0, 3, 3)]],
+    ],
+    ["the counts do not add up", [[source(2, 0, 3)]]],
+    ["a source holds no records", [[source(0, 0, 0)]]],
+    ["no source is listed", [[]]],
+    ["the report is missing", undefined],
+  ] as const)
+    it(`says nothing when ${name}`, async () => {
+      const root = await withReport(
+        sources === undefined ? undefined : (sources as unknown as Obj[][]),
+      );
+      expect(imported(root)).toBeNull();
+    });
+});
