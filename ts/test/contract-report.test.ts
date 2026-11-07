@@ -1312,6 +1312,29 @@ for (const { grouping, file, page } of CARDS) {
   });
 }
 
+// Presentation contract 7.4: a pack with a core. key, at its correct
+// wording_sha256, is refused as a digest mismatch is; the page keeps the
+// core's and the built-in words and shows the refused notice.
+for (const { grouping, file, page } of CARDS) {
+  it(`${page}: a pack with a core. key is refused and the page keeps the built-in words`, async () => {
+    const withCore = await distributed({
+      id: "test/core@1",
+      locale: "en",
+      entries: {
+        [`${grouping}.verdict.not_met`]: "not met",
+        "core.banner.verified": "All good",
+      },
+    });
+    const root = await render(file, withCore);
+    const card = root.querySelector(`[data-page="${page}"]`);
+    expect(card).not.toBeNull();
+    const notice = card!.querySelector('[data-wording="refused"]');
+    expect(notice).not.toBeNull();
+    expect(notice!.getAttribute("data-refusal")).toBe("shape");
+    expect(root.textContent).not.toContain("All good");
+  });
+}
+
 it("a pack's entries for other modules (a page title) are left alone", () => {
   const pack: WordingPack = {
     id: "test/title@1",
