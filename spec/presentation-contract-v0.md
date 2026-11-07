@@ -648,7 +648,8 @@ neither ever comes from the bundle, and the manifest still carries no title (sec
 
 **Reserved prefix.** Every key that begins `core.` is reserved for the core's own text, which
 no pack supplies. A pack MUST NOT carry such a key, and the schema rejects one
-(`neg-wording-pack-core-key.json`).
+(`neg-wording-pack-core-key.json`). A renderer MUST refuse such a pack, as it refuses a pack whose
+bytes do not hash to its `wording_sha256`, and then shows the core's own fallback labels.
 
 `wording_sha256` is the lowercase hex SHA-256 of the pack's **exact bytes as distributed**. The
 bytes are hashed as they are; a consumer MUST NOT re-serialize a pack before hashing it. A

@@ -86,6 +86,9 @@ def load_wording_pack(data: bytes, wording_sha256: str, placeholders: Mapping[st
     for key, text in entries.items():
         if not WORDING_KEY.match(key):
             problems.append(f"key {key!r} is not a wording key")
+        elif key.startswith("core."):
+            # Reserved for the core's own text (contract section 7.4).
+            problems.append(f"key {key!r} is reserved for the core's own text")
         if not isinstance(text, str) or not text:
             problems.append(f"entry {key!r} is not a non-empty string")
             continue

@@ -14,6 +14,7 @@ import { expect, it } from "vitest";
 import { sha256Hex } from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
+  checkWordingPackInput,
   DEFAULT_PACK_SHA256,
   DEFAULT_PACKS,
   LOCKED_ENTRIES,
@@ -1921,4 +1922,43 @@ it("a rule's not-applicable count is in its detail row before the row opens, so 
       false,
     );
   }
+});
+
+it("a pack with a core. key, at the correct wording_sha256, is refused at load, as a digest mismatch is (contract 7.4)", async () => {
+  const cases = JSON.parse(
+    readFileSync(
+      resolve(
+        process.cwd(),
+        "..",
+        "schemas",
+        "examples",
+        "presentation-manifest-v0",
+        "wording-pack-core-key-cases.json",
+      ),
+      "utf8",
+    ),
+  ) as { packs: { id: string; pack: unknown; schema_valid: boolean }[] };
+  expect(cases.packs.some((c) => !c.schema_valid)).toBe(true);
+  for (const c of cases.packs) {
+    const text = JSON.stringify(c.pack);
+    const input = {
+      pack: text,
+      sha256: await sha256Hex(new TextEncoder().encode(text)),
+    };
+    if (c.schema_valid)
+      await expect(checkWordingPackInput(input)).resolves.toBeDefined();
+    else
+      await expect(checkWordingPackInput(input)).rejects.toThrow(
+        /reserved key/u,
+      );
+  }
+  // The shape check alone (no digest) refuses it too.
+  expect(() =>
+    readWordingPack({
+      wording_pack_version: "aac.wording-pack/v0",
+      id: "test/w@1",
+      locale: "en",
+      entries: { "core.banner.verified": "All good" },
+    }),
+  ).toThrow(WordingPackError);
 });

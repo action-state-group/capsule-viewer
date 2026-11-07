@@ -97,6 +97,13 @@ export function readWordingPack(pack: unknown): WordingPack {
     throw new WordingPackError(
       `wording pack is not an ${WORDING_PACK_VERSION} object`,
     );
+  const reserved = Object.keys(entries).find((k) => k.startsWith("core."));
+  // The `core.` prefix is the core's own text (contract 7.4): refused at load,
+  // as a pack whose bytes do not hash to its wording_sha256 is.
+  if (reserved !== undefined)
+    throw new WordingPackError(
+      `wording pack carries the reserved key ${JSON.stringify(reserved)}`,
+    );
   return {
     id: p.id,
     locale: p.locale,
