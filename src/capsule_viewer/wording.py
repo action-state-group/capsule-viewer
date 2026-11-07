@@ -6,6 +6,8 @@ JSON object of presentation words, one locale per pack, never sealed.
 ``wording_sha256`` is the lowercase hex SHA-256 of the pack's exact bytes as
 distributed; the bytes are hashed as they are, never re-serialized first, and a
 pack whose bytes do not hash to the ``wording_sha256`` it was given is refused.
+A pack that carries a key beginning ``core.``, which is reserved for the core's
+own text, is refused too.
 
 An entry may name values the module fills in, written ``{name}``. A module
 declares, per key, the names it fills there, and ``load_wording_pack`` refuses
@@ -30,7 +32,7 @@ PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 
 
 class WordingPackError(ValueError):
-    """A wording pack that must not be used: wrong digest or wrong shape."""
+    """A wording pack that must not be used: wrong digest, wrong shape or a reserved ``core.`` key."""
 
 
 @dataclass(frozen=True)
