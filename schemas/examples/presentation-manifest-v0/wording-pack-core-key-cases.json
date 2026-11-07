@@ -41,6 +41,20 @@
       "schema_valid": false
     },
     {
+      "id": "one-core-key-among-module-keys",
+      "pack": {
+        "wording_pack_version": "aac.wording-pack/v0",
+        "id": "org.example.view.wording/v0",
+        "locale": "en",
+        "entries": {
+          "heading.l0": "What the comparison found",
+          "page.title": "Comparison",
+          "core.check.record-digests": "Each record is fine."
+        }
+      },
+      "schema_valid": false
+    },
+    {
       "id": "bare-core-prefix",
       "pack": {
         "wording_pack_version": "aac.wording-pack/v0",

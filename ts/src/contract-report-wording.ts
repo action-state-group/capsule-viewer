@@ -31,7 +31,9 @@ import GENERIC_PACK from "./wording/contract-report-generic.en.json" with { type
  * `wording`, the same pack the presentation builder carries), bound to its
  * bytes by `wording_sha256`. Its entries replace the default pack's entry
  * for the same key; keys this module does not know (a page title, another
- * module's words) are left to their owners.
+ * module's words) are left to their owners. A pack that carries a key
+ * beginning `core.`, which is reserved for the core's own text (section
+ * 7.4), is refused at load.
  *
  * A pack changes words only. It holds strings and nothing else; every count,
  * verdict, digest and record id on the page is computed by the module and
@@ -96,6 +98,13 @@ export function readWordingPack(pack: unknown): WordingPack {
   )
     throw new WordingPackError(
       `wording pack is not an ${WORDING_PACK_VERSION} object`,
+    );
+  const reserved = Object.keys(entries).find((k) => k.startsWith("core."));
+  // The `core.` prefix is the core's own text (contract 7.4): refused at load,
+  // as a pack whose bytes do not hash to its wording_sha256 is.
+  if (reserved !== undefined)
+    throw new WordingPackError(
+      `wording pack carries the reserved key ${JSON.stringify(reserved)}`,
     );
   return {
     id: p.id,

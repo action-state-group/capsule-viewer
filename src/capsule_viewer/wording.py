@@ -6,6 +6,8 @@ JSON object of presentation words, one locale per pack, never sealed.
 ``wording_sha256`` is the lowercase hex SHA-256 of the pack's exact bytes as
 distributed; the bytes are hashed as they are, never re-serialized first, and a
 pack whose bytes do not hash to the ``wording_sha256`` it was given is refused.
+A pack that carries a key beginning ``core.``, which is reserved for the core's
+own text, is refused too.
 
 An entry may name values the module fills in, written ``{name}``. A module
 declares, per key, the names it fills there, and ``load_wording_pack`` refuses
@@ -30,7 +32,7 @@ PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 
 
 class WordingPackError(ValueError):
-    """A wording pack that must not be used: wrong digest or wrong shape."""
+    """A wording pack that must not be used: wrong digest, wrong shape or a reserved ``core.`` key."""
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,9 @@ def load_wording_pack(data: bytes, wording_sha256: str, placeholders: Mapping[st
     for key, text in entries.items():
         if not WORDING_KEY.match(key):
             problems.append(f"key {key!r} is not a wording key")
+        elif key.startswith("core."):
+            # Reserved for the core's own text (contract section 7.4).
+            problems.append(f"key {key!r} is reserved for the core's own text")
         if not isinstance(text, str) or not text:
             problems.append(f"entry {key!r} is not a non-empty string")
             continue

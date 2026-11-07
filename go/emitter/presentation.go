@@ -202,6 +202,12 @@ func CheckWordingPack(w Wording) (map[string]string, error) {
 		if !ok || text == "" || !wordingKey.MatchString(key) {
 			return nil, bad
 		}
+		// The core. prefix is reserved for the core's own text (contract
+		// section 7.4): a pack that carries such a key is refused at load, as
+		// one whose bytes do not hash to its wording_sha256 is.
+		if strings.HasPrefix(key, "core.") {
+			return nil, fmt.Errorf("wording pack carries the reserved key %q", key)
+		}
 		entries[key] = text
 	}
 	return entries, nil

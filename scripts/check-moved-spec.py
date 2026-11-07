@@ -309,14 +309,16 @@ CONTRACT = Move(
         ),
         # Section 7.4: the reserved core. key prefix, from Steven Mih's closed
         # agent-action-capsule PR #356, with the schema rule, its negative and
-        # its mutant. #356's renderer refusal and its words are not carried.
+        # its mutant. #356's renderer refusal and its words are not carried; the
+        # load-time refusal sentence is capsule-viewer#87's.
         (
             "neither ever comes from the bundle, and the manifest still carries no title (section 4.1).",
             "neither ever comes from the bundle, and the manifest still carries no title (section 4.1).\n\n"
             "**Reserved prefix.** Every key that begins `core.` is reserved for the core's own text, which\n"
             "no pack supplies. A pack MUST NOT carry such a key, and the schema rejects one\n"
-            "(`neg-wording-pack-core-key.json`).",
-            "agent-action-capsule#356, carried with the moved schema (AAC#379)",
+            "(`neg-wording-pack-core-key.json`). A renderer MUST refuse such a pack, as it refuses a pack whose\n"
+            "bytes do not hash to its `wording_sha256`, and then shows the core's own fallback labels.",
+            "agent-action-capsule#356, carried with the moved schema (AAC#379); the load-time refusal is capsule-viewer#87",
         ),
         # Section 9.1: the core strip opens L0 on a Result page
         # (capsule-viewer#81).

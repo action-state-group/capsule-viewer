@@ -352,3 +352,31 @@ func TestPresentationFragmentContractShape(t *testing.T) {
 		require.ErrorContains(t, err, "contract is not {text, sha256}", name)
 	}
 }
+
+// Every pack of the shared core-key cases is checked at load with its correct
+// wording_sha256: one that carries a core. key is refused as a digest
+// mismatch is (contract 7.4), whether or not the schema was run; the rest load.
+func TestCheckWordingPackCoreKeyCases(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "schemas", "examples", "presentation-manifest-v0", "wording-pack-core-key-cases.json"))
+	require.NoError(t, err)
+	var doc struct {
+		Packs []struct {
+			ID          string          `json:"id"`
+			Pack        json.RawMessage `json:"pack"`
+			SchemaValid bool            `json:"schema_valid"`
+		} `json:"packs"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &doc))
+	require.NotEmpty(t, doc.Packs)
+	refused := 0
+	for _, c := range doc.Packs {
+		_, err := CheckWordingPack(*wordingOf(string(c.Pack)))
+		if c.SchemaValid {
+			require.NoError(t, err, c.ID)
+			continue
+		}
+		refused++
+		require.ErrorContains(t, err, "reserved key", c.ID)
+	}
+	require.NotZero(t, refused)
+}
