@@ -14,6 +14,7 @@ import {
   buildHistoryView,
   historyViewDocument,
   historyViewHtml,
+  historyViewStyles,
   renderHistoryView,
 } from "../src/history-view.js";
 
@@ -594,4 +595,48 @@ describe("the History view's refusal vectors", () => {
       expect(built.ok).toBe(false);
       if (!built.ok) expect(built.reasons).toEqual(c.reasons);
     });
+});
+
+describe("the stylesheet's dark palette (issue 310)", () => {
+  const dark =
+    /@media \(prefers-color-scheme:dark\)\{(.*?)\}\.cvh-badge/su.exec(
+      historyViewStyles,
+    )?.[1];
+  const light = /\.cv-history\{([^}]*)\}/u.exec(historyViewStyles)?.[1] ?? "";
+  const hex = (css: string, name: string): string =>
+    new RegExp(`--cvh-${name}:(#[0-9a-f]{6})`, "u").exec(css)?.[1] ?? "";
+  const lum = (h: string): number => {
+    const c = [1, 3, 5].map((i) => {
+      const v = parseInt(h.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+  };
+  const ratio = (a: string, b: string): number => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi! + 0.05) / (lo! + 0.05);
+  };
+
+  it("has one dark block that sets its own background", () => {
+    expect(dark).toBeDefined();
+    const bg = /background:(#[0-9a-f]{6})/u.exec(dark ?? "")?.[1] ?? "";
+    expect(bg).not.toBe("");
+    for (const name of ["ink", "slate", "navy", "ok", "bad"]) {
+      expect(ratio(hex(dark ?? "", name), bg), name).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+    // the same text on the cream cards and callouts
+    const cream = hex(dark ?? "", "cream");
+    for (const name of ["ink", "slate", "navy"]) {
+      expect(ratio(hex(dark ?? "", name), cream), name).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+  });
+
+  it("leaves the light palette as it was", () => {
+    expect(light).toContain("--cvh-ink:#1f2733");
+    expect(light).not.toContain("background");
+  });
 });
