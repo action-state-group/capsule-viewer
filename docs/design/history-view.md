@@ -340,7 +340,10 @@ only draws a History does not embed the 1.2 MB page runtime. The view's
 stylesheet ships beside the function, in TypeScript and Go
 (`historyViewStyles`, held to the same vectors). `renderHistoryView` inserts
 no style itself, so a page with a strict CSP lists the hash of the one
-stylesheet it embeds.
+stylesheet it embeds. On a dark screen (`@media screen and
+(prefers-color-scheme:dark)`) the stylesheet swaps in a dark palette and paints
+its own background, so the view reads on any host page; print always uses the
+light palette.
 
 **Serialization.** TypeScript, Go and the browser write the same bytes
 because the HTML is serialized by the HTML fragment serialization rules,
