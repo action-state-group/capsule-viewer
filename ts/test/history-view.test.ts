@@ -599,7 +599,7 @@ describe("the History view's refusal vectors", () => {
 
 describe("the stylesheet's dark palette (issue 310)", () => {
   const dark =
-    /@media \(prefers-color-scheme:dark\)\{(.*?)\}\.cvh-badge/su.exec(
+    /@media screen and \(prefers-color-scheme:dark\)\{(.*?)\}\.cvh-badge/su.exec(
       historyViewStyles,
     )?.[1];
   const light = /\.cv-history\{([^}]*)\}/u.exec(historyViewStyles)?.[1] ?? "";
