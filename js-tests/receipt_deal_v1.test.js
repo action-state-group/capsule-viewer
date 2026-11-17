@@ -64,7 +64,7 @@ describe("the deal/v1 receipt", () => {
     const { host } = await page(content({ rows }), "L1");
     const shown = [...host.L1.querySelectorAll("[data-row-status]")].map((e) => [e.closest("tr").querySelector("[data-row-id]").getAttribute("data-row-id"), e.getAttribute("data-row-status")]);
     expect(shown).toEqual(statuses.map((s, i) => [`row_${i}`, s]));
-    expect(host.L1.querySelector('[data-row-status="agreed_so_far"]').textContent).toBe("Agreed so far");
+    expect(host.L1.querySelector('[data-row-status="agreed_so_far"]').textContent).toBe("Both say the same so far");
   });
 
   it("the deal-level line is the start state, then settled or nothing; no close, no done", async () => {
@@ -72,7 +72,7 @@ describe("the deal/v1 receipt", () => {
     expect(open.host.L0.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("started");
     expect(open.host.L0.querySelector("[data-settled]")).toBeNull();
     const done = await page(content({ settled: true }), "L0");
-    expect(done.host.L0.querySelector("[data-settled]").textContent).toBe("Settled");
+    expect(done.host.L0.querySelector("[data-settled]").textContent).toBe("Settled: every row is agreed, uncontested, or ruled with its remedy made, as the holder computed it.");
     for (const p of [open, done]) expect(p.text).not.toMatch(/closed|close\b/i);
     const waiting = await page(content({ start: { state: "awaiting_agreement", local: false, by: null }, settled: false, rows_state: "not_started", rows: [] }), "L0");
     expect(waiting.host.L0.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("awaiting_agreement");
@@ -92,7 +92,7 @@ describe("the deal/v1 receipt", () => {
     }
     const adj = await page(content({ audience: "adjudicator", rows_state: "withheld", rows: [] }), "L1", "adjudicator");
     expect(adj.host.L1.querySelectorAll("[data-row-status]").length).toBe(0);
-    expect(adj.host.L1.querySelector('[data-rows-state="withheld"]').textContent).toMatch(/does not show the rows/);
+    expect(adj.host.L1.querySelector('[data-rows-state="withheld"]').textContent).toBe("The holder has not shared each row's status with this reader.");
     expect(adj.host.L1.textContent).not.toMatch(/no rows/i);
     expect(adj.host.L0.querySelector('[data-shared="adjudicator"]')).not.toBeNull();
   });
@@ -119,14 +119,45 @@ describe("the deal/v1 receipt", () => {
     expect(without.text).not.toMatch(/Late:/);
     const withLate = await page(content({ rows: [{ ...ROW, late: { statements: [{ side: "seller", value: "met", record: "r" }], disputes: [] } }] }));
     expect(withLate.text).toMatch(/Late: 1 statements, 0 disputes/);
+    expect(withLate.text).toMatch(/Payment check: not recomputed/);
     expect(without.text).toMatch(/As the holder computed it at 2026-11-10T12:00:00Z\. This is not a time any witness attests\./);
   });
 
   it("marks a local row and shows not_set dates and the ruling", async () => {
     const p = await page(content({ rows: [{ ...ROW, status: "ruled", local: true, due: "not_set", remedy: "none", ruling: { record: "r", value: "not_met", against: "seller", final: true, remedy_due: null } }] }));
-    expect(p.text).toMatch(/Local: this result rests on a record that has no time from a named witness/);
+    expect(p.text).toMatch(/Holder's time only: this result rests on a record with no time from a named witness/);
     expect(p.text).toMatch(/not set/);
     expect(p.text).toMatch(/Final ruling: not met, against seller/);
+  });
+
+  it("an adjudicator's copy that omits rests_on.counterparty, witnesses and the layer shows no zero for them", async () => {
+    const adj = await page(content({ audience: "adjudicator", rows_state: "withheld", rows: [], rests_on: { own: { log_id: "l", size: 7, last: "rec-1" } } }), "L2", "adjudicator");
+    expect(adj.text).not.toMatch(/Witnesses the agreement names/);
+    expect(adj.text).not.toMatch(/other side/);
+    const keep = await page(content());
+    expect(keep.text).toMatch(/Witnesses the agreement names: 0/);
+  });
+
+  it("declines malformed members instead of showing a value the producer never asserted", async () => {
+    for (const bad of [
+      { rows: null }, { rows: {} }, { rows: [null] },
+      { rows: [{ ...ROW, due: "waived" }] }, { rows: [{ ...ROW, window_end: "2026-13-45T99:00:00Z" }] }, { rows: [{ ...ROW, due: "2026-11-04" }] },
+      { rows: [{ ...ROW, ruling: { value: "not_met", against: "seller", final: false } }] },
+      { rows: [{ ...ROW, ruling: { value: "not_met", against: "seller", final: "yes" } }] },
+      { rows: [{ ...ROW, relied_on: [{ record: "r", side: "buyer", time: null, witnessed: "true" }] }] },
+      { rows: [{ ...ROW, relied_on: null }] },
+      { rows: [{ ...ROW, local: "no" }] },
+      { settled: "false" },
+      { rests_on: { own: {}, counterparty_layer: "yes", witnesses: [] } },
+      { rests_on: { own: {}, witnesses: {} } },
+    ]) expect((await page(content(bad))).shown, JSON.stringify(bad)).toBe(false);
+  });
+
+  it("stamps its own module id (/v1) on the page and in its manifest, and shows how the report was checked", async () => {
+    const p = await page(content(), "L1");
+    expect(p.host.L1.querySelector("[data-receipt-module]").getAttribute("data-receipt-module")).toBe("capsuleviewer.receipt.deal/v1");
+    expect(p.module.manifest.id).toBe("capsuleviewer.receipt.deal/v1");
+    expect(p.host.L1.querySelector('[data-sealed="x-deal-report"]').textContent).toMatch(/signature check as: pass/);
   });
 
   it("the three x-deal-v0 modules decline a v1 bundle", async () => {

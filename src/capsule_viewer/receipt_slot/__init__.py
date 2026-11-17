@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The receipt modules as module-slot scripts: the three scripts a page builder
+"""The receipt modules as module-slot scripts: the scripts (three x-deal-v0
+modules with Python twins, and the x-deal-v1 deal module, which has none) a page builder
 puts in a page's module slots (capsulectl ``presentation build``, with a
 plugin carrying them), and the manifests that pin them. This package is the
 writer of those files and the home of their wording pack (``wording-en.json``)

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // The deal receipt modules, in the page: capsuleviewer.receipt.unilateral/v0,
-// capsuleviewer.receipt.seller/v0 and capsuleviewer.receipt.bilateral/v0, as
-// module-slot scripts (agent-action-capsule's presentation contract, as
+// capsuleviewer.receipt.seller/v0 and capsuleviewer.receipt.bilateral/v0 (the
+// x-deal-v0 modules, each with a Python twin) and capsuleviewer.receipt.deal/v1
+// (the x-deal-v1 sealed report, no twin), as module-slot scripts (agent-action-capsule's presentation contract, as
 // capsulectl.deal-view/v0 and capsuleviewer.history/v0 are).
 //
-// This file is the source of the three scripts the manifests pin
-// (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js).
+// This file is the source of the four scripts the manifests pin
+// (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js and
+// receipt_deal.js).
 // `python -m capsule_viewer.receipt_slot --write` writes each one from
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
@@ -354,19 +356,19 @@
 
   // capsulectl's status for the x-deal-v0 check when it names the report as
   // standalone. A page runtime that does not interpret x-deal-v0 reports none.
-  function reportChecked(verification) {
-    var entry = seq(map(verification).extensions).map(map).find(function (e) { return (e.kind === EXTENSION || e.kind === EXTENSION_V1) && e.report === "standalone"; });
+  function reportChecked(verification, extension) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === extension && e.report === "standalone"; });
     return entry !== undefined && typeof entry.status === "string" ? entry.status : null;
   }
 
-  function pageAssurance(context) {
+  function pageAssurance(context, extension) {
     var c = map(context);
     var v = map(c.verification);
     return {
       bundle_digest: typeof v.bundleDigest === "string" ? v.bundleDigest : null,
       witnesses: "absent",
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
-      report_checked: reportChecked(v),
+      report_checked: reportChecked(v, extension),
     };
   }
 
@@ -888,10 +890,13 @@
     return value;
   }
   function optionalWord(list, value, what) { return value === null || value === undefined ? null : closedWord(list, value, what); }
-  // A row date is an RFC 3339 time, or the word not_set.
+  // A row date is an RFC 3339 UTC time to the second, or the word not_set.
+  var RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
   function rowDate(value, what) {
     var t = str(value);
-    if (t === null || t === "") throw new Unavailable("the v1 report's " + what + " is neither a time nor not_set");
+    if (t === null || (t !== "not_set" && (!RFC3339_UTC.test(t) || isNaN(Date.parse(t))))) {
+      throw new Unavailable("the v1 report's " + what + " is neither an RFC 3339 UTC time nor not_set");
+    }
     return t;
   }
   function flag(o, k, what) {
@@ -900,12 +905,19 @@
     return value;
   }
 
+  function failV1(what) { throw new Unavailable("the v1 report's " + what); }
+
   function dealRow(raw) {
-    var r = map(raw);
+    if (!isMap(raw)) throw new Unavailable("a row of the v1 report is not an object");
+    var r = raw;
     var id = str(get(r, "id"));
     if (id === null || id === "") throw new Unavailable("a row of the v1 report has no id");
     var late = get(r, "late");
     var ruling = get(r, "ruling");
+    // section 9: the first final ruling rowstatus applied, or null.
+    if (ruling !== null && (!isMap(ruling) || flag(ruling, "final", "ruling final") !== true)) throw new Unavailable("the v1 report's ruling is not a final ruling or null");
+    var relied = get(r, "relied_on");
+    if (!Array.isArray(relied)) throw new Unavailable("the v1 report's row relied_on is not an array");
     return {
       id: id,
       owed_by: or(str(get(r, "owed_by")), ""),
@@ -919,10 +931,11 @@
       // Optional until rowstatus reports late statements and disputes (evidencebook#461, Q9): nothing is shown while absent.
       late: isMap(late) ? { statements: seq(get(late, "statements")).length, disputes: seq(get(late, "disputes")).length } : null,
       ruling: isMap(ruling)
-        ? { value: or(str(get(ruling, "value")), ""), against: or(str(get(ruling, "against")), ""), final: get(ruling, "final") === true, remedy_due: str(get(ruling, "remedy_due")) }
+        ? { value: or(str(get(ruling, "value")), ""), against: or(str(get(ruling, "against")), ""), remedy_due: str(get(ruling, "remedy_due")) }
         : null,
-      relied_on: seq(get(r, "relied_on")).map(map).map(function (e) {
-        return { record: or(str(get(e, "record")), ""), side: or(str(get(e, "side")), ""), time: str(get(e, "time")), named_witness: get(e, "witnessed") === true };
+      relied_on: relied.map(function (e) {
+        if (!isMap(e)) throw new Unavailable("a relied_on entry of the v1 report is not an object");
+        return { record: or(str(get(e, "record")), ""), side: or(str(get(e, "side")), ""), time: str(get(e, "time")), named_witness: flag(e, "witnessed", "relied_on named-witness flag") };
       }),
     };
   }
@@ -935,7 +948,7 @@
     if (named === null) throw new Unavailable("the x-deal-v1 extension names no sealed report");
     if (!own(extensions, STANDALONE_EXTENSION)) throw new Unavailable("the v1 report is standalone and the bundle carries none in " + STANDALONE_EXTENSION);
     var content = this.standaloneContent(named);
-    if (content === null) throw new Unavailable("the v1 report is not a record on a log");
+    if (content === null) throw new Unavailable("the v1 report is a record on a log; a v1 report travels standalone");
     return [named, content];
   };
 
@@ -954,7 +967,9 @@
       by: optionalWord(V1_START_BY, get(startRaw, "by"), "start by"),
     };
     var rowsState = closedWord(V1_ROWS_STATES, get(content, "rows_state"), "rows_state");
-    var rows = seq(get(content, "rows")).map(dealRow);
+    var rawRows = get(content, "rows");
+    if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
+    var rows = rawRows.map(dealRow);
     if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
     var rests = map(get(content, "rests_on"));
     var theirs = get(rests, "counterparty");
@@ -972,8 +987,9 @@
       rests_on: {
         own_size: int(get(map(get(rests, "own")), "size")),
         counterparty: isMap(theirs) ? { counted: int(get(theirs, "counted")), fork_at: int(get(theirs, "fork_at")) } : null,
-        counterparty_layer: get(rests, "counterparty_layer") === true,
-        witnesses: seq(get(rests, "witnesses")).length,
+        // The adjudicator's copy omits these two (section 9's audience table): absent is not zero.
+        counterparty_layer: own(rests, "counterparty_layer") ? flag(rests, "counterparty_layer", "counterparty_layer") : null,
+        witnesses: own(rests, "witnesses") ? (Array.isArray(rests.witnesses) ? rests.witnesses.length : failV1("witnesses is not an array")) : null,
       },
       report: rep,
       bundle_digest: v.assurance.bundle_digest,
@@ -2131,7 +2147,10 @@
       this.note(w("deal.rows.note"))];
   };
   P.dealL1 = function (model) {
-    return [this.kit.section(w("deal.section.rows"), this.dealRows(model))];
+    return [
+      this.note(w("summary.standalone", { status: model.report_checked === null ? "-" : model.report_checked }), { "data-sealed": "x-deal-report" }),
+      this.kit.section(w("deal.section.rows"), this.dealRows(model)),
+    ];
   };
   P.dealL2 = function (model) {
     var d = this.d, kit = this.kit;
@@ -2157,8 +2176,8 @@
       rest.push(this.note(w("deal.rests.counterparty", { counted: r.counterparty.counted === null ? "-" : String(r.counterparty.counted) })));
       if (r.counterparty.fork_at) rest.push(this.note(w("deal.rests.fork", { at: String(r.counterparty.fork_at) })));
     }
-    rest.push(this.note(w(r.counterparty_layer ? "deal.rests.layer" : "deal.rests.no_layer")));
-    rest.push(this.note(w("deal.rests.witnesses", { count: String(r.witnesses) })));
+    if (r.counterparty_layer !== null) rest.push(this.note(w(r.counterparty_layer ? "deal.rests.layer" : "deal.rests.no_layer")));
+    if (r.witnesses !== null) rest.push(this.note(w("deal.rests.witnesses", { count: String(r.witnesses) })));
     rest.push(this.note(w("wording.provenance", { id: PACK.id, sha: PACK.sha256 || "-" })));
     out.push(kit.section(w("deal.section.rests"), rest, 3));
     return out;
@@ -2305,6 +2324,9 @@
 
   // ---- the modules (presentation contract: canRender, buildModel, render) ----
 
+  // The module's manifest id: the x-deal-v0 modules are /v0, the x-deal-v1 module /v1.
+  function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
+
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
@@ -2331,7 +2353,7 @@
     var e = {
       audience: env && env.audience !== undefined ? env.audience : null,
       verification: (env && env.verification) || pageVerification,
-      assurance: (env && env.assurance) || pageAssurance,
+      assurance: (env && env.assurance) || function (context) { return pageAssurance(context, kind === "deal" ? EXTENSION_V1 : EXTENSION); },
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
     };
@@ -2350,7 +2372,7 @@
       throw err;
     };
     return {
-      manifest: kind === KIND ? MANIFEST : { id: "capsuleviewer.receipt." + kind + "/v0" },
+      manifest: kind === KIND ? MANIFEST : { id: moduleId(kind) },
       title: w(TITLES[kind]),
       // Declining is canRender's answer: nothing of this module is shown.
       canRender: function (context) {
@@ -2376,7 +2398,7 @@
         [host.L0, host.L1, host.L2].forEach(function (region, i) {
           var wrap = doc.createElement("div");
           wrap.className = "cv-kit";
-          wrap.setAttribute("data-receipt-module", "capsuleviewer.receipt." + kind + "/v0");
+          wrap.setAttribute("data-receipt-module", moduleId(kind));
           wrap.appendChild(levels[i]);
           region.appendChild(wrap);
         });
