@@ -2,9 +2,9 @@
 """The receipt modules' module-slot scripts and their manifests, and how a
 registry chooses between them and capsulectl's deal view.
 
-The scripts' behaviour is tested against the Python modules in
+The scripts' behaviour is tested against the frozen golden of the Python modules' output in
 ``js-tests/receipt_parity.test.js``; this holds the files a plugin ships to
-what ``receipt_slot.py`` writes from the Python side, and records the
+what ``capsule_viewer.receipt_slot`` writes from the Python side, and records the
 co-match with ``capsulectl.deal-view/v0`` (capsule-cli
 ``internal/cli/assets/deal-view.manifest.json``, vendored from e9b1f21 in
 ``testdata/capsule-cli/``):
