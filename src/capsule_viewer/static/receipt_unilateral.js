@@ -884,6 +884,7 @@
   var V1_STATUSES = ["not_reached", "not_due", "no_statement", "waiting", "uncontested", "agreed_so_far", "agreed", "in_disagreement", "in_dispute", "ruled"];
   var V1_VALUES = ["met", "not_met"];
   var V1_REMEDIES = ["none", "due", "made", "not_honoured"];
+  var V1_SIDES = ["buyer", "seller"];
   var V1_CHECKS = ["passed", "failed", "not_run", "not_recomputed"];
 
   function closedWord(list, value, what) {
@@ -936,7 +937,7 @@
       check: closedWord(V1_CHECKS, get(r, "check"), "row check"),
       // `late` (optional in section 9, undefined until rowstatus reports it) is not read: the page shows no late line.
       ruling: isMap(ruling)
-        ? { value: or(str(get(ruling, "value")), ""), against: str(get(ruling, "against")) }
+        ? { value: or(str(get(ruling, "value")), ""), against: optionalWord(V1_SIDES, get(ruling, "against"), "ruling against") }
         : null,
       relied_on: relied.map(function (e) {
         if (!isMap(e)) throw new Unavailable("a relied_on entry of the v1 report is not an object");
@@ -2131,8 +2132,8 @@
     if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy) }));
     if (row.ruling !== null) {
       var value = this.token("deal.value", row.ruling.value);
-      // No `against` (null or empty): the ruling alone, never a made-up side.
-      bits.push(truthy(row.ruling.against) ? w("deal.row.ruling", { value: value, side: this.token("deal.side", row.ruling.against) }) : w("deal.row.ruling.bare", { value: value }));
+      // `against` is buyer, seller or null (anything else declined the report); null: the ruling alone.
+      bits.push(row.ruling.against !== null ? w("deal.row.ruling", { value: value, side: this.token("deal.side", row.ruling.against) }) : w("deal.row.ruling.bare", { value: value }));
     }
     bits.push(w("deal.row.check", { check: this.token("deal.check", row.check) }));
     if (row.local) bits.push(w("deal.local"));
