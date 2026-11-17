@@ -4,8 +4,9 @@
 The deal receipt modules, unilateral (``capsuleviewer.receipt.unilateral/v0``,
 a buyer's copy), seller (``capsuleviewer.receipt.seller/v0``, a seller's copy
 of one buyer thread) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
-composed/v1 bundle of both parties' copies), their manifests, and an example
-English wording pack (``wording-en.json``) with neutral example wording."""
+composed/v1 bundle of both parties' copies), and their manifests.
+``example_wording_pack`` returns the example English wording pack, which lives
+in ``capsule_viewer.receipt_slot``."""
 import warnings
 
 from .. import receipt_slot
