@@ -20,6 +20,7 @@ import {
   type CountMismatch,
   type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
+import { DEFAULT_PACKS } from "./contract-report-wording.js";
 import type { Words } from "./contract-report-wording.js";
 import { tagSource } from "./report-legend.js";
 import { OUTCOME_FRAME_VARS } from "./frame-tokens.generated.js";
@@ -279,6 +280,11 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
       el("span", "agg-of", of),
     );
     box.append(caption);
+    if (verdict === "out_of_scope") {
+      const fact = el("div", "agg-fact", contractFactNote(w));
+      fact.dataset.contractFact = "out-of-scope";
+      box.append(fact);
+    }
     const marker = mismatchMarker(figure, field, w);
     if (marker !== undefined) box.append(marker);
     buckets.append(box);
@@ -286,28 +292,39 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   out.append(buckets);
 
   const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
-  const switched = result.buckets.outOfScope !== undefined;
-  if (dated || switched) {
+  if (dated) {
+    // Module spec section 2, "Copied facts": the as-of date (the UTC date of
+    // generated_at, through `applicability.as_of`, the bare date when the
+    // pack's word lacks exactly one {date}) and `contract_fact.note`, which
+    // also sits beside the out_of_scope count above. This line is drawn only
+    // with a date: a Result with the switch alone states the note once, beside
+    // the count; one with both states it at both places, as the spec asks.
     const copied = el("p", "agg-note");
     if (dated) {
       // A dated Result passed validation, so generated_at parses.
       const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
-      copied.append(w.t("front.agg.as-of", { date }), " ");
+      const word = w.section3("applicability.as_of");
+      copied.append(
+        word !== undefined && word.split("{date}").length === 2
+          ? word.replace("{date}", date)
+          : date,
+        " ",
+      );
       copied.dataset.asOf = date;
     }
-    copied.append(
-      w.t(
-        dated && switched
-          ? "front.agg.copied.both"
-          : dated
-            ? "front.agg.copied.dates"
-            : "front.agg.copied.switch",
-      ),
-    );
+    copied.append(contractFactNote(w));
     copied.dataset.copiedFacts = "contract";
     out.append(copied);
   }
   return out;
+}
+
+/** `contract_fact.note`: the pack's word, else the default pack's, never the raw key or nothing (module spec section 2). */
+function contractFactNote(w: Words): string {
+  return (
+    w.section3("contract_fact.note") ??
+    DEFAULT_PACKS.lines.entries["contract_fact.note"]!
+  );
 }
 
 const shortDigest = (digest: string): string =>

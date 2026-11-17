@@ -717,13 +717,19 @@ function renderSummary(
         ?.contractRef,
       row.criterionId,
     );
-  const allRows = model.obligations.flatMap((o) => o.rows);
+  // Tests whose every claim is not yet in force are drawn in their own
+  // section after the in-force tests, never merged with them (Result v0
+  // section 4.3, contract-report module spec section 2).
+  const allRows = model.obligations.flatMap((o) =>
+    o.rows.filter((r) => !allLater(r)),
+  );
+  const laterRows = model.obligations.flatMap((o) => o.rows.filter(allLater));
   const sections: readonly (RowTier | undefined)[] =
     tierOf === undefined
       ? [undefined]
       : ROW_TIERS.filter((tier) => allRows.some((r) => tierOfRow(r) === tier));
-  for (const tier of sections) {
-    if (tier !== undefined) {
+  const drawSection = (tier: RowTier | undefined, later: boolean): void => {
+    if (tier !== undefined && !later) {
       const head = document.createElement("tbody");
       head.dataset.requirementTier = tier;
       const tr = el("tr", "tier");
@@ -745,10 +751,14 @@ function renderSummary(
       table.append(head);
     }
     for (const given of model.obligations) {
-      const obligation: ObligationModel =
-        tier === undefined
-          ? given
-          : { ...given, rows: given.rows.filter((r) => tierOfRow(r) === tier) };
+      const obligation: ObligationModel = {
+        ...given,
+        rows: given.rows.filter(
+          (r) =>
+            allLater(r) === later &&
+            (tier === undefined || tierOfRow(r) === tier),
+        ),
+      };
       if (obligation.rows.length === 0) continue;
       const tbody = document.createElement("tbody");
       tbody.dataset.obligationGroup = obligation.key;
@@ -799,9 +809,11 @@ function renderSummary(
           );
           return body;
         },
-        tier === undefined
-          ? `ob-${obligation.key}`
-          : `ob-${obligation.key}-${tier}`,
+        later
+          ? `ob-${obligation.key}-later`
+          : tier === undefined
+            ? `ob-${obligation.key}`
+            : `ob-${obligation.key}-${tier}`,
         true,
       );
       tbody.append(about);
@@ -819,10 +831,11 @@ function renderSummary(
         const head = el("div", "tnh");
         const testName = rowName(w, "b", "", test);
         head.append(testName, tierBadge(test.tier, w));
-        if (tier !== undefined) {
-          tr.dataset.requirementTier = tier;
-          const chip = el("span", "rtier", w.t(`requirement_tier.${tier}`));
-          chip.dataset.requirementTier = tier;
+        const rowTier = tier ?? (later ? tierOfRow(test) : undefined);
+        if (rowTier !== undefined) {
+          tr.dataset.requirementTier = rowTier;
+          const chip = el("span", "rtier", w.t(`requirement_tier.${rowTier}`));
+          chip.dataset.requirementTier = rowTier;
           head.append(chip);
         }
         nameCell.append(head);
@@ -860,7 +873,7 @@ function renderSummary(
             testName,
             drillRow,
             () => renderSessionList(sessionIds, model, presentation, w),
-            `test-${obligation.key}-${test.criterionId}`,
+            `test-${obligation.key}-${test.criterionId}${later ? "-later" : ""}`,
           );
           toggle.dataset.records = "sessions";
           toggle.dataset.drill = test.criterionId;
@@ -870,6 +883,30 @@ function renderSummary(
       }
       table.append(tbody);
     }
+  };
+  for (const tier of sections) drawSection(tier, false);
+  if (laterRows.length > 0) {
+    // The readiness section (module spec section 2): titled and noted by
+    // the pack's applicability words, after every in-force test.
+    const head = document.createElement("tbody");
+    head.dataset.section = "not-yet-in-force";
+    const tr = el("tr", "tier later");
+    const cell = el("td", "");
+    cell.setAttribute("colspan", "3");
+    cell.append(
+      el(
+        "b",
+        "",
+        w.t("applicability.not_yet_in_force.title", {
+          n: fmt(laterRows.length),
+        }),
+      ),
+      el("small", "", w.t("applicability.not_yet_in_force.note")),
+    );
+    tr.append(cell);
+    head.append(tr);
+    table.append(head);
+    drawSection(undefined, true);
   }
   section.append(table);
   const notes = el("aside", "footnotes");

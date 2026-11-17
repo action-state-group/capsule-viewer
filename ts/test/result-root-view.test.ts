@@ -72,13 +72,13 @@ it("the fourth bucket draws when the Result carries out_of_scope, counted on its
   // never counted as met
   const metList = buckets.querySelector('[data-bucket="met"]')!;
   expect(metList.textContent).not.toContain("claim-3");
-  // the copied-fact note names the out-of-scope switch, with no dates on this Result
-  const copied = root.querySelector<HTMLElement>("[data-copied-facts]")!;
-  expect(copied).not.toBeNull();
-  expect(copied.dataset.asOf).toBeUndefined();
-  expect(copied.textContent).toBe(
-    "The out-of-scope switch is copied from the contract, not re-checked here.",
+  // the copied-fact note sits beside the out-of-scope count; with no dates on
+  // this Result there is no as-of line, so it is not stated a second time
+  const fact = root.querySelector<HTMLElement>("[data-contract-fact]")!;
+  expect(fact.textContent).toBe(
+    "Dates and the out-of-scope switch are the producer's copy of the contract, not re-checked by this page.",
   );
+  expect(root.querySelector("[data-copied-facts]")).toBeNull();
 });
 
 it("a claim not yet in force is shown in its own section, after the in-force buckets, with the as-of date and the copied-facts note -- never merged with them", async () => {
@@ -99,7 +99,7 @@ it("a claim not yet in force is shown in its own section, after the in-force buc
   const copied = root.querySelector<HTMLElement>("[data-copied-facts]")!;
   expect(copied.dataset.asOf).toBe("2026-09-16");
   expect(copied.textContent).toBe(
-    "In force as of 2026-09-16. The dates are copied from the contract, not re-checked here.",
+    "In force as of 2026-09-16. Dates and the out-of-scope switch are the producer's copy of the contract, not re-checked by this page.",
   );
   const buckets = root.querySelector<HTMLElement>('[data-buckets="verdict"]')!;
   // never merged into not_evaluable: that bucket is empty

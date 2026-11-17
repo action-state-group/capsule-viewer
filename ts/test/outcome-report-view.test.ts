@@ -1101,7 +1101,7 @@ it("drill-down: says plainly the transcript is absent, and gives the record ids 
   expect(root.querySelectorAll("button, script")).toHaveLength(0);
 });
 
-it("a rule not yet in force is not called did-not-apply on its roll-up row", async () => {
+it("a rule not yet in force in every conversation leaves the rules table and is drawn only in the not-yet-in-force section", async () => {
   const source = fixture("outcome-report-bundle.json");
   const resultDoc = ((source.disclosures as Obj).result as Obj)
     .agent_input as Obj;
@@ -1122,16 +1122,60 @@ it("a rule not yet in force is not called did-not-apply on its roll-up row", asy
   };
   const { bundle } = await sealEvidenceBundle(source);
   const root = await render(bundle);
-  const row = root.querySelector<HTMLElement>(`tr[data-rule="${ref}"]`);
-  expect(row).not.toBeNull();
-  expect(row!.querySelector('[data-note="not-applied"]')).toBeNull();
-  // ...but says how many conversations it is not yet in force in
-  expect(
-    row!.querySelector<HTMLElement>('[data-note="not-in-force"]')?.textContent,
-  ).toMatch(/^not yet in force in \d+$/);
+  // no in-force row for it: never a zero-count row, never "did not apply"
+  expect(root.querySelector(`tr[data-rule="${ref}"]`)).toBeNull();
   expect(
     root.querySelector<HTMLElement>('[data-note="rule-counts"]')?.textContent,
   ).toMatch(/^Counts are out of the report's \d+ conversations\.$/);
+  // the later criteria sit in their own section after the rules, titled and
+  // noted by the pack's applicability words, every one labelled readiness
+  const later = root.querySelector<HTMLElement>(
+    '[data-section="not-yet-in-force"]',
+  );
+  expect(later).not.toBeNull();
+  expect(later!.querySelector("h2")?.textContent).toBe("Not yet in force");
+  expect(later!.textContent).toContain("Readiness only");
+  const items = later!.querySelectorAll<HTMLElement>("li.later-item");
+  expect(items.length).toBeGreaterThan(0);
+  for (const item of items) {
+    expect(item.dataset.rule).toBe(ref);
+    expect(item.querySelector(".readiness")?.textContent).toMatch(
+      /^readiness only: /,
+    );
+    // assurance stays on the claim
+    expect(
+      item.querySelector<HTMLElement>(".assurance")?.dataset.tier,
+    ).toBeDefined();
+  }
+  expect(root.querySelector('[data-section="rules"]')!.contains(later)).toBe(
+    false,
+  );
+});
+
+it("a Result whose every claim is not yet in force draws only the not-yet-in-force section: no conversation is undecided", async () => {
+  const source = fixture("outcome-report-bundle.json");
+  const resultDoc = ((source.disclosures as Obj).result as Obj)
+    .agent_input as Obj;
+  const claims = resultDoc.claims as Obj[];
+  for (const claim of claims) claim.applies_from = "2099-01-01";
+  (source.disclosures as Obj).result = {
+    agent_input: {
+      ...resultDoc,
+      claims,
+      aggregate: {
+        ...(resultDoc.aggregate as Obj),
+        buckets: rebuildBuckets([]),
+      },
+    },
+  };
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = await render(bundle);
+  const later = root.querySelector<HTMLElement>(
+    '[data-section="not-yet-in-force"]',
+  );
+  expect(later).not.toBeNull();
+  expect(Number(later!.dataset.count)).toBeGreaterThan(0);
+  expect(root.textContent).not.toMatch(/Could not decide: [1-9]/u);
 });
 
 it("drill-down: a not_applicable criterion is its own state -- no claim, no P, never drawn as met or missed", async () => {
