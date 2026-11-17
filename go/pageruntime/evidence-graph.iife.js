@@ -17689,13 +17689,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("d9acdea4c629e3ae42db08872d96da9e982c589a");
+    return commitPrefix("d2469c3f76ce0f01190ccde5328be1580f0005c3");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.18.3",
+    viewerVersion: "0.19.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.14.0",
     cllVersion: "0.3.0",
@@ -18221,6 +18221,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "card.wording.refused.fit": "it does not fit this card's words",
       "front.mock": "Verdicts are from a mock judge and are placeholders.",
       "front.agg.evaluated": "{evaluations} of {requirements}",
+      "front.agg.imported": "Imported: the records behind this result were all backfilled after the fact; none was recorded at the time.",
       "front.agg.evaluations.one": "{n} evaluation",
       "front.agg.evaluations.other": "{n} evaluations",
       "front.agg.requirements.one": "{n} requirement",
@@ -18232,10 +18233,11 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
-      "front.agg.as-of": "In force as of {date}.",
-      "front.agg.copied.both": "The dates and the out-of-scope switch are copied from the contract, not re-checked here.",
-      "front.agg.copied.dates": "The dates are copied from the contract, not re-checked here.",
-      "front.agg.copied.switch": "The out-of-scope switch is copied from the contract, not re-checked here.",
+      "lines.later.readiness": "readiness only",
+      "applicability.as_of": "In force as of {date}.",
+      "applicability.not_yet_in_force.title": "Not yet in force",
+      "applicability.not_yet_in_force.note": "Readiness only: these requirements apply from a later date, which the producer copied from the contract. They are in none of the met, not met or could not decide counts above, and a result here is never a violation.",
+      "contract_fact.note": "Dates and the out-of-scope switch are the producer's copy of the contract, not re-checked by this page.",
       "prov.brief.judge.partial": "judge pinned for some results",
       "front.agg.excluded": "{excluded} excluded as not applicable",
       "front.agg.bucket.met": "Met",
@@ -18831,6 +18833,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "card.wording.refused.fit": "it does not fit this card's words",
       "front.mock": "Verdicts are from a mock judge and are placeholders.",
       "front.agg.evaluated": "{evaluations} of {requirements}",
+      "front.agg.imported": "Imported: the records behind this result were all backfilled after the fact; none was recorded at the time.",
       "front.agg.evaluations.one": "{n} evaluation",
       "front.agg.evaluations.other": "{n} evaluations",
       "front.agg.requirements.one": "{n} requirement",
@@ -18842,10 +18845,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
-      "front.agg.as-of": "In force as of {date}.",
-      "front.agg.copied.both": "The dates and the out-of-scope switch are copied from the contract, not re-checked here.",
-      "front.agg.copied.dates": "The dates are copied from the contract, not re-checked here.",
-      "front.agg.copied.switch": "The out-of-scope switch is copied from the contract, not re-checked here.",
+      "applicability.as_of": "In force as of {date}.",
+      "applicability.not_yet_in_force.title": "Not yet in force",
+      "applicability.not_yet_in_force.note": "Readiness only: these requirements apply from a later date, which the producer copied from the contract. They are in none of the met, not met or could not decide counts above, and a result here is never a violation.",
+      "contract_fact.note": "Dates and the out-of-scope switch are the producer's copy of the contract, not re-checked by this page.",
       "prov.brief.judge.partial": "judge pinned for some results",
       "front.agg.excluded": "{excluded} excluded as not applicable",
       "front.agg.bucket.met": "Met",
@@ -19261,6 +19264,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "card.wording.refused.fit": "it does not fit this card's words",
       "front.mock": "Verdicts are from a mock judge and are placeholders.",
       "front.agg.evaluated": "{evaluations} of {requirements}",
+      "front.agg.imported": "Imported: the records behind this result were all backfilled after the fact; none was recorded at the time.",
       "front.agg.evaluations.one": "{n} evaluation",
       "front.agg.evaluations.other": "{n} evaluations",
       "front.agg.requirements.one": "{n} requirement",
@@ -19272,10 +19276,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "front.agg.later.one": "{n} evaluation not yet in force",
       "front.agg.later.other": "{n} evaluations not yet in force",
       "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
-      "front.agg.as-of": "In force as of {date}.",
-      "front.agg.copied.both": "The dates and the out-of-scope switch are copied from the contract, not re-checked here.",
-      "front.agg.copied.dates": "The dates are copied from the contract, not re-checked here.",
-      "front.agg.copied.switch": "The out-of-scope switch is copied from the contract, not re-checked here.",
+      "applicability.as_of": "In force as of {date}.",
+      "contract_fact.note": "Dates and the out-of-scope switch are the producer's copy of the contract, not re-checked by this page.",
       "prov.brief.judge.partial": "judge pinned for some results",
       "front.agg.excluded": "{excluded} excluded as not applicable",
       "front.agg.bucket.met": "Met",
@@ -19567,6 +19569,11 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     ))
       throw new WordingPackError(
         `wording pack is not an ${WORDING_PACK_VERSION} object`
+      );
+    const reserved = Object.keys(entries).find((k) => k.startsWith("core."));
+    if (reserved !== void 0)
+      throw new WordingPackError(
+        `wording pack carries the reserved key ${JSON.stringify(reserved)}`
       );
     return {
       id: p.id,
@@ -20007,13 +20014,16 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     // aggregate's unknown count is, what the page and the bundle carry, and
     // the producer's findings label.
     "front.mock",
+    "front.agg.imported",
     "front.agg.unknown.one",
     "front.agg.unknown.other",
     "front.agg.mismatch",
-    "front.agg.as-of",
-    "front.agg.copied.both",
-    "front.agg.copied.dates",
-    "front.agg.copied.switch",
+    // Module spec section 2, "Copied facts": a pack cannot make a date or a
+    // switch copied from the contract read as checked here, and cannot
+    // make a later claim read as in force.
+    "applicability.as_of",
+    "applicability.not_yet_in_force.note",
+    "contract_fact.note",
     // The record page, the lowest level (record-page.ts): what each proof
     // proves and does not, what a status means, and what this page did not
     // run. A pack cannot make a rung read as proving more than it does.
@@ -20590,9 +20600,9 @@ ${key}`);
     return problems.map((p) => `${pack.id}: ${p}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
-    lines: "80b1373cd923bbf0fcf5ffaa2499d851f6f0907bca1263948cbea502f62df3b7",
-    groups: "004c1c663a60e8c0248219c6be9b2c91aa89108c648d30144d141137cd02ea99",
-    generic: "10e802539747ebff6fc92b1947d083609c99ab33ad4b3579ed4e1d66425defa0"
+    lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
+    groups: "76acc9598202663738d7d2903ca1a042d9b7ca21799297946e4da39ea77d5250",
+    generic: "6c7570711462e9a9af94faac45f56414fd97a1681608be03299f6fa756eaa41c"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -22425,6 +22435,52 @@ ${key}`);
     }
     host.append(section);
   }
+  function renderNotYetInForce(host, model, w) {
+    const entries = [
+      ...model.conversations.map((c) => ({ c, later: c.notYetInForce })),
+      ...model.notYetInForce.map((c) => ({ c, later: c.notYetInForce }))
+    ].filter((e) => e.later.length > 0);
+    if (entries.length === 0) return;
+    const total = entries.reduce((sum, e) => sum + e.later.length, 0);
+    const section = el8("section", "sec");
+    section.dataset.section = "not-yet-in-force";
+    section.dataset.count = String(total);
+    section.append(
+      el8(
+        "h2",
+        "",
+        w.t("applicability.not_yet_in_force.title", { n: fmtCount(total) })
+      ),
+      el8("p", "lede", w.t("applicability.not_yet_in_force.note"))
+    );
+    const list2 = el8("ul", "later-list");
+    for (const { c, later } of entries) {
+      for (const cr of later) {
+        const label = criterionLabel(model, cr.checkId, cr.criterionId, w);
+        const item = el8("li", "later-item");
+        item.dataset.conversation = c.conversationId;
+        item.dataset.rule = `${cr.checkId}.${cr.criterionId}`;
+        item.append(
+          el8("b", "", label.label),
+          document.createTextNode(` \xB7 ${c.conversationId} \xB7 `),
+          el8(
+            "span",
+            "readiness",
+            `${w.t("lines.later.readiness")}: ${w.enumWord("verdict", cr.verdict)}`
+          )
+        );
+        if (cr.claim !== void 0) {
+          const [, line, data] = assuranceRow(cr.claim, w);
+          const assurance = el8("small", "assurance", ` \xB7 ${line}`);
+          Object.assign(assurance.dataset, data);
+          item.append(assurance);
+        }
+        list2.append(item);
+      }
+    }
+    section.append(list2);
+    host.append(section);
+  }
   function renderRules(host, model, runInfo, result3, w) {
     const tierOf = model.gating?.tierOf;
     const section = el8("section", "sec");
@@ -22472,11 +22528,19 @@ ${key}`);
       const claim = model.conversations.flatMap((c) => c.criteria).find((c) => `${c.checkId}.${c.criterionId}` === ref && c.claim)?.claim;
       return tierOf(claim?.contractRef, ref);
     };
+    const inForceRefs = new Set(
+      model.conversations.flatMap(
+        (c) => c.criteria.map((cr) => `${cr.checkId}.${cr.criterionId}`)
+      )
+    );
+    const whollyLater = new Set(
+      [...model.conversations, ...model.notYetInForce].flatMap((c) => c.notYetInForce).map((cr) => `${cr.checkId}.${cr.criterionId}`).filter((ref) => !inForceRefs.has(ref))
+    );
     const tiers = /* @__PURE__ */ new Map();
     for (const check of model.terms.checks)
       for (const criterion2 of check.criteria) {
         const ref = `${check.id}.${criterion2.id}`;
-        tiers.set(ref, ruleTier(ref));
+        if (!whollyLater.has(ref)) tiers.set(ref, ruleTier(ref));
       }
     const sections = tierOf === void 0 ? [void 0] : ROW_TIERS.filter((tier) => [...tiers.values()].includes(tier));
     for (const tier of sections) {
@@ -22495,7 +22559,7 @@ ${key}`);
       }
       for (const check of model.terms.checks) {
         const criteria = check.criteria.filter(
-          (criterion2) => tiers.get(`${check.id}.${criterion2.id}`) === tier
+          (criterion2) => tiers.has(`${check.id}.${criterion2.id}`) && tiers.get(`${check.id}.${criterion2.id}`) === tier
         );
         if (criteria.length === 0) continue;
         const group = el8("tr", "grp");
@@ -23184,6 +23248,7 @@ ${key}`);
       if (subject !== void 0) levels.L0.append(subject);
     }
     renderRules(levels.L1, model, runInfo, result3, w);
+    renderNotYetInForce(levels.L1, model, w);
     leadWithProvenance(
       levels.L1,
       levels.L1.querySelector('[data-section="rules"]'),
@@ -23559,10 +23624,13 @@ ${key}`);
       model.sessions.flatMap((s) => s.tests).find((t) => t.criterionId === row2.criterionId && t.claim)?.claim?.contractRef,
       row2.criterionId
     );
-    const allRows = model.obligations.flatMap((o) => o.rows);
+    const allRows = model.obligations.flatMap(
+      (o) => o.rows.filter((r) => !allLater(r))
+    );
+    const laterRows = model.obligations.flatMap((o) => o.rows.filter(allLater));
     const sections = tierOf === void 0 ? [void 0] : ROW_TIERS.filter((tier) => allRows.some((r) => tierOfRow(r) === tier));
-    for (const tier of sections) {
-      if (tier !== void 0) {
+    const drawSection = (tier, later) => {
+      if (tier !== void 0 && !later) {
         const head2 = document.createElement("tbody");
         head2.dataset.requirementTier = tier;
         const tr = el9("tr", "tier");
@@ -23584,7 +23652,12 @@ ${key}`);
         table3.append(head2);
       }
       for (const given of model.obligations) {
-        const obligation = tier === void 0 ? given : { ...given, rows: given.rows.filter((r) => tierOfRow(r) === tier) };
+        const obligation = {
+          ...given,
+          rows: given.rows.filter(
+            (r) => allLater(r) === later && (tier === void 0 || tierOfRow(r) === tier)
+          )
+        };
         if (obligation.rows.length === 0) continue;
         const tbody = document.createElement("tbody");
         tbody.dataset.obligationGroup = obligation.key;
@@ -23631,7 +23704,7 @@ ${key}`);
             );
             return body;
           },
-          tier === void 0 ? `ob-${obligation.key}` : `ob-${obligation.key}-${tier}`,
+          later ? `ob-${obligation.key}-later` : tier === void 0 ? `ob-${obligation.key}` : `ob-${obligation.key}-${tier}`,
           true
         );
         tbody.append(about);
@@ -23649,10 +23722,11 @@ ${key}`);
           const head2 = el9("div", "tnh");
           const testName = rowName2(w, "b", "", test);
           head2.append(testName, tierBadge(test.tier, w));
-          if (tier !== void 0) {
-            tr.dataset.requirementTier = tier;
-            const chip = el9("span", "rtier", w.t(`requirement_tier.${tier}`));
-            chip.dataset.requirementTier = tier;
+          const rowTier2 = tier ?? (later ? tierOfRow(test) : void 0);
+          if (rowTier2 !== void 0) {
+            tr.dataset.requirementTier = rowTier2;
+            const chip = el9("span", "rtier", w.t(`requirement_tier.${rowTier2}`));
+            chip.dataset.requirementTier = rowTier2;
             head2.append(chip);
           }
           nameCell.append(head2);
@@ -23688,7 +23762,7 @@ ${key}`);
               testName,
               drillRow,
               () => renderSessionList(sessionIds, model, presentation, w),
-              `test-${obligation.key}-${test.criterionId}`
+              `test-${obligation.key}-${test.criterionId}${later ? "-later" : ""}`
             );
             toggle.dataset.records = "sessions";
             toggle.dataset.drill = test.criterionId;
@@ -23698,6 +23772,28 @@ ${key}`);
         }
         table3.append(tbody);
       }
+    };
+    for (const tier of sections) drawSection(tier, false);
+    if (laterRows.length > 0) {
+      const head2 = document.createElement("tbody");
+      head2.dataset.section = "not-yet-in-force";
+      const tr = el9("tr", "tier later");
+      const cell2 = el9("td", "");
+      cell2.setAttribute("colspan", "3");
+      cell2.append(
+        el9(
+          "b",
+          "",
+          w.t("applicability.not_yet_in_force.title", {
+            n: fmt4(laterRows.length)
+          })
+        ),
+        el9("small", "", w.t("applicability.not_yet_in_force.note"))
+      );
+      tr.append(cell2);
+      head2.append(tr);
+      table3.append(head2);
+      drawSection(void 0, true);
     }
     section.append(table3);
     const notes = el9("aside", "footnotes");
@@ -25610,29 +25706,36 @@ ${key}`);
         el12("span", "agg-of", of)
       );
       box.append(caption);
+      if (verdict2 === "out_of_scope") {
+        const fact = el12("div", "agg-fact", contractFactNote(w));
+        fact.dataset.contractFact = "out-of-scope";
+        box.append(fact);
+      }
       const marker = mismatchMarker(figure, field, w);
       if (marker !== void 0) box.append(marker);
       buckets.append(box);
     }
     out.append(buckets);
     const dated = result3.claims.some((claim) => claim.appliesFrom !== void 0);
-    const switched = result3.buckets.outOfScope !== void 0;
-    if (dated || switched) {
+    if (dated) {
       const copied = el12("p", "agg-note");
       if (dated) {
         const date = utcDateOf(result3.generatedAt) ?? result3.generatedAt;
-        copied.append(w.t("front.agg.as-of", { date }), " ");
+        const word = w.section3("applicability.as_of");
+        copied.append(
+          word !== void 0 && word.split("{date}").length === 2 ? word.replace("{date}", date) : date,
+          " "
+        );
         copied.dataset.asOf = date;
       }
-      copied.append(
-        w.t(
-          dated && switched ? "front.agg.copied.both" : dated ? "front.agg.copied.dates" : "front.agg.copied.switch"
-        )
-      );
+      copied.append(contractFactNote(w));
       copied.dataset.copiedFacts = "contract";
       out.append(copied);
     }
     return out;
+  }
+  function contractFactNote(w) {
+    return w.section3("contract_fact.note") ?? DEFAULT_PACKS.lines.entries["contract_fact.note"];
   }
   var shortDigest = (digest2) => digest2.length > 12 ? `${digest2.slice(0, 4)}\u2026${digest2.slice(-4)}` : digest2;
   function renderCoreIdentity(model) {
@@ -25676,10 +25779,33 @@ ${key}`);
     block.append(top, rest);
     return block;
   }
-  async function coreStripModel(result3, words) {
+  function backfillOnly(document2) {
+    const isObj5 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+    if (!isObj5(document2) || !isObj5(document2["coverage_report"])) return false;
+    const requirements = document2["coverage_report"]["requirements"];
+    if (!Array.isArray(requirements)) return false;
+    let records = 0;
+    for (const requirement of requirements) {
+      if (!isObj5(requirement)) return false;
+      const list2 = requirement["sources"];
+      if (list2 === void 0) continue;
+      if (!Array.isArray(list2)) return false;
+      for (const source of list2) {
+        if (!isObj5(source)) return false;
+        const { contemporaneous_count: live, backfilled_count: back } = source;
+        const total = source["record_count"];
+        if (live !== 0 || !Number.isSafeInteger(total) || total < 0 || back !== total)
+          return false;
+        records += total;
+      }
+    }
+    return records > 0;
+  }
+  async function coreStripModel(result3, words, document2) {
     const tally2 = await tallyJudges(result3.records, result3.claims);
     return {
       result: result3,
+      imported: backfillOnly(document2),
       words,
       mock: judgedByMock(tally2),
       pins: tally2.pins.map((pin) => pin.digest)
@@ -25696,6 +25822,14 @@ ${key}`);
       const mark = el12("p", "mockmark", model.words.t("front.mock"));
       mark.dataset.section = "mock-judge";
       strip.append(mark);
+    }
+    if (model.imported) {
+      const note = tagSource(
+        el12("p", "agg-note imported", model.words.t("front.agg.imported")),
+        "core"
+      );
+      note.dataset.imported = "";
+      strip.append(note);
     }
     strip.append(renderCoreIdentity(model));
     strip.append(renderAggregate(model.result, model.words));
@@ -28343,7 +28477,12 @@ ${pad.repeat(depth)}`;
       const words = result3 === void 0 && !charted ? void 0 : await contractReportWords(grouping, options.wording, {
         singleContract: result3 !== void 0 && citesOneContract(result3)
       });
-      if (result3 !== void 0) strip = await coreStripModel(result3, words);
+      if (result3 !== void 0)
+        strip = await coreStripModel(
+          result3,
+          words,
+          resultDocument2(context, result3)
+        );
       if (charted)
         chartsNode = await drawCharts(
           context,
@@ -30358,6 +30497,7 @@ ${pad.repeat(depth)}`;
 .cvh-seal-title{font-weight:700}.cvh-checked summary{cursor:pointer;font-weight:700;color:var(--cvh-navy)}
 .cvh-check[data-status=fail]{color:var(--cvh-bad)}.cvh-check[data-status=pass]{color:var(--cvh-ok)}
 .cvh-main,.cvh-side{display:grid;gap:16px;align-content:start}.cvh-refused{border:1px solid var(--cvh-bad);color:var(--cvh-bad);padding:8px 12px;border-radius:8px}
+@media screen and (prefers-color-scheme:dark){.cv-history{--cvh-ink:#e8eaee;--cvh-slate:#a3a9b3;--cvh-line:#33373e;--cvh-cream:#22262d;--cvh-navy:#c3d0e8;--cvh-ok:#5fcf90;--cvh-bad:#ff8f84;background:#16181c;color-scheme:dark}.cvh-badge[data-audience=private]{background:#3a2f1a;border-color:#e6b85c}}
 @media (min-width:900px){.cv-history{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}.cvh-header{grid-column:1/-1}}
 @media print{.cv-history{max-width:none;grid-template-columns:1fr}.cvh-proof code{display:block}}
 `;
