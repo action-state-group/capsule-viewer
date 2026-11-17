@@ -4,7 +4,7 @@ registry chooses between them and capsulectl's deal view.
 
 The scripts' behaviour is tested against the Python modules in
 ``js-tests/receipt_parity.test.js``; this holds the files a plugin ships to
-what ``module_slot.py`` writes from the Python side, and records the
+what ``receipt_slot.py`` writes from the Python side, and records the
 co-match with ``capsulectl.deal-view/v0`` (capsule-cli
 ``internal/cli/assets/deal-view.manifest.json``, vendored from e9b1f21 in
 ``testdata/capsule-cli/``):
@@ -38,7 +38,8 @@ import jsonschema
 import pytest
 from receipt_helpers import RECEIPTS, audience_of, load
 
-from capsule_viewer.receipt import BILATERAL_MANIFEST, SELLER_MANIFEST, UNILATERAL_MANIFEST, module_slot
+from capsule_viewer import receipt_slot
+from capsule_viewer.receipt import BILATERAL_MANIFEST, SELLER_MANIFEST, UNILATERAL_MANIFEST
 from capsule_viewer.registry import AmbiguityError, Registry, co_matchable, descriptor, matches
 from capsule_viewer.verifier_report import context_from_capsulectl
 
@@ -47,7 +48,7 @@ AAC = ROOT / "tests" / "testdata" / "aac-presentation"
 SCHEMA = json.loads((AAC / "presentation-manifest-v0.json").read_text(encoding="utf-8"))
 BUILTINS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((AAC / "builtin").glob("*.json"))}
 DEAL_VIEW = json.loads((ROOT / "tests" / "testdata" / "capsule-cli" / "deal-view.manifest.json").read_text(encoding="utf-8"))
-SLOT = {kind: json.loads(module_slot.manifest_path(kind).read_text(encoding="utf-8")) for kind in module_slot.KINDS}
+SLOT = {kind: json.loads(receipt_slot.manifest_path(kind).read_text(encoding="utf-8")) for kind in receipt_slot.KINDS}
 PYTHON = {"unilateral": UNILATERAL_MANIFEST, "seller": SELLER_MANIFEST, "bilateral": BILATERAL_MANIFEST}
 # capsule-cli internal/cli/plugin_presentations.go presentationFileLimit.
 PRESENTATION_FILE_LIMIT = 1 << 20
@@ -70,41 +71,41 @@ def _generated(script: str, name: str) -> object:
 # ---- the shipped files ---------------------------------------------------------
 
 
-def test_the_scripts_and_manifests_are_what_module_slot_writes():
-    assert module_slot.stale() == []
+def test_the_scripts_and_manifests_are_what_receipt_slot_writes():
+    assert receipt_slot.stale() == []
 
 
-@pytest.mark.parametrize("kind", module_slot.KINDS)
+@pytest.mark.parametrize("kind", receipt_slot.KINDS)
 def test_each_manifest_is_schema_valid_and_pins_its_script_and_the_kit_stylesheet(kind):
     manifest = SLOT[kind]
     validator = jsonschema.Draft202012Validator({**SCHEMA, "$ref": "#/$defs/PresentationManifest"})
     assert list(validator.iter_errors(manifest)) == []
     assert manifest["executable"] == {
         "carrier": "module-slot",
-        "script_sha256": _sha(module_slot.script_path(kind)),
-        "style_sha256": [_sha(module_slot.KIT_CSS)],
+        "script_sha256": _sha(receipt_slot.script_path(kind)),
+        "style_sha256": [_sha(receipt_slot.KIT_CSS)],
     }
     # Everything else is the Python module's manifest: one id, one set of selection clauses, two carriers.
     assert {k: v for k, v in manifest.items() if k != "executable"} == {k: v for k, v in PYTHON[kind].items() if k != "executable"}
     assert PYTHON[kind]["executable"] == {"carrier": "core-runtime"}
 
 
-@pytest.mark.parametrize("kind", module_slot.KINDS)
+@pytest.mark.parametrize("kind", receipt_slot.KINDS)
 def test_each_script_carries_its_manifest_the_words_and_the_stylesheet(kind):
-    script = module_slot.script_path(kind).read_text(encoding="utf-8")
-    assert module_slot.script_path(kind).stat().st_size < PRESENTATION_FILE_LIMIT
+    script = receipt_slot.script_path(kind).read_text(encoding="utf-8")
+    assert receipt_slot.script_path(kind).stat().st_size < PRESENTATION_FILE_LIMIT
     assert _generated(script, "KIND") == kind
     # A script cannot carry its own digest: all zeros there, as in capsulectl's deal view.
     assert _generated(script, "MANIFEST") == {**SLOT[kind], "executable": {**SLOT[kind]["executable"], "script_sha256": "0" * 64}}
-    pack = module_slot.pack_bytes()
+    pack = receipt_slot.pack_bytes()
     assert _generated(script, "WORDS") == json.loads(pack)["entries"]
     assert _generated(script, "PACK") == {"id": json.loads(pack)["id"], "sha256": hashlib.sha256(pack).hexdigest()}
-    assert _generated(script, "KIT_CSS") == module_slot.KIT_CSS.read_text(encoding="utf-8")
+    assert _generated(script, "KIT_CSS") == receipt_slot.KIT_CSS.read_text(encoding="utf-8")
 
 
 def test_one_script_per_module_registering_only_its_own():
-    scripts = [module_slot.script_path(k).read_text(encoding="utf-8") for k in module_slot.KINDS]
-    assert len({_sha(module_slot.script_path(k)) for k in module_slot.KINDS}) == 3
+    scripts = [receipt_slot.script_path(k).read_text(encoding="utf-8") for k in receipt_slot.KINDS]
+    assert len({_sha(receipt_slot.script_path(k)) for k in receipt_slot.KINDS}) == 3
     for script in scripts:
         assert script.count("root.EvidenceGraph.registerPresentation(") == 1
         assert "import " not in script.split("(function (root)", 1)[1].split("\n", 1)[0]

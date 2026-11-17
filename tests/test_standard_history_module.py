@@ -17,8 +17,8 @@ import jsonschema
 import pytest
 
 from capsule_viewer.history import HISTORY_MANIFEST
-from capsule_viewer.receipt.module_slot import KINDS
-from capsule_viewer.receipt.module_slot import manifest as receipt_manifest
+from capsule_viewer.receipt_slot import KINDS
+from capsule_viewer.receipt_slot import manifest as receipt_manifest
 from capsule_viewer.registry import co_matchable
 from capsule_viewer.rules import rules_manifest
 from capsule_viewer.rules.fixture import RECORD_KIND

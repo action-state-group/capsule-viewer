@@ -7,8 +7,8 @@ of one buyer thread) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
 composed/v1 bundle of both parties' copies), their manifests, and an example
 English wording pack (``wording-en.json``) with neutral example wording."""
 import warnings
-from importlib import resources
 
+from .. import receipt_slot
 from .bilateral import (
     BILATERAL_MANIFEST,
     BilateralModel,
@@ -24,8 +24,8 @@ from .role import SELLER_KIND, sealed_party_role, sealed_side, seller_kind_engag
 from .seller import SELLER_MANIFEST, SellerModel, SellerReceiptModule, build_seller, seller_manifest
 
 # Deprecated (capsule-viewer#71): the Python receipt modules are the test oracle
-# for the JS module-slot scripts and the generator of those scripts
-# (``module_slot --write``); the receipt page is built by the TypeScript
+# for the JS module-slot scripts (their generator has moved to
+# ``capsule_viewer.receipt_slot``); the receipt page is built by the TypeScript
 # implementation (``buildPresentation`` with ``format: "static"``).
 # They will be removed in a later release.
 warnings.warn(
@@ -40,7 +40,7 @@ warnings.warn(
 
 def example_wording_pack() -> bytes:
     """The exact bytes of the example English wording pack."""
-    return resources.files(__package__).joinpath("wording-en.json").read_bytes()
+    return receipt_slot.pack_bytes()
 
 
 __all__ = [
