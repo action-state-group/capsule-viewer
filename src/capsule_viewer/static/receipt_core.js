@@ -936,7 +936,7 @@
       check: closedWord(V1_CHECKS, get(r, "check"), "row check"),
       // `late` (optional in section 9, undefined until rowstatus reports it) is not read: the page shows no late line.
       ruling: isMap(ruling)
-        ? { value: or(str(get(ruling, "value")), "") }
+        ? { value: or(str(get(ruling, "value")), ""), against: str(get(ruling, "against")) }
         : null,
       relied_on: relied.map(function (e) {
         if (!isMap(e)) throw new Unavailable("a relied_on entry of the v1 report is not an object");
@@ -2129,7 +2129,11 @@
     // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
     if (row.value !== null && row.status !== "ruled") bits.push(w("deal.row.value", { value: this.token("deal.value", row.value) }));
     if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy) }));
-    if (row.ruling !== null) bits.push(w("deal.row.ruling", { value: this.token("deal.value", row.ruling.value) }));
+    if (row.ruling !== null) {
+      var value = this.token("deal.value", row.ruling.value);
+      // No `against` (null or empty): the ruling alone, never a made-up side.
+      bits.push(truthy(row.ruling.against) ? w("deal.row.ruling", { value: value, side: this.token("deal.side", row.ruling.against) }) : w("deal.row.ruling.bare", { value: value }));
+    }
     bits.push(w("deal.row.check", { check: this.token("deal.check", row.check) }));
     if (row.local) bits.push(w("deal.local"));
     return bits.join("; ");

@@ -73,7 +73,7 @@ describe("the deal/v1 receipt", () => {
     expect(open.host.L0.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("started");
     expect(open.host.L0.querySelector("[data-settled]")).toBeNull();
     const done = await page(content({ settled: true }), "L0");
-    expect(done.host.L0.querySelector("[data-settled]").textContent).toBe("Settled: every row is agreed, uncontested, or ruled with its remedy made, as the holder computed it.");
+    expect(done.host.L0.querySelector("[data-settled]").textContent).toBe("Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.");
     for (const p of [open, done]) expect(p.text).not.toMatch(/closed|close\b/i);
     const waiting = await page(content({ start: { state: "awaiting_agreement", local: false, by: null }, settled: false, rows_state: "not_started", rows: [] }), "L0");
     expect(waiting.host.L0.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("awaiting_agreement");
@@ -130,7 +130,9 @@ describe("the deal/v1 receipt", () => {
     const p = await page(content({ rows: [{ ...ROW, status: "ruled", local: true, due: "not_set", remedy: "none", ruling: { record: "r", value: "not_met", against: "seller", final: true, remedy_due: null } }] }));
     expect(p.text).toMatch(/Holder's time only: this result rests on a record with no time from a named witness/);
     expect(p.text).toMatch(/not set/);
-    expect(p.text).toMatch(/Ruling: not met/);
+    expect(p.text).toMatch(/Ruling: not met, against the seller/);
+    const bare = await page(content({ rows: [{ ...ROW, status: "ruled", remedy: "none", ruling: { record: "r", value: "not_met", against: null, final: true, remedy_due: null } }] }));
+    expect(bare.text).toMatch(/Ruling: not met(?!, against)/);
     expect(p.text).not.toMatch(/Statement: /);
   });
 

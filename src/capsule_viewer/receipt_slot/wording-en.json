@@ -359,7 +359,7 @@
     "deal.state.started": "Started",
     "deal.state.awaiting_agreement": "Awaiting agreement",
     "deal.state.not_started": "Not started",
-    "deal.settled": "Settled: every row is agreed, uncontested, or ruled with its remedy made, as the holder computed it.",
+    "deal.settled": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.",
     "deal.start.by": "Started by: {by}.",
     "deal.start.by.offerer_in_time": "the offerer, in time",
     "deal.start.by.acceptor_named": "the acceptor, as named",
@@ -407,7 +407,7 @@
     "deal.check.not_recomputed": "not recomputed",
     "deal.row.value": "Statement: {value}",
     "deal.row.remedy": "Remedy: {remedy}",
-    "deal.row.ruling": "Ruling: {value}",
+    "deal.row.ruling": "Ruling: {value}, against the {side}",
     "deal.row.check": "Payment check: {check}",
     "deal.pack_digest": "The terms pack the agreement cites, by digest:",
     "deal.rests.own": "The holder's own log held {size} records.",
@@ -418,6 +418,9 @@
     "deal.rests.witnesses": "Witnesses the agreement names: {count}.",
     "deal.named_witness.yes": "yes",
     "deal.named_witness.no": "no",
-    "deal.col.named_witness": "Time from a named witness"
+    "deal.col.named_witness": "Time from a named witness",
+    "deal.row.ruling.bare": "Ruling: {value}",
+    "deal.side.buyer": "buyer",
+    "deal.side.seller": "seller"
   }
 }
