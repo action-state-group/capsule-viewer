@@ -10,7 +10,7 @@
 # directory: capsulectl loads presentations only from its built-in plugin
 # roots, one of which is $HOME/.local/lib/capsulectl/plugins, so nothing
 # outside the temp directory is read or written but OUT_DIR. It offers the
-# three modules with their manifests (src/capsule_viewer/receipt/module-slot/),
+# three modules with their manifests (src/capsule_viewer/receipt_slot/),
 # each with its script and the kit stylesheet, as the manifests pin them.
 #
 # For each BUNDLE, at the audience its name ends with (keep, counterparty or
@@ -40,7 +40,7 @@ chmod 0644 "$plugins"/*.js "$plugins/kit.css"
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 presentations="[]"
 for kind in unilateral seller bilateral; do
-  manifest="$root/src/capsule_viewer/receipt/module-slot/manifest-$kind.json"
+  manifest="$root/src/capsule_viewer/receipt_slot/manifest-$kind.json"
   presentations=$(jq -c --slurpfile m "$manifest" --arg script "receipt_$kind.js" --arg ssha "$(sha "$plugins/receipt_$kind.js")" \
     --arg csha "$(sha "$plugins/kit.css")" \
     '. + [{"manifest": $m[0], "files": [{"role": "script", "path": $script, "sha256": $ssha}, {"role": "style", "path": "kit.css", "sha256": $csha}]}]' \

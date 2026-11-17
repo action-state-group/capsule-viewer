@@ -309,7 +309,7 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   (`tests/test_receipt_module.py`).
 - **Depth:** L0 the deal, item, amount and state; L1 what was asked, proposed, approved
   and done, with the merchant's evidence; L2 the verifier's checks and every record.
-- **Words** come from a wording pack (`receipt/wording-en.json` is a neutral English
+- **Words** come from a wording pack (`receipt_slot/wording-en.json` is a neutral English
   example) or are capsulectl's own sealed report lines, shown as such.
 - `tests/test_receipt_golden.py` accounts for every line deal-view.js showed for
   capsule-cli's receipt golden; `js-tests/receipt_layout.test.js` holds every fixture

@@ -12,8 +12,8 @@ its ``@generated`` lines filled: the module it registers, its manifest (with
 words of the example English wording pack (``wording-en.json``, compiled in:
 the script reads no pack), the pack's id and sha256 (named in L2) and the kit
 stylesheet (``static/kit.css``), which the script inserts once at render and
-the manifest pins by ``style_sha256``, and the seller kind (``role.SELLER_KIND``,
-named there and nowhere else).
+the manifest pins by ``style_sha256``, and the seller kind (``SELLER_KIND``, defined
+here and nowhere else).
 
 One script per module, not one shared script for the three: a page builder
 puts one script in the page per module it chose (``--module``, or the modules
