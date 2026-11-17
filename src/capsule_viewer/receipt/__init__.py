@@ -4,6 +4,7 @@ a buyer's copy), seller (``capsuleviewer.receipt.seller/v0``, a seller's copy
 of one buyer thread) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
 composed/v1 bundle of both parties' copies), their manifests, and an example
 English wording pack (``wording-en.json``) with neutral example wording."""
+import warnings
 from importlib import resources
 
 from .bilateral import (
@@ -19,6 +20,19 @@ from .page import receipt_page, receipt_registry
 from .provider import ProviderReceiptModule, provider_receipt_page
 from .role import SELLER_KIND, sealed_party_role, sealed_side, seller_kind_engaged
 from .seller import SELLER_MANIFEST, SellerModel, SellerReceiptModule, build_seller, seller_manifest
+
+# Deprecated (capsule-viewer#71): the Python receipt modules are the test oracle
+# for the JS module-slot scripts and nothing else; the receipt page is built by
+# the TypeScript implementation (``buildPresentation`` with ``format: "static"``).
+# They will be removed in a later release.
+warnings.warn(
+    "capsule_viewer.receipt (the Python unilateral, seller and bilateral receipt "
+    "modules) is deprecated and will be removed in a later release; build receipt "
+    "pages with the TypeScript implementation (buildPresentation, format 'static'). "
+    "See https://github.com/action-state-group/capsule-viewer/issues/71",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def example_wording_pack() -> bytes:
