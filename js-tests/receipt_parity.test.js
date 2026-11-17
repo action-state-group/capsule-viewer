@@ -1,14 +1,16 @@
-// The receipt modules' module-slot scripts against their Python twins, which
-// are the test oracle (tests/receipt_oracle.py). For every receipt fixture
+// The receipt modules' module-slot scripts against the frozen receipt golden
+// (tests/testdata/receipt/oracle-golden.json.gz: what the Python modules, the
+// scripts' twins, made of every case; tests/test_receipt_oracle_golden.py holds
+// it to them while they exist). For every receipt fixture
 // under tests/testdata/receipt/ (single copies, seller and producer copies,
 // compositions, the deal-view golden, and the copies capsulectl as capsule-cli
 // main builds it cut, main-*) at every audience a page may be for,
 // and for each copy whose seller kind was dropped or added, each of the
 // three scripts must:
-//   - accept (canRender) exactly the cases its Python twin accepts;
+//   - accept (canRender) exactly the cases the golden records as accepted;
 //   - build the same model, field for field (dataclasses.asdict on the
 //     Python side);
-//   - render the same result at L0, L1 and L2: the Python module's HTML and
+//   - render the same result at L0, L1 and L2: the golden's HTML and
 //     the script's DOM, each parsed and serialised one canonical way
 //     (attributes sorted), must be equal.
 // Both sides are handed the same inputs the page's runtime does not give a
@@ -20,7 +22,7 @@
 // Run with RECEIPT_SCRIPT_DIR=<dir holding mutated receipt_*.js> to see it
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
-import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, pythonOracle, renderInto } from "./receiptScripts.js";
+import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, receiptGolden, renderInto } from "./receiptScripts.js";
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -28,7 +30,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
   let oracle;
   const loaded = {};
   beforeAll(() => {
-    oracle = pythonOracle();
+    oracle = receiptGolden();
     for (const kind of KINDS) loaded[kind] = loadScript(kind);
   }, 120000);
 

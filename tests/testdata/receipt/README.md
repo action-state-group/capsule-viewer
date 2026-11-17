@@ -25,3 +25,4 @@ session identifiers.
 (`schemas/presentation-manifest-v0.json`), its built-in manifests and three example
 manifests from `schemas/examples/presentation-manifest-v0/`, at agent-action-capsule
 `67b056c`.
+| `oracle-golden.json.gz` | What the Python receipt modules make of every fixture above (canRender, model, and the page at L0, L1 and L2, per audience, plus the edited copies): the output of `tests/receipt_oracle.py`, frozen. `js-tests/receipt_parity.test.js` holds the module-slot scripts to it; `tests/test_receipt_oracle_golden.py` holds it to the Python modules while they exist. Regenerate: `python tests/receipt_oracle.py \| gzip -n -9 > tests/testdata/receipt/oracle-golden.json.gz`. |
