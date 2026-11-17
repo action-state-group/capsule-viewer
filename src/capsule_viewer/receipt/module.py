@@ -63,6 +63,19 @@ from .sides import ACTIONS, CASE_TONE, Missing, plain_date
 DEPTHS = ("L0", "L1", "L2")
 # The values this module fills, per wording key; every other key takes none.
 PLACEHOLDERS: Mapping[str, frozenset[str]] = {
+    # The v1 deal receipt (static/receipt_core.js, kind "deal"; evidencebook#461 section 9)
+    # has no Python twin; these name the pack's placeholders for it.
+    "deal.start.by": frozenset({"by"}),
+    "deal.as_of": frozenset({"at"}),
+    "deal.row.value": frozenset({"value"}),
+    "deal.row.remedy": frozenset({"remedy"}),
+    "deal.row.ruling": frozenset({"value", "against"}),
+    "deal.row.check": frozenset({"check"}),
+    "deal.row.late": frozenset({"statements", "disputes"}),
+    "deal.rests.own": frozenset({"size"}),
+    "deal.rests.counterparty": frozenset({"counted"}),
+    "deal.rests.fork": frozenset({"at"}),
+    "deal.rests.witnesses": frozenset({"count"}),
     "shared.counterparty": frozenset({"kinds"}),
     "shared.adjudicator": frozenset({"kinds"}),
     "countersign.some": frozenset({"statuses"}),

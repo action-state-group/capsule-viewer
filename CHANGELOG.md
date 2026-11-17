@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A v1 deal receipt module-slot script, `static/receipt_deal.js` (`capsuleviewer.receipt.deal/v1`, manifest `receipt_slot/manifest-deal.json`; #322, evidencebook#461): it reads the `x-deal-v1` sealed report (evidencebook `docs/design/461-deal-profile.md` section 9) and shows each term row's computed status as the report gives it, the deal-level line as the start state and "settled" or nothing, and an adjudicator's copy as "withheld" rather than "no rows". It never computes a status and declines a word outside the report's closed sets. The three `x-deal-v0` receipt modules are unchanged and still read a v0 deal's close. The wording pack gains the `deal.*` entries (Sherlock2 reviews them); the oracle golden is regenerated for the new pack digest only. `manifest-provider.json` now also forbids `x-deal-v1`.
+
 ### Changed
 
 - The module-slot writer for the receipt scripts moved out of the deprecated Python `capsule_viewer.receipt` package (#71): `python -m capsule_viewer.receipt_slot --write` (and `--check`) replaces `python -m capsule_viewer.receipt.module_slot`. The example wording pack (`wording-en.json`) and the three module-slot manifests (`manifest-<kind>.json`) moved with it to `capsule_viewer/receipt_slot/`; the writer reads each manifest and replaces only its `executable` block. The shipped scripts change only in three comment lines that name the new command, so each manifest's `script_sha256` changes (the wording pack's bytes and digest do not); a plugin that pins the old digests takes the new manifests. The scripts' behaviour is held to a frozen golden of the Python modules' output (`tests/testdata/receipt/oracle-golden.json.gz`). This meets one of the removal conditions in the 0.19.0 notes (the writer has moved out); the others stand.

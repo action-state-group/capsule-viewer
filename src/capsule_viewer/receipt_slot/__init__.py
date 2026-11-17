@@ -44,6 +44,11 @@ from pathlib import Path
 from ..registry import Manifest
 
 KINDS: tuple[str, ...] = ("unilateral", "seller", "bilateral")
+# The v1 deal receipt (evidencebook#461, docs/design/461-deal-profile.md section 9) is a
+# module of its own, with no Python twin: the Python modules above are the frozen oracle
+# for the three x-deal-v0 modules and stay as they are.
+DEAL_KIND = "deal"
+SCRIPT_KINDS: tuple[str, ...] = KINDS + (DEAL_KIND,)
 # The seller copy's bundle extension kind. Named here and nowhere else: the
 # manifests, the scripts and the Python modules take it from this constant.
 SELLER_KIND = "x-deal-seller/v0"
@@ -112,7 +117,7 @@ def manifest_bytes(kind: str) -> bytes:
 
 def outputs() -> dict[Path, bytes]:
     out: dict[Path, bytes] = {}
-    for kind in KINDS:
+    for kind in SCRIPT_KINDS:
         out[script_path(kind)] = script_bytes(kind)
         out[manifest_path(kind)] = manifest_bytes(kind)
     return out

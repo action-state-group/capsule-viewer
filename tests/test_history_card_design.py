@@ -641,6 +641,7 @@ def test_each_viewer_module_forbids_the_selection_extension_and_needs_to():
         "manifest-seller",
         "manifest-unilateral",
         "receipt_slot/manifest-bilateral",
+        "receipt_slot/manifest-deal",
         "receipt_slot/manifest-seller",
         "receipt_slot/manifest-unilateral",
         "rules",
