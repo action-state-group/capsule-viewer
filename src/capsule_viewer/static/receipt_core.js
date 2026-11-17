@@ -6,10 +6,10 @@
 //
 // This file is the source of the three scripts the manifests pin
 // (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js).
-// `python -m capsule_viewer.receipt.module_slot --write` writes each one from
+// `python -m capsule_viewer.receipt_slot --write` writes each one from
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
-// receipt/wording-en.json, whose id and sha256 the page names in L2) and the
+// receipt_slot/wording-en.json, whose id and sha256 the page names in L2) and the
 // kit stylesheet (static/kit.css, pinned by the manifest's style_sha256).
 // Each script carries the whole of this file and registers exactly one
 // module: the page builder puts one script in the page per module it chose,
@@ -52,7 +52,7 @@
   var WORDS = {}; // @generated WORDS
   var PACK = { id: "", sha256: "" }; // @generated PACK
   var KIT_CSS = ""; // @generated KIT_CSS
-  // The seller copy's bundle extension kind (capsule_viewer.receipt.role.SELLER_KIND).
+  // The seller copy's bundle extension kind (capsule_viewer.receipt_slot.SELLER_KIND).
   var SELLER_KIND = ""; // @generated SELLER_KIND
 
   var EXTENSION = "x-deal-v0";

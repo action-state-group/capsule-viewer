@@ -86,7 +86,7 @@ def test_dropped_lines_are_really_gone(page):
 
 
 def test_reworded_lines_say_it_from_the_pack(page):
-    pack = json.loads((RECEIPTS.parents[2] / "src" / "capsule_viewer" / "receipt" / "wording-en.json").read_text(encoding="utf-8"))
+    pack = json.loads((RECEIPTS.parents[2] / "src" / "capsule_viewer" / "receipt_slot" / "wording-en.json").read_text(encoding="utf-8"))
     text = visible_text(page)
     for key in REWORDED.values():
         assert " ".join(pack["entries"][key].split()) in text, key

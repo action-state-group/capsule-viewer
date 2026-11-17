@@ -18,7 +18,7 @@ export const PY_ENV = { ...process.env, PYTHONPATH: join(ROOT, "src") };
 const SCRIPTS = process.env.RECEIPT_SCRIPT_DIR || join(ROOT, "src", "capsule_viewer", "static");
 
 export const scriptBytes = (kind) => readFileSync(join(SCRIPTS, `receipt_${kind}.js`));
-export const manifestOf = (kind) => JSON.parse(readFileSync(join(ROOT, "src", "capsule_viewer", "receipt", "module-slot", `manifest-${kind}.json`), "utf8"));
+export const manifestOf = (kind) => JSON.parse(readFileSync(join(ROOT, "src", "capsule_viewer", "receipt_slot", `manifest-${kind}.json`), "utf8"));
 export const readBundle = (name) => JSON.parse(readFileSync(join(RECEIPTS, `${name}.bundle.json`), "utf8"));
 export const readVerify = (name) => JSON.parse(readFileSync(join(RECEIPTS, `${name}.verify.json`), "utf8"));
 

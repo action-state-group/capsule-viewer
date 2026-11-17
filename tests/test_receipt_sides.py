@@ -22,8 +22,8 @@ from receipt_helpers import BILATERAL, SELLER, load, render, report_for
 
 from capsule_viewer.receipt import example_wording_pack
 from capsule_viewer.receipt.module import PLACEHOLDERS, UnilateralReceiptModule
-from capsule_viewer.receipt.module_slot import KIT_CSS
 from capsule_viewer.receipt.sides import plain_date
+from capsule_viewer.receipt_slot import KIT_CSS
 from capsule_viewer.wording import load_wording_pack
 
 

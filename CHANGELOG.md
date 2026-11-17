@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The module-slot writer for the receipt scripts moved out of the deprecated Python `capsule_viewer.receipt` package (#71): `python -m capsule_viewer.receipt_slot --write` (and `--check`) replaces `python -m capsule_viewer.receipt.module_slot`. The example wording pack (`wording-en.json`) and the three module-slot manifests (`manifest-<kind>.json`) moved with it to `capsule_viewer/receipt_slot/`; the writer reads each manifest and replaces only its `executable` block. The shipped scripts change only in three comment lines that name the new command, so each manifest's `script_sha256` changes (the wording pack's bytes and digest do not); a plugin that pins the old digests takes the new manifests. The scripts' behaviour is held to a frozen golden of the Python modules' output (`tests/testdata/receipt/oracle-golden.json.gz`). This meets one of the removal conditions in the 0.19.0 notes (the writer has moved out); the others stand.
+
 ## ts 0.19.0 and go 0.19.0 (2026-11-16)
 
 Both state viewer 0.19.0: `ts/v0.19.0`, then `go/v0.19.0` on the commit that ships its page runtime. This release carries #291 (the Studio home, with #305 and evidencebook-skills#146), #302 (the backfill timeline), #303 (the imported headline), #87 (a wording pack with a `core.` key is refused at load), #310 (PR #312, dark History view), #68 (PR #313, the not-yet-in-force section), #71 (PR #314, the Python receipt deprecation), the agent-action-capsule/go v0.21.0 pin (PR #309) and the test change in PR #315 (#99). The Python `capsule_viewer.receipt` package is deprecated in this release (in the repository source at this tag; the Python package is not published): it emits a `DeprecationWarning` on import and is planned for removal in a later release, under the conditions listed under Deprecated below.

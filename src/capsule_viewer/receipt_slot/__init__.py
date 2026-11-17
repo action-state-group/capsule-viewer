@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """The receipt modules as module-slot scripts: the three scripts a page builder
 puts in a page's module slots (capsulectl ``presentation build``, with a
-plugin carrying them), and the manifests that pin them.
+plugin carrying them), and the manifests that pin them. This package is the
+writer of those files and the home of their wording pack (``wording-en.json``)
+and manifests (``manifest-<kind>.json``); it imports nothing from
+``capsule_viewer.receipt``.
 
 ``static/receipt_core.js`` is their one source. Each script is that file with
 its ``@generated`` lines filled: the module it registers, its manifest (with
@@ -9,21 +12,23 @@ its ``@generated`` lines filled: the module it registers, its manifest (with
 words of the example English wording pack (``wording-en.json``, compiled in:
 the script reads no pack), the pack's id and sha256 (named in L2) and the kit
 stylesheet (``static/kit.css``), which the script inserts once at render and
-the manifest pins by ``style_sha256``, and the seller kind (``role.SELLER_KIND``,
-named there and nowhere else).
+the manifest pins by ``style_sha256``, and the seller kind (``SELLER_KIND``, defined
+here and nowhere else).
 
 One script per module, not one shared script for the three: a page builder
 puts one script in the page per module it chose (``--module``, or the modules
 for ``--audience``), so a shared script would register modules the builder
 did not choose, and register them once per slot it was put in.
 
-The manifests are the Python modules' (``UNILATERAL_MANIFEST``,
-``SELLER_MANIFEST``, ``BILATERAL_MANIFEST``: the same ids, the same selection
-clauses), with the module-slot carrier in place of ``core-runtime``. One
-module id, two carriers: the Python module renders a page server-side, the
-script renders it in the page; the parity test holds them to one output.
+Each ``manifest-<kind>.json`` is the module's manifest (its id, selection
+clauses and ``forbids``) and is edited by hand; the writer replaces only its
+``executable`` block, which pins the script and the kit stylesheet by digest.
+The ids and clauses are the ones the Python modules carry (``tests/test_receipt_module_slot.py``
+holds them equal while those exist); the script's output is held to the frozen
+golden ``tests/testdata/receipt/oracle-golden.json.gz`` by
+``js-tests/receipt_parity.test.js``.
 
-``python -m capsule_viewer.receipt.module_slot --write`` writes the scripts and
+``python -m capsule_viewer.receipt_slot --write`` writes the scripts and
 the manifests; ``--check`` exits 1 when a committed file is not what this
 writes (``tests/test_receipt_module_slot.py`` runs the same check).
 """
@@ -33,22 +38,15 @@ import hashlib
 import json
 import re
 import sys
-from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
 
 from ..registry import Manifest
-from .bilateral import BILATERAL_MANIFEST
-from .module import UNILATERAL_MANIFEST
-from .role import SELLER_KIND
-from .seller import SELLER_MANIFEST
 
 KINDS: tuple[str, ...] = ("unilateral", "seller", "bilateral")
-SOURCE_MANIFESTS: Mapping[str, Manifest] = {
-    "unilateral": UNILATERAL_MANIFEST,
-    "seller": SELLER_MANIFEST,
-    "bilateral": BILATERAL_MANIFEST,
-}
+# The seller copy's bundle extension kind. Named here and nowhere else: the
+# manifests, the scripts and the Python modules take it from this constant.
+SELLER_KIND = "x-deal-seller/v0"
 ZERO = "0" * 64
 _PACKAGE = Path(__file__).resolve().parent
 STATIC = _PACKAGE.parent / "static"
@@ -62,7 +60,7 @@ def script_path(kind: str) -> Path:
 
 
 def manifest_path(kind: str) -> Path:
-    return _PACKAGE / "module-slot" / f"manifest-{kind}.json"
+    return _PACKAGE / f"manifest-{kind}.json"
 
 
 def _sha(data: bytes) -> str:
@@ -74,7 +72,7 @@ def pack_bytes() -> bytes:
 
 
 def _manifest(kind: str, script_sha256: str, style_sha256: str) -> Manifest:
-    manifest = json.loads(json.dumps(SOURCE_MANIFESTS[kind]))
+    manifest = json.loads(manifest_path(kind).read_text(encoding="utf-8"))
     manifest["executable"] = {"carrier": "module-slot", "script_sha256": script_sha256, "style_sha256": [style_sha256]}
     return manifest
 

@@ -591,7 +591,7 @@ RECEIPT_MANIFESTS = {
 }
 # The receipt modules' module-slot manifests (#27), written from the ones above.
 MODULE_SLOT_MANIFESTS = {
-    f"module-slot/{p.stem}": json.loads(p.read_text(encoding="utf-8")) for p in sorted((RECEIPTS / "module-slot").glob("manifest-*.json"))
+    f"receipt_slot/{p.stem}": json.loads(p.read_text(encoding="utf-8")) for p in sorted((HERE.parent / "src" / "capsule_viewer" / "receipt_slot").glob("manifest-*.json"))
 }
 BUILTINS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((AAC / "builtin").glob("*.json"))}
 
@@ -640,8 +640,8 @@ def test_each_viewer_module_forbids_the_selection_extension_and_needs_to():
         "manifest-provider",
         "manifest-seller",
         "manifest-unilateral",
-        "module-slot/manifest-bilateral",
-        "module-slot/manifest-seller",
-        "module-slot/manifest-unilateral",
+        "receipt_slot/manifest-bilateral",
+        "receipt_slot/manifest-seller",
+        "receipt_slot/manifest-unilateral",
         "rules",
     ]

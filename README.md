@@ -309,7 +309,7 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   (`tests/test_receipt_module.py`).
 - **Depth:** L0 the deal, item, amount and state; L1 what was asked, proposed, approved
   and done, with the merchant's evidence; L2 the verifier's checks and every record.
-- **Words** come from a wording pack (`receipt/wording-en.json` is a neutral English
+- **Words** come from a wording pack (`receipt_slot/wording-en.json` is a neutral English
   example) or are capsulectl's own sealed report lines, shown as such.
 - `tests/test_receipt_golden.py` accounts for every line deal-view.js showed for
   capsule-cli's receipt golden; `js-tests/receipt_layout.test.js` holds every fixture
@@ -372,16 +372,15 @@ only".
 The three receipt modules (unilateral, seller, bilateral) also ship as module-slot
 scripts, the form a page builder puts in a page (capsulectl `presentation build`, from
 a plugin that carries them): `static/receipt_unilateral.js`, `static/receipt_seller.js`
-and `static/receipt_bilateral.js`, pinned by `receipt/module-slot/manifest-*.json`
+and `static/receipt_bilateral.js`, pinned by `receipt_slot/manifest-*.json`
 (`executable.carrier` `module-slot`, `script_sha256`, and `style_sha256` for the kit
 stylesheet each script inserts once at render).
 
 - **One source, three scripts.** `static/receipt_core.js` is the source;
-  `python -m capsule_viewer.receipt.module_slot --write` (it emits the package's
-  deprecation warning, hidden by default under `python -m`; add `-W default` to see it; the writer must move out before the package is removed, #71) writes each script from it with
+  `python -m capsule_viewer.receipt_slot --write` writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
-  kit stylesheet, and writes the manifests (the Python modules' manifests, same ids and
-  selection clauses, with the module-slot carrier). One script per module: a builder puts
+  kit stylesheet, and rewrites the `executable` block of each `receipt_slot/manifest-*.json`
+  (the rest of the manifest, its id and selection clauses, is edited by hand; while the Python modules exist, `tests/test_receipt_module_slot.py` holds them equal to those modules' manifests, and after that the JSON is the only source). One script per module: a builder puts
   one script in a page per module it chose, so a shared script would register modules it
   did not choose. `tests/test_receipt_module_slot.py` fails when a committed file is not
   what the generator writes.

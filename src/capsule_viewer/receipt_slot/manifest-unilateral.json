@@ -1,6 +1,6 @@
 {
   "spec_version": "aac.presentation-manifest/v0",
-  "id": "capsuleviewer.receipt.seller/v0",
+  "id": "capsuleviewer.receipt.unilateral/v0",
   "presentation_api": "aac.presentation-api/v0",
   "runtime_min": "0.1.0",
   "trust_class": "trusted-executable",
@@ -8,8 +8,7 @@
     "bundle_kind": "evidence-bundle/v2",
     "extensions": {
       "required": [
-        "x-deal-v0",
-        "x-deal-seller/v0"
+        "x-deal-v0"
       ]
     }
   },
@@ -21,7 +20,8 @@
     ],
     "extensions": [
       "composed/v1",
-      "x-history-selection/v0"
+      "x-history-selection/v0",
+      "x-deal-seller/v0"
     ]
   },
   "audiences": [
@@ -36,7 +36,7 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "1282518108639a229cef0879b7a04b38085d7a95d7e16bbba40cb0c98da300df",
+    "script_sha256": "ef1f0c14010f4b712087485ecf1ee8cf925c1e11a40f9c178d61cc03dfede3c0",
     "style_sha256": [
       "246cfdc8ae83e682a220a2c13cef8134c7515999365b33965d4e924bb871f3ea"
     ]

@@ -20,8 +20,8 @@
 The receipt modules read both and decline when they disagree, so a relabelled
 copy shows no receipt rather than the wrong one.
 
-``SELLER_KIND`` is named here and nowhere else in this package: the manifests
-get it from this constant.
+``SELLER_KIND`` is named in ``capsule_viewer.receipt_slot`` and nowhere else: this
+module and the manifests take it from there.
 """
 from __future__ import annotations
 
@@ -29,8 +29,8 @@ from collections.abc import Mapping
 from typing import Literal
 
 from ..context import Frozen, VerifiedBundleContext
+from ..receipt_slot import SELLER_KIND
 
-SELLER_KIND = "x-deal-seller/v0"
 DEAL_EXTENSION = "x-deal-v0"
 PartyRole = Literal["buyer", "seller"]
 ACCEPTANCE_KIND = "counterparty-acceptance-observation"
