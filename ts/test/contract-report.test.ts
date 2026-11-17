@@ -1938,6 +1938,8 @@ it("a date not yet in force is never drawn without its conditions (D3)", async (
     `tr.test[data-criterion="${later}"]`,
   );
   expect(row).not.toBeNull();
+  // its result cell carries the readiness label, never a bare verdict
+  expect(row!.textContent).toContain("readiness only");
   const bodies = [...root.querySelectorAll("table.sum > tbody")];
   expect(bodies.indexOf(row!.closest("tbody")!)).toBeGreaterThan(
     bodies.indexOf(section!),
@@ -1950,7 +1952,7 @@ it("a date not yet in force is never drawn without its conditions (D3)", async (
   // the as-of date and the copied-from-the-contract note sit together
   const copied = root.querySelector<HTMLElement>("[data-copied-facts]");
   expect(copied?.dataset.asOf).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
-  expect(copied?.textContent).toContain("copied from the contract");
+  expect(copied?.textContent).toContain("producer's copy of the contract");
 });
 
 it("a rule's not-applicable count is in its detail row before the row opens, so a static page shows it", async () => {

@@ -193,7 +193,7 @@
     "front.agg.later.other": "{n} evaluations not yet in force",
     "front.agg.mismatch": "count mismatch: the claims give {recomputed}",
     "applicability.as_of": "In force as of {date}.",
-    "contract_fact.note": "Any date or out-of-scope switch shown here is copied from the contract, not re-checked here.",
+    "contract_fact.note": "Dates and the out-of-scope switch are the producer's copy of the contract, not re-checked by this page.",
     "prov.brief.judge.partial": "judge pinned for some results",
     "front.agg.excluded": "{excluded} excluded as not applicable",
     "front.agg.bucket.met": "Met",

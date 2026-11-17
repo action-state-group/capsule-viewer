@@ -1657,6 +1657,13 @@ function renderNotYetInForce(
           `${w.t("lines.later.readiness")}: ${w.enumWord("verdict", cr.verdict)}`,
         ),
       );
+      // Assurance stays on the claim (module spec section 2).
+      if (cr.claim !== undefined) {
+        const [, line, data] = assuranceRow(cr.claim, w);
+        const assurance = el("small", "assurance", ` · ${line}`);
+        Object.assign(assurance.dataset, data);
+        item.append(assurance);
+      }
       list.append(item);
     }
   }
@@ -1730,11 +1737,24 @@ function renderRules(
       .find((c) => `${c.checkId}.${c.criterionId}` === ref && c.claim)?.claim;
     return tierOf(claim?.contractRef, ref);
   };
+  // A rule whose every claim is not yet in force has no in-force row: it is
+  // drawn only in the not-yet-in-force section (module spec section 2).
+  const inForceRefs = new Set(
+    model.conversations.flatMap((c) =>
+      c.criteria.map((cr) => `${cr.checkId}.${cr.criterionId}`),
+    ),
+  );
+  const whollyLater = new Set(
+    [...model.conversations, ...model.notYetInForce]
+      .flatMap((c) => c.notYetInForce)
+      .map((cr) => `${cr.checkId}.${cr.criterionId}`)
+      .filter((ref) => !inForceRefs.has(ref)),
+  );
   const tiers = new Map<string, RowTier | undefined>();
   for (const check of model.terms.checks)
     for (const criterion of check.criteria) {
       const ref = `${check.id}.${criterion.id}`;
-      tiers.set(ref, ruleTier(ref));
+      if (!whollyLater.has(ref)) tiers.set(ref, ruleTier(ref));
     }
   const sections: readonly (RowTier | undefined)[] =
     tierOf === undefined
@@ -1756,7 +1776,9 @@ function renderRules(
     }
     for (const check of model.terms.checks) {
       const criteria = check.criteria.filter(
-        (criterion) => tiers.get(`${check.id}.${criterion.id}`) === tier,
+        (criterion) =>
+          tiers.has(`${check.id}.${criterion.id}`) &&
+          tiers.get(`${check.id}.${criterion.id}`) === tier,
       );
       if (criteria.length === 0) continue;
       const group = el("tr", "grp");

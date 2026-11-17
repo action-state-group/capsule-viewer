@@ -20,6 +20,7 @@ import {
   type CountMismatch,
   type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
+import { DEFAULT_PACKS } from "./contract-report-wording.js";
 import type { Words } from "./contract-report-wording.js";
 import { tagSource } from "./report-legend.js";
 import { OUTCOME_FRAME_VARS } from "./frame-tokens.generated.js";
@@ -296,11 +297,12 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
 
   const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
   const switched = result.buckets.outOfScope !== undefined;
-  if (dated || switched) {
+  if (dated) {
     // Module spec section 2, "Copied facts": the as-of date (the UTC date of
     // generated_at, through `applicability.as_of`, the bare date when the
     // pack's word lacks exactly one {date}) and `contract_fact.note`, which
-    // also sits beside the out_of_scope count above.
+    // also sits beside the out_of_scope count above (drawn here only with a date,
+    // so the note is not stated twice).
     const copied = el("p", "agg-note");
     if (dated) {
       // A dated Result passed validation, so generated_at parses.
@@ -314,11 +316,19 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
       );
       copied.dataset.asOf = date;
     }
-    copied.append(w.section3("contract_fact.note") ?? "contract_fact.note");
+    copied.append(contractFactNote(w));
     copied.dataset.copiedFacts = "contract";
     out.append(copied);
   }
   return out;
+}
+
+/** `contract_fact.note`: the pack's word, else the default pack's, never the raw key or nothing (module spec section 2). */
+function contractFactNote(w: Words): string {
+  return (
+    w.section3("contract_fact.note") ??
+    DEFAULT_PACKS.lines.entries["contract_fact.note"]!
+  );
 }
 
 const shortDigest = (digest: string): string =>
