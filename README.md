@@ -377,8 +377,8 @@ and `static/receipt_bilateral.js`, pinned by `receipt/module-slot/manifest-*.jso
 stylesheet each script inserts once at render).
 
 - **One source, three scripts.** `static/receipt_core.js` is the source;
-  `python -m capsule_viewer.receipt.module_slot --write` (it prints the package's
-  deprecation warning; the writer must move out before the package is removed, #71) writes each script from it with
+  `python -m capsule_viewer.receipt.module_slot --write` (it emits the package's
+  deprecation warning, hidden by default under `python -m`; add `-W default` to see it; the writer must move out before the package is removed, #71) writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and writes the manifests (the Python modules' manifests, same ids and
   selection clauses, with the module-slot carrier). One script per module: a builder puts
