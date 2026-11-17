@@ -142,6 +142,7 @@ describe("the deal/v1 receipt", () => {
     for (const bad of [
       { rows: null }, { rows: {} }, { rows: [null] },
       { rows: [{ ...ROW, due: "waived" }] }, { rows: [{ ...ROW, window_end: "2026-13-45T99:00:00Z" }] }, { rows: [{ ...ROW, due: "2026-11-04" }] },
+      { rows: [{ ...ROW, due: "2026-02-30T09:12:00Z" }] }, { rows: [{ ...ROW, window_end: "2026-11-04T24:00:00Z" }] },
       { rows: [{ ...ROW, ruling: { value: "not_met", against: "seller", final: false } }] },
       { rows: [{ ...ROW, ruling: { value: "not_met", against: "seller", final: "yes" } }] },
       { rows: [{ ...ROW, relied_on: [{ record: "r", side: "buyer", time: null, witnessed: "true" }] }] },

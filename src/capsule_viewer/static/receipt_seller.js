@@ -354,8 +354,9 @@
     });
   }
 
-  // capsulectl's status for the x-deal-v0 check when it names the report as
-  // standalone. A page runtime that does not interpret x-deal-v0 reports none.
+  // capsulectl's status for the `extension` check (x-deal-v0, or x-deal-v1 for the
+  // deal module) when it names the report as standalone. A page runtime that does
+  // not interpret that extension reports none.
   function reportChecked(verification, extension) {
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === extension && e.report === "standalone"; });
     return entry !== undefined && typeof entry.status === "string" ? entry.status : null;
@@ -892,9 +893,15 @@
   function optionalWord(list, value, what) { return value === null || value === undefined ? null : closedWord(list, value, what); }
   // A row date is an RFC 3339 UTC time to the second, or the word not_set.
   var RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+  // The regex checks the shape; the round trip rejects a date Date.parse would silently move (30 February, hour 24).
+  function validUtcTime(t) {
+    if (!RFC3339_UTC.test(t)) return false;
+    var ms = Date.parse(t);
+    return !isNaN(ms) && new Date(ms).toISOString().slice(0, 19) + "Z" === t;
+  }
   function rowDate(value, what) {
     var t = str(value);
-    if (t === null || (t !== "not_set" && (!RFC3339_UTC.test(t) || isNaN(Date.parse(t))))) {
+    if (t === null || (t !== "not_set" && !validUtcTime(t))) {
       throw new Unavailable("the v1 report's " + what + " is neither an RFC 3339 UTC time nor not_set");
     }
     return t;
