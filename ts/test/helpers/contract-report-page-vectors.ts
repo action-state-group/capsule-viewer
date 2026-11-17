@@ -29,6 +29,9 @@ const text = (node: Element | null | undefined): string | null =>
   node == null ? null : (node.textContent ?? "").replace(/\s+/g, " ").trim();
 
 export interface CoreStrip {
+  /** The verification banner's markers (data-verify, -verdict, -checkpoint, -uncheckpointed) and its line. */
+  banner: Record<string, string> | null;
+  banner_text: string | null;
   kicker: string | null;
   facts: string | null;
   mock_mark: string | null;
@@ -45,7 +48,10 @@ export interface CoreStrip {
 export function coreStrip(root: Element): CoreStrip {
   const strip = root.querySelector("[data-core-strip]")!;
   const line = strip.querySelector("[data-evaluated]");
+  const banner = root.querySelector("[data-verify]");
   return {
+    banner: banner === null ? null : dataAttrs(banner),
+    banner_text: text(banner),
     kicker: text(strip.querySelector("[data-core-kicker]")),
     facts: text(strip.querySelector("[data-core-facts]")),
     mock_mark: text(strip.querySelector(".mockmark")),
@@ -62,38 +68,47 @@ export function coreStrip(root: Element): CoreStrip {
 
 export interface ModuleRows {
   grouping: string;
+  page: string[];
   headline: string | null;
   rows: Record<string, string>[];
 }
 
 /**
  * The module's rows, by grouping, each row as its data-* markers (the
- * bundle's own tokens, never wording): `generic` the claim rows (with their
- * cells' markers), `groups` the obligation and test rows, `lines` the
- * result lines.
+ * bundle's own tokens, never wording): `generic` each claim under its row,
+ * `groups` the obligation and test rows, `lines` the result lines.
  */
 export function moduleRows(root: Element, grouping: string): ModuleRows {
-  const selector =
-    grouping === "generic"
-      ? "tr[data-claim-row]"
-      : grouping === "groups"
+  // The module's own pages: the core's verification section is not the module's.
+  const pages = [
+    ...root.querySelectorAll('[data-page]:not([data-page="verification"])'),
+  ];
+  const rows = pages.flatMap((region) => {
+    if (grouping === "generic")
+      // One entry per claim, under the row (requirement) and contract it is
+      // grouped by: the module's own `data-row`, `data-contract`,
+      // `data-claim-ref` and `data-verdict` markers.
+      return [...region.querySelectorAll("[data-row]")].flatMap((row) =>
+        [...row.querySelectorAll("li[data-claim-ref]")].map((claim) => ({
+          row: row.getAttribute("data-row")!,
+          contract: row.getAttribute("data-contract")!,
+          claim: claim.getAttribute("data-claim-ref")!,
+          verdict: claim
+            .querySelector("[data-verdict]")!
+            .getAttribute("data-verdict")!,
+        })),
+      );
+    const selector =
+      grouping === "groups"
         ? "tr[data-obligation], tr[data-criterion]"
         : "tr[data-line]";
-  const page = [...root.querySelectorAll("[data-page]")];
-  const rows = page.flatMap((region) =>
-    [...region.querySelectorAll(selector)].map((row) => {
-      const merged = dataAttrs(row);
-      if (grouping === "generic")
-        for (const cell of row.querySelectorAll(
-          "td[data-sufficiency], td[data-verdict], td[data-tier], td[data-grade], td[data-claim-type]",
-        ))
-          Object.assign(merged, dataAttrs(cell));
-      return merged;
-    }),
-  );
+    return [...region.querySelectorAll(selector)].map(dataAttrs);
+  });
   return {
     grouping,
-    headline: text(page[0]?.querySelector("[data-headline]")),
+    // The module's own page marker: the module that drew the rows.
+    page: [...new Set(pages.map((p) => p.getAttribute("data-page")!))],
+    headline: text(pages[0]?.querySelector("[data-headline]")),
     rows,
   };
 }
@@ -139,7 +154,7 @@ function dropClaim(source: Obj, id: string): void {
 }
 
 const WORDING = resolve(process.cwd(), "src", "wording");
-function audiencePack(file: string): { pack: string; sha256: string } {
+export function audiencePack(file: string): { pack: string; sha256: string } {
   const lock = JSON.parse(
     readFileSync(resolve(WORDING, "audience-packs.lock.json"), "utf8"),
   ) as Record<string, { sha256: string }>;
@@ -183,14 +198,6 @@ const SPECS: readonly Spec[] = [
     file: "compliance-bundle.json",
     grouping: "groups",
   },
-  {
-    name: "eu-groups-deployer-pack",
-    about:
-      "The same Result under the EU deployer audience pack: the strip's figures and every row marker are those of the default pack; only words differ.",
-    file: "compliance-bundle.json",
-    grouping: "groups",
-    wording: "contract-report-eu-deployer.en.json",
-  },
 ];
 
 /** Generate every case from the committed fixtures and the renderer. */
@@ -198,14 +205,17 @@ export async function generatePageVectors(): Promise<PageCase[]> {
   const out: PageCase[] = [];
   for (const spec of SPECS) {
     const source = fixture(spec.file);
+    // The producer's opt-in: the block is empty (contract-report/v1 section 1).
+    source.extensions = {
+      ...((source.extensions as Obj | undefined) ?? {}),
+      "contract-report/v1": {},
+    };
     spec.mutate?.(source);
     const { bundle } = await sealEvidenceBundle(source);
-    const root = document.createElement("main");
-    await renderEvidenceGraph(
+    const drawn = await drawCase(
       bundle,
-      root,
-      undefined,
-      spec.wording === undefined ? {} : { wording: audiencePack(spec.wording) },
+      spec.wording === undefined ? undefined : audiencePack(spec.wording),
+      spec.grouping,
     );
     out.push({
       name: spec.name,
@@ -215,8 +225,8 @@ export async function generatePageVectors(): Promise<PageCase[]> {
       view: { wording: spec.wording ?? null },
       absent: spec.absent ?? [],
       expected: {
-        core_strip: coreStrip(root),
-        module_rows: moduleRows(root, spec.grouping),
+        core_strip: drawn.core_strip,
+        module_rows: drawn.module_rows,
       },
     });
   }
@@ -226,4 +236,43 @@ export async function generatePageVectors(): Promise<PageCase[]> {
 /** The page text of a rendering, for the `absent` check. */
 export function pageText(root: Element): string {
   return root.textContent ?? "";
+}
+
+/** Open every toggle, again and again, until none is left closed (a body can hold toggles of its own). */
+export function openAll(root: Element): void {
+  for (;;) {
+    const closed = [...root.querySelectorAll("details")].filter(
+      (d) => !(d as HTMLDetailsElement).open,
+    );
+    if (closed.length === 0) return;
+    for (const details of closed) {
+      (details as HTMLDetailsElement).open = true;
+      details.dispatchEvent(new Event("toggle"));
+    }
+  }
+}
+
+/** Draw a case's page as a reader gets it with every toggle open, and read its sections. */
+export async function drawCase(
+  bundle: Obj,
+  wording: { pack: string; sha256: string } | undefined,
+  grouping: string,
+): Promise<{
+  root: HTMLElement;
+  core_strip: CoreStrip;
+  module_rows: ModuleRows;
+}> {
+  const root = document.createElement("main");
+  await renderEvidenceGraph(
+    bundle,
+    root,
+    undefined,
+    wording === undefined ? {} : { wording },
+  );
+  openAll(root);
+  return {
+    root,
+    core_strip: coreStrip(root),
+    module_rows: moduleRows(root, grouping),
+  };
 }

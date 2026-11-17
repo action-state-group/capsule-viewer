@@ -31,7 +31,7 @@ are separate and unchanged.
 - `bundle`: the sealed Result-rooted Bundle v2, as the page reads it.
 - `view`: `{wording}`, the audience wording pack the page is drawn with
   (a file under `ts/src/wording/`, bound by its digest in
-  `audience-packs.lock.json`), or `null` for the default pack.
+  `audience-packs.lock.json`), or `null` for the default pack. Every committed case uses the default pack: an audience pack changes words, and the vectors assert tokens and counts.
 - `absent`: strings that must not appear anywhere in the page's text.
 - `expected.core_strip` and `expected.module_rows`, asserted separately.
 
@@ -39,9 +39,11 @@ are separate and unchanged.
 
 Read from the core's own markers on the strip (`data-core-strip`):
 
-- `kicker` (the banner line: pack, version, generation time), `facts` (the
-  Result identity line) and `mock_mark` (the mock-judge mark, `null` when
-  absent).
+- `banner` and `banner_text`: the verification banner's markers
+  (`verify`, `verdict`, `checkpoint`, `uncheckpointed`) and its line.
+- `kicker` (the strip's first line: pack, version, generation time), `facts`
+  (the Result identity line) and `mock_mark` (the mock-judge mark, `null`
+  when absent).
 - `coverage`: the coverage line's `data-*` figures (`evaluated`,
   `requirements`, `excluded`, `unknown`) and `coverage_text`, its words.
 - `tiles`: the buckets in page order, each `{bucket, count, of, label}`: the
@@ -49,10 +51,13 @@ Read from the core's own markers on the strip (`data-core-strip`):
 
 ### `module_rows`
 
-`{grouping, headline, rows}`; each row is the row's `data-*` markers
-(the bundle's own tokens, with the `data-` prefix removed), never wording:
-for `generic` the claim rows (`claim-row`, `support`, `sufficiency`,
-`verdict`, `tier`, `grade`, `claim-type`), for `groups` the obligation rows
+`{grouping, page, headline, rows}`, read with every toggle open. Every case
+opts into `contract-report/v1` (an empty block), so the module resolves;
+`page` lists the module page markers that drew the rows (`contract-report`
+for the `generic` grouping, `compliance` for `groups`). Each row is the row's
+`data-*` markers (the bundle's own tokens, with the `data-` prefix removed),
+never wording: for `generic` one entry per claim (`row` the requirement,
+`contract`, `claim`, `verdict`); for `groups` the obligation rows
 (`obligation`) and test rows (`criterion`, `population`, `exceptions`,
 `not-evaluable`, `out-of-scope`, `not-yet-in-force`, `unverified`).
 `headline` is the module's headline words, `null` when it draws none. The
@@ -65,6 +70,6 @@ megabyte, too large for a shared vector.
   and rows are those of two claims, and neither `claim-3` nor `req-3` appears
   anywhere in the page.
 - `result-generic`: the claim the judge could not decide (`not_evaluable`,
-  sufficiency `GAP`) is counted only in the "could not decide" tile and its
+  claim) is counted only in the "could not decide" tile and its
   row says `not_evaluable`: shown as such, never omitted and never upgraded
   to met.
