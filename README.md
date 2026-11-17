@@ -281,6 +281,8 @@ builds a read-only context from them.
 This is the plain receipt this repository keeps (see Module ownership above; the
 9b receipt is `capsulectl.deal-view/v0`).
 
+**Deprecated (#71):** importing `capsule_viewer.receipt` emits a `DeprecationWarning`; the package will be removed in a later release (see the CHANGELOG). For new work, build receipt pages with the TypeScript `buildPresentation` (`format: "static"`).
+
 `capsule_viewer.receipt` is the unilateral deal receipt,
 `capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
 `x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the

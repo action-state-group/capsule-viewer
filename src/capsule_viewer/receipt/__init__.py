@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The deal receipt modules, unilateral (``capsuleviewer.receipt.unilateral/v0``,
+"""Deprecated (capsule-viewer#71): importing this package emits a DeprecationWarning.
+
+The deal receipt modules, unilateral (``capsuleviewer.receipt.unilateral/v0``,
 a buyer's copy), seller (``capsuleviewer.receipt.seller/v0``, a seller's copy
 of one buyer thread) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
 composed/v1 bundle of both parties' copies), their manifests, and an example
