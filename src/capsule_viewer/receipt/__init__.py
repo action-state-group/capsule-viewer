@@ -22,8 +22,9 @@ from .role import SELLER_KIND, sealed_party_role, sealed_side, seller_kind_engag
 from .seller import SELLER_MANIFEST, SellerModel, SellerReceiptModule, build_seller, seller_manifest
 
 # Deprecated (capsule-viewer#71): the Python receipt modules are the test oracle
-# for the JS module-slot scripts and nothing else; the receipt page is built by
-# the TypeScript implementation (``buildPresentation`` with ``format: "static"``).
+# for the JS module-slot scripts and the generator of those scripts
+# (``module_slot --write``); the receipt page is built by the TypeScript
+# implementation (``buildPresentation`` with ``format: "static"``).
 # They will be removed in a later release.
 warnings.warn(
     "capsule_viewer.receipt (the Python unilateral, seller and bilateral receipt "
