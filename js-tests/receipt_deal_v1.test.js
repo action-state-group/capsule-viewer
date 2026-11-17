@@ -64,6 +64,7 @@ describe("the deal/v1 receipt", () => {
     const { host } = await page(content({ rows }), "L1");
     const shown = [...host.L1.querySelectorAll("[data-row-status]")].map((e) => [e.closest("tr").querySelector("[data-row-id]").getAttribute("data-row-id"), e.getAttribute("data-row-status")]);
     expect(shown).toEqual(statuses.map((s, i) => [`row_${i}`, s]));
+    expect(host.L1.querySelector("th").textContent).toBe("Term");
     expect(host.L1.querySelector('[data-row-status="agreed_so_far"]').textContent).toBe("Both say the same so far");
   });
 
@@ -81,7 +82,8 @@ describe("the deal/v1 receipt", () => {
   it("a settled flag on a deal that has not started shows nothing", async () => {
     const p = await page(content({ start: { state: "not_started", local: false, by: null }, settled: true, rows_state: "not_started", rows: [] }), "L0");
     expect(p.host.L0.querySelector("[data-settled]")).toBeNull();
-    expect(p.host.L0.querySelector('[data-rows-state="not_started"]')).not.toBeNull();
+    expect(p.host.L0.querySelector('[data-rows-state="not_started"]').textContent).toBe("Nothing is agreed yet, so there are no terms to show.");
+    expect(p.host.L0.querySelector("h2").textContent).toBe("Receipt report");
   });
 
   it("one test per audience: keep and counterparty list the rows; the adjudicator's copy says withheld, not no rows", async () => {
@@ -92,7 +94,7 @@ describe("the deal/v1 receipt", () => {
     }
     const adj = await page(content({ audience: "adjudicator", rows_state: "withheld", rows: [] }), "L1", "adjudicator");
     expect(adj.host.L1.querySelectorAll("[data-row-status]").length).toBe(0);
-    expect(adj.host.L1.querySelector('[data-rows-state="withheld"]').textContent).toBe("The holder has not shared each row's status with this reader.");
+    expect(adj.host.L1.querySelector('[data-rows-state="withheld"]').textContent).toBe("The holder has not shared each term's status with this reader.");
     expect(adj.host.L1.textContent).not.toMatch(/no rows/i);
     expect(adj.host.L0.querySelector('[data-shared="adjudicator"]')).not.toBeNull();
   });
@@ -114,11 +116,12 @@ describe("the deal/v1 receipt", () => {
     expect((await page(content(), "L0", null, { "x-deal-v0": { sealed_report: "rep-1" } })).shown).toBe(false);
   });
 
-  it("shows late statements only when the report carries them, and the as_of as the holder's time", async () => {
+  it("shows no late line (section 9 leaves late undefined), and the as_of as the holder's time", async () => {
     const without = await page(content());
-    expect(without.text).not.toMatch(/Late:/);
+    expect(without.text).not.toMatch(/Late/);
     const withLate = await page(content({ rows: [{ ...ROW, late: { statements: [{ side: "seller", value: "met", record: "r" }], disputes: [] } }] }));
-    expect(withLate.text).toMatch(/Late: 1 statements, 0 disputes/);
+    expect(withLate.shown).toBe(true);
+    expect(withLate.text).not.toMatch(/Late/);
     expect(withLate.text).toMatch(/Payment check: not recomputed/);
     expect(without.text).toMatch(/As the holder computed it at 2026-11-10T12:00:00Z\. This is not a time any witness attests\./);
   });
@@ -127,7 +130,8 @@ describe("the deal/v1 receipt", () => {
     const p = await page(content({ rows: [{ ...ROW, status: "ruled", local: true, due: "not_set", remedy: "none", ruling: { record: "r", value: "not_met", against: "seller", final: true, remedy_due: null } }] }));
     expect(p.text).toMatch(/Holder's time only: this result rests on a record with no time from a named witness/);
     expect(p.text).toMatch(/not set/);
-    expect(p.text).toMatch(/Final ruling: not met, against seller/);
+    expect(p.text).toMatch(/Ruling: not met/);
+    expect(p.text).not.toMatch(/Statement: /);
   });
 
   it("an adjudicator's copy that omits rests_on.counterparty, witnesses and the layer shows no zero for them", async () => {

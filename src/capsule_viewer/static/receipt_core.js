@@ -919,7 +919,6 @@
     var r = raw;
     var id = str(get(r, "id"));
     if (id === null || id === "") throw new Unavailable("a row of the v1 report has no id");
-    var late = get(r, "late");
     var ruling = get(r, "ruling");
     // section 9: the first final ruling rowstatus applied, or null.
     if (ruling !== null && (!isMap(ruling) || flag(ruling, "final", "ruling final") !== true)) throw new Unavailable("the v1 report's ruling is not a final ruling or null");
@@ -935,10 +934,9 @@
       remedy: optionalWord(V1_REMEDIES, get(r, "remedy"), "row remedy"),
       local: flag(r, "local", "row local"),
       check: closedWord(V1_CHECKS, get(r, "check"), "row check"),
-      // Optional until rowstatus reports late statements and disputes (evidencebook#461, Q9): nothing is shown while absent.
-      late: isMap(late) ? { statements: seq(get(late, "statements")).length, disputes: seq(get(late, "disputes")).length } : null,
+      // `late` (optional in section 9, undefined until rowstatus reports it) is not read: the page shows no late line.
       ruling: isMap(ruling)
-        ? { value: or(str(get(ruling, "value")), ""), against: or(str(get(ruling, "against")), ""), remedy_due: str(get(ruling, "remedy_due")) }
+        ? { value: or(str(get(ruling, "value")), "") }
         : null,
       relied_on: relied.map(function (e) {
         if (!isMap(e)) throw new Unavailable("a relied_on entry of the v1 report is not an object");
@@ -2128,12 +2126,12 @@
   P.dateText = function (value) { return value === "not_set" ? w("deal.date.not_set") : value; };
   P.rowDetail = function (row) {
     var bits = [];
-    if (row.value !== null) bits.push(w("deal.row.value", { value: this.token("deal.value", row.value) }));
+    // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
+    if (row.value !== null && row.status !== "ruled") bits.push(w("deal.row.value", { value: this.token("deal.value", row.value) }));
     if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy) }));
-    if (row.ruling !== null) bits.push(w("deal.row.ruling", { value: this.token("deal.value", row.ruling.value), against: row.ruling.against }));
+    if (row.ruling !== null) bits.push(w("deal.row.ruling", { value: this.token("deal.value", row.ruling.value) }));
     bits.push(w("deal.row.check", { check: this.token("deal.check", row.check) }));
     if (row.local) bits.push(w("deal.local"));
-    if (row.late !== null && (row.late.statements || row.late.disputes)) bits.push(w("deal.row.late", { statements: String(row.late.statements), disputes: String(row.late.disputes) }));
     return bits.join("; ");
   };
   P.dealRows = function (model) {
