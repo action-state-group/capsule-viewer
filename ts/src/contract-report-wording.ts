@@ -696,10 +696,12 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "front.agg.unknown.one",
   "front.agg.unknown.other",
   "front.agg.mismatch",
-  "front.agg.as-of",
-  "front.agg.copied.both",
-  "front.agg.copied.dates",
-  "front.agg.copied.switch",
+  // Module spec section 2, "Copied facts": a pack cannot make a date or a
+  // switch copied from the contract read as checked here, and cannot
+  // make a later claim read as in force.
+  "applicability.as_of",
+  "applicability.not_yet_in_force.note",
+  "contract_fact.note",
   // The record page, the lowest level (record-page.ts): what each proof
   // proves and does not, what a status means, and what this page did not
   // run. A pack cannot make a rung read as proving more than it does.
@@ -1450,9 +1452,9 @@ export interface WordingSource {
 export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
-  lines: "16042a84872629267d4d1cc2d3920634c3d10f1ed7977bda4bc9021103bf8b12",
-  groups: "31ac6e4d0a2a7e21b51ed8294922427a31f16cdb120962df0c645babfa704a10",
-  generic: "d6a99863ce687c87270e7bcc8554877735a893e4140a25e76aa8cc9a82ac1d67",
+  lines: "81187cb647c6057ed62edbe1e0e200e77a857db328b82d47c58d5e9921321824",
+  groups: "d075bba99c61aed80cc1a7f7934d0f41490cef15015cba122032ab1da8ca5b12",
+  generic: "1092eb2979942ba08fa52b8e36241ef4881e267cde4e05239d4ce0488fc1279c",
 });
 
 export interface Words {

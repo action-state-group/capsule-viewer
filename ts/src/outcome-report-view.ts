@@ -1611,6 +1611,59 @@ function renderLines(
 // Summary: results rule by rule
 // ---------------------------------------------------------------------------
 
+/**
+ * The not-yet-in-force section (module spec section 2, Applicability): the
+ * later criteria of every conversation, in their own section after the
+ * rules, never merged with them and counted in no tally above. A conversation
+ * whose every claim is later appears only here, never as "could not decide".
+ * Each criterion's result carries the readiness label, so a later not_met is
+ * never read as a violation.
+ */
+function renderNotYetInForce(
+  host: HTMLElement,
+  model: LinesModel,
+  w: Words,
+): void {
+  const entries = [
+    ...model.conversations.map((c) => ({ c, later: c.notYetInForce })),
+    ...model.notYetInForce.map((c) => ({ c, later: c.notYetInForce })),
+  ].filter((e) => e.later.length > 0);
+  if (entries.length === 0) return;
+  const total = entries.reduce((sum, e) => sum + e.later.length, 0);
+  const section = el("section", "sec");
+  section.dataset.section = "not-yet-in-force";
+  section.dataset.count = String(total);
+  section.append(
+    el(
+      "h2",
+      "",
+      w.t("applicability.not_yet_in_force.title", { n: fmtCount(total) }),
+    ),
+    el("p", "lede", w.t("applicability.not_yet_in_force.note")),
+  );
+  const list = el("ul", "later-list");
+  for (const { c, later } of entries) {
+    for (const cr of later) {
+      const label = criterionLabel(model, cr.checkId, cr.criterionId, w);
+      const item = el("li", "later-item");
+      item.dataset.conversation = c.conversationId;
+      item.dataset.rule = `${cr.checkId}.${cr.criterionId}`;
+      item.append(
+        el("b", "", label.label),
+        document.createTextNode(` · ${c.conversationId} · `),
+        el(
+          "span",
+          "readiness",
+          `${w.t("lines.later.readiness")}: ${w.enumWord("verdict", cr.verdict)}`,
+        ),
+      );
+      list.append(item);
+    }
+  }
+  section.append(list);
+  host.append(section);
+}
+
 function renderRules(
   host: HTMLElement,
   model: LinesModel,
@@ -2622,6 +2675,7 @@ export async function drawLines(
 
   // L1, why: rule by rule, led by who judged, who witnessed, what verified.
   renderRules(levels.L1, model, runInfo, result, w);
+  renderNotYetInForce(levels.L1, model, w);
   leadWithProvenance(
     levels.L1,
     levels.L1.querySelector('[data-section="rules"]'),

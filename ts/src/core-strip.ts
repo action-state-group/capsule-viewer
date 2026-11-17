@@ -279,6 +279,15 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
       el("span", "agg-of", of),
     );
     box.append(caption);
+    if (verdict === "out_of_scope") {
+      const fact = el(
+        "div",
+        "agg-fact",
+        w.section3("contract_fact.note") ?? "",
+      );
+      fact.dataset.contractFact = "out-of-scope";
+      box.append(fact);
+    }
     const marker = mismatchMarker(figure, field, w);
     if (marker !== undefined) box.append(marker);
     buckets.append(box);
@@ -288,22 +297,24 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
   const switched = result.buckets.outOfScope !== undefined;
   if (dated || switched) {
+    // Module spec section 2, "Copied facts": the as-of date (the UTC date of
+    // generated_at, through `applicability.as_of`, the bare date when the
+    // pack's word lacks exactly one {date}) and `contract_fact.note`, which
+    // also sits beside the out_of_scope count above.
     const copied = el("p", "agg-note");
     if (dated) {
       // A dated Result passed validation, so generated_at parses.
       const date = utcDateOf(result.generatedAt) ?? result.generatedAt;
-      copied.append(w.t("front.agg.as-of", { date }), " ");
+      const word = w.section3("applicability.as_of");
+      copied.append(
+        word !== undefined && word.split("{date}").length === 2
+          ? word.replace("{date}", date)
+          : date,
+        " ",
+      );
       copied.dataset.asOf = date;
     }
-    copied.append(
-      w.t(
-        dated && switched
-          ? "front.agg.copied.both"
-          : dated
-            ? "front.agg.copied.dates"
-            : "front.agg.copied.switch",
-      ),
-    );
+    copied.append(w.section3("contract_fact.note") ?? "contract_fact.note");
     copied.dataset.copiedFacts = "contract";
     out.append(copied);
   }

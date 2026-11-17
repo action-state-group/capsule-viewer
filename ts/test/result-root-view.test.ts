@@ -77,7 +77,7 @@ it("the fourth bucket draws when the Result carries out_of_scope, counted on its
   expect(copied).not.toBeNull();
   expect(copied.dataset.asOf).toBeUndefined();
   expect(copied.textContent).toBe(
-    "The out-of-scope switch is copied from the contract, not re-checked here.",
+    "Any date or out-of-scope switch shown here is copied from the contract, not re-checked here.",
   );
 });
 
@@ -99,7 +99,7 @@ it("a claim not yet in force is shown in its own section, after the in-force buc
   const copied = root.querySelector<HTMLElement>("[data-copied-facts]")!;
   expect(copied.dataset.asOf).toBe("2026-09-16");
   expect(copied.textContent).toBe(
-    "In force as of 2026-09-16. The dates are copied from the contract, not re-checked here.",
+    "In force as of 2026-09-16. Any date or out-of-scope switch shown here is copied from the contract, not re-checked here.",
   );
   const buckets = root.querySelector<HTMLElement>('[data-buckets="verdict"]')!;
   // never merged into not_evaluable: that bucket is empty

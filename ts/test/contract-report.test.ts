@@ -1432,6 +1432,14 @@ it("every default-pack key either is an exact section 3 key or starts with none 
   const exact = new Set<string>();
   for (const [family, values] of Object.entries(SECTION3_ENUMS))
     for (const value of values) exact.add(`${family}.${value}`);
+  // The exact keys the kind defines beyond the enums (module spec section 3).
+  for (const key of [
+    "applicability.as_of",
+    "applicability.not_yet_in_force.title",
+    "applicability.not_yet_in_force.note",
+    "contract_fact.note",
+  ])
+    exact.add(key);
   for (const grouping of ["lines", "groups"] as const) {
     const keys = Object.keys(DEFAULT_PACKS[grouping].entries);
     expect(keys.length).toBeGreaterThan(0);
@@ -1918,6 +1926,31 @@ it("a date not yet in force is never drawn without its conditions (D3)", async (
     );
     expect(note.textContent).not.toContain("2 Dec 2027");
   }
+  // the wholly later test is in its own section after every in-force test,
+  // under the pack's applicability title and note, never among them
+  const section = root.querySelector<HTMLElement>(
+    'tbody[data-section="not-yet-in-force"]',
+  );
+  expect(section).not.toBeNull();
+  expect(section!.textContent).toContain("Not yet in force");
+  expect(section!.textContent).toContain("Readiness only");
+  const row = root.querySelector<HTMLElement>(
+    `tr.test[data-criterion="${later}"]`,
+  );
+  expect(row).not.toBeNull();
+  const bodies = [...root.querySelectorAll("table.sum > tbody")];
+  expect(bodies.indexOf(row!.closest("tbody")!)).toBeGreaterThan(
+    bodies.indexOf(section!),
+  );
+  for (const test of root.querySelectorAll<HTMLElement>("tr.test"))
+    if (test.dataset.criterion !== later)
+      expect(bodies.indexOf(test.closest("tbody")!)).toBeLessThan(
+        bodies.indexOf(section!),
+      );
+  // the as-of date and the copied-from-the-contract note sit together
+  const copied = root.querySelector<HTMLElement>("[data-copied-facts]");
+  expect(copied?.dataset.asOf).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+  expect(copied?.textContent).toContain("copied from the contract");
 });
 
 it("a rule's not-applicable count is in its detail row before the row opens, so a static page shows it", async () => {
