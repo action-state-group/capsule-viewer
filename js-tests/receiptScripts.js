@@ -1,8 +1,8 @@
 // Shared by the receipt module-slot tests: the three scripts as shipped, run
-// in a fresh jsdom window each, and the inputs the Python oracle
-// (tests/receipt_oracle.py) hands both sides.
-import { execFileSync } from "node:child_process";
+// in a fresh jsdom window each, and the frozen golden (receiptGolden) the
+// scripts are held to.
 import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
@@ -32,12 +32,16 @@ export function loadScript(kind) {
 }
 
 let oracle;
-/** The Python modules' output for every case (run once). */
-export function pythonOracle() {
-  if (!oracle) {
-    const out = execFileSync(PY, [join(ROOT, "tests", "receipt_oracle.py")], { cwd: ROOT, env: PY_ENV, encoding: "utf8", maxBuffer: 1 << 28 });
-    oracle = JSON.parse(out);
-  }
+/**
+ * The frozen receipt output for every case: what the Python modules made of
+ * each receipt fixture (canRender, model, and the page at L0, L1 and L2), kept
+ * as tests/testdata/receipt/oracle-golden.json.gz. The scripts are held to it.
+ * tests/test_receipt_oracle_golden.py holds the file to the Python modules
+ * for as long as they exist; regenerate with
+ * `python tests/receipt_oracle.py | gzip -n -9 > tests/testdata/receipt/oracle-golden.json.gz`.
+ */
+export function receiptGolden() {
+  if (!oracle) oracle = JSON.parse(gunzipSync(readFileSync(join(RECEIPTS, "oracle-golden.json.gz"))).toString("utf8"));
   return oracle;
 }
 

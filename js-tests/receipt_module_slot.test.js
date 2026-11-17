@@ -41,7 +41,7 @@ import { standInContext } from "./aacContext.js";
 import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { pixelDifference } from "./pngPixels.js";
 import {
-  caseInputs, KINDS, loadScript, manifestOf, PY, PY_ENV, pythonOracle, readBundle, readVerify, RECEIPTS,
+  caseInputs, KINDS, loadScript, manifestOf, PY, PY_ENV, receiptGolden, readBundle, readVerify, RECEIPTS,
   REVIVE_CONTEXT, ROOT, scriptBytes, scriptJson, serializeContext,
 } from "./receiptScripts.js";
 
@@ -65,7 +65,7 @@ describe("a declined ask, with the page's own verifier", () => {
   it("one-sided-refusal-keep is incomplete, never verified, under the default environment", async () => {
     // The oracle's inputs for the member copy and the audience; the bundle's verification is the script's own
     // (pageVerification), which cannot see capsulectl's INCOMPLETE verdict for the refusal member.
-    const c = pythonOracle().cases.find((x) => x.name === "one-sided-refusal-keep" && x.audience === "keep");
+    const c = receiptGolden().cases.find((x) => x.name === "one-sided-refusal-keep" && x.audience === "keep");
     const { context, env } = caseInputs(c);
     delete env.verification;
     const lib = loadScript("bilateral");
@@ -376,7 +376,7 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
       const start = python.indexOf('<div data-level="L0">');
       const end = python.indexOf("</main>");
       expect(start).toBeGreaterThan(0);
-      const c = pythonOracle().cases.find((x) => x.name === g.name && x.audience === g.audience);
+      const c = receiptGolden().cases.find((x) => x.name === g.name && x.audience === g.audience);
       const { context, env } = caseInputs(c);
       const members = {};
       if (g.kind === "bilateral") {
