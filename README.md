@@ -380,7 +380,7 @@ stylesheet each script inserts once at render).
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and rewrites the `executable` block of each `receipt_slot/manifest-*.json`
-  (the rest of the manifest, its id and selection clauses, is edited by hand). One script per module: a builder puts
+  (the rest of the manifest, its id and selection clauses, is edited by hand; while the Python modules exist, `tests/test_receipt_module_slot.py` holds them equal to those modules' manifests, and after that the JSON is the only source). One script per module: a builder puts
   one script in a page per module it chose, so a shared script would register modules it
   did not choose. `tests/test_receipt_module_slot.py` fails when a committed file is not
   what the generator writes.
