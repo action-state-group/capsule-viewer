@@ -281,11 +281,7 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
     );
     box.append(caption);
     if (verdict === "out_of_scope") {
-      const fact = el(
-        "div",
-        "agg-fact",
-        w.section3("contract_fact.note") ?? "",
-      );
+      const fact = el("div", "agg-fact", contractFactNote(w));
       fact.dataset.contractFact = "out-of-scope";
       box.append(fact);
     }
@@ -296,13 +292,13 @@ function renderAggregate(result: ResultRoot, w: Words): DocumentFragment {
   out.append(buckets);
 
   const dated = result.claims.some((claim) => claim.appliesFrom !== undefined);
-  const switched = result.buckets.outOfScope !== undefined;
   if (dated) {
     // Module spec section 2, "Copied facts": the as-of date (the UTC date of
     // generated_at, through `applicability.as_of`, the bare date when the
     // pack's word lacks exactly one {date}) and `contract_fact.note`, which
-    // also sits beside the out_of_scope count above (drawn here only with a date,
-    // so the note is not stated twice).
+    // also sits beside the out_of_scope count above. This line is drawn only
+    // with a date: a Result with the switch alone states the note once, beside
+    // the count; one with both states it at both places, as the spec asks.
     const copied = el("p", "agg-note");
     if (dated) {
       // A dated Result passed validation, so generated_at parses.
