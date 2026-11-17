@@ -1,18 +1,18 @@
 // The receipt modules' pages in a real browser: every receipt fixture (a buyer's
 // or a seller's copy, or a composed/v1 bundle of both parties' copies), for its own audience, fully
 // open (depth L2) and as it first opens (depth L0), must fit a phone, a desktop
-// and a printed page with no horizontal overflow. The pages are the modules'
-// real output (python -m capsule_viewer.receipt ...).
+// and a printed page with no horizontal overflow. The pages are the module-slot
+// scripts' real output, each run in a page (receiptPage.js).
 //
 // Without a Chromium the suite is SKIPPED locally with a warning, and FAILS
 // under CI (process.env.CI) -- a missing browser must never read as a pass.
-import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
+import { receiptScriptPage } from "./receiptPage.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = join(ROOT, "tests", "testdata", "receipt");
@@ -66,14 +66,21 @@ if (!chromePath) {
 }
 
 function buildPage(dir, fx, depth) {
-  const html = execFileSync(
-    process.env.PYTHON || "python3",
-    ["-m", "capsule_viewer.receipt", join(DATA, `${fx.name}.bundle.json`), join(DATA, `${fx.name}.verify.json`), fx.audience, depth],
-    { cwd: ROOT, env: { ...process.env, PYTHONPATH: join(ROOT, "src") }, encoding: "utf8" },
-  );
+  const { html } = receiptScriptPage(fx.name, fx.audience, depth);
   const file = join(dir, `${fx.name}-${depth}.html`);
   writeFileSync(file, html);
   return { html, url: pathToFileURL(file).href };
+}
+
+// The script draws the page after load: wait for it, and fail on a render error.
+async function rendered(tab) {
+  for (let i = 0; i < 100; i += 1) {
+    const state = await tab.evaluate(`document.body.getAttribute("data-rendered")`);
+    if (state === "true") return;
+    if (state) throw new Error(`the receipt script did not render: ${state}`);
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error("the receipt page did not render");
 }
 
 // Every element whose box leaves the viewport, and any element that scrolls its
@@ -120,15 +127,12 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
     if (dir) rmSync(dir, { recursive: true, force: true });
   }, CLOSE_TIMEOUT_MS);
 
-  it("no receipt page carries a script", () => {
-    for (const page of Object.values(pages)) expect(page.html.toLowerCase()).not.toContain("<script");
-  });
-
   for (const fx of FIXTURES) {
     for (const depth of DEPTHS) {
       for (const vp of VIEWPORTS) {
         it(`${fx.name} at ${depth} fits ${vp.name} (${vp.width}px, ${vp.media})`, async () => {
           await tab.open(pages[`${fx.name}-${depth}`].url, { width: vp.width, media: vp.media });
+          await rendered(tab);
           const m = await tab.evaluate(MEASURE);
           expect(m.vw).toBe(vp.width);
           // Not vacuous: all three levels are laid out and every step is on the page.
@@ -150,9 +154,11 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
   for (const name of ["keep", "bilateral-counterparty", "seller-counterparty"]) {
     it(`${name}: an L0 page hides its steps on screen and prints them`, async () => {
       await tab.open(pages[`${name}-L0`].url, { width: 390, media: "screen" });
+      await rendered(tab);
       const screen = await tab.evaluate(MEASURE);
       expect(screen.visibleRecords).toBe(0);
       await tab.open(pages[`${name}-L0`].url, { width: 680, media: "print" });
+      await rendered(tab);
       const printed = await tab.evaluate(MEASURE);
       expect(printed.visibleRecords).toBe(printed.records);
     }, 30000);

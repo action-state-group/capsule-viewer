@@ -2,7 +2,8 @@
 // desktop (1280px) width, with every toggle closed and with every toggle
 // opened: the Rules page (verified, and failed), the unilateral receipt (the
 // owner's keep copy and the counterparty copy) and the bilateral receipt (keep
-// and counterparty). The pages are the modules' real output.
+// and counterparty). The Rules pages are that module's real output; the
+// receipts are the module-slot scripts run in a page (receiptPage.js).
 //
 // The PNGs in tests/goldens/ are review images: a reviewer opens the 390px one
 // and sees L0 without scrolling. Fonts differ between machines, so this suite
@@ -22,6 +23,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
+import { receiptScriptPage } from "./receiptPage.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const GOLDENS = join(ROOT, "tests", "goldens");
@@ -32,17 +34,17 @@ const SCREEN_HEIGHT = 900;
 const WIDTHS = [390, 1280];
 const STATES = ["closed", "open"];
 
-const receipt = (name, audience) => ["-m", "capsule_viewer.receipt", join(RECEIPTS, `${name}.bundle.json`), join(RECEIPTS, `${name}.verify.json`), audience, "L0"];
+const receipt = (name, audience) => ({ receipt: [name, audience] });
 // keep: the owner's copy (PRIVATE banner). verified: false is a page that did
 // not verify (no L0, no toggles). oneScreen: false is a two-copy page, whose L0
 // holds both headlines and is not held to one phone screen.
 const PAGES = [
   { name: "rules-verified", args: ["-m", "capsule_viewer.rules", "fixture"] },
   { name: "rules-failed", args: ["-m", "capsule_viewer.rules", "fixture", "--failed"], verified: false },
-  { name: "receipt-keep", args: receipt("keep", "keep"), keep: true },
-  { name: "receipt-counterparty", args: receipt("counterparty", "counterparty") },
-  { name: "receipt-bilateral-keep", args: receipt("bilateral-keep", "keep"), keep: true, oneScreen: false },
-  { name: "receipt-bilateral-counterparty", args: receipt("bilateral-counterparty", "counterparty"), oneScreen: false },
+  { name: "receipt-keep", ...receipt("keep", "keep"), keep: true },
+  { name: "receipt-counterparty", ...receipt("counterparty", "counterparty") },
+  { name: "receipt-bilateral-keep", ...receipt("bilateral-keep", "keep"), keep: true, oneScreen: false },
+  { name: "receipt-bilateral-counterparty", ...receipt("bilateral-counterparty", "counterparty"), oneScreen: false },
 ];
 
 const chromePath = findChrome();
@@ -75,6 +77,17 @@ const MEASURE = `(() => {
   };
 })()`;
 
+// A receipt page draws after load (the script): wait for it, and fail on a render error.
+async function rendered(tab) {
+  for (let i = 0; i < 100; i += 1) {
+    const state = await tab.evaluate(`document.body.getAttribute("data-rendered")`);
+    if (state === "true") return;
+    if (state) throw new Error(`the receipt script did not render: ${state}`);
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error("the receipt page did not render");
+}
+
 // Width and height from a PNG's IHDR chunk.
 function pngSize(buf) {
   expect(buf.subarray(1, 4).toString("ascii")).toBe("PNG");
@@ -90,11 +103,13 @@ describe.skipIf(!chromePath)("consumer goldens (headless Chromium)", () => {
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "cv-goldens-"));
     for (const page of PAGES) {
-      const html = execFileSync(process.env.PYTHON || "python3", page.args, {
-        cwd: ROOT,
-        env: { ...process.env, PYTHONPATH: join(ROOT, "src") },
-        encoding: "utf8",
-      });
+      const html = page.receipt
+        ? receiptScriptPage(...page.receipt, "L0").html
+        : execFileSync(process.env.PYTHON || "python3", page.args, {
+            cwd: ROOT,
+            env: { ...process.env, PYTHONPATH: join(ROOT, "src") },
+            encoding: "utf8",
+          });
       const file = join(dir, `${page.name}.html`);
       writeFileSync(file, html);
       urls[page.name] = pathToFileURL(file).href;
@@ -116,6 +131,7 @@ describe.skipIf(!chromePath)("consumer goldens (headless Chromium)", () => {
         const golden = `${page.name}-${width}-${state}.png`;
         it(`${golden}`, async () => {
           await tab.open(urls[page.name], { width, media: "screen" });
+          if (page.receipt) await rendered(tab);
           if (state === "open") await tab.evaluate(OPEN_ALL);
           const m = await tab.evaluate(MEASURE);
 
@@ -129,9 +145,13 @@ describe.skipIf(!chromePath)("consumer goldens (headless Chromium)", () => {
             expect(m.open).toBe(state === "open" ? m.details : 0);
             expect(m.l0Bottom).toBeGreaterThan(0);
           }
-          // The verification state is on the first screen at every width.
-          expect(m.outcomeBottom).toBeGreaterThan(0);
-          expect(m.outcomeBottom).toBeLessThanOrEqual(SCREEN_HEIGHT);
+          // The verification state is on the first screen at every width. (A
+          // receipt page here is only the module's section, in a bare shell:
+          // the page's verification banner belongs to the core page around it.)
+          if (!page.receipt) {
+            expect(m.outcomeBottom).toBeGreaterThan(0);
+            expect(m.outcomeBottom).toBeLessThanOrEqual(SCREEN_HEIGHT);
+          }
           // L0 is the first phone screen, without scrolling.
           if (width === 390 && page.verified !== false && page.oneScreen !== false) expect(m.l0Bottom).toBeLessThanOrEqual(SCREEN_HEIGHT);
           // The PRIVATE banner: on the keep copy's first screen, outside every

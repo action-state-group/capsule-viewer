@@ -15,11 +15,12 @@
 // module: the page builder puts one script in the page per module it chose,
 // and a script never registers a module the builder did not choose.
 //
-// It is the twin of the Python modules (capsule_viewer.receipt: model.py,
-// module.py, seller.py, bilateral.py, role.py), which stay the test oracle:
-// js-tests/receipt_parity.test.js renders every receipt fixture both ways
-// and fails on any difference in the model or the rendered result. Names
-// below follow the Python ones, so a reader can hold the two side by side.
+// It was written as the twin of the Python receipt modules (model.py, module.py,
+// seller.py, bilateral.py, role.py of capsule_viewer.receipt), removed in
+// capsule-viewer#71. js-tests/receipt_parity.test.js holds it to the frozen
+// golden of what those modules made of every receipt fixture (the model and the
+// rendered result), tests/testdata/receipt/oracle-golden.json.gz. Names below
+// follow the removed Python ones.
 //
 // It imports nothing and reads no wording pack. UTF-8, SHA-256 and JCS are
 // computed here, synchronously. It never verifies: canRender and buildModel
@@ -34,15 +35,15 @@
 // * the page's audience: resolution matched the manifest's audiences against
 //   it, and the module is not told which it was. A copy is shown as the
 //   audience its own sealed report names (a keep copy carries the PRIVATE
-//   banner, any other copy never does), never relabelled. The Python twin is
-//   given the page's audience and also declines a copy cut for another one.
+//   banner, any other copy never does), never relabelled. The removed Python twin was
+//   given the page's audience and also declined a copy cut for another one.
 // * the verifier's witness and countersignature results beyond the context:
 //   the page's verifier reports no witness result (so the witness rung says
 //   none was reported to this page), and each countersignature as it reports
 //   it.
 // * a composition's carried copies as contexts of their own: the bilateral
 //   module asks the page's runtime to verify each carried copy
-//   (EvidenceGraph.buildVerifiedBundleContext), as the Python twin reads each
+//   (EvidenceGraph.buildVerifiedBundleContext), as the removed Python twin read each
 //   copy's own verifier report. Nothing of one copy fills another.
 (function (root) {
   "use strict";

@@ -46,8 +46,8 @@ capsule_viewer = ["static/*.js", "static/*.css", "ledger/*.json", "receipt/*.jso
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# The deprecated Python receipt modules are still the oracle for the JS scripts
-# (capsule-viewer#71); tests/test_receipt_deprecation.py asserts the warning itself.
+# What is left of capsule_viewer.receipt (the provider page, #319) is still
+# deprecated and its tests import it; tests/test_receipt_deprecation.py asserts the warning itself.
 filterwarnings = ["ignore:capsule_viewer.receipt .* is deprecated:DeprecationWarning"]
 
 [tool.ruff]

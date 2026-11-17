@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The unilateral receipt manifest against agent-action-capsule's presentation
-contract: schema-valid, selected for every receipt fixture and every audience
-it serves, never ambiguous with the built-ins, the generic fallback or the
-rules module, and refusing a composition (contract sections 4.3 to 4.5)."""
+"""The unilateral receipt module-slot manifest against agent-action-capsule's
+presentation contract: schema-valid, selected for every receipt fixture it
+serves, never ambiguous with the built-ins, the generic fallback or the rules
+module, and refusing a composition (contract sections 4.3 to 4.5), plus the
+registry's own rules (registration, ambiguity, refusals). Selection here is by
+manifest: every module's canRender says yes; what a script accepts is held by
+the frozen golden (``js-tests/receipt_parity.test.js``)."""
 from __future__ import annotations
 
 import copy
@@ -13,9 +16,9 @@ import jsonschema
 import pytest
 from receipt_helpers import FIXTURES, Doc, audience_of, load, report_for
 
+from capsule_viewer import receipt_slot
 from capsule_viewer.context import VerifiedBundleContext, build_context
 from capsule_viewer.kit.components import VerificationResult
-from capsule_viewer.receipt import UNILATERAL_MANIFEST, UnilateralReceiptModule, unilateral_manifest
 from capsule_viewer.registry import (
     AmbiguityError,
     Entry,
@@ -25,7 +28,6 @@ from capsule_viewer.registry import (
     descriptor,
 )
 from capsule_viewer.verifier_report import context_from_capsulectl
-from capsule_viewer.wording import EMPTY_PACK
 
 AAC = Path(__file__).parent / "testdata" / "aac-presentation"
 SCHEMA = json.loads((AAC / "presentation-manifest-v0.json").read_text(encoding="utf-8"))
@@ -51,6 +53,18 @@ UNILATERAL_ID = "capsuleviewer.receipt.unilateral/v0"
 RULES_PROFILE = "spec_version:org.example.rules_compare/v0"
 # The manifest as a deployment that also registers the rules module configures
 # it at render time: forbidding the rules module's profile.
+UNILATERAL_MANIFEST = json.loads(receipt_slot.manifest_path("unilateral").read_text(encoding="utf-8"))
+
+
+def unilateral_manifest(forbid_profiles: list[str] = ()) -> dict:
+    """The manifest with *forbid_profiles* added to its ``forbids``, as a
+    deployment that also registers a module selected by a producer-named
+    profile configures it (contract section 4.4)."""
+    forbids = UNILATERAL_MANIFEST["forbids"]
+    extra = [p for p in forbid_profiles if p not in forbids["profiles"]]
+    return {**UNILATERAL_MANIFEST, "forbids": {**forbids, "profiles": [*forbids["profiles"], *extra]}}
+
+
 CONFIGURED = unilateral_manifest([RULES_PROFILE])
 
 
@@ -58,11 +72,7 @@ def _validator() -> jsonschema.Draft202012Validator:
     return jsonschema.Draft202012Validator({**SCHEMA, "$ref": "#/$defs/PresentationManifest"})
 
 
-def _module(audience: str = "keep") -> UnilateralReceiptModule:
-    return UnilateralReceiptModule(EMPTY_PACK, audience=audience, forbid_profiles=[RULES_PROFILE])
-
-
-def full_registry(module: UnilateralReceiptModule | None = None) -> Registry:
+def full_registry() -> Registry:
     """The receipt module beside every manifest it must coexist with. The
     built-ins and the rules module are registered by manifest; this test
     exercises selection, so their canRender always says yes."""
@@ -71,8 +81,7 @@ def full_registry(module: UnilateralReceiptModule | None = None) -> Registry:
         if manifest["id"] == "aac.builtin.no-aggregate/v0":
             continue  # a second fallback: the generic example stands for the fallback tier
         registry.register(manifest, lambda _c: True)
-    module = module or _module()
-    registry.register(module.manifest_json, module.canRender, module)
+    registry.register(CONFIGURED, lambda _c: True)
     return registry
 
 
@@ -83,11 +92,6 @@ def test_the_manifest_is_schema_valid():
 def test_the_schema_check_can_fail():
     bad = {**UNILATERAL_MANIFEST, "title": "words belong in the pack"}
     assert list(_validator().iter_errors(bad))
-
-
-def test_the_module_carries_its_manifest():
-    assert _module().manifest.id == UNILATERAL_ID
-    assert UNILATERAL_MANIFEST["id"] == UNILATERAL_ID
 
 
 SPECIFIC = [m for m in (*BUILTINS.values(), RULES) if not m["fallback"]]
@@ -144,24 +148,13 @@ def test_the_full_registry_registers():
 @pytest.mark.parametrize("name", FIXTURES)
 def test_each_receipt_fixture_selects_only_the_unilateral_module(name):
     context, _ = context_from_capsulectl(*load(name))
-    registry = full_registry(_module(audience_of(name)))
+    registry = full_registry()
     matched = registry.list(context, audience_of(name), "html")
     assert [e.id for e in matched] == [GENERIC["id"], UNILATERAL_ID]  # one specific, one fallback: tiers never tie
     resolution = registry.resolve(context, audience_of(name), "html")
     assert resolution.outcome == "module"
     assert resolution.entry.id == UNILATERAL_ID
     assert resolution.refusals == ()
-
-
-@pytest.mark.parametrize("audience", ["counterparty", "adjudicator"])
-def test_a_copy_is_never_shown_as_another_audiences(audience):
-    """The keep copy, asked for as a shared audience's page: the module declines
-    (the copy's own sealed report says whom it was cut for), so none of the
-    user's own content is shown as that audience's."""
-    context, _ = context_from_capsulectl(*load("keep"))
-    module = _module(audience)
-    assert module.canRender(context) is False
-    assert full_registry(module).resolve(context, audience, "html").entry.id == GENERIC["id"]
 
 
 def test_an_audience_it_does_not_serve_falls_to_the_fallback():
@@ -195,8 +188,7 @@ def test_the_composition_forbid_bites():
     loose = copy.deepcopy(UNILATERAL_MANIFEST)
     del loose["forbids"]["extensions"]
     registry = Registry()
-    module = _module()
-    registry.register(loose, module.canRender, module)
+    registry.register(loose, lambda _c: True)
     context = _context_with({"composed/v1": {"members": []}})
     assert registry.resolve(context, "keep", "html").entry.id == UNILATERAL_ID
 
@@ -217,24 +209,6 @@ def test_an_unverified_bundle_resolves_to_the_refusal_and_calls_nothing():
     failed = build_context(bundle, VerificationResult("v", "failed"), {})
     assert registry.resolve(failed, "keep", "html").outcome == "refusal"
     assert calls == []
-
-
-def test_a_receipt_the_module_declines_falls_to_the_fallback():
-    """Two disclosed deal reports: the text may have been swapped, so the module
-    declines and nothing of its is shown."""
-    bundle, output = load("counterparty")
-    keep_bundle, _ = load("keep")
-    bundle = copy.deepcopy(bundle)
-    keep_report = keep_bundle["extensions"]["x-deal-v0"]["sealed_report"]
-    bundle["disclosures"][keep_report] = keep_bundle["disclosures"][keep_report]
-    output = copy.deepcopy(output)
-    for entry in output["disclosures"]:
-        if entry["capsule_id"] == keep_report:
-            entry["status"] = "disclosure_match"
-    context, _ = context_from_capsulectl(bundle, report_for(bundle, output))
-    module = _module("counterparty")
-    assert module.canRender(context) is False
-    assert full_registry(module).resolve(context, "counterparty", "html").entry.id == GENERIC["id"]
 
 
 # ---- the registry's own rules ------------------------------------------------

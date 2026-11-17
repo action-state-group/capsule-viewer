@@ -18,6 +18,7 @@ import jsonschema
 import pytest
 from receipt_helpers import load
 
+from capsule_viewer import receipt_slot
 from capsule_viewer.history import (
     HISTORY_ID,
     HISTORY_MANIFEST,
@@ -26,12 +27,10 @@ from capsule_viewer.history import (
     selection_block,
 )
 from capsule_viewer.history.fixture import example_context
-from capsule_viewer.receipt import BilateralReceiptModule, SellerReceiptModule, UnilateralReceiptModule
 from capsule_viewer.registry import Registry, co_matchable, descriptor
 from capsule_viewer.rules import rules_manifest
 from capsule_viewer.rules.fixture import RECORD_KIND
 from capsule_viewer.verifier_report import context_from_capsulectl
-from capsule_viewer.wording import EMPTY_PACK
 
 ROOT = Path(__file__).resolve().parent.parent
 HISTORY = ROOT / "tests" / "testdata" / "history"
@@ -101,21 +100,23 @@ def test_the_script_fetches_nothing_and_imports_nothing():
 # ---- acceptance (3): never co-matchable with a deal view ------------------------
 
 
-def _receipt_modules():
-    # As a deployment that also registers the Rules module configures them (render-time forbid).
-    return (
-        UnilateralReceiptModule(EMPTY_PACK, forbid_profiles=[RULES_PROFILE]),
-        SellerReceiptModule(EMPTY_PACK, forbid_profiles=[RULES_PROFILE]),
-        BilateralReceiptModule(EMPTY_PACK, forbid_profiles=[RULES_PROFILE]),
-    )
+def _receipt_manifests():
+    # The three deal receipts' module-slot manifests, as a deployment that also
+    # registers the Rules module configures them (render-time forbid).
+    out = []
+    for kind in receipt_slot.KINDS:
+        manifest = json.loads(receipt_slot.manifest_path(kind).read_text(encoding="utf-8"))
+        manifest["forbids"]["profiles"] = [*manifest["forbids"]["profiles"], RULES_PROFILE]
+        out.append(manifest)
+    return out
 
 
-@pytest.mark.parametrize("deal_view", _receipt_modules(), ids=lambda m: m.manifest_json["id"])
+@pytest.mark.parametrize("deal_view", _receipt_manifests(), ids=lambda m: m["id"])
 def test_history_and_each_deal_receipt_are_not_co_matchable(deal_view):
-    assert not co_matchable(HISTORY_MANIFEST, deal_view.manifest_json)
-    assert not co_matchable(deal_view.manifest_json, HISTORY_MANIFEST)
+    assert not co_matchable(HISTORY_MANIFEST, deal_view)
+    assert not co_matchable(deal_view, HISTORY_MANIFEST)
     # The one token that does it (design section 4): without it, they would be.
-    bare = copy.deepcopy(deal_view.manifest_json)
+    bare = copy.deepcopy(deal_view)
     bare["forbids"]["extensions"].remove(SELECTION_EXTENSION)
     assert co_matchable(HISTORY_MANIFEST, bare)
 
@@ -139,8 +140,8 @@ def viewer_registry() -> Registry:
             continue  # a second fallback; the generic example stands for that tier
         registry.register(m, lambda _c: True)
     registry.register(rules_manifest(RECORD_KIND), lambda _c: True)
-    for module in _receipt_modules():
-        registry.register(module.manifest_json, module.canRender, module)
+    for manifest in _receipt_manifests():
+        registry.register(manifest, lambda _c: True)
     registry.register(HISTORY_MANIFEST, _can_render)
     return registry
 

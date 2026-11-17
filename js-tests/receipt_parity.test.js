@@ -1,7 +1,6 @@
 // The receipt modules' module-slot scripts against the frozen receipt golden
-// (tests/testdata/receipt/oracle-golden.json.gz: what the Python modules, the
-// scripts' twins, made of every case; tests/test_receipt_oracle_golden.py holds
-// it to them while they exist). For every receipt fixture
+// (tests/testdata/receipt/oracle-golden.json.gz: what the Python receipt modules,
+// the scripts' twins, made of every case before they were removed, #71). For every receipt fixture
 // under tests/testdata/receipt/ (single copies, seller and producer copies,
 // compositions, the deal-view golden, and the copies capsulectl as capsule-cli
 // main builds it cut, main-*) at every audience a page may be for,
@@ -26,7 +25,7 @@ import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, recei
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
-describe("receipt scripts vs the Python modules (the oracle)", () => {
+describe("receipt scripts vs the frozen golden", () => {
   let oracle;
   const loaded = {};
   beforeAll(() => {
@@ -88,7 +87,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
 
-  it("a registered module (no page audience) shows each copy as the Python twin does for the audience it was cut for", async () => {
+  it("a registered module (no page audience) shows each copy as the golden records it for the audience it was cut for", async () => {
     for (const c of oracle.cases) {
       if (c.name.includes("+") || c.audience !== oracle.audience_of[c.name]) continue;
       const { context, env } = caseInputs(c, null);

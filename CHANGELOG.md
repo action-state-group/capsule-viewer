@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Removed
+
+- The Python deal receipt modules (#71): `capsule_viewer.receipt`'s unilateral, seller and bilateral modules (`model`, `module`, `seller`, `bilateral`, `role`, `sides` and `page`, their manifests `receipt/manifest-{unilateral,seller,bilateral}.json`, `receipt_page`, `receipt_registry`, `example_wording_pack` and `python -m capsule_viewer.receipt`), deprecated in 0.19.0. Nothing in the other Action State repositories called them. The receipt pages are the module-slot scripts `static/receipt_unilateral.js`, `receipt_seller.js` and `receipt_bilateral.js`, unchanged; the wording pack and manifests they are written from are in `capsule_viewer.receipt_slot`. The scripts are held to a frozen golden of what the Python modules made of every receipt fixture (`tests/testdata/receipt/oracle-golden.json.gz`: `canRender`, the model and the page at L0, L1 and L2, 104 cases), and the Python tests of the removed modules are gone with them. What is left in `capsule_viewer.receipt` is the provider receipt page (`receipt/provider.py`), which still emits the deprecation warning, now worded for it alone; its fate is open in #319.
+
 ### Changed
 
 - The module-slot writer for the receipt scripts moved out of the deprecated Python `capsule_viewer.receipt` package (#71): `python -m capsule_viewer.receipt_slot --write` (and `--check`) replaces `python -m capsule_viewer.receipt.module_slot`. The example wording pack (`wording-en.json`) and the three module-slot manifests (`manifest-<kind>.json`) moved with it to `capsule_viewer/receipt_slot/`; the writer reads each manifest and replaces only its `executable` block. The shipped scripts change only in three comment lines that name the new command, so each manifest's `script_sha256` changes (the wording pack's bytes and digest do not); a plugin that pins the old digests takes the new manifests. The scripts' behaviour is held to a frozen golden of the Python modules' output (`tests/testdata/receipt/oracle-golden.json.gz`). This meets one of the removal conditions in the 0.19.0 notes (the writer has moved out); the others stand.

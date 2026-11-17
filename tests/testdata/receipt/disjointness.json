@@ -35,8 +35,7 @@
     "resolution": {
       "module": "capsuleviewer.receipt.bilateral/v0",
       "outcome": "module"
-    },
-    "sealed_side": null
+    }
   },
   "buyer/unilateral": {
     "audience": "keep",
@@ -72,8 +71,7 @@
     "resolution": {
       "module": "capsuleviewer.receipt.unilateral/v0",
       "outcome": "module"
-    },
-    "sealed_side": "buyer"
+    }
   },
   "seller/composed": {
     "audience": "counterparty",
@@ -111,8 +109,7 @@
     "resolution": {
       "module": "capsuleviewer.receipt.bilateral/v0",
       "outcome": "module"
-    },
-    "sealed_side": null
+    }
   },
   "seller/unilateral": {
     "audience": "keep",
@@ -149,7 +146,6 @@
     "resolution": {
       "module": "capsuleviewer.receipt.seller/v0",
       "outcome": "module"
-    },
-    "sealed_side": "seller"
+    }
   }
 }

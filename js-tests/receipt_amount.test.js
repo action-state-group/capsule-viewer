@@ -1,6 +1,6 @@
 // formatAmount in each receipt script: fiat by its minor-unit exponent, BTC as
-// millisatoshi counted ("500 msat", never sats or a BTC decimal). Twin of
-// tests/test_receipt_amount.py.
+// millisatoshi counted ("500 msat", never sats or a BTC decimal). (Its Python twin, in
+// the removed receipt modules, was held to the same cases.)
 import { describe, expect, it } from "vitest";
 import { KINDS, loadScript } from "./receiptScripts.js";
 

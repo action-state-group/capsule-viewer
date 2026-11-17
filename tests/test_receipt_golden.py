@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """What the deal-view.js receipt showed is preserved by the receipt module.
 
+The page is the receipt module's own L2 output for ``golden-2`` as frozen in
+``testdata/receipt/oracle-golden.json.gz`` (the module-slot script is held to
+it by ``js-tests/receipt_parity.test.js``): the module's section, not the core
+verification page around it.
+
 ``testdata/receipt/golden-2.*`` is capsule-cli's presentation golden for the
 unilateral receipt (``internal/cli/testdata/presentation/2-unilateral-receipt``
 at capsule-cli fde7ee0): the bundle, and ``snapshot.json``, the text the
@@ -18,11 +23,12 @@ text anywhere on the page; order is checked for lines 8 to 24 only.
 """
 from __future__ import annotations
 
+import gzip
 import json
 import re
 
 import pytest
-from receipt_helpers import RECEIPTS, load, render, visible_text
+from receipt_helpers import RECEIPTS, load, visible_text
 
 GOLDEN = json.loads((RECEIPTS / "golden-2.snapshot.json").read_text(encoding="utf-8"))
 LINES = [" ".join(line.split()) for line in GOLDEN["text"]]
@@ -64,7 +70,9 @@ def _l1_text(html: str) -> str:
 
 @pytest.fixture(scope="module")
 def page() -> str:
-    return render("golden-2", "L2")
+    oracle = json.loads(gzip.decompress((RECEIPTS / "oracle-golden.json.gz").read_bytes()))
+    case = next(c for c in oracle["cases"] if c["name"] == "golden-2" and c["audience"] == "keep")
+    return case["modules"]["unilateral"]["html"]["L2"]
 
 
 def test_the_map_accounts_for_every_deal_view_line(page):

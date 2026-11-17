@@ -589,7 +589,7 @@ SKETCH_JSON = json.loads(SKETCH.read_text(encoding="utf-8"))
 RECEIPT_MANIFESTS = {
     p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(RECEIPTS.glob("manifest-*.json"))
 }
-# The receipt modules' module-slot manifests (#27), written from the ones above.
+# The deal receipt modules' module-slot manifests (#27).
 MODULE_SLOT_MANIFESTS = {
     f"receipt_slot/{p.stem}": json.loads(p.read_text(encoding="utf-8")) for p in sorted((HERE.parent / "src" / "capsule_viewer" / "receipt_slot").glob("manifest-*.json"))
 }
@@ -601,7 +601,7 @@ def test_the_sketch_is_schema_valid():
     assert list(validator.iter_errors(SKETCH_JSON)) == []
     # It forbids only the three report/result profiles, the receipts' own profile forbids.
     assert SKETCH_JSON["executable"]["carrier"] == "module-slot"
-    assert SKETCH_JSON["forbids"] == {"profiles": RECEIPT_MANIFESTS["manifest-unilateral"]["forbids"]["profiles"]}
+    assert SKETCH_JSON["forbids"] == {"profiles": MODULE_SLOT_MANIFESTS["receipt_slot/manifest-unilateral"]["forbids"]["profiles"]}
 
 
 @pytest.mark.parametrize("name", sorted(n for n, m in BUILTINS.items() if not m["fallback"]))
@@ -636,10 +636,7 @@ def test_each_viewer_module_forbids_the_selection_extension_and_needs_to():
         bare["forbids"]["extensions"].remove(SELECTION_EXTENSION)
         unpatched[name] = bare
     assert sorted(n for n, m in unpatched.items() if co_matchable(SKETCH_JSON, m)) == [
-        "manifest-bilateral",
         "manifest-provider",
-        "manifest-seller",
-        "manifest-unilateral",
         "receipt_slot/manifest-bilateral",
         "receipt_slot/manifest-seller",
         "receipt_slot/manifest-unilateral",

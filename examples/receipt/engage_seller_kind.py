@@ -6,7 +6,7 @@ for the seller receipt fixtures (``build_seller_fixtures.sh``):
 
 capsulectl at the commit the fixtures are built from does not engage the
 kind (a later capsule-cli does), so the fixture step adds it: the copy's
-``extensions`` gain ``SELLER_KIND`` (``capsule_viewer.receipt.role``) with an
+``extensions`` gain ``SELLER_KIND`` (``capsule_viewer.receipt_slot``) with an
 empty block. Nothing else changes. The block is packaging, not sealed, so the
 bundle still verifies, with a new bundle digest; the build verifies the file
 as written.
@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from capsule_viewer.context import Json  # noqa: E402 -- the repo's own types, after the path
-from capsule_viewer.receipt.role import SELLER_KIND  # noqa: E402 -- the repo's own constant, after the path
+from capsule_viewer.receipt_slot import SELLER_KIND  # noqa: E402 -- the repo's own constant, after the path
 
 # A capsulectl bundle as loaded, changed in place.
 Bundle = dict[str, Json]

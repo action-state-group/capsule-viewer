@@ -30,17 +30,17 @@ view, together with the Muse JS modules.
 
 This repository keeps the generic, neutral view of a record. That includes the
 Result pages, the History card (`capsuleviewer.standard-history/v0`) and a
-plain receipt: `capsule_viewer.receipt` and the JS receipt module-slot scripts
-(`static/receipt_*.js`). The plain receipt is **not the consumer product path**
+plain receipt: the JS receipt module-slot scripts (`static/receipt_*.js`). The plain receipt is **not the consumer product path**
 and is not held to the 9b receipt design. The Python Rules carrier
 (`capsule_viewer.rules`) is likewise not the consumer product path. This
 repository also keeps what the product modules are held to: the goldens and the
 wording packs it ships.
 
-Nothing here is deleted by this note. The JS receipt scripts and the Rules
-module stay as the basic rendering, and the Python receipt modules stay as the
-oracle the parity tests hold the scripts to; removing them would be a separate
-decision. Two things are out of scope here: the S1-S7 surface forms (head seam,
+The JS receipt scripts and the Rules module stay as the basic rendering. The
+Python receipt modules (unilateral, seller, bilateral) that were their oracle
+were deprecated in 0.19.0 and removed after it (#71), once the scripts were held
+to a frozen golden of that oracle's output; only the provider receipt page
+(`capsule_viewer.receipt.provider`, #319) is left of that package. Two things are out of scope here: the S1-S7 surface forms (head seam,
 wordmark, image and text buckets, 1.91:1 share image) are deferred to after
 launch, and the view-model JSON a receipt module draws from belongs to the Muse
 plugin, not to this repository.
@@ -281,59 +281,57 @@ builds a read-only context from them.
 This is the plain receipt this repository keeps (see Module ownership above; the
 9b receipt is `capsulectl.deal-view/v0`).
 
-**Deprecated (#71):** importing `capsule_viewer.receipt` emits a `DeprecationWarning`; the package will be removed in a later release (see the CHANGELOG). For new work, build receipt pages with the TypeScript `buildPresentation` (`format: "static"`).
-
-`capsule_viewer.receipt` is the unilateral deal receipt,
-`capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
-`x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the
-`x-deal-v0` extension and forbids `composed/v1`, so a composition never resolves to it.
-It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`,
-`adjudicator`) in `html`.
+The receipt is three module-slot scripts, `static/receipt_unilateral.js`,
+`static/receipt_seller.js` and `static/receipt_bilateral.js` (see "The receipt
+modules in the page" below). The unilateral one, `capsuleviewer.receipt.unilateral/v0`,
+is one party's own receipt for one deal, over an `x-deal-v0` bundle. Its manifest
+(`receipt_slot/manifest-unilateral.json`) requires the `x-deal-v0` extension and forbids
+`composed/v1`, so a composition never resolves to it. It serves the three audiences
+capsulectl cuts copies for (`keep`, `counterparty`, `adjudicator`) in `html`.
 
 - **Selection** goes through `registry.py`: agent-action-capsule's presentation contract
   (sections 3.2 and 4), with the static ambiguity test at registration and a hard error,
-  never first-wins, at resolution (`tests/test_receipt_registry.py`).
-- **The module never verifies.** Its context is built from what `capsulectl verify
-  --bundle` reported (`verifier_report.py`), and that report is refused unless its
-  `bundle_digest` is the digest of the exact bundle supplied (`digest.py`), so an
-  edited copy never renders under the original's verdict. Committed words are shown
-  only when the core's `sha256-jcs-nonce256` service (`binding.py`) opens them.
+  never first-wins, at resolution (`tests/test_receipt_manifest_selection.py`).
+- **The module never verifies.** `canRender` and `buildModel` read the context the
+  page's runtime built from what `capsulectl verify --bundle` reported. Committed words
+  are shown only when their opening recomputes to the sealed commitment (the contract's
+  `sha256-jcs-nonce256`).
 - **No producer is named in the manifest.** A deployment that also registers a module
-  selected by a producer-named profile passes that profile at render time
-  (`unilateral_manifest(forbid_profiles=...)`), like the wording pack.
+  selected by a producer-named profile adds that profile to the manifest's `forbids` when
+  it registers it, like the wording pack.
 - **A copy is shown only as its own audience's.** The copy's sealed report names the
-  audience it was cut for; asked for as any other audience's page, the module declines.
+  audience it was cut for; the script shows it as that audience's and never relabels it.
 - **Per record**, it shows DISCLOSED / COMMITTED / WITHHELD / NOT PRESENT and the
   record's place in the log. What a relying party gets is the share builder's decision,
-  made when the copy was cut; the module shows it and never makes it
-  (`tests/test_receipt_module.py`).
+  made when the copy was cut; the module shows it and never makes it.
 - **Depth:** L0 the deal, item, amount and state; L1 what was asked, proposed, approved
   and done, with the merchant's evidence; L2 the verifier's checks and every record.
-- **Words** come from a wording pack (`receipt_slot/wording-en.json` is a neutral English
-  example) or are capsulectl's own sealed report lines, shown as such.
+- **Words** are compiled into each script from a wording pack
+  (`receipt_slot/wording-en.json` is a neutral English example) or are capsulectl's own
+  sealed report lines, shown as such.
 - `tests/test_receipt_golden.py` accounts for every line deal-view.js showed for
   capsule-cli's receipt golden; `js-tests/receipt_layout.test.js` holds every fixture
   to no horizontal overflow at 360, 390 and 1280 px and in print.
 
 ### Bilateral receipt (`capsuleviewer.receipt.bilateral/v0`)
 
-`capsule_viewer.receipt.bilateral` is one deal as both parties hold it, over a
+The bilateral receipt is one deal as both parties hold it, over a
 `composed/v1` bundle: the outer bundle carries `composed/v1` and no `x-deal-v0`, and each
 carried member is one party's own `x-deal-v0` copy, byte for byte, with its own
-completeness proof. Its manifest (`receipt/manifest-bilateral.json`) requires
+completeness proof. Its manifest (`receipt_slot/manifest-bilateral.json`) requires
 `composed/v1` and forbids an outer `x-deal-v0`, so it and the unilateral module never
-match one bundle (`tests/test_receipt_bilateral.py`). `receipt_page` registers both.
+match one bundle (`tests/test_receipt_disjointness.py`).
 
 - **Each copy is read through its own context.** capsulectl verifies each carried member
-  as an Evidence Bundle of its own; `composed.py` builds that member's context from the
-  member's own report, refused unless the report is for that member's exact bytes. One
-  copy never fills in what the other leaves out.
+  as an Evidence Bundle of its own; the script asks the page's runtime for each member's
+  context, built from that member's own report. One copy never fills in what the other
+  leaves out.
 - **One deal or not.** The deals each copy's disclosed records name (a record's deal id,
   else its chain id): both naming the same one is one deal; otherwise the page says the
   copies name different deals and picks neither.
 - **Joins** are shown as the verifier reported them: the composer's declared state, the
   verifier's derived state and, for an agreement, corroborating or redundant. L2 carries
-  the generic composition section in agent-action-capsule's words (`composed.py`).
+  the generic composition section in agent-action-capsule's words.
 - **Audiences:** a page shows the copies cut for its audience; the keep page also shows
   the other party's copy as it was handed over (its counterparty cut), beside at most
   one keep copy. Any other mix is declined.
@@ -342,11 +340,11 @@ match one bundle (`tests/test_receipt_bilateral.py`). `receipt_page` registers b
 
 ### The receipt's sides: three cases
 
-This section describes the plain receipt kept here (`receipt/sides.py`); the 9b
+This section describes the plain receipt kept here (`static/receipt_core.js`); the 9b
 receipt is `capsulectl.deal-view/v0`.
 
 Every receipt a holder keeps, and every composition, opens L0 with whose records it
-holds and the case they make (`receipt/sides.py`). The case is read from what the
+holds and the case they make (`static/receipt_core.js`). The case is read from what the
 verifier reported, never from a label a producer sets:
 
 | Case | When | Drawn |
@@ -362,14 +360,14 @@ is not a finding. Only the holder's own page says "your" and lists the sentences
 can say to their agent, after L1 (dispute this, send me this receipt, show me the other side's
 receipt, ask their side for their receipt, ask their side again); a page cut for someone else names each side by its role,
 including a one-sided composition's missing side. A single copy (no composition) cut for
-someone else draws no sides. `tests/test_receipt_sides.py` holds the
-negatives. The `receipt_document` record kind (a payment app's or email receipt, sealed by
+someone else draws no sides. The frozen receipt golden holds the negatives
+(`js-tests/receipt_parity.test.js`). The `receipt_document` record kind (a payment app's or email receipt, sealed by
 digest) is not in the spec yet; until it is, the recorded ask is what makes "your receipt
 only".
 
 ### The receipt modules in the page: module-slot scripts
 
-The three receipt modules (unilateral, seller, bilateral) also ship as module-slot
+The three receipt modules (unilateral, seller, bilateral) ship as module-slot
 scripts, the form a page builder puts in a page (capsulectl `presentation build`, from
 a plugin that carries them): `static/receipt_unilateral.js`, `static/receipt_seller.js`
 and `static/receipt_bilateral.js`, pinned by `receipt_slot/manifest-*.json`
@@ -380,17 +378,18 @@ stylesheet each script inserts once at render).
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and rewrites the `executable` block of each `receipt_slot/manifest-*.json`
-  (the rest of the manifest, its id and selection clauses, is edited by hand; while the Python modules exist, `tests/test_receipt_module_slot.py` holds them equal to those modules' manifests, and after that the JSON is the only source). One script per module: a builder puts
+  (the rest of the manifest, its id and selection clauses, is edited by hand and is the only source of them). One script per module: a builder puts
   one script in a page per module it chose, so a shared script would register modules it
   did not choose. `tests/test_receipt_module_slot.py` fails when a committed file is not
   what the generator writes.
-- **The Python modules are the test oracle.** `js-tests/receipt_parity.test.js` runs
+- **The scripts are held to a frozen golden.** `js-tests/receipt_parity.test.js` runs
   every receipt fixture, at every audience, and every copy whose seller kind was dropped
-  or added, through both (`tests/receipt_oracle.py` prints the Python side): the same
-  `canRender`, the same model field for field, and the same render at L0, L1 and L2 (both
-  parsed and serialised one canonical way). `js-tests/receipt_module_slot.test.js` also
-  holds the receipt goldens' pages to the same pixels in headless Chromium, and renders the
-  copies capsulectl (capsule-cli main) cut.
+  or added, through the scripts and compares with `tests/testdata/receipt/oracle-golden.json.gz`,
+  what the Python receipt modules made of the same cases before they were removed (#71):
+  the same `canRender`, the same model field for field, and the same render at L0, L1 and
+  L2 (both parsed and serialised one canonical way). `js-tests/receipt_module_slot.test.js`
+  also renders the copies capsulectl (capsule-cli main) cut, in jsdom and in headless
+  Chromium. A change to a script's output is a change to the golden, reviewed as such.
 - **What the page's runtime does not hand a module:** the page's audience (a copy is shown
   as the audience its own sealed report names, never relabelled), a witness result (the
   page's verifier reports none, and the witness line says so) and a composition's carried

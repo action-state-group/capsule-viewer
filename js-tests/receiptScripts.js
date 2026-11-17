@@ -33,12 +33,12 @@ export function loadScript(kind) {
 
 let oracle;
 /**
- * The frozen receipt output for every case: what the Python modules made of
- * each receipt fixture (canRender, model, and the page at L0, L1 and L2), kept
- * as tests/testdata/receipt/oracle-golden.json.gz. The scripts are held to it.
- * tests/test_receipt_oracle_golden.py holds the file to the Python modules
- * for as long as they exist; regenerate with
- * `python tests/receipt_oracle.py | gzip -n -9 > tests/testdata/receipt/oracle-golden.json.gz`.
+ * The frozen receipt output for every case: what the Python receipt modules
+ * (removed in capsule-viewer#71) made of each receipt fixture, canRender, model
+ * and the page at L0, L1 and L2, kept as
+ * tests/testdata/receipt/oracle-golden.json.gz. The scripts are held to it.
+ * It is not regenerated: the modules that made it are gone. A change to a
+ * script's output is a change to this golden, reviewed as such.
  */
 export function receiptGolden() {
   if (!oracle) oracle = JSON.parse(gunzipSync(readFileSync(join(RECEIPTS, "oracle-golden.json.gz"))).toString("utf8"));
@@ -46,7 +46,7 @@ export function receiptGolden() {
 }
 
 /**
- * A case's context and the environment the Python twin was given: capsulectl's
+ * A case's context and the environment the removed Python twin was given: capsulectl's
  * verification and assurance for the bundle and for each carried copy, and the
  * page audience (or null: the copy's own).
  */
@@ -96,7 +96,7 @@ export function canon(node) {
   return `<${tag}${attrs.map(([k, v]) => ` ${k}="${esc(v, true)}"`).join("")}>${[...node.childNodes].map(canon).join("")}</${tag}>`;
 }
 
-/** HTML text (the Python module's render) parsed and canonicalised. */
+/** HTML text (the golden's render) parsed and canonicalised. */
 export function canonHtml(doc, html) {
   const t = doc.createElement("template");
   t.innerHTML = html;

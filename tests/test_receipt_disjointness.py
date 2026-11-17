@@ -8,7 +8,8 @@ one fails a clause its own manifest states, and ``resolve`` selects the one
 that matches without an ambiguity. Precedence is ``forbids``, never priority:
 all three carry priority 1.
 
-The resolve output for the four is committed beside the fixtures
+Selection is by manifest (the module-slot manifests; every module's canRender
+says yes). The resolve output for the four is committed beside the fixtures
 (``testdata/receipt/disjointness.json``); ``python tests/test_receipt_disjointness.py``
 rewrites it."""
 from __future__ import annotations
@@ -21,24 +22,14 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
-from receipt_helpers import PACK, PACK_SHA, RECEIPTS, audience_of, load  # noqa: E402 -- beside this file
+from receipt_helpers import RECEIPTS, audience_of, load  # noqa: E402 -- beside this file
 
-from capsule_viewer.composed import composition_from_capsulectl  # noqa: E402
-from capsule_viewer.receipt import (  # noqa: E402
-    BILATERAL_MANIFEST,
-    PLACEHOLDERS,
-    SELLER_MANIFEST,
-    UNILATERAL_MANIFEST,
-    BilateralReceiptModule,
-    SellerReceiptModule,
-    UnilateralReceiptModule,
-    receipt_registry,
-    sealed_side,
-)
-from capsule_viewer.registry import co_matchable, descriptor, unmet  # noqa: E402
+from capsule_viewer import receipt_slot  # noqa: E402
+from capsule_viewer.registry import Registry, co_matchable, descriptor, unmet  # noqa: E402
 from capsule_viewer.verifier_report import context_from_capsulectl  # noqa: E402
-from capsule_viewer.wording import load_wording_pack  # noqa: E402
 
+MANIFESTS = {kind: json.loads(receipt_slot.manifest_path(kind).read_text(encoding="utf-8")) for kind in receipt_slot.KINDS}
+UNILATERAL_MANIFEST, SELLER_MANIFEST, BILATERAL_MANIFEST = (MANIFESTS[k] for k in ("unilateral", "seller", "bilateral"))
 UNILATERAL = "capsuleviewer.receipt.unilateral/v0"
 SELLER = "capsuleviewer.receipt.seller/v0"
 BILATERAL = "capsuleviewer.receipt.bilateral/v0"
@@ -57,19 +48,15 @@ CASES = {
 
 
 def resolve_output(name: str) -> dict:
-    """What the receipt registry, as ``receipt_page`` builds it, reports for
-    fixture *name*: per module whether it matches and every clause it fails,
+    """What the receipt registry, built from the module-slot manifests, reports
+    for fixture *name*: per module whether it matches and every clause it fails,
     and the resolution."""
     bundle, output = load(name)
-    context, assurance = context_from_capsulectl(bundle, output)
-    composition = composition_from_capsulectl(bundle, output)
+    context, _ = context_from_capsulectl(bundle, output)
     audience = audience_of(name)
-    pack = load_wording_pack(PACK, PACK_SHA, PLACEHOLDERS)
-    registry = receipt_registry(
-        UnilateralReceiptModule(pack, audience=audience, assurance=assurance),
-        SellerReceiptModule(pack, audience=audience, assurance=assurance),
-        BilateralReceiptModule(pack, audience=audience, assurance=assurance, composition=composition),
-    )
+    registry = Registry()
+    for manifest in MANIFESTS.values():
+        registry.register(manifest, lambda _c: True)
     d = descriptor(context)
     # Applicable: what the registry's own match (section 4.3 step 2) lists.
     listed = {e.id for e in registry.list(context, audience, "html")}
@@ -80,7 +67,6 @@ def resolve_output(name: str) -> dict:
         "audience": audience,
         "format": "html",
         "descriptor": {"bundle_kind": d.bundle_kind, "extensions": sorted(d.extensions), "profiles": sorted(d.profiles)},
-        "sealed_side": sealed_side(context),
         "modules": modules,
         "resolution": {"outcome": resolution.outcome, "module": resolution.entry.id if resolution.entry else None},
     }
@@ -111,16 +97,6 @@ def test_exactly_one_receipt_module_is_applicable(case):
             assert m["unmet"], mid
             assert all(r.startswith(("requires ", "forbids ")) for r in m["unmet"]), (mid, m["unmet"])
     assert out["resolution"] == {"outcome": "module", "module": expected}
-
-
-@pytest.mark.parametrize("case", list(CASES), ids=lambda c: "/".join(c))
-def test_the_fixture_is_of_its_role(case):
-    """The single copies' sealed records show their side; a composition's
-    outer bundle carries no deal of its own, so it shows none."""
-    role, comp = case
-    name, _ = CASES[case]
-    context, _ = context_from_capsulectl(*load(name))
-    assert sealed_side(context) == (role if comp == "unilateral" else None)
 
 
 def test_the_committed_resolve_output_is_current():

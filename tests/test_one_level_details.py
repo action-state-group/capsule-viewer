@@ -17,12 +17,14 @@ sits behind a toggle. Each fixture has exactly one fault.
 """
 from __future__ import annotations
 
+import gzip
+import json
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
-from receipt_helpers import BILATERAL, FIXTURES, SELLER, render
+from receipt_helpers import RECEIPTS
 
 from capsule_viewer.rules import example_wording_pack, rules_page
 from capsule_viewer.rules.fixture import FAILED, RECORD_KIND, fixture_context
@@ -192,25 +194,44 @@ def test_rules_failed_shows_its_state_and_nothing_else():
     assert shape(html).outcomes == [("failed", False)]
 
 
-RECEIPT_PAGES = [*FIXTURES, *BILATERAL]
+def _receipt_modules_output():
+    """What each receipt module-slot script draws at L2 for every case it accepts,
+    as frozen in testdata/receipt/oracle-golden.json.gz (the script is held to it
+    by js-tests/receipt_parity.test.js). Only the module's own section, so the
+    page-level checks (the verification state, the PRIVATE banner) do not apply."""
+    oracle = json.loads(gzip.decompress((RECEIPTS / "oracle-golden.json.gz").read_bytes()))
+    return [
+        (f"{c['name']}@{c['audience']}/{kind}", m["html"]["L2"])
+        for c in oracle["cases"]
+        for kind, m in c["modules"].items()
+        if m["can_render"]
+    ]
 
 
-@pytest.mark.parametrize("depth", ["L0", "L2"])
-@pytest.mark.parametrize("name", RECEIPT_PAGES)
-def test_receipt_pages_are_one_level(name, depth):
-    html = render(name, depth)
-    assert one_level_faults(html) == []
+RECEIPT_OUTPUT = _receipt_modules_output()
+_ORACLE = json.loads(gzip.decompress((RECEIPTS / "oracle-golden.json.gz").read_bytes()))
+
+
+def render(name: str, depth: str) -> str:
+    """The receipt module-slot script's output for fixture *name* at the audience
+    it was cut for, at *depth*, from the frozen golden: the one module that accepts it."""
+    case = next(c for c in _ORACLE["cases"] if c["name"] == name and c["audience"] == _ORACLE["audience_of"][name])
+    accepted = [m for m in case["modules"].values() if m["can_render"]]
+    assert len(accepted) == 1, name
+    return accepted[0]["html"][depth]
+
+
+def test_the_receipt_output_set_is_not_vacuous():
+    assert len(RECEIPT_OUTPUT) == 31
+
+
+@pytest.mark.parametrize(("name", "html"), RECEIPT_OUTPUT, ids=[n for n, _ in RECEIPT_OUTPUT])
+def test_receipt_module_output_is_one_level(name, html):
     s = shape(html)
+    assert s.nested == []  # no <details> inside another
     assert s.details == 2  # L1 and L2, one toggle each, and nothing inside them
-    assert s.outcomes[0] == ("verified", False)
-    assert s.l0_titles >= 1 and s.l0_metric_groups
-
-
-@pytest.mark.parametrize("name", SELLER)
-def test_seller_pages_are_one_level(name):
-    # The seller module is held to the same convention: a composition carries
-    # a seller copy's L0, so its headline is three metrics too.
-    assert one_level_faults(render(name, "L2")) == []
+    assert s.l0_regions == 1 and s.l0_titles >= 1 and s.l0_metric_groups
+    assert not s.l0_in_details
 
 
 @pytest.mark.parametrize("name", ["keep", "golden-2", "bilateral-keep", "seller-keep", "seller-producer-keep", "main-buyer-keep", "main-seller-keep"])

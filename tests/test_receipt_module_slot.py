@@ -2,9 +2,9 @@
 """The receipt modules' module-slot scripts and their manifests, and how a
 registry chooses between them and capsulectl's deal view.
 
-The scripts' behaviour is tested against the frozen golden of the Python modules' output in
+The scripts' behaviour is tested against the frozen golden in
 ``js-tests/receipt_parity.test.js``; this holds the files a plugin ships to
-what ``capsule_viewer.receipt_slot`` writes from the Python side, and records the
+what ``capsule_viewer.receipt_slot`` writes, and records the
 co-match with ``capsulectl.deal-view/v0`` (capsule-cli
 ``internal/cli/assets/deal-view.manifest.json``, vendored from e9b1f21 in
 ``testdata/capsule-cli/``):
@@ -39,7 +39,6 @@ import pytest
 from receipt_helpers import RECEIPTS, audience_of, load
 
 from capsule_viewer import receipt_slot
-from capsule_viewer.receipt import BILATERAL_MANIFEST, SELLER_MANIFEST, UNILATERAL_MANIFEST
 from capsule_viewer.registry import AmbiguityError, Registry, co_matchable, descriptor, matches
 from capsule_viewer.verifier_report import context_from_capsulectl
 
@@ -49,7 +48,6 @@ SCHEMA = json.loads((AAC / "presentation-manifest-v0.json").read_text(encoding="
 BUILTINS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((AAC / "builtin").glob("*.json"))}
 DEAL_VIEW = json.loads((ROOT / "tests" / "testdata" / "capsule-cli" / "deal-view.manifest.json").read_text(encoding="utf-8"))
 SLOT = {kind: json.loads(receipt_slot.manifest_path(kind).read_text(encoding="utf-8")) for kind in receipt_slot.KINDS}
-PYTHON = {"unilateral": UNILATERAL_MANIFEST, "seller": SELLER_MANIFEST, "bilateral": BILATERAL_MANIFEST}
 # capsule-cli internal/cli/plugin_presentations.go presentationFileLimit.
 PRESENTATION_FILE_LIMIT = 1 << 20
 # Real copies capsulectl (capsule-cli main) cut: main-buyer-* and main-seller-* by examples/receipt/cut_main_bundles.sh
@@ -85,9 +83,7 @@ def test_each_manifest_is_schema_valid_and_pins_its_script_and_the_kit_styleshee
         "script_sha256": _sha(receipt_slot.script_path(kind)),
         "style_sha256": [_sha(receipt_slot.KIT_CSS)],
     }
-    # Everything else is the Python module's manifest: one id, one set of selection clauses, two carriers.
-    assert {k: v for k, v in manifest.items() if k != "executable"} == {k: v for k, v in PYTHON[kind].items() if k != "executable"}
-    assert PYTHON[kind]["executable"] == {"carrier": "core-runtime"}
+    assert manifest["id"] == f"capsuleviewer.receipt.{kind}/v0"
 
 
 @pytest.mark.parametrize("kind", receipt_slot.KINDS)

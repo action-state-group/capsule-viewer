@@ -34,8 +34,7 @@ witnessed it.
 Wire vocabulary that must never trip this gate: the ``witnessed`` grade value
 of the Evidence Result schema (``static/result_v0_card.js`` ``VALID_GRADES``,
 ``kit/fixture.py``, ``examples/result-v0/build_fixtures.py`` and the example
-results' ``"grade"`` fields), and the receipt model's ``witnessed`` field
-(``receipt/model.py``, an identifier carrying the verifier's witness result).
+results' ``"grade"`` fields).
 Those files are scanned, not exempted: the tests below show the gate sees
 their occurrences and classifies them as wire, and show it failing on
 planted prose in each file format. ``contemporaneous_count`` (the coverage
@@ -226,7 +225,6 @@ def test_every_raw_match_is_classified_exactly_once():
 _WIRE_FILES = {
     "src/capsule_viewer/static/result_v0_card.js": "witnessed (bare)",
     "src/capsule_viewer/kit/fixture.py": "witnessed (bare)",
-    "src/capsule_viewer/receipt/model.py": "witnessed (bare)",
     "examples/result-v0/build_fixtures.py": "witnessed (bare)",
     "examples/result-v0/release-approval-result.json": "witnessed (bare)",
     "README.md": "witnessed (bare)",
