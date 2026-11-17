@@ -281,6 +281,8 @@ builds a read-only context from them.
 This is the plain receipt this repository keeps (see Module ownership above; the
 9b receipt is `capsulectl.deal-view/v0`).
 
+**Deprecated (#71):** importing `capsule_viewer.receipt` emits a `DeprecationWarning`; the package will be removed in a later release (see the CHANGELOG). For new work, build receipt pages with the TypeScript `buildPresentation` (`format: "static"`).
+
 `capsule_viewer.receipt` is the unilateral deal receipt,
 `capsuleviewer.receipt.unilateral/v0`: one party's own receipt for one deal, over an
 `x-deal-v0` bundle. Its manifest (`receipt/manifest-unilateral.json`) requires the
@@ -375,7 +377,8 @@ and `static/receipt_bilateral.js`, pinned by `receipt/module-slot/manifest-*.jso
 stylesheet each script inserts once at render).
 
 - **One source, three scripts.** `static/receipt_core.js` is the source;
-  `python -m capsule_viewer.receipt.module_slot --write` writes each script from it with
+  `python -m capsule_viewer.receipt.module_slot --write` (it emits the package's
+  deprecation warning, hidden by default under `python -m`; add `-W default` to see it; the writer must move out before the package is removed, #71) writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and writes the manifests (the Python modules' manifests, same ids and
   selection clauses, with the module-slot carrier). One script per module: a builder puts
