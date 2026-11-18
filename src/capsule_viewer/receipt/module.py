@@ -517,11 +517,11 @@ class UnilateralReceiptModule:
         """Who wrote the sealed text, as the records say: the one producer
         every disclosed step names, else "the producer". A page never names a
         tool the record does not (a Goose-sealed report records none)."""
-        ps = model.producers
+        names = model.producer_names
         # A report carried outside the log is no record of the log, so the
         # steps' producers say nothing of who wrote its text.
-        if model.report_checked is None and len(ps) == 1 and ps[0] is not None:
-            return ps[0]
+        if model.report_checked is None and len(names) == 1 and names[0] is not None:
+            return names[0]
         return self.w("provenance.the_producer")
 
     def _sealed_note(self, model: ReceiptModel) -> Markup:

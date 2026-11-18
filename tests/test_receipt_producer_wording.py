@@ -31,7 +31,9 @@ def test_one_recorded_producer_is_named_from_the_record():
     named = copy.deepcopy(bundle)
     name_every_producer(named, {"name": "goose", "version": "1.2.3", "commit": "abc1234"})
     text = _text("keep", named)
-    assert "written by goose 1.2.3 (abc1234) and sealed with the receipt" in text
+    assert "written by goose and sealed with the receipt" in text
+    # The version and commit stay in the provenance line.
+    assert "Produced by goose 1.2.3 (abc1234)" in text
     assert "written by the producer" not in text
 
 
@@ -48,3 +50,12 @@ def test_mixed_or_unrecorded_producers_say_the_producer():
     text = _text("keep", None)
     assert "written by the producer and sealed with the receipt" in text
     assert "then a producer that did not record its version" in text
+
+
+def test_a_producer_with_a_version_but_no_name_is_not_called_capsulectl():
+    bundle, _ = load("keep")
+    unnamed = copy.deepcopy(bundle)
+    name_every_producer(unnamed, {"version": "1.2.3"})
+    text = _text("keep", unnamed)
+    assert "Produced by an unnamed producer 1.2.3 (unknown)" in text
+    assert "written by the producer and sealed with the receipt" in text

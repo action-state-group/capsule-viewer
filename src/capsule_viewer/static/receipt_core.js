@@ -731,7 +731,12 @@
     var producer = map(or(get(map(get(payload, EXTENSION)), "producer"), get(payload, "producer")));
     var version = str(get(producer, "version"));
     if (version === null) return null;
-    return or(str(get(producer, "name")), "producer") + " " + version + " (" + or(str(get(producer, "commit")), "unknown") + ")";
+    return or(str(get(producer, "name")), "an unnamed producer") + " " + version + " (" + or(str(get(producer, "commit")), "unknown") + ")";
+  }
+
+  function producerNameOf(payload) {
+    var producer = map(or(get(map(get(payload, EXTENSION)), "producer"), get(payload, "producer")));
+    return str(get(producer, "version")) === null ? null : str(get(producer, "name"));
   }
 
   function committed(reader, stepId, commitmentOf, nonce, text, label) {
@@ -850,6 +855,7 @@
       steps: steps,
       report: rep,
       producers: distinct(payloads.map(producerOf)),
+      producer_names: distinct(payloads.map(producerNameOf)),
       bundle_digest: v.assurance.bundle_digest,
       witnessed: v.assurance.witnesses,
       countersignatures: v.assurance.countersignatures,
@@ -1538,8 +1544,8 @@
   // disclosed step names, else "the producer"; a report carried outside the
   // log has no record of its own to say (module.py _producer).
   P.producer = function (model) {
-    var ps = model.producers;
-    return model.report_checked === null && ps.length === 1 && ps[0] !== null ? ps[0] : w("provenance.the_producer");
+    var ns = model.producer_names;
+    return model.report_checked === null && ns.length === 1 && ns[0] !== null ? ns[0] : w("provenance.the_producer");
   };
 
   // How the report was sealed. A report carried outside the log is described
