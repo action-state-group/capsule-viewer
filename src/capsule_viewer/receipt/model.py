@@ -221,6 +221,7 @@ class ReceiptModel:
     steps: tuple[Step, ...]  # every record carried and every step cited, report records last
     report: Report
     producers: tuple[str | None, ...]  # distinct, in record order; None = not recorded
+    producer_names: tuple[str | None, ...]  # their recorded names alone; None = not recorded or no name
     bundle_digest: str | None  # the digest the verifier's report is bound to
     witnessed: str  # the verifier's witnesses claim, or "absent"
     countersignatures: tuple[str, ...]  # each countersignature result's status
@@ -567,7 +568,16 @@ def _producer(payload: Mapping[str, Frozen]) -> str | None:
     version = _str(producer.get("version"))
     if version is None:
         return None
-    return f"{_str(producer.get('name')) or 'capsulectl'} {version} ({_str(producer.get('commit')) or 'unknown'})"
+    return f"{_str(producer.get('name')) or 'an unnamed producer'} {version} ({_str(producer.get('commit')) or 'unknown'})"
+
+
+def _producer_name(payload: Mapping[str, Frozen]) -> str | None:
+    """The name a step's producer record gives (when it records a version at
+    all): the words a sentence about who wrote the text may use."""
+    producer = _map(_map(payload.get(EXTENSION)).get("producer") or payload.get("producer"))
+    if _str(producer.get("version")) is None:
+        return None
+    return _str(producer.get("name"))
 
 
 def _committed(
@@ -721,6 +731,7 @@ def build_receipt(context: VerifiedBundleContext, bind: Binder, assurance: Assur
         steps=steps_t,
         report=report,
         producers=tuple(dict.fromkeys(_producer(p) for p in payloads)),
+        producer_names=tuple(dict.fromkeys(_producer_name(p) for p in payloads)),
         bundle_digest=assurance.bundle_digest,
         witnessed=assurance.witnesses,
         countersignatures=assurance.countersignatures,

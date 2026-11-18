@@ -2542,7 +2542,7 @@ var EvidenceGraph = (() => {
     }
   });
 
-  // node_modules/@action-state-group/cll/dist/chunk-FSX46CVZ.js
+  // node_modules/@action-state-group/cll/dist/chunk-X2Y6VH3Q.js
   function validateIdentifier(value) {
     const length = new TextEncoder().encode(value).length;
     if (length < 1 || length > limits.identifier || !/^[A-Za-z0-9._:/-]+$/u.test(value))
@@ -2552,8 +2552,8 @@ var EvidenceGraph = (() => {
       );
   }
   var limits, CllError;
-  var init_chunk_FSX46CVZ = __esm({
-    "node_modules/@action-state-group/cll/dist/chunk-FSX46CVZ.js"() {
+  var init_chunk_X2Y6VH3Q = __esm({
+    "node_modules/@action-state-group/cll/dist/chunk-X2Y6VH3Q.js"() {
       limits = Object.freeze({
         entryBytes: 32,
         witnesses: 32,
@@ -4645,56 +4645,85 @@ var EvidenceGraph = (() => {
     }
   });
 
-  // node_modules/@action-state-group/cll/dist/chunk-YQXOEEBD.js
+  // node_modules/@action-state-group/cll/dist/chunk-L6ZLKNEI.js
+  function decodeCheckpointStatement(cose) {
+    if (cose.length < 2 || cose.length > limits.checkpointPayload || cose[0] !== 210)
+      return void 0;
+    const items = decode(cose.subarray(1), {
+      allowIndefinite: false,
+      coerceUndefinedToNull: false,
+      useMaps: true
+    });
+    if (!Array.isArray(items) || items.length !== 4 || !(items[0] instanceof Uint8Array) || !(items[1] instanceof Map) || items[1].size !== 0 || !(items[2] instanceof Uint8Array) || !(items[3] instanceof Uint8Array))
+      return void 0;
+    const headers = decode(items[0], {
+      allowIndefinite: false,
+      useMaps: true
+    });
+    if (!(headers instanceof Map)) return void 0;
+    const kid = headers.get(4);
+    const cwt = headers.get(15);
+    if (headers.size !== 4 || headers.get(1) !== -8 || headers.get(3) !== CHECKPOINT_CONTENT_TYPE || !(kid instanceof Uint8Array) || kid.length !== 32 || !(cwt instanceof Map) || cwt.size !== 2)
+      return void 0;
+    const logId = cwt.get(1);
+    const subject = cwt.get(2);
+    if (typeof logId !== "string" || typeof subject !== "string")
+      return void 0;
+    validateIdentifier(logId);
+    const claims = decode(items[2], {
+      allowIndefinite: false,
+      coerceUndefinedToNull: false,
+      useMaps: true
+    });
+    if (!(claims instanceof Map) || !bytesEqual(encodeCanonical(claims), items[2]))
+      return void 0;
+    const allowedClaims = /* @__PURE__ */ new Set([
+      "kind",
+      "log_size",
+      "commitment",
+      "prev_size",
+      "prev_commitment",
+      "issued_at",
+      "cadence",
+      "consistency_proof"
+    ]);
+    if (claims.size < 6 || claims.size > 8 || [...claims.keys()].some(
+      (key) => typeof key !== "string" || !allowedClaims.has(key)
+    ) || claims.get("kind") !== "cll-checkpoint")
+      return void 0;
+    return {
+      items,
+      kid,
+      logId,
+      subject,
+      claims
+    };
+  }
+  async function checkpointRejectionFieldWith(crypto, cose) {
+    try {
+      const statement = decodeCheckpointStatement(cose);
+      if (statement === void 0) return void 0;
+      const issuedAt = statement.claims.get("issued_at");
+      if (typeof issuedAt === "string" && isRfc3339(issuedAt)) return void 0;
+      const { items, kid } = statement;
+      return await crypto.verifyEd25519(
+        kid,
+        signatureMessage(items),
+        items[3]
+      ) === true ? "issued_at" : void 0;
+    } catch {
+      return void 0;
+    }
+  }
   async function verifyCheckpointWith(crypto, cose) {
     try {
-      if (cose.length < 2 || cose.length > limits.checkpointPayload || cose[0] !== 210)
-        return false;
-      const items = decode(cose.subarray(1), {
-        allowIndefinite: false,
-        coerceUndefinedToNull: false,
-        useMaps: true
-      });
-      if (!Array.isArray(items) || items.length !== 4 || !(items[0] instanceof Uint8Array) || !(items[1] instanceof Map) || items[1].size !== 0 || !(items[2] instanceof Uint8Array) || !(items[3] instanceof Uint8Array))
-        return false;
-      const headers = decode(items[0], {
-        allowIndefinite: false,
-        useMaps: true
-      });
-      if (!(headers instanceof Map)) return false;
-      const kid = headers.get(4);
-      const cwt = headers.get(15);
-      if (headers.size !== 4 || headers.get(1) !== -8 || headers.get(3) !== CHECKPOINT_CONTENT_TYPE || !(kid instanceof Uint8Array) || kid.length !== 32 || !(cwt instanceof Map) || cwt.size !== 2)
-        return false;
-      const logId = cwt.get(1);
-      const subject = cwt.get(2);
-      if (typeof logId !== "string" || typeof subject !== "string") return false;
-      validateIdentifier(logId);
-      const claims = decode(items[2], {
-        allowIndefinite: false,
-        coerceUndefinedToNull: false,
-        useMaps: true
-      });
-      if (!(claims instanceof Map) || !bytesEqual(encodeCanonical(claims), items[2]))
-        return false;
-      const allowedClaims = /* @__PURE__ */ new Set([
-        "kind",
-        "log_size",
-        "commitment",
-        "prev_size",
-        "prev_commitment",
-        "issued_at",
-        "cadence",
-        "consistency_proof"
-      ]);
-      if (claims.size < 6 || claims.size > 8 || [...claims.keys()].some(
-        (key) => typeof key !== "string" || !allowedClaims.has(key)
-      ) || claims.get("kind") !== "cll-checkpoint")
-        return false;
+      const statement = decodeCheckpointStatement(cose);
+      if (statement === void 0) return false;
+      const { items, kid, logId, subject, claims } = statement;
       const logSize = claims.get("log_size");
       const previousSize = claims.get("prev_size");
       const issuedAt = claims.get("issued_at");
-      if (!Number.isSafeInteger(logSize) || logSize < 1 || !Number.isSafeInteger(previousSize) || previousSize < 0 || previousSize >= logSize || typeof issuedAt !== "string" || formatTime(issuedAt) !== issuedAt || subject !== `${logId}#${logSize}`)
+      if (!Number.isSafeInteger(logSize) || logSize < 1 || !Number.isSafeInteger(previousSize) || previousSize < 0 || previousSize >= logSize || typeof issuedAt !== "string" || !isRfc3339(issuedAt) || subject !== logId && subject !== `${logId}#${logSize}`)
         return false;
       const decodePeaks = (value) => {
         if (!(value instanceof Uint8Array)) return void 0;
@@ -4760,11 +4789,7 @@ var EvidenceGraph = (() => {
         if (!Number.isSafeInteger(cadence) || cadence < 1)
           return false;
       }
-      return await crypto.verifyEd25519(
-        kid,
-        encodeCanonical(["Signature1", items[0], new Uint8Array(), items[2]]),
-        items[3]
-      ) === true;
+      return await crypto.verifyEd25519(kid, signatureMessage(items), items[3]) === true;
     } catch {
       return false;
     }
@@ -4828,11 +4853,11 @@ var EvidenceGraph = (() => {
     const k = littleEndian(sha512(digest2)) % Point.Fn.ORDER;
     return Point.BASE.multiplyUnsafe(s).equals(rPoint.add(a.multiplyUnsafe(k)));
   }
-  var CHECKPOINT_CONTENT_TYPE, encodeCanonical, toHex2, bytesEqual, formatTime, Point, littleEndian;
-  var init_chunk_YQXOEEBD = __esm({
-    "node_modules/@action-state-group/cll/dist/chunk-YQXOEEBD.js"() {
+  var CHECKPOINT_CONTENT_TYPE, encodeCanonical, toHex2, bytesEqual, formatTime, isRfc3339, signatureMessage, Point, littleEndian;
+  var init_chunk_L6ZLKNEI = __esm({
+    "node_modules/@action-state-group/cll/dist/chunk-L6ZLKNEI.js"() {
       init_chunk_JR35ZH2C();
-      init_chunk_FSX46CVZ();
+      init_chunk_X2Y6VH3Q();
       init_cborg();
       init_ed25519();
       init_sha2();
@@ -4858,6 +4883,26 @@ var EvidenceGraph = (() => {
         const trimmed = fraction.replace(/0+$/u, "");
         return `${parsed.toISOString().slice(0, 19)}${trimmed === "" ? "" : `.${trimmed}`}Z`;
       };
+      isRfc3339 = (value) => {
+        const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.(\d+))?(Z|[+-]\d\d:\d\d)$/u.exec(
+          value
+        );
+        if (match === null) return false;
+        const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+        const date = /* @__PURE__ */ new Date(0);
+        date.setUTCFullYear(year, month - 1, day);
+        if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day || hour > 23 || minute > 59 || second > 59)
+          return false;
+        try {
+          formatTime(
+            `${value.slice(0, 19)}${match[7] === void 0 ? "" : `.${match[7].slice(0, 9)}`}${match[8]}`
+          );
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      signatureMessage = (items) => encodeCanonical(["Signature1", items[0], new Uint8Array(), items[2]]);
       ({ Point } = ed25519);
       littleEndian = (bytes) => {
         let value = 0n;
@@ -4874,6 +4919,7 @@ var EvidenceGraph = (() => {
     CHECKPOINT_CONTENT_TYPE: () => CHECKPOINT_CONTENT_TYPE,
     MmrTree: () => MmrTree2,
     checkpointMetadata: () => checkpointMetadata,
+    checkpointRejectionField: () => checkpointRejectionField,
     commitmentObject: () => commitmentObject,
     consistencyProof: () => consistencyProof,
     inclusionProof: () => inclusionProof,
@@ -4937,12 +4983,12 @@ var EvidenceGraph = (() => {
     h.forEach((word, i) => outView.setUint32(i * 4, word));
     return out;
   }
-  var K2, H02, rotr3, join, hash, MmrTree2, rootFromPeaks2, verifyInclusionValue2, verifyHexInclusion2, verifyConsistency2, verifyRange2, checkpointCrypto, verifyCheckpoint, checkpointMetadata;
+  var K2, H02, rotr3, join, hash, MmrTree2, rootFromPeaks2, verifyInclusionValue2, verifyHexInclusion2, verifyConsistency2, verifyRange2, checkpointCrypto, checkpointRejectionField, verifyCheckpoint, checkpointMetadata;
   var init_browser = __esm({
     "node_modules/@action-state-group/cll/dist/browser.js"() {
-      init_chunk_YQXOEEBD();
+      init_chunk_L6ZLKNEI();
       init_chunk_JR35ZH2C();
-      init_chunk_FSX46CVZ();
+      init_chunk_X2Y6VH3Q();
       K2 = new Uint32Array([
         1116352408,
         1899447441,
@@ -5049,6 +5095,7 @@ var EvidenceGraph = (() => {
         hash,
         verifyEd25519: async (publicKey, message, signature2) => verifyEd25519(publicKey, message, signature2)
       };
+      checkpointRejectionField = (cose) => checkpointRejectionFieldWith(checkpointCrypto, cose);
       verifyCheckpoint = (cose) => verifyCheckpointWith(checkpointCrypto, cose);
       checkpointMetadata = (cose) => checkpointMetadataWith(checkpointCrypto, cose);
     }
@@ -17689,16 +17736,16 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("d2469c3f76ce0f01190ccde5328be1580f0005c3");
+    return commitPrefix("613a8a95144e5851bbb61df72df8cc76b7500381");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.19.0",
+    viewerVersion: "0.19.2",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.14.0",
-    cllVersion: "0.3.0",
+    cllVersion: "0.4.0",
     ...commit === void 0 ? {} : { commit },
     ...unreleased ? { unreleased: true } : {}
   };

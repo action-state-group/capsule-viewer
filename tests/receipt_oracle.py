@@ -120,7 +120,39 @@ def edits() -> list[tuple[str, dict, dict, str]]:
             edited["extensions"][SELLER_KIND] = {}
             label = f"{name}+seller-kind-added"
         out.append((label, edited, report_for(edited, output), audience_of(name)))
+    # A receipt whose records name no producer (a Goose-sealed one): the page
+    # must not name one (capsule-viewer#328).
+    bundle, output = load("keep")
+    edited = copy.deepcopy(bundle)
+    _strip_producers(edited)
+    out.append(("keep+producer-removed", edited, report_for(edited, output), audience_of("keep")))
+    # ... and one whose every record names the same producer: the page names it.
+    edited = copy.deepcopy(bundle)
+    name_every_producer(edited, {"name": "goose", "version": "1.2.3", "commit": "abc1234"})
+    out.append(("keep+one-producer", edited, report_for(edited, output), audience_of("keep")))
     return out
+
+
+def name_every_producer(bundle: dict, producer: dict) -> None:
+    """Every disclosed record names *producer*: in its x-deal-v0 block when it
+    has one, else in its own header (a typed record, such as the sealed report)."""
+    for disclosure in bundle["disclosures"].values():
+        for payload in disclosure.values():
+            block = payload.get("x-deal-v0")
+            if isinstance(block, dict):
+                block["producer"] = dict(producer)
+            else:
+                payload["producer"] = dict(producer)
+
+
+def _strip_producers(node: object) -> None:
+    if isinstance(node, dict):
+        node.pop("producer", None)
+        for value in node.values():
+            _strip_producers(value)
+    elif isinstance(node, list):
+        for value in node:
+            _strip_producers(value)
 
 
 def main() -> int:

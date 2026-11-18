@@ -15,8 +15,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { emitEvidenceGraphHtml } from "../src/emitter.js";
 import { TEST_KEYS, sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
-// The browser build checks a signed checkpoint with AAC 0.9.0's strict
-// verifier (the Ed25519 check runs on cll 0.3.0's browser path), so a bundle
+// The browser build checks a signed checkpoint with AAC's strict verifier
+// (the Ed25519 check runs on cll's browser path), so a bundle
 // whose records and checkpoint are signed reads verified there. The
 // not-checked list still matters for a bundle that is not fully signed. A real browser, found as
 // emitter-csp-browser.test.ts finds one; skipped when none is installed.
