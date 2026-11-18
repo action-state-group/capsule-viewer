@@ -21,7 +21,7 @@ Both state viewer 0.19.1: `ts/v0.19.1`, then `go/v0.19.1` on the commit that shi
 
 ### Changed
 
-- The bundled `@action-state-group/cll` is 0.4.0 (was 0.3.0, #325). The page runtime's checkpoint verifier now accepts the bare log id as the COSE subject that checkpointed-local-log go v0.4.0 writes (the -02 checkpoint subject); with 0.3.0 such a checkpoint was refused as `checkpoint_authentication_invalid`. The contract-report goldens change only in the viewer and cll version strings they name.
+- The bundled `@action-state-group/cll` is 0.4.0 (was 0.3.0, #325). The page runtime's checkpoint verifier now accepts the bare log id as the COSE subject that checkpointed-local-log go v0.4.0 writes (the -02 checkpoint subject); with 0.3.0 such a checkpoint was refused as `checkpoint_authentication_invalid`. The contract-report goldens change only in the viewer and cll version strings they name. The published `@action-state-group/agent-action-capsule` 0.14.0 still declares an optional peer `cll` 0.3.0 (npm lists the install as `invalid` for that peer; `npm ci` and the packed-consumer check pass), and agent-action-capsule's `main` already pins 0.4.0 but is not yet released: a later viewer release takes the AAC release that accepts cll 0.4.0.
 
 ## ts 0.19.0 and go 0.19.0 (2026-11-16)
 
