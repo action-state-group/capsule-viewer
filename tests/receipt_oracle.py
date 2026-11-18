@@ -120,7 +120,23 @@ def edits() -> list[tuple[str, dict, dict, str]]:
             edited["extensions"][SELLER_KIND] = {}
             label = f"{name}+seller-kind-added"
         out.append((label, edited, report_for(edited, output), audience_of(name)))
+    # A receipt whose records name no producer (a Goose-sealed one): the page
+    # must not name one (capsule-viewer#328).
+    bundle, output = load("keep")
+    edited = copy.deepcopy(bundle)
+    _strip_producers(edited)
+    out.append(("keep+producer-removed", edited, report_for(edited, output), audience_of("keep")))
     return out
+
+
+def _strip_producers(node: object) -> None:
+    if isinstance(node, dict):
+        node.pop("producer", None)
+        for value in node.values():
+            _strip_producers(value)
+    elif isinstance(node, list):
+        for value in node:
+            _strip_producers(value)
 
 
 def main() -> int:

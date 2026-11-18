@@ -77,6 +77,9 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "step.line": frozenset({"text"}),
     "step.log": frozenset({"seq", "leaf", "log"}),
     "provenance.by": frozenset({"producers"}),
+    "summary.sealed": frozenset({"producer"}),
+    "summary.lines": frozenset({"producer"}),
+    "merchant.intro": frozenset({"producer"}),
     "wording.provenance": frozenset({"id", "sha"}),
     # The bilateral module's (``bilateral.py``); one pack words both.
     "deal.agree": frozenset({"deal"}),
@@ -510,13 +513,22 @@ class UnilateralReceiptModule:
             return _join([self.kit.disclosure_badge(c.state), self._note(self.w(f"{prefix}.{c.state}"), data_committed=prefix, data_state=c.state)])
         return self._p(self.w(f"{prefix}.mismatch"), data_committed=prefix, data_state="mismatch")
 
+    def _producer(self, model: ReceiptModel) -> str:
+        """Who wrote the sealed text, as the records say: the one producer
+        every disclosed step names, else "the producer". A page never names a
+        tool the record does not (a Goose-sealed report records none)."""
+        ps = model.producers
+        if len(ps) == 1 and ps[0] is not None:
+            return ps[0]
+        return self.w("provenance.the_producer")
+
     def _sealed_note(self, model: ReceiptModel) -> Markup:
         """How the report was sealed. A report carried outside the log is
         described by what capsulectl verify reported of it and nothing more:
         this page checks no signature, and does not say the record was
         checked on its own authority."""
         if model.report_checked is None:
-            return self._note(self.w("summary.sealed"), data_sealed="x-deal-v0")
+            return self._note(self.w("summary.sealed", producer=self._producer(model)), data_sealed="x-deal-v0")
         return self._note(self.w("summary.standalone", status=model.report_checked), data_sealed="x-deal-report")
 
     def _l1(self, model: ReceiptModel, open_: bool) -> list[str]:
@@ -529,7 +541,7 @@ class UnilateralReceiptModule:
         out.append(self.kit.section(self.w("section.approved"), *self._section_steps(model, "approved")))
         out.append(self.kit.section(self.w("section.merchant"), *self._merchant(model, open_)))
 
-        acted: list[str] = [self._note(self.w("summary.lines"))]
+        acted: list[str] = [self._note(self.w("summary.lines", producer=self._producer(model)))]
         acted += [self._item(model, i, open_=open_) for i in r.did] or [self._note(self.w("acted.nothing"))]
         if r.money:
             acted.append(self._p(r.money, data_sealed_text="money"))
@@ -596,7 +608,7 @@ class UnilateralReceiptModule:
         r = model.report
         if not r.merchant:
             return [self._note(self.w("merchant.none"))]
-        out: list[str] = [self._note(self.w("merchant.intro"))]
+        out: list[str] = [self._note(self.w("merchant.intro", producer=self._producer(model)))]
         if r.email_scope:
             out.append(self._p(r.email_scope, data_sealed_text="email-scope"))
         for m in r.merchant:

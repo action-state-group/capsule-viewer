@@ -567,7 +567,7 @@ def _producer(payload: Mapping[str, Frozen]) -> str | None:
     version = _str(producer.get("version"))
     if version is None:
         return None
-    return f"{_str(producer.get('name')) or 'capsulectl'} {version} ({_str(producer.get('commit')) or 'unknown'})"
+    return f"{_str(producer.get('name')) or 'producer'} {version} ({_str(producer.get('commit')) or 'unknown'})"
 
 
 def _committed(

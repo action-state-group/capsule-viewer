@@ -731,7 +731,7 @@
     var producer = map(or(get(map(get(payload, EXTENSION)), "producer"), get(payload, "producer")));
     var version = str(get(producer, "version"));
     if (version === null) return null;
-    return or(str(get(producer, "name")), "capsulectl") + " " + version + " (" + or(str(get(producer, "commit")), "unknown") + ")";
+    return or(str(get(producer, "name")), "producer") + " " + version + " (" + or(str(get(producer, "commit")), "unknown") + ")";
   }
 
   function committed(reader, stepId, commitmentOf, nonce, text, label) {
@@ -1534,10 +1534,17 @@
     return d.el("ul", {}, deadlines.map(function (x) { return d.el("li", { "data-flagged": x.flagged ? "true" : "false" }, [x.text]); }));
   };
 
+  // Who wrote the sealed text, as the records say: the one producer every
+  // disclosed step names, else "the producer" (module.py _producer).
+  P.producer = function (model) {
+    var ps = model.producers;
+    return ps.length === 1 && ps[0] !== null ? ps[0] : w("provenance.the_producer");
+  };
+
   // How the report was sealed. A report carried outside the log is described
   // by what capsulectl verify reported of it and nothing more (module.py).
   P.sealedNote = function (model) {
-    if (model.report_checked === null) return this.note(w("summary.sealed"), { "data-sealed": "x-deal-v0" });
+    if (model.report_checked === null) return this.note(w("summary.sealed", { producer: this.producer(model) }), { "data-sealed": "x-deal-v0" });
     return this.note(w("summary.standalone", { status: model.report_checked }), { "data-sealed": "x-deal-report" });
   };
 
@@ -1597,7 +1604,7 @@
     out.push(kit.section(w("section.approved"), this.sectionSteps(model, "approved")));
     out.push(kit.section(w("section.merchant"), this.merchant(model)));
 
-    var acted = [this.note(w("summary.lines"))];
+    var acted = [this.note(w("summary.lines", { producer: this.producer(model) }))];
     var did = r.did.map(function (i) { return self.item(model, i); });
     acted = acted.concat(did.length ? did : [this.note(w("acted.nothing"))]);
     if (r.money) acted.push(this.p(r.money, { "data-sealed-text": "money" }));
@@ -1654,7 +1661,7 @@
     var d = this.d, kit = this.kit, self = this;
     var r = model.report;
     if (!r.merchant.length) return [this.note(w("merchant.none"))];
-    var out = [this.note(w("merchant.intro"))];
+    var out = [this.note(w("merchant.intro", { producer: this.producer(model) }))];
     if (r.email_scope) out.push(this.p(r.email_scope, { "data-sealed-text": "email-scope" }));
     r.merchant.forEach(function (m) {
       var rows = m.rows.map(function (row) {

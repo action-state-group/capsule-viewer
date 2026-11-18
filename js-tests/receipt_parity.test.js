@@ -36,9 +36,9 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
 
   it("covers every receipt fixture, at every audience, and the edited copies", () => {
     const names = new Set(oracle.cases.map((c) => c.name));
-    expect(oracle.cases.length).toBe(104);
+    expect(oracle.cases.length).toBe(105);
     expect([...names].filter((n) => !n.includes("+")).length).toBe(28);
-    expect([...names].filter((n) => n.includes("+")).length).toBe(20);
+    expect([...names].filter((n) => n.includes("+")).length).toBe(21);
   });
 
   it("compares every case, model and depth (the count is the parity result)", async () => {
@@ -81,10 +81,10 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     }
     console.log(`receipt parity: ${JSON.stringify(compared)}`);
     expect(differences).toEqual([]);
-    // 28 fixtures x 3 audiences + 20 edited copies (each edited copy declined by
-    // all three, as the Python twin declines it); 31 accepted (module, case)
+    // 28 fixtures x 3 audiences + 21 edited copies (each edited copy declined by
+    // all three, as the Python twin declines it); 32 accepted (module, case)
     // pairs, each rendered at L0, L1 and L2.
-    expect({ ...compared, bytes: undefined }).toEqual({ cases: 104, accepted: 31, models: 31, renders: 93, bytes: undefined });
+    expect({ ...compared, bytes: undefined }).toEqual({ cases: 105, accepted: 32, models: 32, renders: 94, bytes: undefined });
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
 

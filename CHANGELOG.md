@@ -15,6 +15,14 @@ here. The format follows
 
 - The module-slot writer for the receipt scripts moved out of the deprecated Python `capsule_viewer.receipt` package (#71): `python -m capsule_viewer.receipt_slot --write` (and `--check`) replaces `python -m capsule_viewer.receipt.module_slot`. The example wording pack (`wording-en.json`) and the three module-slot manifests (`manifest-<kind>.json`) moved with it to `capsule_viewer/receipt_slot/`; the writer reads each manifest and replaces only its `executable` block. The shipped scripts change only in three comment lines that name the new command, so each manifest's `script_sha256` changes (the wording pack's bytes and digest do not); a plugin that pins the old digests takes the new manifests. The scripts' behaviour is held to a frozen golden of the Python modules' output (`tests/testdata/receipt/oracle-golden.json.gz`). This meets one of the removal conditions in the 0.19.0 notes (the writer has moved out); the others stand.
 
+## ts 0.19.2 and go 0.19.2 (2026-11-17)
+
+Both state viewer 0.19.2: `ts/v0.19.2`, then `go/v0.19.2` on the commit that ships its page runtime. This release carries #328.
+
+### Changed
+
+- The x-deal-v0 receipt pages no longer say capsulectl wrote text it did not (#328). The sentences that named capsulectl as the writer of the sealed summary (`summary.sealed`, `summary.lines`) and of the amounts read from a merchant email (`merchant.intro`) now take the producer from the records: the one producer every disclosed step names, else "the producer". A receipt sealed by another producer, such as the Goose reference, which records none, no longer reads as capsulectl's. `provenance.unrecorded` says "a producer that did not record its version", and a producer record with a version but no name is shown as "producer", not "capsulectl". `summary.lines` no longer says "on this device". The wording pack (`wording-en.json`) and the three module-slot scripts change, so each manifest's `script_sha256` and the pack digest change: a plugin that pins them takes the new manifests. The Python oracle and its frozen golden change with them, and the golden gains a case with no producer recorded.
+
 ## ts 0.19.1 and go 0.19.1 (2026-11-17)
 
 Both state viewer 0.19.1: `ts/v0.19.1`, then `go/v0.19.1` on the commit that ships its page runtime. This release carries #325.

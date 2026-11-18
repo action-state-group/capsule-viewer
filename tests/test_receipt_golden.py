@@ -37,6 +37,9 @@ CORE_PAGE_FROM = 50
 REWORDED = {
     7: "summary.lines",
     25: "summary.sealed",
+    # deal-view.js named capsulectl as the author of a step whose record has
+    # no producer; a Goose-sealed receipt carries none (capsule-viewer#328).
+    37: "provenance.unrecorded",
     # Retired vocabulary (tests/test_prose_word_discipline.py): the line named
     # a property in order to deny it; the rest of the sentence already says
     # what the seal does and does not show.
@@ -76,7 +79,7 @@ def test_the_map_accounts_for_every_deal_view_line(page):
 def test_most_deal_view_lines_are_shown_verbatim(page):
     text = visible_text(page)
     verbatim = [i for i in DEAL_VIEW if LINES[i] in text]
-    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 41
+    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 40
 
 
 def test_dropped_lines_are_really_gone(page):
@@ -89,7 +92,10 @@ def test_reworded_lines_say_it_from_the_pack(page):
     pack = json.loads((RECEIPTS.parents[2] / "src" / "capsule_viewer" / "receipt_slot" / "wording-en.json").read_text(encoding="utf-8"))
     text = visible_text(page)
     for key in REWORDED.values():
-        assert " ".join(pack["entries"][key].split()) in text, key
+        # This receipt's steps name two producers (one records none), so a
+        # sentence that names the writer says "the producer".
+        words = pack["entries"][key].replace("{producer}", pack["entries"]["provenance.the_producer"])
+        assert " ".join(words.split()) in text, key
 
 
 def _out_of_order(text: str) -> list[int]:
