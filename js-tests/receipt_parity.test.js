@@ -82,8 +82,8 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     console.log(`receipt parity: ${JSON.stringify(compared)}`);
     expect(differences).toEqual([]);
     // 28 fixtures x 3 audiences + 22 edited copies (20 declined by
-    // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module); 33 accepted (module, case)
-    // pairs, each rendered at L0, L1 and L2.
+    // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only); 33 accepted (module, case)
+    // pairs, the 31 fixture pairs rendered at L0, L1 and L2.
     expect({ ...compared, bytes: undefined }).toEqual({ cases: 106, accepted: 33, models: 33, renders: 95, bytes: undefined });
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
