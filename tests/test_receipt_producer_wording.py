@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 
 from receipt_helpers import load, render, visible_text
-from receipt_oracle import _strip_producers
+from receipt_oracle import _strip_producers, name_every_producer
 
 
 def _text(name: str, bundle: dict | None) -> str:
@@ -27,10 +27,20 @@ def test_no_recorded_producer_says_the_producer():
 
 
 def test_one_recorded_producer_is_named_from_the_record():
-    # Every step of this copy names the same producer.
-    text = _text("main-standalone-keep", None)
-    assert "written by capsulectl 0.1.0-dev (unknown) and sealed with the receipt" in text
+    bundle, _ = load("keep")
+    named = copy.deepcopy(bundle)
+    name_every_producer(named, {"name": "goose", "version": "1.2.3", "commit": "abc1234"})
+    text = _text("keep", named)
+    assert "written by goose 1.2.3 (abc1234) and sealed with the receipt" in text
     assert "written by the producer" not in text
+
+
+def test_a_report_outside_the_log_never_borrows_the_steps_producer():
+    # main-standalone-keep: every step names one producer, but the report's
+    # text is carried outside the log, so no record says who wrote it.
+    text = _text("main-standalone-keep", None)
+    assert "written by the producer and sealed with the receipt" in text
+    assert "written by capsulectl" not in text
 
 
 def test_mixed_or_unrecorded_producers_say_the_producer():

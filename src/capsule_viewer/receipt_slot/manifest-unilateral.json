@@ -36,7 +36,7 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "dbe3dab08c27e9522b66fe9b4602725f39a0497252d370ecb2b2c77138f09e83",
+    "script_sha256": "9af7952682eb3c6f9aaeb1924cc9f5ad4bc0d915392f416cecf178e2f552a7ed",
     "style_sha256": [
       "246cfdc8ae83e682a220a2c13cef8134c7515999365b33965d4e924bb871f3ea"
     ]

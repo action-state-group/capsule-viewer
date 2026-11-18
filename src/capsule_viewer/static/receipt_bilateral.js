@@ -1535,10 +1535,11 @@
   };
 
   // Who wrote the sealed text, as the records say: the one producer every
-  // disclosed step names, else "the producer" (module.py _producer).
+  // disclosed step names, else "the producer"; a report carried outside the
+  // log has no record of its own to say (module.py _producer).
   P.producer = function (model) {
     var ps = model.producers;
-    return ps.length === 1 && ps[0] !== null ? ps[0] : w("provenance.the_producer");
+    return model.report_checked === null && ps.length === 1 && ps[0] !== null ? ps[0] : w("provenance.the_producer");
   };
 
   // How the report was sealed. A report carried outside the log is described

@@ -126,7 +126,23 @@ def edits() -> list[tuple[str, dict, dict, str]]:
     edited = copy.deepcopy(bundle)
     _strip_producers(edited)
     out.append(("keep+producer-removed", edited, report_for(edited, output), audience_of("keep")))
+    # ... and one whose every record names the same producer: the page names it.
+    edited = copy.deepcopy(bundle)
+    name_every_producer(edited, {"name": "goose", "version": "1.2.3", "commit": "abc1234"})
+    out.append(("keep+one-producer", edited, report_for(edited, output), audience_of("keep")))
     return out
+
+
+def name_every_producer(bundle: dict, producer: dict) -> None:
+    """Every disclosed record names *producer*: in its x-deal-v0 block when it
+    has one, else in its own header (a typed record, such as the sealed report)."""
+    for disclosure in bundle["disclosures"].values():
+        for payload in disclosure.values():
+            block = payload.get("x-deal-v0")
+            if isinstance(block, dict):
+                block["producer"] = dict(producer)
+            else:
+                payload["producer"] = dict(producer)
 
 
 def _strip_producers(node: object) -> None:
