@@ -35,6 +35,11 @@
     "check:package": "node scripts/check-package.mjs",
     "emitter:iife": "node scripts/build-iife.mjs"
   },
+  "overrides": {
+    "@action-state-group/agent-action-capsule": {
+      "@action-state-group/cll": "$@action-state-group/cll"
+    }
+  },
   "dependencies": {
     "@action-state-group/agent-action-capsule": "0.14.0",
     "@action-state-group/cll": "0.4.0"
