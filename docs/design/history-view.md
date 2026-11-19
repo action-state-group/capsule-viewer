@@ -36,7 +36,7 @@ That is the same split the viewer's History modules already use (the module
 draws, the runtime or the producer decides).
 
 **Beside the existing History card.** `capsuleviewer.standard-history/v0`
-(`docs/design/history-card.md`) draws AAC's `standard_history/1` card from a
+(`docs/design/history-card.md`) draws AAC's `standard_history/1` and `/3` cards from a
 sealed bundle and stays as it is; this view does not read bundles. Muse's
 History you send stays that card. This view is a viewer contract like
 `chart-spec`, owned here; the README's note that the view-model JSON belongs
