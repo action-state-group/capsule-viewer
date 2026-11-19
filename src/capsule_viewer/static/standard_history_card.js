@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // The History card, in the page: capsuleviewer.standard-history/v0, which
-// draws a standard_history/1 card (agent-action-capsule's
-// spec/standard-history-v0.md, cited as SH) as the History card (9b) canvas
+// draws a standard_history/1 or /3 card (agent-action-capsule's
+// spec/standard-history-v0.md, cited as SH; /3 is its section 11) as the History card (9b) canvas
 // draws it, boards HistoryCard9b and SharedHistoryLaptop9b.
 //
 // One self-contained module-slot script (the presentation contract, as
@@ -17,7 +17,7 @@
 // card, as `capsulectl seal` seals a payload, with an x-standard-history/v0
 // block in its extensions carrying what the receiver holds beside the card,
 // each member optional: `policy` {digest, window} and `as_of` {anchor,
-// anchor_time, first_checkpoint_time}, under the names of AAC's reference
+// anchor_time, first_checkpoint_time, and for a /3 card coverage_start_time}, under the names of AAC's reference
 // check_card. `as_of` may also carry `checkpoint` (the anchor's cll-checkpoint
 // octets, hex, whose SHA-256 is the anchor) and `receipts` (1 to 64 hex
 // strings, each one cll-witness-receipt for the anchor, IP1 6.2.2): the
@@ -26,11 +26,12 @@
 // runs AAC's checkAnchorWitnessed under the reader's own witness list, never one
 // the bundle names (capsule-viewer#183). A block that also carries `deals` (SH 5.2's deal entries) is the
 // holder's own copy, never the card someone else is sent: the page draws it
-// under the PRIVATE banner and recounts the card from those entries. A shared
-// card shows its counts as the holder's statement (SH 6).
+// under the PRIVATE banner and recounts a /1 card from those entries. For a /3 card the
+// page has no shelf handover (SH 11.7), so it only says whether the entries add up to the card, and
+// counts_recompute stays NOT_CHECKED. A shared card shows its counts as the holder's statement (SH 6).
 //
 // checkCard is the twin of the reference (agent_action_capsule.standard_history
-// .check_card at agent-action-capsule 1037a1c): the same six properties, in
+// .check_card at agent-action-capsule 1037a1c for /1, 38f02a6 for /3): the same six properties, in
 // the same order, with the same statuses, but for one input JSON.parse cannot
 // tell apart (an assetScale written 2.0; see decade), and for the policy
 // digest and the anchor, compared with ===, which is Python's == for the strings
@@ -647,16 +648,13 @@
       card = rootCard(context);
       // The token is the card's own; any other reads under /1, where its form fails.
       derivation = isObj(card) && card.derivation === DERIVATION_3 ? DERIVATION_3 : DERIVATION;
-      // Under /3 the formal counts_recompute needs the whole-shelf handover (SH 11.7), which this page does not have: the entries are
-      // not passed to the check, so it stays NOT_CHECKED, and the page only compares the entries with the card (entriesMatch).
-      properties = checkCard(card, inputs.policy, inputs.as_of, derivation === DERIVATION_3 ? null : inputs.deals, derivation);
-      if (derivation === DERIVATION_3 && inputs.deals !== null && inputs.as_of !== null &&
-          ["card_form", "counts_integral", "denominator"].every(function (k) { return properties[k] === "PASS"; })) {
-        var w = own(card.window, "all") ? { all: true } : { months: card.window.months };
-        var derived = counts(inputs.deals, w, time(inputs.as_of.anchor_time), derivation);
-        entriesMatch = keys(derived).every(function (k) { return equal(card[k], derived[k]); });
-        // Entries that count one deal differently from the card are a disagreement the holder's own copy shows.
-        if (!entriesMatch) properties.counts_recompute = "FAIL";
+      properties = checkCard(card, inputs.policy, inputs.as_of, inputs.deals, derivation);
+      // Under /3 the formal counts_recompute needs the whole-shelf handover (SH 11.7), which this page does not have: the entries
+      // only add up to the card or not (entriesMatch), and a match leaves the property NOT_CHECKED. A mismatch of the holder's own
+      // copy with its own card stays FAIL.
+      if (derivation === DERIVATION_3) {
+        entriesMatch = properties.counts_recompute === "PASS";
+        if (entriesMatch) properties.counts_recompute = "NOT_CHECKED";
       }
     } catch (err) {
       if (!(err instanceof InputError)) throw err;
@@ -684,7 +682,6 @@
       witnessIn: witnessIn,
       covered: rootCovered(context),
       card: card,
-      derivation: derivation,
       entriesMatch: entriesMatch,
       unpriced: own(card, "unpriced") ? card.unpriced : null,
       window: windowText(card.window),
@@ -901,7 +898,8 @@
       ];
     var v3 = c.derivation === DERIVATION_3;
     var recounted = v3 ? m.entriesMatch : m.properties.counts_recompute === "PASS";
-    var missing = ["policy", "as_of"].filter(function (k) { return !m.held[k]; }).map(function (k) { return words("checks.not_held." + k); });
+    // A /3 recount needs the snapshot's time but not the policy (it counts over the card's own window).
+    var missing = (c.derivation === DERIVATION_3 ? ["as_of"] : ["policy", "as_of"]).filter(function (k) { return !m.held[k]; }).map(function (k) { return words("checks.not_held." + k); });
     var statementText = recounted ? words(v3 ? "counts.entries.v3" : "counts.recomputed")
       : m.held.deals ? words("counts.statement.entries", { what: missing.join(", ") }) : words("counts.statement");
     var statement = el(doc, "p", { class: "cv-muted", "data-sh-counts": recounted ? (v3 ? "entries" : "recomputed") : "statement" }, [statementText]);

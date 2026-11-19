@@ -164,6 +164,16 @@ describe("a /3 card in the page", () => {
     expect(page).toContain("Failed: The counts recount from the deal entries");
     expect(page).not.toContain("but not ,");
   });
+  it("entries with no snapshot time are not compared, and the line names only the snapshot's time, never the policy", () => {
+    for (const drop of [(b) => { delete b.as_of; }, (b) => { delete b.as_of; delete b.policy; }]) {
+      const m = modelOf(context3(first, { editBlock: drop }));
+      expect(m.state).toBe("card");
+      expect(m.entriesMatch).toBe(false);
+      const line = renderAll(l, m).L0.querySelector("[data-sh-counts]").textContent;
+      expect(line).toContain("not the snapshot's time, so");
+      expect(line).not.toContain("policy");
+    }
+  });
   it("a card without its coverage start is not a standard card", () => {
     const m = modelOf(context3(first, { editCard: (card) => { delete card.coverage_start; } }));
     expect(m.state).toBe("refused");
