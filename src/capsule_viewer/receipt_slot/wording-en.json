@@ -360,6 +360,7 @@
     "deal.state.started": "Started",
     "deal.state.awaiting_agreement": "Awaiting agreement",
     "deal.state.not_started": "Not started",
+    "deal.report.scope": "A report that passes the check shows who signed it and which deal it covers. It does not show that its rows are correct.",
     "deal.settled": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.",
     "deal.start.by": "Started by: {by}.",
     "deal.start.by.offerer_in_time": "the offerer, in time",

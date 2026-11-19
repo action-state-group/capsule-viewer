@@ -919,6 +919,9 @@
     return value;
   }
 
+  // The members section 9's report has; evidencebook's VerifyReport refuses any other.
+  var V1_REPORT_MEMBERS = ["type", "profile", "deal_id", "audience", "nonce", "as_of", "deal_checkpoint", "pack_digest", "start", "settled", "rows_state", "rows", "rests_on", "report", "disputes", "rulings_unnamed", "status_fact", "referee"];
+
   function failV1(what) { throw new Unavailable("the v1 report's " + what); }
 
   function dealRow(raw) {
@@ -929,6 +932,8 @@
     var ruling = get(r, "ruling");
     // section 9: the first final ruling rowstatus applied, or null.
     if (ruling !== null && (!isMap(ruling) || flag(ruling, "final", "ruling final") !== true)) throw new Unavailable("the v1 report's ruling is not a final ruling or null");
+    // A ruling names its side, buyer, seller or null, and always carries the member.
+    if (ruling !== null && !own(ruling, "against")) throw new Unavailable("the v1 report's ruling has no against member");
     var relied = get(r, "relied_on");
     if (!Array.isArray(relied)) throw new Unavailable("the v1 report's row relied_on is not an array");
     return {
@@ -970,6 +975,7 @@
     var sealed = reader.dealReportV1();
     var content = sealed[1];
     if (get(content, "profile") !== EXTENSION_V1) throw new Unavailable("the sealed report is not an x-deal-v1 report");
+    Object.keys(content).forEach(function (k) { if (V1_REPORT_MEMBERS.indexOf(k) < 0) throw new Unavailable("the v1 report has a member section 9 does not: " + k); });
     var cut = closedWord(V1_AUDIENCES, get(content, "audience"), "audience");
     if (audience !== null && cut !== audience) throw new Unavailable("this copy was cut for " + cut + ", not " + audience);
     var startRaw = map(get(content, "start"));
@@ -2173,6 +2179,7 @@
   P.dealL1 = function (model) {
     return [
       this.note(w("summary.standalone", { status: model.report_checked === null ? "-" : model.report_checked }), { "data-sealed": "x-deal-report" }),
+      this.note(w("deal.report.scope")),
       this.kit.section(w("deal.section.rows"), this.dealRows(model)),
     ];
   };
