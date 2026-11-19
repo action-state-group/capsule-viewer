@@ -936,6 +936,12 @@
     if (ruling !== null && !own(ruling, "against")) throw new Unavailable("the v1 report's ruling has no against member");
     var relied = get(r, "relied_on");
     if (!Array.isArray(relied)) throw new Unavailable("the v1 report's row relied_on is not an array");
+    // VerifyReport refuses a null or mistyped list or object where section 9 has one.
+    if (!isMap(get(r, "owed"))) throw new Unavailable("the v1 report's row owed is not an object");
+    var late = get(r, "late");
+    if (own(r, "late")) {
+      if (!isMap(late) || !Array.isArray(get(late, "statements")) || !Array.isArray(get(late, "disputes"))) throw new Unavailable("the v1 report's row late is not {statements, disputes} lists");
+    }
     return {
       id: id,
       owed_by: or(str(get(r, "owed_by")), ""),
@@ -944,6 +950,7 @@
       status: closedWord(V1_STATUSES, get(r, "status"), "row status"),
       value: optionalWord(V1_VALUES, get(r, "value"), "row value"),
       remedy: optionalWord(V1_REMEDIES, get(r, "remedy"), "row remedy"),
+      remedy_made: flag(r, "remedy_made", "row remedy_made"),
       local: flag(r, "local", "row local"),
       check: closedWord(V1_CHECKS, get(r, "check"), "row check"),
       // `late` (optional in section 9, undefined until rowstatus reports it) is not read: the page shows no late line.
@@ -952,7 +959,11 @@
         : null,
       relied_on: relied.map(function (e) {
         if (!isMap(e)) throw new Unavailable("a relied_on entry of the v1 report is not an object");
-        return { record: or(str(get(e, "record")), ""), side: or(str(get(e, "side")), ""), time: str(get(e, "time")), named_witness: flag(e, "witnessed", "relied_on named-witness flag") };
+        var time = str(get(e, "time"));
+        var named = flag(e, "witnessed", "relied_on named-witness flag");
+        // A time is given exactly when a named witness receipt gives it (section 9).
+        if (named !== (time !== null)) throw new Unavailable("a relied_on entry's named-witness flag does not match its time");
+        return { record: or(str(get(e, "record")), ""), side: or(str(get(e, "side")), ""), time: time, named_witness: named };
       }),
     };
   }
@@ -984,6 +995,9 @@
       local: flag(startRaw, "local", "start local"),
       by: optionalWord(V1_START_BY, get(startRaw, "by"), "start by"),
     };
+    if (!isMap(get(content, "report"))) throw new Unavailable("the v1 report's report text is not an object");
+    var unnamed = get(content, "rulings_unnamed");
+    if (own(content, "rulings_unnamed") && (int(unnamed) === null || unnamed < 0)) throw new Unavailable("the v1 report's rulings_unnamed is not a count");
     var rowsState = closedWord(V1_ROWS_STATES, get(content, "rows_state"), "rows_state");
     var rawRows = get(content, "rows");
     if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
@@ -2150,6 +2164,7 @@
     // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
     if (row.value !== null && row.status !== "ruled") bits.push(w("deal.row.value", { value: this.token("deal.value", row.value) }));
     if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy) }));
+    if (row.remedy === "not_counted" && row.remedy_made) bits.push(w("deal.row.remedy_made"));
     if (row.ruling !== null) {
       var value = this.token("deal.value", row.ruling.value);
       // `against` is buyer, seller or null (anything else declined the report); null: the ruling alone.

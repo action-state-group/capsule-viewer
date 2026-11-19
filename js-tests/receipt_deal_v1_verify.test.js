@@ -1,5 +1,5 @@
 // evidencebook's VerifyReport vectors (testdata/deal-v1/report-verify/vectors.json,
-// evidencebook#555) against the v1 page. The page checks no signature and holds
+// evidencebook#555 and #556, 30 cases) against the v1 page. The page checks no signature and holds
 // no first record, so it applies the rules that read the report's own payload:
 // a ruling's against is buyer, seller or null and always present, no top-level
 // member outside section 9, the x-deal-v1 profile. The signature, deal and book binding
@@ -20,13 +20,14 @@ const env = (audience) => ({
 });
 
 // The cases Go refuses for what the report's own payload holds; the page declines the same.
-const PAYLOAD_REFUSED = ["against-the-adjudicator", "against-in-another-case", "against-empty", "ruling-without-against", "against-misnamed", "an-unknown-member", "a-v0-profile"];
+const PAYLOAD_REFUSED = ["against-the-adjudicator", "against-in-another-case", "against-empty", "ruling-without-against", "against-misnamed", "an-unknown-member", "a-v0-profile",
+  "rows-null", "report-text-null", "relied-on-null", "late-statements-null", "late-disputes-null", "owed-null", "owed-a-number", "owed-a-list", "rulings-unnamed-negative", "witnessed-without-a-time", "a-time-not-witnessed"];
 // Go gives a key_id: the page draws it.
 const VERIFIED = vectors.cases.filter((c) => c.want.key_id).map((c) => c.name);
 
 describe("the deal/v1 receipt against VerifyReport's vectors", () => {
   it("covers the vectors it is held to", () => {
-    expect(vectors.cases.length).toBe(19);
+    expect(vectors.cases.length).toBe(30);
     expect(VERIFIED).toEqual(["ruled-against-seller", "ruled-against-buyer", "ruling-against-null", "no-ruling"]);
     for (const n of PAYLOAD_REFUSED) expect(vectors.cases.find((c) => c.name === n).want.stage).toBe("report");
   });
@@ -39,7 +40,7 @@ describe("the deal/v1 receipt against VerifyReport's vectors", () => {
       if (VERIFIED.includes(c.name)) {
         const model = await module.buildModel(ctx);
         const host = renderInto(lib, module, model, "L1");
-        expect(host.L1.textContent).toContain("A report that passes the check shows who signed it and which deal it covers. It does not show that its rows are correct.");
+        expect(host.L1.textContent).toContain("A report that passes the check shows who signed it and which deal it covers. It does not show that its rows are correct. It is the holder's own record of the deal.");
       }
     });
   }

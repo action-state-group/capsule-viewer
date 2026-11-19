@@ -10,7 +10,7 @@ import { loadScript, manifestOf, renderInto, KINDS } from "./receiptScripts.js";
 const ROW = {
   id: "as_described", owed_by: "seller", owed: {},
   due: "2026-11-04T09:12:00Z", window_end: "2026-11-18T09:12:00Z",
-  status: "agreed", value: "met", remedy: null, local: false, check: "not_recomputed",
+  status: "agreed", value: "met", remedy: null, remedy_made: false, local: false, check: "not_recomputed",
   ruling: null, relied_on: [{ record: "rec-1", side: "buyer", time: "2026-11-03T10:00:00Z", witnessed: true }],
 };
 const content = (over = {}) => ({

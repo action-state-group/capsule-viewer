@@ -2001,6 +2001,2240 @@
       }
      ]
     },
+    "rows": null,
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "rows-null",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": null,
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "report-text-null",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": null,
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "relied-on-null",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": null
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "late-statements-null",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": null,
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "late-disputes-null",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": null,
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "owed-null",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": 5,
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "owed-a-number",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": [],
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "owed-a-list",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": null,
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "witnessed-without-a-time",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-03T10:00:00Z",
+        "witnessed": false
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "a-time-not-witnessed",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
+    "rows": [
+     {
+      "check": "not_run",
+      "due": "2026-11-01T23:59:59Z",
+      "id": "paid_as_agreed",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "amount_minor": 6000,
+       "currency": "USD"
+      },
+      "owed_by": "buyer",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "8a06168849e85197acadbbb65f4e2a9cbf07e90a4fd4676aa2b3907655b38006",
+        "side": "seller",
+        "time": "2026-11-01T10:20:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-04T23:59:59Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-05T10:15:00Z",
+      "id": "delivered",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "item": "ceramic lamp",
+       "quantity": 1
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": null,
+      "remedy_made": false,
+      "ruling": null,
+      "status": "agreed",
+      "value": "met",
+      "window_end": "2026-11-08T10:15:00Z"
+     },
+     {
+      "check": "not_recomputed",
+      "due": "2026-11-04T15:00:00Z",
+      "id": "as_described",
+      "late": {
+       "disputes": [],
+       "statements": []
+      },
+      "local": false,
+      "owed": {
+       "listing": "as published"
+      },
+      "owed_by": "seller",
+      "relied_on": [
+       {
+        "record": "bd6bdd7f472e6c6c8db6adaeb37d3d54e70e377f6ac8c7bab237f18ff0ce9bf8",
+        "side": "buyer",
+        "time": "2026-11-01T10:15:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "82ca6367f3ed817d62f90d2c3ec7ab42b1b5be35854f9cb788213e5b31ca6493",
+        "side": "buyer",
+        "time": "2026-11-04T15:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "9b32191be3361dc1e2b6054ac1c56283bdec59f6c61e190e9abedeaef571f0fb",
+        "side": "buyer",
+        "time": "2026-11-10T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "29e4c8d3debd2f4cefca12bd034ff7e5a4f48dc76c25ca0785250b1e67f6b885",
+        "side": "seller",
+        "time": "2026-11-04T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "68f7d5b890bc7f0962600bc0b290ae4862ebeec02a997955b07fdd27207a943e",
+        "side": "seller",
+        "time": "2026-11-10T14:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7b1f37ef3e1fd334b7d4f6fac9bd39e0e614afe51fd4106333c51035a4cc5c68",
+        "side": "buyer",
+        "time": "2026-11-12T09:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "7919aaf522ae434a4d5263c220066d34d318b112e3c83145a1bd7284feb2b106",
+        "side": "adjudicator",
+        "time": "2026-11-13T10:00:00Z",
+        "witnessed": true
+       },
+       {
+        "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+        "side": "adjudicator",
+        "time": "2026-11-21T10:00:00Z",
+        "witnessed": true
+       }
+      ],
+      "remedy": "not_counted",
+      "remedy_made": false,
+      "ruling": {
+       "against": "seller",
+       "final": true,
+       "record": "2e76b582de3c889391ea4b977e075144494661563e21805c8b618e626e6abc44",
+       "remedy_due": "2026-11-27T23:59:59Z",
+       "value": "not_met"
+      },
+      "status": "ruled",
+      "value": "not_met",
+      "window_end": "2026-11-18T15:00:00Z"
+     }
+    ],
+    "rows_state": "listed",
+    "rulings_unnamed": -1,
+    "settled": false,
+    "start": {
+     "by": "acceptor_named",
+     "local": false,
+     "state": "started"
+    },
+    "status_fact": null,
+    "type": "deal_report"
+   },
+   "name": "rulings-unnamed-negative",
+   "want": {
+    "error": "does not read as a report",
+    "stage": "report"
+   }
+  },
+  {
+   "agent_input": {
+    "as_of": "2026-11-21T12:00:00Z",
+    "audience": "keep",
+    "deal_checkpoint": {
+     "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+     "mmr_size": 15,
+     "root": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "deal_id": "deal-6a1f0c93b27d4e58",
+    "disputes": [
+     {
+      "claimant": "buyer",
+      "forum": "auto:ref",
+      "outcome": "for_claimant",
+      "row": "as_described"
+     }
+    ],
+    "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "pack_digest": "c94cdaacd19bd6eb4085dbc01023d62fa4b0d3b910737c74daa505558e60f4e3",
+    "profile": "x-deal-v1",
+    "report": {},
+    "rests_on": {
+     "counterparty": {
+      "counted": 5,
+      "fork_at": 0,
+      "last": "b102e717f22ecf67225a15902351fb6dfd14b703094d937e84bb02ea8019dc6a",
+      "log_id": "deal/5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+     },
+     "counterparty_kind": null,
+     "counterparty_layer": true,
+     "counterparty_proof": "held",
+     "own": {
+      "last": "86a0ebdea3e7972473ee9b95fe4b810ca56094a821c10a6175a72488bf2ab7f5",
+      "log_id": "deal/8cc4ab0342111e4b0fb0c1fd115fa3b4",
+      "size": 7
+     },
+     "witnesses": [
+      {
+       "key_id": "80ae629533cb26fd2bd280e9d3445f1f8f0f071b62e3712df0c698108936aad3",
+       "url": "https://witness.example"
+      }
+     ]
+    },
     "rows": [
      {
       "check": "not_run",
@@ -3946,5 +6180,5 @@
    }
   }
  ],
- "source": "evidencebook testdata/deal-v1/report-verify/vectors.json at main 7a0acde (VerifyReport, #555); each case's name, Go's result (want) and the report pair's agent_input"
+ "source": "evidencebook testdata/deal-v1/report-verify/vectors.json at main 4aab610 (VerifyReport, #555 and #556); each case's name, Go's result (want) and the report pair's agent_input"
 }

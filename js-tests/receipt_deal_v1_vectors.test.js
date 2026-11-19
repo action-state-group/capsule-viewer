@@ -36,7 +36,9 @@ describe("the deal/v1 receipt against the producer's report vectors", () => {
       const shown = [...host.L1.querySelectorAll("[data-row-status]")].map((e) => e.getAttribute("data-row-status"));
       expect(shown).toEqual(c.report.rows.map((r) => r.status));
       expect(text).not.toMatch(/capsulectl wrote|closed\b/i);
-      if (c.report.rows.some((r) => r.remedy === "not_counted")) expect(text).toContain("a payment is ordered, and this report does not count it");
+      if (c.report.rows.some((r) => r.remedy === "not_counted")) expect(text).toContain("a payment, ordered by the ruling; not checked yet");
+      if (c.report.rows.some((r) => r.remedy === "not_counted" && r.remedy_made)) expect(text).toContain("The owing side has recorded making it (not checked).");
+      if (c.report.rows.some((r) => r.remedy === "not_counted" && !r.remedy_made)) expect(text).toContain("a payment, ordered by the ruling; not checked yet");
       if (c.report.rows.some((r) => r.ruling !== null)) expect(text).toMatch(/Ruling: .*, against the (buyer|seller)/);
     });
   }
