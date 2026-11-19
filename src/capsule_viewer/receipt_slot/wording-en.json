@@ -402,6 +402,7 @@
     "deal.remedy.due": "due",
     "deal.remedy.made": "recorded as made",
     "deal.remedy.not_honoured": "not honoured",
+    "deal.remedy.not_counted": "a payment is ordered, and this report does not count it",
     "deal.check.passed": "passed",
     "deal.check.failed": "failed",
     "deal.check.not_run": "not run",

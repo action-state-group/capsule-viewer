@@ -889,7 +889,7 @@
   var V1_ROWS_STATES = ["listed", "not_started", "withheld"];
   var V1_STATUSES = ["not_reached", "not_due", "no_statement", "waiting", "uncontested", "agreed_so_far", "agreed", "in_disagreement", "in_dispute", "ruled"];
   var V1_VALUES = ["met", "not_met"];
-  var V1_REMEDIES = ["none", "due", "made", "not_honoured"];
+  var V1_REMEDIES = ["none", "due", "made", "not_honoured", "not_counted"];
   var V1_SIDES = ["buyer", "seller"];
   var V1_CHECKS = ["passed", "failed", "not_run", "not_recomputed"];
 
