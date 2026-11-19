@@ -1,8 +1,8 @@
 // evidencebook's VerifyReport vectors (testdata/deal-v1/report-verify/vectors.json,
 // evidencebook#555) against the v1 page. The page checks no signature and holds
 // no first record, so it applies the rules that read the report's own payload:
-// a ruling's against is buyer, seller or null and always present, no member
-// outside section 9, the x-deal-v1 profile. The signature, deal and book binding
+// a ruling's against is buyer, seller or null and always present, no top-level
+// member outside section 9, the x-deal-v1 profile. The signature, deal and book binding
 // cases are capsulectl verify's (the page shows what it reported).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
