@@ -922,6 +922,24 @@
   // The members section 9's report has; evidencebook's VerifyReport refuses any other.
   var V1_REPORT_MEMBERS = ["type", "profile", "deal_id", "audience", "nonce", "as_of", "deal_checkpoint", "pack_digest", "start", "settled", "rows_state", "rows", "rests_on", "report", "disputes", "rulings_unnamed", "status_fact", "referee"];
 
+  // Every field name section 9's report has, at any level. VerifyReport refuses a member spelled otherwise (another case, or
+  // U+017F long s and U+212A Kelvin sign, which case-fold to s and k): the reader reads exact names only, and declines the
+  // report rather than ignore a second spelling beside, or in place of, the one it reads.
+  var V1_FIELD_NAMES = ["against", "as_of", "audience", "by", "check", "claimant", "counted", "counterparty", "counterparty_kind", "counterparty_layer", "counterparty_proof", "current", "deal_checkpoint", "deal_id", "disputes", "due", "final", "fork_at", "forum", "id", "key_id", "last", "late", "local", "log_id", "mmr_size", "nonce", "outcome", "owed", "owed_by", "own", "pack_digest", "profile", "record", "referee", "relied_on", "remedy", "remedy_due", "remedy_made", "report", "rests_on", "root", "row", "rows", "rows_state", "ruling", "rulings_unnamed", "settled", "side", "size", "start", "state", "statements", "status", "status_fact", "time", "type", "url", "value", "window_end", "witnessed", "witnesses"];
+  function foldName(k) { return String(k).toUpperCase().toLowerCase(); }
+  function refuseRespelledNames(node) {
+    if (Array.isArray(node)) { node.forEach(refuseRespelledNames); return; }
+    if (!isMap(node)) return;
+    Object.keys(node).forEach(function (k) {
+      if (V1_FIELD_NAMES.indexOf(k) < 0) {
+        var folded = foldName(k);
+        if (V1_FIELD_NAMES.some(function (n) { return foldName(n) === folded; })) throw new Unavailable("the v1 report has a member spelled otherwise than a field name: " + k);
+      }
+      // The report's text and a term's owed are free-form: their names are not the profile's.
+      if (k !== "report" && k !== "owed") refuseRespelledNames(node[k]);
+    });
+  }
+
   function failV1(what) { throw new Unavailable("the v1 report's " + what); }
 
   function dealRow(raw) {
@@ -986,6 +1004,7 @@
     var sealed = reader.dealReportV1();
     var content = sealed[1];
     if (get(content, "profile") !== EXTENSION_V1) throw new Unavailable("the sealed report is not an x-deal-v1 report");
+    refuseRespelledNames(content);
     Object.keys(content).forEach(function (k) { if (V1_REPORT_MEMBERS.indexOf(k) < 0) throw new Unavailable("the v1 report has a member section 9 does not: " + k); });
     var cut = closedWord(V1_AUDIENCES, get(content, "audience"), "audience");
     if (audience !== null && cut !== audience) throw new Unavailable("this copy was cut for " + cut + ", not " + audience);
