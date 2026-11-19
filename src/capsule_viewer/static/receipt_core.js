@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // The deal receipt modules, in the page: capsuleviewer.receipt.unilateral/v0,
-// capsuleviewer.receipt.seller/v0 and capsuleviewer.receipt.bilateral/v0, as
-// module-slot scripts (agent-action-capsule's presentation contract, as
+// capsuleviewer.receipt.seller/v0 and capsuleviewer.receipt.bilateral/v0 (the
+// x-deal-v0 modules, each with a Python twin) and capsuleviewer.receipt.deal/v1
+// (the x-deal-v1 sealed report, no twin), as module-slot scripts (agent-action-capsule's presentation contract, as
 // capsulectl.deal-view/v0 and capsuleviewer.history/v0 are).
 //
-// This file is the source of the three scripts the manifests pin
-// (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js).
+// This file is the source of the four scripts the manifests pin
+// (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js and
+// receipt_deal.js).
 // `python -m capsule_viewer.receipt_slot --write` writes each one from
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
@@ -56,6 +58,9 @@
   var SELLER_KIND = ""; // @generated SELLER_KIND
 
   var EXTENSION = "x-deal-v0";
+  // The v1 deal profile's extension and sealed report (evidencebook
+  // docs/design/461-deal-profile.md, section 9). A v1 page reads this and never x-deal-v0.
+  var EXTENSION_V1 = "x-deal-v1";
   // Where capsulectl carries a copy's report when it is on no log (capsule-cli#294).
   var STANDALONE_EXTENSION = "x-deal-report/v0";
   var COMPOSED_KIND = "composed/v1";
@@ -349,21 +354,22 @@
     });
   }
 
-  // capsulectl's status for the x-deal-v0 check when it names the report as
-  // standalone. A page runtime that does not interpret x-deal-v0 reports none.
-  function reportChecked(verification) {
-    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION && e.report === "standalone"; });
+  // capsulectl's status for the `extension` check (x-deal-v0, or x-deal-v1 for the
+  // deal module) when it names the report as standalone. A page runtime that does
+  // not interpret that extension reports none.
+  function reportChecked(verification, extension) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === extension && e.report === "standalone"; });
     return entry !== undefined && typeof entry.status === "string" ? entry.status : null;
   }
 
-  function pageAssurance(context) {
+  function pageAssurance(context, extension) {
     var c = map(context);
     var v = map(c.verification);
     return {
       bundle_digest: typeof v.bundleDigest === "string" ? v.bundleDigest : null,
       witnesses: "absent",
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
-      report_checked: reportChecked(v),
+      report_checked: reportChecked(v, extension),
     };
   }
 
@@ -665,6 +671,11 @@
   // it is read only when capsulectl verify reported the check as passed
   // (assurance.report_checked), and shown with that reported status only.
   Reader.prototype.standaloneReport = function (named) {
+    var content = this.standaloneContent(named);
+    return content === null ? null : get(content, "report");
+  };
+  // The whole payload of the standalone report (its `report` is the text body).
+  Reader.prototype.standaloneContent = function (named) {
     var self = this;
     if (this.headers.has(named)) return null;
     var block = map(get(map(get(this.v.bundle, "extensions")), STANDALONE_EXTENSION));
@@ -677,7 +688,7 @@
     var content = map(get(block, "agent_input"));
     var rep = get(content, "report");
     if (get(content, "type") !== REPORT_TYPE || !isMap(rep)) throw new Unavailable("the standalone report carries no report object");
-    return rep;
+    return content;
   };
   Reader.prototype.sealedReport = function () {
     var self = this;
@@ -861,6 +872,163 @@
       countersignatures: v.assurance.countersignatures,
       verification: v.verification,
       report_checked: reader.standalone() ? or(str(v.assurance.report_checked), null) : null,
+    };
+  }
+
+  // ---- the v1 deal receipt (evidencebook docs/design/461-deal-profile.md, section 9) ----
+  //
+  // A v1 deal has no close and no status a record holds: the holder's sealed
+  // report lists each row with the status evidencebook's rowstatus computed,
+  // and this page only shows it. It never computes or corrects one, and it
+  // reads a word outside section 9's closed sets as an unknown version of the
+  // report (the module declines), never as a word of its own.
+
+  var V1_AUDIENCES = ["keep", "counterparty", "adjudicator"];
+  var V1_START_STATES = ["started", "awaiting_agreement", "not_started"];
+  var V1_START_BY = ["offerer_in_time", "acceptor_named", "first_act"];
+  var V1_ROWS_STATES = ["listed", "not_started", "withheld"];
+  var V1_STATUSES = ["not_reached", "not_due", "no_statement", "waiting", "uncontested", "agreed_so_far", "agreed", "in_disagreement", "in_dispute", "ruled"];
+  var V1_VALUES = ["met", "not_met"];
+  var V1_REMEDIES = ["none", "due", "made", "not_honoured", "not_counted"];
+  var V1_SIDES = ["buyer", "seller"];
+  var V1_CHECKS = ["passed", "failed", "not_run", "not_recomputed"];
+
+  function closedWord(list, value, what) {
+    if (typeof value !== "string" || list.indexOf(value) < 0) throw new Unavailable("the v1 report's " + what + " is not one of " + list.join(", "));
+    return value;
+  }
+  function optionalWord(list, value, what) { return value === null || value === undefined ? null : closedWord(list, value, what); }
+  // A row date is an RFC 3339 UTC time to the second, or the word not_set.
+  var RFC3339_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+  // The regex checks the shape; the round trip rejects a date Date.parse would silently move (30 February, hour 24).
+  function validUtcTime(t) {
+    if (!RFC3339_UTC.test(t)) return false;
+    var ms = Date.parse(t);
+    return !isNaN(ms) && new Date(ms).toISOString().slice(0, 19) + "Z" === t;
+  }
+  function rowDate(value, what) {
+    var t = str(value);
+    if (t === null || (t !== "not_set" && !validUtcTime(t))) {
+      throw new Unavailable("the v1 report's " + what + " is neither an RFC 3339 UTC time nor not_set");
+    }
+    return t;
+  }
+  function flag(o, k, what) {
+    var value = get(o, k);
+    if (typeof value !== "boolean") throw new Unavailable("the v1 report's " + what + " is not a boolean");
+    return value;
+  }
+
+  // The members section 9's report has; evidencebook's VerifyReport refuses any other.
+  var V1_REPORT_MEMBERS = ["type", "profile", "deal_id", "audience", "nonce", "as_of", "deal_checkpoint", "pack_digest", "start", "settled", "rows_state", "rows", "rests_on", "report", "disputes", "rulings_unnamed", "status_fact", "referee"];
+
+  function failV1(what) { throw new Unavailable("the v1 report's " + what); }
+
+  function dealRow(raw) {
+    if (!isMap(raw)) throw new Unavailable("a row of the v1 report is not an object");
+    var r = raw;
+    var id = str(get(r, "id"));
+    if (id === null || id === "") throw new Unavailable("a row of the v1 report has no id");
+    var ruling = get(r, "ruling");
+    // section 9: the first final ruling rowstatus applied, or null.
+    if (ruling !== null && (!isMap(ruling) || flag(ruling, "final", "ruling final") !== true)) throw new Unavailable("the v1 report's ruling is not a final ruling or null");
+    // A ruling names its side, buyer, seller or null, and always carries the member.
+    if (ruling !== null && !own(ruling, "against")) throw new Unavailable("the v1 report's ruling has no against member");
+    var relied = get(r, "relied_on");
+    if (!Array.isArray(relied)) throw new Unavailable("the v1 report's row relied_on is not an array");
+    // VerifyReport refuses a null or mistyped list or object where section 9 has one.
+    if (!isMap(get(r, "owed"))) throw new Unavailable("the v1 report's row owed is not an object");
+    var late = get(r, "late");
+    if (own(r, "late")) {
+      if (!isMap(late) || !Array.isArray(get(late, "statements")) || !Array.isArray(get(late, "disputes"))) throw new Unavailable("the v1 report's row late is not {statements, disputes} lists");
+    }
+    return {
+      id: id,
+      owed_by: or(str(get(r, "owed_by")), ""),
+      due: rowDate(get(r, "due"), "due"),
+      window_end: rowDate(get(r, "window_end"), "window_end"),
+      status: closedWord(V1_STATUSES, get(r, "status"), "row status"),
+      value: optionalWord(V1_VALUES, get(r, "value"), "row value"),
+      remedy: optionalWord(V1_REMEDIES, get(r, "remedy"), "row remedy"),
+      remedy_made: flag(r, "remedy_made", "row remedy_made"),
+      local: flag(r, "local", "row local"),
+      check: closedWord(V1_CHECKS, get(r, "check"), "row check"),
+      // `late` (optional in section 9, undefined until rowstatus reports it) is not read: the page shows no late line.
+      ruling: isMap(ruling)
+        ? { value: or(str(get(ruling, "value")), ""), against: optionalWord(V1_SIDES, get(ruling, "against"), "ruling against") }
+        : null,
+      relied_on: relied.map(function (e) {
+        if (!isMap(e)) throw new Unavailable("a relied_on entry of the v1 report is not an object");
+        var time = str(get(e, "time"));
+        var named = flag(e, "witnessed", "relied_on named-witness flag");
+        // A time is given exactly when a named witness receipt gives it (section 9).
+        if (named !== (time !== null)) throw new Unavailable("a relied_on entry's named-witness flag does not match its time");
+        return { record: or(str(get(e, "record")), ""), side: or(str(get(e, "side")), ""), time: time, named_witness: named };
+      }),
+    };
+  }
+
+  // Reader.sealedReport's twin for v1: the named report is always standalone (section 9).
+  Reader.prototype.dealReportV1 = function () {
+    var extensions = map(get(this.v.bundle, "extensions"));
+    if (own(extensions, EXTENSION)) throw new Unavailable("a deal has one version: the bundle carries x-deal-v0 beside x-deal-v1");
+    var named = str(get(map(get(extensions, EXTENSION_V1)), "sealed_report"));
+    if (named === null) throw new Unavailable("the x-deal-v1 extension names no sealed report");
+    if (!own(extensions, STANDALONE_EXTENSION)) throw new Unavailable("the v1 report is standalone and the bundle carries none in " + STANDALONE_EXTENSION);
+    var content = this.standaloneContent(named);
+    if (content === null) throw new Unavailable("the v1 report is a record on a log; a v1 report travels standalone");
+    return [named, content];
+  };
+
+  function buildDeal(v, audience) {
+    if (!v.verified) throw new Unavailable("the bundle did not verify");
+    var reader = new Reader(v);
+    var sealed = reader.dealReportV1();
+    var content = sealed[1];
+    if (get(content, "profile") !== EXTENSION_V1) throw new Unavailable("the sealed report is not an x-deal-v1 report");
+    Object.keys(content).forEach(function (k) { if (V1_REPORT_MEMBERS.indexOf(k) < 0) throw new Unavailable("the v1 report has a member section 9 does not: " + k); });
+    var cut = closedWord(V1_AUDIENCES, get(content, "audience"), "audience");
+    if (audience !== null && cut !== audience) throw new Unavailable("this copy was cut for " + cut + ", not " + audience);
+    var startRaw = map(get(content, "start"));
+    var start = {
+      state: closedWord(V1_START_STATES, get(startRaw, "state"), "start state"),
+      local: flag(startRaw, "local", "start local"),
+      by: optionalWord(V1_START_BY, get(startRaw, "by"), "start by"),
+    };
+    if (!isMap(get(content, "report"))) throw new Unavailable("the v1 report's report text is not an object");
+    var unnamed = get(content, "rulings_unnamed");
+    if (own(content, "rulings_unnamed") && (int(unnamed) === null || unnamed < 0)) throw new Unavailable("the v1 report's rulings_unnamed is not a count");
+    var rowsState = closedWord(V1_ROWS_STATES, get(content, "rows_state"), "rows_state");
+    var rawRows = get(content, "rows");
+    if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
+    var rows = rawRows.map(dealRow);
+    if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
+    var rests = map(get(content, "rests_on"));
+    var theirs = get(rests, "counterparty");
+    var rep = report(sealed[0], map(get(content, "report")));
+    rep.audience = cut;
+    return {
+      deal_id: or(str(get(content, "deal_id")), ""),
+      audience: cut,
+      as_of: or(str(get(content, "as_of")), ""),
+      pack_digest: str(get(content, "pack_digest")),
+      start: start,
+      settled: flag(content, "settled", "settled"),
+      rows_state: rowsState,
+      rows: rows,
+      rests_on: {
+        own_size: int(get(map(get(rests, "own")), "size")),
+        counterparty: isMap(theirs) ? { counted: int(get(theirs, "counted")), fork_at: int(get(theirs, "fork_at")) } : null,
+        // The adjudicator's copy omits these two (section 9's audience table): absent is not zero.
+        counterparty_layer: own(rests, "counterparty_layer") ? flag(rests, "counterparty_layer", "counterparty_layer") : null,
+        witnesses: own(rests, "witnesses") ? (Array.isArray(rests.witnesses) ? rests.witnesses.length : failV1("witnesses is not an array")) : null,
+      },
+      report: rep,
+      bundle_digest: v.assurance.bundle_digest,
+      witnessed: v.assurance.witnesses,
+      countersignatures: v.assurance.countersignatures,
+      verification: v.verification,
+      report_checked: or(str(v.assurance.report_checked), null),
     };
   }
 
@@ -1968,6 +2136,110 @@
     return dr.page(l0, w("seller.depth.l1"), levels.l1, levels.l1_open, levels.l2, levels.l2_open, keep ? dr.actions("none") : null);
   }
 
+  // ---- drawing: the v1 deal receipt -----------------------------------------
+
+  P.token = function (prefix, value) {
+    var text = word(prefix + "." + value);
+    return text !== null ? text : value;
+  };
+  P.dealState = function (model) {
+    var d = this.d;
+    var parts = [this.token("deal.state", model.start.state)];
+    // The deal-level line is the start state, then "settled" or nothing: no close, no done (section 9).
+    if (model.start.state === "started" && model.settled) parts.push(" · ", d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
+    return d.el("span", { "data-deal-state": model.start.state }, parts);
+  };
+  P.dealHeadline = function (model) {
+    var d = this.d;
+    var out = [this.kit.metricGrid([{ label: w("l0.state"), value: this.dealState(model) }])];
+    if (model.start.by !== null) out.push(this.note(w("deal.start.by", { by: this.token("deal.start.by", model.start.by) }), { "data-start-by": model.start.by }));
+    if (model.start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
+    if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
+    out.push(this.note(w("deal.as_of", { at: model.as_of || w("deal.no_time") }), { "data-as-of": model.as_of }));
+    return d.el("div", { "data-headline": "true" }, out);
+  };
+  P.dateText = function (value) { return value === "not_set" ? w("deal.date.not_set") : value; };
+  P.rowDetail = function (row) {
+    var bits = [];
+    // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
+    if (row.value !== null && row.status !== "ruled") bits.push(w("deal.row.value", { value: this.token("deal.value", row.value) }));
+    if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy) }));
+    if (row.remedy === "not_counted" && row.remedy_made) bits.push(w("deal.row.remedy_made"));
+    if (row.ruling !== null) {
+      var value = this.token("deal.value", row.ruling.value);
+      // `against` is buyer, seller or null (anything else declined the report); null: the ruling alone.
+      bits.push(row.ruling.against !== null ? w("deal.row.ruling", { value: value, side: this.token("deal.side", row.ruling.against) }) : w("deal.row.ruling.bare", { value: value }));
+    }
+    bits.push(w("deal.row.check", { check: this.token("deal.check", row.check) }));
+    if (row.local) bits.push(w("deal.local"));
+    return bits.join("; ");
+  };
+  P.dealRows = function (model) {
+    var d = this.d, self = this;
+    if (model.rows_state !== "listed") return [this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state })];
+    if (!model.rows.length) return [this.note(w("deal.rows.none"), { "data-rows-state": "listed" })];
+    var rows = model.rows.map(function (row) {
+      return [
+        d.el("span", { class: "cv-mono", "data-row-id": row.id }, [row.id]),
+        row.owed_by,
+        d.el("span", { "data-row-status": row.status }, [self.token("deal.status", row.status)]),
+        self.dateText(row.due),
+        self.dateText(row.window_end),
+        self.rowDetail(row),
+      ];
+    });
+    return [this.kit.dataTable([w("deal.col.row"), w("deal.col.owed_by"), w("deal.col.status"), w("deal.col.due"), w("deal.col.window_end"), w("deal.col.detail")], rows),
+      this.note(w("deal.rows.note"))];
+  };
+  P.dealL1 = function (model) {
+    return [
+      this.note(w("summary.standalone", { status: model.report_checked === null ? "-" : model.report_checked }), { "data-sealed": "x-deal-report" }),
+      this.note(w("deal.report.scope")),
+      this.kit.section(w("deal.section.rows"), this.dealRows(model)),
+    ];
+  };
+  P.dealL2 = function (model) {
+    var d = this.d, kit = this.kit;
+    var out = [kit.verificationDetails(model.verification)];
+    if (model.bundle_digest) {
+      out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
+    }
+    var basis = [];
+    model.rows.forEach(function (row) {
+      row.relied_on.forEach(function (e) {
+        basis.push([row.id, d.el("span", { class: "cv-mono" }, [e.record]), e.side, e.time !== null ? e.time : w("deal.no_time"), w(e.named_witness ? "deal.named_witness.yes" : "deal.named_witness.no")]);
+      });
+    });
+    var inner = basis.length
+      ? [kit.dataTable([w("deal.col.row"), w("deal.col.record"), w("deal.col.side"), w("deal.col.time"), w("deal.col.named_witness")], basis)]
+      : [this.note(w("deal.basis.none"))];
+    out.push(kit.section(w("deal.section.basis"), inner, 3));
+    var rest = [];
+    if (model.pack_digest) rest.push(this.note(w("deal.pack_digest"), { "data-pack": "true" }), d.el("p", { class: "cv-mono" }, [model.pack_digest]));
+    var r = model.rests_on;
+    if (r.own_size !== null) rest.push(this.note(w("deal.rests.own", { size: String(r.own_size) })));
+    if (r.counterparty !== null) {
+      rest.push(this.note(w("deal.rests.counterparty", { counted: r.counterparty.counted === null ? "-" : String(r.counterparty.counted) })));
+      if (r.counterparty.fork_at) rest.push(this.note(w("deal.rests.fork", { at: String(r.counterparty.fork_at) })));
+    }
+    if (r.counterparty_layer !== null) rest.push(this.note(w(r.counterparty_layer ? "deal.rests.layer" : "deal.rests.no_layer")));
+    if (r.witnesses !== null) rest.push(this.note(w("deal.rests.witnesses", { count: String(r.witnesses) })));
+    rest.push(this.note(w("wording.provenance", { id: PACK.id, sha: PACK.sha256 || "-" })));
+    out.push(kit.section(w("deal.section.rests"), rest, 3));
+    return out;
+  };
+
+  function drawDeal(doc, depth, model) {
+    var dr = new Drawer(doc, depth, false);
+    var l0 = [dr.d.el("h2", {}, [w("deal.title")])];
+    var keep = model.audience === "keep";
+    if (keep) l0.push(dr.privateBanner());
+    l0.push(dr.dealHeadline(model));
+    l0 = l0.concat(dr.copyNotes(model));
+    var l1Open = depth === "L1" || depth === "L2";
+    return dr.page(l0, w("deal.depth.l1"), dr.dealL1(model), l1Open, dr.dealL2(model), depth === "L2", null);
+  }
+
   // ---- drawing: the composition section and the bilateral page ---------------
 
   function pairText(members) { return members[0] + " – " + members[1]; }
@@ -2098,8 +2370,11 @@
 
   // ---- the modules (presentation contract: canRender, buildModel, render) ----
 
-  var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral };
-  var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title" };
+  // The module's manifest id: the x-deal-v0 modules are /v0, the x-deal-v1 module /v1.
+  function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
+
+  var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
+  var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
   // The kit stylesheet, once per document (its bytes are what the manifest's
   // style_sha256 pins).
@@ -2124,12 +2399,13 @@
     var e = {
       audience: env && env.audience !== undefined ? env.audience : null,
       verification: (env && env.verification) || pageVerification,
-      assurance: (env && env.assurance) || pageAssurance,
+      assurance: (env && env.assurance) || function (context) { return pageAssurance(context, kind === "deal" ? EXTENSION_V1 : EXTENSION); },
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
     };
     var build = function (context) {
       var v = view(context, e);
+      if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
       if (kind === "seller") return buildSeller(v, e.audience);
       // A seller's copy, by its packaging or by its own sealed records, is
@@ -2142,7 +2418,7 @@
       throw err;
     };
     return {
-      manifest: kind === KIND ? MANIFEST : { id: "capsuleviewer.receipt." + kind + "/v0" },
+      manifest: kind === KIND ? MANIFEST : { id: moduleId(kind) },
       title: w(TITLES[kind]),
       // Declining is canRender's answer: nothing of this module is shown.
       canRender: function (context) {
@@ -2168,7 +2444,7 @@
         [host.L0, host.L1, host.L2].forEach(function (region, i) {
           var wrap = doc.createElement("div");
           wrap.className = "cv-kit";
-          wrap.setAttribute("data-receipt-module", "capsuleviewer.receipt." + kind + "/v0");
+          wrap.setAttribute("data-receipt-module", moduleId(kind));
           wrap.appendChild(levels[i]);
           region.appendChild(wrap);
         });

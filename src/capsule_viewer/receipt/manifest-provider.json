@@ -16,6 +16,7 @@
     ],
     "extensions": [
       "x-deal-v0",
+      "x-deal-v1",
       "composed/v1",
       "x-history-selection/v0",
       "x-standard-history/v0"
