@@ -29,6 +29,8 @@ const PLACES = [
   ["rests_on", (r) => r.rests_on, "own"],
   ["the start", (r) => r.start, "state"],
   ["the checkpoint", (r) => r.deal_checkpoint, "root"],
+  ["a row (Kelvin sign)", (r) => r.rows[0], "check"],
+  ["a witness (Kelvin sign)", (r) => r.rests_on.witnesses[0], "key_id"],
 ];
 const RESPELLINGS = (name) => [name.toUpperCase(), name[0].toUpperCase() + name.slice(1), name.replace("s", "ſ"), name.replace("k", "K")].filter((s) => s !== name);
 
@@ -55,5 +57,13 @@ describe("the deal/v1 receipt refuses a member spelled otherwise than a field na
     r.report.Scope = "free text";
     r.rows[0].owed = { Item: "lamp", STATUS: 1 };
     expect(await draws(r)).toBe(true);
+  });
+});
+
+describe("the respellings really include the Kelvin sign and the long s", () => {
+  it("check and key_id have a U+212A spelling, status a U+017F one", () => {
+    expect(RESPELLINGS("check")).toContain("checK");
+    expect(RESPELLINGS("key_id")).toContain("Key_id");
+    expect(RESPELLINGS("status")).toContain("ſtatus");
   });
 });
