@@ -40,7 +40,7 @@ describe("the deal/v1 receipt against VerifyReport's vectors", () => {
       if (VERIFIED.includes(c.name)) {
         const model = await module.buildModel(ctx);
         const host = renderInto(lib, module, model, "L1");
-        expect(host.L1.textContent).toContain("A report that passes the check shows who signed it and which deal it covers. It does not show that its rows are correct. It is the holder's own record of the deal.");
+        expect(host.L1.textContent).toContain("A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal.");
       }
     });
   }
