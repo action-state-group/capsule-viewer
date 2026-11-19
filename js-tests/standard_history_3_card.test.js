@@ -91,7 +91,7 @@ describe("a /3 card in the page", () => {
     expect(m.properties.counts_recompute).toBe("NOT_CHECKED");
     const host = renderAll(l, m);
     expect(host.L0.querySelector("[data-sh-counts]").getAttribute("data-sh-counts")).toBe("entries");
-    expect(text(host)).toContain("did not check them against the holder's shelf log");
+    expect(text(host)).toContain("did not check them against the holder's whole log");
     expect(text(host)).not.toContain("Recounted here");
   });
   it("the entries need the snapshot's time but not the policy, and are counted over the card's own window", () => {
@@ -129,7 +129,8 @@ describe("a /3 card in the page", () => {
     const host = renderAll(l, modelOf(context3(first)));
     expect(host.L0.querySelector("[data-sh-remedied]").textContent).toContain(`${c.remedied.count} of ${c.remedied.of} deals`);
     expect(host.L0.querySelector("[data-sh-not-honoured]").textContent).toContain(`${c.not_honoured.count} of ${c.not_honoured.of} deals`);
-    expect(host.L0.querySelector("[data-sh-coverage]").textContent).toContain("Complete from Apr 2026");
+    // The block carries the coverage start's time, so the line says the day: the card names only the month.
+    expect(host.L0.querySelector("[data-sh-coverage]").textContent).toContain(`complete from Apr 10, 2026`);
     expect(host.L0.querySelector("[data-sh-local-times]").textContent).toContain(`${c.local_times.count} of ${c.local_times.of} counted deals`);
     expect(host.L1.querySelector("[data-sh-not-counted-reasons]").textContent).toContain(`${c.not_counted.shop_preauth} shop purchases`);
     expect(host.L1.querySelector("[data-sh-unpriced]")).not.toBeNull();
@@ -147,11 +148,21 @@ describe("a /3 card in the page", () => {
     const host = renderAll(l, m);
     expect(host.L0.querySelector("[data-sh-counts]").getAttribute("data-sh-counts")).toBe("statement");
     expect(host.L0.querySelector("[data-sh-coverage]")).not.toBeNull();
+    expect(host.L0.querySelector("[data-sh-coverage]").textContent).toContain("complete from Apr 10, 2026");
+  });
+  it("without the block's as_of the coverage line says only the month the card names", () => {
+    const m = modelOf(context3(first, { withDeals: false, editBlock: (b) => { delete b.as_of; } }));
+    expect(m.state).toBe("card");
+    expect(renderAll(l, m).L0.querySelector("[data-sh-coverage]").textContent).toContain("complete from some day in Apr 2026");
   });
   it("entries that count one deal differently fail the recount, and the card is refused", () => {
     const m = modelOf(context3(first, { editBlock: (block) => { block.deals.pop(); } }));
     expect(m.state).toBe("refused");
     expect(m.fails).toEqual(["counts_recompute"]);
+    // The refusal page, not the card, says it: no broken "carries the entries but not ," sentence.
+    const page = text(renderAll(l, m));
+    expect(page).toContain("Failed: The counts recount from the deal entries");
+    expect(page).not.toContain("but not ,");
   });
   it("a card without its coverage start is not a standard card", () => {
     const m = modelOf(context3(first, { editCard: (card) => { delete card.coverage_start; } }));

@@ -168,16 +168,18 @@
     "doesnt.signature_none": "That anyone signed it. The card carries no signature.",
     "property.signature": "The card's signature checks under the key it names",
     "v3.remedied": "Put right: {n} of {of} deals that didn't go as agreed. Every part that was not met was made good.",
-    "v3.not_honoured": "Ruling not honoured: {n} of {of} deals that didn't go as agreed. A ruling ordered something and the date for it passed.",
-    "v3.coverage": "Complete from {start}. Before that, the counts cover the deals carried over when the holder moved to this log, as the holder states them.",
-    "v3.local_times": "Not timed by a named witness: {n} of {of} counted deals have a row that rests on a record no witness named in the agreement timed. Such a row is never shown as timed by a witness.",
+    "v3.not_honoured": "Ruling not honoured: {n} of {of} deals that didn't go as agreed. A ruling ordered something and the date passed without it being done.",
+    "v3.coverage": "The holder states these counts are complete from {start}. Before that, they cover the deals carried over when the holder moved to this log.",
+    "v3.local_times": "{n} of {of} counted deals rest at least partly on times no witness named in the deal recorded. Those are never shown as timed by a witness.",
     "counts.not_counted.reasons": "Why, of the {of} not counted: {shop} shop purchases paid up front, and {left_out} left out because no witness named in the agreement timed their records.",
     "doesnt.all.v3": "That these are all the holder's deals. It is the window the holder's policy sets, shop purchases and deals left out are not counted, and before {start} the counts are the holder's statement.",
     "sizes.unpriced": "No amount recorded",
     "sizes.none.priced": "No counted deal has a recorded amount.",
-    "counts.entries.v3": "The deal entries in this copy add up to these counts. This page did not check them against the holder's shelf log, so the counts stay the holder's own statement.",
-    "proves.entries.v3": "The deal entries in this copy add up to the counts. This page did not check them against the holder's shelf log.",
-    "doesnt.statement.v3": "That the counts are right. This page did not check them against the holder's shelf log, so they are the holder's own statement.",
-    "counts.not_counted.v3": "Not counted: {n} of {of} deals in the window."
+    "counts.entries.v3": "The deal entries in this copy add up to these counts. This page did not check them against the holder's whole log, so the counts stay the holder's own statement.",
+    "proves.entries.v3": "The deal entries in this copy add up to the counts. This page did not check them against the holder's whole log.",
+    "doesnt.statement.v3": "That the counts are right. This page did not check them against the holder's whole log, so they are the holder's own statement.",
+    "counts.not_counted.v3": "Not counted: {n} of {of} deals in the window.",
+    "v3.coverage.month": "The holder states these counts are complete from some day in {start}. Before that, they cover the deals carried over when the holder moved to this log.",
+    "doesnt.all.v3.month": "That these are all the holder's deals. It is the window the holder's policy sets, shop purchases and deals left out are not counted, and before some day in {start} the counts are the holder's statement."
   }
 }
