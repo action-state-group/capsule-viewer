@@ -23,7 +23,7 @@ const env = (audience) => ({
 // The cases Go refuses for what the report's own payload holds; the page declines the same.
 const PAYLOAD_REFUSED = ["against-the-adjudicator", "against-in-another-case", "against-empty", "ruling-without-against", "against-misnamed", "an-unknown-member", "a-v0-profile",
   "rows-null", "report-text-null", "relied-on-null", "late-statements-null", "late-disputes-null", "owed-null", "owed-a-number", "owed-a-list", "rulings-unnamed-negative", "witnessed-without-a-time", "a-time-not-witnessed",
-  "rulings-unnamed-zero", "disputes-empty", "disputes-a-number", "witnesses-false", "pair-member-in-another-case", "pair-agent-input-twice"];
+  "rulings-unnamed-zero", "disputes-empty", "disputes-a-number", "witnesses-false", "pair-member-in-another-case", "pair-agent-input-twice", "the-report-is-a-book-pair"];
 // Go gives a key_id: the page draws it.
 const VERIFIED = vectors.cases.filter((c) => c.want.key_id).map((c) => c.name);
 
@@ -33,10 +33,10 @@ describe("the deal/v1 receipt against VerifyReport's vectors", () => {
     expect(VERIFIED).toEqual(["ruled-against-seller", "ruled-against-buyer", "ruling-against-null", "no-ruling"]);
     for (const n of PAYLOAD_REFUSED) expect(vectors.cases.find((c) => c.name === n).want.stage).toBe("report");
   });
-  for (const c of vectors.cases.filter((x) => x.agent_input && (VERIFIED.includes(x.name) || PAYLOAD_REFUSED.includes(x.name)))) {
+  for (const c of vectors.cases.filter((x) => (VERIFIED.includes(x.name) || PAYLOAD_REFUSED.includes(x.name)))) {
     it(`${VERIFIED.includes(c.name) ? "draws" : "declines"} ${c.name}`, async () => {
       const lib = loadScript("deal");
-      const module = lib.api.createModule("deal", env(c.agent_input.audience));
+      const module = lib.api.createModule("deal", env(c.agent_input ? c.agent_input.audience : null));
       const ctx = context(c.agent_input, c.pair);
       expect(await module.canRender(ctx)).toBe(VERIFIED.includes(c.name));
       if (VERIFIED.includes(c.name)) {
