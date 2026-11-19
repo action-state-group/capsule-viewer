@@ -84,13 +84,45 @@ describe("a /3 card in the page", () => {
   const first = VECTORS.cases.find((c) => c.id === "outcomes-from-rows").inputs;
   const modelOf = (ctx) => JSON.parse(JSON.stringify(l.api.buildModelSync(ctx)));
 
-  it("the holder's own copy recounts from the rows, and says it did not check them against the shelf log", () => {
+  it("the holder's own copy's entries add up to the card, but without the shelf handover counts_recompute stays NOT_CHECKED (SH 11.7)", () => {
     const m = modelOf(context3(first));
     expect(m.state).toBe("card");
-    expect(m.properties.counts_recompute).toBe("PASS");
+    expect(m.entriesMatch).toBe(true);
+    expect(m.properties.counts_recompute).toBe("NOT_CHECKED");
     const host = renderAll(l, m);
-    expect(host.L0.querySelector("[data-sh-counts]").getAttribute("data-sh-counts")).toBe("recomputed");
-    expect(text(host)).toContain("did not check those entries against the holder's shelf log");
+    expect(host.L0.querySelector("[data-sh-counts]").getAttribute("data-sh-counts")).toBe("entries");
+    expect(text(host)).toContain("did not check them against the holder's shelf log");
+    expect(text(host)).not.toContain("Recounted here");
+  });
+  it("the entries need the snapshot's time but not the policy, and are counted over the card's own window", () => {
+    expect(modelOf(context3(first, { editBlock: (b) => { delete b.policy; } })).entriesMatch).toBe(true);
+    const i = clone(first);
+    i.policy.window = { months: 1 };
+    const m = modelOf(context3(i));
+    expect(m.properties.window_from_policy).toBe("FAIL");
+    expect(m.fails).toEqual(["window_from_policy"]);
+  });
+  it("the check, given deals and no policy, recounts a /3 card over its own window (as the reference does)", () => {
+    const { api } = l;
+    const props = api.checkCard(clone(first.card), null, first.as_of, first.deals, "standard_history/3");
+    expect(props.counts_recompute).toBe("PASS");
+    const bad = clone(first.deals);
+    bad.pop();
+    expect(api.checkCard(clone(first.card), null, first.as_of, bad, "standard_history/3").counts_recompute).toBe("FAIL");
+  });
+  it("coverage_start with a trailing newline is not a month", () => {
+    const card = clone(first.card);
+    card.coverage_start = "2026-04\n";
+    expect(l.api.checkCard(card, first.policy, first.as_of, null, "standard_history/3").card_form).toBe("FAIL");
+  });
+  it("a deal left out for no witness time is not described as a shop purchase", () => {
+    // A shared card (no entries): the exclusions are both left out for no witness time.
+    const m = modelOf(context3(first, { withDeals: false, editCard: (card) => { card.not_counted = { of: 2, shop_preauth: 0, no_witness_time: 2 }; } }));
+    expect(m.state).toBe("card");
+    const host = renderAll(l, m);
+    expect(host.L1.querySelector("[data-sh-not-counted]").textContent).toBe("Not counted: 2 of 13 deals in the window.");
+    expect(host.L1.querySelector("[data-sh-not-counted-reasons]").textContent).toContain("of the 2 not counted: 0 shop purchases paid up front, and 2 left out");
+    expect(text(host)).not.toContain("shop purchases paid up front. They stay");
   });
   it("draws remedied, not honoured, the coverage start, the local results and why deals are not counted", () => {
     const c = first.card;
