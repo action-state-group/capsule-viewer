@@ -997,7 +997,9 @@
     };
     if (!isMap(get(content, "report"))) throw new Unavailable("the v1 report's report text is not an object");
     var unnamed = get(content, "rulings_unnamed");
-    if (own(content, "rulings_unnamed") && (int(unnamed) === null || unnamed < 0)) throw new Unavailable("the v1 report's rulings_unnamed is not a count");
+    // Both are left out at zero (section 9), so a present one is a positive count, or a non-empty list.
+    if (own(content, "rulings_unnamed") && (int(unnamed) === null || unnamed < 1)) throw new Unavailable("the v1 report's rulings_unnamed is not a positive count");
+    if (own(content, "disputes") && (!Array.isArray(get(content, "disputes")) || !get(content, "disputes").length)) throw new Unavailable("the v1 report's disputes is not a non-empty list");
     var rowsState = closedWord(V1_ROWS_STATES, get(content, "rows_state"), "rows_state");
     var rawRows = get(content, "rows");
     if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
