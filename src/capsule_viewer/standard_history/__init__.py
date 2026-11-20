@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The History card (``capsuleviewer.standard-history/v0``): a
-``standard_history/1`` or ``/3`` card (agent-action-capsule's
-``spec/standard-history-v0.md``; ``/3`` is its section 11) as the History card (9b) canvas draws it.
+``standard_history/1``, ``/3`` or ``/4`` card (agent-action-capsule's
+``spec/standard-history-v0.md``; ``/3`` is its section 11, ``/4`` its section 12) as the History card (9b) canvas draws it.
 
 The module is ``static/standard_history_card.js``: a self-contained
 module-slot script that registers with the page's runtime and carries the

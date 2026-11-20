@@ -50,7 +50,7 @@ The History view (`ts/src/history-view.ts`, design note
 `history-view/v0`, is a viewer contract owned here, like `chart-spec`, so
 Muse, the mesh-llm console and Goose draw one History page with one set of
 words. It sits beside the History card above, which still draws AAC's
-`standard_history/1` and `/3` cards from a sealed bundle.
+`standard_history/1`, `/3` and `/4` cards from a sealed bundle.
 
 ## What "conforming" means for `result/v0`
 
