@@ -91,6 +91,18 @@ describe("a /4 card in the page", () => {
     expect(text(host)).not.toMatch(/left out/);
     expect(text(host)).not.toContain("no witness named in the agreement timed");
   });
+  it("without the block's as_of the /4 line names the month, and a shared /4 card has no left-out reason", () => {
+    const m = modelOf(context3(first, { editBlock: (b) => { delete b.as_of; } }));
+    expect(m.state).toBe("card");
+    const host = renderAll(l, m);
+    expect(host.L1.textContent).toContain("before some day in");
+    expect(text(host)).not.toMatch(/left out/);
+    const shared = modelOf(context3(first, { withDeals: false }));
+    expect(shared.state).toBe("card");
+    const h2 = renderAll(l, shared);
+    expect(h2.L1.querySelector("[data-sh-not-counted]").textContent).toContain("shop purchases paid up front");
+    expect(h2.L1.querySelector("[data-sh-not-counted-reasons]")).toBeNull();
+  });
   it("a /4 card has no not_counted tally and its entries have no left_out", () => {
     expect(Object.keys(first.card)).not.toContain("not_counted");
     const deals = clone(first.deals);
