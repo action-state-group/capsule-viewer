@@ -2,7 +2,7 @@
 // module, src/capsule_viewer/static/standard_history_card.js (capsule-viewer#337).
 //
 // (1) The check is AAC's: every vector of vectors/standard-history-v0/vectors-4.json (a byte copy at
-//     agent-action-capsule PR #636 head f61d407) gives the six properties and the standard verdict it expects.
+//     agent-action-capsule eeed5456 (#636 merged, python/v0.18.0) gives the six properties and the standard verdict it expects.
 // (2) A /4 card in the page: a deal with no witnessed time is counted and drawn as local, and nothing says a deal was left out.
 // (3) /3 refuses `no_witness_time`, /4 refuses `left_out`; /3 reading is unchanged (standard_history_3_card.test.js).
 import { createHash } from "node:crypto";
@@ -57,7 +57,7 @@ function renderAll(loaded, model) {
 const text = (host) => [host.L0, host.L1, host.L2].map((r) => r.textContent).join("\n");
 
 describe("the check is AAC's reference check_card under standard_history/4", () => {
-  it("is the byte copy of AAC#636's vectors", () => {
+  it("is the byte copy of AAC eeed5456 vectors", () => {
     expect(createHash("sha256").update(VECTORS_BYTES).digest("hex")).toBe("21143e7bc1f3d6d9605882870be3077503fd156145d14f00ad43999b0b15eabf");
     expect(VECTORS.cases).toHaveLength(8);
   });
