@@ -85,7 +85,7 @@ describe("a /4 card in the page", () => {
     const c = first.card;
     const host = renderAll(l, m);
     expect(host.L0.querySelector("[data-sh-local-times]").textContent).toContain(`${c.local_times.count} of ${c.local_times.of} counted deals`);
-    expect(host.L0.querySelector("[data-sh-local-times]").textContent).toContain("no time any witness recorded");
+    expect(host.L0.querySelector("[data-sh-local-times]").textContent).toContain("no time from a witness at all");
     expect(host.L1.querySelector("[data-sh-not-counted]").textContent).toContain("shop purchases paid up front");
     expect(host.L1.querySelector("[data-sh-not-counted-reasons]")).toBeNull();
     expect(text(host)).not.toMatch(/left out/);
