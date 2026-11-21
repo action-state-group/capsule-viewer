@@ -1042,9 +1042,9 @@
     return sign + digits.slice(0, digits.length - scale) + "." + digits.slice(digits.length - scale) + " " + code;
   }
 
-  function legsOf(rows, relied) {
+  function legsOf(rows, rowsState, relied) {
     // Rows listed: the book holds exactly the records they name (section 9).
-    if (rows.length) {
+    if (rowsState === "listed") {
       var named = {};
       rows.forEach(function (row) { row.relied_on.forEach(function (e) { named[e.record] = true; }); });
       Object.keys(relied).forEach(function (k) { if (!own(named, k)) throw new Unavailable("the x-deal-v1 extension's book holds a record no row relies on: " + k); });
@@ -1100,7 +1100,7 @@
     if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
     var rows = rawRows.map(dealRow);
     var relied = dealBook(map(get(map(get(v.bundle, "extensions")), EXTENSION_V1)));
-    var legs = legsOf(rows, relied);
+    var legs = legsOf(rows, rowsState, relied);
     rows.forEach(function (row, i) { row.legs = legs[i]; });
     if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
     var rests = map(get(content, "rests_on"));

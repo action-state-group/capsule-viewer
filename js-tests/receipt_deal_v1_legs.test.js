@@ -87,6 +87,16 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
     expect((await draw(c.report, ext)).shown).toBe(false);
   });
 
+  it("declines listed rows that name no record beside a book that holds some, but not a withheld or not-started copy", async () => {
+    const keep = vectors.cases.find((x) => x.name === "keep-copy");
+    const empty = { ...keep.report, rows: [] };
+    expect((await draw(empty, keep.extension)).shown).toBe(false);
+    const adj = vectors.cases.find((x) => x.name === "adjudicator-copy");
+    expect((await draw(adj.report, adj.extension)).shown).toBe(true);
+    const ns = vectors.cases.find((x) => x.name === "not-started-keep-copy");
+    expect((await draw(ns.report, ns.extension)).shown).toBe(true);
+  });
+
   it("shows a money member it cannot write as a decimal as recorded, and still draws the receipt", async () => {
     const c = vectors.cases.find((x) => x.name === "keep-copy");
     const cases = [["19", "1", "0.0000000000000000001 USD"], ["255", "7", null], ["0", "6000", "6000 USD"], ["2", "6000.5", "6000.5 USD scale 2"]];
