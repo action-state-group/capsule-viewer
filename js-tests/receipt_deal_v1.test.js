@@ -5,7 +5,7 @@
 // reports here are fixtures written from section 9; they are held to the
 // producer's real output once that is on evidencebook main (capsule-viewer#322).
 import { describe, expect, it } from "vitest";
-import { loadScript, manifestOf, renderInto, KINDS } from "./receiptScripts.js";
+import { loadScript, manifestOf, renderInto, KINDS, v1Extension } from "./receiptScripts.js";
 
 const ROW = {
   id: "as_described", owed_by: "seller", owed: {},
@@ -25,7 +25,7 @@ const context = (c, extensions = {}) => ({
   bundle: {
     records: [],
     extensions: {
-      "x-deal-v1": { sealed_report: "rep-1" },
+      "x-deal-v1": v1Extension(c),
       "x-deal-report/v0": { record: { capsule_id: "rep-1", action_id: "capsulectl-deal-report" }, agent_input: c },
       ...extensions,
     },

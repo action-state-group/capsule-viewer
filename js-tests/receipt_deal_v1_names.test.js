@@ -3,12 +3,12 @@
 // sent and book pairs, which this page does not read; the report payload's members are the same rule, held here on real reports.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { loadScript } from "./receiptScripts.js";
+import { loadScript, v1Extension } from "./receiptScripts.js";
 
 const vectors = JSON.parse(readFileSync(new URL("../tests/testdata/deal-v1/report-vectors.json", import.meta.url), "utf8"));
 const base = vectors.cases.find((c) => c.name === "appendix-a-26-nov");
 const context = (report) => ({
-  bundle: { records: [], extensions: { "x-deal-v1": { sealed_report: "rep-1" }, "x-deal-report/v0": { record: { capsule_id: "rep-1", action_id: "capsulectl-deal-report" }, agent_input: report } } },
+  bundle: { records: [], extensions: { "x-deal-v1": v1Extension(report), "x-deal-report/v0": { record: { capsule_id: "rep-1", action_id: "capsulectl-deal-report" }, agent_input: report } } },
   records: [], resolvedDisclosures: new Map(), root: null, completeness: { memberships: {} },
 });
 const env = (audience) => ({

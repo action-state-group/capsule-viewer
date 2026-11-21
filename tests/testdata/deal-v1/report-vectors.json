@@ -4131,5 +4131,5 @@
    }
   }
  ],
- "source": "evidencebook testdata/deal-v1/report/vectors.json at main 3128ed12 (written by dealprofile/xdealv1 TestReportVectors; payment legs in relied_on, evidencebook#588/#597); only each case's name, copy and report member"
+ "source": "evidencebook testdata/deal-v1/report/vectors.json at evidencebook v0.22.0 (commit 38c4afce; the file is identical to main 3128ed12, the merge of #597) (written by dealprofile/xdealv1 TestReportVectors; payment legs in relied_on, evidencebook#588/#597); only each case's name, copy and report member"
 }

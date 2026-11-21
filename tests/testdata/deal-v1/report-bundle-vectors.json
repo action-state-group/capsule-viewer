@@ -9837,5 +9837,5 @@
    }
   }
  ],
- "source": "evidencebook testdata/deal-v1/report-bundle/vectors.json at main 3128ed12 (VerifyReportBundle, evidencebook#588/#597); each case's name, the x-deal-v1 extension as a bundle carries it, the report pair's agent_input (decoded from its hex) and Go's result (want)"
+ "source": "evidencebook testdata/deal-v1/report-bundle/vectors.json at evidencebook v0.22.0 (commit 38c4afce; the file is identical to main 3128ed12, the merge of #597) (VerifyReportBundle, evidencebook#588/#597); each case's name, the x-deal-v1 extension as a bundle carries it, the report pair's agent_input (decoded from its hex) and Go's result (want)"
 }

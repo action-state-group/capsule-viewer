@@ -426,15 +426,14 @@
     "deal.row.ruling.bare": "Ruling: {value}",
     "deal.side.buyer": "buyer",
     "deal.side.seller": "seller",
-    "deal.section.legs": "Payments the terms relied on",
-    "deal.col.leg_side": "Recorded by",
+    "deal.section.legs": "Payment records the terms rely on",
+    "deal.col.leg_side": "Side, as the report names it",
     "deal.col.leg": "Leg",
     "deal.col.leg_status": "Status as recorded",
     "deal.col.amount": "Amounts as recorded",
     "deal.col.observed": "Observed at",
     "deal.col.payment_ref": "Payment reference",
-    "deal.legs.note": "Each line is a payment record as its own side sealed it. This page shows it and does not match the legs or judge the payment; the payment check above is the only verdict.",
-    "deal.legs.none": "No payment record is among the records the terms rest on.",
-    "deal.legs.no_book": "This copy carries only the report, not the records the terms rest on, so no payment record is shown."
+    "deal.legs.note": "Each line is a payment record a term relies on, shown as the record states it. This page does not check who signed each record, does not match the legs and does not judge the payment; the payment check above is the only verdict.",
+    "deal.legs.none": "No payment record is among the records the terms rest on."
   }
 }

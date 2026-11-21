@@ -23,10 +23,11 @@ const env = (audience) => ({
   verification: () => ({ verifier: "test", outcome: "verified", checks: [] }),
   assurance: () => ({ bundle_digest: "ab".repeat(32), witnesses: "absent", countersignatures: [], report_checked: "pass" }),
 });
-async function draw(report, extension) {
+async function draw(report, extension, namedReport) {
   const lib = loadScript("deal");
   const module = lib.api.createModule("deal", env(report.audience));
   const ctx = context(report, extension);
+  if (namedReport !== undefined) ctx.bundle.extensions["x-deal-report/v0"].record.capsule_id = namedReport;
   if (!(await module.canRender(ctx))) return { shown: false };
   const model = await module.buildModel(ctx);
   const host = renderInto(lib, module, model, "L1");
@@ -63,34 +64,48 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
     expect(host.L1.querySelector("[data-row-status]")).not.toBeNull();
   });
 
-  it("a copy whose extension carries no book says so, and shows no leg", async () => {
-    const c = vectors.cases.find((x) => x.name === "keep-copy");
-    const { shown, host } = await draw(c.report, { sealed_report: c.extension.sealed_report });
-    expect(shown).toBe(true);
-    expect(host.L1.querySelector('[data-legs="no_book"]')).not.toBeNull();
-    expect(host.L1.querySelector("[data-leg-record]")).toBeNull();
-  });
+  // The refusals of VerifyReportBundle's vectors that read the extension's shape, which this page reads too. The ones
+  // that need a signer or a log (signed by no party, a record of another deal, past a log's size, a referee) are
+  // capsulectl's check, not this page's.
+  const SHAPE_REFUSALS = ["wrong sealed_report", "a relied-on record missing", "a record no row relies on", "a key that is not its pair's id", "an unknown member", "a null relied_on", "no book"];
+  for (const name of SHAPE_REFUSALS) {
+    it(`declines what the producer refuses: ${name}`, async () => {
+      const c = vectors.cases.find((x) => x.name === name);
+      expect(c.want.error).toBeDefined();
+      // A wrong sealed_report names a report this bundle does not carry: the page finds the report by the named id.
+      const { shown } = await draw(c.report, c.extension, name === "wrong sealed_report" ? "other-report" : undefined);
+      expect(shown).toBe(false);
+    });
+  }
 
-  it("an adjudicator's copy withholds the rows and shows no legs section", async () => {
+  it("declines an adjudicator's copy whose pair is not keyed by its id, though no row names it", async () => {
     const c = vectors.cases.find((x) => x.name === "adjudicator-copy");
-    const { host } = await draw(c.report, c.extension);
-    expect(host.L1.querySelector("[data-legs]")).toBeNull();
-    expect(host.L1.querySelector("[data-leg-record]")).toBeNull();
-  });
-
-  it("declines a book that is missing a relied-on record, or keys a pair by another id, or has an unknown member", async () => {
-    const keep = vectors.cases.find((x) => x.name === "keep-copy");
-    const missing = structuredClone(keep.extension);
-    delete missing.book.relied_on[Object.keys(missing.book.relied_on)[0]];
-    expect((await draw(keep.report, missing)).shown).toBe(false);
-    const rekeyed = structuredClone(keep.extension);
-    const [k, pair] = Object.entries(rekeyed.book.relied_on)[0];
+    const ext = structuredClone(c.extension);
+    const [k, pair] = Object.entries(ext.book.relied_on)[0];
     pair.record.capsule_id = "0".repeat(64);
     expect(k).not.toBe(pair.record.capsule_id);
-    expect((await draw(keep.report, rekeyed)).shown).toBe(false);
-    expect((await draw(keep.report, { ...keep.extension, extra: 1 })).shown).toBe(false);
-    const noAgreement = structuredClone(keep.extension);
-    delete noAgreement.book.agreement;
-    expect((await draw(keep.report, noAgreement)).shown).toBe(false);
+    expect((await draw(c.report, ext)).shown).toBe(false);
+  });
+
+  it("shows a money member it cannot write as a decimal as recorded, and still draws the receipt", async () => {
+    const c = vectors.cases.find((x) => x.name === "keep-copy");
+    const cases = [["19", "1", "0.0000000000000000001 USD"], ["255", "7", null], ["0", "6000", "6000 USD"], ["2", "6000.5", "6000.5 USD scale 2"]];
+    for (const [scale, value, want] of cases) {
+      const ext = structuredClone(c.extension);
+      const [, pair] = legsOf(ext)[0];
+      pair.record.settlement.amount = { assetCode: "USD", assetScale: Number(scale), value };
+      const { shown, host } = await draw(c.report, ext);
+      expect(shown).toBe(true);
+      const text = host.L1.querySelector("[data-leg-record]").closest("tr").textContent;
+      if (want !== null) expect(text).toContain("amount " + want);
+      else expect(text).toMatch(/amount 0\.0+7 USD/);
+    }
+  });
+
+  it("shows no verdict, and no side the report does not name", async () => {
+    const c = vectors.cases.find((x) => x.name === "keep-copy");
+    const { host } = await draw(c.report, c.extension);
+    expect(host.L1.textContent).toContain("This page does not check who signed each record");
+    expect(host.L1.textContent).toContain("Side, as the report names it");
   });
 });

@@ -118,3 +118,16 @@ export const REVIVE_CONTEXT = "(s) => ({ ...s, resolvedDisclosures: new Map(s.re
 
 /** JSON safe to put inside a <script> element. */
 export const scriptJson = (value) => JSON.stringify(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+
+// The x-deal-v1 extension a bundle carries for a report (evidencebook#597): the sealed report's id and the book,
+// whose relied_on holds a bare Capsule pair for each record the report's rows name (no leg among them).
+export function v1Extension(report, sealed = "rep-1") {
+  const relied_on = {};
+  const rows = report && Array.isArray(report.rows) ? report.rows : [];
+  for (const row of rows) {
+    for (const e of row && Array.isArray(row.relied_on) ? row.relied_on : []) {
+      if (e && typeof e.record === "string") relied_on[e.record] = { record: { capsule_id: e.record } };
+    }
+  }
+  return { sealed_report: sealed, book: { agreement: {}, relied_on } };
+}

@@ -3,7 +3,7 @@
 // producer's TestReportVectors) is drawn by the page, never declined.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { loadScript, renderInto } from "./receiptScripts.js";
+import { loadScript, renderInto, v1Extension } from "./receiptScripts.js";
 
 const vectors = JSON.parse(readFileSync(new URL("../tests/testdata/deal-v1/report-vectors.json", import.meta.url), "utf8"));
 
@@ -11,7 +11,7 @@ const context = (report) => ({
   bundle: {
     records: [],
     extensions: {
-      "x-deal-v1": { sealed_report: "rep-1" },
+      "x-deal-v1": v1Extension(report),
       "x-deal-report/v0": { record: { capsule_id: "rep-1", action_id: "capsulectl-deal-report" }, agent_input: report },
     },
   },
