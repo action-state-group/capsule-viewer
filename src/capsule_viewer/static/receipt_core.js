@@ -998,6 +998,70 @@
     return [named, content];
   };
 
+  // The settle legs a payment row relied on (evidencebook#588, docs/design/461-deal-profile.md
+  // section 9, "The payment legs and the bundle extension"). The x-deal-v1 extension is exactly
+  // {sealed_report, book}; book.relied_on holds, keyed by record id, the book pair of every record
+  // the holder's rows rely on, so a leg is read by its relied_on id. A copy cut before the extension
+  // carried a book has none, and says so. The page shows a leg's settlement member as recorded, picks
+  // no leg and derives no verdict from one: `check` stays the only verdict.
+  function dealBook(extension) {
+    Object.keys(extension).forEach(function (k) {
+      if (k !== "sealed_report" && k !== "book") throw new Unavailable("the x-deal-v1 extension has a member section 9 does not: " + k);
+    });
+    if (!own(extension, "book")) return null;
+    var book = get(extension, "book");
+    if (!isMap(book)) throw new Unavailable("the x-deal-v1 extension's book is not an object");
+    Object.keys(book).forEach(function (k) {
+      if (k !== "agreement" && k !== "relied_on") throw new Unavailable("the x-deal-v1 extension's book has a member section 9 does not: " + k);
+    });
+    if (!isMap(get(book, "agreement")) || !isMap(get(book, "relied_on"))) throw new Unavailable("the x-deal-v1 extension's book has no agreement and relied_on objects");
+    return get(book, "relied_on");
+  }
+
+  // A money member of a settlement as recorded: its value counted in 10^-assetScale of assetCode.
+  // The payer's leg records `amount`, the payee's `received` and `receive_fee` (draft-mih-agent-settlement-records).
+  var LEG_MONEY = ["amount", "fee", "received", "receive_fee"];
+  function legAmount(a) {
+    if (!isMap(a)) throw new Unavailable("a payment leg's money member is not an object");
+    var value = str(get(a, "value")), code = str(get(a, "assetCode")), scale = int(get(a, "assetScale"));
+    if (value === null || !/^-?\d+$/.test(value) || code === null || code === "" || scale === null || scale < 0 || scale > 18) {
+      throw new Unavailable("a payment leg's money member is not {assetCode, assetScale, value}");
+    }
+    if (!scale) return value + " " + code;
+    var sign = value.charAt(0) === "-" ? "-" : "";
+    var digits = value.replace("-", "").padStart(scale + 1, "0");
+    return sign + digits.slice(0, digits.length - scale) + "." + digits.slice(digits.length - scale) + " " + code;
+  }
+
+  function legsOf(rows, relied) {
+    return rows.map(function (row) {
+      var legs = [];
+      row.relied_on.forEach(function (e) {
+        if (!own(relied, e.record)) throw new Unavailable("a record a row relies on is not in the x-deal-v1 extension's book: " + e.record);
+        var pair = get(relied, e.record);
+        if (!isMap(pair) || !isMap(get(pair, "record"))) throw new Unavailable("a book pair of the x-deal-v1 extension is not a Capsule pair");
+        if (get(get(pair, "record"), "capsule_id") !== e.record) throw new Unavailable("a book pair's Capsule id is not its key in the x-deal-v1 extension: " + e.record);
+        if (!own(get(pair, "record"), "settlement")) return;
+        var settlement = get(get(pair, "record"), "settlement");
+        if (!isMap(settlement)) throw new Unavailable("a leg's settlement is not an object");
+        var leg = str(get(settlement, "leg")), status = str(get(settlement, "status"));
+        if (leg === null || status === null) throw new Unavailable("a leg's settlement has no leg and status");
+        var ref = get(settlement, "payment_ref");
+        legs.push({
+          record: e.record,
+          side: e.side,
+          leg: leg,
+          status: status,
+          money: LEG_MONEY.filter(function (k) { return own(settlement, k); }).map(function (k) { return [k, legAmount(get(settlement, k))]; }),
+          observed_at: str(get(settlement, "observed_at")),
+          sealer_role: str(get(settlement, "sealer_role")),
+          payment_ref: isMap(ref) ? { type: or(str(get(ref, "type")), ""), value: or(str(get(ref, "value")), "") } : null,
+        });
+      });
+      return legs;
+    });
+  }
+
   function buildDeal(v, audience) {
     if (!v.verified) throw new Unavailable("the bundle did not verify");
     var reader = new Reader(v);
@@ -1023,6 +1087,9 @@
     var rawRows = get(content, "rows");
     if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
     var rows = rawRows.map(dealRow);
+    var relied = dealBook(map(get(map(get(v.bundle, "extensions")), EXTENSION_V1)));
+    var legs = relied === null ? null : legsOf(rows, relied);
+    if (legs !== null) rows.forEach(function (row, i) { row.legs = legs[i]; });
     if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
     var rests = map(get(content, "rests_on"));
     var theirs = get(rests, "counterparty");
@@ -1037,6 +1104,8 @@
       settled: flag(content, "settled", "settled"),
       rows_state: rowsState,
       rows: rows,
+      // false: this copy's extension carries no book, so no leg is held in it.
+      has_book: relied !== null,
       rests_on: {
         own_size: int(get(map(get(rests, "own")), "size")),
         counterparty: isMap(theirs) ? { counted: int(get(theirs, "counted")), fork_at: int(get(theirs, "fork_at")) } : null,
@@ -2212,12 +2281,43 @@
     return [this.kit.dataTable([w("deal.col.row"), w("deal.col.owed_by"), w("deal.col.status"), w("deal.col.due"), w("deal.col.window_end"), w("deal.col.detail")], rows),
       this.note(w("deal.rows.note"))];
   };
+  // The payment legs the rows relied on, each as its record states it (evidencebook#588). No leg is picked
+  // and no verdict is drawn from one: the check above stays the only verdict.
+  P.dealLegs = function (model) {
+    var d = this.d, self = this;
+    if (model.rows_state !== "listed" || !model.rows.length) return [];
+    var inner;
+    if (!model.has_book) {
+      inner = [this.note(w("deal.legs.no_book"), { "data-legs": "no_book" })];
+    } else {
+      var rows = [];
+      model.rows.forEach(function (row) {
+        row.legs.forEach(function (leg) {
+          rows.push([
+            d.el("span", { class: "cv-mono", "data-row-id": row.id }, [row.id]),
+            self.token("deal.side", leg.side),
+            leg.leg,
+            leg.status,
+            leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
+            leg.observed_at !== null ? leg.observed_at : w("deal.no_time"),
+            leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
+            d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
+          ]);
+        });
+      });
+      inner = rows.length
+        ? [this.kit.dataTable([w("deal.col.row"), w("deal.col.leg_side"), w("deal.col.leg"), w("deal.col.leg_status"), w("deal.col.amount"), w("deal.col.observed"), w("deal.col.payment_ref"), w("deal.col.record")], rows),
+          this.note(w("deal.legs.note"))]
+        : [this.note(w("deal.legs.none"), { "data-legs": "none" })];
+    }
+    return [this.kit.section(w("deal.section.legs"), inner)];
+  };
   P.dealL1 = function (model) {
     return [
       this.note(w("summary.standalone", { status: model.report_checked === null ? "-" : model.report_checked }), { "data-sealed": "x-deal-report" }),
       this.note(w("deal.report.scope")),
       this.kit.section(w("deal.section.rows"), this.dealRows(model)),
-    ];
+    ].concat(this.dealLegs(model));
   };
   P.dealL2 = function (model) {
     var d = this.d, kit = this.kit;
