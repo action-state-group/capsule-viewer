@@ -1042,6 +1042,33 @@
     return sign + digits.slice(0, digits.length - scale) + "." + digits.slice(digits.length - scale) + " " + code;
   }
 
+  // One leg, as its record states it: the settlement member's names and values, the record id, and the side
+  // the report names (or, in a copy that withholds the rows, the settlement's own sealer_role).
+  function readLeg(record, id, side) {
+    var settlement = get(record, "settlement");
+    if (!isMap(settlement)) throw new Unavailable("a leg's settlement is not an object");
+    var leg = str(get(settlement, "leg")), status = str(get(settlement, "status"));
+    if (leg === null || status === null) throw new Unavailable("a leg's settlement has no leg and status");
+    var ref = get(settlement, "payment_ref");
+    return {
+      record: id,
+      side: side,
+      sealer_role: str(get(settlement, "sealer_role")),
+      leg: leg,
+      status: status,
+      money: LEG_MONEY.filter(function (k) { return own(settlement, k); }).map(function (k) { return [k, legAmount(get(settlement, k))]; }),
+      observed_at: str(get(settlement, "observed_at")),
+      payment_ref: isMap(ref) ? { type: or(str(get(ref, "type")), ""), value: or(str(get(ref, "value")), "") } : null,
+    };
+  }
+
+  // A copy that withholds the rows (an adjudicator's) ties no record to a term: every settle leg the book holds,
+  // in the book's order, with no side but the settlement's own sealer_role.
+  function bookLegs(relied) {
+    return Object.keys(relied).filter(function (k) { return own(get(relied[k], "record"), "settlement"); })
+      .map(function (k) { return readLeg(get(relied[k], "record"), k, null); });
+  }
+
   function legsOf(rows, rowsState, relied) {
     // Rows listed: the book holds exactly the records they name (section 9).
     if (rowsState === "listed") {
@@ -1055,20 +1082,7 @@
         if (!own(relied, e.record)) throw new Unavailable("a record a row relies on is not in the x-deal-v1 extension's book: " + e.record);
         var record = get(get(relied, e.record), "record");
         if (!own(record, "settlement")) return;
-        var settlement = get(record, "settlement");
-        if (!isMap(settlement)) throw new Unavailable("a leg's settlement is not an object");
-        var leg = str(get(settlement, "leg")), status = str(get(settlement, "status"));
-        if (leg === null || status === null) throw new Unavailable("a leg's settlement has no leg and status");
-        var ref = get(settlement, "payment_ref");
-        legs.push({
-          record: e.record,
-          side: e.side,
-          leg: leg,
-          status: status,
-          money: LEG_MONEY.filter(function (k) { return own(settlement, k); }).map(function (k) { return [k, legAmount(get(settlement, k))]; }),
-          observed_at: str(get(settlement, "observed_at")),
-          payment_ref: isMap(ref) ? { type: or(str(get(ref, "type")), ""), value: or(str(get(ref, "value")), "") } : null,
-        });
+        legs.push(readLeg(record, e.record, e.side));
       });
       return legs;
     });
@@ -1102,6 +1116,7 @@
     var relied = dealBook(map(get(map(get(v.bundle, "extensions")), EXTENSION_V1)));
     var legs = legsOf(rows, rowsState, relied);
     rows.forEach(function (row, i) { row.legs = legs[i]; });
+    var withheldLegs = rowsState === "withheld" ? bookLegs(relied) : [];
     if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
     var rests = map(get(content, "rests_on"));
     var theirs = get(rests, "counterparty");
@@ -1116,6 +1131,7 @@
       settled: flag(content, "settled", "settled"),
       rows_state: rowsState,
       rows: rows,
+      withheld_legs: withheldLegs,
       rests_on: {
         own_size: int(get(map(get(rests, "own")), "size")),
         counterparty: isMap(theirs) ? { counted: int(get(theirs, "counted")), fork_at: int(get(theirs, "fork_at")) } : null,
@@ -2295,25 +2311,33 @@
   // and no verdict is drawn from one: the check above stays the only verdict.
   P.dealLegs = function (model) {
     var d = this.d, self = this;
-    if (model.rows_state !== "listed" || !model.rows.length) return [];
+    var withheld = model.rows_state === "withheld";
+    if (!withheld && (model.rows_state !== "listed" || !model.rows.length)) return [];
     var rows = [];
-    model.rows.forEach(function (row) {
-      row.legs.forEach(function (leg) {
-        rows.push([
-          d.el("span", { class: "cv-mono", "data-row-id": row.id }, [row.id]),
-          self.token("deal.side", leg.side),
-          leg.leg,
-          leg.status,
-          leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
-          leg.observed_at !== null ? leg.observed_at : w("deal.no_time"),
-          leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
-          d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
-        ]);
+    function cells(leg, lead) {
+      return lead.concat([
+        leg.leg,
+        leg.status,
+        leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
+        leg.observed_at !== null ? leg.observed_at : w("deal.no_time"),
+        leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
+        d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
+      ]);
+    }
+    var head = [w(withheld ? "deal.col.sealer" : "deal.col.leg_side"), w("deal.col.leg"), w("deal.col.leg_status"), w("deal.col.amount"), w("deal.col.observed"), w("deal.col.payment_ref"), w("deal.col.record")];
+    if (withheld) {
+      // The rows are withheld, so no record is tied to a term: the side is the settlement's own sealer_role.
+      model.withheld_legs.forEach(function (leg) { rows.push(cells(leg, [leg.sealer_role !== null ? leg.sealer_role : "-"])); });
+    } else {
+      head.unshift(w("deal.col.row"));
+      model.rows.forEach(function (row) {
+        row.legs.forEach(function (leg) {
+          rows.push(cells(leg, [d.el("span", { class: "cv-mono", "data-row-id": row.id }, [row.id]), self.token("deal.side", leg.side)]));
+        });
       });
-    });
+    }
     var inner = rows.length
-      ? [this.kit.dataTable([w("deal.col.row"), w("deal.col.leg_side"), w("deal.col.leg"), w("deal.col.leg_status"), w("deal.col.amount"), w("deal.col.observed"), w("deal.col.payment_ref"), w("deal.col.record")], rows),
-        this.note(w("deal.legs.note"))]
+      ? [this.kit.dataTable(head, rows), this.note(w(withheld ? "deal.legs.note.withheld" : "deal.legs.note"), { "data-legs": withheld ? "withheld" : "listed" })]
       : [this.note(w("deal.legs.none"), { "data-legs": "none" })];
     return [this.kit.section(w("deal.section.legs"), inner)];
   };
