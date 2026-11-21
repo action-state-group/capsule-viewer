@@ -102,7 +102,7 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
   // The refusals of VerifyReportBundle's vectors that read the extension's shape, which this page reads too. The ones
   // that need a signer or a log (signed by no party, a record of another deal, past a log's size, a referee) are
   // capsulectl's check, not this page's.
-  const SHAPE_REFUSALS = ["wrong sealed_report", "a relied-on record missing", "a record no row relies on", "a key that is not its pair's id", "an unknown member", "a null relied_on", "no book"];
+  const SHAPE_REFUSALS = ["wrong sealed_report", "a relied-on record missing", "a record no row relies on", "a key that is not its pair's id", "an unknown member", "a null relied_on", "no book", "a keep copy withheld"];
   for (const name of SHAPE_REFUSALS) {
     it(`declines what the producer refuses: ${name}`, async () => {
       const c = vectors.cases.find((x) => x.name === name);

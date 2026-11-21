@@ -1117,6 +1117,8 @@
     var legs = legsOf(rows, rowsState, relied);
     rows.forEach(function (row, i) { row.legs = legs[i]; });
     var withheldLegs = rowsState === "withheld" ? bookLegs(relied) : [];
+    // section 9: an adjudicator's copy, and only it, withholds the rows.
+    if ((rowsState === "withheld") !== (cut === "adjudicator")) throw new Unavailable("the v1 report's rows_state is withheld exactly on an adjudicator's copy");
     if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
     var rests = map(get(content, "rests_on"));
     var theirs = get(rests, "counterparty");
