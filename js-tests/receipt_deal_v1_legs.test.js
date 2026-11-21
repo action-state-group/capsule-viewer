@@ -41,9 +41,12 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
       const { shown, host } = await draw(c.report, c.extension);
       expect(shown).toBe(true);
       const cells = [...host.L1.querySelectorAll("[data-leg-record]")].map((e) => e.getAttribute("data-leg-record"));
-      const want = c.report.rows.flatMap((r) => r.relied_on.map((e) => e.record)).filter((id) => c.extension.book.relied_on[id]?.record.settlement !== undefined);
+      // Listed rows tie each leg to a term; a copy that withholds them shows every leg the book holds.
+      const want = c.report.rows_state === "withheld"
+        ? legsOf(c.extension).map(([id]) => id)
+        : c.report.rows.flatMap((r) => r.relied_on.map((e) => e.record)).filter((id) => c.extension.book.relied_on[id]?.record.settlement !== undefined);
       expect(cells).toEqual(want);
-      if (c.report.rows_state === "listed" && !want.length) expect(host.L1.querySelector('[data-legs="none"]')).not.toBeNull();
+      if (["listed", "withheld"].includes(c.report.rows_state) && !want.length) expect(host.L1.querySelector('[data-legs="none"]')).not.toBeNull();
     });
   }
 
@@ -64,10 +67,43 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
     expect(host.L1.querySelector("[data-row-status]")).not.toBeNull();
   });
 
+  it("an adjudicator's copy withholds the rows, so its legs are tied to no term and show the sealer as recorded", async () => {
+    for (const name of ["adjudicator-copy", "ruling-adjudicator-copy"]) {
+      const c = vectors.cases.find((x) => x.name === name);
+      const { host } = await draw(c.report, c.extension);
+      const legs = legsOf(c.extension);
+      if (!legs.length) { expect(host.L1.querySelector('[data-legs="none"]').textContent).toContain("This copy withholds the terms."); continue; }
+      const table = host.L1.querySelector("[data-leg-record]").closest("table");
+      expect([...table.querySelectorAll("th")].map((e) => e.textContent)).toEqual(["Sealer, as recorded", "Leg", "Status as recorded", "Amounts as recorded", "Observed at (as recorded)", "Payment reference", "Record"]);
+      for (const [id, pair] of legs) {
+        const row = host.L1.querySelector(`[data-leg-record="${id}"]`).closest("tr");
+        expect(row.querySelector("td").textContent).toBe(pair.record.settlement.sealer_role);
+        expect(row.textContent).toContain(pair.record.settlement.leg);
+      }
+      expect(host.L1.querySelector("[data-row-id]")).toBeNull();
+      expect(host.L1.querySelector('[data-legs="withheld"]').textContent).toBe("This copy withholds the terms, so these payment records are not tied to a term. They are the records the report's holder says its terms rest on, shown as each states it. This page does not check who signed them and does not judge the payment.");
+      expect(host.L1.textContent).not.toContain("payment check above");
+    }
+  });
+
+  it("an adjudicator's copy carrying payment legs is among the vectors", () => {
+    const c = vectors.cases.find((x) => x.name === "adjudicator-copy");
+    expect(legsOf(c.extension).length).toBeGreaterThan(0);
+  });
+
+  it("a not-started keep copy lists no rows and shows no legs section; an adjudicator's not-started copy, which withholds rows, says it holds no payment record", async () => {
+    const keep = vectors.cases.find((x) => x.name === "not-started-keep-copy");
+    expect((await draw(keep.report, keep.extension)).host.L1.querySelector("[data-legs]")).toBeNull();
+    const adj = vectors.cases.find((x) => x.name === "not-started-adjudicator-copy");
+    expect(legsOf(adj.extension)).toEqual([]);
+    const none = (await draw(adj.report, adj.extension)).host.L1.querySelector('[data-legs="none"]');
+    expect(none.textContent).toBe("This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.");
+  });
+
   // The refusals of VerifyReportBundle's vectors that read the extension's shape, which this page reads too. The ones
   // that need a signer or a log (signed by no party, a record of another deal, past a log's size, a referee) are
   // capsulectl's check, not this page's.
-  const SHAPE_REFUSALS = ["wrong sealed_report", "a relied-on record missing", "a record no row relies on", "a key that is not its pair's id", "an unknown member", "a null relied_on", "no book"];
+  const SHAPE_REFUSALS = ["wrong sealed_report", "a relied-on record missing", "a record no row relies on", "a key that is not its pair's id", "an unknown member", "a null relied_on", "no book", "a keep copy withheld"];
   for (const name of SHAPE_REFUSALS) {
     it(`declines what the producer refuses: ${name}`, async () => {
       const c = vectors.cases.find((x) => x.name === name);
