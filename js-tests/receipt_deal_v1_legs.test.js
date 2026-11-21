@@ -72,7 +72,7 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
       const c = vectors.cases.find((x) => x.name === name);
       const { host } = await draw(c.report, c.extension);
       const legs = legsOf(c.extension);
-      if (!legs.length) { expect(host.L1.querySelector('[data-legs="none"]')).not.toBeNull(); continue; }
+      if (!legs.length) { expect(host.L1.querySelector('[data-legs="none"]').textContent).toContain("This copy withholds the terms."); continue; }
       const table = host.L1.querySelector("[data-leg-record]").closest("table");
       expect([...table.querySelectorAll("th")].map((e) => e.textContent)).toEqual(["Sealer, as recorded", "Leg", "Status as recorded", "Amounts as recorded", "Observed at (as recorded)", "Payment reference", "Record"]);
       for (const [id, pair] of legs) {
@@ -96,7 +96,8 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
     expect((await draw(keep.report, keep.extension)).host.L1.querySelector("[data-legs]")).toBeNull();
     const adj = vectors.cases.find((x) => x.name === "not-started-adjudicator-copy");
     expect(legsOf(adj.extension)).toEqual([]);
-    expect((await draw(adj.report, adj.extension)).host.L1.querySelector('[data-legs="none"]')).not.toBeNull();
+    const none = (await draw(adj.report, adj.extension)).host.L1.querySelector('[data-legs="none"]');
+    expect(none.textContent).toBe("This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.");
   });
 
   // The refusals of VerifyReportBundle's vectors that read the extension's shape, which this page reads too. The ones

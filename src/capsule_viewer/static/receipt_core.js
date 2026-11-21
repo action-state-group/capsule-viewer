@@ -2340,7 +2340,7 @@
     }
     var inner = rows.length
       ? [this.kit.dataTable(head, rows), this.note(w(withheld ? "deal.legs.note.withheld" : "deal.legs.note"), { "data-legs": withheld ? "withheld" : "listed" })]
-      : [this.note(w("deal.legs.none"), { "data-legs": "none" })];
+      : [this.note(w(withheld ? "deal.legs.none.withheld" : "deal.legs.none"), { "data-legs": "none" })];
     return [this.kit.section(w("deal.section.legs"), inner)];
   };
   P.dealL1 = function (model) {

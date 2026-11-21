@@ -436,6 +436,7 @@
     "deal.legs.note": "Each line is a payment record a term relies on, shown as the record states it. This page does not check who signed each record, does not match the legs and does not judge the payment; the payment check above is the only verdict.",
     "deal.col.sealer": "Sealer, as recorded",
     "deal.legs.note.withheld": "This copy withholds the terms, so these payment records are not tied to a term. They are the records the report's holder says its terms rest on, shown as each states it. This page does not check who signed them and does not judge the payment.",
+    "deal.legs.none.withheld": "This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.",
     "deal.legs.none": "No payment record is among the records the terms' statuses rest on."
   }
 }
