@@ -6,12 +6,12 @@
 // cases are capsulectl verify's (the page shows what it reported).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { loadScript, renderInto } from "./receiptScripts.js";
+import { loadScript, renderInto, v1Extension } from "./receiptScripts.js";
 
 const vectors = JSON.parse(readFileSync(new URL("../tests/testdata/deal-v1/report-verify-vectors.json", import.meta.url), "utf8"));
 // The report pair as the case has it: its members as written (a second spelling of a member declines).
 const context = (report, pair) => ({
-  bundle: { records: [], extensions: { "x-deal-v1": { sealed_report: "rep-1" }, "x-deal-report/v0": pair || { record: { capsule_id: "rep-1", action_id: "capsulectl-deal-report" }, agent_input: report } } },
+  bundle: { records: [], extensions: { "x-deal-v1": v1Extension(report), "x-deal-report/v0": pair || { record: { capsule_id: "rep-1", action_id: "capsulectl-deal-report" }, agent_input: report } } },
   records: [], resolvedDisclosures: new Map(), root: null, completeness: { memberships: {} },
 });
 const env = (audience) => ({
