@@ -675,6 +675,10 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.rtier.totals.unstated",
   "groups.rtier.totals.failed",
   "generic.reason.says",
+  "generic.reason.token.capsule_signature_did_not_verify",
+  "generic.reason.token.capsule_signer_not_trusted",
+  "generic.reason.token.counterparty_leg_signature_did_not_verify",
+  "generic.reason.token.counterparty_leg_signer_not_trusted",
   "generic.reason.unworded",
   "generic.reason.grade",
   "generic.rtier.totals",
@@ -1457,7 +1461,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
   groups: "76acc9598202663738d7d2903ca1a042d9b7ca21799297946e4da39ea77d5250",
-  generic: "c1b737c974d47aed2f8e28b653ea553063244cc25c63d57500999822e75a8a51",
+  generic: "70665880f9926ae08f4e1c3bde8599a12bc861d291a9a36128655f323b802abd",
 });
 
 export interface Words {

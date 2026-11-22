@@ -206,11 +206,20 @@ function reasonLines(
   const found = reasons?.get(claim.id);
   if (found === undefined) return [];
   const { code } = found;
-  const text = found.keyable ? w.reason(claim.requirementRef, code) : undefined;
+  const packText = found.keyable
+    ? w.reason(claim.requirementRef, code)
+    : undefined;
+  const coreText =
+    packText === undefined && found.core
+      ? w.t(`generic.reason.token.${code}`)
+      : undefined;
+  const text = packText ?? coreText;
   const line = el("p", "rreason");
   line.dataset.reasonCode = code;
   line.dataset.reasonKind = found.kind;
   line.dataset.tone = found.kind === "finding" ? "warn" : "note";
+  // A later claim's reason shows under its readiness label (ER section 4.4).
+  if (claim.later) line.append(w.t("generic.later.readiness"), " ");
   if (claim.verdict !== "not_evaluable")
     line.append(
       w.t("generic.reason.grade", { grade: w.enumWord("grade", claim.grade) }),
@@ -225,7 +234,7 @@ function reasonLines(
           ? w.t("generic.reason.says", { text })
           : w.t("generic.reason.unworded", { code }),
       ),
-      text !== undefined ? "pack" : "core",
+      packText !== undefined ? "pack" : "core",
     ),
   );
   return [line];
@@ -402,11 +411,8 @@ export async function drawGeneric(
   verified: BundleVerificationResult,
   w: Words,
   tierOf?: TierOf,
-  claimReasonsOf?: ReasonsOf,
+  reasons?: ReasonsOf,
 ): Promise<void> {
-  // contract-report.ts passes the reasons only for a Result citing one
-  // contract: `row.<ref>.reason.<code>` applies to no other (spec section 3).
-  const reasons = claimReasonsOf;
   const tierFor = (claim: ResultClaim): RowTier =>
     tierOf === undefined
       ? "unstated"

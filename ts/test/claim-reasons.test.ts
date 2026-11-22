@@ -15,7 +15,7 @@ import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 type Obj = Record<string, unknown>;
 
-function source(change?: (claims: Obj[]) => void): Obj {
+function source(change?: (claims: Obj[], doc: Obj) => void): Obj {
   const bundle = JSON.parse(
     readFileSync(
       resolve(process.cwd(), "test", "testdata", "result-root-bundle.json"),
@@ -27,7 +27,7 @@ function source(change?: (claims: Obj[]) => void): Obj {
     "contract-report/v1": {},
   };
   const doc = ((bundle.disclosures as Obj).result as Obj).agent_input as Obj;
-  change?.(doc.claims as Obj[]);
+  change?.(doc.claims as Obj[], doc);
   return bundle;
 }
 
@@ -84,7 +84,7 @@ it("a not_evaluable claim's reason and a self-attested claim's reason show besid
     '[data-claim-ref="claim-3"] [data-reason-code]',
   )!;
   expect(undecided.textContent).toBe(
-    `The report's producer says: ${WORDS["row.req-3.reason.capsule_signature_did_not_verify"]}`,
+    `The report's producer gives this reason: ${WORDS["row.req-3.reason.capsule_signature_did_not_verify"]}`,
   );
   // a signature that failed to verify is a finding, drawn as a warning
   expect(undecided.dataset.tone).toBe("warn");
@@ -92,7 +92,7 @@ it("a not_evaluable claim's reason and a self-attested claim's reason show besid
     '[data-claim-ref="claim-2"] [data-reason-code]',
   )!;
   expect(leg.textContent).toBe(
-    `Grade: self-attested. The report's producer says: ${WORDS["row.req-2.reason.counterparty_leg_signer_not_trusted"]}`,
+    `Grade: self-attested. The report's producer gives this reason: ${WORDS["row.req-2.reason.counterparty_leg_signer_not_trusted"]}`,
   );
   // "not trusted" is a reader setting, not a finding
   expect(leg.dataset.tone).toBe("note");
@@ -134,15 +134,17 @@ it("a reason changes no verdict, grade, tally or count", async () => {
 });
 
 it("a reserved code is shown as the raw code, never worded", async () => {
-  const root = await draw(
-    source((claims) => {
-      claims[2]!.reason = "not_evaluable";
-    }),
-    pack({ ...WORDS, "row.req-3.reason.not_evaluable": "must not be used" }),
-  );
-  expect(lines(root).map((l) => l.textContent)).toEqual([
-    "The report's producer gives a reason this page has no words for: not_evaluable",
-  ]);
+  for (const code of ["label", "detail", "not_evaluable"]) {
+    const root = await draw(
+      source((claims) => {
+        claims[2]!.reason = code;
+      }),
+      pack({ ...WORDS, [`row.req-3.reason.${code}`]: "must not be used" }),
+    );
+    expect(lines(root).map((l) => l.textContent)).toEqual([
+      `The report's producer gives a reason this page has no words for: ${code}`,
+    ]);
+  }
 });
 
 it("claimReasons reads claim.reason and its kind; a failed claim or one without a reason gets none", () => {
@@ -155,11 +157,13 @@ it("claimReasons reads claim.reason and its kind; a failed claim or one without 
     code: "capsule_signer_not_trusted",
     kind: "setting",
     keyable: true,
+    core: true,
   });
   expect(got({ reason: "later_token", reasonKind: "unregistered" })).toEqual({
     code: "later_token",
     kind: "unregistered",
-    keyable: true,
+    keyable: false,
+    core: false,
   });
   expect(got({})).toBeUndefined();
   expect(
@@ -177,7 +181,7 @@ it("an unregistered token is shown raw and neutrally, never as a finding", async
   expect(lines(root)[0]!.dataset.reasonKind).toBe("unregistered");
 });
 
-it("a Result citing two contracts shows no reason at all", async () => {
+it("a Result citing two contracts draws the reason, in the core's words and never the pack's", async () => {
   const root = await draw(
     source((claims) => {
       claims[2]!.contract_ref = "ec:other@1";
@@ -185,5 +189,74 @@ it("a Result citing two contracts shows no reason at all", async () => {
     }),
     pack(WORDS),
   );
-  expect(lines(root)).toEqual([]);
+  const line = root.querySelector<HTMLElement>(
+    '[data-claim-ref="claim-3"] [data-reason-code]',
+  )!;
+  expect(line.textContent).toBe(
+    "The report's producer gives this reason: A record this claim needed has a signature that did not verify, so the record was not used.",
+  );
+  expect(line.dataset.tone).toBe("warn");
+});
+
+it("an unregistered token is shown raw even when the pack has a sentence for it", async () => {
+  const root = await draw(
+    source((claims) => {
+      claims[2]!.reason = "inference_deals_digest_mismatch";
+    }),
+    pack({
+      "row.req-3.reason.inference_deals_digest_mismatch": "must not be used",
+    }),
+  );
+  expect(lines(root).map((l) => l.textContent)).toEqual([
+    "The report's producer gives a reason this page has no words for: inference_deals_digest_mismatch",
+  ]);
+});
+
+it("a registered token with no pack sentence is worded by the core", async () => {
+  const root = await draw(
+    source((claims) => {
+      claims[1]!.reason = "counterparty_leg_signature_did_not_verify";
+    }),
+  );
+  expect(
+    root.querySelector('[data-claim-ref="claim-2"] [data-reason-code]')!
+      .textContent,
+  ).toBe(
+    "Grade: self-attested. The report's producer gives this reason: The other side's signed leg was found and its signature did not verify, so it does not raise the grade.",
+  );
+});
+
+it("a reason changes no grade or check outcome either", async () => {
+  const grades = (root: HTMLElement) =>
+    [...root.querySelectorAll("[data-claim-ref]")].map((n) => [
+      n.getAttribute("data-claim-ref"),
+      n.querySelector("[data-verdict]")?.textContent,
+    ]);
+  const plain = await draw(source(), pack(WORDS));
+  const reasoned = await draw(
+    source((claims) => {
+      claims[2]!.reason = "capsule_signature_did_not_verify";
+      claims[1]!.reason = "counterparty_leg_signer_not_trusted";
+    }),
+    pack(WORDS),
+  );
+  expect(grades(reasoned)).toEqual(grades(plain));
+});
+
+it("a not-yet-in-force claim's reason shows under its readiness label", async () => {
+  const root = await draw(
+    source((claims, doc) => {
+      claims[2]!.applies_from = "2099-01-01";
+      claims[2]!.reason = "capsule_signature_did_not_verify";
+      const aggregate = doc.aggregate as Obj;
+      (aggregate.buckets as Obj).not_evaluable = [];
+      (aggregate.coverage as Obj).evaluated_population = 2;
+      (aggregate.coverage as Obj).not_yet_in_force = 1;
+    }),
+    pack(WORDS),
+  );
+  const line = root.querySelector<HTMLElement>(
+    '[data-claim-ref="claim-3"] [data-reason-code]',
+  )!;
+  expect(line.textContent!.startsWith("readiness ")).toBe(true);
 });

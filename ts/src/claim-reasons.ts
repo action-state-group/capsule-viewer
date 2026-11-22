@@ -20,12 +20,30 @@ const RESERVED: ReadonlySet<string> = new Set([
   "not_evaluable",
 ]);
 
+/**
+ * The registered tokens the core words itself (`generic.reason.token.<code>`):
+ * ER section 4.4 gives each one meaning for every producer, so a page with no
+ * pack word still says what it means. Any other token is shown raw.
+ */
+export const CORE_REASON_CODES: ReadonlySet<string> = new Set([
+  "capsule_signature_did_not_verify",
+  "capsule_signer_not_trusted",
+  "counterparty_leg_signature_did_not_verify",
+  "counterparty_leg_signer_not_trusted",
+]);
+
 export interface ClaimReason {
   readonly code: string;
   /** `finding` is drawn in the warning tone; `setting` and `unregistered` neutrally (section 4.4). */
   readonly kind: "finding" | "setting" | "unregistered";
-  /** False for a code that cannot form a `row.<ref>.reason.<code>` key. */
+  /**
+   * True when a pack may word the code (`row.<ref>.reason.<code>`): a
+   * registered token that is not a reserved row suffix. An unregistered token
+   * is always shown raw (section 4.4).
+   */
   readonly keyable: boolean;
+  /** True when the core has words for the code. */
+  readonly core: boolean;
 }
 
 /**
@@ -38,10 +56,12 @@ export function claimReasons(
   const out = new Map<string, ClaimReason>();
   for (const claim of claims) {
     if (claim.failed || claim.reason === undefined) continue;
+    const kind = claim.reasonKind ?? "unregistered";
     out.set(claim.id, {
       code: claim.reason,
-      kind: claim.reasonKind ?? "unregistered",
-      keyable: !RESERVED.has(claim.reason),
+      kind,
+      keyable: kind !== "unregistered" && !RESERVED.has(claim.reason),
+      core: CORE_REASON_CODES.has(claim.reason),
     });
   }
   return out;

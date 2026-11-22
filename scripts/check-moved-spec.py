@@ -434,21 +434,24 @@ CONTRACT_REPORT_MODULE = Move(
             "- **`x-` members** (ER §8a) are never read.\n",
             "- **`x-` members** (ER §8a) are never read.\n"
             "- **Reasons** (ER §4.4). A claim's `reason` is the producer's token for why the claim is unavailable\n"
-            "  or why its grade stopped short of `countersigned`. The module shows it beside the claim's verdict,\n"
-            "  and on a decided claim beside its grade, labelled as the producer's statement, in the pack's words\n"
-            "  (`row.<requirement_ref>.reason.<code>`, §3) or, with none, as the raw token. A `finding` token is\n"
-            "  drawn as a warning; a `setting` token and an unregistered token are drawn neutrally, an unregistered\n"
-            "  one as its raw value. A row's summary says that some claim of the row gives a reason. A claim that\n"
-            "  failed verification shows none. Reasons are display-only: the module reads `reason` to draw it and\n"
-            "  to nothing else, so no verdict, grade, tally, bucket, count or check changes with it. The module\n"
-            "  reads the claim's `reason` member only, never an `x-` member (ER §8a), so a reason a producer\n"
-            "  keeps under an `x-` name is not shown.\n",
+            "  or why its grade stopped short of `countersigned`. A module that draws a claim's row (the generic\n"
+            "  grouping) shows it beside the claim's verdict, and on a decided claim beside its grade, labelled as\n"
+            "  the producer's statement; a claim not yet in force shows it under its readiness label. The words are\n"
+            "  the pack's (`row.<requirement_ref>.reason.<code>`, §3, in a Result citing one contract), else the\n"
+            "  core's for the four tokens ER §4.4 registers, else the raw token. A `finding` token is drawn as a\n"
+            "  warning; a `setting` token and an unregistered token are drawn neutrally, an unregistered one always\n"
+            "  as its raw value, never as a pack sentence. A row's summary says that some claim of the row gives a\n"
+            "  reason. A claim that failed verification shows none. The cards that draw no claim row (Outcomes,\n"
+            "  EU) do not show reasons. Reasons are display-only: the module reads `reason` to draw it and to\n"
+            "  nothing else, so no verdict, grade, tally, bucket, count or check changes with it. The module reads\n"
+            "  the claim's `reason` member only, never an `x-` member (ER §8a), so a reason a producer keeps under\n"
+            "  an `x-` name is not shown.\n",
             "capsule-viewer#344: the producer's reason beside the claim",
         ),
         (
             "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n",
             "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n"
-            "| `row.<requirement_ref>.reason.<code>` | The pack's sentence for a claim's `reason` token `<code>` (§2). `<code>` is any token except `label`, `detail` and `not_evaluable`, which would name another row key; a claim with such a token shows it raw. With no sentence for a token, the module shows the raw token, never nothing. |\n",
+            "| `row.<requirement_ref>.reason.<code>` | The pack's sentence for a claim's `reason` token `<code>` (§2). `<code>` is a token ER §4.4 registers, other than `label`, `detail` and `not_evaluable`, which would name another row key. With no sentence for a token, the module shows the core's words for a registered token and the raw token for any other, never nothing. |\n",
             "capsule-viewer#344",
         ),
     ],

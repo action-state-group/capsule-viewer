@@ -322,8 +322,9 @@ export async function renderContractReport(
       verified,
       w,
       tierOf,
-      // `row.<ref>.reason.<code>` applies only to a Result citing one contract.
-      citesOneContract(result) ? input.reasons : undefined,
+      // The pack's `row.<ref>.reason.<code>` words apply only to a Result
+      // citing one contract (the Words gate); the reason itself shows always.
+      input.reasons,
     );
   regions.L0.append(levels.L0);
   regions.L1.append(levels.L1);
