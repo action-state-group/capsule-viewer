@@ -674,6 +674,9 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.rtier.totals.out-of-scope",
   "groups.rtier.totals.unstated",
   "groups.rtier.totals.failed",
+  "generic.reason.says",
+  "generic.reason.unworded",
+  "generic.reason.grade",
   "generic.rtier.totals",
   "generic.rtier.totals.out-of-scope",
   "generic.rtier.totals.unstated",
@@ -1454,7 +1457,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
   groups: "76acc9598202663738d7d2903ca1a042d9b7ca21799297946e4da39ea77d5250",
-  generic: "6c7570711462e9a9af94faac45f56414fd97a1681608be03299f6fa756eaa41c",
+  generic: "c1b737c974d47aed2f8e28b653ea553063244cc25c63d57500999822e75a8a51",
 });
 
 export interface Words {
@@ -1485,6 +1488,8 @@ export interface Words {
     requirementRef: string,
     part: "label" | "detail" | "not_evaluable",
   ): string | undefined;
+  /** The `row.<ref>.reason.<code>` word for this Result, or undefined (see `section3`). */
+  reason(requirementRef: string, code: string): string | undefined;
   /** The `group.<segment>.title` word for this Result, or undefined (see `section3`). */
   group(segment: string): string | undefined;
   readonly grouping: ContractReportGrouping;
@@ -1574,6 +1579,10 @@ export function wordsOf(
     row: (requirementRef, part) =>
       context.singleContract
         ? section3(`row.${requirementRef}.${part}`)
+        : undefined,
+    reason: (requirementRef, code) =>
+      context.singleContract
+        ? section3(`row.${requirementRef}.reason.${code}`)
         : undefined,
     group: (segment) =>
       context.singleContract ? section3(`group.${segment}.title`) : undefined,

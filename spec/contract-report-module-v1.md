@@ -94,6 +94,16 @@ rules bind it:
   never read as `CONFLICTING`, and a claim of an unrecognized `type` is shown as unrecognized, never
   dropped.
 - **`x-` members** (ER §8a) are never read.
+- **Reasons** (ER §4.4). A claim's `reason` is the producer's token for why the claim is unavailable
+  or why its grade stopped short of `countersigned`. The module shows it beside the claim's verdict,
+  and on a decided claim beside its grade, labelled as the producer's statement, in the pack's words
+  (`row.<requirement_ref>.reason.<code>`, §3) or, with none, as the raw token. A `finding` token is
+  drawn as a warning; a `setting` token and an unregistered token are drawn neutrally, an unregistered
+  one as its raw value. A row's summary says that some claim of the row gives a reason. A claim that
+  failed verification shows none. Reasons are display-only: the module reads `reason` to draw it and
+  to nothing else, so no verdict, grade, tally, bucket, count or check changes with it. The module
+  reads the claim's `reason` member only, never an `x-` member (ER §8a), so a reason a producer
+  keeps under an `x-` name is not shown.
 - **Other sealed records.** A module MAY also show other sealed records of the bundle (for example
   per-case reports) under the same rules: every number traces to sealed records, withheld stays
   explicit, and producer text is labelled as the producer's.
@@ -134,6 +144,7 @@ lowercased:
 | `report.title`, `report.summary` | The report's heading and its one-line summary. |
 | `group.<segment>.title` | A group's heading. |
 | `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |
+| `row.<requirement_ref>.reason.<code>` | The pack's sentence for a claim's `reason` token `<code>` (§2). `<code>` is any token except `label`, `detail` and `not_evaluable`, which would name another row key; a claim with such a token shows it raw. With no sentence for a token, the module shows the raw token, never nothing. |
 | `verdict.<value>` | `met`, `not_met`, `not_evaluable`, `out_of_scope`. |
 | `applicability.not_yet_in_force.title`, `.note` | The heading and note of the section for rows not yet in force (§2). |
 | `applicability.as_of` | The as-of phrase, with exactly one `{date}` slot that the module fills with the `YYYY-MM-DD` UTC date of `generated_at`, with no locale formatting. A word without exactly one `{date}` is treated as missing. When it is missing, the module shows the bare date, never nothing. |

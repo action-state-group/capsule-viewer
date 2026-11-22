@@ -428,6 +428,29 @@ CONTRACT_REPORT_MODULE = Move(
             "| `requirement_tier.<value>` | A row's requirement tier (§2): `must_have`, `informational`, `unstated`. |",
             "capsule-viewer#199",
         ),
+        # Section 2 and 3: the producer's reason for an unavailable claim
+        # (capsule-viewer#344, from agent-action-capsule#658 / ER §4.4).
+        (
+            "- **`x-` members** (ER §8a) are never read.\n",
+            "- **`x-` members** (ER §8a) are never read.\n"
+            "- **Reasons** (ER §4.4). A claim's `reason` is the producer's token for why the claim is unavailable\n"
+            "  or why its grade stopped short of `countersigned`. The module shows it beside the claim's verdict,\n"
+            "  and on a decided claim beside its grade, labelled as the producer's statement, in the pack's words\n"
+            "  (`row.<requirement_ref>.reason.<code>`, §3) or, with none, as the raw token. A `finding` token is\n"
+            "  drawn as a warning; a `setting` token and an unregistered token are drawn neutrally, an unregistered\n"
+            "  one as its raw value. A row's summary says that some claim of the row gives a reason. A claim that\n"
+            "  failed verification shows none. Reasons are display-only: the module reads `reason` to draw it and\n"
+            "  to nothing else, so no verdict, grade, tally, bucket, count or check changes with it. The module\n"
+            "  reads the claim's `reason` member only, never an `x-` member (ER §8a), so a reason a producer\n"
+            "  keeps under an `x-` name is not shown.\n",
+            "capsule-viewer#344: the producer's reason beside the claim",
+        ),
+        (
+            "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n",
+            "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n"
+            "| `row.<requirement_ref>.reason.<code>` | The pack's sentence for a claim's `reason` token `<code>` (§2). `<code>` is any token except `label`, `detail` and `not_evaluable`, which would name another row key; a claim with such a token shows it raw. With no sentence for a token, the module shows the raw token, never nothing. |\n",
+            "capsule-viewer#344",
+        ),
     ],
     rewrites=[
         ("# The contract-report/v1 Extension — v1", "# The contract-report/v1 Module — v1"),

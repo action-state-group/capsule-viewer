@@ -4,6 +4,7 @@ import type {
   ResultClaim,
   ResultRoot,
 } from "@action-state-group/agent-action-capsule";
+import type { ClaimReason } from "./claim-reasons.js";
 import type { Words } from "./contract-report-wording.js";
 import { COMPLIANCE_FRAME_VARS } from "./frame-tokens.generated.js";
 import { ROW_TIERS, type RowTier, type TierOf } from "./evidence-contract.js";
@@ -60,6 +61,9 @@ export const GENERIC_FRAME = {
 .gr .rname{font-weight:600;color:var(--navy)}
 .gr .rname code,.gr .cid{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
 .gr ul.claims{list-style:none;margin:6px 0 0;padding:0}
+.gr .rreason,.gr .rflag{font-size:12.5px;border-radius:6px;padding:2px 8px;background:#EEF0F3;color:var(--slate)}
+.gr .rreason{margin:4px 0 6px 22px}
+.gr .rreason[data-tone="warn"],.gr .rflag[data-tone="warn"]{background:var(--bad-l);color:var(--bad);font-weight:700}
 .gr .tier-note{font-size:12.5px;color:var(--slate)}
 ` +
     levelCss("gr") +
@@ -184,7 +188,54 @@ function claimProofs(claim: ResultClaim, w: Words): HTMLElement {
   return body;
 }
 
-function claimItem(claim: ResultClaim, w: Words): HTMLElement {
+/** The reasons the Result's producer gives for claims, by claim id (claim-reasons.ts). */
+type ReasonsOf = ReadonlyMap<string, ClaimReason>;
+
+/**
+ * A claim's reason, one line beside its verdict and grade (module spec
+ * section 2, Reasons): the pack's sentence for the code, else a core line
+ * naming the raw code; both said to be the producer's. A finding is drawn in
+ * the warning tone, never as fine print. On a decided claim the reason
+ * explains the grade, so the line names the grade.
+ */
+function reasonLines(
+  claim: ResultClaim,
+  w: Words,
+  reasons?: ReasonsOf,
+): HTMLElement[] {
+  const found = reasons?.get(claim.id);
+  if (found === undefined) return [];
+  const { code } = found;
+  const text = found.keyable ? w.reason(claim.requirementRef, code) : undefined;
+  const line = el("p", "rreason");
+  line.dataset.reasonCode = code;
+  line.dataset.reasonKind = found.kind;
+  line.dataset.tone = found.kind === "finding" ? "warn" : "note";
+  if (claim.verdict !== "not_evaluable")
+    line.append(
+      w.t("generic.reason.grade", { grade: w.enumWord("grade", claim.grade) }),
+      " ",
+    );
+  line.append(
+    tagSource(
+      el(
+        "span",
+        "",
+        text !== undefined
+          ? w.t("generic.reason.says", { text })
+          : w.t("generic.reason.unworded", { code }),
+      ),
+      text !== undefined ? "pack" : "core",
+    ),
+  );
+  return [line];
+}
+
+function claimItem(
+  claim: ResultClaim,
+  w: Words,
+  reasons?: ReasonsOf,
+): HTMLElement {
   const item = el("li", "");
   item.dataset.claimRef = claim.id;
   const head = el("span", "");
@@ -192,6 +243,7 @@ function claimItem(claim: ResultClaim, w: Words): HTMLElement {
   head.append(id, " ", verdictPill(shownVerdict(claim), w));
   item.append(
     levelToggle(2, head, () => claimProofs(claim, w), { className: "claim" }),
+    ...reasonLines(claim, w, reasons),
   );
   return item;
 }
@@ -201,6 +253,7 @@ function rowItem(
   w: Words,
   later: boolean,
   tierOf?: TierOf,
+  reasons?: ReasonsOf,
 ): HTMLElement {
   const label = w.row(row.requirementRef, "label");
   const name = el("span", "rname");
@@ -216,6 +269,16 @@ function rowItem(
     summary.append(" ", chip);
   }
   summary.append(tally(row, w, later));
+  const given = row.claims.filter((claim) => reasons?.has(claim.id));
+  if (given.length > 0) {
+    const flag = el("span", "rflag", w.p("generic.reason.flag", given.length));
+    flag.dataset.tone = given.some(
+      (claim) => reasons!.get(claim.id)!.kind === "finding",
+    )
+      ? "warn"
+      : "note";
+    summary.append(" ", flag);
+  }
   const toggle = levelToggle(
     1,
     summary,
@@ -236,7 +299,7 @@ function rowItem(
         ))
           body.append(el("p", "rnote", w.t("generic.later.note", { date })));
       const list = el("ul", "claims");
-      for (const claim of row.claims) list.append(claimItem(claim, w));
+      for (const claim of row.claims) list.append(claimItem(claim, w, reasons));
       body.append(el("h3", "", w.t("generic.claims.h")), list);
       return body;
     },
@@ -253,6 +316,7 @@ function groupedRows(
   w: Words,
   later: boolean,
   tierOf?: TierOf,
+  reasons?: ReasonsOf,
 ): HTMLElement {
   const box = el("div", "groups");
   const order: (string | undefined)[] = [];
@@ -281,7 +345,7 @@ function groupedRows(
       part.append(heading);
     }
     for (const row of byGroup.get(group)!)
-      part.append(rowItem(row, w, later, tierOf));
+      part.append(rowItem(row, w, later, tierOf, reasons));
     box.append(part);
   }
   return box;
@@ -299,9 +363,11 @@ function byContract(
   w: Words,
   later: boolean,
   tierOf?: TierOf,
+  reasons?: ReasonsOf,
 ): HTMLElement {
   const contracts = [...new Set(rows.map((row) => row.contractRef))];
-  if (contracts.length <= 1) return groupedRows(rows, w, later, tierOf);
+  if (contracts.length <= 1)
+    return groupedRows(rows, w, later, tierOf, reasons);
   const box = el("div", "contracts");
   for (const contract of contracts) {
     const part = el("div", "contract");
@@ -313,6 +379,7 @@ function byContract(
         w,
         later,
         tierOf,
+        reasons,
       ),
     );
     box.append(part);
@@ -335,7 +402,11 @@ export async function drawGeneric(
   verified: BundleVerificationResult,
   w: Words,
   tierOf?: TierOf,
+  claimReasonsOf?: ReasonsOf,
 ): Promise<void> {
+  // contract-report.ts passes the reasons only for a Result citing one
+  // contract: `row.<ref>.reason.<code>` applies to no other (spec section 3).
+  const reasons = claimReasonsOf;
   const tierFor = (claim: ResultClaim): RowTier =>
     tierOf === undefined
       ? "unstated"
@@ -369,7 +440,8 @@ export async function drawGeneric(
   const section = el("section", "front-card");
   section.dataset.section = "rows";
   const rows = rowsOf(inForce);
-  if (tierOf === undefined) section.append(byContract(rows, w, false));
+  if (tierOf === undefined)
+    section.append(byContract(rows, w, false, undefined, reasons));
   else
     for (const tier of ROW_TIERS) {
       const inTier = rows.filter(
@@ -387,7 +459,7 @@ export async function drawGeneric(
           }),
         ),
         el("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
-        byContract(inTier, w, false, tierOf),
+        byContract(inTier, w, false, tierOf, reasons),
       );
       section.append(part);
     }
@@ -403,7 +475,7 @@ export async function drawGeneric(
         "",
         w.t("generic.later.title", { n: later.length.toLocaleString() }),
       ),
-      byContract(laterRows, w, true, tierOf),
+      byContract(laterRows, w, true, tierOf, reasons),
     );
     section.append(part);
   }
