@@ -29,6 +29,12 @@ agent-action-capsule's `checkAnchorWitnessed`) and `readerWitnessPolicy` and
 page's memory only). The History card's signature line asks
 `readerCardSignature`, which reads the context's own strict verdict for the
 card's record and names the key it is signed with on a pass.
+The card statements a block carries in `card_statements` (the holder's
+registration of the card on a transparency service, agent-action-capsule
+`spec/standard-history-v0.md` section 13) go to `readerCardRegistered`, which
+runs agent-action-capsule's `checkCardRegistered` under the reader's own list
+for the key the card is signed with. It shows existence at a time and nothing
+else; `anchor_inclusion` stays not checked.
 
 The code moved here from agent-action-capsule (agent-action-capsule#281) and
 keeps its BSD-3-Clause license (`LICENSE-BSD-3-Clause`); the rest of the

@@ -53,6 +53,11 @@ export {
 export { paymentPreimageCheck } from "./payment-preimage.js";
 export { readerCadenceWitness } from "./cadence-witness.js";
 
+// The History card's card_registered (capsule-viewer#342; standard-history-v0
+// section 13): AAC's checkCardRegistered over the card statements the block
+// carries, under the reader's own witness list. Existence at a time only.
+export { readerCardRegistered } from "./card-registered.js";
+
 // The History card's signature (capsule-viewer#211; rule F4.7): the context's
 // own strict verdict for the root record, which the module draws and does
 // not decide.

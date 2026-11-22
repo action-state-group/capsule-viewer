@@ -183,6 +183,13 @@
     "doesnt.statement.v3": "That the counts are right. This page did not check them against the holder's whole log, so they are the holder's own statement.",
     "counts.not_counted.v3": "Not counted: {n} of {of} deals in the window.",
     "v3.coverage.month": "The holder states these counts are complete from some day in {start}. Before that, they cover the deals carried over when the holder moved to this log.",
-    "doesnt.all.v3.month": "That these are all the holder's deals. It is the window the holder's policy sets, shop purchases and deals left out are not counted, and before some day in {start} the counts are the holder's statement."
+    "doesnt.all.v3.month": "That these are all the holder's deals. It is the window the holder's policy sets, shop purchases and deals left out are not counted, and before some day in {start} the counts are the holder's statement.",
+    "registration.line": "Registered with {service} at {month} {day}, {year} {hh}:{mm} UTC by the key this card is signed with",
+    "registration.line.untimed": "Registered with {service} by the key this card is signed with",
+    "registration.note": "This shows the card existed by then. It does not show that the service checked the counts, the deals or the anchor, or that this is the only card that key registered.",
+    "registration.came": "A card statement came with the card. This page has not checked it against a service you accept.",
+    "registration.failed": "A card statement came with the card and did not pass.",
+    "doesnt.registration": "That the service checked anything in the card, or that this is the only card its key registered. A service you accept logged a statement about this card; that is all it shows.",
+    "property.card_registered": "The card was registered with a service you accept"
   }
 }
