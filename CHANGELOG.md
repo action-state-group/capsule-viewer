@@ -13,7 +13,7 @@ here. The format follows
 
 ## ts 0.20.0 and go 0.20.0 (2026-11-22)
 
-Both state viewer 0.20.0: `ts/v0.20.0`, then `go/v0.20.0` on the commit that ships its page runtime. This release carries #340, #342, #343, #344 and #345.
+Both state viewer 0.20.0: `ts/v0.20.0`, then `go/v0.20.0` on the commit that ships its page runtime.
 
 ### Added
 
