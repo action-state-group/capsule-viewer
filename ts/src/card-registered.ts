@@ -76,19 +76,15 @@ const fromHex = (hex: string): Uint8Array<ArrayBuffer> => {
   return out;
 };
 
-const FAILED: ReaderCardStatement = {
-  status: "FAIL",
-  service: null,
-  registration_time: null,
-};
-
 /**
  * SH 13.3 over `statements` (lowercase hex, one card statement each) beside
  * `card` (the card's octets), under the key identifier `key`, the anchor
- * `anchor` and `policy`: AAC's checkCardRegistered, with an entry that is not
- * hex counted as a statement that is not in the form of SH 13.1 (FAIL, SH 13.3
- * step 1), and a report that keeps AAC's per-statement results. The vectors
- * run through this; {@link readerCardRegistered} supplies its inputs.
+ * `anchor` and `policy`: AAC's checkCardRegistered, whose report (the
+ * aggregate and each statement's own result) is passed through unchanged. An
+ * entry that is not hex, or is over the size of SH 13.1, stands for octets
+ * that are not in that form, which SH 13.3 step 1 fails and which takes
+ * nothing from a statement that passes. The vectors run through this;
+ * {@link readerCardRegistered} supplies its inputs.
  */
 export async function cardRegisteredUnder(
   card: Uint8Array,
@@ -97,28 +93,22 @@ export async function cardRegisteredUnder(
   statements: readonly string[],
   policy: unknown,
 ): Promise<ReaderCardRegistered> {
-  const parsable = statements.map((s) => HEX.test(s));
   const report = await checkCardRegistered(
     card,
     key,
     anchor,
-    statements.map((s, i) => (parsable[i] ? fromHex(s) : new Uint8Array(0))),
+    statements.map((s) =>
+      HEX.test(s) && s.length <= MAX_STATEMENT_HEX
+        ? fromHex(s)
+        : new Uint8Array(0),
+    ),
     policy,
   );
-  const reports: ReaderCardStatement[] = report.statements.map((r, i) =>
-    parsable[i] ? r : FAILED,
-  );
-  const passed = reports.some((r) => r.status === "PASS");
-  const status = passed
-    ? "PASS"
-    : reports.some((r) => r.status === "FAIL")
-      ? "FAIL"
-      : "NOT_CHECKED";
   return {
-    status: reports.length === 0 ? "NOT_PRESENT" : status,
-    service: passed ? report.service : null,
-    registration_time: passed ? report.registration_time : null,
-    statements: reports,
+    status: report.status,
+    service: report.service,
+    registration_time: report.registration_time,
+    statements: report.statements,
     key_id: key,
   };
 }
@@ -141,9 +131,7 @@ export async function readerCardRegistered(
   try {
     if (
       statements.length > MAX_CARD_STATEMENTS ||
-      statements.some(
-        (s) => typeof s !== "string" || s.length > MAX_STATEMENT_HEX,
-      )
+      statements.some((s) => typeof s !== "string")
     )
       return none("NOT_CHECKED");
     if (!isVerifiedBundleContext(context)) return none("NOT_CHECKED");

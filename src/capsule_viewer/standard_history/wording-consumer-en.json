@@ -152,10 +152,10 @@
     "witness.line": "Snapshot recorded {month} {day}, {year} {hh}:{mm} UTC by {witness}",
     "witness.line.untimed": "Snapshot recorded by {witness}",
     "witness.came": "A witness receipt came with the card. This page has not checked it against a witness you accept.",
-    "witness.list.heading": "Witnesses you accept",
+    "witness.list.heading": "Services you accept",
     "witness.list.none": "None. Nothing in the card or its bundle can add one.",
     "witness.list.some": "{names}. Nothing in the card or its bundle can add one.",
-    "witness.list.help": "A list of the witnesses you accept: their names and the hex DER public keys they sign receipts under. It stays on this page only and is gone when the page closes.",
+    "witness.list.help": "A list of the witnesses and transparency services you accept (the same list checks a snapshot's witness receipt and a card's registration): their names and the hex DER public keys they sign receipts under. It stays on this page only and is gone when the page closes.",
     "witness.list.label": "Witness list (JSON)",
     "witness.list.save": "Save",
     "witness.list.reset": "Back to none",
@@ -188,8 +188,9 @@
     "registration.line.untimed": "Registered with {service} by the key this card is signed with",
     "registration.note": "This shows the card existed by then. It does not show that the service checked the counts, the deals or the anchor, or that this is the only card that key registered.",
     "registration.came": "A card statement came with the card. This page has not checked it against a service you accept.",
-    "registration.failed": "A card statement came with the card and did not pass.",
+    "registration.failed": "A card statement came with the card and failed its check. The card's own checks above are unaffected.",
     "doesnt.registration": "That the service checked anything in the card, or that this is the only card its key registered. A service you accept logged a statement about this card; that is all it shows.",
-    "property.card_registered": "The card was registered with a service you accept"
+    "property.card_registered": "Registration with a service you accept",
+    "registration.note.untimed": "This shows the card existed when the service logged it; the Receipt states no time. It does not show that the service checked the counts, the deals or the anchor, or that this is the only card that key registered."
   }
 }

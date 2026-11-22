@@ -75,9 +75,13 @@ describe("a passing statement on a standard card", () => {
     );
     expect(text(host)).toContain("That the service checked anything in the card, or that this is the only card its key registered.");
   });
-  it("with no registration time, names the service and no time", async () => {
+  it("with no registration time, names the service and no time, and does not say 'by then'", async () => {
     const { host } = await page({ answer: { ...PASS, registration_time: null } });
     expect(registration(host).firstChild.textContent).toBe("Registered with service-a by the key this card is signed with");
+    expect(registration(host).lastChild.textContent).toBe(
+      "This shows the card existed when the service logged it; the Receipt states no time. It does not show that the service checked the counts, the deals or the anchor, or that this is the only card that key registered.",
+    );
+    expect(registration(host).textContent).not.toContain("by then");
   });
   it("is a row beside the properties, and never a level or a change to anchor_inclusion", async () => {
     const { host } = await page({ answer: PASS });
@@ -120,9 +124,10 @@ describe("a statement that does not pass, or was not checked", () => {
   it("a failing statement says one came and did not pass, and never that the card was registered", async () => {
     const { host } = await page({ answer: { status: "FAIL", service: null, registration_time: null, statements: [], key_id: KEY } });
     expect(registration(host).getAttribute("data-sh-registration")).toBe("failed");
-    expect(registration(host).textContent).toBe("A card statement came with the card and did not pass.");
-    expect(text(host)).not.toMatch(/Registered with/);
+    expect(registration(host).textContent).toBe("A card statement came with the card and failed its check. The card's own checks above are unaffected.");
+    expect(text(host)).not.toMatch(/registered with/i);
     expect(row(host, "card_registered").getAttribute("data-property-status")).toBe("FAIL");
+    expect(row(host, "card_registered").firstChild.textContent).toBe("Registration with a service you accept");
   });
   it("a statement this page could not check, a runtime without the check, an error or a malformed answer says one came, never a pass", async () => {
     const answers = [
@@ -154,11 +159,18 @@ describe("a statement that does not pass, or was not checked", () => {
 });
 
 describe("a card that is not drawn as a standard card never says it was registered", () => {
-  it("a refused card with a passing answer says only that a statement came", async () => {
+  it("a refused card with a passing answer says only that a statement came, in the line and in the row", async () => {
     const { model, host } = await page({ answer: PASS, name: "neg-percentage-member" });
     expect(model.state).toBe("refused");
-    expect(text(host)).not.toMatch(/Registered with/);
+    expect(text(host)).not.toMatch(/registered with/i);
     expect(host.L0.querySelector('[data-sh-registration="came"]')).not.toBeNull();
+    expect(row(host, "card_registered").getAttribute("data-property-status")).toBe("NOT_CHECKED");
+  });
+  it("a refused card whose statement failed says it failed its check, never that it was not checked", async () => {
+    const { host } = await page({ answer: { status: "FAIL", service: null, registration_time: null, statements: [], key_id: KEY }, name: "neg-percentage-member" });
+    expect(host.L0.querySelector('[data-sh-registration="failed"]').textContent).toBe("A card statement came with the card and failed its check. The card's own checks above are unaffected.");
+    expect(text(host)).not.toContain("has not checked it");
+    expect(row(host, "card_registered").getAttribute("data-property-status")).toBe("FAIL");
   });
   it("a card whose signature fails draws no registration at all", async () => {
     const { model, host } = await page({ answer: PASS, signature: { status: "FAIL", key_id: null } });
@@ -180,6 +192,29 @@ describe("the block member", () => {
     bundle.extensions[EXT].card_statement = STATEMENTS;
     const l = load();
     expect(clone(l.api.buildModelSync(standInContext(bundle, { verify: verifyOf("person-shared") }))).state).toBe("unreadable");
+  });
+  it("saving the list twice through the page's own buttons asks the runtime again each time, with the context", async () => {
+    const calls = [];
+    const l = load({
+      readerCardSignature: () => Promise.resolve({ status: "PASS", key_id: KEY }),
+      readerWitnessPolicy: () => ({ witnesses: [] }),
+      setReaderWitnessPolicy: () => true,
+      readerCardRegistered: (context, given) => {
+        calls.push([context, given]);
+        return Promise.resolve(PASS);
+      },
+    });
+    const context = contextOf("person-shared", STATEMENTS);
+    const model = await l.registered[0].buildModel(context);
+    const host = renderAll(l, model);
+    const flush = () => new Promise((r) => setTimeout(r, 20));
+    for (const button of ["save", "reset", "save"]) {
+      host.L2.querySelector(`[data-sh-witness-list="${button}"]`).click();
+      await flush();
+      expect(registration(host).getAttribute("data-sh-registration")).toBe("line");
+    }
+    expect(calls.length).toBe(4);
+    expect(calls.every(([c, given]) => c === context && JSON.stringify(given) === JSON.stringify(STATEMENTS))).toBe(true);
   });
   it("a redraw for a new list asks the runtime again, for the same statements", async () => {
     const { l, model, seen } = await page({ answer: PASS });

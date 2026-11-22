@@ -167,15 +167,25 @@ describe("readerCardRegistered", () => {
     );
   });
 
-  it("bounds the statements: too many, or one too long, is NOT_CHECKED", async () => {
+  it("bounds the number of statements: too many is NOT_CHECKED", async () => {
     const context = await buildVerifiedBundleContext(bundle());
     const many = new Array<string>(MAX_CARD_STATEMENTS + 1).fill(statement);
     expect((await readerCardRegistered(context, many)).status).toBe(
       "NOT_CHECKED",
     );
+  });
+
+  it("counts a statement over the size of SH 13.1 as one that fails, and takes nothing from a passing one", async () => {
+    const c = corpus.cases.find((x) => x.name === "pass-eddsa-time")!;
     const long = "00".repeat(MAX_STATEMENT_HEX / 2 + 1);
-    expect((await readerCardRegistered(context, [long])).status).toBe(
-      "NOT_CHECKED",
+    const got = await cardRegisteredUnder(
+      fromHex(c.card),
+      c.holder,
+      c.anchor,
+      [long, ...c.statements],
+      policyOf(c.policy),
     );
+    expect(got.status).toBe("PASS");
+    expect(got.statements.map((x) => x.status)).toEqual(["FAIL", "PASS"]);
   });
 });
