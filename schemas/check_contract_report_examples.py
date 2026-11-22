@@ -65,8 +65,14 @@ FIXED_KEYS = (
 # The one slot applicability.as_of carries: exactly one, or the word is missing.
 AS_OF_SLOT = "{date}"
 ROW_SUFFIXES = ("label", "detail", "not_evaluable")
-# A claim `reason` token (evidence-result-v0 section 4.4).
-REASON_CODE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+# The `reason` tokens evidence-result-v0 section 4.4 registers: a pack words only these
+# (an unregistered token is always shown raw), so a key for another is not defined.
+REASON_CODES = (
+    "capsule_signature_did_not_verify",
+    "capsule_signer_not_trusted",
+    "counterparty_leg_signature_did_not_verify",
+    "counterparty_leg_signer_not_trusted",
+)
 # One row of the vendored-files table in schemas/README.md: | `path` | ... | `sha256` |
 VENDOR_ROW = re.compile(r"^\| `([^`]+)` \|.*\| `([0-9a-f]{64})` \|$")
 
@@ -109,7 +115,7 @@ def defined_key(key: str) -> bool:
         # row.<requirement_ref>.reason.<code> (spec section 3): a token that is
         # not one of the row suffixes, which would name another row key.
         ref, sep, code = rest.rpartition(".")
-        return bool(sep) and ref.endswith(".reason") and bool(REASON_CODE.match(code)) and code not in ROW_SUFFIXES
+        return bool(sep) and ref.endswith(".reason") and code in REASON_CODES
     return False
 
 

@@ -227,11 +227,16 @@ it("a registered token with no pack sentence is worded by the core", async () =>
 });
 
 it("a reason changes no grade or check outcome either", async () => {
-  const grades = (root: HTMLElement) =>
-    [...root.querySelectorAll("[data-claim-ref]")].map((n) => [
-      n.getAttribute("data-claim-ref"),
-      n.querySelector("[data-verdict]")?.textContent,
-    ]);
+  // Each claim's own text (its verdict, grade and proofs) with the reason
+  // lines taken out, and the rows' tallies and the counts.
+  const rest = (root: HTMLElement) =>
+    [
+      ...root.querySelectorAll("[data-claim-ref], [data-tally], [data-counts]"),
+    ].map((n) => {
+      const copy = n.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll(".rreason").forEach((r) => r.remove());
+      return copy.textContent;
+    });
   const plain = await draw(source(), pack(WORDS));
   const reasoned = await draw(
     source((claims) => {
@@ -240,7 +245,8 @@ it("a reason changes no grade or check outcome either", async () => {
     }),
     pack(WORDS),
   );
-  expect(grades(reasoned)).toEqual(grades(plain));
+  expect(rest(reasoned)).toEqual(rest(plain));
+  expect(rest(plain).join(" ")).toContain("self-attested");
 });
 
 it("a not-yet-in-force claim's reason shows under its readiness label", async () => {
