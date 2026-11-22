@@ -11,6 +11,7 @@ import {
   contractReportWords,
   type ContractReportGrouping,
 } from "./contract-report-wording.js";
+import type { ClaimReason } from "./claim-reasons.js";
 import { drawGeneric, GENERIC_FRAME } from "./generic-report-view.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
 import { refusedWordingNotice } from "./report-levels.js";
@@ -99,7 +100,11 @@ export type ContractReportInput =
       readonly grouping: "groups";
       readonly presentation: CompliancePresentation;
     }
-  | { readonly grouping: "generic" };
+  | {
+      readonly grouping: "generic";
+      /** The producer's reasons by claim id, from `claim.reason` (claim-reasons.ts); omitted when none was read. */
+      readonly reasons?: ReadonlyMap<string, ClaimReason>;
+    };
 
 const FRAMES: Readonly<
   Record<
@@ -309,7 +314,18 @@ export async function renderContractReport(
       w,
       tierOf,
     );
-  else await drawGeneric(levels, result, bundle, verified, w, tierOf);
+  else
+    await drawGeneric(
+      levels,
+      result,
+      bundle,
+      verified,
+      w,
+      tierOf,
+      // The pack's `row.<ref>.reason.<code>` words apply only to a Result
+      // citing one contract (the Words gate); the reason itself shows always.
+      input.reasons,
+    );
   regions.L0.append(levels.L0);
   regions.L1.append(levels.L1);
   regions.L2.append(levels.L2);

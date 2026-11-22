@@ -55,6 +55,7 @@ import {
   jsonDigest,
 } from "@action-state-group/agent-action-capsule";
 import { chartDatasetOf, resultDocument } from "./chart-dataset.js";
+import { claimReasons } from "./claim-reasons.js";
 import { ChartRefusal, checkChart, type ChartDataset } from "./chart-spec.js";
 import { renderChart, renderChartRefused, renderCharts } from "./chart-view.js";
 import { checkView, isView } from "./report-view.js";
@@ -2461,7 +2462,10 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
     const supported = contractReportInput(context.bundle);
     const input: ContractReportInput | undefined =
       supported === undefined
-        ? { grouping: "generic" }
+        ? {
+            grouping: "generic",
+            reasons: claimReasons(result.claims),
+          }
         : claimsFitCard(result, supported.grouping)
           ? supported
           : undefined;
