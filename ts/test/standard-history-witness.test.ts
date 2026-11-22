@@ -524,14 +524,14 @@ describe("the reader changes their witness list on the page", () => {
     expect(readerWitnessPolicy().witnesses).toHaveLength(0);
   });
 
-  it("refuses text that is not a witness list and changes nothing", async () => {
+  it("refuses text that is not a service list and changes nothing", async () => {
     const p = await page();
     p.q('[data-sh-witness-list="input"]').value =
       '{"witnesses": [{"name": "w"}]}';
     p.q('[data-sh-witness-list="save"]').click();
     await p.tick();
     expect(p.text()).toContain(
-      "That is not a witness list, so nothing changed.",
+      "That is not a service list, so nothing changed.",
     );
     expect(p.text()).not.toContain("Snapshot recorded");
     expect(readerWitnessPolicy().witnesses).toHaveLength(0);
