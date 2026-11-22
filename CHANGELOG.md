@@ -11,6 +11,8 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.20.0 (2026-11-22)
+
 ### Added
 
 - The contract-report module shows a claim's `reason` beside its verdict and grade (agent-action-capsule `spec/evidence-result-v0.md` section 4.4, AAC#658, @action-state-group/agent-action-capsule 0.16.0; #344, the sentences adapted from Sherlock2's wording on evidencebook-skills#207): the pack's sentence for the token under the new key `row.<requirement_ref>.reason.<code>` (`spec/contract-report-module-v1.md` sections 2 and 3), else the core's own words for the four registered tokens, else the raw token (an unregistered token is always raw), labelled as the producer's statement; a `finding` token in the warning tone, a `setting` or an unregistered token neutrally; a not-yet-in-force claim's reason under its readiness label; a count in the row's summary; nothing on a claim that failed verification. The pack's key applies only to a Result citing one contract; the reason itself shows on any Result. The Outcomes and EU cards draw no claim row and show no reason. It is display-only: no verdict, grade, tally, bucket or count changes, and it reads no `x-` member. The generic pack gains `generic.reason.*` words, so its `wording_sha256` changes; the example pack carries the four registered tokens' sentences. The ts package now pins agent-action-capsule 0.16.0.
