@@ -41,7 +41,7 @@
     }
   },
   "dependencies": {
-    "@action-state-group/agent-action-capsule": "0.14.0",
+    "@action-state-group/agent-action-capsule": "0.15.0",
     "@action-state-group/cll": "0.4.0"
   },
   "devDependencies": {

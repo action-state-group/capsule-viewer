@@ -705,7 +705,7 @@ if (m.canRender(ctx)) m.buildModel(ctx).then(function (model) { m.render(model, 
         expect(m.text.includes("receipt came") || m.text.includes("Snapshot recorded")).toBe(line || key.endsWith("not-checked"));
         expect(m.failedRow).toBe(key.endsWith("witness-unlisted") || key.endsWith("witness-tampered"));
         // The reader's own list is shown wherever Receipts came with the card.
-        expect(m.text.includes("Witnesses you accept")).toBe(!key.includes("unwitnessed"));
+        expect(m.text.includes("Services you accept")).toBe(!key.includes("unwitnessed"));
         if (line || key.endsWith("not-checked")) {
           await tab.open(urls[key], { width });
           await tab.evaluate(`document.querySelectorAll("details").forEach((d) => { d.open = true; })`);

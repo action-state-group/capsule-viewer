@@ -171,7 +171,7 @@ describe("the witness line, with the reader's own witness list", () => {
       "A witness receipt came with the card. This page has not checked it against a witness you accept.",
     );
     expect(text).not.toContain("Snapshot recorded");
-    expect(text).toContain("Witnesses you accept: None.");
+    expect(text).toContain("Services you accept: None.");
   });
 
   it("with no runtime check at all, is NOT_CHECKED too, never a false claim", async () => {
@@ -210,7 +210,7 @@ describe("the witness line, with the reader's own witness list", () => {
     const text = draw(model);
     expect(text).not.toContain("Snapshot recorded");
     expect(text).not.toContain("receipt came with the card");
-    expect(text).not.toContain("Witnesses you accept");
+    expect(text).not.toContain("Services you accept");
     // A default card is signed, not witnessed, and the page says so plainly (capsule-cli#519).
     expect(text).toContain(
       "signed by its holder. No outside witness recorded its snapshot",
@@ -506,7 +506,7 @@ describe("the reader changes their witness list on the page", () => {
 
   it("saves a list, draws the line, and goes back to none", async () => {
     const p = await page();
-    expect(p.text()).toContain("Witnesses you accept: None.");
+    expect(p.text()).toContain("Services you accept: None.");
     expect(p.text()).not.toContain("Snapshot recorded");
     p.q('[data-sh-witness-list="input"]').value = JSON.stringify(READER_LIST);
     p.q('[data-sh-witness-list="save"]').click();
@@ -519,19 +519,19 @@ describe("the reader changes their witness list on the page", () => {
     expect(p.host.L0.querySelectorAll("[data-sh-module]")).toHaveLength(1);
     expect(readerWitnessPolicy().witnesses.length).toBeGreaterThan(0);
     p.q('[data-sh-witness-list="reset"]').click();
-    await p.until(() => p.text().includes("Witnesses you accept: None."));
+    await p.until(() => p.text().includes("Services you accept: None."));
     expect(p.text()).not.toContain("Snapshot recorded");
     expect(readerWitnessPolicy().witnesses).toHaveLength(0);
   });
 
-  it("refuses text that is not a witness list and changes nothing", async () => {
+  it("refuses text that is not a service list and changes nothing", async () => {
     const p = await page();
     p.q('[data-sh-witness-list="input"]').value =
       '{"witnesses": [{"name": "w"}]}';
     p.q('[data-sh-witness-list="save"]').click();
     await p.tick();
     expect(p.text()).toContain(
-      "That is not a witness list, so nothing changed.",
+      "That is not a service list, so nothing changed.",
     );
     expect(p.text()).not.toContain("Snapshot recorded");
     expect(readerWitnessPolicy().witnesses).toHaveLength(0);
@@ -544,7 +544,7 @@ describe("the reader changes their witness list on the page", () => {
     p.q('[data-sh-witness-list="reset"]').click(); // fast: the newest
     await new Promise((r) => setTimeout(r, 400));
     expect(p.text()).not.toContain("Snapshot recorded");
-    expect(p.text()).toContain("Witnesses you accept: None.");
+    expect(p.text()).toContain("Services you accept: None.");
   });
 
   it("one card's list change never supersedes another card's check", async () => {
