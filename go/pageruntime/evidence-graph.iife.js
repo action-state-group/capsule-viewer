@@ -17865,10 +17865,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("003fc8941d80de5d1753181aba7b524bd86a85a9");
+    return commitPrefix("03623063136b6cebbc3700d4e21b680a3800066f");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.21.0",
@@ -19730,7 +19730,14 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "generic.claim.unrecognized": "unrecognized claim type {type}",
       "generic.claim.contract": "Contract",
       "generic.claim.requirement": "Requirement",
-      "generic.claim.failure": "Why it failed verification"
+      "generic.claim.failure": "Why it failed verification",
+      "generic.receipt.open": "Open receipt",
+      "generic.receipt.close": "Close receipt",
+      "generic.receipt.not_carried": "Receipt not carried with this page.",
+      "generic.receipt.no_module": "This page has no viewer for this kind of receipt, so it is not shown.",
+      "generic.receipt.withheld": "This node's share policy keeps this receipt off the page.",
+      "generic.receipt.unreadable": "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
+      "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged."
     }
   };
 
@@ -20204,6 +20211,16 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "generic.producer.note",
     "generic.later.note",
     "generic.claim.failure",
+    // The deal receipt line under a claim (capsule-viewer#228): a pack cannot
+    // make a receipt that is not carried read as "no record", or hide that a
+    // carried receipt could not be read or did not pass its checks.
+    "generic.receipt.open",
+    "generic.receipt.close",
+    "generic.receipt.not_carried",
+    "generic.receipt.no_module",
+    "generic.receipt.withheld",
+    "generic.receipt.unreadable",
+    "generic.receipt.unverified",
     // The shared front (report-front.ts): the mock-judge line, what the
     // aggregate's unknown count is, what the page and the bundle carry, and
     // the producer's findings label.
@@ -20798,7 +20815,7 @@ ${key}`);
   var DEFAULT_PACK_SHA256 = Object.freeze({
     lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
     groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
-    generic: "9987467e7d99ff4680fa6d7e2d2d634455f729958bfbd53ebac86c14508b031d"
+    generic: "307d815250e1e422e183f9a6a41bc0355d046a0dd86a1be26860695ffa586b87"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -24486,12 +24503,8 @@ ${key}`);
     renderReportProofs2(levels.L2, model, bundle, verified, w);
   }
 
-  // src/generic-report-view.ts
-  var GENERIC_FRAME = {
-    tag: "div",
-    className: "gr",
-    page: "contract-report",
-    css: `
+  // src/generic-report-styles.ts
+  var GENERIC_REPORT_CSS = `
 .gr{${COMPLIANCE_FRAME_VARS}
   font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;display:block;max-width:1080px;margin:26px auto;padding:0 28px}
 .gr *{box-sizing:border-box}
@@ -24509,7 +24522,18 @@ ${key}`);
 .gr .rreason{margin:4px 0 6px 22px}
 .gr .rreason[data-tone="warn"],.gr .rflag[data-tone="warn"]{background:var(--bad-l);color:var(--bad);font-weight:700}
 .gr .tier-note{font-size:12.5px;color:var(--slate)}
-` + levelCss("gr") + frontCss(".gr")
+.gr .rcpt{margin:6px 0 6px 22px;font-size:13px}
+.gr .rcpt button{font:inherit;color:var(--navy);background:#fff;border:1px solid var(--navy);border-radius:6px;padding:2px 10px;cursor:pointer}
+.gr .rcpt-note{color:var(--slate);margin:0}
+.gr .rcpt-panel{margin-top:8px;border-top:1px solid #D9DDE3;padding-top:8px}
+` + levelCss("gr") + frontCss(".gr");
+
+  // src/generic-report-view.ts
+  var GENERIC_FRAME = {
+    tag: "div",
+    className: "gr",
+    page: "contract-report",
+    css: GENERIC_REPORT_CSS
   };
   var VERDICT_TONE = {
     met: "ok",
@@ -24628,7 +24652,76 @@ ${key}`);
     );
     return [line];
   }
-  function claimItem(claim, w, reasons) {
+  function dealIdOf(claimId) {
+    const at = claimId.indexOf("::");
+    return at > 0 ? claimId.slice(0, at) : void 0;
+  }
+  function receiptLine(claim, w, receipts3) {
+    const deal = dealIdOf(claim.id);
+    if (deal === void 0) return [];
+    const line = el10("div", "rcpt");
+    line.dataset.receiptDeal = deal;
+    const text2 = Object.prototype.hasOwnProperty.call(receipts3.texts, deal) ? receipts3.texts[deal] : void 0;
+    if (text2 === void 0 || text2 === null) {
+      const note = el10(
+        "p",
+        "rcpt-note",
+        w.t(
+          text2 === null ? "generic.receipt.withheld" : "generic.receipt.not_carried"
+        )
+      );
+      note.dataset.receipt = text2 === null ? "withheld" : "not-carried";
+      line.append(note);
+      return [line];
+    }
+    const button = el10(
+      "button",
+      "",
+      w.t("generic.receipt.open")
+    );
+    button.setAttribute("type", "button");
+    button.setAttribute("aria-expanded", "false");
+    button.dataset.receipt = "open";
+    const panel = el10("div", "rcpt-panel");
+    panel.hidden = true;
+    let state = "closed";
+    button.addEventListener("click", () => {
+      if (state === "shown") {
+        panel.hidden = true;
+        state = "hidden";
+        button.setAttribute("aria-expanded", "false");
+        button.textContent = w.t("generic.receipt.open");
+        return;
+      }
+      panel.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      button.textContent = w.t("generic.receipt.close");
+      if (state === "hidden") {
+        state = "shown";
+        return;
+      }
+      state = "shown";
+      button.disabled = true;
+      const showOutcome = (outcome) => {
+        button.disabled = false;
+        panel.dataset.receiptState = outcome;
+        if (outcome === "opened") return;
+        panel.replaceChildren(
+          el10(
+            "p",
+            "rcpt-note",
+            w.t(
+              outcome === "no-module" ? "generic.receipt.no_module" : outcome === "unverified" ? "generic.receipt.unverified" : "generic.receipt.unreadable"
+            )
+          )
+        );
+      };
+      receipts3.open(text2, panel).then(showOutcome, () => showOutcome("unreadable"));
+    });
+    line.append(button, panel);
+    return [line];
+  }
+  function claimItem(claim, w, reasons, receipts3) {
     const item = el10("li", "");
     item.dataset.claimRef = claim.id;
     const head2 = el10("span", "");
@@ -24636,11 +24729,12 @@ ${key}`);
     head2.append(id, " ", verdictPill(shownVerdict(claim), w));
     item.append(
       levelToggle(2, head2, () => claimProofs(claim, w), { className: "claim" }),
-      ...reasonLines(claim, w, reasons)
+      ...reasonLines(claim, w, reasons),
+      ...receipts3 === void 0 ? [] : receiptLine(claim, w, receipts3)
     );
     return item;
   }
-  function rowItem(row2, w, later, tierOf, reasons) {
+  function rowItem(row2, w, later, tierOf, reasons, receipts3) {
     const label = w.row(row2.requirementRef, "label");
     const name = el10("span", "rname");
     if (label !== void 0)
@@ -24683,7 +24777,8 @@ ${key}`);
           ))
             body.append(el10("p", "rnote", w.t("generic.later.note", { date })));
         const list2 = el10("ul", "claims");
-        for (const claim of row2.claims) list2.append(claimItem(claim, w, reasons));
+        for (const claim of row2.claims)
+          list2.append(claimItem(claim, w, reasons, receipts3));
         body.append(el10("h3", "", w.t("generic.claims.h")), list2);
         return body;
       },
@@ -24693,7 +24788,7 @@ ${key}`);
     toggle.dataset.contract = row2.contractRef;
     return toggle;
   }
-  function groupedRows(rows, w, later, tierOf, reasons) {
+  function groupedRows(rows, w, later, tierOf, reasons, receipts3) {
     const box = el10("div", "groups");
     const order = [];
     const byGroup = /* @__PURE__ */ new Map();
@@ -24718,7 +24813,7 @@ ${key}`);
         part.append(heading);
       }
       for (const row2 of byGroup.get(group))
-        part.append(rowItem(row2, w, later, tierOf, reasons));
+        part.append(rowItem(row2, w, later, tierOf, reasons, receipts3));
       box.append(part);
     }
     return box;
@@ -24728,10 +24823,10 @@ ${key}`);
     heading.append(" ", tagSource(el10("code", "", contract), "producer"));
     return heading;
   }
-  function byContract(rows, w, later, tierOf, reasons) {
+  function byContract(rows, w, later, tierOf, reasons, receipts3) {
     const contracts = [...new Set(rows.map((row2) => row2.contractRef))];
     if (contracts.length <= 1)
-      return groupedRows(rows, w, later, tierOf, reasons);
+      return groupedRows(rows, w, later, tierOf, reasons, receipts3);
     const box = el10("div", "contracts");
     for (const contract of contracts) {
       const part = el10("div", "contract");
@@ -24743,14 +24838,15 @@ ${key}`);
           w,
           later,
           tierOf,
-          reasons
+          reasons,
+          receipts3
         )
       );
       box.append(part);
     }
     return box;
   }
-  async function drawGeneric(levels, result3, bundle, verified, w, tierOf, reasons) {
+  async function drawGeneric(levels, result3, bundle, verified, w, tierOf, reasons, receipts3) {
     const tierFor = (claim) => tierOf === void 0 ? "unstated" : tierOf(claim.contractRef, claim.requirementRef);
     const inForce = result3.claims.filter((claim) => !claim.later);
     const later = result3.claims.filter((claim) => claim.later);
@@ -24776,7 +24872,7 @@ ${key}`);
     section.dataset.section = "rows";
     const rows = rowsOf(inForce);
     if (tierOf === void 0)
-      section.append(byContract(rows, w, false, void 0, reasons));
+      section.append(byContract(rows, w, false, void 0, reasons, receipts3));
     else
       for (const tier of ROW_TIERS) {
         const inTier = rows.filter(
@@ -24794,7 +24890,7 @@ ${key}`);
             })
           ),
           el10("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
-          byContract(inTier, w, false, tierOf, reasons)
+          byContract(inTier, w, false, tierOf, reasons, receipts3)
         );
         section.append(part);
       }
@@ -24808,7 +24904,7 @@ ${key}`);
           "",
           w.t("generic.later.title", { n: later.length.toLocaleString() })
         ),
-        byContract(laterRows, w, true, tierOf, reasons)
+        byContract(laterRows, w, true, tierOf, reasons, receipts3)
       );
       section.append(part);
     }
@@ -24863,7 +24959,7 @@ ${key}`);
   function citesOneContract(result3) {
     return new Set(result3.claims.map((claim) => claim.contractRef)).size <= 1;
   }
-  async function renderContractReport(result3, input, bundle, verified, host, wording, contract) {
+  async function renderContractReport(result3, input, bundle, verified, host, wording, contract, receipts3) {
     const tierOf = tierReader(result3, contract);
     const w = await contractReportWords(input.grouping, wording, {
       singleContract: citesOneContract(result3)
@@ -24951,7 +25047,8 @@ ${key}`);
         tierOf,
         // The pack's `row.<ref>.reason.<code>` words apply only to a Result
         // citing one contract (the Words gate); the reason itself shows always.
-        input.reasons
+        input.reasons,
+        receipts3
       );
     regions.L0.append(levels.L0);
     regions.L1.append(levels.L1);
@@ -26728,9 +26825,10 @@ ${pad.repeat(depth)}`;
     }
     const link = element6("a", CHECKED_SECTION_TITLE);
     link.className = "cv-shell-link";
-    link.setAttribute("href", `#${CHECKED_SECTION_ID}`);
+    const checkedId = checkedSectionId(root);
+    link.setAttribute("href", `#${checkedId}`);
     link.addEventListener("click", () => {
-      const section = root.ownerDocument.getElementById(CHECKED_SECTION_ID);
+      const section = root.ownerDocument.getElementById(checkedId);
       if (section instanceof root.ownerDocument.defaultView.HTMLDetailsElement)
         section.open = true;
     });
@@ -26847,6 +26945,24 @@ ${pad.repeat(depth)}`;
   ]);
   var CHECKED_SECTION_TITLE = "How this page was checked";
   var CHECKED_SECTION_ID = "cv-checked";
+  var checkedIds = /* @__PURE__ */ new WeakMap();
+  var renderRoots = /* @__PURE__ */ new WeakSet();
+  var nestedRenders = 0;
+  function checkedSectionId(root) {
+    const known = checkedIds.get(root);
+    if (known !== void 0) return known;
+    let nested = false;
+    for (let a = root.parentElement; a !== null; a = a.parentElement)
+      if (renderRoots.has(a)) {
+        nested = true;
+        break;
+      }
+    renderRoots.add(root);
+    nestedRenders += 1;
+    const id = nested ? `${CHECKED_SECTION_ID}-${nestedRenders}` : CHECKED_SECTION_ID;
+    checkedIds.set(root, id);
+    return id;
+  }
   function renderPresentationHeader(root, bundle) {
     const presentation = readPresentationBlock(bundle);
     if (presentation === void 0) return;
@@ -27269,7 +27385,7 @@ ${pad.repeat(depth)}`;
     scope.dataset.checks = "scope";
     host.append(scope);
   }
-  async function renderVerificationPage(root, context, styled, applied, refused, citedSigners, verifierHint, depth, stamps, charts, contract, l3) {
+  async function renderVerificationPage(root, context, styled, applied, refused, citedSigners, verifierHint, depth, stamps, charts, contract, l3, checkedId) {
     const { bundle, verification: verified } = context;
     const section = element6("section");
     section.dataset.page = "verification";
@@ -27379,7 +27495,7 @@ ${pad.repeat(depth)}`;
     page.append(element6("p", model.verifyIndependentlyLine));
     const folded = document.createElement("details");
     folded.className = "cv-checked";
-    folded.id = CHECKED_SECTION_ID;
+    folded.id = checkedId;
     folded.dataset.checked = "";
     folded.open = !bundleVerified(verified) || depth === "L2";
     const line = checkedSummaryLine(bundleVerified(verified), model);
@@ -28271,7 +28387,8 @@ ${pad.repeat(depth)}`;
         model.verification,
         { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
         host.wording,
-        host.contract
+        host.contract,
+        host.receipts
       );
     }
   };
@@ -28679,6 +28796,33 @@ ${pad.repeat(depth)}`;
   }
   var SETTLE_MS = 100;
   var checkingRenders = /* @__PURE__ */ new WeakMap();
+  var RECEIPT_MODULE_IDS = /* @__PURE__ */ new Set([
+    "capsulectl.deal-view/v0",
+    "capsulectl.deal-view-composed/v0"
+  ]);
+  async function openReceipt(text2, panel, options) {
+    let bundle;
+    try {
+      bundle = JSON.parse(text2);
+    } catch {
+      return "unreadable";
+    }
+    const context = await buildVerifiedBundleContext(bundle);
+    const registry = options.registry ?? defaultRegistry;
+    const resolution = await registry.resolve(
+      context,
+      DEFAULT_AUDIENCE,
+      DEFAULT_FORMAT
+    );
+    if (resolution.kind !== "module" || !RECEIPT_MODULE_IDS.has(resolution.module.manifest.id))
+      return bundleVerified(context.verification) ? "no-module" : "unverified";
+    await renderEvidenceGraph(context, panel, void 0, {
+      audience: DEFAULT_AUDIENCE,
+      format: DEFAULT_FORMAT,
+      ...options.registry === void 0 ? {} : { registry: options.registry }
+    });
+    return "opened";
+  }
   async function renderVerifiedContext(context, root, options) {
     const { bundle, verification } = context;
     const verified = bundleVerified(verification);
@@ -28965,6 +29109,12 @@ ${pad.repeat(depth)}`;
         depth,
         ...options.wording === void 0 ? {} : { wording: options.wording },
         ...contract.checked === void 0 ? {} : { contract: contract.checked },
+        ...options.receipts === void 0 ? {} : {
+          receipts: {
+            texts: options.receipts,
+            open: (text2, panel) => openReceipt(text2, panel, options)
+          }
+        },
         setChromeClass(name) {
           if (name !== OUTCOME_CHROME && name !== COMPLIANCE_CHROME)
             throw new Error(`unknown chrome class ${JSON.stringify(name)}`);
@@ -29063,7 +29213,8 @@ ${pad.repeat(depth)}`;
           options.wording
         ),
         voice: options.voice ?? "shared"
-      } : void 0
+      } : void 0,
+      checkedSectionId(root)
     );
     const summary = root.querySelector("[data-verify-summary]");
     if (summary !== null) summary.textContent = checkedLine;
