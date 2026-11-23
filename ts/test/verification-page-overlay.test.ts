@@ -180,6 +180,11 @@ it("aacInterpreters leaves out the alias interpreters AAC does not name", () => 
 it.each([
   ["outcome-report-bundle.json", "outcome-report/v1", "outcome-report-card"],
   ["compliance-bundle.json", "eu-ai-act-compliance/v1", "compliance-card"],
+  [
+    "compliance-v2/bundle.json",
+    "eu-ai-act-obligations-report/v2",
+    "compliance-card",
+  ],
 ])("%s: the %s row is interpreted by %s", async (file, kind, interpreter) => {
   const { bundle } = await sealEvidenceBundle(
     JSON.parse(

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import { expect, it } from "vitest";
-import { readCompliancePresentation } from "../src/compliance-presentation.js";
+import {
+  readComplianceBlock,
+  readCompliancePresentation,
+} from "../src/compliance-presentation.js";
 
 function bundle(block: unknown): unknown {
   return { extensions: { "eu-ai-act-compliance/v1": block } };
@@ -148,4 +151,100 @@ it("quality_protocol is optional and parses when present", () => {
     bundle({ enabled: true, obligations: [MINIMAL_OBLIGATION] }),
   )!;
   expect(without.qualityProtocol).toBeUndefined();
+});
+
+const V2 = "eu-ai-act-obligations-report/v2";
+const V1 = "eu-ai-act-compliance/v1";
+
+function obligationWith(finding: unknown): unknown {
+  const row = MINIMAL_OBLIGATION.rows[0]!;
+  return { ...MINIMAL_OBLIGATION, rows: [{ ...row, finding }] };
+}
+
+function blockOf(finding: unknown): unknown {
+  return { enabled: true, obligations: [obligationWith(finding)] };
+}
+
+it("a v2 finding is {id, observed, owner_due} and needs all three", () => {
+  const read = (finding: unknown) =>
+    readCompliancePresentation({ extensions: { [V2]: blockOf(finding) } })!
+      .obligations[0]!.rows[0]!.finding;
+  expect(read({ id: "F-01", observed: "Seen.", owner_due: "Owner" })).toEqual({
+    id: "F-01",
+    observed: "Seen.",
+    ownerDue: "Owner",
+  });
+  expect(read({ id: "F-01", owner_due: "Owner" })).toBeUndefined();
+  expect(read({ id: "F-01", observed: "Seen." })).toBeUndefined();
+  // A v1 shape is not a v2 finding, and a grade on a v2 finding is not read.
+  expect(
+    read({
+      id: "F-01",
+      severity: "High",
+      recommendation: "Retrain.",
+      owner_due: "Owner",
+    }),
+  ).toBeUndefined();
+  expect(
+    read({
+      id: "F-01",
+      observed: "Seen.",
+      severity: "High",
+      recommendation: "Retrain.",
+      owner_due: "Owner",
+    }),
+  ).toEqual({ id: "F-01", observed: "Seen.", ownerDue: "Owner" });
+});
+
+it("a v1 finding still needs severity and recommendation", () => {
+  const read = (finding: unknown) =>
+    readCompliancePresentation({ extensions: { [V1]: blockOf(finding) } })!
+      .obligations[0]!.rows[0]!.finding;
+  expect(
+    read({
+      id: "F-01",
+      severity: "Low",
+      recommendation: "Do it.",
+      owner_due: "Owner",
+    }),
+  ).toEqual({
+    id: "F-01",
+    severity: "Low",
+    recommendation: "Do it.",
+    ownerDue: "Owner",
+  });
+  expect(
+    read({ id: "F-01", observed: "Seen.", owner_due: "Owner" }),
+  ).toBeUndefined();
+});
+
+it("each key is engaged on its own block, and the card draws v2 first", () => {
+  const v2 = {
+    enabled: true,
+    regulation: "R2",
+    obligations: [MINIMAL_OBLIGATION],
+  };
+  const v1 = {
+    enabled: true,
+    regulation: "R1",
+    obligations: [MINIMAL_OBLIGATION],
+  };
+  const declined = { enabled: false, obligations: [MINIMAL_OBLIGATION] };
+  expect(readComplianceBlock({ extensions: { [V2]: v2 } }, V1)).toBeUndefined();
+  expect(readComplianceBlock({ extensions: { [V1]: v1 } }, V2)).toBeUndefined();
+  expect(
+    readComplianceBlock({ extensions: { [V1]: v1, [V2]: declined } }, V1),
+  ).toBeDefined();
+  expect(
+    readComplianceBlock({ extensions: { [V1]: declined, [V2]: v2 } }, V2),
+  ).toBeDefined();
+  expect(
+    readCompliancePresentation({ extensions: { [V1]: v1, [V2]: v2 } })!
+      .regulation,
+  ).toBe("R2");
+  // A declined v2 block leaves the v1 block of an older report in force.
+  expect(
+    readCompliancePresentation({ extensions: { [V1]: v1, [V2]: declined } })!
+      .regulation,
+  ).toBe("R1");
 });

@@ -48,10 +48,12 @@ import {
  *   tier (the cited reports' `epistemic_type`, when they all agree), the
  *   contract and judge pin, the rationale, and the transcript (only when the
  *   bundle carries it verifiably; see `findTranscript`).
- * - From the producer's `eu-ai-act-compliance/v1` extension, outside the
+ * - From the producer's `eu-ai-act-obligations-report/v2` (or earlier
+ *   `eu-ai-act-compliance/v1`) extension, outside the
  *   signed records: the regulatory mapping -- article, obligation title,
  *   plain-language summary, applicability, method, the not-evaluable note and
- *   the finding templates (severity, recommendation, owner). The page labels
+ *   the finding templates (v2: what was observed and the owner; v1: severity,
+ *   recommendation, owner). The page labels
  *   it as the producer's mapping. An obligation the claims name but the
  *   extension does not map reads "not stated"; a test the extension names but
  *   no claim does is not drawn.
@@ -163,8 +165,11 @@ export interface ComplianceFindingModel {
   readonly obligationKey: string;
   readonly article: string;
   readonly testName: string;
-  readonly severity: string;
-  readonly recommendation: string;
+  /** The v1 grade and advice; absent on a v2 finding, which carries `observed` instead. */
+  readonly severity?: string;
+  readonly recommendation?: string;
+  /** The v2 statement of what was observed; absent on a v1 finding. */
+  readonly observed?: string;
   readonly ownerDue: string;
   readonly sessionIds: readonly string[];
 }
@@ -609,8 +614,12 @@ function buildFindings(
         obligationKey: obligation.key,
         article: obligation.article,
         testName: row.name,
-        severity: row.finding.severity,
-        recommendation: row.finding.recommendation,
+        ...("observed" in row.finding
+          ? { observed: row.finding.observed }
+          : {
+              severity: row.finding.severity,
+              recommendation: row.finding.recommendation,
+            }),
         ownerDue: row.finding.ownerDue,
         sessionIds: row.sessionsByVerdict.get("not_met") ?? [],
       });

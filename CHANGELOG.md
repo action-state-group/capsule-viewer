@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The EU AI Act card reads the renamed template `eu-ai-act-obligations-report/v2` (#349, evidencebook-skills#201, Steven's ruling of 2026-11-23: drop severity and retrain advice, keep the report layout): the same grouped obligation layout, with each finding `{id, observed, owner_due}` drawn as what was observed and its owner, no severity pill and no advice line (a `severity` or `recommendation` a producer still writes on a v2 finding is not read). A report sealed with `eu-ai-act-compliance/v1` reads and draws unchanged. The card is drawn through `contract-report/v1`, which the pack's compiler writes beside the template block; a v2 block with no `contract-report/v1` is drawn by the generic Result page. The v2 row on the verification page reads as interpreted by the card. The card reads the v2 block first, then the v1 block; each key's own reader decides whether that block is engaged. No built-in manifest, Go, Python or vector change.
+
 ## ts 0.20.0 and go 0.20.0 (2026-11-22)
 
 Both state viewer 0.20.0: `ts/v0.20.0`, then `go/v0.20.0` on the commit that ships its page runtime.

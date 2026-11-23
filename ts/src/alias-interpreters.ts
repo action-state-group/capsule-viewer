@@ -11,7 +11,11 @@ import {
   type ExtensionInterpreterId,
   type ExtensionRow,
 } from "@action-state-group/agent-action-capsule";
-import { readCompliancePresentation } from "./compliance-presentation.js";
+import {
+  COMPLIANCE_KEY_V1,
+  COMPLIANCE_KEY_V2,
+  readComplianceBlock,
+} from "./compliance-presentation.js";
 import { readOutcomeReportPresentation } from "./outcome-report-presentation.js";
 
 /** The interpreters of the two deprecated cards, as AAC 0.7.0 named them. */
@@ -36,9 +40,16 @@ const ALIAS_INTERPRETERS: Readonly<
     id: "outcome-report-card",
     accepts: (bundle) => readOutcomeReportPresentation(bundle) !== undefined,
   },
-  "eu-ai-act-compliance/v1": {
+  [COMPLIANCE_KEY_V1]: {
     id: "compliance-card",
-    accepts: (bundle) => readCompliancePresentation(bundle) !== undefined,
+    accepts: (bundle) =>
+      readComplianceBlock(bundle, COMPLIANCE_KEY_V1) !== undefined,
+  },
+  // The v2 name of the same card (findings state what was observed).
+  [COMPLIANCE_KEY_V2]: {
+    id: "compliance-card",
+    accepts: (bundle) =>
+      readComplianceBlock(bundle, COMPLIANCE_KEY_V2) !== undefined,
   },
 });
 

@@ -1002,3 +1002,65 @@ it("draws the canvas's footnotes 1-3 on the groups page, in the groups pack's ow
   );
   expect(notes[2]![1]).toMatch(/^³ This page is read-only/u);
 });
+
+// ---------------------------------------------------------------------------
+// eu-ai-act-obligations-report/v2: the same grouped layout, findings that
+// state what was observed (no severity, no advice)
+// ---------------------------------------------------------------------------
+
+it("a v2 bundle draws the grouped obligation layout with every finding, each stating what was observed and no grade or advice", async () => {
+  const { bundle } = await sealEvidenceBundle(
+    fixture("compliance-v2/bundle.json"),
+  );
+  const root = await render(bundle);
+  expect(root.querySelector('[data-page="compliance"]')).not.toBeNull();
+  expect(root.querySelector('[data-page="result"]')).toBeNull();
+  // The same two findings the v1 fixture draws.
+  expect(root.querySelectorAll("[data-finding]")).toHaveLength(2);
+  for (const id of ["F-01", "F-02"]) {
+    const finding = root.querySelector<HTMLElement>(`[data-finding="${id}"]`)!;
+    expect(finding.querySelector(".rec")!.textContent).toContain(
+      `Observed in the flagged sessions: ${id}`,
+    );
+    expect(finding.querySelector(".own")!.textContent).toContain("Owner");
+    expect(finding.querySelector(".sev")).toBeNull();
+  }
+  // The groups (obligations and their test rows) are the v1 layout's.
+  const v1 = await render((await sealedComplianceBundle()).bundle);
+  const rows = (r: HTMLElement): string[] =>
+    [...r.querySelectorAll("tr[data-criterion]")].map(
+      (tr) => (tr as HTMLElement).dataset.criterion!,
+    );
+  expect(rows(root)).toEqual(rows(v1));
+  expect(rows(root).length).toBeGreaterThan(0);
+});
+
+it("a v2 finding without observed is not drawn, and a severity or recommendation on a v2 finding is never drawn", async () => {
+  const { bundle } = await sealEvidenceBundle(
+    (() => {
+      const source = fixture("compliance-v2/bundle.json");
+      const obligations = (
+        (source.extensions as Obj)["eu-ai-act-obligations-report/v2"] as Obj
+      ).obligations as Obj[];
+      const rows = obligations.flatMap((o) => o.rows as Obj[]);
+      const f1 = rows.find(
+        (r) => (r.finding as Obj | undefined)?.id === "F-01",
+      )!;
+      Object.assign(f1.finding as Obj, {
+        severity: "High",
+        recommendation: "Retrain the model.",
+      });
+      delete (
+        rows.find((r) => (r.finding as Obj | undefined)?.id === "F-02")!
+          .finding as Obj
+      ).observed;
+      return source;
+    })(),
+  );
+  const root = await render(bundle);
+  expect(root.querySelector('[data-finding="F-02"]')).toBeNull();
+  const f1 = root.querySelector<HTMLElement>('[data-finding="F-01"]')!;
+  expect(f1.querySelector(".sev")).toBeNull();
+  expect(f1.textContent).not.toContain("Retrain");
+  expect(f1.textContent).not.toContain("High");
+});

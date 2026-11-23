@@ -992,11 +992,16 @@ function renderFinding(finding: ComplianceFindingModel, w: Words): HTMLElement {
   const fh = el("div", "fh");
   fh.append(
     maybeProducer(w, "b", "", w.t("groups.finding", { id: finding.id }), true),
-    severityPill(finding.severity, w),
+    ...(finding.severity === undefined
+      ? []
+      : [severityPill(finding.severity, w)]),
     element("span", count(w, "session", finding.sessionIds.length)),
   );
   box.append(fh);
-  box.append(maybeProducer(w, "div", "rec", finding.recommendation, true));
+  // v1 draws the producer's advice; v2 draws what was observed, in the same place.
+  const statement = finding.observed ?? finding.recommendation;
+  if (statement !== undefined)
+    box.append(maybeProducer(w, "div", "rec", statement, true));
   const own = el("div", "own", w.t("groups.finding.owner"));
   own.append(producerText(w, finding.ownerDue));
   box.append(own);
