@@ -17865,7 +17865,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("03623063136b6cebbc3700d4e21b680a3800066f");
+    return commitPrefix("3384a840e4b6309ef28bab1854f4eb322dd498a9");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -19735,7 +19735,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "generic.receipt.close": "Close receipt",
       "generic.receipt.not_carried": "Receipt not carried with this page.",
       "generic.receipt.no_module": "This page has no viewer for this kind of receipt, so it is not shown.",
-      "generic.receipt.withheld": "This node's share policy keeps this receipt off the page.",
+      "generic.receipt.withheld": "The holder's disclosure policy keeps this receipt off this page.",
       "generic.receipt.unreadable": "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
       "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged."
     }
@@ -20815,7 +20815,7 @@ ${key}`);
   var DEFAULT_PACK_SHA256 = Object.freeze({
     lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
     groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
-    generic: "307d815250e1e422e183f9a6a41bc0355d046a0dd86a1be26860695ffa586b87"
+    generic: "d97bae75af3f8493e4473d3af3220cda1bff1e51577d7e06f03648cc26ad819b"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
