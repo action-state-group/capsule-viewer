@@ -1472,7 +1472,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
   groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
-  generic: "364e13930d2d7291d3ad72df06e748849bf2271e7e5acd7e12b16664def21bab",
+  generic: "6312e4cd9d79dd15760f76bfd75f968e54a1370f81d625074fa1231bd9952c1b",
 });
 
 export interface Words {

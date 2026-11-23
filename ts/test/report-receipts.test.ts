@@ -177,7 +177,7 @@ describe("a deal line's receipt", () => {
     expect(root.querySelectorAll("[data-stand-in-receipt]")).toHaveLength(2);
   });
 
-  it("says the page carries no viewer for a receipt when no receipt module takes it, and draws no fallback page", async () => {
+  it("says the page has no viewer for a receipt when no receipt module takes it, and draws no fallback page", async () => {
     const root = await draw({ d1: await receiptText("d1") }, false);
     const first = claim(root, "d1::req-1");
     first
@@ -187,7 +187,7 @@ describe("a deal line's receipt", () => {
     const panel = first.querySelector(".rcpt-panel")!;
     expect(panel.getAttribute("data-receipt-state")).toBe("no-module");
     expect(panel.textContent).toBe(
-      "This page carries no viewer for this receipt, so it is not opened.",
+      "This page has no viewer for this kind of receipt, so it is not opened.",
     );
     expect(panel.querySelector("[data-core-strip], .cv-shell-bar")).toBeNull();
   });

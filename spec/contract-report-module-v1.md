@@ -125,7 +125,7 @@ rules bind it:
   unchanged. The module pairs a claim with a receipt by the deal id key alone and cannot check that the
   receipt is that deal's (a claim's deal id is the producer's own index, not an id the receipt carries):
   that filing is the page builder's, and the module trusts it. The page
-  reaches nothing outside itself. These six words are locked entries (§3): a pack cannot reword them.
+  reaches nothing outside itself. These six strings are locked entries (§3): a pack cannot reword them.
 - **Other sealed records.** A module MAY also show other sealed records of the bundle (for example
   per-case reports) under the same rules: every number traces to sealed records, withheld stays
   explicit, and producer text is labelled as the producer's.
