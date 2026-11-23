@@ -299,7 +299,7 @@ async function walk(
     deal = prior;
   }
   let logId = typeof chain.log_id === "string" ? chain.log_id : "";
-  if (logId === "" && typeof chain.deal_log_id === "string")
+  if (!v1 && logId === "" && typeof chain.deal_log_id === "string")
     logId = chain.deal_log_id;
   const salt = typeof chain.salt === "string" ? chain.salt : "";
   const size = uint(chain.size),

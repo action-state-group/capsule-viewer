@@ -398,6 +398,28 @@ describe("readerCadenceWitness on parent-log-witness/v1", () => {
     },
   );
 
+  it("does not read the v0 alias `deal_log_id` for the log", async () => {
+    const bundle = toV1("cadence-all", (b) => {
+      b.deal_log_id = b.log_id;
+      delete b.log_id;
+    });
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_leaf_does_not_name_this_checkpoint",
+    });
+  });
+
+  it("fails an `earlier` whose consistency proof is changed", async () => {
+    const bundle = toV1("cadence-part", (b) => {
+      const p = b.earlier.consistency_proof;
+      p.old_peaks[0] = flipHex(p.old_peaks[0]);
+    });
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_earlier_checkpoint_not_a_prefix",
+    });
+  });
+
   it("takes coverage from `earlier`, ignoring a stated extent", async () => {
     const whole = toV1("cadence-all", (b) => (b.extent = "part"));
     expect(await check(whole)).toMatchObject({ status: "PASS" });
