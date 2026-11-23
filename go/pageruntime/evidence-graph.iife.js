@@ -17014,8 +17014,10 @@ path.cv-tl-good{fill:var(--person)}path.cv-tl-bad{fill:var(--bad)}path.cv-tl-ope
           obligationKey: obligation.key,
           article: obligation.article,
           testName: row2.name,
-          severity: row2.finding.severity,
-          recommendation: row2.finding.recommendation,
+          ..."observed" in row2.finding ? { observed: row2.finding.observed } : {
+            severity: row2.finding.severity,
+            recommendation: row2.finding.recommendation
+          },
           ownerDue: row2.finding.ownerDue,
           sessionIds: row2.sessionsByVerdict.get("not_met") ?? []
         });
@@ -17863,13 +17865,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("9a4fae0d6bdb7dbd15a71262283d9234470d76e0");
+    return commitPrefix("003fc8941d80de5d1753181aba7b524bd86a85a9");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.20.0",
+    viewerVersion: "0.21.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -18763,7 +18765,9 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "groups.summary.h": "What was checked and what we found",
       "groups.summary.lede": "Each session (one conversation with the agent) was checked against {tests} under {obligations}. Results are counts of sessions: there is no overall score. Open a requirement to read the sessions behind its exceptions.",
       "groups.summary.basis": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, obligation titles, requirement names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided requirements and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
+      "groups.summary.basis.v2": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, obligation titles, requirement names, the article, the plain-language summary, applicability, method, finding ids, what each finding observed, its owner and due date, and the notes on undecided requirements and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them.`,
       "groups.summary.basis.pack-titles": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, requirement names, the article, the plain-language summary, applicability, method, finding ids, severities, recommendations and the notes on undecided requirements and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them. Obligation titles are the Act's article headings, from this page's wording pack.`,
+      "groups.summary.basis.pack-titles.v2": `Every count and result is read from the sealed claims and reports in this bundle, or marked "not stated". The regulation named above, requirement names, the article, the plain-language summary, applicability, method, finding ids, what each finding observed, its owner and due date, and the notes on undecided requirements and quality checks are the producer's mapping, set in italics: carried beside the signed records, not in them. Obligation titles are the Act's article headings, from this page's wording pack.`,
       "groups.fn.records.one": "\xB9 Records are the {records} sealed items in this bundle. A session is one conversation with the agent, made of one or more records; this bundle has {n} session.",
       "groups.fn.records.other": "\xB9 Records are the {records} sealed items in this bundle. A session is one conversation with the agent, made of one or more records; this bundle has {n} sessions.",
       "groups.fn.resolved.tiered": "\xB2 A session is met when every requirement that applied to it was satisfied and at least one applied. A requirement the contract marks informational never changes the answer.",
@@ -20556,6 +20560,8 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "groups.ob.ok.unverified",
     "groups.summary.basis",
     "groups.summary.basis.pack-titles",
+    "groups.summary.basis.v2",
+    "groups.summary.basis.pack-titles.v2",
     "groups.summary.lede",
     "groups.pf.case-record.from-claims",
     "groups.pf.no-claim",
@@ -20791,7 +20797,7 @@ ${key}`);
   }
   var DEFAULT_PACK_SHA256 = Object.freeze({
     lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
-    groups: "76acc9598202663738d7d2903ca1a042d9b7ca21799297946e4da39ea77d5250",
+    groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
     generic: "9987467e7d99ff4680fa6d7e2d2d634455f729958bfbd53ebac86c14508b031d"
   });
   function fill(key, text2, vars) {
@@ -23993,7 +23999,7 @@ ${key}`);
       "p",
       "",
       w.t(
-        packTitlesOnPage(model, w) ? "groups.summary.basis.pack-titles" : "groups.summary.basis"
+        (packTitlesOnPage(model, w) ? "groups.summary.basis.pack-titles" : "groups.summary.basis") + (presentation.version === 2 ? ".v2" : "")
       )
     );
     basis.dataset.basis = "terms";
@@ -24043,11 +24049,13 @@ ${key}`);
     const fh = el9("div", "fh");
     fh.append(
       maybeProducer(w, "b", "", w.t("groups.finding", { id: finding.id }), true),
-      severityPill(finding.severity, w),
+      ...finding.severity === void 0 ? [] : [severityPill(finding.severity, w)],
       element4("span", count(w, "session", finding.sessionIds.length))
     );
     box.append(fh);
-    box.append(maybeProducer(w, "div", "rec", finding.recommendation, true));
+    const statement = finding.observed ?? finding.recommendation;
+    if (statement !== void 0)
+      box.append(maybeProducer(w, "div", "rec", statement, true));
     const own = el9("div", "own", w.t("groups.finding.owner"));
     own.append(producerText(w, finding.ownerDue));
     box.append(own);
@@ -26197,23 +26205,31 @@ ${pad.repeat(depth)}`;
   function strArray(value) {
     return Array.isArray(value) ? value.filter((v) => typeof v === "string") : [];
   }
-  function readFinding(value) {
+  var COMPLIANCE_KEY_V1 = "eu-ai-act-compliance/v1";
+  var COMPLIANCE_KEY_V2 = "eu-ai-act-obligations-report/v2";
+  function readFinding(value, key) {
     const obj = object12(value);
     const id = str2(obj?.id);
+    const ownerDue = str2(obj?.owner_due);
+    if (key === COMPLIANCE_KEY_V2) {
+      const observed = str2(obj?.observed);
+      if (id === void 0 || observed === void 0 || ownerDue === void 0)
+        return void 0;
+      return { id, observed, ownerDue };
+    }
     const severity = str2(obj?.severity);
     const recommendation = str2(obj?.recommendation);
-    const ownerDue = str2(obj?.owner_due);
     if (id === void 0 || severity === void 0 || recommendation === void 0 || ownerDue === void 0)
       return void 0;
     return { id, severity, recommendation, ownerDue };
   }
-  function readRow(value) {
+  function readRow(value, key) {
     const obj = object12(value);
     const criterionId = str2(obj?.criterion_id);
     const name = str2(obj?.name);
     if (criterionId === void 0 || name === void 0) return void 0;
     const notEvaluableNote = str2(obj?.not_evaluable_note);
-    const finding = obj?.finding === void 0 ? void 0 : readFinding(obj.finding);
+    const finding = obj?.finding === void 0 ? void 0 : readFinding(obj.finding, key);
     return {
       criterionId,
       name,
@@ -26228,7 +26244,7 @@ ${pad.repeat(depth)}`;
     if (status2 === void 0 || note === void 0) return void 0;
     return { status: status2, note };
   }
-  function readObligation(value) {
+  function readObligation(value, extension) {
     const obj = object12(value);
     const key = str2(obj?.key);
     const article = str2(obj?.article);
@@ -26239,7 +26255,7 @@ ${pad.repeat(depth)}`;
     if (key === void 0 || article === void 0 || title === void 0 || plain2 === void 0 || method === void 0 || applicability === void 0)
       return void 0;
     const rows = Array.isArray(obj?.rows) ? obj.rows.flatMap((r) => {
-      const row2 = readRow(r);
+      const row2 = readRow(r, extension);
       return row2 === void 0 ? [] : [row2];
     }) : [];
     return {
@@ -26267,24 +26283,28 @@ ${pad.repeat(depth)}`;
       ...note === void 0 ? {} : { note }
     };
   }
-  function readCompliancePresentation(bundle) {
+  function readComplianceBlock(bundle, key) {
     const top = object12(bundle);
     const extensions2 = object12(top?.extensions);
-    const block = object12(extensions2?.["eu-ai-act-compliance/v1"]);
+    const block = object12(extensions2?.[key]);
     if (block === void 0 || block.enabled !== true) return void 0;
     const regulation = str2(block.regulation) ?? "Regulation (EU) 2024/1689";
     const obligations = Array.isArray(block.obligations) ? block.obligations.flatMap((o) => {
-      const obligation = readObligation(o);
+      const obligation = readObligation(o, key);
       return obligation === void 0 ? [] : [obligation];
     }) : [];
     if (obligations.length === 0) return void 0;
     const qualityProtocol = readQualityProtocol(block.quality_protocol);
     return {
       enabled: true,
+      version: key === COMPLIANCE_KEY_V2 ? 2 : 1,
       regulation,
       obligations,
       ...qualityProtocol === void 0 ? {} : { qualityProtocol }
     };
+  }
+  function readCompliancePresentation(bundle) {
+    return readComplianceBlock(bundle, COMPLIANCE_KEY_V2) ?? readComplianceBlock(bundle, COMPLIANCE_KEY_V1);
   }
 
   // src/presentation-registry.ts
@@ -26377,7 +26397,7 @@ ${pad.repeat(depth)}`;
   var EXTENSION_READERS = {
     [CONTRACT_REPORT_KIND]: readContractReport,
     "outcome-report/v1": (bundle) => readOutcomeReportPresentation(bundle) !== void 0,
-    "eu-ai-act-compliance/v1": (bundle) => readCompliancePresentation(bundle) !== void 0
+    [COMPLIANCE_KEY_V1]: (bundle) => readComplianceBlock(bundle, COMPLIANCE_KEY_V1) !== void 0
   };
   function describeContext(context) {
     const bundle = isPlainObject(context.bundle) ? context.bundle : {};
@@ -26608,9 +26628,16 @@ ${pad.repeat(depth)}`;
       id: "outcome-report-card",
       accepts: (bundle) => readOutcomeReportPresentation(bundle) !== void 0
     },
-    "eu-ai-act-compliance/v1": {
+    [COMPLIANCE_KEY_V1]: {
       id: "compliance-card",
-      accepts: (bundle) => readCompliancePresentation(bundle) !== void 0
+      // The card draws the v2 block when it accepts one, so the v1 block is
+      // read only when no v2 block is accepted.
+      accepts: (bundle) => readComplianceBlock(bundle, COMPLIANCE_KEY_V1) !== void 0 && readComplianceBlock(bundle, COMPLIANCE_KEY_V2) === void 0
+    },
+    // The v2 name of the same card (findings state what was observed).
+    [COMPLIANCE_KEY_V2]: {
+      id: "compliance-card",
+      accepts: (bundle) => readComplianceBlock(bundle, COMPLIANCE_KEY_V2) !== void 0
     }
   });
   function aliasExtensionRows(bundle, rows, applied) {
