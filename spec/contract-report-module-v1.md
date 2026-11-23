@@ -115,7 +115,9 @@ rules bind it:
   Under each claim of a deal whose receipt is carried, the module draws an "Open receipt" control
   (`generic.receipt.open`, closed again by `generic.receipt.close`); under a claim of a deal whose
   receipt is not carried it says `generic.receipt.not_carried`, with no control, and never "no
-  record": the page lists the deal, so a missing receipt is a fault of how the page was built. Opening
+  record": the page lists the deal, so a missing receipt is a fault of how the page was built. A deal
+  whose entry is `null` is a receipt the node's share policy keeps off the page on purpose; it says
+  `generic.receipt.withheld` instead, with no control, and is not a fault. Opening
   verifies the carried bundle with the runtime's verifier and draws it, under the claim, with the
   receipt module the page also carries (`capsulectl.deal-view/v0` or `capsulectl.deal-view-composed/v0`):
   the receipt's own cases and words are that module's, and this module adds none. A bundle that is not
@@ -125,7 +127,7 @@ rules bind it:
   unchanged. The module pairs a claim with a receipt by the deal id key alone and cannot check that the
   receipt is that deal's (a claim's deal id is the producer's own index, not an id the receipt carries):
   that filing is the page builder's, and the module trusts it. The page
-  reaches nothing outside itself. These six strings are locked entries (§3): a pack cannot reword them.
+  reaches nothing outside itself. These seven strings are locked entries (§3): a pack cannot reword them.
 - **Other sealed records.** A module MAY also show other sealed records of the bundle (for example
   per-case reports) under the same rules: every number traces to sealed records, withheld stays
   explicit, and producer text is labelled as the producer's.

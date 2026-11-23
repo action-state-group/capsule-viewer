@@ -2748,7 +2748,8 @@ export interface RenderEvidenceGraphOptions {
   /**
    * The deal receipts the page carries, for a report whose claims are deals
    * (capsule-viewer#228): each deal's receipt bundle as the JSON text the node
-   * served, by deal id, the claim id's part before `::`. The contract-report
+   * served, by deal id, the claim id's part before `::`; `null` for a deal whose
+   * receipt the node's share policy keeps off the page on purpose. The contract-report
    * module's `generic` grouping puts an "Open receipt" control under each such
    * claim whose deal is here, and says "receipt not carried with this page"
    * for one whose deal is not. Opening one verifies that bundle with the
@@ -2756,7 +2757,7 @@ export interface RenderEvidenceGraphOptions {
    * carries (`capsulectl.deal-view/v0` or its composed variant); a bundle no
    * such module accepts is not drawn. Absent, no claim gets a receipt line.
    */
-  readonly receipts?: Readonly<Record<string, string>>;
+  readonly receipts?: Readonly<Record<string, string | null>>;
   /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).

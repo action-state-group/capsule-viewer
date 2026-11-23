@@ -82,7 +82,7 @@ function dealsResult(): Obj {
 }
 
 async function draw(
-  receipts: Record<string, string> | undefined,
+  receipts: Record<string, string | null> | undefined,
   withModule = true,
 ): Promise<HTMLElement> {
   const { bundle } = await sealEvidenceBundle(dealsResult());
@@ -132,6 +132,20 @@ describe("a deal line's receipt", () => {
         .join(" "),
     ).not.toMatch(/no record/iu);
     expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
+  });
+
+  it("says a receipt the node's share policy keeps off the page is kept off on purpose, apart from one not carried", async () => {
+    const root = await draw({ d1: null });
+    const kept = claim(root, "d1::req-1");
+    expect(kept.querySelector('[data-receipt="withheld"]')!.textContent).toBe(
+      "This node's share policy keeps this receipt off the page.",
+    );
+    expect(kept.querySelector("button")).toBeNull();
+    // a deal missing from the setting is a page built wrong, and says so
+    expect(
+      claim(root, "d2::req-2").querySelector('[data-receipt="not-carried"]')!
+        .textContent,
+    ).toBe("Receipt not carried with this page.");
   });
 
   it("opens the receipt module under its own claim, only that deal's receipt, and closes and reopens without drawing twice", async () => {
@@ -187,7 +201,7 @@ describe("a deal line's receipt", () => {
     const panel = first.querySelector(".rcpt-panel")!;
     expect(panel.getAttribute("data-receipt-state")).toBe("no-module");
     expect(panel.textContent).toBe(
-      "This page has no viewer for this kind of receipt, so it is not opened.",
+      "This page has no viewer for this kind of receipt, so it is not shown.",
     );
     expect(panel.querySelector("[data-core-strip], .cv-shell-bar")).toBeNull();
   });

@@ -227,7 +227,7 @@ export type ReceiptOpen = "opened" | "no-module" | "unreadable" | "unverified";
  * receipt's content itself; the receipt module the page also carries draws it.
  */
 export interface ReceiptsInput {
-  readonly texts: Readonly<Record<string, string>>;
+  readonly texts: Readonly<Record<string, string | null>>;
   readonly open: (text: string, panel: HTMLElement) => Promise<ReceiptOpen>;
 }
 
@@ -255,9 +255,19 @@ function receiptLine(
   const text = Object.prototype.hasOwnProperty.call(receipts.texts, deal)
     ? receipts.texts[deal]
     : undefined;
-  if (text === undefined) {
-    const note = el("p", "rcpt-note", w.t("generic.receipt.not_carried"));
-    note.dataset.receipt = "not-carried";
+  if (text === undefined || text === null) {
+    // `null` is a receipt the node's share policy kept off the page on
+    // purpose; no entry is a page built without it, a fault.
+    const note = el(
+      "p",
+      "rcpt-note",
+      w.t(
+        text === null
+          ? "generic.receipt.withheld"
+          : "generic.receipt.not_carried",
+      ),
+    );
+    note.dataset.receipt = text === null ? "withheld" : "not-carried";
     line.append(note);
     return [line];
   }

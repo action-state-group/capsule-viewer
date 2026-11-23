@@ -49,3 +49,30 @@ func TestBuildOfflineHTMLRefusesAReceiptItCannotCarry(t *testing.T) {
 		require.Error(t, err, name)
 	}
 }
+
+func TestBuildOfflineHTMLCarriesAWithheldReceiptAsNull(t *testing.T) {
+	bundle := chartBundle(t)
+	got, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{
+		Audience:         "*",
+		Receipts:         map[string]string{"d1": `{}`},
+		ReceiptsWithheld: []string{"d2"},
+	})
+	require.NoError(t, err)
+	require.Contains(t, got, `"receipts":{"d1":"{}","d2":null}`)
+
+	// Withheld alone still marks the page as a deal report.
+	only, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", ReceiptsWithheld: []string{"d2"}})
+	require.NoError(t, err)
+	require.Contains(t, only, `"receipts":{"d2":null}`)
+
+	// A deal is carried or withheld, not both; a withheld id is checked like a carried one.
+	for name, o := range map[string]OfflineOptions{
+		"both":          {Audience: "*", Receipts: map[string]string{"d1": `{}`}, ReceiptsWithheld: []string{"d1"}},
+		"bad id":        {Audience: "*", ReceiptsWithheld: []string{"d1::req"}},
+		"__proto__":     {Audience: "*", ReceiptsWithheld: []string{"__proto__"}},
+		"empty deal id": {Audience: "*", ReceiptsWithheld: []string{""}},
+	} {
+		_, err := BuildOfflineHTML(bundle, []byte(marker), o)
+		require.Error(t, err, name)
+	}
+}
