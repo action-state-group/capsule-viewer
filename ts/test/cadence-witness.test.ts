@@ -344,4 +344,178 @@ describe("readerCadenceWitness, with the reader's own witness list", () => {
       finding: "cadence_earlier_checkpoint_not_this_deal",
     });
   });
+
+  it("passes a bundle with no witness extension as NOT_PRESENT", async () => {
+    const bundle = bundleOf("cadence-all");
+    delete bundle.extensions["x-cadence-witness/v0"];
+    expect(await check(bundle)).toEqual({
+      status: "NOT_PRESENT",
+      finding: null,
+      witness: null,
+      witnessed_time: null,
+    });
+  });
+});
+
+// parent-log-witness/v1 (Evidence Bundle -03): the same chain, its log member
+// named `parent`, no `state`, the covered checkpoint read from `earlier`.
+const V1 = "parent-log-witness/v1";
+const toV1 = (name: string, edit: (block: Json) => void = () => {}): Json => {
+  const bundle = bundleOf(name);
+  const block = chainIn(bundle);
+  delete bundle.extensions["x-cadence-witness/v0"];
+  block.parent = block.cadence;
+  for (const member of [
+    "cadence",
+    "state",
+    "extent",
+    "steps",
+    "steps_witnessed",
+    "checkpoint_at",
+    "rest",
+  ])
+    delete block[member];
+  edit(block);
+  bundle.extensions[V1] = block;
+  return bundle;
+};
+
+describe("readerCadenceWitness on parent-log-witness/v1", () => {
+  beforeEach(() => {
+    setReaderWitnessPolicy(READER_LIST);
+  });
+
+  it.each(["cadence-all", "cadence-part"])(
+    "gives %s's stamp (witness and time) as the v0 chain does",
+    async (name) => {
+      const go = EXPECTED.go_witnesses[name]!;
+      expect(await check(toV1(name))).toEqual({
+        status: "PASS",
+        finding: null,
+        witness: "test witness",
+        witnessed_time: go.receipts[0]!.registration_time,
+      });
+    },
+  );
+
+  it("does not read the v0 alias `deal_log_id` for the log", async () => {
+    const bundle = toV1("cadence-all", (b) => {
+      b.deal_log_id = b.log_id;
+      delete b.log_id;
+    });
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_leaf_does_not_name_this_checkpoint",
+    });
+  });
+
+  it("fails an `earlier` whose consistency proof is changed", async () => {
+    const bundle = toV1("cadence-part", (b) => {
+      const p = b.earlier.consistency_proof;
+      p.old_peaks[0] = flipHex(p.old_peaks[0]);
+    });
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_earlier_checkpoint_not_a_prefix",
+    });
+  });
+
+  it("takes coverage from `earlier`, ignoring a stated extent", async () => {
+    const whole = toV1("cadence-all", (b) => (b.extent = "part"));
+    expect(await check(whole)).toMatchObject({ status: "PASS" });
+    const part = toV1("cadence-part", (b) => (b.extent = "whole"));
+    expect(await check(part)).toMatchObject({ status: "PASS" });
+  });
+
+  it("prefers v1 over a v0 chain beside it", async () => {
+    const bundle = toV1("cadence-all", (b) => (b.salt = b.salt + "0"));
+    bundle.extensions["x-cadence-witness/v0"] = chainIn(
+      bundleOf("cadence-all"),
+    );
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_entry_not_included",
+    });
+  });
+
+  it("does not read a v0-shaped `cadence` member as the parent", async () => {
+    const bundle = toV1("cadence-all", (b) => {
+      b.cadence = b.parent;
+      delete b.parent;
+    });
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_checkpoint_malformed",
+    });
+  });
+
+  it.each([
+    [
+      "an earlier that is not an object",
+      (b: Json) => (b.earlier = null),
+      "cadence_earlier_checkpoint_malformed",
+    ],
+    [
+      "a path of 33 hashes",
+      (b: Json) => b.path.push(...Array(17).fill("00".repeat(32))),
+      "cadence_path_malformed",
+    ],
+    [
+      "an uppercase path hash",
+      (b: Json) => (b.path[3] = "A" + b.path[3].slice(1)),
+      "cadence_path_malformed",
+    ],
+    ["an empty salt", (b: Json) => (b.salt = ""), "cadence_leaf_malformed"],
+    [
+      "a salt JCS cannot render",
+      (b: Json) => (b.salt = "\ud800"),
+      "cadence_leaf_malformed",
+    ],
+    [
+      "a position at 2**path",
+      (b: Json) => (b.index = 2 ** b.path.length),
+      "cadence_leaf_malformed",
+    ],
+    [
+      "a changed salt",
+      (b: Json) => (b.salt = b.salt + "0"),
+      "cadence_entry_not_included",
+    ],
+    [
+      "a changed receipt",
+      (b: Json) => (b.parent.witnesses[0].receipt_b64 = ""),
+      "receipt_malformed",
+    ],
+  ])("fails %s", async (_why, edit, finding) => {
+    expect(await check(toV1("cadence-all", edit))).toMatchObject({
+      status: "FAIL",
+      finding,
+    });
+  });
+
+  it.each(["x", ["a"], null])("fails a block that is %j", async (block) => {
+    const bundle = toV1("cadence-all");
+    bundle.extensions[V1] = block;
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "parent_witness_malformed",
+    });
+  });
+
+  it("an empty path needs position 0", async () => {
+    const bundle = toV1("cadence-all", (b) => ((b.path = []), (b.index = 1)));
+    expect(await check(bundle)).toMatchObject({
+      status: "FAIL",
+      finding: "cadence_leaf_malformed",
+    });
+  });
+
+  it("does not walk a v1 chain from a checkpoint that did not authenticate", async () => {
+    const bundle = toV1("cadence-all");
+    delete bundle.checkpoint.cose;
+    expect(await check(bundle)).toMatchObject({
+      status: "NOT_CHECKED",
+      finding: "checkpoint_unverified",
+    });
+  });
 });

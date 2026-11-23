@@ -37,8 +37,13 @@ const CADENCE_EXTENSIONS = [
   "cadence-witness/v0",
   "x-deal-cadence-v0",
 ] as const;
-/** Every path is 16 hashes: up to 65535 deals per tick. */
+/** The `parent-log-witness/v1` extension (Evidence Bundle -03), which
+ * replaces the v0 names: the same chain, its log member named `parent`. */
+const PARENT_LOG_WITNESS = "parent-log-witness/v1";
+/** A v0 path is 16 hashes: up to 65535 deals per tick. */
 const CADENCE_DEPTH = 16;
+/** The most hashes a v1 path may hold (AAC PARENT_WITNESS_MAX_PATH). */
+const PARENT_MAX_PATH = 32;
 
 /** What {@link readerCadenceWitness} says about a bundle's cadence chain. */
 export interface ReaderCadenceWitness {
@@ -228,14 +233,24 @@ const signedOf = (cp: Checkpoint): SignedCheckpointFields => ({
   prev_root: cp.previousRoot,
 });
 
-/** The cadence chain a bundle carries, under its name or an earlier one. */
-const chainOf = (bundle: unknown): Json | undefined => {
+/** The chain a bundle carries: `parent-log-witness/v1` when the bundle names
+ * it (a block that is not an object is malformed, never read as absent, and
+ * never falls back to v0, as AAC's verifier decides), else the v0 chain under
+ * its name or an earlier one. */
+type Chain = { readonly v1: boolean; readonly block: unknown };
+const chainOf = (bundle: unknown): Chain | undefined => {
   const extensions = object(bundle) ? bundle.extensions : undefined;
   if (!object(extensions)) return undefined;
+  if (Object.hasOwn(extensions, PARENT_LOG_WITNESS))
+    return { v1: true, block: extensions[PARENT_LOG_WITNESS] };
   for (const name of CADENCE_EXTENSIONS)
-    if (object(extensions[name])) return extensions[name];
+    if (object(extensions[name])) return { v1: false, block: extensions[name] };
   return undefined;
 };
+
+// AAC isHex64: a lowercase SHA-256, as a v1 path hash must be.
+const isHex64 = (value: unknown): boolean =>
+  typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
 
 /**
  * Every link of the chain but the receipts (capsule-cli `cadenceClaim`, in
@@ -244,6 +259,7 @@ const chainOf = (bundle: unknown): Json | undefined => {
  */
 async function walk(
   chain: Json,
+  v1: boolean,
   dealCose: Uint8Array,
 ): Promise<Outcome | { cadence: Checkpoint; cose: Uint8Array; inner: Json }> {
   const fail = (finding: string): Outcome => ({ status: "FAIL", finding });
@@ -251,8 +267,10 @@ async function walk(
   let deal = await checkpointMetadata(dealStatement);
   if (deal === undefined) return fail("cadence_deal_checkpoint_malformed");
   // Witnessed in part: the leaf holds an earlier checkpoint of this deal,
-  // signed by the same key, which the bundle's checkpoint extends.
-  if (chain.extent === "part") {
+  // signed by the same key, which the bundle's checkpoint extends. v0 states
+  // it (`extent`); v1 is read from the member's presence, and a stated
+  // extent is ignored.
+  if (v1 ? Object.hasOwn(chain, "earlier") : chain.extent === "part") {
     const earlier = object(chain.earlier) ? chain.earlier : {};
     const cp = object(earlier.checkpoint) ? earlier.checkpoint : {};
     const statement = fromBase64Url(cp.cose);
@@ -281,31 +299,47 @@ async function walk(
     deal = prior;
   }
   let logId = typeof chain.log_id === "string" ? chain.log_id : "";
-  if (logId === "" && typeof chain.deal_log_id === "string")
+  if (!v1 && logId === "" && typeof chain.deal_log_id === "string")
     logId = chain.deal_log_id;
   const salt = typeof chain.salt === "string" ? chain.salt : "";
   const size = uint(chain.size),
     index = uint(chain.index);
   if (logId !== deal.logId || size === undefined || BigInt(size) !== deal.size)
     return fail("cadence_leaf_does_not_name_this_checkpoint");
-  if (index === undefined || index >= 2 ** CADENCE_DEPTH || salt === "")
-    return fail("cadence_leaf_malformed");
-  const path = hashList(chain.path);
+  // v1 checks the path before the leaf's salt and index (AAC's order), so a
+  // block broken in both reads as AAC reads it.
+  const rawPath = chain.path;
+  const path = hashList(rawPath);
+  const pathOk = v1
+    ? Array.isArray(rawPath) &&
+      rawPath.length <= PARENT_MAX_PATH &&
+      rawPath.every(isHex64)
+    : !!path &&
+      path.length === CADENCE_DEPTH &&
+      path.every((h) => h.length === 32);
+  if (!pathOk || !path) return fail("cadence_path_malformed");
   if (
-    !path ||
-    path.length !== CADENCE_DEPTH ||
-    path.some((h) => h.length !== 32)
+    index === undefined ||
+    index >= 2 ** (v1 ? path.length : CADENCE_DEPTH) ||
+    salt === ""
   )
-    return fail("cadence_path_malformed");
-  const leaf = await cadenceLeaf(
-    logId,
-    size,
-    toHex(await sha256(dealStatement)),
-    salt,
-  );
+    return fail("cadence_leaf_malformed");
+  let leaf: Uint8Array;
+  try {
+    leaf = await cadenceLeaf(
+      logId,
+      size,
+      toHex(await sha256(dealStatement)),
+      salt,
+    );
+  } catch {
+    // A salt JCS cannot render (an unpaired surrogate) is no salt.
+    return fail("cadence_leaf_malformed");
+  }
   const root = await cadenceRoot(leaf, index, path);
 
-  const inner = object(chain.cadence) ? chain.cadence : {};
+  const innerKey = v1 ? chain.parent : chain.cadence;
+  const inner = object(innerKey) ? innerKey : {};
   const cp = object(inner.checkpoint) ? inner.checkpoint : {};
   const cose = fromBase64Url(cp.cose);
   if (cose === undefined) return fail("cadence_checkpoint_malformed");
@@ -422,7 +456,8 @@ async function receipts(
 
 /**
  * The deal's witness standing, from a context this runtime built
- * (`buildVerifiedBundleContext`): its `x-cadence-witness/v0` chain walked from
+ * (`buildVerifiedBundleContext`): its `parent-log-witness/v1` chain, or the
+ * older `x-cadence-witness/v0` one, walked from
  * the bundle's own checkpoint, which must have authenticated in the
  * context's strict checks, to the witnessed cadence checkpoint, whose
  * receipts are checked under the reader's own witness list ({@link
@@ -434,8 +469,10 @@ export async function readerCadenceWitness(
 ): Promise<ReaderCadenceWitness> {
   if (!isVerifiedBundleContext(context))
     return result("NOT_CHECKED", "not_a_verified_context");
-  const chain = chainOf(context.bundle);
-  if (chain === undefined || chain.state !== "witnessed")
+  const found = chainOf(context.bundle);
+  if (found === undefined) return result("NOT_PRESENT");
+  // v0 states `state`; a v1 block is a witnessed claim by being present.
+  if (!found.v1 && !(object(found.block) && found.block.state === "witnessed"))
     return result("NOT_PRESENT");
   if (context.strict?.checkpointAuthenticated !== true)
     return result("NOT_CHECKED", "checkpoint_unverified");
@@ -444,7 +481,8 @@ export async function readerCadenceWitness(
     const dealCose = fromBase64Url(stated.cose);
     if (dealCose === undefined)
       return result("NOT_CHECKED", "checkpoint_unverified");
-    const walked = await walk(chain, dealCose);
+    if (!object(found.block)) return result("FAIL", "parent_witness_malformed");
+    const walked = await walk(found.block, found.v1, dealCose);
     if (!("cadence" in walked)) return result(walked.status, walked.finding);
     return await receipts(
       walked.inner.witnesses,
