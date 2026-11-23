@@ -107,6 +107,21 @@ rules bind it:
   nothing else, so no verdict, grade, tally, bucket, count or check changes with it. The module reads
   the claim's `reason` member only, never an `x-` member (ER §8a), so a reason a producer keeps under
   an `x-` name is not shown.
+- **Deal receipts** (capsule-viewer#228). A page may carry, beside the bundle, the receipt of each deal
+  a report's claims are about: the page's `receipts` setting maps a deal id to that deal's receipt
+  bundle, as the JSON text the node served. The deal id of a claim is its `id` before the first `::`,
+  as the inference-deals Result writes it; a claim with no `::` has none. Only a page that carries the
+  setting (possibly empty) draws anything for it, and only the generic grouping draws a claim's row.
+  Under each claim of a deal whose receipt is carried, the module draws an "Open receipt" control
+  (`generic.receipt.open`, closed again by `generic.receipt.close`); under a claim of a deal whose
+  receipt is not carried it says `generic.receipt.not_carried`, with no control, and never "no
+  record": the page lists the deal, so a missing receipt is a fault of how the page was built. Opening
+  verifies the carried bundle with the runtime's verifier and draws it, under the claim, with the
+  receipt module the page also carries (`capsulectl.deal-view/v0` or `capsulectl.deal-view-composed/v0`):
+  the receipt's own cases and words are that module's, and this module adds none. A bundle that is not
+  JSON or that cannot be checked says `generic.receipt.failed`, and one no receipt module takes says
+  `generic.receipt.no_module`; neither draws a fallback page, and the report is unchanged. The page
+  reaches nothing outside itself. These five words are locked entries (§3): a pack cannot reword them.
 - **Other sealed records.** A module MAY also show other sealed records of the bundle (for example
   per-case reports) under the same rules: every number traces to sealed records, withheld stays
   explicit, and producer text is labelled as the producer's.

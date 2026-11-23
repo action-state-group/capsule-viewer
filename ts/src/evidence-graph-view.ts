@@ -18,6 +18,7 @@ import {
   type VerifiedBundleContext,
 } from "@action-state-group/agent-action-capsule";
 import type { PresentationManifest } from "./presentation-registry.js";
+import type { ReceiptOpen, ReceiptsInput } from "./generic-report-view.js";
 import {
   BUILTIN_MANIFEST_COMPOSED,
   BUILTIN_MANIFEST_EVALUATION_SUMMARY_GRAPH,
@@ -287,9 +288,10 @@ function renderVerificationBanner(
   }
   const link = element("a", CHECKED_SECTION_TITLE);
   link.className = "cv-shell-link";
-  link.setAttribute("href", `#${CHECKED_SECTION_ID}`);
+  const checkedId = checkedSectionId(root);
+  link.setAttribute("href", `#${checkedId}`);
   link.addEventListener("click", () => {
-    const section = root.ownerDocument.getElementById(CHECKED_SECTION_ID);
+    const section = root.ownerDocument.getElementById(checkedId);
     if (section instanceof root.ownerDocument.defaultView!.HTMLDetailsElement)
       section.open = true;
   });
@@ -488,6 +490,33 @@ const SIGNATURE_CHECKS: ReadonlyMap<string, string> = new Map([
 export const CHECKED_SECTION_TITLE = "How this page was checked";
 /** The folded verification section's id, the banner link's target. */
 const CHECKED_SECTION_ID = "cv-checked";
+
+/**
+ * The id of the verification section of the render on `root`. A render keeps
+ * `cv-checked`; one drawn inside another render's root (a receipt opened
+ * under a report's claim) gets its own, so the banner link of each render
+ * reaches its own section and no other.
+ */
+const checkedIds = new WeakMap<HTMLElement, string>();
+const renderRoots = new WeakSet<HTMLElement>();
+let nestedRenders = 0;
+function checkedSectionId(root: HTMLElement): string {
+  const known = checkedIds.get(root);
+  if (known !== undefined) return known;
+  let nested = false;
+  for (let a = root.parentElement; a !== null; a = a.parentElement)
+    if (renderRoots.has(a)) {
+      nested = true;
+      break;
+    }
+  renderRoots.add(root);
+  nestedRenders += 1;
+  const id = nested
+    ? `${CHECKED_SECTION_ID}-${nestedRenders}`
+    : CHECKED_SECTION_ID;
+  checkedIds.set(root, id);
+  return id;
+}
 
 // presentation/v1 is rendered here, in the header only, and nowhere else in
 // this module. Only readPresentationBlock's three known fields ever reach
@@ -1137,6 +1166,7 @@ async function renderVerificationPage(
   charts: readonly ChartDigest[],
   contract: PageContract,
   l3: { readonly words: Words; readonly voice: RecordVoice } | undefined,
+  checkedId: string,
 ): Promise<string> {
   const { bundle, verification: verified } = context;
   const section = element("section");
@@ -1273,7 +1303,7 @@ async function renderVerificationPage(
   // line keeps the counts and what was not checked in view.
   const folded = document.createElement("details");
   folded.className = "cv-checked";
-  folded.id = CHECKED_SECTION_ID;
+  folded.id = checkedId;
   folded.dataset.checked = "";
   // Open when the bundle did not verify, and at depth L2, where everything
   // is open (presentation contract section 9.1).
@@ -2264,6 +2294,8 @@ type WordedHost = PresentationHost & {
   readonly wording?: WordingPackInput;
   /** The page's contract, checked (`RenderEvidenceGraphOptions.contract`). */
   readonly contract?: CheckedContract;
+  /** The deal receipts the page carries (`RenderEvidenceGraphOptions.receipts`), with the way to draw one. */
+  readonly receipts?: ReceiptsInput;
 };
 
 /**
@@ -2510,6 +2542,7 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
       { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
       (host as WordedHost).wording,
       (host as WordedHost).contract,
+      (host as WordedHost).receipts,
     );
   },
 };
@@ -2712,6 +2745,18 @@ export interface RenderEvidenceGraphOptions {
    * spec that fails is replaced by the core's notice, never drawn.
    */
   readonly charts?: readonly unknown[];
+  /**
+   * The deal receipts the page carries, for a report whose claims are deals
+   * (capsule-viewer#228): each deal's receipt bundle as the JSON text the node
+   * served, by deal id, the claim id's part before `::`. The contract-report
+   * module's `generic` grouping puts an "Open receipt" control under each such
+   * claim whose deal is here, and says "receipt not carried with this page"
+   * for one whose deal is not. Opening one verifies that bundle with the
+   * runtime's verifier and draws it with the receipt module the page also
+   * carries (`capsulectl.deal-view/v0` or its composed variant); a bundle no
+   * such module accepts is not drawn. Absent, no claim gets a receipt line.
+   */
+  readonly receipts?: Readonly<Record<string, string>>;
   /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
@@ -3318,6 +3363,53 @@ const checkingRenders = new WeakMap<
   { readonly before: readonly ChildNode[]; readonly active: Set<HTMLElement> }
 >();
 
+/** The receipt modules a deal line may open (evidencebook `capsulectl/internal/deal/assets`). */
+const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
+  "capsulectl.deal-view/v0",
+  "capsulectl.deal-view-composed/v0",
+]);
+
+/**
+ * Draw one carried receipt bundle into `panel`: verified once here, resolved
+ * in the page's registry, and drawn only when the module that takes it is a
+ * receipt module (a deal view); otherwise the built-in fallback page would
+ * draw a receipt-shaped page that is not the receipt. A bundle that is not
+ * JSON, or that does not verify, is "failed"; this never throws to the
+ * report page's caller beyond what the caller turns into "failed" too.
+ */
+async function openReceipt(
+  text: string,
+  panel: HTMLElement,
+  options: RenderEvidenceGraphOptions,
+): Promise<ReceiptOpen> {
+  let bundle: unknown;
+  try {
+    bundle = JSON.parse(text);
+  } catch {
+    return "failed";
+  }
+  const context = await buildVerifiedBundleContext(bundle);
+  const registry = options.registry ?? defaultRegistry;
+  const resolution = await registry.resolve(
+    context,
+    DEFAULT_AUDIENCE,
+    DEFAULT_FORMAT,
+  );
+  if (
+    resolution.kind !== "module" ||
+    !RECEIPT_MODULE_IDS.has(resolution.module.manifest.id)
+  )
+    // A bundle that does not even verify is not a receipt this page lacks a
+    // viewer for; it is one that cannot be opened.
+    return bundleVerified(context.verification) ? "no-module" : "failed";
+  await renderEvidenceGraph(context, panel, undefined, {
+    audience: DEFAULT_AUDIENCE,
+    format: DEFAULT_FORMAT,
+    ...(options.registry === undefined ? {} : { registry: options.registry }),
+  });
+  return "opened";
+}
+
 async function renderVerifiedContext(
   context: VerifiedBundleContext,
   root: HTMLElement,
@@ -3757,6 +3849,15 @@ async function renderVerifiedContext(
       depth,
       ...(options.wording === undefined ? {} : { wording: options.wording }),
       ...(contract.checked === undefined ? {} : { contract: contract.checked }),
+      ...(options.receipts === undefined
+        ? {}
+        : {
+            receipts: {
+              texts: options.receipts,
+              open: (text: string, panel: HTMLElement) =>
+                openReceipt(text, panel, options),
+            },
+          }),
       setChromeClass(name: string): void {
         if (name !== OUTCOME_CHROME && name !== COMPLIANCE_CHROME)
           throw new Error(`unknown chrome class ${JSON.stringify(name)}`);
@@ -3876,6 +3977,7 @@ async function renderVerifiedContext(
           voice: options.voice ?? "shared",
         }
       : undefined,
+    checkedSectionId(root),
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");

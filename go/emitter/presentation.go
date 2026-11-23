@@ -160,6 +160,30 @@ type OfflineOptions struct {
 	// names before anything is written (chartspec.Check, or chartspec.CheckView for a view); one that fails
 	// refuses the build. They reach the page as renderOptions' charts.
 	Charts []json.RawMessage
+	// Receipts are the deal receipts a report page carries (capsule-viewer#228),
+	// by deal id (the claim id's part before "::"): each deal's receipt bundle as
+	// the JSON text the node served, kept exactly as given. A non-nil map, empty
+	// or not, marks the page as a deal report: its claims whose deal is not here
+	// say "receipt not carried with this page". Each text must be JSON
+	// (checkReceipts); the page opens one with the receipt module the page
+	// carries (Modules) and verifies it with the runtime's own verifier. They
+	// reach the page as renderOptions' receipts.
+	Receipts map[string]string
+}
+
+// checkReceipts refuses a receipt that is not JSON, or one named by an empty
+// deal id or an id with "::" in it (a claim's deal id never has one), so a
+// report page never carries a receipt it cannot parse or cannot be reached.
+func checkReceipts(receipts map[string]string) error {
+	for deal, text := range receipts {
+		if deal == "" || strings.Contains(deal, "::") {
+			return fmt.Errorf("receipt deal id %q is empty or contains ::", deal)
+		}
+		if !json.Valid([]byte(text)) {
+			return fmt.Errorf("receipt for deal %q is not JSON", deal)
+		}
+	}
+	return nil
 }
 
 // CheckWordingPack checks a wording pack against its digest and its shape
@@ -392,6 +416,13 @@ func renderOptions(o OfflineOptions, format string, charts []interface{}) (strin
 	if o.Contract != nil {
 		options["contract"] = map[string]interface{}{"text": o.Contract.Text, "sha256": o.Contract.SHA256}
 	}
+	if o.Receipts != nil {
+		receipts := make(map[string]interface{}, len(o.Receipts))
+		for deal, text := range o.Receipts {
+			receipts[deal] = text
+		}
+		options["receipts"] = receipts
+	}
 	encoded, err := canonical.JCS(options)
 	if err != nil {
 		return "", err
@@ -419,8 +450,11 @@ func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (stri
 	if err != nil {
 		return "", err
 	}
+	if err := checkReceipts(o.Receipts); err != nil {
+		return "", err
+	}
 	bootstrap := DefaultBootstrap
-	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || o.Contract != nil || len(charts) > 0 {
+	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || o.Contract != nil || len(charts) > 0 || o.Receipts != nil {
 		options, err := renderOptions(o, "html", charts)
 		if err != nil {
 			return "", err
