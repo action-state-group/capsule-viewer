@@ -17865,13 +17865,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("f991f55c1c01422d541007b2bb9beb568eac3e11");
+    return commitPrefix("2c6b426edee5cce4d8f81521f39969b9c131df9b");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.23.0",
+    viewerVersion: "0.23.1",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -29401,7 +29401,9 @@ ${pad.repeat(depth)}`;
     "cadence-witness/v0",
     "x-deal-cadence-v0"
   ];
+  var PARENT_LOG_WITNESS = "parent-log-witness/v1";
   var CADENCE_DEPTH = 16;
+  var PARENT_MAX_PATH = 32;
   var object15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
   var result = (status2, finding = null, witness = null, witnessed_time = null) => ({ status: status2, finding, witness, witnessed_time });
   var fromHex3 = (value) => {
@@ -29487,16 +29489,19 @@ ${pad.repeat(depth)}`;
   var chainOf = (bundle) => {
     const extensions2 = object15(bundle) ? bundle.extensions : void 0;
     if (!object15(extensions2)) return void 0;
+    if (Object.hasOwn(extensions2, PARENT_LOG_WITNESS))
+      return { v1: true, block: extensions2[PARENT_LOG_WITNESS] };
     for (const name of CADENCE_EXTENSIONS)
-      if (object15(extensions2[name])) return extensions2[name];
+      if (object15(extensions2[name])) return { v1: false, block: extensions2[name] };
     return void 0;
   };
-  async function walk(chain, dealCose) {
+  var isHex642 = (value) => typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
+  async function walk(chain, v1, dealCose) {
     const fail2 = (finding) => ({ status: "FAIL", finding });
     let dealStatement = dealCose;
     let deal = await checkpointMetadata(dealStatement);
     if (deal === void 0) return fail2("cadence_deal_checkpoint_malformed");
-    if (chain.extent === "part") {
+    if (v1 ? Object.hasOwn(chain, "earlier") : chain.extent === "part") {
       const earlier = object15(chain.earlier) ? chain.earlier : {};
       const cp2 = object15(earlier.checkpoint) ? earlier.checkpoint : {};
       const statement = fromBase64Url(cp2.cose);
@@ -29519,25 +29524,32 @@ ${pad.repeat(depth)}`;
       deal = prior;
     }
     let logId = typeof chain.log_id === "string" ? chain.log_id : "";
-    if (logId === "" && typeof chain.deal_log_id === "string")
+    if (!v1 && logId === "" && typeof chain.deal_log_id === "string")
       logId = chain.deal_log_id;
     const salt = typeof chain.salt === "string" ? chain.salt : "";
     const size = uint2(chain.size), index = uint2(chain.index);
     if (logId !== deal.logId || size === void 0 || BigInt(size) !== deal.size)
       return fail2("cadence_leaf_does_not_name_this_checkpoint");
-    if (index === void 0 || index >= 2 ** CADENCE_DEPTH || salt === "")
+    const rawPath = chain.path;
+    const path2 = hashList(rawPath);
+    const pathOk = v1 ? Array.isArray(rawPath) && rawPath.length <= PARENT_MAX_PATH && rawPath.every(isHex642) : !!path2 && path2.length === CADENCE_DEPTH && path2.every((h) => h.length === 32);
+    if (!pathOk || !path2) return fail2("cadence_path_malformed");
+    if (index === void 0 || index >= 2 ** (v1 ? path2.length : CADENCE_DEPTH) || salt === "")
       return fail2("cadence_leaf_malformed");
-    const path2 = hashList(chain.path);
-    if (!path2 || path2.length !== CADENCE_DEPTH || path2.some((h) => h.length !== 32))
-      return fail2("cadence_path_malformed");
-    const leaf = await cadenceLeaf(
-      logId,
-      size,
-      toHex4(await sha2564(dealStatement)),
-      salt
-    );
+    let leaf;
+    try {
+      leaf = await cadenceLeaf(
+        logId,
+        size,
+        toHex4(await sha2564(dealStatement)),
+        salt
+      );
+    } catch {
+      return fail2("cadence_leaf_malformed");
+    }
     const root = await cadenceRoot(leaf, index, path2);
-    const inner = object15(chain.cadence) ? chain.cadence : {};
+    const innerKey = v1 ? chain.parent : chain.cadence;
+    const inner = object15(innerKey) ? innerKey : {};
     const cp = object15(inner.checkpoint) ? inner.checkpoint : {};
     const cose = fromBase64Url(cp.cose);
     if (cose === void 0) return fail2("cadence_checkpoint_malformed");
@@ -29617,8 +29629,9 @@ ${pad.repeat(depth)}`;
   async function readerCadenceWitness(context) {
     if (!isVerifiedBundleContext(context))
       return result("NOT_CHECKED", "not_a_verified_context");
-    const chain = chainOf(context.bundle);
-    if (chain === void 0 || chain.state !== "witnessed")
+    const found = chainOf(context.bundle);
+    if (found === void 0) return result("NOT_PRESENT");
+    if (!found.v1 && !(object15(found.block) && found.block.state === "witnessed"))
       return result("NOT_PRESENT");
     if (context.strict?.checkpointAuthenticated !== true)
       return result("NOT_CHECKED", "checkpoint_unverified");
@@ -29627,7 +29640,8 @@ ${pad.repeat(depth)}`;
       const dealCose = fromBase64Url(stated.cose);
       if (dealCose === void 0)
         return result("NOT_CHECKED", "checkpoint_unverified");
-      const walked = await walk(chain, dealCose);
+      if (!object15(found.block)) return result("FAIL", "parent_witness_malformed");
+      const walked = await walk(found.block, found.v1, dealCose);
       if (!("cadence" in walked)) return result(walked.status, walked.finding);
       return await receipts2(
         walked.inner.witnesses,
