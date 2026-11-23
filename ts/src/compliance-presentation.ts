@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /**
- * `eu-ai-act-compliance/v1` typed extension: opts a verified Result v0
+ * `eu-ai-act-obligations-report/v2` (and its earlier name
+ * `eu-ai-act-compliance/v1`, still read for reports already sealed) typed
+ * extension: opts a verified Result v0
  * bundle into the EU AI Act obligations-report card, read only after the
  * bundle verified, and carries the producer's REGULATORY MAPPING for it:
  * per obligation its article, title, plain-language summary, applicability
  * and method; per test its short label, an optional not-evaluable note and
- * an optional finding template (severity, recommendation, owner).
+ * an optional finding template. A v1 template carries severity,
+ * recommendation and owner; a v2 template carries what was observed and the
+ * owner, never a grade or advice.
  *
  * Everything read here is presentation, outside the signed records, and the
  * card labels it so. Which obligations and tests exist, every verdict and
@@ -29,12 +33,27 @@ function strArray(value: unknown): readonly string[] {
     : [];
 }
 
-export interface ComplianceFinding {
+/** The v1 finding template: the producer's grade and advice, and the owner. */
+export interface ComplianceFindingV1 {
   readonly id: string;
   readonly severity: string;
   readonly recommendation: string;
   readonly ownerDue: string;
 }
+
+/** The v2 finding template: what was observed, and the owner. No grade, no advice. */
+export interface ComplianceFindingV2 {
+  readonly id: string;
+  readonly observed: string;
+  readonly ownerDue: string;
+}
+
+export type ComplianceFinding = ComplianceFindingV1 | ComplianceFindingV2;
+
+/** The extension key a block of this version sits under. */
+export const COMPLIANCE_KEY_V1 = "eu-ai-act-compliance/v1";
+export const COMPLIANCE_KEY_V2 = "eu-ai-act-obligations-report/v2";
+type ComplianceKey = typeof COMPLIANCE_KEY_V1 | typeof COMPLIANCE_KEY_V2;
 
 export interface ComplianceRow {
   readonly criterionId: string;
@@ -67,17 +86,30 @@ export interface ComplianceQualityProtocol {
 
 export interface CompliancePresentation {
   readonly enabled: boolean;
+  /** Which template's block this was read from: 1 for `eu-ai-act-compliance/v1`, 2 for `eu-ai-act-obligations-report/v2`. */
+  readonly version: 1 | 2;
   readonly regulation: string;
   readonly obligations: readonly ComplianceObligation[];
   readonly qualityProtocol?: ComplianceQualityProtocol;
 }
 
-function readFinding(value: unknown): ComplianceFinding | undefined {
+function readFinding(
+  value: unknown,
+  key: ComplianceKey,
+): ComplianceFinding | undefined {
   const obj = object(value);
   const id = str(obj?.id);
+  const ownerDue = str(obj?.owner_due);
+  if (key === COMPLIANCE_KEY_V2) {
+    // A v2 finding states what was observed. A severity or recommendation a
+    // producer still writes there is not read: a v2 report draws no grade.
+    const observed = str(obj?.observed);
+    if (id === undefined || observed === undefined || ownerDue === undefined)
+      return undefined;
+    return { id, observed, ownerDue };
+  }
   const severity = str(obj?.severity);
   const recommendation = str(obj?.recommendation);
-  const ownerDue = str(obj?.owner_due);
   if (
     id === undefined ||
     severity === undefined ||
@@ -88,14 +120,17 @@ function readFinding(value: unknown): ComplianceFinding | undefined {
   return { id, severity, recommendation, ownerDue };
 }
 
-function readRow(value: unknown): ComplianceRow | undefined {
+function readRow(
+  value: unknown,
+  key: ComplianceKey,
+): ComplianceRow | undefined {
   const obj = object(value);
   const criterionId = str(obj?.criterion_id);
   const name = str(obj?.name);
   if (criterionId === undefined || name === undefined) return undefined;
   const notEvaluableNote = str(obj?.not_evaluable_note);
   const finding =
-    obj?.finding === undefined ? undefined : readFinding(obj.finding);
+    obj?.finding === undefined ? undefined : readFinding(obj.finding, key);
   return {
     criterionId,
     name,
@@ -117,7 +152,10 @@ function readApplicability(
   return { status, note };
 }
 
-function readObligation(value: unknown): ComplianceObligation | undefined {
+function readObligation(
+  value: unknown,
+  extension: ComplianceKey,
+): ComplianceObligation | undefined {
   const obj = object(value);
   const key = str(obj?.key);
   const article = str(obj?.article);
@@ -136,7 +174,7 @@ function readObligation(value: unknown): ComplianceObligation | undefined {
     return undefined;
   const rows = Array.isArray(obj?.rows)
     ? obj.rows.flatMap((r): ComplianceRow[] => {
-        const row = readRow(r);
+        const row = readRow(r, extension);
         return row === undefined ? [] : [row];
       })
     : [];
@@ -169,17 +207,22 @@ function readQualityProtocol(
   };
 }
 
-export function readCompliancePresentation(
+/**
+ * The block under one key, read as that key's version and no other: the
+ * engaged test of each extension kind (a block its reader declines is absent).
+ */
+export function readComplianceBlock(
   bundle: unknown,
+  key: ComplianceKey,
 ): CompliancePresentation | undefined {
   const top = object(bundle);
   const extensions = object(top?.extensions);
-  const block = object(extensions?.["eu-ai-act-compliance/v1"]);
+  const block = object(extensions?.[key]);
   if (block === undefined || block.enabled !== true) return undefined;
   const regulation = str(block.regulation) ?? "Regulation (EU) 2024/1689";
   const obligations = Array.isArray(block.obligations)
     ? block.obligations.flatMap((o): ComplianceObligation[] => {
-        const obligation = readObligation(o);
+        const obligation = readObligation(o, key);
         return obligation === undefined ? [] : [obligation];
       })
     : [];
@@ -191,8 +234,22 @@ export function readCompliancePresentation(
   const qualityProtocol = readQualityProtocol(block.quality_protocol);
   return {
     enabled: true,
+    version: key === COMPLIANCE_KEY_V2 ? 2 : 1,
     regulation,
     obligations,
     ...(qualityProtocol === undefined ? {} : { qualityProtocol }),
   };
+}
+
+/**
+ * The block the card draws: the v2 block when its reader accepts it, else the
+ * v1 block of a report sealed before the rename.
+ */
+export function readCompliancePresentation(
+  bundle: unknown,
+): CompliancePresentation | undefined {
+  return (
+    readComplianceBlock(bundle, COMPLIANCE_KEY_V2) ??
+    readComplianceBlock(bundle, COMPLIANCE_KEY_V1)
+  );
 }

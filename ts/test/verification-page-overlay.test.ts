@@ -180,6 +180,11 @@ it("aacInterpreters leaves out the alias interpreters AAC does not name", () => 
 it.each([
   ["outcome-report-bundle.json", "outcome-report/v1", "outcome-report-card"],
   ["compliance-bundle.json", "eu-ai-act-compliance/v1", "compliance-card"],
+  [
+    "compliance-v2/bundle.json",
+    "eu-ai-act-obligations-report/v2",
+    "compliance-card",
+  ],
 ])("%s: the %s row is interpreted by %s", async (file, kind, interpreter) => {
   const { bundle } = await sealEvidenceBundle(
     JSON.parse(
@@ -197,4 +202,40 @@ it.each([
     interpreter,
   });
   expect(row.lastElementChild!.textContent).toBe(EXTENSION_SHOWN.covered);
+});
+
+// A bundle with both blocks: the card draws the v2 block, so only the v2 row
+// reads as interpreted; the v1 block stays not interpreted.
+it("with both a v1 and a v2 block engaged, only the v2 row is interpreted by the card", async () => {
+  const source = JSON.parse(
+    readFileSync(
+      resolve(
+        process.cwd(),
+        "test",
+        "testdata",
+        "compliance-v2",
+        "bundle.json",
+      ),
+      "utf8",
+    ),
+  );
+  const v1 = JSON.parse(
+    readFileSync(
+      resolve(process.cwd(), "test", "testdata", "compliance-bundle.json"),
+      "utf8",
+    ),
+  );
+  source.extensions["eu-ai-act-compliance/v1"] =
+    v1.extensions["eu-ai-act-compliance/v1"];
+  const { bundle } = await sealEvidenceBundle(source);
+  const root = document.createElement("main");
+  await renderEvidenceGraph(bundle, root, undefined, { depth: "L2" });
+  const row = (kind: string) =>
+    root.querySelector<HTMLElement>(`tr[data-extension-id="${kind}"]`)!;
+  expect(row("eu-ai-act-obligations-report/v2").dataset.semantics).toBe(
+    "interpreted",
+  );
+  expect(row("eu-ai-act-compliance/v1").dataset.semantics).not.toBe(
+    "interpreted",
+  );
 });

@@ -10,7 +10,10 @@ import {
   bundleVerified,
   verifiedPayload,
 } from "@action-state-group/agent-action-capsule";
-import { readCompliancePresentation } from "./compliance-presentation.js";
+import {
+  COMPLIANCE_KEY_V1,
+  readComplianceBlock,
+} from "./compliance-presentation.js";
 import {
   CONTRACT_REPORT_KIND,
   readContractReport,
@@ -391,8 +394,8 @@ const EXTENSION_READERS: Readonly<
   [CONTRACT_REPORT_KIND]: readContractReport,
   "outcome-report/v1": (bundle) =>
     readOutcomeReportPresentation(bundle) !== undefined,
-  "eu-ai-act-compliance/v1": (bundle) =>
-    readCompliancePresentation(bundle) !== undefined,
+  [COMPLIANCE_KEY_V1]: (bundle) =>
+    readComplianceBlock(bundle, COMPLIANCE_KEY_V1) !== undefined,
 };
 
 /**
