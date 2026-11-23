@@ -41,6 +41,7 @@ func TestBuildOfflineHTMLRefusesAReceiptItCannotCarry(t *testing.T) {
 		"not JSON":        {"d1": "this is not json"},
 		"empty deal id":   {"": `{}`},
 		"deal id with ::": {"d1::req": `{}`},
+		"__proto__":       {"__proto__": `{}`},
 	} {
 		_, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Receipts: receipts})
 		require.Error(t, err, name)

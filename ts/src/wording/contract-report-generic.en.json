@@ -473,6 +473,7 @@
     "generic.receipt.close": "Close receipt",
     "generic.receipt.not_carried": "Receipt not carried with this page.",
     "generic.receipt.no_module": "This page carries no viewer for this receipt, so it is not opened.",
-    "generic.receipt.failed": "This receipt could not be opened. The rest of the report is unchanged."
+    "generic.receipt.unreadable": "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
+    "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged."
   }
 }

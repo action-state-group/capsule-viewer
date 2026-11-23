@@ -119,9 +119,13 @@ rules bind it:
   verifies the carried bundle with the runtime's verifier and draws it, under the claim, with the
   receipt module the page also carries (`capsulectl.deal-view/v0` or `capsulectl.deal-view-composed/v0`):
   the receipt's own cases and words are that module's, and this module adds none. A bundle that is not
-  JSON or that cannot be checked says `generic.receipt.failed`, and one no receipt module takes says
-  `generic.receipt.no_module`; neither draws a fallback page, and the report is unchanged. The page
-  reaches nothing outside itself. These five words are locked entries (§3): a pack cannot reword them.
+  JSON says `generic.receipt.unreadable`, one that does not pass its checks says
+  `generic.receipt.unverified` (a failed check is never worded as a load error), and a verified one no
+  receipt module takes says `generic.receipt.no_module`; none draws a fallback page, and the report is
+  unchanged. The module pairs a claim with a receipt by the deal id key alone and cannot check that the
+  receipt is that deal's (a claim's deal id is the producer's own index, not an id the receipt carries):
+  that filing is the page builder's, and the module trusts it. The page
+  reaches nothing outside itself. These six words are locked entries (§3): a pack cannot reword them.
 - **Other sealed records.** A module MAY also show other sealed records of the bundle (for example
   per-case reports) under the same rules: every number traces to sealed records, withheld stays
   explicit, and producer text is labelled as the producer's.

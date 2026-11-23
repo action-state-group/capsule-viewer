@@ -3374,8 +3374,8 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
  * in the page's registry, and drawn only when the module that takes it is a
  * receipt module (a deal view); otherwise the built-in fallback page would
  * draw a receipt-shaped page that is not the receipt. A bundle that is not
- * JSON, or that does not verify, is "failed"; this never throws to the
- * report page's caller beyond what the caller turns into "failed" too.
+ * JSON is "unreadable", one that does not pass its checks "unverified"; a
+ * rejection is turned into "unreadable" by the caller.
  */
 async function openReceipt(
   text: string,
@@ -3386,7 +3386,7 @@ async function openReceipt(
   try {
     bundle = JSON.parse(text);
   } catch {
-    return "failed";
+    return "unreadable";
   }
   const context = await buildVerifiedBundleContext(bundle);
   const registry = options.registry ?? defaultRegistry;
@@ -3399,9 +3399,9 @@ async function openReceipt(
     resolution.kind !== "module" ||
     !RECEIPT_MODULE_IDS.has(resolution.module.manifest.id)
   )
-    // A bundle that does not even verify is not a receipt this page lacks a
-    // viewer for; it is one that cannot be opened.
-    return bundleVerified(context.verification) ? "no-module" : "failed";
+    // A bundle that does not pass its checks is a finding, not a receipt this
+    // page merely lacks a viewer for.
+    return bundleVerified(context.verification) ? "no-module" : "unverified";
   await renderEvidenceGraph(context, panel, undefined, {
     audience: DEFAULT_AUDIENCE,
     format: DEFAULT_FORMAT,

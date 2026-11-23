@@ -153,6 +153,12 @@ describe.skipIf(executablePath === undefined)(
       return { page, requests, violations };
     }
 
+    const violationsOf = (page: Page): Promise<string[]> =>
+      page.evaluate(
+        () =>
+          (globalThis as unknown as { __violations: string[] }).__violations,
+      );
+
     const receiptsOf = (): Record<string, string> => ({
       d1: data("deal-receipt", "composition-artifact.json"),
       d2: data("deal-receipt", "composition-absence.json"),
@@ -208,6 +214,9 @@ describe.skipIf(executablePath === undefined)(
         );
         expect(opened).toContain("cv-checked");
         expect(requests).toEqual([]);
+        // The receipt module's stylesheet and the nested render's own are
+        // listed in the page's CSP: nothing was blocked while both drew.
+        expect(await violationsOf(page)).toEqual([]);
       } finally {
         await page.close();
       }
@@ -238,7 +247,7 @@ describe.skipIf(executablePath === undefined)(
         expect(
           await page.textContent('[data-claim-ref^="d1::"] .rcpt-panel'),
         ).toBe(
-          "This receipt could not be opened. The rest of the report is unchanged.",
+          "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
         );
         await page.click(
           '[data-claim-ref^="d3::"] button[data-receipt="open"]',
@@ -247,7 +256,7 @@ describe.skipIf(executablePath === undefined)(
         expect(
           await page.textContent('[data-claim-ref^="d3::"] .rcpt-panel'),
         ).toBe(
-          "This receipt could not be opened. The rest of the report is unchanged.",
+          "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged.",
         );
         // The other deal still opens, and the report's own rows are still there.
         await page.click(
@@ -257,6 +266,43 @@ describe.skipIf(executablePath === undefined)(
           '[data-claim-ref^="d2::"] .rcpt-panel .deal-banner',
         );
         expect(await page.$$("[data-claim-ref]")).toHaveLength(3);
+      } finally {
+        await page.close();
+      }
+    });
+    it("opens the single x-deal-v0 receipt with the real deal view, and a refusal composition, with nothing blocked", async () => {
+      const { page } = await open({
+        d1: data("deal-receipt", "unilateral-bundle.json"),
+        d2: data("deal-receipt", "composition-refusal.json"),
+      });
+      try {
+        await page.click(
+          '[data-claim-ref^="d1::"] button[data-receipt="open"]',
+        );
+        await page.waitForSelector(
+          '[data-claim-ref^="d1::"] .rcpt-panel .deal-banner, [data-claim-ref^="d1::"] .rcpt-panel[data-receipt-state]:not([data-receipt-state="opened"])',
+        );
+        expect(
+          await page.getAttribute(
+            '[data-claim-ref^="d1::"] .rcpt-panel',
+            "data-receipt-state",
+          ),
+        ).toBe("opened");
+        expect(
+          await page.$('[data-claim-ref^="d1::"] .rcpt-panel .deal-banner'),
+        ).not.toBeNull();
+        await page.click(
+          '[data-claim-ref^="d2::"] button[data-receipt="open"]',
+        );
+        await page.waitForSelector(
+          '[data-claim-ref^="d2::"] .rcpt-panel .deal-banner',
+        );
+        expect(
+          await page.textContent(
+            '[data-claim-ref^="d2::"] .rcpt-panel .deal-banner',
+          ),
+        ).toContain("Your receipt only");
+        expect(await violationsOf(page)).toEqual([]);
       } finally {
         await page.close();
       }

@@ -217,8 +217,8 @@ function reasonLines(
   return [line];
 }
 
-/** What opening a carried receipt came to: drawn, no module for it, or it could not be read or checked. */
-export type ReceiptOpen = "opened" | "no-module" | "failed";
+/** What opening a carried receipt came to: drawn, no module for it, not readable, or read but not passing its checks. */
+export type ReceiptOpen = "opened" | "no-module" | "unreadable" | "unverified";
 
 /**
  * The deal receipts a report page carries (the page's `receipts` option):
@@ -300,14 +300,18 @@ function receiptLine(
           w.t(
             outcome === "no-module"
               ? "generic.receipt.no_module"
-              : "generic.receipt.failed",
+              : outcome === "unverified"
+                ? "generic.receipt.unverified"
+                : "generic.receipt.unreadable",
           ),
         ),
       );
     };
     // A receipt that cannot be drawn leaves the report as it was and says
-    // why under the claim; the rejection never reaches the page.
-    receipts.open(text, panel).then(showOutcome, () => showOutcome("failed"));
+    // why under the claim; a rejection never reaches the page.
+    receipts
+      .open(text, panel)
+      .then(showOutcome, () => showOutcome("unreadable"));
   });
   line.append(button, panel);
   return [line];

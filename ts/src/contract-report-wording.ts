@@ -696,13 +696,14 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "generic.later.note",
   "generic.claim.failure",
   // The deal receipt line under a claim (capsule-viewer#228): a pack cannot
-  // make a receipt that is not carried read as "no record", or hide that it
-  // could not be opened.
+  // make a receipt that is not carried read as "no record", or hide that a
+  // carried receipt could not be read or did not pass its checks.
   "generic.receipt.open",
   "generic.receipt.close",
   "generic.receipt.not_carried",
   "generic.receipt.no_module",
-  "generic.receipt.failed",
+  "generic.receipt.unreadable",
+  "generic.receipt.unverified",
   // The shared front (report-front.ts): the mock-judge line, what the
   // aggregate's unknown count is, what the page and the bundle carry, and
   // the producer's findings label.
@@ -1471,7 +1472,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
   groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
-  generic: "01c6884e1adb723dc3bf5cc35e9cd3b34c51830bab9fab6bc1b00e7c020e114b",
+  generic: "364e13930d2d7291d3ad72df06e748849bf2271e7e5acd7e12b16664def21bab",
 });
 
 export interface Words {

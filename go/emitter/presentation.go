@@ -172,12 +172,14 @@ type OfflineOptions struct {
 }
 
 // checkReceipts refuses a receipt that is not JSON, or one named by an empty
-// deal id or an id with "::" in it (a claim's deal id never has one), so a
-// report page never carries a receipt it cannot parse or cannot be reached.
+// deal id, "__proto__" or an id with "::" in it (a claim's deal id never has
+// one), so a report page never carries a receipt it cannot parse or reach.
 func checkReceipts(receipts map[string]string) error {
 	for deal, text := range receipts {
-		if deal == "" || strings.Contains(deal, "::") {
-			return fmt.Errorf("receipt deal id %q is empty or contains ::", deal)
+		// "__proto__" is refused because the page reads its options as an
+		// object literal, where that key sets a prototype and no own member.
+		if deal == "" || deal == "__proto__" || strings.Contains(deal, "::") {
+			return fmt.Errorf("receipt deal id %q is empty, __proto__ or contains ::", deal)
 		}
 		if !json.Valid([]byte(text)) {
 			return fmt.Errorf("receipt for deal %q is not JSON", deal)

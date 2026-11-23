@@ -192,23 +192,32 @@ describe("a deal line's receipt", () => {
     expect(panel.querySelector("[data-core-strip], .cv-shell-bar")).toBeNull();
   });
 
-  it("says a receipt could not be opened when it is not JSON or does not verify, and the report stays", async () => {
+  it("says a receipt could not be read when it is not JSON, and that it did not pass its checks when it does not verify, and the report stays", async () => {
     const root = await draw({
       d1: "this is not json",
       d2: JSON.stringify({ bundle_kind: "evidence-bundle/v2", records: [] }),
     });
-    for (const id of ["d1::req-1", "d2::req-2"]) {
+    for (const [id, state, words] of [
+      [
+        "d1::req-1",
+        "unreadable",
+        "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
+      ],
+      [
+        "d2::req-2",
+        "unverified",
+        "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged.",
+      ],
+    ] as const) {
       const line = claim(root, id);
       line
         .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
         .click();
       await settle();
-      expect(line.querySelector(".rcpt-panel")!.textContent).toBe(
-        "This receipt could not be opened. The rest of the report is unchanged.",
-      );
+      expect(line.querySelector(".rcpt-panel")!.textContent).toBe(words);
       expect(
         line.querySelector(".rcpt-panel")!.getAttribute("data-receipt-state"),
-      ).toBe("failed");
+      ).toBe(state);
     }
     expect(root.querySelectorAll("[data-claim-ref]")).toHaveLength(3);
     expect(root.querySelector('[data-page="contract-report"]')).not.toBeNull();
