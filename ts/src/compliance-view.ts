@@ -60,7 +60,7 @@ import { buildVerificationPageModel } from "@action-state-group/agent-action-cap
  * report read as requirement groups and the tests under each. The EU AI Act
  * Results are this grouping with the EU AI Act wording pack; every word on
  * it is the pack's (`w`). Drawn by the module in place of `renderResultPage`
- * when the bundle's `eu-ai-act-compliance/v1` extension opts in, after the same verify-first
+ * when the bundle's `eu-ai-act-obligations-report/v2` (or earlier `eu-ai-act-compliance/v1`) extension opts in, after the same verify-first
  * gate every other root family goes through -- nothing here ever runs on a
  * bundle that did not verify. See compliance.ts for where every value on the
  * page comes from: counts, verdicts, test wording, tiers and the pack from
@@ -91,7 +91,7 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 }
 
 /**
- * Producer text: the eu-ai-act-compliance/v1 mapping, carried beside the
+ * Producer text: the eu-ai-act-obligations-report/v2 (or v1) mapping, carried beside the
  * signed records and signed by no one. Set in italics (`<i>`, the browser's
  * own style) and tagged `data-source="producer"`, so it never reads as a
  * sealed finding; the summary's basis line says what the italics mean.
@@ -915,9 +915,9 @@ function renderSummary(
     "p",
     "",
     w.t(
-      packTitlesOnPage(model, w)
+      (packTitlesOnPage(model, w)
         ? "groups.summary.basis.pack-titles"
-        : "groups.summary.basis",
+        : "groups.summary.basis") + (presentation.version === 2 ? ".v2" : ""),
     ),
   );
   basis.dataset.basis = "terms";
@@ -963,7 +963,8 @@ function renderCanvasNotes(
 }
 
 /**
- * The producer's findings (severity, recommendation), in one block under a
+ * The producer's findings (v2: what was observed and the owner; v1: severity,
+ * recommendation), in one block under a
  * fixed label: presentation text, not evidence (presentation contract
  * section 6). Each finding's session count is the claims'; nothing here
  * tallies the findings themselves.

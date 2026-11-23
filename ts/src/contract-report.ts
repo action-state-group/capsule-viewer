@@ -57,7 +57,8 @@ import { applyDepth, type ReportLevels } from "./report-front.js";
  * The block itself is empty (section 1): the data a grouping reads still
  * comes from the sealed records the bundle carries beside it, the earlier
  * kinds' blocks (`outcome-report/v1` for `lines`,
- * `eu-ai-act-compliance/v1` for `groups`), read by their own readers,
+ * `eu-ai-act-obligations-report/v2`, else its earlier name
+ * `eu-ai-act-compliance/v1`, for `groups`), read by their own readers,
  * unchanged (section 5). A Result that opts in and carries neither draws
  * the `generic` grouping (generic-report-view.ts): rows from its claims.
  *

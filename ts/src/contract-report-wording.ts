@@ -1051,6 +1051,8 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "groups.ob.ok.unverified",
   "groups.summary.basis",
   "groups.summary.basis.pack-titles",
+  "groups.summary.basis.v2",
+  "groups.summary.basis.pack-titles.v2",
   "groups.summary.lede",
   "groups.pf.case-record.from-claims",
   "groups.pf.no-claim",
@@ -1460,7 +1462,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
   Record<ContractReportGrouping, string>
 > = Object.freeze({
   lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
-  groups: "76acc9598202663738d7d2903ca1a042d9b7ca21799297946e4da39ea77d5250",
+  groups: "0f9347e67ea06cafe1e9d2e12697117ce5d7f9e266838e51e1de18790543c750",
   generic: "9987467e7d99ff4680fa6d7e2d2d634455f729958bfbd53ebac86c14508b031d",
 });
 

@@ -86,6 +86,8 @@ export interface ComplianceQualityProtocol {
 
 export interface CompliancePresentation {
   readonly enabled: boolean;
+  /** Which template's block this was read from: 1 for `eu-ai-act-compliance/v1`, 2 for `eu-ai-act-obligations-report/v2`. */
+  readonly version: 1 | 2;
   readonly regulation: string;
   readonly obligations: readonly ComplianceObligation[];
   readonly qualityProtocol?: ComplianceQualityProtocol;
@@ -232,6 +234,7 @@ export function readComplianceBlock(
   const qualityProtocol = readQualityProtocol(block.quality_protocol);
   return {
     enabled: true,
+    version: key === COMPLIANCE_KEY_V2 ? 2 : 1,
     regulation,
     obligations,
     ...(qualityProtocol === undefined ? {} : { qualityProtocol }),

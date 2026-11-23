@@ -1064,3 +1064,19 @@ it("a v2 finding without observed is not drawn, and a severity or recommendation
   expect(f1.textContent).not.toContain("Retrain");
   expect(f1.textContent).not.toContain("High");
 });
+
+it("the v2 page's basis note names what a v2 finding carries, not severities or recommendations, and the v1 page's note is unchanged", async () => {
+  const v2 = await render(
+    (await sealEvidenceBundle(fixture("compliance-v2/bundle.json"))).bundle,
+  );
+  const note = v2.querySelector<HTMLElement>(
+    '[data-basis="terms"]',
+  )!.textContent!;
+  expect(note).toContain("finding ids, what was observed, their owners");
+  expect(note).not.toContain("severities");
+  expect(note).not.toContain("recommendations");
+  const v1 = await render((await sealedComplianceBundle()).bundle);
+  expect(
+    v1.querySelector<HTMLElement>('[data-basis="terms"]')!.textContent,
+  ).toContain("finding ids, severities, recommendations");
+});

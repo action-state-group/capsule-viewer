@@ -42,8 +42,11 @@ const ALIAS_INTERPRETERS: Readonly<
   },
   [COMPLIANCE_KEY_V1]: {
     id: "compliance-card",
+    // The card draws the v2 block when it accepts one, so the v1 block is
+    // read only when no v2 block is accepted.
     accepts: (bundle) =>
-      readComplianceBlock(bundle, COMPLIANCE_KEY_V1) !== undefined,
+      readComplianceBlock(bundle, COMPLIANCE_KEY_V1) !== undefined &&
+      readComplianceBlock(bundle, COMPLIANCE_KEY_V2) === undefined,
   },
   // The v2 name of the same card (findings state what was observed).
   [COMPLIANCE_KEY_V2]: {
