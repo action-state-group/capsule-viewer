@@ -6,13 +6,11 @@ import type {
 } from "@action-state-group/agent-action-capsule";
 import type { ClaimReason } from "./claim-reasons.js";
 import type { Words } from "./contract-report-wording.js";
-import { COMPLIANCE_FRAME_VARS } from "./frame-tokens.generated.js";
 import { ROW_TIERS, type RowTier, type TierOf } from "./evidence-contract.js";
 import { leadWithProvenance, renderCheckYourself } from "./report-front.js";
-import { frontCss } from "./report-front-styles.js";
+import { GENERIC_REPORT_CSS } from "./generic-report-styles.js";
 import {
   assuranceRow,
-  levelCss,
   levelToggle,
   proofList,
   reportSummary,
@@ -46,28 +44,7 @@ export const GENERIC_FRAME = {
   tag: "div",
   className: "gr",
   page: "contract-report",
-  css:
-    `
-.gr{${COMPLIANCE_FRAME_VARS}
-  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;display:block;max-width:1080px;margin:26px auto;padding:0 28px}
-.gr *{box-sizing:border-box}
-.gr h1,.gr h2,.gr h3{font-family:Georgia,"Iowan Old Style",Cambria,serif;color:var(--navy);margin:0}
-.gr h1{font-size:28px;margin:6px 0 4px}
-.gr h2{font-size:21px;margin:0 0 6px}
-.gr h3{font-size:17px;margin:18px 0 6px}
-.gr .rsum,.gr .counts{color:var(--slate);margin:0 0 8px}
-.gr .rnote{font-size:12.5px;color:var(--slate);margin:2px 0 8px}
-.gr .tally{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;margin:4px 0}
-.gr .rname{font-weight:600;color:var(--navy)}
-.gr .rname code,.gr .cid{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
-.gr ul.claims{list-style:none;margin:6px 0 0;padding:0}
-.gr .rreason,.gr .rflag{font-size:12.5px;border-radius:6px;padding:2px 8px;background:#EEF0F3;color:var(--slate)}
-.gr .rreason{margin:4px 0 6px 22px}
-.gr .rreason[data-tone="warn"],.gr .rflag[data-tone="warn"]{background:var(--bad-l);color:var(--bad);font-weight:700}
-.gr .tier-note{font-size:12.5px;color:var(--slate)}
-` +
-    levelCss("gr") +
-    frontCss(".gr"),
+  css: GENERIC_REPORT_CSS,
 } as const;
 
 const VERDICT_TONE: Readonly<Record<string, Tone>> = {
@@ -240,10 +217,121 @@ function reasonLines(
   return [line];
 }
 
+/** What opening a carried receipt came to: drawn, no module for it, not readable, or read but not passing its checks. */
+export type ReceiptOpen = "opened" | "no-module" | "unreadable" | "unverified";
+
+/**
+ * The deal receipts a report page carries (the page's `receipts` option):
+ * each deal's receipt bundle as the JSON text the node served, by deal id, and
+ * the runtime's way to draw one into a panel. The page never reads a
+ * receipt's content itself; the receipt module the page also carries draws it.
+ */
+export interface ReceiptsInput {
+  readonly texts: Readonly<Record<string, string | null>>;
+  readonly open: (text: string, panel: HTMLElement) => Promise<ReceiptOpen>;
+}
+
+/** The deal a claim belongs to: its id before the first `::`, as the inference-deals Result writes it, or none. */
+export function dealIdOf(claimId: string): string | undefined {
+  const at = claimId.indexOf("::");
+  return at > 0 ? claimId.slice(0, at) : undefined;
+}
+
+/**
+ * The deal's receipt line under a claim. Only a page that carries a
+ * `receipts` option draws one (a Result whose ids merely contain `::` is not
+ * a deal report). A deal whose receipt is not carried says so and opens
+ * nothing: it is a fault of how the page was built, never "no record".
+ */
+function receiptLine(
+  claim: ResultClaim,
+  w: Words,
+  receipts: ReceiptsInput,
+): HTMLElement[] {
+  const deal = dealIdOf(claim.id);
+  if (deal === undefined) return [];
+  const line = el("div", "rcpt");
+  line.dataset.receiptDeal = deal;
+  const text = Object.prototype.hasOwnProperty.call(receipts.texts, deal)
+    ? receipts.texts[deal]
+    : undefined;
+  if (text === undefined || text === null) {
+    // `null` is a receipt the holder's disclosure policy kept off the page on
+    // purpose; no entry is a page built without it, a fault.
+    const note = el(
+      "p",
+      "rcpt-note",
+      w.t(
+        text === null
+          ? "generic.receipt.withheld"
+          : "generic.receipt.not_carried",
+      ),
+    );
+    note.dataset.receipt = text === null ? "withheld" : "not-carried";
+    line.append(note);
+    return [line];
+  }
+  const button = el(
+    "button",
+    "",
+    w.t("generic.receipt.open"),
+  ) as HTMLButtonElement;
+  button.setAttribute("type", "button");
+  button.setAttribute("aria-expanded", "false");
+  button.dataset.receipt = "open";
+  const panel = el("div", "rcpt-panel");
+  panel.hidden = true;
+  let state: "closed" | "shown" | "hidden" = "closed";
+  button.addEventListener("click", () => {
+    if (state === "shown") {
+      panel.hidden = true;
+      state = "hidden";
+      button.setAttribute("aria-expanded", "false");
+      button.textContent = w.t("generic.receipt.open");
+      return;
+    }
+    panel.hidden = false;
+    button.setAttribute("aria-expanded", "true");
+    button.textContent = w.t("generic.receipt.close");
+    if (state === "hidden") {
+      state = "shown";
+      return;
+    }
+    state = "shown";
+    button.disabled = true;
+    const showOutcome = (outcome: ReceiptOpen): void => {
+      button.disabled = false;
+      panel.dataset.receiptState = outcome;
+      if (outcome === "opened") return;
+      panel.replaceChildren(
+        el(
+          "p",
+          "rcpt-note",
+          w.t(
+            outcome === "no-module"
+              ? "generic.receipt.no_module"
+              : outcome === "unverified"
+                ? "generic.receipt.unverified"
+                : "generic.receipt.unreadable",
+          ),
+        ),
+      );
+    };
+    // A receipt that cannot be drawn leaves the report as it was and says
+    // why under the claim; a rejection never reaches the page.
+    receipts
+      .open(text, panel)
+      .then(showOutcome, () => showOutcome("unreadable"));
+  });
+  line.append(button, panel);
+  return [line];
+}
+
 function claimItem(
   claim: ResultClaim,
   w: Words,
   reasons?: ReasonsOf,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const item = el("li", "");
   item.dataset.claimRef = claim.id;
@@ -253,6 +341,7 @@ function claimItem(
   item.append(
     levelToggle(2, head, () => claimProofs(claim, w), { className: "claim" }),
     ...reasonLines(claim, w, reasons),
+    ...(receipts === undefined ? [] : receiptLine(claim, w, receipts)),
   );
   return item;
 }
@@ -263,6 +352,7 @@ function rowItem(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const label = w.row(row.requirementRef, "label");
   const name = el("span", "rname");
@@ -308,7 +398,8 @@ function rowItem(
         ))
           body.append(el("p", "rnote", w.t("generic.later.note", { date })));
       const list = el("ul", "claims");
-      for (const claim of row.claims) list.append(claimItem(claim, w, reasons));
+      for (const claim of row.claims)
+        list.append(claimItem(claim, w, reasons, receipts));
       body.append(el("h3", "", w.t("generic.claims.h")), list);
       return body;
     },
@@ -326,6 +417,7 @@ function groupedRows(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const box = el("div", "groups");
   const order: (string | undefined)[] = [];
@@ -354,7 +446,7 @@ function groupedRows(
       part.append(heading);
     }
     for (const row of byGroup.get(group)!)
-      part.append(rowItem(row, w, later, tierOf, reasons));
+      part.append(rowItem(row, w, later, tierOf, reasons, receipts));
     box.append(part);
   }
   return box;
@@ -373,10 +465,11 @@ function byContract(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const contracts = [...new Set(rows.map((row) => row.contractRef))];
   if (contracts.length <= 1)
-    return groupedRows(rows, w, later, tierOf, reasons);
+    return groupedRows(rows, w, later, tierOf, reasons, receipts);
   const box = el("div", "contracts");
   for (const contract of contracts) {
     const part = el("div", "contract");
@@ -389,6 +482,7 @@ function byContract(
         later,
         tierOf,
         reasons,
+        receipts,
       ),
     );
     box.append(part);
@@ -412,6 +506,7 @@ export async function drawGeneric(
   w: Words,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
+  receipts?: ReceiptsInput,
 ): Promise<void> {
   const tierFor = (claim: ResultClaim): RowTier =>
     tierOf === undefined
@@ -447,7 +542,7 @@ export async function drawGeneric(
   section.dataset.section = "rows";
   const rows = rowsOf(inForce);
   if (tierOf === undefined)
-    section.append(byContract(rows, w, false, undefined, reasons));
+    section.append(byContract(rows, w, false, undefined, reasons, receipts));
   else
     for (const tier of ROW_TIERS) {
       const inTier = rows.filter(
@@ -465,7 +560,7 @@ export async function drawGeneric(
           }),
         ),
         el("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
-        byContract(inTier, w, false, tierOf, reasons),
+        byContract(inTier, w, false, tierOf, reasons, receipts),
       );
       section.append(part);
     }
@@ -481,7 +576,7 @@ export async function drawGeneric(
         "",
         w.t("generic.later.title", { n: later.length.toLocaleString() }),
       ),
-      byContract(laterRows, w, true, tierOf, reasons),
+      byContract(laterRows, w, true, tierOf, reasons, receipts),
     );
     section.append(part);
   }

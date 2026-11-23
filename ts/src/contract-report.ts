@@ -12,7 +12,11 @@ import {
   type ContractReportGrouping,
 } from "./contract-report-wording.js";
 import type { ClaimReason } from "./claim-reasons.js";
-import { drawGeneric, GENERIC_FRAME } from "./generic-report-view.js";
+import {
+  drawGeneric,
+  GENERIC_FRAME,
+  type ReceiptsInput,
+} from "./generic-report-view.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
 import { refusedWordingNotice } from "./report-levels.js";
 import {
@@ -216,6 +220,7 @@ export async function renderContractReport(
   host: ReportLevels | HTMLElement,
   wording?: WordingPackInput,
   contract?: CheckedContract,
+  receipts?: ReceiptsInput,
 ): Promise<void> {
   const tierOf = tierReader(result, contract);
   const w = await contractReportWords(input.grouping, wording, {
@@ -326,6 +331,7 @@ export async function renderContractReport(
       // The pack's `row.<ref>.reason.<code>` words apply only to a Result
       // citing one contract (the Words gate); the reason itself shows always.
       input.reasons,
+      receipts,
     );
   regions.L0.append(levels.L0);
   regions.L1.append(levels.L1);

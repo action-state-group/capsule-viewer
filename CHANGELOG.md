@@ -11,6 +11,15 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A contract report whose claims are deals opens the 9b receipt module from each deal line (#228, capsules-plugin#96 button 2, Steven's ruling that current strength counts): the page's new `receipts` setting (a deal id to that deal's receipt bundle as the node served it, or `null` for a receipt the holder's disclosure policy keeps off the page, which says so apart from one not carried) gives each claim of a carried deal an "Open receipt" control that draws the receipt under the claim with the receipt module the page carries, and says "Receipt not carried with this page" for a deal whose receipt is missing. A receipt that is not JSON says it could not be read, one that does not pass its checks says so, and a verified one no receipt module takes says the page has no viewer for that kind of receipt; the page pairs a claim with a receipt by the deal id key alone and trusts the builder's filing. The generic pack gains `generic.receipt.*` words (locked), so its `wording_sha256` changes. The Go emitter takes it as `OfflineOptions.Receipts` and refuses a receipt that is not JSON.
+
+### Fixed
+
+- The generic contract-report view's stylesheet is listed in the offline page's content security policy (`runtime-style-hashes.txt`, `CORE_RUNTIME_STYLES`); it was inserted at render time but not listed, so a browser blocked it.
+- A report page's "How this page was checked" link opens its own verification section when another render sits inside it.
+
 ## ts 0.21.0 and go 0.21.0 (2026-11-22)
 
 Both state viewer 0.21.0: `ts/v0.21.0`, then `go/v0.21.0` on the commit that ships its page runtime.

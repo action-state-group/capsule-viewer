@@ -92,6 +92,9 @@ func BuildEmbeddedHTML(value interface{}, runtime []byte, o OfflineOptions) (*Bu
 	if err != nil {
 		return nil, err
 	}
+	if err := checkReceipts(o.Receipts, o.ReceiptsWithheld); err != nil {
+		return nil, err
+	}
 	options, err := renderOptions(o, "embedded", charts)
 	if err != nil {
 		return nil, err

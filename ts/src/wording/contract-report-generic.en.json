@@ -468,6 +468,13 @@
     "generic.claim.unrecognized": "unrecognized claim type {type}",
     "generic.claim.contract": "Contract",
     "generic.claim.requirement": "Requirement",
-    "generic.claim.failure": "Why it failed verification"
+    "generic.claim.failure": "Why it failed verification",
+    "generic.receipt.open": "Open receipt",
+    "generic.receipt.close": "Close receipt",
+    "generic.receipt.not_carried": "Receipt not carried with this page.",
+    "generic.receipt.no_module": "This page has no viewer for this kind of receipt, so it is not shown.",
+    "generic.receipt.withheld": "The holder's disclosure policy keeps this receipt off this page.",
+    "generic.receipt.unreadable": "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
+    "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged."
   }
 }

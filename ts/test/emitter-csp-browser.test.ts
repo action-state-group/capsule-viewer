@@ -226,6 +226,21 @@ describe.skipIf(executablePath === undefined)(
         const { bundle } = await sealEvidenceBundle(input);
         pages.push([name, emitEvidenceGraphHtml(bundle, runtime), selector]);
       }
+      // The generic contract report's stylesheet: a Result opted into
+      // contract-report/v1 with nothing else (capsule-viewer#228).
+      const generic = fixture("result-root-bundle.json") as Obj;
+      generic.extensions = {
+        ...((generic.extensions as Obj | undefined) ?? {}),
+        "contract-report/v1": {},
+      };
+      pages.push([
+        "generic contract report",
+        emitEvidenceGraphHtml(
+          (await sealEvidenceBundle(generic)).bundle,
+          runtime,
+        ),
+        ".gr",
+      ]);
       // The charts' stylesheet: the committed chart bundle, drawn with its
       // specs (capsule-viewer#82).
       const charts = join("charts", "book.bundle.json");
