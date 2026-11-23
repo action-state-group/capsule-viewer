@@ -189,7 +189,9 @@ type OfflineOptions struct {
 
 // checkReceipts refuses a receipt that is not JSON, or one named by an empty
 // deal id, "__proto__" or an id with "::" in it (a claim's deal id never has
-// one), so a report page never carries a receipt it cannot parse or reach.
+// one), so a report page never carries a receipt it cannot parse or reach. A
+// deal id given twice, or in more than one of carried, withheld and not closed,
+// is refused too.
 func checkReceipts(receipts map[string]string, withheld, notClosed []string) error {
 	seen := make(map[string]bool, len(withheld)+len(notClosed))
 	for _, deals := range [][]string{withheld, notClosed} {
