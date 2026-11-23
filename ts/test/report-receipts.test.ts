@@ -134,11 +134,11 @@ describe("a deal line's receipt", () => {
     expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
   });
 
-  it("says a receipt the node's share policy keeps off the page is kept off on purpose, apart from one not carried", async () => {
+  it("says a receipt the holder's disclosure policy keeps off the page is kept off on purpose, apart from one not carried", async () => {
     const root = await draw({ d1: null });
     const kept = claim(root, "d1::req-1");
     expect(kept.querySelector('[data-receipt="withheld"]')!.textContent).toBe(
-      "This node's share policy keeps this receipt off the page.",
+      "The holder's disclosure policy keeps this receipt off this page.",
     );
     expect(kept.querySelector("button")).toBeNull();
     // a deal missing from the setting is a page built wrong, and says so

@@ -116,7 +116,7 @@ rules bind it:
   (`generic.receipt.open`, closed again by `generic.receipt.close`); under a claim of a deal whose
   receipt is not carried it says `generic.receipt.not_carried`, with no control, and never "no
   record": the page lists the deal, so a missing receipt is a fault of how the page was built. A deal
-  whose entry is `null` is a receipt the node's share policy keeps off the page on purpose; it says
+  whose entry is `null` is a receipt the holder's disclosure policy keeps off the page on purpose; it says
   `generic.receipt.withheld` instead, with no control, and is not a fault. Opening
   verifies the carried bundle with the runtime's verifier and draws it, under the claim, with the
   receipt module the page also carries (`capsulectl.deal-view/v0` or `capsulectl.deal-view-composed/v0`):

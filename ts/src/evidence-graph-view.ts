@@ -2749,7 +2749,7 @@ export interface RenderEvidenceGraphOptions {
    * The deal receipts the page carries, for a report whose claims are deals
    * (capsule-viewer#228): each deal's receipt bundle as the JSON text the node
    * served, by deal id, the claim id's part before `::`; `null` for a deal whose
-   * receipt the node's share policy keeps off the page on purpose. The contract-report
+   * receipt the holder's disclosure policy keeps off the page on purpose. The contract-report
    * module's `generic` grouping puts an "Open receipt" control under each such
    * claim whose deal is here, and says "receipt not carried with this page"
    * for one whose deal is not. Opening one verifies that bundle with the

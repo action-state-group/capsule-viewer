@@ -448,6 +448,34 @@ CONTRACT_REPORT_MODULE = Move(
             "  an `x-` name is not shown.\n",
             "capsule-viewer#344: the producer's reason beside the claim",
         ),
+        # Section 2: the deal receipts a report page may carry
+        # (capsule-viewer#228).
+        (
+            "- **Other sealed records.** A module MAY also show other sealed records of the bundle (for example\n",
+            "- **Deal receipts** (capsule-viewer#228). A page may carry, beside the bundle, the receipt of each deal\n"
+            "  a report's claims are about: the page's `receipts` setting maps a deal id to that deal's receipt\n"
+            "  bundle, as the JSON text the node served. The deal id of a claim is its `id` before the first `::`,\n"
+            "  as the inference-deals Result writes it; a claim with no `::` has none. Only a page that carries the\n"
+            "  setting (possibly empty) draws anything for it, and only the generic grouping draws a claim's row.\n"
+            "  Under each claim of a deal whose receipt is carried, the module draws an \"Open receipt\" control\n"
+            "  (`generic.receipt.open`, closed again by `generic.receipt.close`); under a claim of a deal whose\n"
+            "  receipt is not carried it says `generic.receipt.not_carried`, with no control, and never \"no\n"
+            "  record\": the page lists the deal, so a missing receipt is a fault of how the page was built. A deal\n"
+            "  whose entry is `null` is a receipt the holder's disclosure policy keeps off the page on purpose; it says\n"
+            "  `generic.receipt.withheld` instead, with no control, and is not a fault. Opening\n"
+            "  verifies the carried bundle with the runtime's verifier and draws it, under the claim, with the\n"
+            "  receipt module the page also carries (`capsulectl.deal-view/v0` or `capsulectl.deal-view-composed/v0`):\n"
+            "  the receipt's own cases and words are that module's, and this module adds none. A bundle that is not\n"
+            "  JSON says `generic.receipt.unreadable`, one that does not pass its checks says\n"
+            "  `generic.receipt.unverified` (a failed check is never worded as a load error), and a verified one no\n"
+            "  receipt module takes says `generic.receipt.no_module`; none draws a fallback page, and the report is\n"
+            "  unchanged. The module pairs a claim with a receipt by the deal id key alone and cannot check that the\n"
+            "  receipt is that deal's (a claim's deal id is the producer's own index, not an id the receipt carries):\n"
+            "  that filing is the page builder's, and the module trusts it. The page\n"
+            "  reaches nothing outside itself. These seven strings are locked entries (§3): a pack cannot reword them.\n"
+            "- **Other sealed records.** A module MAY also show other sealed records of the bundle (for example\n",
+            "capsule-viewer#228: a deal line opens the receipt module",
+        ),
         (
             "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n",
             "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n"

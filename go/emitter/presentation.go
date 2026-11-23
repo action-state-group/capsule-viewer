@@ -169,7 +169,7 @@ type OfflineOptions struct {
 	// carries (Modules) and verifies it with the runtime's own verifier. They
 	// reach the page as renderOptions' receipts.
 	Receipts map[string]string
-	// ReceiptsWithheld are the deal ids whose receipt the node's share policy
+	// ReceiptsWithheld are the deal ids whose receipt the holder's disclosure policy
 	// keeps off the page on purpose. They reach the page as `null` entries of
 	// `receipts`, and their claims say so, apart from a deal that is simply
 	// missing from Receipts (a page built wrong). A deal id may not be in both.

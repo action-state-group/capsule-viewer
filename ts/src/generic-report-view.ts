@@ -256,7 +256,7 @@ function receiptLine(
     ? receipts.texts[deal]
     : undefined;
   if (text === undefined || text === null) {
-    // `null` is a receipt the node's share policy kept off the page on
+    // `null` is a receipt the holder's disclosure policy kept off the page on
     // purpose; no entry is a page built without it, a fault.
     const note = el(
       "p",
