@@ -1072,7 +1072,9 @@ it("the v2 page's basis note names what a v2 finding carries, not severities or 
   const note = v2.querySelector<HTMLElement>(
     '[data-basis="terms"]',
   )!.textContent!;
-  expect(note).toContain("finding ids, what was observed, their owners");
+  expect(note).toContain(
+    "finding ids, what each finding observed, its owner and due date",
+  );
   expect(note).not.toContain("severities");
   expect(note).not.toContain("recommendations");
   const v1 = await render((await sealedComplianceBundle()).bundle);
