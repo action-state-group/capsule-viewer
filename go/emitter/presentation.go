@@ -175,18 +175,32 @@ type OfflineOptions struct {
 	// missing from Receipts (a page built wrong). A deal id may not be in both.
 	// Setting it, even empty, marks the page as a deal report like Receipts.
 	ReceiptsWithheld []string
+	// ReceiptsNotClosed are the deal ids that had no settlement or delivery
+	// when the page was built, so they have no receipt yet (capsule-viewer#358).
+	// They reach the page as `{"state":"not-closed"}` entries of `receipts`, and
+	// their claims say "No receipt: this deal had not closed when this page was
+	// built.", apart from a deal missing from Receipts (a page built wrong) and
+	// one in ReceiptsWithheld (the holder's choice). A deal id is in at most one
+	// of the three, once. Setting it, even empty, marks the page as a deal
+	// report like Receipts. The page runtime embedded here reads this entry only
+	// from the release that refreshes it after capsule-viewer#358.
+	ReceiptsNotClosed []string
 }
 
 // checkReceipts refuses a receipt that is not JSON, or one named by an empty
 // deal id, "__proto__" or an id with "::" in it (a claim's deal id never has
 // one), so a report page never carries a receipt it cannot parse or reach.
-func checkReceipts(receipts map[string]string, withheld []string) error {
-	for _, deal := range withheld {
-		if _, both := receipts[deal]; both {
-			return fmt.Errorf("receipt for deal %q is both carried and withheld", deal)
-		}
-		if err := checkReceiptDealID(deal); err != nil {
-			return err
+func checkReceipts(receipts map[string]string, withheld, notClosed []string) error {
+	seen := make(map[string]bool, len(withheld)+len(notClosed))
+	for _, deals := range [][]string{withheld, notClosed} {
+		for _, deal := range deals {
+			if err := checkReceiptDealID(deal); err != nil {
+				return err
+			}
+			if _, carried := receipts[deal]; carried || seen[deal] {
+				return fmt.Errorf("receipt for deal %q is given more than once (carried, withheld or not closed)", deal)
+			}
+			seen[deal] = true
 		}
 	}
 	for deal, text := range receipts {
@@ -439,13 +453,16 @@ func renderOptions(o OfflineOptions, format string, charts []interface{}) (strin
 	if o.Contract != nil {
 		options["contract"] = map[string]interface{}{"text": o.Contract.Text, "sha256": o.Contract.SHA256}
 	}
-	if o.Receipts != nil || o.ReceiptsWithheld != nil {
-		receipts := make(map[string]interface{}, len(o.Receipts)+len(o.ReceiptsWithheld))
+	if o.Receipts != nil || o.ReceiptsWithheld != nil || o.ReceiptsNotClosed != nil {
+		receipts := make(map[string]interface{}, len(o.Receipts)+len(o.ReceiptsWithheld)+len(o.ReceiptsNotClosed))
 		for deal, text := range o.Receipts {
 			receipts[deal] = text
 		}
 		for _, deal := range o.ReceiptsWithheld {
 			receipts[deal] = nil
+		}
+		for _, deal := range o.ReceiptsNotClosed {
+			receipts[deal] = map[string]interface{}{"state": "not-closed"}
 		}
 		options["receipts"] = receipts
 	}
@@ -476,11 +493,11 @@ func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (stri
 	if err != nil {
 		return "", err
 	}
-	if err := checkReceipts(o.Receipts, o.ReceiptsWithheld); err != nil {
+	if err := checkReceipts(o.Receipts, o.ReceiptsWithheld, o.ReceiptsNotClosed); err != nil {
 		return "", err
 	}
 	bootstrap := DefaultBootstrap
-	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || o.Contract != nil || len(charts) > 0 || o.Receipts != nil || o.ReceiptsWithheld != nil {
+	if o.Audience != "*" || o.Depth != "" || o.Wording != nil || o.Contract != nil || len(charts) > 0 || o.Receipts != nil || o.ReceiptsWithheld != nil || o.ReceiptsNotClosed != nil {
 		options, err := renderOptions(o, "html", charts)
 		if err != nil {
 			return "", err

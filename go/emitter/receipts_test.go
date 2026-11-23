@@ -76,3 +76,36 @@ func TestBuildOfflineHTMLCarriesAWithheldReceiptAsNull(t *testing.T) {
 		require.Error(t, err, name)
 	}
 }
+
+func TestBuildOfflineHTMLCarriesANotClosedReceiptAsAStateObject(t *testing.T) {
+	bundle := chartBundle(t)
+	got, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{
+		Audience:          "*",
+		Receipts:          map[string]string{"d1": `{}`},
+		ReceiptsWithheld:  []string{"d2"},
+		ReceiptsNotClosed: []string{"d3"},
+	})
+	require.NoError(t, err)
+	require.Contains(t, got, `"receipts":{"d1":"{}","d2":null,"d3":{"state":"not-closed"}}`)
+
+	// Not closed alone still marks the page as a deal report.
+	only, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", ReceiptsNotClosed: []string{"d3"}})
+	require.NoError(t, err)
+	require.Contains(t, only, `"receipts":{"d3":{"state":"not-closed"}}`)
+
+	// A deal is in one set, once; a not-closed id is checked like the others.
+	for name, o := range map[string]OfflineOptions{
+		"carried too":    {Audience: "*", Receipts: map[string]string{"d1": `{}`}, ReceiptsNotClosed: []string{"d1"}},
+		"withheld too":   {Audience: "*", ReceiptsWithheld: []string{"d1"}, ReceiptsNotClosed: []string{"d1"}},
+		"twice":          {Audience: "*", ReceiptsNotClosed: []string{"d1", "d1"}},
+		"withheld twice": {Audience: "*", ReceiptsWithheld: []string{"d1", "d1"}},
+		"bad id":         {Audience: "*", ReceiptsNotClosed: []string{"d1::req"}},
+		"__proto__":      {Audience: "*", ReceiptsNotClosed: []string{"__proto__"}},
+		"empty deal id":  {Audience: "*", ReceiptsNotClosed: []string{""}},
+	} {
+		_, err := BuildOfflineHTML(bundle, []byte(marker), o)
+		require.Error(t, err, name)
+		_, err = BuildEmbeddedHTML(bundle, []byte(marker), o)
+		require.Error(t, err, name)
+	}
+}

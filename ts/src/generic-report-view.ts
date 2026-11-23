@@ -221,13 +221,26 @@ function reasonLines(
 export type ReceiptOpen = "opened" | "no-module" | "unreadable" | "unverified";
 
 /**
+ * A deal that had no settlement or delivery recorded when the page was built:
+ * it has no receipt yet, which is not a fault of the page and not a holder's
+ * choice (capsule-viewer#358, Sherlock2's what). Any other object is read as
+ * an entry nothing here understands, and reads as not carried.
+ */
+export interface ReceiptNotClosed {
+  readonly state: "not-closed";
+}
+
+/** One deal's entry in the `receipts` option: a receipt bundle's JSON text, `null` (kept off the page by the holder's policy) or {@link ReceiptNotClosed}. */
+export type DealReceiptEntry = string | null | ReceiptNotClosed;
+
+/**
  * The deal receipts a report page carries (the page's `receipts` option):
  * each deal's receipt bundle as the JSON text the node served, by deal id, and
  * the runtime's way to draw one into a panel. The page never reads a
  * receipt's content itself; the receipt module the page also carries draws it.
  */
 export interface ReceiptsInput {
-  readonly texts: Readonly<Record<string, string | null>>;
+  readonly texts: Readonly<Record<string, DealReceiptEntry>>;
   readonly open: (text: string, panel: HTMLElement) => Promise<ReceiptOpen>;
 }
 
@@ -241,7 +254,9 @@ export function dealIdOf(claimId: string): string | undefined {
  * The deal's receipt line under a claim. Only a page that carries a
  * `receipts` option draws one (a Result whose ids merely contain `::` is not
  * a deal report). A deal whose receipt is not carried says so and opens
- * nothing: it is a fault of how the page was built, never "no record".
+ * nothing: it is a fault of how the page was built, never "no record". A deal
+ * marked not closed says it has no receipt because it had not closed when the
+ * page was built, and is not a fault.
  */
 function receiptLine(
   claim: ResultClaim,
@@ -255,19 +270,28 @@ function receiptLine(
   const text = Object.prototype.hasOwnProperty.call(receipts.texts, deal)
     ? receipts.texts[deal]
     : undefined;
-  if (text === undefined || text === null) {
+  if (typeof text !== "string") {
     // `null` is a receipt the holder's disclosure policy kept off the page on
-    // purpose; no entry is a page built without it, a fault.
+    // purpose; the not-closed marker is a deal with no receipt yet. No entry,
+    // or one this page does not know, is a page built without it, a fault.
+    const kind =
+      text === null
+        ? "withheld"
+        : text !== undefined && text.state === "not-closed"
+          ? "not-closed"
+          : "not-carried";
     const note = el(
       "p",
       "rcpt-note",
       w.t(
-        text === null
+        kind === "withheld"
           ? "generic.receipt.withheld"
-          : "generic.receipt.not_carried",
+          : kind === "not-closed"
+            ? "generic.receipt.not_closed"
+            : "generic.receipt.not_carried",
       ),
     );
-    note.dataset.receipt = text === null ? "withheld" : "not-carried";
+    note.dataset.receipt = kind;
     line.append(note);
     return [line];
   }

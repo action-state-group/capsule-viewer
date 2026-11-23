@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A deal with no receipt yet reads "No receipt: this deal had not closed when this page was built." on a contract report page (#358, Sherlock2's what: keep the deal in the Result, never "never closed"). The page's `receipts` setting takes `{ "state": "not-closed" }` for such a deal (`ReceiptEntry`, `ReceiptNotClosed`), and the Go emitter takes `OfflineOptions.ReceiptsNotClosed`, apart from `null` (the holder's policy keeps the receipt off) and a missing deal (still "Receipt not carried with this page", a page built wrong). An object entry the page does not know reads as not carried. The Go option reaches a page only from the release that refreshes the embedded page runtime. The evidencebook builder's matching `--receipts` value is a separate task.
+
 ## ts 0.22.0 and go 0.22.0 (2026-11-23)
 
 Both state viewer 0.22.0: `ts/v0.22.0`, then `go/v0.22.0` on the commit that ships its page runtime.

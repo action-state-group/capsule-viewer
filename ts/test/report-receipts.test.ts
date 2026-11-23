@@ -19,6 +19,7 @@ import type {
   PresentationManifest,
   PresentationModule,
 } from "../src/presentation-registry.js";
+import type { DealReceiptEntry } from "../src/generic-report-view.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 
 type Obj = Record<string, unknown>;
@@ -82,7 +83,7 @@ function dealsResult(): Obj {
 }
 
 async function draw(
-  receipts: Record<string, string | null> | undefined,
+  receipts: Record<string, DealReceiptEntry> | undefined,
   withModule = true,
 ): Promise<HTMLElement> {
   const { bundle } = await sealEvidenceBundle(dealsResult());
@@ -144,6 +145,43 @@ describe("a deal line's receipt", () => {
     // a deal missing from the setting is a page built wrong, and says so
     expect(
       claim(root, "d2::req-2").querySelector('[data-receipt="not-carried"]')!
+        .textContent,
+    ).toBe("Receipt not carried with this page.");
+  });
+
+  it("says a deal with no receipt yet had not closed when the page was built, apart from not carried and withheld, with no control", async () => {
+    const root = await draw({
+      d1: { state: "not-closed" },
+      d2: null,
+    });
+    const open = claim(root, "d1::req-1");
+    expect(open.querySelector('[data-receipt="not-closed"]')!.textContent).toBe(
+      "No receipt: this deal had not closed when this page was built.",
+    );
+    expect(open.querySelector("button")).toBeNull();
+    expect(open.textContent).not.toContain("not carried");
+    expect(open.textContent).not.toMatch(/never/iu);
+    expect(
+      claim(root, "d2::req-2").querySelector('[data-receipt="withheld"]'),
+    ).not.toBeNull();
+  });
+
+  it("never shows the built-wrong line on a page whose every deal is a receipt, withheld or not closed", async () => {
+    const root = await draw({
+      d1: await receiptText("d1"),
+      d2: { state: "not-closed" },
+    });
+    expect(root.textContent).not.toContain("Receipt not carried");
+    expect(root.querySelector('[data-receipt="not-carried"]')).toBeNull();
+  });
+
+  it("reads an object entry it does not know as not carried, so a typo never reads as the benign line", async () => {
+    const root = await draw({
+      d1: { state: "not_closed" } as unknown as DealReceiptEntry,
+      d2: { state: "not-closed" },
+    });
+    expect(
+      claim(root, "d1::req-1").querySelector('[data-receipt="not-carried"]')!
         .textContent,
     ).toBe("Receipt not carried with this page.");
   });
