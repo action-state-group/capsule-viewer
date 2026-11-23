@@ -17865,13 +17865,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("6662e2bf0fb9f7305b45e3ccf5ee0cb2ac868b43");
+    return commitPrefix("f991f55c1c01422d541007b2bb9beb568eac3e11");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.22.0",
+    viewerVersion: "0.23.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -19735,6 +19735,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
       "generic.receipt.close": "Close receipt",
       "generic.receipt.not_carried": "Receipt not carried with this page.",
       "generic.receipt.no_module": "This page has no viewer for this kind of receipt, so it is not shown.",
+      "generic.receipt.not_closed": "No receipt: this deal had not closed when this page was built.",
       "generic.receipt.withheld": "The holder's disclosure policy keeps this receipt off this page.",
       "generic.receipt.unreadable": "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
       "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged."
@@ -20218,6 +20219,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     "generic.receipt.close",
     "generic.receipt.not_carried",
     "generic.receipt.no_module",
+    "generic.receipt.not_closed",
     "generic.receipt.withheld",
     "generic.receipt.unreadable",
     "generic.receipt.unverified",
@@ -20815,7 +20817,7 @@ ${key}`);
   var DEFAULT_PACK_SHA256 = Object.freeze({
     lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
     groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
-    generic: "d97bae75af3f8493e4473d3af3220cda1bff1e51577d7e06f03648cc26ad819b"
+    generic: "85ca54a0cdbce6c6e27fe6350df6dcdfa53c5c85d17d4c8e8fef396afffbf096"
   });
   function fill(key, text2, vars) {
     return text2.replace(PLACEHOLDER, (whole, name) => {
@@ -24662,15 +24664,16 @@ ${key}`);
     const line = el10("div", "rcpt");
     line.dataset.receiptDeal = deal;
     const text2 = Object.prototype.hasOwnProperty.call(receipts3.texts, deal) ? receipts3.texts[deal] : void 0;
-    if (text2 === void 0 || text2 === null) {
+    if (typeof text2 !== "string") {
+      const kind = text2 === null ? "withheld" : text2 !== void 0 && text2.state === "not-closed" ? "not-closed" : "not-carried";
       const note = el10(
         "p",
         "rcpt-note",
         w.t(
-          text2 === null ? "generic.receipt.withheld" : "generic.receipt.not_carried"
+          kind === "withheld" ? "generic.receipt.withheld" : kind === "not-closed" ? "generic.receipt.not_closed" : "generic.receipt.not_carried"
         )
       );
-      note.dataset.receipt = text2 === null ? "withheld" : "not-carried";
+      note.dataset.receipt = kind;
       line.append(note);
       return [line];
     }
