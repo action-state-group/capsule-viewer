@@ -702,6 +702,7 @@ export const LOCKED_ENTRIES: ReadonlySet<string> = new Set([
   "generic.receipt.close",
   "generic.receipt.not_carried",
   "generic.receipt.no_module",
+  "generic.receipt.not_closed",
   "generic.receipt.withheld",
   "generic.receipt.unreadable",
   "generic.receipt.unverified",
@@ -1473,7 +1474,7 @@ export const DEFAULT_PACK_SHA256: Readonly<
 > = Object.freeze({
   lines: "4a03428e884337321754bd6657df0ebb6d5441821378a3b1ff17f2a625021cc5",
   groups: "81aeee3abd2d336824d81e24c7f5fad87227ffb4ff8f247cad96c4c855912b9f",
-  generic: "d97bae75af3f8493e4473d3af3220cda1bff1e51577d7e06f03648cc26ad819b",
+  generic: "85ca54a0cdbce6c6e27fe6350df6dcdfa53c5c85d17d4c8e8fef396afffbf096",
 });
 
 export interface Words {

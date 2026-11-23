@@ -117,7 +117,11 @@ rules bind it:
   receipt is not carried it says `generic.receipt.not_carried`, with no control, and never "no
   record": the page lists the deal, so a missing receipt is a fault of how the page was built. A deal
   whose entry is `null` is a receipt the holder's disclosure policy keeps off the page on purpose; it says
-  `generic.receipt.withheld` instead, with no control, and is not a fault. Opening
+  `generic.receipt.withheld` instead, with no control, and is not a fault. A deal whose entry is
+  `{"state": "not-closed"}` had no settlement or delivery recorded when the page was built, so it has no
+  receipt yet; it says `generic.receipt.not_closed` ("No receipt: this deal had not closed when this page
+  was built."), with no control, and is not a fault (capsule-viewer#358). Any other object entry reads as
+  not carried. Opening
   verifies the carried bundle with the runtime's verifier and draws it, under the claim, with the
   receipt module the page also carries (`capsulectl.deal-view/v0` or `capsulectl.deal-view-composed/v0`):
   the receipt's own cases and words are that module's, and this module adds none. A bundle that is not

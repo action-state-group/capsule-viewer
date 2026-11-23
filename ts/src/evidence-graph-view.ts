@@ -18,7 +18,11 @@ import {
   type VerifiedBundleContext,
 } from "@action-state-group/agent-action-capsule";
 import type { PresentationManifest } from "./presentation-registry.js";
-import type { ReceiptOpen, ReceiptsInput } from "./generic-report-view.js";
+import type {
+  DealReceiptEntry,
+  ReceiptOpen,
+  ReceiptsInput,
+} from "./generic-report-view.js";
 import {
   BUILTIN_MANIFEST_COMPOSED,
   BUILTIN_MANIFEST_EVALUATION_SUMMARY_GRAPH,
@@ -2749,7 +2753,9 @@ export interface RenderEvidenceGraphOptions {
    * The deal receipts the page carries, for a report whose claims are deals
    * (capsule-viewer#228): each deal's receipt bundle as the JSON text the node
    * served, by deal id, the claim id's part before `::`; `null` for a deal whose
-   * receipt the holder's disclosure policy keeps off the page on purpose. The contract-report
+   * receipt the holder's disclosure policy keeps off the page on purpose;
+   * `{ state: "not-closed" }` for a deal that had no settlement or delivery
+   * when the page was built, so it has no receipt yet (capsule-viewer#358). The contract-report
    * module's `generic` grouping puts an "Open receipt" control under each such
    * claim whose deal is here, and says "receipt not carried with this page"
    * for one whose deal is not. Opening one verifies that bundle with the
@@ -2757,7 +2763,7 @@ export interface RenderEvidenceGraphOptions {
    * carries (`capsulectl.deal-view/v0` or its composed variant); a bundle no
    * such module accepts is not drawn. Absent, no claim gets a receipt line.
    */
-  readonly receipts?: Readonly<Record<string, string | null>>;
+  readonly receipts?: Readonly<Record<string, DealReceiptEntry>>;
   /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
