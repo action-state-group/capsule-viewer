@@ -47,7 +47,7 @@ export {
 // The deal receipt's two checks a module may not run (capsule-viewer#214;
 // evidencebook-deal#94, 9b frame 8): a Lightning settlement's preimage
 // against its payment hash (lightning-v0 `preimage_verified`), and a deal
-// bundle's x-cadence-witness/v0 chain with its receipts under the reader's
+// bundle's parent-log-witness/v1 chain (or the older x-cadence-witness/v0) with its receipts under the reader's
 // own witness list. Built from cll's checkpoint and MMR verifiers and
 // agent-action-capsule's JCS and receipt check; the module verifies nothing.
 export { paymentPreimageCheck } from "./payment-preimage.js";

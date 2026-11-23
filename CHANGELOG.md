@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- `readerCadenceWitness` reads `parent-log-witness/v1` (Evidence Bundle -03), so the deal page's witness stamp line reads "recorded by <witness> at <time>" for a witnessed v1 bundle instead of "not checked" (#362; evidencebook#826, Sherlock2's ruling on capsule-cli#428). It reads the block as agent-action-capsule's `verifyParentLogWitness` does: the log member is `parent`, a block that is present is the claim (no `state`), coverage is `earlier` when that member is present and never a stated `extent`, and a path holds 0 to 32 lowercase hashes with `index` below `2**path.length`. A v1 block wins over a v0 chain beside it, and a block that is not an object fails as `parent_witness_malformed`. The v0 names still work, the result type and the page's wording are unchanged.
+
 ## ts 0.23.0 and go 0.23.0 (2026-11-23)
 
 Both state viewer 0.23.0: `ts/v0.23.0`, then `go/v0.23.0` on the commit that ships its page runtime.
