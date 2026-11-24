@@ -169,6 +169,17 @@ caller passes is drawn as text, never parsed as HTML.
   (`pass`, `fail`, `not_run`) and optional `values` for the pack's
   placeholders. An unknown `id` is refused: the words for a check live in
   the pack, not in the caller. The mesh verifier's ids are this list's.
+  Only the `witness` check, and only with status `not_run`, takes `values`
+  (capsule-viewer#368, Sherlock2's ruling on capsules-plugin#358): `n`, a whole
+  number, the 1-based place of the checkpoint row the witness has not
+  registered yet, and `at`, that row's own `cut_at` as an RFC 3339 time (the
+  view formats it like every cut time, so no preformatted text passes). Both
+  are required; the page refuses them unless the page is a checkpoint page,
+  `n` is one of its rows, that row's `witness` slot is not `passed`, and `at`
+  is that row's `cut_at`, so the line and the chip cannot name two different
+  checkpoints. The line then reads "Not checked here: A witness time-stamped
+  these records. Checkpoint {n} (cut {at}) is not registered with the witness
+  yet." Any other `values` is refused as before.
 - `periods` (optional, checkpoint pages): the Service History's counts, one
   entry per closed week, each cell a caller-named `what` and its count, or
   `withheld: true` where the node withholds a count under 5 ("fewer than 5").

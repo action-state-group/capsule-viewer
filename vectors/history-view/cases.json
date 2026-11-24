@@ -1449,6 +1449,122 @@
       "sharing": {
         "stranger_safe": []
       }
+    },
+    "mesh-witness-last-unregistered": {
+      "view": "history-view/v0",
+      "kind": "checkpoint",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "node": "3f9a6c21d0e4b7a85c2f19e0d3b6a4c7e8f01234"
+      },
+      "audience": {
+        "kind": "anyone"
+      },
+      "built_at": "2026-11-03T18:09:41Z",
+      "checked": {
+        "where": "page",
+        "by": "capsules-plugin 0.1.13"
+      },
+      "outcome": {
+        "kind": "answered"
+      },
+      "rows": [
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T12:00:03Z",
+          "log_size": 61,
+          "anchor": "a1b2c3",
+          "signature": "pass",
+          "witness": {
+            "state": "passed",
+            "at": "2026-11-03T12:00:09Z",
+            "by": "witness.agentactioncapsule.org"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T15:30:40Z",
+          "log_size": 94,
+          "anchor": "5d6e7f",
+          "signature": "pass",
+          "witness": {
+            "state": "passed",
+            "at": "2026-11-03T15:30:51Z",
+            "by": "witness.agentactioncapsule.org"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        },
+        {
+          "kind": "checkpoint",
+          "cut_at": "2026-11-03T18:07:12Z",
+          "log_size": 127,
+          "anchor": "9c41d2",
+          "signature": "pass",
+          "witness": {
+            "state": "not_checked"
+          },
+          "second_signature": {
+            "state": "not_checked"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "id": "readable",
+          "status": "pass"
+        },
+        {
+          "id": "artifact_digest",
+          "status": "pass"
+        },
+        {
+          "id": "card_digest",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_signatures",
+          "status": "pass"
+        },
+        {
+          "id": "checkpoint_chain",
+          "status": "pass"
+        },
+        {
+          "id": "consistency",
+          "status": "pass"
+        },
+        {
+          "id": "anchor",
+          "status": "pass"
+        },
+        {
+          "id": "envelope_signature",
+          "status": "not_run"
+        },
+        {
+          "id": "witness",
+          "status": "not_run",
+          "values": {
+            "n": 3,
+            "at": "2026-11-03T18:07:12Z"
+          }
+        }
+      ],
+      "sharing": {
+        "standard_history": true,
+        "history_segments": "counterparties",
+        "record_at_completion": "counterparty",
+        "adjudications": "deliver_to_subjects",
+        "exchange_corroboration": true,
+        "adjudicate_differing_twins": false,
+        "witnesses": []
+      }
     }
   }
 }

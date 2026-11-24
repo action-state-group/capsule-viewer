@@ -139,6 +139,43 @@ describe("the view's own pack", () => {
   });
 });
 
+describe("the witness check names the unregistered checkpoint (capsule-viewer#368)", () => {
+  const witnessed = (): Json =>
+    clone(vectors.cases["mesh-witness-last-unregistered"] as Json);
+  const html = (input: Json): string => historyViewHtml(input);
+
+  it("the chip's missing checkpoint and the list's number are the same one", () => {
+    const input = witnessed();
+    const rows = input["rows"] as { cut_at: string; witness: Json }[];
+    const text = textOf(html(input));
+    expect(text).toContain("Time-stamped: 2 of 3");
+    // The one row whose slot is not filled is row 3, and the list says 3 with that row's own cut time.
+    const open = rows.map((r, i) =>
+      r.witness["state"] === "passed" ? 0 : i + 1,
+    );
+    expect(open.filter((n) => n > 0)).toEqual([3]);
+    expect(text).toContain(
+      "Not checked here: A witness time-stamped these records. Checkpoint 3 (cut Nov 3, 2026, 18:07 UTC) is not registered with the witness yet.",
+    );
+    expect(rows[2]?.cut_at).toBe("2026-11-03T18:07:12Z");
+  });
+  it("without values the line is the bare one", () => {
+    const input = witnessed();
+    const checks = input["checks"] as { id: string; values?: unknown }[];
+    delete checks.find((c) => c.id === "witness")?.values;
+    expect(textOf(html(input))).not.toContain(
+      "is not registered with the witness yet",
+    );
+  });
+  it("is drawn from the scripted page as well", () => {
+    const container = document.createElement("div");
+    expect(renderHistoryView(witnessed(), container)).toBe(true);
+    expect(container.textContent).toContain(
+      "Checkpoint 3 (cut Nov 3, 2026, 18:07 UTC) is not registered with the witness yet.",
+    );
+  });
+});
+
 describe("refusals", () => {
   const refused = (input: unknown, ov?: unknown): readonly string[] => {
     const built = buildHistoryView(input, ov);
