@@ -61,6 +61,8 @@ REWORDED = {
     27: "rung.unwitnessed",
     28: "countersign.none",
     44: "section.anomalies",
+    # "None found." read as the page having looked; it reports (Sherlock2, #374).
+    46: "anomalies.none",
 }
 DROPPED = {
     # This page is built from the bundle and does not carry it, so there is no
@@ -77,6 +79,7 @@ DROPPED = {
     # capsule-viewer#373: with nothing to list, one "none" under "Problems spotted", not one per side.
     45: "the agent-side heading of an empty problems section",
     47: "the counterparty-side heading of an empty problems section",
+    48: "the second \"none\" of an empty problems section: one is said",
 }
 
 
@@ -98,7 +101,7 @@ def test_the_map_accounts_for_every_deal_view_line(page):
 def test_most_deal_view_lines_are_shown_verbatim(page):
     text = visible_text(page)
     verbatim = [i for i in DEAL_VIEW if LINES[i] in text]
-    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 35
+    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 33
 
 
 def test_dropped_lines_are_really_gone(page):

@@ -115,7 +115,7 @@ def test_problems_are_one_section_with_one_none():
     text = visible_text(render("main-standalone-keep", "L2"))
     assert text.count("Problems spotted") == 1 and "Anomalies" not in text
     assert "Agent side" not in text and "Counterparty side" not in text
-    assert text.count("None found.") == 1
+    assert text.count("None reported.") == 1
 
 
 def test_a_module_that_does_not_state_the_outcome_keeps_the_shells_badge():

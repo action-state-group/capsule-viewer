@@ -21,7 +21,7 @@ and `js-tests/receipt_373.test.js` hold each rule.
 | R4 table headers | A one-word column header is never broken across lines ("Ste" over "p"). | none (kit.css `.cv-table th`) | `js-tests/receipt_layout.test.js` (`brokenHeaders`) |
 | R5 amounts | Amounts in msat and in decimal currency group thousands with a comma, by hand and not by locale ("2,000 msat", "2,000.00 USD"); a provider amount in another asset (`× 10^-scale`) is shown as sealed. | none | `test_amounts_group_thousands`, `js-tests/receipt_amount.test.js` |
 | R6 times | A sealed instant is said in the reader's time zone where the page has a script ("Oct 27, 2026, 5:09 PM CDT"); a script-free page says it in words in UTC ("Oct 27, 2026, 22:09 UTC") and does not claim the reader's zone. The sealed instant stays on the element (`data-time`). | none | `test_an_instant_is_said_in_utc_words...`, `js-tests/receipt_373.test.js` |
-| R7 problems | One section "Problems spotted". When nothing is listed it says "None found." once, not once per side. | `section.anomalies`, `anomalies.none` | `test_problems_are_one_section_with_one_none` |
+| R7 problems | One section "Problems spotted". When nothing is listed it says "None reported." once, not once per side. | `section.anomalies`, `anomalies.none` | `test_problems_are_one_section_with_one_none` |
 | R8 time stamp | One sentence about the outside time stamp (the witness receipt), worded about this copy and not about the deal. | `rung.unwitnessed`, `rung.witness_verified`, `rung.witness_failed`, `rung.unreported` | `tests/test_receipt_golden.py` |
 
 ## What is not here
