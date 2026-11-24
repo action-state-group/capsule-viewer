@@ -17865,13 +17865,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("2c6b426edee5cce4d8f81521f39969b9c131df9b");
+    return commitPrefix("c08d95ff9e8a6bfcee0bdfa6ce417c8427c68ebe");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.23.1",
+    viewerVersion: "0.24.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -29890,6 +29890,7 @@ ${pad.repeat(depth)}`;
       "check.key_is_node": "The signing key is the node's published key",
       "check.reply_bound": "The answer is bound to the request it answers",
       "check.witness": "A witness time-stamped these records",
+      "check.line.unregistered": "{status}: {name}. Checkpoint {n} (cut {at}) is not registered with the witness yet.",
       "check.second_signature": "A second party signed this record",
       "check.deal_report": "Each deal was read with its own report, which writes nothing",
       refused: "This page can't show this history: {reasons}"
@@ -30128,6 +30129,36 @@ ${pad.repeat(depth)}`;
         r.refuse(path2, "a passed second-signature slot needs by");
     }
     return { state, by, at, through };
+  }
+  function readUnregistered(r, v, path2, kind, rows) {
+    if (typeof v === "object" && v !== null && !Array.isArray(v) && Object.keys(v).length === 0)
+      return void 0;
+    const o = r.object(v, path2, ["n", "at"], ["n", "at"]);
+    if (!o || !("n" in o) || !("at" in o)) return void 0;
+    const n = r.count(o["n"], `${path2}.n`);
+    const at = r.time(o["at"], `${path2}.at`);
+    if (kind !== "checkpoint") {
+      r.refuse(path2, "names a checkpoint, and only a checkpoint page has them");
+      return void 0;
+    }
+    if (n === void 0 || at === void 0) return void 0;
+    const row2 = rows[n - 1];
+    if (n < 1 || row2 === void 0 || row2.kind !== "checkpoint") {
+      r.refuse(
+        `${path2}.n`,
+        "is not the place of one of this page's rows (1 to the number of rows)"
+      );
+      return void 0;
+    }
+    if (row2.witness.state === "passed") {
+      r.refuse(`${path2}.n`, "names a row whose time-stamp passed");
+      return void 0;
+    }
+    if (row2.cut.ms !== at.ms) {
+      r.refuse(`${path2}.at`, "is not the cut time of row n");
+      return void 0;
+    }
+    return { n, at };
   }
   var EPOCH = { ms: 0 };
   function readRow2(r, v, path2, kind) {
@@ -30369,17 +30400,28 @@ ${pad.repeat(depth)}`;
           "fail",
           "not_run"
         ]);
+        let unregistered;
         if ("values" in co) {
-          const vo = r.object(co["values"], `${path2}.values`, [], []);
-          if (vo && Object.keys(vo).length > 0)
-            r.refuse(
+          if (id === "witness" && status2 === "not_run")
+            unregistered = readUnregistered(
+              r,
+              co["values"],
               `${path2}.values`,
-              "names a placeholder the check's words do not have"
+              kind,
+              rows
             );
+          else {
+            const vo = r.object(co["values"], `${path2}.values`, [], []);
+            if (vo && Object.keys(vo).length > 0)
+              r.refuse(
+                `${path2}.values`,
+                "names a placeholder the check's words do not have"
+              );
+          }
         }
         if (id && checks.some((x) => x.id === id))
           r.refuse(`${path2}.id`, "is listed twice");
-        if (id && status2) checks.push({ id, status: status2 });
+        if (id && status2) checks.push({ id, status: status2, unregistered });
       });
     } else r.refuse("input.checks", "is not a list");
     const periods = [];
@@ -30931,7 +30973,12 @@ ${pad.repeat(depth)}`;
           (c) => el13(
             "li",
             { class: "cvh-check", "data-status": c.status },
-            say("check.line", {
+            c.unregistered ? say("check.line.unregistered", {
+              status: say(`status.${c.status}`),
+              name: say(`check.${c.id}`),
+              n: String(c.unregistered.n),
+              at: minuteOf(c.unregistered.at)
+            }) : say("check.line", {
               status: say(`status.${c.status}`),
               name: say(`check.${c.id}`)
             })
