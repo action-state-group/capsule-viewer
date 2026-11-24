@@ -123,3 +123,10 @@ def test_a_module_that_does_not_state_the_outcome_keeps_the_shells_badge():
     # The provider page draws no receipt top line, so the shell's badge is its only one.
     page = render("mesh-provider-selected", "L0")
     assert "reported by capsulectl verify --bundle" in visible_text(page)
+
+
+def test_the_pack_words_a_self_report_for_views_that_show_one():
+    pack = load_wording_pack(PACK, PACK_SHA, PLACEHOLDERS)
+    assert pack.fill("verify.self_reported", verifier="this node's own request log", checks="request logged (recorded)") == (
+        "Reported by this node's own request log: request logged (recorded). This view shows that report; it did not re-check anything itself."
+    )

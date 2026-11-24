@@ -91,6 +91,9 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "verify.reported": frozenset({"verifier"}),
     "verify.checks_all": frozenset({"checks", "outcome"}),
     "verify.check_one": frozenset({"name", "outcome"}),
+    # A node's own log is a self-report, so "Checked by" would be wrong; the key is for views that
+    # show one (the mesh-llm console, #376). No receipt module draws it.
+    "verify.self_reported": frozenset({"verifier", "checks"}),
     "record.short": frozenset({"head", "tail"}),
     "step.line": frozenset({"text"}),
     "step.log": frozenset({"seq", "leaf", "log"}),

@@ -100,6 +100,7 @@
     "verify.tested": "Checked by {verifier}: {checks}. This page shows its answer; it did not re-check anything itself.",
     "verify.check_one": "{name} ({outcome})",
     "verify.checks_all": "{checks} (all {outcome})",
+    "verify.self_reported": "Reported by {verifier}: {checks}. This view shows that report; it did not re-check anything itself.",
     "verify.reported": "Checked by {verifier}. This page shows its answer; it did not re-check anything itself.",
     "money.test": "Test money: this deal's payment was on a simulated rail. No real money moved.",
     "record.short": "{head}…{tail}",
