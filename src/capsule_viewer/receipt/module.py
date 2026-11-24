@@ -205,8 +205,15 @@ _TIME_MARK = "\x00"
 SHORT_HEAD, SHORT_TAIL = 8, 4
 
 
-def _is_test_rail(f: Fact) -> bool:
-    return f.name == "rail" and f.kind == "token" and f.value == TEST_RAIL
+def _is_rail(f: Fact) -> bool:
+    return f.name == "rail" and f.kind == "token"
+
+
+def _test_money(model: ReceiptModel) -> bool:
+    """Every rail the steps name is the simulated one, and at least one is named: only then is "test
+    money" true of the deal, and only then is the per-step rail row left to that one line."""
+    rails = [f for s in model.steps for f in s.facts if _is_rail(f)]
+    return bool(rails) and all(f.value == TEST_RAIL for f in rails)
 
 
 def time_el(at: str) -> Markup:
@@ -375,7 +382,9 @@ class UnilateralReceiptModule:
 
     def _timed(self, key: str, at: str, **values: str) -> Markup:
         """The pack's words for *key* with the instant *at* drawn by ``time_el`` in its place."""
-        before, found, after = self.w(key, at=_TIME_MARK, **values).partition(_TIME_MARK)
+        # A sealed value may hold the mark itself: it is dropped so it cannot move the instant.
+        clean = {k: v.replace(_TIME_MARK, "") for k, v in values.items()}
+        before, found, after = self.w(key, at=_TIME_MARK, **clean).partition(_TIME_MARK)
         if not found:
             return Markup(escape(before))
         return _join([before, time_el(at), after])
@@ -427,7 +436,7 @@ class UnilateralReceiptModule:
             parts.append(self._p(model.report.scope, data_sealed_text="scope"))
         parts.append(self._p(self._witness(model), data_rung="witness"))
         parts.append(self._p(self._countersign(model), data_rung="countersign"))
-        if any(_is_test_rail(f) for s in model.steps for f in s.facts):
+        if _test_money(model):
             parts.append(self._p(self.w("money.test"), class_="cv-tone--caution", data_test_money="true"))
         return parts
 
@@ -459,7 +468,7 @@ class UnilateralReceiptModule:
 
     # ---- steps --------------------------------------------------------------
 
-    def _step(self, step: Step) -> Markup:
+    def _step(self, step: Step, test_money: bool = False) -> Markup:
         if step.n is not None and step.at:
             label = self._timed("step.position", step.at, n=str(step.n))
         else:
@@ -474,7 +483,7 @@ class UnilateralReceiptModule:
             facts = [
                 _join([_el("dt", self._fact_label(f.name)), self._fact_value(f)])
                 for f in step.facts
-                if not _is_test_rail(f)
+                if not (test_money and _is_rail(f))
             ]
             if step.record_type:
                 facts.insert(0, _join([_el("dt", self.w("step.type")), _el("dd", step.record_type, class_="cv-mono", data_fact="record_type")]))
@@ -522,7 +531,8 @@ class UnilateralReceiptModule:
                                  self.kit.section(self.w("steps.summary"), self._steps(model, item.steps), level=4)]), data_item="true")
 
     def _section_steps(self, model: ReceiptModel, section: str) -> list[Markup]:
-        return [self._step(s) for s in model.steps if s.section == section]
+        test_money = _test_money(model)
+        return [self._step(s, test_money) for s in model.steps if s.section == section]
 
     # ---- L1 -----------------------------------------------------------------
 

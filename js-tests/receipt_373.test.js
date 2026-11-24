@@ -73,4 +73,10 @@ describe("the receipt page for a reader (#373)", () => {
     expect(note.textContent).toContain("This page did not re-check any of it.");
     expect(note.textContent).not.toContain("witnesses");
   });
+
+  it("says an instant in words only when it is a real UTC instant, as the Python twin does", () => {
+    const { api } = loadScript("unilateral");
+    expect(api.plainTime("2026-10-27T22:09:19Z")).toBe("Oct 27, 2026, 22:09 UTC");
+    for (const odd of ["2026-13-27T22:09:19Z", "2026-02-31T99:99:00Z", "2026-10-27T22:09:19Z\n", "٢٠٢٦-10-27T22:09:19Z", "2026-10-27"]) expect(api.plainTime(odd)).toBe(odd);
+  });
 });

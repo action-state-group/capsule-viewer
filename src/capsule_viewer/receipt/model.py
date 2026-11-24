@@ -264,6 +264,8 @@ def _seq(value: Frozen) -> tuple[Frozen, ...]:
 
 def group_thousands(whole: int) -> str:
     """``2000`` -> ``2,000``: grouped by hand, never by locale, so every reader and both twins agree."""
+    if whole < 0:
+        return "-" + group_thousands(-whole)
     digits = str(whole)
     head = len(digits) % 3 or 3
     return ",".join([digits[:head], *(digits[i : i + 3] for i in range(head, len(digits), 3))])

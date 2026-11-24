@@ -120,7 +120,13 @@
   var WITNESS_CHECK = "witnesses";
   var TIME_MARK = "\u0000";
   var SHORT_HEAD = 8, SHORT_TAIL = 4;
-  function isTestRail(f) { return f.name === "rail" && f.kind === "token" && f.value === TEST_RAIL; }
+  function isRail(f) { return f.name === "rail" && f.kind === "token"; }
+  // module.py's _test_money: every rail the steps name is the simulated one, and at least one is named.
+  function testMoney(model) {
+    var rails = [];
+    seq(model.steps).forEach(function (s) { s.facts.forEach(function (f) { if (isRail(f)) rails.push(f); }); });
+    return rails.length > 0 && rails.every(function (f) { return f.value === TEST_RAIL; });
+  }
   var COMPOSED_SCOPE = "Composition closure covers the declared members only; it is not completeness of participation.";
   var COMPOSED_CUSTODY = "Custody domains are labels declared by whoever composed this block. Identical labels make an agreeing pair " +
     "redundant; distinct labels do not establish that two observers are independent.";
@@ -460,6 +466,7 @@
 
   // model.group_thousands: ``2000`` -> ``2,000``, by hand and never by locale, so every reader and both twins agree.
   function groupThousands(whole) {
+    if (whole < 0) return "-" + groupThousands(-whole);
     var digits = String(whole);
     var head = digits.length % 3 || 3;
     var out = [digits.slice(0, head)];
@@ -1496,7 +1503,7 @@
   // The reader's own zone is set after drawing (localTimes), where the page has a script.
   function plainTime(value) {
     var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]00:00)$/.exec(value);
-    if (m === null || +m[2] < 1 || +m[2] > 12) return value;
+    if (m === null || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31 || +m[4] > 23 || +m[5] > 59) return value;
     return MONTHS[+m[2] - 1] + " " + +m[3] + ", " + m[1] + ", " + m[4] + ":" + m[5] + " UTC";
   }
 
@@ -1714,7 +1721,9 @@
     return shown !== at ? this.d.el("span", { "data-time": at }, [shown]) : at;
   };
   P.timed = function (key, at, values) {
-    var parts = w(key, Object.assign({ at: TIME_MARK }, values || {})).split(TIME_MARK);
+    var clean = {};
+    Object.keys(values || {}).forEach(function (k) { clean[k] = values[k].split(TIME_MARK).join(""); });
+    var parts = w(key, Object.assign({ at: TIME_MARK }, clean)).split(TIME_MARK);
     if (parts.length < 2) return parts[0];
     return [parts[0], this.timeEl(at), parts.slice(1).join(TIME_MARK)];
   };
@@ -1795,7 +1804,7 @@
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
-    if (seq(model.steps).some(function (s) { return s.facts.some(isTestRail); })) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
+    if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
   };
   P.witness = function (model) {
@@ -1818,13 +1827,13 @@
     }
     return w("fact." + name);
   };
-  P.step = function (step) {
+  P.step = function (step, testMoneyOnly) {
     var d = this.d, self = this;
     var label = step.n !== null && step.at ? this.timed("step.position", step.at, { n: String(step.n) }) : w("step.unnumbered");
     var parts = [this.kit.evidenceDetails([{ label: label, disclosure: step.disclosure, digest: step.capsule_id, media_type: "", note: this.logText(step.log) }])];
     if (step.line) parts.push(this.p(w("step.line", { text: step.line }), { "data-sealed-text": "step-line" }));
     if (step.disclosure === "disclosed") {
-      var list = step.facts.filter(function (f) { return !isTestRail(f); }).map(function (f) {
+      var list = step.facts.filter(function (f) { return !(testMoneyOnly && isRail(f)); }).map(function (f) {
         return [d.el("dt", {}, [self.factLabel(f.name)]), self.factValue(f)];
       });
       if (step.record_type) list.unshift([d.el("dt", {}, [w("step.type")]), d.el("dd", { class: "cv-mono", "data-fact": "record_type" }, [step.record_type])]);
@@ -1855,7 +1864,8 @@
   };
   P.sectionSteps = function (model, section) {
     var self = this;
-    return model.steps.filter(function (s) { return s.section === section; }).map(function (s) { return self.step(s); });
+    var testMoneyOnly = testMoney(model);
+    return model.steps.filter(function (s) { return s.section === section; }).map(function (s) { return self.step(s, testMoneyOnly); });
   };
   P.committed = function (c, prefix) {
     if (c.state === "opened" && c.text !== null) {
