@@ -71,7 +71,7 @@ describe("the receipt page for a reader (#373)", () => {
     const { root } = await page("main-standalone-keep", "L0");
     const note = root.querySelector("[data-checked]");
     expect(note.querySelector("[data-outcome]").getAttribute("data-outcome")).toBe("verified");
-    expect(note.textContent).toContain("graph closure (verified)");
+    expect(note.textContent).toContain("per record membership (all verified)");
     expect(note.textContent).toContain("it did not re-check anything itself.");
     expect(note.textContent).not.toContain("witnesses");
   });

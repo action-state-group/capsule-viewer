@@ -1741,8 +1741,15 @@
   };
   P.checkedNote = function (result) {
     var pill = this.kit.outcome(result.outcome, "cv-verification__outcome cv-pill");
-    var tested = result.checks.filter(function (c) { return c.name !== WITNESS_CHECK; }).map(function (c) { return c.name + " (" + VERIFICATION_OUTCOMES[c.outcome][0].toLowerCase() + ")"; });
-    var text = tested.length ? w("verify.tested", { verifier: result.verifier, checks: tested.join(", ") }) : w("verify.reported", { verifier: result.verifier });
+    var ran = result.checks.filter(function (c) { return c.name !== WITNESS_CHECK; });
+    var said = function (c) { return VERIFICATION_OUTCOMES[c.outcome][0].toLowerCase(); };
+    var tested;
+    if (ran.length && ran.every(function (c) { return c.outcome === ran[0].outcome; })) {
+      tested = ran.length > 1 ? ran.map(function (c) { return c.name; }).join(", ") + " (all " + said(ran[0]) + ")" : ran[0].name + " (" + said(ran[0]) + ")";
+    } else {
+      tested = ran.map(function (c) { return c.name + " (" + said(c) + ")"; }).join(", ");
+    }
+    var text = tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
     return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);
   };
   P.enumText = function (prefix, value) {

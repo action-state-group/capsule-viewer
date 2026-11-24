@@ -28,7 +28,8 @@ def test_the_top_line_says_what_the_verifier_tested_and_that_the_page_checked_no
     assert "reported by capsulectl verify --bundle" not in visible_text(page.split('data-level="L2"')[0])  # the shell's bare badge is gone
     assert "Checked by capsulectl verify --bundle:" in text
     for test in ("graph closure", "interval coverage", "per record membership", "checkpoint", "producer signatures"):
-        assert f"{test} (verified)" in text
+        assert test in text
+    assert "(all verified)" in text
     assert "witnesses (" not in text  # the one time-stamp sentence is the witness line
     assert "it did not re-check anything itself." in text
 

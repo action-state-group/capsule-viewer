@@ -445,9 +445,14 @@ class UnilateralReceiptModule:
         the page's top line, in place of the shell's bare outcome badge."""
         wording, tone = VERIFICATION_OUTCOMES[result.outcome]
         pill = _el("span", wording, class_=f"cv-verification__outcome cv-pill cv-tone--{tone}", data_outcome=result.outcome)
-        tested = [f"{c.name} ({VERIFICATION_OUTCOMES[c.outcome][0].lower()})" for c in result.checks if c.name != WITNESS_CHECK]
+        ran = [c for c in result.checks if c.name != WITNESS_CHECK]
+        # One outcome for every check is said once ("..., all verified"): the phone's L0 stays one screen.
+        if ran and len({c.outcome for c in ran}) == 1:
+            tested = f"{', '.join(c.name for c in ran)} (all {VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()})" if len(ran) > 1 else f"{ran[0].name} ({VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()})"
+        else:
+            tested = ", ".join(f"{c.name} ({VERIFICATION_OUTCOMES[c.outcome][0].lower()})" for c in ran)
         if tested:
-            text = self.w("verify.tested", verifier=result.verifier, checks=", ".join(tested))
+            text = self.w("verify.tested", verifier=result.verifier, checks=tested)
         else:
             text = self.w("verify.reported", verifier=result.verifier)
         return _el("p", _join([pill, " ", text]), data_checked="true")
