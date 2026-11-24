@@ -89,6 +89,7 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "step.position": frozenset({"n", "at"}),
     "verify.tested": frozenset({"verifier", "checks"}),
     "verify.reported": frozenset({"verifier"}),
+    "verify.checks_all": frozenset({"checks", "outcome"}),
     "record.short": frozenset({"head", "tail"}),
     "step.line": frozenset({"text"}),
     "step.log": frozenset({"seq", "leaf", "log"}),
@@ -448,7 +449,8 @@ class UnilateralReceiptModule:
         ran = [c for c in result.checks if c.name != WITNESS_CHECK]
         # One outcome for every check is said once ("..., all verified"): the phone's L0 stays one screen.
         if ran and len({c.outcome for c in ran}) == 1:
-            tested = f"{', '.join(c.name for c in ran)} (all {VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()})" if len(ran) > 1 else f"{ran[0].name} ({VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()})"
+            outcome = VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()
+            tested = self.w("verify.checks_all", checks=", ".join(c.name for c in ran), outcome=outcome) if len(ran) > 1 else f"{ran[0].name} ({outcome})"
         else:
             tested = ", ".join(f"{c.name} ({VERIFICATION_OUTCOMES[c.outcome][0].lower()})" for c in ran)
         if tested:

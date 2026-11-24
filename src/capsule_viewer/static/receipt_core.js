@@ -1745,7 +1745,7 @@
     var said = function (c) { return VERIFICATION_OUTCOMES[c.outcome][0].toLowerCase(); };
     var tested;
     if (ran.length && ran.every(function (c) { return c.outcome === ran[0].outcome; })) {
-      tested = ran.length > 1 ? ran.map(function (c) { return c.name; }).join(", ") + " (all " + said(ran[0]) + ")" : ran[0].name + " (" + said(ran[0]) + ")";
+      tested = ran.length > 1 ? w("verify.checks_all", { checks: ran.map(function (c) { return c.name; }).join(", "), outcome: said(ran[0]) }) : ran[0].name + " (" + said(ran[0]) + ")";
     } else {
       tested = ran.map(function (c) { return c.name + " (" + said(c) + ")"; }).join(", ");
     }
