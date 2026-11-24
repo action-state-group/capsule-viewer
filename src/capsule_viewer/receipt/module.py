@@ -503,7 +503,9 @@ class UnilateralReceiptModule:
         word = self.pack.get(f"value.{f.name}.{f.value.lower()}") if f.kind == "token" else None
         if word is None:
             return _el("dd", f.value, class_="cv-mono", data_fact=f.name)
-        return _el("dd", _join([word, " ", _el("span", f.value, class_="cv-mono cv-muted", data_code="true")]), data_fact=f.name)
+        if word.lower() == f.value.lower():
+            return _el("dd", word, data_fact=f.name, data_token=f.value)  # "Pay pay" would read as a typo
+        return _el("dd", _join([word, " ", _el("span", f.value, class_="cv-mono cv-muted", data_code="true")]), data_fact=f.name, data_token=f.value)
 
     def _steps(self, model: ReceiptModel, ids: Sequence[str]) -> Markup:
         """The steps an item was read from, each as its own record shows it."""

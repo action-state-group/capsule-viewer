@@ -53,8 +53,10 @@ describe("the receipt page for a reader (#373)", () => {
   it("words raw codes with the code kept small, shortens ids in the records table, lists problems once", async () => {
     const { root } = await page("main-standalone-keep");
     const pay = root.querySelector('[data-fact="action"]');
-    expect(pay.firstChild.textContent.trim()).toBe("Pay");
-    expect(pay.querySelector("[data-code]").textContent).toBe("pay");
+    expect(pay.textContent).toBe("Pay"); // the small code is left out when it only repeats the word
+    const spend = root.querySelector('[data-fact="action_class"]');
+    expect(spend.firstChild.textContent.trim()).toBe("Spend money on a purchase");
+    expect(spend.querySelector("[data-code]").textContent).toBe("money.purchase");
     const shown = [...root.querySelectorAll("[data-capsule-id]")];
     expect(shown.length).toBeGreaterThan(5);
     for (const node of shown) {
@@ -70,7 +72,7 @@ describe("the receipt page for a reader (#373)", () => {
     const note = root.querySelector("[data-checked]");
     expect(note.querySelector("[data-outcome]").getAttribute("data-outcome")).toBe("verified");
     expect(note.textContent).toContain("graph closure (verified)");
-    expect(note.textContent).toContain("This page did not re-check any of it.");
+    expect(note.textContent).toContain("it did not re-check anything itself.");
     expect(note.textContent).not.toContain("witnesses");
   });
 

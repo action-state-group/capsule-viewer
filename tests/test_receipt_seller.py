@@ -522,8 +522,10 @@ def _swapped_pack() -> bytes:
 
 def _evidence(html: str) -> list[tuple[str, str]]:
     """Every data-* attribute on the page, in order, except ``data-label``: the
-    kit copies a table's column heading (pack words) there for narrow screens."""
-    return [(k, v) for k, v in re.findall(r'(data-[a-z-]+)="([^"]*)"', html) if k != "data-label"]
+    kit copies a table's column heading (pack words) there for narrow screens, and
+    ``data-code``: the small code beside a token's words is left out when it only repeats them,
+    which depends on the pack's words (the token itself is ``data-token``, always there)."""
+    return [(k, v) for k, v in re.findall(r'(data-[a-z-]+)="([^"]*)"', html) if k not in ("data-label", "data-code")]
 
 
 @pytest.mark.parametrize("name", [*FIXTURE_ENGAGED, *PRODUCER_ENGAGED, "seller-bilateral"])

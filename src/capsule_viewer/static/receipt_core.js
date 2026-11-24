@@ -1736,7 +1736,8 @@
     var d = this.d;
     var worded = f.kind === "token" ? word("value." + f.name + "." + f.value.toLowerCase()) : null;
     if (worded === null) return d.el("dd", { class: "cv-mono", "data-fact": f.name }, [f.value]);
-    return d.el("dd", { "data-fact": f.name }, [worded, " ", d.el("span", { class: "cv-mono cv-muted", "data-code": "true" }, [f.value])]);
+    if (worded.toLowerCase() === f.value.toLowerCase()) return d.el("dd", { "data-fact": f.name, "data-token": f.value }, [worded]);
+    return d.el("dd", { "data-fact": f.name, "data-token": f.value }, [worded, " ", d.el("span", { class: "cv-mono cv-muted", "data-code": "true" }, [f.value])]);
   };
   P.checkedNote = function (result) {
     var pill = this.kit.outcome(result.outcome, "cv-verification__outcome cv-pill");
