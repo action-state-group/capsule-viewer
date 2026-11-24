@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; style-src &#x27;sha256-clEWzB2b1yP9N3PPEEqX838ofjx/tzuPoKNGnTSoN+U=&#x27;; img-src &#x27;none&#x27;; connect-src &#x27;none&#x27;">
+<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; style-src &#x27;sha256-8QC7v8hA2WDrxx2n8SL9OagExiZ/2N//zjycWkENDfk=&#x27;; img-src &#x27;none&#x27;; connect-src &#x27;none&#x27;">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Capsule ledger</title>
 <style>
@@ -85,6 +85,8 @@ body.cv-kit { margin: 0; }
 .cv-table caption { text-align: left; font-weight: 600; padding-bottom: var(--cv-space-2); }
 .cv-table th, .cv-table td { text-align: left; vertical-align: top; padding: var(--cv-space-2); border-bottom: 1px solid var(--cv-color-border); min-width: 0; }
 .cv-table th { color: var(--cv-color-text-muted); font-weight: 600; background: var(--cv-color-surface-sunken); }
+/* A column header is one short word: never broken mid-word to squeeze a wide table ("Ste" over "p"). */
+.cv-table th { overflow-wrap: normal; }
 @container (max-width: 40rem) {
   .cv-table, .cv-table tbody, .cv-table tr, .cv-table td { display: block; width: 100%; }
   .cv-table caption { display: block; }

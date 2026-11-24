@@ -403,6 +403,7 @@ class SellerReceiptModule(UnilateralReceiptModule):
         if model.demo:
             l0.append(_el("p", self.w("badge.demo"), data_demo="true"))
         l0.append(_el("h2", self.w("seller.title")))
+        l0.append(self.checked_note(model.receipt.verification))
         # The seller's own copy carries the PRIVATE banner, as every keep copy
         # does (module.py); a copy cut for anyone else never does.
         keep = model.receipt.report.audience == "keep"

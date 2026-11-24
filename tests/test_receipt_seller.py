@@ -434,7 +434,7 @@ def test_withheld_steps_show_withheld_and_their_log_place(name):
 def test_offers_read_their_supersession_and_acceptance_from_the_sealed_refs():
     model = _seller("keep").buildModel(_context("seller-keep"))
     offers = [(o.action, o.amount.value if o.amount else None) for o in model.offers]
-    assert offers == [("offer", "2000.00 USD"), ("offer", "1900.00 USD"), ("commit", "1900.00 USD")]
+    assert offers == [("offer", "2,000.00 USD"), ("offer", "1,900.00 USD"), ("commit", "1,900.00 USD")]
     first, second, commit = model.offers
     assert (first.superseded_by, second.supersedes) == (second.step, first.step)
     assert first.accepted_by is None and commit.accepted_by is None

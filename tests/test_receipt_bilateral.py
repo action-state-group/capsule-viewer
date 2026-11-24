@@ -279,7 +279,8 @@ def test_each_party_shows_only_its_own_records():
         other = members["party-b" if party == "party-a" else "party-a"]
         text = party_text(html, party)
         assert all(cid not in text for cid in other), party
-        assert all(cid in text for cid in records), party
+        # A step shows its whole id; the L2 table lists every record, the sealed report too, shortened.
+        assert all(cid in text or f"{cid[:8]}…{cid[-4:]}" in text for cid in records), party
 
 
 def test_the_buyers_withheld_steps_show_withheld_and_their_log_place_only():

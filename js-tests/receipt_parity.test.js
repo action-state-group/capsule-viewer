@@ -36,9 +36,9 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
 
   it("covers every receipt fixture, at every audience, and the edited copies", () => {
     const names = new Set(oracle.cases.map((c) => c.name));
-    expect(oracle.cases.length).toBe(106);
-    expect([...names].filter((n) => !n.includes("+")).length).toBe(28);
-    expect([...names].filter((n) => n.includes("+")).length).toBe(22);
+    expect(oracle.cases.length).toBe(110);
+    expect([...names].filter((n) => !n.includes("+")).length).toBe(29);
+    expect([...names].filter((n) => n.includes("+")).length).toBe(23);
   });
 
   it("compares every case, model and depth (the count is the parity result)", async () => {
@@ -81,10 +81,10 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     }
     console.log(`receipt parity: ${JSON.stringify(compared)}`);
     expect(differences).toEqual([]);
-    // 28 fixtures x 3 audiences + 22 edited copies (20 declined by
-    // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only); 33 accepted (module, case)
-    // pairs, the 31 fixture pairs rendered at L0, L1 and L2.
-    expect({ ...compared, bytes: undefined }).toEqual({ cases: 106, accepted: 33, models: 33, renders: 95, bytes: undefined });
+    // 29 fixtures x 3 audiences + 23 edited copies (21 declined by
+    // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only); 34 accepted (module, case)
+    // pairs, the 32 fixture pairs rendered at L0, L1 and L2.
+    expect({ ...compared, bytes: undefined }).toEqual({ cases: 110, accepted: 34, models: 34, renders: 98, bytes: undefined });
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
 

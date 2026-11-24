@@ -36,10 +36,10 @@ def _rows(html: str) -> list[tuple[str, str]]:
     """Who moved and the label of each row of "How it went", time left out."""
     section = html.split("How it went", 1)[1]
     section = section.split('<section class="cv-section" data-cv="section"><h2', 1)[0]
-    texts = [unescape(t) for t in re.findall(r'<p data-sealed-text="item">(.*?)</p>', section)]
+    texts = [unescape(re.sub(r"<[^>]+>", "", t)) for t in re.findall(r'<p data-sealed-text="item">(.*?)</p>', section)]
     rows = []
     for text in texts:
-        parts = re.sub(r"^\d{4}-\d\d-\d\dT[\d:]+Z · ", "", text).split(" · ", 1)
+        parts = re.sub(r"^[A-Z][a-z]{2} \d+, \d{4}, \d\d:\d\d UTC · ", "", text).split(" · ", 1)
         rows.append((parts[0], parts[1] if len(parts) > 1 else ""))
     return rows
 
