@@ -1745,9 +1745,9 @@
     var said = function (c) { return VERIFICATION_OUTCOMES[c.outcome][0].toLowerCase(); };
     var tested;
     if (ran.length && ran.every(function (c) { return c.outcome === ran[0].outcome; })) {
-      tested = ran.length > 1 ? w("verify.checks_all", { checks: ran.map(function (c) { return c.name; }).join(", "), outcome: said(ran[0]) }) : ran[0].name + " (" + said(ran[0]) + ")";
+      tested = ran.length > 1 ? w("verify.checks_all", { checks: ran.map(function (c) { return c.name; }).join(", "), outcome: said(ran[0]) }) : w("verify.check_one", { name: ran[0].name, outcome: said(ran[0]) });
     } else {
-      tested = ran.map(function (c) { return c.name + " (" + said(c) + ")"; }).join(", ");
+      tested = ran.map(function (c) { return w("verify.check_one", { name: c.name, outcome: said(c) }); }).join(", ");
     }
     var text = tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
     return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);
