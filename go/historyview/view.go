@@ -149,7 +149,17 @@ type row struct {
 	second    slot
 }
 
-type check struct{ id, status string }
+// unregistered names the checkpoint a `witness` check could not stamp: its
+// 1-based place in the rows and its cut time (the check's optional `values`).
+type unregistered struct {
+	n  int64
+	at *instant
+}
+
+type check struct {
+	id, status string
+	unreg      *unregistered
+}
 
 type cell struct {
 	what  string
@@ -258,6 +268,44 @@ func readSlot(r *reader, v any, path string, needBy bool) slot {
 }
 
 var epoch = &instant{}
+
+// readUnregistered reads the witness check's `values`: `n` and `at` name a
+// checkpoint row of this page that the witness has not stamped, so the check's
+// line and the chip cannot name two different ones. `at` is the row's own cut
+// time, an instant like cut_at (the view formats it; no text passes through).
+func readUnregistered(r *reader, v any, path, kind string, rows []*row) *unregistered {
+	// An empty object says nothing, as it always did on every check.
+	if o, ok := v.(*object); ok && len(o.keys) == 0 {
+		return nil
+	}
+	vo := r.object(v, path, []string{"n", "at"}, []string{"n", "at"})
+	if vo == nil || !vo.has("n") || !vo.has("at") {
+		return nil
+	}
+	n, nOK := r.count(vo.get("n"), path+".n")
+	at := r.time(vo.get("at"), path+".at")
+	if kind != "checkpoint" {
+		r.refuse(path, "names a checkpoint, and only a checkpoint page has them")
+		return nil
+	}
+	if !nOK || at == nil {
+		return nil
+	}
+	if n < 1 || n > int64(len(rows)) {
+		r.refuse(path+".n", "is not the place of one of this page's rows (1 to the number of rows)")
+		return nil
+	}
+	row := rows[n-1]
+	if row.witness.state == "passed" {
+		r.refuse(path+".n", "names a row whose time-stamp passed")
+		return nil
+	}
+	if row.cut == nil || row.cut.ms != at.ms {
+		r.refuse(path+".at", "is not the cut time of row n")
+		return nil
+	}
+	return &unregistered{n: n, at: at}
+}
 
 func readRow(r *reader, v any, path, kind string) *row {
 	if kind == "checkpoint" {
@@ -527,8 +575,14 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			}
 			id, idOK := r.oneOf(co.get("id"), path+".id", CheckIDs)
 			status, stOK := r.oneOf(co.get("status"), path+".status", []string{"pass", "fail", "not_run"})
+			var unreg *unregistered
 			if co.has("values") {
-				if vo := r.object(co.get("values"), path+".values", nil, nil); vo != nil && len(vo.keys) > 0 {
+				// Only the witness check, and only when it was not run, may say which
+				// checkpoint the witness has not registered; any other placeholder is
+				// one the check's words do not have.
+				if id == "witness" && status == "not_run" {
+					unreg = readUnregistered(r, co.get("values"), path+".values", kind, rows)
+				} else if vo := r.object(co.get("values"), path+".values", nil, nil); vo != nil && len(vo.keys) > 0 {
 					r.refuse(path+".values", "names a placeholder the check's words do not have")
 				}
 			}
@@ -541,7 +595,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				}
 			}
 			if idOK && stOK {
-				checks = append(checks, check{id, status})
+				checks = append(checks, check{id: id, status: status, unreg: unreg})
 			}
 		}
 	} else {
@@ -1263,8 +1317,12 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 	}
 	var checkLis []any
 	for _, c := range checks {
-		checkLis = append(checkLis, el("li", attrs("class", "cvh-check", "data-status", c.status),
-			say("check.line", "status", say("status."+c.status), "name", say("check."+c.id))))
+		line := say("check.line", "status", say("status."+c.status), "name", say("check."+c.id))
+		if c.unreg != nil {
+			line = say("check.line.unregistered", "status", say("status."+c.status), "name", say("check."+c.id),
+				"n", num(c.unreg.n), "at", minuteOf(c.unreg.at))
+		}
+		checkLis = append(checkLis, el("li", attrs("class", "cvh-check", "data-status", c.status), line))
 	}
 	// The "ran" sentence only when a check passed or failed; all not-run says nothing it does not already.
 	var whereP *element

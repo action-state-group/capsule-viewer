@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The History view's `witness` check takes optional `values` `{ n, at }` when its status is `not_run` (#368; capsules-plugin#358, Sherlock2's rulings): `n` is the 1-based place of the checkpoint row the witness has not registered yet and `at` that row's own `cut_at`. The "How this was checked" line then reads "Not checked here: A witness time-stamped these records. Checkpoint {n} (cut {at}) is not registered with the witness yet.", so the line and the chip's "Time-stamped: N-1 of N" name the same checkpoint. The view refuses `values` unless the page is a checkpoint page, `n` is one of its rows, that row's time-stamp slot has not passed and `at` is its cut time; `values` on any other check, or on a witness check that passed or failed, is still refused. The TypeScript `values` type is now `{ n: number; at: string }`; an empty `values` object on that check still means no values. New wording key `check.line.unregistered` (Go and TypeScript packs), the whole line, so a language pack or overlay sets its own sentence break.
+
 ## ts 0.23.1 and go 0.23.1 (2026-11-23)
 
 Both state viewer 0.23.1: `ts/v0.23.1`, then `go/v0.23.1` on the commit that ships its page runtime.

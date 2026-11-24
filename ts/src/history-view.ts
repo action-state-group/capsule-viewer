@@ -96,7 +96,13 @@ export interface HistoryViewInput {
   readonly checks: readonly {
     readonly id: string;
     readonly status: CheckStatus;
-    readonly values?: Readonly<Record<string, string>>;
+    /**
+     * Only the `witness` check, and only when its status is `not_run`, takes
+     * values: `n`, the 1-based place of the checkpoint row the witness has not
+     * registered yet, and `at`, that row's own cut time (an RFC 3339 instant the
+     * view formats like the row's). Anything else is refused.
+     */
+    readonly values?: { readonly n: number; readonly at: string };
   }[];
   readonly periods?: readonly {
     readonly from: string;
@@ -428,6 +434,60 @@ function readSlot(r: Reader, v: Json, path: string, needBy: boolean): Slot {
   return { state, by, at, through };
 }
 
+/** The checkpoint a `witness` check says the witness has not registered. */
+interface Unregistered {
+  readonly n: number;
+  readonly at: Instant;
+}
+
+/**
+ * The witness check's `values`: `n` and `at` must name one of this page's
+ * checkpoint rows that is not time-stamped, and `at` is that row's cut time,
+ * so the line and the chip cannot name two different checkpoints.
+ */
+function readUnregistered(
+  r: Reader,
+  v: Json,
+  path: string,
+  kind: string | undefined,
+  rows: readonly (ReadCheckpoint | ReadDeal)[],
+): Unregistered | undefined {
+  // An empty object says nothing, as it always did on every check.
+  if (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    Object.keys(v).length === 0
+  )
+    return undefined;
+  const o = r.object(v, path, ["n", "at"], ["n", "at"]);
+  if (!o || !("n" in o) || !("at" in o)) return undefined;
+  const n = r.count(o["n"], `${path}.n`);
+  const at = r.time(o["at"], `${path}.at`);
+  if (kind !== "checkpoint") {
+    r.refuse(path, "names a checkpoint, and only a checkpoint page has them");
+    return undefined;
+  }
+  if (n === undefined || at === undefined) return undefined;
+  const row = rows[n - 1];
+  if (n < 1 || row === undefined || row.kind !== "checkpoint") {
+    r.refuse(
+      `${path}.n`,
+      "is not the place of one of this page's rows (1 to the number of rows)",
+    );
+    return undefined;
+  }
+  if (row.witness.state === "passed") {
+    r.refuse(`${path}.n`, "names a row whose time-stamp passed");
+    return undefined;
+  }
+  if (row.cut.ms !== at.ms) {
+    r.refuse(`${path}.at`, "is not the cut time of row n");
+    return undefined;
+  }
+  return { n, at };
+}
+
 interface ReadCheckpoint {
   readonly kind: "checkpoint";
   readonly cut: Instant;
@@ -727,7 +787,11 @@ export function buildHistoryView(
       r.refuse("input.rows", "must be empty unless the node answered");
   } else r.refuse("input.rows", "is not a list");
 
-  const checks: { id: string; status: CheckStatus }[] = [];
+  const checks: {
+    id: string;
+    status: CheckStatus;
+    unregistered?: Unregistered | undefined;
+  }[] = [];
   if (Array.isArray(o["checks"])) {
     o["checks"].forEach((c, i) => {
       const path = `input.checks[${i}]`;
@@ -744,17 +808,28 @@ export function buildHistoryView(
         "fail",
         "not_run",
       ] as const);
+      let unregistered: Unregistered | undefined;
       if ("values" in co) {
-        const vo = r.object(co["values"], `${path}.values`, [], []);
-        if (vo && Object.keys(vo).length > 0)
-          r.refuse(
+        if (id === "witness" && status === "not_run")
+          unregistered = readUnregistered(
+            r,
+            co["values"],
             `${path}.values`,
-            "names a placeholder the check's words do not have",
+            kind,
+            rows,
           );
+        else {
+          const vo = r.object(co["values"], `${path}.values`, [], []);
+          if (vo && Object.keys(vo).length > 0)
+            r.refuse(
+              `${path}.values`,
+              "names a placeholder the check's words do not have",
+            );
+        }
       }
       if (id && checks.some((x) => x.id === id))
         r.refuse(`${path}.id`, "is listed twice");
-      if (id && status) checks.push({ id, status });
+      if (id && status) checks.push({ id, status, unregistered });
     });
   } else r.refuse("input.checks", "is not a list");
 
@@ -1481,10 +1556,17 @@ export function buildHistoryView(
         el(
           "li",
           { class: "cvh-check", "data-status": c.status },
-          say("check.line", {
-            status: say(`status.${c.status}`),
-            name: say(`check.${c.id}`),
-          }),
+          c.unregistered
+            ? say("check.line.unregistered", {
+                status: say(`status.${c.status}`),
+                name: say(`check.${c.id}`),
+                n: String(c.unregistered.n),
+                at: minuteOf(c.unregistered.at),
+              })
+            : say("check.line", {
+                status: say(`status.${c.status}`),
+                name: say(`check.${c.id}`),
+              }),
         ),
       ),
     ),

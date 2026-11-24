@@ -203,3 +203,22 @@ func TestEmptyOverlayIsNone(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
+
+// An empty `values` object on the witness check still means no values, as it
+// did on every check before the check could name a checkpoint (capsule-viewer#368).
+func TestEmptyWitnessValuesAreNoValues(t *testing.T) {
+	var in map[string]any
+	require.NoError(t, json.Unmarshal(cases(t)["mesh-witness-last-unregistered"], &in))
+	checks := in["checks"].([]any)
+	for _, c := range checks {
+		if c.(map[string]any)["id"] == "witness" {
+			c.(map[string]any)["values"] = map[string]any{}
+		}
+	}
+	raw, err := json.Marshal(in)
+	require.NoError(t, err)
+	html, err := Render(json.RawMessage(raw), nil)
+	require.NoError(t, err)
+	assert.Contains(t, html, "A witness time-stamped these records</li>")
+	assert.NotContains(t, html, "is not registered with the witness yet")
+}
