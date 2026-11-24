@@ -124,4 +124,7 @@ def present(
         return str(page(FALLBACK_TITLE, notice(FAILED, "failed"), *caveats, *refused, checks))
     title = getattr(module, "title", FALLBACK_TITLE)
     tail = (checks,) if core_checks else ()
-    return str(page(title, banner(context.verification), *caveats, *notices, *refused, Markup(body), *tail))
+    # A module that states what the verifier tested and that it did not re-check it (the
+    # receipt modules) takes the place of the bare outcome badge.
+    top = () if getattr(module, "states_outcome", False) else (banner(context.verification),)
+    return str(page(title, *top, *caveats, *notices, *refused, Markup(body), *tail))

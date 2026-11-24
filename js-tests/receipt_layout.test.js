@@ -44,6 +44,10 @@ const FIXTURES = [
   { name: "seller-producer-counterparty", audience: "counterparty" },
   { name: "seller-producer-adjudicator", audience: "adjudicator" },
   { name: "seller-bilateral", audience: "counterparty", oneScreen: false },
+  // The errand's report as capsulectl seals it, the page Steven's hand run reviewed (#373), and the
+  // same copy paid on a simulated rail, which says test money once at the top.
+  { name: "main-standalone-keep", audience: "keep" },
+  { name: "main-standalone-simulated-keep", audience: "keep" },
 ];
 const DEPTHS = ["L0", "L2"];
 // The viewport height headlessChrome.js opens every page at.
@@ -88,12 +92,22 @@ const MEASURE = `(() => {
     const inner = el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== "visible";
     if (out || inner) overflow.push("<" + el.tagName.toLowerCase() + " class='" + el.className + "'> left " + Math.round(r.left) + " right " + Math.round(r.right) + (inner ? " (scrolls inside)" : ""));
   }
+  // A one-word column header broken across lines ("Ste" over "p", #373).
+  const brokenHeaders = [];
+  for (const th of document.querySelectorAll("th")) {
+    if (!th.checkVisibility() || /\\s/.test(th.textContent.trim())) continue;
+    const range = document.createRange();
+    range.selectNodeContents(th);
+    const tops = new Set([...range.getClientRects()].map((r) => Math.round(r.top)));
+    if (tops.size > 1) brokenHeaders.push(th.textContent.trim());
+  }
   const levels = ["L0", "L1", "L2"].map((l) => document.querySelector('[data-level="' + l + '"]'));
   const l0 = levels[0] && levels[0].getBoundingClientRect();
   return {
     vw,
     pageScrollWidth: document.documentElement.scrollWidth,
     overflow,
+    brokenHeaders,
     levels: levels.map((e) => (e ? e.getBoundingClientRect().height : 0)),
     records: document.querySelectorAll("[data-record]").length,
     visibleRecords: [...document.querySelectorAll("[data-record]")].filter((e) => e.checkVisibility()).length,
@@ -137,6 +151,7 @@ describe.skipIf(!chromePath)("receipt module layout (headless Chromium)", () => 
           // Fully open, or printed, every step is visible.
           if (depth === "L2" || vp.media === "print") expect(m.visibleRecords).toBe(m.records);
           expect(m.overflow).toEqual([]);
+          expect(m.brokenHeaders).toEqual([]);
           expect(m.pageScrollWidth).toBeLessThanOrEqual(m.vw);
           // L0 is one screen at a phone's width: it ends inside the 900px-tall viewport.
           if (fx.oneScreen !== false && vp.media === "screen" && vp.width <= 390) expect(m.l0Bottom).toBeLessThanOrEqual(PHONE_HEIGHT);

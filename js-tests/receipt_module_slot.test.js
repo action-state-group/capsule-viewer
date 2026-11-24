@@ -182,7 +182,12 @@ describe("real copies capsulectl cut, in jsdom", () => {
     lib.document.body.appendChild(root);
     module.render(model, { L0: root, L1: root, L2: root, depth: "L2" });
     const heading = [...root.querySelectorAll("h2")].find((h) => h.textContent === "How it went");
-    const rows = [...heading.closest("section").querySelectorAll(":scope > .cv-section__body > [data-item] > p")].map((p) => p.textContent.replace(/^\d{4}-[\d-]+T[\d:]+Z · /, ""));
+    const rows = [...heading.closest("section").querySelectorAll(":scope > .cv-section__body > [data-item] > p")].map((p) => {
+      // The time is its own data-time span, said in the reader's zone: left out here.
+      const copy = p.cloneNode(true);
+      copy.querySelectorAll("[data-time]").forEach((t) => t.remove());
+      return copy.textContent.replace(/^ · /, "");
+    });
     expect(rows).toEqual([
       "Your agent · Couldn't",
       "Your agent · Couldn't (Example Shop)",

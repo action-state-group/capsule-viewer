@@ -262,6 +262,15 @@ def _seq(value: Frozen) -> tuple[Frozen, ...]:
     return value if isinstance(value, tuple) else ()
 
 
+def group_thousands(whole: int) -> str:
+    """``2000`` -> ``2,000``: grouped by hand, never by locale, so every reader and both twins agree."""
+    if whole < 0:
+        return "-" + group_thousands(-whole)
+    digits = str(whole)
+    head = len(digits) % 3 or 3
+    return ",".join([digits[:head], *(digits[i : i + 3] for i in range(head, len(digits), 3))])
+
+
 def format_amount(minor: int, currency: str) -> str:
     """Minor units as a decimal amount and its code: ``627, USD`` -> ``6.27 USD``.
 
@@ -269,11 +278,12 @@ def format_amount(minor: int, currency: str) -> str:
     counted: ``500, BTC`` -> ``500 msat``, never sats or a BTC decimal.
     """
     if currency == "BTC":
-        return f"{minor} msat"
+        return f"{'-' if minor < 0 else ''}{group_thousands(abs(minor))} msat"
     exponent = _EXPONENT.get(currency, 2)
     sign = "-" if minor < 0 else ""
     whole, part = divmod(abs(minor), 10**exponent)
-    return f"{sign}{whole}.{part:0{exponent}d} {currency}" if exponent else f"{sign}{whole} {currency}"
+    grouped = group_thousands(whole)
+    return f"{sign}{grouped}.{part:0{exponent}d} {currency}" if exponent else f"{sign}{grouped} {currency}"
 
 
 def _amount(name: str, minor: Frozen, currency: Frozen) -> Fact | None:

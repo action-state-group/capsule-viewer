@@ -51,14 +51,14 @@ from importlib import resources
 
 from ..binding import check_opening
 from ..context import VerifiedBundleContext
-from ..kit.components import EvidenceItem, Markup, Metric
+from ..kit.components import VERIFICATION_OUTCOMES, EvidenceItem, Markup, Metric, VerificationResult
 from ..kit.contract import KitServices, ModuleManifest
 from ..registry import Manifest
 from ..verifier_report import Assurance
 from ..wording import PLACEHOLDER, WordingPack
 from .model import Binder, Committed, Fact, Item, Move, ReceiptModel, ReceiptUnavailable, Step, build_receipt
 from .role import SELLER_KIND, sealed_side, seller_kind_engaged
-from .sides import ACTIONS, CASE_TONE, Missing, plain_date
+from .sides import ACTIONS, CASE_TONE, Missing, plain_date, plain_time
 
 DEPTHS = ("L0", "L1", "L2")
 # The values this module fills, per wording key; every other key takes none.
@@ -87,6 +87,9 @@ PLACEHOLDERS: Mapping[str, frozenset[str]] = {
     "lifecycle.as_of": frozenset({"text", "at"}),
     "lifecycle.later": frozenset({"text", "at"}),
     "step.position": frozenset({"n", "at"}),
+    "verify.tested": frozenset({"verifier", "checks"}),
+    "verify.reported": frozenset({"verifier"}),
+    "record.short": frozenset({"head", "tail"}),
     "step.line": frozenset({"text"}),
     "step.log": frozenset({"seq", "leaf", "log"}),
     "provenance.by": frozenset({"producers"}),
@@ -193,6 +196,33 @@ def _join(parts: Iterable[str]) -> Markup:
     return Markup("").join(parts)
 
 
+# The rail a sealed action names when no money moved; stated once near the top of the page.
+TEST_RAIL = "simulated"
+# The check the page words as its own single time-stamp sentence (the witness rung), not as a test.
+WITNESS_CHECK = "witnesses"
+_TIME_MARK = "\x00"
+# A shown record id: its first eight and last four hex digits; the whole id is one tap away.
+SHORT_HEAD, SHORT_TAIL = 8, 4
+
+
+def _is_rail(f: Fact) -> bool:
+    return f.name == "rail" and f.kind == "token"
+
+
+def _test_money(model: ReceiptModel) -> bool:
+    """Every rail the steps name is the simulated one, and at least one is named: only then is "test
+    money" true of the deal, and only then is the per-step rail row left to that one line."""
+    rails = [f for s in model.steps for f in s.facts if _is_rail(f)]
+    return bool(rails) and all(f.value == TEST_RAIL for f in rails)
+
+
+def time_el(at: str) -> Markup:
+    """A sealed instant as a ``data-time`` span: the words say UTC (a script-free page cannot
+    know the reader's zone), and the module-slot script rewrites the span into the reader's own."""
+    shown = plain_time(at)
+    return _el("span", shown, data_time=at) if shown != at else Markup(escape(at))
+
+
 class UnilateralReceiptModule:
     """``canRender`` / ``buildModel`` / ``render`` over one verified context.
     *pack* supplies every word, *depth* is the shell's opening level,
@@ -220,6 +250,10 @@ class UnilateralReceiptModule:
         self.audience = audience
         self.assurance = assurance if assurance is not None else Assurance()
         self.bind = bind
+
+    # The page states what the verifier tested itself (``checked_note``), so the shell leaves
+    # out its bare outcome badge and the top of the page never says "Verified" alone.
+    states_outcome = True
 
     @property
     def title(self) -> str:
@@ -251,6 +285,7 @@ class UnilateralReceiptModule:
         if model.demo:
             l0.append(_el("p", self.w("badge.demo"), data_demo="true"))
         l0.append(_el("h2", self.w("page.title")))
+        l0.append(self.checked_note(model.verification))
         keep = model.report.audience == "keep"
         if keep:
             l0.append(self.private_banner())
@@ -345,6 +380,25 @@ class UnilateralReceiptModule:
             return Markup(escape(text))
         return _el("span", value, class_="cv-mono", data_unworded=f"{prefix}.{value}")
 
+    def _timed(self, key: str, at: str, **values: str) -> Markup:
+        """The pack's words for *key* with the instant *at* drawn by ``time_el`` in its place."""
+        # A sealed value may hold the mark itself: it is dropped so it cannot move the instant.
+        clean = {k: v.replace(_TIME_MARK, "") for k, v in values.items()}
+        before, found, after = self.w(key, at=_TIME_MARK, **clean).partition(_TIME_MARK)
+        if not found:
+            return Markup(escape(before))
+        return _join([before, time_el(at), after])
+
+    def _short(self, capsule_id: str) -> str:
+        """A record id, shortened for reading; the page keeps the whole id one tap away."""
+        if len(capsule_id) <= SHORT_HEAD + SHORT_TAIL + 1:
+            return capsule_id
+        return self.w("record.short", head=capsule_id[:SHORT_HEAD], tail=capsule_id[-SHORT_TAIL:])
+
+    def _short_id(self, capsule_id: str) -> Markup:
+        """A record id shortened for the records table; the step's own drawer shows the whole id."""
+        return _el("span", self._short(capsule_id), class_="cv-mono", data_capsule_id=capsule_id)
+
     def _p(self, text: str, **attrs: str) -> Markup:
         return _el("p", text, **attrs)
 
@@ -382,7 +436,26 @@ class UnilateralReceiptModule:
             parts.append(self._p(model.report.scope, data_sealed_text="scope"))
         parts.append(self._p(self._witness(model), data_rung="witness"))
         parts.append(self._p(self._countersign(model), data_rung="countersign"))
+        if _test_money(model):
+            parts.append(self._p(self.w("money.test"), class_="cv-tone--caution", data_test_money="true"))
         return parts
+
+    def checked_note(self, result: VerificationResult) -> Markup:
+        """The verifier's outcome with what it tested and that this page checked none of it:
+        the page's top line, in place of the shell's bare outcome badge."""
+        wording, tone = VERIFICATION_OUTCOMES[result.outcome]
+        pill = _el("span", wording, class_=f"cv-verification__outcome cv-pill cv-tone--{tone}", data_outcome=result.outcome)
+        ran = [c for c in result.checks if c.name != WITNESS_CHECK]
+        # One outcome for every check is said once ("..., all verified"): the phone's L0 stays one screen.
+        if ran and len({c.outcome for c in ran}) == 1:
+            tested = f"{', '.join(c.name for c in ran)} (all {VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()})" if len(ran) > 1 else f"{ran[0].name} ({VERIFICATION_OUTCOMES[ran[0].outcome][0].lower()})"
+        else:
+            tested = ", ".join(f"{c.name} ({VERIFICATION_OUTCOMES[c.outcome][0].lower()})" for c in ran)
+        if tested:
+            text = self.w("verify.tested", verifier=result.verifier, checks=tested)
+        else:
+            text = self.w("verify.reported", verifier=result.verifier)
+        return _el("p", _join([pill, " ", text]), data_checked="true")
 
     def _witness(self, model: ReceiptModel) -> str:
         if model.witnessed == "pass":
@@ -400,9 +473,9 @@ class UnilateralReceiptModule:
 
     # ---- steps --------------------------------------------------------------
 
-    def _step(self, step: Step) -> Markup:
+    def _step(self, step: Step, test_money: bool = False) -> Markup:
         if step.n is not None and step.at:
-            label = self.w("step.position", n=str(step.n), at=step.at)
+            label = self._timed("step.position", step.at, n=str(step.n))
         else:
             label = self.w("step.unnumbered")
         log = self.w("step.log", seq=str(step.log.seq), leaf=str(step.log.leaf_index), log=step.log.log_id) if step.log else self.w("step.no_log")
@@ -413,9 +486,9 @@ class UnilateralReceiptModule:
             parts.append(self._p(self.w("step.line", text=step.line), data_sealed_text="step-line"))
         if step.disclosure == "disclosed":
             facts = [
-                _join([_el("dt", self._fact_label(f.name)),
-                       _el("dd", f.value, class_="cv-mono", data_fact=f.name)])
+                _join([_el("dt", self._fact_label(f.name)), self._fact_value(f)])
                 for f in step.facts
+                if not (test_money and _is_rail(f))
             ]
             if step.record_type:
                 facts.insert(0, _join([_el("dt", self.w("step.type")), _el("dd", step.record_type, class_="cv-mono", data_fact="record_type")]))
@@ -429,6 +502,16 @@ class UnilateralReceiptModule:
         """The label of a step's fact *name*."""
         return self.w(f"fact.{name}")
 
+    def _fact_value(self, f: Fact) -> Markup:
+        """A token's plain words with its code kept small beside them for checkers; a token
+        the pack has no word for, and every amount and count, as sealed."""
+        word = self.pack.get(f"value.{f.name}.{f.value.lower()}") if f.kind == "token" else None
+        if word is None:
+            return _el("dd", f.value, class_="cv-mono", data_fact=f.name)
+        if word.lower() == f.value.lower():
+            return _el("dd", word, data_fact=f.name, data_token=f.value)  # "Pay pay" would read as a typo
+        return _el("dd", _join([word, " ", _el("span", f.value, class_="cv-mono cv-muted", data_code="true")]), data_fact=f.name, data_token=f.value)
+
     def _steps(self, model: ReceiptModel, ids: Sequence[str]) -> Markup:
         """The steps an item was read from, each as its own record shows it."""
         rows = []
@@ -438,16 +521,16 @@ class UnilateralReceiptModule:
                 rows.append(_el("li", _join([self.kit.disclosure_badge("not_present"), " ", _el("span", cid, class_="cv-mono")])))
                 continue
             line = step.line or ""
-            at = f"{step.at} · " if step.at else ""
+            at = _join([time_el(step.at), " · "]) if step.at else Markup("")
             rows.append(
-                _el("li", _join([self.kit.disclosure_badge(step.disclosure), " ", _el("span", at + line)]), data_step=cid)
+                _el("li", _join([self.kit.disclosure_badge(step.disclosure), " ", _el("span", _join([at, line]))]), data_step=cid)
             )
         return _el("ol", _join(rows))
 
     def _item(self, model: ReceiptModel, item: Item, *, open_: bool, prefix: str = "") -> Markup:
-        text = prefix + (f"{item.at} · {item.text}" if item.at else item.text)
+        text = _join([prefix, time_el(item.at), " · ", item.text]) if item.at else _join([prefix, item.text])
         if item.flagged:
-            text = "⚠️ " + text
+            text = _join(["⚠️ ", text])
         if not item.steps:
             return self._p(text, data_sealed_text="item")
         # Inside L1 already: the steps are listed under the item, not behind a second toggle.
@@ -455,7 +538,8 @@ class UnilateralReceiptModule:
                                  self.kit.section(self.w("steps.summary"), self._steps(model, item.steps), level=4)]), data_item="true")
 
     def _section_steps(self, model: ReceiptModel, section: str) -> list[Markup]:
-        return [self._step(s) for s in model.steps if s.section == section]
+        test_money = _test_money(model)
+        return [self._step(s, test_money) for s in model.steps if s.section == section]
 
     # ---- L1 -----------------------------------------------------------------
 
@@ -568,11 +652,11 @@ class UnilateralReceiptModule:
         if r.lifecycle:
             life: list[str] = [self._p(r.lifecycle, data_sealed_text="lifecycle")]
             life += [
-                self._item(model, Item(self.w("lifecycle.later", at=i.at or "", text=i.text), i.steps), open_=open_)
+                self._item(model, Item(self._timed("lifecycle.later", i.at or "", text=i.text), i.steps), open_=open_)
                 for i in r.later
             ]
             if r.may_change and r.as_of:
-                life.append(self._note(self.w("lifecycle.as_of", text=r.may_change, at=r.as_of), data_sealed_text="may-change"))
+                life.append(self._note(self._timed("lifecycle.as_of", r.as_of, text=r.may_change), data_sealed_text="may-change"))
             out.append(self.kit.section(self.w("section.lifecycle"), *life))
 
         if model.statements:
@@ -597,11 +681,15 @@ class UnilateralReceiptModule:
             )
             out.append(self.kit.section(self.w("section.cancellation"), shows))
 
-        anomalies: list[str] = []
-        for side, items in (("agent", r.agent_anomalies), ("counterparty", r.counterparty_anomalies)):
-            body = [self._item(model, i, open_=open_) for i in items] or [self._note(self.w("anomalies.none"))]
-            anomalies.append(self.kit.section(self.w(f"anomalies.{side}"), *body, level=3))
-        out.append(self.kit.section(self.w("section.anomalies"), *anomalies))
+        if not (r.agent_anomalies or r.counterparty_anomalies):
+            # One "none", not one per side: nothing is hidden by joining them.
+            out.append(self.kit.section(self.w("section.anomalies"), self._note(self.w("anomalies.none"))))
+        else:
+            anomalies: list[str] = []
+            for side, items in (("agent", r.agent_anomalies), ("counterparty", r.counterparty_anomalies)):
+                body = [self._item(model, i, open_=open_) for i in items] or [self._note(self.w("anomalies.none"))]
+                anomalies.append(self.kit.section(self.w(f"anomalies.{side}"), *body, level=3))
+            out.append(self.kit.section(self.w("section.anomalies"), *anomalies))
 
         other = self._section_steps(model, "other")
         if other:
@@ -658,7 +746,7 @@ class UnilateralReceiptModule:
             position = str(s.n) if s.n is not None else (self.w("records.report") if s.section == "report" else "")
             kind = s.record_type or self.w("records.unknown")
             log = self.w("step.log", seq=str(s.log.seq), leaf=str(s.log.leaf_index), log=s.log.log_id) if s.log else self.w("step.no_log")
-            rows.append([position, kind, self.kit.disclosure_badge(s.disclosure), log, _el("span", s.capsule_id, class_="cv-mono")])
+            rows.append([position, kind, self.kit.disclosure_badge(s.disclosure), log, self._short_id(s.capsule_id)])
         out.append(
             self.kit.section(
                 self.w("section.records"),

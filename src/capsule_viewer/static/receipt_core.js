@@ -115,6 +115,18 @@
   // The composition section's words: agent-action-capsule's composition view
   // (capsule_viewer.composed, after ts/src/composed-view.ts).
   var NOT_APPLICABLE = "—";
+  // module.py's TEST_RAIL, WITNESS_CHECK, _TIME_MARK, SHORT_HEAD and SHORT_TAIL.
+  var TEST_RAIL = "simulated";
+  var WITNESS_CHECK = "witnesses";
+  var TIME_MARK = "\u0000";
+  var SHORT_HEAD = 8, SHORT_TAIL = 4;
+  function isRail(f) { return f.name === "rail" && f.kind === "token"; }
+  // module.py's _test_money: every rail the steps name is the simulated one, and at least one is named.
+  function testMoney(model) {
+    var rails = [];
+    seq(model.steps).forEach(function (s) { s.facts.forEach(function (f) { if (isRail(f)) rails.push(f); }); });
+    return rails.length > 0 && rails.every(function (f) { return f.value === TEST_RAIL; });
+  }
   var COMPOSED_SCOPE = "Composition closure covers the declared members only; it is not completeness of participation.";
   var COMPOSED_CUSTODY = "Custody domains are labels declared by whoever composed this block. Identical labels make an agreeing pair " +
     "redundant; distinct labels do not establish that two observers are independent.";
@@ -452,17 +464,27 @@
 
   // ---- the receipt model (model.py) -----------------------------------------
 
+  // model.group_thousands: ``2000`` -> ``2,000``, by hand and never by locale, so every reader and both twins agree.
+  function groupThousands(whole) {
+    if (whole < 0) return "-" + groupThousands(-whole);
+    var digits = String(whole);
+    var head = digits.length % 3 || 3;
+    var out = [digits.slice(0, head)];
+    for (var i = head; i < digits.length; i += 3) out.push(digits.slice(i, i + 3));
+    return out.join(",");
+  }
+
   function formatAmount(minor, currency) {
     // BTC counts millisatoshi (1e-11 BTC): shown as counted, never sats or a BTC decimal.
-    if (currency === "BTC") return minor + " msat";
+    if (currency === "BTC") return (minor < 0 ? "-" : "") + groupThousands(Math.abs(minor)) + " msat";
     var exponent = own(EXPONENT, currency) ? EXPONENT[currency] : 2;
     var sign = minor < 0 ? "-" : "";
     var abs = Math.abs(minor);
     var scale = Math.pow(10, exponent);
     var whole = Math.floor(abs / scale);
     var part = abs % scale;
-    if (!exponent) return sign + whole + " " + currency;
-    return sign + whole + "." + String(part).padStart(exponent, "0") + " " + currency;
+    if (!exponent) return sign + groupThousands(whole) + " " + currency;
+    return sign + groupThousands(whole) + "." + String(part).padStart(exponent, "0") + " " + currency;
   }
 
   function fact(name, value, kind) { return { name: name, value: value, kind: kind || "token" }; }
@@ -1477,6 +1499,26 @@
     return MONTHS[+m[2] - 1] + " " + +m[3] + ", " + m[1];
   }
 
+  // sides.plain_time: a UTC RFC 3339 instant, as "Oct 9, 2026, 18:00 UTC"; anything else as it is.
+  // The reader's own zone is set after drawing (localTimes), where the page has a script.
+  function plainTime(value) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]00:00)$/.exec(value);
+    if (m === null || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31 || +m[4] > 23 || +m[5] > 59) return value;
+    return MONTHS[+m[2] - 1] + " " + +m[3] + ", " + m[1] + ", " + m[4] + ":" + m[5] + " UTC";
+  }
+
+  // Each data-time span the drawing made, said in the reader's own time zone.
+  function localTimes(root) {
+    var Format = typeof Intl !== "undefined" && Intl.DateTimeFormat;
+    if (!Format) return;
+    var format;
+    try { format = new Format(undefined, { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }); } catch (e) { return; }
+    Array.prototype.forEach.call(root.querySelectorAll("[data-time]"), function (node) {
+      var date = new Date(node.getAttribute("data-time"));
+      if (!isNaN(date.getTime())) node.textContent = format.format(date);
+    });
+  }
+
   // sides.two_copy_case.
   function twoCopyCase(dealState, joins) {
     var agreed = joins.length > 0 && joins.every(function (jv) {
@@ -1673,6 +1715,43 @@
 
   P.p = function (text, attrs) { return this.d.el("p", attrs, [text]); };
   P.note = function (text, attrs) { return this.d.el("p", Object.assign({ class: "cv-muted" }, attrs || {}), [text]); };
+  // module.py's time_el, _timed, _short, _short_id, _fact_value and checked_note.
+  P.timeEl = function (at) {
+    var shown = plainTime(at);
+    return shown !== at ? this.d.el("span", { "data-time": at }, [shown]) : at;
+  };
+  P.timed = function (key, at, values) {
+    var clean = {};
+    Object.keys(values || {}).forEach(function (k) { clean[k] = values[k].split(TIME_MARK).join(""); });
+    var parts = w(key, Object.assign({ at: TIME_MARK }, clean)).split(TIME_MARK);
+    if (parts.length < 2) return parts[0];
+    return [parts[0], this.timeEl(at), parts.slice(1).join(TIME_MARK)];
+  };
+  P.short = function (id) {
+    if (id.length <= SHORT_HEAD + SHORT_TAIL + 1) return id;
+    return w("record.short", { head: id.slice(0, SHORT_HEAD), tail: id.slice(-SHORT_TAIL) });
+  };
+  P.shortId = function (id) { return this.d.el("span", { class: "cv-mono", "data-capsule-id": id }, [this.short(id)]); };
+  P.factValue = function (f) {
+    var d = this.d;
+    var worded = f.kind === "token" ? word("value." + f.name + "." + f.value.toLowerCase()) : null;
+    if (worded === null) return d.el("dd", { class: "cv-mono", "data-fact": f.name }, [f.value]);
+    if (worded.toLowerCase() === f.value.toLowerCase()) return d.el("dd", { "data-fact": f.name, "data-token": f.value }, [worded]);
+    return d.el("dd", { "data-fact": f.name, "data-token": f.value }, [worded, " ", d.el("span", { class: "cv-mono cv-muted", "data-code": "true" }, [f.value])]);
+  };
+  P.checkedNote = function (result) {
+    var pill = this.kit.outcome(result.outcome, "cv-verification__outcome cv-pill");
+    var ran = result.checks.filter(function (c) { return c.name !== WITNESS_CHECK; });
+    var said = function (c) { return VERIFICATION_OUTCOMES[c.outcome][0].toLowerCase(); };
+    var tested;
+    if (ran.length && ran.every(function (c) { return c.outcome === ran[0].outcome; })) {
+      tested = ran.length > 1 ? ran.map(function (c) { return c.name; }).join(", ") + " (all " + said(ran[0]) + ")" : ran[0].name + " (" + said(ran[0]) + ")";
+    } else {
+      tested = ran.map(function (c) { return c.name + " (" + said(c) + ")"; }).join(", ");
+    }
+    var text = tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
+    return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);
+  };
   P.enumText = function (prefix, value) {
     var text = word(prefix + "." + value);
     if (text !== null) return text;
@@ -1733,6 +1812,7 @@
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
+    if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
   };
   P.witness = function (model) {
@@ -1755,14 +1835,14 @@
     }
     return w("fact." + name);
   };
-  P.step = function (step) {
+  P.step = function (step, testMoneyOnly) {
     var d = this.d, self = this;
-    var label = step.n !== null && step.at ? w("step.position", { n: String(step.n), at: step.at }) : w("step.unnumbered");
+    var label = step.n !== null && step.at ? this.timed("step.position", step.at, { n: String(step.n) }) : w("step.unnumbered");
     var parts = [this.kit.evidenceDetails([{ label: label, disclosure: step.disclosure, digest: step.capsule_id, media_type: "", note: this.logText(step.log) }])];
     if (step.line) parts.push(this.p(w("step.line", { text: step.line }), { "data-sealed-text": "step-line" }));
     if (step.disclosure === "disclosed") {
-      var list = step.facts.map(function (f) {
-        return [d.el("dt", {}, [self.factLabel(f.name)]), d.el("dd", { class: "cv-mono", "data-fact": f.name }, [f.value])];
+      var list = step.facts.filter(function (f) { return !(testMoneyOnly && isRail(f)); }).map(function (f) {
+        return [d.el("dt", {}, [self.factLabel(f.name)]), self.factValue(f)];
       });
       if (step.record_type) list.unshift([d.el("dt", {}, [w("step.type")]), d.el("dd", { class: "cv-mono", "data-fact": "record_type" }, [step.record_type])]);
       parts.push(d.el("dl", { "data-facts": "true" }, list));
@@ -1772,18 +1852,18 @@
     return d.el("div", attrs, parts);
   };
   P.steps = function (model, ids) {
-    var d = this.d, kit = this.kit;
+    var d = this.d, kit = this.kit, self = this;
     return d.el("ol", {}, ids.map(function (cid) {
       var step = stepIn(model, cid);
       if (step === null) return d.el("li", {}, [kit.disclosureBadge("not_present"), " ", d.el("span", { class: "cv-mono" }, [cid])]);
       var line = step.line || "";
-      var at = step.at ? step.at + " · " : "";
-      return d.el("li", { "data-step": cid }, [kit.disclosureBadge(step.disclosure), " ", d.el("span", {}, [at + line])]);
+      var at = step.at ? [self.timeEl(step.at), " · "] : "";
+      return d.el("li", { "data-step": cid }, [kit.disclosureBadge(step.disclosure), " ", d.el("span", {}, [at, line])]);
     }));
   };
   P.item = function (model, it, prefix) {
-    var text = (prefix || "") + (it.at ? it.at + " · " + it.text : it.text);
-    if (it.flagged) text = "⚠️ " + text;
+    var text = it.at ? [prefix || "", this.timeEl(it.at), " · ", it.text] : [prefix || "", it.text];
+    if (it.flagged) text = ["⚠️ ", text];
     if (!it.steps.length) return this.p(text, { "data-sealed-text": "item" });
     return this.d.el("div", { "data-item": "true" }, [
       this.p(text, { "data-sealed-text": "item" }),
@@ -1792,7 +1872,8 @@
   };
   P.sectionSteps = function (model, section) {
     var self = this;
-    return model.steps.filter(function (s) { return s.section === section; }).map(function (s) { return self.step(s); });
+    var testMoneyOnly = testMoney(model);
+    return model.steps.filter(function (s) { return s.section === section; }).map(function (s) { return self.step(s, testMoneyOnly); });
   };
   P.committed = function (c, prefix) {
     if (c.state === "opened" && c.text !== null) {
@@ -1908,9 +1989,9 @@
     if (r.lifecycle) {
       var life = [this.p(r.lifecycle, { "data-sealed-text": "lifecycle" })];
       r.later.forEach(function (i) {
-        life.push(self.item(model, item(w("lifecycle.later", { at: i.at || "", text: i.text }), i.steps)));
+        life.push(self.item(model, item(self.timed("lifecycle.later", i.at || "", { text: i.text }), i.steps)));
       });
-      if (r.may_change && r.as_of) life.push(this.note(w("lifecycle.as_of", { text: r.may_change, at: r.as_of }), { "data-sealed-text": "may-change" }));
+      if (r.may_change && r.as_of) life.push(this.note(this.timed("lifecycle.as_of", r.as_of, { text: r.may_change }), { "data-sealed-text": "may-change" }));
       out.push(kit.section(w("section.lifecycle"), life));
     }
 
@@ -1935,11 +2016,16 @@
       out.push(kit.section(w("section.cancellation"), [shows]));
     });
 
-    var anomalies = [["agent", r.agent_anomalies], ["counterparty", r.counterparty_anomalies]].map(function (pair) {
-      var body = pair[1].map(function (i) { return self.item(model, i); });
-      return kit.section(w("anomalies." + pair[0]), body.length ? body : [self.note(w("anomalies.none"))], 3);
-    });
-    out.push(kit.section(w("section.anomalies"), anomalies));
+    if (!r.agent_anomalies.length && !r.counterparty_anomalies.length) {
+      // One "none", not one per side: nothing is hidden by joining them.
+      out.push(kit.section(w("section.anomalies"), [this.note(w("anomalies.none"))]));
+    } else {
+      var anomalies = [["agent", r.agent_anomalies], ["counterparty", r.counterparty_anomalies]].map(function (pair) {
+        var body = pair[1].map(function (i) { return self.item(model, i); });
+        return kit.section(w("anomalies." + pair[0]), body.length ? body : [self.note(w("anomalies.none"))], 3);
+      });
+      out.push(kit.section(w("section.anomalies"), anomalies));
+    }
 
     var other = this.sectionSteps(model, "other");
     if (other.length) out.push(kit.section(w("section.other"), other));
@@ -1982,7 +2068,7 @@
     }
     var rows = model.steps.map(function (s) {
       var position = s.n !== null ? String(s.n) : (s.section === "report" ? w("records.report") : "");
-      return [position, s.record_type || w("records.unknown"), kit.disclosureBadge(s.disclosure), self.logText(s.log), d.el("span", { class: "cv-mono" }, [s.capsule_id])];
+      return [position, s.record_type || w("records.unknown"), kit.disclosureBadge(s.disclosure), self.logText(s.log), self.shortId(s.capsule_id)];
     });
     out.push(kit.section(w("section.records"), [
       kit.dataTable([w("records.step"), w("records.kind"), w("records.disclosure"), w("records.log"), w("records.id")], rows),
@@ -2233,6 +2319,7 @@
     var l0 = [];
     if (model.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
     l0.push(dr.d.el("h2", {}, [w("page.title")]));
+    l0.push(dr.checkedNote(model.verification));
     var keep = model.report.audience === "keep";
     if (keep) l0.push(dr.privateBanner());
     l0 = l0.concat([levels.headline], levels.notes);
@@ -2247,6 +2334,7 @@
     var l0 = [];
     if (model.receipt.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
     l0.push(dr.d.el("h2", {}, [w("seller.title")]));
+    l0.push(dr.checkedNote(model.receipt.verification));
     var keep = model.receipt.report.audience === "keep";
     if (keep) l0.push(dr.privateBanner());
     l0 = l0.concat([levels.headline], levels.notes);
@@ -2471,7 +2559,7 @@
     };
     var keep = model.parties.some(function (p) { return p.audience === "keep"; });
     var one = model.parties.length === 1;
-    var l0 = [d.el("h2", {}, [w(one ? "bilateral.title.one_sided" : "bilateral.title")])];
+    var l0 = [d.el("h2", {}, [w(one ? "bilateral.title.one_sided" : "bilateral.title")]), dr.checkedNote(model.verification)];
     if (keep) l0.push(dr.privateBanner());
     var dealText;
     if (model.deal_state === "agree" && model.deal !== null) dealText = w(one ? "deal.one" : "deal.agree", { deal: model.deal });
@@ -2554,6 +2642,8 @@
       assurance: (env && env.assurance) || function (context) { return pageAssurance(context, kind === "deal" ? EXTENSION_V1 : EXTENSION); },
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
+      // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
+      localTime: !!(env && env.localTime),
     };
     var build = function (context) {
       var v = view(context, e);
@@ -2599,12 +2689,13 @@
           wrap.setAttribute("data-receipt-module", moduleId(kind));
           wrap.appendChild(levels[i]);
           region.appendChild(wrap);
+          if (e.localTime) localTimes(wrap);
         });
       },
     };
   }
 
-  var module = createModule(KIND, {});
+  var module = createModule(KIND, { localTime: true });
 
   root.CapsuleViewerReceipt = {
     KIND: KIND,
@@ -2621,6 +2712,8 @@
     utf8: utf8,
     jcs: jcs,
     formatAmount: formatAmount,
+    plainTime: plainTime,
+    localTimes: localTimes,
     bundleVerified: bundleVerified,
   };
   if (typeof root.EvidenceGraph !== "undefined" && root.EvidenceGraph && typeof root.EvidenceGraph.registerPresentation === "function") {

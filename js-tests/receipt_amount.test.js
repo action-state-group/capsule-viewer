@@ -9,7 +9,11 @@ describe.each(KINDS)("formatAmount in the %s script", (kind) => {
   it("shows BTC as msat", () => {
     expect(api.formatAmount(500, "BTC")).toBe("500 msat");
     expect(api.formatAmount(0, "BTC")).toBe("0 msat");
-    expect(api.formatAmount(1990, "BTC")).toBe("1990 msat");
+    expect(api.formatAmount(1990, "BTC")).toBe("1,990 msat");
+    expect(api.formatAmount(1234567, "BTC")).toBe("1,234,567 msat");
+    expect(api.formatAmount(-1990, "BTC")).toBe("-1,990 msat");
+    expect(api.formatAmount(200000, "USD")).toBe("2,000.00 USD");
+    expect(api.formatAmount(100000000, "JPY")).toBe("100,000,000 JPY");
     expect(api.formatAmount(-5, "BTC")).toBe("-5 msat");
   });
   it("leaves fiat unchanged", () => {

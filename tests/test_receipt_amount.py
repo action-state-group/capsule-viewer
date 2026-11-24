@@ -13,7 +13,12 @@ from capsule_viewer.receipt.model import format_amount
     [
         (500, "BTC", "500 msat"),
         (0, "BTC", "0 msat"),
-        (1990, "BTC", "1990 msat"),
+        (1990, "BTC", "1,990 msat"),
+        (2000, "BTC", "2,000 msat"),
+        (1234567, "BTC", "1,234,567 msat"),
+        (-1990, "BTC", "-1,990 msat"),
+        (200000, "USD", "2,000.00 USD"),
+        (100000000, "JPY", "100,000,000 JPY"),
         (-5, "BTC", "-5 msat"),
         (627, "USD", "6.27 USD"),
         (500, "JPY", "500 JPY"),

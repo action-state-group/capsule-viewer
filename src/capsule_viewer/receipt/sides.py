@@ -112,6 +112,19 @@ def plain_date(value: str) -> str:
     return f"{_MONTHS[int(m.group(2)) - 1]} {int(m.group(3))}, {m.group(1)}"
 
 
+_INSTANT = re.compile(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]00:00)", re.ASCII)
+
+
+def plain_time(value: str) -> str:
+    """A UTC RFC 3339 instant, as "Oct 9, 2026, 18:00 UTC"; anything else as it is.
+    The script-free page cannot know the reader's time zone, so it says UTC in words;
+    the module-slot script rewrites it to the reader's own (static/receipt_core.js)."""
+    m = _INSTANT.fullmatch(value)
+    if m is None or not (1 <= int(m.group(2)) <= 12 and 1 <= int(m.group(3)) <= 31 and int(m.group(4)) < 24 and int(m.group(5)) < 60):
+        return value
+    return f"{_MONTHS[int(m.group(2)) - 1]} {int(m.group(3))}, {m.group(1)}, {m.group(4)}:{m.group(5)} UTC"
+
+
 def two_copy_case(deal_state: str, joins: Sequence[tuple[Join, Corroboration | None]]) -> str:
     """``both`` when both copies name one deal and every join derived
     ``agree`` as declared, corroborating; else ``not_agreed``. No join is no

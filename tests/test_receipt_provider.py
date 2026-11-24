@@ -32,7 +32,7 @@ def _page() -> str:
 def test_the_page_says_whose_half_it_is_and_shows_each_amount_with_its_unit():
     text = visible_text(_page())
     assert OWN_HALF in text and NO_CONTENT in text
-    assert "Received in total 1990 msat" in text
+    assert "Received in total 1,990 msat" in text
     assert text.count("995 msat") == 2 and text.count("5 msat") >= 2
     assert "Model served m" in text
     # A bundle the producer selected: the shell's notice, and no verified banner above it.

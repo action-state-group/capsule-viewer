@@ -256,6 +256,9 @@ class BilateralReceiptModule:
     *composition*: the verifier's composed/v1 result for this bundle
     (``composition_from_capsulectl``)."""
 
+    # States what the verifier tested itself, so the shell leaves out its bare outcome badge.
+    states_outcome = True
+
     def __init__(
         self,
         pack: WordingPack,
@@ -302,7 +305,7 @@ class BilateralReceiptModule:
         sides = UnilateralReceiptModule(self.pack)
         keep = any(p.audience == "keep" for p in model.parties)
         one = len(model.parties) == 1
-        l0: list[str] = [_el("h2", self.w("bilateral.title.one_sided" if one else "bilateral.title"))]
+        l0: list[str] = [_el("h2", self.w("bilateral.title.one_sided" if one else "bilateral.title")), sides.checked_note(model.verification)]
         if keep:
             l0.append(sides.private_banner())
         l0.append(self._deal(model))

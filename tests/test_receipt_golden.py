@@ -22,10 +22,21 @@ import json
 import re
 
 import pytest
-from receipt_helpers import RECEIPTS, load, render, visible_text
+from receipt_helpers import RECEIPTS, load, render
+from receipt_helpers import visible_text as _visible_text
+
+from capsule_viewer.receipt.sides import plain_time
+
+
+def visible_text(html: str) -> str:
+    """The page's text, with the space a <span> leaves before a closing bracket closed up."""
+    return _visible_text(html).replace(" )", ")")
+
 
 GOLDEN = json.loads((RECEIPTS / "golden-2.snapshot.json").read_text(encoding="utf-8"))
-LINES = [" ".join(line.split()) for line in GOLDEN["text"]]
+# deal-view.js printed each instant as its RFC 3339 text; this page says it in words, in UTC (capsule-viewer#373).
+_INSTANT = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
+LINES = [_INSTANT.sub(lambda m: plain_time(m.group(0)), " ".join(line.split())) for line in GOLDEN["text"]]
 # deal-view.js wrote lines 0 to 49; from 50 on is the vendored AAC viewer's
 # verification page, which deal-view.js did not write.
 DEAL_VIEW = range(0, 50)
@@ -45,6 +56,13 @@ REWORDED = {
     # what the seal does and does not show.
     31: "claims.tamper",
     49: "claims.scope",
+    # capsule-viewer#373: the two example lines said facts about the deal when they were facts
+    # about this copy (#367), and "Anomalies" is "Problems spotted".
+    27: "rung.unwitnessed",
+    28: "countersign.none",
+    44: "section.anomalies",
+    # "None found." read as the page having looked; it reports (Sherlock2, #374).
+    46: "anomalies.none",
 }
 DROPPED = {
     # This page is built from the bundle and does not carry it, so there is no
@@ -58,6 +76,10 @@ DROPPED = {
     # links.
     39: "page-builder version comparison",
     40: "a link to release notes",
+    # capsule-viewer#373: with nothing to list, one "none" under "Problems spotted", not one per side.
+    45: "the agent-side heading of an empty problems section",
+    47: "the counterparty-side heading of an empty problems section",
+    48: "the second \"none\" of an empty problems section: one is said",
 }
 
 
@@ -79,7 +101,7 @@ def test_the_map_accounts_for_every_deal_view_line(page):
 def test_most_deal_view_lines_are_shown_verbatim(page):
     text = visible_text(page)
     verbatim = [i for i in DEAL_VIEW if LINES[i] in text]
-    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 40
+    assert len(verbatim) == len(DEAL_VIEW) - len(REWORDED) - len(DROPPED) == 33
 
 
 def test_dropped_lines_are_really_gone(page):
@@ -116,8 +138,8 @@ def test_what_the_agent_did_keeps_its_order(page):
 
 
 def test_the_order_check_bites(page):
-    """Mutant: swap the two things the agent did."""
-    first, second = LINES[9], LINES[16]
+    """Mutant: swap two lines the page shows verbatim (the lines with a time are said in words here)."""
+    first, second = LINES[11], LINES[20]
     swapped = page.replace(first, "\0").replace(second, first).replace("\0", second)
     assert _out_of_order(_l1_text(swapped)) != []
 

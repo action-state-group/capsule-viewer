@@ -30,6 +30,7 @@ from ..kit.components import Markup, Metric
 from ..kit.contract import KitServices, ModuleManifest
 from ..registry import Registry
 from ..shell import present
+from .model import group_thousands
 
 TITLE = "Your receipt for an exchange you served"
 # The page's own sentences. Public text: Sherlock2's PM (Mesh-LLM/capsules-plugin#134).
@@ -83,7 +84,7 @@ def amount_text(amount: Frozen) -> str | None:
     if not 0 <= scale <= 255:
         return None
     if code == "BTC" and scale == 11:
-        return f"{int(value)} msat"
+        return f"{group_thousands(int(value))} msat"
     return f"{int(value)} × 10^-{scale} {code}"
 
 
@@ -159,8 +160,8 @@ def _total(legs: tuple[Mapping, ...]) -> str | None:
         text = amount_text(_get(_get(leg, "settlement"), "received"))
         if text is None or not text.endswith(" msat"):
             return None
-        values.append(int(text.removesuffix(" msat")))
-    return f"{sum(values)} msat"
+        values.append(int(text.removesuffix(" msat").replace(",", "")))
+    return f"{group_thousands(sum(values))} msat"
 
 
 class ProviderReceiptModule:

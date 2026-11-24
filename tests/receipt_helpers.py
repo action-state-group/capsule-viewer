@@ -109,6 +109,12 @@ class _Snapshot(HTMLParser):
             entry = self.records.setdefault(record, {"disclosure": a.get("data-disclosure"), "log": a.get("data-log"), "facts": {}})
             entry["disclosure"] = a.get("data-disclosure")
         parent_record = next((r for _, r, _ in reversed(self.stack) if r), None)
+        if "data-token" in a and fact is not None:
+            # A worded token: the snapshot holds the sealed token, not a pack's words.
+            if parent_record is not None:
+                self.records[parent_record]["facts"][a["data-fact"]] = a["data-token"]
+            self.stack.append((tag, record or parent_record, None))
+            return
         self.stack.append((tag, record or parent_record, fact))
         if fact is not None and parent_record is not None:
             self.records[parent_record]["facts"][fact] = ""
