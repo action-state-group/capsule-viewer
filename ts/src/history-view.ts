@@ -102,7 +102,7 @@ export interface HistoryViewInput {
      * registered yet, and `at`, that row's own cut time (an RFC 3339 instant the
      * view formats like the row's). Anything else is refused.
      */
-    readonly values?: Readonly<{ n?: number; at?: string }>;
+    readonly values?: { readonly n: number; readonly at: string };
   }[];
   readonly periods?: readonly {
     readonly from: string;
@@ -452,6 +452,14 @@ function readUnregistered(
   kind: string | undefined,
   rows: readonly (ReadCheckpoint | ReadDeal)[],
 ): Unregistered | undefined {
+  // An empty object says nothing, as it always did on every check.
+  if (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    Object.keys(v).length === 0
+  )
+    return undefined;
   const o = r.object(v, path, ["n", "at"], ["n", "at"]);
   if (!o || !("n" in o) || !("at" in o)) return undefined;
   const n = r.count(o["n"], `${path}.n`);
@@ -1548,17 +1556,17 @@ export function buildHistoryView(
         el(
           "li",
           { class: "cvh-check", "data-status": c.status },
-          say("check.line", {
-            status: say(`status.${c.status}`),
-            name: say(`check.${c.id}`),
-          }) +
-            (c.unregistered
-              ? ". " +
-                say("check.witness.unregistered", {
-                  n: String(c.unregistered.n),
-                  at: minuteOf(c.unregistered.at),
-                })
-              : ""),
+          c.unregistered
+            ? say("check.line.unregistered", {
+                status: say(`status.${c.status}`),
+                name: say(`check.${c.id}`),
+                n: String(c.unregistered.n),
+                at: minuteOf(c.unregistered.at),
+              })
+            : say("check.line", {
+                status: say(`status.${c.status}`),
+                name: say(`check.${c.id}`),
+              }),
         ),
       ),
     ),

@@ -167,6 +167,17 @@ describe("the witness check names the unregistered checkpoint (capsule-viewer#36
       "is not registered with the witness yet",
     );
   });
+  it("an empty values object on the witness check still means no values", () => {
+    const input = witnessed();
+    const checks = input["checks"] as { id: string; values?: unknown }[];
+    const witness = checks.find((c) => c.id === "witness");
+    if (witness) witness.values = {};
+    const text = textOf(html(input));
+    expect(text).toContain(
+      "Not checked here: A witness time-stamped these records",
+    );
+    expect(text).not.toContain("is not registered with the witness yet");
+  });
   it("is drawn from the scripted page as well", () => {
     const container = document.createElement("div");
     expect(renderHistoryView(witnessed(), container)).toBe(true);

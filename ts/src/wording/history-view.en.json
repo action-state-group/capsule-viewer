@@ -152,7 +152,7 @@
     "check.key_is_node": "The signing key is the node's published key",
     "check.reply_bound": "The answer is bound to the request it answers",
     "check.witness": "A witness time-stamped these records",
-    "check.witness.unregistered": "Checkpoint {n} (cut {at}) is not registered with the witness yet.",
+    "check.line.unregistered": "{status}: {name}. Checkpoint {n} (cut {at}) is not registered with the witness yet.",
     "check.second_signature": "A second party signed this record",
     "check.deal_report": "Each deal was read with its own report, which writes nothing",
     "refused": "This page can't show this history: {reasons}"

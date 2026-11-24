@@ -274,6 +274,10 @@ var epoch = &instant{}
 // line and the chip cannot name two different ones. `at` is the row's own cut
 // time, an instant like cut_at (the view formats it; no text passes through).
 func readUnregistered(r *reader, v any, path, kind string, rows []*row) *unregistered {
+	// An empty object says nothing, as it always did on every check.
+	if o, ok := v.(*object); ok && len(o.keys) == 0 {
+		return nil
+	}
 	vo := r.object(v, path, []string{"n", "at"}, []string{"n", "at"})
 	if vo == nil || !vo.has("n") || !vo.has("at") {
 		return nil
@@ -1315,7 +1319,8 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 	for _, c := range checks {
 		line := say("check.line", "status", say("status."+c.status), "name", say("check."+c.id))
 		if c.unreg != nil {
-			line += ". " + say("check.witness.unregistered", "n", num(c.unreg.n), "at", minuteOf(c.unreg.at))
+			line = say("check.line.unregistered", "status", say("status."+c.status), "name", say("check."+c.id),
+				"n", num(c.unreg.n), "at", minuteOf(c.unreg.at))
 		}
 		checkLis = append(checkLis, el("li", attrs("class", "cvh-check", "data-status", c.status), line))
 	}
