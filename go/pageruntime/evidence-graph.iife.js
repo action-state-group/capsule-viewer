@@ -17865,13 +17865,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("c08d95ff9e8a6bfcee0bdfa6ce417c8427c68ebe");
+    return commitPrefix("89b75d6ab5f34bada727082758562071d494ce0b");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.24.0",
+    viewerVersion: "0.25.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
