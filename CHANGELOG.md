@@ -17,7 +17,7 @@ Both state viewer 0.25.0: `ts/v0.25.0`, then `go/v0.25.0` on the commit that shi
 
 ### Changed
 
-- The receipt page's presentation rules R1 to R9 (#374, #373): the top line states the verifier's outcome with the checks it ran, test money is said once, sealed tokens read as words, one "Problems spotted" section, and layout fixes (the "Step" table header no longer breaks). `kit.css` changed, so every kit module's `style_sha256` pin moves; consumers that pin a module script or the three ledger page goldens see new pins.
+- The receipt page's presentation rules R1 to R8 (#374, #373): the top line states the verifier's outcome with the checks it ran, test money is said once, sealed tokens read as words, one "Problems spotted" section, and layout fixes (the "Step" table header no longer breaks). `kit.css` changed, so every kit module's `style_sha256` pin moves; consumers that pin a module script or the three ledger page goldens see new pins.
 - The words "all" and the per-check form of the verification line are wording-pack keys, `verify.checks_all` and `verify.check_one`, in both twins (#377, #375). The words on the page do not change.
 
 ## ts 0.24.0 and go 0.24.0 (2026-11-24)
