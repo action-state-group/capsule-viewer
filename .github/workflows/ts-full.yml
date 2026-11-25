@@ -1,0 +1,67 @@
+# The whole `npm run check` of the npm package @action-state-group/capsule-viewer
+# (ts/) on Node 22 and 24, as publish-ts.yml runs it before uploading. Pull
+# requests run a faster subset in ci.yml (Node 24, without
+# test/presentation-builder.test.ts); this runs nightly and on main when its
+# inputs change. scripts/ci-local.sh runs the same check before a push.
+name: TypeScript full check
+
+on:
+  push:
+    branches: [main]
+    # ts/ and the repository files its tests and package check read; keep in
+    # step with what ts/test reads outside ts/.
+    paths: [".github/workflows/ts-full.yml", ".github/scripts/report-failure.sh", "ts/**", "src/**", "tests/**", "vectors/**", "go/**", "schemas/**", "examples/**", "js-tests/**", "tokens/**", "package.json", "package-lock.json"]
+  schedule:
+    - cron: "15 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A run on main or a nightly is never cancelled or replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  ts:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        node: ["22", "24"]
+    defaults:
+      run:
+        working-directory: ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: npm ci
+      # The CSP and offline-page browser tests skip without a Chrome; the
+      # hosted runner ships one, so its absence is a failure here.
+      - run: test -x /usr/bin/google-chrome
+      - run: npm run check
+
+  # A red run on main or a nightly opens or comments on one ci-red issue.
+  report-failure:
+    needs: [ts]
+    if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Report the red run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "TypeScript full check failed on main or nightly"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh
