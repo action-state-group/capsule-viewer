@@ -46,6 +46,8 @@ try {
     "dist/browser.js",
     "dist/emitter-shell.html",
     "dist/evidence-graph.iife.js",
+    "dist/receipt.js",
+    "dist/receipt.d.ts",
   ])
     assert(paths.includes(required), `${required} is not in the package`);
   for (const path of paths)
@@ -88,7 +90,17 @@ try {
      const page = emitEvidenceGraphHtml({}, "/*IIFE*/");
      if (!page.startsWith("<!doctype html>")) throw new Error("no page");`,
   ]);
-  console.log(`${packed.filename}: ${paths.length} files, emits a page`);
+  // The receipt export (#383) loads from the installed package and offers
+  // its four modules.
+  run("node", [
+    "--input-type=module",
+    "-e",
+    `const { receiptModules } = await import(${JSON.stringify(name + "/receipt")});
+     if (receiptModules().length !== 4) throw new Error("no receipt modules");`,
+  ]);
+  console.log(
+    `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules`,
+  );
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }

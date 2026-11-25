@@ -2,3 +2,4 @@ dist/
 node_modules/
 test/testdata/
 test/goldens/
+src/receipt-core.generated.ts
