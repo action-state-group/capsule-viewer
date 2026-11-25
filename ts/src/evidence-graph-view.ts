@@ -3741,13 +3741,18 @@ async function renderVerifiedContext(
   let bar!: HTMLElement;
   let stripNode: HTMLElement | undefined;
   // The header's witness line is left out only while the x-deal-v1 receipt
-  // module draws the one line in its place (#424).
-  let oneWitnessLine =
+  // module draws the one line in its place (#424): on the first frame only.
+  // Every later drawFrame() discards what the module wrote (a failed render,
+  // section or frame check), so the header comes back with it.
+  const oneWitnessLine =
     selected !== undefined &&
     selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE &&
     bookWitnessedOnKeep(context, reading) &&
     !sharedCarrierOf(root);
+  let framesDrawn = 0;
   const drawFrame = (): void => {
+    const leaveOutWitnessLine = oneWitnessLine && framesDrawn === 0;
+    framesDrawn += 1;
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
     renderPresentationHeader(root, bundle);
@@ -3762,7 +3767,7 @@ async function renderVerifiedContext(
         // Only while the x-deal-v1 receipt module draws the one line, on
         // the holder's own copy not carried in a report or shown as a page
         // (#424); a discarded render draws the frame again with the header.
-        oneWitnessLine,
+        leaveOutWitnessLine,
       ),
     );
     const L2 = region("L2");
@@ -4082,7 +4087,6 @@ async function renderVerifiedContext(
     } catch {
       // Everything the module wrote is discarded; no other module is tried.
       chrome = undefined;
-      oneWitnessLine = false;
       drawFrame();
       frame = frameOf();
       refusal = "presentation-failed";

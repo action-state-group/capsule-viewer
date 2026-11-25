@@ -569,6 +569,37 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     });
     expect(broken.textContent).not.toContain("Time-stamped by");
     expect(broken.textContent).toContain(HEADER);
+    // A module that draws but breaks the page's frame: discarded after the
+    // frame check, and the header comes back too.
+    const breaking = createPresentationRegistry();
+    for (const module of receiptModules()) {
+      if (module.manifest.id === "capsuleviewer.receipt.deal/v1")
+        breaking.register({
+          ...module,
+          render: async (model: unknown, host: unknown, services: unknown) => {
+            await (
+              module.render as (
+                a: unknown,
+                b: unknown,
+                c: unknown,
+              ) => Promise<void>
+            )(model, host, services);
+            document
+              .querySelectorAll("[data-verify]")
+              .forEach((n) => n.remove());
+          },
+        });
+      else breaking.register(module);
+    }
+    const framed = document.createElement("main");
+    document.body.append(framed);
+    await renderEvidenceGraph(bundle(), framed, undefined, {
+      depth: "L2",
+      registry: breaking,
+      verifierReport: r,
+    });
+    expect(framed.textContent).not.toContain("Time-stamped by");
+    expect(framed.textContent).toContain(HEADER);
   });
 
   it("the page's times are the reader's own, deadlines with UTC beside them (#423)", async () => {
