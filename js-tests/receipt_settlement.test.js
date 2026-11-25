@@ -30,7 +30,7 @@ const leg = ({ ref = { type: "ln.payment_hash", value: HASH }, received = money(
 // The fixture's records whose capsule id starts with a key of `legs` carry that
 // settlement; `preimages` (same keys) adds body.preimage to the disclosed
 // agent_input; `withhold` (prefixes) makes a record's agent_input withheld.
-function stub(context, { legs = {}, preimages = {}, withhold = [] }) {
+function stub(context, { legs = {}, preimages = {}, withhold = [], bodies = {} }) {
   const pick = (table, id) => Object.entries(table).find(([k]) => id.startsWith(k))?.[1];
   const records = context.records.map((r) => (pick(legs, r.capsule_id) ? { ...r, settlement: pick(legs, r.capsule_id) } : r));
   const resolved = new Map(context.resolvedDisclosures);
@@ -40,23 +40,29 @@ function stub(context, { legs = {}, preimages = {}, withhold = [] }) {
       continue;
     }
     const preimage = pick(preimages, id);
-    if (preimage === undefined || entry.agent_input.state !== "disclosed") continue;
+    // `bodies` (same keys) merges members into the disclosed agent_input's body.
+    const patch = { ...(pick(bodies, id) || {}), ...(preimage === undefined ? {} : { preimage }) };
+    if (!Object.keys(patch).length || entry.agent_input.state !== "disclosed") continue;
     const payload = entry.agent_input.payload;
-    resolved.set(id, { ...entry, agent_input: { state: "disclosed", payload: { ...payload, body: { ...payload.body, preimage } } } });
+    resolved.set(id, { ...entry, agent_input: { state: "disclosed", payload: { ...payload, body: { ...payload.body, ...patch } } } });
   }
   return { ...context, records, resolvedDisclosures: resolved };
 }
 
 // The module as a page runs it (no verifier's assurance given), with the
 // runtime's preimage check (`check`: the real one, a stand-in, or none).
-async function draw(name, { audience = "keep", kind = "unilateral", check = paymentPreimageCheck, ...stubbed } = {}) {
+async function draw(name, { audience = "keep", kind = "unilateral", check = paymentPreimageCheck, reportCheck, unreported = false, ...stubbed } = {}) {
   const c = receiptGolden().cases.find((x) => x.name === name && x.audience === audience);
   const lib = loadScript(kind);
   if (check) lib.window.EvidenceGraph.paymentPreimageCheck = check;
+  if (reportCheck) lib.window.EvidenceGraph.dealStandaloneReport = reportCheck;
   const { context, env } = caseInputs(c);
   // The stubbed context is a new object: it takes the fixture's verifier result.
   const module = lib.api.createModule(kind, { audience: env.audience, verification: () => env.verification(context) });
   const ctx = stub(context, stubbed);
+  // `unreported`: the context's verifier reports no check of the standalone
+  // report, as a page's runtime does not, so the module asks the page for it.
+  if (unreported) ctx.verification = { ...ctx.verification, extensions: ctx.verification.extensions.filter((x) => x.kind !== "x-deal-v0") };
   expect(await module.canRender(ctx)).toBe(true);
   const model = await module.buildModel(ctx);
   const host = renderInto(lib, module, model, "L2");
@@ -99,11 +105,12 @@ describe("the settlement line (#383)", () => {
     expect(text).toMatch(/^Payment: settled on Lightning, as the payee's wallet reported it final; this file carries no proof to check\./);
   });
 
-  it("says the wallet reported it final when only some legs carry a preimage, and asks no check", async () => {
+  it("says only some payments carry a proof when some legs do, and checks none", async () => {
     let asked = 0;
-    const { state } = await draw("keep", { legs: TWO, preimages: { "290b1db4": PREIMAGE }, check: async () => { asked += 1; return "PASS"; } });
+    const { state, text } = await draw("keep", { legs: TWO, preimages: { "290b1db4": PREIMAGE }, check: async () => { asked += 1; return "PASS"; } });
     expect(asked).toBe(0);
-    expect(state).toBe("final");
+    expect(state).toBe("partial");
+    expect(text).toMatch(/^Payment: settled on Lightning; this file carries a proof for some of its payments only, so this page did not check them\./);
   });
 
   it("claims no check the page did not run: no runtime check, an unchecked answer, a throw", async () => {
@@ -147,6 +154,26 @@ describe("the settlement line (#383)", () => {
     const card = await draw("keep");
     expect(card.state).toBe("missing");
     expect(card.text).toBe("Payment: a card payment; the card processor's report is not in this file.");
+  });
+
+  it("names a real rail an action names after a simulated one", async () => {
+    // The keep copy's action (290b1db4) names card; an earlier record named simulated must not hide it.
+    const { state, text } = await draw("keep", { bodies: { "30": { rail: "simulated" } } });
+    expect(state).toBe("missing");
+    expect(text).toBe("Payment: a card payment; the card processor's report is not in this file.");
+  });
+
+  it("asks the standalone report's check and the proof's together, and uses both answers", async () => {
+    let reports = 0, proofs = 0;
+    const legs = { f2f75311: leg() };
+    const { model, state } = await draw("main-standalone-keep", {
+      legs, preimages: { f2f75311: PREIMAGE }, unreported: true,
+      reportCheck: async () => { reports += 1; return "pass"; },
+      check: async (ref, preimage) => { proofs += 1; return paymentPreimageCheck(ref, preimage); },
+    });
+    expect([reports, proofs]).toEqual([1, 1]);
+    expect(state).toBe("proof");
+    expect(model.report_checked).toBe("pass");
   });
 
   it("says nothing more of test money: the simulated rail draws no line", async () => {

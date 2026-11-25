@@ -162,7 +162,7 @@ export function withoutAmountCard(doc, html) {
 
 /**
  * The settlement line, which the frozen twin never draws (capsule-viewer#383:
- * the x-deal-v0 receipt and seller copy say how the payment settled, by rail,
+ * the x-deal-v0 buyer receipt says how the payment settled, by rail,
  * as evidencebook's deal view did), taken out of a script's model and render
  * so every other field and byte is still compared with the twin.
  * js-tests/receipt_settlement.test.js tests the line itself.

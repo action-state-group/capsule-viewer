@@ -25,6 +25,7 @@ import {
   type PresentationModule,
 } from "./presentation-registry.js";
 import { dealStandaloneReport } from "./deal-standalone-report.js";
+import { paymentPreimageCheck } from "./payment-preimage.js";
 import {
   verifierReportReading,
   withVerifierReport,
@@ -102,6 +103,8 @@ export function receiptModules(): PresentationModule[] {
       localTime: true,
       memberContext: (bundle: unknown) => buildVerifiedBundleContext(bundle),
       reportCheck: dealStandaloneReport,
+      // The buyer receipt's settlement line checks each Lightning leg's proof (#383).
+      preimageCheck: paymentPreimageCheck,
     });
     return {
       ...module,

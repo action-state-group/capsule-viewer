@@ -464,12 +464,13 @@
 
   // ---- the settlement line (capsule-viewer#383; Sherlock2's ruling on the deal-view lines) ----
   //
-  // The x-deal-v0 receipt and seller copy say how the payment settled, by
-  // rail, from the settled payee-observed legs among this copy's records
+  // The x-deal-v0 buyer receipt says how the payment settled, by rail (the
+  // seller copy with the next change), from the settled payee-observed legs among this copy's records
   // (draft-mih-agent-settlement-records; Mesh-LLM/capsules-plugin
   // adapters/lightning-v0.md), as evidencebook's deal view did. A Lightning
   // leg's proof is its disclosed preimage; this page hashes nothing, so the
-  // page's runtime checks it (EvidenceGraph.paymentPreimageCheck,
+  // page's runtime checks it (env.preimageCheck: the npm export passes
+  // paymentPreimageCheck, a page's runtime offers EvidenceGraph's,
   // capsule-viewer#214), asked before the model is built and kept per
   // context, as the standalone report's check is. Only a check that ran is
   // claimed: no runtime check, a verifier's report given in env, or any answer
@@ -506,10 +507,13 @@
   }
   // The leg proof's state before any check: withheld (a leg's record is not
   // disclosed in this copy), sealed (every leg carries a preimage, as the deal
-  // view required) or final (the wallet's report only).
+  // view required), partial (some legs carry one, some don't; nothing is
+  // checked, so no leg is claimed either way) or final (no leg carries one:
+  // the wallet's report only).
   function lightningProof(legs) {
     if (legs.some(function (l) { return l.input === null; })) return "withheld";
-    return legs.every(function (l) { return legPreimage(l) !== null; }) ? "sealed" : "final";
+    var carried = legs.filter(function (l) { return legPreimage(l) !== null; }).length;
+    return carried === legs.length ? "sealed" : carried ? "partial" : "final";
   }
 
   // Two non-negative decimal digit strings added.
@@ -569,15 +573,16 @@
   function settlementOf(v, checked) {
     var legs = settledLegs(v.context, v.disclosed);
     if (!legs.length) {
+      // The first rail a disclosed action names, other than the simulated one:
+      // test money is said once, at the top (money.test; the 0.25.0 top line),
+      // so it draws no second line here, and never hides a real rail named after it.
       var rail = null;
       v.records.forEach(function (cid) {
         var p = v.disclosed(cid, "agent_input");
         var named = str(get(map(get(p, "body")), "rail"));
-        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "") rail = named;
+        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "" && named !== TEST_RAIL) rail = named;
       });
-      // Test money is said once, at the top (money.test; the 0.25.0 top line),
-      // so the simulated rail draws no second line here.
-      return rail === null || rail === TEST_RAIL ? null : { state: "missing", rail: rail, band: null };
+      return rail === null ? null : { state: "missing", rail: rail, band: null };
     }
     var railOf = legRail(legs);
     var state = railOf !== "lightning" ? railOf : lightningProof(legs);
@@ -588,15 +593,13 @@
   // The pending runtime check of a context's Lightning proofs, or null when
   // there is none to ask: no legs, another rail, a leg withheld or no
   // preimage, no runtime check, already answered, or no place to keep it.
-  function askSettlementCheck(context) {
-    var graph = root.EvidenceGraph;
-    if (SETTLEMENT_CHECKS === null || SETTLEMENT_CHECKS.has(context)) return null;
-    if (!graph || typeof graph.paymentPreimageCheck !== "function") return null;
+  function askSettlementCheck(context, check) {
+    if (SETTLEMENT_CHECKS === null || SETTLEMENT_CHECKS.has(context) || typeof check !== "function") return null;
     var legs = settledLegs(context, disclosedIn(context));
     if (!legs.length || legRail(legs) !== "lightning" || lightningProof(legs) !== "sealed") return null;
     var answers;
     try {
-      answers = Promise.all(legs.map(function (l) { return graph.paymentPreimageCheck(get(l.settlement, "payment_ref"), legPreimage(l)); }));
+      answers = Promise.all(legs.map(function (l) { return check(get(l.settlement, "payment_ref"), legPreimage(l)); }));
     } catch (err) {
       answers = Promise.reject(err);
     }
@@ -607,6 +610,13 @@
     }, function () {
       SETTLEMENT_CHECKS.set(context, "sealed");
     });
+  }
+
+  // The page runtime's check of one leg's Lightning proof, or null without one.
+  function pagePreimageCheck(paymentRef, preimage) {
+    var graph = root.EvidenceGraph;
+    if (!graph || typeof graph.paymentPreimageCheck !== "function") return Promise.resolve(null);
+    return graph.paymentPreimageCheck(paymentRef, preimage);
   }
 
   // A carried copy, verified by the page's runtime on its own.
@@ -3055,6 +3065,9 @@
   //   reportCheck     bundle -> "pass", "fail" or null (or a promise of one): the page
   //                   runtime's check of the copy's standalone report, asked on a page
   //                   (no assurance given) for the copy itself, not for a carried copy
+  //   preimageCheck   (payment_ref, preimage) -> "PASS", "FAIL", "NOT_PRESENT",
+  //                   "NOT_CHECKED" (or a promise of one): one Lightning leg's proof,
+  //                   asked on a page for the buyer receipt's settlement line
   function createModule(kind, env) {
     if (!own(DRAW, kind)) throw new Error("no receipt module " + kind);
     var e = {
@@ -3064,6 +3077,7 @@
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
       reportCheck: (env && env.reportCheck) || pageReportCheck,
+      preimageCheck: (env && env.preimageCheck) || pagePreimageCheck,
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
@@ -3100,7 +3114,7 @@
       var asked = [
         pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null,
         // The settlement line's Lightning proof, on the x-deal-v0 buyer receipt only.
-        pageChecks && settles ? askSettlementCheck(context) : null,
+        pageChecks && settles ? askSettlementCheck(context, e.preimageCheck) : null,
       ].filter(function (p) { return p !== null; });
       if (asked.length) return Promise.all(asked).then(function () { return buildChecked(context); });
       return buildChecked(context);
