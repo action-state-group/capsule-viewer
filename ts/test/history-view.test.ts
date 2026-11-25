@@ -305,6 +305,35 @@ describe("the stand-in's round 1 (PR 249)", () => {
     expect(buildHistoryView(m, overlay).ok).toBe(false);
   });
 
+  // RECORDED per row by the deal report check (Sherlock2, F10): filled when
+  // it passed, not drawn when it did not run (the checks list says that once
+  // for the card), and a failed check draws no rows at all.
+  const withDealReport = (status: string): HTMLElement => {
+    const m = clone(vectors.cases["muse-owner"]) as Json;
+    for (const c of m["checks"] as Json[])
+      if (c["id"] === "deal_report") c["status"] = status;
+    return page(m, overlay);
+  };
+  const recorded = (p: HTMLElement): Element[] =>
+    [...p.querySelectorAll('[data-history="row"] .cvh-stamp')].filter((e) =>
+      e.textContent?.startsWith("RECORDED"),
+    );
+
+  it("a row's RECORDED stamp follows the deal report check: filled, not drawn, or no rows", () => {
+    const rows = ((vectors.cases["muse-owner"] as Json)["rows"] as Json[])
+      .length;
+    const passed = withDealReport("pass");
+    expect(passed.querySelectorAll('[data-history="row"]')).toHaveLength(rows);
+    expect(recorded(passed)).toHaveLength(rows);
+    for (const e of recorded(passed))
+      expect(e.getAttribute("data-filled")).toBe("yes");
+    const notRun = withDealReport("not_run");
+    expect(notRun.querySelectorAll('[data-history="row"]')).toHaveLength(rows);
+    expect(recorded(notRun)).toHaveLength(0);
+    const failed = withDealReport("fail");
+    expect(failed.querySelectorAll('[data-history="row"]')).toHaveLength(0);
+  });
+
   it("fills RECORDED only when the deal report check passed", () => {
     const m = clone(vectors.cases["muse-owner"]) as Json;
     m["checks"] = [{ id: "deal_report", status: "not_run" }];
@@ -313,6 +342,7 @@ describe("the stand-in's round 1 (PR 249)", () => {
       if (e.textContent?.startsWith("RECORDED"))
         expect(e.getAttribute("data-filled")).toBe("no");
     }
+
     expect(p.querySelector(".cvh-seal-title")).toBeNull();
     expect(p.textContent).not.toContain("did not check how these records");
     expect(p.textContent).not.toContain("These checks");

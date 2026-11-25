@@ -222,3 +222,27 @@ func TestEmptyWitnessValuesAreNoValues(t *testing.T) {
 	assert.Contains(t, html, "A witness time-stamped these records</li>")
 	assert.NotContains(t, html, "is not registered with the witness yet")
 }
+
+// A row's RECORDED stamp follows the deal report check (Sherlock2, F10):
+// drawn and filled when it passed, not drawn when it did not run (the checks
+// list says that once for the card), and a failed check draws no rows.
+func TestRecordedStampFollowsTheDealReportCheck(t *testing.T) {
+	render := func(status string) string {
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(cases(t)["muse-owner"], &m))
+		for _, c := range m["checks"].([]any) {
+			if c.(map[string]any)["id"] == "deal_report" {
+				c.(map[string]any)["status"] = status
+			}
+		}
+		frag, err := Render(m, overlayFor(t, "muse-owner"))
+		require.NoError(t, err)
+		return frag
+	}
+	rows := strings.Count(render("pass"), `data-history="row"`)
+	require.Positive(t, rows)
+	assert.Equal(t, rows, strings.Count(render("pass"), `cvh-stamp-name">RECORDED`))
+	assert.Equal(t, rows, strings.Count(render("not_run"), `data-history="row"`))
+	assert.Zero(t, strings.Count(render("not_run"), `cvh-stamp-name">RECORDED`))
+	assert.Zero(t, strings.Count(render("fail"), `data-history="row"`))
+}

@@ -1036,6 +1036,9 @@ export function buildHistoryView(
   const statusOf = (id: string): CheckStatus | undefined =>
     checks.find((c) => c.id === id)?.status;
   const dealRecorded = statusOf("deal_report") === "pass";
+  // RECORDED is drawn on a row only when the deal_report check passed. When
+  // it did not run, the checks list says so once for the card (Sherlock2,
+  // F10); when it failed, the page draws no rows at all.
   const witnessFailed = statusOf("witness") === "fail";
   const secondFailed = statusOf("second_signature") === "fail";
   // The seal's first lines say how the records are locked; only checks that
@@ -1278,14 +1281,7 @@ export function buildHistoryView(
         el(
           "ul",
           { class: "cvh-stamps" },
-          dealRecorded
-            ? stamp("stamp.recorded", true, "passed", null)
-            : stamp(
-                "stamp.recorded",
-                false,
-                "not_checked",
-                say("slot.unchecked"),
-              ),
+          dealRecorded ? stamp("stamp.recorded", true, "passed", null) : null,
           ...slotStamps(x),
         ),
       );

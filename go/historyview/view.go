@@ -827,6 +827,9 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		verdictKey, chipKey = "verdict.pass.all", "chip.signatures.pass.all"
 	}
 	dealRecorded := statusOf("deal_report") == "pass"
+	// RECORDED is drawn on a row only when the deal_report check passed. When
+	// it did not run, the checks list says so once for the card (Sherlock2,
+	// F10); when it failed, the page draws no rows at all.
 	witnessFailed := statusOf("witness") == "fail"
 	secondFailed := statusOf("second_signature") == "fail"
 	lockChecked := dealRecorded
@@ -1061,13 +1064,11 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				parts = append(parts, *x.money)
 			}
 			parts = append(parts, say("row.opened", "at", minuteOf(x.opened)), say("row.last", "at", minuteOf(x.last)))
-			var recorded *element
+			var stamps []any
 			if dealRecorded {
-				recorded = stamp("stamp.recorded", true, "passed", nil)
-			} else {
-				recorded = stamp("stamp.recorded", false, "not_checked", str(say("slot.unchecked")))
+				stamps = append(stamps, stamp("stamp.recorded", true, "passed", nil))
 			}
-			stamps := append([]any{recorded}, slotStamps(x)...)
+			stamps = append(stamps, slotStamps(x)...)
 			items = append(items, el("li", attrs("class", "cvh-row", "data-history", "row"),
 				el("p", attrs("class", "cvh-row-title"), x.asked),
 				el("p", attrs("class", "cvh-row-detail"), strings.Join(parts, " · ")),
