@@ -6,19 +6,19 @@
 // capsulectl.deal-view/v0 and capsuleviewer.history/v0 are).
 //
 // This file is the source of the four scripts the manifests pin
-// (static/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js and
-// receipt_deal.js).
-// `python -m capsule_viewer.receipt_slot --write` writes each one from
+// (go/receipt/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js and
+// receipt_deal.js; capsule-viewer#383 made go/receipt the one receipt renderer).
+// `go generate` in go/receipt writes each one from
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
-// receipt_slot/wording-en.json, whose id and sha256 the page names in L2) and the
-// kit stylesheet (static/kit.css, pinned by the manifest's style_sha256).
+// go/receipt/wording-en.json, whose id and sha256 the page names in L2) and the
+// kit stylesheet (src/capsule_viewer/static/kit.css, pinned by the manifest's style_sha256).
 // Each script carries the whole of this file and registers exactly one
 // module: the page builder puts one script in the page per module it chose,
 // and a script never registers a module the builder did not choose.
 //
 // It is the twin of the Python modules (capsule_viewer.receipt: model.py,
-// module.py, seller.py, bilateral.py, role.py), which stay the test oracle:
+// module.py, seller.py, bilateral.py, role.py, frozen at 0.25.0), which stay the test oracle:
 // js-tests/receipt_parity.test.js renders every receipt fixture both ways
 // and fails on any difference in the model or the rendered result. Names
 // below follow the Python ones, so a reader can hold the two side by side.
@@ -324,13 +324,22 @@
     return { status: typeof o.status === "string" ? o.status : "", findings: Array.isArray(o.findings) ? o.findings : [] };
   }
 
-  // The runtime's gate (presentation-registry.ts bundleVerified).
+  // The runtime's gate (presentation-registry.ts re-exports
+  // agent-action-capsule's bundleVerified; 0.16.0, verification-page.ts): a
+  // producer-selected bundle, whose interval coverage is withheld as
+  // selection_not_checkable (a Mesh node's receipt), passes the gate on its
+  // other checks, as the page's own verdict does (#383).
+  function producerSelection(v) {
+    var coverage = claim(v.intervalCoverage);
+    return coverage.status === "withheld" && coverage.findings.indexOf("selection_not_checkable") >= 0;
+  }
+
   function bundleVerified(verification) {
     var v = map(verification);
     var membership = claim(v.perRecordMembership);
     var results = map(v.capsuleResults);
     return claim(v.graphClosure).status === "pass" &&
-      claim(v.intervalCoverage).status === "pass" &&
+      (claim(v.intervalCoverage).status === "pass" || producerSelection(v)) &&
       (membership.status === "pass" || (membership.status === "fail" && membership.findings.length > 0 &&
         membership.findings.every(function (f) { return typeof f === "string" && f.indexOf("membership_record_unbound:") === 0; }))) &&
       Object.keys(results).every(function (id) { return map(results[id]).ok === true; }) &&
@@ -1705,11 +1714,16 @@
 
   // ---- drawing: one copy (module.py, seller.py) ------------------------------
 
+  // What carries the receipt being drawn ("report", or null when it stands
+  // alone), set by render for the length of one synchronous draw.
+  var drawCarrier = null;
+
   function Drawer(doc, depth, seller) {
     this.d = new Drawing(doc);
     this.kit = new Kit(this.d);
     this.depth = depth;
     this.seller = !!seller;
+    this.carrier = drawCarrier;
   }
   var P = Drawer.prototype;
 
@@ -1757,7 +1771,15 @@
     if (text !== null) return text;
     return this.d.el("span", { class: "cv-mono", "data-unworded": prefix + "." + value }, [value]);
   };
+  // The owner's own copy says PRIVATE when it stands alone. Carried in a report
+  // (its panel bears data-receipt-carrier="report", set by the page's runtime),
+  // it was shared on purpose by the report owner's setting, and says so
+  // instead: no do-not-forward line (Sherlock2, ops bc71ecae, #383).
   P.privateBanner = function () {
+    if (this.carrier === "report") {
+      var shared = this.d.el("span", { class: "cv-badge" }, [w("banner.shared.label")]);
+      return this.d.el("p", { "data-banner": "shared" }, [shared, " ", w("banner.shared.text")]);
+    }
     var label = this.d.el("span", { class: "cv-badge" }, [w("banner.private.label")]);
     return this.d.el("p", { class: "cv-tone--caution", "data-banner": "private" }, [label, " ", w("banner.private.text")]);
   };
@@ -2678,7 +2700,14 @@
         var doc = host.L0.ownerDocument;
         var depth = DEPTHS.indexOf(host.depth) >= 0 ? host.depth : "L0";
         ensureStyle(doc);
-        var levels = DRAW[kind](doc, depth, model);
+        var carried = host.L0.closest ? host.L0.closest("[data-receipt-carrier]") : null;
+        drawCarrier = carried && carried.getAttribute("data-receipt-carrier") === "report" ? "report" : null;
+        var levels;
+        try {
+          levels = DRAW[kind](doc, depth, model);
+        } finally {
+          drawCarrier = null;
+        }
         // One text node per run of text, as the Python twin's HTML parses: the
         // browser shapes each text node on its own, so a run built from several
         // would lay out a fraction of a pixel differently.

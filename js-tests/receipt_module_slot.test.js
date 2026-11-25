@@ -42,7 +42,7 @@ import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { pixelDifference } from "./pngPixels.js";
 import {
   caseInputs, KINDS, loadScript, manifestOf, PY, PY_ENV, receiptGolden, readBundle, readVerify, RECEIPTS,
-  REVIVE_CONTEXT, ROOT, scriptBytes, scriptJson, serializeContext,
+  REVIVE_CONTEXT, ROOT, scriptBytes, scriptJson, serializeContext, withCurrentPack,
 } from "./receiptScripts.js";
 
 const MAIN = [
@@ -377,7 +377,7 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
       const page = execFileSync(PY, ["-m", "capsule_viewer.receipt", join(RECEIPTS, `${g.name}.bundle.json`), join(RECEIPTS, `${g.name}.verify.json`), g.audience, "L0"],
         { cwd: ROOT, env: PY_ENV, encoding: "utf8" });
       // Both pages without the CSP meta (the script page runs inline scripts); layout is unchanged by it.
-      const python = page.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\n/, "");
+      const python = withCurrentPack(page.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\n/, ""));
       const start = python.indexOf('<div data-level="L0">');
       const end = python.indexOf("</main>");
       expect(start).toBeGreaterThan(0);

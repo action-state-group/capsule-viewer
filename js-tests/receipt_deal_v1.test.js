@@ -55,7 +55,7 @@ describe("the deal/v1 receipt", () => {
     const m = manifestOf("deal");
     expect(m.requires.extensions.required).toEqual(["x-deal-v1"]);
     expect(m.forbids.extensions).toContain("x-deal-v0");
-    expect(m.audiences).toEqual(["keep", "counterparty", "adjudicator"]);
+    expect(m.audiences).toEqual(["keep", "counterparty", "adjudicator", "*"]);
   });
 
   it("shows each row's status as the report gives it, and never computes one", async () => {

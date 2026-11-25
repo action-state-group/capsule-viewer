@@ -2,6 +2,7 @@
 // package ships them (go/receipt, the one receipt renderer, capsule-viewer#383),
 // run in a fresh jsdom window each, and the frozen golden (receiptGolden) the
 // scripts are held to.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { dirname, join, resolve } from "node:path";
@@ -21,6 +22,26 @@ const SCRIPTS = process.env.RECEIPT_SCRIPT_DIR || RECEIPT_DIR;
 
 export const scriptBytes = (kind) => readFileSync(join(SCRIPTS, `receipt_${kind}.js`));
 export const manifestOf = (kind) => JSON.parse(readFileSync(join(RECEIPT_DIR, `manifest-${kind}.json`), "utf8"));
+// The Python twin is frozen at 0.25.0 with its own copy of the example wording
+// pack; the scripts carry go/receipt's, which only adds keys the twin never
+// draws (packAddsOnly holds that). A page names its pack's sha256, so the
+// oracle's pages are read with the current pack's sha256 in place of the
+// frozen one, and every other byte is still compared.
+const packBytes = (dir) => readFileSync(join(dir, "wording-en.json"));
+const FROZEN_PACK = packBytes(join(ROOT, "src", "capsule_viewer", "receipt_slot"));
+const CURRENT_PACK = packBytes(RECEIPT_DIR);
+const sha = (b) => createHash("sha256").update(b).digest("hex");
+export const FROZEN_PACK_SHA256 = sha(FROZEN_PACK);
+export const CURRENT_PACK_SHA256 = sha(CURRENT_PACK);
+export const withCurrentPack = (html) => html.split(FROZEN_PACK_SHA256).join(CURRENT_PACK_SHA256);
+/** The keys of the frozen pack the current one changed or dropped (none, while the twin is the oracle). */
+export function packAddsOnly() {
+  const frozen = JSON.parse(FROZEN_PACK.toString("utf8"));
+  const current = JSON.parse(CURRENT_PACK.toString("utf8"));
+  const changed = Object.keys(frozen.entries).filter((k) => current.entries[k] !== frozen.entries[k]);
+  return { changed, sameId: frozen.id === current.id };
+}
+
 export const readBundle = (name) => JSON.parse(readFileSync(join(RECEIPTS, `${name}.bundle.json`), "utf8"));
 export const readVerify = (name) => JSON.parse(readFileSync(join(RECEIPTS, `${name}.verify.json`), "utf8"));
 

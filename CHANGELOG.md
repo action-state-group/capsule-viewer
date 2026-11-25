@@ -15,6 +15,11 @@ here. The format follows
 
 - Go: package `receipt` (`go/receipt`), the receipt modules for Go page builders (#383): `capsuleviewer.receipt.unilateral/v0`, `.seller/v0`, `.bilateral/v0` and `.deal/v1` as module-slot scripts, each with the manifest that pins it, through `receipt.Module(kind)` (a `go/emitter` module) and `receipt.ID(kind)`. The scripts are byte for byte the ones 0.25.0 ships. The receipt source `receipt_core.js` and its writer now live in `go/receipt` (`go generate`); the Python package's copies stay frozen at 0.25.0.
 
+### Changed
+
+- A deal receipt carried in a report opens with capsule-viewer's own receipt modules (#383): the page runtime's receipt list adds `capsuleviewer.receipt.unilateral/v0`, `.seller/v0`, `.bilateral/v0` and `.deal/v1` beside evidencebook's deal view, which stays until evidencebook's pages move. The runtime marks a carried receipt's panel `data-receipt-carrier="report"`, and the owner's own copy there reads "Shared copy. The report owner's own record of this deal, included in this report because their "Receipts in the settlement report" setting is on. It is not the counterparty's copy." in place of the PRIVATE banner (Sherlock2's ruling; wording keys `banner.shared.label` and `banner.shared.text`). Standing alone, the owner's copy keeps its PRIVATE banner. Each receipt manifest also lists the audience `"*"`, the one a report opens a receipt for, so `presentation build` at its default audience resolves a receipt too.
+- The receipt modules accept a producer-selected bundle (interval coverage withheld as `selection_not_checkable`, as a Mesh node's receipt is) on its other checks, as agent-action-capsule's page verdict does; before, the page verified such a receipt and the module declined it.
+
 ## ts 0.25.0 and go 0.25.0 (2026-11-24)
 
 Both state viewer 0.25.0: `ts/v0.25.0`, then `go/v0.25.0` on the commit that ships its page runtime.
