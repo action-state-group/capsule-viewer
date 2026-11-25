@@ -14,6 +14,7 @@ here. The format follows
 ## ts 0.26.1 and go 0.26.1 (2026-11-25)
 
 Both state viewer 0.26.1: `ts/v0.26.1`, then `go/v0.26.1` on the commit that ships its page runtime. The receipt fixes Sherlock2 set as a condition on the Mesh plugin release counted toward #383 (#391): #392.
+The four receipt scripts change, so each receipt manifest's `script_sha256` changes, and the wording pack gains `verify.tested_here`: a consumer that pins the receipt modules takes the new manifests.
 
 ### Fixed
 
