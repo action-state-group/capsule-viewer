@@ -2701,11 +2701,19 @@
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
 
   // The page could not check the receipt here: no receipt, only the line
-  // and where to check it, in the pack's words (row.cannot_check,
-  // row.cannot_check_pointer; Sherlock2, capsule-viewer#392).
-  function cannotCheckLevels(doc) {
+  // and where to check it, in the pack's words. Without Ed25519 the browser
+  // checks nothing (row.cannot_check, row.cannot_check_pointer; Sherlock2,
+  // capsule-viewer#392); an x-deal-v1 copy's report passes only under its
+  // profile's own rule, which no page runs yet (reason "report_rule",
+  // row.cannot_check.report_rule and its pointer; capsule-viewer#405).
+  function cannotCheckLevels(doc, reason) {
     var d = new Drawing(doc);
-    var line = d.el("p", { class: "cv-tone--caution", "data-cannot-check": "true" }, [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
+    var text = reason === "report_rule"
+      ? w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer")
+      : w("row.cannot_check") + ". " + w("row.cannot_check_pointer");
+    var attrs = { class: "cv-tone--caution", "data-cannot-check": "true" };
+    if (reason) attrs["data-cannot-check-reason"] = reason;
+    var line = d.el("p", attrs, [text]);
     return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
   }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
@@ -2755,8 +2763,21 @@
     // carried copies are not asked about yet (#401): a carried copy whose
     // report is standalone stays unread, as before.
     var pageChecks = !(env && env.assurance);
+    // An x-deal-v1 copy on a page whose verifier reports no check of its
+    // standalone report: that report passes only under the profile's own
+    // rule, which no page runs yet (#405), so the page draws no receipt and
+    // says so, once the bundle itself verified. A verifier's report given in
+    // env (capsulectl's) is read as before.
+    var reportRuleNotRun = function (context) {
+      if (!pageChecks || kind !== "deal") return false;
+      var c = map(context);
+      if (!own(map(get(map(c.bundle), "extensions")), STANDALONE_EXTENSION)) return false;
+      if (reportChecked(c.verification, EXTENSION_V1) !== null) return false;
+      return view(context, e).verified === true;
+    };
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
+      if (reportRuleNotRun(context)) return { cannot_check: true, reason: "report_rule" };
       var asked = pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null;
       if (asked !== null) return asked.then(function () { return buildChecked(context); });
       return buildChecked(context);
@@ -2799,7 +2820,7 @@
         drawCarrier = mark === "report" || mark === "page" ? mark : null;
         var levels;
         try {
-          levels = model && model.cannot_check === true ? cannotCheckLevels(doc) : DRAW[kind](doc, depth, model);
+          levels = model && model.cannot_check === true ? cannotCheckLevels(doc, model.reason) : DRAW[kind](doc, depth, model);
         } finally {
           drawCarrier = null;
         }

@@ -17,6 +17,19 @@ import {
 } from "../src/receipt.js";
 
 type Obj = Record<string, unknown>;
+// An x-deal-v1 keep copy (tests/testdata/deal-v1/README.md).
+const v1Keep = (): string =>
+  readFileSync(
+    resolve(
+      process.cwd(),
+      "..",
+      "tests",
+      "testdata",
+      "deal-v1",
+      "keep-copy.bundle.json",
+    ),
+    "utf8",
+  );
 const fixture = (name: string): string =>
   readFileSync(
     resolve(
@@ -179,6 +192,43 @@ describe("the receipt export (#383)", () => {
     ).members;
     members[1]!.bundle.records[0]!.timestamp = "2001-01-01T00:00:00Z";
     expect((await checkReceipt(bundle)).kind).toBe("did_not_verify");
+  });
+
+  it("an x-deal-v1 keep copy: the page can't check its report, so it draws only that line and how to check it (#405)", async () => {
+    const LINE =
+      "This page can't check this receipt, so it shows nothing from it and no verdict. To check it, run `capsulectl deal verify --bundle <file>` on the receipt file. It needs the capsulectl-deal plugin.";
+    const result = await checkReceipt(v1Keep());
+    expect(result).toEqual({ kind: "cannot_check", reason: "report_rule" });
+    expect(receiptLabel(result)).toBe("can't be checked here");
+    expect(receiptPageLines(result)).toEqual({ tone: "bad", lines: [LINE] });
+    for (const carrier of [undefined, "report", "page"] as const) {
+      const drawn = host();
+      expect(
+        await renderReceipt(
+          v1Keep(),
+          drawn,
+          carrier === undefined ? {} : { carrier },
+        ),
+      ).toEqual(result);
+      const line = drawn.querySelector(
+        '[data-cannot-check-reason="report_rule"]',
+      );
+      expect(line?.textContent, String(carrier)).toBe(LINE);
+      // Nothing from the copy: no banner, no verdict, no record.
+      expect(drawn.querySelector("[data-banner]"), String(carrier)).toBeNull();
+      expect(
+        drawn.querySelector('[data-checked="true"]'),
+        String(carrier),
+      ).toBeNull();
+      expect(drawn.textContent?.trim(), String(carrier)).toBe(LINE);
+    }
+  });
+
+  it("an x-deal-v1 copy that does not verify says so, never that it can't be checked", async () => {
+    const b = JSON.parse(v1Keep()) as Obj;
+    const records = b["records"] as Obj[];
+    records[0]!["timestamp"] = "2000-01-01T00:00:00Z";
+    expect((await checkReceipt(b)).kind).toBe("did_not_verify");
   });
 
   it("labels the other results in the receipt words, and none for no module", async () => {
