@@ -38,6 +38,11 @@ const PACK_ID = "capsuleviewer.receipt.wording.en/v1";
 // - authority_sealed: the seller's own copies of a deal sealed in typed
 //   records, the only reports carrying AUTHORITY blocks (capsulectl writes
 //   them on the holder's own copy only); every act in them is covered.
+// - referee: no fixture's adjudicator copy seals a referee (capsulectl seals
+//   one since --to on an adjudicator's copy; these predate it), so none draws it.
+// - deal_id_title (the card's title, not a model field: model.deal_id is the
+//   twin's): every copy whose sealed report names its deal, so all but the
+//   Mesh payer's, whose report names none.
 // - after_yes: every x-deal-v0 copy with an act or a withheld step. Only the
 //   main-standalone copies place their steps in a book (their records carry
 //   evidence_record_header): the keep copies pass, approved by the user; the
@@ -53,6 +58,30 @@ const VIEWER_LINES_DRAWN = {
     "main-standalone-keep @keep unilateral": "missing",
   },
   counterparty_named: {},
+  referee: {},
+  deal_id_title: {
+    "adjudicator @adjudicator unilateral": " · deal-9afcfc8782fedcca",
+    "buyer-producer-counterparty @counterparty unilateral": " · deal-9ad7aeb443087ea7",
+    "counterparty @counterparty unilateral": " · deal-9afcfc8782fedcca",
+    "golden-2 @keep unilateral": " · deal-498ba095c7031abb",
+    "keep @keep unilateral": " · deal-9afcfc8782fedcca",
+    "keep+one-producer @keep unilateral": " · deal-9afcfc8782fedcca",
+    "keep+producer-removed @keep unilateral": " · deal-9afcfc8782fedcca",
+    "main-buyer-counterparty @counterparty unilateral": " · deal-9bed034f785cd2d6",
+    "main-buyer-keep @keep unilateral": " · deal-9bed034f785cd2d6",
+    "main-seller-counterparty @counterparty seller": " · deal-8cb570c444b99417",
+    "main-seller-keep @keep seller": " · deal-8cb570c444b99417",
+    "main-standalone-counterparty @counterparty unilateral": " · deal-99f5cc056d8030ba",
+    "main-standalone-keep @keep unilateral": " · deal-99f5cc056d8030ba",
+    "main-standalone-simulated-keep @keep unilateral": " · deal-99f5cc056d8030ba",
+    "seller-adjudicator @adjudicator seller": " · deal-5e11e7b1c7c1e0a1",
+    "seller-counterparty @counterparty seller": " · deal-5e11e7b1c7c1e0a1",
+    "seller-declined @counterparty seller": " · deal-a5aaeea750aeb168",
+    "seller-keep @keep seller": " · deal-5e11e7b1c7c1e0a1",
+    "seller-producer-adjudicator @adjudicator seller": " · deal-460f92d1e117c923",
+    "seller-producer-counterparty @counterparty seller": " · deal-460f92d1e117c923",
+    "seller-producer-keep @keep seller": " · deal-460f92d1e117c923",
+  },
   authority_sealed: {
     "main-seller-keep @keep seller": "2 blocks, 0 uncovered",
     "seller-keep @keep seller": "4 blocks, 0 uncovered",
@@ -87,6 +116,7 @@ const VIEWER_LINES_DRAWN = {
 const SUMMARY = {
   settlement: (line) => line.state,
   counterparty_named: (named) => named,
+  referee: (r) => r,
   authority_sealed: (a) => `${a.blocks.length} blocks, ${a.blocks.filter((b) => !b.covered).length} uncovered`,
   after_yes: (yes) => [yes.state, yes.why, yes.act && yes.act.step.slice(0, 8), ...yes.approvers].filter((x) => x !== undefined).join(" "),
 };
@@ -122,6 +152,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
   it("compares every case, model and depth (the count is the parity result)", async () => {
     const compared = { cases: 0, accepted: 0, models: 0, renders: 0, bytes: 0 };
     const drawn = Object.fromEntries(VIEWER_FIELDS.map((f) => [f, {}]));
+    drawn.deal_id_title = {};
     const differences = [];
     for (const c of oracle.cases) {
       compared.cases += 1;
@@ -149,7 +180,10 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         }
         for (const [depth, html] of Object.entries(py.html)) {
           compared.renders += 1;
-          const js = canonNodes(lib.document, withoutViewerLines(levelNodes(renderInto(lib, module, model, depth))));
+          const nodes = levelNodes(renderInto(lib, module, model, depth));
+          const title = nodes[0].querySelector("h2 [data-deal-id]");
+          if (title) drawn.deal_id_title[`${c.name} @${c.audience} ${kind}`] = title.textContent;
+          const js = canonNodes(lib.document, withoutViewerLines(nodes));
           const py0 = withAddedWords(lib.document, withCurrentPack(html));
           const want = canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py0) : py0);
           compared.bytes += want.length;

@@ -1249,6 +1249,20 @@
     return { order: str(get(raw, "authority_order")), blocks: blocks };
   }
 
+  // The referee an adjudicator's copy names (capsule-viewer#383, line 8):
+  // the sealed report's own `referee`, beside its report (capsulectl seals the
+  // adjudicator the copy is handed to; evidencebook deal_report.go
+  // dealRefereeOf), on an adjudicator's copy only. Null otherwise. Whether the
+  // other side named the same one is a check of both copies, not of this one.
+  function refereeOf(reader, raw) {
+    if (get(raw, "audience") !== "adjudicator") return null;
+    var named = str(get(map(get(map(get(reader.v.bundle, "extensions")), EXTENSION)), "sealed_report"));
+    if (named === null) return null;
+    var payload = reader.standalone() ? reader.standaloneContent(named) : reader.payload(named);
+    var referee = str(get(payload, "referee"));
+    return truthy(referee) ? referee : null;
+  }
+
   // The context, read once: headers by id and disclosed deal payloads.
   function Reader(v) {
     this.v = v;
@@ -2626,6 +2640,7 @@
     var parts = [];
     var aud = model.report.audience;
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
+    if (model.referee) parts.push(this.p(w("referee.named", { referee: model.referee }), { "data-rung": "referee" }));
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
     if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
@@ -3207,6 +3222,13 @@
     };
   };
 
+  // The deal's id after the card's title, as capsulectl's deal view named it
+  // (capsule-viewer#383, line 8): the sealed report's deal_id, none when it
+  // names none.
+  P.dealId = function (model) {
+    return model.deal_id ? [this.d.el("span", { "data-deal-id": model.deal_id }, [w("title.deal", { deal: model.deal_id })])] : [];
+  };
+
   // The three levels of one page: L0 always shown, L1 and L2 one toggle each.
   P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after, l2Summary) {
     var d = this.d;
@@ -3222,7 +3244,7 @@
     var levels = dr.levels(model);
     var l0 = [];
     if (model.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
-    l0.push(dr.d.el("h2", {}, [w("page.title")]));
+    l0.push(dr.d.el("h2", {}, [w("page.title")].concat(dr.dealId(model))));
     l0.push(dr.checkedNote(model.verification));
     var keep = model.report.audience === "keep";
     if (keep) l0.push(dr.privateBanner());
@@ -3237,7 +3259,7 @@
     var levels = dr.sellerLevels(model);
     var l0 = [];
     if (model.receipt.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
-    l0.push(dr.d.el("h2", {}, [w("seller.title")]));
+    l0.push(dr.d.el("h2", {}, [w("seller.title")].concat(dr.dealId(model.receipt))));
     l0.push(dr.checkedNote(model.receipt.verification));
     var keep = model.receipt.report.audience === "keep";
     if (keep) l0.push(dr.privateBanner());
@@ -4169,8 +4191,9 @@
     // (capsule-viewer#383, Sherlock2's ruling on the deal-view lines), on the
     // receipt model the copy notes draw from: the settlement line (see
     // settlementOf), who the deal was with (counterpartyOf), whether each
-    // act came after the holder's yes (afterYesModel) and the sealed report's
-    // authority blocks (authorityOf).
+    // act came after the holder's yes (afterYesModel), the sealed report's
+    // authority blocks (authorityOf) and the referee an adjudicator's copy
+    // names (refereeOf).
     var withViewerLines = function (v, receipt) {
       if (settles) {
         var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
@@ -4182,6 +4205,8 @@
       if (named !== null) receipt.counterparty_named = named;
       var authority = authorityOf(raw);
       if (authority !== null) receipt.authority_sealed = authority;
+      var referee = refereeOf(reader, raw);
+      if (referee !== null) receipt.referee = referee;
       var yes = afterYesModel(v);
       if (yes !== null) receipt.after_yes = yes;
     };

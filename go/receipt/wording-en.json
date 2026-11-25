@@ -728,6 +728,8 @@
     "after_yes.giver.shared": "the holder",
     "section.authority": "Authority, as the holder's report states it",
     "authority.sealed": "For each act, what it relied on, in the order the holder's sealed report lists it. This page shows it as sealed and does not check it.",
-    "authority.uncovered": "The holder's report says this act was not covered by what it relied on."
+    "authority.uncovered": "The holder's report says this act was not covered by what it relied on.",
+    "title.deal": " · {deal}",
+    "referee.named": "The referee this side named, as its sealed report states it: {referee}. This page does not check that the other side named the same one, or that the name belongs to any particular person."
   }
 }

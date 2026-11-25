@@ -9,6 +9,8 @@
 //   of the copy's deal log.
 // - line 5: the sealed report's authority blocks, shown as the holder's
 //   sealed text, never as the page's check.
+// - line 8: the deal's id in the card's title, and the referee an
+//   adjudicator's copy names.
 //
 // Where a fixture carries no such data, it is STUBBED onto the stand-in
 // context of a real fixture (the sealed report's members, a record's
@@ -429,5 +431,48 @@ describe("line 5: the authority blocks, as the holder's report states them (#383
     // An empty list, or entries that are not blocks, are no section.
     expect((await draw("keep", { report: { authority: [] } })).receipt.authority_sealed).toBeUndefined();
     expect((await draw("keep", { report: { authority: ["x", 1] } })).receipt.authority_sealed).toBeUndefined();
+  });
+});
+
+// ---- line 8 -----------------------------------------------------------------
+
+describe("line 8: the deal's id in the title, and the referee an adjudicator's copy names (#383)", () => {
+  const title = (host) => host.L0.querySelector("h2");
+  const referee = (host) => host.L0.querySelector('[data-rung="referee"]');
+  const NAMED = "The referee this side named, as its sealed report states it: Example Arbitration Desk. This page does not check that the other side named the same one, or that the name belongs to any particular person.";
+
+  it("names the deal after the title, on both modules", async () => {
+    expect(title((await draw("keep")).host).textContent).toBe("Deal report · deal-9afcfc8782fedcca");
+    expect(title((await draw("seller-keep", { kind: "seller" })).host).textContent).toBe("Sale receipt · deal-5e11e7b1c7c1e0a1");
+    expect(title((await draw("counterparty", { audience: "counterparty" })).host).querySelector("[data-deal-id]").getAttribute("data-deal-id")).toBe("deal-9afcfc8782fedcca");
+  });
+
+  it("names no deal when the sealed report names none", async () => {
+    const { host } = await draw("keep", { report: { deal_id: undefined } });
+    expect(title(host).textContent).toBe("Deal report");
+    expect(title(host).querySelector("[data-deal-id]")).toBeNull();
+  });
+
+  it("names the referee an adjudicator's copy seals, on both modules", async () => {
+    const buyer = await draw("adjudicator", { audience: "adjudicator", top: { referee: "Example Arbitration Desk" } });
+    expect(buyer.receipt.referee).toBe("Example Arbitration Desk");
+    expect(referee(buyer.host).textContent).toBe(NAMED);
+    const seller = await draw("seller-adjudicator", { kind: "seller", audience: "adjudicator", top: { referee: "Example Arbitration Desk" } });
+    expect(referee(seller.host).textContent).toBe(NAMED);
+    // The shared copy's own note stays first.
+    expect(seller.host.L0.querySelector('[data-shared="adjudicator"]')).not.toBeNull();
+  });
+
+  it("names no referee on any other copy, or when the copy seals none", async () => {
+    for (const [name, audience, kind] of [["keep", "keep", "unilateral"], ["counterparty", "counterparty", "unilateral"], ["seller-keep", "keep", "seller"]]) {
+      const { receipt, host } = await draw(name, { audience, kind, top: { referee: "Example Arbitration Desk" } });
+      expect(receipt.referee, name).toBeUndefined();
+      expect(referee(host), name).toBeNull();
+    }
+    for (const value of [undefined, "", 7]) {
+      const { receipt, host } = await draw("adjudicator", { audience: "adjudicator", top: { referee: value } });
+      expect(receipt.referee).toBeUndefined();
+      expect(referee(host)).toBeNull();
+    }
   });
 });

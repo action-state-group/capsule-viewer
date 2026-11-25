@@ -163,9 +163,9 @@ export function withoutAmountCard(doc, html) {
  * line (js-tests/receipt_settlement.test.js) and who the deal was with
  * (js-tests/receipt_deal_view_lines.test.js).
  */
-export const VIEWER_FIELDS = ["settlement", "counterparty_named", "after_yes", "authority_sealed"];
+export const VIEWER_FIELDS = ["settlement", "counterparty_named", "after_yes", "authority_sealed", "referee"];
 /** Those lines' elements in a script's render. */
-export const VIEWER_LINES = ['[data-rung="settlement"]', '[data-rung="counterparty"]', '[data-rung="accepted"]', '[data-rung="after-yes"]', '[data-authority]'].join(", ");
+export const VIEWER_LINES = ['[data-rung="settlement"]', '[data-rung="counterparty"]', '[data-rung="accepted"]', '[data-rung="after-yes"]', '[data-authority]', '[data-rung="referee"]', '[data-deal-id]'].join(", ");
 
 /**
  * A script's model with the viewer's own lines (VIEWER_FIELDS) taken out, so

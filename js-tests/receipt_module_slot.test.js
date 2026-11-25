@@ -105,7 +105,9 @@ describe("real copies capsulectl cut, in jsdom", () => {
       expect(root.querySelectorAll("details").length).toBe(2);
       expect(root.querySelectorAll("details details").length).toBe(0);
       expect(root.querySelectorAll("details[open]").length).toBe(0);
-      expect(root.querySelector("h2").textContent).toBe(c.module === "seller" ? "Sale receipt" : "Deal report");
+      // The title, then the deal's id as the sealed report names it (#383, line 8).
+      expect(root.querySelector("h2").textContent).toBe(`${c.module === "seller" ? "Sale receipt" : "Deal report"} · ${model.receipt ? model.receipt.deal_id : model.deal_id}`);
+      expect((model.receipt || model).deal_id).toMatch(/^deal-[0-9a-f]{16}$/);
       // The verifier's checks shown are the page verifier's, by name.
       expect([...root.querySelectorAll(".cv-check span:nth-child(2)")].slice(0, 3).map((e) => e.textContent))
         .toEqual(["graph closure", "interval coverage", "per record membership"]);
@@ -428,10 +430,10 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
   // The viewer's own lines each golden's script page draws (selector and count).
   // Only the keep copy discloses an action naming its rail (card); each
   // x-deal-v0 copy says whether each act came after the yes (not checked:
-  // its steps have no place in a book).
+  // its steps have no place in a book) and names its deal in its title.
   const VIEWER_LINES_ON = {
-    keep: '[data-rung="settlement"] 1; [data-rung="after-yes"] 1',
-    counterparty: '[data-rung="after-yes"] 1',
+    keep: '[data-rung="settlement"] 1; [data-rung="after-yes"] 1; [data-deal-id] 1',
+    counterparty: '[data-rung="after-yes"] 1; [data-deal-id] 1',
     "bilateral-keep": "",
     "bilateral-counterparty": "",
   };
