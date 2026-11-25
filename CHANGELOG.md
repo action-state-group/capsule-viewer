@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.26.0 and go 0.26.0 (2026-11-24)
+
+Both state viewer 0.26.0: `ts/v0.26.0`, then `go/v0.26.0` on the commit that ships its page runtime. capsule-viewer becomes the one receipt renderer (#383): #385, #386, #387.
+
 ### Added
 
 - Go: package `receipt` (`go/receipt`), the receipt modules for Go page builders (#383): `capsuleviewer.receipt.unilateral/v0`, `.seller/v0`, `.bilateral/v0` and `.deal/v1` as module-slot scripts, each with the manifest that pins it, through `receipt.Module(kind)` (a `go/emitter` module) and `receipt.ID(kind)`. The scripts started as the ones 0.25.0 ships; Changed below says what differs. The receipt source `receipt_core.js` and its writer now live in `go/receipt` (`go generate`); the Python package's copies stay frozen at 0.25.0.
