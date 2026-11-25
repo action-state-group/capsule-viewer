@@ -226,8 +226,10 @@ describe("a deal line's receipt", () => {
     expect(first.querySelector(".rcpt-panel")!.hasAttribute("hidden")).toBe(
       true,
     );
+    // Reopening shows the drawn receipt again and starts no second open: an
+    // open disables the button at once, before it awaits anything.
     button.click();
-    await settle(first);
+    expect(button.disabled).toBe(false);
     expect(first.querySelectorAll("[data-stand-in-receipt]")).toHaveLength(1);
     claim(root, "d2::req-2")
       .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
