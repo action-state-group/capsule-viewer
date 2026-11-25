@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.27.3 and go 0.27.3 (2026-11-25)
+
+Both state viewer 0.27.3: `ts/v0.27.3`, then `go/v0.27.3` on the commit that ships its page runtime. A receipt page refuses a deal copy whose standalone report fails, naming the failed condition (#415, #412). evidencebook-skills#288's demo takes this release.
+
 ### Fixed
 
 - A receipt page (the receipt modules in its registry, as go/emitter's module slot puts them) refuses a deal copy whose standalone report fails the page's own check, as a report and the receipt API already do since 0.27.2 (#412, Sherlock2). Before, it drew the copy under "✓ Unchanged since it was sealed" with the built-in fallback page, because the bundle's own checks pass. Now it gets agent-action-capsule's refused banner ("✗ This bundle did not verify: do not rely on it"), no module and no fallback page. Its records and payloads are not shown, and its banner reads as invalid, as for any bundle that did not verify. "Failed on this page" names each condition that failed, for example "Didn't verify: the deal report carried outside the log was not signed by the deal's last step."; the others are "does not match its Capsule", "was not made at this deal's checkpoint", "is not a report of this deal", and "this deal's log has more than one report record, so the page can't tell which report counts". The bundle checks that passed stay beside them. `dealStandaloneReportFailures` gives those conditions, and the report path and the receipt API use the same module.
