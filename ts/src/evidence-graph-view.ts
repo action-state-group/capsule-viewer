@@ -3502,6 +3502,9 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
  */
 const RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
 
+/** The x-deal-v1 receipt module, the one that draws the book's witness time. */
+const DEAL_V1_RECEIPT_MODULE = "capsuleviewer.receipt.deal/v1";
+
 /** Whether `root` is drawn as a shared carrier (a report or a page), as the receipt module reads it. */
 function sharedCarrierOf(root: HTMLElement): boolean {
   const mark = root
@@ -3737,6 +3740,13 @@ async function renderVerifiedContext(
   };
   let bar!: HTMLElement;
   let stripNode: HTMLElement | undefined;
+  // The header's witness line is left out only while the x-deal-v1 receipt
+  // module draws the one line in its place (#424).
+  let oneWitnessLine =
+    selected !== undefined &&
+    selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE &&
+    bookWitnessedOnKeep(context, reading) &&
+    !sharedCarrierOf(root);
   const drawFrame = (): void => {
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
@@ -3749,12 +3759,10 @@ async function renderVerifiedContext(
         bannerModel,
         bundle,
         withStrict(context),
-        // Not on a receipt carried in a report or shown as a page: the
-        // module draws no witness time there, so the header stays (#424).
-        // Only when a receipt module draws the one line (#424).
-        selected !== undefined &&
-          bookWitnessedOnKeep(context, reading) &&
-          !sharedCarrierOf(root),
+        // Only while the x-deal-v1 receipt module draws the one line, on
+        // the holder's own copy not carried in a report or shown as a page
+        // (#424); a discarded render draws the frame again with the header.
+        oneWitnessLine,
       ),
     );
     const L2 = region("L2");
@@ -4074,6 +4082,7 @@ async function renderVerifiedContext(
     } catch {
       // Everything the module wrote is discarded; no other module is tried.
       chrome = undefined;
+      oneWitnessLine = false;
       drawFrame();
       frame = frameOf();
       refusal = "presentation-failed";

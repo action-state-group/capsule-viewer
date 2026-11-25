@@ -451,7 +451,11 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
 
   it("the holder's witness time is never shown on a shared page or report", async () => {
     const r = report();
-    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "2026-11-25T14:41:19Z" };
+    v1Entry(r)["witnessed"] = {
+      status: "verified",
+      witness: "W",
+      at: "2026-11-25T14:41:19Z",
+    };
     for (const carrier of ["page", "report"] as const) {
       const host = document.createElement("div");
       await renderReceipt(bundle(), host, {
@@ -524,6 +528,47 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     });
     expect(root.textContent).toContain(HEADER);
     expect(root.textContent).not.toContain("Time-stamped by");
+  });
+
+  it("the header stays when no receipt module draws the line, or its render is discarded (#424)", async () => {
+    const HEADER =
+      "This file carries no witness receipt, so this page could not check a time-stamp itself.";
+    const r = report();
+    v1Entry(r)["witnessed"] = {
+      status: "verified",
+      witness: "W",
+      at: "2026-11-25T14:41:19Z",
+    };
+    // The default registry: no receipt module, so no line, so the header stays.
+    const plain = document.createElement("main");
+    document.body.append(plain);
+    await renderEvidenceGraph(bundle(), plain, undefined, {
+      depth: "L2",
+      verifierReport: r,
+    });
+    expect(plain.textContent).not.toContain("Time-stamped by");
+    expect(plain.textContent).toContain(HEADER);
+    // A receipt module whose render throws: its output is discarded and the header comes back.
+    const registry = createPresentationRegistry();
+    for (const module of receiptModules()) {
+      if (module.manifest.id === "capsuleviewer.receipt.deal/v1")
+        registry.register({
+          ...module,
+          render: async () => {
+            throw new Error("boom");
+          },
+        });
+      else registry.register(module);
+    }
+    const broken = document.createElement("main");
+    document.body.append(broken);
+    await renderEvidenceGraph(bundle(), broken, undefined, {
+      depth: "L2",
+      registry,
+      verifierReport: r,
+    });
+    expect(broken.textContent).not.toContain("Time-stamped by");
+    expect(broken.textContent).toContain(HEADER);
   });
 
   it("the page's times are the reader's own, deadlines with UTC beside them (#423)", async () => {
