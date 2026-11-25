@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @vitest-environment jsdom
 
 // A deal copy's standalone report, checked in the page as capsulectl deal
 // verify checks it (capsule-viewer#397): each condition of evidencebook's
@@ -14,13 +15,14 @@ import {
   createEd25519Identity,
   jsonDigest,
   signCapsuleId,
+  VERIFICATION_BANNER_LINES,
 } from "@action-state-group/agent-action-capsule";
 import {
   dealStandaloneReport,
   instant,
   jsonUint,
 } from "../src/deal-standalone-report.js";
-import { checkReceipt } from "../src/receipt.js";
+import { checkReceipt, renderReceipt } from "../src/receipt.js";
 
 type Obj = Record<string, any>;
 
@@ -287,15 +289,28 @@ describe("a deal copy's standalone report, checked in the page (#397)", () => {
     expect(await dealStandaloneReport(longer)).toBe("pass");
   });
 
-  it("a receipt whose standalone report passes draws; one whose report fails has no module", async () => {
+  it("a receipt whose standalone report passes draws and says the page checked it; one whose report fails did not verify", async () => {
     expect(await checkReceipt(keep())).toMatchObject({
       kind: "checked",
       module: "capsuleviewer.receipt.unilateral/v0",
     });
-    // A change only this check sees: the bundle's own checks still pass.
+    // The report is described by the page's own check, never as capsulectl's
+    // (Sherlock2, the #398 follow-up).
+    const drawn = document.createElement("div");
+    await renderReceipt(keep(), drawn, { depth: "L1" });
+    const note = drawn.querySelector('[data-checked-here="true"]');
+    expect(note?.textContent).toBe(
+      "This report's text is carried in the file outside the log. This page checked it itself: signed by the deal's last step, matching its Capsule, and made at this deal's checkpoint.",
+    );
+    expect(drawn.textContent).not.toContain("capsulectl verify reported");
+    // A change only this check sees: the bundle's own checks still pass, and
+    // the copy reads as one that did not verify, never as one not there.
     const b = keep();
     x(b).agent_input.audience = "adjudicator";
-    expect(await checkReceipt(b)).toEqual({ kind: "no_module" });
+    expect(await checkReceipt(b)).toEqual({
+      kind: "did_not_verify",
+      line: VERIFICATION_BANNER_LINES.refused,
+    });
   });
 
   it("has no answer where the browser has no Ed25519", async () => {

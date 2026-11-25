@@ -157,6 +157,10 @@ async function verified(bundle: unknown): Promise<Verified | ReceiptResult> {
     return { kind: "did_not_verify", line: banner.line };
   if (!bundleVerified(context.verification) || composedFailed(context))
     return refused;
+  // A deal copy whose standalone report fails the page's own check did not
+  // verify, and says so, never as a receipt that is simply not there
+  // (Sherlock2, #398 follow-up).
+  if ((await dealStandaloneReport(value)) === "fail") return refused;
   const records = (value as { records?: unknown }).records;
   const total = Array.isArray(records) ? records.length : 0;
   return {
