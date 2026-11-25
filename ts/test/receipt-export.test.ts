@@ -7,6 +7,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildVerifiedBundleContext } from "@action-state-group/agent-action-capsule";
 import {
   checkReceipt,
   RECEIPT_KINDS,
@@ -210,18 +211,26 @@ describe("the receipt export (#383)", () => {
           carrier === undefined ? {} : { carrier },
         ),
       ).toEqual(result);
-      const line = drawn.querySelector(
-        '[data-cannot-check-reason="report_rule"]',
-      );
-      expect(line?.textContent, String(carrier)).toBe(LINE);
-      // Nothing from the copy: no banner, no verdict, no record.
-      expect(drawn.querySelector("[data-banner]"), String(carrier)).toBeNull();
-      expect(
-        drawn.querySelector('[data-checked="true"]'),
-        String(carrier),
-      ).toBeNull();
-      expect(drawn.textContent?.trim(), String(carrier)).toBe(LINE);
+      // Not drawn: the page lines say it once (receiptPageLines).
+      expect(drawn.childNodes.length, String(carrier)).toBe(0);
     }
+  });
+
+  it('the v1 module itself: a copy that did not verify is declined, never "can\'t check"', async () => {
+    const deal = receiptModules().find(
+      (m) => m.manifest.id === "capsuleviewer.receipt.deal/v1",
+    )!;
+    const b = JSON.parse(v1Keep()) as Obj;
+    (b["records"] as Obj[])[0]!["timestamp"] = "2000-01-01T00:00:00Z";
+    expect(await deal.canRender(await buildVerifiedBundleContext(b))).toBe(
+      false,
+    );
+    const good = await buildVerifiedBundleContext(JSON.parse(v1Keep()));
+    expect(await deal.canRender(good)).toBe(true);
+    expect(await deal.buildModel(good)).toEqual({
+      cannot_check: true,
+      reason: "report_rule",
+    });
   });
 
   it("an x-deal-v1 copy that does not verify says so, never that it can't be checked", async () => {

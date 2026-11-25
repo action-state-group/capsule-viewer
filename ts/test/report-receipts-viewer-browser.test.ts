@@ -64,8 +64,6 @@ const MESH_KEEP = repo(
   "receipt",
   "mesh-payer-selected.bundle.json",
 );
-// capsulectl-deal's own keep copy: its report rides standalone in
-// x-deal-report/v0, which the page's runtime checks itself (#397).
 const DEAL_MODULE = repo("go", "receipt", "receipt_deal.js");
 const DEAL_MANIFEST = JSON.parse(
   repo("go", "receipt", "manifest-deal.json"),
@@ -74,6 +72,8 @@ const DEAL_MANIFEST = JSON.parse(
 };
 // An x-deal-v1 keep copy: the page cannot check its report (#405).
 const V1_KEEP = repo("tests", "testdata", "deal-v1", "keep-copy.bundle.json");
+// capsulectl-deal's own keep copy: its report rides standalone in
+// x-deal-report/v0, which the page's runtime checks itself (#397).
 const STANDALONE_KEEP = repo(
   "tests",
   "testdata",

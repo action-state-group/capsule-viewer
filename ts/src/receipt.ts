@@ -234,9 +234,13 @@ export async function renderReceipt(
   if (options.carrier === "report" || options.carrier === "page")
     host.setAttribute("data-receipt-carrier", options.carrier);
   else host.removeAttribute("data-receipt-carrier");
-  if ("result" in found) {
+  // Not checked: nothing is drawn. For a copy this page can't check (an
+  // x-deal-v1 report, #405) the line is the page lines' (receiptPageLines),
+  // said once there.
+  const done = result(found);
+  if (done.kind !== "checked" || "result" in found) {
     host.replaceChildren();
-    return found.result;
+    return done;
   }
   const doc = host.ownerDocument;
   const region = (name: string): HTMLElement => {
@@ -253,7 +257,7 @@ export async function renderReceipt(
     depth: options.depth ?? "L0",
     setChromeClass: () => undefined,
   });
-  return result(found);
+  return done;
 }
 
 const fill = (
