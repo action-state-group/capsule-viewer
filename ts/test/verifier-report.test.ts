@@ -293,7 +293,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     expect(
       root.querySelector('[data-rung="counterparty-half"]')?.textContent,
     ).toBe(
-      "Signed by both sides: the other party's half of this deal is carried in this copy, and capsulectl verify reported it as verified. This page did not check it itself.",
+      "Stamped by both sides: the other party's signed agreement, stamped in their own book, is carried in this copy, and capsulectl verify reported it as verified. It covers their agreement only, not anything after it. This page did not check it itself.",
     );
     expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
       "No countersignature in this copy. A countersignature is a separate signature over this copy; the other party's own half of the deal is the line above.",
