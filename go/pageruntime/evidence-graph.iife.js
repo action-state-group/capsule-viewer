@@ -18113,7 +18113,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("390476127a9337b86f90b73acebcea0ddb53615f");
+    return commitPrefix("c184223821cde62407ebb9c49627b000c5a7dd1f");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -29269,8 +29269,11 @@ ${pad.repeat(depth)}`;
     };
     let bar;
     let stripNode;
-    let oneWitnessLine = selected !== void 0 && selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root);
+    const oneWitnessLine = selected !== void 0 && selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root);
+    let framesDrawn = 0;
     const drawFrame = () => {
+      const leaveOutWitnessLine = oneWitnessLine && framesDrawn === 0;
+      framesDrawn += 1;
       root.replaceChildren();
       root.classList.remove("cv-shell-chrome");
       renderPresentationHeader(root, bundle);
@@ -29285,7 +29288,7 @@ ${pad.repeat(depth)}`;
           // Only while the x-deal-v1 receipt module draws the one line, on
           // the holder's own copy not carried in a report or shown as a page
           // (#424); a discarded render draws the frame again with the header.
-          oneWitnessLine
+          leaveOutWitnessLine
         )
       );
       const L2 = region("L2");
@@ -29481,7 +29484,6 @@ ${pad.repeat(depth)}`;
         assertFrameIntact();
       } catch {
         chrome = void 0;
-        oneWitnessLine = false;
         drawFrame();
         frame2 = frameOf();
         refusal = "presentation-failed";
