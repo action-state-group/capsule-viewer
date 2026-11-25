@@ -22,7 +22,7 @@
 // Run with RECEIPT_SCRIPT_DIR=<dir holding mutated receipt_*.js> to see it
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
-import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, receiptGolden, renderInto } from "./receiptScripts.js";
+import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withCurrentPack } from "./receiptScripts.js";
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -30,6 +30,8 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
   let oracle;
   const loaded = {};
   beforeAll(() => {
+    // The oracle's pages are read with the current pack's sha256 only while the pack adds keys and changes none.
+    expect(packAddsOnly()).toEqual({ changed: [], sameId: true });
     oracle = receiptGolden();
     for (const kind of KINDS) loaded[kind] = loadScript(kind);
   }, 120000);
@@ -69,7 +71,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         for (const [depth, html] of Object.entries(py.html)) {
           compared.renders += 1;
           const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, depth)));
-          const want = canonHtml(lib.document, html);
+          const want = canonHtml(lib.document, withCurrentPack(html));
           compared.bytes += want.length;
           if (js !== want) {
             let at = 0;
@@ -101,7 +103,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         const model = await module.buildModel(context);
         expect(plain(model)).toEqual(py.model);
         const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, "L2")));
-        expect(js).toBe(canonHtml(lib.document, py.html.L2));
+        expect(js).toBe(canonHtml(lib.document, withCurrentPack(py.html.L2)));
       }
     }
   }, 300000);

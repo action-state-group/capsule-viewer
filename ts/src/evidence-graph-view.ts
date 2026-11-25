@@ -3370,11 +3370,27 @@ const checkingRenders = new WeakMap<
   { readonly before: readonly ChildNode[]; readonly active: Set<HTMLElement> }
 >();
 
-/** The receipt modules a deal line may open (evidencebook `capsulectl/internal/deal/assets`). */
+/**
+ * The receipt modules a deal line may open: capsule-viewer's own (go/receipt,
+ * the one receipt renderer, #383) and, until evidencebook's pages have moved
+ * to them, evidencebook's deal view (`capsulectl/internal/deal/assets`).
+ */
 const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
+  "capsuleviewer.receipt.unilateral/v0",
+  "capsuleviewer.receipt.seller/v0",
+  "capsuleviewer.receipt.bilateral/v0",
+  "capsuleviewer.receipt.deal/v1",
   "capsulectl.deal-view/v0",
   "capsulectl.deal-view-composed/v0",
 ]);
+
+/**
+ * The mark a carried receipt's panel bears, so the receipt module draws the
+ * copy as one shared in a report rather than as the owner's private file
+ * (Sherlock2, ops bc71ecae, #383): the module reads it from its host's
+ * ancestors when it renders.
+ */
+const RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
 
 /**
  * Draw one carried receipt bundle into `panel`: verified once here, resolved
@@ -3409,6 +3425,7 @@ async function openReceipt(
     // A bundle that does not pass its checks is a finding, not a receipt this
     // page merely lacks a viewer for.
     return bundleVerified(context.verification) ? "no-module" : "unverified";
+  panel.setAttribute(RECEIPT_CARRIER_ATTRIBUTE, "report");
   await renderEvidenceGraph(context, panel, undefined, {
     audience: DEFAULT_AUDIENCE,
     format: DEFAULT_FORMAT,

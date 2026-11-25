@@ -28,7 +28,8 @@
   "audiences": [
     "keep",
     "counterparty",
-    "adjudicator"
+    "adjudicator",
+    "*"
   ],
   "formats": [
     "html"
@@ -37,7 +38,7 @@
   "priority": 1,
   "executable": {
     "carrier": "module-slot",
-    "script_sha256": "7ad78e95187c1c75bbe803e53e365b97cf8a65479f3a75789a6b04b223bb0f5a",
+    "script_sha256": "a1bc3f91cd3b4b0fae1a0da893657c29a7114131eeb83791e73fffbb17d03452",
     "style_sha256": [
       "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
     ]

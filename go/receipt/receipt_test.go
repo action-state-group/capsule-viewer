@@ -38,22 +38,6 @@ func TestGeneratedFilesAreCurrent(t *testing.T) {
 	}
 }
 
-// capsule-viewer#383 moves the receipt source here without changing a byte:
-// each script and manifest equals the one the Python writer wrote for 0.25.0
-// (the frozen copies in the Python package). The first change to what a
-// receipt shows removes this test, as the copies then part on purpose.
-func TestScriptsEqualTheFrozenPythonCopies(t *testing.T) {
-	for _, kind := range Kinds {
-		f := byKind[kind]
-		frozen, err := os.ReadFile(filepath.Join("..", "..", "src", "capsule_viewer", "static", "receipt_"+kind+".js"))
-		require.NoError(t, err)
-		assert.Equal(t, string(frozen), string(f.script), kind)
-		frozenManifest, err := os.ReadFile(filepath.Join("..", "..", "src", "capsule_viewer", "receipt_slot", "manifest-"+kind+".json"))
-		require.NoError(t, err)
-		assert.Equal(t, string(frozenManifest), string(f.manifest), kind)
-	}
-}
-
 func TestModulePinsItsScriptAndStylesheet(t *testing.T) {
 	css, err := os.ReadFile(writer.DefaultSources(".").KitCSS)
 	require.NoError(t, err)
@@ -168,14 +152,13 @@ func TestResolutionPicksTheReceiptModule(t *testing.T) {
 	}
 	assert.Empty(t, registry.Refused())
 
-	// At the owner's audience a payer's keep copy is the unilateral
-	// receipt. At "*", the audience a report opens a receipt for today, the
-	// manifests (keep, counterparty, adjudicator) do not match and the
-	// built-in page takes it: CV2 of #383 settles what a receipt in a report
-	// shows. A provider's receipt is never a receipt module's.
+	// A payer's keep copy is the unilateral receipt at the owner's audience
+	// and at "*", the audience a report opens a carried receipt for (#383:
+	// the module then draws it as a shared copy). A provider's receipt is
+	// never a receipt module's.
 	cases := []struct{ name, audience, want string }{
 		{"mesh-payer-selected", "keep", "capsuleviewer.receipt.unilateral/v0"},
-		{"mesh-payer-selected", "*", "aac.builtin.no-aggregate/v0"},
+		{"mesh-payer-selected", "*", "capsuleviewer.receipt.unilateral/v0"},
 		{"mesh-provider-selected", "keep", "aac.builtin.no-aggregate/v0"},
 	}
 	for _, c := range cases {
@@ -189,8 +172,7 @@ func TestResolutionPicksTheReceiptModule(t *testing.T) {
 
 // The Python package's receipt files are frozen at 0.25.0 (#383): this
 // package's copies are the ones that change. The pins keep an edit to the
-// frozen copies, and a rerun of the Python writer, from passing unseen once
-// TestScriptsEqualTheFrozenPythonCopies is gone.
+// frozen copies, or a rerun of the Python writer, from passing unseen.
 func TestFrozenPythonCopiesStayFrozen(t *testing.T) {
 	pins := map[string]string{
 		"static/receipt_core.js":                "1e0f98f27a36f8dbf4dfcc4f1dbbc6f98396704add1cba33634bd349baa455d8",
