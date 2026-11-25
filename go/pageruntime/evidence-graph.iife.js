@@ -18113,7 +18113,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("74295931c2bcba28b30b5b443865fd0a7c2906d9");
+    return commitPrefix("390476127a9337b86f90b73acebcea0ddb53615f");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -29117,6 +29117,7 @@ ${pad.repeat(depth)}`;
     "capsulectl.deal-view-composed/v0"
   ]);
   var RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
+  var DEAL_V1_RECEIPT_MODULE = "capsuleviewer.receipt.deal/v1";
   function sharedCarrierOf(root) {
     const mark = root.closest?.(`[${RECEIPT_CARRIER_ATTRIBUTE}]`)?.getAttribute(RECEIPT_CARRIER_ATTRIBUTE);
     return mark === "report" || mark === "page";
@@ -29268,6 +29269,7 @@ ${pad.repeat(depth)}`;
     };
     let bar;
     let stripNode;
+    let oneWitnessLine = selected !== void 0 && selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root);
     const drawFrame = () => {
       root.replaceChildren();
       root.classList.remove("cv-shell-chrome");
@@ -29280,10 +29282,10 @@ ${pad.repeat(depth)}`;
           bannerModel,
           bundle,
           withStrict(context),
-          // Not on a receipt carried in a report or shown as a page: the
-          // module draws no witness time there, so the header stays (#424).
-          // Only when a receipt module draws the one line (#424).
-          selected !== void 0 && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root)
+          // Only while the x-deal-v1 receipt module draws the one line, on
+          // the holder's own copy not carried in a report or shown as a page
+          // (#424); a discarded render draws the frame again with the header.
+          oneWitnessLine
         )
       );
       const L2 = region("L2");
@@ -29479,6 +29481,7 @@ ${pad.repeat(depth)}`;
         assertFrameIntact();
       } catch {
         chrome = void 0;
+        oneWitnessLine = false;
         drawFrame();
         frame2 = frameOf();
         refusal = "presentation-failed";
