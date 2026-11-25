@@ -13623,6 +13623,12 @@ ${body}
       verification: { ...context.verification, extensions: extensions2 }
     };
   }
+  function bookWitnessedOnKeep(context, reading) {
+    if (reading?.kind !== "pass") return false;
+    if (obj2(reading.witnessed)["status"] !== "verified") return false;
+    const x = obj2(obj2(obj2(context.bundle)["extensions"])[STANDALONE2]);
+    return obj2(x["agent_input"])["audience"] === "keep";
+  }
 
   // src/builtin-manifests.ts
   var BUILTIN_MANIFEST_REPORT_ROWS = Object.freeze(
@@ -18099,7 +18105,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("ea8f4e5031e6d1271526a6d25edc9a886c9d73c2");
+    return commitPrefix("7fcc71a8cfe277106761649f03d15ced664d617f");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -27096,9 +27102,10 @@ ${pad.repeat(depth)}`;
     root.append(refusal);
     return bar;
   }
-  function bannerWitnessNotice(model, bundle, verification) {
+  function bannerWitnessNotice(model, bundle, verification, bookWitnessed = false) {
     if (model.state !== "verified" && model.state !== "incomplete")
       return void 0;
+    if (bookWitnessed) return void 0;
     if (model.checkpoint !== "verified") return void 0;
     return witnessNotice(bundle, verification);
   }
@@ -29257,7 +29264,12 @@ ${pad.repeat(depth)}`;
         root,
         bannerModel,
         coverage,
-        bannerWitnessNotice(bannerModel, bundle, withStrict(context))
+        bannerWitnessNotice(
+          bannerModel,
+          bundle,
+          withStrict(context),
+          bookWitnessedOnKeep(context, reading)
+        )
       );
       const L2 = region("L2");
       const core = region("L2-core");
