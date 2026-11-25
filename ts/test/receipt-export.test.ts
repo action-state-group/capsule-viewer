@@ -107,6 +107,38 @@ describe("the receipt export (#383)", () => {
     expect(carried.querySelector('[data-banner="private"]')).not.toBeNull();
   });
 
+  it("saved as a page for anyone, draws the shared copy with the page's two lines (#395)", async () => {
+    const page = host();
+    const result = await renderReceipt(fixture("mesh-payer-selected"), page, {
+      carrier: "page",
+    });
+    expect(page.getAttribute("data-receipt-carrier")).toBe("page");
+    expect(page.querySelector('[data-banner="private"]')).toBeNull();
+    const banner = page.querySelector('[data-banner="shared"]')?.textContent;
+    expect(banner).toContain("Shared copy");
+    expect(banner).toContain(
+      "This node's own record of this exchange, saved as a page for anyone to check. It is not the other side's copy.",
+    );
+    const text = page.textContent ?? "";
+    expect(text).not.toContain("report owner");
+    expect(text).not.toContain("Receipts in the settlement report");
+    expect(text).not.toContain("Do not forward");
+    expect(text).not.toContain("Tell your agent");
+    expect(page.querySelector('[data-checked="true"]')?.textContent).toContain(
+      "Checked in this browser by",
+    );
+
+    // Its lines above the receipt never call it the reader's own.
+    expect(result.kind).toBe("checked");
+    expect(receiptPageLines(result, { carrier: "page" })?.lines[0]).toBe(
+      "Receipt: this node's receipt only",
+    );
+    const both = await checkReceipt(fixture("bilateral-keep"));
+    expect(receiptPageLines(both, { carrier: "page" })?.lines[0]).toBe(
+      "Receipt: stamped by both",
+    );
+  });
+
   it("opens at the depth asked for", async () => {
     const shallow = host();
     await renderReceipt(fixture("keep"), shallow);

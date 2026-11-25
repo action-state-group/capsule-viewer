@@ -1709,7 +1709,7 @@
   // reader may not be the owner, so no line says "you" or "your" (Sherlock2,
   // #386; drawCarrier is set by render for one draw).
   function word(key) {
-    if (drawCarrier === "report" && own(WORDS, key + ".report")) return WORDS[key + ".report"];
+    if (sharedCarrier(drawCarrier) && own(WORDS, key + ".report")) return WORDS[key + ".report"];
     return own(WORDS, key) ? WORDS[key] : null;
   }
   function w(key, values) {
@@ -1723,9 +1723,15 @@
 
   // ---- drawing: one copy (module.py, seller.py) ------------------------------
 
-  // What carries the receipt being drawn ("report", or null when it stands
-  // alone), set by render for the length of one synchronous draw.
+  // What carries the receipt being drawn, set by render for the length of
+  // one synchronous draw: "report" (a report carries it), "page" (a page
+  // saved for anyone to check, capsules-plugin#378), or null when it stands
+  // alone as the owner's copy.
   var drawCarrier = null;
+  // A receipt read by someone other than its owner: a shared copy, with no
+  // second person and no prompts for the owner's agent (Sherlock2, #386;
+  // "page" differs from "report" only in two lines, capsule-viewer#395).
+  function sharedCarrier(carrier) { return carrier === "report" || carrier === "page"; }
 
   function Drawer(doc, depth, seller) {
     this.d = new Drawing(doc);
@@ -1791,9 +1797,9 @@
   // it was shared on purpose by the report owner's setting, and says so
   // instead: no do-not-forward line (Sherlock2, ops bc71ecae, #383).
   P.privateBanner = function () {
-    if (this.carrier === "report") {
+    if (sharedCarrier(this.carrier)) {
       var shared = this.d.el("span", { class: "cv-badge" }, [w("banner.shared.label")]);
-      return this.d.el("p", { "data-banner": "shared" }, [shared, " ", w("banner.shared.text")]);
+      return this.d.el("p", { "data-banner": "shared" }, [shared, " ", w(this.carrier === "page" ? "banner.page.text" : "banner.shared.text")]);
     }
     var label = this.d.el("span", { class: "cv-badge" }, [w("banner.private.label")]);
     return this.d.el("p", { class: "cv-tone--caution", "data-banner": "private" }, [label, " ", w("banner.private.text")]);
@@ -1803,7 +1809,7 @@
     var d = this.d;
     var parts = halves.slice();
     if (line !== false) {
-      var key = (kase === "one_sided" || kase === "limit") && (!keep || this.carrier === "report") ? "sides.case." + kase + ".shared" : "sides.case." + kase;
+      var key = (kase === "one_sided" || kase === "limit") && (!keep || sharedCarrier(this.carrier)) ? "sides.case." + kase + ".shared" : "sides.case." + kase;
       parts.unshift(d.el("p", { class: "cv-sides__case cv-tone--" + CASE_TONE[kase], "data-case": kase }, [w(key)]));
     }
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
@@ -1812,7 +1818,7 @@
   // They are prompts for the owner's own agent, so a copy carried in a report,
   // read by anyone the owner shared it with, has none (Sherlock2, #386).
   P.actions = function (kase) {
-    if (this.carrier === "report") return null;
+    if (sharedCarrier(this.carrier)) return null;
     var d = this.d;
     var items = [d.el("li", { class: "cv-actions__heading" }, [w("actions.heading")])].concat(ACTIONS[kase].map(function (k) {
       return d.el("li", { "data-action": k.replace(/^actions\./, "") }, [w(k)]);
@@ -2636,7 +2642,7 @@
       // On the holder's page their own copy is ours; every other copy is theirs, as received.
       // In a report the reader may not be the owner, so the owner's side is
       // named, not "your" (Sherlock2, #386).
-      if (party.audience === "keep") return dr.half("ours", w(dr.carrier === "report" ? "sides.ours.shared" : "sides.ours"), [section], attrs);
+      if (party.audience === "keep") return dr.half("ours", w(dr.carrier === "page" ? "sides.ours.page" : sharedCarrier(dr.carrier) ? "sides.ours.shared" : "sides.ours"), [section], attrs);
       var label = keep ? w("sides.theirs") : w("sides.half", { role: party.role || w("party.role_undeclared") });
       return dr.half("theirs", label, [section], attrs);
     });
@@ -2741,7 +2747,8 @@
         var depth = DEPTHS.indexOf(host.depth) >= 0 ? host.depth : "L0";
         ensureStyle(doc);
         var carried = host.L0.closest ? host.L0.closest("[data-receipt-carrier]") : null;
-        drawCarrier = carried && carried.getAttribute("data-receipt-carrier") === "report" ? "report" : null;
+        var mark = carried ? carried.getAttribute("data-receipt-carrier") : null;
+        drawCarrier = mark === "report" || mark === "page" ? mark : null;
         var levels;
         try {
           levels = model && model.cannot_check === true ? cannotCheckLevels(doc) : DRAW[kind](doc, depth, model);
