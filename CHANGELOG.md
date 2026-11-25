@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.27.0 and go 0.27.0 (2026-11-25)
+
+Both state viewer 0.27.0: `ts/v0.27.0`, then `go/v0.27.0` on the commit that ships its page runtime. The receipt carrier the Mesh plugin's saved receipt page needs (Mesh-LLM/capsules-plugin#378, Sherlock2): #396.
+
 ### Added
 
 - A third receipt carrier, `"page"`, for a receipt page saved for anyone to check, such as a Mesh node's saved receipt page (#395, Sherlock2). `renderReceipt(…, { carrier: "page" })` draws the report's shared copy: no PRIVATE banner, no "you", and no prompts for the owner's agent. Two lines differ from the report's. The banner reads "This node's own record of this exchange, saved as a page for anyone to check. It is not the other side's copy." (`banner.page.text`), and the owner's half reads "This node's side · in its book" (`sides.ours.page`). The label stays "Shared copy".
