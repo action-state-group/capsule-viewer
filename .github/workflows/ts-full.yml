@@ -20,8 +20,8 @@ permissions:
 
 # A run on main or a nightly is never cancelled or replaced.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   ts:
@@ -50,7 +50,7 @@ jobs:
   # A red run on main or a nightly opens or comments on one ci-red issue.
   report-failure:
     needs: [ts]
-    if: failure() && github.event_name != 'pull_request'
+    if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
