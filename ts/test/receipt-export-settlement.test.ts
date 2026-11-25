@@ -2,8 +2,8 @@
 // @vitest-environment jsdom
 // capsule-viewer#383: the npm receipt export checks a Lightning leg's proof
 // itself (receiptModules passes paymentPreimageCheck to the core), so the
-// buyer receipt's settlement line says "matches" or "did not match" on this
-// path too, never "sealed" for want of a page runtime.
+// buyer receipt's and seller copy's settlement line says "matches" or "did
+// not match" on this path too, never "sealed" for want of a page runtime.
 //
 // No fixture carries a settled leg a receipt module accepts, so the legs are
 // stubbed onto the verified context of a real fixture, as
@@ -21,7 +21,7 @@ const HASH = createHash("sha256")
   .update(Buffer.from(PREIMAGE, "hex"))
   .digest("hex");
 
-const keep = (): unknown =>
+const bundle = (name: string): unknown =>
   JSON.parse(
     readFileSync(
       resolve(
@@ -30,18 +30,24 @@ const keep = (): unknown =>
         "tests",
         "testdata",
         "receipt",
-        "keep.bundle.json",
+        `${name}.bundle.json`,
       ),
       "utf8",
     ),
   );
 
-// The keep copy's action record (290b1db4…) as one settled Lightning leg
-// whose disclosed agent_input carries the preimage.
-async function legContext(hash: string): Promise<unknown> {
-  const context = (await buildVerifiedBundleContext(keep())) as unknown as Obj;
+// A copy's record (the keep copy's action, 290b1db4…, unless named) as one
+// settled Lightning leg whose disclosed agent_input carries the preimage.
+async function legContext(
+  hash: string,
+  name = "keep",
+  prefix = "290b1db4",
+): Promise<unknown> {
+  const context = (await buildVerifiedBundleContext(
+    bundle(name),
+  )) as unknown as Obj;
   const records = (context["records"] as Obj[]).map((r) =>
-    String(r["capsule_id"]).startsWith("290b1db4")
+    String(r["capsule_id"]).startsWith(prefix)
       ? {
           ...r,
           settlement: {
@@ -59,8 +65,7 @@ async function legContext(hash: string): Promise<unknown> {
   const resolved = new Map(context["resolvedDisclosures"] as Map<string, Obj>);
   for (const [id, entry] of resolved) {
     const input = entry["agent_input"] as Obj | undefined;
-    if (!id.startsWith("290b1db4") || input?.["state"] !== "disclosed")
-      continue;
+    if (!id.startsWith(prefix) || input?.["state"] !== "disclosed") continue;
     const payload = input["payload"] as Obj;
     resolved.set(id, {
       ...entry,
@@ -76,10 +81,11 @@ async function legContext(hash: string): Promise<unknown> {
   return { ...context, records, resolvedDisclosures: resolved };
 }
 
-const unilateral = () =>
+const moduleOf = (kind: string) =>
   receiptModules().find(
-    (m) => m.manifest.id === "capsuleviewer.receipt.unilateral/v0",
+    (m) => m.manifest.id === `capsuleviewer.receipt.${kind}/v0`,
   )!;
+const unilateral = () => moduleOf("unilateral");
 
 describe("the npm receipt export's settlement line (#383)", () => {
   it("checks the proof itself: matches", async () => {
@@ -94,5 +100,20 @@ describe("the npm receipt export's settlement line (#383)", () => {
       (await legContext("22".repeat(32))) as never,
     )) as Obj;
     expect((model["settlement"] as Obj)["state"]).toBe("failed");
+  });
+
+  it("checks the seller copy's proof itself too (its commit, 8690c43a…)", async () => {
+    const cases: [string, string][] = [
+      [HASH, "proof"],
+      ["22".repeat(32), "failed"],
+    ];
+    for (const [hash, state] of cases) {
+      const model = (await moduleOf("seller").buildModel(
+        (await legContext(hash, "seller-keep", "8690c43a")) as never,
+      )) as Obj;
+      expect(((model["receipt"] as Obj)["settlement"] as Obj)["state"]).toBe(
+        state,
+      );
+    }
   });
 });

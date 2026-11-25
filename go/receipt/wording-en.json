@@ -730,6 +730,15 @@
     "authority.sealed": "For each act, what it relied on, in the order the holder's sealed report lists it. This page shows it as sealed and does not check it.",
     "authority.uncovered": "The holder's report says this act was not covered by what it relied on.",
     "title.deal": " · {deal}",
+    "seller.payment.settled.proof": "Settled on Lightning; this page checked its proof against its invoice",
+    "seller.payment.settled.failed": "Recorded as settled on Lightning, but its proof did not match its invoice when this page checked it",
+    "seller.payment.settled.sealed": "Recorded as settled on Lightning; its proof is sealed in this file, so this page can't check it",
+    "seller.payment.settled.withheld": "Recorded as settled on Lightning; this copy does not show its proof",
+    "seller.payment.settled.partial": "Recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them",
+    "seller.payment.settled.final": "The payee's wallet reported it final on Lightning; this file carries no proof to check",
+    "seller.payment.settled.x402": "Settled on x402; this page does not check the on-chain record",
+    "seller.payment.settled.other": "Recorded as settled; this page can't check payments on this rail",
+    "seller.payment.recorded": "This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not read what it is about.",
     "referee.named": "The referee this side named, as its sealed report states it: {referee}. This page does not check that the other side named the same one, or that the name belongs to any particular person."
   }
 }

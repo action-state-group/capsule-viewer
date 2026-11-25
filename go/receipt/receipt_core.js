@@ -468,8 +468,8 @@
 
   // ---- the settlement line (capsule-viewer#383; Sherlock2's ruling on the deal-view lines) ----
   //
-  // The x-deal-v0 buyer receipt says how the payment settled, by rail (the
-  // seller copy with the next change), from the settled payee-observed legs among this copy's records
+  // The x-deal-v0 buyer receipt and seller copy say how the payment settled,
+  // by rail, from the settled payee-observed legs among this copy's records
   // (draft-mih-agent-settlement-records; Mesh-LLM/capsules-plugin
   // adapters/lightning-v0.md), as evidencebook's deal view did. A Lightning
   // leg's proof is its disclosed preimage; this page hashes nothing, so the
@@ -593,6 +593,9 @@
     if (state === "sealed" && (checked === "proof" || checked === "failed")) state = checked;
     return { state: state, rail: null, band: legBand(legs) };
   }
+
+  // Whether a settlement line rests on a settled leg (any state but "missing").
+  function settledLine(line) { return !!line && line.state !== "missing"; }
 
   // The pending runtime check of a context's Lightning proofs, or null when
   // there is none to ask: no legs, another rail, a leg withheld or no
@@ -3040,11 +3043,17 @@
       { label: w("seller.l0.amount"), value: this.part(model.amount) },
       { label: w("l0.state"), value: state },
     ]);
-    var payment = d.el("p", { "data-seller-line": "payment" }, [w("seller.l0.payment"), ": ", w("seller.payment.not_recorded")]);
+    var payment = d.el("p", { "data-seller-line": "payment" }, [w("seller.l0.payment"), ": ", this.sellerPayment(model.receipt.settlement)]);
     var handover = d.el("p", { "data-seller-line": "handover" }, [
       w("seller.l0.handover"), ": ", d.el("span", { "data-handover": model.handover.state }, [this.handoverText(model.handover)]),
     ]);
     return [grid, payment, handover];
+  };
+  // The seller headline's payment value: "not recorded in this copy" unless
+  // the copy's settlement line rests on a settled leg (settlementOf), whose
+  // state it then follows.
+  P.sellerPayment = function (line) {
+    return settledLine(line) ? w("seller.payment.settled." + line.state) : w("seller.payment.not_recorded");
   };
   P.sellerNotes = function (model) {
     var audience = model.receipt.report.audience;
@@ -3083,7 +3092,7 @@
     out.push(kit.section(w("seller.section.offers"), [this.offers(model), this.sectionSteps(r, "proposed")]));
     out.push(kit.section(w(this.audienceKey("seller.section.accepted", model)), [this.acceptances(model), this.sectionSteps(r, "approved")]));
 
-    var payment = [this.note(w("seller.payment.none"), { "data-seller": "payment" })];
+    var payment = [this.note(w(settledLine(r.settlement) ? "seller.payment.recorded" : "seller.payment.none"), { "data-seller": "payment" })];
     model.evidence.forEach(function (e) {
       if (e.disclosure === "disclosed") {
         var verified = w(e.verified ? "seller.evidence.verified" : "seller.evidence.unverified");
@@ -3201,7 +3210,7 @@
     ], 3));
     var legs = [
       [w("seller.leg.agreement"), w(model.offers.some(function (o) { return o.action === "commit"; }) ? "seller.leg.recorded" : "seller.leg.none")],
-      [w("seller.leg.payment"), w("seller.leg.none")],
+      [w("seller.leg.payment"), w(settledLine(model.receipt.settlement) ? "seller.leg.recorded" : "seller.leg.none")],
       [w("seller.leg.handover"), w("seller.provenance.seller_observed." + model.handover.state)],
     ];
     out.push(kit.section(w("seller.section.legs"), [kit.dataTable([w("seller.leg.name"), w("seller.leg.state")], legs)], 3));
@@ -4135,7 +4144,7 @@
   //                   (no assurance given) for the copy itself, not for a carried copy
   //   preimageCheck   (payment_ref, preimage) -> "PASS", "FAIL", "NOT_PRESENT",
   //                   "NOT_CHECKED" (or a promise of one): one Lightning leg's proof,
-  //                   asked on a page for the buyer receipt's settlement line
+  //                   asked on a page for the x-deal-v0 settlement line
   function createModule(kind, env) {
     if (!own(DRAW, kind)) throw new Error("no receipt module " + kind);
     var e = {
@@ -4173,15 +4182,15 @@
       if (reportChecked(c.verification, EXTENSION_V1) !== null) return false;
       return view(context, e).verified === true;
     };
-    // The buyer's receipt only: the seller copy's own payment lines ("not
-    // recorded in this copy") come with the next change, worded with it.
-    var settles = kind === "unilateral";
+    // The x-deal-v0 receipts: the buyer's and the seller copy, whose own
+    // payment lines follow the settlement line (P.sellerPayment).
+    var settles = kind === "unilateral" || kind === "seller";
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
       if (reportRuleNotRun(context)) return { cannot_check: true, reason: "report_rule" };
       var asked = [
         pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null,
-        // The settlement line's Lightning proof, on the x-deal-v0 buyer receipt only.
+        // The settlement line's Lightning proof, on the x-deal-v0 receipts only.
         pageChecks && settles ? askSettlementCheck(context, e.preimageCheck) : null,
       ].filter(function (p) { return p !== null; });
       if (asked.length) return Promise.all(asked).then(function () { return buildChecked(context); });
