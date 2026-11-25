@@ -15,6 +15,7 @@ import {
   createEd25519Identity,
   jsonDigest,
   signCapsuleId,
+  VERIFICATION_BANNER_LINES,
 } from "@action-state-group/agent-action-capsule";
 import {
   dealStandaloneReport,
@@ -306,7 +307,10 @@ describe("a deal copy's standalone report, checked in the page (#397)", () => {
     // the copy reads as one that did not verify, never as one not there.
     const b = keep();
     x(b).agent_input.audience = "adjudicator";
-    expect((await checkReceipt(b)).kind).toBe("did_not_verify");
+    expect(await checkReceipt(b)).toEqual({
+      kind: "did_not_verify",
+      line: VERIFICATION_BANNER_LINES.refused,
+    });
   });
 
   it("has no answer where the browser has no Ed25519", async () => {
