@@ -37,7 +37,7 @@ describe("a receipt carried in a report (#383)", () => {
   });
 
   it("the same copy standing alone keeps its PRIVATE banner", async () => {
-    for (const carrier of [undefined, "page", ""]) {
+    for (const carrier of [undefined, "elsewhere", ""]) {
       const panel = await draw("keep", "keep", carrier);
       expect(panel.querySelector('[data-banner="shared"]'), String(carrier)).toBeNull();
       expect(panel.querySelector('[data-banner="private"]'), String(carrier)).not.toBeNull();
@@ -96,9 +96,10 @@ describe("a receipt carried in a report (#383)", () => {
     return out;
   };
 
-  it("in a report the page's own words never say \"you\" or \"your\", on any fixture, copy, module or depth (Sherlock2, #386)", async () => {
+  it("in a report or a page for anyone the page's own words never say \"you\" or \"your\", on any fixture, copy, module or depth (Sherlock2, #386, #395)", async () => {
     const offenders = [];
     let drawn = 0;
+    for (const carrier of ["report", "page"])
     for (const c of receiptGolden().cases) {
       for (const kind of KINDS) {
         if (!c.modules[kind] || !c.modules[kind].can_render) continue;
@@ -109,7 +110,7 @@ describe("a receipt carried in a report (#383)", () => {
         const model = await module.buildModel(context);
         const doc = lib.document;
         const panel = doc.createElement("section");
-        panel.setAttribute("data-receipt-carrier", "report");
+        panel.setAttribute("data-receipt-carrier", carrier);
         const host = { L0: doc.createElement("div"), L1: doc.createElement("div"), L2: doc.createElement("div"), depth: "L2" };
         panel.append(host.L0, host.L1, host.L2);
         doc.body.append(panel);
@@ -120,11 +121,26 @@ describe("a receipt carried in a report (#383)", () => {
         const sealed = sealedStrings(c.bundle ?? readBundle(c.name)).filter((t) => /\byou(r)?\b/i.test(t)).sort((a, b) => b.length - a.length);
         for (const t of sealed) text = text.split(t).join("");
         const at = text.search(/\byou(r)?\b/i);
-        if (at >= 0) offenders.push(`${c.name} @${c.audience} ${kind}: ${text.slice(Math.max(0, at - 60), at + 40)}`);
+        if (at >= 0) offenders.push(`${carrier} ${c.name} @${c.audience} ${kind}: ${text.slice(Math.max(0, at - 60), at + 40)}`);
+        // A page for anyone names no report owner and no report setting.
+        if (carrier === "page" && /report owner|settlement report/.test(text)) offenders.push(`page ${c.name} @${c.audience} ${kind}: names a report`);
       }
     }
-    expect(drawn).toBeGreaterThan(20);
+    expect(drawn).toBeGreaterThan(40);
     expect(offenders).toEqual([]);
+  });
+
+  it("a page saved for anyone (carrier page) is the report's shared copy with two lines of its own (Sherlock2, #395)", async () => {
+    const PAGE = "Shared copy This node's own record of this exchange, saved as a page for anyone to check. It is not the other side's copy.";
+    for (const [name, kind] of [["keep", "unilateral"], ["seller-keep", "seller"], ["bilateral-keep", "bilateral"]]) {
+      const page = await draw(name, "keep", "page", kind, "L1");
+      expect(page.querySelector('[data-banner="shared"]').textContent, kind).toBe(PAGE);
+      expect(page.querySelector('[data-banner="private"]'), kind).toBeNull();
+      expect(page.querySelector('[data-actions="true"]'), kind).toBeNull();
+    }
+    const both = await draw("bilateral-keep", "keep", "page", "bilateral", "L1");
+    expect(both.querySelector('[data-half="ours"] .cv-half__label').textContent).toBe("This node's side · in its book");
+    expect(both.querySelector('[data-half="theirs"] .cv-half__label').textContent).toBe("Their side · as received");
   });
 
   it("each owner's-copy module draws the shared copy in a report and PRIVATE standing alone", async () => {

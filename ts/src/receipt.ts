@@ -61,10 +61,12 @@ export interface ReceiptOptions {
   /** Opened at this depth; default `L0`. */
   readonly depth?: "L0" | "L1" | "L2";
   /**
-   * `report` when the receipt is carried in a report: the owner's copy then
-   * reads as a shared copy and never addresses the reader as its owner.
+   * `report` when the receipt is carried in a report, `page` when it is
+   * saved as a page for anyone to check (capsule-viewer#395): the owner's
+   * copy then reads as a shared copy and never addresses the reader as its
+   * owner. Left out, it is the owner's own copy.
    */
-  readonly carrier?: "report";
+  readonly carrier?: "report" | "page";
 }
 
 type Draw = (model: unknown, host: PresentationHost) => void | Promise<void>;
@@ -213,8 +215,8 @@ export async function renderReceipt(
   options: ReceiptOptions = {},
 ): Promise<ReceiptResult> {
   const found = await resolved(bundle, options.audience ?? "keep");
-  if (options.carrier === "report")
-    host.setAttribute("data-receipt-carrier", "report");
+  if (options.carrier === "report" || options.carrier === "page")
+    host.setAttribute("data-receipt-carrier", options.carrier);
   else host.removeAttribute("data-receipt-carrier");
   if ("result" in found) {
     host.replaceChildren();
@@ -271,20 +273,29 @@ export function receiptLabel(
 }
 
 /**
- * The lines a saved receipt page shows above the receipt, on the owner's
- * own page, and their tone: `ok` only for a receipt both sides stamped,
- * `warn` for one side's own receipt, `bad` for one not checked or not
- * verified. Null for `no_module`.
+ * The lines a saved receipt page shows above the receipt, and their tone:
+ * `ok` only for a receipt both sides stamped, `warn` for one side's own
+ * receipt, `bad` for one not checked or not verified. Null for `no_module`.
+ * With `carrier: "page"` (a node's receipt saved as a page for anyone to
+ * check), the label never addresses the reader as the owner: one side's own
+ * receipt is "this node's receipt only" (capsule-viewer#395). A report draws
+ * no page lines, so it takes no carrier here.
  */
 export function receiptPageLines(
   result: ReceiptResult,
+  options: { readonly carrier?: "page" } = {},
 ): { tone: "ok" | "warn" | "bad"; lines: string[] } | null {
   switch (result.kind) {
     case "checked":
       return {
         tone: result.both ? "ok" : "warn",
         lines: [
-          fill("row.page.receipt", { label: receiptLabel(result) ?? "" }),
+          fill("row.page.receipt", {
+            label:
+              options.carrier === "page" && !result.both
+                ? fill("row.one_sided.page")
+                : (receiptLabel(result) ?? ""),
+          }),
           fill("row.page.records_tied", result.records),
           result.runtimeLine,
         ],
