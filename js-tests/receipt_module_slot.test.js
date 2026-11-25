@@ -42,7 +42,7 @@ import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { pixelDifference } from "./pngPixels.js";
 import {
   caseInputs, KINDS, loadScript, manifestOf, PY, PY_ENV, receiptGolden, readBundle, readVerify, RECEIPTS,
-  REVIVE_CONTEXT, ROOT, scriptBytes, scriptJson, serializeContext, withCurrentPack,
+  REVIVE_CONTEXT, ROOT, scriptBytes, scriptJson, serializeContext, VIEWER_LINES, withCurrentPack,
 } from "./receiptScripts.js";
 
 const MAIN = [
@@ -321,12 +321,12 @@ const LAYOUT_UNIT = 1 / 64;
 // The share of pixels two screenshots of equal text, boxes and styles may
 // differ in (rasterisation, never content: see (3) above).
 const PIXEL_TOLERANCE = 0.002;
-// The settlement line (capsule-viewer#383), which the frozen Python twin never
-// draws: taken off the script's page before it is compared with the Python
-// page, so every other element, box and pixel is still compared.
-// js-tests/receipt_settlement.test.js tests the line itself; the parity test
-// lists which fixtures draw it.
-const DROP_SETTLEMENT = `(() => { const lines = document.querySelectorAll('[data-rung="settlement"]'); lines.forEach((e) => e.remove()); return lines.length; })()`;
+// The lines the viewer draws and the frozen Python twin never does
+// (capsule-viewer#383; VIEWER_LINES in receiptScripts.js): taken off the
+// script's page before it is compared with the Python page, so every other
+// element, box and pixel is still compared. Their own tests test the lines;
+// the parity test lists which fixtures draw each. The count is per selector.
+const DROP_VIEWER_LINES = `(() => { const counts = {}; for (const sel of ${JSON.stringify(VIEWER_LINES.split(", "))}) { const lines = document.querySelectorAll(sel); counts[sel] = lines.length; lines.forEach((e) => e.remove()); } return Object.entries(counts).filter(([, n]) => n > 0).map(([s, n]) => s + " " + n).join("; "); })()`;
 const OPEN_ALL = `document.querySelectorAll("details").forEach((d) => { d.open = true; }); document.querySelectorAll("details").length`;
 
 describe.skipIf(!chromePath)("in headless Chromium", () => {
@@ -425,6 +425,14 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
     { name: "bilateral-keep", audience: "keep", kind: "bilateral" },
     { name: "bilateral-counterparty", audience: "counterparty", kind: "bilateral" },
   ];
+  // The viewer's own lines each golden's script page draws (selector and count).
+  // Only the keep copy discloses an action naming its rail (card).
+  const VIEWER_LINES_ON = {
+    keep: '[data-rung="settlement"] 1',
+    counterparty: "",
+    "bilateral-keep": "",
+    "bilateral-counterparty": "",
+  };
   for (const g of GOLDENS) {
     it(`golden receipt-${g.name}: the script's page is the Python page (text, boxes, styles, pixels) at 390 and 1280, closed and open`, async () => {
       const page = execFileSync(PY, ["-m", "capsule_viewer.receipt", join(RECEIPTS, `${g.name}.bundle.json`), join(RECEIPTS, `${g.name}.verify.json`), g.audience, "L0"],
@@ -459,8 +467,7 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
             await tab.open(pathToFileURL(file).href, { width, media: "screen" });
             if (side === "script") {
               expect((await settle()).rendered).toBe("true");
-              // Only the keep copy discloses an action naming its rail (card).
-              expect(await tab.evaluate(DROP_SETTLEMENT), `${label}: settlement lines`).toBe(g.name === "keep" ? 1 : 0);
+              expect(await tab.evaluate(DROP_VIEWER_LINES), `${label}: the viewer's own lines`).toBe(VIEWER_LINES_ON[g.name]);
             }
             if (state === "open") await tab.evaluate(OPEN_ALL);
             const settled = await tab.call("Runtime.evaluate", { expression: SETTLE_FOR_SHOT, awaitPromise: true, returnByValue: true });

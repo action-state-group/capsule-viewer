@@ -158,21 +158,30 @@ export function withoutAmountCard(doc, html) {
 }
 
 /**
- * The settlement line, which the frozen twin never draws (capsule-viewer#383:
- * the x-deal-v0 buyer receipt says how the payment settled, by rail,
- * as evidencebook's deal view did), taken out of a script's model and render
- * so every other field and byte is still compared with the twin.
- * js-tests/receipt_settlement.test.js tests the line itself.
+ * The model fields of the lines the frozen twin never draws (capsule-viewer#383,
+ * Sherlock2's ruling on the deal-view lines the viewer gains): the settlement
+ * line (js-tests/receipt_settlement.test.js) and who the deal was with
+ * (js-tests/receipt_deal_view_lines.test.js).
  */
-export function withoutSettlement(model) {
+export const VIEWER_FIELDS = ["settlement", "counterparty_named"];
+/** Those lines' elements in a script's render. */
+export const VIEWER_LINES = ['[data-rung="settlement"]', '[data-rung="counterparty"]', '[data-rung="accepted"]'].join(", ");
+
+/**
+ * A script's model with the viewer's own lines (VIEWER_FIELDS) taken out, so
+ * every other field is still compared with the twin.
+ */
+export function withoutViewerFields(model) {
   const out = JSON.parse(JSON.stringify(model));
-  delete out.settlement;
-  if (out.receipt && typeof out.receipt === "object") delete out.receipt.settlement;
+  for (const field of VIEWER_FIELDS) {
+    delete out[field];
+    if (out.receipt && typeof out.receipt === "object") delete out.receipt[field];
+  }
   return out;
 }
-/** The script's level elements with the settlement line removed (see withoutSettlement). */
-export function withoutSettlementLine(nodes) {
-  for (const node of nodes) for (const line of node.querySelectorAll('[data-rung="settlement"]')) line.remove();
+/** The script's level elements with the viewer's own lines (VIEWER_LINES) removed, so every other byte is still compared. */
+export function withoutViewerLines(nodes) {
+  for (const node of nodes) for (const line of node.querySelectorAll(VIEWER_LINES)) line.remove();
   return nodes;
 }
 

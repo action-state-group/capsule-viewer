@@ -702,6 +702,10 @@
     "deal.top.all.no_statement": "No one has said yet whether the terms were met",
     "deal.top.all.agreed_so_far": "Both sides say the same so far; still open to dispute",
     "deal.top.all.agreed": "Both sides say the same",
-    "deal.top.all.uncontested": "One side has said, and the other has not contested it so far"
+    "deal.top.all.uncontested": "One side has said, and the other has not contested it so far",
+    "counterparty.with": "With {who}, as this page checked against what the deal sealed for them.",
+    "counterparty.unchecked": "Some of who this exchange was with could not be checked against what the deal sealed, so this page does not show it.",
+    "accepted.words": "Their words accepting the offer, checked in this page against what was sealed: “{text}”",
+    "accepted.unchecked": "Their words accepting the offer could not be checked against what was sealed, so this page does not show them."
   }
 }

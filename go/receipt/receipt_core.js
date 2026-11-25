@@ -623,6 +623,208 @@
     return graph.paymentPreimageCheck(paymentRef, preimage);
   }
 
+  // ---- who the deal was with, and their words accepting (capsule-viewer#383, line 3) ----
+  //
+  // A copy's sealed report may open who the deal was with
+  // (counterparty_openings: the deal's key and, per step, the raw payee,
+  // name, domain, phone or email) and what the other party wrote accepting
+  // (acceptance_openings: each acceptance's words under the nonce they were
+  // committed with), as capsulectl writes them on the holder's own copy
+  // (evidencebook capsulectl/internal/deal/deal_counterparty_openings.go). The
+  // page recomputes each one against what the step sealed, as capsulectl did
+  // for its own deal view (deal_page_openings.go): a name against the keyed
+  // fingerprint the record carries (dealprofile.Fingerprint, HMAC-SHA256 over
+  // the normalized value), the words against the acceptance's
+  // content_commitment (checkOpening). A value that does not recompute here
+  // is never shown. The line is drawn whenever the copy discloses an opening:
+  // which copies may carry them is capsulectl's rule where it writes a copy.
+  var COUNTERPARTY_KINDS = ["payee", "name", "domain", "phone", "email"];
+  var ACCEPTANCE_KIND = "counterparty-acceptance-observation";
+
+  function hexBytes(h) {
+    if (typeof h !== "string" || h.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(h)) return null;
+    var out = new Uint8Array(h.length / 2);
+    for (var i = 0; i < out.length; i++) out[i] = parseInt(h.slice(2 * i, 2 * i + 2), 16);
+    return out;
+  }
+  function concatBytes(a, b) {
+    var out = new Uint8Array(a.length + b.length);
+    out.set(a);
+    out.set(b, a.length);
+    return out;
+  }
+  // HMAC-SHA256 (RFC 2104) of msg under key, as lowercase hex.
+  function hmacHex(key, msg) {
+    var k = new Uint8Array(64);
+    k.set(key.length > 64 ? hexBytes(sha256Hex(key)) : key);
+    var inner = new Uint8Array(64), outer = new Uint8Array(64);
+    for (var i = 0; i < 64; i++) { inner[i] = k[i] ^ 0x36; outer[i] = k[i] ^ 0x5c; }
+    return sha256Hex(concatBytes(outer, hexBytes(sha256Hex(concatBytes(inner, msg)))));
+  }
+
+  // The normalization dealprofile.Normalize takes each identifier through
+  // before its fingerprint (evidencebook dealprofile/keys.go), as far as a page
+  // can follow it: each function returns the forms the sealed fingerprint may
+  // be over (empty when this page cannot normalize the value, which then
+  // reads as not checked, never as a match). Go's \s, \d and \D are ASCII.
+  var GO_SPACE = "\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+  var GO_TRIM = new RegExp("^[" + GO_SPACE + "]+|[" + GO_SPACE + "]+$", "g");
+  var GO_FIELDS = new RegExp("[" + GO_SPACE + "]+");
+  var PHONE_EXTENSION = /[\t\n\f\r ]*(?:ext\.?|x|#)[\t\n\f\r ]*[0-9]+[\t\n\f\r ]*$/i;
+  var PAYEE_IS_PHONE = /^[\t\n\f\r ]*\+?[0-9\t\n\f\r ().-]{7,}[\t\n\f\r ]*$/;
+  var LEGAL_FORMS = ["llc", "inc", "ltd", "corp", "co", "company", "gmbh", "llp", "plc"];
+  var PUNCTUATION = (function () {
+    try { return new RegExp("\\p{P}", "gu"); } catch (e) { return null; }
+  })();
+  function nfc(s, form) { return typeof s.normalize === "function" ? s.normalize(form || "NFC") : null; }
+  function goTrim(s) { return s.replace(GO_TRIM, ""); }
+  // Go's strings.ToLower: each code point's simple lowercase mapping.
+  function goLower(s) {
+    return Array.from(s).map(function (c) { return c === "İ" ? "i" : c.toLowerCase(); }).join("");
+  }
+  // Full case folding (CaseFolding.txt, C and F), per code point, with
+  // Cherokee folded to its capitals as dealprofile's foldCase does.
+  function caseFold(s) {
+    return Array.from(s).map(function (c) {
+      if (c === "ı") return c;
+      if (c === "ẞ") return "ss";
+      return Array.from(c.toUpperCase().toLowerCase()).map(function (f) {
+        var cp = f.codePointAt(0);
+        if (cp >= 0xab70 && cp <= 0xabbf) return String.fromCodePoint(cp - 0xab70 + 0x13a0);
+        if (cp >= 0x13f8 && cp <= 0x13fd) return String.fromCodePoint(cp - 0x13f8 + 0x13f0);
+        return f;
+      }).join("");
+    }).join("");
+  }
+  function normPhone(v) {
+    v = nfc(v, "NFKC");
+    if (v === null) return [];
+    v = goTrim(v);
+    var at = v.search(PHONE_EXTENSION);
+    if (at >= 0) v = v.slice(0, at);
+    var digits = v.replace(/[^0-9]/g, "");
+    if (v.charAt(0) !== "+") {
+      if (digits.length === 10) digits = "1" + digits;
+      else if (!(digits.length === 11 && digits.charAt(0) === "1")) return [];
+    }
+    return digits.length < 8 || digits.length > 15 ? [] : ["+" + digits];
+  }
+  function normEmail(v) {
+    v = nfc(goTrim(v));
+    if (v === null) return [];
+    v = goLower(v);
+    var ats = v.split("@").length - 1;
+    return ats !== 1 || v.charAt(0) === "@" || v.charAt(v.length - 1) === "@" ? [] : [v];
+  }
+  // A domain's fingerprint is over its registrable domain (eTLD+1, from the
+  // public suffix list, which this page does not carry): every suffix of two
+  // or more labels is a candidate, so a match shows the value's registrable
+  // domain is the sealed one. A name in another script, or in punycode, is
+  // not normalized here (IDNA is not followed), so it reads as not checked.
+  function normDomain(v) {
+    v = nfc(goTrim(v));
+    if (v === null) return [];
+    v = goLower(v).replace(/^[a-z][a-z0-9+.-]*:\/\//, "");
+    var cut = v.search(/[\/?#]/);
+    if (cut >= 0) v = v.slice(0, cut);
+    v = v.slice(v.lastIndexOf("@") + 1).replace(/:[0-9]+$/, "").replace(/\.+$/, "");
+    var labels = v.split(".");
+    if (labels.length < 2) return [];
+    var ldh = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+    if (!labels.every(function (l) { return ldh.test(l) && l.slice(2, 4) !== "--"; })) return [];
+    var out = [];
+    for (var i = labels.length - 2; i >= 0; i--) out.push(labels.slice(i).join("."));
+    return out;
+  }
+  function normName(v) {
+    v = nfc(v);
+    if (v === null || PUNCTUATION === null) return [];
+    var toks = caseFold(v).replace(PUNCTUATION, " ").split(GO_FIELDS).filter(function (t) { return t !== ""; });
+    if (toks.length && toks[0] === "the") toks = toks.slice(1);
+    while (toks.length && LEGAL_FORMS.indexOf(toks[toks.length - 1]) >= 0) toks = toks.slice(0, -1);
+    return toks.length ? [toks.join(" ")] : [];
+  }
+  function normalized(kind, v) {
+    if (kind === "phone") return normPhone(v);
+    if (kind === "email") return normEmail(v);
+    if (kind === "domain") return normDomain(v);
+    if (kind === "name") return normName(v);
+    // A payee is an email, a phone or a name, read as dealprofile reads it.
+    if (v.indexOf("@") >= 0) return normEmail(v);
+    return PAYEE_IS_PHONE.test(v) ? normPhone(v) : normName(v);
+  }
+  // Whether value, as an identifier of kind, recomputes to the sealed fingerprint.
+  function fingerprintMatches(key, kind, value, want) {
+    try {
+      return normalized(kind, value).some(function (n) {
+        return hmacHex(key, utf8("x-deal-v0/fp\u0000" + kind + "\u0000" + n)) === want;
+      });
+    } catch (err) {
+      if (err instanceof NotCanonical) return false;
+      throw err;
+    }
+  }
+  // The keyed fingerprints a record seals for its counterparty: in its
+  // x-deal-v0 block or, in a typed record, its body.
+  function sealedCounterpartyIds(payload) {
+    var holders = [map(get(payload, EXTENSION)), map(get(payload, "body"))];
+    for (var i = 0; i < holders.length; i++) {
+      var ids = get(map(get(holders[i], "counterparty")), "ids");
+      if (isMap(ids)) return ids;
+    }
+    return {};
+  }
+
+  // The line's model, or null when the copy opens neither: `who` is the
+  // counterparty as the deal view named them (the payee, else the name,
+  // else the site, phone or email, then the site in brackets), from the
+  // values that recomputed; `unchecked` is true when any value did not;
+  // `accepted` lists each acceptance in order, its text only when it
+  // recomputed. A step named twice verifies no second entry for it.
+  function counterpartyOf(reader, raw) {
+    var hasWho = own(raw, "counterparty_openings"), hasAccepted = own(raw, "acceptance_openings");
+    if (!hasWho && !hasAccepted) return null;
+    var out = { who: null, unchecked: false, accepted: [] };
+    var cp = map(get(raw, "counterparty_openings"));
+    var key = hexBytes(get(cp, "key"));
+    var got = {}, seen = {};
+    seq(get(cp, "steps")).forEach(function (e) {
+      var entry = map(e);
+      var step = or(str(get(entry, "step")), "");
+      var payload = reader.headers.has(step) ? reader.payload(step) : null;
+      var ids = sealedCounterpartyIds(payload);
+      COUNTERPARTY_KINDS.forEach(function (kind) {
+        var value = get(entry, kind);
+        if (typeof value !== "string") return;
+        var want = str(get(ids, kind));
+        var ok = key !== null && key.length > 0 && truthy(want) && !own(seen, step + "\u0000" + kind) && fingerprintMatches(key, kind, value, want);
+        seen[step + "\u0000" + kind] = true;
+        // The last entry for a field decides it; one that did not recompute
+        // leaves the field unnamed rather than an earlier entry's value.
+        if (ok) got[kind] = value;
+        else {
+          delete got[kind];
+          out.unchecked = true;
+        }
+      });
+    });
+    var label = got.payee || got.name || got.domain || got.phone || got.email || null;
+    if (label !== null) out.who = got.domain && label !== got.domain ? label + " (" + got.domain + ")" : label;
+    var stepsSeen = {};
+    seq(get(raw, "acceptance_openings")).forEach(function (a) {
+      var opening = map(a);
+      var step = str(get(opening, "step"));
+      var c = committed(reader, step, function (p) {
+        var body = map(get(p, "body"));
+        return get(body, "kind") === ACCEPTANCE_KIND ? get(body, "content_commitment") : null;
+      }, get(opening, "nonce"), get(opening, "text"));
+      var first = step !== null && !own(stepsSeen, step);
+      if (step !== null) stepsSeen[step] = true;
+      out.accepted.push({ step: step, text: first && c.state === "opened" ? c.text : null });
+    });
+    return out;
+  }
+
   // A carried copy, verified by the page's runtime on its own.
   function pageMemberContext(bundle) {
     var graph = root.EvidenceGraph;
@@ -2277,6 +2479,7 @@
     var aud = model.report.audience;
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
+    if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     // Only a half capsulectl reported as verified is said; any other status,
     // or none, draws no line (a failed half fails the x-deal-v1 entry, which
@@ -2306,6 +2509,19 @@
     if (model.witnessed === "fail") return w("rung.witness_failed");
     if (model.witnessed === "withheld") return w("rung.unwitnessed");
     return w("rung.unreported");
+  };
+  // Who the deal was with and their words accepting (counterpartyOf): only
+  // what recomputed here is shown; anything else is said to be not shown.
+  P.counterpartyNamed = function (named) {
+    var self = this;
+    var out = [];
+    if (named.who !== null) out.push(this.p(w("counterparty.with", { who: named.who }), { "data-rung": "counterparty", "data-counterparty": "checked" }));
+    if (named.unchecked) out.push(this.p(w("counterparty.unchecked"), { class: "cv-tone--caution", "data-rung": "counterparty", "data-counterparty": "unchecked" }));
+    named.accepted.forEach(function (a) {
+      if (a.text !== null) out.push(self.p(w("accepted.words", { text: a.text }), { "data-rung": "accepted", "data-accepted": a.step }));
+      else out.push(self.p(w("accepted.unchecked"), { class: "cv-tone--caution", "data-rung": "accepted", "data-accepted": "unchecked" }));
+    });
+    return out;
   };
   // The settlement line (settlementOf): its rail and proof, then the size band when there is one.
   P.settlement = function (line) {
@@ -3759,21 +3975,33 @@
       if (asked.length) return Promise.all(asked).then(function () { return buildChecked(context); });
       return buildChecked(context);
     };
-    // The settlement line (see settlementOf), on the receipt model the copy notes draw from.
-    var withSettlement = function (v, receipt) {
-      var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
-      if (line !== null) receipt.settlement = line;
+    // The lines the viewer draws and the frozen Python twin never does
+    // (capsule-viewer#383, Sherlock2's ruling on the deal-view lines), on the
+    // receipt model the copy notes draw from: the settlement line (see
+    // settlementOf) and who the deal was with (counterpartyOf).
+    var withViewerLines = function (v, receipt) {
+      if (settles) {
+        var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
+        if (line !== null) receipt.settlement = line;
+      }
+      var reader = new Reader(v);
+      var named = counterpartyOf(reader, reader.sealedReport()[1]);
+      if (named !== null) receipt.counterparty_named = named;
     };
     var buildChecked = function (context) {
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
-      if (kind === "seller") return buildSeller(v, e.audience);
+      if (kind === "seller") {
+        var sale = buildSeller(v, e.audience);
+        withViewerLines(v, sale.receipt);
+        return sale;
+      }
       // A seller's copy, by its packaging or by its own sealed records, is
       // never shown as a buyer's receipt.
       if (sellerKindEngaged(v) || sealedSide(v) === "seller") throw new Unavailable("a seller's copy is the seller receipt's");
       var receipt = buildReceipt(v, e.audience);
-      withSettlement(v, receipt);
+      withViewerLines(v, receipt);
       return receipt;
     };
     var declined = function (err) {
