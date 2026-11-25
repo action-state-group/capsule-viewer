@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.27.2 and go 0.27.2 (2026-11-25)
+
+Both state viewer 0.27.2: `ts/v0.27.2`, then `go/v0.27.2` on the commit that ships its page runtime. A standalone report the page checked itself says so, and a failing one reads as not verified (#411); an x-deal-v1 receipt a page cannot check says so and how to check it (#407); the History card fixes from the ARD hand run (#403); a test that waited a fixed delay (#409). evidencebook#880's settlement report takes this release.
+
 ### Fixed
 
 - A deal copy whose standalone report this page checked itself (#398, #410) no longer says "capsulectl verify reported its signature check as: pass. This page did not check the signature itself." It says what the page checked: "This report's text is carried in the file outside the log. This page checked it itself: signed by the deal's last step, matching its Capsule, and made at this deal's checkpoint." (`summary.standalone.here`; Sherlock2). A copy drawn from capsulectl's report keeps `summary.standalone`. A copy whose standalone report fails the page's check now reads as a receipt that did not pass its checks: `did_not_verify` from `checkReceipt`/`renderReceipt`, and "This receipt did not pass its checks" in a report. Before, it read as having no module, as if it were not there (Sherlock2). An emitted receipt page's own top level still draws such a copy as a verified bundle; that predates #398 and is #412.
