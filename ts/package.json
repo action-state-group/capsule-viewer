@@ -19,6 +19,10 @@
     "./history-view": {
       "types": "./dist/history-view.d.ts",
       "import": "./dist/history-view.js"
+    },
+    "./receipt": {
+      "types": "./dist/receipt.d.ts",
+      "import": "./dist/receipt.js"
     }
   },
   "engines": {
