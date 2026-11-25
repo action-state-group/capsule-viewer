@@ -56,7 +56,8 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    (`ts-full.yml`, Node 22 and 24) runs nightly and on `main`, after the tag
    is cut on the merge. So before merging, run
    `gh workflow run ts-full.yml --ref release/<package>-v<version>` and merge
-   only when it passes.
+   only when it passes on the branch's current head; run it again after any
+   push to the branch, including an update from `main`.
 3. **Merge.** [Release · Tag](https://github.com/action-state-group/capsule-viewer/actions/workflows/tag-release.yml)
    runs on the merge. For each package whose version changed it creates the
    tag and GitHub Release on the merge commit and dispatches the package's
@@ -88,7 +89,9 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    module's bundle, built the same way by `capsule_viewer.adjudications.module_slot`.
 
 Bumping a version by hand in any pull request releases it the same way when it
-merges, so run the same workflow on its branch and merge only when it passes.
+merges, so run the same workflow on its branch and merge only when it passes
+on the branch's current head; run it again after any push to the branch,
+including an update from `main`.
 
 If a publish fails after the tag exists:
 
