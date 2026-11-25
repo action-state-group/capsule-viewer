@@ -4,6 +4,10 @@ import {
   type StandaloneReportFailure,
 } from "./deal-standalone-report.js";
 import {
+  verifierReportReading,
+  withVerifierReport,
+} from "./verifier-report.js";
+import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
   BOOK_PAYLOADS_EXTENSION,
   buildVerifiedBundleContext,
@@ -1101,9 +1105,14 @@ function renderExtensionTable(
 // A deal copy's standalone report that failed this page's own check
 // (#398, #412): one line per failed condition, in Sherlock2's words, in the
 // list of what failed on this page.
-const STANDALONE_REPORT_FAILED: Readonly<
-  Record<StandaloneReportFailure, string>
-> = {
+/** What failed on the page: its own report check's conditions, or capsulectl's reading (verifier-report.ts). */
+type PageReportFailure = StandaloneReportFailure | "verifier" | "verdict";
+const STANDALONE_REPORT_FAILED: Readonly<Record<PageReportFailure, string>> = {
+  verifier:
+    "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
+  // Filled with the verdict capsulectl reported (standaloneReportLine).
+  verdict:
+    "Didn't verify: capsulectl deal verify reported this bundle as {verdict}.",
   report:
     "Didn't verify: the deal report carried outside the log is not a report of this deal.",
   second:
@@ -1116,6 +1125,15 @@ const STANDALONE_REPORT_FAILED: Readonly<
     "Didn't verify: the deal report carried outside the log was not made at this deal's checkpoint.",
 };
 const STANDALONE_REPORT_CHECK = "deal-report-";
+const standaloneReportLine = (
+  failure: PageReportFailure,
+  verdict: string | undefined,
+): string =>
+  // A function replacement, so no "$" in the verdict is read as a pattern.
+  STANDALONE_REPORT_FAILED[failure].replace(
+    "{verdict}",
+    () => verdict ?? "not valid",
+  );
 
 // The page's own checks in up to three lists (presentation contract section
 // 6.1): what ran here and passed, what ran here and failed, and what the
@@ -1127,7 +1145,8 @@ function renderCheckLists(
   host: HTMLElement,
   lists: VerificationCheckLists,
   verifierHint: string | undefined,
-  reportFailed: readonly StandaloneReportFailure[] = [],
+  reportFailed: readonly PageReportFailure[] = [],
+  verdict?: string,
 ): void {
   const groups = [
     ["page", CHECKED_ON_THIS_PAGE, lists.page as readonly string[]],
@@ -1154,11 +1173,10 @@ function renderCheckLists(
       const item = element(
         "li",
         id.startsWith(STANDALONE_REPORT_CHECK)
-          ? STANDALONE_REPORT_FAILED[
-              id.slice(
-                STANDALONE_REPORT_CHECK.length,
-              ) as StandaloneReportFailure
-            ]
+          ? standaloneReportLine(
+              id.slice(STANDALONE_REPORT_CHECK.length) as PageReportFailure,
+              verdict,
+            )
           : verificationCheckWords(
               id as VerificationCheckLists["page"][number],
               which === "not-checked" ? "notChecked" : which,
@@ -1213,7 +1231,8 @@ async function renderVerificationPage(
   contract: PageContract,
   l3: { readonly words: Words; readonly voice: RecordVoice } | undefined,
   checkedId: string,
-  reportFailed: readonly StandaloneReportFailure[] = [],
+  reportFailed: readonly PageReportFailure[] = [],
+  verdict?: string,
 ): Promise<string> {
   const { bundle, verification: verified } = context;
   // The bundle's own checks passed but its standalone report did not: the
@@ -1348,7 +1367,7 @@ async function renderVerificationPage(
   renderCompletenessStatement(page, model.completeness);
   renderChecks(page, model.checks);
   renderExtensions(page, extensions, presentationRefusalNotices(refused));
-  renderCheckLists(page, model.checkLists, verifierHint, reportFailed);
+  renderCheckLists(page, model.checkLists, verifierHint, reportFailed, verdict);
   page.append(element("p", model.verifyIndependentlyLine));
   // Folded into one section, closed for a bundle that verified; its summary
   // line keeps the counts and what was not checked in view.
@@ -2821,6 +2840,15 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly receipts?: Readonly<Record<string, DealReceiptEntry>>;
   /**
+   * capsulectl's own report of this bundle (`capsulectl deal verify --bundle`,
+   * `capsule-cli-result/v1`), for an x-deal-v1 copy whose report this page
+   * cannot check itself (#405). Read only when it is this bundle's
+   * (verifier-report.ts): a pass lets the receipt draw, saying capsulectl
+   * reported it and the page did not check it; a fail refuses the copy; a
+   * report for another bundle is ignored.
+   */
+  readonly verifierReport?: unknown;
+  /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
    */
@@ -3495,17 +3523,38 @@ async function openReceipt(
 }
 
 async function renderVerifiedContext(
-  context: VerifiedBundleContext,
+  checkedContext: VerifiedBundleContext,
   root: HTMLElement,
   options: RenderEvidenceGraphOptions,
 ): Promise<void> {
+  // capsulectl's report of an x-deal-v1 copy (#405 route 1): a pass is shown
+  // as capsulectl's, a fail refuses the copy, any other report is ignored.
+  const reading =
+    options.verifierReport === undefined ||
+    !bundleVerified(checkedContext.verification)
+      ? null
+      : verifierReportReading(checkedContext, options.verifierReport);
+  // The page's own verification is the checked context's; only the receipt
+  // module reads capsulectl's passing report (resolution and its model).
+  const context = checkedContext;
+  const moduleContext =
+    reading?.kind === "pass" ? withVerifierReport(context) : context;
+  const verdictLine =
+    reading?.kind === "fail" && reading.why === "verdict"
+      ? reading.verdict
+      : undefined;
   const { bundle, verification } = context;
   // A bundle whose own checks pass but whose deal copy's standalone report
   // fails this page's check is refused like one that did not verify: no
   // module, no fallback page, AAC's refused banner, and the failed
   // conditions in the checks (#412).
-  const reportFailed = bundleVerified(verification)
-    ? ((await dealStandaloneReportFailures(bundle)) ?? [])
+  const reportFailed: PageReportFailure[] = bundleVerified(verification)
+    ? [
+        ...(reading?.kind === "fail"
+          ? ([reading.why === "report" ? "verifier" : "verdict"] as const)
+          : []),
+        ...((await dealStandaloneReportFailures(bundle)) ?? []),
+      ]
     : [];
   const verified = bundleVerified(verification) && reportFailed.length === 0;
   const registry = options.registry ?? defaultRegistry;
@@ -3517,7 +3566,7 @@ async function renderVerifiedContext(
       reportFailed.length > 0
         ? { kind: "refusal" }
         : await registry.resolve(
-            context,
+            moduleContext,
             options.audience ?? DEFAULT_AUDIENCE,
             options.format ?? DEFAULT_FORMAT,
           );
@@ -3543,7 +3592,7 @@ async function renderVerifiedContext(
   if (resolution.kind === "module")
     selected = {
       module: resolution.module,
-      model: await resolution.module.buildModel(context),
+      model: await resolution.module.buildModel(moduleContext),
     };
   // The section registry is resolved the same way, after the page and only
   // for a verified bundle whose page resolved: a section never stands in for
@@ -4084,6 +4133,7 @@ async function renderVerifiedContext(
       : undefined,
     checkedSectionId(root),
     reportFailed,
+    verdictLine,
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
