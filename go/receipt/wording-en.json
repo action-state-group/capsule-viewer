@@ -200,6 +200,7 @@
     "sides.case.limit.shared": "One side's record only: the other side's record is not shared. That is the limit they set on what they share, and it says nothing against the deal.",
     "sides.case.not_agreed": "Not stamped by both: the two records do not show one agreement.",
     "sides.ours": "Your side · in your book",
+    "sides.ours.shared": "The report owner's side · in their book",
     "sides.theirs": "Their side · as received",
     "sides.half": "{role}'s side · as received",
     "sides.missing.heading": "Their side",

@@ -1794,7 +1794,10 @@
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
   };
   // module.py's actions: after L1's drilldown, on the holder's own page only.
+  // They are prompts for the owner's own agent, so a copy carried in a report,
+  // read by anyone the owner shared it with, has none (Sherlock2, #386).
   P.actions = function (kase) {
+    if (this.carrier === "report") return null;
     var d = this.d;
     var items = [d.el("li", { class: "cv-actions__heading" }, [w("actions.heading")])].concat(ACTIONS[kase].map(function (k) {
       return d.el("li", { "data-action": k.replace(/^actions\./, "") }, [w(k)]);
@@ -2613,7 +2616,9 @@
       var section = kit.section(heading(party), [levels.headline].concat(levels.notes), 3);
       var attrs = { "data-party": party.member, "data-cut": party.audience };
       // On the holder's page their own copy is ours; every other copy is theirs, as received.
-      if (party.audience === "keep") return dr.half("ours", w("sides.ours"), [section], attrs);
+      // In a report the reader may not be the owner, so the owner's side is
+      // named, not "your" (Sherlock2, #386).
+      if (party.audience === "keep") return dr.half("ours", w(dr.carrier === "report" ? "sides.ours.shared" : "sides.ours"), [section], attrs);
       var label = keep ? w("sides.theirs") : w("sides.half", { role: party.role || w("party.role_undeclared") });
       return dr.half("theirs", label, [section], attrs);
     });
