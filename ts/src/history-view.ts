@@ -831,6 +831,11 @@ export function buildHistoryView(
         r.refuse(`${path}.id`, "is listed twice");
       if (id && status) checks.push({ id, status, unregistered });
     });
+    // A deal page's rows carry RECORDED only when the deal report check
+    // passed; a page that does not list the check did not run it, and the
+    // checks list says so once (Sherlock2, F10).
+    if (kind === "deal" && !checks.some((x) => x.id === "deal_report"))
+      checks.push({ id: "deal_report", status: "not_run" });
   } else r.refuse("input.checks", "is not a list");
 
   const periods: {
@@ -1036,6 +1041,9 @@ export function buildHistoryView(
   const statusOf = (id: string): CheckStatus | undefined =>
     checks.find((c) => c.id === id)?.status;
   const dealRecorded = statusOf("deal_report") === "pass";
+  // RECORDED is drawn on a row only when the deal_report check passed. When
+  // it did not run, the checks list says so once for the card (Sherlock2,
+  // F10); when it failed, the page draws no rows at all.
   const witnessFailed = statusOf("witness") === "fail";
   const secondFailed = statusOf("second_signature") === "fail";
   // The seal's first lines say how the records are locked; only checks that
@@ -1047,7 +1055,10 @@ export function buildHistoryView(
         statusOf("consistency") === "pass"
       : dealRecorded;
 
-  // Header.
+  // Header. A card titled with its holder's name (header.title.person) names
+  // the holder in its callout too, from the same field (Sherlock2, F10).
+  const personTitle =
+    kind !== "checkpoint" && reader !== "owner" && audienceKind !== "shared";
   let title: string;
   if (kind === "checkpoint")
     title =
@@ -1278,14 +1289,7 @@ export function buildHistoryView(
         el(
           "ul",
           { class: "cvh-stamps" },
-          dealRecorded
-            ? stamp("stamp.recorded", true, "passed", null)
-            : stamp(
-                "stamp.recorded",
-                false,
-                "not_checked",
-                say("slot.unchecked"),
-              ),
+          dealRecorded ? stamp("stamp.recorded", true, "passed", null) : null,
           ...slotStamps(x),
         ),
       );
@@ -1359,7 +1363,9 @@ export function buildHistoryView(
               ? say("callout.checkpoints")
               : picked
                 ? say("callout.deals.picked", { name: name ?? "" })
-                : say("callout.deals"),
+                : personTitle
+                  ? say("callout.deals.named", { name: name ?? "" })
+                  : say("callout.deals"),
           ),
           kind === "checkpoint" && rows.length > 0
             ? el("p", null, say("callout.checkpoints.time"))

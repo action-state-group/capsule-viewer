@@ -305,14 +305,86 @@ describe("the stand-in's round 1 (PR 249)", () => {
     expect(buildHistoryView(m, overlay).ok).toBe(false);
   });
 
-  it("fills RECORDED only when the deal report check passed", () => {
+  // RECORDED per row by the deal report check (Sherlock2, F10): filled when
+  // it passed, not drawn when it did not run (the checks list says that once
+  // for the card), and a failed check draws no rows at all.
+  const withDealReport = (status: string): HTMLElement => {
+    const m = clone(vectors.cases["muse-owner"]) as Json;
+    for (const c of m["checks"] as Json[])
+      if (c["id"] === "deal_report") c["status"] = status;
+    return page(m, overlay);
+  };
+  const recorded = (p: HTMLElement): Element[] =>
+    [...p.querySelectorAll('[data-history="row"] .cvh-stamp')].filter((e) =>
+      e.textContent?.startsWith("RECORDED"),
+    );
+
+  it("a row's RECORDED stamp follows the deal report check: filled, not drawn, or no rows", () => {
+    const rows = ((vectors.cases["muse-owner"] as Json)["rows"] as Json[])
+      .length;
+    const passed = withDealReport("pass");
+    expect(passed.querySelectorAll('[data-history="row"]')).toHaveLength(rows);
+    expect(recorded(passed)).toHaveLength(rows);
+    for (const e of recorded(passed))
+      expect(e.getAttribute("data-filled")).toBe("yes");
+    const notRun = withDealReport("not_run");
+    expect(notRun.querySelectorAll('[data-history="row"]')).toHaveLength(rows);
+    expect(recorded(notRun)).toHaveLength(0);
+    const failed = withDealReport("fail");
+    expect(failed.querySelectorAll('[data-history="row"]')).toHaveLength(0);
+  });
+
+  // The callout names the card's holder exactly when the title does
+  // (header.title.person), from the same field (Sherlock2, F10).
+  const callout = (p: HTMLElement): string =>
+    p.querySelector('[data-history="does-not-show"]')?.textContent ?? "";
+  it("a card titled with its holder's name names the holder in its callout; other cards say this side", () => {
+    const person = clone(vectors.cases["muse-picked-shared"]) as Json;
+    delete person["picked"];
+    person["audience"] = { kind: "anyone" };
+    const named = page(person);
+    expect(named.querySelector(".cvh-title, h1")?.textContent).toContain(
+      "History · Steven",
+    );
+    expect(callout(named)).toContain(
+      "Each deal's outcome here is what Steven recorded, not a confirmed outcome.",
+    );
+    const shared = clone(vectors.cases["muse-picked-shared"]) as Json;
+    delete shared["picked"];
+    expect(callout(page(shared))).toContain("what this side recorded");
+    expect(callout(page(clone(vectors.cases["muse-owner"]) as Json))).toContain(
+      "what this side recorded",
+    );
+  });
+
+  it("a failed deal report check: the hero says it once, no rows and no callout", () => {
+    const p = withDealReport("fail");
+    expect(p.querySelector('[data-history="hero"]')?.textContent).toContain(
+      "This history didn't verify, so this page shows none of it.",
+    );
+    expect(p.querySelectorAll('[data-history="row"]')).toHaveLength(0);
+    expect(p.querySelector('[data-history="does-not-show"]')).toBeNull();
+  });
+
+  it("a deal page that does not list the deal report check lists it once as not run", () => {
+    const m = clone(vectors.cases["muse-owner"]) as Json;
+    m["checks"] = (m["checks"] as Json[]).filter(
+      (c) => c["id"] !== "deal_report",
+    );
+    const p = page(m, overlay);
+    expect(p.querySelectorAll('[data-history="row"]').length).toBeGreaterThan(
+      0,
+    );
+    expect(recorded(p)).toHaveLength(0);
+    expect(
+      p.textContent?.split("Each deal was read with its own report").length,
+    ).toBe(2);
+  });
+
+  it("with only the deal report check, not run, the page draws no seal and no checked note", () => {
     const m = clone(vectors.cases["muse-owner"]) as Json;
     m["checks"] = [{ id: "deal_report", status: "not_run" }];
     const p = page(m, overlay);
-    for (const e of p.querySelectorAll(".cvh-stamp")) {
-      if (e.textContent?.startsWith("RECORDED"))
-        expect(e.getAttribute("data-filled")).toBe("no");
-    }
     expect(p.querySelector(".cvh-seal-title")).toBeNull();
     expect(p.textContent).not.toContain("did not check how these records");
     expect(p.textContent).not.toContain("These checks");

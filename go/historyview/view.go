@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -598,6 +599,12 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				checks = append(checks, check{id: id, status: status, unreg: unreg})
 			}
 		}
+		// A deal page's rows carry RECORDED only when the deal report check
+		// passed; a page that does not list the check did not run it, and the
+		// checks list says so once (Sherlock2, F10).
+		if kind == "deal" && !slices.ContainsFunc(checks, func(x check) bool { return x.id == "deal_report" }) {
+			checks = append(checks, check{id: "deal_report", status: "not_run"})
+		}
 	} else {
 		r.refuse("input.checks", "is not a list")
 	}
@@ -827,6 +834,9 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		verdictKey, chipKey = "verdict.pass.all", "chip.signatures.pass.all"
 	}
 	dealRecorded := statusOf("deal_report") == "pass"
+	// RECORDED is drawn on a row only when the deal_report check passed. When
+	// it did not run, the checks list says so once for the card (Sherlock2,
+	// F10); when it failed, the page draws no rows at all.
 	witnessFailed := statusOf("witness") == "fail"
 	secondFailed := statusOf("second_signature") == "fail"
 	lockChecked := dealRecorded
@@ -1061,13 +1071,11 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				parts = append(parts, *x.money)
 			}
 			parts = append(parts, say("row.opened", "at", minuteOf(x.opened)), say("row.last", "at", minuteOf(x.last)))
-			var recorded *element
+			var stamps []any
 			if dealRecorded {
-				recorded = stamp("stamp.recorded", true, "passed", nil)
-			} else {
-				recorded = stamp("stamp.recorded", false, "not_checked", str(say("slot.unchecked")))
+				stamps = append(stamps, stamp("stamp.recorded", true, "passed", nil))
 			}
-			stamps := append([]any{recorded}, slotStamps(x)...)
+			stamps = append(stamps, slotStamps(x)...)
 			items = append(items, el("li", attrs("class", "cvh-row", "data-history", "row"),
 				el("p", attrs("class", "cvh-row-title"), x.asked),
 				el("p", attrs("class", "cvh-row-detail"), strings.Join(parts, " · ")),
@@ -1111,6 +1119,10 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			text = say("callout.checkpoints")
 		case picked:
 			text = say("callout.deals.picked", "name", nameOr())
+		case reader_ != "owner" && audienceKind != "shared":
+			// A card titled with its holder's name (header.title.person) names
+			// the holder in its callout too, from the same field (Sherlock2, F10).
+			text = say("callout.deals.named", "name", nameOr())
 		default:
 			text = say("callout.deals")
 		}
