@@ -13580,8 +13580,14 @@ ${body}
     const entry = extensions2.map(obj2).find((e) => e["kind"] === DEAL_V12 && e["report"] === "standalone");
     if (entry === void 0) return null;
     if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
+    const halfStatus = obj2(entry["counterparty_half"])["status"];
+    const pass2 = {
+      kind: "pass",
+      ...typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {},
+      ...isObj2(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}
+    };
     const verdict2 = r["verdict"];
-    if (verdict2 === "VALID") return { kind: "pass" };
+    if (verdict2 === "VALID") return pass2;
     const coverage = obj2(r["interval_coverage"]);
     const findings = coverage["findings"];
     if (verdict2 === "INCOMPLETE" && coverage["status"] === "withheld" && Array.isArray(findings) && findings.length === 1 && findings[0] === "selection_not_checkable" && [
@@ -13590,21 +13596,26 @@ ${body}
       "checkpoint",
       "producer_signatures"
     ].every((claim) => obj2(r[claim])["status"] === "pass"))
-      return { kind: "pass" };
+      return pass2;
     return {
       kind: "fail",
       why: "verdict",
       verdict: typeof verdict2 === "string" && verdict2 !== "" ? verdict2 : "not valid"
     };
   }
-  function withVerifierReport(context) {
+  function withVerifierReport(context, reading = { kind: "pass" }) {
     const extensions2 = [
       ...context.verification.extensions,
       {
         kind: DEAL_V12,
         status: "pass",
         report: "standalone",
-        integrityCovered: true
+        integrityCovered: true,
+        // The other party's half, as capsulectl reported it (x-deal-v1-counterparty-half).
+        ...reading.counterpartyHalf === void 0 ? {} : { counterparty_half: { status: reading.counterpartyHalf } },
+        // The holder's own book's witness time, as capsulectl reported it; the
+        // receipt module reads only its status, witness and at.
+        ...reading.witnessed === void 0 ? {} : { witnessed: reading.witnessed }
       }
     ];
     return {
@@ -18088,7 +18099,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("cf31a173f04f7b33e5168c7212ca64d02bafa608");
+    return commitPrefix("ea8f4e5031e6d1271526a6d25edc9a886c9d73c2");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -21358,11 +21369,18 @@ ${key}`);
   }
   var WITNESS_NOTICE_LINES = {
     "not-witnessed": "No witness this verifier trusts has vouched for this log: this file checks only against its holder's own signatures. Without such a receipt for its checkpoint, it could be a private copy of the log.",
-    "witness-unreported": "No witness result: none was reported to this page, so it does not show whether any witness has seen this log. What it shows was checked only against its holder's own signatures."
+    "witness-unreported": "No witness result: none was reported to this page, so it does not show whether any witness has seen this log. What it shows was checked only against its holder's own signatures.",
+    // Every x-deal-v1 page: no x-deal-v1 copy ever carries witness evidence
+    // (u219), so the page speaks of this file, never of the holder's log
+    // (Sherlock2, evidencebook#935).
+    "file-no-receipt": "This file carries no witness receipt, so this page could not check a time-stamp itself."
   };
   function witnessNotice(bundle, verified) {
     const status2 = witnessStatus(bundle, verified);
     if (status2 === "verified" || status2 === "invalid") return void 0;
+    const extensions2 = isObject3(bundle) ? bundle.extensions : void 0;
+    if (isObject3(extensions2) && "x-deal-v1" in extensions2)
+      return "file-no-receipt";
     return verified.strict === void 0 ? "witness-unreported" : "not-witnessed";
   }
   function witnessLine(bundle, verified, w = DEFAULT_WORDS.lines) {
@@ -27572,6 +27590,8 @@ ${pad.repeat(depth)}`;
     table3.append(thead, body);
     host.append(table3);
   }
+  var REPORTED_BY_CAPSULECTL = "Reported by capsulectl verify";
+  var isCapsulectlReading = (f) => f === "verifier" || f === "verdict";
   var STANDALONE_REPORT_FAILED = {
     verifier: "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
     // Filled with the verdict capsulectl reported (standaloneReportLine).
@@ -27598,8 +27618,16 @@ ${pad.repeat(depth)}`;
         FAILED_ON_THIS_PAGE,
         [
           ...lists.failed,
-          ...reportFailed.map((f) => `${STANDALONE_REPORT_CHECK}${f}`)
+          ...reportFailed.filter((f) => !isCapsulectlReading(f)).map((f) => `${STANDALONE_REPORT_CHECK}${f}`)
         ]
+      ],
+      // A heading names only what the page itself checked: capsulectl's
+      // reading has its own, and "Failed on this page" is left out when it is
+      // the only reason (Sherlock2, #417).
+      [
+        "capsulectl",
+        REPORTED_BY_CAPSULECTL,
+        reportFailed.filter(isCapsulectlReading).map((f) => `${STANDALONE_REPORT_CHECK}${f}`)
       ],
       [
         "not-checked",
@@ -27761,9 +27789,10 @@ ${pad.repeat(depth)}`;
       ...model,
       checkLists: {
         ...model.checkLists,
+        // capsulectl's reading is not a check on this page: never counted as one.
         failed: [
           ...model.checkLists.failed,
-          ...reportFailed.map((f) => `${STANDALONE_REPORT_CHECK}${f}`)
+          ...reportFailed.filter((f) => !isCapsulectlReading(f)).map((f) => `${STANDALONE_REPORT_CHECK}${f}`)
         ]
       }
     });
@@ -29102,7 +29131,7 @@ ${pad.repeat(depth)}`;
   async function renderVerifiedContext(checkedContext, root, options) {
     const reading = options.verifierReport === void 0 || !bundleVerified(checkedContext.verification) ? null : verifierReportReading(checkedContext, options.verifierReport);
     const context = checkedContext;
-    const moduleContext = reading?.kind === "pass" ? withVerifierReport(context) : context;
+    const moduleContext = reading?.kind === "pass" ? withVerifierReport(context, reading) : context;
     const verdictLine = reading?.kind === "fail" && reading.why === "verdict" ? reading.verdict : void 0;
     const { bundle, verification } = context;
     const reportFailed = bundleVerified(verification) ? [
