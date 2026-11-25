@@ -35,6 +35,9 @@ const PACK_ID = "capsuleviewer.receipt.wording.en/v1";
 //   their words accepting (capsulectl writes them on the holder's own copy
 //   since evidencebook-deal#56; these fixtures predate it), so none draws it,
 //   and no counterparty copy ever does.
+// - authority_sealed: the seller's own copies of a deal sealed in typed
+//   records, the only reports carrying AUTHORITY blocks (capsulectl writes
+//   them on the holder's own copy only); every act in them is covered.
 // - after_yes: every x-deal-v0 copy with an act or a withheld step. Only the
 //   main-standalone copies place their steps in a book (their records carry
 //   evidence_record_header): the keep copies pass, approved by the user; the
@@ -50,6 +53,11 @@ const VIEWER_LINES_DRAWN = {
     "main-standalone-keep @keep unilateral": "missing",
   },
   counterparty_named: {},
+  authority_sealed: {
+    "main-seller-keep @keep seller": "2 blocks, 0 uncovered",
+    "seller-keep @keep seller": "4 blocks, 0 uncovered",
+    "seller-producer-keep @keep seller": "2 blocks, 0 uncovered",
+  },
   after_yes: {
     "adjudicator @adjudicator unilateral": "unplaced",
     "buyer-producer-counterparty @counterparty unilateral": "unplaced",
@@ -79,6 +87,7 @@ const VIEWER_LINES_DRAWN = {
 const SUMMARY = {
   settlement: (line) => line.state,
   counterparty_named: (named) => named,
+  authority_sealed: (a) => `${a.blocks.length} blocks, ${a.blocks.filter((b) => !b.covered).length} uncovered`,
   after_yes: (yes) => [yes.state, yes.why, yes.act && yes.act.step.slice(0, 8), ...yes.approvers].filter((x) => x !== undefined).join(" "),
 };
 

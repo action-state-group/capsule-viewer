@@ -7,6 +7,8 @@
 //   recomputed against what the deal sealed.
 // - line 4: each act came after the holder's yes, recomputed from the order
 //   of the copy's deal log.
+// - line 5: the sealed report's authority blocks, shown as the holder's
+//   sealed text, never as the page's check.
 //
 // Where a fixture carries no such data, it is STUBBED onto the stand-in
 // context of a real fixture (the sealed report's members, a record's
@@ -359,5 +361,73 @@ describe("line 4: each act came after the holder's yes (#383)", () => {
       expect(model, name).toEqual({ state: "unplaced", approvers: [] });
       expect(text, name).toBe("Each act came after your yes: not checked; this copy's steps have no place in a book's log.");
     }
+  });
+});
+
+// ---- line 5 -----------------------------------------------------------------
+
+describe("line 5: the authority blocks, as the holder's report states them (#383)", () => {
+  const section = (host) => host.L1.querySelector('[data-authority="sealed"]');
+
+  it("shows the seller's own copy's blocks as sealed text, each layer with its step", async () => {
+    const { receipt, host } = await draw("seller-keep", { kind: "seller" });
+    expect(receipt.authority_sealed.order).toBe("Each action's layers are listed in the order it relied on them (its sealed authority basis), each with its own time.");
+    expect(receipt.authority_sealed.blocks.map((b) => [b.action, b.covered, b.layers.map((l) => l.layer)])).toEqual([
+      ["offer $2000.00", true, ["task_authority", "evaluation", "user_approval", "action"]],
+      ["offer $1900.00", true, ["task_authority", "evaluation", "action"]],
+      ["commit $1900.00", true, ["task_authority", "evaluation", "action"]],
+      ["told the counterparty: street address", true, ["task_authority", "evaluation", "user_approval", "action"]],
+    ]);
+    const s = section(host);
+    expect(s.querySelector("h2").textContent).toBe("Authority, as the holder's report states it");
+    expect(s.textContent).toContain("This page shows it as sealed and does not check it.");
+    expect(s.querySelector('[data-sealed-text="authority-order"]').textContent).toBe(receipt.authority_sealed.order);
+    // Every layer's text is the report's own, marked sealed, with its step listed under it.
+    const texts = [...s.querySelectorAll('[data-sealed-text="item"]')].map((n) => n.textContent);
+    const layers = receipt.authority_sealed.blocks.flatMap((b) => b.layers);
+    expect(texts).toHaveLength(layers.length);
+    layers.forEach((l, i) => expect(texts[i].endsWith(l.text)).toBe(true));
+    expect(s.querySelectorAll('[data-authority-block="covered"]')).toHaveLength(4);
+    expect(s.querySelectorAll("[data-authority-uncovered]")).toHaveLength(0);
+    // A layer's note is the report's too.
+    expect([...s.querySelectorAll('[data-sealed-text="authority-note"]')].map((n) => n.textContent)).toContain("On the card the check showed you.");
+    // Sealed text, not a check: no rung and no verdict of the page's own.
+    expect(s.querySelector("[data-rung]")).toBeNull();
+  });
+
+  it("flags an act the authority did not cover", async () => {
+    const blocks = [
+      { action: "pay $40.00", step: "aa".repeat(32), covered: false, layers: [{ layer: "action", at: "2026-10-09T19:37:30Z", step: "aa".repeat(32), text: "Done: pay $40.00" }] },
+      { action: "commit $1900.00", step: "bb".repeat(32), covered: true, layers: [{ layer: "action", at: "2026-10-09T19:37:30Z", step: "bb".repeat(32), text: "Done: commit $1900.00" }] },
+    ];
+    const { receipt, host } = await draw("seller-keep", { kind: "seller", report: { authority: blocks, authority_order: undefined } });
+    expect(receipt.authority_sealed.order).toBeNull();
+    const s = section(host);
+    expect(s.querySelector('[data-sealed-text="authority-order"]')).toBeNull();
+    const uncovered = s.querySelector('[data-authority-block="uncovered"]');
+    expect(uncovered.querySelector("h3").textContent).toBe("⚠️ pay $40.00");
+    expect(uncovered.querySelector("[data-authority-uncovered]").textContent).toBe("The holder's report says this act was not covered by what it relied on.");
+    expect(uncovered.querySelector('[data-sealed-text="item"]').textContent.startsWith("⚠️ ")).toBe(true);
+    expect(s.querySelector('[data-authority-block="covered"] h3').textContent).toBe("commit $1900.00");
+  });
+
+  it("is not shown on a shared copy, whose report carries no blocks", async () => {
+    for (const [name, audience] of [["seller-counterparty", "counterparty"], ["seller-adjudicator", "adjudicator"], ["main-seller-counterparty", "counterparty"]]) {
+      const { receipt, host } = await draw(name, { kind: "seller", audience });
+      expect(receipt.authority_sealed, name).toBeUndefined();
+      expect(section(host), name).toBeNull();
+    }
+  });
+
+  it("draws on the buyer receipt too when its report carries blocks, and none from a report without them", async () => {
+    const blocks = [{ action: "pay $4.00", step: "cc".repeat(32), covered: true, layers: [{ layer: "user_approval", at: "2026-10-09T17:43:23Z", step: "cc".repeat(32), text: "Approved by you: \"yes\"" }] }];
+    const { host } = await draw("keep", { report: { authority: blocks, authority_order: "In order." } });
+    expect(section(host).querySelector('[data-sealed-text="authority-order"]').textContent).toBe("In order.");
+    const plain = await draw("keep");
+    expect(plain.receipt.authority_sealed).toBeUndefined();
+    expect(section(plain.host)).toBeNull();
+    // An empty list, or entries that are not blocks, are no section.
+    expect((await draw("keep", { report: { authority: [] } })).receipt.authority_sealed).toBeUndefined();
+    expect((await draw("keep", { report: { authority: ["x", 1] } })).receipt.authority_sealed).toBeUndefined();
   });
 });

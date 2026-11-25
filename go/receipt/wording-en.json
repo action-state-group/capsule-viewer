@@ -725,6 +725,9 @@
     "after_yes.their.own": "your",
     "after_yes.their.shared": "their",
     "after_yes.giver.own": "you",
-    "after_yes.giver.shared": "the holder"
+    "after_yes.giver.shared": "the holder",
+    "section.authority": "Authority, as the holder's report states it",
+    "authority.sealed": "For each act, what it relied on, in the order the holder's sealed report lists it. This page shows it as sealed and does not check it.",
+    "authority.uncovered": "The holder's report says this act was not covered by what it relied on."
   }
 }

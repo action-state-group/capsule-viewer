@@ -1225,6 +1225,30 @@
     };
   }
 
+  // The sealed report's AUTHORITY blocks (capsule-viewer#383, line 5), which
+  // report() leaves out as the frozen twin does: for each act, the layers it
+  // relied on, in its sealed order, each with its time and step, and whether
+  // they covered it. capsulectl writes them on the holder's own copy of a
+  // deal sealed in typed records (evidencebook deal_report.go, the AUTHORITY
+  // block; deal_authority.go). They are the holder's computation, shown as
+  // sealed text: this page checks none of it. Null when the report has none.
+  function authorityOf(raw) {
+    var blocks = [];
+    seq(get(raw, "authority")).forEach(function (b) {
+      if (!isMap(b)) return;
+      var layers = [];
+      seq(get(b, "layers")).forEach(function (l) {
+        if (!isMap(l)) return;
+        var text = str(get(l, "text"));
+        if (text === null) return;
+        layers.push({ layer: or(str(get(l, "layer")), ""), at: str(get(l, "at")), text: text, note: or(str(get(l, "note")), null), step: str(get(l, "step")) });
+      });
+      blocks.push({ action: or(str(get(b, "action")), ""), step: str(get(b, "step")), covered: get(b, "covered") === true, layers: layers });
+    });
+    if (!blocks.length) return null;
+    return { order: str(get(raw, "authority_order")), blocks: blocks };
+  }
+
   // The context, read once: headers by id and disclosed deal payloads.
   function Reader(v) {
     this.v = v;
@@ -2724,6 +2748,27 @@
       this.kit.section(w("steps.summary"), [this.steps(model, it.steps)], 4),
     ]);
   };
+  // The sealed report's authority blocks (authorityOf), as sealed text: each
+  // act and the layers it relied on, an act they did not cover flagged.
+  P.authoritySealed = function (model, authority) {
+    var self = this, kit = this.kit;
+    var body = [this.note(w("authority.sealed"))];
+    if (authority.order !== null) body.push(this.note(authority.order, { "data-sealed-text": "authority-order" }));
+    authority.blocks.forEach(function (b) {
+      var layers = b.layers.map(function (l) {
+        var line = self.item(model, item(l.text, l.step !== null ? [l.step] : [], l.at, !b.covered && l.layer === "action"));
+        if (l.note === null) return line;
+        return [line, self.note(l.note, { "data-sealed-text": "authority-note" })];
+      });
+      var head = b.covered ? [] : [self.p(w("authority.uncovered"), { class: "cv-tone--caution", "data-authority-uncovered": b.step || "" })];
+      var block = kit.section(b.covered ? b.action : "⚠️ " + b.action, head.concat(layers), 3);
+      block.setAttribute("data-authority-block", b.covered ? "covered" : "uncovered");
+      body.push(block);
+    });
+    var section = kit.section(w("section.authority"), body);
+    section.setAttribute("data-authority", "sealed");
+    return section;
+  };
   P.sectionSteps = function (model, section) {
     var self = this;
     var testMoneyOnly = testMoney(model);
@@ -2830,6 +2875,7 @@
     var r = model.report;
     var out = [this.sealedNote(model)];
     out.push(kit.section(w("section.authorized"), [this.committed(model.asked, "asked"), this.sectionSteps(model, "authorized")]));
+    if (model.authority_sealed) out.push(this.authoritySealed(model, model.authority_sealed));
     out = out.concat(this.journey(model));
     out.push(kit.section(w("section.proposed"), this.sectionSteps(model, "proposed")));
     out.push(kit.section(w("section.approved"), this.sectionSteps(model, "approved")));
@@ -3011,6 +3057,7 @@
     authorised.push(this.withheldRow(model.floor, "seller.floor", "floor"));
     authorised = authorised.concat(this.sectionSteps(r, "authorized"));
     out.push(kit.section(w(this.audienceKey("seller.section.authorised", model)), authorised));
+    if (r.authority_sealed) out.push(this.authoritySealed(r, r.authority_sealed));
     out = out.concat(this.journey(r));
 
     var toldList = r.statements.map(function (c) { return self.committed(c, "statement"); });
@@ -4121,16 +4168,20 @@
     // The lines the viewer draws and the frozen Python twin never does
     // (capsule-viewer#383, Sherlock2's ruling on the deal-view lines), on the
     // receipt model the copy notes draw from: the settlement line (see
-    // settlementOf), who the deal was with (counterpartyOf) and whether each
-    // act came after the holder's yes (afterYesModel).
+    // settlementOf), who the deal was with (counterpartyOf), whether each
+    // act came after the holder's yes (afterYesModel) and the sealed report's
+    // authority blocks (authorityOf).
     var withViewerLines = function (v, receipt) {
       if (settles) {
         var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
         if (line !== null) receipt.settlement = line;
       }
       var reader = new Reader(v);
-      var named = counterpartyOf(reader, reader.sealedReport()[1]);
+      var raw = reader.sealedReport()[1];
+      var named = counterpartyOf(reader, raw);
       if (named !== null) receipt.counterparty_named = named;
+      var authority = authorityOf(raw);
+      if (authority !== null) receipt.authority_sealed = authority;
       var yes = afterYesModel(v);
       if (yes !== null) receipt.after_yes = yes;
     };
