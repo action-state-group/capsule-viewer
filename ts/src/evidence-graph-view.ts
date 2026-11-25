@@ -1105,9 +1105,9 @@ function renderExtensionTable(
 // A deal copy's standalone report that failed this page's own check
 // (#398, #412): one line per failed condition, in Sherlock2's words, in the
 // list of what failed on this page.
-const STANDALONE_REPORT_FAILED: Readonly<
-  Record<StandaloneReportFailure, string>
-> = {
+/** What failed on the page: its own report check's conditions, or capsulectl's reading (verifier-report.ts). */
+type PageReportFailure = StandaloneReportFailure | "verifier" | "verdict";
+const STANDALONE_REPORT_FAILED: Readonly<Record<PageReportFailure, string>> = {
   verifier:
     "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
   // Filled with the verdict capsulectl reported (standaloneReportLine).
@@ -1126,12 +1126,13 @@ const STANDALONE_REPORT_FAILED: Readonly<
 };
 const STANDALONE_REPORT_CHECK = "deal-report-";
 const standaloneReportLine = (
-  failure: StandaloneReportFailure,
+  failure: PageReportFailure,
   verdict: string | undefined,
 ): string =>
+  // A function replacement, so no "$" in the verdict is read as a pattern.
   STANDALONE_REPORT_FAILED[failure].replace(
     "{verdict}",
-    verdict ?? "not valid",
+    () => verdict ?? "not valid",
   );
 
 // The page's own checks in up to three lists (presentation contract section
@@ -1144,7 +1145,7 @@ function renderCheckLists(
   host: HTMLElement,
   lists: VerificationCheckLists,
   verifierHint: string | undefined,
-  reportFailed: readonly StandaloneReportFailure[] = [],
+  reportFailed: readonly PageReportFailure[] = [],
   verdict?: string,
 ): void {
   const groups = [
@@ -1173,9 +1174,7 @@ function renderCheckLists(
         "li",
         id.startsWith(STANDALONE_REPORT_CHECK)
           ? standaloneReportLine(
-              id.slice(
-                STANDALONE_REPORT_CHECK.length,
-              ) as StandaloneReportFailure,
+              id.slice(STANDALONE_REPORT_CHECK.length) as PageReportFailure,
               verdict,
             )
           : verificationCheckWords(
@@ -1232,7 +1231,7 @@ async function renderVerificationPage(
   contract: PageContract,
   l3: { readonly words: Words; readonly voice: RecordVoice } | undefined,
   checkedId: string,
-  reportFailed: readonly StandaloneReportFailure[] = [],
+  reportFailed: readonly PageReportFailure[] = [],
   verdict?: string,
 ): Promise<string> {
   const { bundle, verification: verified } = context;
@@ -3549,7 +3548,7 @@ async function renderVerifiedContext(
   // fails this page's check is refused like one that did not verify: no
   // module, no fallback page, AAC's refused banner, and the failed
   // conditions in the checks (#412).
-  const reportFailed: StandaloneReportFailure[] = bundleVerified(verification)
+  const reportFailed: PageReportFailure[] = bundleVerified(verification)
     ? [
         ...(reading?.kind === "fail"
           ? ([reading.why === "report" ? "verifier" : "verdict"] as const)

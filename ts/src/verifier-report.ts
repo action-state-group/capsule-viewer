@@ -32,8 +32,8 @@ const STANDALONE = "x-deal-report/v0";
 
 /**
  * What capsulectl reported of this bundle's x-deal-v1 standalone report:
- *  - `pass`: the bundle's verdict is VALID and the x-deal-v1 entry passed,
- *    with the report standalone;
+ *  - `pass`: the x-deal-v1 entry passed, with the report standalone, and the
+ *    bundle's verdict is VALID, or INCOMPLETE only as a producer selection;
  *  - `fail` with `report`: the entry did not pass (Sherlock2's first line);
  *  - `fail` with `verdict`: the entry passed but capsulectl's verdict for the
  *    bundle is not VALID, for a reason that is not the report; the page says
@@ -53,8 +53,16 @@ export type VerifierReading =
 
 export function verifierReportReading(
   context: VerifiedBundleContext,
-  report: unknown,
+  given: unknown,
 ): VerifierReading | null {
+  // The report as capsulectl prints it (JSON text) or already parsed.
+  let report = given;
+  if (typeof given === "string")
+    try {
+      report = JSON.parse(given);
+    } catch {
+      return null;
+    }
   const extensionsOf = obj(obj(context.bundle)["extensions"]);
   if (!(DEAL_V1 in extensionsOf) || !(STANDALONE in extensionsOf)) return null;
   const r = obj(report);
@@ -84,6 +92,27 @@ export function verifierReportReading(
   if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
   const verdict = r["verdict"];
   if (verdict === "VALID") return { kind: "pass" };
+  // A producer selection: capsulectl calls it INCOMPLETE only because the
+  // interval coverage is withheld as selection_not_checkable, as the Python
+  // twin reads it (verifier_report.py) and the page's own verdict allows it.
+  // Its report passed, so the receipt draws, with the page's incomplete
+  // outcome; it is never refused for that.
+  const coverage = obj(r["interval_coverage"]);
+  const findings = coverage["findings"];
+  if (
+    verdict === "INCOMPLETE" &&
+    coverage["status"] === "withheld" &&
+    Array.isArray(findings) &&
+    findings.length === 1 &&
+    findings[0] === "selection_not_checkable" &&
+    [
+      "graph_closure",
+      "per_record_membership",
+      "checkpoint",
+      "producer_signatures",
+    ].every((claim) => obj(r[claim])["status"] === "pass")
+  )
+    return { kind: "pass" };
   return {
     kind: "fail",
     why: "verdict",

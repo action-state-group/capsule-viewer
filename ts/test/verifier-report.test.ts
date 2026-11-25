@@ -156,6 +156,40 @@ describe("capsulectl's report: which reports are read, and how they fail (#417)"
     expect(await checkReceipt(v0, { verifierReport: forged })).toEqual(plain);
   });
 
+  it("a producer selection (INCOMPLETE only for selection_not_checkable) draws, as the Python twin reads it", async () => {
+    const r = edited((r) => {
+      r["verdict"] = "INCOMPLETE";
+      r["interval_coverage"] = {
+        status: "withheld",
+        findings: ["selection_not_checkable"],
+      };
+    });
+    expect((await checkReceipt(bundle(), { verifierReport: r })).kind).toBe(
+      "checked",
+    );
+    // Any other INCOMPLETE is still the verdict line's.
+    const other = edited((r) => {
+      r["verdict"] = "INCOMPLETE";
+      r["interval_coverage"] = { status: "withheld", findings: ["other"] };
+    });
+    expect((await checkReceipt(bundle(), { verifierReport: other })).kind).toBe(
+      "did_not_verify",
+    );
+  });
+
+  it("takes the report as capsulectl prints it (JSON text) too", async () => {
+    expect(
+      (
+        await checkReceipt(bundle(), {
+          verifierReport: data("keep-copy.verify.json"),
+        })
+      ).kind,
+    ).toBe("checked");
+    expect(
+      await checkReceipt(bundle(), { verifierReport: "{ not json" }),
+    ).toEqual(cannot);
+  });
+
   it("a renderReceipt host that held a receipt is emptied when the next report fails", async () => {
     const host = document.createElement("div");
     await renderReceipt(bundle(), host, { verifierReport: report() });
@@ -226,6 +260,17 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
         root.querySelector('[data-check="deal-report-verifier"]'),
       ).toBeNull();
     }
+  });
+
+  it("a verdict with a $ in it is said as written", async () => {
+    const r = report();
+    r["verdict"] = "$&$'";
+    const root = await page(r);
+    expect(
+      root.querySelector('[data-check="deal-report-verdict"]')?.textContent,
+    ).toBe(
+      "Didn't verify: capsulectl deal verify reported this bundle as $&$'.",
+    );
   });
 
   it("another bundle's report is ignored: the can't-check line, no receipt", async () => {
