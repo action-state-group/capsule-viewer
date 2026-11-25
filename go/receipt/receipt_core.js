@@ -390,15 +390,23 @@
     var c = map(context);
     var v = map(c.verification);
     var checked = reportChecked(v, extension);
+    var here = false;
     // The page runtime's own answer, asked before the model is built
     // (pageReportCheck), when its verifier reports none.
-    if (checked === null && extension === EXTENSION && REPORT_CHECKS !== null && REPORT_CHECKS.has(context)) checked = REPORT_CHECKS.get(context);
-    return {
+    if (checked === null && extension === EXTENSION && REPORT_CHECKS !== null && REPORT_CHECKS.has(context)) {
+      checked = REPORT_CHECKS.get(context);
+      here = true;
+    }
+    var out = {
       bundle_digest: typeof v.bundleDigest === "string" ? v.bundleDigest : null,
       witnesses: "absent",
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
       report_checked: checked,
     };
+    // Said only when the page checked it itself: a verifier's report (the
+    // Python twin's inputs too) carries no such member.
+    if (here) out.report_checked_here = true;
+    return out;
   }
 
   // A copy's standalone report (x-deal-report/v0) is read only once it is
@@ -921,7 +929,7 @@
     var demo = payloads.some(function (p) {
       return get(map(get(p, EXTENSION)), "record_type") === "baseline" && get(map(get(p, "body")), "demo") === true;
     });
-    return {
+    var model = {
       deal_id: or(str(get(raw, "deal_id")), ""),
       demo: demo,
       headline: headlineOf(steps, v.root, rep),
@@ -937,6 +945,8 @@
       verification: v.verification,
       report_checked: reader.standalone() ? or(str(v.assurance.report_checked), null) : null,
     };
+    if (reader.standalone() && v.assurance.report_checked_here === true) model.report_checked_here = true;
+    return model;
   }
 
   // ---- the v1 deal receipt (evidencebook docs/design/461-deal-profile.md, section 9) ----
@@ -1999,9 +2009,12 @@
   };
 
   // How the report was sealed. A report carried outside the log is described
-  // by what capsulectl verify reported of it and nothing more (module.py).
+  // by what checked it and nothing more: capsulectl verify's report
+  // (module.py), or this page's own check (#398), which names what it
+  // checked (summary.standalone.here).
   P.sealedNote = function (model) {
     if (model.report_checked === null) return this.note(w("summary.sealed", { producer: this.producer(model) }), { "data-sealed": "x-deal-v0" });
+    if (model.report_checked_here === true && model.report_checked === "pass") return this.note(w("summary.standalone.here"), { "data-sealed": "x-deal-report", "data-checked-here": "true" });
     return this.note(w("summary.standalone", { status: model.report_checked }), { "data-sealed": "x-deal-report" });
   };
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+import { dealStandaloneReport } from "./deal-standalone-report.js";
 import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
   BOOK_PAYLOADS_EXTENSION,
@@ -3412,6 +3413,9 @@ async function openReceipt(
     return "unreadable";
   }
   const context = await buildVerifiedBundleContext(bundle);
+  // A deal copy whose standalone report fails the page's own check did not
+  // pass its checks: said as such, never as a kind with no viewer.
+  if ((await dealStandaloneReport(bundle)) === "fail") return "unverified";
   const registry = options.registry ?? defaultRegistry;
   const resolution = await registry.resolve(
     context,
