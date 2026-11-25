@@ -825,6 +825,130 @@
     return out;
   }
 
+  // ---- "each act came after your yes" (capsule-viewer#383, line 4) ----
+  //
+  // Recomputed in the page from the copy's deal log, as evidencebook's deal
+  // view recomputed it (deal-view.js dealLogSteps and dealAfterYes; F8.1,
+  // x-deal-v0 section 6): each act (a step that cites what authorized it) is
+  // preceded in this log by that authority, each at an earlier place: an
+  // approval that proceeds, answering a verdict that answers a check; or, on
+  // typed records, an evaluation that let it go ahead under the task's
+  // authority (DO), answering the proposed action. An act sealed without an
+  // approval (an unchecked_action outcome, x-deal or typed; a disclosure with
+  // no authority; a claim sealed unchecked) fails, named; an authority
+  // withheld from this copy is missing; a copy with any step withheld is not
+  // checked, since that step may be an act. A step's place is its book
+  // header's seq and its record digest the header's one payload commitment,
+  // which a rel ref names (x-deal-v0 section 2): figures read from verified
+  // content, nothing hashed here.
+  var DEAL_STEP_TYPES = ["deal_step", "step_completed", "step_failed"];
+  var APPROVAL_TYPES = ["approval", "action-approval/v0"];
+  var EVALUATION_TYPES = ["verdict", "action-evaluation/v0"];
+  var CHECK_TYPES = ["check", "proposed-action/v0"];
+  var APPROVERS = ["user", "standing_intent", "agent_card", "task_authority"];
+
+  // The copy's steps on its deal log, each with its place, digest, deal block
+  // (null when its record is withheld) and body.
+  function dealLogSteps(v) {
+    var steps = [];
+    seq(map(v.context).records).forEach(function (r) {
+      var h = map(get(r, "evidence_record_header"));
+      var cid = str(get(r, "capsule_id"));
+      if (cid === null || DEAL_STEP_TYPES.indexOf(get(h, "record_type")) < 0 || int(get(h, "seq")) === null) return;
+      var input = v.disclosed(cid, "agent_input");
+      // A typed record (task-authority/v0 and the rest) names its type and
+      // refs at its top level; an x-deal-v0 record, in its block.
+      var deal = null;
+      if (isMap(input)) deal = isMap(get(input, EXTENSION)) ? input[EXTENSION] : (typeof get(input, "type") === "string" ? { record_type: input.type, refs: get(input, "refs") } : null);
+      steps.push({ id: cid, seq: h.seq, digest: str(seq(get(h, "payload_commitments"))[0]), deal: deal, body: map(get(input, "body")) });
+    });
+    return steps;
+  }
+  function refTo(deal, rel) {
+    var found = seq(get(deal, "refs")).find(function (r) { return get(map(r), "rel") === rel; });
+    return found ? str(get(found, "digest")) : null;
+  }
+  // The line's model: state passed, failed (why unapproved or order, the act
+  // named), missing (the act named), withheld (a step withheld: not checked),
+  // unplaced (no step has a place in a book: not checked) or none (no act:
+  // nothing drawn), and the approvers the acts were approved by.
+  function afterYesOf(v) {
+    var steps = dealLogSteps(v);
+    if (!steps.length) return { state: "unplaced", approvers: [] };
+    var byDigest = new Map();
+    steps.forEach(function (s) { if (s.digest !== null) byDigest.set(s.digest, s); });
+    var earlier = function (digest, than, types) {
+      var s = digest === null ? undefined : byDigest.get(digest);
+      if (!s) return "absent";
+      if (s.deal === null) return "withheld";
+      return s.seq < than.seq && types.indexOf(get(s.deal, "record_type")) >= 0 ? s : "bad";
+    };
+    var failed = function (act, why) { return { state: "failed", why: why, act: act, approvers: [] }; };
+    var acts = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (s.deal === null) continue;
+      var t = get(s.deal, "record_type");
+      if ((t === "outcome" || t === "action-outcome/v0") && get(s.body, "status") === "unchecked_action") return failed(s, "unapproved");
+      if (t === "disclosure" && get(s.body, "authority") === "none") return failed(s, "unapproved");
+      if (t === "claim" && get(s.body, "unchecked") === true) return failed(s, "unapproved");
+      if (refTo(s.deal, "authorized_by") !== null || t === "action" || (t === "disclosure" && get(s.body, "authority") === "approval")) acts.push(s);
+    }
+    var withheld = steps.some(function (s) { return s.deal === null; });
+    if (!acts.length) return { state: withheld ? "withheld" : "none", approvers: [] };
+    var approvers = [];
+    var missing = null;
+    for (i = 0; i < acts.length; i++) {
+      var act = acts[i];
+      var by = earlier(refTo(act.deal, "authorized_by"), act, APPROVAL_TYPES.concat(EVALUATION_TYPES));
+      var evaluation = by;
+      var approver = null;
+      if (typeof by === "object" && APPROVAL_TYPES.indexOf(get(by.deal, "record_type")) >= 0) {
+        if (get(by.body, "proceed") !== true) return failed(act, "order");
+        var answered = refTo(by.deal, "approves");
+        evaluation = earlier(answered, by, EVALUATION_TYPES);
+        // x-deal-v0 section 6 rule 5: only the verdict's first answer
+        // authorizes; a later one ("Hold", then "Pay anyway") never does.
+        var answeredBefore = steps.some(function (o) {
+          return o.deal !== null && APPROVAL_TYPES.indexOf(get(o.deal, "record_type")) >= 0 && o.seq < by.seq && refTo(o.deal, "approves") === answered;
+        });
+        if (answeredBefore) return failed(act, "order");
+        if (get(by.deal, "record_type") === "approval") {
+          approver = str(get(by.body, "approver"));
+          // Standing intent approves only a passing verdict (rule 6).
+          if (approver === "standing_intent" && typeof evaluation === "object" && get(evaluation.body, "result") !== "pass") return failed(act, "order");
+        } else {
+          // A typed ASK is answered only by the user's own approval.
+          if (get(by.body, "authority") !== "user_approval") return failed(act, "order");
+          approver = "user";
+        }
+      } else if (typeof by === "object") {
+        if (get(by.body, "disposition") !== "DO") return failed(act, "order");
+        approver = "task_authority";
+      }
+      var check = typeof evaluation === "object" ? earlier(refTo(evaluation.deal, "checks"), evaluation, CHECK_TYPES) : evaluation;
+      if (check === "withheld") {
+        missing = missing || act;
+        continue;
+      }
+      if (typeof check === "string") return failed(act, "order");
+      // The check asked about this very act (rule 5).
+      if (typeof get(act.body, "action") === "string" && get(check.body, "action") !== act.body.action) return failed(act, "order");
+      if (approver !== null && approvers.indexOf(approver) < 0) approvers.push(approver);
+    }
+    if (missing !== null) return { state: "missing", act: missing, approvers: approvers };
+    return { state: withheld ? "withheld" : "passed", approvers: approvers };
+  }
+  // The model kept: the act by its capsule id and its sealed action name.
+  function afterYesModel(v) {
+    var yes = afterYesOf(v);
+    if (yes.state === "none") return null;
+    var out = { state: yes.state, approvers: yes.approvers.filter(function (a) { return APPROVERS.indexOf(a) >= 0; }) };
+    if (yes.why) out.why = yes.why;
+    if (yes.act) out.act = { step: yes.act.id, action: str(get(yes.act.body, "action")) };
+    return out;
+  }
+
   // A carried copy, verified by the page's runtime on its own.
   function pageMemberContext(bundle) {
     var graph = root.EvidenceGraph;
@@ -2486,6 +2610,7 @@
     // refuses the copy before it is drawn).
     if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
+    if (model.after_yes) parts.push(this.p(this.afterYes(model, model.after_yes), { "data-rung": "after-yes", "data-after-yes": model.after_yes.state }));
     if (model.settlement) parts.push(this.p(this.settlement(model.settlement), { "data-rung": "settlement", "data-settlement": model.settlement.state }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
@@ -2522,6 +2647,24 @@
       else out.push(self.p(w("accepted.unchecked"), { class: "cv-tone--caution", "data-rung": "accepted", "data-accepted": "unchecked" }));
     });
     return out;
+  };
+  // Whether each act came after the holder's yes (afterYesModel), then how
+  // each was approved, as recorded. The holder's own copy, drawn for them,
+  // says "your"; any other copy, or a page for others, names the holder.
+  P.afterYes = function (model, yes) {
+    var side = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? "own" : "shared";
+    var who = w("after_yes.who." + side), their = w("after_yes.their." + side), giver = w("after_yes.giver." + side);
+    var act = function () {
+      var step = stepIn(model, yes.act.step);
+      if (step !== null && step.line) return "“" + step.line + "”";
+      return yes.act.action !== null ? w("after_yes.act.named", { action: yes.act.action }) : w("after_yes.act.unnamed");
+    };
+    var text;
+    if (yes.state === "failed") text = w("after_yes.failed." + yes.why, { who: who, act: act() });
+    else if (yes.state === "missing") text = w("after_yes.missing", { who: who, act: act() });
+    else text = w("after_yes." + yes.state, { who: who });
+    var said = yes.approvers.map(function (a) { return w("after_yes.approver." + a, { who: who, their: their, giver: giver }); });
+    return said.length ? text + w("after_yes.approvers", { list: said.join("; ") }) : text;
   };
   // The settlement line (settlementOf): its rail and proof, then the size band when there is one.
   P.settlement = function (line) {
@@ -3978,7 +4121,8 @@
     // The lines the viewer draws and the frozen Python twin never does
     // (capsule-viewer#383, Sherlock2's ruling on the deal-view lines), on the
     // receipt model the copy notes draw from: the settlement line (see
-    // settlementOf) and who the deal was with (counterpartyOf).
+    // settlementOf), who the deal was with (counterpartyOf) and whether each
+    // act came after the holder's yes (afterYesModel).
     var withViewerLines = function (v, receipt) {
       if (settles) {
         var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
@@ -3987,6 +4131,8 @@
       var reader = new Reader(v);
       var named = counterpartyOf(reader, reader.sealedReport()[1]);
       if (named !== null) receipt.counterparty_named = named;
+      var yes = afterYesModel(v);
+      if (yes !== null) receipt.after_yes = yes;
     };
     var buildChecked = function (context) {
       var v = view(context, e);

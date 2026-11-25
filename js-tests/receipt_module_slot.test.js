@@ -426,10 +426,12 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
     { name: "bilateral-counterparty", audience: "counterparty", kind: "bilateral" },
   ];
   // The viewer's own lines each golden's script page draws (selector and count).
-  // Only the keep copy discloses an action naming its rail (card).
+  // Only the keep copy discloses an action naming its rail (card); each
+  // x-deal-v0 copy says whether each act came after the yes (not checked:
+  // its steps have no place in a book).
   const VIEWER_LINES_ON = {
-    keep: '[data-rung="settlement"] 1',
-    counterparty: "",
+    keep: '[data-rung="settlement"] 1; [data-rung="after-yes"] 1',
+    counterparty: '[data-rung="after-yes"] 1',
     "bilateral-keep": "",
     "bilateral-counterparty": "",
   };

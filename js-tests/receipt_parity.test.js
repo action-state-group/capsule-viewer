@@ -35,6 +35,11 @@ const PACK_ID = "capsuleviewer.receipt.wording.en/v1";
 //   their words accepting (capsulectl writes them on the holder's own copy
 //   since evidencebook-deal#56; these fixtures predate it), so none draws it,
 //   and no counterparty copy ever does.
+// - after_yes: every x-deal-v0 copy with an act or a withheld step. Only the
+//   main-standalone copies place their steps in a book (their records carry
+//   evidence_record_header): the keep copies pass, approved by the user; the
+//   counterparty copy withholds steps, so it is not checked. Every other
+//   copy's steps have no place in a book, so it is not checked either.
 const VIEWER_LINES_DRAWN = {
   settlement: {
     "golden-2 @keep unilateral": "missing",
@@ -45,11 +50,36 @@ const VIEWER_LINES_DRAWN = {
     "main-standalone-keep @keep unilateral": "missing",
   },
   counterparty_named: {},
+  after_yes: {
+    "adjudicator @adjudicator unilateral": "unplaced",
+    "buyer-producer-counterparty @counterparty unilateral": "unplaced",
+    "counterparty @counterparty unilateral": "unplaced",
+    "golden-2 @keep unilateral": "unplaced",
+    "keep @keep unilateral": "unplaced",
+    "keep+one-producer @keep unilateral": "unplaced",
+    "keep+producer-removed @keep unilateral": "unplaced",
+    "main-buyer-counterparty @counterparty unilateral": "unplaced",
+    "main-buyer-keep @keep unilateral": "unplaced",
+    "main-seller-counterparty @counterparty seller": "unplaced",
+    "main-seller-keep @keep seller": "unplaced",
+    "main-standalone-counterparty @counterparty unilateral": "withheld",
+    "main-standalone-keep @keep unilateral": "passed user",
+    "main-standalone-simulated-keep @keep unilateral": "passed user",
+    "mesh-payer-selected @keep unilateral": "unplaced",
+    "seller-adjudicator @adjudicator seller": "unplaced",
+    "seller-counterparty @counterparty seller": "unplaced",
+    "seller-declined @counterparty seller": "unplaced",
+    "seller-keep @keep seller": "unplaced",
+    "seller-producer-adjudicator @adjudicator seller": "unplaced",
+    "seller-producer-counterparty @counterparty seller": "unplaced",
+    "seller-producer-keep @keep seller": "unplaced",
+  },
 };
 // What the parity test records of each viewer line a case draws.
 const SUMMARY = {
   settlement: (line) => line.state,
   counterparty_named: (named) => named,
+  after_yes: (yes) => [yes.state, yes.why, yes.act && yes.act.step.slice(0, 8), ...yes.approvers].filter((x) => x !== undefined).join(" "),
 };
 
 describe("receipt scripts vs the Python modules (the oracle)", () => {

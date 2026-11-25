@@ -706,6 +706,25 @@
     "counterparty.with": "With {who}, as this page checked against what the deal sealed for them.",
     "counterparty.unchecked": "Some of who this exchange was with could not be checked against what the deal sealed, so this page does not show it.",
     "accepted.words": "Their words accepting the offer, checked in this page against what was sealed: “{text}”",
-    "accepted.unchecked": "Their words accepting the offer could not be checked against what was sealed, so this page does not show them."
+    "accepted.unchecked": "Their words accepting the offer could not be checked against what was sealed, so this page does not show them.",
+    "after_yes.passed": "Each act came after {who} yes: passed, recomputed in this page from the order of this log.",
+    "after_yes.failed.unapproved": "Each act came after {who} yes: failed; {act} was taken without {who} yes.",
+    "after_yes.failed.order": "Each act came after {who} yes: failed; {act} does not follow its approval in this log.",
+    "after_yes.missing": "Each act came after {who} yes: missing; the approval for {act} is not in this copy.",
+    "after_yes.withheld": "Each act came after {who} yes: not checked; steps are withheld from this copy.",
+    "after_yes.unplaced": "Each act came after {who} yes: not checked; this copy's steps have no place in a book's log.",
+    "after_yes.approvers": " How each was approved, as recorded: {list}.",
+    "after_yes.approver.user": "{who} yes is in {their} words, recorded by {their} agent",
+    "after_yes.approver.standing_intent": "approved under {who} standing limits, recorded by {their} agent",
+    "after_yes.approver.agent_card": "answered on a card {who} agent showed, recorded by {their} agent",
+    "after_yes.approver.task_authority": "allowed by the task {giver} gave {their} agent, recorded by {their} agent",
+    "after_yes.act.named": "the {action} step",
+    "after_yes.act.unnamed": "a step",
+    "after_yes.who.own": "your",
+    "after_yes.who.shared": "the holder's",
+    "after_yes.their.own": "your",
+    "after_yes.their.shared": "their",
+    "after_yes.giver.own": "you",
+    "after_yes.giver.shared": "the holder"
   }
 }
