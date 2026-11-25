@@ -24,7 +24,14 @@ const HASH = createHash("sha256")
 const keep = (): unknown =>
   JSON.parse(
     readFileSync(
-      resolve(process.cwd(), "..", "tests", "testdata", "receipt", "keep.bundle.json"),
+      resolve(
+        process.cwd(),
+        "..",
+        "tests",
+        "testdata",
+        "receipt",
+        "keep.bundle.json",
+      ),
       "utf8",
     ),
   );
@@ -52,13 +59,17 @@ async function legContext(hash: string): Promise<unknown> {
   const resolved = new Map(context["resolvedDisclosures"] as Map<string, Obj>);
   for (const [id, entry] of resolved) {
     const input = entry["agent_input"] as Obj | undefined;
-    if (!id.startsWith("290b1db4") || input?.["state"] !== "disclosed") continue;
+    if (!id.startsWith("290b1db4") || input?.["state"] !== "disclosed")
+      continue;
     const payload = input["payload"] as Obj;
     resolved.set(id, {
       ...entry,
       agent_input: {
         state: "disclosed",
-        payload: { ...payload, body: { ...(payload["body"] as Obj), preimage: PREIMAGE } },
+        payload: {
+          ...payload,
+          body: { ...(payload["body"] as Obj), preimage: PREIMAGE },
+        },
       },
     });
   }
