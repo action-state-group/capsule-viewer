@@ -11,13 +11,16 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- The History card no longer repeats a card-level fact on every row, and no longer names a label its rows may not carry (Sherlock2, from the ARD hand run). A deal row draws its RECORDED stamp only when the deal report check passed. When the check did not run, the rows carry no stamp, and "How this was checked" says "Not checked here" once for the card. A deal page that does not list the check is read as not having run it, so that line is never missing. A failed check already drew no rows. "What this does not show" now reads "Each deal's outcome here is what this side recorded, not a confirmed outcome." (`callout.deals`; `callout.deals.picked` likewise), which holds whatever the rows' outcome labels are. A picked card's summary line says "this side's record, not confirmed outcomes" in place of "steps recorded, not outcomes" (`hero.deals.picked.*`). The Go twin (`go/historyview`) changes the same way.
+
 ## ts 0.27.1 and go 0.27.1 (2026-11-25)
 
 Both state viewer 0.27.1: `ts/v0.27.1`, then `go/v0.27.1` on the commit that ships its page runtime. The page's check of a deal copy's standalone report, which evidencebook#880's settlement report needs to draw capsulectl-deal's own receipts: #398.
 
 ### Fixed
 
-- The History card no longer repeats a card-level fact on every row, and no longer names a label its rows may not carry (Sherlock2, from the ARD hand run). A deal row draws its RECORDED stamp only when the deal report check passed. When the check did not run, the rows carry no stamp, and "How this was checked" says "Not checked here" once for the card. A deal page that does not list the check is read as not having run it, so that line is never missing. A failed check already drew no rows. "What this does not show" now reads "Each deal's outcome here is what this side recorded, not a confirmed outcome." (`callout.deals`; `callout.deals.picked` likewise), which holds whatever the rows' outcome labels are. A picked card's summary line says "this side's record, not confirmed outcomes" in place of "steps recorded, not outcomes" (`hero.deals.picked.*`). The Go twin (`go/historyview`) changes the same way.
 - A receipt page draws capsulectl-deal's own receipts again (#397). Their report rides standalone in `x-deal-report/v0`, which the page's verifier does not interpret, so every receipt module declined them ("This page has no viewer for this kind of receipt"; `checkReceipt` gave `no_module`). The page's runtime now checks that report as `capsulectl deal verify --bundle` does for x-deal-v0 (evidencebook `standaloneReportEntry`): the record is the pointer's deal report; it is signed by the deal's last step's key; its payload is the one its Capsule commits; it is this deal's report for a copy audience; it binds this bundle's checkpoint and its time; and no report record is beside it. The receipt module reads the report only when that check passes. The check is the runtime's `dealStandaloneReport`, which the npm `./receipt` export also uses. An x-deal-v1 copy gets no answer until the profile's own report rule is checked here, so its receipt still declines. A composed receipt whose carried copies keep their report standalone also still declines: their reports are not asked about yet (#401).
 
 The four receipt scripts change, so each receipt manifest's `script_sha256` changes. A consumer that pins the receipt modules takes the new manifests.
