@@ -168,3 +168,20 @@ export function withVerifierReport(
     verification: { ...context.verification, extensions },
   };
 }
+
+/**
+ * Whether the page draws capsulectl's verified witness time of the holder's
+ * own book as one line in its receipt (capsule-viewer#424): a passing
+ * reading whose `witnessed` is verified, on the holder's own (keep) copy.
+ * The page then leaves out its header line "This file carries no witness
+ * receipt…", which that one line says itself; every other page keeps it.
+ */
+export function bookWitnessedOnKeep(
+  context: VerifiedBundleContext,
+  reading: VerifierReading | null,
+): boolean {
+  if (reading?.kind !== "pass") return false;
+  if (obj(reading.witnessed)["status"] !== "verified") return false;
+  const x = obj(obj(obj(context.bundle)["extensions"])[STANDALONE]);
+  return obj(x["agent_input"])["audience"] === "keep";
+}

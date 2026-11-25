@@ -23,6 +23,11 @@ here. The format follows
 
 ### Fixed
 
+- An x-deal-v1 receipt shows its times in the reader's own zone, as the page is viewed. The data keeps UTC (#423, Sherlock2):
+  - "As the holder computed it at …", due times, the contest window's end and payment times are local, with the zone;
+  - a deadline (due, window end) says its UTC time beside the local one, for example "Dec 2, 2026, 12:56 PM CST (18:56 UTC)";
+  - a value that is not a full UTC timestamp is shown as stored.
+- On the holder's own x-deal-v1 page, when capsulectl verify reported the book's witness time verified, the receipt says it in one line: "Time-stamped by <witness> at <local time> (<UTC time>), as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself." The page's header line "This file carries no witness receipt, so this page could not check a time-stamp itself." is left out on that page only, so a reader who stops at the header no longer takes it as "not stamped" (#424, Sherlock2). Shared copies, and failed, withheld or not-reported pages, keep the header line.
 - An x-deal-v1 keep page says your own book's witness time as capsulectl reported it, and only as reported (Sherlock2, u219); a shared copy, or a receipt shown as a shared page or report, never does. `capsulectl deal report --html --witness-directory W` runs verify with the stamp proof beside the copy, and the page carries only verify's `witnessed` (evidencebook#935). The receipt's witness line then reads one of:
   - "Time-stamped by <witness> at <time>, as capsulectl verify reported on your own book. This page did not check it itself.";
   - "capsulectl verify reported that your own book's witness time-stamp did not verify, so no time-stamp is shown. This page did not check it itself.";

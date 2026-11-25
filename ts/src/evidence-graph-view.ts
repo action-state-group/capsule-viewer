@@ -6,6 +6,7 @@ import {
 import {
   verifierReportReading,
   withVerifierReport,
+  bookWitnessedOnKeep,
 } from "./verifier-report.js";
 import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
@@ -343,9 +344,13 @@ function bannerWitnessNotice(
   model: VerificationBanner,
   bundle: unknown,
   verification: BundleVerificationResult,
+  bookWitnessed = false,
 ): WitnessNotice | undefined {
   if (model.state !== "verified" && model.state !== "incomplete")
     return undefined;
+  // The receipt says the witness time capsulectl verified, and that this
+  // file carries no receipt, in one line (#424).
+  if (bookWitnessed) return undefined;
   if (model.checkpoint !== "verified") return undefined;
   return witnessNotice(bundle, verification);
 }
@@ -3732,7 +3737,12 @@ async function renderVerifiedContext(
       root,
       bannerModel,
       coverage,
-      bannerWitnessNotice(bannerModel, bundle, withStrict(context)),
+      bannerWitnessNotice(
+        bannerModel,
+        bundle,
+        withStrict(context),
+        bookWitnessedOnKeep(context, reading),
+      ),
     );
     const L2 = region("L2");
     const core = region("L2-core");

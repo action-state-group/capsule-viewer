@@ -27,6 +27,17 @@ const report = (): Obj => JSON.parse(data("keep-copy.verify.json")) as Obj;
 const v1Entry = (r: Obj): Obj =>
   (r["extensions"] as Obj[]).find((e) => e["kind"] === "x-deal-v1")!;
 
+// The format the receipt's localTimes writes, in this run's own zone.
+const local = (iso: string): string =>
+  new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(iso));
+
 const CAPSULECTL_LINE =
   "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself.";
 
@@ -392,7 +403,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
         at: "2026-11-25T14:41:19Z",
       }),
     ).toBe(
-      "Time-stamped by Action State's witness at 2026-11-25T14:41:19Z, as capsulectl verify reported on your own book. This page did not check it itself.",
+      `Time-stamped by Action State's witness at ${local("2026-11-25T14:41:19Z")} (14:41:19 UTC), as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself.`,
     );
     expect(await rung({ status: "failed", reason: "x" })).toBe(
       "capsulectl verify reported that your own book's witness time-stamp did not verify, so no time-stamp is shown. This page did not check it itself.",
@@ -453,6 +464,41 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     const own = document.createElement("div");
     await renderReceipt(bundle(), own, { verifierReport: r, depth: "L2" });
     expect(own.textContent).toContain("Time-stamped by W at t");
+  });
+
+  it("one witness line on the holder's own page: the header line is left out there only (#424)", async () => {
+    const HEADER =
+      "This file carries no witness receipt, so this page could not check a time-stamp itself.";
+    const r = report();
+    v1Entry(r)["witnessed"] = {
+      status: "verified",
+      witness: "W",
+      at: "2026-11-25T14:41:19Z",
+    };
+    const own = await page(r);
+    expect(own.textContent).not.toContain(HEADER);
+    expect(own.querySelector('[data-rung="witness"]')?.textContent).toContain(
+      "This file carries no witness receipt, so this page did not check it itself.",
+    );
+    // Failed, withheld or nothing reported: the header stays.
+    for (const w of [{ status: "failed" }, { status: "withheld" }, undefined]) {
+      const rr = report();
+      if (w !== undefined) v1Entry(rr)["witnessed"] = w;
+      expect((await page(rr)).textContent).toContain(HEADER);
+    }
+  });
+
+  it("the page's times are the reader's own, deadlines with UTC beside them (#423)", async () => {
+    const root = await page(report());
+    const asOf = root.querySelector("[data-as-of]");
+    expect(asOf?.querySelector("[data-time]")?.getAttribute("data-time")).toBe(
+      "2026-09-27T18:00:00Z",
+    );
+    expect(asOf?.textContent).toContain(local("2026-09-27T18:00:00Z"));
+    const text = root.textContent ?? "";
+    expect(text).toContain(`${local("2026-11-01T23:59:59Z")} (23:59 UTC)`);
+    expect(text).toContain(`${local("2026-11-04T23:59:59Z")} (23:59 UTC)`);
+    expect(text).not.toContain("2026-11-01T23:59:59Z");
   });
 
   it("a witnessed result in an entry that did not pass is never said: the copy is refused", async () => {
