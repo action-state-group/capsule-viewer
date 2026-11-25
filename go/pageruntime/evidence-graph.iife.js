@@ -17865,13 +17865,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("89b75d6ab5f34bada727082758562071d494ce0b");
+    return commitPrefix("ef72c0eb839f84f4356d2f5777f85cf7622cc436");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.25.0",
+    viewerVersion: "0.26.0",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -28800,9 +28800,14 @@ ${pad.repeat(depth)}`;
   var SETTLE_MS = 100;
   var checkingRenders = /* @__PURE__ */ new WeakMap();
   var RECEIPT_MODULE_IDS = /* @__PURE__ */ new Set([
+    "capsuleviewer.receipt.unilateral/v0",
+    "capsuleviewer.receipt.seller/v0",
+    "capsuleviewer.receipt.bilateral/v0",
+    "capsuleviewer.receipt.deal/v1",
     "capsulectl.deal-view/v0",
     "capsulectl.deal-view-composed/v0"
   ]);
+  var RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
   async function openReceipt(text2, panel, options) {
     let bundle;
     try {
@@ -28819,6 +28824,7 @@ ${pad.repeat(depth)}`;
     );
     if (resolution.kind !== "module" || !RECEIPT_MODULE_IDS.has(resolution.module.manifest.id))
       return bundleVerified(context.verification) ? "no-module" : "unverified";
+    panel.setAttribute(RECEIPT_CARRIER_ATTRIBUTE, "report");
     await renderEvidenceGraph(context, panel, void 0, {
       audience: DEFAULT_AUDIENCE,
       format: DEFAULT_FORMAT,
