@@ -393,12 +393,40 @@ const root = {};
   function pageAssurance(context, extension) {
     var c = map(context);
     var v = map(c.verification);
+    var checked = reportChecked(v, extension);
+    // The page runtime's own answer, asked before the model is built
+    // (pageReportCheck), when its verifier reports none.
+    if (checked === null && extension === EXTENSION && REPORT_CHECKS !== null && REPORT_CHECKS.has(context)) checked = REPORT_CHECKS.get(context);
     return {
       bundle_digest: typeof v.bundleDigest === "string" ? v.bundleDigest : null,
       witnesses: "absent",
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
-      report_checked: reportChecked(v, extension),
+      report_checked: checked,
     };
+  }
+
+  // A copy's standalone report (x-deal-report/v0) is read only once it is
+  // checked. The page's verifier does not interpret x-deal-v0, so on a page
+  // the module asks the page's runtime, which checks it as capsulectl deal
+  // verify does (EvidenceGraph.dealStandaloneReport, capsule-viewer#397): its
+  // "pass" or "fail" is kept per context, here, until the model is built.
+  // A runtime without that check, or a v1 copy, gives no answer, and the
+  // standalone report stays unread.
+  var REPORT_CHECKS = typeof WeakMap === "function" ? new WeakMap() : null;
+  function pageReportCheck(bundle) {
+    var graph = root.EvidenceGraph;
+    return graph && typeof graph.dealStandaloneReport === "function" ? graph.dealStandaloneReport(bundle) : null;
+  }
+  // The pending check of a context's standalone report, or null when there
+  // is none to ask: no standalone report, the verifier already reported it,
+  // or no place to keep the answer.
+  function askReportCheck(context, check) {
+    var c = map(context);
+    if (REPORT_CHECKS === null || REPORT_CHECKS.has(context) || !isMap(c.verification)) return null;
+    if (!own(map(map(c.bundle).extensions), STANDALONE_EXTENSION) || reportChecked(c.verification, EXTENSION) !== null) return null;
+    return Promise.resolve(check(c.bundle)).then(function (status) {
+      if (status === "pass" || status === "fail") REPORT_CHECKS.set(context, status);
+    });
   }
 
   // A carried copy, verified by the page's runtime on its own.
@@ -2710,6 +2738,7 @@ const root = {};
       assurance: (env && env.assurance) || function (context) { return pageAssurance(context, kind === "deal" ? EXTENSION_V1 : EXTENSION); },
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
+      reportCheck: (env && env.reportCheck) || pageReportCheck,
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
@@ -2720,8 +2749,25 @@ const root = {};
     var cannotCheckHere = function (context) {
       return !(env && env.verification) && map(context).strict === undefined;
     };
+    // On a page (no verifier's assurance given), a carried copy's own
+    // standalone report is asked about too, before its model is built.
+    var pageChecks = !(env && env.assurance);
+    if (pageChecks) {
+      var memberContext = e.memberContext;
+      e.memberContext = function (bundle, id) {
+        return Promise.resolve(memberContext(bundle, id)).then(function (member) {
+          var asked = askReportCheck(member, e.reportCheck);
+          return asked === null ? member : asked.then(function () { return member; });
+        });
+      };
+    }
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
+      var asked = pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null;
+      if (asked !== null) return asked.then(function () { return buildChecked(context); });
+      return buildChecked(context);
+    };
+    var buildChecked = function (context) {
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
@@ -2849,7 +2895,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "ecbc57f1735c3270c6e7df5b7be5804bb76eea7f74f0a48aba672565064e5fd0",
+      "script_sha256": "db76bb62a92a9622057e594c2d36b443bb4398988e99060f95a4921826ecf791",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2894,7 +2940,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "6e74c36a8483a603c96b9881e7103eafd682840a04051e9ed23e18de87576c92",
+      "script_sha256": "776c944c729e30da65df236a9e3284011b08737a1ed07104e6822aa8d94587c8",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2938,7 +2984,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "60e422b81cab7326b9d077005531c80e81b8c7f16c1a33a036f535f2acdae1fc",
+      "script_sha256": "a2024571050747a8de83903bb1f148f8cd04eb5d5ecf70e1cdca0a2f93aaee5e",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2984,7 +3030,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "7b39818cd7559a5c3f67f58e44a5ab81e147388d17e93f95a0eb93b5f9c4b5e0",
+      "script_sha256": "70a046dd6ba9613fc5d7aed2cd0c671ce461dd34bd272fa5f3c97ecbb68ad732",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]

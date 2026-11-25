@@ -389,12 +389,40 @@
   function pageAssurance(context, extension) {
     var c = map(context);
     var v = map(c.verification);
+    var checked = reportChecked(v, extension);
+    // The page runtime's own answer, asked before the model is built
+    // (pageReportCheck), when its verifier reports none.
+    if (checked === null && extension === EXTENSION && REPORT_CHECKS !== null && REPORT_CHECKS.has(context)) checked = REPORT_CHECKS.get(context);
     return {
       bundle_digest: typeof v.bundleDigest === "string" ? v.bundleDigest : null,
       witnesses: "absent",
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
-      report_checked: reportChecked(v, extension),
+      report_checked: checked,
     };
+  }
+
+  // A copy's standalone report (x-deal-report/v0) is read only once it is
+  // checked. The page's verifier does not interpret x-deal-v0, so on a page
+  // the module asks the page's runtime, which checks it as capsulectl deal
+  // verify does (EvidenceGraph.dealStandaloneReport, capsule-viewer#397): its
+  // "pass" or "fail" is kept per context, here, until the model is built.
+  // A runtime without that check, or a v1 copy, gives no answer, and the
+  // standalone report stays unread.
+  var REPORT_CHECKS = typeof WeakMap === "function" ? new WeakMap() : null;
+  function pageReportCheck(bundle) {
+    var graph = root.EvidenceGraph;
+    return graph && typeof graph.dealStandaloneReport === "function" ? graph.dealStandaloneReport(bundle) : null;
+  }
+  // The pending check of a context's standalone report, or null when there
+  // is none to ask: no standalone report, the verifier already reported it,
+  // or no place to keep the answer.
+  function askReportCheck(context, check) {
+    var c = map(context);
+    if (REPORT_CHECKS === null || REPORT_CHECKS.has(context) || !isMap(c.verification)) return null;
+    if (!own(map(map(c.bundle).extensions), STANDALONE_EXTENSION) || reportChecked(c.verification, EXTENSION) !== null) return null;
+    return Promise.resolve(check(c.bundle)).then(function (status) {
+      if (status === "pass" || status === "fail") REPORT_CHECKS.set(context, status);
+    });
   }
 
   // A carried copy, verified by the page's runtime on its own.
@@ -2706,6 +2734,7 @@
       assurance: (env && env.assurance) || function (context) { return pageAssurance(context, kind === "deal" ? EXTENSION_V1 : EXTENSION); },
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
+      reportCheck: (env && env.reportCheck) || pageReportCheck,
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
@@ -2716,8 +2745,25 @@
     var cannotCheckHere = function (context) {
       return !(env && env.verification) && map(context).strict === undefined;
     };
+    // On a page (no verifier's assurance given), a carried copy's own
+    // standalone report is asked about too, before its model is built.
+    var pageChecks = !(env && env.assurance);
+    if (pageChecks) {
+      var memberContext = e.memberContext;
+      e.memberContext = function (bundle, id) {
+        return Promise.resolve(memberContext(bundle, id)).then(function (member) {
+          var asked = askReportCheck(member, e.reportCheck);
+          return asked === null ? member : asked.then(function () { return member; });
+        });
+      };
+    }
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
+      var asked = pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null;
+      if (asked !== null) return asked.then(function () { return buildChecked(context); });
+      return buildChecked(context);
+    };
+    var buildChecked = function (context) {
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);

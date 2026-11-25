@@ -24,6 +24,7 @@ import {
   type PresentationHost,
   type PresentationModule,
 } from "./presentation-registry.js";
+import { dealStandaloneReport } from "./deal-standalone-report.js";
 import { RECEIPT_CORE, RECEIPT_MANIFESTS } from "./receipt-core.generated.js";
 
 /** The receipt kinds, as go/receipt names them. */
@@ -83,6 +84,7 @@ export function receiptModules(): PresentationModule[] {
     const module = core.createModule(kind, {
       localTime: true,
       memberContext: (bundle: unknown) => buildVerifiedBundleContext(bundle),
+      reportCheck: dealStandaloneReport,
     });
     return {
       ...module,
