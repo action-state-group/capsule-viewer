@@ -515,7 +515,9 @@ export type WitnessNotice = keyof typeof WITNESS_NOTICE_LINES;
  * passed, or when the witness check failed (the banner fails then). The
  * banner shows it only when its state is verified or incomplete and the
  * checkpoint's signature verified: with no signed checkpoint there is
- * nothing for a witness to cover.
+ * nothing for a witness to cover. An x-deal-v1 bundle gets `file-no-receipt`
+ * in place of either: no x-deal-v1 copy carries witness evidence (u219), so
+ * the page speaks of this file, never of the holder's log.
  */
 export function witnessNotice(
   bundle: unknown,

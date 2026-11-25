@@ -1941,7 +1941,9 @@
   P.witness = function (model) {
     // capsulectl's report of the holder's own book (x-deal-v1 keep page,
     // amended u203): said in its voice, only as reported.
-    var book = model.book_witnessed;
+    // Only on the holder's own copy drawn for the holder: a shared copy, or a
+    // page shown to others, never shows the holder's witness time.
+    var book = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? model.book_witnessed : null;
     if (book) {
       if (book.status === "verified") return w("rung.book_witnessed", { witness: book.witness, at: book.at });
       return w(book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld");

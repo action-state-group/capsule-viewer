@@ -423,6 +423,38 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     }
   });
 
+  it("a counterparty's copy never shows the holder's witness time", async () => {
+    const shared = JSON.parse(data("counterparty-copy.bundle.json")) as Obj;
+    const r = JSON.parse(data("counterparty-copy.verify.json")) as Obj;
+    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };
+    const host = document.createElement("div");
+    await renderReceipt(shared, host, { verifierReport: r, depth: "L2" });
+    expect(
+      host.querySelector("[data-receipt-module]") ?? host.firstChild,
+    ).not.toBeNull();
+    expect(host.textContent).not.toContain("Time-stamped by");
+    expect(host.textContent).toContain(
+      "No witness result was reported to this page.",
+    );
+  });
+
+  it("the holder's witness time is never shown on a shared page or report", async () => {
+    const r = report();
+    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };
+    for (const carrier of ["page", "report"] as const) {
+      const host = document.createElement("div");
+      await renderReceipt(bundle(), host, {
+        verifierReport: r,
+        carrier,
+        depth: "L2",
+      });
+      expect(host.textContent).not.toContain("Time-stamped by");
+    }
+    const own = document.createElement("div");
+    await renderReceipt(bundle(), own, { verifierReport: r, depth: "L2" });
+    expect(own.textContent).toContain("Time-stamped by W at t");
+  });
+
   it("a witnessed result in an entry that did not pass is never said: the copy is refused", async () => {
     const r = report();
     v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };

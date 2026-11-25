@@ -1945,7 +1945,9 @@ const root = {};
   P.witness = function (model) {
     // capsulectl's report of the holder's own book (x-deal-v1 keep page,
     // amended u203): said in its voice, only as reported.
-    var book = model.book_witnessed;
+    // Only on the holder's own copy drawn for the holder: a shared copy, or a
+    // page shown to others, never shows the holder's witness time.
+    var book = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? model.book_witnessed : null;
     if (book) {
       if (book.status === "verified") return w("rung.book_witnessed", { witness: book.witness, at: book.at });
       return w(book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld");
@@ -2965,7 +2967,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "fca88228986feb5e068067c4d5560fedf88f211f606ea3e86bc3dee0a6d6245c",
+      "script_sha256": "1ff739f60b723d53b877ad3f42e521f8074b88879cf68e155a8bac1a59f46144",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3010,7 +3012,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "d7e95a0cedd51ac4bcac65ee598dad44f3bf74e71a311b01d40a897c0599e555",
+      "script_sha256": "c9521098424554ce206fa14217ca5d4594868e52eb465ddfda22427d3f3de3a8",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3054,7 +3056,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "24819a524a87cb40c954414d80a72ad2955d3d840c0f935b435ebb8399a050bc",
+      "script_sha256": "7da1ae7396dd92413c4ace184d7f08e599550e59d2f4d197f92921bcd1b9193e",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3100,7 +3102,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "24103acd23a735debd216d2f35363ba65e46eff15a6074b46d0fca69709af36b",
+      "script_sha256": "6e34d62dc6973c0769e01e3036bd92b74eb8eb7776791523420bfa5e46e7be06",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
