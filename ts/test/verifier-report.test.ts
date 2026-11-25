@@ -190,6 +190,29 @@ describe("capsulectl's report: which reports are read, and how they fail (#417)"
     ).toEqual(cannot);
   });
 
+  it("renderReceipt says a verified half too, a producer selection's included", async () => {
+    const HALF =
+      "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it.";
+    const verified = edited((r) => {
+      v1Entry(r)["counterparty_half"] = { status: "verified" };
+    });
+    const selected = edited((r) => {
+      v1Entry(r)["counterparty_half"] = { status: "verified" };
+      r["verdict"] = "INCOMPLETE";
+      r["interval_coverage"] = {
+        status: "withheld",
+        findings: ["selection_not_checkable"],
+      };
+    });
+    for (const r of [verified, selected]) {
+      const host = document.createElement("div");
+      await renderReceipt(bundle(), host, { verifierReport: r, depth: "L2" });
+      expect(
+        host.querySelector('[data-rung="counterparty-half"]')?.textContent,
+      ).toBe(HALF);
+    }
+  });
+
   it("a renderReceipt host that held a receipt is emptied when the next report fails", async () => {
     const host = document.createElement("div");
     await renderReceipt(bundle(), host, { verifierReport: report() });

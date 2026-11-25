@@ -1919,8 +1919,9 @@ const root = {};
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
-    // Only a half capsulectl reported as verified is said; any other status
-    // refuses the copy before it is drawn (its x-deal-v1 entry fails).
+    // Only a half capsulectl reported as verified is said; any other status,
+    // or none, draws no line (a failed half fails the x-deal-v1 entry, which
+    // refuses the copy before it is drawn).
     if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
@@ -2942,7 +2943,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "bda33fb078feeb7193dd6f931a1ac53944bfcd91c317fb60b3e80d30e77b1c0a",
+      "script_sha256": "ae9c59de885ebb710f823e72f63bef01bb8761f482e7cf320263af348ee64003",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2987,7 +2988,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "15a50cdab5f79cd77cfd6f579708e2d3a3003b0632ee4c5103850e31878399c4",
+      "script_sha256": "fc68ec93bf358f7e6d3bd52612c4a9e0a382e88c6f862c5c90ec7263ed8ffe06",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3031,7 +3032,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "a9eadcc304f366758ced68da13525a2e68be36a62c9d57959b15b5295293acee",
+      "script_sha256": "ef8d5543858d1b5c2b68d3ea9742bd1922089ffdbbfb3ce6afc7c2d444ec0361",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3077,7 +3078,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "61a4989c61159a491fe265c9740f72d0895d23ef381b753e7c1becde208fa9c1",
+      "script_sha256": "a7073a974904b9b7597aede1caba3f6b9eb814bd171e0a43f1410b5b8e8a6867",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]

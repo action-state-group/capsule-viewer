@@ -1915,8 +1915,9 @@
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
-    // Only a half capsulectl reported as verified is said; any other status
-    // refuses the copy before it is drawn (its x-deal-v1 entry fails).
+    // Only a half capsulectl reported as verified is said; any other status,
+    // or none, draws no line (a failed half fails the x-deal-v1 entry, which
+    // refuses the copy before it is drawn).
     if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
