@@ -11,6 +11,11 @@ here. The format follows
 
 ## Unreleased
 
+## ts 0.26.1 and go 0.26.1 (2026-11-25)
+
+Both state viewer 0.26.1: `ts/v0.26.1`, then `go/v0.26.1` on the commit that ships its page runtime. The receipt fixes Sherlock2 set as a condition on the Mesh plugin release counted toward #383 (#391): #392.
+The four receipt scripts change, so each receipt manifest's `script_sha256` changes, and the wording pack gains `verify.tested_here`: a consumer that pins the receipt modules takes the new manifests.
+
 ### Fixed
 
 - The receipt's top line no longer says the page "did not re-check anything itself" when the page's own verifier (agent-action-capsule in the browser) ran the checks. It reads "Checked in this browser by {verifier}: {checks}." (new key `verify.tested_here`). An outside verifier's report, such as capsulectl's, keeps "did not re-check anything itself" (#391, Sherlock2).
