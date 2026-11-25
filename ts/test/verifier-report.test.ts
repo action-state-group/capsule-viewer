@@ -293,11 +293,20 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     expect(
       root.querySelector('[data-rung="counterparty-half"]')?.textContent,
     ).toBe(
-      "Stamped by both sides: the other party's signed agreement, stamped in their own book, is carried in this copy, and capsulectl verify reported it as verified. It covers their agreement only, not anything after it. This page did not check it itself.",
+      "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it.",
     );
     expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
-      "No countersignature in this copy. A countersignature is a separate signature over this copy; the other party's own half of the deal is the line above.",
+      "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above.",
     );
+  });
+
+  it("a half capsulectl verified in an entry that did not pass is never said: the copy is refused (Sherlock2)", async () => {
+    const r = report();
+    v1Entry(r)["counterparty_half"] = { status: "verified" };
+    v1Entry(r)["status"] = "fail";
+    const root = await page(r);
+    expect(root.querySelector('[data-rung="counterparty-half"]')).toBeNull();
+    expect(root.querySelector("[data-receipt-module]")).toBeNull();
   });
 
   it("without a verified half, no half line and the countersign line as before", async () => {
