@@ -13555,7 +13555,14 @@ ${body}
   var VERIFIER_REPORT_VERSION = "capsule-cli-result/v1";
   var DEAL_V12 = "x-deal-v1";
   var STANDALONE2 = "x-deal-report/v0";
-  function verifierReportReading(context, report) {
+  function verifierReportReading(context, given) {
+    let report = given;
+    if (typeof given === "string")
+      try {
+        report = JSON.parse(given);
+      } catch {
+        return null;
+      }
     const extensionsOf = obj2(obj2(context.bundle)["extensions"]);
     if (!(DEAL_V12 in extensionsOf) || !(STANDALONE2 in extensionsOf)) return null;
     const r = obj2(report);
@@ -13575,6 +13582,15 @@ ${body}
     if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
     const verdict2 = r["verdict"];
     if (verdict2 === "VALID") return { kind: "pass" };
+    const coverage = obj2(r["interval_coverage"]);
+    const findings = coverage["findings"];
+    if (verdict2 === "INCOMPLETE" && coverage["status"] === "withheld" && Array.isArray(findings) && findings.length === 1 && findings[0] === "selection_not_checkable" && [
+      "graph_closure",
+      "per_record_membership",
+      "checkpoint",
+      "producer_signatures"
+    ].every((claim) => obj2(r[claim])["status"] === "pass"))
+      return { kind: "pass" };
     return {
       kind: "fail",
       why: "verdict",
@@ -18072,7 +18088,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("38daef74a8534a415cfa3e19e470300306f05341");
+    return commitPrefix("cf31a173f04f7b33e5168c7212ca64d02bafa608");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -27567,9 +27583,12 @@ ${pad.repeat(depth)}`;
     checkpoint: "Didn't verify: the deal report carried outside the log was not made at this deal's checkpoint."
   };
   var STANDALONE_REPORT_CHECK = "deal-report-";
-  var standaloneReportLine = (failure, verdict2) => STANDALONE_REPORT_FAILED[failure].replace(
-    "{verdict}",
-    verdict2 ?? "not valid"
+  var standaloneReportLine = (failure, verdict2) => (
+    // A function replacement, so no "$" in the verdict is read as a pattern.
+    STANDALONE_REPORT_FAILED[failure].replace(
+      "{verdict}",
+      () => verdict2 ?? "not valid"
+    )
   );
   function renderCheckLists(host, lists, verifierHint, reportFailed = [], verdict2) {
     const groups = [
@@ -27597,9 +27616,7 @@ ${pad.repeat(depth)}`;
         const item = element6(
           "li",
           id.startsWith(STANDALONE_REPORT_CHECK) ? standaloneReportLine(
-            id.slice(
-              STANDALONE_REPORT_CHECK.length
-            ),
+            id.slice(STANDALONE_REPORT_CHECK.length),
             verdict2
           ) : verificationCheckWords(
             id,
