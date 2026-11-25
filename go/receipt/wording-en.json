@@ -541,6 +541,19 @@
     "deal.term.paid_as_agreed": "Payment as agreed",
     "deal.term.delivered": "Delivery",
     "deal.term.as_described": "Item as described",
-    "deal.named_witness.report.own": "yes, as your report states it"
+    "deal.named_witness.report.own": "yes, as your report states it",
+    "settlement.lightning.proof": "Payment: settled on Lightning; its proof matches its invoice, checked in this page.",
+    "settlement.lightning.failed": "Payment: settled on Lightning; its proof did not match its invoice in this page's check.",
+    "settlement.lightning.sealed": "Payment: settled on Lightning; its proof is sealed in this file, and this page can't check it.",
+    "settlement.lightning.withheld": "Payment: settled on Lightning; this copy does not show its proof.",
+    "settlement.lightning.final": "Payment: settled on Lightning, as the payee's wallet reported it final; this file carries no proof to check.",
+    "settlement.x402": "Payment: settled on x402; the chain lookup is not checked on this page.",
+    "settlement.other": "Payment: settled; this page checks no settlement on this rail.",
+    "settlement.missing": "Payment: a {rail} payment; no settlement record is in this file.",
+    "settlement.card": "Payment: a card payment; the card processor's report is not in this file.",
+    "settlement.size": " Size: {band}.",
+    "size.between": "{low} – {high}",
+    "size.under": "under {amount}",
+    "size.range": "{low} to under {high} {currency}"
   }
 }

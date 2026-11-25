@@ -22,9 +22,21 @@
 // Run with RECEIPT_SCRIPT_DIR=<dir holding mutated receipt_*.js> to see it
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
-import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withAddedWords, withCurrentPack, withoutAmountCard } from "./receiptScripts.js";
+import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withAddedWords, withCurrentPack, withoutAmountCard, withoutSettlement, withoutSettlementLine } from "./receiptScripts.js";
 
-const plain = (v) => JSON.parse(JSON.stringify(v));
+// What the frozen twin never draws, compared apart: the settlement line
+// (withoutSettlement in receiptScripts.js). These are the cases whose copy
+// draws it: each discloses an action naming a rail other than the simulated
+// one and carries no settlement leg.
+const SETTLEMENT_LINES = {
+  "golden-2 @keep unilateral": "missing",
+  "keep @keep unilateral": "missing",
+  "keep+one-producer @keep unilateral": "missing",
+  "keep+producer-removed @keep unilateral": "missing",
+  "main-buyer-keep @keep unilateral": "missing",
+  "main-standalone-keep @keep unilateral": "missing",
+};
+
 
 describe("receipt scripts vs the Python modules (the oracle)", () => {
   let oracle;
@@ -56,6 +68,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
 
   it("compares every case, model and depth (the count is the parity result)", async () => {
     const compared = { cases: 0, accepted: 0, models: 0, renders: 0, bytes: 0 };
+    const settled = {};
     const differences = [];
     for (const c of oracle.cases) {
       compared.cases += 1;
@@ -73,15 +86,17 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         compared.accepted += 1;
         const model = await module.buildModel(context);
         compared.models += 1;
+        const line = (model.settlement || (model.receipt && model.receipt.settlement) || {}).state;
+        if (line !== undefined) settled[`${c.name} @${c.audience} ${kind}`] = line;
         try {
-          expect(plain(model)).toEqual(py.model);
+          expect(withoutSettlement(model)).toEqual(py.model);
         } catch (err) {
           differences.push(`${c.name} @${c.audience} ${kind}: model differs\n${String(err.message).slice(0, 2000)}`);
           continue;
         }
         for (const [depth, html] of Object.entries(py.html)) {
           compared.renders += 1;
-          const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, depth)));
+          const js = canonNodes(lib.document, withoutSettlementLine(levelNodes(renderInto(lib, module, model, depth))));
           const py0 = withAddedWords(lib.document, withCurrentPack(html));
           const want = canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py0) : py0);
           compared.bytes += want.length;
@@ -95,6 +110,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     }
     console.log(`receipt parity: ${JSON.stringify(compared)}`);
     expect(differences).toEqual([]);
+    expect(settled).toEqual(SETTLEMENT_LINES);
     // 29 fixtures x 3 audiences + 23 edited copies (21 declined by
     // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only); 34 accepted (module, case)
     // pairs, the 32 fixture pairs rendered at L0, L1 and L2.
@@ -113,8 +129,8 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         expect(await module.canRender(context), `${c.name} ${kind}`).toBe(py.can_render);
         if (!py.can_render) continue;
         const model = await module.buildModel(context);
-        expect(plain(model)).toEqual(py.model);
-        const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, "L2")));
+        expect(withoutSettlement(model)).toEqual(py.model);
+        const js = canonNodes(lib.document, withoutSettlementLine(levelNodes(renderInto(lib, module, model, "L2"))));
         const py2 = withAddedWords(lib.document, withCurrentPack(py.html.L2));
         expect(js).toBe(canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py2) : py2));
       }
