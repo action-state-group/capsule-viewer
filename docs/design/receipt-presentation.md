@@ -7,11 +7,12 @@ request-evidence components are held to these rules (follow-up issue linked from
 
 A view that shows a receipt, a request's evidence or a verifier's result follows rules
 R1 to R8 below. Each rule names the wording keys that carry its words, in
-`src/capsule_viewer/receipt_slot/wording-en.json` (the example English pack); a view
+`go/receipt/wording-en.json` (the example English pack); a view
 that words these lines differently says why in its own spec and sends the text to
-Sherlock2 first. The Python twin (`src/capsule_viewer/receipt/`) and the page script
-(`src/capsule_viewer/static/receipt_core.js`) draw the same page; `tests/test_receipt_373.py`
-and `js-tests/receipt_373.test.js` hold each rule.
+Sherlock2 first. The page script (`go/receipt/receipt_core.js`, the one receipt renderer
+since #383) draws the page, and the frozen Python twin (`src/capsule_viewer/receipt/`)
+drew the same page at 0.25.0; `tests/test_receipt_373.py` and `js-tests/receipt_373.test.js`
+hold each rule.
 
 | Rule | What a view does | Wording keys | Held by |
 | --- | --- | --- | --- |
