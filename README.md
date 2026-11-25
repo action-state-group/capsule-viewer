@@ -379,9 +379,10 @@ stylesheet each script inserts once at render).
 
 - **One source, one renderer.** Since #383 the source is `go/receipt/receipt_core.js`,
   and `go generate ./receipt` (in `go/`) writes `go/receipt/receipt_*.js` and their
-  manifests, which the Go package `receipt` ships to Go page builders. The copies
+  manifests, which the Go package `receipt` ships to Go page builders. The writer
+  still reads the kit stylesheet from `src/capsule_viewer/static/kit.css`. The copies
   described below, in the Python package, are frozen at 0.25.0.
-- **One source, three scripts (the frozen 0.25.0 copies).** `static/receipt_core.js` was the source;
+- **One source, four scripts (the frozen 0.25.0 copies).** `static/receipt_core.js` was the source;
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and rewrites the `executable` block of each `receipt_slot/manifest-*.json`
