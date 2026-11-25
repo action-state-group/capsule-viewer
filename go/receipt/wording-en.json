@@ -23,6 +23,8 @@
     "deal_type.sale": "Sale",
     "deal_type.booking": "Booking",
     "deal_type.subscription": "Subscription",
+    "deal_type.rental": "Rental",
+    "deal_type.service": "Service",
     "state.open": "Open",
     "state.cancelled": "Cancelled",
     "state.closed": "Closed",

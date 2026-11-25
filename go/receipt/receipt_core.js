@@ -12,7 +12,9 @@
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
 // go/receipt/wording-en.json, whose id and sha256 the page names in L2) and the
-// kit stylesheet (src/capsule_viewer/static/kit.css, pinned by the manifest's style_sha256).
+// kit stylesheet (src/capsule_viewer/static/kit.css) and the receipt's dark
+// overrides (static/kit-dark.css, capsule-viewer#391), each pinned by the
+// manifest's style_sha256.
 // Each script carries the whole of this file and registers exactly one
 // module: the page builder puts one script in the page per module it chose,
 // and a script never registers a module the builder did not choose.
@@ -54,6 +56,7 @@
   var WORDS = {}; // @generated WORDS
   var PACK = { id: "", sha256: "" }; // @generated PACK
   var KIT_CSS = ""; // @generated KIT_CSS
+  var KIT_DARK_CSS = ""; // @generated KIT_DARK_CSS
   // The seller copy's bundle extension kind (capsule_viewer.receipt_slot.SELLER_KIND).
   var SELLER_KIND = ""; // @generated SELLER_KIND
 
@@ -2793,14 +2796,22 @@
   }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
-  // The kit stylesheet, once per document (its bytes are what the manifest's
-  // style_sha256 pins).
-  function ensureStyle(doc) {
-    if (!KIT_CSS || doc.getElementById("cv-kit-css")) return;
+  // The kit stylesheet and the receipt's dark overrides, each once per
+  // document under its own id (their bytes are what the manifest's
+  // style_sha256 pins). The kit's other modules insert the same kit.css under
+  // "cv-kit-css", so the overrides never ride on it: whichever module draws
+  // first, a receipt gets them, and they apply only inside a receipt
+  // ([data-receipt-module]), never to another module's card (#391).
+  function insertStyle(doc, id, css) {
+    if (!css || doc.getElementById(id)) return;
     var style = doc.createElement("style");
-    style.id = "cv-kit-css";
-    style.textContent = KIT_CSS;
+    style.id = id;
+    style.textContent = css;
     (doc.head || doc.documentElement).appendChild(style);
+  }
+  function ensureStyle(doc) {
+    insertStyle(doc, "cv-kit-css", KIT_CSS);
+    insertStyle(doc, "cv-receipt-dark-css", KIT_DARK_CSS);
   }
 
   // One module. `env` is what the page's runtime does not hand a module (see

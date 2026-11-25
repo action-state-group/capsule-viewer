@@ -142,6 +142,12 @@ describe("the receipt export (#383)", () => {
       "Checked in this browser by",
     );
 
+    // A Mesh exchange seals deal_type "service": the line reads it as a
+    // word, never the raw token (#391 item 5, Sherlock2's words).
+    const dealType = page.querySelector('[data-deal-type="true"]');
+    expect(dealType?.textContent).toBe("Deal: Service");
+    expect(dealType?.querySelector("[data-unworded]")).toBeNull();
+
     // Its lines above the receipt never call it the reader's own.
     expect(result.kind).toBe("checked");
     expect(receiptPageLines(result, { carrier: "page" })?.lines[0]).toBe(

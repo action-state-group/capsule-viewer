@@ -210,9 +210,11 @@ async function launchOnce(chromePath) {
         listeners.push(own);
         return () => listeners.splice(listeners.indexOf(own), 1);
       },
-      async open(url, { width, media = "screen", scripts = true }) {
+      // colorScheme ("light" or "dark") emulates the reader's OS preference;
+      // left out, the browser's own (the override is cleared).
+      async open(url, { width, media = "screen", scripts = true, colorScheme = "" }) {
         await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: false });
-        await call("Emulation.setEmulatedMedia", { media });
+        await call("Emulation.setEmulatedMedia", { media, features: [{ name: "prefers-color-scheme", value: colorScheme }] });
         await call("Emulation.setScriptExecutionDisabled", { value: !scripts });
         let onEvent;
         const loaded = new Promise((resolve) => {
