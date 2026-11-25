@@ -82,11 +82,14 @@ describe("the receipt page for a reader (#373)", () => {
     expect(note.textContent).not.toContain("witnesses");
   });
 
-  it("a page whose check could not run in full here never says it checked in this browser (#391)", async () => {
+  it("a page whose check cannot run here draws no receipt, only the can't-check line (#392, Sherlock2)", async () => {
     const { root } = await page("main-standalone-keep", "L0", false);
-    const note = root.querySelector("[data-checked]");
-    expect(note.textContent).not.toContain("in this browser");
-    expect(note.textContent).toContain("it did not re-check anything itself.");
+    expect(root.querySelector("[data-checked]")).toBeNull();
+    expect(root.querySelector('[data-banner="private"]')).toBeNull();
+    expect(root.querySelector("[data-cannot-check]").textContent).toBe(
+      "this browser can't check the receipt. Open the bundle in the offline viewer (capsule-viewer) to check it; this page shows no verdict for it.",
+    );
+    expect(root.textContent).not.toContain("did not re-check");
   });
 
   it("an outside verifier's report keeps 'did not re-check anything itself' (#391)", async () => {

@@ -2659,6 +2659,15 @@
   function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
+
+  // The page could not check the receipt here: no receipt, only the line
+  // and where to check it, in the pack's words (row.cannot_check,
+  // row.cannot_check_pointer; Sherlock2, capsule-viewer#392).
+  function cannotCheckLevels(doc) {
+    var d = new Drawing(doc);
+    var line = d.el("p", { class: "cv-tone--caution", "data-cannot-check": "true" }, [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
+    return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
+  }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
   // The kit stylesheet, once per document (its bytes are what the manifest's
@@ -2690,7 +2699,15 @@
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
+    // Sherlock2 on capsule-viewer#392: a page whose own check cannot run in
+    // full here (no strict result: this browser has no Ed25519) draws no
+    // receipt, only the can't-check line and where to check it. A verifier's
+    // report given in env (capsulectl's) is not this page's own check.
+    var cannotCheckHere = function (context) {
+      return !(env && env.verification) && map(context).strict === undefined;
+    };
     var build = function (context) {
+      if (cannotCheckHere(context)) return { cannot_check: true };
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
@@ -2727,7 +2744,7 @@
         drawCarrier = carried && carried.getAttribute("data-receipt-carrier") === "report" ? "report" : null;
         var levels;
         try {
-          levels = DRAW[kind](doc, depth, model);
+          levels = model && model.cannot_check === true ? cannotCheckLevels(doc) : DRAW[kind](doc, depth, model);
         } finally {
           drawCarrier = null;
         }

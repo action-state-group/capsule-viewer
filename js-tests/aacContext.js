@@ -172,6 +172,10 @@ export function standInContext(bundle, { verify, claims = {} } = {}) {
     countersignatures: verification.countersignatures,
     countersigners: undefined,
     extensions: verification.extensions,
+    // A browser with Ed25519 runs the strict checks, so the real context has
+    // a strict result; a receipt page reads its absence as "cannot check
+    // here" (capsule-viewer#392). The stand-in's verdict is the overall one.
+    strict: { verdict: verify && typeof verify.verdict === "string" ? verify.verdict : "VALID" },
     completeness: {
       graphClosure,
       intervalCoverage,

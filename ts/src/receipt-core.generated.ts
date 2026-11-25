@@ -2663,6 +2663,15 @@ const root = {};
   function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
+
+  // The page could not check the receipt here: no receipt, only the line
+  // and where to check it, in the pack's words (row.cannot_check,
+  // row.cannot_check_pointer; Sherlock2, capsule-viewer#392).
+  function cannotCheckLevels(doc) {
+    var d = new Drawing(doc);
+    var line = d.el("p", { class: "cv-tone--caution", "data-cannot-check": "true" }, [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
+    return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
+  }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
   // The kit stylesheet, once per document (its bytes are what the manifest's
@@ -2694,7 +2703,15 @@ const root = {};
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
+    // Sherlock2 on capsule-viewer#392: a page whose own check cannot run in
+    // full here (no strict result: this browser has no Ed25519) draws no
+    // receipt, only the can't-check line and where to check it. A verifier's
+    // report given in env (capsulectl's) is not this page's own check.
+    var cannotCheckHere = function (context) {
+      return !(env && env.verification) && map(context).strict === undefined;
+    };
     var build = function (context) {
+      if (cannotCheckHere(context)) return { cannot_check: true };
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
@@ -2731,7 +2748,7 @@ const root = {};
         drawCarrier = carried && carried.getAttribute("data-receipt-carrier") === "report" ? "report" : null;
         var levels;
         try {
-          levels = DRAW[kind](doc, depth, model);
+          levels = model && model.cannot_check === true ? cannotCheckLevels(doc) : DRAW[kind](doc, depth, model);
         } finally {
           drawCarrier = null;
         }
@@ -2821,7 +2838,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "ba003c41f2abcf0fb3ef4de35eb5adef9a9729e2220ffd23026b3b8fc92b697d",
+      "script_sha256": "47ed7bdebc603427d6250da520a5cb7618da044a15765e94003e5ae2a7e4727c",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2866,7 +2883,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "87d3ea854e20b74ee6723a2c8d19680ccb26b532919be1cead7ec3940a5314a4",
+      "script_sha256": "449f15cb5aa70d69a77e0d914bfa7876f3f0c29f0a336ae5cea5507f5658871d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2910,7 +2927,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "19b785b9cfed8c8ea5c481d9f40dc95b50147e87c64e5b2ccad2962ea342667d",
+      "script_sha256": "7796931b7f70c815122e6730e8d0485c23f2f4317d4f3535944c36898169fab3",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2956,7 +2973,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "d3ed5902399cd823133ab78293e0dfd31f413767a2570f81ea7253a6f96aa338",
+      "script_sha256": "23ce57896898ce207d379cd37d1b46cc5b0fa9c2b3e252fa76513a815ce24905",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
