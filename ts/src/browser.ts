@@ -58,6 +58,12 @@ export { readerCadenceWitness } from "./cadence-witness.js";
 // carries, under the reader's own witness list. Existence at a time only.
 export { readerCardRegistered } from "./card-registered.js";
 
+// A deal copy's standalone report (x-deal-report/v0), checked as capsulectl
+// deal verify checks it (capsule-viewer#397): the receipt module reads the
+// report only once this says "pass". Built from agent-action-capsule's
+// envelope and disclosure checks; the module verifies nothing.
+export { dealStandaloneReport } from "./deal-standalone-report.js";
+
 // The History card's signature (capsule-viewer#211; rule F4.7): the context's
 // own strict verdict for the root record, which the module draws and does
 // not decide.

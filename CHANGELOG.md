@@ -11,6 +11,12 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- A receipt page draws capsulectl-deal's own receipts again (#397). Their report rides standalone in `x-deal-report/v0`, which the page's verifier does not interpret, so every receipt module declined them ("This page has no viewer for this kind of receipt"; `checkReceipt` gave `no_module`). The page's runtime now checks that report as `capsulectl deal verify --bundle` does for x-deal-v0 (evidencebook `standaloneReportEntry`): the record is the pointer's deal report; it is signed by the deal's last step's key; its payload is the one its Capsule commits; it is this deal's report for a copy audience; it binds this bundle's checkpoint and its time; and no report record is beside it. The receipt module reads the report only when that check passes. The check is the runtime's `dealStandaloneReport`, which the npm `./receipt` export also uses. An x-deal-v1 copy gets no answer until the profile's own report rule is checked here, so its receipt still declines. A composed receipt whose carried copies keep their report standalone also still declines: their reports are not asked about yet (#401).
+
+The four receipt scripts change, so each receipt manifest's `script_sha256` changes. A consumer that pins the receipt modules takes the new manifests.
+
 ## ts 0.27.0 and go 0.27.0 (2026-11-25)
 
 Both state viewer 0.27.0: `ts/v0.27.0`, then `go/v0.27.0` on the commit that ships its page runtime. The receipt carrier the Mesh plugin's saved receipt page needs (Mesh-LLM/capsules-plugin#378, Sherlock2): #396.

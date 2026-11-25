@@ -64,6 +64,14 @@ const MESH_KEEP = repo(
   "receipt",
   "mesh-payer-selected.bundle.json",
 );
+// capsulectl-deal's own keep copy: its report rides standalone in
+// x-deal-report/v0, which the page's runtime checks itself (#397).
+const STANDALONE_KEEP = repo(
+  "tests",
+  "testdata",
+  "receipt",
+  "main-standalone-keep.bundle.json",
+);
 
 /** A Result whose claims are three deals' terms, `d1::req-1` .. `d3::req-3`, opted into contract-report/v1. */
 function dealsResult(): Obj {
@@ -114,7 +122,7 @@ describe.skipIf(executablePath === undefined)(
     it("opens the receipt with its top line, as a shared copy, offline and inside the page's CSP", async () => {
       expect(MANIFEST.executable.script_sha256).toBe(hex(MODULE));
       const { bundle } = await sealEvidenceBundle(dealsResult());
-      const receipts = { d1: MESH_KEEP };
+      const receipts = { d1: MESH_KEEP, d2: STANDALONE_KEEP };
       const html = emitEvidenceGraphHtml(bundle, runtime, {
         coreRuntimeSha256: hex(runtime),
         modules: [
@@ -164,6 +172,16 @@ describe.skipIf(executablePath === undefined)(
         expect(
           await page.textContent(`${claim} [data-banner="shared"]`),
         ).toContain("Shared copy The report owner's own record of this deal");
+        // A copy whose report is standalone opens too: the page checked the
+        // report itself (#397), so a module takes it, never "no viewer".
+        const standalone = '[data-claim-ref^="d2::"]';
+        await page.click(`${standalone} button[data-receipt="open"]`);
+        await page.waitForSelector(
+          `${standalone} [data-receipt-carrier="report"] [data-receipt-module="capsuleviewer.receipt.unilateral/v0"]`,
+        );
+        expect(await page.textContent(standalone)).not.toContain(
+          "no viewer for this kind of receipt",
+        );
         expect(requests).toEqual([]);
         expect(
           await page.evaluate(
