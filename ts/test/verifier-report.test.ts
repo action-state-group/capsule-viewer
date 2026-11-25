@@ -268,6 +268,35 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     );
   });
 
+  it("capsulectl's reading has its own heading: nothing under 'Failed on this page' when every page check passed (Sherlock2)", async () => {
+    for (const edit of [
+      (r: Obj) => {
+        v1Entry(r)["status"] = "fail";
+      },
+      (r: Obj) => {
+        r["verdict"] = "INVALID";
+      },
+    ]) {
+      const r = report();
+      edit(r);
+      const root = await page(r);
+      const headings = [...root.querySelectorAll("h4")].map(
+        (h) => h.textContent,
+      );
+      expect(headings).not.toContain("Failed on this page");
+      expect(headings).toContain("Reported by capsulectl verify");
+      expect(root.querySelectorAll('[data-checks="failed"] li')).toHaveLength(
+        0,
+      );
+      expect(
+        root.querySelectorAll('[data-checks="capsulectl"] li'),
+      ).toHaveLength(1);
+      expect(root.querySelector("summary")?.textContent).not.toContain(
+        "on this page failed",
+      );
+    }
+  });
+
   it("an entry that passed in a bundle capsulectl calls INVALID or INCOMPLETE says that verdict, never that the report failed (Sherlock2)", async () => {
     for (const verdict of ["INVALID", "INCOMPLETE"]) {
       const r = report();
