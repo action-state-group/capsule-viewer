@@ -283,6 +283,38 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     expect(root.textContent).not.toContain(CAPSULECTL_LINE);
   });
 
+  it("a counterparty half capsulectl verified is said, and the countersign line does not read as unsigned", async () => {
+    const r = report();
+    v1Entry(r)["counterparty_half"] = {
+      key: "67d55ab77af8e004",
+      status: "verified",
+    };
+    const root = await page(r);
+    expect(
+      root.querySelector('[data-rung="counterparty-half"]')?.textContent,
+    ).toBe(
+      "Signed by both sides: the other party's half of this deal is carried in this copy, and capsulectl verify reported it as verified. This page did not check it itself.",
+    );
+    expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
+      "No countersignature in this copy. A countersignature is a separate signature over this copy; the other party's own half of the deal is the line above.",
+    );
+  });
+
+  it("without a verified half, no half line and the countersign line as before", async () => {
+    for (const half of [undefined, { status: "withheld" }, "verified"]) {
+      const r = report();
+      if (half !== undefined) v1Entry(r)["counterparty_half"] = half;
+      const root = await page(r);
+      expect(root.querySelector('[data-rung="counterparty-half"]')).toBeNull();
+      expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
+        "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy.",
+      );
+    }
+    // The page never says a half capsulectl did not report: no report, no line.
+    const none = await page();
+    expect(none.querySelector('[data-rung="counterparty-half"]')).toBeNull();
+  });
+
   it("the page's own extension rows are its verifier's: one x-deal-v1 row", async () => {
     const root = await page(report());
     expect(

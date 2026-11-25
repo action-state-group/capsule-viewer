@@ -43,7 +43,11 @@ const STANDALONE = "x-deal-report/v0";
  * A report is never read for any other bundle (Codex, #417).
  */
 export type VerifierReading =
-  | { readonly kind: "pass" }
+  | {
+      readonly kind: "pass";
+      /** capsulectl's status for the copy's counterparty half, when it reported one. */
+      readonly counterpartyHalf?: string;
+    }
   | { readonly kind: "fail"; readonly why: "report" }
   | {
       readonly kind: "fail";
@@ -90,8 +94,13 @@ export function verifierReportReading(
     .find((e) => e["kind"] === DEAL_V1 && e["report"] === "standalone");
   if (entry === undefined) return null;
   if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
+  const halfStatus = obj(entry["counterparty_half"])["status"];
+  const pass: VerifierReading =
+    typeof halfStatus === "string"
+      ? { kind: "pass", counterpartyHalf: halfStatus }
+      : { kind: "pass" };
   const verdict = r["verdict"];
-  if (verdict === "VALID") return { kind: "pass" };
+  if (verdict === "VALID") return pass;
   // A producer selection: capsulectl calls it INCOMPLETE only because the
   // interval coverage is withheld as selection_not_checkable, as the Python
   // twin reads it (verifier_report.py) and the page's own verdict allows it.
@@ -112,7 +121,7 @@ export function verifierReportReading(
       "producer_signatures",
     ].every((claim) => obj(r[claim])["status"] === "pass")
   )
-    return { kind: "pass" };
+    return pass;
   return {
     kind: "fail",
     why: "verdict",
@@ -131,6 +140,7 @@ export function verifierReportReading(
  */
 export function withVerifierReport(
   context: VerifiedBundleContext,
+  reading: VerifierReading & { kind: "pass" } = { kind: "pass" },
 ): VerifiedBundleContext {
   const extensions = [
     ...context.verification.extensions,
@@ -139,6 +149,10 @@ export function withVerifierReport(
       status: "pass",
       report: "standalone",
       integrityCovered: true,
+      // The other party's half, as capsulectl reported it (x-deal-v1-counterparty-half).
+      ...(reading.counterpartyHalf === undefined
+        ? {}
+        : { counterparty_half: { status: reading.counterpartyHalf } }),
     },
   ] as unknown as VerifiedBundleContext["verification"]["extensions"];
   return {

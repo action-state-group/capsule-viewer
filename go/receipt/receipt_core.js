@@ -386,6 +386,12 @@
     return entry !== undefined && typeof entry.status === "string" ? entry.status : null;
   }
 
+  function counterpartyHalf(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    var half = entry !== undefined ? map(entry.counterparty_half) : {};
+    return typeof half.status === "string" ? half.status : null;
+  }
+
   function pageAssurance(context, extension) {
     var c = map(context);
     var v = map(c.verification);
@@ -403,6 +409,10 @@
       countersignatures: seq(c.countersignatures).map(function (x) { return isMap(x) && typeof x.status === "string" ? x.status : "unknown"; }),
       report_checked: checked,
     };
+    // The v1 deal module only: capsulectl's status for the other party's half
+    // carried in the copy (x-deal-v1-counterparty-half), from its x-deal-v1
+    // entry, else null. The page never checks the half itself.
+    if (extension === EXTENSION_V1) out.counterparty_half = counterpartyHalf(v);
     // Said only when the page checked it itself: a verifier's report (the
     // Python twin's inputs too) carries no such member.
     if (here) out.report_checked_here = true;
@@ -1219,6 +1229,7 @@
       bundle_digest: v.assurance.bundle_digest,
       witnessed: v.assurance.witnesses,
       countersignatures: v.assurance.countersignatures,
+      counterparty_half: or(str(v.assurance.counterparty_half), null),
       verification: v.verification,
       report_checked: or(str(v.assurance.report_checked), null),
     };
@@ -1904,6 +1915,9 @@
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
+    // Only a half capsulectl reported as verified is said; any other status
+    // refuses the copy before it is drawn (its x-deal-v1 entry fails).
+    if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
@@ -1915,7 +1929,8 @@
     return w("rung.unreported");
   };
   P.countersign = function (model) {
-    if (!model.countersignatures.length) return w("countersign.none");
+    // A two-sided copy is not unsigned by the other party: its half is above.
+    if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : "countersign.none");
     return w("countersign.some", { statuses: model.countersignatures.join(", ") });
   };
   P.logText = function (log) {

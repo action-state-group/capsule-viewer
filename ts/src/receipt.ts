@@ -207,7 +207,10 @@ async function resolved(
         },
       };
     if (reading?.kind === "pass")
-      checked = { ...checked, context: withVerifierReport(checked.context) };
+      checked = {
+        ...checked,
+        context: withVerifierReport(checked.context, reading),
+      };
   }
   const registry = new PresentationRegistry();
   for (const module of receiptModules()) registry.register(module);
