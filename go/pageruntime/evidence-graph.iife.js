@@ -1344,12 +1344,12 @@ var EvidenceGraph = (() => {
     encoders[Type.float.major] = encodeFloat;
     return encoders;
   }
-  function objectToTokens(obj, options = {}, refStack) {
-    const typ = is(obj);
+  function objectToTokens(obj2, options = {}, refStack) {
+    const typ = is(obj2);
     const customTypeEncoder = options && options.typeEncoders && /** @type {OptionalTypeEncoder} */
     options.typeEncoders[typ] || typeEncoders[typ];
     if (typeof customTypeEncoder === "function") {
-      const tokens = customTypeEncoder(obj, typ, options, refStack);
+      const tokens = customTypeEncoder(obj2, typ, options, refStack);
       if (tokens != null) {
         return tokens;
       }
@@ -1358,7 +1358,7 @@ var EvidenceGraph = (() => {
     if (!typeEncoder) {
       throw new Error(`${encodeErrPrefix} unsupported type: ${typ}`);
     }
-    return typeEncoder(obj, typ, options, refStack);
+    return typeEncoder(obj2, typ, options, refStack);
   }
   function sortMapEntries(entries, options) {
     const mapSorter2 = (
@@ -1605,18 +1605,18 @@ var EvidenceGraph = (() => {
          * @param {object|any[]} obj
          * @param {Reference|undefined} parent
          */
-        constructor(obj, parent2) {
-          this.obj = obj;
+        constructor(obj2, parent2) {
+          this.obj = obj2;
           this.parent = parent2;
         }
         /**
          * @param {object|any[]} obj
          * @returns {boolean}
          */
-        includes(obj) {
+        includes(obj2) {
           let p = this;
           do {
-            if (p.obj === obj) {
+            if (p.obj === obj2) {
               return true;
             }
           } while (p = p.parent);
@@ -1627,11 +1627,11 @@ var EvidenceGraph = (() => {
          * @param {object|any[]} obj
          * @returns {Reference}
          */
-        static createCheck(stack, obj) {
-          if (stack && stack.includes(obj)) {
+        static createCheck(stack, obj2) {
+          if (stack && stack.includes(obj2)) {
             throw new Error(`${encodeErrPrefix} object contains circular references`);
           }
-          return new _Ref(obj, stack);
+          return new _Ref(obj2, stack);
         }
       };
       simpleTokens = {
@@ -1650,13 +1650,13 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        number(obj, _typ, _options, _refStack) {
-          if (!Number.isInteger(obj) || !Number.isSafeInteger(obj)) {
-            return new Token(Type.float, obj);
-          } else if (obj >= 0) {
-            return new Token(Type.uint, obj);
+        number(obj2, _typ, _options, _refStack) {
+          if (!Number.isInteger(obj2) || !Number.isSafeInteger(obj2)) {
+            return new Token(Type.float, obj2);
+          } else if (obj2 >= 0) {
+            return new Token(Type.uint, obj2);
           } else {
-            return new Token(Type.negint, obj);
+            return new Token(Type.negint, obj2);
           }
         },
         /**
@@ -1666,11 +1666,11 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        bigint(obj, _typ, _options, _refStack) {
-          if (obj >= BigInt(0)) {
-            return new Token(Type.uint, obj);
+        bigint(obj2, _typ, _options, _refStack) {
+          if (obj2 >= BigInt(0)) {
+            return new Token(Type.uint, obj2);
           } else {
-            return new Token(Type.negint, obj);
+            return new Token(Type.negint, obj2);
           }
         },
         /**
@@ -1680,8 +1680,8 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        Uint8Array(obj, _typ, _options, _refStack) {
-          return new Token(Type.bytes, obj);
+        Uint8Array(obj2, _typ, _options, _refStack) {
+          return new Token(Type.bytes, obj2);
         },
         /**
          * @param {any} obj
@@ -1690,8 +1690,8 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        string(obj, _typ, _options, _refStack) {
-          return new Token(Type.string, obj);
+        string(obj2, _typ, _options, _refStack) {
+          return new Token(Type.string, obj2);
         },
         /**
          * @param {any} obj
@@ -1700,8 +1700,8 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        boolean(obj, _typ, _options, _refStack) {
-          return obj ? simpleTokens.true : simpleTokens.false;
+        boolean(obj2, _typ, _options, _refStack) {
+          return obj2 ? simpleTokens.true : simpleTokens.false;
         },
         /**
          * @param {any} _obj
@@ -1730,8 +1730,8 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        ArrayBuffer(obj, _typ, _options, _refStack) {
-          return new Token(Type.bytes, new Uint8Array(obj));
+        ArrayBuffer(obj2, _typ, _options, _refStack) {
+          return new Token(Type.bytes, new Uint8Array(obj2));
         },
         /**
          * @param {any} obj
@@ -1740,8 +1740,8 @@ var EvidenceGraph = (() => {
          * @param {Reference} [_refStack]
          * @returns {TokenOrNestedTokens}
          */
-        DataView(obj, _typ, _options, _refStack) {
-          return new Token(Type.bytes, new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength));
+        DataView(obj2, _typ, _options, _refStack) {
+          return new Token(Type.bytes, new Uint8Array(obj2.buffer, obj2.byteOffset, obj2.byteLength));
         },
         /**
          * @param {any} obj
@@ -1750,23 +1750,23 @@ var EvidenceGraph = (() => {
          * @param {Reference} [refStack]
          * @returns {TokenOrNestedTokens}
          */
-        Array(obj, _typ, options, refStack) {
-          if (!obj.length) {
+        Array(obj2, _typ, options, refStack) {
+          if (!obj2.length) {
             if (options.addBreakTokens === true) {
               return [simpleTokens.emptyArray, new Token(Type.break)];
             }
             return simpleTokens.emptyArray;
           }
-          refStack = Ref.createCheck(refStack, obj);
+          refStack = Ref.createCheck(refStack, obj2);
           const entries = [];
           let i = 0;
-          for (const e of obj) {
+          for (const e of obj2) {
             entries[i++] = objectToTokens(e, options, refStack);
           }
           if (options.addBreakTokens) {
-            return [new Token(Type.array, obj.length), entries, new Token(Type.break)];
+            return [new Token(Type.array, obj2.length), entries, new Token(Type.break)];
           }
-          return [new Token(Type.array, obj.length), entries];
+          return [new Token(Type.array, obj2.length), entries];
         },
         /**
          * @param {any} obj
@@ -1775,18 +1775,18 @@ var EvidenceGraph = (() => {
          * @param {Reference} [refStack]
          * @returns {TokenOrNestedTokens}
          */
-        Object(obj, typ, options, refStack) {
+        Object(obj2, typ, options, refStack) {
           const isMap = typ !== "Object";
-          const keys = isMap ? obj.keys() : Object.keys(obj);
-          const maxLength = isMap ? obj.size : keys.length;
+          const keys = isMap ? obj2.keys() : Object.keys(obj2);
+          const maxLength = isMap ? obj2.size : keys.length;
           let entries;
           if (maxLength) {
             entries = new Array(maxLength);
-            refStack = Ref.createCheck(refStack, obj);
+            refStack = Ref.createCheck(refStack, obj2);
             const skipUndefined = !isMap && options.ignoreUndefinedProperties;
             let i = 0;
             for (const key of keys) {
-              const value = isMap ? obj.get(key) : obj[key];
+              const value = isMap ? obj2.get(key) : obj2[key];
               if (skipUndefined && value === void 0) {
                 continue;
               }
@@ -1822,10 +1822,10 @@ var EvidenceGraph = (() => {
          * @param {Reference} [refStack]
          * @returns {TokenOrNestedTokens}
          */
-        Tagged(obj, _typ, options, refStack) {
+        Tagged(obj2, _typ, options, refStack) {
           return [
-            new Token(Type.tag, obj.tag),
-            objectToTokens(obj.value, options, refStack)
+            new Token(Type.tag, obj2.tag),
+            objectToTokens(obj2.value, options, refStack)
           ];
         }
       };
@@ -1870,7 +1870,7 @@ var EvidenceGraph = (() => {
   function tokenToMap(token, tokeniser, options) {
     const useMaps = options.useMaps === true;
     const rejectDuplicateMapKeys = options.rejectDuplicateMapKeys === true;
-    const obj = useMaps ? void 0 : {};
+    const obj2 = useMaps ? void 0 : {};
     const m = useMaps ? /* @__PURE__ */ new Map() : void 0;
     for (let i = 0; i < token.value; i++) {
       const key = tokensToObject(tokeniser, options);
@@ -1887,7 +1887,7 @@ var EvidenceGraph = (() => {
         throw new Error(`${decodeErrPrefix} non-string keys not supported (got ${typeof key})`);
       }
       if (rejectDuplicateMapKeys) {
-        if (useMaps && m.has(key) || !useMaps && Object.hasOwn(obj, key)) {
+        if (useMaps && m.has(key) || !useMaps && Object.hasOwn(obj2, key)) {
           throw new Error(`${decodeErrPrefix} found repeat map key "${key}"`);
         }
       }
@@ -1898,12 +1898,12 @@ var EvidenceGraph = (() => {
       if (useMaps) {
         m.set(key, value);
       } else if (key === "__proto__") {
-        Object.defineProperty(obj, key, { value, configurable: true, enumerable: true, writable: true });
+        Object.defineProperty(obj2, key, { value, configurable: true, enumerable: true, writable: true });
       } else {
-        obj[key] = value;
+        obj2[key] = value;
       }
     }
-    return useMaps ? m : obj;
+    return useMaps ? m : obj2;
   }
   function* tokenToMapEntries(token, tokeniser, options) {
     for (let i = 0; i < token.value; i++) {
@@ -5129,6 +5129,7 @@ var EvidenceGraph = (() => {
     conversationStatus: () => conversationStatus,
     createPresentationRegistry: () => createPresentationRegistry,
     createSectionRegistry: () => createSectionRegistry,
+    dealStandaloneReport: () => dealStandaloneReport,
     disclosureOf: () => disclosureOf,
     ed25519Available: () => ed25519Available,
     historyViewHtml: () => historyViewHtml,
@@ -10742,8 +10743,8 @@ ${body}
     const offsetMinutes = designator === void 0 || designator === "Z" || designator === "z" ? 0 : (designator.startsWith("-") ? -1 : 1) * (Number(designator.slice(1, 3)) * 60 + Number(designator.slice(4, 6)));
     if (Math.abs(offsetMinutes) > 23 * 60 + 59)
       return void 0;
-    const instant = midnight + ((hour * 60 + minute) * 60 + second) * 1e3 - offsetMinutes * 6e4;
-    return Math.floor(instant / 864e5);
+    const instant2 = midnight + ((hour * 60 + minute) * 60 + second) * 1e3 - offsetMinutes * 6e4;
+    return Math.floor(instant2 / 864e5);
   };
   var recordTimes = (record) => {
     const sealTime = asString2(record.timestamp);
@@ -17865,13 +17866,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("272682cfda0c113bbb1d7d0e9359544a59acb9d6");
+    return commitPrefix("3897a3681a97fd4d0ada231384d2b77d0f7e24e0");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.27.0",
+    viewerVersion: "0.27.1",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -26134,18 +26135,18 @@ ${key}`);
     return block;
   }
   function backfillOnly(document2) {
-    const isObj5 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
-    if (!isObj5(document2) || !isObj5(document2["coverage_report"])) return false;
+    const isObj6 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+    if (!isObj6(document2) || !isObj6(document2["coverage_report"])) return false;
     const requirements = document2["coverage_report"]["requirements"];
     if (!Array.isArray(requirements)) return false;
     let records = 0;
     for (const requirement of requirements) {
-      if (!isObj5(requirement)) return false;
+      if (!isObj6(requirement)) return false;
       const list2 = requirement["sources"];
       if (list2 === void 0) continue;
       if (!Array.isArray(list2)) return false;
       for (const source of list2) {
-        if (!isObj5(source)) return false;
+        if (!isObj6(source)) return false;
         const { contemporaneous_count: live, backfilled_count: back } = source;
         const total = source["record_count"];
         if (live !== 0 || !Number.isSafeInteger(total) || total < 0 || back !== total)
@@ -26308,28 +26309,28 @@ ${pad.repeat(depth)}`;
   var COMPLIANCE_KEY_V1 = "eu-ai-act-compliance/v1";
   var COMPLIANCE_KEY_V2 = "eu-ai-act-obligations-report/v2";
   function readFinding(value, key) {
-    const obj = object12(value);
-    const id = str2(obj?.id);
-    const ownerDue = str2(obj?.owner_due);
+    const obj2 = object12(value);
+    const id = str2(obj2?.id);
+    const ownerDue = str2(obj2?.owner_due);
     if (key === COMPLIANCE_KEY_V2) {
-      const observed = str2(obj?.observed);
+      const observed = str2(obj2?.observed);
       if (id === void 0 || observed === void 0 || ownerDue === void 0)
         return void 0;
       return { id, observed, ownerDue };
     }
-    const severity = str2(obj?.severity);
-    const recommendation = str2(obj?.recommendation);
+    const severity = str2(obj2?.severity);
+    const recommendation = str2(obj2?.recommendation);
     if (id === void 0 || severity === void 0 || recommendation === void 0 || ownerDue === void 0)
       return void 0;
     return { id, severity, recommendation, ownerDue };
   }
   function readRow(value, key) {
-    const obj = object12(value);
-    const criterionId = str2(obj?.criterion_id);
-    const name = str2(obj?.name);
+    const obj2 = object12(value);
+    const criterionId = str2(obj2?.criterion_id);
+    const name = str2(obj2?.name);
     if (criterionId === void 0 || name === void 0) return void 0;
-    const notEvaluableNote = str2(obj?.not_evaluable_note);
-    const finding = obj?.finding === void 0 ? void 0 : readFinding(obj.finding, key);
+    const notEvaluableNote = str2(obj2?.not_evaluable_note);
+    const finding = obj2?.finding === void 0 ? void 0 : readFinding(obj2.finding, key);
     return {
       criterionId,
       name,
@@ -26338,23 +26339,23 @@ ${pad.repeat(depth)}`;
     };
   }
   function readApplicability(value) {
-    const obj = object12(value);
-    const status2 = obj?.status === "in_force" || obj?.status === "future" ? obj.status : void 0;
-    const note = str2(obj?.note);
+    const obj2 = object12(value);
+    const status2 = obj2?.status === "in_force" || obj2?.status === "future" ? obj2.status : void 0;
+    const note = str2(obj2?.note);
     if (status2 === void 0 || note === void 0) return void 0;
     return { status: status2, note };
   }
   function readObligation(value, extension) {
-    const obj = object12(value);
-    const key = str2(obj?.key);
-    const article = str2(obj?.article);
-    const title = str2(obj?.title);
-    const plain2 = str2(obj?.plain);
-    const method = str2(obj?.method);
-    const applicability = readApplicability(obj?.applicability);
+    const obj2 = object12(value);
+    const key = str2(obj2?.key);
+    const article = str2(obj2?.article);
+    const title = str2(obj2?.title);
+    const plain2 = str2(obj2?.plain);
+    const method = str2(obj2?.method);
+    const applicability = readApplicability(obj2?.applicability);
     if (key === void 0 || article === void 0 || title === void 0 || plain2 === void 0 || method === void 0 || applicability === void 0)
       return void 0;
-    const rows = Array.isArray(obj?.rows) ? obj.rows.flatMap((r) => {
+    const rows = Array.isArray(obj2?.rows) ? obj2.rows.flatMap((r) => {
       const row2 = readRow(r, extension);
       return row2 === void 0 ? [] : [row2];
     }) : [];
@@ -26363,18 +26364,18 @@ ${pad.repeat(depth)}`;
       article,
       title,
       plain: plain2,
-      judgedTerms: strArray(obj?.judged_terms),
+      judgedTerms: strArray(obj2?.judged_terms),
       applicability,
       method,
       rows
     };
   }
   function readQualityProtocol(value) {
-    const obj = object12(value);
-    if (obj === void 0) return void 0;
-    const protocol = str2(obj.protocol);
-    const cadence = str2(obj.cadence);
-    const note = str2(obj.note);
+    const obj2 = object12(value);
+    if (obj2 === void 0) return void 0;
+    const protocol = str2(obj2.protocol);
+    const cadence = str2(obj2.cadence);
+    const note = str2(obj2.note);
     if (protocol === void 0 && cadence === void 0 && note === void 0)
       return void 0;
     return {
@@ -29739,6 +29740,158 @@ ${pad.repeat(depth)}`;
     } catch {
       return none("NOT_CHECKED");
     }
+  }
+
+  // src/deal-standalone-report.ts
+  var DEAL_V0 = "x-deal-v0";
+  var DEAL_V1 = "x-deal-v1";
+  var STANDALONE = "x-deal-report/v0";
+  var POINTER = "sealed_report";
+  var REPORT_ACTION = "capsulectl-deal-report";
+  var STEP_TYPES = /* @__PURE__ */ new Set(["deal_step", "step_completed", "step_failed"]);
+  var COPY_AUDIENCES = /* @__PURE__ */ new Set(["counterparty", "adjudicator", "keep"]);
+  var isObj5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+  var obj = (value) => isObj5(value) ? value : {};
+  async function dealStandaloneReport(bundle) {
+    const value = obj(bundle);
+    const extensions2 = obj(value["extensions"]);
+    if (!(STANDALONE in extensions2) || DEAL_V1 in extensions2) return null;
+    if (!ed25519Available()) return null;
+    return await standaloneReportHolds(value, extensions2) ? "pass" : "fail";
+  }
+  async function standaloneReportHolds(value, extensions2) {
+    const section = extensions2[DEAL_V0];
+    if (!isObj5(section) || Object.keys(section).length !== 1) return false;
+    const id = section[POINTER];
+    const x = extensions2[STANDALONE];
+    if (typeof id !== "string" || !isObj5(x) || Object.keys(x).length !== 2)
+      return false;
+    const record = x["record"];
+    const input = x["agent_input"];
+    if (!isObj5(record) || !isObj5(input) || record["capsule_id"] !== id || record["action_id"] !== REPORT_ACTION)
+      return false;
+    const reportKey = await verifiedProducerKey(record);
+    if (reportKey === void 0) return false;
+    const last = await lastStepRecord(value);
+    if (last === void 0) return false;
+    if (await verifiedProducerKey(last) !== reportKey) return false;
+    const capsule = {};
+    for (const [k, v] of Object.entries(record))
+      if (k !== "signature" && k !== "key_id") capsule[k] = v;
+    const disclosed = await verifyDisclosureEnvelope({
+      capsule,
+      disclosures: { agent_input: input }
+    });
+    if (!disclosed.ok || disclosed.disclosuresMatched !== 1) return false;
+    const logId = obj(value["completeness_certificate"])["log_id"];
+    if (typeof logId !== "string" || !logId.startsWith("deal/")) return false;
+    const audience = input["audience"];
+    if (input["type"] !== "deal_report" || input["profile"] !== DEAL_V0 || typeof audience !== "string" || !COPY_AUDIENCES.has(audience) || input["deal_id"] !== logId.slice("deal/".length))
+      return false;
+    const checkpoint = obj(value["checkpoint"]);
+    const bound = input["deal_checkpoint"];
+    if (!isObj5(bound) || Object.keys(bound).length !== 3) return false;
+    const boundSize = jsonUint(bound["mmr_size"]);
+    const size = jsonUint(checkpoint["mmr_size"]);
+    if (bound["log_id"] !== logId || boundSize === void 0 || size === void 0 || boundSize !== size || bound["root"] !== checkpoint["root"])
+      return false;
+    const records = Array.isArray(value["records"]) ? value["records"] : [];
+    if (records.some((r) => obj(r)["action_id"] === REPORT_ACTION)) return false;
+    const asOf = instant(obj(obj(input["report"])["lifecycle"])["as_of"]);
+    const signed = instant(checkpoint["timestamp"]);
+    return asOf !== void 0 && signed !== void 0 && asOf === signed;
+  }
+  async function verifiedProducerKey(record) {
+    const id = record["capsule_id"];
+    const signature2 = hexBytes2(record["signature"]);
+    const key = record["key_id"];
+    if (typeof id !== "string" || id === "" || signature2 === void 0)
+      return void 0;
+    if (typeof key !== "string" || hexBytes2(key) === void 0) return void 0;
+    const result3 = await verifyProducerEnvelope(id, signature2);
+    if (!result3.ok || result3.publicKey === void 0) return void 0;
+    const verified = Array.from(
+      result3.publicKey,
+      (b) => b.toString(16).padStart(2, "0")
+    ).join("");
+    return verified === key.toLowerCase() ? key : void 0;
+  }
+  async function lastStepRecord(value) {
+    const memberships2 = obj(
+      obj(value["completeness_certificate"])["memberships"]
+    );
+    const records = Array.isArray(value["records"]) ? value["records"] : [];
+    let last;
+    let lastSeq = 0n;
+    for (const raw of records) {
+      const record = obj(raw);
+      const type = (await recordHeader(value, record))?.["record_type"];
+      if (typeof type !== "string" || !STEP_TYPES.has(type)) continue;
+      const id = record["capsule_id"];
+      if (typeof id !== "string") continue;
+      const seq = jsonUint(obj(obj(memberships2[id])["log_coordinates"])["seq"]);
+      if (seq !== void 0 && seq > lastSeq) {
+        last = record;
+        lastSeq = seq;
+      }
+    }
+    return last;
+  }
+  async function recordHeader(value, record) {
+    const embedded = record["evidence_record_header"];
+    if (isObj5(embedded)) return embedded;
+    const id = record["capsule_id"];
+    if (typeof id !== "string" || id === "") return void 0;
+    const disclosed = obj(obj(value["disclosures"])[id])["agent_input"];
+    if (!isObj5(disclosed)) return void 0;
+    const capsule = {};
+    for (const [k, v] of Object.entries(record))
+      if (k !== "signature" && k !== "key_id") capsule[k] = v;
+    const checked = await verifyDisclosureEnvelope({
+      capsule,
+      disclosures: { agent_input: disclosed }
+    });
+    return checked.ok && checked.disclosuresMatched === 1 ? disclosed : void 0;
+  }
+  function jsonUint(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0) ? BigInt(value) : void 0;
+  }
+  function hexBytes2(value) {
+    if (typeof value !== "string" || value.length % 2 !== 0 || !/^[0-9a-fA-F]*$/u.test(value))
+      return void 0;
+    const out = new Uint8Array(value.length / 2);
+    for (let i = 0; i < out.length; i++)
+      out[i] = parseInt(value.slice(2 * i, 2 * i + 2), 16);
+    return out;
+  }
+  function instant(value) {
+    if (typeof value !== "string") return void 0;
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:(Z)|([+-])(\d{2}):(\d{2}))$/u.exec(
+      value
+    );
+    if (m === null) return void 0;
+    const [, y, mo, d, h, mi, s, frac, z, sign, oh, om] = m;
+    const fields2 = [y, mo, d, h, mi, s].map(Number);
+    const [year, month, day, hour, minute, second] = fields2;
+    if (month < 1 || month > 12 || day < 1 || day > civil(year, month + 1, 0).getUTCDate() || hour > 23 || minute > 59 || second > 59)
+      return void 0;
+    let offset = 0;
+    if (z === void 0) {
+      const offHour = Number(oh);
+      const offMinute = Number(om);
+      if (offHour > 23 || offMinute > 59) return void 0;
+      offset = (sign === "-" ? -1 : 1) * (offHour * 60 + offMinute) * 60;
+    }
+    const at = civil(year, month, day);
+    at.setUTCHours(hour, minute, second, 0);
+    const seconds = BigInt(at.getTime() / 1e3) - BigInt(offset);
+    const nanos = (frac ?? "").slice(0, 9).padEnd(9, "0");
+    return `${seconds}.${nanos}`;
+  }
+  function civil(year, month, day) {
+    const at = /* @__PURE__ */ new Date(0);
+    at.setUTCFullYear(year, month - 1, day);
+    return at;
   }
 
   // src/wording/history-view.en.json
