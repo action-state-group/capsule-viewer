@@ -7,6 +7,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildVerifiedBundleContext } from "@action-state-group/agent-action-capsule";
 import {
   checkReceipt,
   RECEIPT_KINDS,
@@ -17,6 +18,19 @@ import {
 } from "../src/receipt.js";
 
 type Obj = Record<string, unknown>;
+// An x-deal-v1 keep copy (tests/testdata/deal-v1/README.md).
+const v1Keep = (): string =>
+  readFileSync(
+    resolve(
+      process.cwd(),
+      "..",
+      "tests",
+      "testdata",
+      "deal-v1",
+      "keep-copy.bundle.json",
+    ),
+    "utf8",
+  );
 const fixture = (name: string): string =>
   readFileSync(
     resolve(
@@ -179,6 +193,51 @@ describe("the receipt export (#383)", () => {
     ).members;
     members[1]!.bundle.records[0]!.timestamp = "2001-01-01T00:00:00Z";
     expect((await checkReceipt(bundle)).kind).toBe("did_not_verify");
+  });
+
+  it("an x-deal-v1 keep copy: the page can't check its report, so it draws only that line and how to check it (#405)", async () => {
+    const LINE =
+      "This page can't check this receipt, so it shows nothing from it and no verdict. To check it, run `capsulectl deal verify --bundle <file>` on the receipt file. It needs the capsulectl-deal plugin.";
+    const result = await checkReceipt(v1Keep());
+    expect(result).toEqual({ kind: "cannot_check", reason: "report_rule" });
+    expect(receiptLabel(result)).toBe("can't be checked here");
+    expect(receiptPageLines(result)).toEqual({ tone: "bad", lines: [LINE] });
+    for (const carrier of [undefined, "report", "page"] as const) {
+      const drawn = host();
+      expect(
+        await renderReceipt(
+          v1Keep(),
+          drawn,
+          carrier === undefined ? {} : { carrier },
+        ),
+      ).toEqual(result);
+      // Not drawn: the page lines say it once (receiptPageLines).
+      expect(drawn.childNodes.length, String(carrier)).toBe(0);
+    }
+  });
+
+  it('the v1 module itself: a copy that did not verify is declined, never "can\'t check"', async () => {
+    const deal = receiptModules().find(
+      (m) => m.manifest.id === "capsuleviewer.receipt.deal/v1",
+    )!;
+    const b = JSON.parse(v1Keep()) as Obj;
+    (b["records"] as Obj[])[0]!["timestamp"] = "2000-01-01T00:00:00Z";
+    expect(await deal.canRender(await buildVerifiedBundleContext(b))).toBe(
+      false,
+    );
+    const good = await buildVerifiedBundleContext(JSON.parse(v1Keep()));
+    expect(await deal.canRender(good)).toBe(true);
+    expect(await deal.buildModel(good)).toEqual({
+      cannot_check: true,
+      reason: "report_rule",
+    });
+  });
+
+  it("an x-deal-v1 copy that does not verify says so, never that it can't be checked", async () => {
+    const b = JSON.parse(v1Keep()) as Obj;
+    const records = b["records"] as Obj[];
+    records[0]!["timestamp"] = "2000-01-01T00:00:00Z";
+    expect((await checkReceipt(b)).kind).toBe("did_not_verify");
   });
 
   it("labels the other results in the receipt words, and none for no module", async () => {

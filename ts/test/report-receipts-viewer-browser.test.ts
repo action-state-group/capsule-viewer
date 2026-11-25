@@ -64,6 +64,14 @@ const MESH_KEEP = repo(
   "receipt",
   "mesh-payer-selected.bundle.json",
 );
+const DEAL_MODULE = repo("go", "receipt", "receipt_deal.js");
+const DEAL_MANIFEST = JSON.parse(
+  repo("go", "receipt", "manifest-deal.json"),
+) as {
+  executable: { script_sha256: string; style_sha256: string[] };
+};
+// An x-deal-v1 keep copy: the page cannot check its report (#405).
+const V1_KEEP = repo("tests", "testdata", "deal-v1", "keep-copy.bundle.json");
 // capsulectl-deal's own keep copy: its report rides standalone in
 // x-deal-report/v0, which the page's runtime checks itself (#397).
 const STANDALONE_KEEP = repo(
@@ -122,7 +130,7 @@ describe.skipIf(executablePath === undefined)(
     it("opens the receipt with its top line, as a shared copy, offline and inside the page's CSP", async () => {
       expect(MANIFEST.executable.script_sha256).toBe(hex(MODULE));
       const { bundle } = await sealEvidenceBundle(dealsResult());
-      const receipts = { d1: MESH_KEEP, d2: STANDALONE_KEEP };
+      const receipts = { d1: MESH_KEEP, d2: STANDALONE_KEEP, d3: V1_KEEP };
       const html = emitEvidenceGraphHtml(bundle, runtime, {
         coreRuntimeSha256: hex(runtime),
         modules: [
@@ -130,6 +138,11 @@ describe.skipIf(executablePath === undefined)(
             code: MODULE,
             sha256: hex(MODULE),
             styleSha256: MANIFEST.executable.style_sha256,
+          },
+          {
+            code: DEAL_MODULE,
+            sha256: hex(DEAL_MODULE),
+            styleSha256: DEAL_MANIFEST.executable.style_sha256,
           },
         ],
         bootstrap: `const RECEIPTS = ${escapeJsonForHtmlScript(JSON.stringify(receipts))}; renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, { depth: 'L2', receipts: RECEIPTS });`,
@@ -180,6 +193,18 @@ describe.skipIf(executablePath === undefined)(
           `${standalone} [data-receipt-carrier="report"] [data-receipt-module="capsuleviewer.receipt.unilateral/v0"]`,
         );
         expect(await page.textContent(standalone)).not.toContain(
+          "no viewer for this kind of receipt",
+        );
+        // An x-deal-v1 copy: the v1 module takes it and draws only the line
+        // that this page can't check it, and how to (#405), not "no viewer".
+        const v1 = '[data-claim-ref^="d3::"]';
+        await page.click(`${v1} button[data-receipt="open"]`);
+        const why = `${v1} [data-receipt-carrier="report"] [data-cannot-check-reason="report_rule"]`;
+        await page.waitForSelector(why);
+        expect(await page.textContent(why)).toContain(
+          "This page can't check this receipt",
+        );
+        expect(await page.textContent(v1)).not.toContain(
           "no viewer for this kind of receipt",
         );
         expect(requests).toEqual([]);

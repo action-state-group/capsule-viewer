@@ -51,8 +51,13 @@ export type ReceiptResult =
     }
   /** The bundle did not verify, or could not be read: do not rely on it. */
   | { readonly kind: "did_not_verify"; readonly line: string }
-  /** This browser cannot verify it (no SHA-256 or Ed25519): no verdict. */
-  | { readonly kind: "cannot_check" }
+  /**
+   * This page cannot check it, so it shows nothing from it and no verdict:
+   * this browser cannot verify (no SHA-256 or Ed25519), or, with `reason`
+   * `report_rule`, the copy is an x-deal-v1 receipt whose report passes only
+   * under its profile's own rule, which no page runs yet (#405).
+   */
+  | { readonly kind: "cannot_check"; readonly reason?: "report_rule" }
   /** Verified, but no receipt module draws it (not a deal receipt). */
   | { readonly kind: "no_module" };
 
@@ -189,6 +194,15 @@ const bothSides = (model: unknown): boolean =>
 
 function result(found: Found): ReceiptResult {
   if ("result" in found) return found.result;
+  const model = found.model as { cannot_check?: unknown; reason?: unknown };
+  if (
+    typeof model === "object" &&
+    model !== null &&
+    model.cannot_check === true
+  )
+    return model.reason === "report_rule"
+      ? { kind: "cannot_check", reason: "report_rule" }
+      : { kind: "cannot_check" };
   return {
     kind: "checked",
     module: found.module.manifest.id,
@@ -220,9 +234,13 @@ export async function renderReceipt(
   if (options.carrier === "report" || options.carrier === "page")
     host.setAttribute("data-receipt-carrier", options.carrier);
   else host.removeAttribute("data-receipt-carrier");
-  if ("result" in found) {
+  // Not checked: nothing is drawn. For a copy this page can't check (an
+  // x-deal-v1 report, #405) the line is the page lines' (receiptPageLines),
+  // said once there.
+  const done = result(found);
+  if (done.kind !== "checked" || "result" in found) {
     host.replaceChildren();
-    return found.result;
+    return done;
   }
   const doc = host.ownerDocument;
   const region = (name: string): HTMLElement => {
@@ -239,7 +257,7 @@ export async function renderReceipt(
     depth: options.depth ?? "L0",
     setChromeClass: () => undefined,
   });
-  return result(found);
+  return done;
 }
 
 const fill = (
@@ -267,7 +285,9 @@ export function receiptLabel(
       : result.kind === "no_record"
         ? "row.none"
         : result.kind === "cannot_check"
-          ? "row.cannot_check"
+          ? result.reason === "report_rule"
+            ? "row.cannot_check.report_rule.row"
+            : "row.cannot_check"
           : result.kind === "did_not_verify"
             ? "row.did_not_verify"
             : null;
@@ -306,7 +326,9 @@ export function receiptPageLines(
       return {
         tone: "bad",
         lines: [
-          `${fill("row.cannot_check")}. ${fill("row.cannot_check_pointer")}`,
+          result.reason === "report_rule"
+            ? `${fill("row.cannot_check.report_rule")} ${fill("row.cannot_check.report_rule_pointer")}`
+            : `${fill("row.cannot_check")}. ${fill("row.cannot_check_pointer")}`,
         ],
       };
     case "did_not_verify":
