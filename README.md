@@ -584,7 +584,8 @@ npm test   # the kit layout suite also needs Chromium (CHROME_PATH)
 ```
 
 `scripts/ci-local.sh` runs these plus the `ts/` package's `npm run check` and
-the `go/` module's tests, as CI does.
+the `go/` module's tests, as CI does; `--full` also runs the `ts/` check on
+Node 22 and 24. [AGENTS.md](AGENTS.md) says when to run each.
 
 ## Packages and releases
 
