@@ -199,14 +199,14 @@ async function resolved(
   let checked = found;
   if (verifierReport !== undefined) {
     const reading = verifierReportReading(checked.context, verifierReport);
-    if (reading === "fail")
+    if (reading?.kind === "fail")
       return {
         result: {
           kind: "did_not_verify",
           line: VERIFICATION_BANNER_LINES.refused,
         },
       };
-    if (reading === "pass")
+    if (reading?.kind === "pass")
       checked = { ...checked, context: withVerifierReport(checked.context) };
   }
   const registry = new PresentationRegistry();

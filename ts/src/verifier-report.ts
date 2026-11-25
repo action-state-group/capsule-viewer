@@ -28,18 +28,35 @@ const obj = (v: unknown): Obj => (isObj(v) ? v : {});
 /** capsulectl's result format (`capsule-cli-result/v1`), as the Python twin reads it. */
 export const VERIFIER_REPORT_VERSION = "capsule-cli-result/v1";
 const DEAL_V1 = "x-deal-v1";
+const STANDALONE = "x-deal-report/v0";
 
 /**
  * What capsulectl reported of this bundle's x-deal-v1 standalone report:
- * "pass" when the bundle's verdict is VALID and the x-deal-v1 entry passed
- * with the report standalone; "fail" when the report is this bundle's and
- * says anything else; null when it is not this bundle's report or names no
- * standalone x-deal-v1 report.
+ *  - `pass`: the bundle's verdict is VALID and the x-deal-v1 entry passed,
+ *    with the report standalone;
+ *  - `fail` with `report`: the entry did not pass (Sherlock2's first line);
+ *  - `fail` with `verdict`: the entry passed but capsulectl's verdict for the
+ *    bundle is not VALID, for a reason that is not the report; the page says
+ *    the verdict, never that the report failed (Sherlock2's second line);
+ *  - null: the bundle is not an x-deal-v1 copy with a standalone report, or
+ *    the report is not this bundle's, or names no standalone x-deal-v1 entry.
+ * A report is never read for any other bundle (Codex, #417).
  */
+export type VerifierReading =
+  | { readonly kind: "pass" }
+  | { readonly kind: "fail"; readonly why: "report" }
+  | {
+      readonly kind: "fail";
+      readonly why: "verdict";
+      readonly verdict: string;
+    };
+
 export function verifierReportReading(
   context: VerifiedBundleContext,
   report: unknown,
-): "pass" | "fail" | null {
+): VerifierReading | null {
+  const extensionsOf = obj(obj(context.bundle)["extensions"]);
+  if (!(DEAL_V1 in extensionsOf) || !(STANDALONE in extensionsOf)) return null;
   const r = obj(report);
   if (r["spec_version"] !== VERIFIER_REPORT_VERSION) return null;
   const digest = context.verification.bundleDigest;
@@ -64,17 +81,24 @@ export function verifierReportReading(
     .map(obj)
     .find((e) => e["kind"] === DEAL_V1 && e["report"] === "standalone");
   if (entry === undefined) return null;
-  return entry["status"] === "pass" && r["verdict"] === "VALID"
-    ? "pass"
-    : "fail";
+  if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
+  const verdict = r["verdict"];
+  if (verdict === "VALID") return { kind: "pass" };
+  return {
+    kind: "fail",
+    why: "verdict",
+    verdict:
+      typeof verdict === "string" && verdict !== "" ? verdict : "not valid",
+  };
 }
 
 /**
  * The context the receipt module reads, with capsulectl's passing check of
  * the x-deal-v1 standalone report: an x-deal-v1 entry naming the report
  * standalone and its status, as capsulectl's own report entry does, beside
- * the page verifier's own entries. The bundle and the page's checks are
- * unchanged. Only a "pass" reading is ever added.
+ * the page verifier's own entries, for the receipt module only: the page's
+ * own verification (its banner, its extension rows) reads the context
+ * without it (Codex, #417). Only a "pass" reading is ever added.
  */
 export function withVerifierReport(
   context: VerifiedBundleContext,

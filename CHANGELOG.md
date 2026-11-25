@@ -15,8 +15,10 @@ here. The format follows
 
 - A page or the receipt API can carry capsulectl's own verify report for an x-deal-v1 copy, so its receipt draws (#405 route 1). A page cannot run the x-deal-v1 report rule itself. With `verifierReport` (the output of `capsulectl deal verify --bundle`, `capsule-cli-result/v1`) given to `renderEvidenceGraph`, `checkReceipt` or `renderReceipt`, the report is read only when it is this bundle's: its format, its `bundle_digest` and its record identities, as the Python twin checks them.
   - When it passed, the v1 receipt draws, and its line says so in `summary.standalone`'s words: "capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
-  - When it failed, the copy is refused, with "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass."
-  - A missing report, or another bundle's, keeps the can't-check line (#407).
+  - When it failed, the copy is refused (Sherlock2):
+    - when its x-deal-v1 entry did not pass: "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.";
+    - when the entry passed but the verdict is not VALID: "Didn't verify: capsulectl deal verify reported this bundle as <verdict>.", never that the report failed.
+  - A missing report, or another bundle's, keeps the can't-check line (#407). A report is read only for a bundle that is an x-deal-v1 copy with a standalone report. Capsulectl's passing entry reaches the receipt module only, never the page's own checks or extension rows.
 
 ### Fixed
 

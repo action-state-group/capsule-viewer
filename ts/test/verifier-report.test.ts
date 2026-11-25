@@ -85,6 +85,90 @@ describe("capsulectl's report of an x-deal-v1 copy, in the receipt API (#405)", 
   });
 });
 
+describe("capsulectl's report: which reports are read, and how they fail (#417)", () => {
+  const cannot = { kind: "cannot_check", reason: "report_rule" };
+  const edited = (edit: (r: Obj) => void): Obj => {
+    const r = report();
+    edit(r);
+    return r;
+  };
+
+  it("a report with no standalone x-deal-v1 entry is not read", async () => {
+    for (const r of [
+      edited((r) => delete r["extensions"]),
+      edited((r) => {
+        r["extensions"] = "not a list";
+      }),
+      edited((r) => {
+        r["extensions"] = (r["extensions"] as Obj[]).filter(
+          (e) => e["kind"] !== "x-deal-v1",
+        );
+      }),
+      edited((r) => {
+        v1Entry(r)["report"] = "in_log";
+      }),
+    ])
+      expect(await checkReceipt(bundle(), { verifierReport: r })).toEqual(
+        cannot,
+      );
+  });
+
+  it("an entry that did not pass, whatever it says, refuses the copy", async () => {
+    for (const status of ["fail", "not_checked", "withheld", "anything"]) {
+      const r = edited((r) => {
+        v1Entry(r)["status"] = status;
+      });
+      expect((await checkReceipt(bundle(), { verifierReport: r })).kind).toBe(
+        "did_not_verify",
+      );
+    }
+  });
+
+  it("a report is never read for a bundle that is not an x-deal-v1 copy", async () => {
+    // A v0 copy, with a report forged to its digest that says the v1 report
+    // failed: the copy reads as it does with no report at all.
+    const v0 = JSON.parse(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "..",
+          "tests",
+          "testdata",
+          "receipt",
+          "main-standalone-keep.bundle.json",
+        ),
+        "utf8",
+      ),
+    ) as Obj;
+    const plain = await checkReceipt(v0);
+    const forged = edited((r) => {
+      v1Entry(r)["status"] = "fail";
+    });
+    const { buildVerifiedBundleContext } = await import(
+      "@action-state-group/agent-action-capsule"
+    );
+    forged["bundle_digest"] = (
+      await buildVerifiedBundleContext(v0)
+    ).verification.bundleDigest;
+    forged["record_identity"] = Object.fromEntries(
+      (v0["records"] as Obj[]).map((x) => [x["capsule_id"], {}]),
+    );
+    expect(await checkReceipt(v0, { verifierReport: forged })).toEqual(plain);
+  });
+
+  it("a renderReceipt host that held a receipt is emptied when the next report fails", async () => {
+    const host = document.createElement("div");
+    await renderReceipt(bundle(), host, { verifierReport: report() });
+    expect(host.childNodes.length).toBeGreaterThan(0);
+    await renderReceipt(bundle(), host, {
+      verifierReport: edited((r) => {
+        v1Entry(r)["status"] = "fail";
+      }),
+    });
+    expect(host.childNodes.length).toBe(0);
+  });
+});
+
 describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", () => {
   async function page(verifierReport?: unknown): Promise<HTMLElement> {
     const registry = createPresentationRegistry();
@@ -125,6 +209,40 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     ).toBe(
       "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
     );
+  });
+
+  it("an entry that passed in a bundle capsulectl calls INVALID or INCOMPLETE says that verdict, never that the report failed (Sherlock2)", async () => {
+    for (const verdict of ["INVALID", "INCOMPLETE"]) {
+      const r = report();
+      r["verdict"] = verdict;
+      const root = await page(r);
+      expect(root.querySelector("[data-receipt-module]")).toBeNull();
+      expect(
+        root.querySelector('[data-check="deal-report-verdict"]')?.textContent,
+      ).toBe(
+        `Didn't verify: capsulectl deal verify reported this bundle as ${verdict}.`,
+      );
+      expect(
+        root.querySelector('[data-check="deal-report-verifier"]'),
+      ).toBeNull();
+    }
+  });
+
+  it("another bundle's report is ignored: the can't-check line, no receipt", async () => {
+    const other = report();
+    other["bundle_digest"] = "0".repeat(64);
+    const root = await page(other);
+    expect(
+      root.querySelector('[data-cannot-check-reason="report_rule"]'),
+    ).not.toBeNull();
+    expect(root.textContent).not.toContain(CAPSULECTL_LINE);
+  });
+
+  it("the page's own extension rows are its verifier's: one x-deal-v1 row", async () => {
+    const root = await page(report());
+    expect(
+      root.querySelectorAll('[data-extension-id="x-deal-v1"]'),
+    ).toHaveLength(1);
   });
 
   it("without a report draws only the can't-check line", async () => {
