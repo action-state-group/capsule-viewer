@@ -334,6 +334,38 @@ describe("the stand-in's round 1 (PR 249)", () => {
     expect(failed.querySelectorAll('[data-history="row"]')).toHaveLength(0);
   });
 
+  // The callout names the card's holder exactly when the title does
+  // (header.title.person), from the same field (Sherlock2, F10).
+  const callout = (p: HTMLElement): string =>
+    p.querySelector('[data-history="does-not-show"]')?.textContent ?? "";
+  it("a card titled with its holder's name names the holder in its callout; other cards say this side", () => {
+    const person = clone(vectors.cases["muse-picked-shared"]) as Json;
+    delete person["picked"];
+    person["audience"] = { kind: "anyone" };
+    const named = page(person);
+    expect(named.querySelector(".cvh-title, h1")?.textContent).toContain(
+      "History · Steven",
+    );
+    expect(callout(named)).toContain(
+      "Each deal's outcome here is what Steven recorded, not a confirmed outcome.",
+    );
+    const shared = clone(vectors.cases["muse-picked-shared"]) as Json;
+    delete shared["picked"];
+    expect(callout(page(shared))).toContain("what this side recorded");
+    expect(callout(page(clone(vectors.cases["muse-owner"]) as Json))).toContain(
+      "what this side recorded",
+    );
+  });
+
+  it("a failed deal report check: the hero says it once, no rows and no callout", () => {
+    const p = withDealReport("fail");
+    expect(p.querySelector('[data-history="hero"]')?.textContent).toContain(
+      "This history didn't verify, so this page shows none of it.",
+    );
+    expect(p.querySelectorAll('[data-history="row"]')).toHaveLength(0);
+    expect(p.querySelector('[data-history="does-not-show"]')).toBeNull();
+  });
+
   it("a deal page that does not list the deal report check lists it once as not run", () => {
     const m = clone(vectors.cases["muse-owner"]) as Json;
     m["checks"] = (m["checks"] as Json[]).filter(

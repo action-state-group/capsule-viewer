@@ -1119,6 +1119,10 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			text = say("callout.checkpoints")
 		case picked:
 			text = say("callout.deals.picked", "name", nameOr())
+		case reader_ != "owner" && audienceKind != "shared":
+			// A card titled with its holder's name (header.title.person) names
+			// the holder in its callout too, from the same field (Sherlock2, F10).
+			text = say("callout.deals.named", "name", nameOr())
 		default:
 			text = say("callout.deals")
 		}

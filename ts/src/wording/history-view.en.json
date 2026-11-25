@@ -92,6 +92,7 @@
     "callout.checkpoints": "These checkpoints show when this node's log was cut and how much it holds. They don't show what any exchange said or how it went, and this is not a judgment of the node.",
     "callout.checkpoints.time": "The exact time of each exchange. Checkpoint times are rounded to the minute, and each side of an exchange gets its own checkpoint, so two can share a time.",
     "callout.deals": "Each deal's outcome here is what this side recorded, not a confirmed outcome.",
+    "callout.deals.named": "Each deal's outcome here is what {name} recorded, not a confirmed outcome.",
     "callout.deals.picked": "{name} picked these; it isn't every deal. Each outcome is what {name}'s side recorded, not a confirmed outcome.",
     "shares.heading": "What this node shares",
     "shares.summary": "With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange.",

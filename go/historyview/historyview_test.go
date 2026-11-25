@@ -266,3 +266,39 @@ func TestADealPageWithoutTheDealReportCheckListsItNotRun(t *testing.T) {
 	assert.Zero(t, strings.Count(frag, `cvh-stamp-name">RECORDED`))
 	assert.Equal(t, 1, strings.Count(frag, "Each deal was read with its own report"))
 }
+
+// The callout names the card's holder exactly when the title does
+// (header.title.person), and a failed deal report check draws the hero's
+// failure, no rows and no callout (Sherlock2, F10).
+func TestCalloutNamesTheHolderWithThePersonTitle(t *testing.T) {
+	load := func(name string) map[string]any {
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(cases(t)[name], &m))
+		return m
+	}
+	render := func(m map[string]any, overlay any) string {
+		frag, err := Render(m, overlay)
+		require.NoError(t, err)
+		return frag
+	}
+	person := load("muse-picked-shared")
+	delete(person, "picked")
+	person["audience"] = map[string]any{"kind": "anyone"}
+	named := render(person, nil)
+	assert.Contains(t, named, "History · Steven")
+	assert.Contains(t, named, "Each deal's outcome here is what Steven recorded, not a confirmed outcome.")
+	shared := load("muse-picked-shared")
+	delete(shared, "picked")
+	assert.Contains(t, render(shared, nil), "what this side recorded")
+
+	failed := load("muse-owner")
+	for _, c := range failed["checks"].([]any) {
+		if c.(map[string]any)["id"] == "deal_report" {
+			c.(map[string]any)["status"] = "fail"
+		}
+	}
+	page := render(failed, overlayFor(t, "muse-owner"))
+	assert.Contains(t, page, "This history didn't verify, so this page shows none of it.")
+	assert.Zero(t, strings.Count(page, `data-history="row"`))
+	assert.NotContains(t, page, `data-history="does-not-show"`)
+}

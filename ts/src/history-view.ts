@@ -1055,7 +1055,10 @@ export function buildHistoryView(
         statusOf("consistency") === "pass"
       : dealRecorded;
 
-  // Header.
+  // Header. A card titled with its holder's name (header.title.person) names
+  // the holder in its callout too, from the same field (Sherlock2, F10).
+  const personTitle =
+    kind !== "checkpoint" && reader !== "owner" && audienceKind !== "shared";
   let title: string;
   if (kind === "checkpoint")
     title =
@@ -1360,7 +1363,9 @@ export function buildHistoryView(
               ? say("callout.checkpoints")
               : picked
                 ? say("callout.deals.picked", { name: name ?? "" })
-                : say("callout.deals"),
+                : personTitle
+                  ? say("callout.deals.named", { name: name ?? "" })
+                  : say("callout.deals"),
           ),
           kind === "checkpoint" && rows.length > 0
             ? el("p", null, say("callout.checkpoints.time"))
