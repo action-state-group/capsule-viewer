@@ -12,7 +12,10 @@
 // It writes the same bytes the Python writer (capsule_viewer.receipt_slot)
 // wrote for capsule-viewer 0.25.0, so the JSON it fills in is serialised the
 // way Python's json.dumps does: keys in file order, non-ASCII text as is,
-// and only '"', '\\' and control characters escaped.
+// and only '"', '\\' and control characters escaped. One difference: a number
+// keeps the text it was written with (Python would print 2.50 as 2.5); no
+// input carries such a number, and TestGeneratedFilesAreCurrent would show
+// one that did.
 package writer
 
 import (

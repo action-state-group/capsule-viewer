@@ -21,6 +21,8 @@ func TestSerialisationIsPythons(t *testing.T) {
 	assert.Equal(t, "{\n  \"a\": \"q\\\"\\\\\\n\\r\\t\\b\\f\\u0001\\u001f é ✓   /\",\n  \"b\": [\n    1,\n    true,\n    null,\n    {},\n    []\n  ],\n  \"c\": {\n    \"d\": []\n  }\n}", indented(v))
 }
 
+// A number keeps its written text, unlike Python's 2.50 -> 2.5 (see the
+// package comment).
 func TestDecodeKeepsOrderAndRefusesTrailingData(t *testing.T) {
 	v, err := decode([]byte(`{"z": 1, "a": 2.50}`))
 	require.NoError(t, err)

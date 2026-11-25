@@ -16,6 +16,7 @@ import (
 
 	"github.com/action-state-group/capsule-viewer/go/emitter"
 	"github.com/action-state-group/capsule-viewer/go/pageruntime"
+	"github.com/action-state-group/capsule-viewer/go/presentation"
 	"github.com/action-state-group/capsule-viewer/go/receipt/internal/writer"
 )
 
@@ -129,15 +130,83 @@ func TestOfflinePageRefusesAWrongPin(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// meshKeepCopy is a Mesh node's keep copy of a deal receipt, numbers kept as
-// their JSON text.
+// meshKeepCopy is a Mesh node's keep copy of a deal receipt.
 func meshKeepCopy(t *testing.T) map[string]interface{} {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "..", "tests", "testdata", "receipt", "mesh-payer-selected.bundle.json"))
+	return fixture(t, "mesh-payer-selected")
+}
+
+// fixture is a receipt bundle from tests/testdata/receipt, numbers kept as
+// their JSON text.
+func fixture(t *testing.T, name string) map[string]interface{} {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "..", "tests", "testdata", "receipt", name+".bundle.json"))
 	require.NoError(t, err)
 	d := json.NewDecoder(strings.NewReader(string(raw)))
 	d.UseNumber()
 	var bundle map[string]interface{}
 	require.NoError(t, d.Decode(&bundle))
 	return bundle
+}
+
+// The page's resolution (go/presentation, the Go twin of the runtime's
+// registry) picks these modules as the reference runtime would: each
+// registers beside the built-ins without ambiguity, and each Mesh fixture
+// resolves to the module below. A Mesh provider's receipt is not a deal (no
+// x-deal-v0 block), so no receipt module here takes it: it stays the Python
+// provider module's, frozen at 0.25.0.
+func TestResolutionPicksTheReceiptModule(t *testing.T) {
+	registry, err := presentation.NewBuiltinRegistry(presentation.ReferenceRuntime())
+	require.NoError(t, err)
+	for _, kind := range Kinds {
+		m, err := Module(kind)
+		require.NoError(t, err)
+		manifest, err := presentation.ParseManifest(m.Manifest)
+		require.NoError(t, err, kind)
+		_, err = registry.Register(manifest)
+		require.NoError(t, err, kind)
+	}
+	assert.Empty(t, registry.Refused())
+
+	// At the owner's audience a payer's keep copy is the unilateral
+	// receipt. At "*", the audience a report opens a receipt for today, the
+	// manifests (keep, counterparty, adjudicator) do not match and the
+	// built-in page takes it: CV2 of #383 settles what a receipt in a report
+	// shows. A provider's receipt is never a receipt module's.
+	cases := []struct{ name, audience, want string }{
+		{"mesh-payer-selected", "keep", "capsuleviewer.receipt.unilateral/v0"},
+		{"mesh-payer-selected", "*", "aac.builtin.no-aggregate/v0"},
+		{"mesh-provider-selected", "keep", "aac.builtin.no-aggregate/v0"},
+	}
+	for _, c := range cases {
+		d, _ := presentation.DescribeBundle(fixture(t, c.name))
+		got, err := registry.Resolve(d, c.audience, presentation.FormatHTML)
+		require.NoError(t, err, c.name)
+		require.Equal(t, presentation.ResolutionModule, got.Kind, c.name)
+		assert.Equal(t, c.want, got.Manifest.ID, "%s at %s", c.name, c.audience)
+	}
+}
+
+// The Python package's receipt files are frozen at 0.25.0 (#383): this
+// package's copies are the ones that change. The pins keep an edit to the
+// frozen copies, and a rerun of the Python writer, from passing unseen once
+// TestScriptsEqualTheFrozenPythonCopies is gone.
+func TestFrozenPythonCopiesStayFrozen(t *testing.T) {
+	pins := map[string]string{
+		"static/receipt_core.js":                "1e0f98f27a36f8dbf4dfcc4f1dbbc6f98396704add1cba33634bd349baa455d8",
+		"static/receipt_unilateral.js":          "f4fb1ffff653f63af2b204bb24d457f2e56bbeb39ee426964e57d194163f851a",
+		"static/receipt_seller.js":              "bfa71f640ecef842fcf59bc4f0ddaf3529bc426edd787ca07548990d499af07a",
+		"static/receipt_bilateral.js":           "58d44eeacaedff905d7ca8cf363185daa7f290c450f6976fb4fab4fc10c18122",
+		"static/receipt_deal.js":                "7ad78e95187c1c75bbe803e53e365b97cf8a65479f3a75789a6b04b223bb0f5a",
+		"receipt_slot/manifest-unilateral.json": "bdf74647e823dc3651748e6311d5b7df6712254a9fa4308989ec367b2532b8f7",
+		"receipt_slot/manifest-seller.json":     "ec448a50776a0f418c5cb6e40985de81adc07be90b39247664e1f2a28ae4161c",
+		"receipt_slot/manifest-bilateral.json":  "e2722aa746da21c6a7158a48841781e3ca67c1b89c6a1020c750367d53975548",
+		"receipt_slot/manifest-deal.json":       "d6eee9a12d99692e23d7d2980e008b55aeb70a01b9150f02a8b2d7ccaf436c7d",
+		"receipt_slot/wording-en.json":          "86b1f1bc62907dfba420f76541bf3047b4b2355b744b2c5107f1870993d9dfe9",
+	}
+	for name, pin := range pins {
+		b, err := os.ReadFile(filepath.Join("..", "..", "src", "capsule_viewer", filepath.FromSlash(name)))
+		require.NoError(t, err)
+		assert.Equal(t, pin, sum(b), "%s is frozen at 0.25.0: change go/receipt instead", name)
+	}
 }

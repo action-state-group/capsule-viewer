@@ -10,8 +10,8 @@
 # directory: capsulectl loads presentations only from its built-in plugin
 # roots, one of which is $HOME/.local/lib/capsulectl/plugins, so nothing
 # outside the temp directory is read or written but OUT_DIR. It offers the
-# three modules with their manifests (src/capsule_viewer/receipt_slot/),
-# each with its script and the kit stylesheet, as the manifests pin them.
+# three modules with their manifests (go/receipt, the one receipt renderer,
+# #383), each with its script and the kit stylesheet, as the manifests pin them.
 #
 # For each BUNDLE, at the audience its name ends with (keep, counterparty or
 # adjudicator): OUT_DIR/<name>.list.json (`presentation list`),
@@ -34,13 +34,13 @@ plugins="$HOME/.local/lib/capsulectl/plugins"
 mkdir -p "$plugins"
 chmod 0755 "$HOME" "$HOME/.local" "$HOME/.local/lib" "$HOME/.local/lib/capsulectl" "$plugins"
 
-static="$root/src/capsule_viewer/static"
-cp "$static/receipt_unilateral.js" "$static/receipt_seller.js" "$static/receipt_bilateral.js" "$static/kit.css" "$plugins/"
+receipts="$root/go/receipt"
+cp "$receipts/receipt_unilateral.js" "$receipts/receipt_seller.js" "$receipts/receipt_bilateral.js" "$root/src/capsule_viewer/static/kit.css" "$plugins/"
 chmod 0644 "$plugins"/*.js "$plugins/kit.css"
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 presentations="[]"
 for kind in unilateral seller bilateral; do
-  manifest="$root/src/capsule_viewer/receipt_slot/manifest-$kind.json"
+  manifest="$receipts/manifest-$kind.json"
   presentations=$(jq -c --slurpfile m "$manifest" --arg script "receipt_$kind.js" --arg ssha "$(sha "$plugins/receipt_$kind.js")" \
     --arg csha "$(sha "$plugins/kit.css")" \
     '. + [{"manifest": $m[0], "files": [{"role": "script", "path": $script, "sha256": $ssha}, {"role": "style", "path": "kit.css", "sha256": $csha}]}]' \
