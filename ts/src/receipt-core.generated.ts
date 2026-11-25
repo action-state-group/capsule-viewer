@@ -1709,9 +1709,10 @@ const root = {};
   // ---- words ----------------------------------------------------------------
 
   var PLACEHOLDER = /\{([a-z_]+)\}/g;
-  // In a report a key's "<key>.report" form wins when the pack has one: the
-  // reader may not be the owner, so no line says "you" or "your" (Sherlock2,
-  // #386; drawCarrier is set by render for one draw).
+  // On a shared copy (in a report or a page for anyone) a key's
+  // "<key>.report" form wins when the pack has one: the reader may not be the
+  // owner, so no line says "you" or "your" (Sherlock2, #386, #395;
+  // drawCarrier is set by render for one draw).
   function word(key) {
     if (sharedCarrier(drawCarrier) && own(WORDS, key + ".report")) return WORDS[key + ".report"];
     return own(WORDS, key) ? WORDS[key] : null;
@@ -1796,10 +1797,12 @@ const root = {};
     if (text !== null) return text;
     return this.d.el("span", { class: "cv-mono", "data-unworded": prefix + "." + value }, [value]);
   };
-  // The owner's own copy says PRIVATE when it stands alone. Carried in a report
-  // (its panel bears data-receipt-carrier="report", set by the page's runtime),
-  // it was shared on purpose by the report owner's setting, and says so
-  // instead: no do-not-forward line (Sherlock2, ops bc71ecae, #383).
+  // The owner's own copy says PRIVATE when it stands alone. As a shared copy
+  // it says so instead, with no do-not-forward line: carried in a report (its
+  // panel bears data-receipt-carrier="report", set by the page's runtime) it
+  // was shared by the report owner's setting (Sherlock2, ops bc71ecae, #383);
+  // saved as a page for anyone (data-receipt-carrier="page") it is the node's
+  // own record (#395).
   P.privateBanner = function () {
     if (sharedCarrier(this.carrier)) {
       var shared = this.d.el("span", { class: "cv-badge" }, [w("banner.shared.label")]);
@@ -1819,8 +1822,9 @@ const root = {};
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
   };
   // module.py's actions: after L1's drilldown, on the holder's own page only.
-  // They are prompts for the owner's own agent, so a copy carried in a report,
-  // read by anyone the owner shared it with, has none (Sherlock2, #386).
+  // They are prompts for the owner's own agent, so a shared copy (in a report
+  // or a page for anyone), read by someone other than the owner, has none
+  // (Sherlock2, #386, #395).
   P.actions = function (kase) {
     if (sharedCarrier(this.carrier)) return null;
     var d = this.d;
@@ -2845,7 +2849,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "21f12ab7e07b2518630b541fc832d580daeffdb8ef1bca9725bd7b12d3768a9c",
+      "script_sha256": "ecbc57f1735c3270c6e7df5b7be5804bb76eea7f74f0a48aba672565064e5fd0",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2890,7 +2894,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "b3dd77806a92dfa21b6b9c9b02c0ed948bc93860b765f16767e5c02bf87e8723",
+      "script_sha256": "6e74c36a8483a603c96b9881e7103eafd682840a04051e9ed23e18de87576c92",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2934,7 +2938,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "e223d30bec5e01549901b5047b720a81084f8bf85200410811863a96deffa750",
+      "script_sha256": "60e422b81cab7326b9d077005531c80e81b8c7f16c1a33a036f535f2acdae1fc",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2980,7 +2984,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "0b694a2cdd8441e7b4c2e8f1e79897338a28ed8a8732672ded734dbd187f3291",
+      "script_sha256": "7b39818cd7559a5c3f67f58e44a5ab81e147388d17e93f95a0eb93b5f9c4b5e0",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]

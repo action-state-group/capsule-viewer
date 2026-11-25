@@ -14,7 +14,7 @@ here. The format follows
 ### Added
 
 - A third receipt carrier, `"page"`, for a receipt page saved for anyone to check, such as a Mesh node's saved receipt page (#395, Sherlock2). `renderReceipt(…, { carrier: "page" })` draws the report's shared copy: no PRIVATE banner, no "you", and no prompts for the owner's agent. Two lines differ from the report's. The banner reads "This node's own record of this exchange, saved as a page for anyone to check. It is not the other side's copy." (`banner.page.text`), and the owner's half reads "This node's side · in its book" (`sides.ours.page`). The label stays "Shared copy".
-- `receiptPageLines(result, { carrier })`: with a carrier set, one side's own receipt is labeled "Receipt: this node's receipt only" (`row.one_sided.page`), not "your receipt only".
+- `receiptPageLines(result, { carrier: "page" })`: on a page for anyone, one side's own receipt is labeled "Receipt: this node's receipt only" (`row.one_sided.page`), not "your receipt only".
 
 The four receipt scripts change, so each receipt manifest's `script_sha256` changes, and the wording pack gains three keys. A consumer that pins the receipt modules takes the new manifests.
 

@@ -276,13 +276,14 @@ export function receiptLabel(
  * The lines a saved receipt page shows above the receipt, and their tone:
  * `ok` only for a receipt both sides stamped, `warn` for one side's own
  * receipt, `bad` for one not checked or not verified. Null for `no_module`.
- * With `carrier` set (a page for anyone to check, or a report), the label
- * never addresses the reader as the owner: one side's own receipt is "this
- * node's receipt only" (capsule-viewer#395).
+ * With `carrier: "page"` (a node's receipt saved as a page for anyone to
+ * check), the label never addresses the reader as the owner: one side's own
+ * receipt is "this node's receipt only" (capsule-viewer#395). A report draws
+ * no page lines, so it takes no carrier here.
  */
 export function receiptPageLines(
   result: ReceiptResult,
-  options: Pick<ReceiptOptions, "carrier"> = {},
+  options: { readonly carrier?: "page" } = {},
 ): { tone: "ok" | "warn" | "bad"; lines: string[] } | null {
   switch (result.kind) {
     case "checked":
@@ -291,7 +292,7 @@ export function receiptPageLines(
         lines: [
           fill("row.page.receipt", {
             label:
-              options.carrier !== undefined && !result.both
+              options.carrier === "page" && !result.both
                 ? fill("row.one_sided.page")
                 : (receiptLabel(result) ?? ""),
           }),

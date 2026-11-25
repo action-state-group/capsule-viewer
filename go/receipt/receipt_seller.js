@@ -1705,9 +1705,10 @@
   // ---- words ----------------------------------------------------------------
 
   var PLACEHOLDER = /\{([a-z_]+)\}/g;
-  // In a report a key's "<key>.report" form wins when the pack has one: the
-  // reader may not be the owner, so no line says "you" or "your" (Sherlock2,
-  // #386; drawCarrier is set by render for one draw).
+  // On a shared copy (in a report or a page for anyone) a key's
+  // "<key>.report" form wins when the pack has one: the reader may not be the
+  // owner, so no line says "you" or "your" (Sherlock2, #386, #395;
+  // drawCarrier is set by render for one draw).
   function word(key) {
     if (sharedCarrier(drawCarrier) && own(WORDS, key + ".report")) return WORDS[key + ".report"];
     return own(WORDS, key) ? WORDS[key] : null;
@@ -1792,10 +1793,12 @@
     if (text !== null) return text;
     return this.d.el("span", { class: "cv-mono", "data-unworded": prefix + "." + value }, [value]);
   };
-  // The owner's own copy says PRIVATE when it stands alone. Carried in a report
-  // (its panel bears data-receipt-carrier="report", set by the page's runtime),
-  // it was shared on purpose by the report owner's setting, and says so
-  // instead: no do-not-forward line (Sherlock2, ops bc71ecae, #383).
+  // The owner's own copy says PRIVATE when it stands alone. As a shared copy
+  // it says so instead, with no do-not-forward line: carried in a report (its
+  // panel bears data-receipt-carrier="report", set by the page's runtime) it
+  // was shared by the report owner's setting (Sherlock2, ops bc71ecae, #383);
+  // saved as a page for anyone (data-receipt-carrier="page") it is the node's
+  // own record (#395).
   P.privateBanner = function () {
     if (sharedCarrier(this.carrier)) {
       var shared = this.d.el("span", { class: "cv-badge" }, [w("banner.shared.label")]);
@@ -1815,8 +1818,9 @@
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
   };
   // module.py's actions: after L1's drilldown, on the holder's own page only.
-  // They are prompts for the owner's own agent, so a copy carried in a report,
-  // read by anyone the owner shared it with, has none (Sherlock2, #386).
+  // They are prompts for the owner's own agent, so a shared copy (in a report
+  // or a page for anyone), read by someone other than the owner, has none
+  // (Sherlock2, #386, #395).
   P.actions = function (kase) {
     if (sharedCarrier(this.carrier)) return null;
     var d = this.d;
