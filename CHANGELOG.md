@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- A receipt page (the receipt modules in its registry, as go/emitter's module slot puts them) refuses a deal copy whose standalone report fails the page's own check, as a report and the receipt API already do since 0.27.2 (#412, Sherlock2). Before, it drew the copy under "✓ Unchanged since it was sealed" with the built-in fallback page, because the bundle's own checks pass. Now it gets agent-action-capsule's refused banner ("✗ This bundle did not verify: do not rely on it"), no module and no fallback page. "Failed on this page" names each condition that failed, for example "Didn't verify: the deal report carried outside the log was not signed by the deal's last step."; the others are "does not match its Capsule", "was not made at this deal's checkpoint" and "is not a report of this deal". The bundle checks that passed stay beside them. `dealStandaloneReportFailures` gives those conditions, and the report path and the receipt API use the same module.
+
 ## ts 0.27.2 and go 0.27.2 (2026-11-25)
 
 Both state viewer 0.27.2: `ts/v0.27.2`, then `go/v0.27.2` on the commit that ships its page runtime. A standalone report the page checked itself says so, and a failing one reads as not verified (#411); an x-deal-v1 receipt a page cannot check says so and how to check it (#407); the History card fixes from the ARD hand run (#403); a test that waited a fixed delay (#409). evidencebook#880's settlement report takes this release.

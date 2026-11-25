@@ -19,6 +19,7 @@ import {
 } from "@action-state-group/agent-action-capsule";
 import {
   dealStandaloneReport,
+  dealStandaloneReportFailures,
   instant,
   jsonUint,
 } from "../src/deal-standalone-report.js";
@@ -229,6 +230,46 @@ describe("a deal copy's standalone report, checked in the page (#397)", () => {
     expect(
       await dealStandaloneReport(await resealed(() => undefined, identity())),
     ).toBe("fail");
+  });
+
+  it("names each failed condition by its kind, and only those (#412)", async () => {
+    expect(await dealStandaloneReportFailures(keep())).toEqual([]);
+    const changed = keep();
+    x(changed).agent_input.audience = "adjudicator";
+    expect(await dealStandaloneReportFailures(changed)).toEqual(["capsule"]);
+    expect(
+      await dealStandaloneReportFailures(
+        await resealed(() => undefined, identity()),
+      ),
+    ).toEqual(["signer"]);
+    expect(
+      await dealStandaloneReportFailures(
+        await resealed((input) => {
+          input.profile = "x-deal-v1";
+        }),
+      ),
+    ).toEqual(["report"]);
+    expect(
+      await dealStandaloneReportFailures(
+        await resealed((input) => {
+          const t = Date.parse(input.report.lifecycle.as_of) + 1000;
+          input.report.lifecycle.as_of = new Date(t).toISOString();
+        }),
+      ),
+    ).toEqual(["checkpoint"]);
+    // Two at once: both named, in the page's order.
+    const both = await resealed(() => undefined, identity());
+    both.records.push({
+      ...both.records[0],
+      action_id: "capsulectl-deal-report",
+    });
+    expect(await dealStandaloneReportFailures(both)).toEqual([
+      "report",
+      "signer",
+    ]);
+    expect(
+      await dealStandaloneReportFailures(read("mesh-payer-selected")),
+    ).toBeNull();
   });
 
   it("reads a JSON number as Go's JSONUint does: never a string, a fraction or -0", () => {
