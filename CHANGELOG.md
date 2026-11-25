@@ -13,8 +13,8 @@ here. The format follows
 
 ### Fixed
 
-- The receipt's top line no longer says the page "did not re-check anything itself" when the page's own verifier (agent-action-capsule in the browser) ran the checks. It reads "Checked in this browser by {verifier}: {checks}." (new key `verify.tested_here`). An outside verifier's report, such as capsulectl's, keeps "did not re-check anything itself" (#391, Sherlock2).
-- No Amount card when no signed field carries an amount, so "not present" never sits beside a paid deal that records its payment only in the producer's words, such as a Mesh node's (#391, Sherlock2). A copy whose acted step seals an amount keeps the card.
+- The receipt's top line no longer says the page "did not re-check anything itself" when the page's own verifier (agent-action-capsule in the browser) ran the checks. It reads "Checked in this browser by {verifier}: {checks}." (new key `verify.tested_here`). An outside verifier's report, such as capsulectl's, or a page whose check could not run in full in this browser (no Ed25519), keeps "did not re-check anything itself" (#391, Sherlock2).
+- The buyer's receipt has no Amount card when no signed field carries an amount, so "not present" never sits beside a paid deal that records its payment only in the producer's words, such as a Mesh node's (#391, Sherlock2). A copy whose acted step seals an amount keeps the card. The seller's receipt is unchanged.
 
 ## ts 0.26.0 and go 0.26.0 (2026-11-24)
 

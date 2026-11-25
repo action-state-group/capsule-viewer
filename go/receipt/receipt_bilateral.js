@@ -365,7 +365,10 @@
       outcome = "incomplete";
       checks.push({ name: "declined member", outcome: "not_checked", detail: "policy_declined" });
     }
-    return { verifier: VERIFIER, outcome: outcome, checks: checks };
+    // The page's own check ran in full only when the runtime has a strict
+    // result: without Ed25519 a producer selection is read on its plain
+    // checks alone (agent-action-capsule's buildVerifiedBundleContext).
+    return { verifier: VERIFIER, outcome: outcome, checks: checks, here: map(context).strict !== undefined };
   }
 
   function declinedMember(bundle) {
@@ -1770,9 +1773,10 @@
       tested = ran.map(function (c) { return w("verify.check_one", { name: c.name, outcome: said(c) }); }).join(", ");
     }
     // The page's own verifier ran in this browser, so the line says so; an
-    // outside verifier's report (capsulectl's) keeps "did not re-check"
-    // (Sherlock2, capsule-viewer#391).
-    var here = result.verifier === VERIFIER && tested;
+    // outside verifier's report (capsulectl's), or a page whose check could
+    // not run in full here, keeps "did not re-check" (Sherlock2,
+    // capsule-viewer#391: never on a can't-check result).
+    var here = result.verifier === VERIFIER && result.here === true && tested;
     var text = here ? w("verify.tested_here", { verifier: result.verifier, checks: tested })
       : tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
     return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);

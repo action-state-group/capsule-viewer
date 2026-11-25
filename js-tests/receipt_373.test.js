@@ -5,10 +5,15 @@ import { describe, expect, it } from "vitest";
 import { caseInputs, readBundle, readVerify, loadScript, receiptGolden, renderInto } from "./receiptScripts.js";
 import { standInContext } from "./aacContext.js";
 
-async function page(name, depth = "L2") {
+// A page whose own check ran in full: the runtime's context carries a strict
+// result (it does where the browser has Ed25519). strict: false is a page
+// that could not run it.
+async function page(name, depth = "L2", strict = true) {
   const lib = loadScript("unilateral");
   const module = lib.registered[0];
-  const context = standInContext(readBundle(name), { verify: readVerify(name) });
+  const base = standInContext(readBundle(name), { verify: readVerify(name) });
+  const { strict: _none, ...rest } = base;
+  const context = strict ? { ...rest, strict: { verdict: "VALID" } } : rest;
   const model = await module.buildModel(context);
   const root = lib.document.createElement("div");
   lib.document.body.appendChild(root);
@@ -75,6 +80,13 @@ describe("the receipt page for a reader (#373)", () => {
     expect(note.textContent).toContain("Checked in this browser by the page's verifier (agent-action-capsule): ");
     expect(note.textContent).not.toContain("did not re-check");
     expect(note.textContent).not.toContain("witnesses");
+  });
+
+  it("a page whose check could not run in full here never says it checked in this browser (#391)", async () => {
+    const { root } = await page("main-standalone-keep", "L0", false);
+    const note = root.querySelector("[data-checked]");
+    expect(note.textContent).not.toContain("in this browser");
+    expect(note.textContent).toContain("it did not re-check anything itself.");
   });
 
   it("an outside verifier's report keeps 'did not re-check anything itself' (#391)", async () => {

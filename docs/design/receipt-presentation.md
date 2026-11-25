@@ -16,7 +16,7 @@ hold each rule.
 
 | Rule | What a view does | Wording keys | Held by |
 | --- | --- | --- | --- |
-| R1 top line | Opens with the verifier's outcome and says who reported it, what it tested (each check with its own result, the witness check left to R8) and that the page did not re-check any of it. Never a bare "Verified" on a receipt page (the provider page, which is not a deal receipt, still draws the shell's badge). | `verify.tested`, `verify.reported` | `test_the_top_line_says_what_the_verifier_tested...`, `test_an_incomplete_result_is_never_worded_as_verified` |
+| R1 top line | Opens with the verifier's outcome and says who reported it and what it tested (each check with its own result, the witness check left to R8). When the page's own verifier ran the checks in full in this browser, it says so ("Checked in this browser by ..."); an outside verifier's report, or a check that could not run in full here, says the page did not re-check any of it (#391). Never a bare "Verified" on a receipt page (the provider page, which is not a deal receipt, still draws the shell's badge). | `verify.tested`, `verify.tested_here`, `verify.reported` | `test_the_top_line_says_what_the_verifier_tested...`, `test_an_incomplete_result_is_never_worded_as_verified`, `js-tests/receipt_373.test.js` |
 | R2 test money | A payment on a simulated rail (`rail` is exactly `simulated`) is stated once, near the top, and the rail is not repeated per step. | `money.test` | `test_test_money_is_said_once...` |
 | R3 plain words | A sealed token (`proceed`, `money.purchase`, `out`, `pay`, `card`, `not_configured` and the like) reads as plain words with its code kept small beside them for checkers; a token with no word is shown as sealed. A long record id is shown in full in its own step and shortened (first 8, last 4) in the one records table. | `value.<fact>.<token, lower case>`, `record.short` | `test_raw_codes_read_as_words...`, `test_records_table_shortens_each_id...` |
 | R4 table headers | A one-word column header is never broken across lines ("Ste" over "p"). | none (kit.css `.cv-table th`) | `js-tests/receipt_layout.test.js` (`brokenHeaders`) |
@@ -36,3 +36,5 @@ hold each rule.
 - The verifier's bare outcome badge that a host draws above a module (the Python shell is
   covered: a module with `states_outcome` takes its place) is the host's own; the TS page
   runtime and capsulectl are tracked in their own issues.
+
+On the buyer's receipt, L0 shows an Amount card only when a signed field carries the amount (the acted step's `amount_minor`). A deal that records its payment only in the producer's words shows no card, and no figure is parsed from prose (#391, `js-tests/receipt_391.test.js`).

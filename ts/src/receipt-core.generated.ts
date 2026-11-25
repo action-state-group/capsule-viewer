@@ -369,7 +369,10 @@ const root = {};
       outcome = "incomplete";
       checks.push({ name: "declined member", outcome: "not_checked", detail: "policy_declined" });
     }
-    return { verifier: VERIFIER, outcome: outcome, checks: checks };
+    // The page's own check ran in full only when the runtime has a strict
+    // result: without Ed25519 a producer selection is read on its plain
+    // checks alone (agent-action-capsule's buildVerifiedBundleContext).
+    return { verifier: VERIFIER, outcome: outcome, checks: checks, here: map(context).strict !== undefined };
   }
 
   function declinedMember(bundle) {
@@ -1774,9 +1777,10 @@ const root = {};
       tested = ran.map(function (c) { return w("verify.check_one", { name: c.name, outcome: said(c) }); }).join(", ");
     }
     // The page's own verifier ran in this browser, so the line says so; an
-    // outside verifier's report (capsulectl's) keeps "did not re-check"
-    // (Sherlock2, capsule-viewer#391).
-    var here = result.verifier === VERIFIER && tested;
+    // outside verifier's report (capsulectl's), or a page whose check could
+    // not run in full here, keeps "did not re-check" (Sherlock2,
+    // capsule-viewer#391: never on a can't-check result).
+    var here = result.verifier === VERIFIER && result.here === true && tested;
     var text = here ? w("verify.tested_here", { verifier: result.verifier, checks: tested })
       : tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
     return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);
@@ -2817,7 +2821,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "59bf9864ce201761c304eb4123ee74f83f8bd1e40a40e3f40fa6ac62cb150eb1",
+      "script_sha256": "ba003c41f2abcf0fb3ef4de35eb5adef9a9729e2220ffd23026b3b8fc92b697d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2862,7 +2866,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "3102041bee466851796e2897d78bd4fc0285718fcb9592cfed7c3ce14ef14ce5",
+      "script_sha256": "87d3ea854e20b74ee6723a2c8d19680ccb26b532919be1cead7ec3940a5314a4",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2906,7 +2910,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "7ef697d7f3e56b1af4df7310fbc3d3bf0519036544beae714a664e969a46bd9e",
+      "script_sha256": "19b785b9cfed8c8ea5c481d9f40dc95b50147e87c64e5b2ccad2962ea342667d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2952,7 +2956,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "f7e7c51bbbfc98e144ed5b52572acfad890f42c4dee9680716d5a9da5efa133e",
+      "script_sha256": "d3ed5902399cd823133ab78293e0dfd31f413767a2570f81ea7253a6f96aa338",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
