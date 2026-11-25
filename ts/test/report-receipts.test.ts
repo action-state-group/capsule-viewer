@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createPresentationRegistry,
   renderEvidenceGraph,
@@ -101,7 +101,19 @@ async function draw(
 
 const claim = (root: HTMLElement, id: string): HTMLElement =>
   root.querySelector<HTMLElement>(`[data-claim-ref="${id}"]`)!;
-const settle = (): Promise<void> => new Promise((done) => setTimeout(done, 50));
+// Opening a receipt is async (it verifies the bundle, then resolves a
+// module): wait until the claim's panel says how it ended, never a fixed
+// delay, which a loaded machine outruns (#406).
+const settle = (scope: Element): Promise<void> =>
+  vi.waitFor(
+    () => {
+      if (
+        !scope.querySelector(".rcpt-panel")?.hasAttribute("data-receipt-state")
+      )
+        throw new Error("the receipt has not finished opening");
+    },
+    { timeout: 10_000, interval: 5 },
+  );
 
 describe("a deal line's receipt", () => {
   it("draws nothing on a page that carries no receipts, though claim ids contain ::", async () => {
@@ -196,7 +208,7 @@ describe("a deal line's receipt", () => {
       'button[data-receipt="open"]',
     )!;
     button.click();
-    await settle();
+    await settle(first);
     expect(first.querySelector(".rcpt-panel")!.hasAttribute("hidden")).toBe(
       false,
     );
@@ -214,13 +226,15 @@ describe("a deal line's receipt", () => {
     expect(first.querySelector(".rcpt-panel")!.hasAttribute("hidden")).toBe(
       true,
     );
+    // Reopening shows the drawn receipt again and starts no second open: an
+    // open disables the button at once, before it awaits anything.
     button.click();
-    await settle();
+    expect(button.disabled).toBe(false);
     expect(first.querySelectorAll("[data-stand-in-receipt]")).toHaveLength(1);
     claim(root, "d2::req-2")
       .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
       .click();
-    await settle();
+    await settle(claim(root, "d2::req-2"));
     expect(
       claim(root, "d2::req-2")
         .querySelector("[data-stand-in-receipt]")!
@@ -235,7 +249,7 @@ describe("a deal line's receipt", () => {
     first
       .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
       .click();
-    await settle();
+    await settle(first);
     const panel = first.querySelector(".rcpt-panel")!;
     expect(panel.getAttribute("data-receipt-state")).toBe("no-module");
     expect(panel.textContent).toBe(
@@ -265,7 +279,7 @@ describe("a deal line's receipt", () => {
       line
         .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
         .click();
-      await settle();
+      await settle(line);
       expect(line.querySelector(".rcpt-panel")!.textContent).toBe(words);
       expect(
         line.querySelector(".rcpt-panel")!.getAttribute("data-receipt-state"),
