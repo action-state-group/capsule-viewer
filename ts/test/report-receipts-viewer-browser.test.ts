@@ -150,12 +150,14 @@ describe.skipIf(executablePath === undefined)(
         await page.click(`${claim} button[data-receipt="open"]`);
         const drawn = `${claim} [data-receipt-carrier="report"] [data-receipt-module="capsuleviewer.receipt.unilateral/v0"]`;
         await page.waitForSelector(drawn);
-        // The receipt's own top line: the verifier's outcome (R1, #373).
-        expect(
-          await page.$(
-            `${claim} [data-receipt-carrier="report"] [data-checked="true"]`,
-          ),
-        ).not.toBeNull();
+        // The receipt's own top line: the verifier's outcome and its checks (R1, #373),
+        // verified for this producer-selected copy, never "did not verify".
+        const top = await page.textContent(
+          `${claim} [data-receipt-carrier="report"] [data-checked="true"]`,
+        );
+        expect(top).toContain("Checked by");
+        expect(top).toContain("verified");
+        expect(top?.toLowerCase()).not.toContain("did not verify");
         // Shared, not private, in Sherlock2's words.
         expect(await page.$(`${claim} [data-banner="private"]`)).toBeNull();
         expect(

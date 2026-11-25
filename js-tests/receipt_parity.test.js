@@ -30,6 +30,8 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
   let oracle;
   const loaded = {};
   beforeAll(() => {
+    // The oracle's pages are read with the current pack's sha256 only while the pack adds keys and changes none.
+    expect(packAddsOnly()).toEqual({ changed: [], sameId: true });
     oracle = receiptGolden();
     for (const kind of KINDS) loaded[kind] = loadScript(kind);
   }, 120000);

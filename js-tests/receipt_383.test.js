@@ -5,7 +5,7 @@
 // banner and no do-not-forward line. Standing alone it keeps its PRIVATE
 // banner. Every manifest lists "*", the audience a report opens a receipt for.
 import { describe, expect, it } from "vitest";
-import { caseInputs, KINDS, loadScript, manifestOf, packAddsOnly, receiptGolden } from "./receiptScripts.js";
+import { caseInputs, KINDS, loadScript, manifestOf, packAddsOnly, readBundle, receiptGolden } from "./receiptScripts.js";
 
 const SHARED = "Shared copy The report owner's own record of this deal, included in this report because their \"Receipts in the settlement report\" setting is on. It is not the counterparty's copy.";
 
@@ -85,5 +85,81 @@ describe("a receipt carried in a report (#383)", () => {
     const bothAlone = await draw("bilateral-keep", "keep", undefined, "bilateral", "L1");
     expect(bothAlone.querySelector('[data-half="ours"] .cv-half__label').textContent).toBe("Your side · in your book");
     expect(bothAlone.querySelector('[data-actions="true"]')).not.toBeNull();
+  });
+
+  // Every string a bundle carries: the producer's own sealed words, which the
+  // page shows as recorded and may not reword.
+  const sealedStrings = (value, out = []) => {
+    if (typeof value === "string") out.push(value);
+    else if (Array.isArray(value)) value.forEach((v) => sealedStrings(v, out));
+    else if (value && typeof value === "object") Object.values(value).forEach((v) => sealedStrings(v, out));
+    return out;
+  };
+
+  it("in a report the page's own words never say \"you\" or \"your\", on any fixture, copy, module or depth (Sherlock2, #386)", async () => {
+    const offenders = [];
+    let drawn = 0;
+    for (const c of receiptGolden().cases) {
+      for (const kind of KINDS) {
+        if (!c.modules[kind] || !c.modules[kind].can_render) continue;
+        const lib = loadScript(kind);
+        const { context, env } = caseInputs(c, null);
+        const module = lib.api.createModule(kind, env);
+        if (!(await module.canRender(context))) continue;
+        const model = await module.buildModel(context);
+        const doc = lib.document;
+        const panel = doc.createElement("section");
+        panel.setAttribute("data-receipt-carrier", "report");
+        const host = { L0: doc.createElement("div"), L1: doc.createElement("div"), L2: doc.createElement("div"), depth: "L2" };
+        panel.append(host.L0, host.L1, host.L2);
+        doc.body.append(panel);
+        module.render(model, host, {});
+        drawn += 1;
+        // The producer's sealed text is quoted as recorded; only the page's words are held to the rule.
+        let text = panel.textContent;
+        const sealed = sealedStrings(c.bundle ?? readBundle(c.name)).filter((t) => /\byou(r)?\b/i.test(t)).sort((a, b) => b.length - a.length);
+        for (const t of sealed) text = text.split(t).join("");
+        const at = text.search(/\byou(r)?\b/i);
+        if (at >= 0) offenders.push(`${c.name} @${c.audience} ${kind}: ${text.slice(Math.max(0, at - 60), at + 40)}`);
+      }
+    }
+    expect(drawn).toBeGreaterThan(20);
+    expect(offenders).toEqual([]);
+  });
+
+  it("each owner's-copy module draws the shared copy in a report and PRIVATE standing alone", async () => {
+    for (const [name, kind] of [["keep", "unilateral"], ["seller-keep", "seller"], ["bilateral-keep", "bilateral"]]) {
+      const carried = await draw(name, "keep", "report", kind);
+      expect(carried.querySelector('[data-banner="shared"]'), kind).not.toBeNull();
+      expect(carried.querySelector('[data-banner="private"]'), kind).toBeNull();
+      const alone = await draw(name, "keep", undefined, kind);
+      expect(alone.querySelector('[data-banner="private"]'), kind).not.toBeNull();
+      expect(alone.querySelector('[data-banner="shared"]'), kind).toBeNull();
+    }
+  });
+
+  it("one script draws a carried copy and then a stand-alone one: the mark does not outlive its draw", async () => {
+    const c = receiptGolden().cases.find((x) => x.name === "keep" && x.audience === "keep");
+    const lib = loadScript("unilateral");
+    const { context, env } = caseInputs(c, null);
+    const module = lib.api.createModule("unilateral", env);
+    const model = await module.buildModel(context);
+    const doc = lib.document;
+    const host = (carrier) => {
+      const panel = doc.createElement("section");
+      if (carrier) panel.setAttribute("data-receipt-carrier", carrier);
+      const h = { L0: doc.createElement("div"), L1: doc.createElement("div"), L2: doc.createElement("div"), depth: "L1" };
+      panel.append(h.L0, h.L1, h.L2);
+      doc.body.append(panel);
+      return [panel, h];
+    };
+    const [inReport, a] = host("report");
+    module.render(model, a, {});
+    const [alone, b] = host(null);
+    module.render(model, b, {});
+    expect(inReport.querySelector('[data-banner="shared"]')).not.toBeNull();
+    expect(alone.querySelector('[data-banner="private"]')).not.toBeNull();
+    expect(alone.querySelector('[data-actions="true"]')).not.toBeNull();
+    expect(alone.textContent).toContain("Tell your agent");
   });
 });

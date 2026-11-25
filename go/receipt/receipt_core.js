@@ -1702,7 +1702,13 @@
   // ---- words ----------------------------------------------------------------
 
   var PLACEHOLDER = /\{([a-z_]+)\}/g;
-  function word(key) { return own(WORDS, key) ? WORDS[key] : null; }
+  // In a report a key's "<key>.report" form wins when the pack has one: the
+  // reader may not be the owner, so no line says "you" or "your" (Sherlock2,
+  // #386; drawCarrier is set by render for one draw).
+  function word(key) {
+    if (drawCarrier === "report" && own(WORDS, key + ".report")) return WORDS[key + ".report"];
+    return own(WORDS, key) ? WORDS[key] : null;
+  }
   function w(key, values) {
     var template = word(key);
     if (template === null) return "[" + key + "]";
@@ -1788,7 +1794,7 @@
     var d = this.d;
     var parts = halves.slice();
     if (line !== false) {
-      var key = (kase === "one_sided" || kase === "limit") && !keep ? "sides.case." + kase + ".shared" : "sides.case." + kase;
+      var key = (kase === "one_sided" || kase === "limit") && (!keep || this.carrier === "report") ? "sides.case." + kase + ".shared" : "sides.case." + kase;
       parts.unshift(d.el("p", { class: "cv-sides__case cv-tone--" + CASE_TONE[kase], "data-case": kase }, [w(key)]));
     }
     return d.el("div", { class: "cv-sides", "data-receipt-case": kase }, parts);
