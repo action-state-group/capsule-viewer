@@ -69,9 +69,10 @@ export async function dealStandaloneReport(
 /**
  * Which of the report's checks failed, so a page can name each (Sherlock2,
  * #412):
- *  - `report`: it is not this deal's report (conditions 1, 4 and 6: the
- *    pointer, the record, the payload's type, profile, audience and deal, or
- *    a report record beside it);
+ *  - `report`: it is not this deal's report (conditions 1 and 4: the
+ *    pointer, the record, the payload's type, profile, audience and deal);
+ *  - `second`: the log holds a report record beside it, so the page can't
+ *    tell which report counts (6);
  *  - `signer`: it is not signed by the key of the deal's last step (2);
  *  - `capsule`: its payload is not the one its Capsule commits (3);
  *  - `checkpoint`: it is not bound to this bundle's checkpoint and time (5, 7).
@@ -82,6 +83,7 @@ export async function dealStandaloneReport(
  */
 export type StandaloneReportFailure =
   | "report"
+  | "second"
   | "signer"
   | "capsule"
   | "checkpoint";
@@ -173,7 +175,7 @@ async function standaloneReportFailures(
   // 6. No report record beside it.
   const records = Array.isArray(value["records"]) ? value["records"] : [];
   if (records.some((r) => obj(r)["action_id"] === REPORT_ACTION))
-    failed.add("report");
+    failed.add("second");
 
   // 7. As of the checkpoint's signed time.
   const asOf = instant(obj(obj(input["report"])["lifecycle"])["as_of"]);
@@ -182,9 +184,9 @@ async function standaloneReportFailures(
     failed.add("checkpoint");
 
   // In the order the page runs them, for the lines it draws.
-  return (["report", "signer", "capsule", "checkpoint"] as const).filter((f) =>
-    failed.has(f),
-  );
+  return (
+    ["report", "second", "signer", "capsule", "checkpoint"] as const
+  ).filter((f) => failed.has(f));
 }
 
 /** A record's producer key, hex, when its signature verifies under its own key_id. */

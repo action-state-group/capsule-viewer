@@ -1106,6 +1106,8 @@ const STANDALONE_REPORT_FAILED: Readonly<
 > = {
   report:
     "Didn't verify: the deal report carried outside the log is not a report of this deal.",
+  second:
+    "Didn't verify: this deal's log has more than one report record, so the page can't tell which report counts.",
   signer:
     "Didn't verify: the deal report carried outside the log was not signed by the deal's last step.",
   capsule:
@@ -1304,11 +1306,11 @@ async function renderVerificationPage(
   page.append(recordPageStyle);
   let result: ResultRoot | undefined;
   try {
-    result = bundleVerified(verified) ? await resultRootOf(context) : undefined;
+    result = passed ? await resultRootOf(context) : undefined;
   } catch {
     result = undefined;
   }
-  const read = bundleVerified(verified)
+  const read = passed
     ? await recordEntries(context, result)
     : new Map<string, CitedRecord>();
   const rawRecords = new Map<string, unknown>();
@@ -1323,7 +1325,7 @@ async function renderVerificationPage(
     model.uncheckpointedCount,
     model.coverage,
     {
-      verified: bundleVerified(verified),
+      verified: passed,
       read,
       kind: (id) => recordKind(rawRecords.get(id), read.get(id)),
       build: (id, record) => {
@@ -3580,8 +3582,11 @@ async function renderVerifiedContext(
     reportFailed.length > 0
       ? {
           ...verificationBanner(context, stamps),
+          // AAC's own banner for a bundle that did not verify.
           state: "failed" as const,
           line: VERIFICATION_BANNER_LINES.refused,
+          verdict: "invalid" as const,
+          detail: "",
           refusal: UNVERIFIED_BUNDLE_REFUSAL,
         }
       : verificationBanner(context, stamps);

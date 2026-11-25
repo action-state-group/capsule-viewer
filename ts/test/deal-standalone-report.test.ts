@@ -264,7 +264,7 @@ describe("a deal copy's standalone report, checked in the page (#397)", () => {
       action_id: "capsulectl-deal-report",
     });
     expect(await dealStandaloneReportFailures(both)).toEqual([
-      "report",
+      "second",
       "signer",
     ]);
     expect(

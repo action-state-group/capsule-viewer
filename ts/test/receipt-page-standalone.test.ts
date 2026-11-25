@@ -62,6 +62,21 @@ describe("a receipt page and a deal copy's standalone report (#412)", () => {
     const banner = root.querySelector("[data-verify]");
     expect(banner?.getAttribute("data-verify")).toBe("failed");
     expect(banner?.textContent).toBe(VERIFICATION_BANNER_LINES.refused);
+    // AAC's own refused banner: an invalid verdict and no details line.
+    expect(banner?.getAttribute("data-verdict")).toBe("invalid");
+    expect(root.querySelector("[data-banner-detail]")?.textContent ?? "").toBe(
+      "",
+    );
+    // No record's payload is shown, every section opened: AAC's refusal says
+    // records, rows and payloads are not shown. "money.purchase" is in a
+    // disclosed payload of this copy.
+    // Record bodies are built when their section opens (deferBody).
+    for (let round = 0; round < 3; round++)
+      for (const d of root.querySelectorAll("details")) {
+        (d as HTMLDetailsElement).open = true;
+        d.dispatchEvent(new Event("toggle"));
+      }
+    expect(root.textContent).not.toContain("money.purchase");
     // No module and no fallback page: no L0 or L1 region, no receipt, no rows.
     expect(root.querySelector('[data-region="L0"]')).toBeNull();
     expect(root.querySelector("[data-receipt-module]")).toBeNull();
