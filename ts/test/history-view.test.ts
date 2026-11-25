@@ -334,15 +334,25 @@ describe("the stand-in's round 1 (PR 249)", () => {
     expect(failed.querySelectorAll('[data-history="row"]')).toHaveLength(0);
   });
 
-  it("fills RECORDED only when the deal report check passed", () => {
+  it("a deal page that does not list the deal report check lists it once as not run", () => {
+    const m = clone(vectors.cases["muse-owner"]) as Json;
+    m["checks"] = (m["checks"] as Json[]).filter(
+      (c) => c["id"] !== "deal_report",
+    );
+    const p = page(m, overlay);
+    expect(p.querySelectorAll('[data-history="row"]').length).toBeGreaterThan(
+      0,
+    );
+    expect(recorded(p)).toHaveLength(0);
+    expect(
+      p.textContent?.split("Each deal was read with its own report").length,
+    ).toBe(2);
+  });
+
+  it("with only the deal report check, not run, the page draws no seal and no checked note", () => {
     const m = clone(vectors.cases["muse-owner"]) as Json;
     m["checks"] = [{ id: "deal_report", status: "not_run" }];
     const p = page(m, overlay);
-    for (const e of p.querySelectorAll(".cvh-stamp")) {
-      if (e.textContent?.startsWith("RECORDED"))
-        expect(e.getAttribute("data-filled")).toBe("no");
-    }
-
     expect(p.querySelector(".cvh-seal-title")).toBeNull();
     expect(p.textContent).not.toContain("did not check how these records");
     expect(p.textContent).not.toContain("These checks");

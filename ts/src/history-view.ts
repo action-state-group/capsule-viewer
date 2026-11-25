@@ -831,6 +831,11 @@ export function buildHistoryView(
         r.refuse(`${path}.id`, "is listed twice");
       if (id && status) checks.push({ id, status, unregistered });
     });
+    // A deal page's rows carry RECORDED only when the deal report check
+    // passed; a page that does not list the check did not run it, and the
+    // checks list says so once (Sherlock2, F10).
+    if (kind === "deal" && !checks.some((x) => x.id === "deal_report"))
+      checks.push({ id: "deal_report", status: "not_run" });
   } else r.refuse("input.checks", "is not a list");
 
   const periods: {

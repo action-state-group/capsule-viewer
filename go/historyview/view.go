@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -597,6 +598,12 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 			if idOK && stOK {
 				checks = append(checks, check{id: id, status: status, unreg: unreg})
 			}
+		}
+		// A deal page's rows carry RECORDED only when the deal report check
+		// passed; a page that does not list the check did not run it, and the
+		// checks list says so once (Sherlock2, F10).
+		if kind == "deal" && !slices.ContainsFunc(checks, func(x check) bool { return x.id == "deal_report" }) {
+			checks = append(checks, check{id: "deal_report", status: "not_run"})
 		}
 	} else {
 		r.refuse("input.checks", "is not a list")

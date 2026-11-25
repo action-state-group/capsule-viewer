@@ -241,8 +241,28 @@ func TestRecordedStampFollowsTheDealReportCheck(t *testing.T) {
 	}
 	rows := strings.Count(render("pass"), `data-history="row"`)
 	require.Positive(t, rows)
-	assert.Equal(t, rows, strings.Count(render("pass"), `cvh-stamp-name">RECORDED`))
+	passed := render("pass")
+	assert.Equal(t, rows, strings.Count(passed, `data-filled="yes" data-state="passed"><span class="cvh-stamp-name">RECORDED`))
 	assert.Equal(t, rows, strings.Count(render("not_run"), `data-history="row"`))
 	assert.Zero(t, strings.Count(render("not_run"), `cvh-stamp-name">RECORDED`))
 	assert.Zero(t, strings.Count(render("fail"), `data-history="row"`))
+}
+
+// A deal page that does not list the deal report check did not run it: its
+// rows carry no RECORDED stamp and the checks list says so once.
+func TestADealPageWithoutTheDealReportCheckListsItNotRun(t *testing.T) {
+	var m map[string]any
+	require.NoError(t, json.Unmarshal(cases(t)["muse-owner"], &m))
+	var kept []any
+	for _, c := range m["checks"].([]any) {
+		if c.(map[string]any)["id"] != "deal_report" {
+			kept = append(kept, c)
+		}
+	}
+	m["checks"] = kept
+	frag, err := Render(m, overlayFor(t, "muse-owner"))
+	require.NoError(t, err)
+	assert.Positive(t, strings.Count(frag, `data-history="row"`))
+	assert.Zero(t, strings.Count(frag, `cvh-stamp-name">RECORDED`))
+	assert.Equal(t, 1, strings.Count(frag, "Each deal was read with its own report"))
 }

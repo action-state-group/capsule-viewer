@@ -4,6 +4,6 @@
     "stamp.second": "COUNTERSIGNED",
     "seal.second.label": "Countersigned by",
     "slot.second.none": "no one yet · ask Muse to send it for a second signature",
-    "callout.deals": "“Steps recorded” is this side's record of each deal, not a confirmed outcome. Not a rating."
+    "callout.deals": "Each deal's outcome here is what this side recorded, not a confirmed outcome. Not a rating."
   }
 }
