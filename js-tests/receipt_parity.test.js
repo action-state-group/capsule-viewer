@@ -22,7 +22,7 @@
 // Run with RECEIPT_SCRIPT_DIR=<dir holding mutated receipt_*.js> to see it
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
-import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withCurrentPack } from "./receiptScripts.js";
+import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withCurrentPack, withoutAmountCard } from "./receiptScripts.js";
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -71,7 +71,8 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         for (const [depth, html] of Object.entries(py.html)) {
           compared.renders += 1;
           const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, depth)));
-          const want = canonHtml(lib.document, withCurrentPack(html));
+          const py0 = withCurrentPack(html);
+          const want = canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py0) : py0);
           compared.bytes += want.length;
           if (js !== want) {
             let at = 0;
@@ -103,7 +104,8 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         const model = await module.buildModel(context);
         expect(plain(model)).toEqual(py.model);
         const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, "L2")));
-        expect(js).toBe(canonHtml(lib.document, withCurrentPack(py.html.L2)));
+        const py2 = withCurrentPack(py.html.L2);
+        expect(js).toBe(canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py2) : py2));
       }
     }
   }, 300000);

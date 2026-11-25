@@ -307,7 +307,7 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   record's place in the log. What a relying party gets is the share builder's decision,
   made when the copy was cut; the module shows it and never makes it
   (`tests/test_receipt_module.py`).
-- **Depth:** L0 the deal, item, amount and state; L1 what was asked, proposed, approved
+- **Depth:** L0 the deal, item, amount (when a signed field carries one, #391) and state; L1 what was asked, proposed, approved
   and done, with the merchant's evidence; L2 the verifier's checks and every record.
 - **Words** come from a wording pack (`go/receipt/wording-en.json` is a neutral English
   example) or are capsulectl's own sealed report lines, shown as such.

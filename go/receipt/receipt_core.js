@@ -365,7 +365,10 @@
       outcome = "incomplete";
       checks.push({ name: "declined member", outcome: "not_checked", detail: "policy_declined" });
     }
-    return { verifier: VERIFIER, outcome: outcome, checks: checks };
+    // The page's own check ran in full only when the runtime has a strict
+    // result: without Ed25519 a producer selection is read on its plain
+    // checks alone (agent-action-capsule's buildVerifiedBundleContext).
+    return { verifier: VERIFIER, outcome: outcome, checks: checks, here: map(context).strict !== undefined };
   }
 
   function declinedMember(bundle) {
@@ -1769,7 +1772,13 @@
     } else {
       tested = ran.map(function (c) { return w("verify.check_one", { name: c.name, outcome: said(c) }); }).join(", ");
     }
-    var text = tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
+    // The page's own verifier ran in this browser, so the line says so; an
+    // outside verifier's report (capsulectl's), or a page whose check could
+    // not run in full here, keeps "did not re-check" (Sherlock2,
+    // capsule-viewer#391: never on a can't-check result).
+    var here = result.verifier === VERIFIER && result.here === true && tested;
+    var text = here ? w("verify.tested_here", { verifier: result.verifier, checks: tested })
+      : tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
     return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);
   };
   P.enumText = function (prefix, value) {
@@ -1830,11 +1839,14 @@
     var h = model.headline;
     var state = h.state ? this.enumText("state", h.state) : w("l0.state.missing");
     var dealType = this.d.el("p", { "data-deal-type": "true" }, [w("l0.deal_type"), ": ", this.part(h.deal_type, "deal_type")]);
-    return [dealType, this.kit.metricGrid([
-      { label: w("l0.item"), value: this.part(h.item) },
-      { label: w("l0.amount"), value: this.part(h.amount) },
-      { label: w("l0.state"), value: state },
-    ])];
+    // No Amount card when no signed field carries an amount: a deal that
+    // records its payment only in prose (a Mesh node's outcome and close) must
+    // not show "not present" beside a paid deal, and prose is never parsed
+    // into a figure (Sherlock2, capsule-viewer#391).
+    var cards = [{ label: w("l0.item"), value: this.part(h.item) }];
+    if (h.amount !== "not_present") cards.push({ label: w("l0.amount"), value: this.part(h.amount) });
+    cards.push({ label: w("l0.state"), value: state });
+    return [dealType, this.kit.metricGrid(cards)];
   };
   P.copyNotes = function (model) {
     var parts = [];
@@ -2647,6 +2659,15 @@
   function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
+
+  // The page could not check the receipt here: no receipt, only the line
+  // and where to check it, in the pack's words (row.cannot_check,
+  // row.cannot_check_pointer; Sherlock2, capsule-viewer#392).
+  function cannotCheckLevels(doc) {
+    var d = new Drawing(doc);
+    var line = d.el("p", { class: "cv-tone--caution", "data-cannot-check": "true" }, [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
+    return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
+  }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
   // The kit stylesheet, once per document (its bytes are what the manifest's
@@ -2678,7 +2699,15 @@
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
+    // Sherlock2 on capsule-viewer#392: a page whose own check cannot run in
+    // full here (no strict result: this browser has no Ed25519) draws no
+    // receipt, only the can't-check line and where to check it. A verifier's
+    // report given in env (capsulectl's) is not this page's own check.
+    var cannotCheckHere = function (context) {
+      return !(env && env.verification) && map(context).strict === undefined;
+    };
     var build = function (context) {
+      if (cannotCheckHere(context)) return { cannot_check: true };
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
@@ -2715,7 +2744,7 @@
         drawCarrier = carried && carried.getAttribute("data-receipt-carrier") === "report" ? "report" : null;
         var levels;
         try {
-          levels = DRAW[kind](doc, depth, model);
+          levels = model && model.cannot_check === true ? cannotCheckLevels(doc) : DRAW[kind](doc, depth, model);
         } finally {
           drawCarrier = null;
         }

@@ -119,6 +119,22 @@ export function canon(node) {
   return `<${tag}${attrs.map(([k, v]) => ` ${k}="${esc(v, true)}"`).join("")}>${[...node.childNodes].map(canon).join("")}</${tag}>`;
 }
 
+/**
+ * The Python page without its Amount card: capsule-viewer#391 drops the card
+ * when no signed field carries an amount (the model's headline amount is
+ * "not_present"), where the frozen twin still draws it. Every other byte is
+ * compared.
+ */
+export function withoutAmountCard(doc, html) {
+  const t = doc.createElement("template");
+  t.innerHTML = html;
+  for (const card of t.content.querySelectorAll(".cv-metric")) {
+    const label = card.querySelector(".cv-metric__label");
+    if (label && label.textContent === "Amount") card.remove();
+  }
+  return t.innerHTML;
+}
+
 /** HTML text (the Python module's render) parsed and canonicalised. */
 export function canonHtml(doc, html) {
   const t = doc.createElement("template");

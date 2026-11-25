@@ -2,13 +2,18 @@
 // parity test holds it to the Python twin with the reader's time zone off; here the page as a
 // reader gets it (the registered module), with the zone on.
 import { describe, expect, it } from "vitest";
-import { readBundle, readVerify, loadScript } from "./receiptScripts.js";
+import { caseInputs, readBundle, readVerify, loadScript, receiptGolden, renderInto } from "./receiptScripts.js";
 import { standInContext } from "./aacContext.js";
 
-async function page(name, depth = "L2") {
+// A page whose own check ran in full: the runtime's context carries a strict
+// result (it does where the browser has Ed25519). strict: false is a page
+// that could not run it.
+async function page(name, depth = "L2", strict = true) {
   const lib = loadScript("unilateral");
   const module = lib.registered[0];
-  const context = standInContext(readBundle(name), { verify: readVerify(name) });
+  const base = standInContext(readBundle(name), { verify: readVerify(name) });
+  const { strict: _none, ...rest } = base;
+  const context = strict ? { ...rest, strict: { verdict: "VALID" } } : rest;
   const model = await module.buildModel(context);
   const root = lib.document.createElement("div");
   lib.document.body.appendChild(root);
@@ -67,13 +72,35 @@ describe("the receipt page for a reader (#373)", () => {
     expect(root.textContent).not.toContain("Anomalies");
   });
 
-  it("opens with the verifier's outcome and what it tested, and says the page re-checked none of it", async () => {
+  it("opens with the verifier's outcome and what it tested; the page's own check says it ran in this browser (#391)", async () => {
     const { root } = await page("main-standalone-keep", "L0");
     const note = root.querySelector("[data-checked]");
     expect(note.querySelector("[data-outcome]").getAttribute("data-outcome")).toBe("verified");
     expect(note.textContent).toContain("per record membership (all verified)");
-    expect(note.textContent).toContain("it did not re-check anything itself.");
+    expect(note.textContent).toContain("Checked in this browser by the page's verifier (agent-action-capsule): ");
+    expect(note.textContent).not.toContain("did not re-check");
     expect(note.textContent).not.toContain("witnesses");
+  });
+
+  it("a page whose check cannot run here draws no receipt, only the can't-check line (#392, Sherlock2)", async () => {
+    const { root } = await page("main-standalone-keep", "L0", false);
+    expect(root.querySelector("[data-checked]")).toBeNull();
+    expect(root.querySelector('[data-banner="private"]')).toBeNull();
+    expect(root.querySelector("[data-cannot-check]").textContent).toBe(
+      "this browser can't check the receipt. Open the bundle in the offline viewer (capsule-viewer) to check it; this page shows no verdict for it.",
+    );
+    expect(root.textContent).not.toContain("did not re-check");
+  });
+
+  it("an outside verifier's report keeps 'did not re-check anything itself' (#391)", async () => {
+    const c = receiptGolden().cases.find((x) => x.name === "main-standalone-keep" && x.audience === "keep");
+    const lib = loadScript("unilateral");
+    const { context, env } = caseInputs(c);
+    const module = lib.api.createModule("unilateral", env);
+    const host = renderInto(lib, module, await module.buildModel(context), "L0");
+    const note = host.L0.querySelector("[data-checked]");
+    expect(note.textContent).toContain("it did not re-check anything itself.");
+    expect(note.textContent).not.toContain("in this browser");
   });
 
   it("says an instant in words only when it is a real UTC instant, as the Python twin does", () => {
