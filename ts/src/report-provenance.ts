@@ -498,6 +498,11 @@ export const WITNESS_NOTICE_LINES = {
     "No witness this verifier trusts has vouched for this log: this file checks only against its holder's own signatures. Without such a receipt for its checkpoint, it could be a private copy of the log.",
   "witness-unreported":
     "No witness result: none was reported to this page, so it does not show whether any witness has seen this log. What it shows was checked only against its holder's own signatures.",
+  // Every x-deal-v1 page: no x-deal-v1 copy ever carries witness evidence
+  // (u219), so the page speaks of this file, never of the holder's log
+  // (Sherlock2, evidencebook#935).
+  "file-no-receipt":
+    "This file carries no witness receipt, so this page could not check a time-stamp itself.",
 } as const;
 
 export type WitnessNotice = keyof typeof WITNESS_NOTICE_LINES;
@@ -518,6 +523,9 @@ export function witnessNotice(
 ): WitnessNotice | undefined {
   const status = witnessStatus(bundle, verified);
   if (status === "verified" || status === "invalid") return undefined;
+  const extensions = isObject(bundle) ? bundle.extensions : undefined;
+  if (isObject(extensions) && "x-deal-v1" in extensions)
+    return "file-no-receipt";
   return verified.strict === undefined ? "witness-unreported" : "not-witnessed";
 }
 

@@ -47,6 +47,8 @@ export type VerifierReading =
       readonly kind: "pass";
       /** capsulectl's status for the copy's counterparty half, when it reported one. */
       readonly counterpartyHalf?: string;
+      /** capsulectl's report of the holder's own book's witness time (verify --stamp-proof), as given. */
+      readonly witnessed?: unknown;
     }
   | { readonly kind: "fail"; readonly why: "report" }
   | {
@@ -95,10 +97,11 @@ export function verifierReportReading(
   if (entry === undefined) return null;
   if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
   const halfStatus = obj(entry["counterparty_half"])["status"];
-  const pass: VerifierReading =
-    typeof halfStatus === "string"
-      ? { kind: "pass", counterpartyHalf: halfStatus }
-      : { kind: "pass" };
+  const pass: VerifierReading = {
+    kind: "pass",
+    ...(typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {}),
+    ...(isObj(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}),
+  };
   const verdict = r["verdict"];
   if (verdict === "VALID") return pass;
   // A producer selection: capsulectl calls it INCOMPLETE only because the
@@ -153,6 +156,11 @@ export function withVerifierReport(
       ...(reading.counterpartyHalf === undefined
         ? {}
         : { counterparty_half: { status: reading.counterpartyHalf } }),
+      // The holder's own book's witness time, as capsulectl reported it; the
+      // receipt module reads only its status, witness and at.
+      ...(reading.witnessed === undefined
+        ? {}
+        : { witnessed: reading.witnessed }),
     },
   ] as unknown as VerifiedBundleContext["verification"]["extensions"];
   return {
