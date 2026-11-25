@@ -11,6 +11,11 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- The receipt's top line no longer says the page "did not re-check anything itself" when the page's own verifier (agent-action-capsule in the browser) ran the checks. It reads "Checked in this browser by {verifier}: {checks}." (new key `verify.tested_here`). An outside verifier's report, such as capsulectl's, keeps "did not re-check anything itself" (#391, Sherlock2).
+- No Amount card when no signed field carries an amount, so "not present" never sits beside a paid deal that records its payment only in the producer's words, such as a Mesh node's (#391, Sherlock2). A copy whose acted step seals an amount keeps the card.
+
 ## ts 0.26.0 and go 0.26.0 (2026-11-24)
 
 Both state viewer 0.26.0: `ts/v0.26.0`, then `go/v0.26.0` on the commit that ships its page runtime. capsule-viewer becomes the one receipt renderer (#383): #385, #386, #387.

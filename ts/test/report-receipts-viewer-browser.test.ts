@@ -155,8 +155,9 @@ describe.skipIf(executablePath === undefined)(
         const top = await page.textContent(
           `${claim} [data-receipt-carrier="report"] [data-checked="true"]`,
         );
-        expect(top).toContain("Checked by");
+        expect(top).toContain("Checked in this browser by");
         expect(top).toContain("verified");
+        expect(top).toContain("interval coverage (not checked)");
         expect(top?.toLowerCase()).not.toContain("did not verify");
         // Shared, not private, in Sherlock2's words.
         expect(await page.$(`${claim} [data-banner="private"]`)).toBeNull();

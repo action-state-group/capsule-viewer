@@ -89,7 +89,7 @@ describe("the receipt export (#383)", () => {
     ).toBe("checked");
     expect(alone.querySelector('[data-banner="private"]')).not.toBeNull();
     expect(alone.querySelector('[data-checked="true"]')?.textContent).toContain(
-      "Checked by",
+      "Checked in this browser by",
     );
 
     const carried = host();

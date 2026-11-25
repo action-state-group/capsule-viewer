@@ -1769,7 +1769,12 @@
     } else {
       tested = ran.map(function (c) { return w("verify.check_one", { name: c.name, outcome: said(c) }); }).join(", ");
     }
-    var text = tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
+    // The page's own verifier ran in this browser, so the line says so; an
+    // outside verifier's report (capsulectl's) keeps "did not re-check"
+    // (Sherlock2, capsule-viewer#391).
+    var here = result.verifier === VERIFIER && tested;
+    var text = here ? w("verify.tested_here", { verifier: result.verifier, checks: tested })
+      : tested ? w("verify.tested", { verifier: result.verifier, checks: tested }) : w("verify.reported", { verifier: result.verifier });
     return this.d.el("p", { "data-checked": "true" }, [pill, " ", text]);
   };
   P.enumText = function (prefix, value) {
@@ -1830,11 +1835,14 @@
     var h = model.headline;
     var state = h.state ? this.enumText("state", h.state) : w("l0.state.missing");
     var dealType = this.d.el("p", { "data-deal-type": "true" }, [w("l0.deal_type"), ": ", this.part(h.deal_type, "deal_type")]);
-    return [dealType, this.kit.metricGrid([
-      { label: w("l0.item"), value: this.part(h.item) },
-      { label: w("l0.amount"), value: this.part(h.amount) },
-      { label: w("l0.state"), value: state },
-    ])];
+    // No Amount card when no signed field carries an amount: a deal that
+    // records its payment only in prose (a Mesh node's outcome and close) must
+    // not show "not present" beside a paid deal, and prose is never parsed
+    // into a figure (Sherlock2, capsule-viewer#391).
+    var cards = [{ label: w("l0.item"), value: this.part(h.item) }];
+    if (h.amount !== "not_present") cards.push({ label: w("l0.amount"), value: this.part(h.amount) });
+    cards.push({ label: w("l0.state"), value: state });
+    return [dealType, this.kit.metricGrid(cards)];
   };
   P.copyNotes = function (model) {
     var parts = [];

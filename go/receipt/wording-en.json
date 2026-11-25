@@ -111,6 +111,7 @@
     "step.unnumbered": "A step this receipt cites",
     "step.line": "The receipt's line: {text}",
     "verify.tested": "Checked by {verifier}: {checks}. This page shows its answer; it did not re-check anything itself.",
+    "verify.tested_here": "Checked in this browser by {verifier}: {checks}.",
     "verify.check_one": "{name} ({outcome})",
     "verify.checks_all": "{checks} (all {outcome})",
     "verify.self_reported": "Reported by {verifier}: {checks}. This view shows that report; it did not re-check anything itself.",
