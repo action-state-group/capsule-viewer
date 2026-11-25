@@ -1107,6 +1107,10 @@ function renderExtensionTable(
 // list of what failed on this page.
 /** What failed on the page: its own report check's conditions, or capsulectl's reading (verifier-report.ts). */
 type PageReportFailure = StandaloneReportFailure | "verifier" | "verdict";
+/** capsulectl's reading, not a check this page ran: never under "Failed on this page" (Sherlock2). */
+const REPORTED_BY_CAPSULECTL = "Reported by capsulectl verify";
+const isCapsulectlReading = (f: PageReportFailure): boolean =>
+  f === "verifier" || f === "verdict";
 const STANDALONE_REPORT_FAILED: Readonly<Record<PageReportFailure, string>> = {
   verifier:
     "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
@@ -1155,8 +1159,20 @@ function renderCheckLists(
       FAILED_ON_THIS_PAGE,
       [
         ...lists.failed,
-        ...reportFailed.map((f) => `${STANDALONE_REPORT_CHECK}${f}`),
+        ...reportFailed
+          .filter((f) => !isCapsulectlReading(f))
+          .map((f) => `${STANDALONE_REPORT_CHECK}${f}`),
       ] as readonly string[],
+    ],
+    // A heading names only what the page itself checked: capsulectl's
+    // reading has its own, and "Failed on this page" is left out when it is
+    // the only reason (Sherlock2, #417).
+    [
+      "capsulectl",
+      REPORTED_BY_CAPSULECTL,
+      reportFailed
+        .filter(isCapsulectlReading)
+        .map((f) => `${STANDALONE_REPORT_CHECK}${f}`) as readonly string[],
     ],
     [
       "not-checked",
@@ -1179,7 +1195,9 @@ function renderCheckLists(
             )
           : verificationCheckWords(
               id as VerificationCheckLists["page"][number],
-              which === "not-checked" ? "notChecked" : which,
+              which === "not-checked"
+                ? "notChecked"
+                : (which as "page" | "failed"),
               lists,
             ),
       );
@@ -1382,9 +1400,12 @@ async function renderVerificationPage(
     ...model,
     checkLists: {
       ...model.checkLists,
+      // capsulectl's reading is not a check on this page: never counted as one.
       failed: [
         ...model.checkLists.failed,
-        ...reportFailed.map((f) => `${STANDALONE_REPORT_CHECK}${f}`),
+        ...reportFailed
+          .filter((f) => !isCapsulectlReading(f))
+          .map((f) => `${STANDALONE_REPORT_CHECK}${f}`),
       ],
     },
   });

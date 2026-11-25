@@ -268,6 +268,35 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     );
   });
 
+  it("capsulectl's reading has its own heading: nothing under 'Failed on this page' when every page check passed (Sherlock2)", async () => {
+    for (const edit of [
+      (r: Obj) => {
+        v1Entry(r)["status"] = "fail";
+      },
+      (r: Obj) => {
+        r["verdict"] = "INVALID";
+      },
+    ]) {
+      const r = report();
+      edit(r);
+      const root = await page(r);
+      const headings = [...root.querySelectorAll("h4")].map(
+        (h) => h.textContent,
+      );
+      expect(headings).not.toContain("Failed on this page");
+      expect(headings).toContain("Reported by capsulectl verify");
+      expect(root.querySelectorAll('[data-checks="failed"] li')).toHaveLength(
+        0,
+      );
+      expect(
+        root.querySelectorAll('[data-checks="capsulectl"] li'),
+      ).toHaveLength(1);
+      expect(root.querySelector("summary")?.textContent).not.toContain(
+        "on this page failed",
+      );
+    }
+  });
+
   it("an entry that passed in a bundle capsulectl calls INVALID or INCOMPLETE says that verdict, never that the report failed (Sherlock2)", async () => {
     for (const verdict of ["INVALID", "INCOMPLETE"]) {
       const r = report();
@@ -345,6 +374,94 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     // The page never says a half capsulectl did not report: no report, no line.
     const none = await page();
     expect(none.querySelector('[data-rung="counterparty-half"]')).toBeNull();
+  });
+
+  it("the holder's own book's witness time, as capsulectl reported it (amended u203)", async () => {
+    const rung = async (
+      witnessed?: unknown,
+    ): Promise<string | null | undefined> => {
+      const r = report();
+      if (witnessed !== undefined) v1Entry(r)["witnessed"] = witnessed;
+      const root = await page(r);
+      return root.querySelector('[data-rung="witness"]')?.textContent;
+    };
+    expect(
+      await rung({
+        status: "verified",
+        witness: "Action State's witness",
+        at: "2026-11-25T14:41:19Z",
+      }),
+    ).toBe(
+      "Time-stamped by Action State's witness at 2026-11-25T14:41:19Z, as capsulectl verify reported on your own book. This page did not check it itself.",
+    );
+    expect(await rung({ status: "failed", reason: "x" })).toBe(
+      "capsulectl verify reported that your own book's witness time-stamp did not verify, so no time-stamp is shown. This page did not check it itself.",
+    );
+    expect(await rung({ status: "withheld" })).toBe(
+      "capsulectl verify found no time-stamp for your own book from the witnesses it was given. That does not mean there is none. This page did not check it itself.",
+    );
+    // Nothing reported, or not a result: the line as before, never "Time-stamped".
+    for (const w of [
+      undefined,
+      "verified",
+      { status: "verified" },
+      { status: "verified", witness: "", at: "t" },
+      { status: "other" },
+    ])
+      expect(await rung(w)).toBe(
+        "No witness result was reported to this page.",
+      );
+  });
+
+  it("an x-deal-v1 page never draws the log line, only the file-scoped one (Sherlock2)", async () => {
+    for (const r of [report(), undefined]) {
+      const root = await page(r);
+      expect(root.textContent).not.toContain("has vouched for this log");
+      expect(root.textContent).toContain(
+        "This file carries no witness receipt, so this page could not check a time-stamp itself.",
+      );
+    }
+  });
+
+  it("a counterparty's copy never shows the holder's witness time", async () => {
+    const shared = JSON.parse(data("counterparty-copy.bundle.json")) as Obj;
+    const r = JSON.parse(data("counterparty-copy.verify.json")) as Obj;
+    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };
+    const host = document.createElement("div");
+    await renderReceipt(shared, host, { verifierReport: r, depth: "L2" });
+    expect(
+      host.querySelector("[data-receipt-module]") ?? host.firstChild,
+    ).not.toBeNull();
+    expect(host.textContent).not.toContain("Time-stamped by");
+    expect(host.textContent).toContain(
+      "No witness result was reported to this page.",
+    );
+  });
+
+  it("the holder's witness time is never shown on a shared page or report", async () => {
+    const r = report();
+    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };
+    for (const carrier of ["page", "report"] as const) {
+      const host = document.createElement("div");
+      await renderReceipt(bundle(), host, {
+        verifierReport: r,
+        carrier,
+        depth: "L2",
+      });
+      expect(host.textContent).not.toContain("Time-stamped by");
+    }
+    const own = document.createElement("div");
+    await renderReceipt(bundle(), own, { verifierReport: r, depth: "L2" });
+    expect(own.textContent).toContain("Time-stamped by W at t");
+  });
+
+  it("a witnessed result in an entry that did not pass is never said: the copy is refused", async () => {
+    const r = report();
+    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };
+    v1Entry(r)["status"] = "fail";
+    const root = await page(r);
+    expect(root.textContent).not.toContain("Time-stamped by");
+    expect(root.querySelector("[data-receipt-module]")).toBeNull();
   });
 
   it("the page's own extension rows are its verifier's: one x-deal-v1 row", async () => {

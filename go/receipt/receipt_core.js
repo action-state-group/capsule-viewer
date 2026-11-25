@@ -392,6 +392,17 @@
     return typeof half.status === "string" ? half.status : null;
   }
 
+  // capsulectl's report of the holder's own book's witness time (verify
+  // --stamp-proof, beside the copy and never in it), from its x-deal-v1
+  // entry: {status, witness, at} with strings only, else null.
+  function bookWitnessed(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    var got = entry !== undefined ? map(entry.witnessed) : {};
+    if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
+    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || typeof got.at !== "string" || got.at === "")) return null;
+    return got.status === "verified" ? { status: got.status, witness: got.witness, at: got.at } : { status: got.status };
+  }
+
   function pageAssurance(context, extension) {
     var c = map(context);
     var v = map(c.verification);
@@ -412,7 +423,10 @@
     // The v1 deal module only: capsulectl's status for the other party's half
     // carried in the copy (x-deal-v1-counterparty-half), from its x-deal-v1
     // entry, else null. The page never checks the half itself.
-    if (extension === EXTENSION_V1) out.counterparty_half = counterpartyHalf(v);
+    if (extension === EXTENSION_V1) {
+      out.counterparty_half = counterpartyHalf(v);
+      out.book_witnessed = bookWitnessed(v);
+    }
     // Said only when the page checked it itself: a verifier's report (the
     // Python twin's inputs too) carries no such member.
     if (here) out.report_checked_here = true;
@@ -1230,6 +1244,7 @@
       witnessed: v.assurance.witnesses,
       countersignatures: v.assurance.countersignatures,
       counterparty_half: or(str(v.assurance.counterparty_half), null),
+      book_witnessed: v.assurance.book_witnessed || null,
       verification: v.verification,
       report_checked: or(str(v.assurance.report_checked), null),
     };
@@ -1924,6 +1939,15 @@
     return parts;
   };
   P.witness = function (model) {
+    // capsulectl's report of the holder's own book (x-deal-v1 keep page,
+    // amended u203): said in its voice, only as reported.
+    // Only on the holder's own copy drawn for the holder: a shared copy, or a
+    // page shown to others, never shows the holder's witness time.
+    var book = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? model.book_witnessed : null;
+    if (book) {
+      if (book.status === "verified") return w("rung.book_witnessed", { witness: book.witness, at: book.at });
+      return w(book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld");
+    }
     if (model.witnessed === "pass") return w("rung.witness_verified");
     if (model.witnessed === "fail") return w("rung.witness_failed");
     if (model.witnessed === "withheld") return w("rung.unwitnessed");
