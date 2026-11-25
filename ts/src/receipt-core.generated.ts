@@ -734,8 +734,10 @@ const root = {};
   };
   // The report in x-deal-report/v0 when it is the named one; null when `named`
   // is a record on the log. This script cannot check that record's signature:
-  // it is read only when capsulectl verify reported the check as passed
-  // (assurance.report_checked), and shown with that reported status only.
+  // it is read only when its check passed (assurance.report_checked), as
+  // capsulectl verify reported it or, on a page whose verifier reports none,
+  // as the page's runtime checked it (EvidenceGraph.dealStandaloneReport,
+  // #397), and shown with that status only.
   Reader.prototype.standaloneReport = function (named) {
     var content = this.standaloneContent(named);
     return content === null ? null : get(content, "report");
@@ -2730,6 +2732,9 @@ const root = {};
   //   assurance       context -> {bundle_digest, witnesses, countersignatures}
   //   composition     view -> the composed/v1 result, or null
   //   memberContext   (bundle, member id) -> a carried copy's context (or a promise of one)
+  //   reportCheck     bundle -> "pass", "fail" or null (or a promise of one): the page
+  //                   runtime's check of the copy's standalone report, asked on a page
+  //                   (no assurance given) for the copy itself, not for a carried copy
   function createModule(kind, env) {
     if (!own(DRAW, kind)) throw new Error("no receipt module " + kind);
     var e = {
@@ -2749,18 +2754,11 @@ const root = {};
     var cannotCheckHere = function (context) {
       return !(env && env.verification) && map(context).strict === undefined;
     };
-    // On a page (no verifier's assurance given), a carried copy's own
-    // standalone report is asked about too, before its model is built.
+    // On a page (no verifier's assurance given) the copy's own standalone
+    // report is asked about before its model is built. A composed copy's
+    // carried copies are not asked about yet (#401): a carried copy whose
+    // report is standalone stays unread, as before.
     var pageChecks = !(env && env.assurance);
-    if (pageChecks) {
-      var memberContext = e.memberContext;
-      e.memberContext = function (bundle, id) {
-        return Promise.resolve(memberContext(bundle, id)).then(function (member) {
-          var asked = askReportCheck(member, e.reportCheck);
-          return asked === null ? member : asked.then(function () { return member; });
-        });
-      };
-    }
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
       var asked = pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null;
@@ -2895,7 +2893,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "db76bb62a92a9622057e594c2d36b443bb4398988e99060f95a4921826ecf791",
+      "script_sha256": "8b535583887b18e08a24bdb42b6ca91f3be15ca007ee0e29050f2e723a0369a3",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2940,7 +2938,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "776c944c729e30da65df236a9e3284011b08737a1ed07104e6822aa8d94587c8",
+      "script_sha256": "46c59c5976dd2955aa3b9cf5e9909fcc42009f841cf82d3240f45fd17e2a3a2a",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -2984,7 +2982,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "a2024571050747a8de83903bb1f148f8cd04eb5d5ecf70e1cdca0a2f93aaee5e",
+      "script_sha256": "e6674deb00f753945a369110fe92b3eff9ff1f318260671017bc320af00cd9ae",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3030,7 +3028,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "70a046dd6ba9613fc5d7aed2cd0c671ce461dd34bd272fa5f3c97ecbb68ad732",
+      "script_sha256": "4fdfa6c94604da1e8fa6d4f59c7b6eee2d40019bbfbec7cd17f4774046535f59",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]

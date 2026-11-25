@@ -214,17 +214,20 @@ async function recordHeader(value: Obj, record: Obj): Promise<Obj | undefined> {
   return checked.ok && checked.disclosuresMatched === 1 ? disclosed : undefined;
 }
 
-/** A JSON non-negative integer (a number or a decimal string), as evidencebook's JSONUint reads one. */
-function jsonUint(value: unknown): bigint | undefined {
-  if (typeof value === "number")
-    return Number.isSafeInteger(value) && value >= 0
-      ? BigInt(value)
-      : undefined;
-  if (typeof value === "string" && /^(0|[1-9][0-9]*)$/u.test(value)) {
-    const n = BigInt(value);
-    return n < 2n ** 64n ? n : undefined;
-  }
-  return undefined;
+/**
+ * A JSON non-negative integer, as evidencebook's JSONUint reads one from a
+ * bundle decoded with UseNumber: a number only, never a string, and never -0
+ * (strconv.ParseUint refuses "-0"). One limit of the page's JSON.parse: a
+ * number written `22.0` or `2.2e1` arrives here as 22, which Go refuses; the
+ * page cannot see the spelling.
+ */
+export function jsonUint(value: unknown): bigint | undefined {
+  return typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    !Object.is(value, -0)
+    ? BigInt(value)
+    : undefined;
 }
 
 function hexBytes(value: unknown): Uint8Array | undefined {
@@ -242,10 +245,14 @@ function hexBytes(value: unknown): Uint8Array | undefined {
 
 /**
  * An RFC 3339 time as one comparable instant, to the nanosecond, as Go's
- * time.Parse(time.RFC3339Nano) reads it and Equal compares it (an upper-case
- * T and Z); undefined when it is not one.
+ * time.Parse(time.RFC3339Nano) reads it and Equal compares it: the year read
+ * as written (0000-9999), an upper-case T and Z, any number of fraction
+ * digits of which nine are kept. Undefined when it is not one. Go's general
+ * parser also takes a comma before the fraction and a one-digit hour, which
+ * this refuses: capsulectl writes neither, and a refusal here only declines
+ * a receipt Go would pass, never the other way.
  */
-function instant(value: unknown): string | undefined {
+export function instant(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const m =
     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:(Z)|([+-])(\d{2}):(\d{2}))$/u.exec(
@@ -266,7 +273,7 @@ function instant(value: unknown): string | undefined {
     month < 1 ||
     month > 12 ||
     day < 1 ||
-    day > new Date(Date.UTC(year, month, 0)).getUTCDate() ||
+    day > civil(year, month + 1, 0).getUTCDate() ||
     hour > 23 ||
     minute > 59 ||
     second > 59
@@ -279,10 +286,20 @@ function instant(value: unknown): string | undefined {
     if (offHour > 23 || offMinute > 59) return undefined;
     offset = (sign === "-" ? -1 : 1) * (offHour * 60 + offMinute) * 60;
   }
-  const seconds =
-    BigInt(Date.UTC(year, month - 1, day, hour, minute, second) / 1000) -
-    BigInt(offset);
+  const at = civil(year, month, day);
+  at.setUTCHours(hour, minute, second, 0);
+  const seconds = BigInt(at.getTime() / 1000) - BigInt(offset);
   // Go reads any number of fraction digits and keeps nine.
   const nanos = (frac ?? "").slice(0, 9).padEnd(9, "0");
   return `${seconds}.${nanos}`;
+}
+
+/**
+ * A UTC date with the year taken as written: Date.UTC reads a year 0-99 as
+ * 1900-1999, setUTCFullYear does not.
+ */
+function civil(year: number, month: number, day: number): Date {
+  const at = new Date(0);
+  at.setUTCFullYear(year, month - 1, day);
+  return at;
 }

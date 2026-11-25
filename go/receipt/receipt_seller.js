@@ -730,8 +730,10 @@
   };
   // The report in x-deal-report/v0 when it is the named one; null when `named`
   // is a record on the log. This script cannot check that record's signature:
-  // it is read only when capsulectl verify reported the check as passed
-  // (assurance.report_checked), and shown with that reported status only.
+  // it is read only when its check passed (assurance.report_checked), as
+  // capsulectl verify reported it or, on a page whose verifier reports none,
+  // as the page's runtime checked it (EvidenceGraph.dealStandaloneReport,
+  // #397), and shown with that status only.
   Reader.prototype.standaloneReport = function (named) {
     var content = this.standaloneContent(named);
     return content === null ? null : get(content, "report");
@@ -2726,6 +2728,9 @@
   //   assurance       context -> {bundle_digest, witnesses, countersignatures}
   //   composition     view -> the composed/v1 result, or null
   //   memberContext   (bundle, member id) -> a carried copy's context (or a promise of one)
+  //   reportCheck     bundle -> "pass", "fail" or null (or a promise of one): the page
+  //                   runtime's check of the copy's standalone report, asked on a page
+  //                   (no assurance given) for the copy itself, not for a carried copy
   function createModule(kind, env) {
     if (!own(DRAW, kind)) throw new Error("no receipt module " + kind);
     var e = {
@@ -2745,18 +2750,11 @@
     var cannotCheckHere = function (context) {
       return !(env && env.verification) && map(context).strict === undefined;
     };
-    // On a page (no verifier's assurance given), a carried copy's own
-    // standalone report is asked about too, before its model is built.
+    // On a page (no verifier's assurance given) the copy's own standalone
+    // report is asked about before its model is built. A composed copy's
+    // carried copies are not asked about yet (#401): a carried copy whose
+    // report is standalone stays unread, as before.
     var pageChecks = !(env && env.assurance);
-    if (pageChecks) {
-      var memberContext = e.memberContext;
-      e.memberContext = function (bundle, id) {
-        return Promise.resolve(memberContext(bundle, id)).then(function (member) {
-          var asked = askReportCheck(member, e.reportCheck);
-          return asked === null ? member : asked.then(function () { return member; });
-        });
-      };
-    }
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
       var asked = pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null;
