@@ -62,24 +62,54 @@ const obj = (value: unknown): Obj => (isObj(value) ? value : {});
 export async function dealStandaloneReport(
   bundle: unknown,
 ): Promise<"pass" | "fail" | null> {
+  const failed = await dealStandaloneReportFailures(bundle);
+  return failed === null ? null : failed.length === 0 ? "pass" : "fail";
+}
+
+/**
+ * Which of the report's checks failed, so a page can name each (Sherlock2,
+ * #412):
+ *  - `report`: it is not this deal's report (conditions 1 and 4: the
+ *    pointer, the record, the payload's type, profile, audience and deal);
+ *  - `second`: the log holds a report record beside it, so the page can't
+ *    tell which report counts (6);
+ *  - `signer`: it is not signed by the key of the deal's last step (2);
+ *  - `capsule`: its payload is not the one its Capsule commits (3);
+ *  - `checkpoint`: it is not bound to this bundle's checkpoint and time (5, 7).
+ * An empty list is a pass. Null when there is nothing this page checks, as
+ * for dealStandaloneReport. When the record itself cannot be read
+ * (condition 1), only `report` is given: the other checks have nothing to
+ * read.
+ */
+export type StandaloneReportFailure =
+  | "report"
+  | "second"
+  | "signer"
+  | "capsule"
+  | "checkpoint";
+
+export async function dealStandaloneReportFailures(
+  bundle: unknown,
+): Promise<StandaloneReportFailure[] | null> {
   const value = obj(bundle);
   const extensions = obj(value["extensions"]);
   if (!(STANDALONE in extensions) || DEAL_V1 in extensions) return null;
   if (!ed25519Available()) return null;
-  return (await standaloneReportHolds(value, extensions)) ? "pass" : "fail";
+  return standaloneReportFailures(value, extensions);
 }
 
-async function standaloneReportHolds(
+async function standaloneReportFailures(
   value: Obj,
   extensions: Obj,
-): Promise<boolean> {
+): Promise<StandaloneReportFailure[]> {
+  const failed = new Set<StandaloneReportFailure>();
   // 1. A pointer-only section naming the record the extension carries.
   const section = extensions[DEAL_V0];
-  if (!isObj(section) || Object.keys(section).length !== 1) return false;
+  if (!isObj(section) || Object.keys(section).length !== 1) return ["report"];
   const id = section[POINTER];
   const x = extensions[STANDALONE];
   if (typeof id !== "string" || !isObj(x) || Object.keys(x).length !== 2)
-    return false;
+    return ["report"];
   const record = x["record"];
   const input = x["agent_input"];
   if (
@@ -88,14 +118,17 @@ async function standaloneReportHolds(
     record["capsule_id"] !== id ||
     record["action_id"] !== REPORT_ACTION
   )
-    return false;
+    return ["report"];
 
   // 2. Signed by the deal's last step's key.
   const reportKey = await verifiedProducerKey(record);
-  if (reportKey === undefined) return false;
   const last = await lastStepRecord(value);
-  if (last === undefined) return false;
-  if ((await verifiedProducerKey(last)) !== reportKey) return false;
+  if (
+    reportKey === undefined ||
+    last === undefined ||
+    (await verifiedProducerKey(last)) !== reportKey
+  )
+    failed.add("signer");
 
   // 3. The disclosed payload is the one the Capsule commits.
   const capsule: Record<string, ParsedJson> = {};
@@ -105,44 +138,55 @@ async function standaloneReportHolds(
     capsule,
     disclosures: { agent_input: input as ParsedJson },
   });
-  if (!disclosed.ok || disclosed.disclosuresMatched !== 1) return false;
+  if (!disclosed.ok || disclosed.disclosuresMatched !== 1)
+    failed.add("capsule");
 
   // 4. This deal's report, under x-deal-v0, for a copy audience.
   const logId = obj(value["completeness_certificate"])["log_id"];
-  if (typeof logId !== "string" || !logId.startsWith("deal/")) return false;
   const audience = input["audience"];
   if (
+    typeof logId !== "string" ||
+    !logId.startsWith("deal/") ||
     input["type"] !== "deal_report" ||
     input["profile"] !== DEAL_V0 ||
     typeof audience !== "string" ||
     !COPY_AUDIENCES.has(audience) ||
     input["deal_id"] !== logId.slice("deal/".length)
   )
-    return false;
+    failed.add("report");
 
   // 5. Bound to this bundle's checkpoint and nothing else.
   const checkpoint = obj(value["checkpoint"]);
   const bound = input["deal_checkpoint"];
-  if (!isObj(bound) || Object.keys(bound).length !== 3) return false;
-  const boundSize = jsonUint(bound["mmr_size"]);
+  const boundSize = isObj(bound) ? jsonUint(bound["mmr_size"]) : undefined;
   const size = jsonUint(checkpoint["mmr_size"]);
   if (
+    !isObj(bound) ||
+    Object.keys(bound).length !== 3 ||
+    typeof logId !== "string" ||
     bound["log_id"] !== logId ||
     boundSize === undefined ||
     size === undefined ||
     boundSize !== size ||
     bound["root"] !== checkpoint["root"]
   )
-    return false;
+    failed.add("checkpoint");
 
   // 6. No report record beside it.
   const records = Array.isArray(value["records"]) ? value["records"] : [];
-  if (records.some((r) => obj(r)["action_id"] === REPORT_ACTION)) return false;
+  if (records.some((r) => obj(r)["action_id"] === REPORT_ACTION))
+    failed.add("second");
 
   // 7. As of the checkpoint's signed time.
   const asOf = instant(obj(obj(input["report"])["lifecycle"])["as_of"]);
   const signed = instant(checkpoint["timestamp"]);
-  return asOf !== undefined && signed !== undefined && asOf === signed;
+  if (asOf === undefined || signed === undefined || asOf !== signed)
+    failed.add("checkpoint");
+
+  // In the order the page runs them, for the lines it draws.
+  return (
+    ["report", "second", "signer", "capsule", "checkpoint"] as const
+  ).filter((f) => failed.has(f));
 }
 
 /** A record's producer key, hex, when its signature verifies under its own key_id. */

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
-import { dealStandaloneReport } from "./deal-standalone-report.js";
+import {
+  dealStandaloneReportFailures,
+  type StandaloneReportFailure,
+} from "./deal-standalone-report.js";
 import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
   BOOK_PAYLOADS_EXTENSION,
@@ -168,6 +171,7 @@ import {
   FULL_VERIFIER_LINE,
   NOT_CHECKED_ON_THIS_PAGE,
   RECEIPT_GRADE_DISPLAY,
+  UNVERIFIED_BUNDLE_REFUSAL,
   VERIFICATION_BANNER_LINES,
   verificationBanner,
   verificationCheckWords,
@@ -1094,6 +1098,25 @@ function renderExtensionTable(
   host.append(table);
 }
 
+// A deal copy's standalone report that failed this page's own check
+// (#398, #412): one line per failed condition, in Sherlock2's words, in the
+// list of what failed on this page.
+const STANDALONE_REPORT_FAILED: Readonly<
+  Record<StandaloneReportFailure, string>
+> = {
+  report:
+    "Didn't verify: the deal report carried outside the log is not a report of this deal.",
+  second:
+    "Didn't verify: this deal's log has more than one report record, so the page can't tell which report counts.",
+  signer:
+    "Didn't verify: the deal report carried outside the log was not signed by the deal's last step.",
+  capsule:
+    "Didn't verify: the deal report carried outside the log does not match its Capsule.",
+  checkpoint:
+    "Didn't verify: the deal report carried outside the log was not made at this deal's checkpoint.",
+};
+const STANDALONE_REPORT_CHECK = "deal-report-";
+
 // The page's own checks in up to three lists (presentation contract section
 // 6.1): what ran here and passed, what ran here and failed, and what the
 // bundle calls for that this page did not run. A list with no entries is not
@@ -1104,11 +1127,23 @@ function renderCheckLists(
   host: HTMLElement,
   lists: VerificationCheckLists,
   verifierHint: string | undefined,
+  reportFailed: readonly StandaloneReportFailure[] = [],
 ): void {
   const groups = [
-    ["page", CHECKED_ON_THIS_PAGE, lists.page],
-    ["failed", FAILED_ON_THIS_PAGE, lists.failed],
-    ["not-checked", NOT_CHECKED_ON_THIS_PAGE, lists.notChecked],
+    ["page", CHECKED_ON_THIS_PAGE, lists.page as readonly string[]],
+    [
+      "failed",
+      FAILED_ON_THIS_PAGE,
+      [
+        ...lists.failed,
+        ...reportFailed.map((f) => `${STANDALONE_REPORT_CHECK}${f}`),
+      ] as readonly string[],
+    ],
+    [
+      "not-checked",
+      NOT_CHECKED_ON_THIS_PAGE,
+      lists.notChecked as readonly string[],
+    ],
   ] as const;
   for (const [which, heading, ids] of groups) {
     if (ids.length === 0) continue;
@@ -1118,11 +1153,17 @@ function renderCheckLists(
     for (const id of ids) {
       const item = element(
         "li",
-        verificationCheckWords(
-          id,
-          which === "not-checked" ? "notChecked" : which,
-          lists,
-        ),
+        id.startsWith(STANDALONE_REPORT_CHECK)
+          ? STANDALONE_REPORT_FAILED[
+              id.slice(
+                STANDALONE_REPORT_CHECK.length,
+              ) as StandaloneReportFailure
+            ]
+          : verificationCheckWords(
+              id as VerificationCheckLists["page"][number],
+              which === "not-checked" ? "notChecked" : which,
+              lists,
+            ),
       );
       item.dataset.check = id;
       list.append(item);
@@ -1172,8 +1213,12 @@ async function renderVerificationPage(
   contract: PageContract,
   l3: { readonly words: Words; readonly voice: RecordVoice } | undefined,
   checkedId: string,
+  reportFailed: readonly StandaloneReportFailure[] = [],
 ): Promise<string> {
   const { bundle, verification: verified } = context;
+  // The bundle's own checks passed but its standalone report did not: the
+  // page refuses it (#412), and says so wherever it says the bundle verified.
+  const passed = bundleVerified(verified) && reportFailed.length === 0;
   const section = element("section");
   section.dataset.page = "verification";
   let page = section;
@@ -1196,6 +1241,7 @@ async function renderVerificationPage(
       ...(context.strict === undefined ? {} : { strict: context.strict }),
     },
   );
+
   // AAC's page model carries no presentation refusals: this registry lays
   // its refusal rows over AAC's extension rows (the integrity words from
   // each row's own integrity) and adds a notice for each refused module
@@ -1260,11 +1306,11 @@ async function renderVerificationPage(
   page.append(recordPageStyle);
   let result: ResultRoot | undefined;
   try {
-    result = bundleVerified(verified) ? await resultRootOf(context) : undefined;
+    result = passed ? await resultRootOf(context) : undefined;
   } catch {
     result = undefined;
   }
-  const read = bundleVerified(verified)
+  const read = passed
     ? await recordEntries(context, result)
     : new Map<string, CitedRecord>();
   const rawRecords = new Map<string, unknown>();
@@ -1279,7 +1325,7 @@ async function renderVerificationPage(
     model.uncheckpointedCount,
     model.coverage,
     {
-      verified: bundleVerified(verified),
+      verified: passed,
       read,
       kind: (id) => recordKind(rawRecords.get(id), read.get(id)),
       build: (id, record) => {
@@ -1302,7 +1348,7 @@ async function renderVerificationPage(
   renderCompletenessStatement(page, model.completeness);
   renderChecks(page, model.checks);
   renderExtensions(page, extensions, presentationRefusalNotices(refused));
-  renderCheckLists(page, model.checkLists, verifierHint);
+  renderCheckLists(page, model.checkLists, verifierHint, reportFailed);
   page.append(element("p", model.verifyIndependentlyLine));
   // Folded into one section, closed for a bundle that verified; its summary
   // line keeps the counts and what was not checked in view.
@@ -1312,8 +1358,17 @@ async function renderVerificationPage(
   folded.dataset.checked = "";
   // Open when the bundle did not verify, and at depth L2, where everything
   // is open (presentation contract section 9.1).
-  folded.open = !bundleVerified(verified) || depth === "L2";
-  const line = checkedSummaryLine(bundleVerified(verified), model);
+  folded.open = !passed || depth === "L2";
+  const line = checkedSummaryLine(passed, {
+    ...model,
+    checkLists: {
+      ...model.checkLists,
+      failed: [
+        ...model.checkLists.failed,
+        ...reportFailed.map((f) => `${STANDALONE_REPORT_CHECK}${f}`),
+      ],
+    },
+  });
   const heading = element("summary");
   heading.append(
     element("strong", CHECKED_SECTION_TITLE),
@@ -3415,7 +3470,8 @@ async function openReceipt(
   const context = await buildVerifiedBundleContext(bundle);
   // A deal copy whose standalone report fails the page's own check did not
   // pass its checks: said as such, never as a kind with no viewer.
-  if ((await dealStandaloneReport(bundle)) === "fail") return "unverified";
+  if (((await dealStandaloneReportFailures(bundle)) ?? []).length > 0)
+    return "unverified";
   const registry = options.registry ?? defaultRegistry;
   const resolution = await registry.resolve(
     context,
@@ -3444,17 +3500,27 @@ async function renderVerifiedContext(
   options: RenderEvidenceGraphOptions,
 ): Promise<void> {
   const { bundle, verification } = context;
-  const verified = bundleVerified(verification);
+  // A bundle whose own checks pass but whose deal copy's standalone report
+  // fails this page's check is refused like one that did not verify: no
+  // module, no fallback page, AAC's refused banner, and the failed
+  // conditions in the checks (#412).
+  const reportFailed = bundleVerified(verification)
+    ? ((await dealStandaloneReportFailures(bundle)) ?? [])
+    : [];
+  const verified = bundleVerified(verification) && reportFailed.length === 0;
   const registry = options.registry ?? defaultRegistry;
   let refusal: keyof typeof PRESENTATION_REFUSALS | undefined;
   let selected: { module: PresentationModule; model: unknown } | undefined;
   let resolution: PresentationResolution;
   try {
-    resolution = await registry.resolve(
-      context,
-      options.audience ?? DEFAULT_AUDIENCE,
-      options.format ?? DEFAULT_FORMAT,
-    );
+    resolution =
+      reportFailed.length > 0
+        ? { kind: "refusal" }
+        : await registry.resolve(
+            context,
+            options.audience ?? DEFAULT_AUDIENCE,
+            options.format ?? DEFAULT_FORMAT,
+          );
   } catch (err) {
     if (!(err instanceof PresentationAmbiguityError)) throw err;
     resolution = { kind: "no-presentation", refused: [] };
@@ -3512,7 +3578,18 @@ async function renderVerifiedContext(
     declaredProducerKeys(bundle),
     context.countersigners,
   );
-  const bannerModel = verificationBanner(context, stamps);
+  const bannerModel =
+    reportFailed.length > 0
+      ? {
+          ...verificationBanner(context, stamps),
+          // AAC's own banner for a bundle that did not verify.
+          state: "failed" as const,
+          line: VERIFICATION_BANNER_LINES.refused,
+          verdict: "invalid" as const,
+          detail: "",
+          refusal: UNVERIFIED_BUNDLE_REFUSAL,
+        }
+      : verificationBanner(context, stamps);
   const records = object(bundle).records;
   const coverage = {
     uncheckpointed: bannerModel.uncheckpointed,
@@ -4006,6 +4083,7 @@ async function renderVerifiedContext(
         }
       : undefined,
     checkedSectionId(root),
+    reportFailed,
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
