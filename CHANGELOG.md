@@ -23,6 +23,8 @@ here. The format follows
 
 ### Fixed
 
+- A receipt's "Deal" line words `service` and `rental` as "Service" and "Rental" (#391, Sherlock2), so a Mesh exchange reads "Deal: Service" instead of the raw value. These are the two `deal_type` values the x-deal profile allows that the wording pack did not word.
+- A receipt follows its page's colour scheme (#391). On a page that declares a dark scheme (`color-scheme: light dark` in dark mode, as the Mesh saved page does), the receipt is drawn dark instead of as a white block. A page that declares none, such as the emitter's shell and the report pages, keeps a light receipt. The dark colours are `tokens/tokens.json`'s new `kit-dark`, generated into `kit-dark.css`, which the receipt modules insert as a second stylesheet that applies inside a receipt only. A browser without CSS `light-dark()` keeps the light colours. Each receipt module's `style_sha256` gains a second pin, for `kit-dark.css`, and its script pin changes; its `kit.css` pin, `kit.css` itself, the kit's other modules and the Python receipt modules do not change.
 - An x-deal-v1 receipt shows its times in the reader's own zone, as the page is viewed. The data keeps UTC (#423, Sherlock2):
   - "As the holder computed it at …", due times, the contest window's end and payment times are local, with the zone;
   - a deadline (due, window end) says its UTC time beside the local one, for example "Dec 2, 2026, 12:56 PM CST (18:56 UTC)";

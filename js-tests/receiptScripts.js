@@ -23,10 +23,12 @@ const SCRIPTS = process.env.RECEIPT_SCRIPT_DIR || RECEIPT_DIR;
 export const scriptBytes = (kind) => readFileSync(join(SCRIPTS, `receipt_${kind}.js`));
 export const manifestOf = (kind) => JSON.parse(readFileSync(join(RECEIPT_DIR, `manifest-${kind}.json`), "utf8"));
 // The Python twin is frozen at 0.25.0 with its own copy of the example wording
-// pack; the scripts carry go/receipt's, which only adds keys the twin never
-// draws (packAddsOnly holds that). A page names its pack's sha256, so the
-// oracle's pages are read with the current pack's sha256 in place of the
-// frozen one, and every other byte is still compared.
+// pack; the scripts carry go/receipt's, which only adds keys (packAddsOnly
+// holds that). A page names its pack's sha256, so the oracle's pages are read
+// with the current pack's sha256 in place of the frozen one, and a value the
+// twin drew unworded (a `data-unworded` span) is read with the word the
+// current pack added for it (withAddedWords); every other byte is still
+// compared.
 const packBytes = (dir) => readFileSync(join(dir, "wording-en.json"));
 const FROZEN_PACK = packBytes(join(ROOT, "src", "capsule_viewer", "receipt_slot"));
 const CURRENT_PACK = packBytes(RECEIPT_DIR);
@@ -117,6 +119,24 @@ export function canon(node) {
   const attrs = [...node.attributes].map((a) => [a.name, a.value]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const tag = node.tagName.toLowerCase();
   return `<${tag}${attrs.map(([k, v]) => ` ${k}="${esc(v, true)}"`).join("")}>${[...node.childNodes].map(canon).join("")}</${tag}>`;
+}
+
+/**
+ * *html* with each unworded value whose key the current pack added since the
+ * frozen one (`deal_type.service`, `deal_type.rental`: capsule-viewer#391)
+ * drawn as that word, as the scripts draw it. Keys the frozen pack already
+ * had, and keys neither pack words, are left as they are.
+ */
+export function withAddedWords(doc, html) {
+  const frozen = JSON.parse(FROZEN_PACK.toString("utf8")).entries;
+  const current = JSON.parse(CURRENT_PACK.toString("utf8")).entries;
+  const t = doc.createElement("template");
+  t.innerHTML = html;
+  for (const span of t.content.querySelectorAll("[data-unworded]")) {
+    const key = span.getAttribute("data-unworded");
+    if (!(key in frozen) && key in current) span.replaceWith(doc.createTextNode(current[key]));
+  }
+  return t.innerHTML;
 }
 
 /**

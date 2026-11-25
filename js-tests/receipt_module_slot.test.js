@@ -32,7 +32,7 @@
 // locally with a warning when there is no Chromium, and fails under CI.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -363,6 +363,53 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
         expect(m.overflowX).toBe(0);
       });
     }
+  }
+
+  // capsule-viewer#391 item 4: the receipt follows the colour scheme its host
+  // page declares, not the reader's OS. The Mesh saved page declares
+  // "light dark"; the emitter shells and report pages declare none and stay
+  // light, so a dark receipt never sits in a white frame, nor the reverse.
+  const SCHEMES = [
+    { host: "light dark", os: "dark", dark: true },
+    // Another kit module (History, Adjudications) drew first and inserted
+    // kit.css under the shared id: the receipt still gets its overrides, and
+    // that module's card stays light (#391).
+    { host: "light dark", os: "dark", dark: true, otherFirst: true },
+    { host: "light dark", os: "light", dark: false },
+    { host: null, os: "dark", dark: false },
+    { host: "dark", os: "light", dark: true },
+    { host: "light", os: "dark", dark: false },
+  ];
+  const COLOURS = `(() => {
+    const rgb = (e, p) => e ? getComputedStyle(e).getPropertyValue(p) : null;
+    const kit = document.querySelector("[data-receipt-module]");
+    return {
+      surface: rgb(kit, "background-color"),
+      text: rgb(kit, "color"),
+      card: rgb(document.querySelector(".cv-metric"), "background-color"),
+      label: rgb(document.querySelector(".cv-metric__label"), "color"),
+      other: rgb(document.getElementById("other-card"), "background-color"),
+    };
+  })()`;
+  for (const s of SCHEMES) {
+    it(`a host declaring ${s.host === null ? "no colour scheme" : `color-scheme "${s.host}"`}, read in OS ${s.os} mode${s.otherFirst ? ", after another kit module" : ""}, draws the receipt ${s.dark ? "dark" : "light"}`, async () => {
+      const c = MAIN[0];
+      const context = standInContext(readBundle(c.name), { verify: readVerify(c.name) });
+      const meta = s.host === null ? "" : `<meta name="color-scheme" content="${s.host}">`;
+      const other = s.otherFirst ? `<style id="cv-kit-css">${readFileSync(join(ROOT, "src", "capsule_viewer", "static", "kit.css"), "utf8")}</style>` : "";
+      const head = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">${meta}<title>receipt</title>${other}</head><body>`;
+      const file = join(dir, `scheme-${s.host ?? "none"}-${s.os}${s.otherFirst ? "-other" : ""}.html`.replace(/ /g, "-"));
+      writeFileSync(file, scriptPage(head, `<div class="cv-kit" id="other-card">another module's card</div>`, "</body></html>", c.module, { kind: c.module, depth: "L2", context: serializeContext(context) }));
+      await tab.open(pathToFileURL(file).href, { width: 1280, colorScheme: s.os });
+      expect((await settle()).rendered).toBe("true");
+      const got = await tab.evaluate(COLOURS);
+      // kit-dark.css's values (tokens/tokens.json "kit-dark"), else kit.css's.
+      // Another kit module's card never takes the receipt's dark values.
+      expect(got).toEqual(s.dark
+        ? { surface: "rgb(22, 25, 31)", text: "rgb(230, 233, 239)", card: "rgb(30, 34, 42)", label: "rgb(170, 177, 189)", other: "rgb(255, 255, 255)" }
+        : { surface: "rgb(255, 255, 255)", text: "rgb(27, 31, 39)", card: "rgb(244, 245, 247)", label: "rgb(77, 85, 100)", other: "rgb(255, 255, 255)" });
+      expect(await tab.evaluate(`document.querySelectorAll("#cv-kit-css").length + "," + document.querySelectorAll("#cv-receipt-dark-css").length`)).toBe("1,1");
+    });
   }
 
   // The receipt goldens: tests/goldens/receipt-{keep,counterparty,bilateral-keep,bilateral-counterparty}-*.png.

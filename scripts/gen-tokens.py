@@ -6,8 +6,9 @@
     python3 scripts/gen-tokens.py --check   # exit 1, naming each site, if one differs
     ... --source FILE                        # read FILE instead of tokens/tokens.json
 
-Sites: the TOKENS table in src/capsule_viewer/kit/tokens.py, the --cv-* block
-in src/capsule_viewer/static/kit.css, the :root block of both emitter shells
+Sites: the TOKENS and KIT_DARK tables in src/capsule_viewer/kit/tokens.py, the
+--cv-* block in src/capsule_viewer/static/kit.css, the whole of
+src/capsule_viewer/static/kit-dark.css (from "kit-dark"), the :root block of both emitter shells
 (go/emitter/shell.html, ts/src/emitter-shell.html) and the report-frame
 variables in ts/src/frame-tokens.generated.ts. Only the token blocks are
 rewritten; everything around them is hand-written.
@@ -27,11 +28,14 @@ from capsule_viewer.kit import tokens as kit_tokens  # noqa: E402
 SOURCE = ROOT / "tokens" / "tokens.json"
 TOKENS_PY = ROOT / "src/capsule_viewer/kit/tokens.py"
 KIT_CSS = ROOT / "src/capsule_viewer/static/kit.css"
+KIT_DARK_CSS = ROOT / "src/capsule_viewer/static/kit-dark.css"
 SHELLS = (ROOT / "go/emitter/shell.html", ROOT / "ts/src/emitter-shell.html")
 FRAME_TS = ROOT / "ts/src/frame-tokens.generated.ts"
 
 PY_BEGIN = "# BEGIN GENERATED TOKENS (tokens/tokens.json) -- do not edit by hand\n"
 PY_END = "# END GENERATED TOKENS\n"
+DARK_BEGIN = "# BEGIN GENERATED KIT-DARK (tokens/tokens.json) -- do not edit by hand\n"
+DARK_END = "# END GENERATED KIT-DARK\n"
 SHELL_ROOT = re.compile(r"      :root \{\n.*?\n      \}\n", re.S)
 # Emitted before this shell variable, inside :root.
 SHELL_FRAME_COMMENT = (
@@ -44,10 +48,14 @@ def load(source: Path) -> dict:
     return json.loads(source.read_text(encoding="utf-8"))
 
 
-def tokens_py(src: str, kit: dict[str, str]) -> str:
-    start, end = src.index(PY_BEGIN), src.index(PY_END)
-    lines = [f"    {json.dumps(name)}: {json.dumps(value)}," for name, value in kit.items()]
-    return src[: start + len(PY_BEGIN)] + "\n".join(lines) + "\n" + src[end:]
+def py_table(src: str, begin: str, end_marker: str, table: dict[str, str]) -> str:
+    start, end = src.index(begin), src.index(end_marker)
+    lines = [f"    {json.dumps(name)}: {json.dumps(value)}," for name, value in table.items()]
+    return src[: start + len(begin)] + "\n".join(lines) + "\n" + src[end:]
+
+
+def tokens_py(src: str, kit: dict[str, str], kit_dark: dict[str, str]) -> str:
+    return py_table(py_table(src, PY_BEGIN, PY_END, kit), DARK_BEGIN, DARK_END, kit_dark)
 
 
 def shell_root(data: dict) -> str:
@@ -94,13 +102,14 @@ def main() -> int:
     data = load(source)
     kit_tokens.TOKENS = data["kit"]  # token_block()/regenerate() read the module global
     wanted: dict[Path, str] = {
-        TOKENS_PY: tokens_py(TOKENS_PY.read_text(encoding="utf-8"), data["kit"]),
+        TOKENS_PY: tokens_py(TOKENS_PY.read_text(encoding="utf-8"), data["kit"], data["kit-dark"]),
         KIT_CSS: kit_tokens.regenerate(KIT_CSS.read_text(encoding="utf-8")),
+        KIT_DARK_CSS: kit_tokens.dark_stylesheet(data["kit"], data["kit-dark"]),
         FRAME_TS: frame_ts(data),
     }
     for shell in SHELLS:
         wanted[shell] = shell_html(shell.read_text(encoding="utf-8"), data)
-    stale = [p for p, text in wanted.items() if p.read_text(encoding="utf-8") != text]
+    stale = [p for p, text in wanted.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
     if check:
         for path in stale:
             print(f"out of date: {path.relative_to(ROOT)} (run python3 scripts/gen-tokens.py)")

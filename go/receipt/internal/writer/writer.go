@@ -6,11 +6,13 @@
 // it registers, its manifest (with script_sha256 all zeros, as a script
 // cannot carry its own digest), the words of the example English wording
 // pack (compiled in: the script reads no pack), the pack's id and sha256, the
-// kit stylesheet (src/capsule_viewer/static/kit.css, the one copy, which the
-// manifest pins by style_sha256) and the seller kind.
+// kit stylesheet (src/capsule_viewer/static/kit.css, the one copy), the
+// receipt's dark overrides (static/kit-dark.css; the manifest pins the two by
+// style_sha256, in that order) and the seller kind.
 //
 // It writes the same bytes the Python writer (capsule_viewer.receipt_slot)
-// wrote for capsule-viewer 0.25.0, so the JSON it fills in is serialised the
+// wrote for capsule-viewer 0.25.0 (apart from the dark overrides and the
+// words added since, capsule-viewer#391), so the JSON it fills in is serialised the
 // way Python's json.dumps does: keys in file order, non-ASCII text as is,
 // and only '"', '\\' and control characters escaped. One difference: a number
 // keeps the text it was written with (Python would print 2.50 as 2.5); no
@@ -48,17 +50,27 @@ var generated = regexp.MustCompile(`(?m)^(  var (\w+) = ).*; // @generated (\w+)
 
 // Sources are the inputs: the package directory (receipt_core.js, the
 // hand-edited manifest-<kind>.json and wording-en.json) and the kit
-// stylesheet.
+// stylesheet and its dark overrides.
 type Sources struct {
-	Dir    string
-	KitCSS string
+	Dir        string
+	KitCSS     string
+	KitDarkCSS string
 }
 
 // DefaultSources are the inputs of a capsule-viewer checkout, from the
 // receipt package's directory.
 func DefaultSources(dir string) Sources {
-	return Sources{Dir: dir, KitCSS: filepath.Join(dir, "..", "..", "src", "capsule_viewer", "static", "kit.css")}
+	static := filepath.Join(dir, "..", "..", "src", "capsule_viewer", "static")
+	return Sources{Dir: dir, KitCSS: filepath.Join(static, "kit.css"), KitDarkCSS: filepath.Join(static, "kit-dark.css")}
 }
+
+// The kit stylesheet is shared with the kit's other modules, which insert it
+// under the same element id, so it is pinned and inserted unchanged. The
+// dark overrides (generated from tokens/tokens.json by scripts/gen-tokens.py)
+// are a second stylesheet of the receipt's own: they apply inside a receipt
+// only and follow the colour scheme the host page declares, so a receipt on a
+// dark page is dark and one on a page that declares none stays light
+// (capsule-viewer#391).
 
 func digest(b []byte) string {
 	sum := sha256.Sum256(b)
@@ -76,6 +88,10 @@ func Outputs(s Sources) (map[string][]byte, error) {
 		return nil, err
 	}
 	css, err := os.ReadFile(s.KitCSS)
+	if err != nil {
+		return nil, err
+	}
+	dark, err := os.ReadFile(s.KitDarkCSS)
 	if err != nil {
 		return nil, err
 	}
@@ -108,19 +124,20 @@ func Outputs(s Sources) (map[string][]byte, error) {
 			return nil, fmt.Errorf("manifest-%s.json is not an object", kind)
 		}
 		values := map[string]string{
-			"KIND":        inline(kind),
-			"MANIFEST":    inline(mo.withExecutable(zero, digest(css))),
-			"WORDS":       inline(entries),
-			"PACK":        inline(object{{"id", id}, {"sha256", digest(pack)}}),
-			"KIT_CSS":     inline(string(css)),
-			"SELLER_KIND": inline(SellerKind),
+			"KIND":         inline(kind),
+			"MANIFEST":     inline(mo.withExecutable(zero, digest(css), digest(dark))),
+			"WORDS":        inline(entries),
+			"PACK":         inline(object{{"id", id}, {"sha256", digest(pack)}}),
+			"KIT_CSS":      inline(string(css)),
+			"KIT_DARK_CSS": inline(string(dark)),
+			"SELLER_KIND":  inline(SellerKind),
 		}
 		script, err := Fill(core, values)
 		if err != nil {
 			return nil, err
 		}
 		out["receipt_"+kind+".js"] = script
-		final := mo.withExecutable(digest(script), digest(css))
+		final := mo.withExecutable(digest(script), digest(css), digest(dark))
 		out["manifest-"+kind+".json"] = append([]byte(indented(final)), '\n')
 		manifests = append(manifests, member{kind, final})
 	}
@@ -216,9 +233,13 @@ func (o object) get(key string) (interface{}, bool) {
 }
 
 // withExecutable is the manifest with its executable block replaced (or
-// added last), pinning the script and the kit stylesheet.
-func (o object) withExecutable(script, style string) object {
-	exec := object{{"carrier", "module-slot"}, {"script_sha256", script}, {"style_sha256", []interface{}{style}}}
+// added last), pinning the script and its stylesheets, in insertion order.
+func (o object) withExecutable(script string, styles ...string) object {
+	pins := make([]interface{}, len(styles))
+	for i, style := range styles {
+		pins[i] = style
+	}
+	exec := object{{"carrier", "module-slot"}, {"script_sha256", script}, {"style_sha256", pins}}
 	out := make(object, 0, len(o)+1)
 	found := false
 	for _, m := range o {

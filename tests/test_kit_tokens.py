@@ -12,11 +12,14 @@ from capsule_viewer.kit.tokens import (
     BEGIN_MARKER,
     CONTRAST_PAIRS,
     END_MARKER,
+    KIT_DARK,
     PREFIX,
     TOKENS,
     TokenDriftError,
     check_token_sync,
+    dark_stylesheet,
     kit_css,
+    kit_dark_css,
     regenerate,
     token_block,
 )
@@ -93,6 +96,36 @@ def test_contrast_formula_matches_known_values():
 def test_text_pairs_meet_wcag_aa(fg, bg):
     ratio = contrast(TOKENS[fg], TOKENS[bg])
     assert ratio >= 4.5, f"{fg} on {bg}: {ratio:.2f}:1 < 4.5:1"
+
+
+@pytest.mark.parametrize(("fg", "bg"), CONTRAST_PAIRS, ids=[f"{f}-on-{b}" for f, b in CONTRAST_PAIRS])
+def test_dark_text_pairs_meet_wcag_aa(fg, bg):
+    ratio = contrast(KIT_DARK[fg], KIT_DARK[bg])
+    assert ratio >= 4.5, f"dark {fg} on {bg}: {ratio:.2f}:1 < 4.5:1"
+
+
+def test_shipped_dark_stylesheet_is_what_the_source_generates():
+    assert kit_dark_css() == dark_stylesheet()
+
+
+def test_dark_stylesheet_overrides_every_colour_token_and_nothing_else():
+    """kit-dark.css (capsule-viewer#391) only re-declares the kit's colour
+    tokens as light-dark(<light>, <dark>), inside @supports and on a receipt
+    only, so a browser without light-dark() keeps kit.css's light values, and
+    neither the shell's frame nor another kit module's card is reached."""
+    css = re.sub(r"/\*.*?\*/", "", kit_dark_css(), flags=re.S)
+    assert [s.strip() for s in re.findall(r"([^{}]+)\{", css)] == ["@supports (color: light-dark(#000, #fff))", "[data-receipt-module]"]
+    declared = dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", css))
+    colours = [name for name in TOKENS if name.startswith("color-")]
+    assert declared == {PREFIX + n: f"light-dark({TOKENS[n]}, {KIT_DARK[n]})" for n in colours}
+
+
+def test_dark_stylesheet_refuses_a_palette_that_misses_or_adds_a_colour():
+    short = {k: v for k, v in KIT_DARK.items() if k != "color-accent"}
+    with pytest.raises(TokenDriftError, match="color-accent"):
+        dark_stylesheet(TOKENS, short)
+    with pytest.raises(TokenDriftError, match="color-extra"):
+        dark_stylesheet(TOKENS, {**KIT_DARK, "color-extra": "#000000"})
 
 
 def test_every_tone_the_css_uses_has_a_checked_pair():

@@ -39,8 +39,15 @@ func TestGeneratedFilesAreCurrent(t *testing.T) {
 }
 
 func TestModulePinsItsScriptAndStylesheet(t *testing.T) {
-	css, err := os.ReadFile(writer.DefaultSources(".").KitCSS)
+	src := writer.DefaultSources(".")
+	// The kit stylesheet, pinned unchanged (the kit's other modules share it),
+	// then the receipt's dark overrides, scoped to a receipt (#391).
+	kit, err := os.ReadFile(src.KitCSS)
 	require.NoError(t, err)
+	dark, err := os.ReadFile(src.KitDarkCSS)
+	require.NoError(t, err)
+	assert.Contains(t, string(dark), "@supports (color: light-dark(#000, #fff)) {\n  [data-receipt-module] {")
+	assert.Contains(t, string(dark), "--cv-color-surface: light-dark(#ffffff, ")
 	ids := map[string]string{
 		Unilateral: "capsuleviewer.receipt.unilateral/v0",
 		Seller:     "capsuleviewer.receipt.seller/v0",
@@ -51,7 +58,7 @@ func TestModulePinsItsScriptAndStylesheet(t *testing.T) {
 		m, err := Module(kind)
 		require.NoError(t, err)
 		assert.Equal(t, sum(m.Code), m.SHA256, kind)
-		assert.Equal(t, []string{sum(css)}, m.StyleSHA256, kind)
+		assert.Equal(t, []string{sum(kit), sum(dark)}, m.StyleSHA256, kind)
 		id, err := ID(kind)
 		require.NoError(t, err)
 		assert.Equal(t, ids[kind], id)

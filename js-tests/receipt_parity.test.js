@@ -22,7 +22,7 @@
 // Run with RECEIPT_SCRIPT_DIR=<dir holding mutated receipt_*.js> to see it
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
-import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withCurrentPack, withoutAmountCard } from "./receiptScripts.js";
+import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withAddedWords, withCurrentPack, withoutAmountCard } from "./receiptScripts.js";
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -35,6 +35,17 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     oracle = receiptGolden();
     for (const kind of KINDS) loaded[kind] = loadScript(kind);
   }, 120000);
+
+  it("reads an oracle value as a word only where the pack added that word (#391)", () => {
+    const { document: doc } = loaded.unilateral;
+    const span = (key, value) => `<p>Deal: <span class="cv-mono" data-unworded="${key}">${value}</span></p>`;
+    expect(withAddedWords(doc, span("deal_type.service", "service"))).toBe("<p>Deal: Service</p>");
+    expect(withAddedWords(doc, span("deal_type.rental", "rental"))).toBe("<p>Deal: Rental</p>");
+    // A key no pack words stays unworded, as both sides draw it.
+    expect(withAddedWords(doc, span("deal_type.barter", "barter"))).toBe(span("deal_type.barter", "barter"));
+    // The oracle does draw the Mesh exchange's "service" unworded.
+    expect(oracle.cases.some((c) => Object.values(c.modules).some((m) => Object.values(m.html || {}).some((h) => h.includes('data-unworded="deal_type.service"'))))).toBe(true);
+  });
 
   it("covers every receipt fixture, at every audience, and the edited copies", () => {
     const names = new Set(oracle.cases.map((c) => c.name));
@@ -71,7 +82,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         for (const [depth, html] of Object.entries(py.html)) {
           compared.renders += 1;
           const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, depth)));
-          const py0 = withCurrentPack(html);
+          const py0 = withAddedWords(lib.document, withCurrentPack(html));
           const want = canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py0) : py0);
           compared.bytes += want.length;
           if (js !== want) {
@@ -104,7 +115,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
         const model = await module.buildModel(context);
         expect(plain(model)).toEqual(py.model);
         const js = canonNodes(lib.document, levelNodes(renderInto(lib, module, model, "L2")));
-        const py2 = withCurrentPack(py.html.L2);
+        const py2 = withAddedWords(lib.document, withCurrentPack(py.html.L2));
         expect(js).toBe(canonHtml(lib.document, model.headline && model.headline.amount === "not_present" ? withoutAmountCard(lib.document, py2) : py2));
       }
     }

@@ -142,8 +142,9 @@ stylesheet inlined under a hash-pinned Content-Security-Policy.
   `CHROME_PATH` if Chromium is not in a standard location; without one the
   suite is skipped locally with a warning and fails under CI.
 - **Tokens.** `tokens/tokens.json` is the one source of the design tokens.
-  `python3 scripts/gen-tokens.py` generates from it the `TOKENS` table in
-  `kit/tokens.py`, the `--cv-*` block at the top of `static/kit.css`, the
+  `python3 scripts/gen-tokens.py` generates from it the `TOKENS` and `KIT_DARK`
+  tables in `kit/tokens.py`, the `--cv-*` block at the top of `static/kit.css`,
+  `static/kit-dark.css` (the receipt modules' dark colours), the
   `--aac-*` `:root` block of both emitter shells and the report frames'
   variables (`ts/src/frame-tokens.generated.ts`). `tests/test_tokens_sync.py`
   fails if a generated site differs; `tests/test_kit_tokens.py` fails if a
@@ -380,7 +381,9 @@ stylesheet each script inserts once at render).
 - **One source, one renderer.** Since #383 the source is `go/receipt/receipt_core.js`,
   and `go generate ./receipt` (in `go/`) writes `go/receipt/receipt_*.js` and their
   manifests, which the Go package `receipt` ships to Go page builders. The writer
-  still reads the kit stylesheet from `src/capsule_viewer/static/kit.css`. The copies
+  still reads the kit stylesheet from `src/capsule_viewer/static/kit.css`, and
+  compiles in `static/kit-dark.css` as a second stylesheet, scoped to a receipt,
+  so a receipt follows its page's declared colour scheme (#391). The copies
   described below, in the Python package, are frozen at 0.25.0.
 - **One source, four scripts (the frozen 0.25.0 copies).** `static/receipt_core.js` was the source;
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with

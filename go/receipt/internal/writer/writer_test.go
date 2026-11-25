@@ -3,6 +3,7 @@
 package writer
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -62,5 +63,10 @@ func TestFill(t *testing.T) {
 
 func TestOutputsRefusesMissingInputs(t *testing.T) {
 	_, err := Outputs(Sources{Dir: t.TempDir(), KitCSS: "nope.css"})
+	assert.Error(t, err)
+	// The dark overrides are an input too: a checkout without them fails.
+	src := DefaultSources(filepath.Join("..", ".."))
+	src.KitDarkCSS = filepath.Join(t.TempDir(), "nope.css")
+	_, err = Outputs(src)
 	assert.Error(t, err)
 }
