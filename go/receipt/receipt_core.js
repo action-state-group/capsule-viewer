@@ -399,7 +399,7 @@
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
     var got = entry !== undefined ? map(entry.witnessed) : {};
     if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
-    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || typeof got.at !== "string" || got.at === "")) return null;
+    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || !validUtcTime(got.at))) return null;
     return got.status === "verified" ? { status: got.status, witness: got.witness, at: got.at } : { status: got.status };
   }
 
@@ -1585,6 +1585,14 @@
     return MONTHS[+m[2] - 1] + " " + +m[3] + ", " + m[1] + ", " + m[4] + ":" + m[5] + " UTC";
   }
 
+  // "18:56:20 UTC" for a UTC RFC 3339 instant; the value as it is otherwise.
+  // With minutesOnly, "18:56 UTC" (a deadline).
+  function utcClock(value, minutesOnly) {
+    var m = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})(:\d{2})?(?:\.\d+)?(?:Z|[+-]00:00)$/.exec(value);
+    if (m === null) return value;
+    return m[1] + (minutesOnly ? "" : m[2] || ":00") + " UTC";
+  }
+
   // Each data-time span the drawing made, said in the reader's own time zone.
   function localTimes(root) {
     var Format = typeof Intl !== "undefined" && Intl.DateTimeFormat;
@@ -1945,7 +1953,9 @@
     // page shown to others, never shows the holder's witness time.
     var book = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? model.book_witnessed : null;
     if (book) {
-      if (book.status === "verified") return w("rung.book_witnessed", { witness: book.witness, at: book.at });
+      // One line: the reader's local time, with UTC beside it (a short zone
+      // name such as CST is ambiguous), and the file's own fact (#424).
+      if (book.status === "verified") return this.timed("rung.book_witnessed", book.at, { witness: book.witness, utc: utcClock(book.at) });
       return w(book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld");
     }
     if (model.witnessed === "pass") return w("rung.witness_verified");
@@ -2497,10 +2507,22 @@
     if (model.start.by !== null) out.push(this.note(w("deal.start.by", { by: this.token("deal.start.by", model.start.by) }), { "data-start-by": model.start.by }));
     if (model.start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
-    out.push(this.note(w("deal.as_of", { at: model.as_of || w("deal.no_time") }), { "data-as-of": model.as_of }));
+    // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
+    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: model.as_of });
+    out.push(this.note(asOf, { "data-as-of": model.as_of }));
     return d.el("div", { "data-headline": "true" }, out);
   };
-  P.dateText = function (value) { return value === "not_set" ? w("deal.date.not_set") : value; };
+  // A full UTC instant becomes a data-time span (the reader's own zone); a
+  // date-only value is shown as stored, since converting it would move the day.
+  // A deadline also says its UTC time beside the local one, since a short
+  // zone name is ambiguous (Sherlock2, #423).
+  P.dateText = function (value) {
+    if (value === "not_set") return w("deal.date.not_set");
+    if (!validUtcTime(value)) return value;
+    return this.d.el("span", {}, [this.timeEl(value), " (" + utcClock(value, true) + ")"]);
+  };
+  // An x-deal-v1 time: the reader's zone for a real UTC instant, else as stored.
+  P.v1Time = function (value) { return validUtcTime(value) ? this.timeEl(value) : value; };
   P.rowDetail = function (row) {
     var bits = [];
     // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
@@ -2545,7 +2567,7 @@
         leg.leg,
         leg.status,
         leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
-        leg.observed_at !== null ? leg.observed_at : w("deal.no_time"),
+        leg.observed_at !== null ? self.v1Time(leg.observed_at) : w("deal.no_time"),
         leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
         d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
       ]);

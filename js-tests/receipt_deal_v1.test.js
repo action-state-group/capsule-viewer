@@ -123,7 +123,21 @@ describe("the deal/v1 receipt", () => {
     expect(withLate.shown).toBe(true);
     expect(withLate.text).not.toMatch(/Late/);
     expect(withLate.text).toMatch(/Payment check: not recomputed/);
-    expect(without.text).toMatch(/As the holder computed it at 2026-11-10T12:00:00Z\. This is not a time any witness attests\./);
+    // A time is shown as written for a page with no script (the reader's own
+    // zone replaces it when the page draws), and the data keeps UTC (#423).
+    expect(without.text).toMatch(/As the holder computed it at Nov 10, 2026, 12:00 UTC\. This is not a time any witness attests\./);
+    const asOf = [without.host.L0, without.host.L1, without.host.L2].map((h) => h.querySelector("[data-as-of] [data-time]")).find(Boolean);
+    expect(asOf.getAttribute("data-time")).toBe("2026-11-10T12:00:00Z");
+  });
+
+  it("shows a deadline in the reader's zone with UTC beside it; a deadline that is not a UTC time refuses the copy (#423)", async () => {
+    const p = await page(content({ rows: [{ ...ROW, due: "2026-11-01T23:59:59Z", window_end: "not_set" }] }));
+    const row = p.host.L1.querySelector("[data-row-id]").closest("tr");
+    expect(row.textContent).toContain("Nov 1, 2026, 23:59 UTC (23:59 UTC)");
+    expect([...row.querySelectorAll("[data-time]")].map((n) => n.getAttribute("data-time"))).toEqual(["2026-11-01T23:59:59Z"]);
+    // The model already refuses a deadline that is not an RFC 3339 UTC time, so none is ever drawn converted.
+    for (const due of ["2026-11-01", "2026-11-01T10:00:00+05:00", "2026-02-30T10:00:00Z"])
+      expect((await page(content({ rows: [{ ...ROW, due }] }))).shown).toBe(false);
   });
 
   it("marks a local row and shows not_set dates and the ruling", async () => {

@@ -6,6 +6,7 @@ import {
 import {
   verifierReportReading,
   withVerifierReport,
+  bookWitnessedOnKeep,
 } from "./verifier-report.js";
 import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
@@ -343,9 +344,13 @@ function bannerWitnessNotice(
   model: VerificationBanner,
   bundle: unknown,
   verification: BundleVerificationResult,
+  bookWitnessed = false,
 ): WitnessNotice | undefined {
   if (model.state !== "verified" && model.state !== "incomplete")
     return undefined;
+  // The receipt says the witness time capsulectl verified, and that this
+  // file carries no receipt, in one line (#424).
+  if (bookWitnessed) return undefined;
   if (model.checkpoint !== "verified") return undefined;
   return witnessNotice(bundle, verification);
 }
@@ -3497,6 +3502,17 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
  */
 const RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
 
+/** The x-deal-v1 receipt module, the one that draws the book's witness time. */
+const DEAL_V1_RECEIPT_MODULE = "capsuleviewer.receipt.deal/v1";
+
+/** Whether `root` is drawn as a shared carrier (a report or a page), as the receipt module reads it. */
+function sharedCarrierOf(root: HTMLElement): boolean {
+  const mark = root
+    .closest?.(`[${RECEIPT_CARRIER_ATTRIBUTE}]`)
+    ?.getAttribute(RECEIPT_CARRIER_ATTRIBUTE);
+  return mark === "report" || mark === "page";
+}
+
 /**
  * Draw one carried receipt bundle into `panel`: verified once here, resolved
  * in the page's registry, and drawn only when the module that takes it is a
@@ -3724,7 +3740,19 @@ async function renderVerifiedContext(
   };
   let bar!: HTMLElement;
   let stripNode: HTMLElement | undefined;
+  // The header's witness line is left out only while the x-deal-v1 receipt
+  // module draws the one line in its place (#424): on the first frame only.
+  // Every later drawFrame() discards what the module wrote (a failed render,
+  // section or frame check), so the header comes back with it.
+  const oneWitnessLine =
+    selected !== undefined &&
+    selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE &&
+    bookWitnessedOnKeep(context, reading) &&
+    !sharedCarrierOf(root);
+  let framesDrawn = 0;
   const drawFrame = (): void => {
+    const leaveOutWitnessLine = oneWitnessLine && framesDrawn === 0;
+    framesDrawn += 1;
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
     renderPresentationHeader(root, bundle);
@@ -3732,7 +3760,15 @@ async function renderVerifiedContext(
       root,
       bannerModel,
       coverage,
-      bannerWitnessNotice(bannerModel, bundle, withStrict(context)),
+      bannerWitnessNotice(
+        bannerModel,
+        bundle,
+        withStrict(context),
+        // Only while the x-deal-v1 receipt module draws the one line, on
+        // the holder's own copy not carried in a report or shown as a page
+        // (#424); a discarded render draws the frame again with the header.
+        leaveOutWitnessLine,
+      ),
     );
     const L2 = region("L2");
     const core = region("L2-core");

@@ -13623,6 +13623,20 @@ ${body}
       verification: { ...context.verification, extensions: extensions2 }
     };
   }
+  function bookWitnessedOnKeep(context, reading) {
+    if (reading?.kind !== "pass") return false;
+    const w = obj2(reading.witnessed);
+    if (w["status"] !== "verified" || typeof w["witness"] !== "string" || w["witness"] === "" || !utcInstant(w["at"]))
+      return false;
+    const x = obj2(obj2(obj2(context.bundle)["extensions"])[STANDALONE2]);
+    return obj2(x["agent_input"])["audience"] === "keep";
+  }
+  function utcInstant(value) {
+    if (typeof value !== "string") return false;
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)) return false;
+    const ms = Date.parse(value);
+    return !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 19) + "Z" === value;
+  }
 
   // src/builtin-manifests.ts
   var BUILTIN_MANIFEST_REPORT_ROWS = Object.freeze(
@@ -18099,7 +18113,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("ea8f4e5031e6d1271526a6d25edc9a886c9d73c2");
+    return commitPrefix("c184223821cde62407ebb9c49627b000c5a7dd1f");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -27096,9 +27110,10 @@ ${pad.repeat(depth)}`;
     root.append(refusal);
     return bar;
   }
-  function bannerWitnessNotice(model, bundle, verification) {
+  function bannerWitnessNotice(model, bundle, verification, bookWitnessed = false) {
     if (model.state !== "verified" && model.state !== "incomplete")
       return void 0;
+    if (bookWitnessed) return void 0;
     if (model.checkpoint !== "verified") return void 0;
     return witnessNotice(bundle, verification);
   }
@@ -29102,6 +29117,11 @@ ${pad.repeat(depth)}`;
     "capsulectl.deal-view-composed/v0"
   ]);
   var RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
+  var DEAL_V1_RECEIPT_MODULE = "capsuleviewer.receipt.deal/v1";
+  function sharedCarrierOf(root) {
+    const mark = root.closest?.(`[${RECEIPT_CARRIER_ATTRIBUTE}]`)?.getAttribute(RECEIPT_CARRIER_ATTRIBUTE);
+    return mark === "report" || mark === "page";
+  }
   async function openReceipt(text2, panel, options) {
     let bundle;
     try {
@@ -29249,7 +29269,11 @@ ${pad.repeat(depth)}`;
     };
     let bar;
     let stripNode;
+    const oneWitnessLine = selected !== void 0 && selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root);
+    let framesDrawn = 0;
     const drawFrame = () => {
+      const leaveOutWitnessLine = oneWitnessLine && framesDrawn === 0;
+      framesDrawn += 1;
       root.replaceChildren();
       root.classList.remove("cv-shell-chrome");
       renderPresentationHeader(root, bundle);
@@ -29257,7 +29281,15 @@ ${pad.repeat(depth)}`;
         root,
         bannerModel,
         coverage,
-        bannerWitnessNotice(bannerModel, bundle, withStrict(context))
+        bannerWitnessNotice(
+          bannerModel,
+          bundle,
+          withStrict(context),
+          // Only while the x-deal-v1 receipt module draws the one line, on
+          // the holder's own copy not carried in a report or shown as a page
+          // (#424); a discarded render draws the frame again with the header.
+          leaveOutWitnessLine
+        )
       );
       const L2 = region("L2");
       const core = region("L2-core");
