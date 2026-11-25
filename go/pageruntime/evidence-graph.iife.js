@@ -13391,6 +13391,158 @@ ${body}
     };
   }
 
+  // src/deal-standalone-report.ts
+  var DEAL_V0 = "x-deal-v0";
+  var DEAL_V1 = "x-deal-v1";
+  var STANDALONE = "x-deal-report/v0";
+  var POINTER = "sealed_report";
+  var REPORT_ACTION = "capsulectl-deal-report";
+  var STEP_TYPES = /* @__PURE__ */ new Set(["deal_step", "step_completed", "step_failed"]);
+  var COPY_AUDIENCES = /* @__PURE__ */ new Set(["counterparty", "adjudicator", "keep"]);
+  var isObj = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+  var obj = (value) => isObj(value) ? value : {};
+  async function dealStandaloneReport(bundle) {
+    const value = obj(bundle);
+    const extensions2 = obj(value["extensions"]);
+    if (!(STANDALONE in extensions2) || DEAL_V1 in extensions2) return null;
+    if (!ed25519Available()) return null;
+    return await standaloneReportHolds(value, extensions2) ? "pass" : "fail";
+  }
+  async function standaloneReportHolds(value, extensions2) {
+    const section = extensions2[DEAL_V0];
+    if (!isObj(section) || Object.keys(section).length !== 1) return false;
+    const id = section[POINTER];
+    const x = extensions2[STANDALONE];
+    if (typeof id !== "string" || !isObj(x) || Object.keys(x).length !== 2)
+      return false;
+    const record = x["record"];
+    const input = x["agent_input"];
+    if (!isObj(record) || !isObj(input) || record["capsule_id"] !== id || record["action_id"] !== REPORT_ACTION)
+      return false;
+    const reportKey = await verifiedProducerKey(record);
+    if (reportKey === void 0) return false;
+    const last = await lastStepRecord(value);
+    if (last === void 0) return false;
+    if (await verifiedProducerKey(last) !== reportKey) return false;
+    const capsule = {};
+    for (const [k, v] of Object.entries(record))
+      if (k !== "signature" && k !== "key_id") capsule[k] = v;
+    const disclosed = await verifyDisclosureEnvelope({
+      capsule,
+      disclosures: { agent_input: input }
+    });
+    if (!disclosed.ok || disclosed.disclosuresMatched !== 1) return false;
+    const logId = obj(value["completeness_certificate"])["log_id"];
+    if (typeof logId !== "string" || !logId.startsWith("deal/")) return false;
+    const audience = input["audience"];
+    if (input["type"] !== "deal_report" || input["profile"] !== DEAL_V0 || typeof audience !== "string" || !COPY_AUDIENCES.has(audience) || input["deal_id"] !== logId.slice("deal/".length))
+      return false;
+    const checkpoint = obj(value["checkpoint"]);
+    const bound = input["deal_checkpoint"];
+    if (!isObj(bound) || Object.keys(bound).length !== 3) return false;
+    const boundSize = jsonUint(bound["mmr_size"]);
+    const size = jsonUint(checkpoint["mmr_size"]);
+    if (bound["log_id"] !== logId || boundSize === void 0 || size === void 0 || boundSize !== size || bound["root"] !== checkpoint["root"])
+      return false;
+    const records = Array.isArray(value["records"]) ? value["records"] : [];
+    if (records.some((r) => obj(r)["action_id"] === REPORT_ACTION)) return false;
+    const asOf = instant(obj(obj(input["report"])["lifecycle"])["as_of"]);
+    const signed = instant(checkpoint["timestamp"]);
+    return asOf !== void 0 && signed !== void 0 && asOf === signed;
+  }
+  async function verifiedProducerKey(record) {
+    const id = record["capsule_id"];
+    const signature2 = hexBytes2(record["signature"]);
+    const key = record["key_id"];
+    if (typeof id !== "string" || id === "" || signature2 === void 0)
+      return void 0;
+    if (typeof key !== "string" || hexBytes2(key) === void 0) return void 0;
+    const result3 = await verifyProducerEnvelope(id, signature2);
+    if (!result3.ok || result3.publicKey === void 0) return void 0;
+    const verified = Array.from(
+      result3.publicKey,
+      (b) => b.toString(16).padStart(2, "0")
+    ).join("");
+    return verified === key.toLowerCase() ? key : void 0;
+  }
+  async function lastStepRecord(value) {
+    const memberships2 = obj(
+      obj(value["completeness_certificate"])["memberships"]
+    );
+    const records = Array.isArray(value["records"]) ? value["records"] : [];
+    let last;
+    let lastSeq = 0n;
+    for (const raw of records) {
+      const record = obj(raw);
+      const type = (await recordHeader(value, record))?.["record_type"];
+      if (typeof type !== "string" || !STEP_TYPES.has(type)) continue;
+      const id = record["capsule_id"];
+      if (typeof id !== "string") continue;
+      const seq = jsonUint(obj(obj(memberships2[id])["log_coordinates"])["seq"]);
+      if (seq !== void 0 && seq > lastSeq) {
+        last = record;
+        lastSeq = seq;
+      }
+    }
+    return last;
+  }
+  async function recordHeader(value, record) {
+    const embedded = record["evidence_record_header"];
+    if (isObj(embedded)) return embedded;
+    const id = record["capsule_id"];
+    if (typeof id !== "string" || id === "") return void 0;
+    const disclosed = obj(obj(value["disclosures"])[id])["agent_input"];
+    if (!isObj(disclosed)) return void 0;
+    const capsule = {};
+    for (const [k, v] of Object.entries(record))
+      if (k !== "signature" && k !== "key_id") capsule[k] = v;
+    const checked = await verifyDisclosureEnvelope({
+      capsule,
+      disclosures: { agent_input: disclosed }
+    });
+    return checked.ok && checked.disclosuresMatched === 1 ? disclosed : void 0;
+  }
+  function jsonUint(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0) ? BigInt(value) : void 0;
+  }
+  function hexBytes2(value) {
+    if (typeof value !== "string" || value.length % 2 !== 0 || !/^[0-9a-fA-F]*$/u.test(value))
+      return void 0;
+    const out = new Uint8Array(value.length / 2);
+    for (let i = 0; i < out.length; i++)
+      out[i] = parseInt(value.slice(2 * i, 2 * i + 2), 16);
+    return out;
+  }
+  function instant(value) {
+    if (typeof value !== "string") return void 0;
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:(Z)|([+-])(\d{2}):(\d{2}))$/u.exec(
+      value
+    );
+    if (m === null) return void 0;
+    const [, y, mo, d, h, mi, s, frac, z, sign, oh, om] = m;
+    const fields2 = [y, mo, d, h, mi, s].map(Number);
+    const [year, month, day, hour, minute, second] = fields2;
+    if (month < 1 || month > 12 || day < 1 || day > civil(year, month + 1, 0).getUTCDate() || hour > 23 || minute > 59 || second > 59)
+      return void 0;
+    let offset = 0;
+    if (z === void 0) {
+      const offHour = Number(oh);
+      const offMinute = Number(om);
+      if (offHour > 23 || offMinute > 59) return void 0;
+      offset = (sign === "-" ? -1 : 1) * (offHour * 60 + offMinute) * 60;
+    }
+    const at = civil(year, month, day);
+    at.setUTCHours(hour, minute, second, 0);
+    const seconds = BigInt(at.getTime() / 1e3) - BigInt(offset);
+    const nanos = (frac ?? "").slice(0, 9).padEnd(9, "0");
+    return `${seconds}.${nanos}`;
+  }
+  function civil(year, month, day) {
+    const at = /* @__PURE__ */ new Date(0);
+    at.setUTCFullYear(year, month - 1, day);
+    return at;
+  }
+
   // src/builtin-manifests.ts
   var BUILTIN_MANIFEST_REPORT_ROWS = Object.freeze(
     {
@@ -13553,7 +13705,7 @@ ${body}
   var BUILTIN_SECTION_MANIFESTS = Object.freeze([BUILTIN_MANIFEST_COMPOSED]);
 
   // src/chart-spec.ts
-  var isObj = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isObj2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var ChartRefusal = class extends Error {
     reason;
     pointer;
@@ -13603,7 +13755,7 @@ ${body}
     );
   }
   function readDay(value, at) {
-    if (isObj(value)) {
+    if (isObj2(value)) {
       onlyKeys(value, ["year", "month", "date", "utc"], at);
       const { year, month, date, utc } = value;
       if (utc === true && Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(date)) {
@@ -13619,7 +13771,7 @@ ${body}
     );
   }
   function readPredicate(value, at) {
-    need(isObj(value), void 0, at, "a predicate object");
+    need(isObj2(value), void 0, at, "a predicate object");
     const p = value;
     for (const kind of ["and", "or"])
       if (Object.hasOwn(p, kind)) {
@@ -13705,7 +13857,7 @@ ${body}
   function resolveField(header, path2) {
     let at = header;
     for (const name of path2.split(".")) {
-      if (!isObj(at) || !Object.hasOwn(at, name)) return MISSING;
+      if (!isObj2(at) || !Object.hasOwn(at, name)) return MISSING;
       at = at[name];
     }
     return at;
@@ -13744,7 +13896,7 @@ ${body}
     }
   }
   function readChannel(value, at) {
-    need(isObj(value), void 0, at, "an encoding object");
+    need(isObj2(value), void 0, at, "an encoding object");
     const c = value;
     onlyKeys(c, ["field", "type", "aggregate", "timeUnit", "title"], at);
     const type = need(
@@ -13797,7 +13949,7 @@ ${body}
     return out;
   }
   function readWindow(value, at) {
-    need(isObj(value), void 0, at, "{field, from, to}");
+    need(isObj2(value), void 0, at, "{field, from, to}");
     const w = value;
     onlyKeys(w, ["field", "from", "to"], at);
     const field = readField(w.field, pointerOf(at, "field"));
@@ -13822,11 +13974,11 @@ ${body}
     return { field, from, to };
   }
   function readStatement(value, at) {
-    need(isObj(value), void 0, at, "an object");
+    need(isObj2(value), void 0, at, "an object");
     const s = value;
     onlyKeys(s, ["population", "window", "runs", "values"], at);
     const pop = s.population;
-    need(isObj(pop), void 0, pointerOf(at, "population"), "{count}");
+    need(isObj2(pop), void 0, pointerOf(at, "population"), "{count}");
     onlyKeys(pop, ["count"], pointerOf(at, "population"));
     const count2 = pop.count;
     need(
@@ -13841,7 +13993,7 @@ ${body}
     if (Object.hasOwn(s, "runs")) {
       const r = s.runs;
       const rat = pointerOf(at, "runs");
-      need(isObj(r), void 0, rat, "{filter, field}");
+      need(isObj2(r), void 0, rat, "{filter, field}");
       onlyKeys(r, ["filter", "field"], rat);
       out.runs = {
         filter: readPredicate(r.filter, pointerOf(rat, "filter")),
@@ -13857,7 +14009,7 @@ ${body}
     );
     values.forEach((v, i) => {
       const vat = pointerOf(pointerOf(at, "values"), i);
-      need(isObj(v), void 0, vat, "a group object");
+      need(isObj2(v), void 0, vat, "a group object");
       onlyKeys(v, [...CHANNELS, "not_run"], vat);
       if (Object.hasOwn(v, "not_run"))
         need(
@@ -13880,7 +14032,7 @@ ${body}
       }
       return void 0;
     }
-    if (isObj(value))
+    if (isObj2(value))
       for (const [k, v] of Object.entries(value)) {
         const found = inexactNumber(v, pointerOf(at, k));
         if (found !== void 0) return found;
@@ -13888,7 +14040,7 @@ ${body}
     return void 0;
   }
   function readChartSpec(value) {
-    need(isObj(value), void 0, "", "a Vega-Lite object");
+    need(isObj2(value), void 0, "", "a Vega-Lite object");
     const inexact = inexactNumber(value, "");
     if (inexact !== void 0)
       refuse(
@@ -13913,11 +14065,11 @@ ${body}
     );
     need(spec.$schema === SCHEMA, void 0, "/$schema", SCHEMA);
     const data = spec.data;
-    need(isObj(data), void 0, "/data", '{"name": "dataset"}');
+    need(isObj2(data), void 0, "/data", '{"name": "dataset"}');
     onlyKeys(data, ["name"], "/data");
     need(data.name === "dataset", void 0, "/data/name", '"dataset"');
     let mark;
-    if (isObj(spec.mark)) {
+    if (isObj2(spec.mark)) {
       onlyKeys(spec.mark, ["type"], "/mark");
       mark = need(
         MARKS.includes(spec.mark.type),
@@ -13942,7 +14094,7 @@ ${body}
       );
       spec.transform.forEach((t, i) => {
         const at = pointerOf("/transform", i);
-        need(isObj(t), void 0, at, "{filter: predicate}");
+        need(isObj2(t), void 0, at, "{filter: predicate}");
         onlyKeys(t, ["filter"], at);
         need(
           Object.hasOwn(t, "filter"),
@@ -13954,7 +14106,7 @@ ${body}
       });
     }
     const encoding = spec.encoding;
-    need(isObj(encoding), void 0, "/encoding", "an object");
+    need(isObj2(encoding), void 0, "/encoding", "an object");
     onlyKeys(encoding, CHANNELS, "/encoding");
     const channels = {};
     for (const name of CHANNELS)
@@ -13964,7 +14116,7 @@ ${body}
           pointerOf("/encoding", name)
         );
     const usermeta = spec.usermeta;
-    need(isObj(usermeta), void 0, "/usermeta", "{capsule: statement}");
+    need(isObj2(usermeta), void 0, "/usermeta", "{capsule: statement}");
     onlyKeys(usermeta, ["capsule"], "/usermeta");
     const statement = readStatement(
       usermeta.capsule,
@@ -14041,9 +14193,9 @@ ${body}
       refuse("chart-dataset-invalid", "the dataset plan has no nodes");
     const out = [];
     for (const node of nodes) {
-      if (!isObj(node) || node.operator !== "traditional.window") continue;
+      if (!isObj2(node) || node.operator !== "traditional.window") continue;
       const p = node.params;
-      if (!isObj(p) || typeof p.field !== "string" || !isCalendarDate(p.from) || !isCalendarDate(p.to))
+      if (!isObj2(p) || typeof p.field !== "string" || !isCalendarDate(p.from) || !isCalendarDate(p.to))
         refuse(
           "chart-dataset-invalid",
           "a window node of the dataset plan has no {field, from, to}"
@@ -14329,12 +14481,12 @@ ${body}
   }
 
   // src/report-view.ts
-  var isObj2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isObj3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var refuse2 = (reason, message, pointer) => {
     throw new ChartRefusal(reason, message, pointer);
   };
   var ID = /^[a-z][a-z0-9_]{0,31}$/u;
-  var isView = (value) => isObj2(value) && Object.hasOwn(value, "view");
+  var isView = (value) => isObj3(value) && Object.hasOwn(value, "view");
   var keyChannel = (chart) => chart.keys.find((k) => k !== "x");
   function onlyKeys2(value, allowed, at) {
     for (const key of Object.keys(value))
@@ -14348,7 +14500,7 @@ ${body}
   var ROLES = ["activity", "judgment", "adjudication"];
   var CLASSES = ["good", "bad", "open"];
   function readEntry(value, at, seen, lane = false) {
-    if (!isObj2(value))
+    if (!isObj3(value))
       return refuse2("view-unsupported-member", `${at} must be an object`, at);
     onlyKeys2(
       value,
@@ -14388,7 +14540,7 @@ ${body}
     }
     if (value.classes !== void 0) {
       const c = value.classes;
-      if (!isObj2(c) || Object.keys(c).length === 0)
+      if (!isObj3(c) || Object.keys(c).length === 0)
         refuse2(
           "view-unsupported-member",
           `${at}/classes must be a non-empty object`,
@@ -14566,7 +14718,7 @@ ${body}
     };
   }
   function checkView(value, dataset) {
-    if (!isObj2(value))
+    if (!isObj3(value))
       return refuse2("view-unsupported-member", "a view must be an object", "");
     const kind = value.view;
     const checkOne = (id, spec, at) => {
@@ -14741,7 +14893,7 @@ ${body}
   }
 
   // src/chart-dataset.ts
-  var isObj3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isObj4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var RECORD_HEADER_MEMBER = "evidence_record_header";
   var DATASET_VERSION = "evidence-dataset-v0";
   var HEX642 = /^[0-9a-f]{64}$/u;
@@ -14750,15 +14902,15 @@ ${body}
   };
   function digestRef(value, what) {
     if (value === void 0) return void 0;
-    if (!isObj3(value) || value.digest_alg !== "SHA-256" || typeof value.digest !== "string" || !HEX642.test(value.digest))
+    if (!isObj4(value) || value.digest_alg !== "SHA-256" || typeof value.digest !== "string" || !HEX642.test(value.digest))
       return invalid(`${what} is not {digest_alg: "SHA-256", digest: <64-hex>}`);
     return value.digest;
   }
   function resultDocument2(context, result3) {
     const member = disclosureOf(context, result3.capsuleId, result3.member);
-    if (member.state !== "disclosed" || !isObj3(member.payload)) return void 0;
+    if (member.state !== "disclosed" || !isObj4(member.payload)) return void 0;
     const document2 = result3.form === "book" ? member.payload.statement : member.payload;
-    return isObj3(document2) ? document2 : void 0;
+    return isObj4(document2) ? document2 : void 0;
   }
   async function digestOf(value) {
     try {
@@ -14772,7 +14924,7 @@ ${body}
   async function documentsByDigest(context) {
     const found = /* @__PURE__ */ new Map();
     const consider = async (value) => {
-      if (!isObj3(value) || value.dataset_version === void 0 && !(isObj3(value.header) && value.header.ir_version !== void 0))
+      if (!isObj4(value) || value.dataset_version === void 0 && !(isObj4(value.header) && value.header.ir_version !== void 0))
         return;
       const digest2 = await digestOf(value);
       if (digest2 !== void 0) found.set(digest2, value);
@@ -14782,10 +14934,10 @@ ${body}
         const disclosed = disclosureOf(context, record.capsule_id, member);
         if (disclosed.state !== "disclosed") continue;
         await consider(disclosed.payload);
-        if (isObj3(disclosed.payload)) await consider(disclosed.payload.statement);
+        if (isObj4(disclosed.payload)) await consider(disclosed.payload.statement);
       }
       const inline = record[RECORD_HEADER_MEMBER];
-      if (isObj3(inline)) await consider(inline.statement);
+      if (isObj4(inline)) await consider(inline.statement);
     }
     return found;
   }
@@ -14793,7 +14945,7 @@ ${body}
     const found = /* @__PURE__ */ new Map();
     for (const record of context.records) {
       const inline = record[RECORD_HEADER_MEMBER];
-      if (isObj3(inline)) {
+      if (isObj4(inline)) {
         const digest3 = await digestOf(inline);
         if (digest3 !== void 0)
           found.set(digest3, { header: inline, recordId: record.capsule_id });
@@ -14801,7 +14953,7 @@ ${body}
       }
       const digest2 = committedDigest(record, "agent_input");
       const disclosed = disclosureOf(context, record.capsule_id, "agent_input");
-      if (digest2 !== void 0 && disclosed.state === "disclosed" && isObj3(disclosed.payload))
+      if (digest2 !== void 0 && disclosed.state === "disclosed" && isObj4(disclosed.payload))
         found.set(digest2, {
           header: disclosed.payload,
           recordId: record.capsule_id
@@ -14832,7 +14984,7 @@ ${body}
     const rows = [];
     let last = -1;
     for (const raw of dataset.rows) {
-      if (!isObj3(raw) || Object.keys(raw).sort().join(",") !== "digest,digest_alg,record_type,seq" || !Number.isSafeInteger(raw.seq) || raw.seq <= last || typeof raw.record_type !== "string" || raw.digest_alg !== "SHA-256" || typeof raw.digest !== "string" || !HEX642.test(raw.digest))
+      if (!isObj4(raw) || Object.keys(raw).sort().join(",") !== "digest,digest_alg,record_type,seq" || !Number.isSafeInteger(raw.seq) || raw.seq <= last || typeof raw.record_type !== "string" || raw.digest_alg !== "SHA-256" || typeof raw.digest !== "string" || !HEX642.test(raw.digest))
         return invalid(
           "a dataset row is not {seq, record_type, digest_alg, digest}, in seq order"
         );
@@ -17216,12 +17368,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   var MAX_LABELS = 8;
   var MAX_LABEL = 60;
   var EXTENSION = /^x-[a-z0-9][a-z0-9._-]*$/u;
-  var isObj4 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+  var isObj5 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
   function str(value, max) {
     return typeof value === "string" && value.length > 0 && value.length <= max ? value : void 0;
   }
   function readScope(value) {
-    if (!isObj4(value)) return void 0;
+    if (!isObj5(value)) return void 0;
     const pack = str(value.pack, 120);
     const salting = str(value.salting, 60);
     const saltId = str(value.salt_id, 120);
@@ -17230,7 +17382,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     return { pack, tier: value.tier, salting, saltId };
   }
   function readEntry2(value, grouped) {
-    if (!isObj4(value)) return void 0;
+    if (!isObj5(value)) return void 0;
     const labels = value.request_labels;
     if (!Array.isArray(labels) || labels.length > MAX_LABELS || labels.some((l) => str(l, MAX_LABEL) === void 0))
       return void 0;
@@ -17243,7 +17395,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     let halves;
     if (value.halves !== void 0) {
       const h = value.halves;
-      if (!isObj4(h) || !Number.isSafeInteger(h.present) || !Number.isSafeInteger(h.of) || h.present < 0 || h.of < 1 || h.present > h.of)
+      if (!isObj5(h) || !Number.isSafeInteger(h.present) || !Number.isSafeInteger(h.of) || h.present < 0 || h.of < 1 || h.present > h.of)
         return void 0;
       halves = { present: h.present, of: h.of };
     }
@@ -17269,13 +17421,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     };
   }
   function readSubjectHistory(document2) {
-    if (!isObj4(document2)) return void 0;
+    if (!isObj5(document2)) return void 0;
     const found = Object.entries(document2).filter(
-      ([key, member]) => EXTENSION.test(key) && isObj4(member) && isObj4(member.subject_history)
+      ([key, member]) => EXTENSION.test(key) && isObj5(member) && isObj5(member.subject_history)
     );
     if (found.length !== 1) return void 0;
     const block = found[0][1].subject_history;
-    if (!isObj4(block.conversations)) return void 0;
+    if (!isObj5(block.conversations)) return void 0;
     const scope = readScope(block.handle_scope);
     const operator = scope?.tier === "operator";
     const grouped = operator || scope?.tier === "shared" && scope.salting === "per-share";
@@ -17866,13 +18018,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("3897a3681a97fd4d0ada231384d2b77d0f7e24e0");
+    return commitPrefix("c6bb35516b0733b9cd070c632bf6d7efc05c83b9");
   }
   var commit = builtCommit();
   var unreleased = false;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
-    viewerVersion: "0.27.1",
+    viewerVersion: "0.27.2",
     verifier: "@action-state-group/agent-action-capsule",
     verifierVersion: "0.16.0",
     cllVersion: "0.4.0",
@@ -28817,6 +28969,7 @@ ${pad.repeat(depth)}`;
       return "unreadable";
     }
     const context = await buildVerifiedBundleContext(bundle);
+    if (await dealStandaloneReport(bundle) === "fail") return "unverified";
     const registry = options.registry ?? defaultRegistry;
     const resolution = await registry.resolve(
       context,
@@ -29742,158 +29895,6 @@ ${pad.repeat(depth)}`;
     }
   }
 
-  // src/deal-standalone-report.ts
-  var DEAL_V0 = "x-deal-v0";
-  var DEAL_V1 = "x-deal-v1";
-  var STANDALONE = "x-deal-report/v0";
-  var POINTER = "sealed_report";
-  var REPORT_ACTION = "capsulectl-deal-report";
-  var STEP_TYPES = /* @__PURE__ */ new Set(["deal_step", "step_completed", "step_failed"]);
-  var COPY_AUDIENCES = /* @__PURE__ */ new Set(["counterparty", "adjudicator", "keep"]);
-  var isObj5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-  var obj = (value) => isObj5(value) ? value : {};
-  async function dealStandaloneReport(bundle) {
-    const value = obj(bundle);
-    const extensions2 = obj(value["extensions"]);
-    if (!(STANDALONE in extensions2) || DEAL_V1 in extensions2) return null;
-    if (!ed25519Available()) return null;
-    return await standaloneReportHolds(value, extensions2) ? "pass" : "fail";
-  }
-  async function standaloneReportHolds(value, extensions2) {
-    const section = extensions2[DEAL_V0];
-    if (!isObj5(section) || Object.keys(section).length !== 1) return false;
-    const id = section[POINTER];
-    const x = extensions2[STANDALONE];
-    if (typeof id !== "string" || !isObj5(x) || Object.keys(x).length !== 2)
-      return false;
-    const record = x["record"];
-    const input = x["agent_input"];
-    if (!isObj5(record) || !isObj5(input) || record["capsule_id"] !== id || record["action_id"] !== REPORT_ACTION)
-      return false;
-    const reportKey = await verifiedProducerKey(record);
-    if (reportKey === void 0) return false;
-    const last = await lastStepRecord(value);
-    if (last === void 0) return false;
-    if (await verifiedProducerKey(last) !== reportKey) return false;
-    const capsule = {};
-    for (const [k, v] of Object.entries(record))
-      if (k !== "signature" && k !== "key_id") capsule[k] = v;
-    const disclosed = await verifyDisclosureEnvelope({
-      capsule,
-      disclosures: { agent_input: input }
-    });
-    if (!disclosed.ok || disclosed.disclosuresMatched !== 1) return false;
-    const logId = obj(value["completeness_certificate"])["log_id"];
-    if (typeof logId !== "string" || !logId.startsWith("deal/")) return false;
-    const audience = input["audience"];
-    if (input["type"] !== "deal_report" || input["profile"] !== DEAL_V0 || typeof audience !== "string" || !COPY_AUDIENCES.has(audience) || input["deal_id"] !== logId.slice("deal/".length))
-      return false;
-    const checkpoint = obj(value["checkpoint"]);
-    const bound = input["deal_checkpoint"];
-    if (!isObj5(bound) || Object.keys(bound).length !== 3) return false;
-    const boundSize = jsonUint(bound["mmr_size"]);
-    const size = jsonUint(checkpoint["mmr_size"]);
-    if (bound["log_id"] !== logId || boundSize === void 0 || size === void 0 || boundSize !== size || bound["root"] !== checkpoint["root"])
-      return false;
-    const records = Array.isArray(value["records"]) ? value["records"] : [];
-    if (records.some((r) => obj(r)["action_id"] === REPORT_ACTION)) return false;
-    const asOf = instant(obj(obj(input["report"])["lifecycle"])["as_of"]);
-    const signed = instant(checkpoint["timestamp"]);
-    return asOf !== void 0 && signed !== void 0 && asOf === signed;
-  }
-  async function verifiedProducerKey(record) {
-    const id = record["capsule_id"];
-    const signature2 = hexBytes2(record["signature"]);
-    const key = record["key_id"];
-    if (typeof id !== "string" || id === "" || signature2 === void 0)
-      return void 0;
-    if (typeof key !== "string" || hexBytes2(key) === void 0) return void 0;
-    const result3 = await verifyProducerEnvelope(id, signature2);
-    if (!result3.ok || result3.publicKey === void 0) return void 0;
-    const verified = Array.from(
-      result3.publicKey,
-      (b) => b.toString(16).padStart(2, "0")
-    ).join("");
-    return verified === key.toLowerCase() ? key : void 0;
-  }
-  async function lastStepRecord(value) {
-    const memberships2 = obj(
-      obj(value["completeness_certificate"])["memberships"]
-    );
-    const records = Array.isArray(value["records"]) ? value["records"] : [];
-    let last;
-    let lastSeq = 0n;
-    for (const raw of records) {
-      const record = obj(raw);
-      const type = (await recordHeader(value, record))?.["record_type"];
-      if (typeof type !== "string" || !STEP_TYPES.has(type)) continue;
-      const id = record["capsule_id"];
-      if (typeof id !== "string") continue;
-      const seq = jsonUint(obj(obj(memberships2[id])["log_coordinates"])["seq"]);
-      if (seq !== void 0 && seq > lastSeq) {
-        last = record;
-        lastSeq = seq;
-      }
-    }
-    return last;
-  }
-  async function recordHeader(value, record) {
-    const embedded = record["evidence_record_header"];
-    if (isObj5(embedded)) return embedded;
-    const id = record["capsule_id"];
-    if (typeof id !== "string" || id === "") return void 0;
-    const disclosed = obj(obj(value["disclosures"])[id])["agent_input"];
-    if (!isObj5(disclosed)) return void 0;
-    const capsule = {};
-    for (const [k, v] of Object.entries(record))
-      if (k !== "signature" && k !== "key_id") capsule[k] = v;
-    const checked = await verifyDisclosureEnvelope({
-      capsule,
-      disclosures: { agent_input: disclosed }
-    });
-    return checked.ok && checked.disclosuresMatched === 1 ? disclosed : void 0;
-  }
-  function jsonUint(value) {
-    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0) ? BigInt(value) : void 0;
-  }
-  function hexBytes2(value) {
-    if (typeof value !== "string" || value.length % 2 !== 0 || !/^[0-9a-fA-F]*$/u.test(value))
-      return void 0;
-    const out = new Uint8Array(value.length / 2);
-    for (let i = 0; i < out.length; i++)
-      out[i] = parseInt(value.slice(2 * i, 2 * i + 2), 16);
-    return out;
-  }
-  function instant(value) {
-    if (typeof value !== "string") return void 0;
-    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:(Z)|([+-])(\d{2}):(\d{2}))$/u.exec(
-      value
-    );
-    if (m === null) return void 0;
-    const [, y, mo, d, h, mi, s, frac, z, sign, oh, om] = m;
-    const fields2 = [y, mo, d, h, mi, s].map(Number);
-    const [year, month, day, hour, minute, second] = fields2;
-    if (month < 1 || month > 12 || day < 1 || day > civil(year, month + 1, 0).getUTCDate() || hour > 23 || minute > 59 || second > 59)
-      return void 0;
-    let offset = 0;
-    if (z === void 0) {
-      const offHour = Number(oh);
-      const offMinute = Number(om);
-      if (offHour > 23 || offMinute > 59) return void 0;
-      offset = (sign === "-" ? -1 : 1) * (offHour * 60 + offMinute) * 60;
-    }
-    const at = civil(year, month, day);
-    at.setUTCHours(hour, minute, second, 0);
-    const seconds = BigInt(at.getTime() / 1e3) - BigInt(offset);
-    const nanos = (frac ?? "").slice(0, 9).padEnd(9, "0");
-    return `${seconds}.${nanos}`;
-  }
-  function civil(year, month, day) {
-    const at = /* @__PURE__ */ new Date(0);
-    at.setUTCFullYear(year, month - 1, day);
-    return at;
-  }
-
   // src/wording/history-view.en.json
   var history_view_en_default = {
     wording_pack_version: "0",
@@ -29946,8 +29947,8 @@ ${pad.repeat(depth)}`;
       "hero.unreadable": "This page could not read the answer, so it shows none of it.",
       "hero.deals.one": "{n} deal, newest first",
       "hero.deals.other": "{n} deals, newest first",
-      "hero.deals.picked.one": "1 deal {name} picked \xB7 steps recorded, not outcomes",
-      "hero.deals.picked.other": "{n} deals {name} picked \xB7 steps recorded, not outcomes",
+      "hero.deals.picked.one": "1 deal {name} picked \xB7 this side's record, not confirmed outcomes",
+      "hero.deals.picked.other": "{n} deals {name} picked \xB7 this side's record, not confirmed outcomes",
       "hero.none.deals": "There are no deals in this store yet.",
       "chip.signatures.pass": "Checkpoint signatures check",
       "chip.signatures.pass.all": "Every signature checks",
@@ -29988,8 +29989,9 @@ ${pad.repeat(depth)}`;
       "callout.heading": "What this does not show",
       "callout.checkpoints": "These checkpoints show when this node's log was cut and how much it holds. They don't show what any exchange said or how it went, and this is not a judgment of the node.",
       "callout.checkpoints.time": "The exact time of each exchange. Checkpoint times are rounded to the minute, and each side of an exchange gets its own checkpoint, so two can share a time.",
-      "callout.deals": "\u201CSteps recorded\u201D is this side's record of each deal, not a confirmed outcome.",
-      "callout.deals.picked": "{name} picked these; it isn't every deal. \u201CSteps recorded\u201D is {name}'s side's record, not a confirmed outcome.",
+      "callout.deals": "Each deal's outcome here is what this side recorded, not a confirmed outcome.",
+      "callout.deals.named": "Each deal's outcome here is what {name} recorded, not a confirmed outcome.",
+      "callout.deals.picked": "{name} picked these; it isn't every deal. Each outcome is what {name}'s side recorded, not a confirmed outcome.",
       "shares.heading": "What this node shares",
       "shares.summary": "With anyone who asks: a summary of its checkpoints, meaning how much it has recorded and when, and nothing about any exchange.",
       "shares.standard.on": "With anyone: the Service History.",
@@ -30582,6 +30584,8 @@ ${pad.repeat(depth)}`;
           r.refuse(`${path2}.id`, "is listed twice");
         if (id && status2) checks.push({ id, status: status2, unregistered });
       });
+      if (kind === "deal" && !checks.some((x) => x.id === "deal_report"))
+        checks.push({ id: "deal_report", status: "not_run" });
     } else r.refuse("input.checks", "is not a list");
     const periods = [];
     if ("periods" in o) {
@@ -30744,6 +30748,7 @@ ${pad.repeat(depth)}`;
     const witnessFailed = statusOf("witness") === "fail";
     const secondFailed = statusOf("second_signature") === "fail";
     const lockChecked = kind === "checkpoint" ? statusOf("checkpoint_signatures") === "pass" && statusOf("checkpoint_chain") === "pass" && statusOf("consistency") === "pass" : dealRecorded;
+    const personTitle = kind !== "checkpoint" && reader !== "owner" && audienceKind !== "shared";
     let title;
     if (kind === "checkpoint")
       title = stream !== void 0 ? say("header.title.stream", { node: short2(node ?? ""), stream }) : say("header.title.node", { node: short2(node ?? "") });
@@ -30931,12 +30936,7 @@ ${pad.repeat(depth)}`;
           el13(
             "ul",
             { class: "cvh-stamps" },
-            dealRecorded ? stamp("stamp.recorded", true, "passed", null) : stamp(
-              "stamp.recorded",
-              false,
-              "not_checked",
-              say("slot.unchecked")
-            ),
+            dealRecorded ? stamp("stamp.recorded", true, "passed", null) : null,
             ...slotStamps(x)
           )
         );
@@ -30995,7 +30995,7 @@ ${pad.repeat(depth)}`;
       el13(
         "p",
         null,
-        kind === "checkpoint" ? say("callout.checkpoints") : picked ? say("callout.deals.picked", { name: name ?? "" }) : say("callout.deals")
+        kind === "checkpoint" ? say("callout.checkpoints") : picked ? say("callout.deals.picked", { name: name ?? "" }) : personTitle ? say("callout.deals.named", { name: name ?? "" }) : say("callout.deals")
       ),
       kind === "checkpoint" && rows.length > 0 ? el13("p", null, say("callout.checkpoints.time")) : null
     ) : null;
