@@ -4,6 +4,10 @@ import {
   type StandaloneReportFailure,
 } from "./deal-standalone-report.js";
 import {
+  verifierReportReading,
+  withVerifierReport,
+} from "./verifier-report.js";
+import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
   BOOK_PAYLOADS_EXTENSION,
   buildVerifiedBundleContext,
@@ -1104,6 +1108,8 @@ function renderExtensionTable(
 const STANDALONE_REPORT_FAILED: Readonly<
   Record<StandaloneReportFailure, string>
 > = {
+  verifier:
+    "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
   report:
     "Didn't verify: the deal report carried outside the log is not a report of this deal.",
   second:
@@ -2821,6 +2827,15 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly receipts?: Readonly<Record<string, DealReceiptEntry>>;
   /**
+   * capsulectl's own report of this bundle (`capsulectl deal verify --bundle`,
+   * `capsule-cli-result/v1`), for an x-deal-v1 copy whose report this page
+   * cannot check itself (#405). Read only when it is this bundle's
+   * (verifier-report.ts): a pass lets the receipt draw, saying capsulectl
+   * reported it and the page did not check it; a fail refuses the copy; a
+   * report for another bundle is ignored.
+   */
+  readonly verifierReport?: unknown;
+  /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
    */
@@ -3495,17 +3510,29 @@ async function openReceipt(
 }
 
 async function renderVerifiedContext(
-  context: VerifiedBundleContext,
+  checkedContext: VerifiedBundleContext,
   root: HTMLElement,
   options: RenderEvidenceGraphOptions,
 ): Promise<void> {
+  // capsulectl's report of an x-deal-v1 copy (#405 route 1): a pass is shown
+  // as capsulectl's, a fail refuses the copy, any other report is ignored.
+  const reading =
+    options.verifierReport === undefined ||
+    !bundleVerified(checkedContext.verification)
+      ? null
+      : verifierReportReading(checkedContext, options.verifierReport);
+  const context =
+    reading === "pass" ? withVerifierReport(checkedContext) : checkedContext;
   const { bundle, verification } = context;
   // A bundle whose own checks pass but whose deal copy's standalone report
   // fails this page's check is refused like one that did not verify: no
   // module, no fallback page, AAC's refused banner, and the failed
   // conditions in the checks (#412).
-  const reportFailed = bundleVerified(verification)
-    ? ((await dealStandaloneReportFailures(bundle)) ?? [])
+  const reportFailed: StandaloneReportFailure[] = bundleVerified(verification)
+    ? [
+        ...(reading === "fail" ? (["verifier"] as const) : []),
+        ...((await dealStandaloneReportFailures(bundle)) ?? []),
+      ]
     : [];
   const verified = bundleVerified(verification) && reportFailed.length === 0;
   const registry = options.registry ?? defaultRegistry;

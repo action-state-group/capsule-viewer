@@ -25,6 +25,10 @@ import {
   type PresentationModule,
 } from "./presentation-registry.js";
 import { dealStandaloneReport } from "./deal-standalone-report.js";
+import {
+  verifierReportReading,
+  withVerifierReport,
+} from "./verifier-report.js";
 import { RECEIPT_CORE, RECEIPT_MANIFESTS } from "./receipt-core.generated.js";
 
 /** The receipt kinds, as go/receipt names them. */
@@ -73,6 +77,14 @@ export interface ReceiptOptions {
    * owner. Left out, it is the owner's own copy.
    */
   readonly carrier?: "report" | "page";
+  /**
+   * capsulectl's own report of this bundle (`capsulectl deal verify
+   * --bundle`), for an x-deal-v1 copy whose report no page can check itself
+   * (#405). Read only when it is this bundle's: a pass draws the receipt,
+   * saying capsulectl reported it and this page did not check it; a fail is
+   * `did_not_verify`; any other report is ignored (verifier-report.ts).
+   */
+  readonly verifierReport?: unknown;
 }
 
 type Draw = (model: unknown, host: PresentationHost) => void | Promise<void>;
@@ -177,9 +189,26 @@ type Found =
       readonly model: unknown;
     });
 
-async function resolved(bundle: unknown, audience: string): Promise<Found> {
-  const checked = await verified(bundle);
-  if ("kind" in checked) return { result: checked };
+async function resolved(
+  bundle: unknown,
+  audience: string,
+  verifierReport?: unknown,
+): Promise<Found> {
+  const found = await verified(bundle);
+  if ("kind" in found) return { result: found };
+  let checked = found;
+  if (verifierReport !== undefined) {
+    const reading = verifierReportReading(checked.context, verifierReport);
+    if (reading === "fail")
+      return {
+        result: {
+          kind: "did_not_verify",
+          line: VERIFICATION_BANNER_LINES.refused,
+        },
+      };
+    if (reading === "pass")
+      checked = { ...checked, context: withVerifierReport(checked.context) };
+  }
   const registry = new PresentationRegistry();
   for (const module of receiptModules()) registry.register(module);
   const resolution = await registry.resolve(checked.context, audience, "html");
@@ -221,7 +250,9 @@ export async function checkReceipt(
   bundle: unknown,
   options: ReceiptOptions = {},
 ): Promise<ReceiptResult> {
-  return result(await resolved(bundle, options.audience ?? "keep"));
+  return result(
+    await resolved(bundle, options.audience ?? "keep", options.verifierReport),
+  );
 }
 
 /**
@@ -234,7 +265,11 @@ export async function renderReceipt(
   host: HTMLElement,
   options: ReceiptOptions = {},
 ): Promise<ReceiptResult> {
-  const found = await resolved(bundle, options.audience ?? "keep");
+  const found = await resolved(
+    bundle,
+    options.audience ?? "keep",
+    options.verifierReport,
+  );
   if (options.carrier === "report" || options.carrier === "page")
     host.setAttribute("data-receipt-carrier", options.carrier);
   else host.removeAttribute("data-receipt-carrier");

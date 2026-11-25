@@ -76,12 +76,15 @@ export async function dealStandaloneReport(
  *  - `signer`: it is not signed by the key of the deal's last step (2);
  *  - `capsule`: its payload is not the one its Capsule commits (3);
  *  - `checkpoint`: it is not bound to this bundle's checkpoint and time (5, 7).
+ * (`verifier` is never returned here: it is a page's reading of
+ * capsulectl's own report that the report failed, verifier-report.ts.)
  * An empty list is a pass. Null when there is nothing this page checks, as
  * for dealStandaloneReport. When the record itself cannot be read
  * (condition 1), only `report` is given: the other checks have nothing to
  * read.
  */
 export type StandaloneReportFailure =
+  | "verifier"
   | "report"
   | "second"
   | "signer"

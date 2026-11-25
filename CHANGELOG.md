@@ -11,6 +11,13 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A page or the receipt API can carry capsulectl's own verify report for an x-deal-v1 copy, so its receipt draws (#405 route 1). A page cannot run the x-deal-v1 report rule itself. With `verifierReport` (the output of `capsulectl deal verify --bundle`, `capsule-cli-result/v1`) given to `renderEvidenceGraph`, `checkReceipt` or `renderReceipt`, the report is read only when it is this bundle's: its format, its `bundle_digest` and its record identities, as the Python twin checks them.
+  - When it passed, the v1 receipt draws, and its line says so in `summary.standalone`'s words: "capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+  - When it failed, the copy is refused, with "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass."
+  - A missing report, or another bundle's, keeps the can't-check line (#407).
+
 ### Fixed
 
 - A receipt page (the receipt modules in its registry, as go/emitter's module slot puts them) refuses a deal copy whose standalone report fails the page's own check, as a report and the receipt API already do since 0.27.2 (#412, Sherlock2). Before, it drew the copy under "✓ Unchanged since it was sealed" with the built-in fallback page, because the bundle's own checks pass. Now it gets agent-action-capsule's refused banner ("✗ This bundle did not verify: do not rely on it"), no module and no fallback page. Its records and payloads are not shown, and its banner reads as invalid, as for any bundle that did not verify. "Failed on this page" names each condition that failed, for example "Didn't verify: the deal report carried outside the log was not signed by the deal's last step."; the others are "does not match its Capsule", "was not made at this deal's checkpoint", "is not a report of this deal", and "this deal's log has more than one report record, so the page can't tell which report counts". The bundle checks that passed stay beside them. `dealStandaloneReportFailures` gives those conditions, and the report path and the receipt API use the same module.
