@@ -30,8 +30,8 @@ view, together with the Muse JS modules.
 
 This repository keeps the generic, neutral view of a record. That includes the
 Result pages, the History card (`capsuleviewer.standard-history/v0`) and a
-plain receipt: `capsule_viewer.receipt` and the JS receipt module-slot scripts
-(`static/receipt_*.js`). The plain receipt is **not the consumer product path**
+plain receipt: the receipt module-slot scripts (`go/receipt/receipt_*.js`, the one
+receipt renderer, #383) and the frozen Python `capsule_viewer.receipt`. The plain receipt is **not the consumer product path**
 and is not held to the 9b receipt design. The Python Rules carrier
 (`capsule_viewer.rules`) is likewise not the consumer product path. This
 repository also keeps what the product modules are held to: the goldens and the
@@ -309,7 +309,7 @@ It serves the three audiences capsulectl cuts copies for (`keep`, `counterparty`
   (`tests/test_receipt_module.py`).
 - **Depth:** L0 the deal, item, amount and state; L1 what was asked, proposed, approved
   and done, with the merchant's evidence; L2 the verifier's checks and every record.
-- **Words** come from a wording pack (`receipt_slot/wording-en.json` is a neutral English
+- **Words** come from a wording pack (`go/receipt/wording-en.json` is a neutral English
   example) or are capsulectl's own sealed report lines, shown as such.
 - `tests/test_receipt_golden.py` accounts for every line deal-view.js showed for
   capsule-cli's receipt golden; `js-tests/receipt_layout.test.js` holds every fixture
@@ -371,12 +371,18 @@ only".
 
 The three receipt modules (unilateral, seller, bilateral) also ship as module-slot
 scripts, the form a page builder puts in a page (capsulectl `presentation build`, from
-a plugin that carries them): `static/receipt_unilateral.js`, `static/receipt_seller.js`
-and `static/receipt_bilateral.js`, pinned by `receipt_slot/manifest-*.json`
+a plugin that carries them, or a Go page builder through package `receipt`):
+`go/receipt/receipt_unilateral.js`, `receipt_seller.js` and `receipt_bilateral.js`
+(and `receipt_deal.js`), pinned by `go/receipt/manifest-*.json`
 (`executable.carrier` `module-slot`, `script_sha256`, and `style_sha256` for the kit
 stylesheet each script inserts once at render).
 
-- **One source, three scripts.** `static/receipt_core.js` is the source;
+- **One source, one renderer.** Since #383 the source is `go/receipt/receipt_core.js`,
+  and `go generate ./receipt` (in `go/`) writes `go/receipt/receipt_*.js` and their
+  manifests, which the Go package `receipt` ships to Go page builders. The writer
+  still reads the kit stylesheet from `src/capsule_viewer/static/kit.css`. The copies
+  described below, in the Python package, are frozen at 0.25.0.
+- **One source, four scripts (the frozen 0.25.0 copies).** `static/receipt_core.js` was the source;
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with
   its manifest, the example pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and rewrites the `executable` block of each `receipt_slot/manifest-*.json`

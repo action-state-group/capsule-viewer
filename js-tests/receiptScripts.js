@@ -1,5 +1,6 @@
-// Shared by the receipt module-slot tests: the three scripts as shipped, run
-// in a fresh jsdom window each, and the frozen golden (receiptGolden) the
+// Shared by the receipt module-slot tests: the scripts as the Go receipt
+// package ships them (go/receipt, the one receipt renderer, capsule-viewer#383),
+// run in a fresh jsdom window each, and the frozen golden (receiptGolden) the
 // scripts are held to.
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
@@ -15,10 +16,11 @@ export const PY = process.env.PYTHON || "python3";
 export const PY_ENV = { ...process.env, PYTHONPATH: join(ROOT, "src") };
 // RECEIPT_SCRIPT_DIR runs the tests against other bytes (a mutant, to show
 // the parity test red); unset, the shipped scripts.
-const SCRIPTS = process.env.RECEIPT_SCRIPT_DIR || join(ROOT, "src", "capsule_viewer", "static");
+export const RECEIPT_DIR = join(ROOT, "go", "receipt");
+const SCRIPTS = process.env.RECEIPT_SCRIPT_DIR || RECEIPT_DIR;
 
 export const scriptBytes = (kind) => readFileSync(join(SCRIPTS, `receipt_${kind}.js`));
-export const manifestOf = (kind) => JSON.parse(readFileSync(join(ROOT, "src", "capsule_viewer", "receipt_slot", `manifest-${kind}.json`), "utf8"));
+export const manifestOf = (kind) => JSON.parse(readFileSync(join(RECEIPT_DIR, `manifest-${kind}.json`), "utf8"));
 export const readBundle = (name) => JSON.parse(readFileSync(join(RECEIPTS, `${name}.bundle.json`), "utf8"));
 export const readVerify = (name) => JSON.parse(readFileSync(join(RECEIPTS, `${name}.verify.json`), "utf8"));
 
