@@ -19,6 +19,7 @@ here. The format follows
     - when its x-deal-v1 entry did not pass: "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.";
     - when the entry passed but the verdict is not VALID: "Didn't verify: capsulectl deal verify reported this bundle as <verdict>.", never that the report failed. A producer selection (INCOMPLETE only because the interval coverage is withheld as `selection_not_checkable`) is not refused: its receipt draws, as the Python twin reads it.
   - A missing report, or another bundle's, keeps the can't-check line (#407). A report is read only for a bundle that is an x-deal-v1 copy with a standalone report. Capsulectl's passing entry reaches the receipt module only, never the page's own checks or extension rows.
+- An x-deal-v1 receipt drawn from capsulectl's report says when the copy carries the other party's half and capsulectl reported it verified (`counterparty_half` in its x-deal-v1 entry, evidencebook#886): "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it." On such a copy the countersign line no longer reads as unsigned: "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above." A half with any other status, or none reported, draws no line, and the countersign line is unchanged.
 
 ### Fixed
 

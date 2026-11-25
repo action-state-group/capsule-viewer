@@ -190,6 +190,29 @@ describe("capsulectl's report: which reports are read, and how they fail (#417)"
     ).toEqual(cannot);
   });
 
+  it("renderReceipt says a verified half too, a producer selection's included", async () => {
+    const HALF =
+      "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it.";
+    const verified = edited((r) => {
+      v1Entry(r)["counterparty_half"] = { status: "verified" };
+    });
+    const selected = edited((r) => {
+      v1Entry(r)["counterparty_half"] = { status: "verified" };
+      r["verdict"] = "INCOMPLETE";
+      r["interval_coverage"] = {
+        status: "withheld",
+        findings: ["selection_not_checkable"],
+      };
+    });
+    for (const r of [verified, selected]) {
+      const host = document.createElement("div");
+      await renderReceipt(bundle(), host, { verifierReport: r, depth: "L2" });
+      expect(
+        host.querySelector('[data-rung="counterparty-half"]')?.textContent,
+      ).toBe(HALF);
+    }
+  });
+
   it("a renderReceipt host that held a receipt is emptied when the next report fails", async () => {
     const host = document.createElement("div");
     await renderReceipt(bundle(), host, { verifierReport: report() });
@@ -281,6 +304,47 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       root.querySelector('[data-cannot-check-reason="report_rule"]'),
     ).not.toBeNull();
     expect(root.textContent).not.toContain(CAPSULECTL_LINE);
+  });
+
+  it("a counterparty half capsulectl verified is said, and the countersign line does not read as unsigned", async () => {
+    const r = report();
+    v1Entry(r)["counterparty_half"] = {
+      key: "67d55ab77af8e004",
+      status: "verified",
+    };
+    const root = await page(r);
+    expect(
+      root.querySelector('[data-rung="counterparty-half"]')?.textContent,
+    ).toBe(
+      "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it.",
+    );
+    expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
+      "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above.",
+    );
+  });
+
+  it("a half capsulectl verified in an entry that did not pass is never said: the copy is refused (Sherlock2)", async () => {
+    const r = report();
+    v1Entry(r)["counterparty_half"] = { status: "verified" };
+    v1Entry(r)["status"] = "fail";
+    const root = await page(r);
+    expect(root.querySelector('[data-rung="counterparty-half"]')).toBeNull();
+    expect(root.querySelector("[data-receipt-module]")).toBeNull();
+  });
+
+  it("without a verified half, no half line and the countersign line as before", async () => {
+    for (const half of [undefined, { status: "withheld" }, "verified"]) {
+      const r = report();
+      if (half !== undefined) v1Entry(r)["counterparty_half"] = half;
+      const root = await page(r);
+      expect(root.querySelector('[data-rung="counterparty-half"]')).toBeNull();
+      expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
+        "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy.",
+      );
+    }
+    // The page never says a half capsulectl did not report: no report, no line.
+    const none = await page();
+    expect(none.querySelector('[data-rung="counterparty-half"]')).toBeNull();
   });
 
   it("the page's own extension rows are its verifier's: one x-deal-v1 row", async () => {
