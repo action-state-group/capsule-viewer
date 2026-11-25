@@ -13625,9 +13625,17 @@ ${body}
   }
   function bookWitnessedOnKeep(context, reading) {
     if (reading?.kind !== "pass") return false;
-    if (obj2(reading.witnessed)["status"] !== "verified") return false;
+    const w = obj2(reading.witnessed);
+    if (w["status"] !== "verified" || typeof w["witness"] !== "string" || w["witness"] === "" || !utcInstant(w["at"]))
+      return false;
     const x = obj2(obj2(obj2(context.bundle)["extensions"])[STANDALONE2]);
     return obj2(x["agent_input"])["audience"] === "keep";
+  }
+  function utcInstant(value) {
+    if (typeof value !== "string") return false;
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)) return false;
+    const ms = Date.parse(value);
+    return !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 19) + "Z" === value;
   }
 
   // src/builtin-manifests.ts
@@ -18105,7 +18113,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("7fcc71a8cfe277106761649f03d15ced664d617f");
+    return commitPrefix("74295931c2bcba28b30b5b443865fd0a7c2906d9");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -29109,6 +29117,10 @@ ${pad.repeat(depth)}`;
     "capsulectl.deal-view-composed/v0"
   ]);
   var RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
+  function sharedCarrierOf(root) {
+    const mark = root.closest?.(`[${RECEIPT_CARRIER_ATTRIBUTE}]`)?.getAttribute(RECEIPT_CARRIER_ATTRIBUTE);
+    return mark === "report" || mark === "page";
+  }
   async function openReceipt(text2, panel, options) {
     let bundle;
     try {
@@ -29268,7 +29280,10 @@ ${pad.repeat(depth)}`;
           bannerModel,
           bundle,
           withStrict(context),
-          bookWitnessedOnKeep(context, reading)
+          // Not on a receipt carried in a report or shown as a page: the
+          // module draws no witness time there, so the header stays (#424).
+          // Only when a receipt module draws the one line (#424).
+          selected !== void 0 && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root)
         )
       );
       const L2 = region("L2");
