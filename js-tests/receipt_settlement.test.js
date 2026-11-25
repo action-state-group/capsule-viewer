@@ -30,7 +30,7 @@ const leg = ({ ref = { type: "ln.payment_hash", value: HASH }, received = money(
 // The fixture's records whose capsule id starts with a key of `legs` carry that
 // settlement; `preimages` (same keys) adds body.preimage to the disclosed
 // agent_input; `withhold` (prefixes) makes a record's agent_input withheld.
-function stub(context, { legs = {}, preimages = {}, withhold = [], bodies = {} }) {
+function stub(context, { legs = {}, preimages = {}, withhold = [], bodies = {}, blocks = {} }) {
   const pick = (table, id) => Object.entries(table).find(([k]) => id.startsWith(k))?.[1];
   const records = context.records.map((r) => (pick(legs, r.capsule_id) ? { ...r, settlement: pick(legs, r.capsule_id) } : r));
   const resolved = new Map(context.resolvedDisclosures);
@@ -41,10 +41,13 @@ function stub(context, { legs = {}, preimages = {}, withhold = [], bodies = {} }
     }
     const preimage = pick(preimages, id);
     // `bodies` (same keys) merges members into the disclosed agent_input's body.
+    // `blocks` (same keys) merges members into its x-deal-v0 block (its record_type, say).
     const patch = { ...(pick(bodies, id) || {}), ...(preimage === undefined ? {} : { preimage }) };
-    if (!Object.keys(patch).length || entry.agent_input.state !== "disclosed") continue;
+    const block = pick(blocks, id);
+    if ((!Object.keys(patch).length && !block) || entry.agent_input.state !== "disclosed") continue;
     const payload = entry.agent_input.payload;
-    resolved.set(id, { ...entry, agent_input: { state: "disclosed", payload: { ...payload, body: { ...payload.body, ...patch } } } });
+    const deal = block ? { "x-deal-v0": { ...payload["x-deal-v0"], ...block } } : {};
+    resolved.set(id, { ...entry, agent_input: { state: "disclosed", payload: { ...payload, ...deal, body: { ...payload.body, ...patch } } } });
   }
   return { ...context, records, resolvedDisclosures: resolved };
 }
@@ -157,8 +160,12 @@ describe("the settlement line (#383)", () => {
   });
 
   it("names a real rail an action names after a simulated one", async () => {
-    // The keep copy's action (290b1db4) names card; an earlier record named simulated must not hide it.
-    const { state, text } = await draw("keep", { bodies: { "30": { rail: "simulated" } } });
+    // The keep copy's action (290b1db4) names card; its approval (3ad3f14b), which comes
+    // before it, is made an action naming the simulated rail, and must not hide the card.
+    const { model, state, text } = await draw("keep", { blocks: { "3ad3f14b": { record_type: "action" } }, bodies: { "3ad3f14b": { rail: "simulated" } } });
+    const earlier = model.steps.find((s) => s.capsule_id.startsWith("3ad3f14b"));
+    expect(earlier.record_type).toBe("action");
+    expect(earlier.facts).toContainEqual(expect.objectContaining({ name: "rail", value: "simulated" }));
     expect(state).toBe("missing");
     expect(text).toBe("Payment: a card payment; the card processor's report is not in this file.");
   });
