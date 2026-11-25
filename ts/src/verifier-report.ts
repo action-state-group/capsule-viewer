@@ -181,7 +181,26 @@ export function bookWitnessedOnKeep(
   reading: VerifierReading | null,
 ): boolean {
   if (reading?.kind !== "pass") return false;
-  if (obj(reading.witnessed)["status"] !== "verified") return false;
+  // The receipt's own conditions for drawing the line (receipt_core.js
+  // bookWitnessed): verified, with a witness and a time.
+  const w = obj(reading.witnessed);
+  if (
+    w["status"] !== "verified" ||
+    typeof w["witness"] !== "string" ||
+    w["witness"] === "" ||
+    !utcInstant(w["at"])
+  )
+    return false;
   const x = obj(obj(obj(context.bundle)["extensions"])[STANDALONE]);
   return obj(x["agent_input"])["audience"] === "keep";
+}
+
+/** A UTC RFC 3339 time to the second, as the receipt module's validUtcTime reads it. */
+function utcInstant(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)) return false;
+  const ms = Date.parse(value);
+  return (
+    !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 19) + "Z" === value
+  );
 }

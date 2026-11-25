@@ -3502,6 +3502,14 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
  */
 const RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
 
+/** Whether `root` is drawn as a shared carrier (a report or a page), as the receipt module reads it. */
+function sharedCarrierOf(root: HTMLElement): boolean {
+  const mark = root
+    .closest?.(`[${RECEIPT_CARRIER_ATTRIBUTE}]`)
+    ?.getAttribute(RECEIPT_CARRIER_ATTRIBUTE);
+  return mark === "report" || mark === "page";
+}
+
 /**
  * Draw one carried receipt bundle into `panel`: verified once here, resolved
  * in the page's registry, and drawn only when the module that takes it is a
@@ -3741,7 +3749,12 @@ async function renderVerifiedContext(
         bannerModel,
         bundle,
         withStrict(context),
-        bookWitnessedOnKeep(context, reading),
+        // Not on a receipt carried in a report or shown as a page: the
+        // module draws no witness time there, so the header stays (#424).
+        // Only when a receipt module draws the one line (#424).
+        selected !== undefined &&
+          bookWitnessedOnKeep(context, reading) &&
+          !sharedCarrierOf(root),
       ),
     );
     const L2 = region("L2");

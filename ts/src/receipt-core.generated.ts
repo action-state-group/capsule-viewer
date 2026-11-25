@@ -403,7 +403,7 @@ const root = {};
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
     var got = entry !== undefined ? map(entry.witnessed) : {};
     if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
-    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || typeof got.at !== "string" || got.at === "")) return null;
+    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || !validUtcTime(got.at))) return null;
     return got.status === "verified" ? { status: got.status, witness: got.witness, at: got.at } : { status: got.status };
   }
 
@@ -2512,7 +2512,8 @@ const root = {};
     if (model.start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
     // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
-    out.push(this.note(model.as_of ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: w("deal.no_time") }), { "data-as-of": model.as_of }));
+    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: model.as_of });
+    out.push(this.note(asOf, { "data-as-of": model.as_of }));
     return d.el("div", { "data-headline": "true" }, out);
   };
   // A full UTC instant becomes a data-time span (the reader's own zone); a
@@ -2521,9 +2522,11 @@ const root = {};
   // zone name is ambiguous (Sherlock2, #423).
   P.dateText = function (value) {
     if (value === "not_set") return w("deal.date.not_set");
-    var shown = this.timeEl(value);
-    return shown === value ? value : this.d.el("span", {}, [shown, " (" + utcClock(value, true) + ")"]);
+    if (!validUtcTime(value)) return value;
+    return this.d.el("span", {}, [this.timeEl(value), " (" + utcClock(value, true) + ")"]);
   };
+  // An x-deal-v1 time: the reader's zone for a real UTC instant, else as stored.
+  P.v1Time = function (value) { return validUtcTime(value) ? this.timeEl(value) : value; };
   P.rowDetail = function (row) {
     var bits = [];
     // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
@@ -2568,7 +2571,7 @@ const root = {};
         leg.leg,
         leg.status,
         leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
-        leg.observed_at !== null ? self.timeEl(leg.observed_at) : w("deal.no_time"),
+        leg.observed_at !== null ? self.v1Time(leg.observed_at) : w("deal.no_time"),
         leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
         d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
       ]);
@@ -2986,7 +2989,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "2f6aaaf5266a62b4be631e9bcc471ffd38a0eb2673a1da18761af21cf40a0566",
+      "script_sha256": "2cd1fa39967f3301bb08ba7f8f6e8adf9cdbe80ab977dc8d4f5a39ff88bd13d1",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3031,7 +3034,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "aab2bd016e934cbeaf44b0c646ce4ff130f16a9ed7b4f356ca818952a2a78ff1",
+      "script_sha256": "7f8f650bce787d4477559898c17f9cf9bb742b237d7e63b2392cdd182e8ab55a",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3075,7 +3078,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "4e3131e257b4b2701c6748b4cea2211e9032073716e0fc55924f6d312e7474c1",
+      "script_sha256": "580dfa5ba811804fd35ae4683415bec138e45f1d1cf460b9e65f94761b9718e6",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]
@@ -3121,7 +3124,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "8dd85875c44aa2f5a36b1b94ca804e673bf9f6a1e07a1c3c2f658099387b13ee",
+      "script_sha256": "eb19c338d404b0dca9d012ec56a8d7a5b0d3aa744a381f9fce05f9b5843fc077",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c"
       ]

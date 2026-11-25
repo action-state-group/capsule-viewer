@@ -451,7 +451,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
 
   it("the holder's witness time is never shown on a shared page or report", async () => {
     const r = report();
-    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "t" };
+    v1Entry(r)["witnessed"] = { status: "verified", witness: "W", at: "2026-11-25T14:41:19Z" };
     for (const carrier of ["page", "report"] as const) {
       const host = document.createElement("div");
       await renderReceipt(bundle(), host, {
@@ -463,7 +463,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     }
     const own = document.createElement("div");
     await renderReceipt(bundle(), own, { verifierReport: r, depth: "L2" });
-    expect(own.textContent).toContain("Time-stamped by W at t");
+    expect(own.textContent).toContain("Time-stamped by W at ");
   });
 
   it("one witness line on the holder's own page: the header line is left out there only (#424)", async () => {
@@ -486,6 +486,44 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       if (w !== undefined) v1Entry(rr)["witnessed"] = w;
       expect((await page(rr)).textContent).toContain(HEADER);
     }
+  });
+
+  it("the header stays wherever the one line is not drawn (#424)", async () => {
+    const HEADER =
+      "This file carries no witness receipt, so this page could not check a time-stamp itself.";
+    for (const w of [
+      { status: "verified", witness: "W" },
+      { status: "verified", at: "2026-11-25T14:41:19Z" },
+      { status: "verified", witness: "W", at: "t" },
+      { status: "verified", witness: "W", at: "2026-02-30T10:00:00Z" },
+    ]) {
+      const r = report();
+      v1Entry(r)["witnessed"] = w;
+      const root = await page(r);
+      expect(root.textContent).toContain(HEADER);
+      expect(root.textContent).not.toContain("Time-stamped by");
+    }
+    // A page drawn as a shared carrier keeps the header.
+    const r = report();
+    v1Entry(r)["witnessed"] = {
+      status: "verified",
+      witness: "W",
+      at: "2026-11-25T14:41:19Z",
+    };
+    const registry = createPresentationRegistry();
+    for (const module of receiptModules()) registry.register(module);
+    const shared = document.createElement("main");
+    shared.setAttribute("data-receipt-carrier", "page");
+    const root = document.createElement("div");
+    shared.append(root);
+    document.body.append(shared);
+    await renderEvidenceGraph(bundle(), root, undefined, {
+      depth: "L2",
+      registry,
+      verifierReport: r,
+    });
+    expect(root.textContent).toContain(HEADER);
+    expect(root.textContent).not.toContain("Time-stamped by");
   });
 
   it("the page's times are the reader's own, deadlines with UTC beside them (#423)", async () => {

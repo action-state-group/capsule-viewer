@@ -399,7 +399,7 @@
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
     var got = entry !== undefined ? map(entry.witnessed) : {};
     if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
-    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || typeof got.at !== "string" || got.at === "")) return null;
+    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || !validUtcTime(got.at))) return null;
     return got.status === "verified" ? { status: got.status, witness: got.witness, at: got.at } : { status: got.status };
   }
 
@@ -2508,7 +2508,8 @@
     if (model.start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
     // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
-    out.push(this.note(model.as_of ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: w("deal.no_time") }), { "data-as-of": model.as_of }));
+    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: model.as_of });
+    out.push(this.note(asOf, { "data-as-of": model.as_of }));
     return d.el("div", { "data-headline": "true" }, out);
   };
   // A full UTC instant becomes a data-time span (the reader's own zone); a
@@ -2517,9 +2518,11 @@
   // zone name is ambiguous (Sherlock2, #423).
   P.dateText = function (value) {
     if (value === "not_set") return w("deal.date.not_set");
-    var shown = this.timeEl(value);
-    return shown === value ? value : this.d.el("span", {}, [shown, " (" + utcClock(value, true) + ")"]);
+    if (!validUtcTime(value)) return value;
+    return this.d.el("span", {}, [this.timeEl(value), " (" + utcClock(value, true) + ")"]);
   };
+  // An x-deal-v1 time: the reader's zone for a real UTC instant, else as stored.
+  P.v1Time = function (value) { return validUtcTime(value) ? this.timeEl(value) : value; };
   P.rowDetail = function (row) {
     var bits = [];
     // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
@@ -2564,7 +2567,7 @@
         leg.leg,
         leg.status,
         leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
-        leg.observed_at !== null ? self.timeEl(leg.observed_at) : w("deal.no_time"),
+        leg.observed_at !== null ? self.v1Time(leg.observed_at) : w("deal.no_time"),
         leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
         d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
       ]);

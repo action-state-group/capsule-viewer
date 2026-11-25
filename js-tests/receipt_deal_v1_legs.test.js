@@ -50,6 +50,17 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
     });
   }
 
+  it("shows a payment time that is not a UTC time exactly as recorded (#423)", async () => {
+    const c = JSON.parse(JSON.stringify(vectors.cases.find((x) => x.name === "keep-copy")));
+    const [id, pair] = legsOf(c.extension)[0];
+    pair.record.settlement.observed_at = "2026-11-01T23:59:99Z";
+    const { shown, host } = await draw(c.report, c.extension);
+    expect(shown).toBe(true);
+    const row = host.L1.querySelector(`[data-leg-record="${id}"]`).closest("tr");
+    expect(row.textContent).toContain("2026-11-01T23:59:99Z");
+    expect(row.querySelector("[data-time]")).toBeNull();
+  });
+
   it("shows a leg's settlement as recorded, and no verdict beside it", async () => {
     const c = vectors.cases.find((x) => x.name === "keep-copy");
     const [id, pair] = legsOf(c.extension)[0];
@@ -61,7 +72,8 @@ describe("the deal/v1 receipt shows the payment legs the report relied on", () =
     expect(text).toContain(s.status);
     expect(text).toContain("60.00 USD");
     expect(text).toMatch(/received 60\.00 USD; receive_fee 0\.00 USD|amount 60\.00 USD/);
-    expect(text).toContain(s.observed_at);
+    expect(text).toContain("Nov 1, 2026, 10:15 UTC");
+    expect(row.querySelector("[data-time]").getAttribute("data-time")).toBe(s.observed_at);
     expect(text).toContain(`${s.payment_ref.type} ${s.payment_ref.value}`);
     expect(host.L1.textContent).toContain("the payment check above is the only verdict");
     expect(host.L1.querySelector("[data-row-status]")).not.toBeNull();
