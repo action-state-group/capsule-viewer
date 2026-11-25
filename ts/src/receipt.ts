@@ -177,7 +177,9 @@ export async function renderReceipt(
 
 /**
  * The one-line label an exchanges row shows for a result, in the receipt
- * modules' words; null where the result has no label.
+ * modules' words; null where the result has no label. It is for the owner's
+ * own row only, never for a receipt carried in a report: its words address
+ * the owner (Sherlock2, #387).
  */
 export function receiptLabel(
   result: ReceiptResult | { kind: "no_record" },
@@ -185,14 +187,14 @@ export function receiptLabel(
   const key =
     result.kind === "checked"
       ? result.both
-        ? "summary.both"
-        : "summary.one_sided"
+        ? "row.both"
+        : "row.one_sided"
       : result.kind === "no_record"
-        ? "summary.none"
+        ? "row.none"
         : result.kind === "cannot_check"
-          ? "summary.cannot_check"
+          ? "row.cannot_check"
           : result.kind === "did_not_verify"
-            ? "summary.did_not_verify"
+            ? "row.did_not_verify"
             : null;
   return key === null ? null : (core.WORDS[key] ?? null);
 }
