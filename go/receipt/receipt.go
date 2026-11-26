@@ -14,8 +14,10 @@
 //
 // receipt_core.js is the source of all four. `go generate` writes each
 // receipt_<kind>.js and the executable block of each manifest-<kind>.json
-// from it, the manifest, wording-en.json, the kit stylesheet and the
-// receipt's own stylesheets (internal/writer). The Python package's copies (src/capsule_viewer/static,
+// from it, the manifest, wording-en.json, the kit stylesheet
+// (src/capsule_viewer/static/kit.css), the receipt's dark overrides
+// (src/capsule_viewer/static/kit-dark.css) and the receipt's own rules
+// (go/receipt/receipt.css) (internal/writer). The Python package's copies (src/capsule_viewer/static,
 // receipt_slot) are frozen at capsule-viewer 0.25.0; this package's copies
 // are the ones that change.
 package receipt

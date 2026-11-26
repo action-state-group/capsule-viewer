@@ -6,7 +6,8 @@
 //   #430 "Where it stands: Started" beside two terms met: the line also says where the terms stand;
 //   #431 the records table showed raw UTC: it says each time as the header does;
 //   #432 "No payment record is among the records" on a paid deal: one line says why;
-//   #424 "Time from a named witness: yes" while the page checked no witness receipt: the yes says whose.
+//   #424 "Time from a named witness: yes" while the page checked no witness receipt: the yes says it is
+//        the report's ("your report" on the holder's own page, "the holder's report" elsewhere).
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,14 +34,24 @@ const env = (audience) => ({
   verification: () => ({ verifier: "test", outcome: "verified", checks: [] }),
   assurance: () => ({ bundle_digest: "ab".repeat(32), witnesses: "withheld", countersignatures: [], report_checked: "pass" }),
 });
-async function page(edit, depth = "L2", editBook) {
+async function page(edit, depth = "L2", editBook, carrier) {
   const lib = loadScript("deal");
   const module = lib.api.createModule("deal", env(null));
   const ctx = context(edit, editBook);
   expect(await module.canRender(ctx)).toBe(true);
   const model = await module.buildModel(ctx);
-  return { lib, model, host: renderInto(lib, module, model, depth) };
+  if (!carrier) return { lib, model, host: renderInto(lib, module, model, depth) };
+  // Drawn inside a page or report shown to others (data-receipt-carrier).
+  const doc = lib.document;
+  const outer = doc.createElement("div");
+  outer.setAttribute("data-receipt-carrier", carrier);
+  const host = { L0: doc.createElement("div"), L1: doc.createElement("div"), L2: doc.createElement("div"), depth };
+  outer.append(host.L0, host.L1, host.L2);
+  module.render(model, host, {});
+  return { lib, model, host };
 }
+// The run's copy as its holder's own (keep) copy.
+const asKeep = (c) => ({ ...c, audience: "keep" });
 // The table whose column headers are *head*, as rows of cell text.
 function table(root, head) {
   const t = [...root.querySelectorAll("table")].find((x) => [...x.querySelectorAll("th")].map((th) => th.textContent).join("|") === head.join("|"));
@@ -48,6 +59,13 @@ function table(root, head) {
   return [...t.querySelectorAll("tbody tr")].map((tr) => [...tr.children]);
 }
 const BASIS = ["Term", "Record", "Side", "Time", "Time from a named witness"];
+const NO_PAYMENT = "so this page shows no payment and does not check one.";
+const WHY = {
+  statements: `The records this page's term statuses rest on are the sides' own statements, not a payment record, ${NO_PAYMENT}`,
+  mixed: `The records this page's term statuses rest on are the sides' own statements and other deal records, none of them a payment record, ${NO_PAYMENT}`,
+  other: `The records this page's term statuses rest on are deal records other than the sides' statements, none of them a payment record, ${NO_PAYMENT}`,
+  no_records: "No term's status rests on any record yet, so there is no payment record to show.",
+};
 // Steven's run, drawn while the contest window was still open: both terms met so far, not settled yet.
 const openWindow = (c) => ({ ...c, settled: false, rows: c.rows.map((r) => ({ ...r, status: "agreed_so_far" })) });
 
@@ -89,20 +107,24 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     const { host } = await page(openWindow, "L0");
     const state = host.L0.querySelector("[data-deal-state]");
     expect(state.getAttribute("data-deal-state")).toBe("started");
-    expect(state.textContent).toBe("Started · Terms: Both say the same so far (2 of 2)");
+    // The deal-level line stays start.state (section 9); the terms' count sits beside it, outside it.
+    expect(state.textContent).toBe("Started");
+    expect(state.querySelector("[data-deal-terms]")).toBeNull();
+    expect(host.L0.querySelector("[data-deal-terms]").textContent).toBe("Terms: Both say the same so far (2 of 2)");
+    expect(host.L0.querySelector(".cv-metric__value").textContent).toBe("Started · Terms: Both say the same so far (2 of 2)");
     expect(host.L0.querySelector("[data-settled]")).toBeNull();
     expect(host.L0.textContent).not.toMatch(/closed|close\b|done/i);
   });
 
   it("#430: mixed statuses are each counted in the rows' order; a settled deal says settled and no tally", async () => {
     const mixed = await page((c) => ({ ...c, settled: false, rows: [{ ...c.rows[0], status: "waiting", value: null }, { ...c.rows[1], status: "agreed_so_far" }] }), "L0");
-    expect(mixed.host.L0.querySelector("[data-terms-tally]").textContent).toBe("Terms: Waiting for the other side (1 of 2); Both say the same so far (1 of 2)");
+    expect(mixed.host.L0.querySelector("[data-deal-terms]").textContent).toBe("Terms: Waiting for the other side (1 of 2); Both say the same so far (1 of 2)");
     const settled = await page(undefined, "L0");
     expect(settled.host.L0.querySelector("[data-settled]")).not.toBeNull();
-    expect(settled.host.L0.querySelector("[data-terms-tally]")).toBeNull();
+    expect(settled.host.L0.querySelector("[data-deal-terms]")).toBeNull();
     // A deal that has not started has no terms to count.
     const none = await page((c) => ({ ...c, start: { state: "awaiting_agreement", local: false, by: null }, settled: false, rows_state: "not_started", rows: [] }), "L0");
-    expect(none.host.L0.querySelector("[data-terms-tally]")).toBeNull();
+    expect(none.host.L0.querySelector("[data-deal-terms]")).toBeNull();
   });
 
   it("#431: the records table says each time as the header does, the data keeping UTC", async () => {
@@ -119,23 +141,30 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     const { host } = await page();
     expect(host.L1.querySelector('[data-legs="none"]').textContent).toBe("No payment record is among the records the terms' statuses rest on.");
     expect(host.L1.querySelector("[data-legs-why]").getAttribute("data-legs-why")).toBe("statements");
-    expect(host.L1.querySelector("[data-legs-why]").textContent).toBe("Each term's status here rests on the sides' own statements, not on a payment record, so this page shows no payment and does not check one.");
+    expect(host.L1.querySelector("[data-legs-why]").textContent).toBe(WHY.statements);
   });
 
-  it("#432: terms resting on no record yet, or on other records, each say so", async () => {
+  it("#432: terms resting on no record yet, or on other records, each say so; never of each term", async () => {
     const noRecords = (c) => ({ ...c, rows: c.rows.map((r) => ({ ...r, status: "not_due", value: null, relied_on: [] })) });
     const empty = await page(noRecords, "L1", (book) => { book.relied_on = {}; });
     expect(empty.host.L1.querySelector("[data-legs-why]").textContent).toBe("No term's status rests on any record yet, so there is no payment record to show.");
-    // A book pair whose payload names another record type (a dispute, say), or none, is not a statement.
-    for (const type of ["dispute", undefined]) {
-      const { host } = await page(undefined, "L1", (book) => {
-        const x = Object.values(book.relied_on)[0].payload["x-deal-v1"];
-        if (type === undefined) delete x.record_type;
-        else x.record_type = type;
-      });
-      expect(host.L1.querySelector("[data-legs-why]").getAttribute("data-legs-why")).toBe("other");
-      expect(host.L1.querySelector("[data-legs-why]").textContent).toBe("Each term's status here rests on other deal records, not on a payment record, so this page shows no payment and does not check one.");
+    // One term rests on both statements, the other on none: the line speaks of the records, not each term.
+    const half = await page((c) => ({ ...c, rows: [c.rows[0], { ...c.rows[1], status: "not_due", value: null, relied_on: [] }] }), "L1");
+    expect(half.host.L1.querySelector("[data-legs-why]").getAttribute("data-legs-why")).toBe("statements");
+    expect(half.host.L1.querySelector("[data-legs-why]").textContent).toBe(WHY.statements);
+    // A book pair whose payload names another record type (a dispute, say), or none, is not a statement:
+    // beside a statement the records are a mix; with no statement, other records.
+    const typed = (types) => (book) => Object.values(book.relied_on).forEach((pair, i) => {
+      const x = pair.payload["x-deal-v1"];
+      if (types[i] === undefined) delete x.record_type;
+      else x.record_type = types[i];
+    });
+    for (const [types, why] of [[["dispute", "statement"], "mixed"], [[undefined, "statement"], "mixed"], [["dispute", "dispute"], "other"]]) {
+      const { host } = await page(undefined, "L1", typed(types));
+      expect(host.L1.querySelector("[data-legs-why]").getAttribute("data-legs-why")).toBe(why);
+      expect(host.L1.querySelector("[data-legs-why]").textContent).toBe(WHY[why]);
     }
+    for (const text of Object.values(WHY)) expect(text).not.toMatch(/each term/i);
   });
 
   it("#432: a settle record the terms rest on that shows no leg gets no why line", async () => {
@@ -144,13 +173,23 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     expect(host.L1.querySelector("[data-legs-why]")).toBeNull();
   });
 
-  it("#424: the named-witness yes is capsulectl's, said in its voice, never the page's own", async () => {
+  it("#424: the named-witness yes is the report's, said as its, never the page's own", async () => {
     const { host } = await page();
     const cells = table(host.L2, BASIS).map((r) => r[4]);
     for (const cell of cells) {
-      expect(cell.textContent).toBe("yes, as capsulectl reported it");
+      expect(cell.textContent).toBe("yes, as the holder's report states it");
       expect(cell.querySelector("[data-named-witness]").getAttribute("data-named-witness")).toBe("yes");
     }
+    // The holder's own page says "your report"; the same copy carried in a page or report for others does not.
+    const own = await page(asKeep);
+    for (const r of table(own.host.L2, BASIS)) expect(r[4].textContent).toBe("yes, as your report states it");
+    for (const carrier of ["page", "report"]) {
+      const carried = await page(asKeep, "L2", undefined, carrier);
+      for (const r of table(carried.host.L2, BASIS)) expect(r[4].textContent).toBe("yes, as the holder's report states it");
+    }
+    // A record with no named witness says no, in any copy.
+    const no = await page((c) => ({ ...c, rows: c.rows.map((r) => ({ ...r, relied_on: r.relied_on.map((e) => ({ ...e, time: null, witnessed: false })) })) }));
+    for (const r of table(no.host.L2, BASIS)) expect([r[3].textContent, r[4].textContent]).toEqual(["no time", "no"]);
     // The header still says the file carries no witness receipt the page checked.
     expect(host.L0.querySelector('[data-rung="witness"]').textContent).toBe("No outside time stamp: this copy carries no witness receipt.");
   });

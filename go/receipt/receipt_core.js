@@ -1954,12 +1954,15 @@
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
   };
+  // The holder's own copy drawn for the holder: neither a shared copy nor a
+  // page or report shown to others. Its lines may say "your".
+  P.ownPage = function (model) { return model.report.audience === "keep" && !sharedCarrier(this.carrier); };
   P.witness = function (model) {
     // capsulectl's report of the holder's own book (x-deal-v1 keep page,
     // amended u203): said in its voice, only as reported.
     // Only on the holder's own copy drawn for the holder: a shared copy, or a
     // page shown to others, never shows the holder's witness time.
-    var book = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? model.book_witnessed : null;
+    var book = this.ownPage(model) ? model.book_witnessed : null;
     if (book) {
       // One line: the reader's local time, with UTC beside it (a short zone
       // name such as CST is ambiguous), and the file's own fact (#424).
@@ -2507,11 +2510,14 @@
     var parts = [this.token("deal.state", model.start.state)];
     // The deal-level line is the start state, then "settled" or nothing: no close, no done (section 9).
     if (model.start.state === "started" && model.settled) parts.push(" · ", d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
+    var line = d.el("span", { "data-deal-state": model.start.state }, parts);
     // A started deal not yet settled also says where its terms stand, as the rows below give them, so
-    // the line never reads behind the terms ("Started" beside two terms met, #430). It counts the
-    // statuses shown; it is not a deal state and claims no close.
-    else if (model.start.state === "started" && model.rows_state === "listed" && model.rows.length) parts.push(" · ", d.el("span", { "data-terms-tally": "true" }, [this.termsTally(model.rows)]));
-    return d.el("span", { "data-deal-state": model.start.state }, parts);
+    // the value never reads behind the terms ("Started" beside two terms met, #430). It counts the
+    // statuses shown, beside the deal-level line and outside it: it is not a deal state and claims no close.
+    if (model.start.state === "started" && !model.settled && model.rows_state === "listed" && model.rows.length) {
+      return [line, " · ", d.el("span", { "data-deal-terms": "true" }, [this.termsTally(model.rows)])];
+    }
+    return line;
   };
   // "Terms: Both say the same so far (2 of 2)": each status the rows give, in the rows' order, with its count.
   P.termsTally = function (rows) {
@@ -2621,19 +2627,22 @@
       ? [this.kit.dataTable(head, rows), this.note(w(withheld ? "deal.legs.note.withheld" : "deal.legs.note"), { "data-legs": withheld ? "withheld" : "listed" })]
       : [this.note(w(withheld ? "deal.legs.none.withheld" : "deal.legs.none"), { "data-legs": "none" })];
     var why = !rows.length && !withheld ? legsWhy(model.rows) : null;
+    // One line about the records the terms rest on together, never about each term.
     if (why !== null) inner.push(this.note(w("deal.legs.why." + why), { "data-legs-why": why }));
     return [this.kit.section(w("deal.section.legs"), inner)];
   };
   // Why no payment record is shown on a copy that lists its terms (#432), from what the records the
-  // terms rest on are: none at all, only the sides' statements, or other deal records. It says what
-  // the copy carries, not whether a payment was made. A settle record that carries no settlement
-  // member to show gets no line: "not on a payment record" would not be true of it.
+  // terms rest on are, taken together: none at all, only the sides' statements, statements and other
+  // deal records, or only other deal records. It says what the copy carries, not whether a payment
+  // was made, and nothing of any one term. A settle record that carries no settlement member to show
+  // gets no line: "not a payment record" would not be true of it.
   function legsWhy(rows) {
     var types = [];
     rows.forEach(function (row) { row.relied_on.forEach(function (e) { types.push(e.record_type); }); });
     if (!types.length) return "no_records";
     if (types.indexOf("settle") >= 0) return null;
-    return types.every(function (t) { return t === "statement"; }) ? "statements" : "other";
+    var statements = types.filter(function (t) { return t === "statement"; }).length;
+    return statements === types.length ? "statements" : statements ? "mixed" : "other";
   }
   P.dealL1 = function (model) {
     return [
@@ -2648,18 +2657,29 @@
     if (model.bundle_digest) {
       out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
     }
+    // Whether the table shows each record's time and named-witness flag. Both are the holder's own
+    // report's (VerifyReport checks only that a record is witnessed exactly when it has a time), and a
+    // shared copy shows them too. Whether a copy that is not the holder's own page should is a pending
+    // PM question (u219 scope); to hide them there, set this to this.ownPage(model).
+    var witnessColumns = true;
+    // The yes says whose word it is (#424): this page checked no witness receipt. The holder's own page
+    // says "your report"; any other says "the holder's report". The pack's bare
+    // "deal.named_witness.yes" stays as the frozen pack has it (packAddsOnly).
+    var yes = w(this.ownPage(model) ? "deal.named_witness.report.own" : "deal.named_witness.report");
     var basis = [];
     model.rows.forEach(function (row) {
       row.relied_on.forEach(function (e) {
-        // The time in the reader's zone, as the header's (#431). The yes is the holder's report's, as
-        // capsulectl computed it, and says so: this page checked no witness receipt (#424). The pack's
-        // bare "deal.named_witness.yes" stays as the frozen pack has it (packAddsOnly).
-        basis.push([self.termName(row.id), d.el("span", { class: "cv-mono" }, [e.record]), self.sideWord(e.side), e.time !== null ? self.v1Time(e.time) : w("deal.no_time"),
-          d.el("span", { "data-named-witness": e.named_witness ? "yes" : "no" }, [w(e.named_witness ? "deal.named_witness.reported" : "deal.named_witness.no")])]);
+        var cells = [self.termName(row.id), d.el("span", { class: "cv-mono" }, [e.record]), self.sideWord(e.side)];
+        // The time in the reader's zone, as the header's (#431).
+        if (witnessColumns) cells.push(e.time !== null ? self.v1Time(e.time) : w("deal.no_time"),
+          d.el("span", { "data-named-witness": e.named_witness ? "yes" : "no" }, [e.named_witness ? yes : w("deal.named_witness.no")]));
+        basis.push(cells);
       });
     });
+    var head = [w("deal.col.row"), w("deal.col.record"), w("deal.col.side")];
+    if (witnessColumns) head.push(w("deal.col.time"), w("deal.col.named_witness"));
     var inner = basis.length
-      ? [kit.dataTable([w("deal.col.row"), w("deal.col.record"), w("deal.col.side"), w("deal.col.time"), w("deal.col.named_witness")], basis)]
+      ? [kit.dataTable(head, basis)]
       : [this.note(w("deal.basis.none"))];
     out.push(kit.section(w("deal.section.basis"), inner, 3));
     var rest = [];

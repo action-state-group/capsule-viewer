@@ -5,13 +5,18 @@
 // report, a paid deal whose two terms both read met. Terms in words and
 // sides that never break inside a word (#429), the terms' standing on the
 // deal line (#430), the records table's times in the reader's zone (#431),
-// why no payment record is shown (#432), and the named-witness yes in
-// capsulectl's voice (#424).
+// why no payment record is shown (#432), and the named-witness yes as the
+// report's (#424). Then the holder's own keep copy (keep-copy.bundle.json),
+// the case Steven ran on Maya's copy, on a page with capsulectl's report.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { renderReceipt } from "../src/receipt.js";
+import {
+  createPresentationRegistry,
+  renderEvidenceGraph,
+} from "../src/evidence-graph-view.js";
+import { receiptModules, renderReceipt } from "../src/receipt.js";
 import {
   RECEIPT_CORE,
   RECEIPT_MANIFESTS,
@@ -94,77 +99,158 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
     expect(manifest.executable.style_sha256).toHaveLength(3);
   });
 
-  it("#431 and #424: each time in the reader's zone, and the yes in capsulectl's voice", async () => {
+  it("#431 and #424: each time in the reader's zone, and the yes as the holder's report's", async () => {
     const host = await drawn();
     for (const r of rows(host, BASIS)) {
       expect(
         r[3]!.querySelector("[data-time]")?.getAttribute("data-time"),
       ).toBe("2026-11-25T14:31:31Z");
       expect(r[3]!.textContent).toBe(local("2026-11-25T14:31:31Z"));
-      expect(r[4]!.textContent).toBe("yes, as capsulectl reported it");
+      expect(r[4]!.textContent).toBe("yes, as the holder's report states it");
     }
     expect(host.textContent).not.toContain("2026-11-25T14:31:31Z");
   });
 
-  it("#432: the paid deal says its terms rest on the sides' statements, not a payment record", async () => {
+  it("#432: the paid deal says its records are the sides' statements, not a payment record", async () => {
     const host = await drawn();
     expect(host.querySelector("[data-legs-why]")?.textContent).toBe(
-      "Each term's status here rests on the sides' own statements, not on a payment record, so this page shows no payment and does not check one.",
+      "The records this page's term statuses rest on are the sides' own statements, not a payment record, so this page shows no payment and does not check one.",
     );
   });
 
-  it("#430: before the contest window ends, the deal line says where the terms stand", async () => {
+  it("#430: before the contest window ends, the deal line says where the terms stand, beside it", async () => {
     // The run's report as drawn at 14:41, the window still open: both met so
     // far, not settled. The module is given capsulectl's check, as a page is.
-    const b = bundle();
-    const ext = b["extensions"] as Obj;
-    const pair = ext["x-deal-report/v0"] as Obj;
-    const content = structuredClone(pair["agent_input"]) as Obj;
-    content["settled"] = false;
-    content["rows"] = (content["rows"] as Obj[]).map((r) => ({
-      ...r,
-      status: "agreed_so_far",
-    }));
-    pair["agent_input"] = content;
-    const core = RECEIPT_CORE as {
-      createModule(
-        kind: string,
-        env: object,
-      ): {
-        buildModel(context: unknown): unknown;
-        render(model: unknown, host: object): void;
-      };
-    };
-    const module = core.createModule("deal", {
-      verification: () => ({
-        verifier: "test",
-        outcome: "verified",
-        checks: [],
-      }),
-      assurance: () => ({
-        bundle_digest: "ab".repeat(32),
-        witnesses: "withheld",
-        countersignatures: [],
-        report_checked: "pass",
-      }),
+    const { L0 } = await edited((content) => {
+      content["settled"] = false;
+      content["rows"] = (content["rows"] as Obj[]).map((r) => ({
+        ...r,
+        status: "agreed_so_far",
+      }));
     });
-    const context = {
-      bundle: { records: [], extensions: ext },
-      records: [],
-      resolvedDisclosures: new Map(),
-      root: null,
-      completeness: { memberships: {} },
-    };
-    const model = await module.buildModel(context);
-    const L0 = document.createElement("div");
-    module.render(model, {
-      L0,
-      L1: document.createElement("div"),
-      L2: document.createElement("div"),
-      depth: "L0",
-    });
-    expect(L0.querySelector("[data-deal-state]")?.textContent).toBe(
-      "Started · Terms: Both say the same so far (2 of 2)",
+    expect(L0.querySelector("[data-deal-state]")?.textContent).toBe("Started");
+    expect(L0.querySelector("[data-deal-terms]")?.textContent).toBe(
+      "Terms: Both say the same so far (2 of 2)",
     );
+  });
+
+  it("#424: the same copy as its holder's own says 'your report'", async () => {
+    const { L2 } = await edited((content) => {
+      content["audience"] = "keep";
+    });
+    for (const r of rows(L2, BASIS))
+      expect(r[4]!.textContent).toBe("yes, as your report states it");
+  });
+});
+
+// The run's copy with its report edited by *edit*, drawn by the module with
+// capsulectl's check given (the edit changes the bundle, so a verify report
+// for the original bytes would not be this bundle's).
+async function edited(
+  edit: (content: Obj) => void,
+): Promise<{ L0: HTMLElement; L2: HTMLElement }> {
+  const b = bundle();
+  const ext = b["extensions"] as Obj;
+  const pair = ext["x-deal-report/v0"] as Obj;
+  const content = structuredClone(pair["agent_input"]) as Obj;
+  edit(content);
+  pair["agent_input"] = content;
+  const core = RECEIPT_CORE as {
+    createModule(
+      kind: string,
+      env: object,
+    ): {
+      buildModel(context: unknown): unknown;
+      render(model: unknown, host: object): void;
+    };
+  };
+  const module = core.createModule("deal", {
+    verification: () => ({ verifier: "test", outcome: "verified", checks: [] }),
+    assurance: () => ({
+      bundle_digest: "ab".repeat(32),
+      witnesses: "withheld",
+      countersignatures: [],
+      report_checked: "pass",
+    }),
+  });
+  const model = await module.buildModel({
+    bundle: { records: [], extensions: ext },
+    records: [],
+    resolvedDisclosures: new Map(),
+    root: null,
+    completeness: { memberships: {} },
+  });
+  const L0 = document.createElement("div");
+  const L2 = document.createElement("div");
+  module.render(model, {
+    L0,
+    L1: document.createElement("div"),
+    L2,
+    depth: "L2",
+  });
+  return { L0, L2 };
+}
+
+// The holder's own keep copy, the case Steven ran on Maya's copy: its one
+// term is not due yet and rests on no record, and capsulectl's report is
+// given to the page as a page gives it (#405 route 1).
+describe("the holder's x-deal-v1 keep copy on a page, with capsulectl's report", () => {
+  const keepBundle = (): Obj =>
+    JSON.parse(data("keep-copy.bundle.json")) as Obj;
+  const keepReport = (witnessed?: Obj): Obj => {
+    const r = JSON.parse(data("keep-copy.verify.json")) as Obj;
+    const entry = (r["extensions"] as Obj[]).find(
+      (e) => e["kind"] === "x-deal-v1",
+    )!;
+    if (witnessed !== undefined) entry["witnessed"] = witnessed;
+    return r;
+  };
+  const HEADER =
+    "This file carries no witness receipt, so this page could not check a time-stamp itself.";
+  async function keepPage(verifierReport: Obj): Promise<HTMLElement> {
+    const registry = createPresentationRegistry();
+    for (const module of receiptModules()) registry.register(module);
+    const root = document.createElement("main");
+    document.body.append(root);
+    await renderEvidenceGraph(keepBundle(), root, undefined, {
+      depth: "L2",
+      registry,
+      verifierReport,
+    });
+    return root;
+  }
+
+  it("says capsulectl's verified time-stamp once, in its voice, in place of the header line (u219)", async () => {
+    const root = await keepPage(
+      keepReport({
+        status: "verified",
+        witness: "W",
+        at: "2026-11-25T14:41:19Z",
+      }),
+    );
+    expect(root.textContent).not.toContain(HEADER);
+    const line = root.querySelector('[data-rung="witness"]')?.textContent;
+    expect(line).toContain("Time-stamped by W at ");
+    expect(line).toContain(
+      "as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself.",
+    );
+    // With no verified time-stamp reported, the header line stays.
+    expect((await keepPage(keepReport())).textContent).toContain(HEADER);
+  });
+
+  it("#430 and #432: the tally of its one term, and why no payment record is shown", async () => {
+    const root = await keepPage(keepReport());
+    expect(root.querySelector("[data-deal-state]")?.textContent).toBe(
+      "Started",
+    );
+    expect(root.querySelector("[data-deal-terms]")?.textContent).toBe(
+      "Terms: Not due (1 of 1)",
+    );
+    expect(root.querySelector("[data-legs-why]")?.textContent).toBe(
+      "No term's status rests on any record yet, so there is no payment record to show.",
+    );
+    // Its term rests on no record, so there is no named-witness row to word.
+    expect(root.textContent).toContain("No record is listed for any term.");
+    expect(root.textContent).not.toContain("as your report states it");
   });
 });
