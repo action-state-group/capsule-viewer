@@ -264,3 +264,44 @@ describe("the receipt export (#383)", () => {
     });
   });
 });
+
+// A downgraded x-deal-v0 copy (capsule-viewer#452): the report dropped and its
+// text put inline in x-deal-v0, as evidencebook's check-deal-pages.sh
+// deal-receipt-downgraded case makes it. Sherlock2's two lines, on #452.
+const downgraded = (name = "main-standalone-keep"): Obj => {
+  const b = JSON.parse(fixture(name)) as Obj;
+  const extensions = b["extensions"] as Obj;
+  const report = (
+    (extensions["x-deal-report/v0"] as Obj)["agent_input"] as Obj
+  )["report"] as Obj;
+  extensions["x-deal-v0"] = { ...report, did_line: "A line nobody sealed." };
+  delete extensions["x-deal-report/v0"];
+  return b;
+};
+
+describe("a downgraded x-deal-v0 copy (#452)", () => {
+  it("says its text is not shown and capsulectl's verdict on it, and draws nothing from it", async () => {
+    const result = await checkReceipt(downgraded());
+    expect(result).toEqual({ kind: "cannot_check", reason: "downgraded" });
+    // Not "can't be checked here": deal verify reports it INVALID (Sherlock2, #453).
+    expect(receiptLabel(result)).toBe("receipt text not checked");
+    expect(receiptPageLines(result)).toEqual({
+      tone: "bad",
+      lines: [
+        "⚠️ The receipt's text is not shown: this copy names no sealed report, so its text could not be checked.",
+        "`capsulectl deal verify --bundle <file>` reports this copy as INVALID (sealed_report_not_named).",
+      ],
+    });
+    const drawn = host();
+    drawn.append(document.createElement("p"));
+    expect(await renderReceipt(downgraded(), drawn)).toEqual(result);
+    // Not drawn: the page lines say it once (receiptPageLines).
+    expect(drawn.childNodes.length).toBe(0);
+  });
+
+  it("a downgraded copy whose records were changed did not verify, never that it can't be checked", async () => {
+    const b = downgraded();
+    (b["records"] as Obj[])[0]!["timestamp"] = "2000-01-01T00:00:00Z";
+    expect((await checkReceipt(b)).kind).toBe("did_not_verify");
+  });
+});
