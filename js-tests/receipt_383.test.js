@@ -55,7 +55,7 @@ describe("a receipt carried in a report (#383)", () => {
   });
 
   it("the current wording pack only adds keys to the frozen one the Python oracle reads", () => {
-    expect(packAddsOnly()).toEqual({ changed: [], sameId: true });
+    expect(packAddsOnly()).toEqual({ changed: [], sameId: false }); // the id differs by design (evidencebook#956)
   });
 
   it("a producer-selected copy passes the gate as the page's verdict does; any other withheld coverage does not", () => {

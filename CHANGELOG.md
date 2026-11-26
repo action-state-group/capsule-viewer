@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The receipt modules' wording pack in `go/receipt` is `capsuleviewer.receipt.wording.en/v1`, with the same words: a person's receipt page no longer names a pack called "example" (Sherlock2 on evidencebook#956, ops a3c37efc). The pack's digest changes with its id (the id is part of the pack), and `go/receipt`'s scripts and manifests and `ts/src/receipt-core.generated.ts` change their hashes with it. The frozen Python twin keeps its example pack; the parity tests read its pages with the current id. Pages written before keep their own scripts and pack, and still open.
+
 ### Added
 
 - A page or the receipt API can carry capsulectl's own verify report for an x-deal-v1 copy, so its receipt draws (#405 route 1). A page cannot run the x-deal-v1 report rule itself. With `verifierReport` (the output of `capsulectl deal verify --bundle`, `capsule-cli-result/v1`) given to `renderEvidenceGraph`, `checkReceipt` or `renderReceipt`, the report is read only when it is this bundle's: its format, its `bundle_digest` and its record identities, as the Python twin checks them.
