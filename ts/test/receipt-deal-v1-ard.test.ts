@@ -77,10 +77,10 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
     const host = await drawn();
     const basis = rows(host, ["Term", "Record", "Side"]);
     expect(basis.map((r) => [r[0]!.textContent, r[2]!.textContent])).toEqual([
-      ["Paid as agreed", "buyer"],
-      ["Paid as agreed", "seller"],
-      ["Delivered", "buyer"],
-      ["Delivered", "seller"],
+      ["Payment as agreed", "buyer"],
+      ["Payment as agreed", "seller"],
+      ["Delivery", "buyer"],
+      ["Delivery", "seller"],
     ]);
     for (const r of basis)
       for (const i of [0, 2])
@@ -113,7 +113,7 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
   it("#432: the paid deal says its records are the sides' statements, not a payment record", async () => {
     const host = await drawn();
     expect(host.querySelector("[data-legs-why]")?.textContent).toBe(
-      "The records this page's term statuses rest on are the sides' own statements, not a payment record, so this page shows no payment and does not check one.",
+      "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment.",
     );
   });
 

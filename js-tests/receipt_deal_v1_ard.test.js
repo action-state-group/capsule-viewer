@@ -60,11 +60,10 @@ function table(root, head) {
   return [...t.querySelectorAll("tbody tr")].map((tr) => [...tr.children]);
 }
 const BASIS = ["Term", "Record", "Side", "Time", "Time from a named witness"];
-const NO_PAYMENT = "so this page shows no payment and does not check one.";
 const WHY = {
-  statements: `The records this page's term statuses rest on are the sides' own statements, not a payment record, ${NO_PAYMENT}`,
-  mixed: `The records this page's term statuses rest on are the sides' own statements and other deal records, none of them a payment record, ${NO_PAYMENT}`,
-  other: `The records this page's term statuses rest on are deal records other than the sides' statements, none of them a payment record, ${NO_PAYMENT}`,
+  statements: "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment.",
+  mixed: "These terms rest on what the sides say and on other deal records. None is a payment record, so this page does not show or check a payment.",
+  other: "These terms rest on deal records, none of them a payment record, so this page does not show or check a payment.",
   no_records: "No term's status rests on any record yet, so there is no payment record to show.",
 };
 // Steven's run, drawn while the contest window was still open: both terms met so far, not settled yet.
@@ -74,13 +73,13 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
   it("#429: names each term in words, keeps its id on the element, and words each side", async () => {
     const { host } = await page(asKeep);
     const rows = table(host.L1, ["Term", "Owed by", "Status", "Due", "Contest window ends", "Detail"]);
-    expect(rows.map((r) => [r[0].textContent, r[1].textContent])).toEqual([["Paid as agreed", "buyer"], ["Delivered", "seller"]]);
+    expect(rows.map((r) => [r[0].textContent, r[1].textContent])).toEqual([["Payment as agreed", "buyer"], ["Delivery", "seller"]]);
     const term = rows[0][0].querySelector("[data-row-id]");
     expect([term.getAttribute("data-row-id"), term.getAttribute("title"), term.className]).toEqual(["paid_as_agreed", "paid_as_agreed", "cv-receipt-word"]);
     expect(rows[0][1].querySelector(".cv-receipt-word").getAttribute("data-side")).toBe("buyer");
     const basis = table(host.L2, BASIS);
     expect(basis.map((r) => [r[0].textContent, r[2].textContent])).toEqual([
-      ["Paid as agreed", "buyer"], ["Paid as agreed", "seller"], ["Delivered", "buyer"], ["Delivered", "seller"],
+      ["Payment as agreed", "buyer"], ["Payment as agreed", "seller"], ["Delivery", "buyer"], ["Delivery", "seller"],
     ]);
     for (const r of basis) for (const i of [0, 2]) expect(r[i].querySelector(".cv-receipt-word")).not.toBeNull();
     expect(host.L1.textContent + host.L2.textContent).not.toContain("paid_as_agreed");
@@ -200,7 +199,7 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     for (const p of [await page(), await page(asKeep, "L2", undefined, "page"), await page(asKeep, "L2", undefined, "report")]) {
       const rows = table(p.host.L2, ["Term", "Record", "Side"]);
       expect(rows.map((r) => [r[0].textContent, r[2].textContent])).toEqual([
-        ["Paid as agreed", "buyer"], ["Paid as agreed", "seller"], ["Delivered", "buyer"], ["Delivered", "seller"],
+        ["Payment as agreed", "buyer"], ["Payment as agreed", "seller"], ["Delivery", "buyer"], ["Delivery", "seller"],
       ]);
       expect(table(p.host.L2, BASIS)).toBeNull();
       noRecordTime(p.host);

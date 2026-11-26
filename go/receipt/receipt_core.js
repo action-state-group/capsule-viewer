@@ -2532,7 +2532,8 @@
     }).join("; ") });
   };
   // A term by its name in words (#429). The page holds no terms pack (section 9, "Row text"), so the
-  // wording pack words the profile's known term ids; any other id is shown as it is. The id stays on
+  // wording pack words the profile's known term ids, as a stand-in (Sherlock2, #437): once a deal
+  // terms pack carries term text, the pack's name wins over these. Any other id is shown as it is. The id stays on
   // the element. A name or a side breaks between words, never inside one (receipt.css).
   P.termName = function (id) {
     var text = word("deal.term." + id);
