@@ -321,6 +321,12 @@ const LAYOUT_UNIT = 1 / 64;
 // The share of pixels two screenshots of equal text, boxes and styles may
 // differ in (rasterisation, never content: see (3) above).
 const PIXEL_TOLERANCE = 0.002;
+// The settlement line (capsule-viewer#383), which the frozen Python twin never
+// draws: taken off the script's page before it is compared with the Python
+// page, so every other element, box and pixel is still compared.
+// js-tests/receipt_settlement.test.js tests the line itself; the parity test
+// lists which fixtures draw it.
+const DROP_SETTLEMENT = `(() => { const lines = document.querySelectorAll('[data-rung="settlement"]'); lines.forEach((e) => e.remove()); return lines.length; })()`;
 const OPEN_ALL = `document.querySelectorAll("details").forEach((d) => { d.open = true; }); document.querySelectorAll("details").length`;
 
 describe.skipIf(!chromePath)("in headless Chromium", () => {
@@ -451,7 +457,11 @@ describe.skipIf(!chromePath)("in headless Chromium", () => {
           const layout = {};
           for (const [side, file] of Object.entries(files)) {
             await tab.open(pathToFileURL(file).href, { width, media: "screen" });
-            if (side === "script") expect((await settle()).rendered).toBe("true");
+            if (side === "script") {
+              expect((await settle()).rendered).toBe("true");
+              // Only the keep copy discloses an action naming its rail (card).
+              expect(await tab.evaluate(DROP_SETTLEMENT), `${label}: settlement lines`).toBe(g.name === "keep" ? 1 : 0);
+            }
             if (state === "open") await tab.evaluate(OPEN_ALL);
             const settled = await tab.call("Runtime.evaluate", { expression: SETTLE_FOR_SHOT, awaitPromise: true, returnByValue: true });
             expect(settled.result.value, `${label} ${side}: the kit stylesheet applied`).toBe(true);

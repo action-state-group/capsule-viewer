@@ -462,6 +462,163 @@
     });
   }
 
+  // ---- the settlement line (capsule-viewer#383; Sherlock2's ruling on the deal-view lines) ----
+  //
+  // The x-deal-v0 buyer receipt says how the payment settled, by rail (the
+  // seller copy with the next change), from the settled payee-observed legs among this copy's records
+  // (draft-mih-agent-settlement-records; Mesh-LLM/capsules-plugin
+  // adapters/lightning-v0.md), as evidencebook's deal view did. A Lightning
+  // leg's proof is its disclosed preimage; this page hashes nothing, so the
+  // page's runtime checks it (env.preimageCheck: the npm export passes
+  // paymentPreimageCheck, a page's runtime offers EvidenceGraph's,
+  // capsule-viewer#214), asked before the model is built and kept per
+  // context, as the standalone report's check is. Only a check that ran is
+  // claimed: no runtime check, a verifier's report given in env, or any answer
+  // but PASS or FAIL leaves the proof "sealed here, not checked".
+  var SETTLEMENT_CHECKS = typeof WeakMap === "function" ? new WeakMap() : null;
+  // A leg names Bitcoin by its CAIP-19 asset id (evidencebook
+  // deal_settlement_lightning.go, lightningBTC); the band names it BTC.
+  var ASSET_CODES = { "bip122:000000000019d6689c085ae165831e93/slip44:0": "BTC" };
+  var BAND_SYMBOLS = { USD: "$", EUR: "€", GBP: "£" };
+  var LEG_VALUE = /^(0|[1-9][0-9]*)$/;
+
+  // The settled payee-observed legs among the context's records, each with
+  // its disclosed agent_input (null when this copy does not disclose it).
+  function settledLegs(context, disclosed) {
+    var legs = [];
+    seq(map(context).records).forEach(function (r) {
+      var s = map(get(r, "settlement"));
+      var cid = str(get(r, "capsule_id"));
+      if (cid === null || s.leg !== "payee_observed" || s.status !== "settled") return;
+      var input = disclosed(cid, "agent_input");
+      legs.push({ settlement: s, input: isMap(input) ? input : null });
+    });
+    return legs;
+  }
+  function legRail(legs) {
+    var type = function (l) { return or(str(get(map(get(l.settlement, "payment_ref")), "type")), ""); };
+    if (legs.every(function (l) { return type(l) === "ln.payment_hash"; })) return "lightning";
+    if (legs.every(function (l) { return type(l).indexOf("x402.") === 0; })) return "x402";
+    return "other";
+  }
+  function legPreimage(l) {
+    var p = get(map(get(l.input, "body")), "preimage");
+    return typeof p === "string" && p !== "" ? p : null;
+  }
+  // The leg proof's state before any check: withheld (a leg's record is not
+  // disclosed in this copy), sealed (every leg carries a preimage, as the deal
+  // view required), partial (some legs carry one, some don't; nothing is
+  // checked, so no leg is claimed either way) or final (no leg carries one:
+  // the wallet's report only).
+  function lightningProof(legs) {
+    if (legs.some(function (l) { return l.input === null; })) return "withheld";
+    var carried = legs.filter(function (l) { return legPreimage(l) !== null; }).length;
+    return carried === legs.length ? "sealed" : carried ? "partial" : "final";
+  }
+
+  // Two non-negative decimal digit strings added.
+  function addDigits(a, b) {
+    var out = "", carry = 0;
+    for (var i = a.length - 1, j = b.length - 1; i >= 0 || j >= 0 || carry; i--, j--) {
+      var s = (i >= 0 ? a.charCodeAt(i) - 48 : 0) + (j >= 0 ? b.charCodeAt(j) - 48 : 0) + carry;
+      out = String(s % 10) + out;
+      carry = s >= 10 ? 1 : 0;
+    }
+    return out.replace(/^0+(?=.)/, "");
+  }
+  // Ruling u94: one band per exchange, never per leg; the legs' received and
+  // receive_fee summed, only when all share one currency and scale and each
+  // value is a non-negative integer. A zero sum, or no amount, is no band.
+  // decade = digits - assetScale - 1 (lightning-v0's "Band"), never converted.
+  function legBand(legs) {
+    var amounts = [];
+    legs.forEach(function (l) {
+      ["received", "receive_fee"].forEach(function (k) { if (own(l.settlement, k)) amounts.push(get(l.settlement, k)); });
+    });
+    if (!amounts.length) return null;
+    var code = str(get(map(amounts[0]), "assetCode")), scale = int(get(map(amounts[0]), "assetScale"));
+    if (code === null || code === "" || scale === null || scale < 0) return null;
+    var sum = "0";
+    for (var i = 0; i < amounts.length; i++) {
+      var a = map(amounts[i]), value = get(a, "value");
+      if (get(a, "assetCode") !== code || int(get(a, "assetScale")) !== scale || typeof value !== "string" || !LEG_VALUE.test(value)) return null;
+      sum = addDigits(sum, value);
+    }
+    if (sum === "0") return null;
+    return { currency: own(ASSET_CODES, code) ? ASSET_CODES[code] : code, decade: sum.length - scale - 1 };
+  }
+
+  // The band's words, as the History card names a size
+  // (src/capsule_viewer/static/standard_history_card.js bandLabel): a
+  // currency with a symbol as "$10 – $99", every band below its first ten
+  // units as "under $10"; another currency in its own units.
+  function bandPower(d) {
+    if (d > 18 || d < -18) return "1e" + d;
+    if (d >= 0) return "1" + new Array(d + 1).join("0");
+    return "0." + new Array(-d).join("0") + "1";
+  }
+  function bandGrouped(digits) { return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function bandLabel(band) {
+    var sym = own(BAND_SYMBOLS, band.currency) ? BAND_SYMBOLS[band.currency] : null;
+    if (sym !== null && band.decade <= 17) {
+      if (band.decade <= 0) return w("size.under", { amount: sym + "10" });
+      return w("size.between", { low: sym + bandGrouped(bandPower(band.decade)), high: sym + bandGrouped(bandPower(band.decade + 1).slice(1).replace(/0/g, "9")) });
+    }
+    return w("size.range", { low: bandPower(band.decade), high: bandPower(band.decade + 1), currency: band.currency });
+  }
+
+  // The line's model, or null when nothing is drawn: no leg and no disclosed
+  // action naming a rail other than the simulated one. `checked` is the runtime's answer kept for this
+  // context ("proof", "failed" or "sealed"), or undefined.
+  function settlementOf(v, checked) {
+    var legs = settledLegs(v.context, v.disclosed);
+    if (!legs.length) {
+      // The first rail a disclosed action names, other than the simulated one:
+      // test money is said once, at the top (money.test; the 0.25.0 top line),
+      // so it draws no second line here, and never hides a real rail named after it.
+      var rail = null;
+      v.records.forEach(function (cid) {
+        var p = v.disclosed(cid, "agent_input");
+        var named = str(get(map(get(p, "body")), "rail"));
+        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "" && named !== TEST_RAIL) rail = named;
+      });
+      return rail === null ? null : { state: "missing", rail: rail, band: null };
+    }
+    var railOf = legRail(legs);
+    var state = railOf !== "lightning" ? railOf : lightningProof(legs);
+    if (state === "sealed" && (checked === "proof" || checked === "failed")) state = checked;
+    return { state: state, rail: null, band: legBand(legs) };
+  }
+
+  // The pending runtime check of a context's Lightning proofs, or null when
+  // there is none to ask: no legs, another rail, a leg withheld or no
+  // preimage, no runtime check, already answered, or no place to keep it.
+  function askSettlementCheck(context, check) {
+    if (SETTLEMENT_CHECKS === null || SETTLEMENT_CHECKS.has(context) || typeof check !== "function") return null;
+    var legs = settledLegs(context, disclosedIn(context));
+    if (!legs.length || legRail(legs) !== "lightning" || lightningProof(legs) !== "sealed") return null;
+    var answers;
+    try {
+      answers = Promise.all(legs.map(function (l) { return check(get(l.settlement, "payment_ref"), legPreimage(l)); }));
+    } catch (err) {
+      answers = Promise.reject(err);
+    }
+    return answers.then(function (got) {
+      // A FAIL is the runtime's answer that the check ran and a proof does not match.
+      var state = got.every(function (a) { return a === "PASS"; }) ? "proof" : got.some(function (a) { return a === "FAIL"; }) ? "failed" : "sealed";
+      SETTLEMENT_CHECKS.set(context, state);
+    }, function () {
+      SETTLEMENT_CHECKS.set(context, "sealed");
+    });
+  }
+
+  // The page runtime's check of one leg's Lightning proof, or null without one.
+  function pagePreimageCheck(paymentRef, preimage) {
+    var graph = root.EvidenceGraph;
+    if (!graph || typeof graph.paymentPreimageCheck !== "function") return Promise.resolve(null);
+    return graph.paymentPreimageCheck(paymentRef, preimage);
+  }
+
   // A carried copy, verified by the page's runtime on its own.
   function pageMemberContext(bundle) {
     var graph = root.EvidenceGraph;
@@ -472,17 +629,23 @@
   }
 
   // The context, read as the Python twin's VerifiedBundleContext is read.
+  // A record member's payload as the runtime resolved it, or null unless disclosed.
+  function disclosedIn(context) {
+    var resolved = map(context).resolvedDisclosures;
+    return function (id, member) {
+      var entry = resolved && typeof resolved.get === "function" ? resolved.get(id) : undefined;
+      var r = entry ? entry[member] : undefined;
+      return r && r.state === "disclosed" ? (r.payload === undefined ? null : r.payload) : null;
+    };
+  }
+
   function view(context, env) {
     var c = map(context);
     var bundle = map(c.bundle);
     var records = seq(c.records).map(function (r) { return map(r).capsule_id; }).filter(function (id) { return typeof id === "string"; });
     var resolved = c.resolvedDisclosures;
     var verification = env.verification(context);
-    var disclosed = function (id, member) {
-      var entry = resolved && typeof resolved.get === "function" ? resolved.get(id) : undefined;
-      var r = entry ? entry[member] : undefined;
-      return r && r.state === "disclosed" ? (r.payload === undefined ? null : r.payload) : null;
-    };
+    var disclosed = disclosedIn(context);
     var mismatch = records.some(function (id) {
       var entry = resolved && typeof resolved.get === "function" ? resolved.get(id) : undefined;
       return !!entry && ["agent_input", "agent_output"].some(function (m) { return entry[m] && entry[m].state === "disclosure_mismatch"; });
@@ -1951,6 +2114,7 @@
     // refuses the copy before it is drawn).
     if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
+    if (model.settlement) parts.push(this.p(this.settlement(model.settlement), { "data-rung": "settlement", "data-settlement": model.settlement.state }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
   };
@@ -1973,6 +2137,14 @@
     if (model.witnessed === "fail") return w("rung.witness_failed");
     if (model.witnessed === "withheld") return w("rung.unwitnessed");
     return w("rung.unreported");
+  };
+  // The settlement line (settlementOf): its rail and proof, then the size band when there is one.
+  P.settlement = function (line) {
+    if (line.state === "missing") {
+      return line.rail === "card" ? w("settlement.card") : w("settlement.missing", { rail: line.rail.replace(/_/g, " ") });
+    }
+    var text = w(["x402", "other"].indexOf(line.state) >= 0 ? "settlement." + line.state : "settlement.lightning." + line.state);
+    return line.band ? text + w("settlement.size", { band: bandLabel(line.band) }) : text;
   };
   P.countersign = function (model) {
     // A two-sided copy is not unsigned by the other party: its half is above.
@@ -2893,6 +3065,9 @@
   //   reportCheck     bundle -> "pass", "fail" or null (or a promise of one): the page
   //                   runtime's check of the copy's standalone report, asked on a page
   //                   (no assurance given) for the copy itself, not for a carried copy
+  //   preimageCheck   (payment_ref, preimage) -> "PASS", "FAIL", "NOT_PRESENT",
+  //                   "NOT_CHECKED" (or a promise of one): one Lightning leg's proof,
+  //                   asked on a page for the buyer receipt's settlement line
   function createModule(kind, env) {
     if (!own(DRAW, kind)) throw new Error("no receipt module " + kind);
     var e = {
@@ -2902,6 +3077,7 @@
       composition: (env && env.composition) || compositionOf,
       memberContext: (env && env.memberContext) || pageMemberContext,
       reportCheck: (env && env.reportCheck) || pageReportCheck,
+      preimageCheck: (env && env.preimageCheck) || pagePreimageCheck,
       // The page says each time in the reader's zone; the parity tests leave it off to compare with the script-free twin.
       localTime: !!(env && env.localTime),
     };
@@ -2929,12 +3105,24 @@
       if (reportChecked(c.verification, EXTENSION_V1) !== null) return false;
       return view(context, e).verified === true;
     };
+    // The buyer's receipt only: the seller copy's own payment lines ("not
+    // recorded in this copy") come with the next change, worded with it.
+    var settles = kind === "unilateral";
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
       if (reportRuleNotRun(context)) return { cannot_check: true, reason: "report_rule" };
-      var asked = pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null;
-      if (asked !== null) return asked.then(function () { return buildChecked(context); });
+      var asked = [
+        pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null,
+        // The settlement line's Lightning proof, on the x-deal-v0 buyer receipt only.
+        pageChecks && settles ? askSettlementCheck(context, e.preimageCheck) : null,
+      ].filter(function (p) { return p !== null; });
+      if (asked.length) return Promise.all(asked).then(function () { return buildChecked(context); });
       return buildChecked(context);
+    };
+    // The settlement line (see settlementOf), on the receipt model the copy notes draw from.
+    var withSettlement = function (v, receipt) {
+      var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
+      if (line !== null) receipt.settlement = line;
     };
     var buildChecked = function (context) {
       var v = view(context, e);
@@ -2944,7 +3132,9 @@
       // A seller's copy, by its packaging or by its own sealed records, is
       // never shown as a buyer's receipt.
       if (sellerKindEngaged(v) || sealedSide(v) === "seller") throw new Unavailable("a seller's copy is the seller receipt's");
-      return buildReceipt(v, e.audience);
+      var receipt = buildReceipt(v, e.audience);
+      withSettlement(v, receipt);
+      return receipt;
     };
     var declined = function (err) {
       if (err instanceof Unavailable) return false;

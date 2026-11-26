@@ -160,6 +160,25 @@ export function withoutAmountCard(doc, html) {
   return t.innerHTML;
 }
 
+/**
+ * The settlement line, which the frozen twin never draws (capsule-viewer#383:
+ * the x-deal-v0 buyer receipt says how the payment settled, by rail,
+ * as evidencebook's deal view did), taken out of a script's model and render
+ * so every other field and byte is still compared with the twin.
+ * js-tests/receipt_settlement.test.js tests the line itself.
+ */
+export function withoutSettlement(model) {
+  const out = JSON.parse(JSON.stringify(model));
+  delete out.settlement;
+  if (out.receipt && typeof out.receipt === "object") delete out.receipt.settlement;
+  return out;
+}
+/** The script's level elements with the settlement line removed (see withoutSettlement). */
+export function withoutSettlementLine(nodes) {
+  for (const node of nodes) for (const line of node.querySelectorAll('[data-rung="settlement"]')) line.remove();
+  return nodes;
+}
+
 /** HTML text (the Python module's render) parsed and canonicalised. */
 export function canonHtml(doc, html) {
   const t = doc.createElement("template");
