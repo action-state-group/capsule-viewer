@@ -13555,6 +13555,37 @@ ${body}
   var VERIFIER_REPORT_VERSION = "capsule-cli-result/v1";
   var DEAL_V12 = "x-deal-v1";
   var STANDALONE2 = "x-deal-report/v0";
+  function countersignedStamps(stamps) {
+    return stamps.map((raw) => {
+      const s = obj2(raw);
+      const kind = typeof s["kind"] === "string" ? s["kind"] : "unknown";
+      const name = s["name"];
+      const at = obj2(s["statement"])["recomputedAt"];
+      return {
+        kind,
+        ...kind === "resolved" && typeof name === "string" ? { name } : {},
+        ...kind === "resolved" && typeof at === "string" ? { at } : {}
+      };
+    });
+  }
+  var REPORTED_CHECKS = [
+    "producer_signatures",
+    "interval_coverage",
+    "graph_closure",
+    "per_record_membership",
+    "checkpoint",
+    "witnesses"
+  ];
+  function reportedChecks(r) {
+    const out = {};
+    for (const name of REPORTED_CHECKS) {
+      const c = obj2(r[name]);
+      if (typeof c["status"] !== "string") continue;
+      const findings = Array.isArray(c["findings"]) ? c["findings"].filter((f) => typeof f === "string") : [];
+      out[name] = { status: c["status"], findings };
+    }
+    return out;
+  }
   function verifierReportReading(context, given) {
     let report = given;
     if (typeof given === "string")
@@ -13584,7 +13615,9 @@ ${body}
     const pass2 = {
       kind: "pass",
       ...typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {},
-      ...isObj2(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}
+      ...isObj2(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {},
+      checks: reportedChecks(r),
+      ...typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}
     };
     const verdict2 = r["verdict"];
     if (verdict2 === "VALID") return pass2;
@@ -13603,7 +13636,7 @@ ${body}
       verdict: typeof verdict2 === "string" && verdict2 !== "" ? verdict2 : "not valid"
     };
   }
-  function withVerifierReport(context, reading = { kind: "pass" }) {
+  function withVerifierReport(context, reading = { kind: "pass" }, verifyCommand, countersigned) {
     const extensions2 = [
       ...context.verification.extensions,
       {
@@ -13615,7 +13648,17 @@ ${body}
         ...reading.counterpartyHalf === void 0 ? {} : { counterparty_half: { status: reading.counterpartyHalf } },
         // The holder's own book's witness time, as capsulectl reported it; the
         // receipt module reads only its status, witness and at.
-        ...reading.witnessed === void 0 ? {} : { witnessed: reading.witnessed }
+        ...reading.witnessed === void 0 ? {} : { witnessed: reading.witnessed },
+        // capsulectl's own result for each bundle check it reported, for the
+        // receipt's proof panel (#382); the page's banner reads its own.
+        ...reading.checks === void 0 ? {} : { checks: reading.checks },
+        // The command the page's maker gave for checking this copy (the page's
+        // verifyCommand option), for the receipt's "Check it yourself".
+        ...verifyCommand === void 0 ? {} : { verify_command: verifyCommand },
+        ...reading.verdict === void 0 ? {} : { verdict: reading.verdict },
+        // The page's own classification of each countersignature (AAC's
+        // classifyCountersignatures), for the receipt's COUNTERSIGNED stamp.
+        ...countersigned === void 0 ? {} : { countersigned }
       }
     ];
     return {
@@ -18113,7 +18156,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("c184223821cde62407ebb9c49627b000c5a7dd1f");
+    return commitPrefix("72ed02a5b3e12c36888f3fde9bb0da8ad46b8c29");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -29151,7 +29194,18 @@ ${pad.repeat(depth)}`;
   async function renderVerifiedContext(checkedContext, root, options) {
     const reading = options.verifierReport === void 0 || !bundleVerified(checkedContext.verification) ? null : verifierReportReading(checkedContext, options.verifierReport);
     const context = checkedContext;
-    const moduleContext = reading?.kind === "pass" ? withVerifierReport(context, reading) : context;
+    const stamps = await classifyCountersignatures(
+      context.countersignatures.map((entry) => entry.value),
+      context.verification.bundleDigest,
+      declaredProducerKeys(context.bundle),
+      context.countersigners
+    );
+    const moduleContext = reading?.kind === "pass" ? withVerifierReport(
+      context,
+      reading,
+      options.verifyCommand,
+      countersignedStamps(stamps)
+    ) : context;
     const verdictLine = reading?.kind === "fail" && reading.why === "verdict" ? reading.verdict : void 0;
     const { bundle, verification } = context;
     const reportFailed = bundleVerified(verification) ? [
@@ -29207,12 +29261,6 @@ ${pad.repeat(depth)}`;
           model: await sectionResolution.module.buildModel(context)
         };
     }
-    const stamps = await classifyCountersignatures(
-      context.countersignatures.map((entry) => entry.value),
-      verification.bundleDigest,
-      declaredProducerKeys(bundle),
-      context.countersigners
-    );
     const bannerModel = reportFailed.length > 0 ? {
       ...verificationBanner(context, stamps),
       // AAC's own banner for a bundle that did not verify.
