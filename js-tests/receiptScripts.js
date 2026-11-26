@@ -24,8 +24,10 @@ export const scriptBytes = (kind) => readFileSync(join(SCRIPTS, `receipt_${kind}
 export const manifestOf = (kind) => JSON.parse(readFileSync(join(RECEIPT_DIR, `manifest-${kind}.json`), "utf8"));
 // The Python twin is frozen at 0.25.0 with its own copy of the example wording
 // pack; the scripts carry go/receipt's, which only adds keys (packAddsOnly
-// holds that). A page names its pack's sha256, so the oracle's pages are read
-// with the current pack's sha256 in place of the frozen one, and a value the
+// holds that) and since evidencebook#956 has its own id, en/v1 (Sherlock2:
+// a person's page does not run on a pack named "example"). A page names its
+// pack's id and sha256, so the oracle's pages are read with the current pack's
+// id and sha256 in place of the frozen ones, and a value the
 // twin drew unworded (a `data-unworded` span) is read with the word the
 // current pack added for it (withAddedWords); every other byte is still
 // compared.
@@ -35,7 +37,10 @@ const CURRENT_PACK = packBytes(RECEIPT_DIR);
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 export const FROZEN_PACK_SHA256 = sha(FROZEN_PACK);
 export const CURRENT_PACK_SHA256 = sha(CURRENT_PACK);
-export const withCurrentPack = (html) => html.split(FROZEN_PACK_SHA256).join(CURRENT_PACK_SHA256);
+const FROZEN_PACK_ID = JSON.parse(FROZEN_PACK.toString("utf8")).id;
+const CURRENT_PACK_ID = JSON.parse(CURRENT_PACK.toString("utf8")).id;
+export const withCurrentPack = (html) =>
+  html.split(FROZEN_PACK_SHA256).join(CURRENT_PACK_SHA256).split(FROZEN_PACK_ID).join(CURRENT_PACK_ID);
 /** The keys of the frozen pack the current one changed or dropped (none, while the twin is the oracle). */
 export function packAddsOnly() {
   const frozen = JSON.parse(FROZEN_PACK.toString("utf8"));

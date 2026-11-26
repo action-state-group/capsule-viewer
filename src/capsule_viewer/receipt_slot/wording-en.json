@@ -1,6 +1,6 @@
 {
   "wording_pack_version": "aac.wording-pack/v0",
-  "id": "capsuleviewer.receipt.wording.en/v1",
+  "id": "capsuleviewer.receipt.wording.example-en/v0",
   "locale": "en",
   "entries": {
     "page.title": "Deal report",
