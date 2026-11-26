@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * receipt.css -- the receipt modules' own rules, inserted after kit.css and
+ * kit-dark.css by the go/receipt modules only, and scoped to a receipt
+ * ([data-receipt-module]), so no other kit module's card changes.
+ *
+ * kit.css lets text wrap anywhere so a long id never pushes a table sideways.
+ * Beside a 64-character record id that squeezed a short word to "buye / r".
+ * A side or a term name breaks between words, never inside one (#429).
+ */
+[data-receipt-module] .cv-receipt-word { overflow-wrap: normal; }

@@ -12,9 +12,10 @@
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
 // go/receipt/wording-en.json, whose id and sha256 the page names in L2) and the
-// kit stylesheet (src/capsule_viewer/static/kit.css) and the receipt's dark
-// overrides (static/kit-dark.css, capsule-viewer#391), each pinned by the
-// manifest's style_sha256.
+// kit stylesheet (src/capsule_viewer/static/kit.css), the receipt's dark
+// overrides (static/kit-dark.css, capsule-viewer#391) and its own rules
+// (go/receipt/receipt.css, capsule-viewer#429), each pinned by the manifest's
+// style_sha256.
 // Each script carries the whole of this file and registers exactly one
 // module: the page builder puts one script in the page per module it chose,
 // and a script never registers a module the builder did not choose.
@@ -57,6 +58,7 @@
   var PACK = { id: "", sha256: "" }; // @generated PACK
   var KIT_CSS = ""; // @generated KIT_CSS
   var KIT_DARK_CSS = ""; // @generated KIT_DARK_CSS
+  var RECEIPT_CSS = ""; // @generated RECEIPT_CSS
   // The seller copy's bundle extension kind (capsule_viewer.receipt_slot.SELLER_KIND).
   var SELLER_KIND = ""; // @generated SELLER_KIND
 
@@ -1182,6 +1184,9 @@
       row.relied_on.forEach(function (e) {
         if (!own(relied, e.record)) throw new Unavailable("a record a row relies on is not in the x-deal-v1 extension's book: " + e.record);
         var record = get(get(relied, e.record), "record");
+        // The record's type as its book payload states it (statement, settle, ...), or null: read only to
+        // say why no payment record is shown (#432), never for a verdict.
+        e.record_type = str(get(map(get(map(get(get(relied, e.record), "payload")), EXTENSION_V1)), "record_type"));
         if (!own(record, "settlement")) return;
         legs.push(readLeg(record, e.record, e.side));
       });
@@ -2502,8 +2507,33 @@
     var parts = [this.token("deal.state", model.start.state)];
     // The deal-level line is the start state, then "settled" or nothing: no close, no done (section 9).
     if (model.start.state === "started" && model.settled) parts.push(" · ", d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
+    // A started deal not yet settled also says where its terms stand, as the rows below give them, so
+    // the line never reads behind the terms ("Started" beside two terms met, #430). It counts the
+    // statuses shown; it is not a deal state and claims no close.
+    else if (model.start.state === "started" && model.rows_state === "listed" && model.rows.length) parts.push(" · ", d.el("span", { "data-terms-tally": "true" }, [this.termsTally(model.rows)]));
     return d.el("span", { "data-deal-state": model.start.state }, parts);
   };
+  // "Terms: Both say the same so far (2 of 2)": each status the rows give, in the rows' order, with its count.
+  P.termsTally = function (rows) {
+    var self = this, order = [], counts = {};
+    rows.forEach(function (row) {
+      if (!own(counts, row.status)) { order.push(row.status); counts[row.status] = 0; }
+      counts[row.status] += 1;
+    });
+    var total = String(rows.length);
+    return w("deal.state.terms", { tally: order.map(function (status) {
+      return w("deal.state.terms.count", { status: self.token("deal.status", status), count: String(counts[status]), total: total });
+    }).join("; ") });
+  };
+  // A term by its name in words (#429). The page holds no terms pack (section 9, "Row text"), so the
+  // wording pack words the profile's known term ids; any other id is shown as it is. The id stays on
+  // the element. A name or a side breaks between words, never inside one (receipt.css).
+  P.termName = function (id) {
+    var text = word("deal.term." + id);
+    if (text === null) return this.d.el("span", { class: "cv-mono", "data-row-id": id }, [id]);
+    return this.d.el("span", { class: "cv-receipt-word", "data-row-id": id, title: id }, [text]);
+  };
+  P.sideWord = function (side) { return this.d.el("span", { class: "cv-receipt-word", "data-side": side }, [this.token("deal.side", side)]); };
   P.dealHeadline = function (model) {
     var d = this.d;
     var out = [this.kit.metricGrid([{ label: w("l0.state"), value: this.dealState(model) }])];
@@ -2547,8 +2577,8 @@
     if (!model.rows.length) return [this.note(w("deal.rows.none"), { "data-rows-state": "listed" })];
     var rows = model.rows.map(function (row) {
       return [
-        d.el("span", { class: "cv-mono", "data-row-id": row.id }, [row.id]),
-        row.owed_by,
+        self.termName(row.id),
+        self.sideWord(row.owed_by),
         d.el("span", { "data-row-status": row.status }, [self.token("deal.status", row.status)]),
         self.dateText(row.due),
         self.dateText(row.window_end),
@@ -2583,15 +2613,28 @@
       head.unshift(w("deal.col.row"));
       model.rows.forEach(function (row) {
         row.legs.forEach(function (leg) {
-          rows.push(cells(leg, [d.el("span", { class: "cv-mono", "data-row-id": row.id }, [row.id]), self.token("deal.side", leg.side)]));
+          rows.push(cells(leg, [self.termName(row.id), self.sideWord(leg.side)]));
         });
       });
     }
     var inner = rows.length
       ? [this.kit.dataTable(head, rows), this.note(w(withheld ? "deal.legs.note.withheld" : "deal.legs.note"), { "data-legs": withheld ? "withheld" : "listed" })]
       : [this.note(w(withheld ? "deal.legs.none.withheld" : "deal.legs.none"), { "data-legs": "none" })];
+    var why = !rows.length && !withheld ? legsWhy(model.rows) : null;
+    if (why !== null) inner.push(this.note(w("deal.legs.why." + why), { "data-legs-why": why }));
     return [this.kit.section(w("deal.section.legs"), inner)];
   };
+  // Why no payment record is shown on a copy that lists its terms (#432), from what the records the
+  // terms rest on are: none at all, only the sides' statements, or other deal records. It says what
+  // the copy carries, not whether a payment was made. A settle record that carries no settlement
+  // member to show gets no line: "not on a payment record" would not be true of it.
+  function legsWhy(rows) {
+    var types = [];
+    rows.forEach(function (row) { row.relied_on.forEach(function (e) { types.push(e.record_type); }); });
+    if (!types.length) return "no_records";
+    if (types.indexOf("settle") >= 0) return null;
+    return types.every(function (t) { return t === "statement"; }) ? "statements" : "other";
+  }
   P.dealL1 = function (model) {
     return [
       this.note(w("summary.standalone", { status: model.report_checked === null ? "-" : model.report_checked }), { "data-sealed": "x-deal-report" }),
@@ -2600,7 +2643,7 @@
     ].concat(this.dealLegs(model));
   };
   P.dealL2 = function (model) {
-    var d = this.d, kit = this.kit;
+    var d = this.d, kit = this.kit, self = this;
     var out = [kit.verificationDetails(model.verification)];
     if (model.bundle_digest) {
       out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
@@ -2608,7 +2651,11 @@
     var basis = [];
     model.rows.forEach(function (row) {
       row.relied_on.forEach(function (e) {
-        basis.push([row.id, d.el("span", { class: "cv-mono" }, [e.record]), e.side, e.time !== null ? e.time : w("deal.no_time"), w(e.named_witness ? "deal.named_witness.yes" : "deal.named_witness.no")]);
+        // The time in the reader's zone, as the header's (#431). The yes is the holder's report's, as
+        // capsulectl computed it, and says so: this page checked no witness receipt (#424). The pack's
+        // bare "deal.named_witness.yes" stays as the frozen pack has it (packAddsOnly).
+        basis.push([self.termName(row.id), d.el("span", { class: "cv-mono" }, [e.record]), self.sideWord(e.side), e.time !== null ? self.v1Time(e.time) : w("deal.no_time"),
+          d.el("span", { "data-named-witness": e.named_witness ? "yes" : "no" }, [w(e.named_witness ? "deal.named_witness.reported" : "deal.named_witness.no")])]);
       });
     });
     var inner = basis.length
@@ -2796,9 +2843,9 @@
   }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
 
-  // The kit stylesheet and the receipt's dark overrides, each once per
-  // document under its own id (their bytes are what the manifest's
-  // style_sha256 pins). The kit's other modules insert the same kit.css under
+  // The kit stylesheet, the receipt's dark overrides and its own rules
+  // (receipt.css, #429), each once per document under its own id (their
+  // bytes are what the manifest's style_sha256 pins). The kit's other modules insert the same kit.css under
   // "cv-kit-css", so the overrides never ride on it: whichever module draws
   // first, a receipt gets them, and they apply only inside a receipt
   // ([data-receipt-module]), never to another module's card (#391).
@@ -2812,6 +2859,7 @@
   function ensureStyle(doc) {
     insertStyle(doc, "cv-kit-css", KIT_CSS);
     insertStyle(doc, "cv-receipt-dark-css", KIT_DARK_CSS);
+    insertStyle(doc, "cv-receipt-css", RECEIPT_CSS);
   }
 
   // One module. `env` is what the page's runtime does not hand a module (see

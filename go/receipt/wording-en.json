@@ -531,6 +531,15 @@
     "deal.col.sealer": "Sealer, as recorded",
     "deal.legs.note.withheld": "This copy withholds the terms, so these payment records are not tied to a term. They are the records the report's holder says its terms rest on, shown as each states it. This page does not check who signed them and does not judge the payment.",
     "deal.legs.none.withheld": "This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.",
-    "deal.legs.none": "No payment record is among the records the terms' statuses rest on."
+    "deal.legs.none": "No payment record is among the records the terms' statuses rest on.",
+    "deal.legs.why.statements": "Each term's status here rests on the sides' own statements, not on a payment record, so this page shows no payment and does not check one.",
+    "deal.legs.why.other": "Each term's status here rests on other deal records, not on a payment record, so this page shows no payment and does not check one.",
+    "deal.legs.why.no_records": "No term's status rests on any record yet, so there is no payment record to show.",
+    "deal.state.terms": "Terms: {tally}",
+    "deal.state.terms.count": "{status} ({count} of {total})",
+    "deal.term.paid_as_agreed": "Paid as agreed",
+    "deal.term.delivered": "Delivered",
+    "deal.term.as_described": "As described",
+    "deal.named_witness.reported": "yes, as capsulectl reported it"
   }
 }
