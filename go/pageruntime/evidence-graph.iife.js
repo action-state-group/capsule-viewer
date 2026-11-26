@@ -13583,8 +13583,36 @@ ${body}
     );
     for (const stamp of stamps)
       if (stamp.kind === "resolved")
-        return { name: stamp.name, at: stamp.statement.recomputedAt, k, n };
+        return {
+          name: stamp.name,
+          at: stamp.statement.recomputedAt,
+          k,
+          n,
+          independent: listedIndependent(
+            given["countersigners"],
+            stamp.keyId,
+            stamp.name,
+            producers,
+            counterpartyKey(shown2.bundle)
+          )
+        };
     return null;
+  }
+  function counterpartyKey(bundle) {
+    const agreement = obj2(
+      obj2(obj2(obj2(bundle)["extensions"])["x-deal-v1"])["book"]
+    )["agreement"];
+    const key = obj2(obj2(obj2(agreement)["payload"])["body"])["counterparty_key"];
+    return typeof key === "string" && /^[0-9a-f]{64}$/u.test(key) ? key : null;
+  }
+  function listedIndependent(rows, keyId, name, holder, counterparty) {
+    if (counterparty === null || holder.length === 0) return false;
+    const row2 = rows.map(obj2).find(
+      (r) => r["name"] === name && Array.isArray(r["key_ids"]) && r["key_ids"].includes(keyId)
+    );
+    const listed = row2?.["independent_of"];
+    if (!Array.isArray(listed)) return false;
+    return [...holder, counterparty].every((key) => listed.includes(key));
   }
 
   // src/verifier-report.ts
@@ -18313,7 +18341,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("717c91b5498bbf99afea810759c1c69245101e98");
+    return commitPrefix("f06e4e639456f9f407b135e6f7a3bdf8e4984e9a");
   }
   var commit = builtCommit();
   var unreleased = true;
