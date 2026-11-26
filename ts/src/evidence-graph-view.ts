@@ -1127,7 +1127,7 @@ const STANDALONE_REPORT_FAILED: Readonly<Record<PageReportFailure, string>> = {
     "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
   // An x-deal-v0 copy (CV3b): capsulectl's x-deal-v0 entry did not pass, in
   // whatever form the copy carries its report.
-  deal: "Didn't verify: capsulectl deal verify reported that this deal's record did not pass its check.",
+  deal: "Didn't verify: capsulectl deal verify reported that this deal's records did not pass.",
   // An x-deal-v0 copy: capsulectl reported a countersignature on this copy
   // that does not verify, which it refuses to show.
   countersign:

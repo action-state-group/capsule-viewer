@@ -742,9 +742,9 @@
     "referee.named": "The referee this side named, as its sealed report states it: {referee}. This page does not check that the other side named the same one, or that the name belongs to any particular person.",
     "countersign.reported.resolved": "Countersigned by {name}, a signer listed in the directory capsulectl verify was given ({directory}): it signed this bundle's digest, which covers its records but not the countersignatures beside them{checks}. It vouches only as far as you trust that directory. capsulectl verify reported this; this page did not check it itself.",
     "countersign.reported.checks": ", with its own results ({checks})",
-    "countersign.reported.not_independent": "NOT INDEPENDENT: capsulectl verify reported a countersignature by the producer's own key. A self-countersignature is not a check by anyone else.",
+    "countersign.reported.not_independent": "Not independent: capsulectl verify reported a countersignature by the producer's own key. A self-countersignature is not a check by anyone else.",
     "countersign.reported.unresolved_signer": "capsulectl verify reported a countersignature by a key the directory it was given ({directory}) does not list ({key}): its signer is unknown. This page did not check it itself.",
-    "countersign.reported.unverified": "capsulectl verify reported a countersignature of a type it does not check: it is not counted.",
+    "countersign.reported.unverified": "capsulectl verify reported a countersignature of a type it does not check, so this page does not show it as a countersignature.",
     "countersign.reported.receipt.verified": " Its log signature verifies, as capsulectl verify reported.",
     "countersign.reported.receipt.absent": " It carries no log signature.",
     "countersign.reported.receipt.unverified": " Its log signature does not verify, as capsulectl verify reported."

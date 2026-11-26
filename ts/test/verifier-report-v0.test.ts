@@ -190,7 +190,7 @@ describe("line 9 on an x-deal-v0 copy: the countersign rung capsulectl resolved"
       "Countersigned by Example Countersigners Ltd, a signer listed in the directory capsulectl verify was given (countersigners.json): it signed this bundle's digest, which covers its records but not the countersignatures beside them, with its own results (chain consistency: established). It vouches only as far as you trust that directory. capsulectl verify reported this; this page did not check it itself. It carries no log signature.",
     );
     expect(self).toBe(
-      "NOT INDEPENDENT: capsulectl verify reported a countersignature by the producer's own key. A self-countersignature is not a check by anyone else.",
+      "Not independent: capsulectl verify reported a countersignature by the producer's own key. A self-countersignature is not a check by anyone else.",
     );
     expect(unknown).toMatch(
       /^capsulectl verify reported a countersignature by a key the directory it was given \(countersigners\.json\) does not list \([0-9a-f]{16}…\): its signer is unknown\./u,
@@ -230,7 +230,7 @@ describe("line 9 on an x-deal-v0 copy: the countersign rung capsulectl resolved"
     expect(
       host.querySelector('[data-countersign="unverified"]')?.textContent,
     ).toBe(
-      "capsulectl verify reported a countersignature of a type it does not check: it is not counted.",
+      "capsulectl verify reported a countersignature of a type it does not check, so this page does not show it as a countersignature.",
     );
     expect(
       (await checkReceipt(bundle(), { verifierReport: unchecked })).kind,
@@ -396,7 +396,7 @@ describe("capsulectl's failures on an x-deal-v0 page say which", () => {
       ).toBe("did_not_verify");
       const root = await page(copy(name), r);
       expect(root.textContent, name).toContain(
-        "Didn't verify: capsulectl deal verify reported that this deal's record did not pass its check.",
+        "Didn't verify: capsulectl deal verify reported that this deal's records did not pass.",
       );
       expect(root.textContent, name).not.toContain(STANDALONE_FAILED);
       expect(root.querySelector("[data-receipt-module]"), name).toBeNull();
