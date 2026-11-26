@@ -740,7 +740,7 @@
     "seller.payment.settled.other": "Recorded as settled; this page can't check payments on this rail",
     "seller.payment.recorded": "This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not check what it says.",
     "referee.named": "The referee this side named, as its sealed report states it: {referee}. This page does not check that the other side named the same one, or that the name belongs to any particular person.",
-    "countersign.reported.resolved": "Countersigned by {name}, a signer listed in the directory capsulectl verify was given ({directory}): it signed this exact file{checks}. It vouches only as far as you trust that directory. capsulectl verify reported this; this page did not check it itself.",
+    "countersign.reported.resolved": "Countersigned by {name}, a signer listed in the directory capsulectl verify was given ({directory}): it signed this bundle's digest, which covers its records but not the countersignatures beside them{checks}. It vouches only as far as you trust that directory. capsulectl verify reported this; this page did not check it itself.",
     "countersign.reported.checks": ", with its own results ({checks})",
     "countersign.reported.not_independent": "NOT INDEPENDENT: capsulectl verify reported a countersignature by the producer's own key. A self-countersignature is not a check by anyone else.",
     "countersign.reported.unresolved_signer": "capsulectl verify reported a countersignature by a key the directory it was given ({directory}) does not list ({key}): its signer is unknown. This page did not check it itself.",

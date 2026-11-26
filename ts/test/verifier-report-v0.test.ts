@@ -187,7 +187,7 @@ describe("line 9 on an x-deal-v0 copy: the countersign rung capsulectl resolved"
     ]);
     const [resolved, self, unknown] = rungs(host, "countersign");
     expect(resolved).toBe(
-      "Countersigned by Example Countersigners Ltd, a signer listed in the directory capsulectl verify was given (countersigners.json): it signed this exact file, with its own results (chain consistency: established). It vouches only as far as you trust that directory. capsulectl verify reported this; this page did not check it itself. It carries no log signature.",
+      "Countersigned by Example Countersigners Ltd, a signer listed in the directory capsulectl verify was given (countersigners.json): it signed this bundle's digest, which covers its records but not the countersignatures beside them, with its own results (chain consistency: established). It vouches only as far as you trust that directory. capsulectl verify reported this; this page did not check it itself. It carries no log signature.",
     );
     expect(self).toBe(
       "NOT INDEPENDENT: capsulectl verify reported a countersignature by the producer's own key. A self-countersignature is not a check by anyone else.",
@@ -202,6 +202,39 @@ describe("line 9 on an x-deal-v0 copy: the countersign rung capsulectl resolved"
     ).toBe(true);
     // The u219 line comes with it.
     expect(rungs(host, "witness")).toEqual([BOOK_LINE]);
+  });
+
+  it("says each log-signature result, and none for a self or unchecked countersignature", async () => {
+    const x = r();
+    csEntries(x)[0]!["receipt"] = "verified";
+    csEntries(x)[1]!["receipt"] = "verified";
+    csEntries(x)[2]!["receipt"] = "unverified";
+    let lines = rungs(await drawn(bundle(), x), "countersign");
+    expect(lines[0]).toMatch(
+      / Its log signature verifies, as capsulectl verify reported\.$/u,
+    );
+    expect(lines[1]).not.toContain("log signature");
+    expect(lines[2]).toMatch(
+      / Its log signature does not verify, as capsulectl verify reported\.$/u,
+    );
+    // No receipt member: no suffix.
+    const none = r();
+    for (const e of csEntries(none)) delete e["receipt"];
+    lines = rungs(await drawn(bundle(), none), "countersign");
+    for (const line of lines) expect(line).not.toContain("log signature");
+    // A type capsulectl does not check: shown, attributed, never counted, no suffix.
+    const unchecked = r();
+    csEntries(unchecked)[2]!["state"] = "unverified";
+    csEntries(unchecked)[2]!["receipt"] = "verified";
+    const host = await drawn(bundle(), unchecked);
+    expect(
+      host.querySelector('[data-countersign="unverified"]')?.textContent,
+    ).toBe(
+      "capsulectl verify reported a countersignature of a type it does not check: it is not counted.",
+    );
+    expect(
+      (await checkReceipt(bundle(), { verifierReport: unchecked })).kind,
+    ).toBe("checked");
   });
 
   it("is drawn on any copy capsulectl reported on, a page shown to others included", async () => {
