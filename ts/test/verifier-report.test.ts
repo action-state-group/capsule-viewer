@@ -141,7 +141,7 @@ describe("capsulectl's report: which reports are read, and how they fail (#417)"
     }
   });
 
-  it("a report is never read for a bundle that is not an x-deal-v1 copy", async () => {
+  it("an x-deal-v1 report is never read for an x-deal-v0 copy", async () => {
     // A v0 copy, with a report forged to its digest that says the v1 report
     // failed: the copy reads as it does with no report at all.
     const v0 = JSON.parse(
@@ -658,10 +658,10 @@ describe("capsulectl's own check results and the verify command reach the receip
       (e) => e["kind"] === "x-deal-v1",
     )!;
 
-  it("carries each check capsulectl reported, status and findings, in the x-deal-v1 entry", () => {
+  it("carries each check capsulectl reported, status and findings, in the x-deal-v1 entry", async () => {
     const b = bundle(),
       r = report();
-    const reading = verifierReportReading(contextOf(b, r), r);
+    const reading = await verifierReportReading(contextOf(b, r), r);
     expect(reading?.kind).toBe("pass");
     const entry = entryOf(
       withVerifierReport(contextOf(b, r), reading as never),
@@ -677,12 +677,12 @@ describe("capsulectl's own check results and the verify command reach the receip
     expect(Object.keys(entry["checks"] as Obj)).toEqual([...REPORTED_CHECKS]);
   });
 
-  it("leaves out a check the report does not state, and keeps only string findings", () => {
+  it("leaves out a check the report does not state, and keeps only string findings", async () => {
     const b = bundle(),
       r = report();
     delete r["checkpoint"];
     (r["witnesses"] as Obj)["findings"] = ["witness_receipt_absent", 7, null];
-    const reading = verifierReportReading(contextOf(b, r), r);
+    const reading = await verifierReportReading(contextOf(b, r), r);
     const entry = entryOf(
       withVerifierReport(contextOf(b, r), reading as never),
     );
@@ -694,17 +694,17 @@ describe("capsulectl's own check results and the verify command reach the receip
     });
   });
 
-  it("another bundle's report carries nothing", () => {
+  it("another bundle's report carries nothing", async () => {
     const b = bundle(),
       r = report();
     r["bundle_digest"] = "00".repeat(32);
-    expect(verifierReportReading(contextOf(b, report()), r)).toBeNull();
+    expect(await verifierReportReading(contextOf(b, report()), r)).toBeNull();
   });
 
-  it("the verify command is carried only when the page was given one", () => {
+  it("the verify command is carried only when the page was given one", async () => {
     const b = bundle(),
       r = report();
-    const reading = verifierReportReading(contextOf(b, r), r) as never;
+    const reading = (await verifierReportReading(contextOf(b, r), r)) as never;
     expect(
       entryOf(withVerifierReport(contextOf(b, r), reading))["verify_command"],
     ).toBeUndefined();
@@ -721,14 +721,14 @@ describe("capsulectl's own check results and the verify command reach the receip
 });
 
 describe("the verdict and the countersignatures reach the receipt (#382, review round 1)", () => {
-  it("carries capsulectl's verdict, and each countersignature as the page classified it", () => {
+  it("carries capsulectl's verdict, and each countersignature as the page classified it", async () => {
     const b = bundle(),
       r = report();
     const ctx = {
       bundle: b,
       verification: { bundleDigest: r["bundle_digest"], extensions: [] },
     } as unknown as Parameters<typeof verifierReportReading>[0];
-    const reading = verifierReportReading(ctx, r) as never;
+    const reading = (await verifierReportReading(ctx, r)) as never;
     const stamps = countersignedStamps([
       {
         kind: "resolved",

@@ -18,7 +18,11 @@
  * receipt draws the can't-check line (#407).
  */
 
-import type { VerifiedBundleContext } from "@action-state-group/agent-action-capsule";
+import {
+  jcs,
+  sha256Hex,
+  type VerifiedBundleContext,
+} from "@action-state-group/agent-action-capsule";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj =>
@@ -27,8 +31,46 @@ const obj = (v: unknown): Obj => (isObj(v) ? v : {});
 
 /** capsulectl's result format (`capsule-cli-result/v1`), as the Python twin reads it. */
 export const VERIFIER_REPORT_VERSION = "capsule-cli-result/v1";
+const DEAL_V0 = "x-deal-v0";
 const DEAL_V1 = "x-deal-v1";
 const STANDALONE = "x-deal-report/v0";
+
+/**
+ * The countersignature states capsulectl reports (capsule-cli
+ * `VerifyCountersignatures`, `cli/countersign.go`) that a page may show as
+ * capsulectl's finding. `invalid` is not among them: capsulectl refuses to
+ * show a countersignature that does not verify, and so does the page.
+ */
+const COUNTERSIGN_STATES = new Set([
+  "resolved",
+  "not_independent",
+  "unresolved_signer",
+  "unverified",
+]);
+
+/**
+ * One countersignature as capsulectl verify reported it on an x-deal-v0 copy,
+ * read from capsule-cli's `CountersignatureReport` (state, signer.key_id,
+ * signer_name, receipt, checks): strings only.
+ */
+export interface ReportedCountersignature {
+  readonly state: string;
+  readonly key_id: string;
+  readonly signer_name?: string;
+  /** Its log signature: verified, absent or unverified. */
+  readonly receipt?: string;
+  /** The countersigner's own results, as it stated them. */
+  readonly checks?: readonly {
+    readonly name: string;
+    readonly result: string;
+  }[];
+}
+
+/** capsulectl's countersign rung of an x-deal-v0 copy: the directory it resolved signers in, and each entry. */
+export interface ReportedCountersign {
+  readonly directory: string;
+  readonly entries: readonly ReportedCountersignature[];
+}
 
 /**
  * What capsulectl reported of this bundle's x-deal-v1 standalone report:
@@ -57,8 +99,16 @@ export type VerifierReading =
       readonly checks?: Readonly<Record<string, ReportedCheck>>;
       /** capsulectl's verdict for the bundle: VALID, or INCOMPLETE for a producer selection. */
       readonly verdict?: string;
+      /** The deal profile the report was read for: x-deal-v1 (the default), or x-deal-v0. */
+      readonly profile?: typeof DEAL_V0;
+      /** capsulectl's countersign rung of an x-deal-v0 copy, bound to this copy's countersignatures. */
+      readonly countersign?: ReportedCountersign;
     }
   | { readonly kind: "fail"; readonly why: "report" }
+  /** An x-deal-v0 copy: capsulectl's x-deal-v0 entry did not pass. */
+  | { readonly kind: "fail"; readonly why: "deal" }
+  /** An x-deal-v0 copy: capsulectl reported a countersignature that does not verify. */
+  | { readonly kind: "fail"; readonly why: "countersign" }
   | {
       readonly kind: "fail";
       readonly why: "verdict";
@@ -128,10 +178,10 @@ function reportedChecks(r: Obj): Record<string, ReportedCheck> {
   return out;
 }
 
-export function verifierReportReading(
+export async function verifierReportReading(
   context: VerifiedBundleContext,
   given: unknown,
-): VerifierReading | null {
+): Promise<VerifierReading | null> {
   // The report as capsulectl prints it (JSON text) or already parsed.
   let report = given;
   if (typeof given === "string")
@@ -141,27 +191,15 @@ export function verifierReportReading(
       return null;
     }
   const extensionsOf = obj(obj(context.bundle)["extensions"]);
-  if (!(DEAL_V1 in extensionsOf) || !(STANDALONE in extensionsOf)) return null;
-  const r = obj(report);
-  if (r["spec_version"] !== VERIFIER_REPORT_VERSION) return null;
-  const digest = context.verification.bundleDigest;
-  if (typeof digest !== "string" || r["bundle_digest"] !== digest) return null;
-  const identity = r["record_identity"];
-  const records = Array.isArray(obj(context.bundle)["records"])
-    ? (obj(context.bundle)["records"] as unknown[])
-    : [];
-  const ids = new Set(
-    records
-      .map((x) => obj(x)["capsule_id"])
-      .filter((id): id is string => typeof id === "string"),
-  );
-  if (
-    !isObj(identity) ||
-    Object.keys(identity).length !== ids.size ||
-    !Object.keys(identity).every((id) => ids.has(id))
-  )
+  const v1 = DEAL_V1 in extensionsOf;
+  // An x-deal-v1 copy is read only with its standalone report; an x-deal-v0
+  // copy in any report form (a Mesh copy seals its report in the log).
+  if (v1 ? !(STANDALONE in extensionsOf) : !(DEAL_V0 in extensionsOf))
     return null;
+  const r = obj(report);
+  if (!boundToBundle(context, r)) return null;
   const extensions = Array.isArray(r["extensions"]) ? r["extensions"] : [];
+  if (!v1) return dealV0Reading(context, r, extensions.map(obj));
   const entry = extensions
     .map(obj)
     .find((e) => e["kind"] === DEAL_V1 && e["report"] === "standalone");
@@ -175,6 +213,43 @@ export function verifierReportReading(
     checks: reportedChecks(r),
     ...(typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}),
   };
+  return withVerdict(r, pass);
+}
+
+/**
+ * Whether the report is capsulectl's for this very bundle: its result
+ * format, this bundle's digest, and record identities naming exactly this
+ * bundle's records (the Python twin's rules).
+ */
+function boundToBundle(context: VerifiedBundleContext, r: Obj): boolean {
+  if (r["spec_version"] !== VERIFIER_REPORT_VERSION) return false;
+  const digest = context.verification.bundleDigest;
+  if (typeof digest !== "string" || r["bundle_digest"] !== digest) return false;
+  const identity = r["record_identity"];
+  const records = Array.isArray(obj(context.bundle)["records"])
+    ? (obj(context.bundle)["records"] as unknown[])
+    : [];
+  const ids = new Set(
+    records
+      .map((x) => obj(x)["capsule_id"])
+      .filter((id): id is string => typeof id === "string"),
+  );
+  return (
+    isObj(identity) &&
+    Object.keys(identity).length === ids.size &&
+    Object.keys(identity).every((id) => ids.has(id))
+  );
+}
+
+/**
+ * capsulectl's verdict over a passing deal entry: the pass, when the verdict
+ * is VALID or INCOMPLETE only as a producer selection; otherwise a fail that
+ * says the verdict, never that the deal entry failed.
+ */
+function withVerdict(
+  r: Obj,
+  pass: VerifierReading & { kind: "pass" },
+): VerifierReading {
   const verdict = r["verdict"];
   if (verdict === "VALID") return pass;
   // A producer selection: capsulectl calls it INCOMPLETE only because the
@@ -207,6 +282,131 @@ export function verifierReportReading(
 }
 
 /**
+ * capsulectl's report of an x-deal-v0 copy (capsule-viewer#383, CV3b): its
+ * one x-deal-v0 entry, and on a pass the two members only capsulectl can
+ * check:
+ *  - `witnessed`, the holder's own book's witness time (verify --stamp-proof),
+ *    in the shape x-deal-v1 reports it;
+ *  - `countersign`, the countersign rung resolved against the directory
+ *    capsulectl was given: `{directory, countersignatures_sha256, entries}`,
+ *    each entry capsule-cli's CountersignatureReport as printed.
+ * In this order: an entry that did not pass refuses the copy; the
+ * countersign member is bound to this copy (the SHA-256 of the JCS of its
+ * whole countersignatures array, which the bundle digest does not cover, and
+ * one entry per countersignature, signer key ids in order), and an unbound
+ * one is ignored; a bound entry in state `invalid` refuses the copy, as
+ * capsulectl refuses to show it; only then are the display members read,
+ * and a malformed one draws nothing (the page keeps its own line).
+ */
+async function dealV0Reading(
+  context: VerifiedBundleContext,
+  r: Obj,
+  extensions: readonly Obj[],
+): Promise<VerifierReading | null> {
+  const entries = extensions.filter((e) => e["kind"] === DEAL_V0);
+  if (entries.length !== 1) return null;
+  const entry = entries[0]!;
+  if (entry["status"] === "fail") return { kind: "fail", why: "deal" };
+  if (entry["status"] !== "pass") return null;
+  const bound = await boundCountersign(context, entry["countersign"]);
+  if (bound?.some((e) => e["state"] === "invalid"))
+    return { kind: "fail", why: "countersign" };
+  const countersign = bound === null ? null : reportedCountersign(bound, entry);
+  return withVerdict(r, {
+    kind: "pass",
+    profile: DEAL_V0,
+    ...(isObj(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}),
+    ...(countersign === null ? {} : { countersign }),
+    ...(typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}),
+  });
+}
+
+/**
+ * The countersign member's entries when it is bound to this copy's
+ * countersignatures, else null: its `countersignatures_sha256` is the
+ * lowercase hex SHA-256 of the JCS of the copy's whole countersignatures
+ * array, and it has one entry per countersignature whose signer key id is
+ * that countersignature's, in order.
+ */
+async function boundCountersign(
+  context: VerifiedBundleContext,
+  given: unknown,
+): Promise<Obj[] | null> {
+  const raw = obj(given);
+  const list = raw["entries"];
+  const carried = obj(context.bundle)["countersignatures"];
+  if (!Array.isArray(list) || !Array.isArray(carried) || carried.length === 0)
+    return null;
+  if (list.length !== carried.length) return null;
+  let digest: string;
+  try {
+    digest = await sha256Hex(jcs(carried));
+  } catch {
+    return null;
+  }
+  if (raw["countersignatures_sha256"] !== digest) return null;
+  const entries = list.map(obj);
+  const signed = carried.map((c) => obj(obj(c)["signer"])["key_id"]);
+  return entries.every((e, i) => {
+    const id = obj(e["signer"])["key_id"];
+    return typeof id === "string" && id !== "" && id === signed[i];
+  })
+    ? entries
+    : null;
+}
+
+/**
+ * capsulectl's countersign rung from its bound entries, or null when any
+ * display member is malformed: the page then keeps its own line.
+ */
+function reportedCountersign(
+  bound: readonly Obj[],
+  entry: Obj,
+): ReportedCountersign | null {
+  const directory = obj(entry["countersign"])["directory"];
+  if (typeof directory !== "string" || directory === "") return null;
+  const entries: ReportedCountersignature[] = [];
+  for (const e of bound) {
+    const state = e["state"];
+    if (typeof state !== "string" || !COUNTERSIGN_STATES.has(state))
+      return null;
+    const name = e["signer_name"];
+    // A resolved signer is named; any other state names none.
+    if (state === "resolved" && (typeof name !== "string" || name === ""))
+      return null;
+    // Every display member present must be well formed: a malformed one
+    // drops the whole member, so the page keeps its own line.
+    const receipt = e["receipt"];
+    if (
+      receipt !== undefined &&
+      (typeof receipt !== "string" ||
+        !["verified", "absent", "unverified"].includes(receipt))
+    )
+      return null;
+    const given = e["checks"];
+    if (given !== undefined && !Array.isArray(given)) return null;
+    const checks: { name: string; result: string }[] = [];
+    for (const c of (given ?? []) as unknown[]) {
+      const check = obj(c);
+      if (
+        typeof check["name"] !== "string" ||
+        typeof check["result"] !== "string"
+      )
+        return null;
+      checks.push({ name: check["name"], result: check["result"] });
+    }
+    entries.push({
+      state,
+      key_id: obj(e["signer"])["key_id"] as string,
+      ...(state === "resolved" ? { signer_name: name as string } : {}),
+      ...(typeof receipt === "string" ? { receipt } : {}),
+      ...(state === "resolved" && checks.length > 0 ? { checks } : {}),
+    });
+  }
+  return { directory, entries };
+}
+
+/**
  * The context the receipt module reads, with capsulectl's passing check of
  * the x-deal-v1 standalone report: an x-deal-v1 entry naming the report
  * standalone and its status, as capsulectl's own report entry does, beside
@@ -220,6 +420,7 @@ export function withVerifierReport(
   verifyCommand?: string,
   countersigned?: readonly CountersignedStamp[],
 ): VerifiedBundleContext {
+  if (reading.profile === DEAL_V0) return withDealV0Report(context, reading);
   const extensions = [
     ...context.verification.extensions,
     {
@@ -255,6 +456,60 @@ export function withVerifierReport(
 }
 
 /**
+ * The x-deal-v0 receipt modules' context with capsulectl's two members, in
+ * an x-deal-v0 entry marked `reported_by: "capsulectl"` that carries no
+ * `status` and no `report`: the module's own reading of the report's form
+ * and the page's own check of a standalone report (#397) stay the page's,
+ * and only these members are capsulectl's.
+ */
+function withDealV0Report(
+  context: VerifiedBundleContext,
+  reading: VerifierReading & { kind: "pass" },
+): VerifiedBundleContext {
+  if (reading.witnessed === undefined && reading.countersign === undefined)
+    return context;
+  const extensions = [
+    ...context.verification.extensions,
+    {
+      kind: DEAL_V0,
+      reported_by: "capsulectl",
+      ...(reading.witnessed === undefined
+        ? {}
+        : { witnessed: reading.witnessed }),
+      ...(reading.countersign === undefined
+        ? {}
+        : { countersign: reading.countersign }),
+    },
+  ] as unknown as VerifiedBundleContext["verification"]["extensions"];
+  return {
+    ...context,
+    verification: { ...context.verification, extensions },
+  };
+}
+
+/**
+ * The audience a deal copy's sealed report names, where the receipt module
+ * reads it: an x-deal-v1 copy's standalone report content; an x-deal-v0
+ * copy's report object in any form (receipt_core.js copyAudience): the
+ * standalone report's, a disclosed record's, or the x-deal-v0 section
+ * itself when it names no sealed report.
+ */
+function sealedAudience(context: VerifiedBundleContext): unknown {
+  const exts = obj(obj(context.bundle)["extensions"]);
+  const standalone = obj(obj(exts[STANDALONE])["agent_input"]);
+  if (DEAL_V1 in exts) return standalone["audience"];
+  const deal = obj(exts[DEAL_V0]);
+  const named = deal["sealed_report"];
+  if (typeof named !== "string") return deal["audience"];
+  if (obj(obj(exts[STANDALONE])["record"])["capsule_id"] === named)
+    return obj(standalone["report"])["audience"];
+  const input = obj(context.resolvedDisclosures.get(named)?.agent_input);
+  return input["state"] === "disclosed"
+    ? obj(obj(input["payload"])["report"])["audience"]
+    : undefined;
+}
+
+/**
  * Whether the page draws capsulectl's verified witness time of the holder's
  * own book as one line in its receipt (capsule-viewer#424): a passing
  * reading whose `witnessed` is verified, on the holder's own (keep) copy.
@@ -276,8 +531,7 @@ export function bookWitnessedOnKeep(
     !utcInstant(w["at"])
   )
     return false;
-  const x = obj(obj(obj(context.bundle)["extensions"])[STANDALONE]);
-  return obj(x["agent_input"])["audience"] === "keep";
+  return sealedAudience(context) === "keep";
 }
 
 /** A UTC RFC 3339 time to the second, as the receipt module's validUtcTime reads it. */

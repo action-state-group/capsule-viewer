@@ -400,12 +400,45 @@
   // capsulectl's report of the holder's own book's witness time (verify
   // --stamp-proof, beside the copy and never in it), from its x-deal-v1
   // entry: {status, witness, at} with strings only, else null.
-  function bookWitnessed(verification) {
-    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+  function bookWitnessed(verification, extension) {
+    var entry = extension === EXTENSION ? capsulectlV0Entry(verification) : seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
     var got = entry !== undefined ? map(entry.witnessed) : {};
     if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
     if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || !validUtcTime(got.at))) return null;
     return got.status === "verified" ? { status: got.status, witness: got.witness, at: got.at } : { status: got.status };
+  }
+
+  // capsulectl's report of an x-deal-v0 copy, as the page's runtime hands it
+  // to the module (ts/src/verifier-report.ts withDealV0Report, capsule-viewer#383
+  // CV3b): an x-deal-v0 entry marked reported_by capsulectl, with no status, so
+  // the report's form and its check stay the page's own.
+  function capsulectlV0Entry(verification) {
+    return seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION && e.reported_by === "capsulectl" && !own(e, "status"); });
+  }
+  var COUNTERSIGN_REPORTED = ["resolved", "not_independent", "unresolved_signer", "unverified"];
+  // capsulectl's countersign rung of an x-deal-v0 copy (line 9): the directory
+  // it resolved signers in and each entry, strings only, else null. The page's
+  // runtime bound each entry to this copy's countersignatures.
+  function reportedCountersign(verification) {
+    var entry = capsulectlV0Entry(verification);
+    var got = entry !== undefined ? map(entry.countersign) : {};
+    var directory = str(get(got, "directory"));
+    var list = seq(get(got, "entries")).map(map);
+    if (directory === null || !list.length) return null;
+    if (!list.every(function (e) { return COUNTERSIGN_REPORTED.indexOf(get(e, "state")) >= 0 && str(get(e, "key_id")) !== null; })) return null;
+    return {
+      directory: directory,
+      entries: list.map(function (e) {
+        return {
+          state: get(e, "state"),
+          key_id: str(get(e, "key_id")),
+          signer_name: str(get(e, "signer_name")),
+          receipt: ["verified", "absent", "unverified"].indexOf(get(e, "receipt")) >= 0 ? get(e, "receipt") : null,
+          checks: seq(get(e, "checks")).map(map).filter(function (c) { return str(get(c, "name")) !== null && str(get(c, "result")) !== null; })
+            .map(function (c) { return { name: get(c, "name"), result: get(c, "result") }; }),
+        };
+      }),
+    };
   }
 
   function pageAssurance(context, extension) {
@@ -430,11 +463,21 @@
     // entry, else null. The page never checks the half itself.
     if (extension === EXTENSION_V1) {
       out.counterparty_half = counterpartyHalf(v);
-      out.book_witnessed = bookWitnessed(v);
+      out.book_witnessed = bookWitnessed(v, extension);
       out.checks = reportedChecks(v);
       out.verify_command = reportedCommand(v);
       out.verdict = reportedVerdict(v);
       out.countersigned = reportedCountersigned(v);
+    }
+    // The x-deal-v0 modules: capsulectl's report of the holder's own book's
+    // witness time and its countersign rung, only when the page was given
+    // capsulectl's report (CV3b). Absent otherwise, so a model built from a
+    // verifier report alone (the Python twin's inputs) is unchanged.
+    if (extension === EXTENSION) {
+      var book = bookWitnessed(v, extension);
+      var rung = reportedCountersign(v);
+      if (book !== null) out.book_witnessed = book;
+      if (rung !== null) out.countersign_reported = rung;
     }
     // Said only when the page checked it itself: a verifier's report (the
     // Python twin's inputs too) carries no such member.
@@ -1512,6 +1555,10 @@
       verification: v.verification,
       report_checked: reader.standalone() ? or(str(v.assurance.report_checked), null) : null,
     };
+    // capsulectl's report, when the page was given one (CV3b): the holder's
+    // own book's witness time (u219) and the countersign rung (line 9).
+    if (v.assurance.book_witnessed) model.book_witnessed = v.assurance.book_witnessed;
+    if (v.assurance.countersign_reported) model.countersign_reported = v.assurance.countersign_reported;
     if (reader.standalone() && v.assurance.report_checked_here === true) model.report_checked_here = true;
     return model;
   }
@@ -2655,7 +2702,8 @@
     // or none, draws no line (a failed half fails the x-deal-v1 entry, which
     // refuses the copy before it is drawn).
     if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
-    parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
+    if (model.countersign_reported) parts = parts.concat(this.countersignReported(model.countersign_reported));
+    else parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
     if (model.after_yes) parts.push(this.p(this.afterYes(model, model.after_yes), { "data-rung": "after-yes", "data-after-yes": model.after_yes.state }));
     if (model.settlement) parts.push(this.p(this.settlement(model.settlement), { "data-rung": "settlement", "data-settlement": model.settlement.state }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
@@ -2724,6 +2772,28 @@
     // A two-sided copy is not unsigned by the other party: its half is above.
     if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : "countersign.none");
     return w("countersign.some", { statuses: model.countersignatures.join(", ") });
+  };
+  // Line 9 (capsule-viewer#383): the countersign rung capsulectl verify
+  // resolved against the directory it was given, one line per
+  // countersignature, in capsulectl's voice, never the page's. A
+  // self-countersignature is flagged.
+  P.countersignReported = function (rung) {
+    var self = this;
+    return rung.entries.map(function (e) {
+      var text;
+      if (e.state === "resolved") {
+        var checks = e.checks.map(function (c) { return c.name + ": " + c.result; }).join(", ");
+        text = w("countersign.reported.resolved", { name: e.signer_name, directory: rung.directory, checks: checks ? w("countersign.reported.checks", { checks: checks }) : "" });
+      } else if (e.state === "unresolved_signer") {
+        text = w("countersign.reported.unresolved_signer", { directory: rung.directory, key: e.key_id.length > 16 ? e.key_id.slice(0, 16) + "…" : e.key_id });
+      } else {
+        text = w("countersign.reported." + e.state);
+      }
+      if (e.receipt !== null && e.state !== "not_independent" && e.state !== "unverified") text += w("countersign.reported.receipt." + e.receipt);
+      var attrs = { "data-rung": "countersign", "data-countersign": e.state };
+      if (e.state === "not_independent") attrs["class"] = "cv-tone--caution";
+      return self.p(text, attrs);
+    });
   };
   P.logText = function (log) {
     return log ? w("step.log", { seq: String(log.seq), leaf: String(log.leaf_index), log: log.log_id }) : w("step.no_log");

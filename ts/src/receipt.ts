@@ -201,7 +201,10 @@ async function resolved(
   if ("kind" in found) return { result: found };
   let checked = found;
   if (verifierReport !== undefined) {
-    const reading = verifierReportReading(checked.context, verifierReport);
+    const reading = await verifierReportReading(
+      checked.context,
+      verifierReport,
+    );
     if (reading?.kind === "fail")
       return {
         result: {
