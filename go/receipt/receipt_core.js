@@ -895,7 +895,9 @@
       if ((t === "outcome" || t === "action-outcome/v0") && get(s.body, "status") === "unchecked_action") return failed(s, "unapproved");
       if (t === "disclosure" && get(s.body, "authority") === "none") return failed(s, "unapproved");
       if (t === "claim" && get(s.body, "unchecked") === true) return failed(s, "unapproved");
-      if (refTo(s.deal, "authorized_by") !== null || t === "action" || (t === "disclosure" && get(s.body, "authority") === "approval")) acts.push(s);
+      // An action record is an act whether or not it cites an authority, in
+      // either form (RECORD_TYPE_BY_TYPED), so one citing none fails below.
+      if (refTo(s.deal, "authorized_by") !== null || t === "action" || RECORD_TYPE_BY_TYPED[t] === "action" || (t === "disclosure" && get(s.body, "authority") === "approval")) acts.push(s);
     }
     var withheld = steps.some(function (s) { return s.deal === null; });
     if (!acts.length) return { state: withheld ? "withheld" : "none", approvers: [] };
@@ -921,8 +923,10 @@
           // Standing intent approves only a passing verdict (rule 6).
           if (approver === "standing_intent" && typeof evaluation === "object" && get(evaluation.body, "result") !== "pass") return failed(act, "order");
         } else {
-          // A typed ASK is answered only by the user's own approval.
+          // A typed ASK is answered only by the user's own approval, and
+          // only an ASK is (a DO authorizes on its own; a DENY never does).
           if (get(by.body, "authority") !== "user_approval") return failed(act, "order");
+          if (typeof evaluation === "object" && get(evaluation.body, "disposition") !== "ASK") return failed(act, "order");
           approver = "user";
         }
       } else if (typeof by === "object") {

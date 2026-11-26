@@ -346,6 +346,19 @@ describe("line 4: each act came after the holder's yes (#383)", () => {
     });
     expect((await yes({ payloads: approval("user_approval") })).yes).toEqual({ state: "passed", approvers: ["user"] });
     expect((await yes({ payloads: approval("standing_rule") })).yes.state).toBe("failed");
+    // The user's approval answers only an ASK: not a DENY, a DO or an evaluation with no disposition.
+    for (const disposition of ["DENY", "DO", undefined]) {
+      const payloads = { ...approval("user_approval"), "7f8c6534": typed("action-evaluation/v0", checks, disposition === undefined ? {} : { disposition }) };
+      expect((await yes({ payloads })).yes, String(disposition)).toMatchObject({ state: "failed", why: "order" });
+    }
+  });
+
+  it("fails an action record that cites no authority, in either form", async () => {
+    const typedAct = () => ({ type: "action-record/v0", refs: [], body: { action: "pay" } });
+    for (const [form, act] of [["x-deal", block({ refs: [] })], ["typed", typedAct]]) {
+      const { yes: model } = await yes({ payloads: { "04a4b4c4": act } });
+      expect(model, form).toMatchObject({ state: "failed", why: "order", act: { step: expect.stringMatching(/^04a4b4c4/) } });
+    }
   });
 
   it("names the holder, never \"your\", on another's copy or a page for others", async () => {

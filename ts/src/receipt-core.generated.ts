@@ -899,7 +899,9 @@ const root = {};
       if ((t === "outcome" || t === "action-outcome/v0") && get(s.body, "status") === "unchecked_action") return failed(s, "unapproved");
       if (t === "disclosure" && get(s.body, "authority") === "none") return failed(s, "unapproved");
       if (t === "claim" && get(s.body, "unchecked") === true) return failed(s, "unapproved");
-      if (refTo(s.deal, "authorized_by") !== null || t === "action" || (t === "disclosure" && get(s.body, "authority") === "approval")) acts.push(s);
+      // An action record is an act whether or not it cites an authority, in
+      // either form (RECORD_TYPE_BY_TYPED), so one citing none fails below.
+      if (refTo(s.deal, "authorized_by") !== null || t === "action" || RECORD_TYPE_BY_TYPED[t] === "action" || (t === "disclosure" && get(s.body, "authority") === "approval")) acts.push(s);
     }
     var withheld = steps.some(function (s) { return s.deal === null; });
     if (!acts.length) return { state: withheld ? "withheld" : "none", approvers: [] };
@@ -925,8 +927,10 @@ const root = {};
           // Standing intent approves only a passing verdict (rule 6).
           if (approver === "standing_intent" && typeof evaluation === "object" && get(evaluation.body, "result") !== "pass") return failed(act, "order");
         } else {
-          // A typed ASK is answered only by the user's own approval.
+          // A typed ASK is answered only by the user's own approval, and
+          // only an ASK is (a DO authorizes on its own; a DENY never does).
           if (get(by.body, "authority") !== "user_approval") return failed(act, "order");
+          if (typeof evaluation === "object" && get(evaluation.body, "disposition") !== "ASK") return failed(act, "order");
           approver = "user";
         }
       } else if (typeof by === "object") {
@@ -4357,7 +4361,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "339fb94ce3cc1c283d847715b0d4b63fcf916693a37e7df6977e7ec09a384a99",
+      "script_sha256": "49eb4cf19a2d04f9cfdf385cbf77e57fcd8910d598c843c5c20d2ff2e13a96e5",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4404,7 +4408,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "a49cbafac0393d4babc53a991ebf2aba21c4206a30cf41775ea43206ba86fe1d",
+      "script_sha256": "b2f2c182fd239dff29f9cf2c6c563be81a8e478e7baef2c1c3d7e93114fe2caa",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4450,7 +4454,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "e3a9544186691d791140a5c791354a4b7d127ec4a8a6fef5f21fd307689a075b",
+      "script_sha256": "08a75b4d79545b2b268fc8cf5b1cd70e716363e472d1af8d03ffd111ac202773",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4498,7 +4502,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "f2699d443f872f7bcf9db2536a2e5ea5b33a9982e8edb46ac98933ce57ad500a",
+      "script_sha256": "eae3236cd95d11b3863a74965544dd3d9855699b93c259ed2a23e758ca58f140",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
