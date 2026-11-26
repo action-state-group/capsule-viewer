@@ -431,6 +431,8 @@
     if (extension === EXTENSION_V1) {
       out.counterparty_half = counterpartyHalf(v);
       out.book_witnessed = bookWitnessed(v);
+      out.checks = reportedChecks(v);
+      out.verify_command = reportedCommand(v);
     }
     // Said only when the page checked it itself: a verifier's report (the
     // Python twin's inputs too) carries no such member.
@@ -1393,6 +1395,7 @@
     var theirs = get(rests, "counterparty");
     var rep = report(sealed[0], map(get(content, "report")));
     rep.audience = cut;
+    var steps = dealSteps(v);
     return {
       deal_id: or(str(get(content, "deal_id")), ""),
       audience: cut,
@@ -1418,7 +1421,151 @@
       book_witnessed: v.assurance.book_witnessed || null,
       verification: v.verification,
       report_checked: or(str(v.assurance.report_checked), null),
+      // The top surface (#382): every record the copy carries, the holder's role as its own
+      // agreement states it, capsulectl's answer per check and the command it gave, and the
+      // copy itself for "Download proof file" (null when it cannot be written back exactly).
+      sealed_steps: steps,
+      role: roleOf(steps),
+      checks: or(v.assurance.checks, null),
+      verify_command: or(str(v.assurance.verify_command), null),
+      log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
+      checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
+      proof_file: proofFile(v.bundle),
     };
+  }
+  function roleOf(steps) {
+    var agree = steps.find(function (s) { return s.kind === "agree"; });
+    return agree && (agree.role === "buyer" || agree.role === "seller") ? agree.role : null;
+  }
+  // The copy as the page carries it: the emitter writes the bundle as JCS, so its JCS is the file.
+  function proofFile(bundle) {
+    try {
+      return jcs(bundle);
+    } catch (e) {
+      if (e instanceof NotCanonical) return null;
+      throw e;
+    }
+  }
+
+  // ---- the v1 receipt's top surface: what the copy holds, record by record (#382) ----
+
+  // A book pair's payload, read only when it is the one its header commits to and the header is the
+  // one its record attests (the record's agent_input digest): never a word the record does not seal.
+  function base64Bytes(text) {
+    if (typeof text !== "string" || !/^[A-Za-z0-9_\-+/]*={0,2}$/.test(text)) return null;
+    var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var clean = text.replace(/=+$/, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (clean.length % 4 === 1) return null;
+    var out = [], bits = 0, acc = 0;
+    for (var i = 0; i < clean.length; i++) {
+      acc = (acc << 6) | alphabet.indexOf(clean.charAt(i));
+      bits += 6;
+      if (bits >= 8) { bits -= 8; out.push((acc >> bits) & 0xff); }
+    }
+    return new Uint8Array(out);
+  }
+  function utf8Text(bytes) {
+    try {
+      if (typeof TextDecoder === "function") return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      return decodeURIComponent(escape(String.fromCharCode.apply(null, Array.prototype.slice.call(bytes))));
+    } catch (e) {
+      return null;
+    }
+  }
+  function attestedHeader(record, header) {
+    var attested = str(get(map(get(map(get(record, "model_attestation")), "compute_attestation")), "agent_input_digest"));
+    return isMap(header) && attested !== null && recordDigest(header) === attested ? header : null;
+  }
+  // The payload a header's first commitment names, from the copy's evidencebook/payloads, when its bytes
+  // hash to that commitment; else null (withheld, or not the sealed one).
+  function committedPayload(header, payloads) {
+    var commitment = str(seq(get(header, "payload_commitments"))[0]);
+    if (commitment === null || !HEX64.test(commitment)) return null;
+    var bytes = base64Bytes(get(payloads, commitment));
+    if (bytes === null || sha256Hex(bytes) !== commitment) return null;
+    var text = utf8Text(bytes);
+    if (text === null) return null;
+    try {
+      var payload = JSON.parse(text);
+      return isMap(payload) ? payload : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // One step per record the copy carries, in the copy's order: its time, its log place, its kind and
+  // what it records, as far as the copy opens it. A record whose payload the copy does not open is a
+  // step with no kind ("withheld").
+  function dealSteps(v) {
+    var bundle = v.bundle;
+    var payloads = map(get(map(get(bundle, "extensions")), "evidencebook/payloads"));
+    var disclosures = map(get(bundle, "disclosures"));
+    var book = map(get(map(get(bundle, "extensions")), EXTENSION_V1)).book;
+    var pairs = {};
+    var agreement = map(get(map(book), "agreement"));
+    if (isMap(get(agreement, "record"))) pairs[str(get(get(agreement, "record"), "capsule_id"))] = agreement;
+    var relied = map(get(map(book), "relied_on"));
+    Object.keys(relied).forEach(function (k) { pairs[k] = map(relied[k]); });
+    return seq(get(bundle, "records")).filter(isMap).map(function (record) {
+      var id = or(str(get(record, "capsule_id")), "");
+      var pair = own(pairs, id) ? pairs[id] : null;
+      var header = attestedHeader(record, pair ? get(pair, "header") : get(map(get(disclosures, id)), "agent_input"));
+      var payload = null;
+      if (header !== null) {
+        payload = pair && isMap(get(pair, "payload")) && recordDigest(get(pair, "payload")) === str(seq(get(header, "payload_commitments"))[0])
+          ? get(pair, "payload")
+          : committedPayload(header, payloads);
+      }
+      var block = map(get(map(payload), EXTENSION_V1));
+      var body = map(get(map(payload), "body"));
+      var coords = map(get(map(get(v.memberships, id)), "log_coordinates"));
+      var statements = seq(get(body, "statements")).filter(isMap).map(function (st) {
+        return { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")) };
+      });
+      return {
+        record: id,
+        // The step's own sealed time (its block's `at`), else the record's timestamp to the second.
+        time: stepTime(payload !== null ? str(get(block, "at")) : null, str(get(record, "timestamp"))),
+        seq: payload !== null && int(get(block, "seq")) !== null ? int(get(block, "seq")) : header !== null ? int(get(header, "seq")) : null,
+        leaf: int(get(coords, "leaf_index")),
+        kind: payload !== null ? str(get(block, "record_type")) : null,
+        shown: payload !== null,
+        role: payload !== null ? str(get(body, "role")) : null,
+        leg: isMap(get(record, "settlement")) ? readLeg(record, id, null) : null,
+        // The settlement's money members as recorded, for the page to say in msat and sats.
+        money: isMap(get(record, "settlement")) ? LEG_MONEY.reduce(function (acc, k) {
+          if (own(get(record, "settlement"), k) && isMap(get(get(record, "settlement"), k))) acc[k] = get(get(record, "settlement"), k);
+          return acc;
+        }, {}) : {},
+        statements: statements,
+        act: payload !== null ? str(get(body, "act")) : null,
+      };
+    });
+  }
+  function stepTime(at, timestamp) {
+    if (at !== null && validUtcTime(at)) return at;
+    var m = timestamp !== null ? /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?Z$/.exec(timestamp) : null;
+    return m && validUtcTime(m[1] + "Z") ? m[1] + "Z" : timestamp;
+  }
+  function optionalWordOrNull(words, value) { return typeof value === "string" && words.indexOf(value) >= 0 ? value : null; }
+
+  // capsulectl verify's own answer for each bundle check, as the page runtime carries it in the
+  // x-deal-v1 entry (#382): {name: {status, findings}} with strings only, or null when none came.
+  function reportedChecks(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    var given = entry !== undefined ? get(entry, "checks") : null;
+    if (!isMap(given)) return null;
+    var out = {};
+    Object.keys(given).forEach(function (name) {
+      var c = map(given[name]);
+      if (typeof c.status === "string") out[name] = { status: c.status, findings: seq(c.findings).filter(function (f) { return typeof f === "string"; }) };
+    });
+    return out;
+  }
+  function reportedCommand(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    var command = entry !== undefined ? get(entry, "verify_command") : null;
+    return typeof command === "string" && command !== "" ? command : null;
   }
 
   // ---- the seller model (seller.py) -----------------------------------------
@@ -2633,12 +2780,12 @@
   };
 
   // The three levels of one page: L0 always shown, L1 and L2 one toggle each.
-  P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after) {
+  P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after, l2Summary) {
     var d = this.d;
     return [
       d.el("div", { "data-level": "L0" }, l0),
       d.el("div", { "data-level": "L1" }, [this.kit.drilldown(l1Summary, l1, l1Open)].concat(after ? [after] : [])),
-      d.el("div", { "data-level": "L2" }, [this.kit.drilldown(w("depth.l2"), l2, l2Open)]),
+      d.el("div", { "data-level": "L2" }, [this.kit.drilldown(l2Summary || w("depth.l2"), l2, l2Open)]),
     ];
   };
 
@@ -2869,15 +3016,430 @@
     return out;
   };
 
+  // ---- drawing: the v1 receipt's top surface (#382, Steven's design) ----------
+  //
+  // L0 is the design: header and tags, the top line with the seal, the cards, the stamps, the steps,
+  // the proof panel, what this does not prove, what else is here, the footer. L1 ("For checkers") is
+  // every sealed record and the terms; L2 ("Technical details") is the ladder of rungs, the records
+  // each term rests on, what the report rests on and the checks, as the page drew them before. Every
+  // line says only what the copy holds or capsulectl reported: a field the copy does not carry (the
+  // item, the seller's name, a simulated rail) is left out, never filled in.
+
+  // The harbour seal (Steven's design, two of its three moods: a v1 receipt never shows "Waiting for
+  // you"). Decorative: the mood is always also said in words beside it.
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var SEAL_BODY = [
+    ["path", { d: "M22 106 C18 70 34 44 60 42 C86 44 102 70 98 106 Z", fill: "#7F96A8" }],
+    ["ellipse", { cx: "60", cy: "88", rx: "24", ry: "19", fill: "#C9D5DE" }],
+    ["circle", { cx: "60", cy: "40", r: "26", fill: "#8FA5B6" }],
+  ];
+  var SEAL_MOODS = {
+    done: [
+      ["circle", { cx: "50", cy: "37", r: "3.6", fill: "#13202B" }], ["circle", { cx: "70", cy: "37", r: "3.6", fill: "#13202B" }],
+      ["circle", { cx: "43", cy: "46", r: "3.4", fill: "#E8A3A3", opacity: "0.7" }], ["circle", { cx: "77", cy: "46", r: "3.4", fill: "#E8A3A3", opacity: "0.7" }],
+      ["ellipse", { cx: "60", cy: "48", rx: "9", ry: "6", fill: "#C9D5DE" }],
+      ["ellipse", { cx: "60", cy: "45.5", rx: "3.2", ry: "2.2", fill: "#13202B" }],
+      ["path", { d: "M57 50 Q60 53 63 50", stroke: "#13202B", "stroke-width": "1.6", fill: "none", "stroke-linecap": "round" }],
+      ["path", { d: "M76 76 Q92 70 95 82 Q88 86 79 82 Z", fill: "#6E8597" }],
+      ["circle", { cx: "96", cy: "78", r: "14", fill: "#C2412D" }],
+      ["path", { d: "M90.5 78.5 L94.5 82.5 L101.5 74.5", stroke: "#FFFFFF", "stroke-width": "2.6", fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+    ],
+    not_as_agreed: [
+      ["path", { d: "M45 31 L54 34 M75 31 L66 34", stroke: "#13202B", "stroke-width": "1.8", "stroke-linecap": "round" }],
+      ["circle", { cx: "50", cy: "39", r: "3.4", fill: "#13202B" }], ["circle", { cx: "70", cy: "39", r: "3.4", fill: "#13202B" }],
+      ["ellipse", { cx: "60", cy: "49", rx: "9", ry: "6", fill: "#C9D5DE" }],
+      ["ellipse", { cx: "60", cy: "46.5", rx: "3.2", ry: "2.2", fill: "#13202B" }],
+      ["path", { d: "M56.5 53 Q60 50.5 63.5 53", stroke: "#13202B", "stroke-width": "1.6", fill: "none", "stroke-linecap": "round" }],
+      ["path", { d: "M76 76 Q92 70 95 82 Q88 86 79 82 Z", fill: "#6E8597" }],
+      ["circle", { cx: "96", cy: "78", r: "14", fill: "#D97A1E" }],
+      ["path", { d: "M96 71 L96 79", stroke: "#FFFFFF", "stroke-width": "2.8", "stroke-linecap": "round" }],
+      ["circle", { cx: "96", cy: "84.5", r: "1.7", fill: "#FFFFFF" }],
+    ],
+  };
+  P.seal = function (mood) {
+    var doc = this.d.doc;
+    var svg = doc.createElementNS(SVG_NS, "svg");
+    [["viewBox", "0 0 120 120"], ["width", "72"], ["height", "72"], ["aria-hidden", "true"], ["focusable", "false"], ["class", "cv-rcpt-seal"], ["data-seal", mood]]
+      .forEach(function (a) { svg.setAttribute(a[0], a[1]); });
+    SEAL_BODY.concat(SEAL_MOODS[mood]).forEach(function (shape) {
+      var node = doc.createElementNS(SVG_NS, shape[0]);
+      Object.keys(shape[1]).forEach(function (k) { node.setAttribute(k, shape[1][k]); });
+      svg.appendChild(node);
+    });
+    return svg;
+  };
+
+  // The holder's payment leg: the payer's on a buyer's copy, the payee's on a seller's.
+  function ownLeg(model) {
+    var want = model.role === "seller" ? "payee" : "payer";
+    var step = model.sealed_steps.find(function (s) { return s.leg !== null && s.leg.leg.indexOf(want) === 0 && s.leg.status === "settled"; });
+    return step ? step.leg : null;
+  }
+  // The seal's mood and the top line, from the report's own facts (Sherlock2, 2026-11-26, buzz
+  // 368bf508 and 12969602; the seal's meaning awaits Steven's ruling):
+  // * done: settled, every term "both say the same" with value met, and the holder's settle record held;
+  // * not_as_agreed: a term has a final ruling of not met;
+  // * no seal otherwise, and a top line in words. "Waiting for you" is never a receipt's.
+  function dealVerdict(model) {
+    var rows = model.rows_state === "listed" ? model.rows : [];
+    var ruled = rows.find(function (r) { return r.status === "ruled" && r.ruling !== null && r.ruling.value === "not_met"; });
+    if (ruled) return { mood: "not_as_agreed", line: "ruled_not_met", term: ruled.id, remedy: ruled.remedy };
+    if (model.start.state !== "started") return { mood: null, line: "state." + model.start.state };
+    var leg = ownLeg(model);
+    if (model.settled) {
+      var conceded = rows.find(function (r) { return r.value === "not_met" && r.remedy_made; });
+      if (conceded) return { mood: null, line: "remedied", term: conceded.id };
+      if (rows.length && rows.every(function (r) { return r.status === "not_reached"; })) return { mood: null, line: "none_due" };
+      var agreed = rows.length > 0 && rows.every(function (r) { return r.status === "agreed" && r.value === "met"; });
+      return { mood: agreed && leg !== null ? "done" : null, line: "settled" };
+    }
+    if (rows.some(function (r) { return r.status === "in_dispute"; })) return { mood: null, line: "in_dispute" };
+    if (rows.some(function (r) { return r.status === "in_disagreement"; })) return { mood: null, line: "in_disagreement" };
+    if (rows.length && rows.every(function (r) { return r.status === "waiting"; })) return { mood: null, line: leg !== null ? "paid_waiting" : "waiting" };
+    return { mood: null, line: "terms" };
+  }
+  // A key's form for this copy: the seller's when the copy is a seller's, and the third person's
+  // (".report") when the reader is not the holder on their own page (a counterparty's or adjudicator's
+  // copy, or a page or report shown to others), so no line says "your" to someone it is not about.
+  P.say = function (model, key, values) {
+    var forms = [];
+    if (!this.ownPage(model)) {
+      if (model.role === "seller") forms.push(key + ".seller.report");
+      forms.push(key + ".report");
+    }
+    if (model.role === "seller") forms.push(key + ".seller");
+    forms.push(key);
+    var chosen = forms.find(function (k) { return own(WORDS, k); });
+    return w(chosen || key, values);
+  };
+
+  // A money member as a reader says it: BTC at scale 11 (or less) is counted in msat, with sats above
+  // when it is whole sats; anything else as recorded (legAmount).
+  function moneyOf(a) {
+    var value = str(get(a, "value")), code = str(get(a, "assetCode")), scale = int(get(a, "assetScale"));
+    if (code === "BTC" && value !== null && /^\d+$/.test(value) && scale !== null && scale >= 0 && scale <= 11) {
+      var msat = Number(value) * Math.pow(10, 11 - scale);
+      if (Number.isSafeInteger(msat)) {
+        var main = groupThousands(msat) + " msat";
+        return msat % 1000 === 0 && msat > 0 ? { main: groupThousands(msat / 1000) + (msat === 1000 ? " sat" : " sats"), sub: main } : { main: main, sub: null };
+      }
+    }
+    return { main: legAmount(a), sub: null };
+  }
+  P.short = function (id) { return id.length > SHORT_HEAD + SHORT_TAIL + 1 ? id.slice(0, SHORT_HEAD) + "…" + id.slice(-SHORT_TAIL) : id; };
+
+  P.surfaceHeader = function (model) {
+    var d = this.d;
+    var tags = [d.el("span", { class: "cv-rcpt-title", "data-receipt-title": model.role || "deal" }, [w(model.role === "seller" ? "deal.surface.title.seller" : model.role === "buyer" ? "deal.surface.title.buyer" : "deal.surface.title")])];
+    if (model.audience === "keep" && !sharedCarrier(this.carrier)) tags.push(d.el("span", { class: "cv-rcpt-tag cv-rcpt-tag--private", "data-banner": "private" }, [w("deal.surface.tag.private")]));
+    else tags.push(d.el("span", { class: "cv-rcpt-tag", "data-banner": "shared" }, [w(sharedCarrier(this.carrier) ? "banner.shared.label" : "deal.surface.tag.shared")]));
+    var actions = [];
+    if (model.proof_file !== null) actions.push(this.proofDownload(model, "cv-rcpt-button cv-rcpt-button--primary"));
+    return d.el("div", { class: "cv-rcpt-header", "data-surface": "header" }, [d.el("div", { class: "cv-rcpt-tags" }, tags), d.el("div", { class: "cv-rcpt-actions" }, actions)]);
+  };
+  // "Download proof file": the copy as this page carries it, saved as a file capsulectl verify reads.
+  P.proofDownload = function (model, cls) {
+    var d = this.d;
+    var name = (model.deal_id || "deal") + ".bundle.json";
+    var link = d.el("a", { class: cls, href: "#", download: name, "data-proof-download": name }, [w("deal.surface.download")]);
+    var text = model.proof_file;
+    link.addEventListener("click", function () {
+      var view = link.ownerDocument.defaultView;
+      var url = view && view.URL && typeof view.URL.createObjectURL === "function" && typeof view.Blob === "function"
+        ? view.URL.createObjectURL(new view.Blob([text], { type: "application/json" }))
+        : "data:application/json;charset=utf-8," + encodeURIComponent(text);
+      link.setAttribute("href", url);
+    });
+    return link;
+  };
+
+  P.topLine = function (model, verdict) {
+    var d = this.d;
+    var key = "deal.top." + verdict.line;
+    var values = {};
+    if (verdict.term) values.term = word("deal.term." + verdict.term) || verdict.term;
+    var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
+    var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
+    if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
+    if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
+    var parts = [];
+    if (verdict.mood !== null) parts.push(this.seal(verdict.mood));
+    parts.push(d.el("div", { class: "cv-rcpt-topline" }, line));
+    return d.el("div", { class: "cv-rcpt-top", "data-surface": "top" }, parts);
+  };
+
+  P.surfaceCards = function (model, verdict) {
+    var d = this.d;
+    var cards = [];
+    var leg = ownLeg(model);
+    if (leg !== null) {
+      var amountKey = model.role === "seller" ? "received" : "amount";
+      // A record's time only on the holder's own page (Sherlock2, u239): no other copy shows one.
+      var at = this.ownPage(model) && leg.observed_at !== null && validUtcTime(leg.observed_at) ? this.timed("deal.card.at", leg.observed_at) : null;
+      cards.push({ key: "paid", label: w(model.role === "seller" ? "deal.card.received" : "deal.card.paid"), value: this.legMoney(model, leg, amountKey), note: at });
+    }
+    cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of) : null });
+    cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.verified" : "deal.card.other.none"), note: null });
+    return d.el("div", { class: "cv-rcpt-cards", "data-surface": "cards" }, cards.map(function (c) {
+      var parts = [d.el("div", { class: "cv-rcpt-card__label" }, [c.label]), d.el("div", { class: "cv-rcpt-card__value" }, [c.value])];
+      if (c.note) parts.push(d.el("div", { class: "cv-rcpt-card__note" }, [c.note]));
+      return d.el("div", { class: "cv-rcpt-card", "data-card": c.key }, parts);
+    }));
+  };
+  // The status card: "Settled" under the Done seal, else the terms' one shared status, else the start state.
+  P.statusWord = function (model, verdict) {
+    if (verdict.mood === "done") return w("deal.card.status.done");
+    var rows = model.rows_state === "listed" ? model.rows : [];
+    var first = rows.length ? rows[0].status : null;
+    if (first !== null && model.start.state === "started" && rows.every(function (r) { return r.status === first; })) return this.token("deal.status", first);
+    return this.token("deal.state", model.start.state);
+  };
+  P.legMoney = function (model, leg, key) {
+    var step = model.sealed_steps.find(function (s) { return s.leg === leg; });
+    var m = step ? step.money[key] : null;
+    var said = m ? moneyOf(m) : { main: "-", sub: null };
+    return said.sub ? [said.main, this.d.el("span", { class: "cv-rcpt-sub" }, [said.sub])] : said.main;
+  };
+
+  // The three stamps (Muse design §3.3, as #382 item 14 words them), each from its own evidence.
+  P.stamps = function (model) {
+    var d = this.d, self = this;
+    var checks = model.checks;
+    var recorded;
+    var checkpoint = checks !== null && own(checks, "checkpoint") ? checks.checkpoint.status : null;
+    if (checkpoint === null) recorded = { state: "not_checked" };
+    else if (checkpoint === "fail") recorded = { state: "failed" };
+    else if (checkpoint !== "pass") recorded = { state: "open" };
+    else {
+      var leaves = mmrLeaves(model.checkpoint_size), size = model.rests_on.own_size;
+      recorded = leaves !== null && size !== null && leaves < size ? { state: "partial", k: leaves, n: size } : { state: "filled" };
+    }
+    var witness = this.timeStamp(model);
+    var counter = model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
+    var items = [["recorded", recorded], ["time_stamped", witness], ["countersigned", counter]];
+    return d.el("ul", { class: "cv-rcpt-stamps", "data-surface": "stamps" }, items.map(function (it) {
+      var name = it[0], s = it[1];
+      var values = {};
+      if (s.k !== undefined) { values.k = String(s.k); values.n = String(s.n); }
+      if (s.witness !== undefined) values.witness = s.witness;
+      var text = s.at !== undefined ? self.timed("deal.stamp." + name + "." + s.state, s.at, values) : w("deal.stamp." + name + "." + s.state, values);
+      return d.el("li", { class: "cv-rcpt-stamp cv-rcpt-stamp--" + (s.state === "filled" ? "filled" : "open"), "data-stamp": name, "data-stamp-state": s.state }, [
+        d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [text]),
+      ]);
+    }));
+  };
+  // The leaves an MMR of `size` nodes holds (size = 2L - popcount(L)), or null when no L gives it.
+  function mmrLeaves(size) {
+    if (size === null || size < 0) return null;
+    for (var l = 0; l <= size; l++) {
+      var ones = 0, x = l;
+      while (x) { ones += x & 1; x >>>= 1; }
+      if (2 * l - ones === size) return l;
+    }
+    return null;
+  }
+  // TIME-STAMPED and the proof panel's "Outside time stamp" row, one decision: capsulectl's check of
+  // the holder's own book, on the holder's own page only (a shared copy never shows the holder's time).
+  P.timeStamp = function (model) {
+    if (!this.ownPage(model)) return { state: "not_checked" };
+    var book = model.book_witnessed;
+    if (book === null) return { state: "not_checked" };
+    if (book.status === "verified") return { state: "filled", at: book.at, witness: book.witness };
+    if (book.status === "failed") return { state: "failed" };
+    return { state: "open" };
+  };
+
+  // "What happened, step by step": one row per record the copy carries, each opening to what it records.
+  P.stepTitle = function (model, step) {
+    if (!step.shown) return w("deal.step.withheld");
+    if (step.kind === "agree") return w("deal.step.agree");
+    if (step.kind === "settle" && step.leg !== null) {
+      var payee = step.leg.leg.indexOf("payee") === 0;
+      var key = payee ? "received" : "amount";
+      var raw = this.rawMoney(step, key);
+      return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: raw !== null ? moneyOf(raw).sub || moneyOf(raw).main : "-" });
+    }
+    if (step.kind === "statement") {
+      var self = this;
+      var said = step.statements.map(function (st) { return (word("deal.term." + st.row) || st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : "-"); }).join("; ");
+      return this.say(model, "deal.step.statement", { said: said || "-" });
+    }
+    if (step.kind === "perform") return w("deal.step.perform", { act: step.act !== null ? step.act : "-" });
+    var known = step.kind !== null ? word("deal.step.kind." + step.kind) : null;
+    return known !== null ? known : w("deal.step.other", { kind: step.kind || "-" });
+  };
+  P.rawMoney = function (step, key) { return step.money && own(step.money, key) ? step.money[key] : null; };
+  P.stepDrawer = function (model, step) {
+    var d = this.d, self = this;
+    var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [step.kind !== null ? step.kind : w("deal.drawer.kind.withheld")])]];
+    if (step.time !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(step.time)]);
+    if (step.leg !== null) {
+      var leg = step.leg;
+      rows.push([w("deal.drawer.leg"), leg.leg + " · " + leg.status]);
+      leg.money.forEach(function (m) {
+        var raw = self.rawMoney(step, m[0]);
+        var said = raw !== null ? moneyOf(raw) : { main: m[1], sub: null };
+        rows.push([m[0], said.sub ? said.main + " (" + said.sub + ")" : said.main]);
+      });
+      if (leg.payment_ref !== null) rows.push([w("deal.drawer.payment_ref"), d.el("span", { class: "cv-mono" }, [leg.payment_ref.type + " " + self.short(leg.payment_ref.value)])]);
+    }
+    step.statements.forEach(function (st) { rows.push([self.termName(st.row), st.value !== null ? self.token("deal.value", st.value) : "-"]); });
+    if (step.kind === "agree" && step.role !== null) rows.push([w("deal.drawer.role"), this.sideWord(step.role)]);
+    var id = d.el("details", { class: "cv-rcpt-id", "data-record-id": step.record }, [
+      d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.short(step.record)]), " · ", step.kind !== null ? step.kind : w("deal.drawer.kind.withheld")]),
+      d.el("code", { class: "cv-mono cv-rcpt-fullid" }, [step.record]),
+    ]);
+    var place = [];
+    if (step.seq !== null) place.push(w("deal.drawer.seq", { seq: String(step.seq) }));
+    if (step.leaf !== null) place.push(w("deal.drawer.leaf", { leaf: String(step.leaf) }));
+    return [
+      d.el("dl", { class: "cv-rcpt-fields" }, rows.map(function (r) { return d.el("div", { class: "cv-rcpt-field" }, [d.el("dt", {}, [r[0]]), d.el("dd", {}, [r[1]])]); })),
+      d.el("div", { class: "cv-rcpt-record" }, [d.el("span", { class: "cv-rcpt-record__label" }, [w("deal.drawer.record")]), id].concat(place.length ? [d.el("span", { class: "cv-mono cv-muted" }, [place.join(" · ")])] : [])),
+    ];
+  };
+  P.timeline = function (model) {
+    var d = this.d, self = this;
+    var steps = model.sealed_steps;
+    // Each step's time only on the holder's own page (Sherlock2, u239).
+    var own = this.ownPage(model);
+    var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w("deal.steps.lede", { count: String(steps.length) }))];
+    if (!steps.length) return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([this.note(w("deal.steps.none"))]));
+    var list = d.el("ol", { class: "cv-rcpt-steps" }, steps.map(function (step, i) {
+      return d.el("li", { class: "cv-rcpt-step", "data-step": String(i + 1), "data-step-kind": step.kind || "withheld" }, [
+        d.el("details", {}, [
+          d.el("summary", {}, [
+            d.el("span", { class: "cv-rcpt-step__n", "aria-hidden": "true" }, [String(i + 1)]),
+            d.el("span", { class: "cv-rcpt-step__title" }, [self.stepTitle(model, step)]),
+            d.el("span", { class: "cv-rcpt-step__time" }, [step.time !== null && own ? self.v1Time(step.time) : ""]),
+          ]),
+          d.el("div", { class: "cv-rcpt-step__drawer" }, self.stepDrawer(model, step)),
+        ]),
+      ]);
+    }));
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([list]));
+  };
+
+  // "Is this record intact?": capsulectl verify's own answer per check, never the page's (#378: no
+  // bare "Verified"), with the outside time stamp as the TIME-STAMPED stamp says it.
+  var PROOF_ROWS = ["producer_signatures", "interval_coverage", "graph_closure", "per_record_membership", "checkpoint"];
+  P.proofPanel = function (model) {
+    var d = this.d, self = this;
+    var checks = model.checks;
+    var statuses = PROOF_ROWS.map(function (name) { return checks !== null && own(checks, name) ? checks[name].status : null; });
+    var lede = checks === null ? "deal.proof.lede.none"
+      : statuses.some(function (s) { return s === "fail"; }) ? "deal.proof.lede.failed"
+      : statuses.every(function (s) { return s === "pass"; }) ? "deal.proof.lede.passed" : "deal.proof.lede.partial";
+    var rows = PROOF_ROWS.map(function (name, i) { return self.proofRow(name, statuses[i] === null ? "absent" : statuses[i], w("deal.proof." + name), null); });
+    var stamp = this.timeStamp(model);
+    var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
+    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
+    rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
+    var parts = [
+      d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.proof")]),
+      this.p(w(lede), { class: "cv-rcpt-lede", "data-proof": lede.split(".").pop() }),
+      d.el("ul", { class: "cv-rcpt-proof" }, rows),
+      this.checkYourself(model),
+    ];
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "proof" }, parts);
+  };
+  P.proofRow = function (name, status, text, note) {
+    var d = this.d;
+    var mark = status === "pass" ? "✓" : status === "fail" ? "✗" : "–";
+    var parts = [
+      d.el("span", { class: "cv-rcpt-mark cv-rcpt-mark--" + status, "aria-hidden": "true" }, [mark]),
+      d.el("span", { class: "cv-rcpt-proof__text" }, [
+        d.el("span", { class: "cv-rcpt-sr" }, [w("deal.proof.status." + status) + ": "]),
+        d.el("span", { class: "cv-rcpt-proof__label" }, [text]),
+        d.el("span", { class: "cv-mono cv-rcpt-proof__code" }, [name.replace(/_/g, " ")]),
+      ].concat(note ? [d.el("span", { class: "cv-rcpt-proof__note" }, [note])] : [])),
+    ];
+    return d.el("li", { class: "cv-rcpt-proof__row", "data-check": name, "data-check-status": status }, parts);
+  };
+  P.checkYourself = function (model) {
+    var d = this.d;
+    var parts = [d.el("div", { class: "cv-rcpt-h4" }, [w("deal.check.title")])];
+    if (model.verify_command !== null) parts.push(d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "" }, [model.verify_command])]));
+    else parts.push(this.note(w("deal.check.no_command")));
+    if (model.bundle_digest) parts.push(this.note(w("deal.check.expect", { fingerprint: this.short(model.bundle_digest) }), { "data-expect": model.bundle_digest }));
+    if (model.proof_file !== null) parts.push(this.proofDownload(model, "cv-rcpt-button"));
+    return d.el("div", { class: "cv-rcpt-check", "data-surface": "check" }, parts);
+  };
+
+  P.notProven = function (model) {
+    var d = this.d, self = this;
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "not-proven" }, [
+      d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.not_proven")]),
+      d.el("ul", { class: "cv-rcpt-list" }, ["true", "who", "goods", "outside"].map(function (k) { return d.el("li", {}, [self.say(model, "deal.not_proven." + k)]); })),
+    ]);
+  };
+  P.elseHere = function (model) {
+    var d = this.d;
+    var rows = model.rows_state === "listed" ? model.rows : [];
+    var problems = rows.filter(function (r) { return r.status === "in_dispute" || r.status === "in_disagreement" || (r.ruling !== null && r.ruling.value === "not_met"); });
+    var self = this;
+    var problemText = problems.length
+      ? problems.map(function (r) { return (word("deal.term." + r.id) || r.id) + ": " + self.token("deal.status", r.status); }).join("; ")
+      : w("deal.else.problems.none");
+    var tiles = [
+      { key: "problems", label: w("deal.else.problems"), text: problemText },
+      { key: "whose", label: w("deal.else.whose"), text: this.say(model, "deal.else.whose.text") },
+    ];
+    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.say(model, "deal.else.half.text") });
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "else" }, [
+      d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.else")]),
+      d.el("div", { class: "cv-rcpt-tiles" }, tiles.map(function (t) {
+        return d.el("div", { class: "cv-rcpt-tile", "data-else": t.key }, [d.el("div", { class: "cv-rcpt-tile__label" }, [t.label]), d.el("div", {}, [t.text])]);
+      })),
+    ]);
+  };
+  P.surfaceFooter = function (model) {
+    var parts = [w("deal.footer.times")];
+    parts.push(" ", this.ownPage(model) ? w("deal.footer.private") : w("deal.footer.shared"));
+    if (model.as_of && validUtcTime(model.as_of)) parts.push(" ", this.timed("deal.footer.after", model.as_of));
+    return this.d.el("p", { class: "cv-rcpt-footer", "data-surface": "footer" }, parts);
+  };
+
+  // "For checkers: every sealed record": each record once, then the copy's own facts.
+  P.recordTable = function (model) {
+    var d = this.d, self = this;
+    var rows = model.sealed_steps.map(function (step, i) {
+      return [String(i + 1), self.stepTitle(model, step), d.el("span", { class: "cv-mono" }, [step.kind !== null ? step.kind : "-"]),
+        d.el("span", { class: "cv-mono" }, [(step.seq !== null ? String(step.seq) : "-") + " · " + (step.leaf !== null ? String(step.leaf) : "-")]),
+        d.el("span", { class: "cv-mono", "data-inventory-record": step.record, title: step.record }, [self.short(step.record)]),
+        w(step.shown ? "deal.inventory.shown" : "deal.inventory.withheld")];
+    });
+    var facts = [
+      [w("deal.inventory.log"), model.log_id !== null ? d.el("span", { class: "cv-mono" }, [model.log_id]) : w("deal.inventory.not_recorded")],
+      [w("deal.inventory.fingerprint"), model.bundle_digest ? d.el("span", { class: "cv-mono" }, [model.bundle_digest]) : w("deal.inventory.not_recorded")],
+      [w("deal.inventory.profile"), d.el("span", { class: "cv-mono" }, [EXTENSION_V1])],
+      [w("deal.inventory.producer"), w("deal.inventory.not_recorded")],
+      [w("deal.inventory.pack"), d.el("span", { class: "cv-mono" }, [PACK.id])],
+    ];
+    return [
+      rows.length ? this.kit.dataTable([w("deal.col.step"), w("deal.col.what"), w("deal.col.kind"), w("deal.col.place"), w("deal.col.record"), w("deal.col.shown")], rows) : this.note(w("deal.steps.none")),
+      d.el("dl", { class: "cv-rcpt-fields", "data-inventory": "facts" }, facts.map(function (f) { return d.el("div", { class: "cv-rcpt-field" }, [d.el("dt", {}, [f[0]]), d.el("dd", {}, [f[1]])]); })),
+    ];
+  };
+
   function drawDeal(doc, depth, model) {
     var dr = new Drawer(doc, depth, false);
-    var l0 = [dr.d.el("h2", {}, [w("deal.title")])];
-    var keep = model.audience === "keep";
-    if (keep) l0.push(dr.privateBanner());
-    l0.push(dr.dealHeadline(model));
-    l0 = l0.concat(dr.copyNotes(model));
-    var l1Open = depth === "L1" || depth === "L2";
-    return dr.page(l0, w("deal.depth.l1"), dr.dealL1(model), l1Open, dr.dealL2(model), depth === "L2", null);
+    var d = dr.d;
+    var verdict = dealVerdict(model);
+    var main = d.el("div", { class: "cv-rcpt-main" }, [dr.timeline(model), dr.elseHere(model)]);
+    var side = d.el("div", { class: "cv-rcpt-side" }, [dr.proofPanel(model), dr.notProven(model)]);
+    var l0 = [d.el("div", { class: "cv-rcpt", "data-receipt-surface": "v1" }, [
+      dr.surfaceHeader(model),
+      d.el("div", { class: "cv-rcpt-panel cv-rcpt-hero" }, [dr.topLine(model, verdict), dr.surfaceCards(model, verdict)]),
+      dr.stamps(model),
+      d.el("div", { class: "cv-rcpt-grid" }, [main, side]),
+    ])];
+    // For checkers: every sealed record, the copy's facts, then where the deal stands and its terms.
+    var l1 = dr.recordTable(model).concat([dr.dealHeadline(model)], dr.dealL1(model));
+    // Technical details: the ladder of rungs as the page drew them before, and the report's grounds.
+    var l2 = [dr.kit.section(w("deal.section.rungs"), dr.copyNotes(model), 3)].concat(dr.dealL2(model));
+    var levels = dr.page(l0, w("deal.depth.l1.checkers"), l1, depth === "L1" || depth === "L2", l2, depth === "L2", null, w("deal.depth.l2.technical"));
+    levels[1].appendChild(dr.surfaceFooter(model));
+    return levels;
   }
 
   // ---- drawing: the composition section and the bilateral page ---------------

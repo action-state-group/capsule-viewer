@@ -105,26 +105,26 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
 
   it("#430: a started deal not yet settled says where its terms stand, beside the start state", async () => {
     const { host } = await page(openWindow, "L0");
-    const state = host.L0.querySelector("[data-deal-state]");
+    const state = host.L1.querySelector("[data-deal-state]");
     expect(state.getAttribute("data-deal-state")).toBe("started");
     // The deal-level line stays start.state (section 9); the terms' count sits beside it, outside it.
     expect(state.textContent).toBe("Started");
     expect(state.querySelector("[data-deal-terms]")).toBeNull();
-    expect(host.L0.querySelector("[data-deal-terms]").textContent).toBe("Terms: Both say the same so far (2 of 2)");
-    expect(host.L0.querySelector(".cv-metric__value").textContent).toBe("Started · Terms: Both say the same so far (2 of 2)");
-    expect(host.L0.querySelector("[data-settled]")).toBeNull();
-    expect(host.L0.textContent).not.toMatch(/closed|close\b|done/i);
+    expect(host.L1.querySelector("[data-deal-terms]").textContent).toBe("Terms: Both say the same so far (2 of 2)");
+    expect(host.L1.querySelector(".cv-metric__value").textContent).toBe("Started · Terms: Both say the same so far (2 of 2)");
+    expect(host.L1.querySelector("[data-settled]")).toBeNull();
+    expect(host.L1.textContent).not.toMatch(/closed|close\b|done/i);
   });
 
   it("#430: mixed statuses are each counted in the rows' order; a settled deal says settled and no tally", async () => {
     const mixed = await page((c) => ({ ...c, settled: false, rows: [{ ...c.rows[0], status: "waiting", value: null }, { ...c.rows[1], status: "agreed_so_far" }] }), "L0");
-    expect(mixed.host.L0.querySelector("[data-deal-terms]").textContent).toBe("Terms: Waiting for the other side (1 of 2); Both say the same so far (1 of 2)");
+    expect(mixed.host.L1.querySelector("[data-deal-terms]").textContent).toBe("Terms: Waiting for the other side (1 of 2); Both say the same so far (1 of 2)");
     const settled = await page(undefined, "L0");
-    expect(settled.host.L0.querySelector("[data-settled]")).not.toBeNull();
-    expect(settled.host.L0.querySelector("[data-deal-terms]")).toBeNull();
+    expect(settled.host.L1.querySelector("[data-settled]")).not.toBeNull();
+    expect(settled.host.L1.querySelector("[data-deal-terms]")).toBeNull();
     // A deal that has not started has no terms to count.
     const none = await page((c) => ({ ...c, start: { state: "awaiting_agreement", local: false, by: null }, settled: false, rows_state: "not_started", rows: [] }), "L0");
-    expect(none.host.L0.querySelector("[data-deal-terms]")).toBeNull();
+    expect(none.host.L1.querySelector("[data-deal-terms]")).toBeNull();
   });
 
   it("#431: the records table says each time as the header does, the data keeping UTC", async () => {
@@ -183,7 +183,7 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     const no = await page((c) => ({ ...asKeep(c), rows: c.rows.map((r) => ({ ...r, relied_on: r.relied_on.map((e) => ({ ...e, time: null, witnessed: false })) })) }));
     for (const r of table(no.host.L2, BASIS)) expect([r[3].textContent, r[4].textContent]).toEqual(["no time", "no"]);
     // The header still says the file carries no witness receipt the page checked.
-    expect(host.L0.querySelector('[data-rung="witness"]').textContent).toBe("No outside time stamp: this copy carries no witness receipt.");
+    expect(host.L2.querySelector('[data-rung="witness"]').textContent).toBe("No outside time stamp: this copy carries no witness receipt.");
   });
 
   // Sherlock2, u239: a copy that is not the holder's own page lists the records each term rests on,

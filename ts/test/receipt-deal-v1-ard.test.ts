@@ -120,15 +120,16 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
   it("#430: before the contest window ends, the deal line says where the terms stand, beside it", async () => {
     // The run's report as drawn at 14:41, the window still open: both met so
     // far, not settled. The module is given capsulectl's check, as a page is.
-    const { L0 } = await edited((content) => {
+    // The deal line sits under "For checkers" (L1) since the redesign (#382).
+    const { L1 } = await edited((content) => {
       content["settled"] = false;
       content["rows"] = (content["rows"] as Obj[]).map((r) => ({
         ...r,
         status: "agreed_so_far",
       }));
     });
-    expect(L0.querySelector("[data-deal-state]")?.textContent).toBe("Started");
-    expect(L0.querySelector("[data-deal-terms]")?.textContent).toBe(
+    expect(L1.querySelector("[data-deal-state]")?.textContent).toBe("Started");
+    expect(L1.querySelector("[data-deal-terms]")?.textContent).toBe(
       "Terms: Both say the same so far (2 of 2)",
     );
   });
@@ -153,7 +154,7 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
 // for the original bytes would not be this bundle's).
 async function edited(
   edit: (content: Obj) => void,
-): Promise<{ L0: HTMLElement; L2: HTMLElement }> {
+): Promise<{ L0: HTMLElement; L1: HTMLElement; L2: HTMLElement }> {
   const b = bundle();
   const ext = b["extensions"] as Obj;
   const pair = ext["x-deal-report/v0"] as Obj;
@@ -187,14 +188,10 @@ async function edited(
     completeness: { memberships: {} },
   });
   const L0 = document.createElement("div");
+  const L1 = document.createElement("div");
   const L2 = document.createElement("div");
-  module.render(model, {
-    L0,
-    L1: document.createElement("div"),
-    L2,
-    depth: "L2",
-  });
-  return { L0, L2 };
+  module.render(model, { L0, L1, L2, depth: "L2" });
+  return { L0, L1, L2 };
 }
 
 // The holder's own keep copy, the case Steven ran on Maya's copy: its one
