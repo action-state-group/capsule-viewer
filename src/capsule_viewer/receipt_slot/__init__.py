@@ -10,7 +10,8 @@ and manifests (``manifest-<kind>.json``); it imports nothing from
 ``static/receipt_core.js`` is their one source. Each script is that file with
 its ``@generated`` lines filled: the module it registers, its manifest (with
 ``script_sha256`` all zeros, as a script cannot carry its own digest), the
-words of the example English wording pack (``wording-en.json``, compiled in:
+words of the English wording pack (``wording-en.json``,
+``capsuleviewer.receipt.wording.en/v1``, compiled in:
 the script reads no pack), the pack's id and sha256 (named in L2) and the kit
 stylesheet (``static/kit.css``), which the script inserts once at render and
 the manifest pins by ``style_sha256``, and the seller kind (``SELLER_KIND``, defined

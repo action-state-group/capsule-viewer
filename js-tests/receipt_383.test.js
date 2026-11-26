@@ -6,6 +6,8 @@
 // banner. Every manifest lists "*", the audience a report opens a receipt for.
 import { describe, expect, it } from "vitest";
 import { caseInputs, KINDS, loadScript, manifestOf, packAddsOnly, readBundle, receiptGolden } from "./receiptScripts.js";
+// The receipt wording pack id, Go and Python alike (evidencebook#956, #439): never one named "example".
+const PACK_ID = "capsuleviewer.receipt.wording.en/v1";
 
 const SHARED = "Shared copy The report owner's own record of this deal, included in this report because their \"Receipts in the settlement report\" setting is on. It is not the counterparty's copy.";
 
@@ -55,7 +57,7 @@ describe("a receipt carried in a report (#383)", () => {
   });
 
   it("the current wording pack only adds keys to the frozen one the Python oracle reads", () => {
-    expect(packAddsOnly()).toEqual({ changed: [], sameId: false }); // the id differs by design (evidencebook#956)
+    expect(packAddsOnly()).toEqual({ changed: [], frozenId: PACK_ID, currentId: PACK_ID });
   });
 
   it("a producer-selected copy passes the gate as the page's verdict does; any other withheld coverage does not", () => {

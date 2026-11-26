@@ -2,7 +2,7 @@
 """``python -m capsule_viewer.receipt BUNDLE VERIFY_JSON AUDIENCE [DEPTH]``
 prints the receipt page for a bundle (one copy, or a composed/v1 bundle of
 two) and what ``capsulectl verify --bundle`` reported for it, worded by the
-example English pack. A report that is not for
+English pack (capsuleviewer.receipt.wording.en/v1). A report that is not for
 this exact bundle writes no page and exits 1. The receipt layout test opens
 these pages in headless Chromium."""
 from __future__ import annotations

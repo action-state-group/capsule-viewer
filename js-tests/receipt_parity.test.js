@@ -23,6 +23,8 @@
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
 import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withAddedWords, withCurrentPack, withoutAmountCard, withoutSettlement, withoutSettlementLine } from "./receiptScripts.js";
+// The receipt wording pack id, Go and Python alike (evidencebook#956, #439): never one named "example".
+const PACK_ID = "capsuleviewer.receipt.wording.en/v1";
 
 // What the frozen twin never draws, compared apart: the settlement line
 // (withoutSettlement in receiptScripts.js). These are the cases whose copy
@@ -43,7 +45,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
   const loaded = {};
   beforeAll(() => {
     // The oracle's pages are read with the current pack's sha256 only while the pack adds keys and changes none.
-    expect(packAddsOnly()).toEqual({ changed: [], sameId: false }); // the id differs by design (evidencebook#956)
+    expect(packAddsOnly()).toEqual({ changed: [], frozenId: PACK_ID, currentId: PACK_ID });
     oracle = receiptGolden();
     for (const kind of KINDS) loaded[kind] = loadScript(kind);
   }, 120000);
