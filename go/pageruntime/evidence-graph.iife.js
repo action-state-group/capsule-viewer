@@ -18272,7 +18272,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("2d408a852dbebbdd181525b631565db591884302");
+    return commitPrefix("e4194c7bcaa380e6545f62c2b4731f3708ae03cb");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -27770,7 +27770,7 @@ ${pad.repeat(depth)}`;
     verifier: "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
     // An x-deal-v0 copy (CV3b): capsulectl's x-deal-v0 entry did not pass, in
     // whatever form the copy carries its report.
-    deal: "Didn't verify: capsulectl deal verify reported that this deal's record did not pass its check.",
+    deal: "Didn't verify: capsulectl deal verify reported that this deal's records did not pass.",
     // An x-deal-v0 copy: capsulectl reported a countersignature on this copy
     // that does not verify, which it refuses to show.
     countersign: "Didn't verify: capsulectl deal verify reported a countersignature on this file that does not verify.",
