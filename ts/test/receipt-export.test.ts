@@ -283,7 +283,8 @@ describe("a downgraded x-deal-v0 copy (#452)", () => {
   it("says its text is not shown and capsulectl's verdict on it, and draws nothing from it", async () => {
     const result = await checkReceipt(downgraded());
     expect(result).toEqual({ kind: "cannot_check", reason: "downgraded" });
-    expect(receiptLabel(result)).toBe("can't be checked here");
+    // Not "can't be checked here": deal verify reports it INVALID (Sherlock2, #453).
+    expect(receiptLabel(result)).toBe("receipt text not checked");
     expect(receiptPageLines(result)).toEqual({
       tone: "bad",
       lines: [

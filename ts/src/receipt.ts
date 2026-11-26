@@ -338,9 +338,11 @@ export function receiptLabel(
       : result.kind === "no_record"
         ? "row.none"
         : result.kind === "cannot_check"
-          ? result.reason === undefined
-            ? "row.cannot_check"
-            : "row.cannot_check.report_rule.row"
+          ? result.reason === "report_rule"
+            ? "row.cannot_check.report_rule.row"
+            : result.reason === "downgraded"
+              ? "row.cannot_check.downgraded.row"
+              : "row.cannot_check"
           : result.kind === "did_not_verify"
             ? "row.did_not_verify"
             : null;
