@@ -16,6 +16,7 @@ import {
 } from "../src/evidence-graph-view.js";
 import { checkReceipt, receiptModules, renderReceipt } from "../src/receipt.js";
 import {
+  countersignedStamps,
   REPORTED_CHECKS,
   verifierReportReading,
   withVerifierReport,
@@ -716,5 +717,43 @@ describe("capsulectl's own check results and the verify command reach the receip
         ),
       )["verify_command"],
     ).toBe("capsulectl deal verify --bundle x.html");
+  });
+});
+
+describe("the verdict and the countersignatures reach the receipt (#382, review round 1)", () => {
+  it("carries capsulectl's verdict, and each countersignature as the page classified it", () => {
+    const b = bundle(),
+      r = report();
+    const ctx = {
+      bundle: b,
+      verification: { bundleDigest: r["bundle_digest"], extensions: [] },
+    } as unknown as Parameters<typeof verifierReportReading>[0];
+    const reading = verifierReportReading(ctx, r) as never;
+    const stamps = countersignedStamps([
+      {
+        kind: "resolved",
+        name: "Acme Audit",
+        statement: { recomputedAt: "2026-11-25T15:00:00Z" },
+      },
+      {
+        kind: "not-independent",
+        name: "producer",
+        statement: { recomputedAt: "2026-11-25T15:00:00Z" },
+      },
+      { kind: "invalid" },
+      "junk",
+    ]);
+    expect(stamps).toEqual([
+      { kind: "resolved", name: "Acme Audit", at: "2026-11-25T15:00:00Z" },
+      { kind: "not-independent" },
+      { kind: "invalid" },
+      { kind: "unknown" },
+    ]);
+    const entry = (
+      withVerifierReport(ctx, reading, undefined, stamps).verification
+        .extensions as unknown as Obj[]
+    ).find((e) => e["kind"] === "x-deal-v1")!;
+    expect(entry["verdict"]).toBe("VALID");
+    expect(entry["countersigned"]).toEqual(stamps);
   });
 });

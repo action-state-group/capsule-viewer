@@ -265,11 +265,16 @@ describe("is this record intact, and check it yourself", () => {
 
   it("prints capsulectl's command and the fingerprint to expect; with no command it says how to check", async () => {
     const { host } = await draw(bundleOf(SELLER, asKeep));
-    expect(q(host.L0, "[data-verify-command]").textContent).toBe("capsulectl deal verify --bundle receipt.html");
+    expect(q(host.L0, '[data-verify-command="page"]').textContent).toBe("capsulectl deal verify --bundle receipt.html");
+    // The downloaded file is checked by its own name, not the page's.
+    expect(q(host.L0, '[data-verify-command="download"]').textContent).toBe("capsulectl deal verify --bundle deal-fe219bb1ab3d4dec.bundle.json");
     expect(q(host.L0, "[data-expect]").textContent).toBe("Expect: VALID, fingerprint cb525e5c…b59a.");
     const bare = await draw(bundleOf(SELLER, asKeep), { assurance: { verify_command: null } });
-    expect(q(bare.host.L0, "[data-verify-command]")).toBeNull();
-    expect(bare.host.L0.textContent).toContain("run capsulectl deal verify --bundle on it");
+    expect(q(bare.host.L0, '[data-verify-command="page"]')).toBeNull();
+    expect(q(bare.host.L0, '[data-verify-command="download"]')).not.toBeNull();
+    // A producer selection capsulectl read INCOMPLETE expects that verdict, not VALID.
+    const selection = await draw(bundleOf(SELLER, asKeep), { assurance: { verdict: "INCOMPLETE" } });
+    expect(q(selection.host.L0, "[data-expect]").textContent).toBe("Expect: INCOMPLETE, fingerprint cb525e5c…b59a.");
   });
 
   it("Download proof file saves the copy itself: its JCS, which is the file the page carries", async () => {
@@ -283,6 +288,80 @@ describe("is this record intact, and check it yourself", () => {
     link.addEventListener("click", (e) => e.preventDefault());
     link.dispatchEvent(new lib.window.MouseEvent("click", { cancelable: true }));
     expect(link.getAttribute("href")).not.toBe("#");
+  });
+});
+
+describe("review round 1: payments, the summary, countersignatures and withheld terms", () => {
+  const settleIndex = SELLER.records.findIndex((r) => r.settlement);
+  const withStatus = (status) => (x) => { x.records[settleIndex].settlement.status = status; };
+
+  it("a payment record not settled is never 'received': its title, card and the top line say its status", async () => {
+    for (const status of ["pending", "failed", "reversed"]) {
+      const { host } = await draw(bundleOf(SELLER, (c) => ({ ...rows({ status: "waiting" })(asKeep(c)), settled: false }), withStatus(status)));
+      expect(q(host.L0, '[data-step="2"] .cv-rcpt-step__title').textContent).toBe(`Payment recorded as ${status}: 2,000 msat`);
+      expect(q(host.L0, '[data-card="paid"] .cv-rcpt-card__label').textContent).toBe("Payment");
+      expect(q(host.L0, '[data-card="paid"]').textContent).toContain(`Recorded as ${status}`);
+      expect(q(host.L0, "[data-top-line]").textContent).toBe("Waiting for the buyer to say it too");
+    }
+    const settled = await draw(bundleOf(SELLER, asKeep, withStatus("pending")));
+    expect(q(settled.host.L0, "svg[data-seal]")).toBeNull();
+  });
+
+  it("two payment records of the holder's: no amount is picked and no seal is drawn", async () => {
+    const b = bundleOf(SELLER, asKeep, (x) => { x.records.push({ ...structuredClone(x.records[settleIndex]), capsule_id: "f".repeat(64) }); });
+    const { host } = await draw(b);
+    expect(q(host.L0, '[data-card="paid"] .cv-rcpt-card__value').textContent).toBe("2 payment records; see the steps");
+    expect(q(host.L0, "svg[data-seal]")).toBeNull();
+  });
+
+  it("a check capsulectl ran but withheld for this copy is marked not run, and the summary does not say every test passed", async () => {
+    const { host } = await draw(bundleOf(SELLER, asKeep), { assurance: { checks: { ...ALL_PASS, interval_coverage: { status: "withheld", findings: ["selection_not_checkable"] } } } });
+    expect(q(host.L0, '[data-check="interval_coverage"]').getAttribute("data-check-status")).toBe("withheld");
+    expect(q(host.L0, '[data-check="interval_coverage"]').textContent).toContain("not run on this copy");
+    expect(q(host.L0, "[data-proof]").getAttribute("data-proof")).toBe("partial");
+  });
+
+  it("a failed outside time stamp makes the summary say a test failed", async () => {
+    const { host } = await draw(bundleOf(SELLER, asKeep), { assurance: { book_witnessed: { status: "failed" } } });
+    expect(q(host.L0, "[data-proof]").getAttribute("data-proof")).toBe("failed");
+  });
+
+  it("COUNTERSIGNED: filled only by a resolved signer the page verified; a producer's, an unlisted or a failed one says so", async () => {
+    const state = async (countersigned) => {
+      const stamp = q((await draw(bundleOf(SELLER, asKeep), { assurance: { countersigned } })).host.L0, '[data-stamp="countersigned"]');
+      return [stamp.getAttribute("data-stamp-state"), q(stamp, ".cv-rcpt-stamp__text").textContent];
+    };
+    const [filled, text] = await state([{ kind: "resolved", name: "Acme Audit", at: "2026-11-25T15:00:00Z" }]);
+    expect(filled).toBe("filled");
+    expect(text).toMatch(/^Acme Audit signed this record too · .+, by their clock$/);
+    expect((await state([{ kind: "invalid", name: null, at: null }]))[0]).toBe("failed");
+    expect((await state([{ kind: "not-independent", name: null, at: null }]))[0]).toBe("self");
+    expect((await state([{ kind: "unresolved-signer", name: null, at: null }]))[0]).toBe("unresolved");
+    expect((await state([{ kind: "unverified", name: null, at: null }]))[0]).toBe("not_checked");
+    expect((await state([]))[0]).toBe("open");
+  });
+
+  it("an adjudicator's copy, whose terms are withheld, never reads as having no problems", async () => {
+    const adj = (c) => ({ ...c, audience: "adjudicator", rows_state: "withheld", rows: [] });
+    const b = bundleOf(SELLER, adj, (x) => { x.extensions["x-deal-v1"].book.relied_on = {}; });
+    const lib = loadScript("deal");
+    const module = lib.api.createModule("deal", { ...envOf(), audience: "adjudicator" });
+    const ctx = { bundle: b, records: b.records, resolvedDisclosures: new Map(), root: null, completeness: { memberships: {} } };
+    const host = renderInto(lib, module, await module.buildModel(ctx), "L2");
+    expect(q(host.L0, '[data-else="problems"]').textContent).toBe("Problems spottedNot shown: each term's status is withheld from this reader");
+  });
+
+  it("no record time in any level of a shared copy, the checkers' payment table included (u239)", async () => {
+    // The payment term relies on the seller's settle record, so the checkers' payment table has a row.
+    const settle = SELLER.records[settleIndex];
+    const withLeg = (c) => ({ ...c, rows: c.rows.map((r) => (r.id === "paid_as_agreed" ? { ...r, relied_on: [...r.relied_on, { record: settle.capsule_id, side: "seller", time: null, witnessed: false }] } : r)) });
+    const addPair = (x) => { x.extensions["x-deal-v1"].book.relied_on[settle.capsule_id] = { record: structuredClone(settle) }; };
+    const shared = await draw(bundleOf(SELLER, withLeg, addPair));
+    const legRow = q(shared.host.L1, `[data-leg-record="${settle.capsule_id}"]`).closest("tr");
+    expect(legRow.querySelector("[data-time]") === null).toBe(true);
+    expect(legRow.textContent).toContain("no time");
+    const own = await draw(bundleOf(SELLER, (c) => withLeg(asKeep(c)), addPair));
+    expect(q(own.host.L1, `[data-leg-record="${settle.capsule_id}"]`).closest("tr").querySelector("[data-time]") === null).toBe(false);
   });
 });
 

@@ -433,6 +433,8 @@
       out.book_witnessed = bookWitnessed(v);
       out.checks = reportedChecks(v);
       out.verify_command = reportedCommand(v);
+      out.verdict = reportedVerdict(v);
+      out.countersigned = reportedCountersigned(v);
     }
     // Said only when the page checked it itself: a verifier's report (the
     // Python twin's inputs too) carries no such member.
@@ -1428,6 +1430,8 @@
       role: roleOf(steps),
       checks: or(v.assurance.checks, null),
       verify_command: or(str(v.assurance.verify_command), null),
+      verdict: or(str(v.assurance.verdict), null),
+      countersigned: Array.isArray(v.assurance.countersigned) ? v.assurance.countersigned : null,
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
@@ -1539,6 +1543,8 @@
         }, {}) : {},
         statements: statements,
         act: payload !== null ? str(get(body, "act")) : null,
+        // A refund or a remedy's payment (evidencebook payment.go: `reverses`, `remedy_for`), never the deal's own payment.
+        refund: payload !== null && (own(body, "reverses") || own(body, "remedy_for")),
       };
     });
   }
@@ -1561,6 +1567,22 @@
       if (typeof c.status === "string") out[name] = { status: c.status, findings: seq(c.findings).filter(function (f) { return typeof f === "string"; }) };
     });
     return out;
+  }
+  function reportedEntry(verification, member) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    return entry !== undefined ? get(entry, member) : null;
+  }
+  function reportedVerdict(verification) {
+    var v = reportedEntry(verification, "verdict");
+    return typeof v === "string" && v !== "" ? v : null;
+  }
+  // The page's classification of each countersignature, as the runtime carries it: [{kind, name, at}].
+  function reportedCountersigned(verification) {
+    var given = reportedEntry(verification, "countersigned");
+    if (!Array.isArray(given)) return null;
+    return given.filter(isMap).map(function (c) {
+      return { kind: or(str(get(c, "kind")), "unknown"), name: str(get(c, "name")), at: str(get(c, "at")) };
+    });
   }
   function reportedCommand(verification) {
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
@@ -2926,7 +2948,8 @@
         leg.leg,
         leg.status,
         leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
-        leg.observed_at !== null ? self.v1Time(leg.observed_at) : w("deal.no_time"),
+        // A record's time only on the holder's own page (Sherlock2, u239).
+        leg.observed_at !== null && self.ownPage(model) ? self.v1Time(leg.observed_at) : w("deal.no_time"),
         leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
         d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
       ]);
@@ -3069,11 +3092,26 @@
     return svg;
   };
 
-  // The holder's payment leg: the payer's on a buyer's copy, the payee's on a seller's.
-  function ownLeg(model) {
+  // The holder's own payment: the payer's leg on a buyer's copy, the payee's on a seller's. A page cannot
+  // weigh a payment's superseded or refused legs as capsulectl does (evidencebook payment.go), so it picks
+  // one only when one applies: the legs the payment term relies on when the report names any, else the
+  // holder's own legs in the copy, refunds aside. Several, or none: null, and the page names no amount.
+  function ownLegs(model) {
     var want = model.role === "seller" ? "payee" : "payer";
-    var step = model.sealed_steps.find(function (s) { return s.leg !== null && s.leg.leg.indexOf(want) === 0 && s.leg.status === "settled"; });
-    return step ? step.leg : null;
+    var mine = function (leg) { return leg.leg.indexOf(want) === 0; };
+    var relied = [];
+    if (model.rows_state === "listed") model.rows.forEach(function (r) { seq(r.legs).forEach(function (l) { if (mine(l) && relied.indexOf(l.record) < 0) relied.push(l.record); }); });
+    return model.sealed_steps.filter(function (s) {
+      return s.leg !== null && !s.refund && mine(s.leg) && (!relied.length || relied.indexOf(s.record) >= 0);
+    });
+  }
+  function ownLeg(model) {
+    var legs = ownLegs(model);
+    return legs.length === 1 ? legs[0].leg : null;
+  }
+  function paidLeg(model) {
+    var leg = ownLeg(model);
+    return leg !== null && leg.status === "settled" ? leg : null;
   }
   // The seal's mood and the top line, from the report's own facts (Sherlock2, 2026-11-26, buzz
   // 368bf508 and 12969602; the seal's meaning awaits Steven's ruling):
@@ -3085,7 +3123,7 @@
     var ruled = rows.find(function (r) { return r.status === "ruled" && r.ruling !== null && r.ruling.value === "not_met"; });
     if (ruled) return { mood: "not_as_agreed", line: "ruled_not_met", term: ruled.id, remedy: ruled.remedy };
     if (model.start.state !== "started") return { mood: null, line: "state." + model.start.state };
-    var leg = ownLeg(model);
+    var leg = paidLeg(model);
     if (model.settled) {
       var conceded = rows.find(function (r) { return r.value === "not_met" && r.remedy_made; });
       if (conceded) return { mood: null, line: "remedied", term: conceded.id };
@@ -3126,8 +3164,6 @@
     }
     return { main: legAmount(a), sub: null };
   }
-  P.short = function (id) { return id.length > SHORT_HEAD + SHORT_TAIL + 1 ? id.slice(0, SHORT_HEAD) + "…" + id.slice(-SHORT_TAIL) : id; };
-
   P.surfaceHeader = function (model) {
     var d = this.d;
     var tags = [d.el("span", { class: "cv-rcpt-title", "data-receipt-title": model.role || "deal" }, [w(model.role === "seller" ? "deal.surface.title.seller" : model.role === "buyer" ? "deal.surface.title.buyer" : "deal.surface.title")])];
@@ -3137,10 +3173,11 @@
     if (model.proof_file !== null) actions.push(this.proofDownload(model, "cv-rcpt-button cv-rcpt-button--primary"));
     return d.el("div", { class: "cv-rcpt-header", "data-surface": "header" }, [d.el("div", { class: "cv-rcpt-tags" }, tags), d.el("div", { class: "cv-rcpt-actions" }, actions)]);
   };
+  function proofName(model) { return (model.deal_id || "deal") + ".bundle.json"; }
   // "Download proof file": the copy as this page carries it, saved as a file capsulectl verify reads.
   P.proofDownload = function (model, cls) {
     var d = this.d;
-    var name = (model.deal_id || "deal") + ".bundle.json";
+    var name = proofName(model);
     var link = d.el("a", { class: cls, href: "#", download: name, "data-proof-download": name }, [w("deal.surface.download")]);
     var text = model.proof_file;
     link.addEventListener("click", function () {
@@ -3174,12 +3211,17 @@
     var leg = ownLeg(model);
     if (leg !== null) {
       var amountKey = model.role === "seller" ? "received" : "amount";
+      var settled = leg.status === "settled";
       // A record's time only on the holder's own page (Sherlock2, u239): no other copy shows one.
       var at = this.ownPage(model) && leg.observed_at !== null && validUtcTime(leg.observed_at) ? this.timed("deal.card.at", leg.observed_at) : null;
-      cards.push({ key: "paid", label: w(model.role === "seller" ? "deal.card.received" : "deal.card.paid"), value: this.legMoney(model, leg, amountKey), note: at });
+      cards.push({ key: "paid", label: w(!settled ? "deal.card.payment" : model.role === "seller" ? "deal.card.received" : "deal.card.paid"), value: this.legMoney(model, leg, amountKey),
+        note: settled ? at : w("deal.card.payment.status", { status: leg.status }) });
+    } else if (ownLegs(model).length > 1) {
+      cards.push({ key: "paid", label: w("deal.card.payment"), value: w("deal.card.payment.several", { count: String(ownLegs(model).length) }), note: null });
     }
     cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of) : null });
-    cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.verified" : "deal.card.other.none"), note: null });
+    // The other side's half, named by side only when the copy's own agreement says which side the holder is.
+    if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.verified" : "deal.card.other.none"), note: null });
     return d.el("div", { class: "cv-rcpt-cards", "data-surface": "cards" }, cards.map(function (c) {
       var parts = [d.el("div", { class: "cv-rcpt-card__label" }, [c.label]), d.el("div", { class: "cv-rcpt-card__value" }, [c.value])];
       if (c.note) parts.push(d.el("div", { class: "cv-rcpt-card__note" }, [c.note]));
@@ -3215,18 +3257,34 @@
       recorded = leaves !== null && size !== null && leaves < size ? { state: "partial", k: leaves, n: size } : { state: "filled" };
     }
     var witness = this.timeStamp(model);
-    var counter = model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
+    var counter = this.countersigned(model);
     var items = [["recorded", recorded], ["time_stamped", witness], ["countersigned", counter]];
     return d.el("ul", { class: "cv-rcpt-stamps", "data-surface": "stamps" }, items.map(function (it) {
       var name = it[0], s = it[1];
       var values = {};
       if (s.k !== undefined) { values.k = String(s.k); values.n = String(s.n); }
       if (s.witness !== undefined) values.witness = s.witness;
+      if (s.signer !== undefined) values.signer = s.signer;
       var text = s.at !== undefined ? self.timed("deal.stamp." + name + "." + s.state, s.at, values) : w("deal.stamp." + name + "." + s.state, values);
       return d.el("li", { class: "cv-rcpt-stamp cv-rcpt-stamp--" + (s.state === "filled" ? "filled" : "open"), "data-stamp": name, "data-stamp-state": s.state }, [
         d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [text]),
       ]);
     }));
+  };
+  // COUNTERSIGNED (#382 item 14): filled only for a countersignature from a resolved signer that this page
+  // verified over this very bundle (AAC's classification, carried by the runtime); a producer's own, an
+  // unlisted signer's or a failed one never fills it, nor does the other side's verified half.
+  P.countersigned = function (model) {
+    var list = model.countersigned;
+    if (list === null) return model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
+    var given = list.filter(function (c) { return c.kind !== "hollow"; });
+    if (!given.length) return { state: "open" };
+    var resolved = given.find(function (c) { return c.kind === "resolved" && c.name !== null && c.at !== null && validUtcTime(c.at); });
+    if (resolved) return { state: "filled", signer: resolved.name, at: resolved.at };
+    if (given.some(function (c) { return c.kind === "invalid"; })) return { state: "failed" };
+    if (given.some(function (c) { return c.kind === "not-independent"; })) return { state: "self" };
+    if (given.some(function (c) { return c.kind === "unresolved-signer"; })) return { state: "unresolved" };
+    return { state: "not_checked" };
   };
   // The leaves an MMR of `size` nodes holds (size = 2L - popcount(L)), or null when no L gives it.
   function mmrLeaves(size) {
@@ -3255,9 +3313,12 @@
     if (step.kind === "agree") return w("deal.step.agree");
     if (step.kind === "settle" && step.leg !== null) {
       var payee = step.leg.leg.indexOf("payee") === 0;
-      var key = payee ? "received" : "amount";
-      var raw = this.rawMoney(step, key);
-      return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: raw !== null ? moneyOf(raw).sub || moneyOf(raw).main : "-" });
+      var raw = this.rawMoney(step, payee ? "received" : "amount");
+      var amount = raw !== null ? moneyOf(raw).sub || moneyOf(raw).main : "-";
+      if (step.refund) return w("deal.step.settle.refund", { amount: amount, status: step.leg.status });
+      // "Paid" only for a leg recorded as settled: a pending, failed or reversed one says its status.
+      if (step.leg.status !== "settled") return w("deal.step.settle.status", { amount: amount, status: step.leg.status });
+      return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: amount });
     }
     if (step.kind === "statement") {
       var self = this;
@@ -3329,9 +3390,14 @@
     var lede = checks === null ? "deal.proof.lede.none"
       : statuses.some(function (s) { return s === "fail"; }) ? "deal.proof.lede.failed"
       : statuses.every(function (s) { return s === "pass"; }) ? "deal.proof.lede.passed" : "deal.proof.lede.partial";
-    var rows = PROOF_ROWS.map(function (name, i) { return self.proofRow(name, statuses[i] === null ? "absent" : statuses[i], w("deal.proof." + name), null); });
+    var rows = PROOF_ROWS.map(function (name, i) {
+      var status = statuses[i] === null ? "absent" : ["pass", "fail", "withheld"].indexOf(statuses[i]) >= 0 ? statuses[i] : "absent";
+      return self.proofRow(name, status, w("deal.proof." + name), null);
+    });
     var stamp = this.timeStamp(model);
     var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
+    // The summary counts every row it shows: a failed time stamp is a failed test too.
+    if (lede === "deal.proof.lede.passed" && stampState === "fail") lede = "deal.proof.lede.failed";
     var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
     rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
     var parts = [
@@ -3358,9 +3424,18 @@
   P.checkYourself = function (model) {
     var d = this.d;
     var parts = [d.el("div", { class: "cv-rcpt-h4" }, [w("deal.check.title")])];
-    if (model.verify_command !== null) parts.push(d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "" }, [model.verify_command])]));
-    else parts.push(this.note(w("deal.check.no_command")));
-    if (model.bundle_digest) parts.push(this.note(w("deal.check.expect", { fingerprint: this.short(model.bundle_digest) }), { "data-expect": model.bundle_digest }));
+    // capsulectl's command checks the file it was given (this page); the downloaded proof file is checked
+    // by name, quoted for a shell when it is not plain.
+    if (model.verify_command !== null) {
+      parts.push(this.note(w("deal.check.page")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "page" }, [model.verify_command])]));
+    }
+    if (model.proof_file !== null) {
+      var name = proofName(model);
+      var quoted = /^[A-Za-z0-9._-]+$/.test(name) ? name : "'" + name.replace(/'/g, "'\\''") + "'";
+      parts.push(this.note(w("deal.check.download")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "download" }, ["capsulectl deal verify --bundle " + quoted])]));
+    }
+    if (model.verify_command === null && model.proof_file === null) parts.push(this.note(w("deal.check.no_command")));
+    if (model.bundle_digest) parts.push(this.note(w("deal.check.expect", { verdict: model.verdict || "VALID", fingerprint: this.short(model.bundle_digest) }), { "data-expect": model.bundle_digest }));
     if (model.proof_file !== null) parts.push(this.proofDownload(model, "cv-rcpt-button"));
     return d.el("div", { class: "cv-rcpt-check", "data-surface": "check" }, parts);
   };
@@ -3377,7 +3452,7 @@
     var rows = model.rows_state === "listed" ? model.rows : [];
     var problems = rows.filter(function (r) { return r.status === "in_dispute" || r.status === "in_disagreement" || (r.ruling !== null && r.ruling.value === "not_met"); });
     var self = this;
-    var problemText = problems.length
+    var problemText = model.rows_state === "withheld" ? w("deal.else.problems.withheld") : problems.length
       ? problems.map(function (r) { return (word("deal.term." + r.id) || r.id) + ": " + self.token("deal.status", r.status); }).join("; ")
       : w("deal.else.problems.none");
     var tiles = [

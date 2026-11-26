@@ -55,6 +55,8 @@ export type VerifierReading =
        * capsulectl's answer and never the page's own (#382).
        */
       readonly checks?: Readonly<Record<string, ReportedCheck>>;
+      /** capsulectl's verdict for the bundle: VALID, or INCOMPLETE for a producer selection. */
+      readonly verdict?: string;
     }
   | { readonly kind: "fail"; readonly why: "report" }
   | {
@@ -62,6 +64,35 @@ export type VerifierReading =
       readonly why: "verdict";
       readonly verdict: string;
     };
+
+/**
+ * One countersignature as the page classified it, for the receipt's
+ * COUNTERSIGNED stamp: its kind (hollow, unverified, invalid,
+ * not-independent, unresolved-signer, resolved), and for a resolved one the
+ * signer's name and the time it says it recomputed, by its own clock.
+ */
+export interface CountersignedStamp {
+  readonly kind: string;
+  readonly name?: string;
+  readonly at?: string;
+}
+
+/** The receipt's view of AAC's countersignature stamps: strings only. */
+export function countersignedStamps(
+  stamps: readonly unknown[],
+): CountersignedStamp[] {
+  return stamps.map((raw) => {
+    const s = obj(raw);
+    const kind = typeof s["kind"] === "string" ? s["kind"] : "unknown";
+    const name = s["name"];
+    const at = obj(s["statement"])["recomputedAt"];
+    return {
+      kind,
+      ...(kind === "resolved" && typeof name === "string" ? { name } : {}),
+      ...(kind === "resolved" && typeof at === "string" ? { at } : {}),
+    };
+  });
+}
 
 /** One of capsulectl's bundle checks, as its report states it. */
 export interface ReportedCheck {
@@ -142,6 +173,7 @@ export function verifierReportReading(
     ...(typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {}),
     ...(isObj(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}),
     checks: reportedChecks(r),
+    ...(typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}),
   };
   const verdict = r["verdict"];
   if (verdict === "VALID") return pass;
@@ -186,6 +218,7 @@ export function withVerifierReport(
   context: VerifiedBundleContext,
   reading: VerifierReading & { kind: "pass" } = { kind: "pass" },
   verifyCommand?: string,
+  countersigned?: readonly CountersignedStamp[],
 ): VerifiedBundleContext {
   const extensions = [
     ...context.verification.extensions,
@@ -209,6 +242,10 @@ export function withVerifierReport(
       // The command the page's maker gave for checking this copy (the page's
       // verifyCommand option), for the receipt's "Check it yourself".
       ...(verifyCommand === undefined ? {} : { verify_command: verifyCommand }),
+      ...(reading.verdict === undefined ? {} : { verdict: reading.verdict }),
+      // The page's own classification of each countersignature (AAC's
+      // classifyCountersignatures), for the receipt's COUNTERSIGNED stamp.
+      ...(countersigned === undefined ? {} : { countersigned }),
     },
   ] as unknown as VerifiedBundleContext["verification"]["extensions"];
   return {
