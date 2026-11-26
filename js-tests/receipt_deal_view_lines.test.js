@@ -152,7 +152,7 @@ describe("line 3: who the deal was with and their words accepting (#383)", () =>
         report: { counterparty_openings: { key, steps } },
       });
       expect(receipt.counterparty_named, JSON.stringify(steps)).toEqual({ who: null, unchecked: true, accepted: [] });
-      expect(lines("counterparty")).toEqual(["Some of who this exchange was with could not be checked against what the deal sealed, so this page does not show it."]);
+      expect(lines("counterparty")).toEqual(["Part of who this deal was with could not be checked against what the deal sealed, so this page does not show it."]);
     }
   });
 
@@ -374,7 +374,7 @@ describe("line 4: each act came after the holder's yes (#383)", () => {
     for (const [name, kind] of [["keep", "unilateral"], ["seller-keep", "seller"]]) {
       const { yes: model, text } = await yes({}, { name, kind });
       expect(model, name).toEqual({ state: "unplaced", approvers: [] });
-      expect(text, name).toBe("Each act came after your yes: not checked; this copy's steps have no place in a book's log.");
+      expect(text, name).toBe("Each act came after your yes: not checked; this copy's steps are not placed in a book's log, so their order can't be checked.");
     }
   });
 });

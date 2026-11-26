@@ -548,7 +548,7 @@
     "settlement.lightning.withheld": "Payment: recorded as settled on Lightning; this copy does not show its proof.",
     "settlement.lightning.partial": "Payment: recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them.",
     "settlement.lightning.final": "Payment: the payee's wallet reported it final on Lightning; this file carries no proof to check.",
-    "settlement.x402": "Payment: settled on x402; this page does not check the on-chain record.",
+    "settlement.x402": "Payment: recorded as settled on x402; this page does not check the on-chain record.",
     "settlement.other": "Payment: recorded as settled; this page can't check payments on this rail.",
     "settlement.missing": "Payment: a {rail} payment; no settlement record is in this file.",
     "settlement.card": "Payment: a card payment; the card processor's report is not in this file.",
@@ -704,7 +704,7 @@
     "deal.top.all.agreed": "Both sides say the same",
     "deal.top.all.uncontested": "One side has said, and the other has not contested it so far",
     "counterparty.with": "With {who}, as this page checked against what the deal sealed for them.",
-    "counterparty.unchecked": "Some of who this exchange was with could not be checked against what the deal sealed, so this page does not show it.",
+    "counterparty.unchecked": "Part of who this deal was with could not be checked against what the deal sealed, so this page does not show it.",
     "accepted.words": "Their words accepting the offer, checked in this page against what was sealed: “{text}”",
     "accepted.unchecked": "Their words accepting the offer could not be checked against what was sealed, so this page does not show them.",
     "after_yes.passed": "Each act came after {who} yes: passed, recomputed in this page from the order of this log.",
@@ -712,7 +712,7 @@
     "after_yes.failed.order": "Each act came after {who} yes: failed; {act} does not follow its approval in this log.",
     "after_yes.missing": "Each act came after {who} yes: missing; the approval for {act} is not in this copy.",
     "after_yes.withheld": "Each act came after {who} yes: not checked; steps are withheld from this copy.",
-    "after_yes.unplaced": "Each act came after {who} yes: not checked; this copy's steps have no place in a book's log.",
+    "after_yes.unplaced": "Each act came after {who} yes: not checked; this copy's steps are not placed in a book's log, so their order can't be checked.",
     "after_yes.approvers": " How each was approved, as recorded: {list}.",
     "after_yes.approver.user": "{who} yes is in {their} words, recorded by {their} agent",
     "after_yes.approver.standing_intent": "approved under {who} standing limits, recorded by {their} agent",
@@ -736,9 +736,9 @@
     "seller.payment.settled.withheld": "Recorded as settled on Lightning; this copy does not show its proof",
     "seller.payment.settled.partial": "Recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them",
     "seller.payment.settled.final": "The payee's wallet reported it final on Lightning; this file carries no proof to check",
-    "seller.payment.settled.x402": "Settled on x402; this page does not check the on-chain record",
+    "seller.payment.settled.x402": "Recorded as settled on x402; this page does not check the on-chain record",
     "seller.payment.settled.other": "Recorded as settled; this page can't check payments on this rail",
-    "seller.payment.recorded": "This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not read what it is about.",
+    "seller.payment.recorded": "This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not check what it says.",
     "referee.named": "The referee this side named, as its sealed report states it: {referee}. This page does not check that the other side named the same one, or that the name belongs to any particular person."
   }
 }

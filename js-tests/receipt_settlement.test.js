@@ -138,7 +138,7 @@ describe("the settlement line (#383)", () => {
 
   it("names x402 and another rail without checking either", async () => {
     const x402 = { "290b1db4": leg({ ref: { type: "x402.tx", value: "0xabc" } }) };
-    expect((await draw("keep", { legs: x402 })).text).toBe("Payment: settled on x402; this page does not check the on-chain record. Size: $10 – $99.");
+    expect((await draw("keep", { legs: x402 })).text).toBe("Payment: recorded as settled on x402; this page does not check the on-chain record. Size: $10 – $99.");
     const mixed = { ...x402, "3ad3f14b": leg() };
     const other = await draw("keep", { legs: mixed });
     expect(other.state).toBe("other");
@@ -223,7 +223,7 @@ describe("the settlement line (#383)", () => {
       expect(proof.model.receipt.settlement.state).toBe("proof");
       expect(proof.line.textContent).toBe("Payment: settled on Lightning; this page checked its proof against its invoice. Size: $1,000 – $9,999.");
       expect(proof.headline).toBe("Payment: Settled on Lightning; this page checked its proof against its invoice");
-      expect(proof.note).toBe("This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not read what it is about.");
+      expect(proof.note).toBe("This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not check what it says.");
       expect(proof.legRow).toBe("recorded");
       for (const text of [proof.headline, proof.note, proof.legRow]) expect(text).not.toMatch(/not recorded|no payment record/i);
     });
@@ -233,7 +233,7 @@ describe("the settlement line (#383)", () => {
         [{ legs: SALE }, "final", "Payment: The payee's wallet reported it final on Lightning; this file carries no proof to check"],
         [{ legs: { "8690c43a": leg({ ref: { type: "ln.payment_hash", value: "22".repeat(32) } }) }, preimages: { "8690c43a": PREIMAGE } }, "failed", "Payment: Recorded as settled on Lightning, but its proof did not match its invoice when this page checked it"],
         [{ legs: { ...SALE, "0777698f": leg() }, preimages: { "8690c43a": PREIMAGE } }, "partial", "Payment: Recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them"],
-        [{ legs: { "8690c43a": leg({ ref: { type: "x402.tx", value: "0xabc" } }) } }, "x402", "Payment: Settled on x402; this page does not check the on-chain record"],
+        [{ legs: { "8690c43a": leg({ ref: { type: "x402.tx", value: "0xabc" } }) } }, "x402", "Payment: Recorded as settled on x402; this page does not check the on-chain record"],
         [{ legs: { "8690c43a": leg({ ref: { type: "x402.tx", value: "0xabc" } }), "0777698f": leg() } }, "other", "Payment: Recorded as settled; this page can't check payments on this rail"],
       ];
       for (const [stubbed, state, headline] of cases) {
