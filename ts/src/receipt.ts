@@ -313,13 +313,16 @@ export async function renderReceipt(
   return done;
 }
 
+// The words as plain text: a command the pack marks with backticks, which a
+// receipt page draws as code, loses only the backticks here, since callers
+// draw these strings as text (Sherlock2 on capsule-viewer#454).
 const fill = (
   key: string,
   values: Record<string, string | number> = {},
 ): string =>
-  (core.WORDS[key] ?? `[${key}]`).replace(/\{(\w+)\}/g, (_, name: string) =>
-    String(values[name]),
-  );
+  (core.WORDS[key] ?? `[${key}]`)
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\{(\w+)\}/g, (_, name: string) => String(values[name]));
 
 /**
  * The one-line label an exchanges row shows for a result, in the receipt

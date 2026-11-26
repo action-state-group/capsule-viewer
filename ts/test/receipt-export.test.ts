@@ -203,7 +203,7 @@ describe("the receipt export (#383)", () => {
 
   it("an x-deal-v1 keep copy: the page can't check its report, so it draws only that line and how to check it (#405)", async () => {
     const LINE =
-      "This page can't check this receipt, so it shows nothing from it and no verdict. To check it, run `capsulectl deal verify --bundle <file>` on the receipt file. It needs the capsulectl-deal plugin.";
+      "This page can't check this receipt, so it shows nothing from it and no verdict. To check it, run capsulectl deal verify --bundle <file> on the receipt file. It needs the capsulectl-deal plugin.";
     const result = await checkReceipt(v1Keep());
     expect(result).toEqual({ kind: "cannot_check", reason: "report_rule" });
     expect(receiptLabel(result)).toBe("can't be checked here");
@@ -289,7 +289,7 @@ describe("a downgraded x-deal-v0 copy (#452)", () => {
       tone: "bad",
       lines: [
         "⚠️ The receipt's text is not shown: this copy names no sealed report, so its text could not be checked.",
-        "`capsulectl deal verify --bundle <file>` reports this copy as INVALID (sealed_report_not_named).",
+        "capsulectl deal verify --bundle <file> reports this copy as INVALID (sealed_report_not_named).",
       ],
     });
     const drawn = host();
@@ -304,4 +304,44 @@ describe("a downgraded x-deal-v0 copy (#452)", () => {
     (b["records"] as Obj[])[0]!["timestamp"] = "2000-01-01T00:00:00Z";
     expect((await checkReceipt(b)).kind).toBe("did_not_verify");
   });
+});
+
+// A command in the can't-check lines (#454): the module draws it as code and
+// the page lines carry the same words without the backticks, so the two
+// agree byte for byte and "<file>" stays literal (Sherlock2's choice).
+describe("a command in the can't-check lines (#454)", () => {
+  const COMMAND = "capsulectl deal verify --bundle <file>";
+  for (const [kind, reason] of [
+    ["unilateral", "downgraded"],
+    ["deal", "report_rule"],
+  ] as const) {
+    it(`${reason}: the page lines hold the drawn command, with no backticks`, async () => {
+      const module = receiptModules().find((m) =>
+        m.manifest.id.startsWith(`capsuleviewer.receipt.${kind}/`),
+      )!;
+      const drawn = host();
+      await (
+        module.render as unknown as (
+          model: unknown,
+          host: Record<string, unknown>,
+        ) => Promise<void>
+      )(
+        { cannot_check: true, reason },
+        { L0: drawn, L1: drawn, L2: drawn, depth: "L2" },
+      );
+      const codes = [...drawn.querySelectorAll("code")].map(
+        (c) => c.textContent,
+      );
+      expect(codes).toEqual([COMMAND]);
+      const page = receiptPageLines({ kind: "cannot_check", reason });
+      const lines = page!.lines;
+      expect(lines.join("\n")).not.toContain("`");
+      expect(lines.filter((l) => l.includes(codes[0]!))).toHaveLength(1);
+      // The drawn line's text is the page line's, word for word.
+      const drawnLine = [...drawn.querySelectorAll("p")]
+        .map((p) => p.textContent)
+        .find((t) => t!.includes(COMMAND));
+      expect(lines.some((l) => l.endsWith(drawnLine!))).toBe(true);
+    });
+  }
 });

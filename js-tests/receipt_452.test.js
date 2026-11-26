@@ -8,7 +8,8 @@ import { readBundle, readVerify, loadScript } from "./receiptScripts.js";
 import { standInContext } from "./aacContext.js";
 
 const LINE = "⚠️ The receipt's text is not shown: this copy names no sealed report, so its text could not be checked.";
-const VERDICT = "`capsulectl deal verify --bundle <file>` reports this copy as INVALID (sealed_report_not_named).";
+// The command is drawn as code (#454), so the text has no backticks.
+const VERDICT = "capsulectl deal verify --bundle <file> reports this copy as INVALID (sealed_report_not_named).";
 const INLINE = "A line nobody sealed.";
 
 // The report dropped and its text put inline, as check-deal-pages.sh does it.
