@@ -84,14 +84,14 @@ describe("the settlement line (#383)", () => {
   it("passes the proof when the runtime answers PASS for every leg", async () => {
     const { state, text } = await draw("keep", { legs: TWO, preimages: BOTH });
     expect(state).toBe("proof");
-    expect(text).toBe("Payment: settled on Lightning; its proof matches its invoice, checked in this page. Size: $10 – $99.");
+    expect(text).toBe("Payment: settled on Lightning; this page checked its proof against its invoice. Size: $10 – $99.");
   });
 
   it("says the proof did not match when any leg's check answers FAIL", async () => {
     const legs = { ...TWO, "3ad3f14b": leg({ ref: { type: "ln.payment_hash", value: OTHER_HASH } }) };
     const { state, text } = await draw("keep", { legs, preimages: BOTH });
     expect(state).toBe("failed");
-    expect(text).toMatch(/^Payment: settled on Lightning; its proof did not match its invoice in this page's check\./);
+    expect(text).toMatch(/^Payment: recorded as settled on Lightning, but its proof did not match its invoice when this page checked it\./);
   });
 
   it("says this copy does not show the proof when a leg's record is withheld", async () => {
@@ -99,13 +99,13 @@ describe("the settlement line (#383)", () => {
     const { state, text } = await draw("keep", { legs: TWO, preimages: BOTH, withhold: ["3ad3f14b"], check: async () => { asked += 1; return "PASS"; } });
     expect(asked).toBe(0);
     expect(state).toBe("withheld");
-    expect(text).toMatch(/^Payment: settled on Lightning; this copy does not show its proof\./);
+    expect(text).toMatch(/^Payment: recorded as settled on Lightning; this copy does not show its proof\./);
   });
 
   it("says the wallet reported it final when no leg carries a preimage", async () => {
     const { state, text } = await draw("keep", { legs: TWO });
     expect(state).toBe("final");
-    expect(text).toMatch(/^Payment: settled on Lightning, as the payee's wallet reported it final; this file carries no proof to check\./);
+    expect(text).toMatch(/^Payment: the payee's wallet reported it final on Lightning; this file carries no proof to check\./);
   });
 
   it("says only some payments carry a proof when some legs do, and checks none", async () => {
@@ -113,14 +113,14 @@ describe("the settlement line (#383)", () => {
     const { state, text } = await draw("keep", { legs: TWO, preimages: { "290b1db4": PREIMAGE }, check: async () => { asked += 1; return "PASS"; } });
     expect(asked).toBe(0);
     expect(state).toBe("partial");
-    expect(text).toMatch(/^Payment: settled on Lightning; this file carries a proof for some of its payments only, so this page did not check them\./);
+    expect(text).toMatch(/^Payment: recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them\./);
   });
 
   it("claims no check the page did not run: no runtime check, an unchecked answer, a throw", async () => {
     for (const check of [null, async () => "NOT_CHECKED", () => { throw new Error("no SHA-256"); }, async () => { throw new Error("rejected"); }]) {
       const { state, text } = await draw("keep", { legs: TWO, preimages: BOTH, check });
       expect(state).toBe("sealed");
-      expect(text).toMatch(/^Payment: settled on Lightning; its proof is sealed in this file, and this page can't check it\./);
+      expect(text).toMatch(/^Payment: recorded as settled on Lightning; its proof is sealed in this file, so this page can't check it\./);
     }
   });
 
@@ -138,11 +138,11 @@ describe("the settlement line (#383)", () => {
 
   it("names x402 and another rail without checking either", async () => {
     const x402 = { "290b1db4": leg({ ref: { type: "x402.tx", value: "0xabc" } }) };
-    expect((await draw("keep", { legs: x402 })).text).toBe("Payment: settled on x402; the chain lookup is not checked on this page. Size: $10 – $99.");
+    expect((await draw("keep", { legs: x402 })).text).toBe("Payment: settled on x402; this page does not check the on-chain record. Size: $10 – $99.");
     const mixed = { ...x402, "3ad3f14b": leg() };
     const other = await draw("keep", { legs: mixed });
     expect(other.state).toBe("other");
-    expect(other.text).toMatch(/^Payment: settled; this page checks no settlement on this rail\./);
+    expect(other.text).toMatch(/^Payment: recorded as settled; this page can't check payments on this rail\./);
   });
 
   it("counts only settled payee-observed legs", async () => {
@@ -227,7 +227,7 @@ describe("the settlement line (#383)", () => {
       for (const legs of cases) {
         const { model, text } = await draw("keep", { legs });
         expect(model.settlement.band).toBeNull();
-        expect(text).toBe("Payment: settled on Lightning, as the payee's wallet reported it final; this file carries no proof to check.");
+        expect(text).toBe("Payment: the payee's wallet reported it final on Lightning; this file carries no proof to check.");
       }
     });
   });
@@ -246,7 +246,7 @@ describe("the settlement line (#383)", () => {
       const legs = { "3ad3f14b": leg() };
       const { state, text } = await draw("counterparty", { audience: "counterparty", legs, preimages: { "3ad3f14b": PREIMAGE } });
       expect(state).toBe("proof");
-      expect(text).toBe("Payment: settled on Lightning; its proof matches its invoice, checked in this page. Size: $10 – $99.");
+      expect(text).toBe("Payment: settled on Lightning; this page checked its proof against its invoice. Size: $10 – $99.");
     });
   });
 
