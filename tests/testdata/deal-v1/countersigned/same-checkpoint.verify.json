@@ -1,0 +1,79 @@
+{
+  "bundle_digest": "724697a1066de013d9c29caa0fb8fab4f742b6f8fd1c8198699bd77b46c457af",
+  "checked_against": {
+    "bundle_draft": "draft-mih-zhang-agent-disclosure-bundle-01",
+    "checks": "aac-strict"
+  },
+  "checkpoint": {
+    "findings": [],
+    "status": "pass"
+  },
+  "countersignatures": [],
+  "disclosures": [
+    {
+      "capsule_id": "9c6d5ddd9396922493a318bd2d30d55aa7600f5a1947d1169a2738a42165f31f",
+      "member": "agent_input",
+      "status": "disclosure_match"
+    }
+  ],
+  "extensions": [
+    {
+      "kind": "evidencebook/payloads",
+      "status": "uninterpreted"
+    },
+    {
+      "kind": "x-deal-report/v0",
+      "status": "uninterpreted"
+    },
+    {
+      "as_of": "as of 2026-09-27T18:00:00Z (the holder's time, when it computed the report; no witness attests it)",
+      "claims": [],
+      "counterparty_half": {
+        "key": "763ea563a765d8a5",
+        "record": "98073b84382c1a029029f246b32dab634a2ab4abd09f4e7be1911c1737151da5",
+        "size": 1,
+        "status": "verified"
+      },
+      "kind": "x-deal-v1",
+      "read_by": "capsulectl-deal",
+      "report": "standalone",
+      "sealed_report": "1820405c99f8318b1d149ac3905d8708add71eee4dcd1d9a8360a8546009a463",
+      "status": "pass"
+    },
+    {
+      "kind": "x-deal-v1-counterparty-half",
+      "status": "uninterpreted"
+    }
+  ],
+  "graph_closure": {
+    "findings": [],
+    "status": "pass"
+  },
+  "interval_coverage": {
+    "findings": [],
+    "status": "pass"
+  },
+  "per_record_membership": {
+    "findings": [],
+    "status": "pass"
+  },
+  "producer_signatures": {
+    "findings": [],
+    "status": "pass"
+  },
+  "record_identity": {
+    "9c6d5ddd9396922493a318bd2d30d55aa7600f5a1947d1169a2738a42165f31f": "passed"
+  },
+  "record_signatures": {
+    "9c6d5ddd9396922493a318bd2d30d55aa7600f5a1947d1169a2738a42165f31f": "authored"
+  },
+  "spec_version": "capsule-cli-result/v1",
+  "verdict": "VALID",
+  "witnesses": {
+    "findings": [
+      "witness_receipt_absent"
+    ],
+    "receipts": [],
+    "status": "withheld"
+  }
+}

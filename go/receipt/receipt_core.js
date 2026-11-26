@@ -468,6 +468,7 @@
       out.verify_command = reportedCommand(v);
       out.verdict = reportedVerdict(v);
       out.countersigned = reportedCountersigned(v);
+      out.countersigned_copy = reportedCountersignedCopy(v);
     }
     // The x-deal-v0 modules: capsulectl's report of the holder's own book's
     // witness time and its countersign rung, only when the page was given
@@ -1850,6 +1851,7 @@
       verify_command: or(str(v.assurance.verify_command), null),
       verdict: or(str(v.assurance.verdict), null),
       countersigned: Array.isArray(v.assurance.countersigned) ? v.assurance.countersigned : null,
+      countersigned_copy: v.assurance.countersigned_copy || null,
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
@@ -2001,6 +2003,14 @@
     return given.filter(isMap).map(function (c) {
       return { kind: or(str(get(c, "kind")), "unknown"), name: str(get(c, "name")), at: str(get(c, "at")) };
     });
+  }
+  // The page's own check of the countersigned copy it carries (#456), as the runtime carries it:
+  // {name, at, k, n} only when every check passed, else null.
+  function reportedCountersignedCopy(verification) {
+    var c = map(reportedEntry(verification, "countersigned_copy"));
+    var name = str(get(c, "name")), at = str(get(c, "at")), k = get(c, "k"), n = get(c, "n");
+    if (name === null || at === null || !Number.isInteger(k) || !Number.isInteger(n) || k < 1 || k > n) return null;
+    return { name: name, at: at, k: k, n: n, independent: get(c, "independent") === true };
   }
   function reportedCommand(verification) {
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
@@ -3777,16 +3787,26 @@
       if (s.k !== undefined) { values.k = String(s.k); values.n = String(s.n); }
       if (s.witness !== undefined) values.witness = s.witness;
       if (s.signer !== undefined) values.signer = s.signer;
-      var text = s.at !== undefined ? self.timed("deal.stamp." + name + "." + s.state, s.at, values) : w("deal.stamp." + name + "." + s.state, values);
+      var key = "deal.stamp." + name + "." + (s.words || s.state);
+      var text = s.at !== undefined ? self.timed(key, s.at, values) : w(key, values);
       return d.el("li", { class: "cv-rcpt-stamp cv-rcpt-stamp--" + (s.state === "filled" ? "filled" : "open"), "data-stamp": name, "data-stamp-state": s.state }, [
         d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [text]),
       ]);
     }));
   };
   // COUNTERSIGNED (#382 item 14): filled only for a countersignature from a resolved signer that this page
-  // verified over this very bundle (AAC's classification, carried by the runtime); a producer's own, an
-  // unlisted signer's or a failed one never fills it, nor does the other side's verified half.
+  // verified, over this very bundle or over the countersigned copy the page carries (#456; AAC's
+  // classification, carried by the runtime); a producer's own, an unlisted signer's or a failed one never
+  // fills it, nor does the other side's verified half.
   P.countersigned = function (model) {
+    // The countersigned copy the page carries, checked by the page itself (#456): it verifies, a
+    // countersignature on it resolves, and its records 1 to k are this copy's records 1 to k. It
+    // decides the stamp even when a countersignature on this very bundle failed: the copy is the
+    // signed one the page checked (Sherlock2 on #457). Unless the signer's directory row lists it as
+    // independent of both parties, the line says the row does not (u649).
+    var copy = model.countersigned_copy;
+    var copyAt = copy ? stepTime(null, copy.at) : null;
+    if (copy && copyAt !== null && validUtcTime(copyAt)) return { state: "filled", words: copy.independent ? "filled_copy" : "filled_copy_not_listed", signer: copy.name, at: copyAt, k: copy.k, n: copy.n };
     var list = model.countersigned;
     if (list === null) return model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
     var given = list.filter(function (c) { return c.kind !== "hollow"; });

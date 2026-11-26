@@ -693,6 +693,8 @@
     "deal.check.page": "On this page's own file, as capsulectl gave it:",
     "deal.check.download": "On the downloaded proof file:",
     "deal.stamp.countersigned.filled": "{signer} signed this record too · {at}, by their clock",
+    "deal.stamp.countersigned.filled_copy": "Countersigned by {signer} at {at}, through record {k} of {n}.",
+    "deal.stamp.countersigned.filled_copy_not_listed": "Countersigned by {signer} at {at}, through record {k} of {n}. Its directory entry does not list it as independent of the parties.",
     "deal.stamp.countersigned.failed": "Didn't verify",
     "deal.stamp.countersigned.self": "Signed by the producer only, not by another party",
     "deal.stamp.countersigned.unresolved": "Signed by an unlisted signer",
