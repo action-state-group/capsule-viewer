@@ -531,6 +531,16 @@
     "deal.col.sealer": "Sealer, as recorded",
     "deal.legs.note.withheld": "This copy withholds the terms, so these payment records are not tied to a term. They are the records the report's holder says its terms rest on, shown as each states it. This page does not check who signed them and does not judge the payment.",
     "deal.legs.none.withheld": "This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.",
-    "deal.legs.none": "No payment record is among the records the terms' statuses rest on."
+    "deal.legs.none": "No payment record is among the records the terms' statuses rest on.",
+    "deal.legs.why.statements": "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment.",
+    "deal.legs.why.mixed": "These terms rest on what the sides say and on other deal records. None is a payment record, so this page does not show or check a payment.",
+    "deal.legs.why.other": "These terms rest on deal records, none of them a payment record, so this page does not show or check a payment.",
+    "deal.legs.why.no_records": "No term's status rests on any record yet, so there is no payment record to show.",
+    "deal.state.terms": "Terms: {tally}",
+    "deal.state.terms.count": "{status} ({count} of {total})",
+    "deal.term.paid_as_agreed": "Payment as agreed",
+    "deal.term.delivered": "Delivery",
+    "deal.term.as_described": "Item as described",
+    "deal.named_witness.report.own": "yes, as your report states it"
   }
 }

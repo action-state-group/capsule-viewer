@@ -7,8 +7,9 @@
 // cannot carry its own digest), the words of the example English wording
 // pack (compiled in: the script reads no pack), the pack's id and sha256, the
 // kit stylesheet (src/capsule_viewer/static/kit.css, the one copy), the
-// receipt's dark overrides (static/kit-dark.css; the manifest pins the two by
-// style_sha256, in that order) and the seller kind.
+// receipt's dark overrides (static/kit-dark.css), the receipt's own rules
+// (receipt.css; the manifest pins the three by style_sha256, in that order)
+// and the seller kind.
 //
 // It writes the same bytes the Python writer (capsule_viewer.receipt_slot)
 // wrote for capsule-viewer 0.25.0 (apart from the dark overrides and the
@@ -49,8 +50,8 @@ const zero = "0000000000000000000000000000000000000000000000000000000000000000"
 var generated = regexp.MustCompile(`(?m)^(  var (\w+) = ).*; // @generated (\w+)$`)
 
 // Sources are the inputs: the package directory (receipt_core.js, the
-// hand-edited manifest-<kind>.json and wording-en.json) and the kit
-// stylesheet and its dark overrides.
+// hand-edited manifest-<kind>.json, wording-en.json and receipt.css) and the
+// kit stylesheet and its dark overrides.
 type Sources struct {
 	Dir        string
 	KitCSS     string
@@ -70,7 +71,9 @@ func DefaultSources(dir string) Sources {
 // are a second stylesheet of the receipt's own: they apply inside a receipt
 // only and follow the colour scheme the host page declares, so a receipt on a
 // dark page is dark and one on a page that declares none stays light
-// (capsule-viewer#391).
+// (capsule-viewer#391). receipt.css is a third, also the receipt's own and
+// scoped to a receipt: a word in a table cell never breaks inside
+// (capsule-viewer#429).
 
 func digest(b []byte) string {
 	sum := sha256.Sum256(b)
@@ -92,6 +95,10 @@ func Outputs(s Sources) (map[string][]byte, error) {
 		return nil, err
 	}
 	dark, err := os.ReadFile(s.KitDarkCSS)
+	if err != nil {
+		return nil, err
+	}
+	own, err := os.ReadFile(filepath.Join(s.Dir, "receipt.css"))
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +132,12 @@ func Outputs(s Sources) (map[string][]byte, error) {
 		}
 		values := map[string]string{
 			"KIND":         inline(kind),
-			"MANIFEST":     inline(mo.withExecutable(zero, digest(css), digest(dark))),
+			"MANIFEST":     inline(mo.withExecutable(zero, digest(css), digest(dark), digest(own))),
 			"WORDS":        inline(entries),
 			"PACK":         inline(object{{"id", id}, {"sha256", digest(pack)}}),
 			"KIT_CSS":      inline(string(css)),
 			"KIT_DARK_CSS": inline(string(dark)),
+			"RECEIPT_CSS":  inline(string(own)),
 			"SELLER_KIND":  inline(SellerKind),
 		}
 		script, err := Fill(core, values)
@@ -137,7 +145,7 @@ func Outputs(s Sources) (map[string][]byte, error) {
 			return nil, err
 		}
 		out["receipt_"+kind+".js"] = script
-		final := mo.withExecutable(digest(script), digest(css), digest(dark))
+		final := mo.withExecutable(digest(script), digest(css), digest(dark), digest(own))
 		out["manifest-"+kind+".json"] = append([]byte(indented(final)), '\n')
 		manifests = append(manifests, member{kind, final})
 	}

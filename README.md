@@ -383,7 +383,9 @@ stylesheet each script inserts once at render).
   manifests, which the Go package `receipt` ships to Go page builders. The writer
   still reads the kit stylesheet from `src/capsule_viewer/static/kit.css`, and
   compiles in `static/kit-dark.css` as a second stylesheet, scoped to a receipt,
-  so a receipt follows its page's declared colour scheme (#391). The copies
+  so a receipt follows its page's declared colour scheme (#391), and
+  `go/receipt/receipt.css`, the receipt's own rules, as a third, also scoped to
+  a receipt (#429). The copies
   described below, in the Python package, are frozen at 0.25.0.
 - **One source, four scripts (the frozen 0.25.0 copies).** `static/receipt_core.js` was the source;
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with
