@@ -94,7 +94,7 @@ describe("the header and the top line", () => {
     expect(q(host.L0, "svg[data-seal]").getAttribute("data-seal")).toBe("done");
     expect(q(host.L0, "svg[data-seal]").getAttribute("aria-hidden")).toBe("true");
     expect(q(host.L0, "[data-top-line]").textContent).toBe("Sale settled, as your records show");
-    expect(q(host.L0, "[data-mood]").textContent).toBe("Done: paid, settled, and both sides say the same");
+    expect(q(host.L0, "[data-mood]").textContent).toBe("Done: recorded as settled, and both sides say the same");
     expect(host.L0.textContent).toContain("Intact, not true");
   });
 
@@ -128,7 +128,7 @@ describe("the header and the top line", () => {
   it("paid but the terms still waiting for the other side: says so, no seal (the demo's case)", async () => {
     const { host } = await draw(bundleOf(SELLER, (c) => ({ ...rows({ status: "waiting" })(asKeep(c)), settled: false })));
     expect(q(host.L0, "svg[data-seal]")).toBeNull();
-    expect(q(host.L0, "[data-top-line]").textContent).toBe("Payment received. Waiting for the buyer to say it too");
+    expect(q(host.L0, "[data-top-line]").textContent).toBe("Payment recorded as received. Waiting for the buyer to say it too");
     expect(q(host.L0, "[data-card-status]").textContent).toBe("Waiting for the other side");
   });
 
@@ -139,6 +139,14 @@ describe("the header and the top line", () => {
     expect(text).not.toMatch(/Waiting for you/);
   });
 
+  it("terms all at one status read in plain words, and one step is one step (Sherlock2's design review)", async () => {
+    const { host } = await draw(bundleOf(BUYER));
+    expect(q(host.L0, "[data-top-line]").textContent).toBe("Nothing is due yet");
+    expect(host.L0.textContent).toContain("1 sealed step in this copy.");
+    const mixed = await draw(bundleOf(SELLER, (c) => ({ ...asKeep(c), settled: false, rows: [{ ...c.rows[0], status: "not_due", value: null }, { ...c.rows[1], status: "agreed_so_far" }] })));
+    expect(q(mixed.host.L0, "[data-top-line]").getAttribute("data-top-line")).toBe("terms");
+  });
+
   it("no top line claims the deal closed or done unless the Done seal is earned", async () => {
     const { host } = await draw(bundleOf(BUYER));
     expect(q(host.L0, "svg[data-seal]")).toBeNull();
@@ -147,12 +155,15 @@ describe("the header and the top line", () => {
 });
 
 describe("the cards and the stamps", () => {
-  it("the amount the holder's own payment record states, in sats and msat, with its time", async () => {
+  it("the amount the holder's own payment record states, in sats and msat, said as recorded (u203)", async () => {
     const { host } = await draw(bundleOf(SELLER, asKeep));
     const paid = q(host.L0, '[data-card="paid"]');
-    expect(q(paid, ".cv-rcpt-card__label").textContent).toBe("Received");
+    expect(q(paid, ".cv-rcpt-card__label").textContent).toBe("Payment");
     expect(q(paid, ".cv-rcpt-card__value").textContent).toBe("2 sats2,000 msat");
-    expect(q(host.L0, '[data-card="other"]').textContent).toContain("Their signed agreement checks out");
+    expect(q(paid, ".cv-rcpt-card__note").textContent).toBe("Recorded as received");
+    expect(q(host.L0, '[data-card="other"]').textContent).toContain("Their signed agreement: capsulectl verify reported it verified");
+    // The page checks no payment proof: nothing on the surface says "paid" in its own voice.
+    expect(host.L0.textContent).not.toMatch(/\bPaid\b/);
   });
 
   it("a copy with no payment record draws no amount card", async () => {
@@ -175,6 +186,8 @@ describe("the cards and the stamps", () => {
     const own = await draw(bundleOf(SELLER, asKeep), { assurance: witnessed });
     expect(q(own.host.L0, '[data-stamp="time_stamped"]').getAttribute("data-stamp-state")).toBe("filled");
     expect(q(own.host.L0, '[data-check="witnesses"]').getAttribute("data-check-status")).toBe("pass");
+    // Said in capsulectl's voice, never the page's (u219).
+    expect(q(own.host.L0, '[data-stamp="time_stamped"]').textContent).toMatch(/, as capsulectl verify reported$/);
     for (const carrier of ["report", "page"]) {
       const shown = await draw(bundleOf(SELLER, asKeep), { assurance: witnessed, carrier });
       expect(q(shown.host.L0, '[data-stamp="time_stamped"]').getAttribute("data-stamp-state")).toBe("not_checked");
@@ -202,7 +215,7 @@ describe("what happened, step by step", () => {
     const steps = [...host.L0.querySelectorAll("[data-step]")];
     expect(steps.map((s) => s.getAttribute("data-step-kind"))).toEqual(["agree", "settle", "perform", "statement"]);
     expect(steps.map((s) => q(s, ".cv-rcpt-step__title").textContent)).toEqual([
-      "Deal agreed", "Payment received: 2,000 msat", "Recorded as done: delivered", "You said: Delivery: met; Payment as agreed: met",
+      "Deal agreed", "Payment recorded as received: 2,000 msat", "Recorded as done: delivered", "You said: Delivery: met; Payment as agreed: met",
     ]);
     expect(new Set(model.sealed_steps.map((s) => s.record)).size).toBe(SELLER.records.length);
     const settle = steps[1];

@@ -3134,6 +3134,9 @@
     if (rows.some(function (r) { return r.status === "in_dispute"; })) return { mood: null, line: "in_dispute" };
     if (rows.some(function (r) { return r.status === "in_disagreement"; })) return { mood: null, line: "in_disagreement" };
     if (rows.length && rows.every(function (r) { return r.status === "waiting"; })) return { mood: null, line: leg !== null ? "paid_waiting" : "waiting" };
+    // One status every term shares, said in plain words; mixed statuses are counted (termsTally).
+    var only = rows.length && rows.every(function (r) { return r.status === rows[0].status; }) ? rows[0].status : null;
+    if (only !== null && own(WORDS, "deal.top.all." + only)) return { mood: null, line: "all." + only };
     return { mood: null, line: "terms" };
   }
   // A key's form for this copy: the seller's when the copy is a seller's, and the third person's
@@ -3211,11 +3214,9 @@
     var leg = ownLeg(model);
     if (leg !== null) {
       var amountKey = model.role === "seller" ? "received" : "amount";
-      var settled = leg.status === "settled";
-      // A record's time only on the holder's own page (Sherlock2, u239): no other copy shows one.
-      var at = this.ownPage(model) && leg.observed_at !== null && validUtcTime(leg.observed_at) ? this.timed("deal.card.at", leg.observed_at) : null;
-      cards.push({ key: "paid", label: w(!settled ? "deal.card.payment" : model.role === "seller" ? "deal.card.received" : "deal.card.paid"), value: this.legMoney(model, leg, amountKey),
-        note: settled ? at : w("deal.card.payment.status", { status: leg.status }) });
+      // Said as recorded, never in the page's own voice: the page checks no payment proof (u203).
+      var recorded = leg.status === "settled" ? w(model.role === "seller" ? "deal.card.payment.received" : "deal.card.payment.settled") : w("deal.card.payment.status", { status: leg.status });
+      cards.push({ key: "paid", label: w("deal.card.payment"), value: this.legMoney(model, leg, amountKey), note: recorded });
     } else if (ownLegs(model).length > 1) {
       cards.push({ key: "paid", label: w("deal.card.payment"), value: w("deal.card.payment.several", { count: String(ownLegs(model).length) }), note: null });
     }
@@ -3365,7 +3366,7 @@
     var steps = model.sealed_steps;
     // Each step's time only on the holder's own page (Sherlock2, u239).
     var own = this.ownPage(model);
-    var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w("deal.steps.lede", { count: String(steps.length) }))];
+    var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w(steps.length === 1 ? "deal.steps.lede.one" : "deal.steps.lede", { count: String(steps.length) }))];
     if (!steps.length) return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([this.note(w("deal.steps.none"))]));
     var list = d.el("ol", { class: "cv-rcpt-steps" }, steps.map(function (step, i) {
       return d.el("li", { class: "cv-rcpt-step", "data-step": String(i + 1), "data-step-kind": step.kind || "withheld" }, [
