@@ -30,7 +30,7 @@ func sum(b []byte) string {
 func TestGeneratedFilesAreCurrent(t *testing.T) {
 	out, err := writer.Outputs(writer.DefaultSources("."))
 	require.NoError(t, err)
-	require.Len(t, out, 2*len(Kinds)+1)
+	require.Len(t, out, 2*len(Kinds)+1+len(writer.StyleCopies))
 	for name, want := range out {
 		got, err := os.ReadFile(name)
 		require.NoError(t, err)
@@ -88,11 +88,49 @@ func TestModuleReturnsCopies(t *testing.T) {
 	assert.NotEqual(t, "x", b.StyleSHA256[0])
 }
 
+// Styles returns, for every kind, exactly the stylesheets its manifest pins,
+// in style_sha256 order, and the generated copies are the sources' bytes.
+func TestStylesAreThoseTheManifestPins(t *testing.T) {
+	src := writer.DefaultSources(".")
+	kit, err := os.ReadFile(src.KitCSS)
+	require.NoError(t, err)
+	dark, err := os.ReadFile(src.KitDarkCSS)
+	require.NoError(t, err)
+	own, err := os.ReadFile(filepath.Join(src.Dir, "receipt.css"))
+	require.NoError(t, err)
+	for _, kind := range Kinds {
+		m, err := Module(kind)
+		require.NoError(t, err)
+		styles, err := Styles(kind)
+		require.NoError(t, err)
+		require.Len(t, styles, len(m.StyleSHA256), kind)
+		for i, s := range styles {
+			assert.Equal(t, m.StyleSHA256[i], sum(s), "%s style %d", kind, i)
+		}
+		assert.Equal(t, [][]byte{kit, dark, own}, styles, kind)
+	}
+}
+
+func TestStylesReturnsCopies(t *testing.T) {
+	a, err := Styles(Deal)
+	require.NoError(t, err)
+	want := sum(a[0])
+	a[0][0] ^= 0xff
+	a[1] = nil
+	b, err := Styles(Deal)
+	require.NoError(t, err)
+	assert.Equal(t, want, sum(b[0]))
+	assert.NotEmpty(t, b[1])
+}
+
 func TestUnknownKindIsRefused(t *testing.T) {
 	_, err := Module("provider")
 	assert.ErrorContains(t, err, `no "provider" receipt module`)
 	_, err = ID("")
 	assert.Error(t, err)
+	styles, err := Styles("provider")
+	assert.ErrorContains(t, err, `no "provider" receipt module`)
+	assert.Nil(t, styles)
 }
 
 // Each module goes into an offline page as go/emitter checks it: the manifest

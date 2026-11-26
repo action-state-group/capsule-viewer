@@ -1,0 +1,34 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * kit-dark.css -- GENERATED from tokens/tokens.json ("kit-dark") by
+ * scripts/gen-tokens.py. Do not edit by hand.
+ *
+ * Inserted after kit.css by the go/receipt modules only, as a stylesheet of
+ * their own, and scoped to a receipt ([data-receipt-module]), so no other
+ * kit module's card changes. Each colour token becomes
+ * light-dark(<light>, <dark>), which follows the colour scheme the host page
+ * declares (color-scheme), not the reader's OS: a host that declares
+ * "light dark" gets the dark values in dark mode, and a host that declares
+ * none stays light. A browser without light-dark() skips the @supports block
+ * and keeps kit.css's light values.
+ */
+@supports (color: light-dark(#000, #fff)) {
+  [data-receipt-module] {
+    --cv-color-text: light-dark(#1b1f27, #e6e9ef);
+    --cv-color-text-muted: light-dark(#4d5564, #aab1bd);
+    --cv-color-surface: light-dark(#ffffff, #16191f);
+    --cv-color-surface-sunken: light-dark(#f4f5f7, #1e222a);
+    --cv-color-border: light-dark(#d3d7de, #3a414d);
+    --cv-color-accent: light-dark(#2445a8, #9db4ff);
+    --cv-color-positive-fg: light-dark(#17603a, #7fd8a2);
+    --cv-color-positive-bg: light-dark(#e6f3eb, #12301f);
+    --cv-color-negative-fg: light-dark(#a31d1d, #ff9a92);
+    --cv-color-negative-bg: light-dark(#fbe9e9, #3b1a18);
+    --cv-color-caution-fg: light-dark(#6f4700, #f0c674);
+    --cv-color-caution-bg: light-dark(#fcf1dc, #33270d);
+    --cv-color-neutral-fg: light-dark(#3d4452, #c7ccd6);
+    --cv-color-neutral-bg: light-dark(#eceef2, #262b34);
+    --cv-color-info-fg: light-dark(#1f3c94, #a9bdff);
+    --cv-color-info-bg: light-dark(#e7ecfb, #1b2546);
+  }
+}

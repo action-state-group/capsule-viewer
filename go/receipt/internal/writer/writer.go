@@ -115,7 +115,7 @@ func Outputs(s Sources) (map[string][]byte, error) {
 	if !okE || !okI {
 		return nil, errors.New("wording-en.json has no id or entries")
 	}
-	out := make(map[string][]byte, 2*len(Kinds)+1)
+	out := make(map[string][]byte, 2*len(Kinds)+1+len(StyleCopies))
 	var manifests object
 	for _, kind := range Kinds {
 		raw, err := os.ReadFile(filepath.Join(s.Dir, "manifest-"+kind+".json"))
@@ -154,8 +154,17 @@ func Outputs(s Sources) (map[string][]byte, error) {
 		return nil, err
 	}
 	out[TSModule] = ts
+	// Byte-identical copies of the kit stylesheet and its dark overrides, so
+	// the package can embed them (go:embed cannot reach outside the Go
+	// module) and return them beside the scripts that inline them.
+	out[StyleCopies[0]] = css
+	out[StyleCopies[1]] = dark
 	return out, nil
 }
+
+// StyleCopies are the generated copies of the kit stylesheet and its dark
+// overrides, in that order, relative to Dir.
+var StyleCopies = []string{"kit.css", "kit-dark.css"}
 
 // TSModule is where the npm package's copy of the receipt modules is
 // written, relative to the receipt package's directory.
