@@ -4172,6 +4172,15 @@ const root = {};
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
 
+  // A wording line's runs: the text between each pair of backticks as a
+  // <code> element, the rest as text. The npm export's page lines drop the
+  // same backticks (ts/src/receipt.ts, fill).
+  function withCode(d, text) {
+    return text.split(/`([^`]+)`/).map(function (part, i) {
+      return i % 2 ? d.el("code", { class: "cv-mono" }, [part]) : part;
+    }).filter(function (part) { return part !== ""; });
+  }
+
   // The page could not check the receipt here: no receipt, only the line
   // and where to check it, in the pack's words. Without Ed25519 the browser
   // checks nothing (row.cannot_check, row.cannot_check_pointer; Sherlock2,
@@ -4182,15 +4191,18 @@ const root = {};
   // against: what was left out and why, then capsulectl's verdict on such a
   // copy as a second line of the same block (reason "downgraded",
   // row.cannot_check.downgraded and its _verdict; Sherlock2 on capsule-viewer#452).
+  // A command in those words is marked with backticks; the line draws it as
+  // inline code, words unchanged, as text nodes so "<file>" stays text
+  // (withCode; Sherlock2 on capsule-viewer#454).
   function cannotCheckLevels(doc, reason) {
     var d = new Drawing(doc);
     var attrs = { class: "cv-tone--caution", "data-cannot-check": "true" };
     if (reason) attrs["data-cannot-check-reason"] = reason;
     var line = reason === "downgraded"
-      ? d.el("div", attrs, [d.el("p", {}, [w("row.cannot_check.downgraded")]), d.el("p", {}, [w("row.cannot_check.downgraded_verdict")])])
-      : d.el("p", attrs, [reason === "report_rule"
-        ? w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer")
-        : w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
+      ? d.el("div", attrs, [d.el("p", {}, [w("row.cannot_check.downgraded")]), d.el("p", {}, withCode(d, w("row.cannot_check.downgraded_verdict")))])
+      : d.el("p", attrs, reason === "report_rule"
+        ? withCode(d, w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer"))
+        : [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
     return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
   }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
@@ -4451,7 +4463,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "98f1d1d7c3cdc0996b78d77bbc1fa67a037f5f378d4ffb1ed5ee260eaffe6cac",
+      "script_sha256": "2ad95663473aea2476aa0fe1fc5d30b5934de59eb7d22d96f26ace815fa914bb",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4498,7 +4510,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "f13e9c9119bab720de42efb8edf8f08fac7964456ab94a99259a2e8d0392616b",
+      "script_sha256": "133ea32735de2bef1f02e6f737c85254ce0eacda45c9d4387f5fa305d2248452",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4544,7 +4556,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "41854ac41305213efe11491ae7c17b8c2f7a36c519fd0c44625230e297d1fa94",
+      "script_sha256": "256abbca600e4fed6def80dab81f7ae2a4b78ab3fa706e3c745580bd7b8821e6",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4592,7 +4604,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "431d9c94098dbbc8d934f5ea0b5550040374add17b247de877085f9c7eb88b87",
+      "script_sha256": "9450ffe20c7496eebd3176b8732384a4abc44c861b75a57e4bddd7280bd9c1ba",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

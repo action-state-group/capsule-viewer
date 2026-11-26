@@ -4168,6 +4168,15 @@
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
 
+  // A wording line's runs: the text between each pair of backticks as a
+  // <code> element, the rest as text. The npm export's page lines drop the
+  // same backticks (ts/src/receipt.ts, fill).
+  function withCode(d, text) {
+    return text.split(/`([^`]+)`/).map(function (part, i) {
+      return i % 2 ? d.el("code", { class: "cv-mono" }, [part]) : part;
+    }).filter(function (part) { return part !== ""; });
+  }
+
   // The page could not check the receipt here: no receipt, only the line
   // and where to check it, in the pack's words. Without Ed25519 the browser
   // checks nothing (row.cannot_check, row.cannot_check_pointer; Sherlock2,
@@ -4178,15 +4187,18 @@
   // against: what was left out and why, then capsulectl's verdict on such a
   // copy as a second line of the same block (reason "downgraded",
   // row.cannot_check.downgraded and its _verdict; Sherlock2 on capsule-viewer#452).
+  // A command in those words is marked with backticks; the line draws it as
+  // inline code, words unchanged, as text nodes so "<file>" stays text
+  // (withCode; Sherlock2 on capsule-viewer#454).
   function cannotCheckLevels(doc, reason) {
     var d = new Drawing(doc);
     var attrs = { class: "cv-tone--caution", "data-cannot-check": "true" };
     if (reason) attrs["data-cannot-check-reason"] = reason;
     var line = reason === "downgraded"
-      ? d.el("div", attrs, [d.el("p", {}, [w("row.cannot_check.downgraded")]), d.el("p", {}, [w("row.cannot_check.downgraded_verdict")])])
-      : d.el("p", attrs, [reason === "report_rule"
-        ? w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer")
-        : w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
+      ? d.el("div", attrs, [d.el("p", {}, [w("row.cannot_check.downgraded")]), d.el("p", {}, withCode(d, w("row.cannot_check.downgraded_verdict")))])
+      : d.el("p", attrs, reason === "report_rule"
+        ? withCode(d, w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer"))
+        : [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
     return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
   }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
