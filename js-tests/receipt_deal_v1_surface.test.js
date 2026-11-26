@@ -321,9 +321,12 @@ describe("review round 1: payments, the summary, countersignatures and withheld 
     expect(q(host.L0, "[data-proof]").getAttribute("data-proof")).toBe("partial");
   });
 
-  it("a failed outside time stamp makes the summary say a test failed", async () => {
+  it("a failed outside time stamp makes the summary say a test failed, a withheld check beside it or not", async () => {
     const { host } = await draw(bundleOf(SELLER, asKeep), { assurance: { book_witnessed: { status: "failed" } } });
     expect(q(host.L0, "[data-proof]").getAttribute("data-proof")).toBe("failed");
+    const withheld = { ...ALL_PASS, interval_coverage: { status: "withheld", findings: ["selection_not_checkable"] } };
+    const both = await draw(bundleOf(SELLER, asKeep), { assurance: { checks: withheld, book_witnessed: { status: "failed" } } });
+    expect(q(both.host.L0, "[data-proof]").getAttribute("data-proof")).toBe("failed");
   });
 
   it("COUNTERSIGNED: filled only by a resolved signer the page verified; a producer's, an unlisted or a failed one says so", async () => {
@@ -334,6 +337,10 @@ describe("review round 1: payments, the summary, countersignatures and withheld 
     const [filled, text] = await state([{ kind: "resolved", name: "Acme Audit", at: "2026-11-25T15:00:00Z" }]);
     expect(filled).toBe("filled");
     expect(text).toMatch(/^Acme Audit signed this record too · .+, by their clock$/);
+    // AAC's classifier keeps fractions of a second; the stamp still fills, said to the second.
+    const [fraction] = await state([{ kind: "resolved", name: "Acme Audit", at: "2026-11-25T15:00:00.123Z" }]);
+    expect(fraction).toBe("filled");
+    expect((await state([{ kind: "resolved", name: "Acme Audit", at: "yesterday" }]))[0]).toBe("not_checked");
     expect((await state([{ kind: "invalid", name: null, at: null }]))[0]).toBe("failed");
     expect((await state([{ kind: "not-independent", name: null, at: null }]))[0]).toBe("self");
     expect((await state([{ kind: "unresolved-signer", name: null, at: null }]))[0]).toBe("unresolved");

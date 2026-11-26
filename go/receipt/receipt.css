@@ -77,5 +77,7 @@
 @media (max-width: 720px) {
   [data-receipt-module] .cv-rcpt-hero, [data-receipt-module] .cv-rcpt-grid { grid-template-columns: minmax(0, 1fr); }
   [data-receipt-module] .cv-rcpt-step__drawer { padding-left: 0; }
+  [data-receipt-module] .cv-rcpt-step summary { grid-template-columns: auto minmax(0, 1fr); row-gap: 0; }
+  [data-receipt-module] .cv-rcpt-step__time { grid-column: 2; white-space: normal; }
   [data-receipt-module] .cv-rcpt-field { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }

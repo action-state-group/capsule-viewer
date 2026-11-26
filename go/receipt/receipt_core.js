@@ -3279,8 +3279,10 @@
     if (list === null) return model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
     var given = list.filter(function (c) { return c.kind !== "hollow"; });
     if (!given.length) return { state: "open" };
-    var resolved = given.find(function (c) { return c.kind === "resolved" && c.name !== null && c.at !== null && validUtcTime(c.at); });
-    if (resolved) return { state: "filled", signer: resolved.name, at: resolved.at };
+    // AAC's classifier keeps the signer's own time, fractions of a second included; the page says it to the second.
+    var secondOf = function (at) { var t = at !== null ? stepTime(null, at) : null; return t !== null && validUtcTime(t) ? t : null; };
+    var resolved = given.find(function (c) { return c.kind === "resolved" && c.name !== null && secondOf(c.at) !== null; });
+    if (resolved) return { state: "filled", signer: resolved.name, at: secondOf(resolved.at) };
     if (given.some(function (c) { return c.kind === "invalid"; })) return { state: "failed" };
     if (given.some(function (c) { return c.kind === "not-independent"; })) return { state: "self" };
     if (given.some(function (c) { return c.kind === "unresolved-signer"; })) return { state: "unresolved" };
@@ -3396,8 +3398,8 @@
     });
     var stamp = this.timeStamp(model);
     var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
-    // The summary counts every row it shows: a failed time stamp is a failed test too.
-    if (lede === "deal.proof.lede.passed" && stampState === "fail") lede = "deal.proof.lede.failed";
+    // The summary counts every row it shows: any failed row, the time stamp included, makes it "failed".
+    if (stampState === "fail") lede = "deal.proof.lede.failed";
     var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
     rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
     var parts = [
