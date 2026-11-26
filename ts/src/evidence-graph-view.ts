@@ -3575,7 +3575,9 @@ async function renderVerifiedContext(
   // module reads capsulectl's passing report (resolution and its model).
   const context = checkedContext;
   const moduleContext =
-    reading?.kind === "pass" ? withVerifierReport(context, reading) : context;
+    reading?.kind === "pass"
+      ? withVerifierReport(context, reading, options.verifyCommand)
+      : context;
   const verdictLine =
     reading?.kind === "fail" && reading.why === "verdict"
       ? reading.verdict

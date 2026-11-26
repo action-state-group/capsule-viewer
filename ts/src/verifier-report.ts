@@ -49,6 +49,12 @@ export type VerifierReading =
       readonly counterpartyHalf?: string;
       /** capsulectl's report of the holder's own book's witness time (verify --stamp-proof), as given. */
       readonly witnessed?: unknown;
+      /**
+       * capsulectl's own result for each bundle check it names (REPORTED_CHECKS),
+       * status and findings as strings only, so the receipt's proof panel says
+       * capsulectl's answer and never the page's own (#382).
+       */
+      readonly checks?: Readonly<Record<string, ReportedCheck>>;
     }
   | { readonly kind: "fail"; readonly why: "report" }
   | {
@@ -56,6 +62,40 @@ export type VerifierReading =
       readonly why: "verdict";
       readonly verdict: string;
     };
+
+/** One of capsulectl's bundle checks, as its report states it. */
+export interface ReportedCheck {
+  readonly status: string;
+  readonly findings: readonly string[];
+}
+
+/**
+ * The bundle checks of capsulectl's report the receipt's proof panel shows,
+ * in its order (#382): producer signatures, interval coverage, graph closure,
+ * per-record membership, the checkpoint and the witnesses.
+ */
+export const REPORTED_CHECKS = [
+  "producer_signatures",
+  "interval_coverage",
+  "graph_closure",
+  "per_record_membership",
+  "checkpoint",
+  "witnesses",
+] as const;
+
+/** Each check of REPORTED_CHECKS the report states with a string status. */
+function reportedChecks(r: Obj): Record<string, ReportedCheck> {
+  const out: Record<string, ReportedCheck> = {};
+  for (const name of REPORTED_CHECKS) {
+    const c = obj(r[name]);
+    if (typeof c["status"] !== "string") continue;
+    const findings = Array.isArray(c["findings"])
+      ? c["findings"].filter((f): f is string => typeof f === "string")
+      : [];
+    out[name] = { status: c["status"], findings };
+  }
+  return out;
+}
 
 export function verifierReportReading(
   context: VerifiedBundleContext,
@@ -101,6 +141,7 @@ export function verifierReportReading(
     kind: "pass",
     ...(typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {}),
     ...(isObj(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}),
+    checks: reportedChecks(r),
   };
   const verdict = r["verdict"];
   if (verdict === "VALID") return pass;
@@ -144,6 +185,7 @@ export function verifierReportReading(
 export function withVerifierReport(
   context: VerifiedBundleContext,
   reading: VerifierReading & { kind: "pass" } = { kind: "pass" },
+  verifyCommand?: string,
 ): VerifiedBundleContext {
   const extensions = [
     ...context.verification.extensions,
@@ -161,6 +203,12 @@ export function withVerifierReport(
       ...(reading.witnessed === undefined
         ? {}
         : { witnessed: reading.witnessed }),
+      // capsulectl's own result for each bundle check it reported, for the
+      // receipt's proof panel (#382); the page's banner reads its own.
+      ...(reading.checks === undefined ? {} : { checks: reading.checks }),
+      // The command the page's maker gave for checking this copy (the page's
+      // verifyCommand option), for the receipt's "Check it yourself".
+      ...(verifyCommand === undefined ? {} : { verify_command: verifyCommand }),
     },
   ] as unknown as VerifiedBundleContext["verification"]["extensions"];
   return {

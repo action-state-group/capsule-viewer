@@ -15,6 +15,11 @@ import {
   renderEvidenceGraph,
 } from "../src/evidence-graph-view.js";
 import { checkReceipt, receiptModules, renderReceipt } from "../src/receipt.js";
+import {
+  REPORTED_CHECKS,
+  verifierReportReading,
+  withVerifierReport,
+} from "../src/verifier-report.js";
 
 type Obj = Record<string, unknown>;
 const data = (name: string): string =>
@@ -637,5 +642,79 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       root.querySelector('[data-cannot-check-reason="report_rule"]'),
     ).not.toBeNull();
     expect(root.textContent).not.toContain(CAPSULECTL_LINE);
+  });
+});
+
+describe("capsulectl's own check results and the verify command reach the receipt (#382)", () => {
+  // The context the receipt module reads, from the real keep copy and its report.
+  const contextOf = (b: Obj, r: Obj) =>
+    ({
+      bundle: b,
+      verification: { bundleDigest: r["bundle_digest"], extensions: [] },
+    }) as unknown as Parameters<typeof verifierReportReading>[0];
+  const entryOf = (ctx: ReturnType<typeof withVerifierReport>): Obj =>
+    (ctx.verification.extensions as unknown as Obj[]).find(
+      (e) => e["kind"] === "x-deal-v1",
+    )!;
+
+  it("carries each check capsulectl reported, status and findings, in the x-deal-v1 entry", () => {
+    const b = bundle(),
+      r = report();
+    const reading = verifierReportReading(contextOf(b, r), r);
+    expect(reading?.kind).toBe("pass");
+    const entry = entryOf(
+      withVerifierReport(contextOf(b, r), reading as never),
+    );
+    expect(entry["checks"]).toEqual({
+      producer_signatures: { status: "pass", findings: [] },
+      interval_coverage: { status: "pass", findings: [] },
+      graph_closure: { status: "pass", findings: [] },
+      per_record_membership: { status: "pass", findings: [] },
+      checkpoint: { status: "pass", findings: [] },
+      witnesses: { status: "withheld", findings: ["witness_receipt_absent"] },
+    });
+    expect(Object.keys(entry["checks"] as Obj)).toEqual([...REPORTED_CHECKS]);
+  });
+
+  it("leaves out a check the report does not state, and keeps only string findings", () => {
+    const b = bundle(),
+      r = report();
+    delete r["checkpoint"];
+    (r["witnesses"] as Obj)["findings"] = ["witness_receipt_absent", 7, null];
+    const reading = verifierReportReading(contextOf(b, r), r);
+    const entry = entryOf(
+      withVerifierReport(contextOf(b, r), reading as never),
+    );
+    const checks = entry["checks"] as Obj;
+    expect(checks["checkpoint"]).toBeUndefined();
+    expect(checks["witnesses"]).toEqual({
+      status: "withheld",
+      findings: ["witness_receipt_absent"],
+    });
+  });
+
+  it("another bundle's report carries nothing", () => {
+    const b = bundle(),
+      r = report();
+    r["bundle_digest"] = "00".repeat(32);
+    expect(verifierReportReading(contextOf(b, report()), r)).toBeNull();
+  });
+
+  it("the verify command is carried only when the page was given one", () => {
+    const b = bundle(),
+      r = report();
+    const reading = verifierReportReading(contextOf(b, r), r) as never;
+    expect(
+      entryOf(withVerifierReport(contextOf(b, r), reading))["verify_command"],
+    ).toBeUndefined();
+    expect(
+      entryOf(
+        withVerifierReport(
+          contextOf(b, r),
+          reading,
+          "capsulectl deal verify --bundle x.html",
+        ),
+      )["verify_command"],
+    ).toBe("capsulectl deal verify --bundle x.html");
   });
 });
