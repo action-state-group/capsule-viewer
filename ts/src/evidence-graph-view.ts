@@ -1112,14 +1112,26 @@ function renderExtensionTable(
 // (#398, #412): one line per failed condition, in Sherlock2's words, in the
 // list of what failed on this page.
 /** What failed on the page: its own report check's conditions, or capsulectl's reading (verifier-report.ts). */
-type PageReportFailure = StandaloneReportFailure | "verifier" | "verdict";
+type PageReportFailure =
+  | StandaloneReportFailure
+  | "verifier"
+  | "verdict"
+  | "deal"
+  | "countersign";
 /** capsulectl's reading, not a check this page ran: never under "Failed on this page" (Sherlock2). */
 const REPORTED_BY_CAPSULECTL = "Reported by capsulectl verify";
 const isCapsulectlReading = (f: PageReportFailure): boolean =>
-  f === "verifier" || f === "verdict";
+  f === "verifier" || f === "verdict" || f === "deal" || f === "countersign";
 const STANDALONE_REPORT_FAILED: Readonly<Record<PageReportFailure, string>> = {
   verifier:
     "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
+  // An x-deal-v0 copy (CV3b): capsulectl's x-deal-v0 entry did not pass, in
+  // whatever form the copy carries its report.
+  deal: "Didn't verify: capsulectl deal verify reported that this deal's records did not pass.",
+  // An x-deal-v0 copy: capsulectl reported a countersignature on this copy
+  // that does not verify, which it refuses to show.
+  countersign:
+    "Didn't verify: capsulectl deal verify reported a countersignature on this file that does not verify.",
   // Filled with the verdict capsulectl reported (standaloneReportLine).
   verdict:
     "Didn't verify: capsulectl deal verify reported this bundle as {verdict}.",
@@ -3503,8 +3515,16 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
  */
 const RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
 
-/** The x-deal-v1 receipt module, the one that draws the book's witness time. */
-const DEAL_V1_RECEIPT_MODULE = "capsuleviewer.receipt.deal/v1";
+/**
+ * The receipt modules that draw capsulectl's witness time of the holder's
+ * own book as one line: the x-deal-v1 module, and the x-deal-v0 buyer
+ * receipt and seller copy (CV3b).
+ */
+const BOOK_WITNESS_MODULES: ReadonlySet<string> = new Set([
+  "capsuleviewer.receipt.deal/v1",
+  "capsuleviewer.receipt.unilateral/v0",
+  "capsuleviewer.receipt.seller/v0",
+]);
 
 /** Whether `root` is drawn as a shared carrier (a report or a page), as the receipt module reads it. */
 function sharedCarrierOf(root: HTMLElement): boolean {
@@ -3571,7 +3591,7 @@ async function renderVerifiedContext(
     options.verifierReport === undefined ||
     !bundleVerified(checkedContext.verification)
       ? null
-      : verifierReportReading(checkedContext, options.verifierReport);
+      : await verifierReportReading(checkedContext, options.verifierReport);
   // The page's own verification is the checked context's; only the receipt
   // module reads capsulectl's passing report (resolution and its model).
   const context = checkedContext;
@@ -3604,7 +3624,13 @@ async function renderVerifiedContext(
   const reportFailed: PageReportFailure[] = bundleVerified(verification)
     ? [
         ...(reading?.kind === "fail"
-          ? ([reading.why === "report" ? "verifier" : "verdict"] as const)
+          ? ([
+              reading.why === "report"
+                ? "verifier"
+                : reading.why === "verdict"
+                  ? "verdict"
+                  : reading.why,
+            ] as const)
           : []),
         ...((await dealStandaloneReportFailures(bundle)) ?? []),
       ]
@@ -3756,7 +3782,7 @@ async function renderVerifiedContext(
   // section or frame check), so the header comes back with it.
   const oneWitnessLine =
     selected !== undefined &&
-    selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE &&
+    BOOK_WITNESS_MODULES.has(selected.module.manifest.id) &&
     bookWitnessedOnKeep(context, reading) &&
     !sharedCarrierOf(root);
   let framesDrawn = 0;

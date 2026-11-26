@@ -13553,8 +13553,15 @@ ${body}
   var isObj2 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
   var obj2 = (v) => isObj2(v) ? v : {};
   var VERIFIER_REPORT_VERSION = "capsule-cli-result/v1";
+  var DEAL_V02 = "x-deal-v0";
   var DEAL_V12 = "x-deal-v1";
   var STANDALONE2 = "x-deal-report/v0";
+  var COUNTERSIGN_STATES = /* @__PURE__ */ new Set([
+    "resolved",
+    "not_independent",
+    "unresolved_signer",
+    "unverified"
+  ]);
   function countersignedStamps(stamps) {
     return stamps.map((raw) => {
       const s = obj2(raw);
@@ -13586,7 +13593,7 @@ ${body}
     }
     return out;
   }
-  function verifierReportReading(context, given) {
+  async function verifierReportReading(context, given) {
     let report = given;
     if (typeof given === "string")
       try {
@@ -13595,19 +13602,13 @@ ${body}
         return null;
       }
     const extensionsOf = obj2(obj2(context.bundle)["extensions"]);
-    if (!(DEAL_V12 in extensionsOf) || !(STANDALONE2 in extensionsOf)) return null;
-    const r = obj2(report);
-    if (r["spec_version"] !== VERIFIER_REPORT_VERSION) return null;
-    const digest2 = context.verification.bundleDigest;
-    if (typeof digest2 !== "string" || r["bundle_digest"] !== digest2) return null;
-    const identity2 = r["record_identity"];
-    const records = Array.isArray(obj2(context.bundle)["records"]) ? obj2(context.bundle)["records"] : [];
-    const ids = new Set(
-      records.map((x) => obj2(x)["capsule_id"]).filter((id) => typeof id === "string")
-    );
-    if (!isObj2(identity2) || Object.keys(identity2).length !== ids.size || !Object.keys(identity2).every((id) => ids.has(id)))
+    const v1 = DEAL_V12 in extensionsOf;
+    if (v1 ? !(STANDALONE2 in extensionsOf) : !(DEAL_V02 in extensionsOf))
       return null;
+    const r = obj2(report);
+    if (!boundToBundle(context, r)) return null;
     const extensions2 = Array.isArray(r["extensions"]) ? r["extensions"] : [];
+    if (!v1) return dealV0Reading(context, r, extensions2.map(obj2));
     const entry = extensions2.map(obj2).find((e) => e["kind"] === DEAL_V12 && e["report"] === "standalone");
     if (entry === void 0) return null;
     if (entry["status"] !== "pass") return { kind: "fail", why: "report" };
@@ -13619,6 +13620,20 @@ ${body}
       checks: reportedChecks(r),
       ...typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}
     };
+    return withVerdict(r, pass2);
+  }
+  function boundToBundle(context, r) {
+    if (r["spec_version"] !== VERIFIER_REPORT_VERSION) return false;
+    const digest2 = context.verification.bundleDigest;
+    if (typeof digest2 !== "string" || r["bundle_digest"] !== digest2) return false;
+    const identity2 = r["record_identity"];
+    const records = Array.isArray(obj2(context.bundle)["records"]) ? obj2(context.bundle)["records"] : [];
+    const ids = new Set(
+      records.map((x) => obj2(x)["capsule_id"]).filter((id) => typeof id === "string")
+    );
+    return isObj2(identity2) && Object.keys(identity2).length === ids.size && Object.keys(identity2).every((id) => ids.has(id));
+  }
+  function withVerdict(r, pass2) {
     const verdict2 = r["verdict"];
     if (verdict2 === "VALID") return pass2;
     const coverage = obj2(r["interval_coverage"]);
@@ -13636,7 +13651,80 @@ ${body}
       verdict: typeof verdict2 === "string" && verdict2 !== "" ? verdict2 : "not valid"
     };
   }
+  async function dealV0Reading(context, r, extensions2) {
+    const entries = extensions2.filter((e) => e["kind"] === DEAL_V02);
+    if (entries.length !== 1) return null;
+    const entry = entries[0];
+    if (entry["status"] === "fail") return { kind: "fail", why: "deal" };
+    if (entry["status"] !== "pass") return null;
+    const bound = await boundCountersign(context, entry["countersign"]);
+    if (bound?.some((e) => e["state"] === "invalid"))
+      return { kind: "fail", why: "countersign" };
+    const countersign = bound === null ? null : reportedCountersign(bound, entry);
+    return withVerdict(r, {
+      kind: "pass",
+      profile: DEAL_V02,
+      ...isObj2(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {},
+      ...countersign === null ? {} : { countersign },
+      ...typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}
+    });
+  }
+  async function boundCountersign(context, given) {
+    const raw = obj2(given);
+    const list2 = raw["entries"];
+    const carried = obj2(context.bundle)["countersignatures"];
+    if (!Array.isArray(list2) || !Array.isArray(carried) || carried.length === 0)
+      return null;
+    if (list2.length !== carried.length) return null;
+    let digest2;
+    try {
+      digest2 = await sha256Hex(jcs(carried));
+    } catch {
+      return null;
+    }
+    if (raw["countersignatures_sha256"] !== digest2) return null;
+    const entries = list2.map(obj2);
+    const signed = carried.map((c) => obj2(obj2(c)["signer"])["key_id"]);
+    return entries.every((e, i) => {
+      const id = obj2(e["signer"])["key_id"];
+      return typeof id === "string" && id !== "" && id === signed[i];
+    }) ? entries : null;
+  }
+  function reportedCountersign(bound, entry) {
+    const directory = obj2(entry["countersign"])["directory"];
+    if (typeof directory !== "string" || directory === "") return null;
+    const entries = [];
+    for (const e of bound) {
+      const state = e["state"];
+      if (typeof state !== "string" || !COUNTERSIGN_STATES.has(state))
+        return null;
+      const name = e["signer_name"];
+      if (state === "resolved" && (typeof name !== "string" || name === ""))
+        return null;
+      const receipt = e["receipt"];
+      if (receipt !== void 0 && (typeof receipt !== "string" || !["verified", "absent", "unverified"].includes(receipt)))
+        return null;
+      const given = e["checks"];
+      if (given !== void 0 && !Array.isArray(given)) return null;
+      const checks = [];
+      for (const c of given ?? []) {
+        const check = obj2(c);
+        if (typeof check["name"] !== "string" || typeof check["result"] !== "string")
+          return null;
+        checks.push({ name: check["name"], result: check["result"] });
+      }
+      entries.push({
+        state,
+        key_id: obj2(e["signer"])["key_id"],
+        ...state === "resolved" ? { signer_name: name } : {},
+        ...typeof receipt === "string" ? { receipt } : {},
+        ...state === "resolved" && checks.length > 0 ? { checks } : {}
+      });
+    }
+    return { directory, entries };
+  }
   function withVerifierReport(context, reading = { kind: "pass" }, verifyCommand, countersigned) {
+    if (reading.profile === DEAL_V02) return withDealV0Report(context, reading);
     const extensions2 = [
       ...context.verification.extensions,
       {
@@ -13666,13 +13754,41 @@ ${body}
       verification: { ...context.verification, extensions: extensions2 }
     };
   }
+  function withDealV0Report(context, reading) {
+    if (reading.witnessed === void 0 && reading.countersign === void 0)
+      return context;
+    const extensions2 = [
+      ...context.verification.extensions,
+      {
+        kind: DEAL_V02,
+        reported_by: "capsulectl",
+        ...reading.witnessed === void 0 ? {} : { witnessed: reading.witnessed },
+        ...reading.countersign === void 0 ? {} : { countersign: reading.countersign }
+      }
+    ];
+    return {
+      ...context,
+      verification: { ...context.verification, extensions: extensions2 }
+    };
+  }
+  function sealedAudience(context) {
+    const exts = obj2(obj2(context.bundle)["extensions"]);
+    const standalone = obj2(obj2(exts[STANDALONE2])["agent_input"]);
+    if (DEAL_V12 in exts) return standalone["audience"];
+    const deal = obj2(exts[DEAL_V02]);
+    const named = deal["sealed_report"];
+    if (typeof named !== "string") return deal["audience"];
+    if (obj2(obj2(exts[STANDALONE2])["record"])["capsule_id"] === named)
+      return obj2(standalone["report"])["audience"];
+    const input = obj2(context.resolvedDisclosures.get(named)?.agent_input);
+    return input["state"] === "disclosed" ? obj2(obj2(input["payload"])["report"])["audience"] : void 0;
+  }
   function bookWitnessedOnKeep(context, reading) {
     if (reading?.kind !== "pass") return false;
     const w = obj2(reading.witnessed);
     if (w["status"] !== "verified" || typeof w["witness"] !== "string" || w["witness"] === "" || !utcInstant(w["at"]))
       return false;
-    const x = obj2(obj2(obj2(context.bundle)["extensions"])[STANDALONE2]);
-    return obj2(x["agent_input"])["audience"] === "keep";
+    return sealedAudience(context) === "keep";
   }
   function utcInstant(value) {
     if (typeof value !== "string") return false;
@@ -18156,7 +18272,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("72ed02a5b3e12c36888f3fde9bb0da8ad46b8c29");
+    return commitPrefix("e4194c7bcaa380e6545f62c2b4731f3708ae03cb");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -27649,9 +27765,15 @@ ${pad.repeat(depth)}`;
     host.append(table3);
   }
   var REPORTED_BY_CAPSULECTL = "Reported by capsulectl verify";
-  var isCapsulectlReading = (f) => f === "verifier" || f === "verdict";
+  var isCapsulectlReading = (f) => f === "verifier" || f === "verdict" || f === "deal" || f === "countersign";
   var STANDALONE_REPORT_FAILED = {
     verifier: "Didn't verify: capsulectl deal verify reported that the deal report carried outside the log did not pass.",
+    // An x-deal-v0 copy (CV3b): capsulectl's x-deal-v0 entry did not pass, in
+    // whatever form the copy carries its report.
+    deal: "Didn't verify: capsulectl deal verify reported that this deal's records did not pass.",
+    // An x-deal-v0 copy: capsulectl reported a countersignature on this copy
+    // that does not verify, which it refuses to show.
+    countersign: "Didn't verify: capsulectl deal verify reported a countersignature on this file that does not verify.",
     // Filled with the verdict capsulectl reported (standaloneReportLine).
     verdict: "Didn't verify: capsulectl deal verify reported this bundle as {verdict}.",
     report: "Didn't verify: the deal report carried outside the log is not a report of this deal.",
@@ -29160,7 +29282,11 @@ ${pad.repeat(depth)}`;
     "capsulectl.deal-view-composed/v0"
   ]);
   var RECEIPT_CARRIER_ATTRIBUTE = "data-receipt-carrier";
-  var DEAL_V1_RECEIPT_MODULE = "capsuleviewer.receipt.deal/v1";
+  var BOOK_WITNESS_MODULES = /* @__PURE__ */ new Set([
+    "capsuleviewer.receipt.deal/v1",
+    "capsuleviewer.receipt.unilateral/v0",
+    "capsuleviewer.receipt.seller/v0"
+  ]);
   function sharedCarrierOf(root) {
     const mark = root.closest?.(`[${RECEIPT_CARRIER_ATTRIBUTE}]`)?.getAttribute(RECEIPT_CARRIER_ATTRIBUTE);
     return mark === "report" || mark === "page";
@@ -29192,7 +29318,7 @@ ${pad.repeat(depth)}`;
     return "opened";
   }
   async function renderVerifiedContext(checkedContext, root, options) {
-    const reading = options.verifierReport === void 0 || !bundleVerified(checkedContext.verification) ? null : verifierReportReading(checkedContext, options.verifierReport);
+    const reading = options.verifierReport === void 0 || !bundleVerified(checkedContext.verification) ? null : await verifierReportReading(checkedContext, options.verifierReport);
     const context = checkedContext;
     const stamps = await classifyCountersignatures(
       context.countersignatures.map((entry) => entry.value),
@@ -29209,7 +29335,9 @@ ${pad.repeat(depth)}`;
     const verdictLine = reading?.kind === "fail" && reading.why === "verdict" ? reading.verdict : void 0;
     const { bundle, verification } = context;
     const reportFailed = bundleVerified(verification) ? [
-      ...reading?.kind === "fail" ? [reading.why === "report" ? "verifier" : "verdict"] : [],
+      ...reading?.kind === "fail" ? [
+        reading.why === "report" ? "verifier" : reading.why === "verdict" ? "verdict" : reading.why
+      ] : [],
       ...await dealStandaloneReportFailures(bundle) ?? []
     ] : [];
     const verified = bundleVerified(verification) && reportFailed.length === 0;
@@ -29317,7 +29445,7 @@ ${pad.repeat(depth)}`;
     };
     let bar;
     let stripNode;
-    const oneWitnessLine = selected !== void 0 && selected.module.manifest.id === DEAL_V1_RECEIPT_MODULE && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root);
+    const oneWitnessLine = selected !== void 0 && BOOK_WITNESS_MODULES.has(selected.module.manifest.id) && bookWitnessedOnKeep(context, reading) && !sharedCarrierOf(root);
     let framesDrawn = 0;
     const drawFrame = () => {
       const leaveOutWitnessLine = oneWitnessLine && framesDrawn === 0;
