@@ -4173,15 +4173,20 @@
   // checks nothing (row.cannot_check, row.cannot_check_pointer; Sherlock2,
   // capsule-viewer#392); an x-deal-v1 copy's report passes only under its
   // profile's own rule, which no page runs yet (reason "report_rule",
-  // row.cannot_check.report_rule and its pointer; capsule-viewer#405).
+  // row.cannot_check.report_rule and its pointer; capsule-viewer#405); a
+  // downgraded x-deal-v0 copy names no sealed report to check its text
+  // against: what was left out and why, then capsulectl's verdict on such a
+  // copy as a second line of the same block (reason "downgraded",
+  // row.cannot_check.downgraded and its _verdict; Sherlock2 on capsule-viewer#452).
   function cannotCheckLevels(doc, reason) {
     var d = new Drawing(doc);
-    var text = reason === "report_rule"
-      ? w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer")
-      : w("row.cannot_check") + ". " + w("row.cannot_check_pointer");
     var attrs = { class: "cv-tone--caution", "data-cannot-check": "true" };
     if (reason) attrs["data-cannot-check-reason"] = reason;
-    var line = d.el("p", attrs, [text]);
+    var line = reason === "downgraded"
+      ? d.el("div", attrs, [d.el("p", {}, [w("row.cannot_check.downgraded")]), d.el("p", {}, [w("row.cannot_check.downgraded_verdict")])])
+      : d.el("p", attrs, [reason === "report_rule"
+        ? w("row.cannot_check.report_rule") + " " + w("row.cannot_check.report_rule_pointer")
+        : w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
     return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
   }
   var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
@@ -4259,8 +4264,23 @@
     // The x-deal-v0 receipts: the buyer's and the seller copy, whose own
     // payment lines follow the settlement line (P.sellerPayment).
     var settles = kind === "unilateral" || kind === "seller";
+    // A downgraded x-deal-v0 copy (capsule-viewer#452): its x-deal-v0 block
+    // names no sealed report, as a page from before reports were sealed or a
+    // hand-edited one carries its report text inline. Nothing sealed is there
+    // to check that text against, so once the bundle itself verified the page
+    // draws one line saying so in place of the receipt and reads nothing from
+    // the block. capsulectl deal verify calls such a copy INVALID
+    // (sealed_report_not_named), so this holds whatever verifier report env gives.
+    var downgraded = function (context) {
+      if (!settles) return false;
+      var extensions = map(get(map(map(context).bundle), "extensions"));
+      if (!own(extensions, EXTENSION)) return false;
+      if (str(get(map(get(extensions, EXTENSION)), "sealed_report")) !== null) return false;
+      return view(context, e).verified === true;
+    };
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
+      if (downgraded(context)) return { cannot_check: true, reason: "downgraded" };
       if (reportRuleNotRun(context)) return { cannot_check: true, reason: "report_rule" };
       var asked = [
         pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null,

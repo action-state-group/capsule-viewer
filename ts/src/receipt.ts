@@ -60,9 +60,14 @@ export type ReceiptResult =
    * This page cannot check it, so it shows nothing from it and no verdict:
    * this browser cannot verify (no SHA-256 or Ed25519), or, with `reason`
    * `report_rule`, the copy is an x-deal-v1 receipt whose report passes only
-   * under its profile's own rule, which no page runs yet (#405).
+   * under its profile's own rule, which no page runs yet (#405); with
+   * `downgraded`, the copy is an x-deal-v0 receipt that names no sealed
+   * report to check its inline text against (#452).
    */
-  | { readonly kind: "cannot_check"; readonly reason?: "report_rule" }
+  | {
+      readonly kind: "cannot_check";
+      readonly reason?: "report_rule" | "downgraded";
+    }
   /** Verified, but no receipt module draws it (not a deal receipt). */
   | { readonly kind: "no_module" };
 
@@ -242,8 +247,8 @@ function result(found: Found): ReceiptResult {
     model !== null &&
     model.cannot_check === true
   )
-    return model.reason === "report_rule"
-      ? { kind: "cannot_check", reason: "report_rule" }
+    return model.reason === "report_rule" || model.reason === "downgraded"
+      ? { kind: "cannot_check", reason: model.reason }
       : { kind: "cannot_check" };
   return {
     kind: "checked",
@@ -333,9 +338,9 @@ export function receiptLabel(
       : result.kind === "no_record"
         ? "row.none"
         : result.kind === "cannot_check"
-          ? result.reason === "report_rule"
-            ? "row.cannot_check.report_rule.row"
-            : "row.cannot_check"
+          ? result.reason === undefined
+            ? "row.cannot_check"
+            : "row.cannot_check.report_rule.row"
           : result.kind === "did_not_verify"
             ? "row.did_not_verify"
             : null;
@@ -376,7 +381,12 @@ export function receiptPageLines(
         lines: [
           result.reason === "report_rule"
             ? `${fill("row.cannot_check.report_rule")} ${fill("row.cannot_check.report_rule_pointer")}`
-            : `${fill("row.cannot_check")}. ${fill("row.cannot_check_pointer")}`,
+            : result.reason === "downgraded"
+              ? fill("row.cannot_check.downgraded")
+              : `${fill("row.cannot_check")}. ${fill("row.cannot_check_pointer")}`,
+          ...(result.reason === "downgraded"
+            ? [fill("row.cannot_check.downgraded_verdict")]
+            : []),
         ],
       };
     case "did_not_verify":
