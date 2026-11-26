@@ -386,10 +386,12 @@ stylesheet each script inserts once at render).
   so a receipt follows its page's declared colour scheme (#391), and
   `go/receipt/receipt.css`, the receipt's own rules, as a third, also scoped to
   a receipt (#429). The copies
-  described below, in the Python package, are frozen at 0.25.0.
+  described below, in the Python package, are frozen at 0.25.0, except that
+  their wording pack has the same id as `go/receipt`'s,
+  `capsuleviewer.receipt.wording.en/v1`, with its own 0.25.0 words (#439).
 - **One source, four scripts (the frozen 0.25.0 copies).** `static/receipt_core.js` was the source;
   `python -m capsule_viewer.receipt_slot --write` writes each script from it with
-  its manifest, the example pack's words compiled in (the script reads no pack) and the
+  its manifest, the pack's words compiled in (the script reads no pack) and the
   kit stylesheet, and rewrites the `executable` block of each `receipt_slot/manifest-*.json`
   (the rest of the manifest, its id and selection clauses, is edited by hand; while the Python modules exist, `tests/test_receipt_module_slot.py` holds them equal to those modules' manifests, and after that the JSON is the only source). One script per module: a builder puts
   one script in a page per module it chose, so a shared script would register modules it

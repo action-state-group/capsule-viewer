@@ -13,7 +13,7 @@ here. The format follows
 
 ### Changed
 
-- The receipt modules' wording pack in `go/receipt` is `capsuleviewer.receipt.wording.en/v1`, with the same words: a person's receipt page no longer names a pack called "example" (Sherlock2 on evidencebook#956, ops a3c37efc). The pack's digest changes with its id (the id is part of the pack), and `go/receipt`'s scripts and manifests and `ts/src/receipt-core.generated.ts` change their hashes with it. The frozen Python twin keeps its example pack; the parity tests read its pages with the current id. Pages written before keep their own scripts and pack, and still open.
+- The receipt modules' wording pack in `go/receipt` is `capsuleviewer.receipt.wording.en/v1`, with the same words: a person's receipt page no longer names a pack called "example" (Sherlock2 on evidencebook#956, ops a3c37efc). The pack's digest changes with its id (the id is part of the pack), and `go/receipt`'s scripts and manifests and `ts/src/receipt-core.generated.ts` change their hashes with it. The frozen Python twin's pack takes the same id with its own 0.25.0 words (#439), so its `static/receipt_*.js` scripts, `receipt_slot/manifest-*.json` and the oracle golden change their hashes with it; the parity tests read its pages with the current pack's digest. Pages written before keep their own scripts and pack, and still open.
 
 ### Added
 

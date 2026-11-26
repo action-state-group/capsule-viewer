@@ -5,7 +5,8 @@ The deal receipt modules, unilateral (``capsuleviewer.receipt.unilateral/v0``,
 a buyer's copy), seller (``capsuleviewer.receipt.seller/v0``, a seller's copy
 of one buyer thread) and bilateral (``capsuleviewer.receipt.bilateral/v0``, a
 composed/v1 bundle of both parties' copies), and their manifests.
-``example_wording_pack`` returns the example English wording pack, which lives
+``example_wording_pack`` returns the English wording pack
+(``capsuleviewer.receipt.wording.en/v1``; the function keeps its old name), which lives
 in ``capsule_viewer.receipt_slot``."""
 import warnings
 
@@ -40,7 +41,7 @@ warnings.warn(
 
 
 def example_wording_pack() -> bytes:
-    """The exact bytes of the example English wording pack."""
+    """The exact bytes of the English wording pack, ``capsuleviewer.receipt.wording.en/v1``."""
     return receipt_slot.pack_bytes()
 
 

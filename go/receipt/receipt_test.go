@@ -182,20 +182,23 @@ func TestResolutionPicksTheReceiptModule(t *testing.T) {
 }
 
 // The Python package's receipt files are frozen at 0.25.0 (#383): this
-// package's copies are the ones that change. The pins keep an edit to the
-// frozen copies, or a rerun of the Python writer, from passing unseen.
+// package's copies are the ones that change. The one exception is the
+// Python pack's id, capsuleviewer.receipt.wording.en/v1 like this package's
+// (evidencebook#956, #439), so the scripts and manifests the Python writer
+// made from it changed with it. The pins keep an edit to the frozen copies,
+// or a rerun of the Python writer, from passing unseen.
 func TestFrozenPythonCopiesStayFrozen(t *testing.T) {
 	pins := map[string]string{
 		"static/receipt_core.js":                "1e0f98f27a36f8dbf4dfcc4f1dbbc6f98396704add1cba33634bd349baa455d8",
-		"static/receipt_unilateral.js":          "f4fb1ffff653f63af2b204bb24d457f2e56bbeb39ee426964e57d194163f851a",
-		"static/receipt_seller.js":              "bfa71f640ecef842fcf59bc4f0ddaf3529bc426edd787ca07548990d499af07a",
-		"static/receipt_bilateral.js":           "58d44eeacaedff905d7ca8cf363185daa7f290c450f6976fb4fab4fc10c18122",
-		"static/receipt_deal.js":                "7ad78e95187c1c75bbe803e53e365b97cf8a65479f3a75789a6b04b223bb0f5a",
-		"receipt_slot/manifest-unilateral.json": "bdf74647e823dc3651748e6311d5b7df6712254a9fa4308989ec367b2532b8f7",
-		"receipt_slot/manifest-seller.json":     "ec448a50776a0f418c5cb6e40985de81adc07be90b39247664e1f2a28ae4161c",
-		"receipt_slot/manifest-bilateral.json":  "e2722aa746da21c6a7158a48841781e3ca67c1b89c6a1020c750367d53975548",
-		"receipt_slot/manifest-deal.json":       "d6eee9a12d99692e23d7d2980e008b55aeb70a01b9150f02a8b2d7ccaf436c7d",
-		"receipt_slot/wording-en.json":          "86b1f1bc62907dfba420f76541bf3047b4b2355b744b2c5107f1870993d9dfe9",
+		"static/receipt_unilateral.js":          "70dd992ae345de7c2f44d8ae1e72e126d8c9695f9ae4d352d62212b20e2a8169",
+		"static/receipt_seller.js":              "e28e262719b3d1c202828c469e7f41122902080b935ceaf58dc1186233f9a290",
+		"static/receipt_bilateral.js":           "b05afa9fd19c98c9db3f0d4682969a379c2cdce07f3ea6bb18ada98210d999c5",
+		"static/receipt_deal.js":                "59f3005f7eee5c81d15a0c9824bc6a9d460268fa6b933a3d64fd9b1381be03bc",
+		"receipt_slot/manifest-unilateral.json": "5111bf2f60a9cab24eb295439641ad64260c1994cc3431d028644e4ea6ac9d7a",
+		"receipt_slot/manifest-seller.json":     "a8ad65785c839fdcc15274aab6a55e8845c25f30bae2313757739be0a672f360",
+		"receipt_slot/manifest-bilateral.json":  "3252cd8af2fe30c41f3772f25bb6834860becc389d2535e00486f9e17deb51c1",
+		"receipt_slot/manifest-deal.json":       "69e42baf84da5ae6dfcb2ffc58a82f8cd5a7bd4b0239031cccc10314f7a270f4",
+		"receipt_slot/wording-en.json":          "30c6e0d4afb71d3caebe0154a1682e84c4738bdb95fe251be83b60e55d5459cb",
 	}
 	for name, pin := range pins {
 		b, err := os.ReadFile(filepath.Join("..", "..", "src", "capsule_viewer", filepath.FromSlash(name)))
