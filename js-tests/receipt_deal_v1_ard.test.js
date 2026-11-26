@@ -6,8 +6,9 @@
 //   #430 "Where it stands: Started" beside two terms met: the line also says where the terms stand;
 //   #431 the records table showed raw UTC: it says each time as the header does;
 //   #432 "No payment record is among the records" on a paid deal: one line says why;
-//   #424 "Time from a named witness: yes" while the page checked no witness receipt: the yes says it is
-//        the report's ("your report" on the holder's own page, "the holder's report" elsewhere).
+//   #424 "Time from a named witness: yes" while the page checked no witness receipt: on the holder's
+//        own page the yes says it is "your report"'s; any other copy shows no record time and no
+//        named-witness column (Sherlock2, u239).
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -71,7 +72,7 @@ const openWindow = (c) => ({ ...c, settled: false, rows: c.rows.map((r) => ({ ..
 
 describe("the x-deal-v1 page of the ARD run's deal", () => {
   it("#429: names each term in words, keeps its id on the element, and words each side", async () => {
-    const { host } = await page();
+    const { host } = await page(asKeep);
     const rows = table(host.L1, ["Term", "Owed by", "Status", "Due", "Contest window ends", "Detail"]);
     expect(rows.map((r) => [r[0].textContent, r[1].textContent])).toEqual([["Paid as agreed", "buyer"], ["Delivered", "seller"]]);
     const term = rows[0][0].querySelector("[data-row-id]");
@@ -128,7 +129,7 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
   });
 
   it("#431: the records table says each time as the header does, the data keeping UTC", async () => {
-    const { host } = await page();
+    const { host } = await page(asKeep);
     const times = table(host.L2, BASIS).map((r) => r[3]);
     for (const cell of times) {
       expect(cell.querySelector("[data-time]").getAttribute("data-time")).toBe("2026-11-25T14:31:31Z");
@@ -173,25 +174,44 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     expect(host.L1.querySelector("[data-legs-why]")).toBeNull();
   });
 
-  it("#424: the named-witness yes is the report's, said as its, never the page's own", async () => {
-    const { host } = await page();
-    const cells = table(host.L2, BASIS).map((r) => r[4]);
-    for (const cell of cells) {
-      expect(cell.textContent).toBe("yes, as the holder's report states it");
-      expect(cell.querySelector("[data-named-witness]").getAttribute("data-named-witness")).toBe("yes");
+  it("#424: on the holder's own page the yes is said as the report's, never the page's own", async () => {
+    const { host } = await page(asKeep);
+    for (const r of table(host.L2, BASIS)) {
+      expect(r[4].textContent).toBe("yes, as your report states it");
+      expect(r[4].querySelector("[data-named-witness]").getAttribute("data-named-witness")).toBe("yes");
     }
-    // The holder's own page says "your report"; the same copy carried in a page or report for others does not.
-    const own = await page(asKeep);
-    for (const r of table(own.host.L2, BASIS)) expect(r[4].textContent).toBe("yes, as your report states it");
-    for (const carrier of ["page", "report"]) {
-      const carried = await page(asKeep, "L2", undefined, carrier);
-      for (const r of table(carried.host.L2, BASIS)) expect(r[4].textContent).toBe("yes, as the holder's report states it");
-    }
-    // A record with no named witness says no, in any copy.
-    const no = await page((c) => ({ ...c, rows: c.rows.map((r) => ({ ...r, relied_on: r.relied_on.map((e) => ({ ...e, time: null, witnessed: false })) })) }));
+    // A record with no named witness says no.
+    const no = await page((c) => ({ ...asKeep(c), rows: c.rows.map((r) => ({ ...r, relied_on: r.relied_on.map((e) => ({ ...e, time: null, witnessed: false })) })) }));
     for (const r of table(no.host.L2, BASIS)) expect([r[3].textContent, r[4].textContent]).toEqual(["no time", "no"]);
     // The header still says the file carries no witness receipt the page checked.
     expect(host.L0.querySelector('[data-rung="witness"]').textContent).toBe("No outside time stamp: this copy carries no witness receipt.");
+  });
+
+  // Sherlock2, u239: a copy that is not the holder's own page lists the records each term rests on,
+  // with no record time and no named-witness column, anywhere in L0 to L2.
+  const RECORD_TIME = "2026-11-25T14:31:31Z";
+  const noRecordTime = (host) => {
+    for (const region of [host.L0, host.L1, host.L2]) {
+      expect(region.querySelector(`[data-time="${RECORD_TIME}"]`)).toBeNull();
+      expect(region.textContent).not.toMatch(/14:31|Time from a named witness|states it/);
+    }
+  };
+  it("u239: the counterparty's copy, and the holder's copy carried for others, list the records without time or witness", async () => {
+    for (const p of [await page(), await page(asKeep, "L2", undefined, "page"), await page(asKeep, "L2", undefined, "report")]) {
+      const rows = table(p.host.L2, ["Term", "Record", "Side"]);
+      expect(rows.map((r) => [r[0].textContent, r[2].textContent])).toEqual([
+        ["Paid as agreed", "buyer"], ["Paid as agreed", "seller"], ["Delivered", "buyer"], ["Delivered", "seller"],
+      ]);
+      expect(table(p.host.L2, BASIS)).toBeNull();
+      noRecordTime(p.host);
+    }
+  });
+  it("u239: the adjudicator's copy draws no record time and no named-witness column", async () => {
+    const adj = (c) => ({ ...c, audience: "adjudicator", rows_state: "withheld", rows: [] });
+    const p = await page(adj);
+    expect(p.host.L1.querySelector('[data-rows-state="withheld"]')).not.toBeNull();
+    expect(table(p.host.L2, BASIS)).toBeNull();
+    noRecordTime(p.host);
   });
 });
 
@@ -235,7 +255,7 @@ describe.skipIf(!chromePath)("#429 in headless Chromium: no side or term name br
 
   for (const width of [720, 900, 1280]) {
     it(`at ${width}px`, async () => {
-      const { lib, host } = await page();
+      const { lib, host } = await page(asKeep);
       const styles = [...lib.document.head.querySelectorAll("style")].map((s) => s.outerHTML).join("");
       const body = [host.L0, host.L1, host.L2].map((h) => h.innerHTML).join("").replace(/<details(?![^>]*\bopen\b)/g, "<details open");
       const file = join(dir, `ard-${width}.html`);

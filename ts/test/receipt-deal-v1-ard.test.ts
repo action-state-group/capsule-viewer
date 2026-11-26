@@ -8,6 +8,8 @@
 // why no payment record is shown (#432), and the named-witness yes as the
 // report's (#424). Then the holder's own keep copy (keep-copy.bundle.json),
 // the case Steven ran on Maya's copy, on a page with capsulectl's report.
+// Only the holder's own page shows a record's time and named-witness flag
+// (Sherlock2, u239).
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -73,7 +75,7 @@ const BASIS = ["Term", "Record", "Side", "Time", "Time from a named witness"];
 describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", () => {
   it("#429: terms in words, sides as words, and the receipt's own stylesheet pinned", async () => {
     const host = await drawn();
-    const basis = rows(host, BASIS);
+    const basis = rows(host, ["Term", "Record", "Side"]);
     expect(basis.map((r) => [r[0]!.textContent, r[2]!.textContent])).toEqual([
       ["Paid as agreed", "buyer"],
       ["Paid as agreed", "seller"],
@@ -99,15 +101,12 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
     expect(manifest.executable.style_sha256).toHaveLength(3);
   });
 
-  it("#431 and #424: each time in the reader's zone, and the yes as the holder's report's", async () => {
+  it("u239: the counterparty's copy lists the records with no record time and no named-witness column", async () => {
     const host = await drawn();
-    for (const r of rows(host, BASIS)) {
-      expect(
-        r[3]!.querySelector("[data-time]")?.getAttribute("data-time"),
-      ).toBe("2026-11-25T14:31:31Z");
-      expect(r[3]!.textContent).toBe(local("2026-11-25T14:31:31Z"));
-      expect(r[4]!.textContent).toBe("yes, as the holder's report states it");
-    }
+    expect(rows(host, ["Term", "Record", "Side"])).toHaveLength(4);
+    expect(host.querySelector('[data-time="2026-11-25T14:31:31Z"]')).toBeNull();
+    expect(host.textContent).not.toContain("Time from a named witness");
+    expect(host.textContent).not.toContain(local("2026-11-25T14:31:31Z"));
     expect(host.textContent).not.toContain("2026-11-25T14:31:31Z");
   });
 
@@ -134,12 +133,18 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
     );
   });
 
-  it("#424: the same copy as its holder's own says 'your report'", async () => {
+  it("#431 and #424: the same copy as its holder's own says each time in the reader's zone, and 'your report'", async () => {
     const { L2 } = await edited((content) => {
       content["audience"] = "keep";
     });
-    for (const r of rows(L2, BASIS))
+    for (const r of rows(L2, BASIS)) {
+      expect(
+        r[3]!.querySelector("[data-time]")?.getAttribute("data-time"),
+      ).toBe("2026-11-25T14:31:31Z");
+      expect(r[3]!.textContent).toBe(local("2026-11-25T14:31:31Z"));
       expect(r[4]!.textContent).toBe("yes, as your report states it");
+    }
+    expect(L2.textContent).not.toContain("2026-11-25T14:31:31Z");
   });
 });
 
@@ -165,6 +170,7 @@ async function edited(
     };
   };
   const module = core.createModule("deal", {
+    localTime: true,
     verification: () => ({ verifier: "test", outcome: "verified", checks: [] }),
     assurance: () => ({
       bundle_digest: "ab".repeat(32),

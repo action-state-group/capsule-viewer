@@ -2657,15 +2657,14 @@
     if (model.bundle_digest) {
       out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
     }
-    // Whether the table shows each record's time and named-witness flag. Both are the holder's own
-    // report's (VerifyReport checks only that a record is witnessed exactly when it has a time), and a
-    // shared copy shows them too. Whether a copy that is not the holder's own page should is a pending
-    // PM question (u219 scope); to hide them there, set this to this.ownPage(model).
-    var witnessColumns = true;
-    // The yes says whose word it is (#424): this page checked no witness receipt. The holder's own page
-    // says "your report"; any other says "the holder's report". The pack's bare
+    // Each record's time and named-witness flag are the holder's own report's (VerifyReport checks only
+    // that a record is witnessed exactly when it has a time). Only the holder's own page shows them; a
+    // counterparty's or adjudicator's copy, or a page shown to others, lists the records without them
+    // (Sherlock2, u239). This table is the only place a relied_on time is drawn.
+    var witnessColumns = this.ownPage(model);
+    // The yes says whose word it is (#424): this page checked no witness receipt. The pack's bare
     // "deal.named_witness.yes" stays as the frozen pack has it (packAddsOnly).
-    var yes = w(this.ownPage(model) ? "deal.named_witness.report.own" : "deal.named_witness.report");
+    var yes = w("deal.named_witness.report.own");
     var basis = [];
     model.rows.forEach(function (row) {
       row.relied_on.forEach(function (e) {

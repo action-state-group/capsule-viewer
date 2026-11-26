@@ -541,7 +541,6 @@
     "deal.term.paid_as_agreed": "Paid as agreed",
     "deal.term.delivered": "Delivered",
     "deal.term.as_described": "As described",
-    "deal.named_witness.report": "yes, as the holder's report states it",
     "deal.named_witness.report.own": "yes, as your report states it"
   }
 }
