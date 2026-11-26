@@ -2010,7 +2010,7 @@
     var c = map(reportedEntry(verification, "countersigned_copy"));
     var name = str(get(c, "name")), at = str(get(c, "at")), k = get(c, "k"), n = get(c, "n");
     if (name === null || at === null || !Number.isInteger(k) || !Number.isInteger(n) || k < 1 || k > n) return null;
-    return { name: name, at: at, k: k, n: n };
+    return { name: name, at: at, k: k, n: n, independent: get(c, "independent") === true };
   }
   function reportedCommand(verification) {
     var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
@@ -3800,10 +3800,13 @@
   // fills it, nor does the other side's verified half.
   P.countersigned = function (model) {
     // The countersigned copy the page carries, checked by the page itself (#456): it verifies, a
-    // countersignature on it resolves, and its records 1 to k are this copy's records 1 to k.
+    // countersignature on it resolves, and its records 1 to k are this copy's records 1 to k. It
+    // decides the stamp even when a countersignature on this very bundle failed: the copy is the
+    // signed one the page checked (Sherlock2 on #457). Unless the signer's directory row lists it as
+    // independent of both parties, the line says the row does not (u649).
     var copy = model.countersigned_copy;
     var copyAt = copy ? stepTime(null, copy.at) : null;
-    if (copy && copyAt !== null && validUtcTime(copyAt)) return { state: "filled", words: "filled_copy", signer: copy.name, at: copyAt, k: copy.k, n: copy.n };
+    if (copy && copyAt !== null && validUtcTime(copyAt)) return { state: "filled", words: copy.independent ? "filled_copy" : "filled_copy_not_listed", signer: copy.name, at: copyAt, k: copy.k, n: copy.n };
     var list = model.countersigned;
     if (list === null) return model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
     var given = list.filter(function (c) { return c.kind !== "hollow"; });

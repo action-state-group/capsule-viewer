@@ -74,17 +74,55 @@ async function stamp(
 }
 
 const UNFILLED = { state: "open", text: "Not countersigned" };
+const NOT_LISTED =
+  " Its directory entry does not list it as independent of the parties.";
+
+// The two parties' keys: the holder's (the copy's declared producer key) and
+// the counterparty's (the holder's sealed agreement).
+const HOLDER = ((copy()["extensions"] as Obj)["producer-key/v1"] as Obj)[
+  "public_key"
+] as string;
+const COUNTERPARTY = (
+  (
+    (
+      (
+        (fixture("same-checkpoint.bundle.json")["extensions"] as Obj)[
+          "x-deal-v1"
+        ] as Obj
+      )["book"] as Obj
+    )["agreement"] as Obj
+  )["payload"] as Obj
+)["body"] as Obj;
+const rowsIndependentOf = (independentOf: unknown): unknown =>
+  (rows() as Obj[]).map((r) => ({ ...r, independent_of: independentOf }));
 
 describe("the countersigned copy a v1 receipt page carries (#456)", () => {
   it("fills COUNTERSIGNED from the page's own check, through record k of n", async () => {
     expect(await stamp("same-checkpoint", given())).toEqual({
       state: "filled",
-      text: `Countersigned by Example Countersigner at ${local(AT)}, through record 1 of 1.`,
+      text: `Countersigned by Example Countersigner at ${local(AT)}, through record 1 of 1.${NOT_LISTED}`,
     });
     expect(await stamp("later-checkpoint", given())).toEqual({
       state: "filled",
-      text: `Countersigned by Example Countersigner at ${local(AT)}, through record 1 of 2.`,
+      text: `Countersigned by Example Countersigner at ${local(AT)}, through record 1 of 2.${NOT_LISTED}`,
     });
+  });
+
+  it("says the directory entry does not list it as independent unless its row names both parties (u649)", async () => {
+    const counterparty = COUNTERPARTY["counterparty_key"] as string;
+    const line = `Countersigned by Example Countersigner at ${local(AT)}, through record 1 of 1.`;
+    const cases: [string, unknown, string][] = [
+      ["an empty list", [], line + NOT_LISTED],
+      ["only the holder", [HOLDER], line + NOT_LISTED],
+      ["only the counterparty", [counterparty], line + NOT_LISTED],
+      ["not a list", HOLDER, line + NOT_LISTED],
+      ["both parties", [counterparty, HOLDER], line],
+    ];
+    for (const [why, list, text] of cases)
+      expect(
+        await stamp("same-checkpoint", given(copy(), rowsIndependentOf(list))),
+        why,
+      ).toEqual({ state: "filled", text });
   });
 
   it("without the copy the stamp is as before", async () => {
@@ -140,6 +178,7 @@ describe("the countersigned copy a v1 receipt page carries (#456)", () => {
       at: AT,
       k: 1,
       n: 2,
+      independent: false,
     });
     const two = given(
       fixture("two-record-countersigned-copy.bundle.json"),

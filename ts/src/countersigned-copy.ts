@@ -34,6 +34,14 @@ export interface CountersignedCopyStamp {
   readonly at: string;
   readonly k: number;
   readonly n: number;
+  /**
+   * The signer's directory row lists it as independent of both parties:
+   * its `independent_of` names the holder's key (a producer key either
+   * bundle declares) and the counterparty's key the holder's sealed
+   * agreement names. Otherwise the page says the row does not (u649,
+   * Sherlock2 on #457); the page never says who runs whom.
+   */
+  readonly independent: boolean;
 }
 
 type Obj = Record<string, unknown>;
@@ -92,6 +100,53 @@ export async function checkCountersignedCopy(
   );
   for (const stamp of stamps)
     if (stamp.kind === "resolved")
-      return { name: stamp.name, at: stamp.statement.recomputedAt, k, n };
+      return {
+        name: stamp.name,
+        at: stamp.statement.recomputedAt,
+        k,
+        n,
+        independent: listedIndependent(
+          given["countersigners"] as unknown[],
+          stamp.keyId,
+          stamp.name,
+          producers,
+          counterpartyKey(shown.bundle),
+        ),
+      };
   return null;
+}
+
+// The counterparty's key the holder's own sealed agreement names
+// (x-deal-v1 `book.agreement`, its body's `counterparty_key`), or null.
+function counterpartyKey(bundle: unknown): string | null {
+  const agreement = obj(
+    obj(obj(obj(bundle)["extensions"])["x-deal-v1"])["book"],
+  )["agreement"];
+  const key = obj(obj(obj(agreement)["payload"])["body"])["counterparty_key"];
+  return typeof key === "string" && /^[0-9a-f]{64}$/u.test(key) ? key : null;
+}
+
+// Whether the row that names the signer (its name and key, as the
+// classifier resolved them) lists it as independent of every party: the
+// holder's keys and the counterparty's. A missing list, a missing party or
+// an unknown counterparty leaves it not listed.
+function listedIndependent(
+  rows: readonly unknown[],
+  keyId: string,
+  name: string,
+  holder: readonly string[],
+  counterparty: string | null,
+): boolean {
+  if (counterparty === null || holder.length === 0) return false;
+  const row = rows
+    .map(obj)
+    .find(
+      (r) =>
+        r["name"] === name &&
+        Array.isArray(r["key_ids"]) &&
+        r["key_ids"].includes(keyId),
+    );
+  const listed = row?.["independent_of"];
+  if (!Array.isArray(listed)) return false;
+  return [...holder, counterparty].every((key) => listed.includes(key));
 }
