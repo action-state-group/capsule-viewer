@@ -166,13 +166,21 @@ const done = (root: Element): boolean =>
   root.querySelector('[data-refusal="fragment-unreadable"]') !== null;
 
 // Wait until the page has drawn its verification section and stopped changing.
-// No deadline of its own: a page that never settles is caught by the suite's
-// hang ceiling (vitest.config.ts), and a wall-clock deadline here would fail a
-// page that is only slow because the machine is loaded (capsule-viewer#433).
-async function settled(root: Element): Promise<Snapshot> {
+// The deadline is a hang ceiling, not a work budget: the slowest page here
+// settles in about 10 s at load 35, so five minutes fails only a page that
+// never settles, and fails it with this message long before the suite's own
+// ceiling (vitest.config.ts, capsule-viewer#433). It must stay below that
+// ceiling: vitest does not cancel a timed-out test, so a loop with no end of
+// its own would keep polling, and keep its page open, under the next tests.
+const SETTLE_CEILING_MS = 5 * 60_000;
+async function settled(
+  root: Element,
+  ceilingMs = SETTLE_CEILING_MS,
+): Promise<Snapshot> {
+  const deadline = Date.now() + ceilingMs;
   let last = "";
   let stable = 0;
-  for (;;) {
+  while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 15));
     const now = root.innerHTML;
     stable = done(root) && now === last ? stable + 1 : 0;
@@ -182,10 +190,16 @@ async function settled(root: Element): Promise<Snapshot> {
       return snapshot(root);
     }
   }
+  throw new Error("page did not settle");
 }
 
 /** Open a page in jsdom with its scripts running, as a browser would. */
-async function openPage(html: string, url: string): Promise<Snapshot> {
+async function openPage(
+  html: string,
+  url: string,
+  ceilingMs?: number,
+  onClose?: (dom: JSDOM) => void,
+): Promise<Snapshot> {
   const dom = new JSDOM(html, {
     runScripts: "dangerously",
     url,
@@ -195,11 +209,26 @@ async function openPage(html: string, url: string): Promise<Snapshot> {
     },
   });
   try {
-    return await settled(dom.window.document.getElementById("app")!);
+    return await settled(dom.window.document.getElementById("app")!, ceilingMs);
   } finally {
     dom.window.close();
+    onClose?.(dom);
   }
 }
+
+it("a page that never settles fails with its own message and is closed", async () => {
+  let closed: JSDOM | undefined;
+  await expect(
+    openPage(
+      '<!doctype html><div id="app">never verified</div>',
+      "file:///never.html",
+      200,
+      (dom) => (closed = dom),
+    ),
+  ).rejects.toThrow("page did not settle");
+  // The failure path closed the window, so nothing polls it after the test.
+  expect(closed).toBeDefined();
+});
 
 /**
  * Open a static page as a browser would, with scripting off (it has no
