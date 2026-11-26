@@ -221,7 +221,7 @@ describe("the settlement line (#383)", () => {
     it("draws the settlement line on the seller copy, and its payment lines agree with it", async () => {
       const proof = await sellerLines({ legs: SALE, preimages: { "8690c43a": PREIMAGE } });
       expect(proof.model.receipt.settlement.state).toBe("proof");
-      expect(proof.line.textContent).toBe("Payment: settled on Lightning; its proof matches its invoice, checked in this page. Size: $1,000 – $9,999.");
+      expect(proof.line.textContent).toBe("Payment: settled on Lightning; this page checked its proof against its invoice. Size: $1,000 – $9,999.");
       expect(proof.headline).toBe("Payment: Settled on Lightning; this page checked its proof against its invoice");
       expect(proof.note).toBe("This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not read what it is about.");
       expect(proof.legRow).toBe("recorded");
