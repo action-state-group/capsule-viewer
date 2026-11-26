@@ -23,6 +23,7 @@ import {
   sha256Hex,
   type VerifiedBundleContext,
 } from "@action-state-group/agent-action-capsule";
+import type { CountersignedCopyStamp } from "./countersigned-copy.js";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj =>
@@ -419,6 +420,7 @@ export function withVerifierReport(
   reading: VerifierReading & { kind: "pass" } = { kind: "pass" },
   verifyCommand?: string,
   countersigned?: readonly CountersignedStamp[],
+  countersignedCopy?: CountersignedCopyStamp,
 ): VerifiedBundleContext {
   if (reading.profile === DEAL_V0) return withDealV0Report(context, reading);
   const extensions = [
@@ -447,6 +449,11 @@ export function withVerifierReport(
       // The page's own classification of each countersignature (AAC's
       // classifyCountersignatures), for the receipt's COUNTERSIGNED stamp.
       ...(countersigned === undefined ? {} : { countersigned }),
+      // The page's own check of the countersigned copy it carries
+      // (countersigned-copy.ts): present only when every check passed.
+      ...(countersignedCopy === undefined
+        ? {}
+        : { countersigned_copy: countersignedCopy }),
     },
   ] as unknown as VerifiedBundleContext["verification"]["extensions"];
   return {

@@ -4,6 +4,10 @@ import {
   type StandaloneReportFailure,
 } from "./deal-standalone-report.js";
 import {
+  checkCountersignedCopy,
+  type CountersignedCopyInput,
+} from "./countersigned-copy.js";
+import {
   countersignedStamps,
   verifierReportReading,
   withVerifierReport,
@@ -2888,6 +2892,14 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly verifierReport?: unknown;
   /**
+   * A countersigned copy of the holder's own deal book and the countersigner
+   * rows to resolve its signer under (`{bundle, countersigners}`), for an
+   * x-deal-v1 copy capsulectl passed (#456). The page checks it itself
+   * (countersigned-copy.ts) and fills the receipt's COUNTERSIGNED stamp only
+   * when every check passes; otherwise it is ignored.
+   */
+  readonly countersignedCopy?: CountersignedCopyInput;
+  /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
    */
@@ -3603,6 +3615,11 @@ async function renderVerifiedContext(
     declaredProducerKeys(context.bundle),
     context.countersigners,
   );
+  // The countersigned copy the page carries, checked by the page itself.
+  const countersignedCopy =
+    reading?.kind === "pass" && options.countersignedCopy !== undefined
+      ? await checkCountersignedCopy(context, options.countersignedCopy)
+      : null;
   const moduleContext =
     reading?.kind === "pass"
       ? withVerifierReport(
@@ -3610,6 +3627,7 @@ async function renderVerifiedContext(
           reading,
           options.verifyCommand,
           countersignedStamps(stamps),
+          countersignedCopy ?? undefined,
         )
       : context;
   const verdictLine =
