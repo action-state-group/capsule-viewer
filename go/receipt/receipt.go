@@ -17,7 +17,9 @@
 // from it, the manifest, wording-en.json, the kit stylesheet
 // (src/capsule_viewer/static/kit.css), the receipt's dark overrides
 // (src/capsule_viewer/static/kit-dark.css) and the receipt's own rules
-// (go/receipt/receipt.css) (internal/writer). The Python package's copies (src/capsule_viewer/static,
+// (go/receipt/receipt.css) (internal/writer). It also writes byte-identical
+// copies of the two kit stylesheets here (kit.css, kit-dark.css), so Styles
+// can return the three stylesheets a manifest pins. The Python package's copies (src/capsule_viewer/static,
 // receipt_slot) are frozen at capsule-viewer 0.25.0; this package's copies
 // are the ones that change.
 package receipt
@@ -61,6 +63,17 @@ var (
 	bilateralManifest []byte
 	//go:embed manifest-deal.json
 	dealManifest []byte
+
+	// The stylesheets every module's manifest pins, in its style_sha256
+	// order: the kit stylesheet, the receipt's dark overrides and the
+	// receipt's own rules (internal/writer pins them in this order).
+	//go:embed kit.css
+	kitCSS []byte
+	//go:embed kit-dark.css
+	kitDarkCSS []byte
+	//go:embed receipt.css
+	receiptCSS []byte
+	styles     = [][]byte{kitCSS, kitDarkCSS, receiptCSS}
 )
 
 type files struct{ script, manifest []byte }
@@ -114,4 +127,19 @@ func Module(kind string) (emitter.Module, error) {
 		StyleSHA256: append([]string(nil), m.Executable.StyleSHA256...),
 		Manifest:    append(json.RawMessage(nil), f.manifest...),
 	}, nil
+}
+
+// Styles are the stylesheets kind's manifest pins, in its style_sha256
+// order: each slice's SHA-256 is the manifest's entry at that index. A page
+// builder that loads modules from files, such as capsulectl presentation
+// build, takes them beside Module's script. The slices are copies.
+func Styles(kind string) ([][]byte, error) {
+	if _, _, err := parse(kind); err != nil {
+		return nil, err
+	}
+	out := make([][]byte, len(styles))
+	for i, s := range styles {
+		out[i] = append([]byte(nil), s...)
+	}
+	return out, nil
 }
