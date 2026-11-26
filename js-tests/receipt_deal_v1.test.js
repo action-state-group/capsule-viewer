@@ -68,22 +68,24 @@ describe("the deal/v1 receipt", () => {
     expect(host.L1.querySelector('[data-row-status="agreed_so_far"]').textContent).toBe("Both say the same so far");
   });
 
+  // The deal-level line moved under "For checkers" (L1) with the redesign (#382); its words are unchanged.
   it("the deal-level line is the start state, then settled or nothing; no close, no done", async () => {
     const open = await page(content({ settled: false }), "L0");
-    expect(open.host.L0.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("started");
-    expect(open.host.L0.querySelector("[data-settled]")).toBeNull();
+    expect(open.host.L1.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("started");
+    expect(open.host.L1.querySelector("[data-settled]")).toBeNull();
     const done = await page(content({ settled: true }), "L0");
-    expect(done.host.L0.querySelector("[data-settled]").textContent).toBe("Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.");
+    expect(done.host.L1.querySelector("[data-settled]").textContent).toBe("Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.");
     for (const p of [open, done]) expect(p.text).not.toMatch(/closed|close\b/i);
     const waiting = await page(content({ start: { state: "awaiting_agreement", local: false, by: null }, settled: false, rows_state: "not_started", rows: [] }), "L0");
-    expect(waiting.host.L0.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("awaiting_agreement");
+    expect(waiting.host.L1.querySelector("[data-deal-state]").getAttribute("data-deal-state")).toBe("awaiting_agreement");
   });
 
   it("a settled flag on a deal that has not started shows nothing", async () => {
     const p = await page(content({ start: { state: "not_started", local: false, by: null }, settled: true, rows_state: "not_started", rows: [] }), "L0");
-    expect(p.host.L0.querySelector("[data-settled]")).toBeNull();
-    expect(p.host.L0.querySelector('[data-rows-state="not_started"]').textContent).toBe("Nothing is agreed yet, so there are no terms to show.");
-    expect(p.host.L0.querySelector("h2").textContent).toBe("Receipt report");
+    expect(p.host.L1.querySelector("[data-settled]")).toBeNull();
+    expect(p.host.L1.querySelector('[data-rows-state="not_started"]').textContent).toBe("Nothing is agreed yet, so there are no terms to show.");
+    // The header names the receipt by the holder's role as its agreement states it; this copy carries none (#382).
+    expect(p.host.L0.querySelector("[data-receipt-title]").textContent).toBe("Deal receipt");
   });
 
   it("one test per audience: keep and counterparty list the rows; the adjudicator's copy says withheld, not no rows", async () => {
@@ -96,7 +98,7 @@ describe("the deal/v1 receipt", () => {
     expect(adj.host.L1.querySelectorAll("[data-row-status]").length).toBe(0);
     expect(adj.host.L1.querySelector('[data-rows-state="withheld"]').textContent).toBe("The holder has not shared each term's status with this reader.");
     expect(adj.host.L1.textContent).not.toMatch(/no rows/i);
-    expect(adj.host.L0.querySelector('[data-shared="adjudicator"]')).not.toBeNull();
+    expect(adj.host.L2.querySelector('[data-shared="adjudicator"]')).not.toBeNull();
   });
 
   it("declines a copy cut for another audience, and rows listed where the state says none", async () => {

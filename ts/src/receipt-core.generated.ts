@@ -57,12 +57,12 @@ const root = {};
   "use strict";
 
   var KIND = "unilateral"; // @generated KIND
-  var MANIFEST = {"spec_version": "aac.presentation-manifest/v0", "id": "capsuleviewer.receipt.unilateral/v0", "presentation_api": "aac.presentation-api/v0", "runtime_min": "0.1.0", "trust_class": "trusted-executable", "requires": {"bundle_kind": "evidence-bundle/v2", "extensions": {"required": ["x-deal-v0"]}}, "forbids": {"profiles": ["spec_version:report/v1", "spec_version:evaluation-summary/v1", "result_version:evidence-result-v0"], "extensions": ["composed/v1", "x-history-selection/v0", "x-deal-seller/v0"]}, "audiences": ["keep", "counterparty", "adjudicator", "*"], "formats": ["html"], "fallback": false, "priority": 1, "executable": {"carrier": "module-slot", "script_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "style_sha256": ["1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c", "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b", "e99d485d2ad0e02e5f77581f139648e970e4552930d2c3e0670c0d0cb4badf69"]}}; // @generated MANIFEST
-  var WORDS = {"page.title": "Deal report", "badge.demo": "DEMO", "banner.private.label": "PRIVATE", "banner.private.text": "This is your own copy of this deal report, with everything this page shows. Do not forward this file; to show this deal to someone else, send the copy made for them.", "banner.shared.label": "Shared copy", "banner.shared.text": "The report owner's own record of this deal, included in this report because their \"Receipts in the settlement report\" setting is on. It is not the counterparty's copy.", "banner.page.text": "This node's own record of this exchange, saved as a page for anyone to check. It is not the other side's copy.", "summary.standalone": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: {status}. This page did not check the signature itself.", "summary.standalone.here": "This report's text is carried in the file outside the log. This page checked it itself: signed by the deal's last step, matching its Capsule, and made at this deal's checkpoint.", "depth.l1": "Why: what was asked, proposed, approved and done", "depth.l2": "Verify: the records, their places in the log and the checks", "l0.deal_type": "Deal", "l0.item": "Item", "l0.amount": "Amount", "l0.state": "Where it stands", "l0.state.missing": "not stated", "deal_type.purchase": "Purchase", "deal_type.sale": "Sale", "deal_type.booking": "Booking", "deal_type.subscription": "Subscription", "deal_type.rental": "Rental", "deal_type.service": "Service", "state.open": "Open", "state.cancelled": "Cancelled", "state.closed": "Closed", "shared.counterparty": "A shared copy for the other party. Left out of this copy: {kinds}.", "shared.adjudicator": "A shared copy for an adjudicator. Left out of this copy: {kinds}.", "rung.witness_verified": "Witness receipt checked: the verifier checked a witness receipt in this file. Which steps that receipt covers is not shown here; capsulectl verify reports it. It does not confirm what the agent did.", "rung.unwitnessed": "No outside time stamp: this copy carries no witness receipt.", "rung.witness_failed": "A witness receipt is in this file and did not verify.", "countersign.none": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy.", "countersign.none.two_sided": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above.", "counterparty_half.verified": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it.", "countersign.some": "Countersignatures, as the verifier reported them: {statuses}.", "section.authorized": "What you asked", "section.authorized.report": "What the owner asked", "section.proposed": "What the agent proposed, and how it was checked", "section.approved": "What you approved", "section.approved.report": "What the owner approved", "section.merchant": "The merchant's own evidence", "section.acted": "What the agent did", "section.lifecycle": "Where this deal stands", "section.statements.keep": "What your agent told the buyer", "section.statements.keep.report": "What the owner's agent told the buyer", "section.statements.counterparty": "What the seller's agent told you", "section.statements.counterparty.report": "What the seller's agent told the buyer", "section.statements.adjudicator": "What the seller's agent told the buyer", "section.told": "What your agent told whom", "section.told.report": "What the owner's agent told whom", "section.deadlines": "Cancel-by and due dates", "section.cancellation": "Your cancellation", "section.cancellation.report": "The owner's cancellation", "section.anomalies": "Problems spotted", "section.other": "Other steps", "section.claims": "What this does not claim", "section.records": "Every record in this receipt", "section.provenance": "Who sealed these records", "asked.opened": "✓ These are the exact words sealed when the deal opened.", "asked.committed": "Your words are sealed as a commitment, and their opening is not in this copy, so they are not checked here.", "asked.committed.report": "The owner's words are sealed as a commitment, and their opening is not in this copy, so they are not checked here.", "asked.mismatch": "⚠️ The words you asked could not be checked against the sealed record.", "asked.mismatch.report": "⚠️ The words the owner asked could not be checked against the sealed record.", "asked.withheld": "Withheld from this copy.", "asked.not_present": "The deal's opening step is not in this report.", "statement.opened": "✓ These are the exact words sealed when the agent said them; this page does not check that they are true.", "statement.mismatch": "⚠️ A statement here could not be checked against its sealed step.", "statement.committed": "A statement is sealed as a commitment; its opening is not in this copy.", "statement.withheld": "A statement's step is withheld from this copy.", "statement.not_present": "A statement's step is not in this report.", "class.condition": "Condition", "class.warranty": "Warranty", "class.refund_terms": "Refund terms", "class.delivery_promise": "Delivery promise", "class.other": "Other", "summary.sealed": "The text on this page was written by {producer} when the receipt was made and sealed as a record in this file; the verifier checked that record. It summarises the steps and is not the steps themselves.", "summary.lines": "The summary lines below, and each step's line, were written by {producer} and sealed with the receipt: they were checked as unchanged since, not that they are right. Under each item are the steps it was read from; each step's sealed record is checked.", "acted.nothing": "Nothing yet.", "merchant.none": "No merchant email is attached to this receipt.", "merchant.intro": "Two different things stand behind each email. The merchant's signature is checked against the merchant's published key, saved when the email was sealed; it shows what the merchant sent, and it does not depend on the agent. The receipt's seal shows these exact bytes were kept unchanged from that time on; it is the sealer's own record. Amounts, dates and order numbers below are read from the email by {producer} and may be misread.", "merchant.order": "Order {order}", "merchant.email": "Merchant email", "merchant.signature": "Merchant's signature: {text}", "merchant.seal": "Our seal: {text}", "merchant.key_supplied": "The merchant's key was supplied by hand, not read from the merchant's DNS.", "merchant.approved": "You approved", "merchant.approved.report": "The owner approved", "merchant.approved_basis": "You approved ({basis})", "merchant.approved_basis.report": "The owner approved ({basis})", "merchant.agent_reported": "The agent reported paying", "merchant.charged": "The merchant's email says (read from the email)", "merchant.charged_on": "Charged on (the email's date)", "merchant.cancel_by": "Cancel by (read from the email)", "merchant.items": "Items (read from the email)", "merchant.domains": "Signing domain", "merchant.key_size": "Merchant's key (sealed when the email was sealed)", "lifecycle.later": "{at} · confirms the close: {text}", "lifecycle.as_of": "{text} (as of {at})", "told.none": "Nothing about you was recorded as shared.", "told.none.report": "Nothing about the owner was recorded as shared.", "told.note": "Only what the agent sealed as shared is listed here; something it told without sealing it is not.", "cancellation.shows": "What this shows", "cancellation.not_shows": "What this does not show", "anomalies.agent": "Agent side", "anomalies.counterparty": "Counterparty side", "anomalies.none": "None reported.", "claims.tamper": "It is tamper-evident: it shows these records were not changed after they were sealed, not who made them.", "claims.reported": "It records what the agent reported. It does not show that what was reported was true.", "claims.merchant": "It does not prove the merchant shipped, delivered or refunded anything.", "claims.scope": "The verification below covers every step's sealed record and its place in this deal's log. The records carry fingerprints, not names or numbers; the words shown come from the device that sealed them. The seal key is on the agent's machine, so this shows the record was not changed after it was made, not who made it. It covers this skill's own records only, never the agent host's own store.", "claims.withheld": "Steps marked WITHHELD are proven present and unchanged, at their place in the log; what they say is not in this copy.", "step.position": "Step {n} · {at}", "step.unnumbered": "A step this receipt cites", "step.line": "The receipt's line: {text}", "verify.tested": "Checked by {verifier}: {checks}. This page shows its answer; it did not re-check anything itself.", "verify.tested_here": "Checked in this browser by {verifier}: {checks}.", "verify.check_one": "{name} ({outcome})", "verify.checks_all": "{checks} (all {outcome})", "verify.self_reported": "Reported by {verifier}: {checks}. This view shows that report; it did not re-check anything itself.", "verify.reported": "Checked by {verifier}. This page shows its answer; it did not re-check anything itself.", "money.test": "Test money: this deal's payment was on a simulated rail. No real money moved.", "record.short": "{head}…{tail}", "value.action.pay": "Pay", "value.action.commit": "Commit to the deal", "value.action.offer": "Make an offer", "value.action.share_contact": "Share contact details", "value.action_class.money.purchase": "Spend money on a purchase", "value.action_class.agreement.accept": "Accept an agreement", "value.action_class.marketplace.offer": "Make an offer in a marketplace", "value.action_class.disclosure.personal": "Share personal details", "value.action_class.external_commitment.other": "Another kind of commitment to an outside party", "value.result.pass": "Passed", "value.result.pause": "Paused to ask first", "value.disposition.do": "Go ahead", "value.disposition.ask": "Ask first", "value.approver.user": "The person, directly", "value.approver.human": "Another person", "value.approver.standing_intent": "The person's standing instructions to the agent", "value.approver.policy": "A policy", "value.choice.proceed": "Go ahead", "value.direction.out": "Money going out", "value.direction.in": "Money coming in", "value.rail.card": "Card", "value.rail.lightning": "Lightning", "value.rail.simulated": "Simulated (test money)", "value.judge.rules": "Rules", "value.rules.not_configured": "No rules checker was set for this check", "value.rules.evaluated": "Checked by the rules", "value.rules.not_evaluated": "The rules could not be checked", "value.rules.not_applicable": "No rules apply to this step", "value.result.deny": "Refused by the rules", "value.approver.agent_card": "The agent's card", "step.log": "seq {seq} · leaf {leaf} · {log}", "step.no_log": "no place in a log was supplied", "step.record": "Record", "step.type": "Recorded as", "step.key": "Signing key", "steps.summary": "The steps this was read from", "records.step": "Step", "records.kind": "Recorded as", "records.disclosure": "Disclosure", "records.log": "Place in the log", "records.id": "Record", "records.report": "the sealed report", "records.unknown": "not in this copy", "provenance.by": "Produced by {producers}.", "provenance.then": ", then ", "provenance.unrecorded": "a producer that did not record its version", "provenance.the_producer": "the producer", "wording.provenance": "This page's words: wording pack {id}, sha256 {sha}.", "fact.deal_type": "Deal type", "fact.allowed": "Allowed", "fact.item": "Item", "fact.quantity": "Quantity", "fact.price": "Price", "fact.expect_close_by": "Expected to close by", "fact.asked.item": "You asked for (item)", "fact.asked.item.report": "The owner asked for (item)", "fact.asked.quantity": "You asked for (quantity)", "fact.asked.quantity.report": "The owner asked for (quantity)", "fact.action": "Action", "fact.action_class": "Action class", "fact.amount": "Amount", "fact.authorized_max": "Most you allowed", "fact.authorized_max.report": "Most the owner allowed", "fact.material_fields_changed": "Material details changed", "fact.offer_fields_changed": "Offer details changed", "fact.result": "Check result", "fact.differences": "Differences found", "fact.judge": "Checked by", "fact.rules": "Rules", "fact.notes": "Notes", "fact.approver": "Approved by", "fact.choice": "Choice", "fact.direction": "Direction", "fact.rail": "Paid by", "fact.class": "Statement class", "fact.source_kind": "Said by", "rung.book_witnessed": "Time-stamped by {witness} at {at} ({utc}), as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself.", "rung.book_witness_failed": "capsulectl verify reported that your own book's witness time-stamp did not verify, so no time-stamp is shown. This page did not check it itself.", "rung.book_witness_withheld": "capsulectl verify found no time-stamp for your own book from the witnesses it was given. That does not mean there is none. This page did not check it itself.", "rung.unreported": "No witness result was reported to this page.", "l2.bundle_digest": "The verifier's report is for the bundle with digest", "fact.disposition": "Disposition", "bilateral.title": "Deal report: both parties' copies", "bilateral.title.one_sided": "Deal report: one party's copy", "deal.agree": "Both copies name one deal: {deal}.", "deal.one": "This copy is for deal {deal}.", "deal.mismatch": "The copies name different deals ({deals}). They are not shown as one deal, and neither is picked.", "deal.unnamed": "A copy names no deal, so the copies are not shown as one deal.", "party.heading": "{role} copy ({member})", "party.role_undeclared": "Undeclared", "parts.own": "Each copy is shown from its own records. What one copy leaves out is never filled in from the other.", "joins.heading": "How the two copies line up", "joins.none": "The composition declares no join between the copies.", "sides.case.both": "Stamped by both sides: both records are here, and the verifier found they agree.", "sides.case.one_sided": "Your receipt only: the other side's record is missing.", "sides.case.one_sided.shared": "One side's record only: the other side's record is missing.", "sides.case.limit": "Your receipt only: the other side's record is not shared. That is the limit they set on what they share, and it says nothing against the deal.", "sides.case.limit.shared": "One side's record only: the other side's record is not shared. That is the limit they set on what they share, and it says nothing against the deal.", "sides.case.not_agreed": "Not stamped by both: the two records do not show one agreement.", "sides.ours": "Your side · in your book", "sides.ours.shared": "The report owner's side · in their book", "sides.ours.page": "This node's side · in its book", "sides.theirs": "Their side · as received", "sides.half": "{role}'s side · as received", "sides.missing.heading": "Their side", "sides.missing.none": "No record. Nothing from their side is in this receipt.", "sides.missing.absence": "No record. Their side was asked on {start} and had not answered by {end}. The ask is on record.", "sides.missing.refusal.policy_declined": "Not shared. Their side was asked for its record, and on {date} signed a reply that its sharing policy does not allow it. This is a limit on what they share. They have not refused the deal.", "row.both": "stamped by both", "row.one_sided": "your receipt only", "row.one_sided.page": "this node's receipt only", "row.none": "no record", "row.cannot_check": "this browser can't check the receipt", "row.did_not_verify": "the receipt did not verify: do not rely on it", "row.cannot_check_pointer": "Open the bundle in the offline viewer (capsule-viewer) to check it; this page shows no verdict for it.", "row.cannot_check.report_rule": "This page can't check this receipt, so it shows nothing from it and no verdict.", "row.cannot_check.report_rule_pointer": "To check it, run `capsulectl deal verify --bundle <file>` on the receipt file. It needs the capsulectl-deal plugin.", "row.cannot_check.report_rule.row": "can't be checked here", "row.page.receipt": "Receipt: {label}", "row.page.records_tied": "{tied} of {total} records in the receipt are tied to a signed checkpoint.", "actions.heading": "Tell your agent:", "actions.dispute": "“Dispute this”", "actions.send": "“Send me this receipt”", "actions.show_theirs": "“Show me the other side's receipt”", "actions.ask_again": "“Ask their side again”", "actions.ask": "“Ask their side for their receipt”", "join.line": "{basis}: declared {declared}; the verifier derived {derived}.", "join.basis.pre_agreed_identifier": "Pre-agreed identifier", "join.basis.shared_artifact_digest": "Shared artifact digest", "join.basis.issued_receipt": "Issued receipt", "join.basis.same_interval": "Same interval", "join.state.agree": "agree", "join.state.mismatch": "mismatch", "join.state.unjoined": "unjoined", "join.state.one_sided": "one-sided", "join.state.not_derivable": "not derivable", "join.result.join_state_mismatch": "What was declared is not what the verifier derived.", "corroboration.corroborating": "They agree, and their declared custody differs: corroborating, on declared custody only.", "corroboration.redundant": "They agree, but redundantly, not corroborating ({reasons}).", "l2.composition": "How the copies were put together, as the verifier checked it", "seller.title": "Sale receipt", "seller.depth.l1": "Why: what was authorised, said, offered, accepted and handed over", "seller.l0.item": "Sold", "seller.l0.amount": "Amount agreed", "seller.l0.payment": "Payment", "seller.l0.handover": "Handed over", "seller.payment.not_recorded": "Not recorded in this copy", "seller.handover.seller_observed": "By the seller's own record (not confirmed by the buyer or a carrier)", "seller.handover.none": "Not recorded", "seller.outcome.completed": "Closed: matches what was agreed", "seller.outcome.mismatch": "Closed: differs from what was agreed", "seller.outcome.not_selected": "Closed: not selected", "seller.outcome.open": "Open", "seller.fact.allowed_actions": "The agent may", "seller.fact.outcome_id": "Kind of deal", "seller.floor.committed": "The lowest price is sealed as a commitment. Its opening is in this copy; this page does not open it.", "seller.floor.withheld": "The lowest price is not in this copy.", "seller.floor.not_present": "No lowest price is sealed in this copy.", "seller.section.authorised.keep": "What you authorised", "seller.section.authorised.keep.report": "What the owner authorised", "seller.section.authorised.counterparty": "What the seller authorised their agent to do", "seller.section.authorised.adjudicator": "What the seller authorised their agent to do", "seller.section.represented.keep": "What your agent told this buyer", "seller.section.represented.keep.report": "What the owner's agent told this buyer", "seller.section.represented.counterparty": "What the seller's agent told you", "seller.section.represented.counterparty.report": "What the seller's agent told the buyer", "seller.section.represented.adjudicator": "What the seller's agent told the buyer", "seller.represented.none": "No statement to the buyer is recorded in this copy.", "seller.section.offers": "Offers, and which replaced which", "seller.offers.none": "No offer is disclosed in this copy.", "seller.offers.action": "Proposed", "seller.offers.amount": "Amount", "seller.offers.status": "Status", "seller.offers.note": "A later offer that names an earlier one replaces it; the earlier one can no longer be accepted.", "seller.offer.accepted": "accepted by the buyer", "seller.offer.superseded": "replaced by a later offer", "seller.offer.open": "not replaced", "seller.action.offer": "Offer", "seller.action.commit": "Commit", "seller.section.accepted.keep": "What the buyer accepted", "seller.section.accepted.counterparty": "What you accepted", "seller.section.accepted.counterparty.report": "What the buyer accepted", "seller.section.accepted.adjudicator": "What the buyer accepted", "seller.accepted.none": "No acceptance is recorded in this copy.", "seller.accepted.offer": "The acceptance names the offer at step", "seller.accepted.offer_not_here": "The acceptance names an offer that is not disclosed in this copy.", "seller.accepted.digest": "Digest of the exact offer accepted:", "seller.accepted.words": "The seller's agent recorded this acceptance as an observation. The buyer's words are sealed as a commitment and are not shown here.", "seller.section.payment": "Payment", "seller.payment.none": "This copy carries no payment record. Evidence the seller's agent recorded is listed with its source; this page does not read what it is about.", "seller.evidence.source": "Evidence from", "seller.evidence.verified": "marked verified", "seller.evidence.unverified": "not verified", "seller.evidence.withheld": "An evidence step is withheld from this copy.", "seller.section.handover": "Handover, and who says so", "seller.provenance.seller_observed": "The seller's own record:", "seller.provenance.seller_observed.recorded": "recorded (a claim by the seller)", "seller.provenance.seller_observed.withheld": "withheld from this copy", "seller.provenance.seller_observed.not_present": "not recorded", "seller.provenance.carrier": "A carrier's confirmation:", "seller.provenance.carrier.not_present": "none in this copy", "seller.provenance.buyer_confirmed": "The buyer's confirmation:", "seller.provenance.buyer_confirmed.not_present": "none in this copy (only the buyer's own records can carry it)", "seller.delivered.item": "Handed over (item)", "seller.delivered.quantity": "Handed over (quantity)", "seller.delivered.price": "At the price", "seller.handover.note": "A handover recorded by the seller alone shows what the seller says was handed over, not that the buyer received it.", "seller.address.committed": "An address was given. Its record carries the field's class and a commitment to the value, not the value.", "seller.address.withheld": "The address given is not in this copy.", "seller.address.not_present": "No address is recorded as given in this copy.", "seller.section.given.keep": "What your agent gave this buyer", "seller.section.given.keep.report": "What the owner's agent gave this buyer", "seller.section.given.counterparty": "What the seller's agent gave you", "seller.section.given.counterparty.report": "What the seller's agent gave the buyer", "seller.section.given.adjudicator": "What the seller's agent gave the buyer", "seller.section.obligations": "Open obligations", "seller.obligations.none": "No open obligation is recorded in this copy.", "seller.not_selected": "The seller closed this thread without a sale to this buyer. Nothing was committed or handed over in it.", "seller.threads": "This copy covers one buyer's thread. Other buyers' threads of the same sale are not in it.", "seller.claims.handover": "It does not show that the buyer received anything: a handover recorded by the seller is the seller's claim.", "seller.section.chain": "Offers and what they replaced", "seller.chain.digest": "Record digest", "seller.chain.supersedes": "Replaces step", "seller.chain.superseded_by": "Replaced by step", "seller.section.commitments": "Commitments the disclosed records seal", "seller.commitment.field": "Field", "seller.commitment.value": "Commitment", "seller.commitment.state": "Opening", "seller.commitment.opened": "opened on this page", "seller.commitment.sealed": "not opened on this page", "seller.section.legs": "Settlement legs", "seller.leg.name": "Leg", "seller.leg.state": "In this copy", "seller.leg.agreement": "Agreement", "seller.leg.payment": "Payment", "seller.leg.handover": "Handover", "seller.leg.recorded": "recorded", "seller.leg.none": "not recorded", "seller.section.keys": "Signing keys", "seller.asked.opened": "✓ These are the seller's exact words, sealed when the sale opened.", "seller.asked.committed": "The seller's words are sealed as a commitment, and their opening is not in this copy, so they are not checked here.", "seller.asked.mismatch": "⚠️ The seller's words could not be checked against the sealed record.", "seller.asked.withheld": "The seller's words are withheld from this copy.", "seller.asked.not_present": "The sale's opening step is not in this copy.", "seller.fact.asked.item": "To sell (item)", "seller.fact.asked.quantity": "To sell (quantity)", "seller.fact.item": "Item", "seller.fact.price": "Asking price", "seller.shared.counterparty": "A shared copy for the buyer. What it leaves out is listed under Why.", "seller.shared.adjudicator": "A shared copy for an adjudicator. What it leaves out is listed under Why.", "seller.section.left_out": "What this copy leaves out", "class.address": "address", "class.credential": "login", "class.email": "email", "class.home_address": "home address", "class.id_document": "ID document", "class.name": "name", "class.other_contact": "contact details", "class.payment_card": "payment card", "class.phone": "phone", "class.pickup_area": "pickup area", "class.pickup_location": "pickup location", "class.verification_code": "verification code", "section.journey": "How it went", "journey_by.user": "You", "journey_by.user.report": "Owner", "journey_by.agent": "Your agent", "journey_by.agent.report": "Owner's agent", "journey_by.other": "The other side", "journey_by.unknown": "Someone", "journey_note": "Who moved, and each row's names, items and amounts, come from the report sealed in this file; open a row to see the step it came from. The rest of the wording comes from this page and is not sealed.", "journey.agent.act.cancel": "Cancelled", "journey.agent.act.commit": "Booked", "journey.agent.act.offer": "Made an offer", "journey.agent.act.other": "Done", "journey.agent.act.pay": "Paid {amount}", "journey.agent.act.pay.no_amount": "Paid", "journey.agent.act.pay.within": "Paid {amount} within your {limit} limit", "journey.agent.act.pay.within.report": "Paid {amount} within the owner's {limit} limit", "journey.agent.act.sign": "Signed", "journey.agent.asked_seller": "Asked the seller", "journey.agent.checked": "Checked", "journey.agent.chose": "Chose for you", "journey.agent.chose.report": "Chose for the owner", "journey.agent.chose.item": "Chose {item} for you", "journey.agent.chose.item.report": "Chose {item} for the owner", "journey.agent.couldnt": "Couldn't ({reason})", "journey.agent.couldnt.who": "Couldn't ({who} {reason})", "journey.agent.options": "Showed you {count} options", "journey.agent.options.report": "Showed the owner {count} options", "journey.agent.paused": "Waited for your OK", "journey.agent.paused.report": "Waited for the owner's OK", "journey.agent.recommended": "Recommended", "journey.agent.searched": "Searched", "journey.agent.told": "Told {who} your {classes}", "journey.agent.told.report": "Told {who} the owner's {classes}", "journey.other.changed": "Seller changed", "journey.other.said": "Seller said", "journey.reason.blocked": "blocked", "journey.reason.cannot_ship_here": "can't ship here", "journey.reason.out_of_stock": "out of stock", "journey.reason.payment_declined": "payment declined", "journey.reason.sign_in_required": "sign-in", "journey.reason.site_error": "site error", "journey.user.approved.commit": "OK'd agreeing to {amount}", "journey.user.approved.offer": "OK'd offering {amount}", "journey.user.approved.other": "OK'd it", "journey.user.approved.pay": "OK'd paying {amount}", "journey.user.approved.share_contact": "OK'd sharing your {classes}", "journey.user.approved.share_contact.report": "OK'd sharing the owner's {classes}", "journey.user.asked": "Asked", "journey.user.called_off": "Called off", "journey.user.changed": "Changed what you asked", "journey.user.changed.report": "Changed what the owner asked", "journey.user.declined.commit": "Said no to agreeing to {amount}", "journey.user.declined.offer": "Said no to offering {amount}", "journey.user.declined.other": "Said no", "journey.user.declined.pay": "Said no to paying {amount}", "journey.user.declined.share_contact": "Said no to sharing your {classes}", "journey.user.declined.share_contact.report": "Said no to sharing the owner's {classes}", "journey.user.narrowed": "Narrowed", "journey.user.picked": "Picked", "journey.user.raised": "Raised", "journey.user.switched": "Switched to {who}", "journey.user.switched.item": "Switched to {item}", "deal.title": "Receipt report", "deal.depth.l1": "Terms: what each term stands at", "deal.state.started": "Started", "deal.state.awaiting_agreement": "Awaiting agreement", "deal.state.not_started": "Not started", "deal.report.scope": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal.", "deal.settled": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.", "deal.start.by": "Started by: {by}.", "deal.start.by.offerer_in_time": "the offerer, in time", "deal.start.by.acceptor_named": "the acceptor, as named", "deal.start.by.first_act": "the first act", "deal.local": "Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word.", "deal.rows.not_started": "Nothing is agreed yet, so there are no terms to show.", "deal.rows.withheld": "The holder has not shared each term's status with this reader.", "deal.rows.none": "The agreement lists no terms.", "deal.rows.note": "Each status is the one the holder computed. This page shows it and does not compute it.", "deal.as_of": "As the holder computed it at {at}. This is not a time any witness attests.", "deal.no_time": "no time", "deal.date.not_set": "not set", "deal.section.rows": "Terms", "deal.section.basis": "The records each term's status rests on", "deal.section.rests": "What this report rests on", "deal.col.row": "Term", "deal.col.owed_by": "Owed by", "deal.col.status": "Status", "deal.col.due": "Due", "deal.col.window_end": "Contest window ends", "deal.col.detail": "Detail", "deal.col.record": "Record", "deal.col.side": "Side", "deal.col.time": "Time", "deal.basis.none": "No record is listed for any term.", "deal.status.not_reached": "Not reached", "deal.status.not_due": "Not due", "deal.status.no_statement": "No statement", "deal.status.waiting": "Waiting for the other side", "deal.status.uncontested": "Uncontested", "deal.status.agreed_so_far": "Both say the same so far", "deal.status.agreed": "Both say the same", "deal.status.in_disagreement": "Statements differ", "deal.status.in_dispute": "In dispute", "deal.status.ruled": "Ruled", "deal.value.met": "met", "deal.value.not_met": "not met", "deal.remedy.none": "none ordered", "deal.remedy.due": "due", "deal.remedy.made": "recorded as made", "deal.remedy.not_honoured": "not honoured", "deal.remedy.not_counted": "a payment, ordered by the ruling; not checked yet", "deal.row.remedy_made": "The owing side has recorded making it (not checked).", "deal.check.passed": "passed", "deal.check.failed": "failed", "deal.check.not_run": "not run", "deal.check.not_recomputed": "not recomputed", "deal.row.value": "Statement: {value}", "deal.row.remedy": "Remedy: {remedy}", "deal.row.ruling": "Ruling: {value}, against the {side}", "deal.row.check": "Payment check: {check}", "deal.pack_digest": "The terms pack the agreement cites, by digest:", "deal.rests.own": "The holder's own log held {size} records.", "deal.rests.counterparty": "The other side's log was counted to {counted} records.", "deal.rests.fork": "The other side's log forks at record {at}.", "deal.rests.layer": "The other side keeps its own record of this deal.", "deal.rests.no_layer": "The other side does not keep its own record of this deal.", "deal.rests.witnesses": "Witnesses the agreement names: {count}.", "deal.named_witness.yes": "yes", "deal.named_witness.no": "no", "deal.col.named_witness": "Time from a named witness", "deal.row.ruling.bare": "Ruling: {value}", "deal.side.buyer": "buyer", "deal.side.seller": "seller", "deal.section.legs": "Payment records the terms' statuses rest on", "deal.col.leg_side": "Side, as the report names it", "deal.col.leg": "Leg", "deal.col.leg_status": "Status as recorded", "deal.col.amount": "Amounts as recorded", "deal.col.observed": "Observed at (as recorded)", "deal.col.payment_ref": "Payment reference", "deal.legs.note": "Each line is a payment record a term relies on, shown as the record states it. This page does not check who signed each record, does not match the legs and does not judge the payment; the payment check above is the only verdict.", "deal.col.sealer": "Sealer, as recorded", "deal.legs.note.withheld": "This copy withholds the terms, so these payment records are not tied to a term. They are the records the report's holder says its terms rest on, shown as each states it. This page does not check who signed them and does not judge the payment.", "deal.legs.none.withheld": "This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.", "deal.legs.none": "No payment record is among the records the terms' statuses rest on.", "deal.legs.why.statements": "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment.", "deal.legs.why.mixed": "These terms rest on what the sides say and on other deal records. None is a payment record, so this page does not show or check a payment.", "deal.legs.why.other": "These terms rest on deal records, none of them a payment record, so this page does not show or check a payment.", "deal.legs.why.no_records": "No term's status rests on any record yet, so there is no payment record to show.", "deal.state.terms": "Terms: {tally}", "deal.state.terms.count": "{status} ({count} of {total})", "deal.term.paid_as_agreed": "Payment as agreed", "deal.term.delivered": "Delivery", "deal.term.as_described": "Item as described", "deal.named_witness.report.own": "yes, as your report states it", "settlement.lightning.proof": "Payment: settled on Lightning; this page checked its proof against its invoice.", "settlement.lightning.failed": "Payment: recorded as settled on Lightning, but its proof did not match its invoice when this page checked it.", "settlement.lightning.sealed": "Payment: recorded as settled on Lightning; its proof is sealed in this file, so this page can't check it.", "settlement.lightning.withheld": "Payment: recorded as settled on Lightning; this copy does not show its proof.", "settlement.lightning.partial": "Payment: recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them.", "settlement.lightning.final": "Payment: the payee's wallet reported it final on Lightning; this file carries no proof to check.", "settlement.x402": "Payment: settled on x402; this page does not check the on-chain record.", "settlement.other": "Payment: recorded as settled; this page can't check payments on this rail.", "settlement.missing": "Payment: a {rail} payment; no settlement record is in this file.", "settlement.card": "Payment: a card payment; the card processor's report is not in this file.", "settlement.size": " Size: {band}.", "size.between": "{low} – {high}", "size.under": "under {amount}", "size.range": "{low} to under {high} {currency}"}; // @generated WORDS
-  var PACK = {"id": "capsuleviewer.receipt.wording.en/v1", "sha256": "ae2ffbe87b9427a5bcf620990a0cfeda722e61341749031ba5b36e543581d73c"}; // @generated PACK
+  var MANIFEST = {"spec_version": "aac.presentation-manifest/v0", "id": "capsuleviewer.receipt.unilateral/v0", "presentation_api": "aac.presentation-api/v0", "runtime_min": "0.1.0", "trust_class": "trusted-executable", "requires": {"bundle_kind": "evidence-bundle/v2", "extensions": {"required": ["x-deal-v0"]}}, "forbids": {"profiles": ["spec_version:report/v1", "spec_version:evaluation-summary/v1", "result_version:evidence-result-v0"], "extensions": ["composed/v1", "x-history-selection/v0", "x-deal-seller/v0"]}, "audiences": ["keep", "counterparty", "adjudicator", "*"], "formats": ["html"], "fallback": false, "priority": 1, "executable": {"carrier": "module-slot", "script_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "style_sha256": ["1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c", "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b", "99f181ed34205bb6cfa8f5fd85de14d6b725f5f4e7cd8a3cf6ed3efdff30e56a"]}}; // @generated MANIFEST
+  var WORDS = {"page.title": "Deal report", "badge.demo": "DEMO", "banner.private.label": "PRIVATE", "banner.private.text": "This is your own copy of this deal report, with everything this page shows. Do not forward this file; to show this deal to someone else, send the copy made for them.", "banner.shared.label": "Shared copy", "banner.shared.text": "The report owner's own record of this deal, included in this report because their \"Receipts in the settlement report\" setting is on. It is not the counterparty's copy.", "banner.page.text": "This node's own record of this exchange, saved as a page for anyone to check. It is not the other side's copy.", "summary.standalone": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: {status}. This page did not check the signature itself.", "summary.standalone.here": "This report's text is carried in the file outside the log. This page checked it itself: signed by the deal's last step, matching its Capsule, and made at this deal's checkpoint.", "depth.l1": "Why: what was asked, proposed, approved and done", "depth.l2": "Verify: the records, their places in the log and the checks", "l0.deal_type": "Deal", "l0.item": "Item", "l0.amount": "Amount", "l0.state": "Where it stands", "l0.state.missing": "not stated", "deal_type.purchase": "Purchase", "deal_type.sale": "Sale", "deal_type.booking": "Booking", "deal_type.subscription": "Subscription", "deal_type.rental": "Rental", "deal_type.service": "Service", "state.open": "Open", "state.cancelled": "Cancelled", "state.closed": "Closed", "shared.counterparty": "A shared copy for the other party. Left out of this copy: {kinds}.", "shared.adjudicator": "A shared copy for an adjudicator. Left out of this copy: {kinds}.", "rung.witness_verified": "Witness receipt checked: the verifier checked a witness receipt in this file. Which steps that receipt covers is not shown here; capsulectl verify reports it. It does not confirm what the agent did.", "rung.unwitnessed": "No outside time stamp: this copy carries no witness receipt.", "rung.witness_failed": "A witness receipt is in this file and did not verify.", "countersign.none": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy.", "countersign.none.two_sided": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above.", "counterparty_half.verified": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it.", "countersign.some": "Countersignatures, as the verifier reported them: {statuses}.", "section.authorized": "What you asked", "section.authorized.report": "What the owner asked", "section.proposed": "What the agent proposed, and how it was checked", "section.approved": "What you approved", "section.approved.report": "What the owner approved", "section.merchant": "The merchant's own evidence", "section.acted": "What the agent did", "section.lifecycle": "Where this deal stands", "section.statements.keep": "What your agent told the buyer", "section.statements.keep.report": "What the owner's agent told the buyer", "section.statements.counterparty": "What the seller's agent told you", "section.statements.counterparty.report": "What the seller's agent told the buyer", "section.statements.adjudicator": "What the seller's agent told the buyer", "section.told": "What your agent told whom", "section.told.report": "What the owner's agent told whom", "section.deadlines": "Cancel-by and due dates", "section.cancellation": "Your cancellation", "section.cancellation.report": "The owner's cancellation", "section.anomalies": "Problems spotted", "section.other": "Other steps", "section.claims": "What this does not claim", "section.records": "Every record in this receipt", "section.provenance": "Who sealed these records", "asked.opened": "✓ These are the exact words sealed when the deal opened.", "asked.committed": "Your words are sealed as a commitment, and their opening is not in this copy, so they are not checked here.", "asked.committed.report": "The owner's words are sealed as a commitment, and their opening is not in this copy, so they are not checked here.", "asked.mismatch": "⚠️ The words you asked could not be checked against the sealed record.", "asked.mismatch.report": "⚠️ The words the owner asked could not be checked against the sealed record.", "asked.withheld": "Withheld from this copy.", "asked.not_present": "The deal's opening step is not in this report.", "statement.opened": "✓ These are the exact words sealed when the agent said them; this page does not check that they are true.", "statement.mismatch": "⚠️ A statement here could not be checked against its sealed step.", "statement.committed": "A statement is sealed as a commitment; its opening is not in this copy.", "statement.withheld": "A statement's step is withheld from this copy.", "statement.not_present": "A statement's step is not in this report.", "class.condition": "Condition", "class.warranty": "Warranty", "class.refund_terms": "Refund terms", "class.delivery_promise": "Delivery promise", "class.other": "Other", "summary.sealed": "The text on this page was written by {producer} when the receipt was made and sealed as a record in this file; the verifier checked that record. It summarises the steps and is not the steps themselves.", "summary.lines": "The summary lines below, and each step's line, were written by {producer} and sealed with the receipt: they were checked as unchanged since, not that they are right. Under each item are the steps it was read from; each step's sealed record is checked.", "acted.nothing": "Nothing yet.", "merchant.none": "No merchant email is attached to this receipt.", "merchant.intro": "Two different things stand behind each email. The merchant's signature is checked against the merchant's published key, saved when the email was sealed; it shows what the merchant sent, and it does not depend on the agent. The receipt's seal shows these exact bytes were kept unchanged from that time on; it is the sealer's own record. Amounts, dates and order numbers below are read from the email by {producer} and may be misread.", "merchant.order": "Order {order}", "merchant.email": "Merchant email", "merchant.signature": "Merchant's signature: {text}", "merchant.seal": "Our seal: {text}", "merchant.key_supplied": "The merchant's key was supplied by hand, not read from the merchant's DNS.", "merchant.approved": "You approved", "merchant.approved.report": "The owner approved", "merchant.approved_basis": "You approved ({basis})", "merchant.approved_basis.report": "The owner approved ({basis})", "merchant.agent_reported": "The agent reported paying", "merchant.charged": "The merchant's email says (read from the email)", "merchant.charged_on": "Charged on (the email's date)", "merchant.cancel_by": "Cancel by (read from the email)", "merchant.items": "Items (read from the email)", "merchant.domains": "Signing domain", "merchant.key_size": "Merchant's key (sealed when the email was sealed)", "lifecycle.later": "{at} · confirms the close: {text}", "lifecycle.as_of": "{text} (as of {at})", "told.none": "Nothing about you was recorded as shared.", "told.none.report": "Nothing about the owner was recorded as shared.", "told.note": "Only what the agent sealed as shared is listed here; something it told without sealing it is not.", "cancellation.shows": "What this shows", "cancellation.not_shows": "What this does not show", "anomalies.agent": "Agent side", "anomalies.counterparty": "Counterparty side", "anomalies.none": "None reported.", "claims.tamper": "It is tamper-evident: it shows these records were not changed after they were sealed, not who made them.", "claims.reported": "It records what the agent reported. It does not show that what was reported was true.", "claims.merchant": "It does not prove the merchant shipped, delivered or refunded anything.", "claims.scope": "The verification below covers every step's sealed record and its place in this deal's log. The records carry fingerprints, not names or numbers; the words shown come from the device that sealed them. The seal key is on the agent's machine, so this shows the record was not changed after it was made, not who made it. It covers this skill's own records only, never the agent host's own store.", "claims.withheld": "Steps marked WITHHELD are proven present and unchanged, at their place in the log; what they say is not in this copy.", "step.position": "Step {n} · {at}", "step.unnumbered": "A step this receipt cites", "step.line": "The receipt's line: {text}", "verify.tested": "Checked by {verifier}: {checks}. This page shows its answer; it did not re-check anything itself.", "verify.tested_here": "Checked in this browser by {verifier}: {checks}.", "verify.check_one": "{name} ({outcome})", "verify.checks_all": "{checks} (all {outcome})", "verify.self_reported": "Reported by {verifier}: {checks}. This view shows that report; it did not re-check anything itself.", "verify.reported": "Checked by {verifier}. This page shows its answer; it did not re-check anything itself.", "money.test": "Test money: this deal's payment was on a simulated rail. No real money moved.", "record.short": "{head}…{tail}", "value.action.pay": "Pay", "value.action.commit": "Commit to the deal", "value.action.offer": "Make an offer", "value.action.share_contact": "Share contact details", "value.action_class.money.purchase": "Spend money on a purchase", "value.action_class.agreement.accept": "Accept an agreement", "value.action_class.marketplace.offer": "Make an offer in a marketplace", "value.action_class.disclosure.personal": "Share personal details", "value.action_class.external_commitment.other": "Another kind of commitment to an outside party", "value.result.pass": "Passed", "value.result.pause": "Paused to ask first", "value.disposition.do": "Go ahead", "value.disposition.ask": "Ask first", "value.approver.user": "The person, directly", "value.approver.human": "Another person", "value.approver.standing_intent": "The person's standing instructions to the agent", "value.approver.policy": "A policy", "value.choice.proceed": "Go ahead", "value.direction.out": "Money going out", "value.direction.in": "Money coming in", "value.rail.card": "Card", "value.rail.lightning": "Lightning", "value.rail.simulated": "Simulated (test money)", "value.judge.rules": "Rules", "value.rules.not_configured": "No rules checker was set for this check", "value.rules.evaluated": "Checked by the rules", "value.rules.not_evaluated": "The rules could not be checked", "value.rules.not_applicable": "No rules apply to this step", "value.result.deny": "Refused by the rules", "value.approver.agent_card": "The agent's card", "step.log": "seq {seq} · leaf {leaf} · {log}", "step.no_log": "no place in a log was supplied", "step.record": "Record", "step.type": "Recorded as", "step.key": "Signing key", "steps.summary": "The steps this was read from", "records.step": "Step", "records.kind": "Recorded as", "records.disclosure": "Disclosure", "records.log": "Place in the log", "records.id": "Record", "records.report": "the sealed report", "records.unknown": "not in this copy", "provenance.by": "Produced by {producers}.", "provenance.then": ", then ", "provenance.unrecorded": "a producer that did not record its version", "provenance.the_producer": "the producer", "wording.provenance": "This page's words: wording pack {id}, sha256 {sha}.", "fact.deal_type": "Deal type", "fact.allowed": "Allowed", "fact.item": "Item", "fact.quantity": "Quantity", "fact.price": "Price", "fact.expect_close_by": "Expected to close by", "fact.asked.item": "You asked for (item)", "fact.asked.item.report": "The owner asked for (item)", "fact.asked.quantity": "You asked for (quantity)", "fact.asked.quantity.report": "The owner asked for (quantity)", "fact.action": "Action", "fact.action_class": "Action class", "fact.amount": "Amount", "fact.authorized_max": "Most you allowed", "fact.authorized_max.report": "Most the owner allowed", "fact.material_fields_changed": "Material details changed", "fact.offer_fields_changed": "Offer details changed", "fact.result": "Check result", "fact.differences": "Differences found", "fact.judge": "Checked by", "fact.rules": "Rules", "fact.notes": "Notes", "fact.approver": "Approved by", "fact.choice": "Choice", "fact.direction": "Direction", "fact.rail": "Paid by", "fact.class": "Statement class", "fact.source_kind": "Said by", "rung.book_witnessed": "Time-stamped by {witness} at {at} ({utc}), as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself.", "rung.book_witness_failed": "capsulectl verify reported that your own book's witness time-stamp did not verify, so no time-stamp is shown. This page did not check it itself.", "rung.book_witness_withheld": "capsulectl verify found no time-stamp for your own book from the witnesses it was given. That does not mean there is none. This page did not check it itself.", "rung.unreported": "No witness result was reported to this page.", "l2.bundle_digest": "The verifier's report is for the bundle with digest", "fact.disposition": "Disposition", "bilateral.title": "Deal report: both parties' copies", "bilateral.title.one_sided": "Deal report: one party's copy", "deal.agree": "Both copies name one deal: {deal}.", "deal.one": "This copy is for deal {deal}.", "deal.mismatch": "The copies name different deals ({deals}). They are not shown as one deal, and neither is picked.", "deal.unnamed": "A copy names no deal, so the copies are not shown as one deal.", "party.heading": "{role} copy ({member})", "party.role_undeclared": "Undeclared", "parts.own": "Each copy is shown from its own records. What one copy leaves out is never filled in from the other.", "joins.heading": "How the two copies line up", "joins.none": "The composition declares no join between the copies.", "sides.case.both": "Stamped by both sides: both records are here, and the verifier found they agree.", "sides.case.one_sided": "Your receipt only: the other side's record is missing.", "sides.case.one_sided.shared": "One side's record only: the other side's record is missing.", "sides.case.limit": "Your receipt only: the other side's record is not shared. That is the limit they set on what they share, and it says nothing against the deal.", "sides.case.limit.shared": "One side's record only: the other side's record is not shared. That is the limit they set on what they share, and it says nothing against the deal.", "sides.case.not_agreed": "Not stamped by both: the two records do not show one agreement.", "sides.ours": "Your side · in your book", "sides.ours.shared": "The report owner's side · in their book", "sides.ours.page": "This node's side · in its book", "sides.theirs": "Their side · as received", "sides.half": "{role}'s side · as received", "sides.missing.heading": "Their side", "sides.missing.none": "No record. Nothing from their side is in this receipt.", "sides.missing.absence": "No record. Their side was asked on {start} and had not answered by {end}. The ask is on record.", "sides.missing.refusal.policy_declined": "Not shared. Their side was asked for its record, and on {date} signed a reply that its sharing policy does not allow it. This is a limit on what they share. They have not refused the deal.", "row.both": "stamped by both", "row.one_sided": "your receipt only", "row.one_sided.page": "this node's receipt only", "row.none": "no record", "row.cannot_check": "this browser can't check the receipt", "row.did_not_verify": "the receipt did not verify: do not rely on it", "row.cannot_check_pointer": "Open the bundle in the offline viewer (capsule-viewer) to check it; this page shows no verdict for it.", "row.cannot_check.report_rule": "This page can't check this receipt, so it shows nothing from it and no verdict.", "row.cannot_check.report_rule_pointer": "To check it, run `capsulectl deal verify --bundle <file>` on the receipt file. It needs the capsulectl-deal plugin.", "row.cannot_check.report_rule.row": "can't be checked here", "row.page.receipt": "Receipt: {label}", "row.page.records_tied": "{tied} of {total} records in the receipt are tied to a signed checkpoint.", "actions.heading": "Tell your agent:", "actions.dispute": "“Dispute this”", "actions.send": "“Send me this receipt”", "actions.show_theirs": "“Show me the other side's receipt”", "actions.ask_again": "“Ask their side again”", "actions.ask": "“Ask their side for their receipt”", "join.line": "{basis}: declared {declared}; the verifier derived {derived}.", "join.basis.pre_agreed_identifier": "Pre-agreed identifier", "join.basis.shared_artifact_digest": "Shared artifact digest", "join.basis.issued_receipt": "Issued receipt", "join.basis.same_interval": "Same interval", "join.state.agree": "agree", "join.state.mismatch": "mismatch", "join.state.unjoined": "unjoined", "join.state.one_sided": "one-sided", "join.state.not_derivable": "not derivable", "join.result.join_state_mismatch": "What was declared is not what the verifier derived.", "corroboration.corroborating": "They agree, and their declared custody differs: corroborating, on declared custody only.", "corroboration.redundant": "They agree, but redundantly, not corroborating ({reasons}).", "l2.composition": "How the copies were put together, as the verifier checked it", "seller.title": "Sale receipt", "seller.depth.l1": "Why: what was authorised, said, offered, accepted and handed over", "seller.l0.item": "Sold", "seller.l0.amount": "Amount agreed", "seller.l0.payment": "Payment", "seller.l0.handover": "Handed over", "seller.payment.not_recorded": "Not recorded in this copy", "seller.handover.seller_observed": "By the seller's own record (not confirmed by the buyer or a carrier)", "seller.handover.none": "Not recorded", "seller.outcome.completed": "Closed: matches what was agreed", "seller.outcome.mismatch": "Closed: differs from what was agreed", "seller.outcome.not_selected": "Closed: not selected", "seller.outcome.open": "Open", "seller.fact.allowed_actions": "The agent may", "seller.fact.outcome_id": "Kind of deal", "seller.floor.committed": "The lowest price is sealed as a commitment. Its opening is in this copy; this page does not open it.", "seller.floor.withheld": "The lowest price is not in this copy.", "seller.floor.not_present": "No lowest price is sealed in this copy.", "seller.section.authorised.keep": "What you authorised", "seller.section.authorised.keep.report": "What the owner authorised", "seller.section.authorised.counterparty": "What the seller authorised their agent to do", "seller.section.authorised.adjudicator": "What the seller authorised their agent to do", "seller.section.represented.keep": "What your agent told this buyer", "seller.section.represented.keep.report": "What the owner's agent told this buyer", "seller.section.represented.counterparty": "What the seller's agent told you", "seller.section.represented.counterparty.report": "What the seller's agent told the buyer", "seller.section.represented.adjudicator": "What the seller's agent told the buyer", "seller.represented.none": "No statement to the buyer is recorded in this copy.", "seller.section.offers": "Offers, and which replaced which", "seller.offers.none": "No offer is disclosed in this copy.", "seller.offers.action": "Proposed", "seller.offers.amount": "Amount", "seller.offers.status": "Status", "seller.offers.note": "A later offer that names an earlier one replaces it; the earlier one can no longer be accepted.", "seller.offer.accepted": "accepted by the buyer", "seller.offer.superseded": "replaced by a later offer", "seller.offer.open": "not replaced", "seller.action.offer": "Offer", "seller.action.commit": "Commit", "seller.section.accepted.keep": "What the buyer accepted", "seller.section.accepted.counterparty": "What you accepted", "seller.section.accepted.counterparty.report": "What the buyer accepted", "seller.section.accepted.adjudicator": "What the buyer accepted", "seller.accepted.none": "No acceptance is recorded in this copy.", "seller.accepted.offer": "The acceptance names the offer at step", "seller.accepted.offer_not_here": "The acceptance names an offer that is not disclosed in this copy.", "seller.accepted.digest": "Digest of the exact offer accepted:", "seller.accepted.words": "The seller's agent recorded this acceptance as an observation. The buyer's words are sealed as a commitment and are not shown here.", "seller.section.payment": "Payment", "seller.payment.none": "This copy carries no payment record. Evidence the seller's agent recorded is listed with its source; this page does not read what it is about.", "seller.evidence.source": "Evidence from", "seller.evidence.verified": "marked verified", "seller.evidence.unverified": "not verified", "seller.evidence.withheld": "An evidence step is withheld from this copy.", "seller.section.handover": "Handover, and who says so", "seller.provenance.seller_observed": "The seller's own record:", "seller.provenance.seller_observed.recorded": "recorded (a claim by the seller)", "seller.provenance.seller_observed.withheld": "withheld from this copy", "seller.provenance.seller_observed.not_present": "not recorded", "seller.provenance.carrier": "A carrier's confirmation:", "seller.provenance.carrier.not_present": "none in this copy", "seller.provenance.buyer_confirmed": "The buyer's confirmation:", "seller.provenance.buyer_confirmed.not_present": "none in this copy (only the buyer's own records can carry it)", "seller.delivered.item": "Handed over (item)", "seller.delivered.quantity": "Handed over (quantity)", "seller.delivered.price": "At the price", "seller.handover.note": "A handover recorded by the seller alone shows what the seller says was handed over, not that the buyer received it.", "seller.address.committed": "An address was given. Its record carries the field's class and a commitment to the value, not the value.", "seller.address.withheld": "The address given is not in this copy.", "seller.address.not_present": "No address is recorded as given in this copy.", "seller.section.given.keep": "What your agent gave this buyer", "seller.section.given.keep.report": "What the owner's agent gave this buyer", "seller.section.given.counterparty": "What the seller's agent gave you", "seller.section.given.counterparty.report": "What the seller's agent gave the buyer", "seller.section.given.adjudicator": "What the seller's agent gave the buyer", "seller.section.obligations": "Open obligations", "seller.obligations.none": "No open obligation is recorded in this copy.", "seller.not_selected": "The seller closed this thread without a sale to this buyer. Nothing was committed or handed over in it.", "seller.threads": "This copy covers one buyer's thread. Other buyers' threads of the same sale are not in it.", "seller.claims.handover": "It does not show that the buyer received anything: a handover recorded by the seller is the seller's claim.", "seller.section.chain": "Offers and what they replaced", "seller.chain.digest": "Record digest", "seller.chain.supersedes": "Replaces step", "seller.chain.superseded_by": "Replaced by step", "seller.section.commitments": "Commitments the disclosed records seal", "seller.commitment.field": "Field", "seller.commitment.value": "Commitment", "seller.commitment.state": "Opening", "seller.commitment.opened": "opened on this page", "seller.commitment.sealed": "not opened on this page", "seller.section.legs": "Settlement legs", "seller.leg.name": "Leg", "seller.leg.state": "In this copy", "seller.leg.agreement": "Agreement", "seller.leg.payment": "Payment", "seller.leg.handover": "Handover", "seller.leg.recorded": "recorded", "seller.leg.none": "not recorded", "seller.section.keys": "Signing keys", "seller.asked.opened": "✓ These are the seller's exact words, sealed when the sale opened.", "seller.asked.committed": "The seller's words are sealed as a commitment, and their opening is not in this copy, so they are not checked here.", "seller.asked.mismatch": "⚠️ The seller's words could not be checked against the sealed record.", "seller.asked.withheld": "The seller's words are withheld from this copy.", "seller.asked.not_present": "The sale's opening step is not in this copy.", "seller.fact.asked.item": "To sell (item)", "seller.fact.asked.quantity": "To sell (quantity)", "seller.fact.item": "Item", "seller.fact.price": "Asking price", "seller.shared.counterparty": "A shared copy for the buyer. What it leaves out is listed under Why.", "seller.shared.adjudicator": "A shared copy for an adjudicator. What it leaves out is listed under Why.", "seller.section.left_out": "What this copy leaves out", "class.address": "address", "class.credential": "login", "class.email": "email", "class.home_address": "home address", "class.id_document": "ID document", "class.name": "name", "class.other_contact": "contact details", "class.payment_card": "payment card", "class.phone": "phone", "class.pickup_area": "pickup area", "class.pickup_location": "pickup location", "class.verification_code": "verification code", "section.journey": "How it went", "journey_by.user": "You", "journey_by.user.report": "Owner", "journey_by.agent": "Your agent", "journey_by.agent.report": "Owner's agent", "journey_by.other": "The other side", "journey_by.unknown": "Someone", "journey_note": "Who moved, and each row's names, items and amounts, come from the report sealed in this file; open a row to see the step it came from. The rest of the wording comes from this page and is not sealed.", "journey.agent.act.cancel": "Cancelled", "journey.agent.act.commit": "Booked", "journey.agent.act.offer": "Made an offer", "journey.agent.act.other": "Done", "journey.agent.act.pay": "Paid {amount}", "journey.agent.act.pay.no_amount": "Paid", "journey.agent.act.pay.within": "Paid {amount} within your {limit} limit", "journey.agent.act.pay.within.report": "Paid {amount} within the owner's {limit} limit", "journey.agent.act.sign": "Signed", "journey.agent.asked_seller": "Asked the seller", "journey.agent.checked": "Checked", "journey.agent.chose": "Chose for you", "journey.agent.chose.report": "Chose for the owner", "journey.agent.chose.item": "Chose {item} for you", "journey.agent.chose.item.report": "Chose {item} for the owner", "journey.agent.couldnt": "Couldn't ({reason})", "journey.agent.couldnt.who": "Couldn't ({who} {reason})", "journey.agent.options": "Showed you {count} options", "journey.agent.options.report": "Showed the owner {count} options", "journey.agent.paused": "Waited for your OK", "journey.agent.paused.report": "Waited for the owner's OK", "journey.agent.recommended": "Recommended", "journey.agent.searched": "Searched", "journey.agent.told": "Told {who} your {classes}", "journey.agent.told.report": "Told {who} the owner's {classes}", "journey.other.changed": "Seller changed", "journey.other.said": "Seller said", "journey.reason.blocked": "blocked", "journey.reason.cannot_ship_here": "can't ship here", "journey.reason.out_of_stock": "out of stock", "journey.reason.payment_declined": "payment declined", "journey.reason.sign_in_required": "sign-in", "journey.reason.site_error": "site error", "journey.user.approved.commit": "OK'd agreeing to {amount}", "journey.user.approved.offer": "OK'd offering {amount}", "journey.user.approved.other": "OK'd it", "journey.user.approved.pay": "OK'd paying {amount}", "journey.user.approved.share_contact": "OK'd sharing your {classes}", "journey.user.approved.share_contact.report": "OK'd sharing the owner's {classes}", "journey.user.asked": "Asked", "journey.user.called_off": "Called off", "journey.user.changed": "Changed what you asked", "journey.user.changed.report": "Changed what the owner asked", "journey.user.declined.commit": "Said no to agreeing to {amount}", "journey.user.declined.offer": "Said no to offering {amount}", "journey.user.declined.other": "Said no", "journey.user.declined.pay": "Said no to paying {amount}", "journey.user.declined.share_contact": "Said no to sharing your {classes}", "journey.user.declined.share_contact.report": "Said no to sharing the owner's {classes}", "journey.user.narrowed": "Narrowed", "journey.user.picked": "Picked", "journey.user.raised": "Raised", "journey.user.switched": "Switched to {who}", "journey.user.switched.item": "Switched to {item}", "deal.title": "Receipt report", "deal.depth.l1": "Terms: what each term stands at", "deal.state.started": "Started", "deal.state.awaiting_agreement": "Awaiting agreement", "deal.state.not_started": "Not started", "deal.report.scope": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal.", "deal.settled": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it.", "deal.start.by": "Started by: {by}.", "deal.start.by.offerer_in_time": "the offerer, in time", "deal.start.by.acceptor_named": "the acceptor, as named", "deal.start.by.first_act": "the first act", "deal.local": "Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word.", "deal.rows.not_started": "Nothing is agreed yet, so there are no terms to show.", "deal.rows.withheld": "The holder has not shared each term's status with this reader.", "deal.rows.none": "The agreement lists no terms.", "deal.rows.note": "Each status is the one the holder computed. This page shows it and does not compute it.", "deal.as_of": "As the holder computed it at {at}. This is not a time any witness attests.", "deal.no_time": "no time", "deal.date.not_set": "not set", "deal.section.rows": "Terms", "deal.section.basis": "The records each term's status rests on", "deal.section.rests": "What this report rests on", "deal.col.row": "Term", "deal.col.owed_by": "Owed by", "deal.col.status": "Status", "deal.col.due": "Due", "deal.col.window_end": "Contest window ends", "deal.col.detail": "Detail", "deal.col.record": "Record", "deal.col.side": "Side", "deal.col.time": "Time", "deal.basis.none": "No record is listed for any term.", "deal.status.not_reached": "Not reached", "deal.status.not_due": "Not due", "deal.status.no_statement": "No statement", "deal.status.waiting": "Waiting for the other side", "deal.status.uncontested": "Uncontested", "deal.status.agreed_so_far": "Both say the same so far", "deal.status.agreed": "Both say the same", "deal.status.in_disagreement": "Statements differ", "deal.status.in_dispute": "In dispute", "deal.status.ruled": "Ruled", "deal.value.met": "met", "deal.value.not_met": "not met", "deal.remedy.none": "none ordered", "deal.remedy.due": "due", "deal.remedy.made": "recorded as made", "deal.remedy.not_honoured": "not honoured", "deal.remedy.not_counted": "a payment, ordered by the ruling; not checked yet", "deal.row.remedy_made": "The owing side has recorded making it (not checked).", "deal.check.passed": "passed", "deal.check.failed": "failed", "deal.check.not_run": "not run", "deal.check.not_recomputed": "not recomputed", "deal.row.value": "Statement: {value}", "deal.row.remedy": "Remedy: {remedy}", "deal.row.ruling": "Ruling: {value}, against the {side}", "deal.row.check": "Payment check: {check}", "deal.pack_digest": "The terms pack the agreement cites, by digest:", "deal.rests.own": "The holder's own log held {size} records.", "deal.rests.counterparty": "The other side's log was counted to {counted} records.", "deal.rests.fork": "The other side's log forks at record {at}.", "deal.rests.layer": "The other side keeps its own record of this deal.", "deal.rests.no_layer": "The other side does not keep its own record of this deal.", "deal.rests.witnesses": "Witnesses the agreement names: {count}.", "deal.named_witness.yes": "yes", "deal.named_witness.no": "no", "deal.col.named_witness": "Time from a named witness", "deal.row.ruling.bare": "Ruling: {value}", "deal.side.buyer": "buyer", "deal.side.seller": "seller", "deal.section.legs": "Payment records the terms' statuses rest on", "deal.col.leg_side": "Side, as the report names it", "deal.col.leg": "Leg", "deal.col.leg_status": "Status as recorded", "deal.col.amount": "Amounts as recorded", "deal.col.observed": "Observed at (as recorded)", "deal.col.payment_ref": "Payment reference", "deal.legs.note": "Each line is a payment record a term relies on, shown as the record states it. This page does not check who signed each record, does not match the legs and does not judge the payment; the payment check above is the only verdict.", "deal.col.sealer": "Sealer, as recorded", "deal.legs.note.withheld": "This copy withholds the terms, so these payment records are not tied to a term. They are the records the report's holder says its terms rest on, shown as each states it. This page does not check who signed them and does not judge the payment.", "deal.legs.none.withheld": "This copy withholds the terms. Among the records the report's holder says they rest on, there is no payment record.", "deal.legs.none": "No payment record is among the records the terms' statuses rest on.", "deal.legs.why.statements": "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment.", "deal.legs.why.mixed": "These terms rest on what the sides say and on other deal records. None is a payment record, so this page does not show or check a payment.", "deal.legs.why.other": "These terms rest on deal records, none of them a payment record, so this page does not show or check a payment.", "deal.legs.why.no_records": "No term's status rests on any record yet, so there is no payment record to show.", "deal.state.terms": "Terms: {tally}", "deal.state.terms.count": "{status} ({count} of {total})", "deal.term.paid_as_agreed": "Payment as agreed", "deal.term.delivered": "Delivery", "deal.term.as_described": "Item as described", "deal.named_witness.report.own": "yes, as your report states it", "settlement.lightning.proof": "Payment: settled on Lightning; this page checked its proof against its invoice.", "settlement.lightning.failed": "Payment: recorded as settled on Lightning, but its proof did not match its invoice when this page checked it.", "settlement.lightning.sealed": "Payment: recorded as settled on Lightning; its proof is sealed in this file, so this page can't check it.", "settlement.lightning.withheld": "Payment: recorded as settled on Lightning; this copy does not show its proof.", "settlement.lightning.partial": "Payment: recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them.", "settlement.lightning.final": "Payment: the payee's wallet reported it final on Lightning; this file carries no proof to check.", "settlement.x402": "Payment: settled on x402; this page does not check the on-chain record.", "settlement.other": "Payment: recorded as settled; this page can't check payments on this rail.", "settlement.missing": "Payment: a {rail} payment; no settlement record is in this file.", "settlement.card": "Payment: a card payment; the card processor's report is not in this file.", "settlement.size": " Size: {band}.", "size.between": "{low} – {high}", "size.under": "under {amount}", "size.range": "{low} to under {high} {currency}", "deal.surface.title": "Deal receipt", "deal.surface.title.buyer": "Order receipt", "deal.surface.title.seller": "Sale receipt", "deal.surface.tag.private": "Private: your copy", "deal.surface.tag.shared": "Shared copy", "deal.surface.download": "Download proof file", "deal.top.settled": "Settled, as your records show", "deal.top.settled.report": "Settled, as the holder's records show", "deal.top.settled.seller": "Sale settled, as your records show", "deal.top.settled.seller.report": "Sale settled, as the holder's records show", "deal.top.ruled_not_met": "Ruled: {term} not met", "deal.top.remedied": "Settled after a remedy: {term} not met, remedy made", "deal.top.none_due": "Settled: no term came due", "deal.top.paid_waiting": "Payment recorded. Waiting for the seller to say it too", "deal.top.paid_waiting.seller": "Payment recorded as received. Waiting for the buyer to say it too", "deal.top.waiting": "Waiting for the seller to say it too", "deal.top.waiting.seller": "Waiting for the buyer to say it too", "deal.top.in_dispute": "In dispute before the adjudicator", "deal.top.in_disagreement": "The two sides' statements differ", "deal.top.state.awaiting_agreement": "Awaiting agreement", "deal.top.state.not_started": "Not started", "deal.seal.done": "Done: recorded as settled, and both sides say the same", "deal.seal.not_as_agreed": "Didn't go as agreed", "deal.seal.short": "Intact, not true: the seal says the records are unchanged, not that what they say is true.", "deal.card.status": "Status", "deal.card.status.done": "Settled", "deal.card.as_of": "As of {at}", "deal.card.other.seller": "Seller's side", "deal.card.other.buyer": "Buyer's side", "deal.card.other.verified": "Their signed agreement: capsulectl verify reported it verified", "deal.card.other.none": "Not in this copy", "deal.stamp.recorded": "RECORDED", "deal.stamp.recorded.filled": "Checkpointed", "deal.stamp.recorded.partial": "Checkpointed through step {k} of {n}", "deal.stamp.recorded.open": "Not checkpointed yet", "deal.stamp.recorded.not_checked": "Not checked here", "deal.stamp.recorded.failed": "Didn't verify", "deal.stamp.time_stamped": "TIME-STAMPED", "deal.stamp.time_stamped.filled": "{witness} · {at}, as capsulectl verify reported", "deal.stamp.time_stamped.open": "Not time-stamped yet", "deal.stamp.time_stamped.not_checked": "Not checked here", "deal.stamp.time_stamped.failed": "Didn't verify", "deal.stamp.countersigned": "COUNTERSIGNED", "deal.stamp.countersigned.open": "Not countersigned", "deal.stamp.countersigned.not_checked": "Not checked here", "deal.section.steps": "What happened, step by step", "deal.steps.lede": "{count} sealed steps in this copy. Open one to see exactly what was recorded.", "deal.steps.none": "This copy carries no sealed steps.", "deal.step.withheld": "A sealed step whose contents are not in this copy", "deal.step.agree": "Deal agreed", "deal.step.settle.payer": "Payment recorded as settled: {amount}", "deal.step.settle.payee": "Payment recorded as received: {amount}", "deal.step.statement": "You said: {said}", "deal.step.statement.report": "The holder said: {said}", "deal.step.other": "A {kind} record", "deal.drawer.kind": "Kind", "deal.drawer.kind.withheld": "not in this copy", "deal.drawer.time": "When", "deal.drawer.leg": "Payment", "deal.drawer.payment_ref": "Payment reference", "deal.drawer.role": "Side", "deal.drawer.record": "Record", "deal.drawer.seq": "seq {seq}", "deal.drawer.leaf": "leaf {leaf}", "deal.section.proof": "Is this record intact?", "deal.proof.lede.passed": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself.", "deal.proof.lede.partial": "capsulectl verify passed every test it ran when this page was made; a test marked – was not run on this copy. The page shows its answer; it did not re-check by itself.", "deal.proof.lede.failed": "No. capsulectl verify reported a test that failed.", "deal.proof.lede.none": "This page was not given capsulectl verify's answer for each test. Download the proof file and check it yourself.", "deal.proof.producer_signatures": "Signed by the agent's device", "deal.proof.interval_coverage": "No step missing from first to last", "deal.proof.graph_closure": "Each step links to the one before", "deal.proof.per_record_membership": "Every step is in this deal's log", "deal.proof.checkpoint": "The log's summary adds up", "deal.proof.witness.filled": "Outside time stamp: {witness} at {at}, as capsulectl verify reported on your own book", "deal.proof.witness.open": "Outside time stamp: not in this copy", "deal.proof.witness.not_checked": "Outside time stamp: not checked here", "deal.proof.witness.failed": "Outside time stamp: didn't verify", "deal.proof.witness.note": "Your History card's checkpoint may carry it.", "deal.proof.witness.note.report": "The holder's History card's checkpoint may carry it.", "deal.proof.status.pass": "passed", "deal.proof.status.fail": "failed", "deal.proof.status.absent": "not in this copy", "deal.proof.status.withheld": "not run on this copy", "deal.check.title": "Check it yourself", "deal.check.no_command": "Download the proof file and run capsulectl deal verify --bundle on it.", "deal.check.expect": "Expect: {verdict}, fingerprint {fingerprint}.", "deal.section.not_proven": "What this does not prove", "deal.not_proven.true": "That what the agents said was true. Only that it wasn't changed after sealing.", "deal.not_proven.who": "Who made the records. The signing key is on your agent's machine.", "deal.not_proven.who.report": "Who made the records. The signing key is on the holder's agent's machine.", "deal.not_proven.goods": "That the goods shipped or arrived.", "deal.not_proven.outside": "Anything outside this deal.", "deal.section.else": "What else is in this receipt", "deal.else.problems": "Problems spotted", "deal.else.problems.none": "None", "deal.else.whose": "Whose records these are", "deal.else.whose.text": "Only your side's records are here. The seller keeps its own copy, signed by them.", "deal.else.whose.text.report": "Only the holder's side's records are here.", "deal.else.whose.text.seller": "Only your side's records are here. The buyer keeps its own copy, signed by them.", "deal.else.half": "The other side's agreement", "deal.else.half.text": "This copy carries the seller's signed agreement, which capsulectl verify checked. It covers their agreement only, not anything after it.", "deal.else.half.text.seller": "This copy carries the buyer's signed agreement, which capsulectl verify checked. It covers their agreement only, not anything after it.", "deal.footer.times": "Times are in your time zone.", "deal.footer.private": "This file is your private copy: to show this deal to someone, send them the copy made for them.", "deal.footer.shared": "This is a shared copy of the holder's records.", "deal.footer.after": "Records sealed after {at} are not in this receipt.", "deal.depth.l1.checkers": "For checkers: every sealed record", "deal.depth.l2.technical": "Technical details", "deal.section.rungs": "What this copy carries", "deal.col.step": "Step", "deal.col.what": "What", "deal.col.kind": "Kind", "deal.col.place": "Log position (seq · leaf)", "deal.col.shown": "Shown", "deal.inventory.shown": "Shown", "deal.inventory.withheld": "Withheld", "deal.inventory.log": "Log", "deal.inventory.fingerprint": "Proof fingerprint", "deal.inventory.profile": "Profile checked against", "deal.inventory.producer": "Producer version", "deal.inventory.not_recorded": "not recorded", "deal.inventory.pack": "Wording pack", "deal.step.perform": "Recorded as done: {act}", "deal.else.whose.text.seller.report": "Only the holder's side's records are here.", "deal.else.half.text.report": "This copy carries the other side's signed agreement, which capsulectl verify checked. It covers their agreement only, not anything after it.", "deal.card.payment": "Payment", "deal.card.payment.status": "Recorded as {status}", "deal.card.payment.several": "{count} payment records; see the steps", "deal.step.settle.status": "Payment recorded as {status}: {amount}", "deal.step.settle.refund": "Refund recorded as {status}: {amount}", "deal.check.page": "On this page's own file, as capsulectl gave it:", "deal.check.download": "On the downloaded proof file:", "deal.stamp.countersigned.filled": "{signer} signed this record too · {at}, by their clock", "deal.stamp.countersigned.failed": "Didn't verify", "deal.stamp.countersigned.self": "Signed by the producer only, not by another party", "deal.stamp.countersigned.unresolved": "Signed by an unlisted signer", "deal.else.problems.withheld": "Not shown: each term's status is withheld from this reader", "deal.card.payment.settled": "Recorded as settled", "deal.card.payment.received": "Recorded as received", "deal.steps.lede.one": "1 sealed step in this copy. Open it to see exactly what was recorded.", "deal.top.all.not_due": "Nothing is due yet", "deal.top.all.not_reached": "No term has come due", "deal.top.all.no_statement": "No one has said yet whether the terms were met", "deal.top.all.agreed_so_far": "Both sides say the same so far; still open to dispute", "deal.top.all.agreed": "Both sides say the same", "deal.top.all.uncontested": "One side has said, and the other has not contested it so far"}; // @generated WORDS
+  var PACK = {"id": "capsuleviewer.receipt.wording.en/v1", "sha256": "4e3f08bf0fd31425215ad2d3a4158a2b35ccc5057f6a494be4fa878d24e051d4"}; // @generated PACK
   var KIT_CSS = "/* SPDX-License-Identifier: Apache-2.0 */\n/*\n * kit.css -- the presentation component kit's stylesheet.\n *\n * The token block below is generated from capsule_viewer/kit/tokens.py\n * (python -m capsule_viewer.kit tokens --write); tests/test_kit_tokens.py\n * fails if the two disagree. Every colour in the component rules is a\n * var(--cv-*) reference -- the same test refuses a literal colour outside the\n * generated block.\n *\n * Phone behaviour lives here, in the primitives: each responsive component is\n * its own size container and reflows on ITS width (@container), so a module\n * that places a MetricGrid or DataTable in a narrow column gets the phone\n * layout without writing a media query. Nothing in the kit scrolls the page\n * sideways: long tokens (digests, ids) wrap anywhere.\n */\n/* BEGIN GENERATED TOKENS (capsule_viewer.kit.tokens) -- do not edit by hand */\n:root {\n  --cv-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n  --cv-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;\n  --cv-font-size-sm: 0.8125rem;\n  --cv-font-size-md: 0.9375rem;\n  --cv-font-size-lg: 1.125rem;\n  --cv-line-height: 1.5;\n  --cv-space-1: 0.25rem;\n  --cv-space-2: 0.5rem;\n  --cv-space-3: 0.75rem;\n  --cv-space-4: 1rem;\n  --cv-space-5: 1.5rem;\n  --cv-radius: 0.5rem;\n  --cv-radius-pill: 999px;\n  --cv-color-text: #1b1f27;\n  --cv-color-text-muted: #4d5564;\n  --cv-color-surface: #ffffff;\n  --cv-color-surface-sunken: #f4f5f7;\n  --cv-color-border: #d3d7de;\n  --cv-color-accent: #2445a8;\n  --cv-color-positive-fg: #17603a;\n  --cv-color-positive-bg: #e6f3eb;\n  --cv-color-negative-fg: #a31d1d;\n  --cv-color-negative-bg: #fbe9e9;\n  --cv-color-caution-fg: #6f4700;\n  --cv-color-caution-bg: #fcf1dc;\n  --cv-color-neutral-fg: #3d4452;\n  --cv-color-neutral-bg: #eceef2;\n  --cv-color-info-fg: #1f3c94;\n  --cv-color-info-bg: #e7ecfb;\n}\n/* END GENERATED TOKENS */\n\n.cv-kit { font-family: var(--cv-font-sans); font-size: var(--cv-font-size-md); line-height: var(--cv-line-height); color: var(--cv-color-text); background: var(--cv-color-surface); overflow-wrap: anywhere; }\nbody.cv-kit { margin: 0; }\n.cv-page { max-width: 60rem; margin: 0 auto; padding: var(--cv-space-5) var(--cv-space-4); }\n.cv-kit *, .cv-kit *::before, .cv-kit *::after { box-sizing: border-box; }\n.cv-kit :where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure) { margin: 0; padding: 0; }\n.cv-kit :where(ul, ol) { list-style: none; }\n.cv-mono { font-family: var(--cv-font-mono); font-size: var(--cv-font-size-sm); }\n.cv-muted { color: var(--cv-color-text-muted); }\n\n/* Section */\n.cv-section { margin: 0 0 var(--cv-space-5); }\n.cv-section__title { font-size: var(--cv-font-size-lg); font-weight: 600; margin-bottom: var(--cv-space-3); }\n.cv-section__body { display: flex; flex-direction: column; gap: var(--cv-space-3); min-width: 0; }\n\n/* MetricGrid: as many columns as fit, never narrower than the label needs; one column on a phone. */\n.cv-metrics-wrap { container-type: inline-size; }\n.cv-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); gap: var(--cv-space-3); }\n.cv-metric { min-width: 0; border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); padding: var(--cv-space-3); background: var(--cv-color-surface-sunken); }\n.cv-metric__label { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }\n.cv-metric__value { font-size: var(--cv-font-size-lg); font-weight: 600; }\n.cv-metric__note { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }\n@container (max-width: 24rem) { .cv-metrics { grid-template-columns: 1fr; } }\n\n/* DataTable: a real table when there is room; stacked label/value rows when there is not. */\n.cv-table-wrap { container-type: inline-size; }\n.cv-table { width: 100%; border-collapse: collapse; font-size: var(--cv-font-size-sm); }\n.cv-table caption { text-align: left; font-weight: 600; padding-bottom: var(--cv-space-2); }\n.cv-table th, .cv-table td { text-align: left; vertical-align: top; padding: var(--cv-space-2); border-bottom: 1px solid var(--cv-color-border); min-width: 0; }\n.cv-table th { color: var(--cv-color-text-muted); font-weight: 600; background: var(--cv-color-surface-sunken); }\n/* A column header is one short word: never broken mid-word to squeeze a wide table (\"Ste\" over \"p\"). */\n.cv-table th { overflow-wrap: normal; }\n@container (max-width: 40rem) {\n  .cv-table, .cv-table tbody, .cv-table tr, .cv-table td { display: block; width: 100%; }\n  .cv-table caption { display: block; }\n  .cv-table thead { display: none; }\n  .cv-table tr { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); margin-bottom: var(--cv-space-2); }\n  .cv-table td { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--cv-space-2); }\n  .cv-table td::before { content: attr(data-label); color: var(--cv-color-text-muted); font-weight: 600; }\n  .cv-table tr > td:last-child { border-bottom: 0; }\n}\n\n/* CalendarGrid: always seven columns; the cells shrink, the text wraps. */\n.cv-calendar { font-size: var(--cv-font-size-sm); }\n.cv-calendar__title { font-weight: 600; margin-bottom: var(--cv-space-2); }\n.cv-calendar__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }\n.cv-calendar__dow { text-align: center; color: var(--cv-color-text-muted); font-weight: 600; padding: var(--cv-space-1) 0; }\n.cv-calendar__day { min-width: 0; min-height: 3rem; border: 1px solid var(--cv-color-border); border-radius: 4px; padding: 2px var(--cv-space-1); background: var(--cv-color-surface); }\n.cv-calendar__day--blank { border-color: transparent; background: transparent; }\n.cv-calendar__num { font-weight: 600; }\n.cv-calendar__mark { display: block; font-size: 0.6875rem; line-height: 1.25; border-radius: 3px; padding: 0 2px; }\n\n/* Tones shared by badges, pills, calendar marks and verification outcomes. */\n.cv-tone--positive { color: var(--cv-color-positive-fg); background: var(--cv-color-positive-bg); }\n.cv-tone--negative { color: var(--cv-color-negative-fg); background: var(--cv-color-negative-bg); }\n.cv-tone--caution { color: var(--cv-color-caution-fg); background: var(--cv-color-caution-bg); }\n.cv-tone--neutral { color: var(--cv-color-neutral-fg); background: var(--cv-color-neutral-bg); }\n.cv-tone--info { color: var(--cv-color-info-fg); background: var(--cv-color-info-bg); }\n\n/* Receipt sides: ours blue, theirs amber (always \"as received\"), a missing side grey and dashed. No side is ever the negative tone: one side missing is not a finding. */\n.cv-sides { display: flex; flex-direction: column; gap: var(--cv-space-2); margin: 0 0 var(--cv-space-3); }\n.cv-sides__case { padding: var(--cv-space-1) var(--cv-space-3); border-radius: var(--cv-radius); font-weight: 600; font-size: var(--cv-font-size-sm); }\n.cv-half { min-width: 0; border-radius: var(--cv-radius); padding: var(--cv-space-1) var(--cv-space-3) var(--cv-space-2); border: 1px solid var(--cv-color-border); }\n.cv-half > .cv-section { margin-bottom: 0; }\n.cv-half__label { font-size: var(--cv-font-size-sm); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cv-color-text-muted); margin-bottom: var(--cv-space-1); }\n.cv-half--ours { background: var(--cv-color-info-bg); border-color: var(--cv-color-info-fg); }\n.cv-half--theirs { background: var(--cv-color-caution-bg); border-color: var(--cv-color-caution-fg); }\n.cv-half--missing { background: var(--cv-color-neutral-bg); border: 1px dashed var(--cv-color-neutral-fg); }\n.cv-actions { display: flex; flex-wrap: wrap; column-gap: var(--cv-space-3); font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-info-fg); }\n.cv-actions__heading { font-weight: 400; color: var(--cv-color-text-muted); }\n\n/* DisclosureBadge and VerdictPill. The pill is scoped to the kit wrapper: the page shell's verification banner is a .cv-pill outside it, and a module's stylesheet must not restyle the banner (the frame check refuses the module). */\n.cv-badge, .cv-kit .cv-pill { display: inline-block; max-width: 100%; font-size: var(--cv-font-size-sm); font-weight: 600; border-radius: var(--cv-radius-pill); padding: 0 var(--cv-space-2); border: 1px solid currentColor; }\n.cv-badge { letter-spacing: 0.02em; }\n/* A state label breaks between words, never inside one. */\n.cv-badge, .cv-kit .cv-pill { overflow-wrap: normal; }\n.cv-refusal { color: var(--cv-color-negative-fg); background: var(--cv-color-negative-bg); border: 1px dashed currentColor; }\n\n/* CitationList */\n.cv-citations { display: flex; flex-direction: column; gap: var(--cv-space-2); counter-reset: cv-cite; }\n.cv-citation { counter-increment: cv-cite; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--cv-space-2); }\n.cv-citation::before { content: \"[\" counter(cv-cite) \"]\"; color: var(--cv-color-text-muted); }\n.cv-citation__ref { display: block; color: var(--cv-color-text-muted); }\n\n/* Drilldown: native details/summary -- opens with no script; prints open. */\n.cv-drilldown { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); background: var(--cv-color-surface); }\n.cv-drilldown > summary { cursor: pointer; padding: var(--cv-space-2) var(--cv-space-3); font-weight: 600; color: var(--cv-color-accent); }\n.cv-drilldown__body { padding: 0 var(--cv-space-3) var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-2); min-width: 0; }\n\n/* EvidenceDetails */\n.cv-evidence { display: flex; flex-direction: column; gap: var(--cv-space-2); }\n.cv-evidence__item { border-left: 3px solid var(--cv-color-border); padding-left: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-1); }\n.cv-evidence__head { display: flex; flex-wrap: wrap; gap: var(--cv-space-2); align-items: baseline; }\n.cv-evidence__label { font-weight: 600; }\n\n/* VerificationDetails */\n.cv-verification { display: flex; flex-direction: column; gap: var(--cv-space-2); }\n.cv-verification__outcome { border-radius: var(--cv-radius); padding: var(--cv-space-2) var(--cv-space-3); font-weight: 600; }\n.cv-checks { display: flex; flex-direction: column; gap: var(--cv-space-1); }\n.cv-check { display: flex; flex-wrap: wrap; gap: var(--cv-space-2); align-items: baseline; }\n\n/* PartyCard */\n.cv-party { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); padding: var(--cv-space-3); background: var(--cv-color-surface-sunken); }\n.cv-party__role { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }\n.cv-party__name { font-weight: 600; }\n.cv-party__facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--cv-space-1) var(--cv-space-3); margin-top: var(--cv-space-2); font-size: var(--cv-font-size-sm); }\n.cv-party__facts dt { color: var(--cv-color-text-muted); }\n.cv-party-wrap { container-type: inline-size; }\n@container (max-width: 20rem) { .cv-party__facts { grid-template-columns: minmax(0, 1fr); } }\n\n/* Timeline: entries in the order given. */\n.cv-timeline { border-left: 2px solid var(--cv-color-border); padding-left: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-3); }\n.cv-timeline__at { display: block; color: var(--cv-color-text-muted); }\n.cv-timeline__label { font-weight: 600; }\n\n@media print {\n  .cv-kit { background: none; }\n  .cv-drilldown > summary { color: var(--cv-color-text); }\n  /* A closed drilldown still prints its body (Chromium's details-content). */\n  .cv-drilldown::details-content { content-visibility: visible; display: block; }\n  .cv-section, .cv-metric, .cv-party, .cv-table tr, .cv-evidence__item { break-inside: avoid; }\n}\n"; // @generated KIT_CSS
   var KIT_DARK_CSS = "/* SPDX-License-Identifier: Apache-2.0 */\n/*\n * kit-dark.css -- GENERATED from tokens/tokens.json (\"kit-dark\") by\n * scripts/gen-tokens.py. Do not edit by hand.\n *\n * Inserted after kit.css by the go/receipt modules only, as a stylesheet of\n * their own, and scoped to a receipt ([data-receipt-module]), so no other\n * kit module's card changes. Each colour token becomes\n * light-dark(<light>, <dark>), which follows the colour scheme the host page\n * declares (color-scheme), not the reader's OS: a host that declares\n * \"light dark\" gets the dark values in dark mode, and a host that declares\n * none stays light. A browser without light-dark() skips the @supports block\n * and keeps kit.css's light values.\n */\n@supports (color: light-dark(#000, #fff)) {\n  [data-receipt-module] {\n    --cv-color-text: light-dark(#1b1f27, #e6e9ef);\n    --cv-color-text-muted: light-dark(#4d5564, #aab1bd);\n    --cv-color-surface: light-dark(#ffffff, #16191f);\n    --cv-color-surface-sunken: light-dark(#f4f5f7, #1e222a);\n    --cv-color-border: light-dark(#d3d7de, #3a414d);\n    --cv-color-accent: light-dark(#2445a8, #9db4ff);\n    --cv-color-positive-fg: light-dark(#17603a, #7fd8a2);\n    --cv-color-positive-bg: light-dark(#e6f3eb, #12301f);\n    --cv-color-negative-fg: light-dark(#a31d1d, #ff9a92);\n    --cv-color-negative-bg: light-dark(#fbe9e9, #3b1a18);\n    --cv-color-caution-fg: light-dark(#6f4700, #f0c674);\n    --cv-color-caution-bg: light-dark(#fcf1dc, #33270d);\n    --cv-color-neutral-fg: light-dark(#3d4452, #c7ccd6);\n    --cv-color-neutral-bg: light-dark(#eceef2, #262b34);\n    --cv-color-info-fg: light-dark(#1f3c94, #a9bdff);\n    --cv-color-info-bg: light-dark(#e7ecfb, #1b2546);\n  }\n}\n"; // @generated KIT_DARK_CSS
-  var RECEIPT_CSS = "/* SPDX-License-Identifier: Apache-2.0 */\n/*\n * receipt.css -- the receipt modules' own rules, inserted after kit.css and\n * kit-dark.css by the go/receipt modules only, and scoped to a receipt\n * ([data-receipt-module]), so no other kit module's card changes.\n *\n * kit.css lets text wrap anywhere so a long id never pushes a table sideways.\n * Beside a 64-character record id that squeezed a short word to \"buye / r\".\n * A side or a term name breaks between words, never inside one (#429).\n */\n[data-receipt-module] .cv-receipt-word { overflow-wrap: normal; }\n"; // @generated RECEIPT_CSS
+  var RECEIPT_CSS = "/* SPDX-License-Identifier: Apache-2.0 */\n/*\n * receipt.css -- the receipt modules' own rules, inserted after kit.css and\n * kit-dark.css by the go/receipt modules only, and scoped to a receipt\n * ([data-receipt-module]), so no other kit module's card changes.\n *\n * kit.css lets text wrap anywhere so a long id never pushes a table sideways.\n * Beside a 64-character record id that squeezed a short word to \"buye / r\".\n * A side or a term name breaks between words, never inside one (#429).\n */\n[data-receipt-module] .cv-receipt-word { overflow-wrap: normal; }\n\n/*\n * The v1 receipt's top surface (#382, Steven's design): a header, a hero card\n * with the seal and three cards, the stamps, then the steps beside the proof\n * panel. One column under 720px, so a phone shows the proof panel and a step's\n * drawer on one narrow screen; long ids and the verify line wrap.\n */\n[data-receipt-module] .cv-rcpt { display: grid; gap: 0.875rem; }\n[data-receipt-module] .cv-rcpt-header { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }\n[data-receipt-module] .cv-rcpt-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }\n[data-receipt-module] .cv-rcpt-title { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }\n[data-receipt-module] .cv-rcpt-tag { border-radius: var(--cv-radius-pill); padding: 0.125rem 0.625rem; font-size: var(--cv-font-size-sm); background: var(--cv-color-neutral-bg); color: var(--cv-color-neutral-fg); }\n[data-receipt-module] .cv-rcpt-tag--private { background: var(--cv-color-caution-bg); color: var(--cv-color-caution-fg); }\n[data-receipt-module] .cv-rcpt-button { display: inline-block; border-radius: var(--cv-radius); padding: 0.5rem 0.875rem; font-weight: 600; text-decoration: none; background: var(--cv-color-info-bg); color: var(--cv-color-info-fg); }\n[data-receipt-module] .cv-rcpt-button--primary { background: var(--cv-color-accent); color: #ffffff; }\n[data-receipt-module] .cv-rcpt-panel { background: var(--cv-color-surface); border: 1px solid var(--cv-color-border); border-radius: calc(var(--cv-radius) * 2); padding: 1rem 1.125rem; min-width: 0; }\n[data-receipt-module] .cv-rcpt-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1rem; align-items: center; }\n[data-receipt-module] .cv-rcpt-top { display: flex; gap: 0.875rem; align-items: center; min-width: 0; }\n[data-receipt-module] .cv-rcpt-seal { flex: none; }\n[data-receipt-module] .cv-rcpt-headline { margin: 0; font-size: 1.5rem; line-height: 1.25; }\n[data-receipt-module] .cv-rcpt-mood { margin: 0.25rem 0 0; font-weight: 600; }\n[data-receipt-module] .cv-rcpt-lede { margin: 0.25rem 0 0.5rem; }\n[data-receipt-module] .cv-rcpt-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.5rem; }\n[data-receipt-module] .cv-rcpt-card { background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); padding: 0.625rem 0.75rem; min-width: 0; }\n[data-receipt-module] .cv-rcpt-card__label, [data-receipt-module] .cv-rcpt-tile__label { font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-text-muted); }\n[data-receipt-module] .cv-rcpt-card__value { font-size: var(--cv-font-size-lg); font-weight: 700; overflow-wrap: anywhere; }\n[data-receipt-module] .cv-rcpt-card[data-card=\"other\"] .cv-rcpt-card__value { font-size: var(--cv-font-size-md); font-weight: 600; }\n[data-receipt-module] .cv-rcpt-card__note, [data-receipt-module] .cv-rcpt-sub { display: block; font-size: var(--cv-font-size-sm); font-weight: 400; color: var(--cv-color-text-muted); }\n[data-receipt-module] .cv-rcpt-stamps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }\n[data-receipt-module] .cv-rcpt-stamp { border-radius: var(--cv-radius); padding: 0.375rem 0.625rem; font-size: var(--cv-font-size-sm); border: 1px dashed var(--cv-color-border); }\n[data-receipt-module] .cv-rcpt-stamp--filled { border-style: solid; background: var(--cv-color-positive-bg); color: var(--cv-color-positive-fg); }\n[data-receipt-module] .cv-rcpt-stamp__name { font-weight: 700; letter-spacing: 0.06em; }\n[data-receipt-module] .cv-rcpt-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0.875rem; align-items: start; }\n[data-receipt-module] .cv-rcpt-main, [data-receipt-module] .cv-rcpt-side { display: grid; gap: 0.875rem; min-width: 0; }\n[data-receipt-module] .cv-rcpt-h { margin: 0 0 0.25rem; font-size: var(--cv-font-size-lg); }\n[data-receipt-module] .cv-rcpt-h4 { font-weight: 600; margin-bottom: 0.25rem; }\n[data-receipt-module] .cv-rcpt-steps { list-style: none; margin: 0.5rem 0 0; padding: 0; }\n[data-receipt-module] .cv-rcpt-step { border-top: 1px solid var(--cv-color-border); }\n[data-receipt-module] .cv-rcpt-step summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.625rem; align-items: center; padding: 0.625rem 0; cursor: pointer; list-style: none; }\n[data-receipt-module] .cv-rcpt-step__n { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--cv-color-info-bg); color: var(--cv-color-info-fg); font-size: var(--cv-font-size-sm); font-weight: 700; }\n[data-receipt-module] .cv-rcpt-step__title { font-weight: 600; overflow-wrap: anywhere; }\n[data-receipt-module] .cv-rcpt-step__time { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); white-space: nowrap; }\n[data-receipt-module] .cv-rcpt-step__drawer { padding: 0 0 0.75rem 2.125rem; }\n[data-receipt-module] .cv-rcpt-fields { display: grid; gap: 0.25rem; margin: 0; }\n[data-receipt-module] .cv-rcpt-field { display: grid; grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 1.2fr); gap: 0.5rem; }\n[data-receipt-module] .cv-rcpt-field dt { color: var(--cv-color-text-muted); }\n[data-receipt-module] .cv-rcpt-field dd { margin: 0; overflow-wrap: anywhere; }\n[data-receipt-module] .cv-rcpt-record { margin-top: 0.5rem; padding: 0.5rem 0.625rem; background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); display: grid; gap: 0.25rem; }\n[data-receipt-module] .cv-rcpt-record__label { font-size: var(--cv-font-size-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cv-color-text-muted); }\n[data-receipt-module] .cv-rcpt-fullid { display: block; overflow-wrap: anywhere; }\n[data-receipt-module] .cv-rcpt-proof { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }\n[data-receipt-module] .cv-rcpt-proof__row { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.5rem; }\n[data-receipt-module] .cv-rcpt-proof__label { display: block; font-weight: 600; }\n[data-receipt-module] .cv-rcpt-proof__code, [data-receipt-module] .cv-rcpt-proof__note { display: block; font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }\n[data-receipt-module] .cv-rcpt-mark { font-weight: 700; text-align: center; }\n[data-receipt-module] .cv-rcpt-mark--pass { color: var(--cv-color-positive-fg); }\n[data-receipt-module] .cv-rcpt-mark--fail { color: var(--cv-color-negative-fg); }\n[data-receipt-module] .cv-rcpt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }\n[data-receipt-module] .cv-rcpt-check { margin-top: 0.75rem; padding: 0.625rem 0.75rem; background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); display: grid; gap: 0.375rem; justify-items: start; }\n[data-receipt-module] .cv-rcpt-command { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--cv-font-mono); font-size: var(--cv-font-size-sm); }\n[data-receipt-module] .cv-rcpt-list { margin: 0; padding-left: 1.125rem; list-style: disc; }\n[data-receipt-module] .cv-rcpt-list li { margin: 0.125rem 0; }\n[data-receipt-module] .cv-rcpt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.5rem; }\n[data-receipt-module] .cv-rcpt-tile { background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); padding: 0.625rem 0.75rem; }\n[data-receipt-module] .cv-rcpt-footer { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }\n@media (max-width: 720px) {\n  [data-receipt-module] .cv-rcpt-hero, [data-receipt-module] .cv-rcpt-grid { grid-template-columns: minmax(0, 1fr); }\n  [data-receipt-module] .cv-rcpt-step__drawer { padding-left: 0; }\n  [data-receipt-module] .cv-rcpt-step summary { grid-template-columns: auto minmax(0, 1fr); row-gap: 0; }\n  [data-receipt-module] .cv-rcpt-step__time { grid-column: 2; white-space: normal; }\n  [data-receipt-module] .cv-rcpt-field { grid-template-columns: minmax(0, 1fr); gap: 0; }\n}\n"; // @generated RECEIPT_CSS
   // The seller copy's bundle extension kind (capsule_viewer.receipt_slot.SELLER_KIND).
   var SELLER_KIND = "x-deal-seller/v0"; // @generated SELLER_KIND
 
@@ -435,6 +435,10 @@ const root = {};
     if (extension === EXTENSION_V1) {
       out.counterparty_half = counterpartyHalf(v);
       out.book_witnessed = bookWitnessed(v);
+      out.checks = reportedChecks(v);
+      out.verify_command = reportedCommand(v);
+      out.verdict = reportedVerdict(v);
+      out.countersigned = reportedCountersigned(v);
     }
     // Said only when the page checked it itself: a verifier's report (the
     // Python twin's inputs too) carries no such member.
@@ -1397,6 +1401,7 @@ const root = {};
     var theirs = get(rests, "counterparty");
     var rep = report(sealed[0], map(get(content, "report")));
     rep.audience = cut;
+    var steps = dealSteps(v);
     return {
       deal_id: or(str(get(content, "deal_id")), ""),
       audience: cut,
@@ -1422,7 +1427,171 @@ const root = {};
       book_witnessed: v.assurance.book_witnessed || null,
       verification: v.verification,
       report_checked: or(str(v.assurance.report_checked), null),
+      // The top surface (#382): every record the copy carries, the holder's role as its own
+      // agreement states it, capsulectl's answer per check and the command it gave, and the
+      // copy itself for "Download proof file" (null when it cannot be written back exactly).
+      sealed_steps: steps,
+      role: roleOf(steps),
+      checks: or(v.assurance.checks, null),
+      verify_command: or(str(v.assurance.verify_command), null),
+      verdict: or(str(v.assurance.verdict), null),
+      countersigned: Array.isArray(v.assurance.countersigned) ? v.assurance.countersigned : null,
+      log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
+      checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
+      proof_file: proofFile(v.bundle),
     };
+  }
+  function roleOf(steps) {
+    var agree = steps.find(function (s) { return s.kind === "agree"; });
+    return agree && (agree.role === "buyer" || agree.role === "seller") ? agree.role : null;
+  }
+  // The copy as the page carries it: the emitter writes the bundle as JCS, so its JCS is the file.
+  function proofFile(bundle) {
+    try {
+      return jcs(bundle);
+    } catch (e) {
+      if (e instanceof NotCanonical) return null;
+      throw e;
+    }
+  }
+
+  // ---- the v1 receipt's top surface: what the copy holds, record by record (#382) ----
+
+  // A book pair's payload, read only when it is the one its header commits to and the header is the
+  // one its record attests (the record's agent_input digest): never a word the record does not seal.
+  function base64Bytes(text) {
+    if (typeof text !== "string" || !/^[A-Za-z0-9_\-+/]*={0,2}$/.test(text)) return null;
+    var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var clean = text.replace(/=+$/, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (clean.length % 4 === 1) return null;
+    var out = [], bits = 0, acc = 0;
+    for (var i = 0; i < clean.length; i++) {
+      acc = (acc << 6) | alphabet.indexOf(clean.charAt(i));
+      bits += 6;
+      if (bits >= 8) { bits -= 8; out.push((acc >> bits) & 0xff); }
+    }
+    return new Uint8Array(out);
+  }
+  function utf8Text(bytes) {
+    try {
+      if (typeof TextDecoder === "function") return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      return decodeURIComponent(escape(String.fromCharCode.apply(null, Array.prototype.slice.call(bytes))));
+    } catch (e) {
+      return null;
+    }
+  }
+  function attestedHeader(record, header) {
+    var attested = str(get(map(get(map(get(record, "model_attestation")), "compute_attestation")), "agent_input_digest"));
+    return isMap(header) && attested !== null && recordDigest(header) === attested ? header : null;
+  }
+  // The payload a header's first commitment names, from the copy's evidencebook/payloads, when its bytes
+  // hash to that commitment; else null (withheld, or not the sealed one).
+  function committedPayload(header, payloads) {
+    var commitment = str(seq(get(header, "payload_commitments"))[0]);
+    if (commitment === null || !HEX64.test(commitment)) return null;
+    var bytes = base64Bytes(get(payloads, commitment));
+    if (bytes === null || sha256Hex(bytes) !== commitment) return null;
+    var text = utf8Text(bytes);
+    if (text === null) return null;
+    try {
+      var payload = JSON.parse(text);
+      return isMap(payload) ? payload : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // One step per record the copy carries, in the copy's order: its time, its log place, its kind and
+  // what it records, as far as the copy opens it. A record whose payload the copy does not open is a
+  // step with no kind ("withheld").
+  function dealSteps(v) {
+    var bundle = v.bundle;
+    var payloads = map(get(map(get(bundle, "extensions")), "evidencebook/payloads"));
+    var disclosures = map(get(bundle, "disclosures"));
+    var book = map(get(map(get(bundle, "extensions")), EXTENSION_V1)).book;
+    var pairs = {};
+    var agreement = map(get(map(book), "agreement"));
+    if (isMap(get(agreement, "record"))) pairs[str(get(get(agreement, "record"), "capsule_id"))] = agreement;
+    var relied = map(get(map(book), "relied_on"));
+    Object.keys(relied).forEach(function (k) { pairs[k] = map(relied[k]); });
+    return seq(get(bundle, "records")).filter(isMap).map(function (record) {
+      var id = or(str(get(record, "capsule_id")), "");
+      var pair = own(pairs, id) ? pairs[id] : null;
+      var header = attestedHeader(record, pair ? get(pair, "header") : get(map(get(disclosures, id)), "agent_input"));
+      var payload = null;
+      if (header !== null) {
+        payload = pair && isMap(get(pair, "payload")) && recordDigest(get(pair, "payload")) === str(seq(get(header, "payload_commitments"))[0])
+          ? get(pair, "payload")
+          : committedPayload(header, payloads);
+      }
+      var block = map(get(map(payload), EXTENSION_V1));
+      var body = map(get(map(payload), "body"));
+      var coords = map(get(map(get(v.memberships, id)), "log_coordinates"));
+      var statements = seq(get(body, "statements")).filter(isMap).map(function (st) {
+        return { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")) };
+      });
+      return {
+        record: id,
+        // The step's own sealed time (its block's `at`), else the record's timestamp to the second.
+        time: stepTime(payload !== null ? str(get(block, "at")) : null, str(get(record, "timestamp"))),
+        seq: payload !== null && int(get(block, "seq")) !== null ? int(get(block, "seq")) : header !== null ? int(get(header, "seq")) : null,
+        leaf: int(get(coords, "leaf_index")),
+        kind: payload !== null ? str(get(block, "record_type")) : null,
+        shown: payload !== null,
+        role: payload !== null ? str(get(body, "role")) : null,
+        leg: isMap(get(record, "settlement")) ? readLeg(record, id, null) : null,
+        // The settlement's money members as recorded, for the page to say in msat and sats.
+        money: isMap(get(record, "settlement")) ? LEG_MONEY.reduce(function (acc, k) {
+          if (own(get(record, "settlement"), k) && isMap(get(get(record, "settlement"), k))) acc[k] = get(get(record, "settlement"), k);
+          return acc;
+        }, {}) : {},
+        statements: statements,
+        act: payload !== null ? str(get(body, "act")) : null,
+        // A refund or a remedy's payment (evidencebook payment.go: `reverses`, `remedy_for`), never the deal's own payment.
+        refund: payload !== null && (own(body, "reverses") || own(body, "remedy_for")),
+      };
+    });
+  }
+  function stepTime(at, timestamp) {
+    if (at !== null && validUtcTime(at)) return at;
+    var m = timestamp !== null ? /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?Z$/.exec(timestamp) : null;
+    return m && validUtcTime(m[1] + "Z") ? m[1] + "Z" : timestamp;
+  }
+  function optionalWordOrNull(words, value) { return typeof value === "string" && words.indexOf(value) >= 0 ? value : null; }
+
+  // capsulectl verify's own answer for each bundle check, as the page runtime carries it in the
+  // x-deal-v1 entry (#382): {name: {status, findings}} with strings only, or null when none came.
+  function reportedChecks(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    var given = entry !== undefined ? get(entry, "checks") : null;
+    if (!isMap(given)) return null;
+    var out = {};
+    Object.keys(given).forEach(function (name) {
+      var c = map(given[name]);
+      if (typeof c.status === "string") out[name] = { status: c.status, findings: seq(c.findings).filter(function (f) { return typeof f === "string"; }) };
+    });
+    return out;
+  }
+  function reportedEntry(verification, member) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    return entry !== undefined ? get(entry, member) : null;
+  }
+  function reportedVerdict(verification) {
+    var v = reportedEntry(verification, "verdict");
+    return typeof v === "string" && v !== "" ? v : null;
+  }
+  // The page's classification of each countersignature, as the runtime carries it: [{kind, name, at}].
+  function reportedCountersigned(verification) {
+    var given = reportedEntry(verification, "countersigned");
+    if (!Array.isArray(given)) return null;
+    return given.filter(isMap).map(function (c) {
+      return { kind: or(str(get(c, "kind")), "unknown"), name: str(get(c, "name")), at: str(get(c, "at")) };
+    });
+  }
+  function reportedCommand(verification) {
+    var entry = seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
+    var command = entry !== undefined ? get(entry, "verify_command") : null;
+    return typeof command === "string" && command !== "" ? command : null;
   }
 
   // ---- the seller model (seller.py) -----------------------------------------
@@ -2637,12 +2806,12 @@ const root = {};
   };
 
   // The three levels of one page: L0 always shown, L1 and L2 one toggle each.
-  P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after) {
+  P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after, l2Summary) {
     var d = this.d;
     return [
       d.el("div", { "data-level": "L0" }, l0),
       d.el("div", { "data-level": "L1" }, [this.kit.drilldown(l1Summary, l1, l1Open)].concat(after ? [after] : [])),
-      d.el("div", { "data-level": "L2" }, [this.kit.drilldown(w("depth.l2"), l2, l2Open)]),
+      d.el("div", { "data-level": "L2" }, [this.kit.drilldown(l2Summary || w("depth.l2"), l2, l2Open)]),
     ];
   };
 
@@ -2783,7 +2952,8 @@ const root = {};
         leg.leg,
         leg.status,
         leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
-        leg.observed_at !== null ? self.v1Time(leg.observed_at) : w("deal.no_time"),
+        // A record's time only on the holder's own page (Sherlock2, u239).
+        leg.observed_at !== null && self.ownPage(model) ? self.v1Time(leg.observed_at) : w("deal.no_time"),
         leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
         d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
       ]);
@@ -2873,15 +3043,485 @@ const root = {};
     return out;
   };
 
+  // ---- drawing: the v1 receipt's top surface (#382, Steven's design) ----------
+  //
+  // L0 is the design: header and tags, the top line with the seal, the cards, the stamps, the steps,
+  // the proof panel, what this does not prove, what else is here, the footer. L1 ("For checkers") is
+  // every sealed record and the terms; L2 ("Technical details") is the ladder of rungs, the records
+  // each term rests on, what the report rests on and the checks, as the page drew them before. Every
+  // line says only what the copy holds or capsulectl reported: a field the copy does not carry (the
+  // item, the seller's name, a simulated rail) is left out, never filled in.
+
+  // The harbour seal (Steven's design, two of its three moods: a v1 receipt never shows "Waiting for
+  // you"). Decorative: the mood is always also said in words beside it.
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var SEAL_BODY = [
+    ["path", { d: "M22 106 C18 70 34 44 60 42 C86 44 102 70 98 106 Z", fill: "#7F96A8" }],
+    ["ellipse", { cx: "60", cy: "88", rx: "24", ry: "19", fill: "#C9D5DE" }],
+    ["circle", { cx: "60", cy: "40", r: "26", fill: "#8FA5B6" }],
+  ];
+  var SEAL_MOODS = {
+    done: [
+      ["circle", { cx: "50", cy: "37", r: "3.6", fill: "#13202B" }], ["circle", { cx: "70", cy: "37", r: "3.6", fill: "#13202B" }],
+      ["circle", { cx: "43", cy: "46", r: "3.4", fill: "#E8A3A3", opacity: "0.7" }], ["circle", { cx: "77", cy: "46", r: "3.4", fill: "#E8A3A3", opacity: "0.7" }],
+      ["ellipse", { cx: "60", cy: "48", rx: "9", ry: "6", fill: "#C9D5DE" }],
+      ["ellipse", { cx: "60", cy: "45.5", rx: "3.2", ry: "2.2", fill: "#13202B" }],
+      ["path", { d: "M57 50 Q60 53 63 50", stroke: "#13202B", "stroke-width": "1.6", fill: "none", "stroke-linecap": "round" }],
+      ["path", { d: "M76 76 Q92 70 95 82 Q88 86 79 82 Z", fill: "#6E8597" }],
+      ["circle", { cx: "96", cy: "78", r: "14", fill: "#C2412D" }],
+      ["path", { d: "M90.5 78.5 L94.5 82.5 L101.5 74.5", stroke: "#FFFFFF", "stroke-width": "2.6", fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+    ],
+    not_as_agreed: [
+      ["path", { d: "M45 31 L54 34 M75 31 L66 34", stroke: "#13202B", "stroke-width": "1.8", "stroke-linecap": "round" }],
+      ["circle", { cx: "50", cy: "39", r: "3.4", fill: "#13202B" }], ["circle", { cx: "70", cy: "39", r: "3.4", fill: "#13202B" }],
+      ["ellipse", { cx: "60", cy: "49", rx: "9", ry: "6", fill: "#C9D5DE" }],
+      ["ellipse", { cx: "60", cy: "46.5", rx: "3.2", ry: "2.2", fill: "#13202B" }],
+      ["path", { d: "M56.5 53 Q60 50.5 63.5 53", stroke: "#13202B", "stroke-width": "1.6", fill: "none", "stroke-linecap": "round" }],
+      ["path", { d: "M76 76 Q92 70 95 82 Q88 86 79 82 Z", fill: "#6E8597" }],
+      ["circle", { cx: "96", cy: "78", r: "14", fill: "#D97A1E" }],
+      ["path", { d: "M96 71 L96 79", stroke: "#FFFFFF", "stroke-width": "2.8", "stroke-linecap": "round" }],
+      ["circle", { cx: "96", cy: "84.5", r: "1.7", fill: "#FFFFFF" }],
+    ],
+  };
+  P.seal = function (mood) {
+    var doc = this.d.doc;
+    var svg = doc.createElementNS(SVG_NS, "svg");
+    [["viewBox", "0 0 120 120"], ["width", "72"], ["height", "72"], ["aria-hidden", "true"], ["focusable", "false"], ["class", "cv-rcpt-seal"], ["data-seal", mood]]
+      .forEach(function (a) { svg.setAttribute(a[0], a[1]); });
+    SEAL_BODY.concat(SEAL_MOODS[mood]).forEach(function (shape) {
+      var node = doc.createElementNS(SVG_NS, shape[0]);
+      Object.keys(shape[1]).forEach(function (k) { node.setAttribute(k, shape[1][k]); });
+      svg.appendChild(node);
+    });
+    return svg;
+  };
+
+  // The holder's own payment: the payer's leg on a buyer's copy, the payee's on a seller's. A page cannot
+  // weigh a payment's superseded or refused legs as capsulectl does (evidencebook payment.go), so it picks
+  // one only when one applies: the legs the payment term relies on when the report names any, else the
+  // holder's own legs in the copy, refunds aside. Several, or none: null, and the page names no amount.
+  function ownLegs(model) {
+    var want = model.role === "seller" ? "payee" : "payer";
+    var mine = function (leg) { return leg.leg.indexOf(want) === 0; };
+    var relied = [];
+    if (model.rows_state === "listed") model.rows.forEach(function (r) { seq(r.legs).forEach(function (l) { if (mine(l) && relied.indexOf(l.record) < 0) relied.push(l.record); }); });
+    return model.sealed_steps.filter(function (s) {
+      return s.leg !== null && !s.refund && mine(s.leg) && (!relied.length || relied.indexOf(s.record) >= 0);
+    });
+  }
+  function ownLeg(model) {
+    var legs = ownLegs(model);
+    return legs.length === 1 ? legs[0].leg : null;
+  }
+  function paidLeg(model) {
+    var leg = ownLeg(model);
+    return leg !== null && leg.status === "settled" ? leg : null;
+  }
+  // The seal's mood and the top line, from the report's own facts (Sherlock2, 2026-11-26, buzz
+  // 368bf508 and 12969602; the seal's meaning awaits Steven's ruling):
+  // * done: settled, every term "both say the same" with value met, and the holder's settle record held;
+  // * not_as_agreed: a term has a final ruling of not met;
+  // * no seal otherwise, and a top line in words. "Waiting for you" is never a receipt's.
+  function dealVerdict(model) {
+    var rows = model.rows_state === "listed" ? model.rows : [];
+    var ruled = rows.find(function (r) { return r.status === "ruled" && r.ruling !== null && r.ruling.value === "not_met"; });
+    if (ruled) return { mood: "not_as_agreed", line: "ruled_not_met", term: ruled.id, remedy: ruled.remedy };
+    if (model.start.state !== "started") return { mood: null, line: "state." + model.start.state };
+    var leg = paidLeg(model);
+    if (model.settled) {
+      var conceded = rows.find(function (r) { return r.value === "not_met" && r.remedy_made; });
+      if (conceded) return { mood: null, line: "remedied", term: conceded.id };
+      if (rows.length && rows.every(function (r) { return r.status === "not_reached"; })) return { mood: null, line: "none_due" };
+      var agreed = rows.length > 0 && rows.every(function (r) { return r.status === "agreed" && r.value === "met"; });
+      return { mood: agreed && leg !== null ? "done" : null, line: "settled" };
+    }
+    if (rows.some(function (r) { return r.status === "in_dispute"; })) return { mood: null, line: "in_dispute" };
+    if (rows.some(function (r) { return r.status === "in_disagreement"; })) return { mood: null, line: "in_disagreement" };
+    if (rows.length && rows.every(function (r) { return r.status === "waiting"; })) return { mood: null, line: leg !== null ? "paid_waiting" : "waiting" };
+    // One status every term shares, said in plain words; mixed statuses are counted (termsTally).
+    var only = rows.length && rows.every(function (r) { return r.status === rows[0].status; }) ? rows[0].status : null;
+    if (only !== null && own(WORDS, "deal.top.all." + only)) return { mood: null, line: "all." + only };
+    return { mood: null, line: "terms" };
+  }
+  // A key's form for this copy: the seller's when the copy is a seller's, and the third person's
+  // (".report") when the reader is not the holder on their own page (a counterparty's or adjudicator's
+  // copy, or a page or report shown to others), so no line says "your" to someone it is not about.
+  P.say = function (model, key, values) {
+    var forms = [];
+    if (!this.ownPage(model)) {
+      if (model.role === "seller") forms.push(key + ".seller.report");
+      forms.push(key + ".report");
+    }
+    if (model.role === "seller") forms.push(key + ".seller");
+    forms.push(key);
+    var chosen = forms.find(function (k) { return own(WORDS, k); });
+    return w(chosen || key, values);
+  };
+
+  // A money member as a reader says it: BTC at scale 11 (or less) is counted in msat, with sats above
+  // when it is whole sats; anything else as recorded (legAmount).
+  function moneyOf(a) {
+    var value = str(get(a, "value")), code = str(get(a, "assetCode")), scale = int(get(a, "assetScale"));
+    if (code === "BTC" && value !== null && /^\d+$/.test(value) && scale !== null && scale >= 0 && scale <= 11) {
+      var msat = Number(value) * Math.pow(10, 11 - scale);
+      if (Number.isSafeInteger(msat)) {
+        var main = groupThousands(msat) + " msat";
+        return msat % 1000 === 0 && msat > 0 ? { main: groupThousands(msat / 1000) + (msat === 1000 ? " sat" : " sats"), sub: main } : { main: main, sub: null };
+      }
+    }
+    return { main: legAmount(a), sub: null };
+  }
+  P.surfaceHeader = function (model) {
+    var d = this.d;
+    var tags = [d.el("span", { class: "cv-rcpt-title", "data-receipt-title": model.role || "deal" }, [w(model.role === "seller" ? "deal.surface.title.seller" : model.role === "buyer" ? "deal.surface.title.buyer" : "deal.surface.title")])];
+    if (model.audience === "keep" && !sharedCarrier(this.carrier)) tags.push(d.el("span", { class: "cv-rcpt-tag cv-rcpt-tag--private", "data-banner": "private" }, [w("deal.surface.tag.private")]));
+    else tags.push(d.el("span", { class: "cv-rcpt-tag", "data-banner": "shared" }, [w(sharedCarrier(this.carrier) ? "banner.shared.label" : "deal.surface.tag.shared")]));
+    var actions = [];
+    if (model.proof_file !== null) actions.push(this.proofDownload(model, "cv-rcpt-button cv-rcpt-button--primary"));
+    return d.el("div", { class: "cv-rcpt-header", "data-surface": "header" }, [d.el("div", { class: "cv-rcpt-tags" }, tags), d.el("div", { class: "cv-rcpt-actions" }, actions)]);
+  };
+  function proofName(model) { return (model.deal_id || "deal") + ".bundle.json"; }
+  // "Download proof file": the copy as this page carries it, saved as a file capsulectl verify reads.
+  P.proofDownload = function (model, cls) {
+    var d = this.d;
+    var name = proofName(model);
+    var link = d.el("a", { class: cls, href: "#", download: name, "data-proof-download": name }, [w("deal.surface.download")]);
+    var text = model.proof_file;
+    link.addEventListener("click", function () {
+      var view = link.ownerDocument.defaultView;
+      var url = view && view.URL && typeof view.URL.createObjectURL === "function" && typeof view.Blob === "function"
+        ? view.URL.createObjectURL(new view.Blob([text], { type: "application/json" }))
+        : "data:application/json;charset=utf-8," + encodeURIComponent(text);
+      link.setAttribute("href", url);
+    });
+    return link;
+  };
+
+  P.topLine = function (model, verdict) {
+    var d = this.d;
+    var key = "deal.top." + verdict.line;
+    var values = {};
+    if (verdict.term) values.term = word("deal.term." + verdict.term) || verdict.term;
+    var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
+    var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
+    if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
+    if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
+    var parts = [];
+    if (verdict.mood !== null) parts.push(this.seal(verdict.mood));
+    parts.push(d.el("div", { class: "cv-rcpt-topline" }, line));
+    return d.el("div", { class: "cv-rcpt-top", "data-surface": "top" }, parts);
+  };
+
+  P.surfaceCards = function (model, verdict) {
+    var d = this.d;
+    var cards = [];
+    var leg = ownLeg(model);
+    if (leg !== null) {
+      var amountKey = model.role === "seller" ? "received" : "amount";
+      // Said as recorded, never in the page's own voice: the page checks no payment proof (u203).
+      var recorded = leg.status === "settled" ? w(model.role === "seller" ? "deal.card.payment.received" : "deal.card.payment.settled") : w("deal.card.payment.status", { status: leg.status });
+      cards.push({ key: "paid", label: w("deal.card.payment"), value: this.legMoney(model, leg, amountKey), note: recorded });
+    } else if (ownLegs(model).length > 1) {
+      cards.push({ key: "paid", label: w("deal.card.payment"), value: w("deal.card.payment.several", { count: String(ownLegs(model).length) }), note: null });
+    }
+    cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of) : null });
+    // The other side's half, named by side only when the copy's own agreement says which side the holder is.
+    if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.verified" : "deal.card.other.none"), note: null });
+    return d.el("div", { class: "cv-rcpt-cards", "data-surface": "cards" }, cards.map(function (c) {
+      var parts = [d.el("div", { class: "cv-rcpt-card__label" }, [c.label]), d.el("div", { class: "cv-rcpt-card__value" }, [c.value])];
+      if (c.note) parts.push(d.el("div", { class: "cv-rcpt-card__note" }, [c.note]));
+      return d.el("div", { class: "cv-rcpt-card", "data-card": c.key }, parts);
+    }));
+  };
+  // The status card: "Settled" under the Done seal, else the terms' one shared status, else the start state.
+  P.statusWord = function (model, verdict) {
+    if (verdict.mood === "done") return w("deal.card.status.done");
+    var rows = model.rows_state === "listed" ? model.rows : [];
+    var first = rows.length ? rows[0].status : null;
+    if (first !== null && model.start.state === "started" && rows.every(function (r) { return r.status === first; })) return this.token("deal.status", first);
+    return this.token("deal.state", model.start.state);
+  };
+  P.legMoney = function (model, leg, key) {
+    var step = model.sealed_steps.find(function (s) { return s.leg === leg; });
+    var m = step ? step.money[key] : null;
+    var said = m ? moneyOf(m) : { main: "-", sub: null };
+    return said.sub ? [said.main, this.d.el("span", { class: "cv-rcpt-sub" }, [said.sub])] : said.main;
+  };
+
+  // The three stamps (Muse design §3.3, as #382 item 14 words them), each from its own evidence.
+  P.stamps = function (model) {
+    var d = this.d, self = this;
+    var checks = model.checks;
+    var recorded;
+    var checkpoint = checks !== null && own(checks, "checkpoint") ? checks.checkpoint.status : null;
+    if (checkpoint === null) recorded = { state: "not_checked" };
+    else if (checkpoint === "fail") recorded = { state: "failed" };
+    else if (checkpoint !== "pass") recorded = { state: "open" };
+    else {
+      var leaves = mmrLeaves(model.checkpoint_size), size = model.rests_on.own_size;
+      recorded = leaves !== null && size !== null && leaves < size ? { state: "partial", k: leaves, n: size } : { state: "filled" };
+    }
+    var witness = this.timeStamp(model);
+    var counter = this.countersigned(model);
+    var items = [["recorded", recorded], ["time_stamped", witness], ["countersigned", counter]];
+    return d.el("ul", { class: "cv-rcpt-stamps", "data-surface": "stamps" }, items.map(function (it) {
+      var name = it[0], s = it[1];
+      var values = {};
+      if (s.k !== undefined) { values.k = String(s.k); values.n = String(s.n); }
+      if (s.witness !== undefined) values.witness = s.witness;
+      if (s.signer !== undefined) values.signer = s.signer;
+      var text = s.at !== undefined ? self.timed("deal.stamp." + name + "." + s.state, s.at, values) : w("deal.stamp." + name + "." + s.state, values);
+      return d.el("li", { class: "cv-rcpt-stamp cv-rcpt-stamp--" + (s.state === "filled" ? "filled" : "open"), "data-stamp": name, "data-stamp-state": s.state }, [
+        d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [text]),
+      ]);
+    }));
+  };
+  // COUNTERSIGNED (#382 item 14): filled only for a countersignature from a resolved signer that this page
+  // verified over this very bundle (AAC's classification, carried by the runtime); a producer's own, an
+  // unlisted signer's or a failed one never fills it, nor does the other side's verified half.
+  P.countersigned = function (model) {
+    var list = model.countersigned;
+    if (list === null) return model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
+    var given = list.filter(function (c) { return c.kind !== "hollow"; });
+    if (!given.length) return { state: "open" };
+    // AAC's classifier keeps the signer's own time, fractions of a second included; the page says it to the second.
+    var secondOf = function (at) { var t = at !== null ? stepTime(null, at) : null; return t !== null && validUtcTime(t) ? t : null; };
+    var resolved = given.find(function (c) { return c.kind === "resolved" && c.name !== null && secondOf(c.at) !== null; });
+    if (resolved) return { state: "filled", signer: resolved.name, at: secondOf(resolved.at) };
+    if (given.some(function (c) { return c.kind === "invalid"; })) return { state: "failed" };
+    if (given.some(function (c) { return c.kind === "not-independent"; })) return { state: "self" };
+    if (given.some(function (c) { return c.kind === "unresolved-signer"; })) return { state: "unresolved" };
+    return { state: "not_checked" };
+  };
+  // The leaves an MMR of `size` nodes holds (size = 2L - popcount(L)), or null when no L gives it.
+  function mmrLeaves(size) {
+    if (size === null || size < 0) return null;
+    for (var l = 0; l <= size; l++) {
+      var ones = 0, x = l;
+      while (x) { ones += x & 1; x >>>= 1; }
+      if (2 * l - ones === size) return l;
+    }
+    return null;
+  }
+  // TIME-STAMPED and the proof panel's "Outside time stamp" row, one decision: capsulectl's check of
+  // the holder's own book, on the holder's own page only (a shared copy never shows the holder's time).
+  P.timeStamp = function (model) {
+    if (!this.ownPage(model)) return { state: "not_checked" };
+    var book = model.book_witnessed;
+    if (book === null) return { state: "not_checked" };
+    if (book.status === "verified") return { state: "filled", at: book.at, witness: book.witness };
+    if (book.status === "failed") return { state: "failed" };
+    return { state: "open" };
+  };
+
+  // "What happened, step by step": one row per record the copy carries, each opening to what it records.
+  P.stepTitle = function (model, step) {
+    if (!step.shown) return w("deal.step.withheld");
+    if (step.kind === "agree") return w("deal.step.agree");
+    if (step.kind === "settle" && step.leg !== null) {
+      var payee = step.leg.leg.indexOf("payee") === 0;
+      var raw = this.rawMoney(step, payee ? "received" : "amount");
+      var amount = raw !== null ? moneyOf(raw).sub || moneyOf(raw).main : "-";
+      if (step.refund) return w("deal.step.settle.refund", { amount: amount, status: step.leg.status });
+      // "Paid" only for a leg recorded as settled: a pending, failed or reversed one says its status.
+      if (step.leg.status !== "settled") return w("deal.step.settle.status", { amount: amount, status: step.leg.status });
+      return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: amount });
+    }
+    if (step.kind === "statement") {
+      var self = this;
+      var said = step.statements.map(function (st) { return (word("deal.term." + st.row) || st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : "-"); }).join("; ");
+      return this.say(model, "deal.step.statement", { said: said || "-" });
+    }
+    if (step.kind === "perform") return w("deal.step.perform", { act: step.act !== null ? step.act : "-" });
+    var known = step.kind !== null ? word("deal.step.kind." + step.kind) : null;
+    return known !== null ? known : w("deal.step.other", { kind: step.kind || "-" });
+  };
+  P.rawMoney = function (step, key) { return step.money && own(step.money, key) ? step.money[key] : null; };
+  P.stepDrawer = function (model, step) {
+    var d = this.d, self = this;
+    var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [step.kind !== null ? step.kind : w("deal.drawer.kind.withheld")])]];
+    if (step.time !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(step.time)]);
+    if (step.leg !== null) {
+      var leg = step.leg;
+      rows.push([w("deal.drawer.leg"), leg.leg + " · " + leg.status]);
+      leg.money.forEach(function (m) {
+        var raw = self.rawMoney(step, m[0]);
+        var said = raw !== null ? moneyOf(raw) : { main: m[1], sub: null };
+        rows.push([m[0], said.sub ? said.main + " (" + said.sub + ")" : said.main]);
+      });
+      if (leg.payment_ref !== null) rows.push([w("deal.drawer.payment_ref"), d.el("span", { class: "cv-mono" }, [leg.payment_ref.type + " " + self.short(leg.payment_ref.value)])]);
+    }
+    step.statements.forEach(function (st) { rows.push([self.termName(st.row), st.value !== null ? self.token("deal.value", st.value) : "-"]); });
+    if (step.kind === "agree" && step.role !== null) rows.push([w("deal.drawer.role"), this.sideWord(step.role)]);
+    var id = d.el("details", { class: "cv-rcpt-id", "data-record-id": step.record }, [
+      d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.short(step.record)]), " · ", step.kind !== null ? step.kind : w("deal.drawer.kind.withheld")]),
+      d.el("code", { class: "cv-mono cv-rcpt-fullid" }, [step.record]),
+    ]);
+    var place = [];
+    if (step.seq !== null) place.push(w("deal.drawer.seq", { seq: String(step.seq) }));
+    if (step.leaf !== null) place.push(w("deal.drawer.leaf", { leaf: String(step.leaf) }));
+    return [
+      d.el("dl", { class: "cv-rcpt-fields" }, rows.map(function (r) { return d.el("div", { class: "cv-rcpt-field" }, [d.el("dt", {}, [r[0]]), d.el("dd", {}, [r[1]])]); })),
+      d.el("div", { class: "cv-rcpt-record" }, [d.el("span", { class: "cv-rcpt-record__label" }, [w("deal.drawer.record")]), id].concat(place.length ? [d.el("span", { class: "cv-mono cv-muted" }, [place.join(" · ")])] : [])),
+    ];
+  };
+  P.timeline = function (model) {
+    var d = this.d, self = this;
+    var steps = model.sealed_steps;
+    // Each step's time only on the holder's own page (Sherlock2, u239).
+    var own = this.ownPage(model);
+    var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w(steps.length === 1 ? "deal.steps.lede.one" : "deal.steps.lede", { count: String(steps.length) }))];
+    if (!steps.length) return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([this.note(w("deal.steps.none"))]));
+    var list = d.el("ol", { class: "cv-rcpt-steps" }, steps.map(function (step, i) {
+      return d.el("li", { class: "cv-rcpt-step", "data-step": String(i + 1), "data-step-kind": step.kind || "withheld" }, [
+        d.el("details", {}, [
+          d.el("summary", {}, [
+            d.el("span", { class: "cv-rcpt-step__n", "aria-hidden": "true" }, [String(i + 1)]),
+            d.el("span", { class: "cv-rcpt-step__title" }, [self.stepTitle(model, step)]),
+            d.el("span", { class: "cv-rcpt-step__time" }, [step.time !== null && own ? self.v1Time(step.time) : ""]),
+          ]),
+          d.el("div", { class: "cv-rcpt-step__drawer" }, self.stepDrawer(model, step)),
+        ]),
+      ]);
+    }));
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([list]));
+  };
+
+  // "Is this record intact?": capsulectl verify's own answer per check, never the page's (#378: no
+  // bare "Verified"), with the outside time stamp as the TIME-STAMPED stamp says it.
+  var PROOF_ROWS = ["producer_signatures", "interval_coverage", "graph_closure", "per_record_membership", "checkpoint"];
+  P.proofPanel = function (model) {
+    var d = this.d, self = this;
+    var checks = model.checks;
+    var statuses = PROOF_ROWS.map(function (name) { return checks !== null && own(checks, name) ? checks[name].status : null; });
+    var lede = checks === null ? "deal.proof.lede.none"
+      : statuses.some(function (s) { return s === "fail"; }) ? "deal.proof.lede.failed"
+      : statuses.every(function (s) { return s === "pass"; }) ? "deal.proof.lede.passed" : "deal.proof.lede.partial";
+    var rows = PROOF_ROWS.map(function (name, i) {
+      var status = statuses[i] === null ? "absent" : ["pass", "fail", "withheld"].indexOf(statuses[i]) >= 0 ? statuses[i] : "absent";
+      return self.proofRow(name, status, w("deal.proof." + name), null);
+    });
+    var stamp = this.timeStamp(model);
+    var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
+    // The summary counts every row it shows: any failed row, the time stamp included, makes it "failed".
+    if (stampState === "fail") lede = "deal.proof.lede.failed";
+    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
+    rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
+    var parts = [
+      d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.proof")]),
+      this.p(w(lede), { class: "cv-rcpt-lede", "data-proof": lede.split(".").pop() }),
+      d.el("ul", { class: "cv-rcpt-proof" }, rows),
+      this.checkYourself(model),
+    ];
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "proof" }, parts);
+  };
+  P.proofRow = function (name, status, text, note) {
+    var d = this.d;
+    var mark = status === "pass" ? "✓" : status === "fail" ? "✗" : "–";
+    var parts = [
+      d.el("span", { class: "cv-rcpt-mark cv-rcpt-mark--" + status, "aria-hidden": "true" }, [mark]),
+      d.el("span", { class: "cv-rcpt-proof__text" }, [
+        d.el("span", { class: "cv-rcpt-sr" }, [w("deal.proof.status." + status) + ": "]),
+        d.el("span", { class: "cv-rcpt-proof__label" }, [text]),
+        d.el("span", { class: "cv-mono cv-rcpt-proof__code" }, [name.replace(/_/g, " ")]),
+      ].concat(note ? [d.el("span", { class: "cv-rcpt-proof__note" }, [note])] : [])),
+    ];
+    return d.el("li", { class: "cv-rcpt-proof__row", "data-check": name, "data-check-status": status }, parts);
+  };
+  P.checkYourself = function (model) {
+    var d = this.d;
+    var parts = [d.el("div", { class: "cv-rcpt-h4" }, [w("deal.check.title")])];
+    // capsulectl's command checks the file it was given (this page); the downloaded proof file is checked
+    // by name, quoted for a shell when it is not plain.
+    if (model.verify_command !== null) {
+      parts.push(this.note(w("deal.check.page")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "page" }, [model.verify_command])]));
+    }
+    if (model.proof_file !== null) {
+      var name = proofName(model);
+      var quoted = /^[A-Za-z0-9._-]+$/.test(name) ? name : "'" + name.replace(/'/g, "'\\''") + "'";
+      parts.push(this.note(w("deal.check.download")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "download" }, ["capsulectl deal verify --bundle " + quoted])]));
+    }
+    if (model.verify_command === null && model.proof_file === null) parts.push(this.note(w("deal.check.no_command")));
+    if (model.bundle_digest) parts.push(this.note(w("deal.check.expect", { verdict: model.verdict || "VALID", fingerprint: this.short(model.bundle_digest) }), { "data-expect": model.bundle_digest }));
+    if (model.proof_file !== null) parts.push(this.proofDownload(model, "cv-rcpt-button"));
+    return d.el("div", { class: "cv-rcpt-check", "data-surface": "check" }, parts);
+  };
+
+  P.notProven = function (model) {
+    var d = this.d, self = this;
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "not-proven" }, [
+      d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.not_proven")]),
+      d.el("ul", { class: "cv-rcpt-list" }, ["true", "who", "goods", "outside"].map(function (k) { return d.el("li", {}, [self.say(model, "deal.not_proven." + k)]); })),
+    ]);
+  };
+  P.elseHere = function (model) {
+    var d = this.d;
+    var rows = model.rows_state === "listed" ? model.rows : [];
+    var problems = rows.filter(function (r) { return r.status === "in_dispute" || r.status === "in_disagreement" || (r.ruling !== null && r.ruling.value === "not_met"); });
+    var self = this;
+    var problemText = model.rows_state === "withheld" ? w("deal.else.problems.withheld") : problems.length
+      ? problems.map(function (r) { return (word("deal.term." + r.id) || r.id) + ": " + self.token("deal.status", r.status); }).join("; ")
+      : w("deal.else.problems.none");
+    var tiles = [
+      { key: "problems", label: w("deal.else.problems"), text: problemText },
+      { key: "whose", label: w("deal.else.whose"), text: this.say(model, "deal.else.whose.text") },
+    ];
+    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.say(model, "deal.else.half.text") });
+    return d.el("section", { class: "cv-rcpt-panel", "data-surface": "else" }, [
+      d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.else")]),
+      d.el("div", { class: "cv-rcpt-tiles" }, tiles.map(function (t) {
+        return d.el("div", { class: "cv-rcpt-tile", "data-else": t.key }, [d.el("div", { class: "cv-rcpt-tile__label" }, [t.label]), d.el("div", {}, [t.text])]);
+      })),
+    ]);
+  };
+  P.surfaceFooter = function (model) {
+    var parts = [w("deal.footer.times")];
+    parts.push(" ", this.ownPage(model) ? w("deal.footer.private") : w("deal.footer.shared"));
+    if (model.as_of && validUtcTime(model.as_of)) parts.push(" ", this.timed("deal.footer.after", model.as_of));
+    return this.d.el("p", { class: "cv-rcpt-footer", "data-surface": "footer" }, parts);
+  };
+
+  // "For checkers: every sealed record": each record once, then the copy's own facts.
+  P.recordTable = function (model) {
+    var d = this.d, self = this;
+    var rows = model.sealed_steps.map(function (step, i) {
+      return [String(i + 1), self.stepTitle(model, step), d.el("span", { class: "cv-mono" }, [step.kind !== null ? step.kind : "-"]),
+        d.el("span", { class: "cv-mono" }, [(step.seq !== null ? String(step.seq) : "-") + " · " + (step.leaf !== null ? String(step.leaf) : "-")]),
+        d.el("span", { class: "cv-mono", "data-inventory-record": step.record, title: step.record }, [self.short(step.record)]),
+        w(step.shown ? "deal.inventory.shown" : "deal.inventory.withheld")];
+    });
+    var facts = [
+      [w("deal.inventory.log"), model.log_id !== null ? d.el("span", { class: "cv-mono" }, [model.log_id]) : w("deal.inventory.not_recorded")],
+      [w("deal.inventory.fingerprint"), model.bundle_digest ? d.el("span", { class: "cv-mono" }, [model.bundle_digest]) : w("deal.inventory.not_recorded")],
+      [w("deal.inventory.profile"), d.el("span", { class: "cv-mono" }, [EXTENSION_V1])],
+      [w("deal.inventory.producer"), w("deal.inventory.not_recorded")],
+      [w("deal.inventory.pack"), d.el("span", { class: "cv-mono" }, [PACK.id])],
+    ];
+    return [
+      rows.length ? this.kit.dataTable([w("deal.col.step"), w("deal.col.what"), w("deal.col.kind"), w("deal.col.place"), w("deal.col.record"), w("deal.col.shown")], rows) : this.note(w("deal.steps.none")),
+      d.el("dl", { class: "cv-rcpt-fields", "data-inventory": "facts" }, facts.map(function (f) { return d.el("div", { class: "cv-rcpt-field" }, [d.el("dt", {}, [f[0]]), d.el("dd", {}, [f[1]])]); })),
+    ];
+  };
+
   function drawDeal(doc, depth, model) {
     var dr = new Drawer(doc, depth, false);
-    var l0 = [dr.d.el("h2", {}, [w("deal.title")])];
-    var keep = model.audience === "keep";
-    if (keep) l0.push(dr.privateBanner());
-    l0.push(dr.dealHeadline(model));
-    l0 = l0.concat(dr.copyNotes(model));
-    var l1Open = depth === "L1" || depth === "L2";
-    return dr.page(l0, w("deal.depth.l1"), dr.dealL1(model), l1Open, dr.dealL2(model), depth === "L2", null);
+    var d = dr.d;
+    var verdict = dealVerdict(model);
+    var main = d.el("div", { class: "cv-rcpt-main" }, [dr.timeline(model), dr.elseHere(model)]);
+    var side = d.el("div", { class: "cv-rcpt-side" }, [dr.proofPanel(model), dr.notProven(model)]);
+    var l0 = [d.el("div", { class: "cv-rcpt", "data-receipt-surface": "v1" }, [
+      dr.surfaceHeader(model),
+      d.el("div", { class: "cv-rcpt-panel cv-rcpt-hero" }, [dr.topLine(model, verdict), dr.surfaceCards(model, verdict)]),
+      dr.stamps(model),
+      d.el("div", { class: "cv-rcpt-grid" }, [main, side]),
+    ])];
+    // For checkers: every sealed record, the copy's facts, then where the deal stands and its terms.
+    var l1 = dr.recordTable(model).concat([dr.dealHeadline(model)], dr.dealL1(model));
+    // Technical details: the ladder of rungs as the page drew them before, and the report's grounds.
+    var l2 = [dr.kit.section(w("deal.section.rungs"), dr.copyNotes(model), 3)].concat(dr.dealL2(model));
+    var levels = dr.page(l0, w("deal.depth.l1.checkers"), l1, depth === "L1" || depth === "L2", l2, depth === "L2", null, w("deal.depth.l2.technical"));
+    levels[1].appendChild(dr.surfaceFooter(model));
+    return levels;
   }
 
   // ---- drawing: the composition section and the bilateral page ---------------
@@ -3258,11 +3898,11 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "0900d431c36a3d1ae0c114842b308027455b45df22bae7e5633be3135c6b7635",
+      "script_sha256": "6bd796c744bb11633646d5b831fcd6896e45ce8c127834ed29f9a3411491094e",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
-        "e99d485d2ad0e02e5f77581f139648e970e4552930d2c3e0670c0d0cb4badf69"
+        "99f181ed34205bb6cfa8f5fd85de14d6b725f5f4e7cd8a3cf6ed3efdff30e56a"
       ]
     }
   },
@@ -3305,11 +3945,11 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "e35a9ee14450a320321befe689c606f19c8d0e0439155ce4f40353dc35df6a75",
+      "script_sha256": "2ad243fa2c73a7d9273de7a29d8c5f45b8280bf7efd8b93a46c2c9b1bea39a7c",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
-        "e99d485d2ad0e02e5f77581f139648e970e4552930d2c3e0670c0d0cb4badf69"
+        "99f181ed34205bb6cfa8f5fd85de14d6b725f5f4e7cd8a3cf6ed3efdff30e56a"
       ]
     }
   },
@@ -3351,11 +3991,11 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "c8e2ee133c51cc69965e4080ce4e68014729110b307e038104e052217d8a4a2f",
+      "script_sha256": "b3aad0adf100fb0b3d91bcbfec95ef136b8b29f0937f0a793371ac8d4fcddbde",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
-        "e99d485d2ad0e02e5f77581f139648e970e4552930d2c3e0670c0d0cb4badf69"
+        "99f181ed34205bb6cfa8f5fd85de14d6b725f5f4e7cd8a3cf6ed3efdff30e56a"
       ]
     }
   },
@@ -3399,11 +4039,11 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "1c57ab85f3c5cd91592ee5c3bf810fe2f63e2137d2cd7e7019b51458e522b5f9",
+      "script_sha256": "d4bfc631cccb5729f4db1507b80d462a5ef4eeafd59f15658cec17880ac1f8a7",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
-        "e99d485d2ad0e02e5f77581f139648e970e4552930d2c3e0670c0d0cb4badf69"
+        "99f181ed34205bb6cfa8f5fd85de14d6b725f5f4e7cd8a3cf6ed3efdff30e56a"
       ]
     }
   }

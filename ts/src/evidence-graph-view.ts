@@ -4,6 +4,7 @@ import {
   type StandaloneReportFailure,
 } from "./deal-standalone-report.js";
 import {
+  countersignedStamps,
   verifierReportReading,
   withVerifierReport,
   bookWitnessedOnKeep,
@@ -3574,8 +3575,23 @@ async function renderVerifiedContext(
   // The page's own verification is the checked context's; only the receipt
   // module reads capsulectl's passing report (resolution and its model).
   const context = checkedContext;
+  // The countersignatures as this page classifies them, for its banner and,
+  // on an x-deal-v1 copy capsulectl passed, the receipt's COUNTERSIGNED stamp.
+  const stamps = await classifyCountersignatures(
+    context.countersignatures.map((entry) => entry.value),
+    context.verification.bundleDigest,
+    declaredProducerKeys(context.bundle),
+    context.countersigners,
+  );
   const moduleContext =
-    reading?.kind === "pass" ? withVerifierReport(context, reading) : context;
+    reading?.kind === "pass"
+      ? withVerifierReport(
+          context,
+          reading,
+          options.verifyCommand,
+          countersignedStamps(stamps),
+        )
+      : context;
   const verdictLine =
     reading?.kind === "fail" && reading.why === "verdict"
       ? reading.verdict
@@ -3658,12 +3674,6 @@ async function renderVerifiedContext(
         model: await sectionResolution.module.buildModel(context),
       };
   }
-  const stamps = await classifyCountersignatures(
-    context.countersignatures.map((entry) => entry.value),
-    verification.bundleDigest,
-    declaredProducerKeys(bundle),
-    context.countersigners,
-  );
   const bannerModel =
     reportFailed.length > 0
       ? {
