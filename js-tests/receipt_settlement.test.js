@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // capsule-viewer#383 (Sherlock2's ruling on the deal-view lines the viewer
-// gains): the x-deal-v0 buyer receipt says how the payment settled,
-// by rail, with a Lightning proof checked by the page's runtime
+// gains): the x-deal-v0 buyer receipt and seller copy say how the payment
+// settled, by rail, with a Lightning proof checked by the page's runtime
 // (EvidenceGraph.paymentPreimageCheck, ts/src/payment-preimage.ts) and the
 // exchange's size band (ruling u94: one band per exchange, none for a zero or
 // absent amount).
@@ -138,7 +138,7 @@ describe("the settlement line (#383)", () => {
 
   it("names x402 and another rail without checking either", async () => {
     const x402 = { "290b1db4": leg({ ref: { type: "x402.tx", value: "0xabc" } }) };
-    expect((await draw("keep", { legs: x402 })).text).toBe("Payment: settled on x402; this page does not check the on-chain record. Size: $10 – $99.");
+    expect((await draw("keep", { legs: x402 })).text).toBe("Payment: recorded as settled on x402; this page does not check the on-chain record. Size: $10 – $99.");
     const mixed = { ...x402, "3ad3f14b": leg() };
     const other = await draw("keep", { legs: mixed });
     expect(other.state).toBe("other");
@@ -197,11 +197,74 @@ describe("the settlement line (#383)", () => {
     expect(model.receipt.settlement).toBeUndefined();
   });
 
-  it("draws nothing on the seller copy yet, whose payment lines say not recorded", async () => {
-    const legs = { "8690c43a": leg({ received: money("12000", "EUR"), fee: money("0", "EUR") }) };
-    const { model, line } = await draw("seller-keep", { kind: "seller", legs });
-    expect(line).toBeNull();
-    expect(model.receipt.settlement).toBeUndefined();
+  describe("the seller copy's payment lines follow it", () => {
+    // seller-keep's commit (8690c43a) as a settled leg the seller observed.
+    const SALE = { "8690c43a": leg({ received: money("190000"), fee: money("0") }) };
+    const sellerLines = async (stubbed) => {
+      const c = receiptGolden().cases.find((x) => x.name === "seller-keep" && x.audience === "keep");
+      const lib = loadScript("seller");
+      lib.window.EvidenceGraph.paymentPreimageCheck = paymentPreimageCheck;
+      const { context, env } = caseInputs(c);
+      const module = lib.api.createModule("seller", { audience: env.audience, verification: () => env.verification(context) });
+      const model = await module.buildModel(stub(context, stubbed));
+      const host = renderInto(lib, module, model, "L2");
+      const legRow = [...host.L2.querySelectorAll("tr")].find((tr) => tr.firstElementChild && tr.firstElementChild.textContent === "Payment");
+      return {
+        model,
+        line: host.L0.querySelector('[data-rung="settlement"]'),
+        headline: host.L0.querySelector('[data-seller-line="payment"]').textContent,
+        note: host.L1.querySelector('[data-seller="payment"]').textContent,
+        legRow: legRow && legRow.lastElementChild.textContent,
+      };
+    };
+
+    it("draws the settlement line on the seller copy, and its payment lines agree with it", async () => {
+      const proof = await sellerLines({ legs: SALE, preimages: { "8690c43a": PREIMAGE } });
+      expect(proof.model.receipt.settlement.state).toBe("proof");
+      expect(proof.line.textContent).toBe("Payment: settled on Lightning; this page checked its proof against its invoice. Size: $1,000 – $9,999.");
+      expect(proof.headline).toBe("Payment: Settled on Lightning; this page checked its proof against its invoice");
+      expect(proof.note).toBe("This copy carries a payment record: the payment line at the top says how it settled and what this page checked. Evidence the seller's agent recorded is listed with its source; this page does not check what it says.");
+      expect(proof.legRow).toBe("recorded");
+      for (const text of [proof.headline, proof.note, proof.legRow]) expect(text).not.toMatch(/not recorded|no payment record/i);
+    });
+
+    it("follows each state of the line in its headline", async () => {
+      const cases = [
+        [{ legs: SALE }, "final", "Payment: The payee's wallet reported it final on Lightning; this file carries no proof to check"],
+        [{ legs: { "8690c43a": leg({ ref: { type: "ln.payment_hash", value: "22".repeat(32) } }) }, preimages: { "8690c43a": PREIMAGE } }, "failed", "Payment: Recorded as settled on Lightning, but its proof did not match its invoice when this page checked it"],
+        [{ legs: { ...SALE, "0777698f": leg() }, preimages: { "8690c43a": PREIMAGE } }, "partial", "Payment: Recorded as settled on Lightning; this file carries a proof for only some of its payments, so this page checked none of them"],
+        [{ legs: { "8690c43a": leg({ ref: { type: "x402.tx", value: "0xabc" } }) } }, "x402", "Payment: Recorded as settled on x402; this page does not check the on-chain record"],
+        [{ legs: { "8690c43a": leg({ ref: { type: "x402.tx", value: "0xabc" } }), "0777698f": leg() } }, "other", "Payment: Recorded as settled; this page can't check payments on this rail"],
+      ];
+      for (const [stubbed, state, headline] of cases) {
+        const got = await sellerLines(stubbed);
+        expect(got.model.receipt.settlement.state, state).toBe(state);
+        expect(got.headline, state).toBe(headline);
+        expect(got.legRow, state).toBe("recorded");
+      }
+    });
+
+    it("keeps \"not recorded\" with no settled leg, and draws no line", async () => {
+      const none = await sellerLines({});
+      expect(none.line).toBeNull();
+      expect(none.model.receipt.settlement).toBeUndefined();
+      expect(none.headline).toBe("Payment: Not recorded in this copy");
+      expect(none.note).toMatch(/^This copy carries no payment record\./);
+      expect(none.legRow).toBe("not recorded");
+      // A leg not settled, or not the payee's, is no payment record either.
+      const pending = await sellerLines({ legs: { "8690c43a": leg({ status: "pending" }) } });
+      expect(pending.headline).toBe("Payment: Not recorded in this copy");
+    });
+
+    it("keeps \"not recorded\" when an action names a rail but no leg settled it", async () => {
+      // The evidence record (f4eb6f65, x-deal-v0) is made an action naming the card rail: the line says no settlement record is here.
+      const missing = await sellerLines({ blocks: { f4eb6f65: { record_type: "action" } }, bodies: { f4eb6f65: { rail: "card" } } });
+      expect(missing.model.receipt.settlement).toEqual({ state: "missing", rail: "card", band: null });
+      expect(missing.line.textContent).toBe("Payment: a card payment; the card processor's report is not in this file.");
+      expect(missing.headline).toBe("Payment: Not recorded in this copy");
+      expect(missing.note).toMatch(/^This copy carries no payment record\./);
+      expect(missing.legRow).toBe("not recorded");
+    });
   });
 
   describe("the size band (ruling u94)", () => {

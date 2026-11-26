@@ -103,7 +103,7 @@ export function receiptModules(): PresentationModule[] {
       localTime: true,
       memberContext: (bundle: unknown) => buildVerifiedBundleContext(bundle),
       reportCheck: dealStandaloneReport,
-      // The buyer receipt's settlement line checks each Lightning leg's proof (#383).
+      // The x-deal-v0 receipts' settlement line checks each Lightning leg's proof (#383).
       preimageCheck: paymentPreimageCheck,
     });
     return {

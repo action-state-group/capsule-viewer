@@ -468,8 +468,8 @@
 
   // ---- the settlement line (capsule-viewer#383; Sherlock2's ruling on the deal-view lines) ----
   //
-  // The x-deal-v0 buyer receipt says how the payment settled, by rail (the
-  // seller copy with the next change), from the settled payee-observed legs among this copy's records
+  // The x-deal-v0 buyer receipt and seller copy say how the payment settled,
+  // by rail, from the settled payee-observed legs among this copy's records
   // (draft-mih-agent-settlement-records; Mesh-LLM/capsules-plugin
   // adapters/lightning-v0.md), as evidencebook's deal view did. A Lightning
   // leg's proof is its disclosed preimage; this page hashes nothing, so the
@@ -594,6 +594,9 @@
     return { state: state, rail: null, band: legBand(legs) };
   }
 
+  // Whether a settlement line rests on a settled leg (any state but "missing").
+  function settledLine(line) { return !!line && line.state !== "missing"; }
+
   // The pending runtime check of a context's Lightning proofs, or null when
   // there is none to ask: no legs, another rail, a leg withheld or no
   // preimage, no runtime check, already answered, or no place to keep it.
@@ -621,6 +624,336 @@
     var graph = root.EvidenceGraph;
     if (!graph || typeof graph.paymentPreimageCheck !== "function") return Promise.resolve(null);
     return graph.paymentPreimageCheck(paymentRef, preimage);
+  }
+
+  // ---- who the deal was with, and their words accepting (capsule-viewer#383, line 3) ----
+  //
+  // A copy's sealed report may open who the deal was with
+  // (counterparty_openings: the deal's key and, per step, the raw payee,
+  // name, domain, phone or email) and what the other party wrote accepting
+  // (acceptance_openings: each acceptance's words under the nonce they were
+  // committed with), as capsulectl writes them on the holder's own copy
+  // (evidencebook capsulectl/internal/deal/deal_counterparty_openings.go). The
+  // page recomputes each one against what the step sealed, as capsulectl did
+  // for its own deal view (deal_page_openings.go): a name against the keyed
+  // fingerprint the record carries (dealprofile.Fingerprint, HMAC-SHA256 over
+  // the normalized value), the words against the acceptance's
+  // content_commitment (checkOpening). A value that does not recompute here
+  // is never shown. The line is drawn whenever the copy discloses an opening:
+  // which copies may carry them is capsulectl's rule where it writes a copy.
+  var COUNTERPARTY_KINDS = ["payee", "name", "domain", "phone", "email"];
+  var ACCEPTANCE_KIND = "counterparty-acceptance-observation";
+
+  function hexBytes(h) {
+    if (typeof h !== "string" || h.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(h)) return null;
+    var out = new Uint8Array(h.length / 2);
+    for (var i = 0; i < out.length; i++) out[i] = parseInt(h.slice(2 * i, 2 * i + 2), 16);
+    return out;
+  }
+  function concatBytes(a, b) {
+    var out = new Uint8Array(a.length + b.length);
+    out.set(a);
+    out.set(b, a.length);
+    return out;
+  }
+  // HMAC-SHA256 (RFC 2104) of msg under key, as lowercase hex.
+  function hmacHex(key, msg) {
+    var k = new Uint8Array(64);
+    k.set(key.length > 64 ? hexBytes(sha256Hex(key)) : key);
+    var inner = new Uint8Array(64), outer = new Uint8Array(64);
+    for (var i = 0; i < 64; i++) { inner[i] = k[i] ^ 0x36; outer[i] = k[i] ^ 0x5c; }
+    return sha256Hex(concatBytes(outer, hexBytes(sha256Hex(concatBytes(inner, msg)))));
+  }
+
+  // The normalization dealprofile.Normalize takes each identifier through
+  // before its fingerprint (evidencebook dealprofile/keys.go), as far as a page
+  // can follow it: each function returns the forms the sealed fingerprint may
+  // be over (empty when this page cannot normalize the value, which then
+  // reads as not checked, never as a match). Go's \s, \d and \D are ASCII.
+  var GO_SPACE = "\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+  var GO_TRIM = new RegExp("^[" + GO_SPACE + "]+|[" + GO_SPACE + "]+$", "g");
+  var GO_FIELDS = new RegExp("[" + GO_SPACE + "]+");
+  var PHONE_EXTENSION = /[\t\n\f\r ]*(?:ext\.?|x|#)[\t\n\f\r ]*[0-9]+[\t\n\f\r ]*$/i;
+  var PAYEE_IS_PHONE = /^[\t\n\f\r ]*\+?[0-9\t\n\f\r ().-]{7,}[\t\n\f\r ]*$/;
+  var LEGAL_FORMS = ["llc", "inc", "ltd", "corp", "co", "company", "gmbh", "llp", "plc"];
+  var PUNCTUATION = (function () {
+    try { return new RegExp("\\p{P}", "gu"); } catch (e) { return null; }
+  })();
+  function nfc(s, form) { return typeof s.normalize === "function" ? s.normalize(form || "NFC") : null; }
+  function goTrim(s) { return s.replace(GO_TRIM, ""); }
+  // Go's strings.ToLower: each code point's simple lowercase mapping.
+  function goLower(s) {
+    return Array.from(s).map(function (c) { return c === "İ" ? "i" : c.toLowerCase(); }).join("");
+  }
+  // Full case folding (CaseFolding.txt, C and F), per code point, with
+  // Cherokee folded to its capitals as dealprofile's foldCase does.
+  function caseFold(s) {
+    return Array.from(s).map(function (c) {
+      if (c === "ı") return c;
+      if (c === "ẞ") return "ss";
+      return Array.from(c.toUpperCase().toLowerCase()).map(function (f) {
+        var cp = f.codePointAt(0);
+        if (cp >= 0xab70 && cp <= 0xabbf) return String.fromCodePoint(cp - 0xab70 + 0x13a0);
+        if (cp >= 0x13f8 && cp <= 0x13fd) return String.fromCodePoint(cp - 0x13f8 + 0x13f0);
+        return f;
+      }).join("");
+    }).join("");
+  }
+  function normPhone(v) {
+    v = nfc(v, "NFKC");
+    if (v === null) return [];
+    v = goTrim(v);
+    var at = v.search(PHONE_EXTENSION);
+    if (at >= 0) v = v.slice(0, at);
+    var digits = v.replace(/[^0-9]/g, "");
+    if (v.charAt(0) !== "+") {
+      if (digits.length === 10) digits = "1" + digits;
+      else if (!(digits.length === 11 && digits.charAt(0) === "1")) return [];
+    }
+    return digits.length < 8 || digits.length > 15 ? [] : ["+" + digits];
+  }
+  function normEmail(v) {
+    v = nfc(goTrim(v));
+    if (v === null) return [];
+    v = goLower(v);
+    var ats = v.split("@").length - 1;
+    return ats !== 1 || v.charAt(0) === "@" || v.charAt(v.length - 1) === "@" ? [] : [v];
+  }
+  // A domain's fingerprint is over its registrable domain (eTLD+1, from the
+  // public suffix list, which this page does not carry): every suffix of two
+  // or more labels is a candidate, so a match shows the value's registrable
+  // domain is the sealed one. A name in another script, or in punycode, is
+  // not normalized here (IDNA is not followed), so it reads as not checked.
+  function normDomain(v) {
+    v = nfc(goTrim(v));
+    if (v === null) return [];
+    v = goLower(v).replace(/^[a-z][a-z0-9+.-]*:\/\//, "");
+    var cut = v.search(/[\/?#]/);
+    if (cut >= 0) v = v.slice(0, cut);
+    v = v.slice(v.lastIndexOf("@") + 1).replace(/:[0-9]+$/, "").replace(/\.+$/, "");
+    var labels = v.split(".");
+    if (labels.length < 2) return [];
+    var ldh = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+    if (!labels.every(function (l) { return ldh.test(l) && l.slice(2, 4) !== "--"; })) return [];
+    var out = [];
+    for (var i = labels.length - 2; i >= 0; i--) out.push(labels.slice(i).join("."));
+    return out;
+  }
+  function normName(v) {
+    v = nfc(v);
+    if (v === null || PUNCTUATION === null) return [];
+    var toks = caseFold(v).replace(PUNCTUATION, " ").split(GO_FIELDS).filter(function (t) { return t !== ""; });
+    if (toks.length && toks[0] === "the") toks = toks.slice(1);
+    while (toks.length && LEGAL_FORMS.indexOf(toks[toks.length - 1]) >= 0) toks = toks.slice(0, -1);
+    return toks.length ? [toks.join(" ")] : [];
+  }
+  function normalized(kind, v) {
+    if (kind === "phone") return normPhone(v);
+    if (kind === "email") return normEmail(v);
+    if (kind === "domain") return normDomain(v);
+    if (kind === "name") return normName(v);
+    // A payee is an email, a phone or a name, read as dealprofile reads it.
+    if (v.indexOf("@") >= 0) return normEmail(v);
+    return PAYEE_IS_PHONE.test(v) ? normPhone(v) : normName(v);
+  }
+  // Whether value, as an identifier of kind, recomputes to the sealed fingerprint.
+  function fingerprintMatches(key, kind, value, want) {
+    try {
+      return normalized(kind, value).some(function (n) {
+        return hmacHex(key, utf8("x-deal-v0/fp\u0000" + kind + "\u0000" + n)) === want;
+      });
+    } catch (err) {
+      if (err instanceof NotCanonical) return false;
+      throw err;
+    }
+  }
+  // The keyed fingerprints a record seals for its counterparty: in its
+  // x-deal-v0 block or, in a typed record, its body.
+  function sealedCounterpartyIds(payload) {
+    var holders = [map(get(payload, EXTENSION)), map(get(payload, "body"))];
+    for (var i = 0; i < holders.length; i++) {
+      var ids = get(map(get(holders[i], "counterparty")), "ids");
+      if (isMap(ids)) return ids;
+    }
+    return {};
+  }
+
+  // The line's model, or null when the copy opens neither: `who` is the
+  // counterparty as the deal view named them (the payee, else the name,
+  // else the site, phone or email, then the site in brackets), from the
+  // values that recomputed; `unchecked` is true when any value did not;
+  // `accepted` lists each acceptance in order, its text only when it
+  // recomputed. A step named twice verifies no second entry for it.
+  function counterpartyOf(reader, raw) {
+    var hasWho = own(raw, "counterparty_openings"), hasAccepted = own(raw, "acceptance_openings");
+    if (!hasWho && !hasAccepted) return null;
+    var out = { who: null, unchecked: false, accepted: [] };
+    var cp = map(get(raw, "counterparty_openings"));
+    var key = hexBytes(get(cp, "key"));
+    var got = {}, seen = {};
+    seq(get(cp, "steps")).forEach(function (e) {
+      var entry = map(e);
+      var step = or(str(get(entry, "step")), "");
+      var payload = reader.headers.has(step) ? reader.payload(step) : null;
+      var ids = sealedCounterpartyIds(payload);
+      COUNTERPARTY_KINDS.forEach(function (kind) {
+        var value = get(entry, kind);
+        if (typeof value !== "string") return;
+        var want = str(get(ids, kind));
+        var ok = key !== null && key.length > 0 && truthy(want) && !own(seen, step + "\u0000" + kind) && fingerprintMatches(key, kind, value, want);
+        seen[step + "\u0000" + kind] = true;
+        // The last entry for a field decides it; one that did not recompute
+        // leaves the field unnamed rather than an earlier entry's value.
+        if (ok) got[kind] = value;
+        else {
+          delete got[kind];
+          out.unchecked = true;
+        }
+      });
+    });
+    var label = got.payee || got.name || got.domain || got.phone || got.email || null;
+    if (label !== null) out.who = got.domain && label !== got.domain ? label + " (" + got.domain + ")" : label;
+    var stepsSeen = {};
+    seq(get(raw, "acceptance_openings")).forEach(function (a) {
+      var opening = map(a);
+      var step = str(get(opening, "step"));
+      var c = committed(reader, step, function (p) {
+        var body = map(get(p, "body"));
+        return get(body, "kind") === ACCEPTANCE_KIND ? get(body, "content_commitment") : null;
+      }, get(opening, "nonce"), get(opening, "text"));
+      var first = step !== null && !own(stepsSeen, step);
+      if (step !== null) stepsSeen[step] = true;
+      out.accepted.push({ step: step, text: first && c.state === "opened" ? c.text : null });
+    });
+    return out;
+  }
+
+  // ---- "each act came after your yes" (capsule-viewer#383, line 4) ----
+  //
+  // Recomputed in the page from the copy's deal log, as evidencebook's deal
+  // view recomputed it (deal-view.js dealLogSteps and dealAfterYes; F8.1,
+  // x-deal-v0 section 6): each act (a step that cites what authorized it) is
+  // preceded in this log by that authority, each at an earlier place: an
+  // approval that proceeds, answering a verdict that answers a check; or, on
+  // typed records, an evaluation that let it go ahead under the task's
+  // authority (DO), answering the proposed action. An act sealed without an
+  // approval (an unchecked_action outcome, x-deal or typed; a disclosure with
+  // no authority; a claim sealed unchecked) fails, named; an authority
+  // withheld from this copy is missing; a copy with any step withheld is not
+  // checked, since that step may be an act. A step's place is its book
+  // header's seq and its record digest the header's one payload commitment,
+  // which a rel ref names (x-deal-v0 section 2): figures read from verified
+  // content, nothing hashed here.
+  var DEAL_STEP_TYPES = ["deal_step", "step_completed", "step_failed"];
+  var APPROVAL_TYPES = ["approval", "action-approval/v0"];
+  var EVALUATION_TYPES = ["verdict", "action-evaluation/v0"];
+  var CHECK_TYPES = ["check", "proposed-action/v0"];
+  var APPROVERS = ["user", "standing_intent", "agent_card", "task_authority"];
+
+  // The copy's steps on its deal log, each with its place, digest, deal block
+  // (null when its record is withheld) and body.
+  function dealLogSteps(v) {
+    var steps = [];
+    seq(map(v.context).records).forEach(function (r) {
+      var h = map(get(r, "evidence_record_header"));
+      var cid = str(get(r, "capsule_id"));
+      if (cid === null || DEAL_STEP_TYPES.indexOf(get(h, "record_type")) < 0 || int(get(h, "seq")) === null) return;
+      var input = v.disclosed(cid, "agent_input");
+      // A typed record (task-authority/v0 and the rest) names its type and
+      // refs at its top level; an x-deal-v0 record, in its block.
+      var deal = null;
+      if (isMap(input)) deal = isMap(get(input, EXTENSION)) ? input[EXTENSION] : (typeof get(input, "type") === "string" ? { record_type: input.type, refs: get(input, "refs") } : null);
+      steps.push({ id: cid, seq: h.seq, digest: str(seq(get(h, "payload_commitments"))[0]), deal: deal, body: map(get(input, "body")) });
+    });
+    return steps;
+  }
+  function refTo(deal, rel) {
+    var found = seq(get(deal, "refs")).find(function (r) { return get(map(r), "rel") === rel; });
+    return found ? str(get(found, "digest")) : null;
+  }
+  // The line's model: state passed, failed (why unapproved or order, the act
+  // named), missing (the act named), withheld (a step withheld: not checked),
+  // unplaced (no step has a place in a book: not checked) or none (no act:
+  // nothing drawn), and the approvers the acts were approved by.
+  function afterYesOf(v) {
+    var steps = dealLogSteps(v);
+    if (!steps.length) return { state: "unplaced", approvers: [] };
+    var byDigest = new Map();
+    steps.forEach(function (s) { if (s.digest !== null) byDigest.set(s.digest, s); });
+    var earlier = function (digest, than, types) {
+      var s = digest === null ? undefined : byDigest.get(digest);
+      if (!s) return "absent";
+      if (s.deal === null) return "withheld";
+      return s.seq < than.seq && types.indexOf(get(s.deal, "record_type")) >= 0 ? s : "bad";
+    };
+    var failed = function (act, why) { return { state: "failed", why: why, act: act, approvers: [] }; };
+    var acts = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (s.deal === null) continue;
+      var t = get(s.deal, "record_type");
+      if ((t === "outcome" || t === "action-outcome/v0") && get(s.body, "status") === "unchecked_action") return failed(s, "unapproved");
+      if (t === "disclosure" && get(s.body, "authority") === "none") return failed(s, "unapproved");
+      if (t === "claim" && get(s.body, "unchecked") === true) return failed(s, "unapproved");
+      // An action record is an act whether or not it cites an authority, in
+      // either form (RECORD_TYPE_BY_TYPED), so one citing none fails below.
+      if (refTo(s.deal, "authorized_by") !== null || t === "action" || RECORD_TYPE_BY_TYPED[t] === "action" || (t === "disclosure" && get(s.body, "authority") === "approval")) acts.push(s);
+    }
+    var withheld = steps.some(function (s) { return s.deal === null; });
+    if (!acts.length) return { state: withheld ? "withheld" : "none", approvers: [] };
+    var approvers = [];
+    var missing = null;
+    for (i = 0; i < acts.length; i++) {
+      var act = acts[i];
+      var by = earlier(refTo(act.deal, "authorized_by"), act, APPROVAL_TYPES.concat(EVALUATION_TYPES));
+      var evaluation = by;
+      var approver = null;
+      if (typeof by === "object" && APPROVAL_TYPES.indexOf(get(by.deal, "record_type")) >= 0) {
+        if (get(by.body, "proceed") !== true) return failed(act, "order");
+        var answered = refTo(by.deal, "approves");
+        evaluation = earlier(answered, by, EVALUATION_TYPES);
+        // x-deal-v0 section 6 rule 5: only the verdict's first answer
+        // authorizes; a later one ("Hold", then "Pay anyway") never does.
+        var answeredBefore = steps.some(function (o) {
+          return o.deal !== null && APPROVAL_TYPES.indexOf(get(o.deal, "record_type")) >= 0 && o.seq < by.seq && refTo(o.deal, "approves") === answered;
+        });
+        if (answeredBefore) return failed(act, "order");
+        if (get(by.deal, "record_type") === "approval") {
+          approver = str(get(by.body, "approver"));
+          // Standing intent approves only a passing verdict (rule 6).
+          if (approver === "standing_intent" && typeof evaluation === "object" && get(evaluation.body, "result") !== "pass") return failed(act, "order");
+        } else {
+          // A typed ASK is answered only by the user's own approval, and
+          // only an ASK is (a DO authorizes on its own; a DENY never does).
+          if (get(by.body, "authority") !== "user_approval") return failed(act, "order");
+          if (typeof evaluation === "object" && get(evaluation.body, "disposition") !== "ASK") return failed(act, "order");
+          approver = "user";
+        }
+      } else if (typeof by === "object") {
+        if (get(by.body, "disposition") !== "DO") return failed(act, "order");
+        approver = "task_authority";
+      }
+      var check = typeof evaluation === "object" ? earlier(refTo(evaluation.deal, "checks"), evaluation, CHECK_TYPES) : evaluation;
+      if (check === "withheld") {
+        missing = missing || act;
+        continue;
+      }
+      if (typeof check === "string") return failed(act, "order");
+      // The check asked about this very act (rule 5).
+      if (typeof get(act.body, "action") === "string" && get(check.body, "action") !== act.body.action) return failed(act, "order");
+      if (approver !== null && approvers.indexOf(approver) < 0) approvers.push(approver);
+    }
+    if (missing !== null) return { state: "missing", act: missing, approvers: approvers };
+    return { state: withheld ? "withheld" : "passed", approvers: approvers };
+  }
+  // The model kept: the act by its capsule id and its sealed action name.
+  function afterYesModel(v) {
+    var yes = afterYesOf(v);
+    if (yes.state === "none") return null;
+    var out = { state: yes.state, approvers: yes.approvers.filter(function (a) { return APPROVERS.indexOf(a) >= 0; }) };
+    if (yes.why) out.why = yes.why;
+    if (yes.act) out.act = { step: yes.act.id, action: str(get(yes.act.body, "action")) };
+    return out;
   }
 
   // A carried copy, verified by the page's runtime on its own.
@@ -897,6 +1230,44 @@
       withheld: strings(get(raw, "withheld")),
       journey: journeyOf(get(raw, "journey")),
     };
+  }
+
+  // The sealed report's AUTHORITY blocks (capsule-viewer#383, line 5), which
+  // report() leaves out as the frozen twin does: for each act, the layers it
+  // relied on, in its sealed order, each with its time and step, and whether
+  // they covered it. capsulectl writes them on the holder's own copy of a
+  // deal sealed in typed records (evidencebook deal_report.go, the AUTHORITY
+  // block; deal_authority.go). They are the holder's computation, shown as
+  // sealed text: this page checks none of it. Null when the report has none.
+  function authorityOf(raw) {
+    var blocks = [];
+    seq(get(raw, "authority")).forEach(function (b) {
+      if (!isMap(b)) return;
+      var layers = [];
+      seq(get(b, "layers")).forEach(function (l) {
+        if (!isMap(l)) return;
+        var text = str(get(l, "text"));
+        if (text === null) return;
+        layers.push({ layer: or(str(get(l, "layer")), ""), at: str(get(l, "at")), text: text, note: or(str(get(l, "note")), null), step: str(get(l, "step")) });
+      });
+      blocks.push({ action: or(str(get(b, "action")), ""), step: str(get(b, "step")), covered: get(b, "covered") === true, layers: layers });
+    });
+    if (!blocks.length) return null;
+    return { order: str(get(raw, "authority_order")), blocks: blocks };
+  }
+
+  // The referee an adjudicator's copy names (capsule-viewer#383, line 8):
+  // the sealed report's own `referee`, beside its report (capsulectl seals the
+  // adjudicator the copy is handed to; evidencebook deal_report.go
+  // dealRefereeOf), on an adjudicator's copy only. Null otherwise. Whether the
+  // other side named the same one is a check of both copies, not of this one.
+  function refereeOf(reader, raw) {
+    if (get(raw, "audience") !== "adjudicator") return null;
+    var named = str(get(map(get(map(get(reader.v.bundle, "extensions")), EXTENSION)), "sealed_report"));
+    if (named === null) return null;
+    var payload = reader.standalone() ? reader.standaloneContent(named) : reader.payload(named);
+    var referee = str(get(payload, "referee"));
+    return truthy(referee) ? referee : null;
   }
 
   // The context, read once: headers by id and disclosed deal payloads.
@@ -2276,13 +2647,16 @@
     var parts = [];
     var aud = model.report.audience;
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
+    if (model.referee) parts.push(this.p(w("referee.named", { referee: model.referee }), { "data-rung": "referee" }));
     if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
+    if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     // Only a half capsulectl reported as verified is said; any other status,
     // or none, draws no line (a failed half fails the x-deal-v1 entry, which
     // refuses the copy before it is drawn).
     if (model.counterparty_half === "verified") parts.push(this.p(w("counterparty_half.verified"), { "data-rung": "counterparty-half" }));
     parts.push(this.p(this.countersign(model), { "data-rung": "countersign" }));
+    if (model.after_yes) parts.push(this.p(this.afterYes(model, model.after_yes), { "data-rung": "after-yes", "data-after-yes": model.after_yes.state }));
     if (model.settlement) parts.push(this.p(this.settlement(model.settlement), { "data-rung": "settlement", "data-settlement": model.settlement.state }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
@@ -2306,6 +2680,37 @@
     if (model.witnessed === "fail") return w("rung.witness_failed");
     if (model.witnessed === "withheld") return w("rung.unwitnessed");
     return w("rung.unreported");
+  };
+  // Who the deal was with and their words accepting (counterpartyOf): only
+  // what recomputed here is shown; anything else is said to be not shown.
+  P.counterpartyNamed = function (named) {
+    var self = this;
+    var out = [];
+    if (named.who !== null) out.push(this.p(w("counterparty.with", { who: named.who }), { "data-rung": "counterparty", "data-counterparty": "checked" }));
+    if (named.unchecked) out.push(this.p(w("counterparty.unchecked"), { class: "cv-tone--caution", "data-rung": "counterparty", "data-counterparty": "unchecked" }));
+    named.accepted.forEach(function (a) {
+      if (a.text !== null) out.push(self.p(w("accepted.words", { text: a.text }), { "data-rung": "accepted", "data-accepted": a.step }));
+      else out.push(self.p(w("accepted.unchecked"), { class: "cv-tone--caution", "data-rung": "accepted", "data-accepted": "unchecked" }));
+    });
+    return out;
+  };
+  // Whether each act came after the holder's yes (afterYesModel), then how
+  // each was approved, as recorded. The holder's own copy, drawn for them,
+  // says "your"; any other copy, or a page for others, names the holder.
+  P.afterYes = function (model, yes) {
+    var side = model.report.audience === "keep" && !sharedCarrier(this.carrier) ? "own" : "shared";
+    var who = w("after_yes.who." + side), their = w("after_yes.their." + side), giver = w("after_yes.giver." + side);
+    var act = function () {
+      var step = stepIn(model, yes.act.step);
+      if (step !== null && step.line) return "“" + step.line + "”";
+      return yes.act.action !== null ? w("after_yes.act.named", { action: yes.act.action }) : w("after_yes.act.unnamed");
+    };
+    var text;
+    if (yes.state === "failed") text = w("after_yes.failed." + yes.why, { who: who, act: act() });
+    else if (yes.state === "missing") text = w("after_yes.missing", { who: who, act: act() });
+    else text = w("after_yes." + yes.state, { who: who });
+    var said = yes.approvers.map(function (a) { return w("after_yes.approver." + a, { who: who, their: their, giver: giver }); });
+    return said.length ? text + w("after_yes.approvers", { list: said.join("; ") }) : text;
   };
   // The settlement line (settlementOf): its rail and proof, then the size band when there is one.
   P.settlement = function (line) {
@@ -2364,6 +2769,27 @@
       this.p(text, { "data-sealed-text": "item" }),
       this.kit.section(w("steps.summary"), [this.steps(model, it.steps)], 4),
     ]);
+  };
+  // The sealed report's authority blocks (authorityOf), as sealed text: each
+  // act and the layers it relied on, an act they did not cover flagged.
+  P.authoritySealed = function (model, authority) {
+    var self = this, kit = this.kit;
+    var body = [this.note(w("authority.sealed"))];
+    if (authority.order !== null) body.push(this.note(authority.order, { "data-sealed-text": "authority-order" }));
+    authority.blocks.forEach(function (b) {
+      var layers = b.layers.map(function (l) {
+        var line = self.item(model, item(l.text, l.step !== null ? [l.step] : [], l.at, !b.covered && l.layer === "action"));
+        if (l.note === null) return line;
+        return [line, self.note(l.note, { "data-sealed-text": "authority-note" })];
+      });
+      var head = b.covered ? [] : [self.p(w("authority.uncovered"), { class: "cv-tone--caution", "data-authority-uncovered": b.step || "" })];
+      var block = kit.section(b.covered ? b.action : "⚠️ " + b.action, head.concat(layers), 3);
+      block.setAttribute("data-authority-block", b.covered ? "covered" : "uncovered");
+      body.push(block);
+    });
+    var section = kit.section(w("section.authority"), body);
+    section.setAttribute("data-authority", "sealed");
+    return section;
   };
   P.sectionSteps = function (model, section) {
     var self = this;
@@ -2471,6 +2897,7 @@
     var r = model.report;
     var out = [this.sealedNote(model)];
     out.push(kit.section(w("section.authorized"), [this.committed(model.asked, "asked"), this.sectionSteps(model, "authorized")]));
+    if (model.authority_sealed) out.push(this.authoritySealed(model, model.authority_sealed));
     out = out.concat(this.journey(model));
     out.push(kit.section(w("section.proposed"), this.sectionSteps(model, "proposed")));
     out.push(kit.section(w("section.approved"), this.sectionSteps(model, "approved")));
@@ -2620,11 +3047,17 @@
       { label: w("seller.l0.amount"), value: this.part(model.amount) },
       { label: w("l0.state"), value: state },
     ]);
-    var payment = d.el("p", { "data-seller-line": "payment" }, [w("seller.l0.payment"), ": ", w("seller.payment.not_recorded")]);
+    var payment = d.el("p", { "data-seller-line": "payment" }, [w("seller.l0.payment"), ": ", this.sellerPayment(model.receipt.settlement)]);
     var handover = d.el("p", { "data-seller-line": "handover" }, [
       w("seller.l0.handover"), ": ", d.el("span", { "data-handover": model.handover.state }, [this.handoverText(model.handover)]),
     ]);
     return [grid, payment, handover];
+  };
+  // The seller headline's payment value: "not recorded in this copy" unless
+  // the copy's settlement line rests on a settled leg (settlementOf), whose
+  // state it then follows.
+  P.sellerPayment = function (line) {
+    return settledLine(line) ? w("seller.payment.settled." + line.state) : w("seller.payment.not_recorded");
   };
   P.sellerNotes = function (model) {
     var audience = model.receipt.report.audience;
@@ -2652,6 +3085,7 @@
     authorised.push(this.withheldRow(model.floor, "seller.floor", "floor"));
     authorised = authorised.concat(this.sectionSteps(r, "authorized"));
     out.push(kit.section(w(this.audienceKey("seller.section.authorised", model)), authorised));
+    if (r.authority_sealed) out.push(this.authoritySealed(r, r.authority_sealed));
     out = out.concat(this.journey(r));
 
     var toldList = r.statements.map(function (c) { return self.committed(c, "statement"); });
@@ -2662,7 +3096,7 @@
     out.push(kit.section(w("seller.section.offers"), [this.offers(model), this.sectionSteps(r, "proposed")]));
     out.push(kit.section(w(this.audienceKey("seller.section.accepted", model)), [this.acceptances(model), this.sectionSteps(r, "approved")]));
 
-    var payment = [this.note(w("seller.payment.none"), { "data-seller": "payment" })];
+    var payment = [this.note(w(settledLine(r.settlement) ? "seller.payment.recorded" : "seller.payment.none"), { "data-seller": "payment" })];
     model.evidence.forEach(function (e) {
       if (e.disclosure === "disclosed") {
         var verified = w(e.verified ? "seller.evidence.verified" : "seller.evidence.unverified");
@@ -2780,7 +3214,7 @@
     ], 3));
     var legs = [
       [w("seller.leg.agreement"), w(model.offers.some(function (o) { return o.action === "commit"; }) ? "seller.leg.recorded" : "seller.leg.none")],
-      [w("seller.leg.payment"), w("seller.leg.none")],
+      [w("seller.leg.payment"), w(settledLine(model.receipt.settlement) ? "seller.leg.recorded" : "seller.leg.none")],
       [w("seller.leg.handover"), w("seller.provenance.seller_observed." + model.handover.state)],
     ];
     out.push(kit.section(w("seller.section.legs"), [kit.dataTable([w("seller.leg.name"), w("seller.leg.state")], legs)], 3));
@@ -2801,6 +3235,13 @@
     };
   };
 
+  // The deal's id after the card's title, as capsulectl's deal view named it
+  // (capsule-viewer#383, line 8): the sealed report's deal_id, none when it
+  // names none.
+  P.dealId = function (model) {
+    return model.deal_id ? [this.d.el("span", { "data-deal-id": model.deal_id }, [w("title.deal", { deal: model.deal_id })])] : [];
+  };
+
   // The three levels of one page: L0 always shown, L1 and L2 one toggle each.
   P.page = function (l0, l1Summary, l1, l1Open, l2, l2Open, after, l2Summary) {
     var d = this.d;
@@ -2816,7 +3257,7 @@
     var levels = dr.levels(model);
     var l0 = [];
     if (model.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
-    l0.push(dr.d.el("h2", {}, [w("page.title")]));
+    l0.push(dr.d.el("h2", {}, [w("page.title")].concat(dr.dealId(model))));
     l0.push(dr.checkedNote(model.verification));
     var keep = model.report.audience === "keep";
     if (keep) l0.push(dr.privateBanner());
@@ -2831,7 +3272,7 @@
     var levels = dr.sellerLevels(model);
     var l0 = [];
     if (model.receipt.demo) l0.push(dr.d.el("p", { "data-demo": "true" }, [w("badge.demo")]));
-    l0.push(dr.d.el("h2", {}, [w("seller.title")]));
+    l0.push(dr.d.el("h2", {}, [w("seller.title")].concat(dr.dealId(model.receipt))));
     l0.push(dr.checkedNote(model.receipt.verification));
     var keep = model.receipt.report.audience === "keep";
     if (keep) l0.push(dr.privateBanner());
@@ -3707,7 +4148,7 @@
   //                   (no assurance given) for the copy itself, not for a carried copy
   //   preimageCheck   (payment_ref, preimage) -> "PASS", "FAIL", "NOT_PRESENT",
   //                   "NOT_CHECKED" (or a promise of one): one Lightning leg's proof,
-  //                   asked on a page for the buyer receipt's settlement line
+  //                   asked on a page for the x-deal-v0 settlement line
   function createModule(kind, env) {
     if (!own(DRAW, kind)) throw new Error("no receipt module " + kind);
     var e = {
@@ -3745,35 +4186,57 @@
       if (reportChecked(c.verification, EXTENSION_V1) !== null) return false;
       return view(context, e).verified === true;
     };
-    // The buyer's receipt only: the seller copy's own payment lines ("not
-    // recorded in this copy") come with the next change, worded with it.
-    var settles = kind === "unilateral";
+    // The x-deal-v0 receipts: the buyer's and the seller copy, whose own
+    // payment lines follow the settlement line (P.sellerPayment).
+    var settles = kind === "unilateral" || kind === "seller";
     var build = function (context) {
       if (cannotCheckHere(context)) return { cannot_check: true };
       if (reportRuleNotRun(context)) return { cannot_check: true, reason: "report_rule" };
       var asked = [
         pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null,
-        // The settlement line's Lightning proof, on the x-deal-v0 buyer receipt only.
+        // The settlement line's Lightning proof, on the x-deal-v0 receipts only.
         pageChecks && settles ? askSettlementCheck(context, e.preimageCheck) : null,
       ].filter(function (p) { return p !== null; });
       if (asked.length) return Promise.all(asked).then(function () { return buildChecked(context); });
       return buildChecked(context);
     };
-    // The settlement line (see settlementOf), on the receipt model the copy notes draw from.
-    var withSettlement = function (v, receipt) {
-      var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
-      if (line !== null) receipt.settlement = line;
+    // The lines the viewer draws and the frozen Python twin never does
+    // (capsule-viewer#383, Sherlock2's ruling on the deal-view lines), on the
+    // receipt model the copy notes draw from: the settlement line (see
+    // settlementOf), who the deal was with (counterpartyOf), whether each
+    // act came after the holder's yes (afterYesModel), the sealed report's
+    // authority blocks (authorityOf) and the referee an adjudicator's copy
+    // names (refereeOf).
+    var withViewerLines = function (v, receipt) {
+      if (settles) {
+        var line = settlementOf(v, pageChecks && SETTLEMENT_CHECKS !== null ? SETTLEMENT_CHECKS.get(v.context) : undefined);
+        if (line !== null) receipt.settlement = line;
+      }
+      var reader = new Reader(v);
+      var raw = reader.sealedReport()[1];
+      var named = counterpartyOf(reader, raw);
+      if (named !== null) receipt.counterparty_named = named;
+      var authority = authorityOf(raw);
+      if (authority !== null) receipt.authority_sealed = authority;
+      var referee = refereeOf(reader, raw);
+      if (referee !== null) receipt.referee = referee;
+      var yes = afterYesModel(v);
+      if (yes !== null) receipt.after_yes = yes;
     };
     var buildChecked = function (context) {
       var v = view(context, e);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
-      if (kind === "seller") return buildSeller(v, e.audience);
+      if (kind === "seller") {
+        var sale = buildSeller(v, e.audience);
+        withViewerLines(v, sale.receipt);
+        return sale;
+      }
       // A seller's copy, by its packaging or by its own sealed records, is
       // never shown as a buyer's receipt.
       if (sellerKindEngaged(v) || sealedSide(v) === "seller") throw new Unavailable("a seller's copy is the seller receipt's");
       var receipt = buildReceipt(v, e.audience);
-      withSettlement(v, receipt);
+      withViewerLines(v, receipt);
       return receipt;
     };
     var declined = function (err) {
