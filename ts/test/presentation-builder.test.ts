@@ -166,11 +166,13 @@ const done = (root: Element): boolean =>
   root.querySelector('[data-refusal="fragment-unreadable"]') !== null;
 
 // Wait until the page has drawn its verification section and stopped changing.
+// No deadline of its own: a page that never settles is caught by the suite's
+// hang ceiling (vitest.config.ts), and a wall-clock deadline here would fail a
+// page that is only slow because the machine is loaded (capsule-viewer#433).
 async function settled(root: Element): Promise<Snapshot> {
-  const deadline = Date.now() + 60_000;
   let last = "";
   let stable = 0;
-  while (Date.now() < deadline) {
+  for (;;) {
     await new Promise((r) => setTimeout(r, 15));
     const now = root.innerHTML;
     stable = done(root) && now === last ? stable + 1 : 0;
@@ -180,7 +182,6 @@ async function settled(root: Element): Promise<Snapshot> {
       return snapshot(root);
     }
   }
-  throw new Error("page did not settle");
 }
 
 /** Open a page in jsdom with its scripts running, as a browser would. */
@@ -202,20 +203,21 @@ async function openPage(html: string, url: string): Promise<Snapshot> {
 
 /**
  * Open a static page as a browser would, with scripting off (it has no
- * script to run; its CSP allows none). Returns what #app shows and the
- * page itself for the static checks.
+ * script to run; its CSP allows none). A static page of the outcome report
+ * is about 14 MB and takes seconds of CPU to parse, so each test parses a
+ * page once and passes the document on (capsule-viewer#433).
  */
+const staticDocument = (html: string): Document =>
+  openDom(html).window.document;
+
+/** What #app of a static page shows, and the page itself for the static checks. */
 function openStatic(html: string): { snapshot: Snapshot; page: Document } {
-  const dom = openDom(html);
-  return {
-    snapshot: snapshot(dom.window.document.getElementById("app")!),
-    page: dom.window.document,
-  };
+  const page = staticDocument(html);
+  return { snapshot: snapshot(page.getElementById("app")!), page };
 }
 
 /** What every static page must say and carry, for one verification state. */
-function expectStaticPage(html: string, verify: string): void {
-  const { page } = openStatic(html);
+function expectStaticPage(page: Document, verify: string): void {
   expect(page.querySelectorAll("script")).toHaveLength(0);
   expect(
     [...page.querySelectorAll("*")].flatMap((e) =>
@@ -250,6 +252,8 @@ type Outcome =
       readonly kind: "shown";
       readonly built: BuiltPresentation;
       readonly snapshot: Snapshot;
+      /** The parsed page, for the static packaging. */
+      readonly page?: Document;
     }
   | { readonly kind: "refused"; readonly error: string };
 
@@ -274,6 +278,7 @@ async function showAll(
       continue;
     }
     let shown: Snapshot;
+    let page: Document | undefined;
     if (built.format === "html")
       shown = await openPage(built.html, "file:///offline.html");
     else if (built.format === "fragment")
@@ -281,14 +286,20 @@ async function showAll(
         buildFragmentViewerHtml({ code: runtime }),
         `file:///viewer.html#${built.fragment}`,
       );
-    else if (built.format === "static") shown = openStatic(built.html).snapshot;
+    else if (built.format === "static")
+      ({ snapshot: shown, page } = openStatic(built.html));
     else {
       const element = document.createElement("main");
       await built.mount(element);
       openEveryBody(element);
       shown = snapshot(element);
     }
-    out[format] = { kind: "shown", built, snapshot: shown };
+    out[format] = {
+      kind: "shown",
+      built,
+      snapshot: shown,
+      ...(page === undefined ? {} : { page }),
+    };
   }
   return out;
 }
@@ -345,7 +356,7 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
           ? (await sealEvidenceBundle(fixture(file))).bundle
           : fixture(file),
       );
-  }, 120_000);
+  });
 
   const table: string[] = [];
 
@@ -428,7 +439,7 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
         expect(statik.kind).toBe("shown");
         if (statik.kind === "shown" && statik.built.format === "static") {
           expect(statik.built.verification).toBe(snap.verify[0]);
-          expectStaticPage(statik.built.html, snap.verify[0]!);
+          expectStaticPage(statik.page!, snap.verify[0]!);
         }
 
         // The hand-back: the fragment rebuilds the exact offline file.
@@ -450,10 +461,11 @@ describe("one builder, four packagings: acceptance over (bundle, audience) pairs
         table.push(
           `${label} | ${audience} | module ${first![1].built.module ?? first![1].built.resolution} | verify ${snap.verify.join(",")} | ids ${snap.evidence_ids.length} | identical across ${shown.map(([f]) => f).join("+")} | ${availabilityLine(report)}`,
         );
-        // The timeout: every body of the 451-record outcome page is built in each
-        // packaging (capsule-viewer#67), so its pages are about 6 MB each:
-        // about 95 s alone on a quiet machine, more under the full parallel run.
-      }, 480_000);
+        // Every body of the 451-record outcome page is built in each packaging
+        // (capsule-viewer#67), so this is the file's heaviest case: it runs
+        // under the suite's hang ceiling, not a timeout of its own
+        // (vitest.config.ts, capsule-viewer#433).
+      });
 
   it("prints the table", () => {
     // Visible with --reporter=verbose; also a guard that the table ran.
@@ -550,7 +562,7 @@ describe("theme, wording, locale and depth", () => {
         expect(shown, name).toEqual(baseline);
       }
     }
-  }, 120_000);
+  });
 
   it("a wording pack titles the page, and its digest is checked", async () => {
     const { bundle } = await sealEvidenceBundle(
@@ -700,7 +712,7 @@ describe("buildPresentation", () => {
       if (built.format !== "html") throw new Error("html expected");
       expect(built.html).toBe(emitEvidenceGraphHtml(bundle, "/*IIFE_MARKER*/"));
     }
-  }, 120_000);
+  });
 
   it("refuses a fragment over the limit with a clear error, never a cut-down link", async () => {
     const bundle = fixture("week-bundle.json");
@@ -723,7 +735,7 @@ describe("buildPresentation", () => {
         maxFragmentLength: 100,
       }),
     ).rejects.toThrow(/over the 100-character maximum/u);
-  }, 120_000);
+  });
 
   it("scopes before encoding: withheld payloads are not in the fragment at all", async () => {
     const { bundle } = await sealEvidenceBundle(
@@ -1258,7 +1270,7 @@ describe("packaging availability", () => {
         sessions,
         (await sealEvidenceBundle(monthlyComplianceFixture(sessions))).bundle,
       );
-  }, 120_000);
+  });
 
   it("the monthly fixtures are deterministic and monthly-report scale", async () => {
     const again = (await sealEvidenceBundle(monthlyComplianceFixture(40)))
@@ -1310,6 +1322,11 @@ describe("packaging availability", () => {
       await expect(
         buildPresentation(bundle, { ...settings, format: "fragment" }),
       ).rejects.toThrow(FragmentTooLargeError);
+      // The budget is read by the fragment packaging only
+      // (src/presentation-builder.ts, packageAs), so the other packagings of
+      // this bundle are the 80-session case's, checked there; building and
+      // opening them again here cost minutes under load (capsule-viewer#433).
+      if (raise) return;
 
       // The supported packagings show the same thing.
       const html = await buildPresentation(bundle, {
@@ -1334,20 +1351,18 @@ describe("packaging availability", () => {
       await embedded.mount(element);
       openEveryBody(element);
       const fromEmbedded = snapshot(element);
-      const fromStatic = openStatic(statik.html).snapshot;
+      const { snapshot: fromStatic, page } = openStatic(statik.html);
       expect(fromStatic).toEqual(fromEmbedded);
       expect(await openPage(html.html, "file:///monthly.html")).toEqual(
         fromStatic,
       );
       expect(fromStatic.verify).toEqual(["incomplete"]);
       expect(fromStatic.pages).toContain("verification");
-      expectStaticPage(statik.html, "incomplete");
+      expectStaticPage(page, "incomplete");
       // Every toggle's body is built, and the page stays in its budget.
-      expect(
-        openStatic(statik.html).page.querySelectorAll('[data-body="pending"]'),
-      ).toHaveLength(0);
+      expect(page.querySelectorAll('[data-body="pending"]')).toHaveLength(0);
       expect(statik.bytes).toBeLessThan(STATIC_PAGE_DEFAULT_BUDGET);
-    }, 180_000);
+    });
 
   it("reports a missing runtime for html and fragment, and a missing DOM for static", async () => {
     const { bundle } = await sealEvidenceBundle(
@@ -1472,10 +1487,9 @@ describe("the static page", () => {
     expect(statik.html).toContain("<style>:root{--aac-accent:#7a1f5c}</style>");
     expect(statik.html).not.toContain("__BUNDLE__");
     expect(statik.html).not.toMatch(/<script/iu);
-    expect(openStatic(statik.html).snapshot).toEqual(
-      await openPage(html.html, "file:///themed.html"),
-    );
-    expectStaticPage(statik.html, "incomplete");
+    const { snapshot: shown, page } = openStatic(statik.html);
+    expect(shown).toEqual(await openPage(html.html, "file:///themed.html"));
+    expectStaticPage(page, "incomplete");
     // The card's own frame survives the static page too (capsule-viewer#60).
     expect(statik.html).toContain('<div id="app" class="cv-shell-chrome">');
   });
@@ -1490,7 +1504,8 @@ describe("the static page", () => {
       format: "static",
     });
     if (built.format !== "static") throw new Error("static expected");
-    const { page } = openStatic(built.html);
+    // The page only: its snapshot would serialise and reparse all 14 MB of it.
+    const page = staticDocument(built.html);
     const csp = page
       .querySelector('meta[http-equiv="Content-Security-Policy"]')!
       .getAttribute("content")!;
@@ -1505,7 +1520,7 @@ describe("the static page", () => {
     expect(attributes.length).toBeGreaterThan(0);
     expect(csp).toContain("'unsafe-hashes'");
     for (const value of attributes) expect(csp).toContain(source(value));
-  }, 120_000);
+  });
 
   it("states a failed verification as computed at build time", async () => {
     const built = await buildPresentation(fixture("report-rows-bundle.json"), {
@@ -1516,7 +1531,7 @@ describe("the static page", () => {
     if (built.format !== "static") throw new Error("static expected");
     expect(built.verification).toBe("failed");
     expect(built.resolution).toBe("refusal");
-    expectStaticPage(built.html, "failed");
+    expectStaticPage(staticDocument(built.html), "failed");
   });
 });
 
@@ -1950,7 +1965,7 @@ describe("the static page builds every toggle's body", () => {
         toggle.querySelector(":scope > :not(summary)"),
         toggle.querySelector(":scope > summary")?.textContent ?? "",
       ).not.toBeNull();
-  }, 120_000);
+  });
 
   it("reports the page's size, and refuses a page over its budget", async () => {
     const { bundle } = await sealEvidenceBundle(
