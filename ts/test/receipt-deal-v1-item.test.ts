@@ -26,7 +26,15 @@ type Obj = Record<string, unknown>;
 const data = (name: string): Obj =>
   JSON.parse(
     readFileSync(
-      resolve(process.cwd(), "..", "tests", "testdata", "deal-v1", "offer", name),
+      resolve(
+        process.cwd(),
+        "..",
+        "tests",
+        "testdata",
+        "deal-v1",
+        "offer",
+        name,
+      ),
       "utf8",
     ),
   ) as Obj;
@@ -62,9 +70,7 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     expect(root.querySelector("[data-receipt-surface]")).not.toBeNull();
     expect(item(root)).toBe(ITEM);
     // Inside the hero, under the top line; no seller is named.
-    expect(
-      root.querySelector(".cv-rcpt-hero [data-hero-item]"),
-    ).not.toBeNull();
+    expect(root.querySelector(".cv-rcpt-hero [data-hero-item]")).not.toBeNull();
   });
 
   it("no offer given: no item, and the rest of the receipt is unchanged", async () => {
@@ -103,9 +109,9 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     const forged = structuredClone(data("offer.json"));
     ((forged["body"] as Obj)["terms"] as Obj)["item"] = "forged item";
     const bundle = structuredClone(data("keep-copy.bundle.json"));
-    const agreement = (
-      (bundle["extensions"] as Obj)["x-deal-v1"] as Obj
-    )["book"] as Obj;
+    const agreement = ((bundle["extensions"] as Obj)["x-deal-v1"] as Obj)[
+      "book"
+    ] as Obj;
     const pair = agreement["agreement"] as Obj;
     const payload = pair["payload"] as Obj;
     ((payload["body"] as Obj)["offer"] as Obj)["digest"] =
@@ -116,9 +122,9 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     const record = (bundle["records"] as Obj[]).find(
       (r) => r["capsule_id"] === id,
     )!;
-    (
-      (record["model_attestation"] as Obj)["compute_attestation"] as Obj
-    )["agent_input_digest"] = core.recordDigest(header);
+    ((record["model_attestation"] as Obj)["compute_attestation"] as Obj)[
+      "agent_input_digest"
+    ] = core.recordDigest(header);
     (pair["record"] as Obj)["model_attestation"] = record["model_attestation"];
     const root = await page(bundle, { dealOffer: forged });
     expect(item(root)).toBeNull();
