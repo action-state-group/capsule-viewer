@@ -1830,7 +1830,7 @@
   // The x-deal-v1 extension's book (evidencebook#588, docs/design/461-deal-profile.md section 9, "The payment legs
   // and the bundle extension"; dealprofile/xdealv1/report_bundle.go, ReportBook). The extension is exactly
   // {sealed_report, book}; book is {agreement, relied_on} and, as the view-model note's section 4 item 1 and
-  // evidencebook#861 add, an optional `offer` (the holder's own offer, one book pair), and on a full adjudicator copy
+  // evidencebook#861 add, an optional `offer` (the holder's own offer, its sent pair {record, agent_input}, #498), and on a full adjudicator copy
   // `records` (every record of the holder's deal book, by record id) and `received` ({log_id, records, proofs}: the
   // copy of the other side's book it holds, only beside records). relied_on holds, keyed by record id, the book pair of
   // every record the holder's rows rely on, so a leg is read by its relied_on id. VerifyReportBundle refuses a bundle
@@ -2092,10 +2092,13 @@
     return copy;
   }
   // The holder's own offer (#461, Sherlock2's rule on #384: the item is the agreement's offer `terms.item`; the
-  // view-model note's section 4 item 1): the book's `offer` pair when the copy carries one, else the `deal_offer`
+  // view-model note's section 4 item 1): the book's `offer` when the copy carries one, else the `deal_offer`
   // capsulectl gave beside the copy. Either is read only when it is a propose record whose SHA-256 over its JCS bytes
-  // is the offer digest the copy's own sealed agreement cites. A carried pair that is not is refused; a side input
+  // is the offer digest the copy's own sealed agreement cites. A carried offer that is not is refused; a side input
   // that is not draws nothing. Its terms are said as recorded: the price in the offer's own currency, never converted.
+  // The carried offer is the offer's sent pair {record, agent_input} (#498; evidencebook xdealv1.Pair, the form every
+  // holder of an offer has): the record is the standalone Capsule whose agent_input_digest is the record's digest.
+  // capsulectl checks its signature and signer (xdealv1.VerifySent); the page checks only that chain.
   function holderOffer(steps, book, given) {
     var agree = steps.find(function (s) { return vof(s.kind) === "agree" && s.offer_ref !== null; });
     var cited = agree ? agree.offer_ref : null;
@@ -2106,12 +2109,13 @@
     }
     var t = null, src = null;
     if (book.offer !== null) {
-      var id = str(get(get(book.offer, "record"), "capsule_id"));
-      var header = attestedHeader(get(book.offer, "record"), get(book.offer, "header"));
-      var payload = get(book.offer, "payload");
-      t = header !== null && str(seq(get(header, "payload_commitments"))[0]) === recordDigest(payload) ? terms(payload) : null;
-      if (t === null) throw new Unavailable("the x-deal-v1 extension's offer is not the offer the copy's agreement cites");
-      src = function (path) { return inRecord(id, "/payload/body/terms" + path); };
+      var record = get(book.offer, "record"), input = get(book.offer, "agent_input");
+      var id = str(get(record, "capsule_id"));
+      var attested = str(get(map(get(map(get(record, "model_attestation")), "compute_attestation")), "agent_input_digest"));
+      var sent = Object.keys(book.offer).length === 2 && own(book.offer, "agent_input") && attested !== null && recordDigest(input) === attested;
+      t = sent ? terms(input) : null;
+      if (t === null) throw new Unavailable("the x-deal-v1 extension's offer is not the sent offer the copy's agreement cites");
+      src = function (path) { return inRecord(id, "/agent_input/body/terms" + path); };
     } else if (isMap(given)) {
       t = terms(given);
       src = function (path) { return { report: "deal_offer", path: "/body/terms" + path }; };

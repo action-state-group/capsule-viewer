@@ -25,6 +25,7 @@ import {
 } from "../src/evidence-graph-view.js";
 import { receiptModules } from "../src/receipt.js";
 import { RECEIPT_CORE } from "../src/receipt-core.generated.js";
+import { pairOf, pointer } from "./helpers/receipt-anti-hardcode.js";
 
 type Obj = Record<string, unknown>;
 const data = (name: string): Obj =>
@@ -137,6 +138,33 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     pair["record"] = record;
     return bundle;
   };
+
+  it("a copy carrying the offer's sent pair as book.offer (#498): the hero names its item from the copy, with no side input", async () => {
+    // evidencebook#1065 carries the pair `deal offer --out` wrote; until a
+    // capsulectl writes it, the pair is put in the real keep copy here and
+    // capsulectl's report rebound to that copy.
+    const pair = data("offer.pair.json");
+    const bundle = structuredClone(data("keep-copy.bundle.json"));
+    ((bundle["extensions"] as Obj)["x-deal-v1"] as Obj)["book"] = {
+      ...(((bundle["extensions"] as Obj)["x-deal-v1"] as Obj)["book"] as Obj),
+      offer: pair,
+    };
+    const root = await page(bundle, {
+      verifierReport: await reboundReport(bundle),
+    });
+    expect(root.querySelector("[data-receipt-surface]")).not.toBeNull();
+    expect(item(root)).toBe(ITEM);
+    const id = String((pair["record"] as Obj)["capsule_id"]);
+    expect(
+      root
+        .querySelector("[data-hero-item] [data-ptr]")
+        ?.getAttribute("data-ptr"),
+    ).toBe(`record:${id}#/agent_input/body/terms/item`);
+    // The anti-hardcode check reads that source back from the copy.
+    expect(pointer(pairOf(bundle, id), "/agent_input/body/terms/item")).toBe(
+      ITEM,
+    );
+  });
 
   it("control: a report rebound to the unchanged copy still binds, and the item is drawn", async () => {
     const bundle = data("keep-copy.bundle.json");

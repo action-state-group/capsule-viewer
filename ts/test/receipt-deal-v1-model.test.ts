@@ -52,6 +52,7 @@ type Model = {
   records: Sourced<Obj>[];
   item: Sourced<string>;
   quantity: Sourced<number>;
+  price: Sourced<{ minor: number; currency: string }>;
   book_witnessed: unknown;
   rows: { relied_on: { time: string | null }[] }[];
 };
@@ -448,47 +449,132 @@ describe("the deal model: a full adjudicator copy (evidencebook#861)", () => {
 describe("the deal model: the holder's own offer carried in the copy (book.offer)", () => {
   const ITEM = "200 conference badges, delivered by Friday";
   const offer = (): Obj => read("offer", "offer.json");
-  // The offer as a book pair: its payload, a header committing to it, and a
-  // record attesting that header (the page checks the chain and the
-  // agreement's offer digest; capsulectl checks the signature).
-  const pairOf = (payload: Obj): Obj => {
-    const header = { payload_commitments: [core.recordDigest(payload)] };
-    return {
-      record: {
-        capsule_id: "0f".repeat(32),
-        model_attestation: {
-          compute_attestation: {
-            agent_input_digest: core.recordDigest(header),
-          },
-        },
-      },
-      header,
-      payload,
-    };
+  // The offer's sent pair {record, agent_input}, as the buyer's `deal offer
+  // --out` wrote it (evidencebook xdealv1.Pair): the form capsulectl carries
+  // as book.offer (evidencebook#1065). The page checks the record's
+  // agent_input_digest and the agreement's offer digest; capsulectl checks
+  // the signature and the signer.
+  const sentPair = (): Obj => read("offer", "offer.pair.json");
+  const OFFER_ID = (sentPair()["record"] as Obj)["capsule_id"];
+  const terms = (pair: Obj): Obj =>
+    ((pair["agent_input"] as Obj)["body"] as Obj)["terms"] as Obj;
+  // The pair's record attesting its agent_input as it now is (not re-signed).
+  const reAttested = (pair: Obj): Obj => {
+    (
+      ((pair["record"] as Obj)["model_attestation"] as Obj)[
+        "compute_attestation"
+      ] as Obj
+    )["agent_input_digest"] = core.recordDigest(pair["agent_input"]);
+    return pair;
   };
-  const withOffer = (payload: Obj, audience = "keep"): Obj => {
+  const withOffer = (pair: unknown, audience = "keep"): Obj => {
     const b = read("offer", "keep-copy.bundle.json");
-    book(b)["offer"] = pairOf(payload);
+    book(b)["offer"] = pair;
     content(b)["audience"] = audience;
     b["records"] = [];
     return b;
   };
+  // The copy's agreement re-sealed to cite *offer*: its hash chain redone
+  // (payload -> header commitment -> the record's agent_input_digest), not
+  // re-signed, which the model does not check (capsulectl and the page's
+  // runtime do, receipt-deal-v1-item.test.ts).
+  const citing = (b: Obj, offer: unknown): Obj => {
+    const pair = book(b)["agreement"] as Obj;
+    const payload = pair["payload"] as Obj;
+    ((payload["body"] as Obj)["offer"] as Obj)["digest"] =
+      core.recordDigest(offer);
+    const header = pair["header"] as Obj;
+    header["payload_commitments"] = [core.recordDigest(payload)];
+    (
+      ((pair["record"] as Obj)["model_attestation"] as Obj)[
+        "compute_attestation"
+      ] as Obj
+    )["agent_input_digest"] = core.recordDigest(header);
+    return b;
+  };
 
-  it("the offer the agreement cites gives the item and quantity, each with its source", async () => {
-    const m = await model(withOffer(offer()));
-    expect(m.item).toEqual({
-      value: ITEM,
-      src: { record: "0f".repeat(32), path: "/payload/body/terms/item" },
-    });
-    const quantity = ((offer()["body"] as Obj)["terms"] as Obj)["quantity"];
-    expect(m.quantity?.value ?? null).toBe(quantity ?? null);
+  it("the fixture's offer.json is its sent pair's agent_input", () => {
+    expect(core.recordDigest(offer())).toBe(
+      core.recordDigest(sentPair()["agent_input"]),
+    );
   });
 
-  it("an offer the agreement does not cite is refused", async () => {
-    const other = offer();
-    ((other["body"] as Obj)["terms"] as Obj)["item"] = "something else";
-    await expect(model(withOffer(other))).rejects.toThrow(
-      /not the offer the copy's agreement cites/,
+  it("the sent pair the agreement cites gives the item, quantity and price, each with its source", async () => {
+    const m = await model(withOffer(sentPair()));
+    const at = (path: string) => ({
+      record: OFFER_ID,
+      path: "/agent_input/body/terms" + path,
+    });
+    expect(m.item).toEqual({ value: ITEM, src: at("/item") });
+    expect(m.quantity).toEqual({ value: 200, src: at("/quantity") });
+    expect(m.price).toEqual({
+      value: { minor: 6000, currency: "USD" },
+      src: at(""),
+    });
+  });
+
+  it("an agent_input the agreement cites but its record does not attest is refused", async () => {
+    // Only the record's attestation is changed: agent_input is still the
+    // offer the agreement cites, so the attestation check alone refuses it.
+    const pair = sentPair();
+    (
+      ((pair["record"] as Obj)["model_attestation"] as Obj)[
+        "compute_attestation"
+      ] as Obj
+    )["agent_input_digest"] = "00".repeat(32);
+    expect(core.recordDigest(pair["agent_input"])).toBe(
+      core.recordDigest(sentPair()["agent_input"]),
+    );
+    await expect(model(withOffer(pair))).rejects.toThrow(
+      /not the sent offer the copy's agreement cites/,
+    );
+  });
+
+  it("a sent pair the agreement does not cite is refused", async () => {
+    const pair = sentPair();
+    terms(pair)["item"] = "something else";
+    await expect(model(withOffer(reAttested(pair)))).rejects.toThrow(
+      /not the sent offer the copy's agreement cites/,
+    );
+  });
+
+  it("a sent record the agreement cites that is not a propose is refused", async () => {
+    const pair = sentPair();
+    ((pair["agent_input"] as Obj)["x-deal-v1"] as Obj)["record_type"] =
+      "decline";
+    reAttested(pair);
+    const control = sentPair();
+    terms(control)["item"] = "something else";
+    reAttested(control);
+    expect(
+      (await model(citing(withOffer(control), control["agent_input"]))).item
+        ?.value,
+    ).toBe("something else");
+    await expect(
+      model(citing(withOffer(pair), pair["agent_input"])),
+    ).rejects.toThrow(/not the sent offer the copy's agreement cites/);
+  });
+
+  it("the offer as a book pair {record, header, payload}, which no producer writes, is refused", async () => {
+    const pair = sentPair();
+    const payload = pair["agent_input"];
+    const header = { payload_commitments: [core.recordDigest(payload)] };
+    (
+      ((pair["record"] as Obj)["model_attestation"] as Obj)[
+        "compute_attestation"
+      ] as Obj
+    )["agent_input_digest"] = core.recordDigest(header);
+    const bookPair = { record: pair["record"], header, payload };
+    await expect(model(withOffer(bookPair))).rejects.toThrow(
+      /not the sent offer the copy's agreement cites/,
+    );
+  });
+
+  it("a sent pair with a member besides record and agent_input is refused", async () => {
+    const pair = sentPair();
+    pair["header"] = {};
+    await expect(model(withOffer(pair))).rejects.toThrow(
+      /not the sent offer the copy's agreement cites/,
     );
   });
 
@@ -505,7 +591,7 @@ describe("the deal model: the holder's own offer carried in the copy (book.offer
       });
       return L0;
     };
-    const carried = await draw(withOffer(offer(), "counterparty"));
+    const carried = await draw(withOffer(sentPair(), "counterparty"));
     expect(carried.querySelector("[data-hero-item]")?.textContent).toContain(
       ITEM,
     );
@@ -514,5 +600,29 @@ describe("the deal model: the holder's own offer carried in the copy (book.offer
     given["records"] = [];
     const side = await draw(given, { deal_offer: offer() });
     expect(side.querySelector("[data-hero-item]")).toBeNull();
+  });
+
+  it("the carried offer adds only the item line: none of its times is drawn (u239)", async () => {
+    // The offer's x-deal-v1.at, body.stated_at and Capsule timestamp are the
+    // offerer's own word, never a record time: every depth of the page is the
+    // same with and without the pair, the item line aside.
+    const all = async (b: Obj): Promise<string> => {
+      const mod = module({});
+      const m = await mod.buildModel(context(b));
+      const out = ["L0", "L1", "L2"].map(() => document.createElement("div"));
+      mod.render(m, { L0: out[0]!, L1: out[1]!, L2: out[2]!, depth: "L2" });
+      out.forEach((el) =>
+        el.querySelectorAll("[data-hero-item]").forEach((n) => n.remove()),
+      );
+      return out.map((el) => el.innerHTML).join("\n");
+    };
+    for (const audience of ["keep", "counterparty"]) {
+      const without = read("offer", "keep-copy.bundle.json");
+      content(without)["audience"] = audience;
+      without["records"] = [];
+      expect(await all(withOffer(sentPair(), audience))).toBe(
+        await all(without),
+      );
+    }
   });
 });
