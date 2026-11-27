@@ -203,7 +203,8 @@ bundle itself (so the downloaded file shows them too):
 Items 1, 2 and 4 are ruled (u561); item 1's shape inside `book` is engineering's. Item 3 stays as
 written. Steven also asked for a no-PII or pseudonym step for outside readers who are not a party,
 such as an external audit (u561 item 2). That is filed as evidencebook#1058 (an audit copy with
-personal details removed and parties shown as labels) and is not part of this plan.
+personal details removed and each party shown by its role and short key, for example
+"Seller · 13sffh34", with the full key at L2; Steven, 2026-11-27) and is not part of this plan.
 
 ## 5. The anti-hardcode test
 
