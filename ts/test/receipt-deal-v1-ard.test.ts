@@ -128,7 +128,9 @@ describe("the x-deal-v1 receipt of the ARD run's deal, from the npm package", ()
         status: "agreed_so_far",
       }));
     });
-    expect(L1.querySelector("[data-deal-state]")?.textContent).toBe("Started");
+    expect(L1.querySelector("[data-deal-state]")?.textContent).toBe(
+      "Agreement: started",
+    );
     expect(L1.querySelector("[data-deal-terms]")?.textContent).toBe(
       "Terms: Both say the same so far (2 of 2)",
     );
@@ -244,7 +246,7 @@ describe("the holder's x-deal-v1 keep copy on a page, with capsulectl's report",
   it("#430 and #432: the tally of its one term, and why no payment record is shown", async () => {
     const root = await keepPage(keepReport());
     expect(root.querySelector("[data-deal-state]")?.textContent).toBe(
-      "Started",
+      "Agreement: started",
     );
     expect(root.querySelector("[data-deal-terms]")?.textContent).toBe(
       "Terms: Not due (1 of 1)",

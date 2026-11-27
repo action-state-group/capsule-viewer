@@ -64,7 +64,8 @@ describe("the deal/v1 receipt", () => {
     const { host } = await page(content({ rows }), "L1");
     const shown = [...host.L1.querySelectorAll("[data-row-status]")].map((e) => [e.closest("tr").querySelector("[data-row-id]").getAttribute("data-row-id"), e.getAttribute("data-row-status")]);
     expect(shown).toEqual(statuses.map((s, i) => [`row_${i}`, s]));
-    expect(host.L1.querySelector("th").textContent).toBe("Term");
+    // The relied-on records are steps too (#476), so the rows' table is found by its status cells.
+    expect(host.L1.querySelector("[data-row-status]").closest("table").querySelector("th").textContent).toBe("Term");
     expect(host.L1.querySelector('[data-row-status="agreed_so_far"]').textContent).toBe("Both say the same so far");
   });
 
