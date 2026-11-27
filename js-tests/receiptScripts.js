@@ -64,13 +64,20 @@ let oracle;
  * each receipt fixture (canRender, model, and the page at L0, L1 and L2), kept
  * as tests/testdata/receipt/oracle-golden.json.gz. The scripts are held to it.
  * tests/test_receipt_oracle_golden.py holds the file to the Python modules
- * for as long as they exist; regenerate with
+ * for as long as they exist, and it is frozen before they go (u526): it then
+ * holds the scripts on its own. Regenerate with
  * `python tests/receipt_oracle.py | gzip -n -9 > tests/testdata/receipt/oracle-golden.json.gz`.
  */
 export function receiptGolden() {
-  if (!oracle) oracle = JSON.parse(gunzipSync(readFileSync(join(RECEIPTS, "oracle-golden.json.gz"))).toString("utf8"));
+  if (!oracle) {
+    const all = JSON.parse(gunzipSync(readFileSync(join(RECEIPTS, "oracle-golden.json.gz"))).toString("utf8"));
+    // The cases a page refuses before any module runs (a report that does not name the copy) are apart: refusedCases.
+    oracle = { ...all, cases: all.cases.filter((c) => c.refused === undefined), refused: all.cases.filter((c) => c.refused !== undefined) };
+  }
   return oracle;
 }
+/** The golden's cases the page refuses before any module runs, each with the Python twin's reason. */
+export const refusedCases = () => receiptGolden().refused;
 
 /**
  * A case's context and the environment the Python twin was given: capsulectl's
@@ -172,12 +179,27 @@ export const VIEWER_LINES = ['[data-rung="settlement"]', '[data-rung="counterpar
  * every other field is still compared with the twin.
  */
 export function withoutViewerFields(model) {
-  const out = JSON.parse(JSON.stringify(model));
+  const out = withoutSources(model);
   for (const field of VIEWER_FIELDS) {
     delete out[field];
     if (out.receipt && typeof out.receipt === "object") delete out.receipt[field];
   }
   return out;
+}
+/**
+ * What the model says without where each value was read (`sources`, `src`;
+ * the view-model note's section 2): the frozen twin's model names no sources,
+ * so the two are compared on their values. ts/test/receipt-v0-model.test.ts
+ * holds the sources themselves.
+ */
+export function withoutSources(model) {
+  return JSON.parse(JSON.stringify(model), function (key, value) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      delete value.sources;
+      delete value.src;
+    }
+    return value;
+  });
 }
 /** The script's level elements with the viewer's own lines (VIEWER_LINES) removed, so every other byte is still compared. */
 export function withoutViewerLines(nodes) {
