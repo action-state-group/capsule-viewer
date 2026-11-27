@@ -174,6 +174,8 @@ describe("line 3: who the deal was with and their words accepting (#383)", () =>
       report: { counterparty_openings: { key: KEY, steps: [{ step: profile, payee: "Example Stickers", domain: "example.net" }] } },
     });
     expect(mixed.receipt.counterparty_named).toEqual({ who: "Example Stickers", unchecked: true, accepted: [] });
+    // Its source is the one value that recomputed, never the one that did not (the view-model note's section 2).
+    expect(mixed.receipt.sources.counterparty_named.from.slice(1).map((f) => f.path)).toEqual(["/agent_input/report/counterparty_openings/steps/0/payee"]);
     expect(mixed.lines("counterparty")).toHaveLength(2);
   });
 

@@ -123,12 +123,12 @@ const DERIVED = (api) => ({
   // state, why and approvers are that check's result over the copy's whole deal log (afterYesOf), held
   // case by case in js-tests/receipt_deal_view_lines.test.js, not a value read from one member.
   after_yes: (value, got, from) => (value.act ? from[0].record === value.act.step && got[0] === value.act.action : value.act === undefined && "bundle" in from[0]),
-  // Each accepted text is an acceptance opening the report holds for that step. The name is the label
-  // counterpartyOf builds from the openings' last value of each kind, when every one recomputed
-  // (unchecked false); when one did not, the page dropped it after its own fingerprint check.
-  counterparty_openings: (value, got) =>
-    value.accepted.every((a) => a.text === null || (Array.isArray(got[1]) && got[1].some((o) => o?.step === a.step && o?.text === a.text))) &&
-    (value.who === null || value.unchecked || value.who === counterpartyLabel(got[0])),
+  // Each accepted text is an acceptance opening the report holds for that step (got[0]). The name is
+  // counterpartyOf's label over exactly the opening values the page recomputed (the rest of `from`,
+  // each naming its kind).
+  counterparty_openings: (value, got, from) =>
+    value.accepted.every((a) => a.text === null || (Array.isArray(got[0]) && got[0].some((o) => o?.step === a.step && o?.text === a.text))) &&
+    value.who === counterpartyLabel(Object.fromEntries(from.slice(1).map((f, i) => [f.path.split("/").pop(), got[i + 1]]))),
 });
 
 /** Two values the same, a model's own `src`/`sources` left out. */
@@ -137,12 +137,8 @@ function sameValue(a, b) {
   return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
 }
 
-/** counterpartyOf's label, from each kind's last value in the counterparty openings. */
-function counterpartyLabel(openings) {
-  const got = {};
-  for (const e of (isObj(openings) && Array.isArray(openings.steps) ? openings.steps : [])) {
-    for (const k of ["payee", "name", "domain", "phone", "email"]) if (typeof e?.[k] === "string") got[k] = e[k];
-  }
+/** counterpartyOf's label over the checked value of each kind. */
+function counterpartyLabel(got) {
   const label = got.payee || got.name || got.domain || got.phone || got.email || null;
   return label !== null && got.domain && label !== got.domain ? `${label} (${got.domain})` : label;
 }
@@ -476,6 +472,12 @@ describe("the v0 and provider receipt models name each value's source (view-mode
     const due = api.entryReaders.deadline(deadlineEntry);
     expect(DERIVED_FOR_TEST(api).deadline(due, [deadlineEntry])).toBe(true);
     expect(DERIVED_FOR_TEST(api).deadline({ ...due, flagged: false }, [deadlineEntry])).toBe(false);
+    // A name the page kept beside an opening that did not recompute is rebuilt from the checked one only.
+    const cp = DERIVED_FOR_TEST(api).counterparty_openings;
+    const from = [null, { record: "r", path: "/agent_input/report/counterparty_openings/steps/0/payee" }];
+    expect(cp({ who: "Example Stickers", unchecked: true, accepted: [] }, [undefined, "Example Stickers"], from)).toBe(true);
+    expect(cp({ who: "invented", unchecked: true, accepted: [] }, [undefined, "Example Stickers"], from)).toBe(false);
+    expect(cp({ who: "Example Stickers", unchecked: true, accepted: [] }, [undefined], [null])).toBe(false);
     // The legs' band is rebuilt by legBand: a wrong one fails.
     const derived = DERIVED_FOR_TEST(loaded.unilateral.api);
     const leg = { status: "settled", received: { value: "1000", assetCode: "BTC", assetScale: 11 } };

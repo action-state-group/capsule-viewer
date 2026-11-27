@@ -840,14 +840,16 @@ const root = {};
   // values that recomputed; `unchecked` is true when any value did not;
   // `accepted` lists each acceptance in order, its text only when it
   // recomputed. A step named twice verifies no second entry for it.
-  function counterpartyOf(reader, raw) {
+  // `checkedAt`, when given, gets for each kind it names the index of the opening entry that decided it.
+  function counterpartyOf(reader, raw, checkedAt) {
+    checkedAt = checkedAt || {};
     var hasWho = own(raw, "counterparty_openings"), hasAccepted = own(raw, "acceptance_openings");
     if (!hasWho && !hasAccepted) return null;
     var out = { who: null, unchecked: false, accepted: [] };
     var cp = map(get(raw, "counterparty_openings"));
     var key = hexBytes(get(cp, "key"));
     var got = {}, seen = {};
-    seq(get(cp, "steps")).forEach(function (e) {
+    seq(get(cp, "steps")).forEach(function (e, index) {
       var entry = map(e);
       var step = or(str(get(entry, "step")), "");
       var payload = reader.headers.has(step) ? reader.payload(step) : null;
@@ -860,9 +862,12 @@ const root = {};
         seen[step + "\u0000" + kind] = true;
         // The last entry for a field decides it; one that did not recompute
         // leaves the field unnamed rather than an earlier entry's value.
-        if (ok) got[kind] = value;
-        else {
+        if (ok) {
+          got[kind] = value;
+          checkedAt[kind] = index;
+        } else {
           delete got[kind];
+          delete checkedAt[kind];
           out.unchecked = true;
         }
       });
@@ -5440,7 +5445,8 @@ const root = {};
       var reader = new Reader(v);
       var sealed = reader.sealedReport();
       var raw = sealed[1];
-      var named = counterpartyOf(reader, raw);
+      var checkedAt = {};
+      var named = counterpartyOf(reader, raw, checkedAt);
       if (named !== null) receipt.counterparty_named = named;
       var authority = authorityOf(raw);
       if (authority !== null) receipt.authority_sealed = authority;
@@ -5453,8 +5459,11 @@ const root = {};
       var inReport = function (path) { return inRecord(sealed[0], "/agent_input/report" + path); };
       // The settlement line and the after-yes line carry their own `src` (settlementOf, afterYesModel).
       var lines = sourcesOf(receipt, {
-        // Who, from the openings the page fingerprinted; the accepted words, from the openings it checked.
-        counterparty_named: { derived: "counterparty_openings", from: ["counterparty_openings", "acceptance_openings"].map(function (k) { return own(raw, k) ? inReport("/" + k) : null; }) },
+        // The accepted words, from the acceptance openings; who, from each opening value whose fingerprint
+        // this page recomputed (a value that did not is not a source).
+        counterparty_named: { derived: "counterparty_openings", from: [own(raw, "acceptance_openings") ? inReport("/acceptance_openings") : null].concat(Object.keys(checkedAt).sort().map(function (kind) {
+          return inReport("/counterparty_openings/steps/" + checkedAt[kind] + "/" + kind);
+        })) },
         authority_sealed: inReport("/authority"),
         referee: inRecord(sealed[0], "/agent_input/referee"),
       });
@@ -5615,7 +5624,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "4d315d949f771c569d0483c92571d422b0ab2e1641c2fa0eb0c242d77970a488",
+      "script_sha256": "ae5fdd3daa0039e37929f74ccc7e16f0adca8eb707449ce932aae1e68683033d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5662,7 +5671,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "588ceeabc53b3a0abc17a80d8a232bae0eaf36c6e25ad79394b46db5f4c1d7a0",
+      "script_sha256": "4354ef7bbca2734b0b0f902ae187f686cb605a34af12624d2822db99ed9a3ae8",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5708,7 +5717,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "23b3622df699c29d93fc396b1f1d420c8759395459715101e9813465c5fce432",
+      "script_sha256": "7027fa7ed2f5437769cf40c6640a2c9eef6d8786364c4697ec6c0690ae39be38",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5756,7 +5765,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "d18fcf0adb50baea2ac27b97351c76ec7f85434599ad59d8c583867e37e22d99",
+      "script_sha256": "54e0d70339e7f11fd93f5ee097d5608a2a933ed0dd636a94c1461b625f7ebf25",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5798,7 +5807,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "5afc8028f4fa2855428b1f56591896924343715c6aa44d0bb3f6767ad7bd4013",
+      "script_sha256": "d6ef87068417946f2292e70465ed248e542516517ae52652f1daa5fafae92a6d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
