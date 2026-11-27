@@ -109,6 +109,7 @@ def test_the_own_half_line_is_the_go_packs_and_names_no_countersigner():
     )
     assert "countersign" not in OWN_HALF.lower()
 
+
 def test_a_bundle_that_did_not_verify_shows_no_rows():
     bundle, output = load(NAME)
     output = copy.deepcopy(output)

@@ -7,9 +7,9 @@ It is not a deal receipt. The bundle's root is the node's own record of the
 exchange it served (``x-mesh-poc-v1``), and every other record is a
 ``payee_observed`` settlement leg: what the node received. The page says it is
 the node's own half, not a joint record (the other party keeps its own), names
-the model and shows each amount with its unit. It reads no request or response text (the
-bundle carries none) and shows nothing of who asked. It never uses deal or
-offer wording, since nothing here is one.
+the model and shows each amount with its unit. It reads no request or response
+text (the bundle carries none) and shows nothing of who asked. It never uses
+deal or offer wording, since nothing here is one.
 
 Like the other receipt modules it never verifies: it reads a context the core
 has gated, and a bundle the producer chose the records of reaches it as
