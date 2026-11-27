@@ -4185,7 +4185,8 @@
 
   // ---- the provider's own receipt (provider.py) ------------------------------
   // capsuleviewer.receipt.provider/v0: the page for a bundle of one exchange a
-  // Mesh node served and the payments it received for it (capsules-plugin
+  // Mesh node served, or was asked to serve and recorded as failed or sent on
+  // with no response (#465), and the payments it received for it (capsules-plugin
   // provider-receipt-bundle, Mesh-LLM/capsules-plugin#134). Not a deal
   // receipt: the root is the node's own record of the exchange it served
   // (x-mesh-poc-v1) and every other record is a settled payee_observed leg.

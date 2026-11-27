@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 import pytest
-from receipt_helpers import load, render, report_for, visible_text
+from receipt_helpers import PACK, PACK_SHA, load, render, report_for, visible_text
 
 from capsule_viewer.receipt.provider import (
     MODEL_ASKED,
@@ -248,6 +248,9 @@ def _failed(reason):
         (..., None),
         ("something_new", None),
         (None, None),
+        ({"class": "timeout"}, None),
+        ([{"class": "timeout"}], None),
+        (7, None),
     ],
 )
 def test_a_failed_exchange_says_it_failed_and_why_in_words(failure_class, words):
@@ -312,3 +315,16 @@ def test_the_new_words_are_the_go_packs():
     assert entries["provider.status.failed"] == STATUS_FAILED.format(reason="")
     assert entries["provider.status.failed_reason"] == STATUS_FAILED.format(reason=": {reason}")
     assert {k.removeprefix("provider.reason."): v for k, v in entries.items() if k.startswith("provider.reason.")} == REASONS
+
+
+@pytest.mark.parametrize("status", ["failed", "dispatched"])
+def test_the_receipt_page_titles_a_failed_or_dispatched_exchange_as_asked(status):
+    # receipt_page (the CLI's page, every receipt module registered) reads the
+    # provider module's title after it builds the model (#465).
+    from capsule_viewer.receipt import receipt_page
+
+    context = _edited(status)
+    html = receipt_page(context, None, PACK, PACK_SHA, audience="keep")
+    assert f"<title>{TITLE_ASKED}</title>" in html
+    confirmed, _ = context_from_capsulectl(*load(NAME))
+    assert "<title>Your receipt for an exchange you served</title>" in receipt_page(confirmed, None, PACK, PACK_SHA, audience="keep")

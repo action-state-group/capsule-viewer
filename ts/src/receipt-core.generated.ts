@@ -4189,7 +4189,8 @@ const root = {};
 
   // ---- the provider's own receipt (provider.py) ------------------------------
   // capsuleviewer.receipt.provider/v0: the page for a bundle of one exchange a
-  // Mesh node served and the payments it received for it (capsules-plugin
+  // Mesh node served, or was asked to serve and recorded as failed or sent on
+  // with no response (#465), and the payments it received for it (capsules-plugin
   // provider-receipt-bundle, Mesh-LLM/capsules-plugin#134). Not a deal
   // receipt: the root is the node's own record of the exchange it served
   // (x-mesh-poc-v1) and every other record is a settled payee_observed leg.
@@ -4683,7 +4684,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "b9f8c8320456a827c4fdac417fa048c7cb4b498c39c55814b5d592510efc31f2",
+      "script_sha256": "6472737a8afda2af88c022887927d43bd43af9974ab9f9cfa509ef2d7deb114e",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4730,7 +4731,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "831c114e1cbe92abe506b9857566ea3e6fbbf8b15623783b6153e643f25066ee",
+      "script_sha256": "a8c8fde26bd9b4d832721b54b66b7082998de04012e7ea23dc96210a023d46c2",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4776,7 +4777,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "d1c38589526d57a8df23a29b3baeb9e8711d411d2deeabead9205f86b7d0cca5",
+      "script_sha256": "0f00cc6834f986d9e0cd8db100c107fd5d5d27f5be48baf43389a6bfd9886cd1",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4824,7 +4825,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "8186e8f5825f0e7c948ee7caa0c1bc0aa63e7df036fcf97c2086bed16f29b570",
+      "script_sha256": "f103db4b4aa8fbbccd888a3021507293444634f8403d3c138e15bbafb3c4e385",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4866,7 +4867,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "84d65b55a212ec8f9fe294f5bfa9239bea7380d5c5ceb53a71ded38f004b8dd1",
+      "script_sha256": "13ce0126dec33205b9b34840d8bce6b096187cfead011c2d3bc22e6bac504b50",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

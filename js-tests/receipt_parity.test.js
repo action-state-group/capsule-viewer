@@ -145,10 +145,10 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
 
   it("covers every receipt fixture, at every audience, and the edited copies", () => {
     const names = new Set(oracle.cases.map((c) => c.name));
-    expect(oracle.cases.length).toBe(170);
+    expect(oracle.cases.length).toBe(173);
     expect([...names].filter((n) => !n.includes("+")).length).toBe(29);
-    // 23 deal edits, 60 of the provider's receipt.
-    expect([...names].filter((n) => n.includes("+")).length).toBe(83);
+    // 23 deal edits, 63 of the provider's receipt.
+    expect([...names].filter((n) => n.includes("+")).length).toBe(86);
   });
 
   it("compares every case, model and depth (the count is the parity result)", async () => {
@@ -202,9 +202,9 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     expect(drawn).toEqual(VIEWER_LINES_DRAWN);
     // 29 fixtures x 3 audiences + 23 deal edits (21 declined by
     // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only)
-    // + 60 edits of the provider's receipt (declined by all three); 34 accepted (module, case)
+    // + 63 edits of the provider's receipt (declined by all three); 34 accepted (module, case)
     // pairs, the 32 fixture pairs rendered at L0, L1 and L2.
-    expect({ ...compared, bytes: undefined }).toEqual({ cases: 170, accepted: 34, models: 34, renders: 98, bytes: undefined });
+    expect({ ...compared, bytes: undefined }).toEqual({ cases: 173, accepted: 34, models: 34, renders: 98, bytes: undefined });
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
 
@@ -273,10 +273,10 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     }
     expect(differences).toEqual([]);
     // The fixture at its three audiences (the twin's module takes any; the
-    // manifest names the owner's only) and 42 edited copies it still accepts:
-    // 31 confirmed, 9 failed (no reason, each reason class, an unknown one,
-    // no payment with and without a reason) and 2 dispatched (#465).
-    expect(compared).toEqual({ accepted: 45, declined: 125 });
+    // manifest names the owner's only) and 45 edited copies it still accepts:
+    // 31 confirmed, 12 failed (no reason, each reason class, an unknown one or
+    // not text, no payment with and without a reason) and 2 dispatched (#465).
+    expect(compared).toEqual({ accepted: 48, declined: 125 });
   }, 300000);
 
   it("each script registers exactly its own module, under its manifest", () => {

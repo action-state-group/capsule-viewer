@@ -231,6 +231,8 @@ def provider_edits() -> list[tuple[str, dict, dict, str]]:
 
     for cls in ("payment_required", "refused", "upstream_error", "timeout", "dropped", "something_new"):
         out.append(edited(f"failed-{cls}", failed(lambda poc, cls=cls: poc.__setitem__("failure_class", cls))))
+    for label, value in (("object", {"class": "timeout"}), ("list", [{"class": "timeout"}]), ("number", 7)):
+        out.append(edited(f"failed-class-{label}", failed(lambda poc, value=value: poc.__setitem__("failure_class", value))))
     out.append(edited("failed-no-payment", failed(drop_legs=True)))
     out.append(edited("failed-timeout-no-payment", failed(lambda poc: poc.__setitem__("failure_class", "timeout"), drop_legs=True)))
     out.append(edited("dispatched-no-payment", failed(drop_legs=True, status="dispatched")))

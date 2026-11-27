@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The provider's own receipt (``capsuleviewer.receipt.provider/v0``): the page
-for a bundle of one exchange a Mesh node served and the payments it received
-for it (capsules-plugin ``provider-receipt-bundle``, Mesh-LLM/capsules-plugin#134).
+for a bundle of one exchange a Mesh node served, or was asked to serve and
+recorded as failed or sent on with no response (capsule-viewer#465), and the
+payments it received for it (capsules-plugin ``provider-receipt-bundle``,
+Mesh-LLM/capsules-plugin#134).
 
 It is not a deal receipt. The bundle's root is the node's own record of the
 exchange it served (``x-mesh-poc-v1``), and every other record is a
@@ -186,7 +188,8 @@ def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]
     if not others and effect != "failed":
         return None
     reason = poc.get("failure_class")
-    return exchange[0], tuple(others), effect, reason if effect == "failed" and reason in REASONS else None
+    known = effect == "failed" and isinstance(reason, str) and reason in REASONS
+    return exchange[0], tuple(others), effect, reason if known else None
 
 
 def _total(legs: tuple[Mapping, ...]) -> str | None:
@@ -222,6 +225,9 @@ class ProviderReceiptModule:
         if parts is None:
             raise ValueError(f"{self.manifest.id}: buildModel called on a context canRender refuses")
         exchange, legs, effect, reason = parts
+        # The owner's title says what the record is: a failed or dispatched
+        # exchange was not served. The shell reads it after building the model.
+        self.title = TITLE if effect == "confirmed" else TITLE_ASKED
         return ProviderModel(
             effect=effect,
             reason=reason,
@@ -282,11 +288,6 @@ class ProviderReceiptModule:
 def provider_receipt_page(context: VerifiedBundleContext) -> str:
     """The page for *context*, a gated context over a provider's receipt bundle."""
     module = ProviderReceiptModule()
-    # The owner's title says what the record is: a failed or dispatched
-    # exchange was not served.
-    parts = _parts(context) if context.verified else None
-    if parts is not None and parts[2] != "confirmed":
-        module.title = TITLE_ASKED
     registry = Registry()
     registry.register(MANIFEST, module.canRender, module)
     return present(context, registry, audience="keep", core_checks=True)
