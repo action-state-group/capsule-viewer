@@ -85,6 +85,7 @@ function dealsResult(): Obj {
 async function draw(
   receipts: Record<string, DealReceiptEntry> | undefined,
   withModule = true,
+  receiptDeals?: Record<string, string>,
 ): Promise<HTMLElement> {
   const { bundle } = await sealEvidenceBundle(dealsResult());
   const root = document.createElement("main");
@@ -95,6 +96,7 @@ async function draw(
     depth: "L2",
     registry,
     ...(receipts === undefined ? {} : { receipts }),
+    ...(receiptDeals === undefined ? {} : { receiptDeals }),
   });
   return root;
 }
@@ -145,6 +147,36 @@ describe("a deal line's receipt", () => {
         .join(" "),
     ).not.toMatch(/no record/iu);
     expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
+  });
+
+  it("takes each claim's deal from the builder's receiptDeals, not its id's prefix, and draws no line for a claim it leaves out (evidencebook#116)", async () => {
+    const root = await draw(
+      { "deal::A": await receiptText("deal::A"), d1: null, "deal-P": null },
+      true,
+      { "d1::req-1": "deal::A", plain: "deal-P" },
+    );
+    const a = claim(root, "d1::req-1");
+    expect(a.querySelector<HTMLElement>(".rcpt")!.dataset.receiptDeal).toBe(
+      "deal::A",
+    );
+    a.querySelector<HTMLButtonElement>('button[data-receipt="open"]')!.click();
+    await settle(a);
+    expect(
+      a.querySelector<HTMLElement>("[data-stand-in-receipt]")!.dataset
+        .standInReceipt,
+    ).toBe("deal::A");
+    expect(claim(root, "d2::req-2").querySelector(".rcpt")).toBeNull();
+    const plain = claim(root, "plain");
+    expect(plain.querySelector<HTMLElement>(".rcpt")!.dataset.receiptDeal).toBe(
+      "deal-P",
+    );
+    expect(plain.querySelector('[data-receipt="withheld"]')).not.toBeNull();
+  });
+
+  it("gives no claim a receipt line when receiptDeals names none, whatever its id", async () => {
+    const root = await draw({ d1: null }, true, {});
+    for (const id of ["d1::req-1", "d2::req-2", "plain"])
+      expect(claim(root, id).querySelector(".rcpt")).toBeNull();
   });
 
   it("says a receipt the holder's disclosure policy keeps off the page is kept off on purpose, apart from one not carried", async () => {

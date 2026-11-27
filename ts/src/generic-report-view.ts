@@ -242,12 +242,33 @@ export type DealReceiptEntry = string | null | ReceiptNotClosed;
 export interface ReceiptsInput {
   readonly texts: Readonly<Record<string, DealReceiptEntry>>;
   readonly open: (text: string, panel: HTMLElement) => Promise<ReceiptOpen>;
+  /**
+   * Each claim's deal by claim id, as the page's builder decided it
+   * (`RenderEvidenceGraphOptions.receiptDeals`); a claim not here has none.
+   * Absent, a claim's deal is its id's part before `::` ({@link dealIdOf}).
+   */
+  readonly deals?: Readonly<Record<string, string>>;
 }
 
 /** The deal a claim belongs to: its id before the first `::`, as the inference-deals Result writes it, or none. */
 export function dealIdOf(claimId: string): string | undefined {
   const at = claimId.indexOf("::");
   return at > 0 ? claimId.slice(0, at) : undefined;
+}
+
+/**
+ * A claim's deal on this page: the builder's when it gave them (the report
+ * that checked the receipts reads it from the subject of the records the
+ * claim cites, evidencebook#116), else its id's part before `::`.
+ */
+function dealOf(
+  claim: ResultClaim,
+  receipts: ReceiptsInput,
+): string | undefined {
+  if (receipts.deals === undefined) return dealIdOf(claim.id);
+  return Object.prototype.hasOwnProperty.call(receipts.deals, claim.id)
+    ? receipts.deals[claim.id]
+    : undefined;
 }
 
 /**
@@ -263,7 +284,7 @@ function receiptLine(
   w: Words,
   receipts: ReceiptsInput,
 ): HTMLElement[] {
-  const deal = dealIdOf(claim.id);
+  const deal = dealOf(claim, receipts);
   if (deal === undefined) return [];
   const line = el("div", "rcpt");
   line.dataset.receiptDeal = deal;

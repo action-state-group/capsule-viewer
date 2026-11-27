@@ -2870,7 +2870,7 @@ export interface RenderEvidenceGraphOptions {
   /**
    * The deal receipts the page carries, for a report whose claims are deals
    * (capsule-viewer#228): each deal's receipt bundle as the JSON text the node
-   * served, by deal id, the claim id's part before `::`; `null` for a deal whose
+   * served, by deal id (`receiptDeals`); `null` for a deal whose
    * receipt the holder's disclosure policy keeps off the page on purpose;
    * `{ state: "not-closed" }` for a deal that had no settlement or delivery
    * when the page was built, so it has no receipt yet (capsule-viewer#358). The contract-report
@@ -2882,6 +2882,16 @@ export interface RenderEvidenceGraphOptions {
    * such module accepts is not drawn. Absent, no claim gets a receipt line.
    */
   readonly receipts?: Readonly<Record<string, DealReceiptEntry>>;
+  /**
+   * Each claim's deal, by claim id, as the page's builder decided it:
+   * evidencebook's report reads a claim's deal from the subject of the
+   * records it cites, else its id's part before `::` (evidencebook#116,
+   * subject convention v0; evidencebook report.dealOf owns the rule).
+   * Given, a claim gets the receipt line of its deal here and none when it is
+   * not here; absent, a claim's deal is its id's part before `::`, as pages
+   * built before it read. Read only with `receipts`.
+   */
+  readonly receiptDeals?: Readonly<Record<string, string>>;
   /**
    * capsulectl's own report of this bundle (`capsulectl deal verify --bundle`,
    * `capsule-cli-result/v1`), for an x-deal-v1 copy whose report this page
@@ -4121,6 +4131,9 @@ async function renderVerifiedContext(
               texts: options.receipts,
               open: (text: string, panel: HTMLElement) =>
                 openReceipt(text, panel, options),
+              ...(options.receiptDeals === undefined
+                ? {}
+                : { deals: options.receiptDeals }),
             },
           }),
       setChromeClass(name: string): void {

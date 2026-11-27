@@ -18341,7 +18341,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("f06e4e639456f9f407b135e6f7a3bdf8e4984e9a");
+    return commitPrefix("37c42da09f947951f1e8857e40c73c8a187ed249");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -25141,8 +25141,12 @@ ${key}`);
     const at = claimId.indexOf("::");
     return at > 0 ? claimId.slice(0, at) : void 0;
   }
+  function dealOf(claim, receipts3) {
+    if (receipts3.deals === void 0) return dealIdOf(claim.id);
+    return Object.prototype.hasOwnProperty.call(receipts3.deals, claim.id) ? receipts3.deals[claim.id] : void 0;
+  }
   function receiptLine(claim, w, receipts3) {
-    const deal = dealIdOf(claim.id);
+    const deal = dealOf(claim, receipts3);
     if (deal === void 0) return [];
     const line = el10("div", "rcpt");
     line.dataset.receiptDeal = deal;
@@ -29712,7 +29716,8 @@ ${pad.repeat(depth)}`;
         ...options.receipts === void 0 ? {} : {
           receipts: {
             texts: options.receipts,
-            open: (text2, panel) => openReceipt(text2, panel, options)
+            open: (text2, panel) => openReceipt(text2, panel, options),
+            ...options.receiptDeals === void 0 ? {} : { deals: options.receiptDeals }
           }
         },
         setChromeClass(name) {
