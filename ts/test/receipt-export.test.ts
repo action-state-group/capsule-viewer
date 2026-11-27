@@ -432,3 +432,110 @@ describe("a command in the can't-check lines (#454)", () => {
     });
   }
 });
+
+// capsule-viewer#465: the npm export's provider module draws a failed or
+// dispatched exchange with its real status, in Sherlock2's words. No signed
+// failed or dispatched bundle is cut yet (the plugin's route serves no failed
+// exchange), so these draw the module's model as it builds it; which
+// bundles it accepts is js-tests/receipt_provider.test.js's and the parity
+// golden's (tests/receipt_oracle.py).
+describe("the provider's receipt: a failed or dispatched exchange (#465)", () => {
+  const FAILED_TAIL =
+    " It was not served. Any payment this node received for it is listed below.";
+  const model = (effect: string, reason: string | null, paid = true) => ({
+    effect,
+    reason,
+    exchange_id: "5cd79a2e1d368d4126c8710bd68eb209",
+    model: "m",
+    served_at: "2026-10-30T19:50:00 UTC",
+    payments: paid
+      ? [
+          {
+            capsule_id: "943636c8ec93ae8d3d82",
+            received: "995 msat",
+            fee: "5 msat",
+          },
+        ]
+      : [],
+    total: paid ? "995 msat" : "0 msat",
+  });
+  const draw = async (m: object, carrier?: "page") => {
+    const provider = receiptModules().find(
+      (module) => module.manifest.id === "capsuleviewer.receipt.provider/v0",
+    )!;
+    const drawn = host();
+    const regions = { L0: host(), L1: host(), L2: host() };
+    if (carrier) drawn.setAttribute("data-receipt-carrier", carrier);
+    drawn.append(regions.L0, regions.L1, regions.L2);
+    await (
+      provider.render as unknown as (
+        model: unknown,
+        host: Record<string, unknown>,
+      ) => Promise<void>
+    )(m, { ...regions, depth: "L0" });
+    return {
+      text: regions.L0.textContent ?? "",
+      title: regions.L0.querySelector("h2")?.textContent ?? null,
+      status:
+        regions.L0.querySelector('[data-provider="status"]')?.textContent ??
+        null,
+    };
+  };
+
+  it.each([
+    ["payment_required", "payment required"],
+    ["upstream_error", "upstream error"],
+    ["timeout", "timed out"],
+  ])(
+    "a failed exchange that names %s says why in words",
+    async (cls, words) => {
+      const page = await draw(model("failed", cls));
+      expect(page.status).toBe(
+        `This node's record says the exchange failed: ${words}.${FAILED_TAIL}`,
+      );
+      expect(page.text).not.toContain(cls);
+    },
+  );
+
+  it("a failed exchange with no reason or no payment says it failed", async () => {
+    for (const m of [model("failed", null), model("failed", null, false)]) {
+      const page = await draw(m);
+      expect(page.status).toBe(
+        `This node's record says the exchange failed.${FAILED_TAIL}`,
+      );
+    }
+    expect((await draw(model("failed", null, false))).text).toContain(
+      "Received (0)",
+    );
+  });
+
+  it("a dispatched exchange says the host reported no response", async () => {
+    const page = await draw(model("dispatched", null));
+    expect(page.status).toBe(
+      "This node's record says the request was sent on, but the host reported no response. It does not show that the exchange was served.",
+    );
+  });
+
+  it.each(["failed", "dispatched"])(
+    "a %s page says what was asked and when it was recorded, never served",
+    async (effect) => {
+      const page = await draw(model(effect, null));
+      expect(page.title).toBe(
+        "Your record of an exchange you were asked to serve",
+      );
+      expect(page.text).toContain("Model asked for");
+      expect(page.text).toContain("Recorded at2026-10-30T19:50:00 UTC");
+      expect(page.text).not.toMatch(/Model served|Served at/);
+      // A shared copy draws no owner's title and never says "you".
+      const shared = await draw(model(effect, null), "page");
+      expect(shared.title).toBeNull();
+      expect(shared.text).not.toMatch(/\byou\b/i);
+    },
+  );
+
+  it("the confirmed page draws no status line", async () => {
+    const page = await draw(model("confirmed", null));
+    expect(page.status).toBeNull();
+    expect(page.title).toBe("Your receipt for an exchange you served");
+  });
+});

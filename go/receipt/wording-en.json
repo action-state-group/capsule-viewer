@@ -764,6 +764,17 @@
     "provider.fee": "Fee for receiving",
     "provider.total": "Received in total",
     "provider.payment_record": "Payment record",
-    "provider.not_shown": "not shown"
+    "provider.not_shown": "not shown",
+    "provider.title_asked": "Your record of an exchange you were asked to serve",
+    "provider.model_asked": "Model asked for",
+    "provider.recorded_at": "Recorded at",
+    "provider.status.failed": "This node's record says the exchange failed. It was not served. Any payment this node received for it is listed below.",
+    "provider.status.failed_reason": "This node's record says the exchange failed: {reason}. It was not served. Any payment this node received for it is listed below.",
+    "provider.status.dispatched": "This node's record says the request was sent on, but the host reported no response. It does not show that the exchange was served.",
+    "provider.reason.payment_required": "payment required",
+    "provider.reason.refused": "refused",
+    "provider.reason.upstream_error": "upstream error",
+    "provider.reason.timeout": "timed out",
+    "provider.reason.dropped": "dropped"
   }
 }

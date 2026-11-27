@@ -273,3 +273,39 @@ func TestProviderWordsNeverCallTheOtherPartyACountersigner(t *testing.T) {
 		"This is this node's own record of its half of the exchange. It is not a joint record: the other party keeps its own.",
 		pack.Entries["provider.own_half"])
 }
+
+// A failed or dispatched exchange's page is drawn in Sherlock2's words
+// (#465): its labels and title never say it was served, a failed record's
+// reason is one of the five classes the plugin writes, in words, and only
+// provider.status.failed_reason takes a {reason}.
+func TestProviderNotServedWords(t *testing.T) {
+	b, err := os.ReadFile("wording-en.json")
+	require.NoError(t, err)
+	var pack struct {
+		Entries map[string]string `json:"entries"`
+	}
+	require.NoError(t, json.Unmarshal(b, &pack))
+	e := pack.Entries
+	assert.Equal(t, "Your record of an exchange you were asked to serve", e["provider.title_asked"])
+	assert.Equal(t, "Model asked for", e["provider.model_asked"])
+	assert.Equal(t, "Recorded at", e["provider.recorded_at"])
+	assert.Equal(t, "This node's record says the exchange failed: {reason}. It was not served. Any payment this node received for it is listed below.", e["provider.status.failed_reason"])
+	assert.Equal(t, strings.Replace(e["provider.status.failed_reason"], ": {reason}", "", 1), e["provider.status.failed"])
+	assert.Equal(t, "This node's record says the request was sent on, but the host reported no response. It does not show that the exchange was served.", e["provider.status.dispatched"])
+	reasons := map[string]string{}
+	for key, words := range e {
+		if class, ok := strings.CutPrefix(key, "provider.reason."); ok {
+			reasons[class] = words
+		}
+		if strings.HasPrefix(key, "provider.") && key != "provider.status.failed_reason" && key != "provider.received_count" {
+			assert.NotContains(t, words, "{", key)
+		}
+	}
+	assert.Equal(t, map[string]string{
+		"payment_required": "payment required",
+		"refused":          "refused",
+		"upstream_error":   "upstream error",
+		"timeout":          "timed out",
+		"dropped":          "dropped",
+	}, reasons)
+}

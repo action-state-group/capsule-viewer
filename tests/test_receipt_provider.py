@@ -11,11 +11,17 @@ import re
 from pathlib import Path
 
 import pytest
-from receipt_helpers import load, render, report_for, visible_text
+from receipt_helpers import PACK, PACK_SHA, load, render, report_for, visible_text
 
 from capsule_viewer.receipt.provider import (
+    MODEL_ASKED,
     NO_CONTENT,
     OWN_HALF,
+    REASONS,
+    RECORDED_AT,
+    STATUS_DISPATCHED,
+    STATUS_FAILED,
+    TITLE_ASKED,
     ProviderReceiptModule,
     amount_text,
     provider_receipt_page,
@@ -166,8 +172,8 @@ def test_a_leg_that_is_not_settled_is_not_a_payment_received(status):
     assert not ProviderReceiptModule().canRender(context)
 
 
-@pytest.mark.parametrize("status", ["failed", "planned", "dispatched", "refused", None, "missing", "no effect"])
-def test_an_exchange_that_was_not_served_is_not_an_exchange_you_served(status):
+@pytest.mark.parametrize("status", ["planned", "refused", None, "missing", "no effect"])
+def test_an_exchange_with_no_effect_this_page_draws_is_not_rendered(status):
     bundle, output = load(NAME)
     edited = copy.deepcopy(bundle)
     root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
@@ -204,3 +210,121 @@ def test_the_time_is_shown_in_utc_or_not_at_all(stamp, shown):
     from capsule_viewer.receipt.provider import _utc
 
     assert _utc(stamp) == shown
+
+
+# capsule-viewer#465: a failed or dispatched exchange, drawn with its real
+# status in Sherlock2's words (Steven's u1578 E and F, evidencebook#205).
+def _edited(status, failure_class=..., legs=True):
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
+    root["effect"]["status"] = status
+    poc = root["model_attestation"]["compute_attestation"]["x-mesh-poc-v1"]
+    if status == "failed":
+        poc["outcome"] = "failed"
+    if failure_class is not ...:
+        poc["failure_class"] = failure_class
+    output = copy.deepcopy(output)
+    if not legs:
+        edited["records"] = [root]
+        for key in ("record_identity", "record_signatures"):
+            output[key] = {k: v for k, v in output[key].items() if k == root["capsule_id"]}
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    return context
+
+
+def _failed(reason):
+    return STATUS_FAILED.format(reason=f": {reason}" if reason else "")
+
+
+@pytest.mark.parametrize(
+    ("failure_class", "words"),
+    [
+        ("payment_required", "payment required"),
+        ("refused", "refused"),
+        ("upstream_error", "upstream error"),
+        ("timeout", "timed out"),
+        ("dropped", "dropped"),
+        (..., None),
+        ("something_new", None),
+        (None, None),
+        ({"class": "timeout"}, None),
+        ([{"class": "timeout"}], None),
+        (7, None),
+    ],
+)
+def test_a_failed_exchange_says_it_failed_and_why_in_words(failure_class, words):
+    html = provider_receipt_page(_edited("failed", failure_class))
+    text = visible_text(html)
+    assert _failed(words) in text
+    # The owner's title is the page's <title>, not its visible text.
+    assert f"<title>{TITLE_ASKED}</title>" in html and MODEL_ASKED in text and RECORDED_AT in text
+    assert "Model served" not in text and "Served at" not in text and "you served" not in html
+    # Never the raw code (refused and dropped are their own words).
+    if isinstance(failure_class, str) and failure_class not in REASONS.values():
+        assert failure_class not in text
+
+
+def test_a_failed_exchange_with_no_payment_is_drawn_with_no_payment_row():
+    module = ProviderReceiptModule()
+    context = _edited("failed", "timeout", legs=False)
+    model = module.buildModel(context)
+    assert model.payments == () and model.reason == "timeout"
+    text = visible_text(provider_receipt_page(context))
+    assert _failed("timed out") in text and "Received (0)" in text
+
+
+@pytest.mark.parametrize("status", ["confirmed", "dispatched"])
+def test_only_a_failed_exchange_may_have_no_payment(status):
+    assert not ProviderReceiptModule().canRender(_edited(status, legs=False))
+
+
+def test_a_dispatched_exchange_says_no_response_was_recorded_and_names_no_reason():
+    context = _edited("dispatched", "refused")
+    assert ProviderReceiptModule().buildModel(context).reason is None
+    html = provider_receipt_page(context)
+    text = visible_text(html)
+    assert STATUS_DISPATCHED in text and "refused" not in text
+    assert f"<title>{TITLE_ASKED}</title>" in html and MODEL_ASKED in text and RECORDED_AT in text
+
+
+def test_a_summary_of_unsealed_failures_is_not_one_exchange():
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
+    root["effect"]["status"] = "failed"
+    poc = root["model_attestation"]["compute_attestation"]["x-mesh-poc-v1"]
+    poc.update({"outcome": "failed", "unsealed_failures": {"count": 3, "window_start": "2026-10-30T19:00Z", "window_s": 3600}})
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    assert not ProviderReceiptModule().canRender(context)
+
+
+def test_the_confirmed_page_draws_no_status_line():
+    html = _page()
+    assert 'data-provider="status"' not in html
+    assert "<title>Your receipt for an exchange you served</title>" in html
+
+
+def test_the_new_words_are_the_go_packs():
+    # The scripts and this twin draw the same sentences (#465).
+    entries = json.loads((Path(__file__).parents[1] / "go" / "receipt" / "wording-en.json").read_text(encoding="utf-8"))["entries"]
+    assert entries["provider.title_asked"] == TITLE_ASKED
+    assert entries["provider.model_asked"] == MODEL_ASKED
+    assert entries["provider.recorded_at"] == RECORDED_AT
+    assert entries["provider.status.dispatched"] == STATUS_DISPATCHED
+    assert entries["provider.status.failed"] == STATUS_FAILED.format(reason="")
+    assert entries["provider.status.failed_reason"] == STATUS_FAILED.format(reason=": {reason}")
+    assert {k.removeprefix("provider.reason."): v for k, v in entries.items() if k.startswith("provider.reason.")} == REASONS
+
+
+@pytest.mark.parametrize("status", ["failed", "dispatched"])
+def test_the_receipt_page_titles_a_failed_or_dispatched_exchange_as_asked(status):
+    # receipt_page (the CLI's page, every receipt module registered) reads the
+    # provider module's title after it builds the model (#465).
+    from capsule_viewer.receipt import receipt_page
+
+    context = _edited(status)
+    html = receipt_page(context, None, PACK, PACK_SHA, audience="keep")
+    assert f"<title>{TITLE_ASKED}</title>" in html
+    confirmed, _ = context_from_capsulectl(*load(NAME))
+    assert "<title>Your receipt for an exchange you served</title>" in receipt_page(confirmed, None, PACK, PACK_SHA, audience="keep")
