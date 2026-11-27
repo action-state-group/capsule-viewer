@@ -72,9 +72,12 @@ var (
 	fileJSONRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.json$`)
 	fileHTMLRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.html$`)
 	hex64RE    = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	digitsRE   = regexp.MustCompile(`^(0|[1-9][0-9]{0,30})$`)
-	codeRE     = regexp.MustCompile(`^[A-Z]{3,8}$`)
-	derivRE    = regexp.MustCompile(`^standard_history/[1-4]$`)
+	// An amount as the standard card reads one (standard_history_card.js
+	// VALUE, CURRENCY): an exact integer string, an ISO 4217 code or a CAIP-19
+	// asset id, a scale 0 to 255.
+	digitsRE = regexp.MustCompile(`^(0|[1-9][0-9]{0,299})$`)
+	codeRE   = regexp.MustCompile(`^(?:[A-Z]{3}|[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128})$`)
+	derivRE  = regexp.MustCompile(`^standard_history/[1-4]$`)
 )
 
 // countOf is TS count: a safe whole number of 0 or more, without a refusal.
@@ -104,8 +107,8 @@ func readAmount(r *reader, v any, path string) *amount {
 	value, _ := o.get("value").(string)
 	code, _ := o.get("assetCode").(string)
 	scale, scaleOK := countOf(o.get("assetScale"))
-	if !digitsRE.MatchString(value) || !codeRE.MatchString(code) || !scaleOK || scale > 18 {
-		r.refuse(path, "is not an amount (value digits, assetCode 3 to 8 capitals, assetScale 0 to 18)")
+	if !digitsRE.MatchString(value) || !codeRE.MatchString(code) || !scaleOK || scale > 255 {
+		r.refuse(path, "is not an amount (an integer value, an ISO 4217 or CAIP-19 assetCode, assetScale 0 to 255)")
 		return nil
 	}
 	return &amount{value: value, code: code, scale: scale}
@@ -131,10 +134,10 @@ func amountText(a *amount) string {
 		if a.value != "0" {
 			msat = a.value + strings.Repeat("0", int(11-a.scale))
 		}
-		if len(msat) <= 3 {
-			return grouped("0") + " sat"
+		if msat == "0" {
+			return "0 sat"
 		}
-		if strings.HasSuffix(msat, "000") {
+		if len(msat) > 3 && strings.HasSuffix(msat, "000") {
 			return grouped(msat[:len(msat)-3]) + " sat"
 		}
 		return grouped(msat) + " msat"
@@ -205,6 +208,13 @@ func readCardObject(r *reader, text string) *cardObject {
 	}
 	out := &cardObject{derivation: derivation}
 	oc := asObj(card.get("outcomes"))
+	if oc != nil {
+		for _, k := range oc.keys {
+			if !contains([]string{"of", "held", "did_not_hold", "undecided"}, k) {
+				return bad("its card's outcomes carry a member SH §4 does not have")
+			}
+		}
+	}
 	var ofOK, heldOK, dnhOK, undOK bool
 	if oc != nil {
 		out.of, ofOK = countOf(oc.get("of"))
@@ -648,6 +658,8 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 			switch {
 			case s == nil || s.state == "not_checked":
 				return "not_checked"
+			case s.state == "passed" && s.through != nil && s.through[0] < s.through[1]:
+				return "partial"
 			case s.state == "passed":
 				return "filled"
 			case s.state == "failed":
@@ -706,6 +718,10 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 					}
 				} else if every(func(x termResult) bool { return x.status == "agreed" && x.value == "met" }) {
 					line = say("card.row.went")
+				} else if every(func(x termResult) bool {
+					return (x.status == "agreed" || x.status == "uncontested" || x.status == "ruled") && x.value == "met"
+				}) {
+					line = say("card.row.went.final")
 				} else if every(func(x termResult) bool { return x.status == "not_due" }) {
 					line = say("card.row.not_due")
 				} else if every(func(x termResult) bool { return x.status == "not_reached" }) {
@@ -743,7 +759,11 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 				sort.SliceStable(byHolder, func(i, j int) bool { return byHolder[i].holder && !byHolder[j].holder })
 				parts := make([]string, 0, len(byHolder))
 				for _, x := range byHolder {
-					s := say(termKey(x.holder)+".label") + ": " + say("card.status."+x.status)
+					statusKey := "card.status." + x.status
+					if _, ok := base[statusKey+".not_met"]; ok && x.value == "not_met" {
+						statusKey += ".not_met"
+					}
+					s := say(termKey(x.holder)+".label") + ": " + say(statusKey)
 					if x.status == "ruled" && x.value != "" {
 						s += say("card.status.ruled." + x.value)
 					}
@@ -756,33 +776,46 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 			if x != nil {
 				rec, ts, cs, item, receipt = x.recorded, x.witness, x.countersigned, x.item, x.receipt
 			}
+			// A slot that covers part of the deal's steps says how far, and is
+			// not drawn filled (the receipt's partial stamp; TS part).
+			part := func(key string, s *slot) []any {
+				if s == nil || s.through == nil || s.at == nil {
+					return nil
+				}
+				return []any{say(key, "k", strconv.FormatInt(s.through[0], 10), "n", strconv.FormatInt(s.through[1], 10)),
+					" · ", timeEl(s.at)}
+			}
 			recState := slotState(rec)
 			var recLine []any
 			switch {
-			case recState != "filled":
-				recLine = []any{say("card.stamp.recorded." + recState)}
-			case rec.through != nil && rec.through[0] < rec.through[1]:
-				recLine = []any{say("card.stamp.recorded.partial",
-					"k", strconv.FormatInt(rec.through[0], 10), "n", strconv.FormatInt(rec.through[1], 10))}
-			case rec.at != nil:
+			case recState == "partial":
+				recLine = part("card.stamp.recorded.partial", rec)
+			case recState == "filled" && rec.at != nil:
 				recLine = []any{say("card.stamp.recorded.filled"), " · ", timeEl(rec.at)}
 			default:
-				recLine = []any{say("card.stamp.recorded.filled")}
+				recLine = []any{say("card.stamp.recorded." + recState)}
 			}
 			tsState := slotState(ts)
-			tsLine := []any{}
-			if tsState == "filled" && ts.at != nil {
-				tsLine = append(tsLine, deref(ts.by)+" · ", timeEl(ts.at))
-			} else {
-				tsLine = append(tsLine, say("card.stamp.time_stamped."+tsState))
+			var tsLine []any
+			switch {
+			case tsState == "partial":
+				tsLine = append([]any{deref(ts.by) + " · "}, part("card.stamp.time_stamped.partial", ts)...)
+			case tsState == "filled" && ts.at != nil:
+				tsLine = []any{deref(ts.by) + " · ", timeEl(ts.at)}
+			default:
+				tsLine = []any{say("card.stamp.time_stamped." + tsState)}
 			}
 			csState := slotState(cs)
-			csLine := []any{}
-			if csState == "filled" && cs.at != nil {
-				csLine = append(csLine, say("card.stamp.countersigned.by", "signer", deref(cs.by)), " · ",
-					timeEl(cs.at), say("card.stamp.countersigned.clock"))
-			} else {
-				csLine = append(csLine, say("card.stamp.countersigned."+csState))
+			var csLine []any
+			switch {
+			case csState == "partial":
+				csLine = append([]any{say("card.stamp.countersigned.by", "signer", deref(cs.by)), " · "},
+					part("card.stamp.countersigned.partial", cs)...)
+			case csState == "filled" && cs.at != nil:
+				csLine = []any{say("card.stamp.countersigned.by", "signer", deref(cs.by)), " · ",
+					timeEl(cs.at), say("card.stamp.countersigned.clock")}
+			default:
+				csLine = []any{say("card.stamp.countersigned." + csState)}
 			}
 			var sealArt, srLine, itemLine, both, receiptLine *element
 			if seal {
@@ -822,6 +855,13 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 			el("ol", attrs("class", "cvh-rows", "data-history", "rows"), items...))
 	}
 
+	or := func(s, def string) string {
+		if s == "" {
+			return def
+		}
+		return s
+	}
+
 	// Who signed the card, and what that shows.
 	signer := name
 	if owner {
@@ -831,10 +871,20 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 	if obj.signedAt != nil {
 		signedLine = append(signedLine, " · ", timeEl(obj.signedAt))
 	}
+	signedNote := "card.signed.unchecked"
+	switch proof["producer_signatures"] {
+	case "pass":
+		signedNote = "card.signed.note"
+	case "fail":
+		signedNote = "card.signed.failed"
+	}
 	signed := el("section", attrs("class", "cvh-panel", "data-history", "signed"),
 		el("h2", nil, say("card.signed.heading")),
 		el("p", nil, signedLine...),
-		el("p", attrs("class", "cvh-note"), say("card.signed.note")))
+		// What the signature shows is said only when capsulectl verify
+		// reported the signature check passed.
+		el("p", attrs("class", "cvh-note", "data-signature", or(proof["producer_signatures"], "absent")),
+			say(signedNote)))
 
 	// "Is this record intact?": capsulectl verify's own answer per check.
 	lede := "card.proof.lede.partial"
@@ -848,7 +898,7 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 		}
 	}
 	switch {
-	case failed || anyFail:
+	case failed || anyFail || proof["witnesses"] == "fail":
 		lede = "card.proof.lede.failed"
 	case allPass:
 		lede = "card.proof.lede.passed"
@@ -868,12 +918,6 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 				el("span", nil, label...),
 				" ",
 				el("code", attrs("class", "cvh-code"), strings.ReplaceAll(code, "_", " "))))
-	}
-	or := func(s, def string) string {
-		if s == "" {
-			return def
-		}
-		return s
 	}
 	var proofRows []any
 	for _, c := range proofChecks {

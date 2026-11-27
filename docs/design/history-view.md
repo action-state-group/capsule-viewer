@@ -504,8 +504,11 @@ holder's own book does not carry.
   this page, so a counts-only page can never embed or offer private entries.
 - `deals` (Your History only) adds, per entry id, what the entry does not carry
   and the holder's own book does: the agreement's `terms.item`, its agreed
-  amount (the /3 entry's amount is its value band's floor, said as "from … (its
-  value band)" when no amount is given), the stamp slots and the receipt page's
+  amount (AAC SH §5.2 names the entry's amount the agreed amount, but the
+  one producer of /3 cards, evidencebook's capsulectl, fills it with the value
+  band's floor until its design Q15 rules: `deal_standard_history3.go`
+  `bandAmount`; so a /3 entry's amount is said as "from … (its value band)"
+  when the holder's book gives no amount), the stamp slots and the receipt page's
   file name. An id that is not an entry of the object is refused. The other
   side's name is not drawn: no sealed record holds it yet (evidencebook#1031),
   and a key id is never shown as a name.
@@ -528,10 +531,16 @@ History row does not have, so a History never draws it.
 "Checkpointed through step k of n" when it covers part). TIME-STAMPED fills
 from the `time_stamped` slot (the witness and its time). COUNTERSIGNED fills
 only from a countersignature checked on that deal's bundle; the other side's
-half of the deal is said in words, never as COUNTERSIGNED. Every slot that is
-absent reads "Not checked here". On the legacy deal page the `deal_report`
+half of the deal is said in words, never as COUNTERSIGNED. A slot that covers part
+of the deal's steps (`through`) says "… through step k of n" and is not drawn
+filled. Every slot that is absent reads "Not checked here". On the legacy deal page the `deal_report`
 check no longer fills RECORDED either: it says each deal was read with its own
 report, not that a checkpoint covers it.
+
+**The signature.** "Who signed this card" says what a signature shows only
+when capsulectl verify reported the signature check passed; otherwise it says
+the check failed or was not reported. "Is this record intact?" reads "No" when
+any check it lists failed, the outside time stamp included.
 
 **Times.** The static page (TypeScript or Go) draws every time in UTC and says
 "Times are in UTC."; `renderHistoryView` rewrites each `time[data-time]` into

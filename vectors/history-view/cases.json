@@ -1800,6 +1800,58 @@
         }
       }
     },
+    "card-yours-final-terms": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "owner",
+      "holder": {
+        "name": "Maya"
+      },
+      "audience": {
+        "kind": "private"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "machine": {
+        "file": "maya-history-card.json",
+        "text": "{\"disclosures\":{\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":null,\"did_not_hold\":0,\"held\":0,\"of\":1,\"undecided\":1},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":3,\"undecided\":2},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":1,\"held\":0,\"of\":2,\"undecided\":1}],\"class_missing\":{\"count\":1,\"of\":11},\"controller_class\":\"person_declared\",\"coverage_start\":\"2026-04\",\"derivation\":\"standard_history/3\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":0,\"of\":1,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":1,\"open\":0,\"split\":0,\"withdrawn\":0},\"of\":1},\"received\":{\"by_forum\":{\"auto\":0,\"external\":1,\"network\":1,\"of\":2,\"rail\":0},\"by_outcome\":{\"against\":1,\"for\":0,\"no_finding\":0,\"of\":2,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":2}},\"happened\":{\"no_record\":3,\"of\":11,\"receipt_only\":4,\"stamped_by_both\":4},\"holder_kind\":\"person\",\"in_window\":{\"counted\":11,\"not_counted\":2,\"of\":13},\"local_times\":{\"count\":2,\"of\":11},\"not_counted\":{\"no_witness_time\":1,\"of\":2,\"shop_preauth\":1},\"not_honoured\":{\"count\":1,\"of\":5},\"outcomes\":{\"did_not_hold\":5,\"held\":1,\"of\":11,\"undecided\":5},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"remedied\":{\"count\":1,\"of\":5},\"roles\":{\"bought\":4,\"of\":11,\"provided\":7},\"since\":\"2026-03\",\"unpriced\":{\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-11-27T03:12:00Z\",\"first_checkpoint_time\":\"2026-09-01T00:00:00Z\"},\"deals\":[{\"agreed_at\":\"2026-09-02T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"4500\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-final\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"uncontested\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"remedy\":\"none\",\"status\":\"ruled\",\"value\":\"met\"}]}],\"policy\":{\"digest\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"window\":{\"months\":3}}}},\"records\":[{\"capsule_id\":\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-11-27T03:12:30Z\"}]}",
+        "verify": {
+          "verdict": "VALID",
+          "bundle_digest": "967cde259525fcc1c0d3b242e4d55352d5f2f3793e034996f09b2fd4c366bcda",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "pass",
+            "witnesses": "withheld"
+          }
+        }
+      },
+      "deals": {
+        "deal-final": {
+          "amount": {
+            "value": "999",
+            "assetCode": "BTC",
+            "assetScale": 11
+          },
+          "recorded": {
+            "state": "passed",
+            "at": "2026-11-27T03:12:00Z",
+            "through": {
+              "k": 1,
+              "n": 2
+            }
+          }
+        }
+      }
+    },
     "card-yours-v1": {
       "view": "history-view/v0",
       "kind": "deal",

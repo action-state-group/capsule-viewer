@@ -31,7 +31,10 @@ func TestGroupedAndAmountText(t *testing.T) {
 		want string
 	}{
 		{amount{"0", "BTC", 8}, "0 sat"},
-		{amount{"1", "BTC", 11}, "0 sat"}, // 1 msat is under three digits
+		{amount{"1", "BTC", 11}, "1 msat"},
+		{amount{"999", "BTC", 11}, "999 msat"},
+		{amount{"1000", "BTC", 11}, "1 sat"},
+		{amount{"7", "eip155:1/slip44:60", 18}, "0.000000000000000007 eip155:1/slip44:60"},
 		{amount{"1500", "BTC", 11}, "1,500 msat"},
 		{amount{"21000", "BTC", 8}, "21,000 sat"},
 		{amount{"5", "BTC", 12}, "0.000000000005 BTC"},
@@ -116,4 +119,78 @@ func TestCardTextNotJSON(t *testing.T) {
 	mo["text"] = "{"
 	mo["verify"].(map[string]any)["bundle_digest"] = sha256Hex("{")
 	assert.Equal(t, []string{"input.machine.text: is not JSON"}, reasons(t, m, nil))
+}
+
+// withText swaps the card's object text for edit's version of it, with the
+// bundle digest that matches, so only the edit is refused.
+func withText(t *testing.T, m map[string]any, edit func(doc map[string]any)) {
+	t.Helper()
+	mo := m["machine"].(map[string]any)
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal([]byte(mo["text"].(string)), &doc))
+	edit(doc)
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	mo["text"] = string(raw)
+	mo["verify"].(map[string]any)["bundle_digest"] = sha256Hex(string(raw))
+}
+
+func TestCardOutcomesWithAnUnknownMemberAreRefused(t *testing.T) {
+	m := cardYours(t)
+	delete(m, "deals")
+	withText(t, m, func(doc map[string]any) {
+		cid := doc["records"].([]any)[0].(map[string]any)["capsule_id"].(string)
+		card := doc["disclosures"].(map[string]any)[cid].(map[string]any)["agent_input"].(map[string]any)
+		card["outcomes"].(map[string]any)["settled"] = 0
+	})
+	assert.Equal(t, []string{"input.machine.text: its card's outcomes carry a member SH §4 does not have"}, reasons(t, m, nil))
+}
+
+func TestCardAmountCodes(t *testing.T) {
+	for code, ok := range map[string]bool{
+		"USD": true, "eip155:1/slip44:60": true, "BTCX": false, "usd": false, "": false,
+	} {
+		m := cardYours(t)
+		firstDeal(m)["amount"] = map[string]any{"value": "1", "assetCode": code, "assetScale": 255}
+		_, err := Render(m, nil)
+		if ok {
+			assert.NoError(t, err, code)
+			continue
+		}
+		var refused *Refused
+		require.ErrorAs(t, err, &refused, code)
+		assert.Contains(t, refused.Reasons[0], "is not an amount (an integer value, an ISO 4217 or CAIP-19 assetCode, assetScale 0 to 255)")
+	}
+}
+
+// The signed panel's note follows capsulectl verify's producer_signatures
+// check, and a failed witnesses check makes the proof lede say failed.
+func TestCardSignedNoteAndLedeFollowTheChecks(t *testing.T) {
+	for status, key := range map[string]string{"pass": "card.signed.note", "fail": "card.signed.failed", "withheld": "card.signed.unchecked"} {
+		m := cardYours(t)
+		m["machine"].(map[string]any)["verify"].(map[string]any)["checks"].(map[string]any)["producer_signatures"] = status
+		html, err := Render(m, nil)
+		require.NoError(t, err)
+		assert.Contains(t, html, `data-signature="`+status+`">`+textEscaper.Replace(base[key])+`</p>`, status)
+	}
+	m := cardYours(t)
+	v := m["machine"].(map[string]any)["verify"].(map[string]any)
+	v["checks"].(map[string]any)["witnesses"] = "fail"
+	delete(v, "witness")
+	html, err := Render(m, nil)
+	require.NoError(t, err)
+	assert.Contains(t, html, `data-proof="failed"`)
+}
+
+// A passed slot that covers only part of the deal's steps is drawn partial,
+// not filled, on every stamp.
+func TestCardPartialSlots(t *testing.T) {
+	m := cardYours(t)
+	through := map[string]any{"k": 1, "n": 2}
+	d := firstDeal(m)
+	d["time_stamped"] = map[string]any{"state": "passed", "by": "W", "at": "2026-11-27T03:13:00Z", "through": through}
+	d["countersigned"] = map[string]any{"state": "passed", "by": "C", "at": "2026-11-27T03:14:00Z", "through": through}
+	html, err := Render(m, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 3, strings.Count(html, `data-filled="no" data-state="partial"`))
 }

@@ -271,6 +271,14 @@
     "card.footer.shared": "This page shows the card {name} sent. Only its counts are here; {name} keeps its deals.",
     "card.footer.built.before": "Page made ",
     "card.footer.built.after": ".",
-    "card.row.not_met": "Not met: {term}"
+    "card.row.not_met": "Not met: {term}",
+    "card.row.went.final": "Went as agreed: every term ended as met",
+    "card.status.uncontested.not_met": "not met, not contested",
+    "card.status.agreed.not_met": "both say it was not met",
+    "card.status.agreed_so_far.not_met": "both say it was not met, so far",
+    "card.stamp.time_stamped.partial": "Time-stamped through step {k} of {n}",
+    "card.stamp.countersigned.partial": "Countersigned through step {k} of {n}",
+    "card.signed.failed": "capsulectl verify reported that this card's signature didn't verify.",
+    "card.signed.unchecked": "capsulectl verify reported no signature check for this card."
   }
 }

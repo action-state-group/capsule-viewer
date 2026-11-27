@@ -12,6 +12,8 @@ import { describe, expect, it } from "vitest";
 import {
   HISTORY_VIEW_WORDING,
   SEAL_SHAPES,
+  amountText,
+  type HistoryCardInput,
   buildHistoryView,
   historyViewHtml,
   renderHistoryView,
@@ -212,7 +214,7 @@ describe("the two perspectives", () => {
   });
 
   it("stamps: RECORDED only from the row's own slot, COUNTERSIGNED never from the other side's half", () => {
-    const p = page(cases["card-yours"]);
+    const p = page(cases["card-yours"], { localTime: false });
     const rows = [...p.querySelectorAll('[data-history="row"]')];
     const stampOf = (r: Element, i: number) =>
       r.querySelectorAll(".cvh-stamp")[i]!;
@@ -228,7 +230,9 @@ describe("the two perspectives", () => {
         expect(stampOf(r, 2).getAttribute("data-filled")).toBe("no");
     }
     const lines = rows.map((r) => stampOf(r, 0).textContent);
-    expect(lines).toContain("RECORDEDCheckpointed through step 3 of 5");
+    expect(lines).toContain(
+      "RECORDEDCheckpointed through step 3 of 5 · Nov 27, 2026, 03:12 UTC",
+    );
     expect(lines).toContain("RECORDEDNot checkpointed yet");
     expect(p.textContent).not.toContain(
       "the other party signed this record too",
@@ -390,5 +394,180 @@ describe("one source with the receipt", () => {
     ];
     for (const [ours, theirs] of same)
       expect([ours, words[ours]]).toEqual([ours, rw[theirs]]);
+  });
+});
+
+describe("round 1 of the review", () => {
+  it("amounts: msat below a sat stays msat, whole sats read as sat, other assets as decimals", () => {
+    const btc = (value: string) =>
+      amountText({ value, code: "BTC", scale: 11 });
+    expect([
+      btc("0"),
+      btc("1"),
+      btc("999"),
+      btc("1000"),
+      btc("1001"),
+      btc("2000000"),
+    ]).toEqual([
+      "0 sat",
+      "1 msat",
+      "999 msat",
+      "1 sat",
+      "1,001 msat",
+      "2,000 sat",
+    ]);
+    expect(amountText({ value: "1", code: "BTC", scale: 8 })).toBe("1 sat");
+    expect(amountText({ value: "1999", code: "USD", scale: 2 })).toBe(
+      "19.99 USD",
+    );
+    const caip = "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    expect(amountText({ value: "5", code: caip, scale: 30 })).toBe(
+      `0.${"0".repeat(29)}5 ${caip}`,
+    );
+  });
+
+  it("a CAIP-19 amount with a large scale does not refuse the page", () => {
+    const input = clone(cases["card-yours"]) as Json;
+    const deals = input["deals"] as Record<string, Json>;
+    deals[Object.keys(deals)[0]!]!["amount"] = {
+      value: "5",
+      assetCode: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      assetScale: 200,
+    };
+    expect(buildHistoryView(input).ok).toBe(true);
+  });
+
+  it("a stamp covering part of the steps says how far and is not drawn filled", () => {
+    const input = clone(cases["card-yours"]) as Json;
+    const deals = input["deals"] as Record<string, Json>;
+    const id = Object.keys(deals)[0]!;
+    const through = { k: 2, n: 4 };
+    deals[id] = {
+      recorded: { state: "passed", at: "2026-11-27T03:12:00Z", through },
+      time_stamped: {
+        state: "passed",
+        by: "W",
+        at: "2026-11-27T03:13:00Z",
+        through,
+      },
+      countersigned: {
+        state: "passed",
+        by: "C",
+        at: "2026-11-27T03:14:00Z",
+        through,
+      },
+    };
+    const row = [
+      ...page(input, { localTime: false }).querySelectorAll(
+        '[data-history="row"]',
+      ),
+    ].find((r) => r.textContent?.includes("Countersigned through"))!;
+    const stamps = [...row.querySelectorAll(".cvh-stamp")];
+    expect(stamps.map((s) => s.getAttribute("data-filled"))).toEqual([
+      "no",
+      "no",
+      "no",
+    ]);
+    expect(stamps.map((s) => s.getAttribute("data-state"))).toEqual([
+      "partial",
+      "partial",
+      "partial",
+    ]);
+    expect(stamps.map((s) => s.textContent)).toEqual([
+      "RECORDEDCheckpointed through step 2 of 4 · Nov 27, 2026, 03:12 UTC",
+      "TIME-STAMPEDW · Time-stamped through step 2 of 4 · Nov 27, 2026, 03:13 UTC",
+      "COUNTERSIGNEDC signed this record too · Countersigned through step 2 of 4 · Nov 27, 2026, 03:14 UTC",
+    ]);
+  });
+
+  it("a term's words follow its value; final met terms read as went as agreed", () => {
+    const text =
+      page(cases["card-yours"], { localTime: false }).textContent ?? "";
+    expect(text).toContain("not met, not contested");
+    expect(text).toContain("both say it was not met");
+    const input = clone(cases["card-yours"]) as Json;
+    const machine = input["machine"] as Json;
+    const doc = JSON.parse(machine["text"] as string) as Json;
+    const block = (doc["extensions"] as Json)["x-standard-history/v0"] as {
+      deals: Json[];
+    };
+    block.deals = [
+      {
+        ...block.deals[0],
+        rows: [
+          { owed_by: "holder", status: "uncontested", value: "met" },
+          {
+            owed_by: "counterparty",
+            status: "ruled",
+            value: "met",
+            remedy: "none",
+          },
+        ],
+      },
+    ];
+    machine["text"] = new TextDecoder().decode(jcs(doc));
+    (machine["verify"] as Json)["bundle_digest"] = sha256Hex(
+      machine["text"] as string,
+    );
+    delete input["deals"];
+    const row = page(input).querySelector('[data-history="row-line"]');
+    expect(row?.textContent).toBe("Went as agreed: every term ended as met");
+  });
+
+  it("what the signature shows is said only when its check passed", () => {
+    const note = (producer: string) => {
+      const input = clone(cases["card-theirs"]) as Json;
+      const v = (input["machine"] as Json)["verify"] as Json;
+      (v["checks"] as Json)["producer_signatures"] = producer;
+      if (producer === "fail") v["verdict"] = "INVALID";
+      return page(input).querySelector("[data-signature]")?.textContent;
+    };
+    expect(note("pass")).toBe(words["card.signed.note"]);
+    expect(note("fail")).toBe(words["card.signed.failed"]);
+    expect(note("withheld")).toBe(words["card.signed.unchecked"]);
+  });
+
+  it("a failed witness check is not summed up as every test passing", () => {
+    const p = page(cases["card-yours-v1"]);
+    expect(p.querySelector("[data-proof]")?.getAttribute("data-proof")).toBe(
+      "failed",
+    );
+  });
+
+  it("a card whose outcomes carry a member SH does not have is refused", () => {
+    const input = clone(cases["card-theirs"]) as Json;
+    const machine = input["machine"] as Json;
+    const doc = JSON.parse(machine["text"] as string) as Json;
+    const root = (doc["records"] as Json[])[0]!;
+    const card = (
+      (doc["disclosures"] as Json)[root["capsule_id"] as string] as Json
+    )["agent_input"] as Json;
+    (card["outcomes"] as Json)["percent_held"] = 50;
+    machine["text"] = new TextDecoder().decode(jcs(doc));
+    (machine["verify"] as Json)["bundle_digest"] = sha256Hex(
+      machine["text"] as string,
+    );
+    const built = buildHistoryView(input);
+    expect(built.ok ? [] : built.reasons).toEqual([
+      "input.machine.text: its card's outcomes carry a member SH §4 does not have",
+    ]);
+  });
+
+  it("the exported type describes both perspectives", () => {
+    const theirs: HistoryCardInput = cases[
+      "card-theirs"
+    ] as unknown as HistoryCardInput;
+    const yours: HistoryCardInput = {
+      ...(cases["card-yours"] as unknown as HistoryCardInput),
+      deals: {
+        "deal-301": {
+          item: "Badges",
+          receipt: "r.html",
+          recorded: { state: "none" },
+        },
+      },
+    };
+    expect(buildHistoryView(theirs).ok).toBe(true);
+    expect(buildHistoryView(yours).ok).toBe(true);
   });
 });

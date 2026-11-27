@@ -119,6 +119,68 @@ export interface HistoryViewInput {
   readonly period?: { readonly from: string; readonly to: string };
 }
 
+/** The card page's input (#384, design note section 11): a deal page drawn from its signed card bundle. */
+export interface HistoryCardInput {
+  readonly view: typeof HISTORY_VIEW;
+  readonly kind: "deal";
+  readonly surface: "neutral" | "product";
+  /** `owner` draws Your History from the holder's own copy; `recipient` draws a card someone was sent. */
+  readonly reader: "owner" | "recipient";
+  readonly holder: { readonly name: string };
+  /** `private` with `owner`, `shared` with `recipient`. */
+  readonly audience: { readonly kind: "private" | "shared" };
+  readonly built_at: string;
+  readonly checked: { readonly where: "builder"; readonly by: string };
+  readonly rows: readonly [];
+  readonly checks: readonly [];
+  readonly machine: {
+    /** A plain `.json` file name: the download's name and the verify line's argument. */
+    readonly file: string;
+    /** The card bundle's canonical JSON (RFC 8785); its SHA-256 must be `verify.bundle_digest`. */
+    readonly text: string;
+    readonly verify: {
+      readonly verdict: "VALID" | "INVALID";
+      readonly bundle_digest: string;
+      readonly checks: Readonly<
+        Partial<
+          Record<
+            | "producer_signatures"
+            | "interval_coverage"
+            | "graph_closure"
+            | "per_record_membership"
+            | "checkpoint"
+            | "witnesses",
+            "pass" | "fail" | "withheld"
+          >
+        >
+      >;
+      /** Required exactly when `checks.witnesses` is `pass`. */
+      readonly witness?: { readonly by: string; readonly at: string };
+    };
+  };
+  /** Owner only: per deal entry id, what the holder's own book adds. */
+  readonly deals?: Readonly<
+    Record<
+      string,
+      {
+        readonly item?: string;
+        readonly amount?: {
+          readonly value: string;
+          readonly assetCode: string;
+          readonly assetScale: number;
+        };
+        readonly recorded?: HistorySlot;
+        readonly time_stamped?: HistorySlot;
+        readonly countersigned?: HistorySlot;
+        /** A plain `.html` file name: that deal's receipt page beside this one. */
+        readonly receipt?: string;
+      }
+    >
+  >;
+  /** How many of the card's deals are sample history. */
+  readonly sample?: number;
+}
+
 /** An overlay pack: a product caller's words for keys of the view's own pack. */
 export interface HistoryViewOverlay {
   readonly id: string;
@@ -772,7 +834,12 @@ const PROOF_CHECKS = [
 const FILE_JSON = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.json$/u;
 const FILE_HTML = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.html$/u;
 const HEX64 = /^[0-9a-f]{64}$/u;
-const DIGITS = /^(0|[1-9][0-9]{0,30})$/u;
+// An amount as the standard card reads one (standard_history_card.js VALUE,
+// CURRENCY): an exact integer string, an ISO 4217 code or a CAIP-19 asset id,
+// a scale 0 to 255.
+const DIGITS = /^(0|[1-9][0-9]{0,299})$/u;
+const CURRENCY =
+  /^(?:[A-Z]{3}|[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128})$/u;
 
 function isObj(v: Json): v is Record<string, Json> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -796,15 +863,15 @@ function readAmount(r: Reader, v: Json, path: string): Amount | undefined {
   const scale = o["assetScale"];
   if (
     !DIGITS.test(value) ||
-    !/^[A-Z]{3,8}$/u.test(code) ||
+    !CURRENCY.test(code) ||
     typeof scale !== "number" ||
     !Number.isSafeInteger(scale) ||
     scale < 0 ||
-    scale > 18
+    scale > 255
   ) {
     r.refuse(
       path,
-      "is not an amount (value digits, assetCode 3 to 8 capitals, assetScale 0 to 18)",
+      "is not an amount (an integer value, an ISO 4217 or CAIP-19 assetCode, assetScale 0 to 255)",
     );
     return undefined;
   }
@@ -820,11 +887,16 @@ function grouped(digits: string): string {
  * An amount in words: bitcoin amounts as sat, or msat when not a whole sat;
  * any other asset as its decimal value and code.
  */
-function amountText(a: Amount): string {
+export function amountText(a: {
+  readonly value: string;
+  readonly code: string;
+  readonly scale: number;
+}): string {
   if (a.code === "BTC" && a.scale <= 11) {
     const msat = a.value === "0" ? "0" : a.value + "0".repeat(11 - a.scale);
-    if (msat.length <= 3 || msat.endsWith("000"))
-      return `${grouped(msat.length <= 3 ? "0" : msat.slice(0, -3))} sat`;
+    if (msat === "0") return "0 sat";
+    if (msat.length > 3 && msat.endsWith("000"))
+      return `${grouped(msat.slice(0, -3))} sat`;
     return `${grouped(msat)} msat`;
   }
   if (a.scale === 0) return `${grouped(a.value)} ${a.code}`;
@@ -880,6 +952,13 @@ function readCardObject(r: Reader, text: string): CardObject | undefined {
   )
     return bad("its card is not a standard_history card");
   const oc = card["outcomes"];
+  if (
+    isObj(oc) &&
+    Object.keys(oc).some(
+      (k) => !["of", "held", "did_not_hold", "undecided"].includes(k),
+    )
+  )
+    return bad("its card's outcomes carry a member SH §4 does not have");
   const of = isObj(oc) ? count(oc["of"]) : undefined;
   const held = isObj(oc) ? count(oc["held"]) : undefined;
   const didNotHold = isObj(oc) ? count(oc["did_not_hold"]) : undefined;
@@ -1373,7 +1452,9 @@ function buildCardPage(
       s === undefined || s.state === "not_checked"
         ? "not_checked"
         : s.state === "passed"
-          ? "filled"
+          ? s.through !== undefined && s.through.k < s.through.n
+            ? "partial"
+            : "filled"
           : s.state === "failed"
             ? "failed"
             : "open";
@@ -1431,6 +1512,16 @@ function buildCardPage(
           if (stated?.remedy === "made") line += say("card.row.remedy.made");
         } else if (t.every((x) => x.status === "agreed" && x.value === "met"))
           line = say("card.row.went");
+        else if (
+          t.every(
+            (x) =>
+              (x.status === "agreed" ||
+                x.status === "uncontested" ||
+                x.status === "ruled") &&
+              x.value === "met",
+          )
+        )
+          line = say("card.row.went.final");
         else if (t.every((x) => x.status === "not_due"))
           line = say("card.row.not_due");
         else if (t.every((x) => x.status === "not_reached"))
@@ -1460,42 +1551,59 @@ function buildCardPage(
               .sort((a, b) => (a.holder === b.holder ? 0 : a.holder ? -1 : 1))
               .map(
                 (x) =>
-                  `${say(x.holder ? "card.term.yours.label" : "card.term.theirs.label")}: ${say(`card.status.${x.status}`)}${x.status === "ruled" && x.value !== undefined ? say(`card.status.ruled.${x.value}`) : ""}`,
+                  `${say(x.holder ? "card.term.yours.label" : "card.term.theirs.label")}: ${say(x.value === "not_met" && BASE[`card.status.${x.status}.not_met`] !== undefined ? `card.status.${x.status}.not_met` : `card.status.${x.status}`)}${x.status === "ruled" && x.value !== undefined ? say(`card.status.ruled.${x.value}`) : ""}`,
               )
               .join("; ")
           : null;
+      // A slot that covers part of the deal's steps says how far, and is not
+      // drawn filled (the receipt's partial stamp).
+      const part = (
+        key: string,
+        s: Slot | undefined,
+      ): (HistoryElement | string)[] =>
+        s?.through !== undefined && s.at !== undefined
+          ? [
+              say(key, { k: String(s.through.k), n: String(s.through.n) }),
+              " · ",
+              time(s.at),
+            ]
+          : [];
       const rec = x?.recorded;
       const recState = slotState(rec);
       const recLine =
-        recState === "filled"
-          ? rec?.through && rec.through.k < rec.through.n
-            ? [
-                say("card.stamp.recorded.partial", {
-                  k: String(rec.through.k),
-                  n: String(rec.through.n),
-                }),
-              ]
-            : rec?.at
-              ? [say("card.stamp.recorded.filled"), " · ", time(rec.at)]
-              : [say("card.stamp.recorded.filled")]
-          : [say(`card.stamp.recorded.${recState}`)];
+        recState === "partial"
+          ? part("card.stamp.recorded.partial", rec)
+          : recState === "filled" && rec?.at
+            ? [say("card.stamp.recorded.filled"), " · ", time(rec.at)]
+            : [say(`card.stamp.recorded.${recState}`)];
       const ts = x?.witness;
       const tsState = slotState(ts);
       const tsLine =
-        tsState === "filled" && ts?.at
-          ? [`${ts.by ?? ""} · `, time(ts.at)]
-          : [say(`card.stamp.time_stamped.${tsState}`)];
+        tsState === "partial"
+          ? [
+              `${ts?.by ?? ""} · `,
+              ...part("card.stamp.time_stamped.partial", ts),
+            ]
+          : tsState === "filled" && ts?.at
+            ? [`${ts.by ?? ""} · `, time(ts.at)]
+            : [say(`card.stamp.time_stamped.${tsState}`)];
       const cs = x?.countersigned;
       const csState = slotState(cs);
       const csLine =
-        csState === "filled" && cs?.at
+        csState === "partial"
           ? [
-              say("card.stamp.countersigned.by", { signer: cs.by ?? "" }),
+              say("card.stamp.countersigned.by", { signer: cs?.by ?? "" }),
               " · ",
-              time(cs.at),
-              say("card.stamp.countersigned.clock"),
+              ...part("card.stamp.countersigned.partial", cs),
             ]
-          : [say(`card.stamp.countersigned.${csState}`)];
+          : csState === "filled" && cs?.at
+            ? [
+                say("card.stamp.countersigned.by", { signer: cs.by ?? "" }),
+                " · ",
+                time(cs.at),
+                say("card.stamp.countersigned.clock"),
+              ]
+            : [say(`card.stamp.countersigned.${csState}`)];
       return el(
         "li",
         {
@@ -1581,14 +1689,29 @@ function buildCardPage(
       }),
       ...(obj.signedAt !== undefined ? [" · ", time(obj.signedAt)] : []),
     ),
-    el("p", { class: "cvh-note" }, say("card.signed.note")),
+    // What the signature shows is said only when capsulectl verify reported
+    // the signature check passed.
+    el(
+      "p",
+      {
+        class: "cvh-note",
+        "data-signature": proof["producer_signatures"] ?? "absent",
+      },
+      say(
+        proof["producer_signatures"] === "pass"
+          ? "card.signed.note"
+          : proof["producer_signatures"] === "fail"
+            ? "card.signed.failed"
+            : "card.signed.unchecked",
+      ),
+    ),
   );
 
   // "Is this record intact?": capsulectl verify's own answer per check.
   const statuses = PROOF_CHECKS.map((c) => proof[c]);
   const lede = failed
     ? "card.proof.lede.failed"
-    : statuses.some((s) => s === "fail")
+    : statuses.some((s) => s === "fail") || proof["witnesses"] === "fail"
       ? "card.proof.lede.failed"
       : statuses.every((s) => s === "pass")
         ? "card.proof.lede.passed"

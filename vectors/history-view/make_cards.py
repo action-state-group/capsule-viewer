@@ -114,6 +114,14 @@ def main() -> None:
     et, ed = bundle(empty_card, {"as_of": as_of, "policy": {}, "deals": []}, "2026-11-27T03:12:30Z")
     cases["card-yours-empty"] = base("owner", "Maya") | {
         "machine": {"file": "maya-history-card.json", "text": et, "verify": verify(ed)}}
+    final = [dict(deals3[0], deal="deal-final", rows=[
+        {"owed_by": "holder", "status": "uncontested", "value": "met"},
+        {"owed_by": "counterparty", "status": "ruled", "value": "met", "remedy": "none"}])]
+    ft, fd = bundle(card3, {"as_of": as_of, "policy": case.get("policy", {}), "deals": final}, "2026-11-27T03:12:30Z")
+    cases["card-yours-final-terms"] = base("owner", "Maya") | {
+        "machine": {"file": "maya-history-card.json", "text": ft, "verify": verify(fd)},
+        "deals": {"deal-final": {"amount": {"value": "999", "assetCode": "BTC", "assetScale": 11},
+                                 "recorded": {"state": "passed", "at": "2026-11-27T03:12:00Z", "through": {"k": 1, "n": 2}}}}}
     ot1, od1 = bundle(card1, block1, "2026-10-01T09:00:00Z")
     cases["card-yours-v1"] = base("owner", "Rowan") | {
         "machine": {"file": "rowan-card.json", "text": ot1, "verify": verify(od1, witnesses="fail")}}
