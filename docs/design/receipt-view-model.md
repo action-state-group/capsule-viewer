@@ -11,20 +11,18 @@ v1.2 (actionstate-muse `docs/PRD_VIEWER_PRESENTATION.md` at `bbfc5ca`) already s
 builds one view model from the verified bundle, derived and never sealed (§14.1), that L1 and L2
 are flat sibling panels with no workflow controls in the HTML (§15.1 items 2 and 3), and that
 disclosure is built before rendering (§15.2). This note applies those rules to the receipt and
-History pages capsulectl and the ARD demo make today, and departs from the PRD in one place:
+History pages capsulectl and the ARD demo make today, with one owner change Steven has ruled:
 
-- **The owner (u476).** PRD §14.2 and Steven's ruling u476 (ops `proprietary/inbox.md`,
-  2026-10-19, capsule-viewer#40) give the view-model JSON that the Muse plugin emits for Muse chat
-  to the Muse plugin. The receipt module and its `buildModel` already live in capsule-viewer, and no
-  PR here emits a model JSON for Muse or moves a Muse profile, so none of them changes that owner.
-  Sherlock2 is asking Steven the owner question for the neutral profiles in that narrower form,
-  recommending neutral profiles (receipt, History, Results) in capsule-viewer and Muse-only ones in
-  Muse
-  (buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=27cb5e160d6571767e6bf3e9495366bd5cad6e4a13f53109086802e31e3f2185&thread=29f39b3dd29d2c1318a1971af542afe0268d52588a881fb9854a9a45aca7eea6,
-  item 1; narrowed in its review of this note,
-  buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=719998855145083387cd4f2f9dfd4fb17c59728fd4dc5f96c0ed716e5ca9882f&thread=29f39b3dd29d2c1318a1971af542afe0268d52588a881fb9854a9a45aca7eea6).
-  A later PR that would emit a model JSON for Muse waits on his ruling. Sherlock2 also proposes folding this
-  review's rules (its C11 to C18) into the PRD as v1.3 (same message); if that lands, the PRD is the
+- **The owner (u476, amended by u562).** PRD §14.2 and Steven's ruling u476 (ops
+  `proprietary/inbox.md`, 2026-10-19, capsule-viewer#40) gave the view-model JSON to the Muse
+  plugin. Steven amended it on 2026-11-27 (u562, ops commit `2438384`,
+  buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=5a60bef478fb02a319569eac19c7746733327a34fd787ce40b2719d18746c1f5):
+  Muse is a host like Goose; the view-model shape for the neutral profiles (receipt, History,
+  Results) lives in capsule-viewer's `buildModel`; the Muse plugin runs that same `buildModel` and
+  only emits its JSON into Muse chat, with no Muse-only receipt or History code. This note is the
+  capsule-viewer side of that. Sherlock2 also proposes folding this
+  review's rules (its C11 to C18) into the PRD as v1.3
+  (buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=27cb5e160d6571767e6bf3e9495366bd5cad6e4a13f53109086802e31e3f2185&thread=29f39b3dd29d2c1318a1971af542afe0268d52588a881fb9854a9a45aca7eea6); if that lands, the PRD is the
   spec and this note is its implementation plan.
 
 ## 1. The problem
@@ -77,7 +75,7 @@ capsule-viewer `go/receipt`, `ts/src` (the runtime's own modules also implement 
 the records it misses today. It is a pure function over the verified context (and the verifier's
 report when one is given), never sealed, so it adds nothing a checker must trust (PRD §14.1). It
 has no published schema and no `spec_version`, so it can change with the viewer; whether it lives
-in capsule-viewer is the narrower u476 question above. The module's drawers read only this model;
+in capsule-viewer is ruled (u562, above). The module's drawers read only this model;
 the core's banner and its part of L2 stay the core's (section 3).
 
 `buildModel` keeps its input: the verified context plus the checked inputs the page is given
@@ -204,9 +202,8 @@ bundle itself (so the downloaded file shows them too):
 
 Items 1, 2 and 4 are ruled (u561); item 1's shape inside `book` is engineering's. Item 3 stays as
 written. Steven also asked for a no-PII or pseudonym step for outside readers who are not a party,
-such as an external audit (u561 item 2); Sherlock2 proposes an `audit` audience preset over
-capsulectl's existing PII classes and a display-only alias, not yet filed and not part of this
-plan (buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=80221d503826ad4e56d9b85920dae1dfc14ea81330f3eef4a1aa8910a391cf4f&thread=29f39b3dd29d2c1318a1971af542afe0268d52588a881fb9854a9a45aca7eea6).
+such as an external audit (u561 item 2). That is filed as evidencebook#1058 (an audit copy with
+personal details removed and parties shown as labels) and is not part of this plan.
 
 ## 5. The anti-hardcode test
 
@@ -299,13 +296,10 @@ coordinator's call (asg-rules standing rule 3).
 - **Ruled (u561, Steven 2026-11-27):** the keep copy carries the offer and names the seller; u499
   extends to x-deal-v1 counterparty copies; u219 stands (no witness receipt in any copy); the v0
   page stays. PR 5 and PR 6 no longer wait on Steven.
-- **Open with Steven, gating no PR here:** (1) where neutral profiles' models live (u476, PRD
-  §14.2): Steven answered in direction only (Muse is a user-space personal agent like Goose); Sherlock2
-  recommends Muse as one more host running capsule-viewer's `buildModel`, with the Muse plugin
-  keeping the JSON it emits into chat, as a u476 amendment awaiting his yes. No PR in section 7
-  emits a model JSON for Muse; a later one that would, waits on it. (2b) the `audit` preset and
-  display alias (section 4). The model itself (no schema, no `spec_version`, never sealed) carries
-  no product meaning.
+- **Ruled (u562):** the view model for receipt, History and Results lives in capsule-viewer's
+  `buildModel`; Muse runs it as a host and only emits the JSON into its chat. No question to Steven
+  gates a PR in section 7. The audit copy is evidencebook#1058. The model itself (no schema, no
+  `spec_version`, never sealed) carries no product meaning.
 - **Open with the seller's records:** the delivered quantity (section 4 item 3), checked in PR 5.
 - **Steven: the PRD docs PR of PR 12** (u526).
 - Wording for new lines (the withheld line, the share line, "waiting on", the agreement-state
