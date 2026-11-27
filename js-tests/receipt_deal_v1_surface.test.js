@@ -564,6 +564,11 @@ async function goldenPage(page) {
 }
 
 describe("the golden pages are checked in as the receipt draws them now (#509)", () => {
+  // The pages are compared without a browser, but their PNGs are drawn only in one: an update without
+  // Chromium would rewrite the pages and leave the PNGs beside them stale.
+  it.runIf(UPDATE)("UPDATE_GOLDENS=1 has a Chromium to redraw the PNGs with", () => {
+    expect(chromePath, "UPDATE_GOLDENS=1 needs Google Chrome or Chromium (set CHROME_PATH) to redraw the PNGs").toBeTruthy();
+  });
   for (const page of GOLDEN_PAGES) {
     it(`receipt-deal-v1-${page.name}.html`, async () => {
       const html = await goldenPage(page);
