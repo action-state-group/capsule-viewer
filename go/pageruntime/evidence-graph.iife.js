@@ -15327,118 +15327,6 @@ ${body}
     return { plan, rows };
   }
 
-  // src/claim-subject.ts
-  var isObj6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var SUBJECT_ROOT = "subject_root";
-  var SUBJECT_CLOSE = "subject_close";
-  var MEMBERSHIP_LOG = "log";
-  var MEMBERSHIP_FIELD = "field:";
-  var CONTROL_RECORD_TYPES = /* @__PURE__ */ new Set([
-    SUBJECT_ROOT,
-    SUBJECT_CLOSE,
-    "index_root",
-    "disclosure",
-    "evidence_request_answered",
-    "disclosure_policy",
-    "lifecycle",
-    "book_close",
-    "window_open",
-    "window_close"
-  ]);
-  function readHeader(value) {
-    if (!isObj6(value)) return void 0;
-    const { book_id: bookId, seq, record_type: recordType, links } = value;
-    if (typeof bookId !== "string" || typeof seq !== "number" || !Number.isSafeInteger(seq) || typeof recordType !== "string" || !Array.isArray(links))
-      return void 0;
-    const cites = links.flatMap(
-      (link) => isObj6(link) && link.type === "cites" && typeof link.target === "string" ? [link.target] : []
-    );
-    return { bookId, seq, recordType, cites, raw: value };
-  }
-  function headerOf2(context, id) {
-    const record = context.recordIndex.get(id);
-    if (record === void 0) return void 0;
-    if (RECORD_HEADER_MEMBER in record)
-      return readHeader(record[RECORD_HEADER_MEMBER]);
-    const input = disclosureOf(context, id, "agent_input");
-    return input.state === "disclosed" ? readHeader(input.payload) : void 0;
-  }
-  function pointerTokens(pointer) {
-    if (!pointer.startsWith("/")) return void 0;
-    const tokens = pointer.slice(1).split("/");
-    for (const token of tokens) if (/~(?![01])/u.test(token)) return void 0;
-    return tokens.map((t) => t.replaceAll("~1", "/").replaceAll("~0", "~"));
-  }
-  function readRoot(id, header) {
-    if (header.recordType !== SUBJECT_ROOT) return void 0;
-    const statement = header.raw.statement;
-    if (!isObj6(statement)) return void 0;
-    const keys = Object.keys(statement);
-    if (keys.some(
-      (k) => k !== "subject_kind" && k !== "subject_id" && k !== "membership"
-    ))
-      return void 0;
-    const { subject_kind: kind, subject_id: subjectId, membership } = statement;
-    if (typeof kind !== "string" || kind === "" || typeof subjectId !== "string" || subjectId === "" || typeof membership !== "string")
-      return void 0;
-    if (membership === MEMBERSHIP_LOG) return { id, header, subjectId };
-    if (!membership.startsWith(MEMBERSHIP_FIELD)) return void 0;
-    const pointer = pointerTokens(membership.slice(MEMBERSHIP_FIELD.length));
-    return pointer === void 0 ? void 0 : { id, header, subjectId, pointer };
-  }
-  function valueAt(header, tokens) {
-    let value = header;
-    for (const token of tokens) {
-      if (Array.isArray(value)) {
-        if (!/^(0|[1-9][0-9]*)$/u.test(token)) return void 0;
-        value = value[Number(token)];
-      } else if (isObj6(value) && Object.hasOwn(value, token)) {
-        value = value[token];
-      } else return void 0;
-    }
-    return typeof value === "string" ? value : void 0;
-  }
-  function isMember(root, id, member) {
-    if (id === root.id || CONTROL_RECORD_TYPES.has(member.recordType))
-      return false;
-    if (member.bookId !== root.header.bookId || member.seq <= root.header.seq)
-      return false;
-    if (root.pointer === void 0) return true;
-    return member.cites.includes(root.id) && valueAt(member.raw, root.pointer) === root.subjectId;
-  }
-  function rootsOf(context) {
-    const roots = [];
-    for (const record of context.records) {
-      const header = headerOf2(context, record.capsule_id);
-      const root = header === void 0 ? void 0 : readRoot(record.capsule_id, header);
-      if (root !== void 0) roots.push(root);
-    }
-    return roots;
-  }
-  function subjectsOfRecord(context, roots, id) {
-    const member = headerOf2(context, id);
-    if (member === void 0) return [];
-    return roots.filter((r) => isMember(r, id, member)).map((r) => r.subjectId);
-  }
-  function dealPrefixOf(claimId) {
-    const at = claimId.indexOf("::");
-    return at > 0 ? claimId.slice(0, at) : void 0;
-  }
-  function claimDeals(context, claims) {
-    const roots = rootsOf(context);
-    const deals = /* @__PURE__ */ new Map();
-    for (const claim of claims) {
-      if (deals.has(claim.id)) continue;
-      const subjects = /* @__PURE__ */ new Set();
-      for (const ref of claim.evidence)
-        for (const subject of subjectsOfRecord(context, roots, ref.digest))
-          subjects.add(subject);
-      const deal = subjects.size === 0 ? dealPrefixOf(claim.id) : subjects.size === 1 ? [...subjects][0] : void 0;
-      if (deal !== void 0) deals.set(claim.id, deal);
-    }
-    return deals;
-  }
-
   // src/claim-reasons.ts
   var RESERVED = /* @__PURE__ */ new Set([
     "label",
@@ -17803,12 +17691,12 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   var MAX_LABELS = 8;
   var MAX_LABEL = 60;
   var EXTENSION = /^x-[a-z0-9][a-z0-9._-]*$/u;
-  var isObj7 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+  var isObj6 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
   function str(value, max) {
     return typeof value === "string" && value.length > 0 && value.length <= max ? value : void 0;
   }
   function readScope(value) {
-    if (!isObj7(value)) return void 0;
+    if (!isObj6(value)) return void 0;
     const pack = str(value.pack, 120);
     const salting = str(value.salting, 60);
     const saltId = str(value.salt_id, 120);
@@ -17817,7 +17705,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     return { pack, tier: value.tier, salting, saltId };
   }
   function readEntry2(value, grouped) {
-    if (!isObj7(value)) return void 0;
+    if (!isObj6(value)) return void 0;
     const labels = value.request_labels;
     if (!Array.isArray(labels) || labels.length > MAX_LABELS || labels.some((l) => str(l, MAX_LABEL) === void 0))
       return void 0;
@@ -17830,7 +17718,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     let halves;
     if (value.halves !== void 0) {
       const h = value.halves;
-      if (!isObj7(h) || !Number.isSafeInteger(h.present) || !Number.isSafeInteger(h.of) || h.present < 0 || h.of < 1 || h.present > h.of)
+      if (!isObj6(h) || !Number.isSafeInteger(h.present) || !Number.isSafeInteger(h.of) || h.present < 0 || h.of < 1 || h.present > h.of)
         return void 0;
       halves = { present: h.present, of: h.of };
     }
@@ -17856,13 +17744,13 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
     };
   }
   function readSubjectHistory(document2) {
-    if (!isObj7(document2)) return void 0;
+    if (!isObj6(document2)) return void 0;
     const found = Object.entries(document2).filter(
-      ([key, member]) => EXTENSION.test(key) && isObj7(member) && isObj7(member.subject_history)
+      ([key, member]) => EXTENSION.test(key) && isObj6(member) && isObj6(member.subject_history)
     );
     if (found.length !== 1) return void 0;
     const block = found[0][1].subject_history;
-    if (!isObj7(block.conversations)) return void 0;
+    if (!isObj6(block.conversations)) return void 0;
     const scope = readScope(block.handle_scope);
     const operator = scope?.tier === "operator";
     const grouped = operator || scope?.tier === "shared" && scope.salting === "per-share";
@@ -18453,7 +18341,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("a75ef30d8bfe0a247b5a7d06346be7bd3c06a34e");
+    return commitPrefix("eb1eb84691369c69d3801efc1feda33bf6c8d683");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -25249,8 +25137,16 @@ ${key}`);
     );
     return [line];
   }
+  function dealIdOf(claimId) {
+    const at = claimId.indexOf("::");
+    return at > 0 ? claimId.slice(0, at) : void 0;
+  }
+  function dealOf(claim, receipts3) {
+    if (receipts3.deals === void 0) return dealIdOf(claim.id);
+    return Object.prototype.hasOwnProperty.call(receipts3.deals, claim.id) ? receipts3.deals[claim.id] : void 0;
+  }
   function receiptLine(claim, w, receipts3) {
-    const deal = receipts3.deals(claim);
+    const deal = dealOf(claim, receipts3);
     if (deal === void 0) return [];
     const line = el10("div", "rcpt");
     line.dataset.receiptDeal = deal;
@@ -25440,8 +25336,7 @@ ${key}`);
     }
     return box;
   }
-  async function drawGeneric(levels, result3, bundle, verified, w, tierOf, reasons, receipts3, deals = (claim) => dealPrefixOf(claim.id)) {
-    const page = receipts3 === void 0 ? void 0 : { ...receipts3, deals };
+  async function drawGeneric(levels, result3, bundle, verified, w, tierOf, reasons, receipts3) {
     const tierFor = (claim) => tierOf === void 0 ? "unstated" : tierOf(claim.contractRef, claim.requirementRef);
     const inForce = result3.claims.filter((claim) => !claim.later);
     const later = result3.claims.filter((claim) => claim.later);
@@ -25467,7 +25362,7 @@ ${key}`);
     section.dataset.section = "rows";
     const rows = rowsOf(inForce);
     if (tierOf === void 0)
-      section.append(byContract(rows, w, false, void 0, reasons, page));
+      section.append(byContract(rows, w, false, void 0, reasons, receipts3));
     else
       for (const tier of ROW_TIERS) {
         const inTier = rows.filter(
@@ -25485,7 +25380,7 @@ ${key}`);
             })
           ),
           el10("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
-          byContract(inTier, w, false, tierOf, reasons, page)
+          byContract(inTier, w, false, tierOf, reasons, receipts3)
         );
         section.append(part);
       }
@@ -25499,7 +25394,7 @@ ${key}`);
           "",
           w.t("generic.later.title", { n: later.length.toLocaleString() })
         ),
-        byContract(laterRows, w, true, tierOf, reasons, page)
+        byContract(laterRows, w, true, tierOf, reasons, receipts3)
       );
       section.append(part);
     }
@@ -25554,7 +25449,7 @@ ${key}`);
   function citesOneContract(result3) {
     return new Set(result3.claims.map((claim) => claim.contractRef)).size <= 1;
   }
-  async function renderContractReport(result3, input, bundle, verified, host, wording, contract, receipts3, deals) {
+  async function renderContractReport(result3, input, bundle, verified, host, wording, contract, receipts3) {
     const tierOf = tierReader(result3, contract);
     const w = await contractReportWords(input.grouping, wording, {
       singleContract: citesOneContract(result3)
@@ -25643,8 +25538,7 @@ ${key}`);
         // The pack's `row.<ref>.reason.<code>` words apply only to a Result
         // citing one contract (the Words gate); the reason itself shows always.
         input.reasons,
-        receipts3,
-        deals
+        receipts3
       );
     regions.L0.append(levels.L0);
     regions.L1.append(levels.L1);
@@ -26727,18 +26621,18 @@ ${key}`);
     return block;
   }
   function backfillOnly(document2) {
-    const isObj8 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
-    if (!isObj8(document2) || !isObj8(document2["coverage_report"])) return false;
+    const isObj7 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+    if (!isObj7(document2) || !isObj7(document2["coverage_report"])) return false;
     const requirements = document2["coverage_report"]["requirements"];
     if (!Array.isArray(requirements)) return false;
     let records = 0;
     for (const requirement of requirements) {
-      if (!isObj8(requirement)) return false;
+      if (!isObj7(requirement)) return false;
       const list2 = requirement["sources"];
       if (list2 === void 0) continue;
       if (!Array.isArray(list2)) return false;
       for (const source of list2) {
-        if (!isObj8(source)) return false;
+        if (!isObj7(source)) return false;
         const { contemporaneous_count: live, backfilled_count: back } = source;
         const total = source["record_count"];
         if (live !== 0 || !Number.isSafeInteger(total) || total < 0 || back !== total)
@@ -29019,8 +28913,7 @@ ${pad.repeat(depth)}`;
         ...input === void 0 ? {} : { input },
         ...supported !== void 0 && input === void 0 ? { unfit: true } : {},
         bundle: context.bundle,
-        verification: withStrict(context),
-        deals: claimDeals(context, result3.claims)
+        verification: withStrict(context)
       };
     },
     render: async (model, host) => {
@@ -29045,8 +28938,7 @@ ${pad.repeat(depth)}`;
         { L0: host.L0, L1: host.L1, L2: host.L2, depth: host.depth },
         host.wording,
         host.contract,
-        host.receipts,
-        (claim) => model.deals.get(claim.id)
+        host.receipts
       );
     }
   };
@@ -29824,7 +29716,8 @@ ${pad.repeat(depth)}`;
         ...options.receipts === void 0 ? {} : {
           receipts: {
             texts: options.receipts,
-            open: (text2, panel) => openReceipt(text2, panel, options)
+            open: (text2, panel) => openReceipt(text2, panel, options),
+            ...options.receiptDeals === void 0 ? {} : { deals: options.receiptDeals }
           }
         },
         setChromeClass(name) {
