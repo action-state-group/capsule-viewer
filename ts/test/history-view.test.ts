@@ -121,7 +121,7 @@ describe("the History view's vectors", () => {
     const orphans = readdirSync(goldens)
       .filter((f) => f.endsWith(".html"))
       .map((f) => f.slice(0, -".html".length))
-      .filter((name) => !(name in vectors.cases));
+      .filter((name) => !Object.hasOwn(vectors.cases, name));
     expect(orphans).toEqual([]);
   });
 });
