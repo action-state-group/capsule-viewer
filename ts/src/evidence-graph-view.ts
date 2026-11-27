@@ -2883,10 +2883,10 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly receipts?: Readonly<Record<string, DealReceiptEntry>>;
   /**
-   * Each claim's deal, by claim id, as the page's builder decided it: the
-   * report that checked `receipts` reads a claim's deal from the subject of
-   * the records it cites, else its id's part before `::` (evidencebook#116,
-   * the subject convention v0; evidencebook report.dealOf owns the rule).
+   * Each claim's deal, by claim id, as the page's builder decided it:
+   * evidencebook's report reads a claim's deal from the subject of the
+   * records it cites, else its id's part before `::` (evidencebook#116,
+   * subject convention v0; evidencebook report.dealOf owns the rule).
    * Given, a claim gets the receipt line of its deal here and none when it is
    * not here; absent, a claim's deal is its id's part before `::`, as pages
    * built before it read. Read only with `receipts`.
