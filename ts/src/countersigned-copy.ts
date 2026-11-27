@@ -118,7 +118,7 @@ export async function checkCountersignedCopy(
 
 // The counterparty's key the holder's own sealed agreement names
 // (x-deal-v1 `book.agreement`, its body's `counterparty_key`), or null.
-function counterpartyKey(bundle: unknown): string | null {
+export function counterpartyKey(bundle: unknown): string | null {
   const agreement = obj(
     obj(obj(obj(bundle)["extensions"])["x-deal-v1"])["book"],
   )["agreement"];
@@ -128,8 +128,8 @@ function counterpartyKey(bundle: unknown): string | null {
 
 // Whether the row that names the signer (its name and key, as the
 // classifier resolved them) lists it as independent of every party: the
-// holder's keys and the counterparty's. A missing list, a missing party or
-// an unknown counterparty leaves it not listed.
+// holder's keys and the counterparty's. A missing row, a missing list, a
+// missing party or an unknown counterparty leaves it not listed (u650).
 function listedIndependent(
   rows: readonly unknown[],
   keyId: string,
@@ -137,7 +137,6 @@ function listedIndependent(
   holder: readonly string[],
   counterparty: string | null,
 ): boolean {
-  if (counterparty === null || holder.length === 0) return false;
   const row = rows
     .map(obj)
     .find(
@@ -146,7 +145,27 @@ function listedIndependent(
         Array.isArray(r["key_ids"]) &&
         r["key_ids"].includes(keyId),
     );
-  const listed = row?.["independent_of"];
-  if (!Array.isArray(listed)) return false;
-  return [...holder, counterparty].every((key) => listed.includes(key));
+  return listsParties(row?.["independent_of"], holder, counterparty) === true;
+}
+
+/**
+ * What a directory row's `independent_of` list says about the parties, as
+ * far as the page knows them: false when the list is missing or leaves out
+ * a party key the page knows (the holder's producer keys, the counterparty's
+ * key), true when it names every one and the page knows both sides, and null
+ * when it names every key the page knows but the page does not know both
+ * sides, so it cannot tell. The countersigned copy reads null as not listed
+ * (u650); the witness line draws nothing for it (capsule-viewer#508: never
+ * assumed).
+ */
+export function listsParties(
+  listed: unknown,
+  holder: readonly string[],
+  counterparty: string | null,
+): boolean | null {
+  // A list that names no key lists no one, whoever the parties are.
+  if (!Array.isArray(listed) || listed.length === 0) return false;
+  const known = counterparty === null ? holder : [...holder, counterparty];
+  if (!known.every((key) => listed.includes(key))) return false;
+  return holder.length > 0 && counterparty !== null ? true : null;
 }
