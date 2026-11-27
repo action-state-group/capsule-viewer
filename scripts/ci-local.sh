@@ -80,7 +80,7 @@ light() {
 
   # ci.yml: js
   npm install --no-audit --no-fund
-  npm test -- --maxWorkers=2
+  npm test -- --minWorkers=1 --maxWorkers=2
 
   # ci.yml: go
   (cd go && test -z "$(gofmt -l .)" && go mod tidy && test -z "$(git status --porcelain -- .)" \
