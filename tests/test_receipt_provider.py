@@ -6,6 +6,7 @@ receipt (Mesh-LLM/capsules-plugin#134)."""
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
 import re
 from pathlib import Path
@@ -284,6 +285,22 @@ def test_a_failed_exchange_with_no_payment_says_so_and_draws_no_received_section
     assert "<table" not in html
     assert "Received" not in text and "0 msat" not in text
     assert not re.search(r"payment[^.]*listed below", text)
+
+
+@pytest.mark.parametrize("effect", ["confirmed", "dispatched"])
+def test_only_a_failed_exchange_gets_the_unpaid_lines(effect, monkeypatch):
+    # _parts never builds such a model; render still keys the unpaid lines to
+    # the failed effect, as the script does (Sherlock2 on #502).
+    build = ProviderReceiptModule.buildModel
+    monkeypatch.setattr(
+        ProviderReceiptModule,
+        "buildModel",
+        lambda self, context: dataclasses.replace(build(self, context), effect=effect, reason=None),
+    )
+    html = provider_receipt_page(_edited("failed", "timeout", legs=False))
+    assert NO_CONTENT_UNPAID not in html and RECORDS_NOTE_UNPAID not in html
+    assert "This node received no payment for it." not in html
+    assert NO_CONTENT in html and RECORDS_NOTE in html
 
 
 def test_a_failed_exchange_with_a_payment_draws_its_line_and_received_section_as_merged():

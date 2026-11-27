@@ -255,8 +255,9 @@ class ProviderReceiptModule:
 
     def render(self, model: ProviderModel, services: KitServices) -> str:
         served = model.effect == "confirmed"
-        # Only a failed exchange may have no payment (_parts).
-        unpaid = not model.payments
+        # _parts admits no payment only for a failed exchange; the effect is
+        # checked here too, as in the script.
+        unpaid = model.effect == "failed" and not model.payments
         if served:
             status = ""
         elif model.effect == "dispatched":

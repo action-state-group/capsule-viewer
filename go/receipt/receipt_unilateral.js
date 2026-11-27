@@ -5297,9 +5297,11 @@
     // record says, asks no "served" of its labels and heads it accordingly.
     var served = model.effect === "confirmed";
     // A failed exchange with no payment says so and draws no Received
-    // section: no total, no "(0)", no empty table (Sherlock2, #470). Only a
-    // failed exchange may have no payment (providerParts).
-    var unpaid = !model.payments.length;
+    // section: no total, no "(0)", no empty table (Sherlock2, #470).
+    // providerParts admits no payment only for a failed exchange; the effect
+    // is checked here too, so a model handed to render directly never gets
+    // the unpaid lines for a served or dispatched exchange.
+    var unpaid = model.effect === "failed" && !model.payments.length;
     var tail = unpaid ? "_unpaid" : "";
     var status = served ? null
       : model.effect === "dispatched" ? w("provider.status.dispatched")

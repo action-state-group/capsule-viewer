@@ -534,6 +534,20 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     },
   );
 
+  // Sherlock2 on #502: the unpaid lines are a failed exchange's only, even
+  // for a model handed to render directly.
+  it.each(["confirmed", "dispatched"])(
+    "a %s model with no payment row gets none of the unpaid lines",
+    async (effect) => {
+      const page = await draw(model(effect, null, false));
+      expect(page.text).not.toContain("This node received no payment for it.");
+      expect(page.text).toContain("It names the model and what was received.");
+      expect(page.text).toContain(
+        "The exchange and each payment are records of their own, listed below.",
+      );
+    },
+  );
+
   it("a dispatched exchange says the host reported no response", async () => {
     const page = await draw(model("dispatched", null));
     expect(page.status).toBe(

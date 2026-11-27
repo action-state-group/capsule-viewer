@@ -5301,9 +5301,11 @@ const root = {};
     // record says, asks no "served" of its labels and heads it accordingly.
     var served = model.effect === "confirmed";
     // A failed exchange with no payment says so and draws no Received
-    // section: no total, no "(0)", no empty table (Sherlock2, #470). Only a
-    // failed exchange may have no payment (providerParts).
-    var unpaid = !model.payments.length;
+    // section: no total, no "(0)", no empty table (Sherlock2, #470).
+    // providerParts admits no payment only for a failed exchange; the effect
+    // is checked here too, so a model handed to render directly never gets
+    // the unpaid lines for a served or dispatched exchange.
+    var unpaid = model.effect === "failed" && !model.payments.length;
     var tail = unpaid ? "_unpaid" : "";
     var status = served ? null
       : model.effect === "dispatched" ? w("provider.status.dispatched")
@@ -5667,7 +5669,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "89b34dfd3723b19a4d5340b6c6bc2d2fd55e945b4749379a584a65fd9633fa2e",
+      "script_sha256": "a2e5c330e0a8863436dc27c4a337799efa9f7e639b41945314dc0a08da44aa04",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5714,7 +5716,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "c980a7f98ac387404c79cfcb87572ffd9851e263131f0558c47088c59557af7d",
+      "script_sha256": "56dd4b890a5b25651915e1f4f1e61770d595bf76c3f92f00e9cf114a92010aa1",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5760,7 +5762,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "11f57eebe00ca1942129a0545148217c3eea9acabc00b71c678b1d8b7c13a86f",
+      "script_sha256": "e6976816435190681d263b3cd7b56a6ce11203a3a7956eef91393c1c07bc040f",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5808,7 +5810,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "33f7e7ad3de29c022b7b389fde07c1f8f4f82aab48fa51e489b121be32890b28",
+      "script_sha256": "b6344b8a3369a814561a0623a8c9804cf5073be0286c7e0160bed0f70a3c7791",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5850,7 +5852,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "462584b96d779cbf093a405287bd0d45f8d16fa4289fec067a1b4af37af09729",
+      "script_sha256": "a0081f1b57ff4af59350821c059ec608b9cc616418c3715e615a0eb284b10025",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
