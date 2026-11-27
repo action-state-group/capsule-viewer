@@ -1834,7 +1834,7 @@ const root = {};
   // The x-deal-v1 extension's book (evidencebook#588, docs/design/461-deal-profile.md section 9, "The payment legs
   // and the bundle extension"; dealprofile/xdealv1/report_bundle.go, ReportBook). The extension is exactly
   // {sealed_report, book}; book is {agreement, relied_on} and, as the view-model note's section 4 item 1 and
-  // evidencebook#861 add, an optional `offer` (the holder's own offer, one book pair), and on a full adjudicator copy
+  // evidencebook#861 add, an optional `offer` (the holder's own offer, its sent pair {record, agent_input}, #498), and on a full adjudicator copy
   // `records` (every record of the holder's deal book, by record id) and `received` ({log_id, records, proofs}: the
   // copy of the other side's book it holds, only beside records). relied_on holds, keyed by record id, the book pair of
   // every record the holder's rows rely on, so a leg is read by its relied_on id. VerifyReportBundle refuses a bundle
@@ -5628,7 +5628,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "b0dcfd2755acf8149484a54946cb765251e990e87270c33af70d9a78c919520d",
+      "script_sha256": "58908ffa8275bf502f02053017577de4a174373336bf0f1187b83a31382155fe",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5675,7 +5675,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "9e437890e530c2bfecec2bdb46a6964ba1a3fc01826d40a06c54871291a76412",
+      "script_sha256": "a472a6181c3bb608912fab0dca8372de635f2ab7937e742238383aa0a5dfa834",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5721,7 +5721,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "be2dd77b1d512f1c7c6da86f1359b388ac48018f00682623cb9434fa8792e908",
+      "script_sha256": "7521b01554768cc011a8e913949540d0a1b246ef95bbe699cd06ca6d5aca5d9b",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5769,7 +5769,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "225d54be9e9bf59e5bb0a6136b4bb01708da0dcf3143c6a738022a675c13b2da",
+      "script_sha256": "bfaed69727a13afda4838545dbd2bd6cced1c7500c982e1b3f8336919a68d853",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5811,7 +5811,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "c5d36eacc69bc31c802121695085a9e9bb4d6ba0c4938934b527f39e11247540",
+      "script_sha256": "185f8977d33255e10d9e560bfee631955532191f8a18ed8a8ff52f93e2c58dff",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

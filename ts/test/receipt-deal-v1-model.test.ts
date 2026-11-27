@@ -512,9 +512,18 @@ describe("the deal model: the holder's own offer carried in the copy (book.offer
     });
   });
 
-  it("an agent_input that is not the one its record attests is refused", async () => {
+  it("an agent_input the agreement cites but its record does not attest is refused", async () => {
+    // Only the record's attestation is changed: agent_input is still the
+    // offer the agreement cites, so the attestation check alone refuses it.
     const pair = sentPair();
-    terms(pair)["item"] = "something else";
+    (
+      ((pair["record"] as Obj)["model_attestation"] as Obj)[
+        "compute_attestation"
+      ] as Obj
+    )["agent_input_digest"] = "00".repeat(32);
+    expect(core.recordDigest(pair["agent_input"])).toBe(
+      core.recordDigest(sentPair()["agent_input"]),
+    );
     await expect(model(withOffer(pair))).rejects.toThrow(
       /not the sent offer the copy's agreement cites/,
     );

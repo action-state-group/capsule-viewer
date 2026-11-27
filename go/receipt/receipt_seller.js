@@ -1830,7 +1830,7 @@
   // The x-deal-v1 extension's book (evidencebook#588, docs/design/461-deal-profile.md section 9, "The payment legs
   // and the bundle extension"; dealprofile/xdealv1/report_bundle.go, ReportBook). The extension is exactly
   // {sealed_report, book}; book is {agreement, relied_on} and, as the view-model note's section 4 item 1 and
-  // evidencebook#861 add, an optional `offer` (the holder's own offer, one book pair), and on a full adjudicator copy
+  // evidencebook#861 add, an optional `offer` (the holder's own offer, its sent pair {record, agent_input}, #498), and on a full adjudicator copy
   // `records` (every record of the holder's deal book, by record id) and `received` ({log_id, records, proofs}: the
   // copy of the other side's book it holds, only beside records). relied_on holds, keyed by record id, the book pair of
   // every record the holder's rows rely on, so a leg is read by its relied_on id. VerifyReportBundle refuses a bundle
