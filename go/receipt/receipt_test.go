@@ -248,3 +248,28 @@ func TestFrozenPythonCopiesStayFrozen(t *testing.T) {
 		assert.Equal(t, pin, sum(b), "%s is frozen at 0.25.0: change go/receipt instead", name)
 	}
 }
+
+// The provider's own receipt names the other party only as keeping its own
+// record (#460, Sherlock2's wording): in these records a countersignature is
+// a third party re-checking a bundle (the countersign.* lines), never the
+// other party signing, so no provider.* line uses the word.
+func TestProviderWordsNeverCallTheOtherPartyACountersigner(t *testing.T) {
+	b, err := os.ReadFile("wording-en.json")
+	require.NoError(t, err)
+	var pack struct {
+		Entries map[string]string `json:"entries"`
+	}
+	require.NoError(t, json.Unmarshal(b, &pack))
+	seen := 0
+	for key, words := range pack.Entries {
+		if !strings.HasPrefix(key, "provider.") {
+			continue
+		}
+		seen++
+		assert.NotContains(t, strings.ToLower(words), "countersign", key)
+	}
+	assert.Positive(t, seen, "the pack has provider.* words")
+	assert.Equal(t,
+		"This is this node's own record of its half of the exchange. It is not a joint record: the other party keeps its own.",
+		pack.Entries["provider.own_half"])
+}

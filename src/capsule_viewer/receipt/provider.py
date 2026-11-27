@@ -6,8 +6,8 @@ for it (capsules-plugin ``provider-receipt-bundle``, Mesh-LLM/capsules-plugin#13
 It is not a deal receipt. The bundle's root is the node's own record of the
 exchange it served (``x-mesh-poc-v1``), and every other record is a
 ``payee_observed`` settlement leg: what the node received. The page says it is
-the node's own half, not a joint record and not countersigned, names the model
-and shows each amount with its unit. It reads no request or response text (the
+the node's own half, not a joint record (the other party keeps its own), names
+the model and shows each amount with its unit. It reads no request or response text (the
 bundle carries none) and shows nothing of who asked. It never uses deal or
 offer wording, since nothing here is one.
 
@@ -33,10 +33,12 @@ from ..shell import present
 from .model import group_thousands
 
 TITLE = "Your receipt for an exchange you served"
-# The page's own sentences. Public text: Sherlock2's PM (Mesh-LLM/capsules-plugin#134).
+# The page's own sentences. Public text: Sherlock2's PM (Mesh-LLM/capsules-plugin#134);
+# OWN_HALF as Sherlock2 reworded it (#460): the other party is not a countersigner,
+# which in these records is a third party re-checking a bundle.
 OWN_HALF = (
-    "This is this node's own record of its half of the exchange. It is not a joint record, "
-    "and the other party has not countersigned it."
+    "This is this node's own record of its half of the exchange. It is not a joint record: "
+    "the other party keeps its own."
 )
 NO_CONTENT = "It names the model and what was received. It holds no request or response text."
 RECORDS_NOTE = "The exchange and each payment are records of their own, listed below."

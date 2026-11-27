@@ -121,7 +121,7 @@ describe("the receipt export (#383)", () => {
     const text = l0.textContent ?? "";
     for (const words of [
       "Your receipt for an exchange you served",
-      "This is this node's own record of its half of the exchange. It is not a joint record, and the other party has not countersigned it.",
+      "This is this node's own record of its half of the exchange. It is not a joint record: the other party keeps its own.",
       "It names the model and what was received. It holds no request or response text.",
       "Model served",
       "Served at2026-10-30T19:50:00 UTC",
@@ -159,7 +159,12 @@ describe("the receipt export (#383)", () => {
       expect(result.kind).toBe("checked");
       const text = shared.textContent ?? "";
       expect(text).not.toMatch(/\byou(r)?\b/i);
-      expect(text).toContain("This is this node's own record of its half");
+      // #460: the shared copy carries the same own-half line, about "this
+      // node", and names no countersigner.
+      expect(text).toContain(
+        "This is this node's own record of its half of the exchange. It is not a joint record: the other party keeps its own.",
+      );
+      expect(text).not.toMatch(/countersign/i);
       expect(shared.querySelector("h2")).toBeNull();
     },
   );

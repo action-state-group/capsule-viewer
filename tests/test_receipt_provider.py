@@ -6,7 +6,9 @@ receipt (Mesh-LLM/capsules-plugin#134)."""
 from __future__ import annotations
 
 import copy
+import json
 import re
+from pathlib import Path
 
 import pytest
 from receipt_helpers import load, render, report_for, visible_text
@@ -94,6 +96,18 @@ def test_only_a_served_exchange_with_its_payments_is_this_modules():
     assert OWN_HALF in visible_text(render(NAME, audience="keep"))
     assert "No presentation" in visible_text(render(NAME, audience="counterparty"))
 
+
+def test_the_own_half_line_is_the_go_packs_and_names_no_countersigner():
+    # #460: Sherlock2's words, the same in the Go package's pack (provider.own_half),
+    # so the scripts and this twin draw one sentence. A countersignature is a third
+    # party re-checking a bundle, never the other party, so the line never says it.
+    pack = json.loads((Path(__file__).parents[1] / "go" / "receipt" / "wording-en.json").read_text(encoding="utf-8"))
+    assert OWN_HALF == pack["entries"]["provider.own_half"]
+    assert OWN_HALF == (
+        "This is this node's own record of its half of the exchange. "
+        "It is not a joint record: the other party keeps its own."
+    )
+    assert "countersign" not in OWN_HALF.lower()
 
 def test_a_bundle_that_did_not_verify_shows_no_rows():
     bundle, output = load(NAME)
