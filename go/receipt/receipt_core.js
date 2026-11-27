@@ -1724,7 +1724,7 @@
     });
     if (!isMap(get(book, "agreement")) || !isMap(get(book, "relied_on"))) throw new Unavailable("the x-deal-v1 extension's book has no agreement and relied_on objects");
     var out = {
-      agreement: bookPair(get(book, "agreement")),
+      agreement: get(book, "agreement"),
       relied: bookPairs(get(book, "relied_on"), "relied_on"),
       offer: own(book, "offer") ? bookPair(get(book, "offer")) : null,
       records: own(book, "records") ? bookPairs(get(book, "records"), "records") : null,
@@ -1849,7 +1849,12 @@
     var rep = report(sealed[0], map(get(content, "report")));
     rep.audience = cut;
     var steps = dealSteps(v, book, keep);
-    var records = steps.map(function (s) { var r = s.raw; delete s.raw; return r; });
+    // A shared copy's raw records leave out the record's time and a leg's observed time, as the steps do.
+    var records = steps.map(function (s) {
+      var r = s.raw;
+      delete s.raw;
+      return keep || r === null ? r : { value: timeless(r.value), src: r.src };
+    });
     var offer = holderOffer(steps, book, v.assurance.deal_offer);
     return {
       deal_id: or(str(get(content, "deal_id")), ""),
@@ -1897,6 +1902,17 @@
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
     };
+  }
+  // A record with its time (`timestamp`) and a leg's observed time (`settlement.observed_at`) left out, for a copy or
+  // a page that shows no record time (u219, u238, u239).
+  function timeless(record) {
+    var copy = {};
+    Object.keys(record).forEach(function (k) { if (k !== "timestamp") copy[k] = record[k]; });
+    if (isMap(get(record, "settlement"))) {
+      copy.settlement = {};
+      Object.keys(record.settlement).forEach(function (k) { if (k !== "observed_at") copy.settlement[k] = record.settlement[k]; });
+    }
+    return copy;
   }
   // The holder's own offer (#461, Sherlock2's rule on #384: the item is the agreement's offer `terms.item`; the
   // view-model note's section 4 item 1): the book's `offer` pair when the copy carries one, else the `deal_offer`
@@ -2005,8 +2021,9 @@
 
   // The Capsule ids a record cites, as its copy states them: its header's `cites` links, the record's own
   // `references`, every deal-record reference its payload makes (by payload digest: `prev`, a dispute's
-  // `statements`, a statement's `names`, ...), and a ruling's `read` and `sources` (the book heads it read, by
-  // record id). Used only to put the steps in an order; nothing is checked or concluded from them.
+  // `statements`, a statement's `names`, ...), the other side's record its block says it had `seen`, and a ruling's
+  // `read` and `sources` (the book heads it read, by record id). Used only to put the steps in an order; nothing is
+  // checked or concluded from them.
   function citations(record, header, payload) {
     var out = [];
     seq(get(header, "links")).forEach(function (l) { if (get(l, "type") === "cites" && str(get(l, "target")) !== null) out.push(l.target); });
@@ -2018,6 +2035,8 @@
       Object.keys(node).forEach(function (k) { walk(node[k]); });
     })(payload);
     var body = map(get(map(payload), "body"));
+    var seen = str(get(map(get(map(payload), EXTENSION_V1)), "seen"));
+    if (seen !== null) out.push(seen);
     if (str(get(map(get(map(payload), EXTENSION_V1)), "record_type")) === "ruling") {
       var ids = function (node) {
         if (typeof node === "string") out.push(node);
@@ -2151,7 +2170,6 @@
         record: id,
         // Where the copy holds the record: a bundle record, or a book pair of the x-deal-v1 extension.
         src: { bundle: r.where },
-        bundled: r.bundled,
         book: sourced(bookOf(record, agreement ? agreement.record : null, agreementBody), inRecord(id, "/record/key_id")),
         // The step's own sealed time (its block's `at`), else the record's timestamp to the second; the keep copy's only.
         time: keep ? sourced(stepTime(at, str(get(record, "timestamp"))), inRecord(id, at !== null && validUtcTime(at) ? "/payload/" + EXTENSION_V1 + "/at" : "/record/timestamp")) : null,
@@ -4336,11 +4354,13 @@
     var d = this.d, self = this;
     var extra = model.records.filter(function (r) { return r.src.bundle.indexOf("/records/") !== 0; });
     if (!extra.length) return [];
-    return [this.kit.section(w("deal.section.book_records"), [this.note(w("deal.book_records.lede"))].concat(extra.map(function (r) {
+    var own = this.ownPage(model);
+    var lede = own ? "deal.book_records.lede" : "deal.book_records.lede.shared";
+    return [this.kit.section(w("deal.section.book_records"), [this.note(w(lede))].concat(extra.map(function (r) {
       var id = or(str(get(r.value, "capsule_id")), "");
       return d.el("details", { class: "cv-rcpt-id", "data-book-record": id, "data-ptr": r.src.bundle }, [
         d.el("summary", {}, [d.el("span", { class: "cv-mono", title: id }, [self.short(id)])]),
-        d.el("pre", { class: "cv-mono cv-rcpt-raw" }, [JSON.stringify(r.value, null, 2)]),
+        d.el("pre", { class: "cv-mono cv-rcpt-raw" }, [JSON.stringify(own ? r.value : timeless(r.value), null, 2)]),
       ]);
     })), 3)];
   };

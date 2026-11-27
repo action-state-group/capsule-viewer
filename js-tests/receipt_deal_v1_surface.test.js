@@ -158,11 +158,11 @@ describe("the header and the top line", () => {
 });
 
 describe("the cards and the stamps", () => {
-  it("the amount the holder's own payment record states, in sats and msat, said as recorded (u203)", async () => {
+  it("the amount the holder's own payment record states, once, in its recorded asset (u203, #476)", async () => {
     const { host } = await draw(bundleOf(SELLER, asKeep));
     const paid = q(host.L0, '[data-card="paid"]');
     expect(q(paid, ".cv-rcpt-card__label").textContent).toBe("Payment");
-    expect(q(paid, ".cv-rcpt-card__value").textContent).toBe("2 sats2,000 msat");
+    expect(q(paid, ".cv-rcpt-card__value").textContent).toBe("2,000 msat");
     expect(q(paid, ".cv-rcpt-card__note").textContent).toBe("Recorded as received");
     expect(q(host.L0, '[data-card="other"]').textContent).toContain("Their signed agreement: checked");
     // The page checks no payment proof: nothing on the surface says "paid" in its own voice.
@@ -217,11 +217,16 @@ describe("what happened, step by step", () => {
   it("one step per record the copy carries, each once, in the copy's order, opening to what it records", async () => {
     const { host, model } = await draw(bundleOf(SELLER, asKeep));
     const steps = [...host.L0.querySelectorAll("[data-step]")];
-    expect(steps.map((s) => s.getAttribute("data-step-kind"))).toEqual(["agree", "settle", "perform", "statement"]);
+    // The other side's statement the rows rely on is carried only in the book's relied_on: a step too (#476),
+    // after the holder's statement its block says it had seen.
+    expect(steps.map((s) => s.getAttribute("data-step-kind"))).toEqual(["agree", "settle", "perform", "statement", "statement"]);
     expect(steps.map((s) => q(s, ".cv-rcpt-step__title").textContent)).toEqual([
-      "Deal agreed", "Payment recorded as received: 2,000 msat", "Recorded as done: delivered", "You said: Delivery: met; Payment as agreed: met",
+      "Deal agreed", "Payment recorded as received: 2,000 msat", "Recorded as done: delivered",
+      "You said: Delivery: met; Payment as agreed: met", "The other side said: Delivery: met; Payment as agreed: met",
     ]);
-    expect(new Set(model.sealed_steps.map((s) => s.record)).size).toBe(SELLER.records.length);
+    const relied = Object.keys(SELLER.extensions["x-deal-v1"].book.relied_on);
+    const carried = new Set(SELLER.records.map((r) => r.capsule_id).concat(relied));
+    expect(model.sealed_steps.map((s) => s.record).sort()).toEqual([...carried].sort());
     const settle = steps[1];
     expect(q(settle, "[data-record-id]").getAttribute("data-record-id")).toBe(SELLER.records[1].capsule_id);
     expect(q(settle, ".cv-rcpt-fullid").textContent).toBe(SELLER.records[1].capsule_id);
@@ -236,7 +241,7 @@ describe("what happened, step by step", () => {
     });
     const { host } = await draw(b);
     const kinds = [...host.L0.querySelectorAll("[data-step]")].map((s) => s.getAttribute("data-step-kind"));
-    expect(kinds).toEqual(["agree", "settle", "withheld", "statement"]);
+    expect(kinds).toEqual(["agree", "settle", "withheld", "statement", "statement"]);
     expect(host.L0.textContent).not.toContain("forged");
     expect(host.L0.textContent).toContain("A sealed step whose contents are not in this copy");
   });
@@ -395,7 +400,10 @@ describe("the technical layer stays, under For checkers and Technical details", 
     const { host } = await draw(bundleOf(SELLER, asKeep));
     expect(q(host.L1, "summary").textContent).toBe("For checkers: every sealed record");
     const ids = [...host.L1.querySelectorAll("[data-inventory-record]")].map((e) => e.getAttribute("data-inventory-record"));
-    expect(ids).toEqual(SELLER.records.map((r) => r.capsule_id));
+    // The bundle's records in their order, with the relied-on record the copy carries only in its book (#476).
+    const bundled = SELLER.records.map((r) => r.capsule_id);
+    expect(ids.filter((id) => bundled.includes(id))).toEqual(bundled);
+    expect(ids).toHaveLength(new Set(bundled.concat(Object.keys(SELLER.extensions["x-deal-v1"].book.relied_on))).size);
     expect(q(host.L1, '[data-inventory="facts"]').textContent).toContain("capsuleviewer.receipt.wording.en/v1");
     expect(q(host.L1, '[data-inventory="facts"]').textContent).toContain("Producer versionnot recorded");
     expect(q(host.L1, "[data-deal-state]")).not.toBeNull();
@@ -599,7 +607,7 @@ describe("#461: the item from the holder's sealed offer, in the module", () => {
   const ITEM = "200 conference badges, delivered by Friday";
   const item = async (bundle, offer) => {
     const { host, model } = await draw(bundle, { assurance: { deal_offer: offer } });
-    return { model: model.item, drawn: q(host.L0, ".cv-rcpt-hero [data-hero-item]")?.textContent ?? null, host };
+    return { model: model.item === null ? null : model.item.value, drawn: q(host.L0, ".cv-rcpt-hero [data-hero-item]")?.textContent ?? null, host };
   };
   const edited = (edit) => { const o = structuredClone(OFFER); edit(o); return o; };
 

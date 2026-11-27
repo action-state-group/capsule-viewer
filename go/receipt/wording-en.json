@@ -728,6 +728,7 @@
     "deal.drawer.names.unread": "not in this copy",
     "deal.section.book_records": "Records carried in the deal book",
     "deal.book_records.lede": "Records this copy carries in its deal book, not among the bundle's own records, as recorded.",
+    "deal.book_records.lede.shared": "Records this copy carries in its deal book, not among the bundle's own records, as recorded, their times left out of this shared copy.",
     "deal.check.page": "On this page's own file, as capsulectl gave it:",
     "deal.check.download": "On the downloaded proof file:",
     "deal.stamp.countersigned.filled": "{signer} signed this record too · {at}, by their clock",

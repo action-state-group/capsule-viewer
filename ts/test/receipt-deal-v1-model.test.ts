@@ -289,8 +289,21 @@ describe("the deal model: a shared copy holds no time (u219, u238, u239)", () =>
     }
     for (const row of m.rows)
       for (const e of row.relied_on) expect(e.time).toBeNull();
-    // The agreement first; the rest after what each cites, then by record id.
+    // The raw records leave out the record's and the leg's time too.
+    for (const r of m.records) {
+      expect(r!.value).not.toHaveProperty("timestamp");
+      expect(
+        (r!.value["settlement"] as Obj | undefined) ?? {},
+      ).not.toHaveProperty("observed_at");
+    }
+    // The agreement first; the rest after what each cites (the other side's
+    // statement after the holder's statement it says it had seen).
     expect(m.sealed_steps[0]!.kind?.value).toBe("agree");
+    const last = m.sealed_steps[m.sealed_steps.length - 1]!;
+    expect([last.book?.value, last.kind?.value]).toEqual([
+      "other",
+      "statement",
+    ]);
     const seqs = m.sealed_steps
       .filter((s) => s.book?.value === "holder")
       .map((s) => s.seq?.value);
