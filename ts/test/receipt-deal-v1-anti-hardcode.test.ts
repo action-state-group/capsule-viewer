@@ -6,7 +6,7 @@
  * receipt: on every deal fixture, in every carrier, each visible text node of
  * the receipt module's region is a wording-pack string or a value read from
  * the copy, and each value resolves (helpers/receipt-anti-hardcode.ts says
- * how). The nodes PR 3 of the note replaces are left out (EXCLUDED).
+ * how). Since PR 3 of the note (#489) no node is left out (EXCLUDED).
  */
 import { bundleDigest } from "@action-state-group/agent-action-capsule";
 import { readFileSync, readdirSync } from "node:fs";

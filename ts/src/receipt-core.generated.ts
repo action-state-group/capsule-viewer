@@ -1937,6 +1937,8 @@ const root = {};
         // capsulectl's report as the page was given it: its verdict, and its x-deal-v1 entry's status.
         verdict: { report: "capsulectl", path: "/verdict" },
         report_checked: { report: "x-deal-v1", path: "/status" },
+        // capsulectl's witness time of the holder's own book (verify --stamp-proof), as its x-deal-v1 entry gives it.
+        book_witness: { report: "x-deal-v1", path: "/witnessed" },
         // The command the page's maker gave for checking this copy (verifyCommand).
         verify_command: { report: "verify_command" },
         // The page's own checks: its classification of each countersignature and of the countersigned copy.
@@ -4343,7 +4345,10 @@ const root = {};
     if (!this.ownPage(model)) return { state: "not_checked" };
     var book = model.book_witnessed;
     if (book === null) return { state: "not_checked" };
-    if (book.status === "verified") return { state: "filled", words: "filled_checked", at: book.at, witness: book.witness };
+    var S = model.sources;
+    if (book.status === "verified") {
+      return { state: "filled", words: "filled_checked", at: book.at, at_src: at(S.book_witness, "/at"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
+    }
     if (book.status === "failed") return { state: "failed" };
     return { state: "open" };
   };
@@ -5324,7 +5329,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "3c7c4df282ad4afd5692c383d827c179d5d91d4b332143f43f3e9dee231d9fc8",
+      "script_sha256": "19510e1b894849979056d1d0c016a7e9cf5590b88db0faf51c0502d9fed5f471",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5371,7 +5376,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "1a0bdbdcab56b0f9275d6ac1167296ce1d7a41f781b17449da5f0ee97cac4547",
+      "script_sha256": "a6389143e5955f6ee4fab9aa8bfb28997b936e5c3952a014eb6d0bf92aceb41f",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5417,7 +5422,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "05701d85020da335ae9439ea11b2c999a90104e40384a0a234b7a148fd987f86",
+      "script_sha256": "b764c2aad38f70026e443a81db81dbce86a6eb8cf9d2c6a7033beab60139f45c",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5465,7 +5470,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "adbbd1a053cec7727f0ff5f8cf94acfd46dc66e18dd5af16041990d3a67cf8f2",
+      "script_sha256": "7dd89553802a09b9dc7dee80a0b4a92d0d683314f8c962b3b4f1f6f7cd252adc",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5507,7 +5512,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "c48d5297a311fb4a0481f9e1f27ea3c24e738525353cd2f09257a68d48b8b450",
+      "script_sha256": "63eab9cfe14f929126c274a98cd7bc0e0b5720450b9a1fffc3653d0bd6fd5b2f",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

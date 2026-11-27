@@ -1933,6 +1933,8 @@
         // capsulectl's report as the page was given it: its verdict, and its x-deal-v1 entry's status.
         verdict: { report: "capsulectl", path: "/verdict" },
         report_checked: { report: "x-deal-v1", path: "/status" },
+        // capsulectl's witness time of the holder's own book (verify --stamp-proof), as its x-deal-v1 entry gives it.
+        book_witness: { report: "x-deal-v1", path: "/witnessed" },
         // The command the page's maker gave for checking this copy (verifyCommand).
         verify_command: { report: "verify_command" },
         // The page's own checks: its classification of each countersignature and of the countersigned copy.
@@ -4339,7 +4341,10 @@
     if (!this.ownPage(model)) return { state: "not_checked" };
     var book = model.book_witnessed;
     if (book === null) return { state: "not_checked" };
-    if (book.status === "verified") return { state: "filled", words: "filled_checked", at: book.at, witness: book.witness };
+    var S = model.sources;
+    if (book.status === "verified") {
+      return { state: "filled", words: "filled_checked", at: book.at, at_src: at(S.book_witness, "/at"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
+    }
     if (book.status === "failed") return { state: "failed" };
     return { state: "open" };
   };
