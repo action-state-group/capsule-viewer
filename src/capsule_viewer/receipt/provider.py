@@ -44,6 +44,28 @@ NO_CONTENT = "It names the model and what was received. It holds no request or r
 RECORDS_NOTE = "The exchange and each payment are records of their own, listed below."
 MODEL = "Model served"
 SERVED_AT = "Served at"
+# A failed or dispatched exchange was not served (capsule-viewer#465): Sherlock2's
+# words for its page, the same as the Go pack's provider.* keys.
+TITLE_ASKED = "Your record of an exchange you were asked to serve"
+MODEL_ASKED = "Model asked for"
+RECORDED_AT = "Recorded at"
+STATUS_FAILED = (
+    "This node's record says the exchange failed{reason}. It was not served. "
+    "Any payment this node received for it is listed below."
+)
+STATUS_DISPATCHED = (
+    "This node's record says the request was sent on, but the host reported no response. "
+    "It does not show that the exchange was served."
+)
+# The failure classes a failed record may name (capsules-plugin FailedExchange.class),
+# in words; any other value is drawn as no reason, never as its code.
+REASONS = {
+    "payment_required": "payment required",
+    "refused": "refused",
+    "upstream_error": "upstream error",
+    "timeout": "timed out",
+    "dropped": "dropped",
+}
 RECEIVED = "Received"
 FEE = "Fee for receiving"
 TOTAL = "Received in total"
@@ -99,6 +121,8 @@ class Payment:
 
 @dataclass(frozen=True)
 class ProviderModel:
+    effect: str
+    reason: str | None
     exchange_id: str
     model: str
     served_at: str
@@ -129,15 +153,16 @@ def _is_leg(record: Frozen) -> bool:
     return _get(leg, "leg") == _LEG and _get(leg, "sealer_role") == "payee" and _get(leg, "status") == "settled"
 
 
-def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]] | None:
-    """The served exchange record and the legs, when the bundle is exactly those."""
+def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...], str, str | None] | None:
+    """The node's own record of the exchange, the legs, the record's effect and
+    a failed record's reason class, when the bundle is exactly those."""
     records = _get(context.bundle, "records")
     root = _get(context.bundle, "root")
     if not isinstance(records, tuple) or not all(isinstance(r, Mapping) for r in records):
         return None
     exchange = [r for r in records if _get(r, "capsule_id") == root]
     others = [r for r in records if _get(r, "capsule_id") != root]
-    if len(exchange) != 1 or not others or not all(_is_leg(r) for r in others):
+    if len(exchange) != 1 or not all(_is_leg(r) for r in others):
         return None
     poc = _get(_get(_get(exchange[0], "model_attestation"), "compute_attestation"), _POC)
     # The node's own served record: a mesh exchange block that names its serving
@@ -147,12 +172,21 @@ def _parts(context: VerifiedBundleContext) -> tuple[Mapping, tuple[Mapping, ...]
         return None
     if poc.get("role", "served") != "served":
         return None
-    # Only an exchange that was served: a request that failed or never completed
-    # (a payment may still have come in) is not "an exchange you served", and a
-    # record that states no status is not shown as one either.
-    if _get(_get(exchange[0], "effect"), "status") != "confirmed":
+    # A summary of the failures a node did not seal one by one is not one exchange.
+    if "unsealed_failures" in poc:
         return None
-    return exchange[0], tuple(others)
+    # Served (confirmed), failed, or sent on with no response recorded
+    # (dispatched): each side keeps its half of a failed exchange too (Steven's
+    # u1578 E and F, evidencebook#205; capsule-viewer#465). A record that states
+    # no such status is not shown. A failed exchange may have no payment; any
+    # other needs one.
+    effect = _get(_get(exchange[0], "effect"), "status")
+    if effect not in ("confirmed", "failed", "dispatched"):
+        return None
+    if not others and effect != "failed":
+        return None
+    reason = poc.get("failure_class")
+    return exchange[0], tuple(others), effect, reason if effect == "failed" and reason in REASONS else None
 
 
 def _total(legs: tuple[Mapping, ...]) -> str | None:
@@ -187,8 +221,10 @@ class ProviderReceiptModule:
         parts = _parts(context) if context.verified else None
         if parts is None:
             raise ValueError(f"{self.manifest.id}: buildModel called on a context canRender refuses")
-        exchange, legs = parts
+        exchange, legs, effect, reason = parts
         return ProviderModel(
+            effect=effect,
+            reason=reason,
             exchange_id=_text(_get(exchange, "capsule_id")),
             model=_text(_get(_get(exchange, "model_attestation"), "model_id")),
             served_at=_utc(_text(_get(exchange, "timestamp"))),
@@ -204,7 +240,17 @@ class ProviderReceiptModule:
         )
 
     def render(self, model: ProviderModel, services: KitServices) -> str:
-        metrics = [Metric(MODEL, model.model or "?"), Metric(SERVED_AT, model.served_at or "?")]
+        served = model.effect == "confirmed"
+        if served:
+            status = ""
+        elif model.effect == "dispatched":
+            status = STATUS_DISPATCHED
+        else:
+            status = STATUS_FAILED.format(reason=f": {REASONS[model.reason]}" if model.reason else "")
+        metrics = [
+            Metric(MODEL if served else MODEL_ASKED, model.model or "?"),
+            Metric(SERVED_AT if served else RECORDED_AT, model.served_at or "?"),
+        ]
         if model.total is not None:
             metrics.append(Metric(TOTAL, model.total))
         rows = [
@@ -219,6 +265,11 @@ class ProviderReceiptModule:
         return str(
             Markup(f'<div class="cv-provider-receipt" data-module="{escape(self.manifest.id)}">')
             + Markup('<p data-provider="own-half">') + OWN_HALF + Markup("</p>")
+            + (
+                Markup(f'<p data-provider="status" data-effect="{escape(model.effect)}">') + status + Markup("</p>")
+                if status
+                else Markup("")
+            )
             + Markup('<p data-provider="no-content">') + NO_CONTENT + Markup("</p>")
             + services.metric_grid(metrics)
             + services.drilldown(f"{RECEIVED} ({len(model.payments)})", table, expanded=True)
@@ -231,6 +282,11 @@ class ProviderReceiptModule:
 def provider_receipt_page(context: VerifiedBundleContext) -> str:
     """The page for *context*, a gated context over a provider's receipt bundle."""
     module = ProviderReceiptModule()
+    # The owner's title says what the record is: a failed or dispatched
+    # exchange was not served.
+    parts = _parts(context) if context.verified else None
+    if parts is not None and parts[2] != "confirmed":
+        module.title = TITLE_ASKED
     registry = Registry()
     registry.register(MANIFEST, module.canRender, module)
     return present(context, registry, audience="keep", core_checks=True)

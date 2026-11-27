@@ -4269,22 +4269,41 @@
     return get(leg, "leg") === PROVIDER_LEG && get(leg, "sealer_role") === "payee" && get(leg, "status") === "settled";
   }
 
-  // provider._parts: the served exchange record and the legs, when the bundle is exactly those.
+  // provider._REASONS: the failure classes a failed record may name
+  // (capsules-plugin FailedExchange.class), each drawn in words; any other
+  // value is drawn as no reason, never as its code.
+  var PROVIDER_REASONS = ["payment_required", "refused", "upstream_error", "timeout", "dropped"];
+
+  // provider._parts: the node's own record of the exchange, the legs and the
+  // record's effect, when the bundle is exactly those. The effect is
+  // confirmed (served), failed or dispatched (sent on, no response
+  // recorded): each side keeps its half of a failed exchange too (Steven's
+  // u1578 E and F, evidencebook#205; capsule-viewer#465). A failed exchange
+  // may have no payment; any other needs one.
   function providerParts(v) {
     var records = get(v.bundle, "records");
     if (!Array.isArray(records) || !records.every(isMap)) return null;
     var root = get(v.bundle, "root");
     var exchange = records.filter(function (r) { return get(r, "capsule_id") === root; });
     var others = records.filter(function (r) { return get(r, "capsule_id") !== root; });
-    if (exchange.length !== 1 || !others.length || !others.every(isProviderLeg)) return null;
+    if (exchange.length !== 1 || !others.every(isProviderLeg)) return null;
     var poc = get(map(get(map(get(exchange[0], "model_attestation")), "compute_attestation")), PROVIDER_POC);
-    // The node's own served record: a mesh exchange block naming its serving
+    // The node's own record: a mesh exchange block naming its serving
     // provenance and not marked as another role.
     if (!isMap(poc) || !isMap(get(poc, "serving_provenance"))) return null;
     if ((own(poc, "role") ? poc.role : "served") !== "served") return null;
-    // Only an exchange that was served (its effect confirmed).
-    if (get(map(get(exchange[0], "effect")), "status") !== "confirmed") return null;
-    return { exchange: exchange[0], legs: others };
+    // A summary of the failures a node did not seal one by one is not one exchange.
+    if (own(poc, "unsealed_failures")) return null;
+    var effect = get(map(get(exchange[0], "effect")), "status");
+    if (effect !== "confirmed" && effect !== "failed" && effect !== "dispatched") return null;
+    if (!others.length && effect !== "failed") return null;
+    var reason = get(poc, "failure_class");
+    return {
+      exchange: exchange[0],
+      legs: others,
+      effect: effect,
+      reason: effect === "failed" && PROVIDER_REASONS.indexOf(reason) >= 0 ? reason : null,
+    };
   }
 
   // provider._text: a scalar as Python's str() writes it; "" for null, a map or
@@ -4309,6 +4328,8 @@
       return { capsule_id: pyText(get(leg, "capsule_id")), received: received && received.text, fee: fee && fee.text };
     });
     return {
+      effect: parts.effect,
+      reason: parts.reason,
       exchange_id: pyText(get(parts.exchange, "capsule_id")),
       model: pyText(get(map(get(parts.exchange, "model_attestation")), "model_id")),
       served_at: providerUtc(pyText(get(parts.exchange, "timestamp"))),
@@ -4327,15 +4348,26 @@
     var d = new Drawing(doc);
     var kit = new Kit(d);
     var mono = function (id) { return d.el("span", { class: "cv-mono" }, [id.slice(0, 16)]); };
-    var metrics = [{ label: w("provider.model"), value: model.model || "?" }, { label: w("provider.served_at"), value: model.served_at || "?" }];
+    // A failed or dispatched exchange was not served: its page says what the
+    // record says, asks no "served" of its labels and heads it accordingly.
+    var served = model.effect === "confirmed";
+    var status = served ? null
+      : model.effect === "dispatched" ? w("provider.status.dispatched")
+      : model.reason !== null ? w("provider.status.failed_reason", { reason: w("provider.reason." + model.reason) })
+      : w("provider.status.failed");
+    var metrics = [
+      { label: w(served ? "provider.model" : "provider.model_asked"), value: model.model || "?" },
+      { label: w(served ? "provider.served_at" : "provider.recorded_at"), value: model.served_at || "?" },
+    ];
     if (model.total !== null) metrics.push({ label: w("provider.total"), value: model.total });
     var notShown = w("provider.not_shown");
     var rows = model.payments.map(function (p) { return [mono(p.capsule_id), p.received || notShown, p.fee || notShown]; });
     var table = kit.dataTable([w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
     var l0 = d.el("div", { "data-level": "L0" }, [
-      sharedCarrier(drawCarrier) ? null : d.el("h2", {}, [w("provider.title")]),
+      sharedCarrier(drawCarrier) ? null : d.el("h2", {}, [w(served ? "provider.title" : "provider.title_asked")]),
       d.el("div", { class: "cv-provider-receipt", "data-module": moduleId("provider") }, [
         d.el("p", { "data-provider": "own-half" }, [w("provider.own_half")]),
+        status === null ? null : d.el("p", { "data-provider": "status", "data-effect": model.effect }, [status]),
         d.el("p", { "data-provider": "no-content" }, [w("provider.no_content")]),
         kit.metricGrid(metrics),
         kit.drilldown(w("provider.received_count", { count: String(model.payments.length) }), [table], true),

@@ -163,7 +163,10 @@ def provider_edits() -> list[tuple[str, dict, dict, str]]:
         root = next(r for r in b["records"] if r["capsule_id"] == b["root"])
         legs = [r for r in b["records"] if "settlement" in r]
         edit(b, root, legs)
-        return (f"{PROVIDER}+{label}", b, report_for(b, output), "keep")
+        # An edit that drops records drops them from the verifier's per-record report too.
+        ids = {r["capsule_id"] for r in b["records"]}
+        trimmed = {**output, **{k: {i: v for i, v in output[k].items() if i in ids} for k in ("record_identity", "record_signatures")}}
+        return (f"{PROVIDER}+{label}", b, report_for(b, trimmed), "keep")
 
     def poc(value):
         return lambda b, root, legs: root["model_attestation"]["compute_attestation"].__setitem__("x-mesh-poc-v1", value)
@@ -210,6 +213,33 @@ def provider_edits() -> list[tuple[str, dict, dict, str]]:
     for status in ("failed", "planned", "dispatched", "refused", None, ...):
         out.append(edited(f"effect-{'missing' if status is ... else status}", effect_status(status)))
     out.append(edited("no-effect", lambda b, root, legs: root.pop("effect")))
+
+    # capsule-viewer#465: a failed record, with each reason class the plugin
+    # writes (x-mesh-poc-v1.failure_class) and one it predates; with no
+    # payment (drawn only when failed); and the summary of unsealed failures.
+    def failed(edit_poc=None, drop_legs=False, status="failed"):
+        def edit(b, root, legs):
+            root["effect"]["status"] = status
+            poc = root["model_attestation"]["compute_attestation"]["x-mesh-poc-v1"]
+            if status == "failed":
+                poc["outcome"] = "failed"
+            if edit_poc:
+                edit_poc(poc)
+            if drop_legs:
+                b["records"] = [r for r in b["records"] if r["capsule_id"] == b["root"]]
+        return edit
+
+    for cls in ("payment_required", "refused", "upstream_error", "timeout", "dropped", "something_new"):
+        out.append(edited(f"failed-{cls}", failed(lambda poc, cls=cls: poc.__setitem__("failure_class", cls))))
+    out.append(edited("failed-no-payment", failed(drop_legs=True)))
+    out.append(edited("failed-timeout-no-payment", failed(lambda poc: poc.__setitem__("failure_class", "timeout"), drop_legs=True)))
+    out.append(edited("dispatched-no-payment", failed(drop_legs=True, status="dispatched")))
+    out.append(edited("confirmed-no-payment", failed(drop_legs=True, status="confirmed")))
+    out.append(edited("dispatched-reason-ignored", failed(lambda poc: poc.__setitem__("failure_class", "refused"), status="dispatched")))
+    out.append(edited(
+        "failed-unsealed-summary",
+        failed(lambda poc: poc.__setitem__("unsealed_failures", {"count": 3, "window_start": "2026-10-30T19:00Z", "window_s": 3600})),
+    ))
     big = {"value": "9007199254740993995", "assetCode": "BTC", "assetScale": 11}
     for label, edit in (
         ("received-big", amount("received", big)),

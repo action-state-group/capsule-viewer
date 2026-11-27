@@ -5,7 +5,7 @@
 // to the twin on the fixture and its edited copies. The rows marked "script
 // only" are where a script number or date is not Python's.
 import { describe, expect, it } from "vitest";
-import { loadScript } from "./receiptScripts.js";
+import { caseInputs, loadScript, receiptGolden } from "./receiptScripts.js";
 
 const { api } = loadScript("provider");
 const text = (amount) => api.providerAmount(amount)?.text ?? null;
@@ -91,4 +91,120 @@ describe("the provider's receipt: the served time (provider._utc)", () => {
   ])("script only: %s is ?", (stamp) => {
     expect(api.providerUtc(stamp)).toBe("?");
   });
+});
+
+// capsule-viewer#465: a failed or dispatched exchange is drawn with its real
+// status, in Sherlock2's words (Steven's u1578 E and F, evidencebook#205). The
+// cases are the oracle golden's edited copies of the provider's receipt
+// (tests/receipt_oracle.py), whose pages js-tests/receipt_parity.test.js holds
+// to the Python twin; this pins the words themselves.
+describe("the provider's receipt: a failed or dispatched exchange (#465)", () => {
+  const golden = receiptGolden();
+  const byName = (label) => golden.cases.find((c) => c.name === `mesh-provider-selected+${label}`);
+  const FAILED_TAIL = " It was not served. Any payment this node received for it is listed below.";
+  const DISPATCHED =
+    "This node's record says the request was sent on, but the host reported no response. It does not show that the exchange was served.";
+
+  // The page as the owner sees it, or as a shared copy (a page saved for anyone) draws it.
+  async function draw(label, carrier = null) {
+    const lib = loadScript("provider");
+    const { context, env } = caseInputs(byName(label));
+    const module = lib.api.createModule("provider", env);
+    if (!(await module.canRender(context))) return null;
+    const model = await module.buildModel(context);
+    const doc = lib.document;
+    const host = { L0: doc.createElement("div"), L1: doc.createElement("div"), L2: doc.createElement("div"), depth: "L0" };
+    if (carrier) {
+      const wrap = doc.createElement("div");
+      wrap.setAttribute("data-receipt-carrier", carrier);
+      wrap.append(host.L0, host.L1, host.L2);
+    }
+    module.render(model, host, {});
+    const l0 = host.L0;
+    const status = l0.querySelector('[data-provider="status"]');
+    return {
+      model,
+      title: l0.querySelector("h2")?.textContent ?? null,
+      status: status?.textContent ?? null,
+      effect: status?.getAttribute("data-effect") ?? null,
+      text: l0.textContent,
+      rows: l0.querySelectorAll("tbody tr").length,
+    };
+  }
+
+  it.each([
+    ["payment_required", "payment required"],
+    ["refused", "refused"],
+    ["upstream_error", "upstream error"],
+    ["timeout", "timed out"],
+    ["dropped", "dropped"],
+  ])("a failed record naming %s says why in words, never the code", async (cls, words) => {
+    const page = await draw(`failed-${cls}`);
+    expect(page.status).toBe(`This node's record says the exchange failed: ${words}.${FAILED_TAIL}`);
+    expect(page.effect).toBe("failed");
+    expect(page.model.reason).toBe(cls);
+    if (cls.includes("_")) expect(page.text).not.toContain(cls);
+  });
+
+  it.each(["effect-failed", "failed-something_new"])("a failed record with no reason it can word (%s) states none", async (label) => {
+    const page = await draw(label);
+    expect(page.status).toBe(`This node's record says the exchange failed.${FAILED_TAIL}`);
+    expect(page.model.reason).toBeNull();
+    expect(page.text).not.toContain("something_new");
+  });
+
+  it("a failed exchange with no payment is drawn, with no payment row", async () => {
+    for (const label of ["failed-no-payment", "failed-timeout-no-payment"]) {
+      const page = await draw(label);
+      expect(page.model.payments).toEqual([]);
+      expect(page.rows).toBe(0);
+      expect(page.text).toContain("Received (0)");
+    }
+    expect((await draw("failed-timeout-no-payment")).status).toBe(`This node's record says the exchange failed: timed out.${FAILED_TAIL}`);
+  });
+
+  it("a dispatched exchange says no response was recorded, and names no reason", async () => {
+    for (const label of ["effect-dispatched", "dispatched-reason-ignored"]) {
+      const page = await draw(label);
+      expect(page.status).toBe(DISPATCHED);
+      expect(page.effect).toBe("dispatched");
+      expect(page.model.reason).toBeNull();
+    }
+  });
+
+  it("a failed or dispatched page says what was asked and when it was recorded, never served", async () => {
+    for (const label of ["effect-failed", "effect-dispatched"]) {
+      const page = await draw(label);
+      expect(page.title).toBe("Your record of an exchange you were asked to serve");
+      expect(page.text).toContain("Model asked for");
+      expect(page.text).toContain("Recorded at");
+      expect(page.text).not.toContain("Model served");
+      expect(page.text).not.toContain("Served at");
+    }
+  });
+
+  it("the confirmed page is as it was: no status line, the served title and labels", async () => {
+    const page = await draw("time-offset");
+    expect(page.status).toBeNull();
+    expect(page.model.effect).toBe("confirmed");
+    expect(page.title).toBe("Your receipt for an exchange you served");
+    expect(page.text).toContain("Model served");
+    expect(page.text).toContain("Served at");
+  });
+
+  it("a shared copy of a failed or dispatched page draws no owner's title and speaks of this node, never you", async () => {
+    for (const label of ["failed-refused", "effect-dispatched"]) {
+      const page = await draw(label, "page");
+      expect(page.title).toBeNull();
+      expect(page.text).toContain("this node");
+      expect(page.text).not.toMatch(/\byou\b/i);
+    }
+  });
+
+  it.each(["dispatched-no-payment", "confirmed-no-payment", "failed-unsealed-summary"])(
+    "%s is not drawn: only a failed exchange may have no payment, and a summary of failures is not one exchange",
+    async (label) => {
+      expect(await draw(label)).toBeNull();
+    },
+  );
 });
