@@ -16,7 +16,11 @@ import { interfaceFields, standInContext, unionFields } from "./aacContext.js";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const RECEIPT = join(ROOT, "tests", "testdata", "receipt");
 const SHAPE = JSON.parse(readFileSync(join(ROOT, "tests", "testdata", "aac-context", "verified-bundle-context-shape.json"), "utf8")).composed;
-const AAC_SRC = process.env.AAC_TS_SRC || resolve(ROOT, "..", "agent-action-capsule--main", "ts", "src");
+// AAC's ts/src at the tag of the @action-state-group/agent-action-capsule
+// version ts/package.json depends on, which ci.yml's js job and
+// scripts/ci-local.sh fetch. Unset, the comparison skips; set, a missing file
+// fails it.
+const AAC_SRC = process.env.AAC_TS_SRC;
 const read = (path) => JSON.parse(readFileSync(path, "utf8"));
 // Every receipt copy whose capsulectl verify report carries a composed/v1 verification.
 const COMPOSED = readdirSync(RECEIPT)
@@ -57,7 +61,7 @@ describe("aacContext.js: the composed/v1 verification has AAC's shape", () => {
     });
   }
 
-  it.skipIf(!existsSync(join(AAC_SRC, "composed.ts")))("the vendored composed shapes are AAC's source", () => {
+  it.skipIf(!AAC_SRC)("the vendored composed shapes are AAC's source", () => {
     for (const [name, { file, union, fields }] of Object.entries(SHAPE)) {
       const source = readFileSync(join(AAC_SRC, file), "utf8");
       expect(union ? unionFields(source, name) : interfaceFields(source, name), name).toEqual(fields);

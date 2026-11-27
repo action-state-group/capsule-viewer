@@ -67,6 +67,16 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --no-audit --no-fund
+      # The vendored AAC shapes (tests/testdata/aac-context) are compared with
+      # AAC's TypeScript source at the tag of the version ts/package.json
+      # depends on, so the pin moves with that dependency.
+      - name: AAC source at the ts/ dependency's tag
+        run: |
+          version="$(node -p 'require("./ts/package.json").dependencies["@action-state-group/agent-action-capsule"]')"
+          git init -q "$RUNNER_TEMP/aac-ts"
+          git -C "$RUNNER_TEMP/aac-ts" fetch -q --depth 1 https://github.com/action-state-group/agent-action-capsule.git "refs/tags/ts/v$version"
+          git -C "$RUNNER_TEMP/aac-ts" checkout -q FETCH_HEAD
+          echo "AAC_TS_SRC=$RUNNER_TEMP/aac-ts/ts/src" >> "$GITHUB_ENV"
       - run: npm test
 
   # The npm package @action-state-group/capsule-viewer: the whole `npm run

@@ -351,17 +351,19 @@ the same evidence identifiers. A packaging that is unavailable is reported, neve
 The rendered markup is compared as HTML parsing reads it: a static page is parsed, and parsing
 adds the elements HTML implies (a table row's `tbody`), which a page drawn by script may omit.
 
-capsule-viewer's `ts/test/presentation-builder.test.ts` checks this over the fixtures for each built-in page shape
+capsule-viewer's `ts/test/presentation-builder.test.ts`, with the outcome report's rows in
+`ts/test/presentation-builder-outcome-all.test.ts`, `-outcome-public.test.ts` and
+`-outcome-counterparty.test.ts`, checks this over the fixtures for each built-in page shape
 and a bundle that does not verify, for three audiences, in all four targets, by rendering each
 packaging and comparing what it shows, and checks that `availablePackagings` reports exactly the
 targets that built; the only unavailability the fixtures meet is a fragment over its budget. Two
 monthly-scale compliance bundles, derived deterministically from the committed two-session
 fixture (capsule-viewer's `ts/test/helpers/monthly-fixtures.ts`: 40 sessions, about 490 KB, and 80 sessions, about
-1 MB), assert that the fragment is reported unavailable with its length and limit, at the default
+1 MB), assert in `ts/test/presentation-builder-availability.test.ts` that the fragment is reported unavailable with its length and limit, at the default
 budget and, for the larger, at the ceiling, while the other three targets show the same thing.
-Every static page in the table is checked for no script, its CSP and its statement. The same file
-checks that theme, wording, locale and depth leave every evidence identifier unchanged, and
-its `ts/test/presentation-builder-browser.test.ts` opens the offline file, the fragment URL and the
+Every static page in the table is checked for no script, its CSP and its statement.
+`presentation-builder.test.ts` checks that theme, wording, locale and depth leave every evidence identifier unchanged, and
+`ts/test/presentation-builder-browser.test.ts` opens the offline file, the fragment URL and the
 static page in a CSP-enforcing browser and finds no request beyond the document itself, no CSP
 violation, and the static page showing what the offline file shows.
 

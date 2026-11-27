@@ -1,22 +1,22 @@
 {
-  "source": "agent-action-capsule 3a7aca6, ts/src/bundle.ts and ts/src/verify.ts; VerifiedBundleContext.strict from agent-action-capsule 0.16.0 (dist/bundle.d.ts), which the receipt modules read (capsule-viewer#392)",
-  "note": "The fields of the TypeScript interfaces js-tests/aacContext.js stands in for. A name ending in ? is optional. js-tests/history_card.test.js checks the stand-in against this list, and this list against the interface source when an agent-action-capsule checkout is present (AAC_TS_SRC, default ../agent-action-capsule--main/ts/src).",
+  "source": "agent-action-capsule ts/v0.16.0 (105231a), ts/src/bundle.ts and ts/src/verify.ts: the tag of the @action-state-group/agent-action-capsule version ts/package.json depends on",
+  "note": "The fields of the TypeScript interfaces js-tests/aacContext.js stands in for. A name ending in ? is optional. js-tests/history_card.test.js checks the stand-in against this list, and this list against the interface source at that tag, given as AAC_TS_SRC (ci.yml's js job and scripts/ci-local.sh fetch it). Re-take it when that dependency is bumped.",
   "interfaces": {
-    "VerifiedBundleContext": {"file": "bundle.ts", "fields": ["bundle", "root", "verification", "strict?", "resolvedDisclosures", "records", "recordIndex", "countersignatures", "countersigners", "extensions", "completeness"]},
+    "VerifiedBundleContext": {"file": "bundle.ts", "fields": ["bundle", "root", "verification", "strict", "resolvedDisclosures", "records", "recordIndex", "countersignatures", "countersigners", "extensions", "completeness"]},
     "VerifiedBundleContext.completeness": {"file": "bundle.ts", "fields": ["graphClosure", "intervalCoverage", "perRecordMembership", "memberships"]},
-    "BundleVerificationResult": {"file": "bundle.ts", "fields": ["bundleDigest?", "graphClosure", "intervalCoverage", "perRecordMembership", "disclosures", "extensions", "countersignatures", "verification?", "capsuleResults"]},
+    "BundleVerificationResult": {"file": "bundle.ts", "fields": ["bundleDigest?", "graphClosure", "intervalCoverage", "perRecordMembership", "disclosures", "extensions", "countersignatures", "verification?", "capsuleResults", "categoryCoverage", "history?", "emptyHistoryCheckpoint?", "strict?"]},
     "ClaimResult": {"file": "bundle.ts", "fields": ["status", "findings"]},
     "DisclosureResult": {"file": "bundle.ts", "fields": ["capsuleId", "member", "status"]},
     "VerificationResult": {"file": "verify.ts", "fields": ["ok", "findings", "assurance", "capsuleId?"]}
   },
-  "composed_source": "agent-action-capsule 3a7aca6, ts/src/bundle.ts and ts/src/composed.ts",
-  "composed_note": "The fields of a composed/v1 block's verification as js-tests/aacContext.js aacComposed builds it (the receipt modules' contexts, #27). A union type's fields are every variant's, a name ending in ? where some variant lacks it or declares it optional. js-tests/aac_context.test.js checks the stand-in against this list, and this list against the source when an agent-action-capsule checkout is present.",
+  "composed_source": "agent-action-capsule ts/v0.16.0 (105231a), ts/src/bundle.ts and ts/src/composed.ts",
+  "composed_note": "The fields of a composed/v1 block's verification as js-tests/aacContext.js aacComposed builds it (the receipt modules' contexts, #27). A union type's fields are every variant's, a name ending in ? where some variant lacks it or declares it optional. js-tests/aac_context.test.js checks the stand-in against this list, and this list against the source at that tag, as above.",
   "composed": {
     "ExtensionResult": {"file": "bundle.ts", "union": true, "fields": ["kind", "status", "interpreter?", "integrityCovered", "composed?"]},
     "ComposedResult": {"file": "composed.ts", "union": true, "fields": ["status", "malformed", "findings", "composedDigest?", "members?", "observers?", "compositionClosure?", "joins?", "corroboration?"]},
     "ComposedDigestResult": {"file": "composed.ts", "fields": ["declared", "recomputed", "matches"]},
-    "ComposedMemberResult": {"file": "composed.ts", "fields": ["id", "observer", "outcome", "body", "digest", "findings", "bundle?", "refusalSignature?"]},
-    "ComposedMemberClaims": {"file": "composed.ts", "fields": ["graphClosure", "intervalCoverage", "perRecordMembership"]},
+    "ComposedMemberResult": {"file": "composed.ts", "fields": ["id", "observer", "outcome", "body", "digest", "findings", "bundle?", "refusalSignature?", "responseSignature?"]},
+    "ComposedMemberClaims": {"file": "composed.ts", "fields": ["graphClosure", "intervalCoverage", "perRecordMembership", "history?"]},
     "ComposedClaim": {"file": "composed.ts", "fields": ["status", "findings"]},
     "ObserverDeclaration": {"file": "composed.ts", "fields": ["id", "role", "custodyDomain"]}
   }

@@ -709,6 +709,28 @@ BUILDER = Move(
             "| `contract` | Optional: `{text, sha256}`, the compiled contract's exact text and its digest (section 1). |",
             "capsule-viewer#199",
         ),
+        # Section 4: the acceptance table's checks were split across files so
+        # vitest runs them in parallel (capsule-viewer#466); the paragraph
+        # names the files that hold them now (capsule-viewer#471).
+        (
+            "capsule-viewer's `ts/test/presentation-builder.test.ts` checks this over the fixtures for each built-in page shape\n",
+            "capsule-viewer's `ts/test/presentation-builder.test.ts`, with the outcome report's rows in\n"
+            "`ts/test/presentation-builder-outcome-all.test.ts`, `-outcome-public.test.ts` and\n"
+            "`-outcome-counterparty.test.ts`, checks this over the fixtures for each built-in page shape\n",
+            "capsule-viewer#471",
+        ),
+        (
+            "1 MB), assert that the fragment is reported unavailable",
+            "1 MB), assert in `ts/test/presentation-builder-availability.test.ts` that the fragment is reported unavailable",
+            "capsule-viewer#471",
+        ),
+        (
+            "its statement. The same file\nchecks that theme, wording, locale and depth leave every evidence identifier unchanged, and\n"
+            "its `ts/test/presentation-builder-browser.test.ts` opens",
+            "its statement.\n`presentation-builder.test.ts` checks that theme, wording, locale and depth leave every evidence identifier unchanged, and\n"
+            "`ts/test/presentation-builder-browser.test.ts` opens",
+            "capsule-viewer#471",
+        ),
     ],
 )
 
