@@ -66,16 +66,26 @@ describe("the History view's vectors", () => {
 
     it(`${name}: a scripted page draws the same HTML`, () => {
       const container = document.createElement("div");
-      expect(renderHistoryView(input, container, overlayFor(name))).toBe(true);
+      expect(
+        renderHistoryView(input, container, overlayFor(name), {
+          localTime: false,
+        }),
+      ).toBe(true);
       expect(container.innerHTML).toBe(
         historyViewHtml(input, overlayFor(name)),
       );
     });
 
     it(`${name}: words pass the gates`, () => {
+      // A card page's item is the holder's own agreement text (its terms.item),
+      // quoted, not the view's words, so the gates read the page without it.
       const text = textOf(
-        historyViewHtml(input, overlayFor(name)),
+        historyViewHtml(input, overlayFor(name)).replace(
+          /<p class="cvh-row-item">[^<]*<\/p>/gu,
+          "",
+        ),
       ).toLowerCase();
+      const card = "machine" in input;
       // T8 (tests/testdata/history/t8-banned.json): no deal status phrase, no similarity claim.
       const t8 = JSON.parse(
         readFileSync(
@@ -91,9 +101,11 @@ describe("the History view's vectors", () => {
       for (const pattern of t8.similarity_claim.patterns)
         expect(text).not.toMatch(new RegExp(pattern, "iu"));
       // The mesh console's banned terms (banned-terms.ts), even inside other words.
+      // A card page's stamp row keeps Steven's COUNTERSIGNED stamp (#382 point
+      // 14, #384 item 3), as the receipt does; the console's pages never draw it.
       if (input["surface"] === "neutral")
         for (const banned of [
-          "countersign",
+          ...(card ? [] : ["countersign"]),
           "reputation",
           "score",
           "rating",
@@ -106,7 +118,10 @@ describe("the History view's vectors", () => {
 
 describe("the view's own pack", () => {
   it("holds neutral words only", () => {
-    const all = Object.values(HISTORY_VIEW_WORDING.entries)
+    // The card page's COUNTERSIGNED stamp is Steven's (#382 point 14).
+    const all = Object.entries(HISTORY_VIEW_WORDING.entries)
+      .filter(([k]) => !k.startsWith("card.stamp.countersigned"))
+      .map(([, v]) => v)
       .join("\n")
       .toLowerCase();
     for (const banned of [
@@ -319,14 +334,14 @@ describe("the stand-in's round 1 (PR 249)", () => {
       e.textContent?.startsWith("RECORDED"),
     );
 
-  it("a row's RECORDED stamp follows the deal report check: filled, not drawn, or no rows", () => {
+  // RECORDED means checkpointed (Steven, #384); the deal report check says
+  // only that each deal was read with its own report, so it never fills it.
+  it("the deal report check fills no RECORDED stamp: rows, or no rows when it failed", () => {
     const rows = ((vectors.cases["muse-owner"] as Json)["rows"] as Json[])
       .length;
     const passed = withDealReport("pass");
     expect(passed.querySelectorAll('[data-history="row"]')).toHaveLength(rows);
-    expect(recorded(passed)).toHaveLength(rows);
-    for (const e of recorded(passed))
-      expect(e.getAttribute("data-filled")).toBe("yes");
+    expect(recorded(passed)).toHaveLength(0);
     const notRun = withDealReport("not_run");
     expect(notRun.querySelectorAll('[data-history="row"]')).toHaveLength(rows);
     expect(recorded(notRun)).toHaveLength(0);

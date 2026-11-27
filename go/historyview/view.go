@@ -10,9 +10,10 @@
 // The view draws; it never fetches and never verifies. Its caller passes a
 // history-view/v0 object built from what the caller itself checked, and the
 // view decides the layout, the words and which slots may fill. Unknown
-// members are refused. Caller text is only ever text: it never goes in an
-// attribute, and the page is written by its own serializer, not
-// html/template.
+// members are refused. Caller text is only ever text: it goes in an
+// attribute only on the card page (a checked file name, digest or the
+// percent-encoded download), never parsed as HTML, and the page is written
+// by its own serializer, not html/template.
 package historyview
 
 import (
@@ -72,7 +73,13 @@ type element struct {
 	children []any // *element or string
 }
 
-var tokenRE = regexp.MustCompile(`^[a-z0-9 _.-]*$`)
+// attrNameRE is an attribute name: the view's own, never caller text. An
+// attribute value may hold caller-derived text (a file name, a time, a
+// percent-encoded download) only without the characters whose attribute
+// serialization differs between engines (TS ATTR_NAME and ATTR_VALUE).
+var attrNameRE = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]*$`)
+
+func attrValueOK(v string) bool { return !strings.ContainsAny(v, "<>\"\u00a0") }
 
 func attrs(pairs ...string) [][2]string {
 	var out [][2]string
@@ -84,7 +91,7 @@ func attrs(pairs ...string) [][2]string {
 
 func el(tag string, a [][2]string, children ...any) *element {
 	for _, p := range a {
-		if !tokenRE.MatchString(p[0]) || !tokenRE.MatchString(p[1]) {
+		if !attrNameRE.MatchString(p[0]) || !attrValueOK(p[1]) {
 			panic(internal(fmt.Sprintf("attribute %s=%s is not a view token", p[0], p[1])))
 		}
 	}
@@ -104,7 +111,8 @@ func el(tag string, a [][2]string, children ...any) *element {
 var textEscaper = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", " ", "&nbsp;")
 
 // serialize writes the tree by the HTML fragment serialization rules: in
-// text, escape &, <, > and U+00A0. Attributes hold only the view's own tokens.
+// text, escape &, <, > and U+00A0; in an attribute value, & (el refuses the
+// value's other special characters).
 func serialize(b *strings.Builder, n any) {
 	if s, ok := n.(string); ok {
 		b.WriteString(textEscaper.Replace(s))
@@ -114,7 +122,7 @@ func serialize(b *strings.Builder, n any) {
 	b.WriteByte('<')
 	b.WriteString(e.tag)
 	for _, p := range e.attrs {
-		b.WriteString(" " + p[0] + `="` + p[1] + `"`)
+		b.WriteString(" " + p[0] + `="` + strings.ReplaceAll(p[1], "&", "&amp;") + `"`)
 	}
 	b.WriteByte('>')
 	for _, c := range e.children {
@@ -437,6 +445,13 @@ func short(id string) string {
 
 func build(input, overlay any, hasOverlay bool) (*element, []string) {
 	r := &reader{}
+	// A deal page that carries its signed object is the card page (#384).
+	if in, ok := input.(*object); ok && in.has("machine") {
+		if in.get("view") != View {
+			r.refuse("input.view", "is not "+View)
+		}
+		return buildCardPage(r, in, overlay, hasOverlay)
+	}
 	o := r.object(input, "input", topKeys, []string{"view", "kind", "surface", "reader", "holder", "audience", "built_at", "checked", "rows", "checks"})
 	if o == nil {
 		return nil, r.reasons
@@ -767,24 +782,7 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		return nil, r.reasons
 	}
 
-	say := func(key string, values ...string) string {
-		text, ok := words[key]
-		if !ok {
-			text, ok = base[key]
-		}
-		if !ok {
-			panic(internal("no words for " + key))
-		}
-		return placeholderRE.ReplaceAllStringFunc(text, func(m string) string {
-			p := m[1 : len(m)-1]
-			for i := 0; i+1 < len(values); i += 2 {
-				if values[i] == p {
-					return values[i+1]
-				}
-			}
-			panic(internal(key + " needs {" + p + "}"))
-		})
-	}
+	say := sayer(words)
 	num := func(n int64) string { return strconv.FormatInt(n, 10) }
 	plural := func(key string, n int64, values ...string) string {
 		suffix := "other"
@@ -834,9 +832,8 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		verdictKey, chipKey = "verdict.pass.all", "chip.signatures.pass.all"
 	}
 	dealRecorded := statusOf("deal_report") == "pass"
-	// RECORDED is drawn on a row only when the deal_report check passed. When
-	// it did not run, the checks list says so once for the card (Sherlock2,
-	// F10); when it failed, the page draws no rows at all.
+	// When the deal_report check did not run, the checks list says so once for
+	// the card (Sherlock2, F10); when it failed, the page draws no rows at all.
 	witnessFailed := statusOf("witness") == "fail"
 	secondFailed := statusOf("second_signature") == "fail"
 	lockChecked := dealRecorded
@@ -1071,11 +1068,10 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 				parts = append(parts, *x.money)
 			}
 			parts = append(parts, say("row.opened", "at", minuteOf(x.opened)), say("row.last", "at", minuteOf(x.last)))
-			var stamps []any
-			if dealRecorded {
-				stamps = append(stamps, stamp("stamp.recorded", true, "passed", nil))
-			}
-			stamps = append(stamps, slotStamps(x)...)
+			// RECORDED means checkpointed (Steven, #384): the deal report check
+			// says each deal was read with its own report, not that a checkpoint
+			// covers it, so it fills no RECORDED stamp here.
+			stamps := slotStamps(x)
 			items = append(items, el("li", attrs("class", "cvh-row", "data-history", "row"),
 				el("p", attrs("class", "cvh-row-title"), x.asked),
 				el("p", attrs("class", "cvh-row-detail"), strings.Join(parts, " · ")),
@@ -1365,6 +1361,29 @@ func build(input, overlay any, hasOverlay bool) (*element, []string) {
 		el("div", attrs("class", "cvh-main"), hero, chips, rowList, periodBlock),
 		el("div", attrs("class", "cvh-side"), callout, shares, seal, panel))
 	return tree, nil
+}
+
+// sayer is the page's words: the overlay's entry for key, else the pack's,
+// with its {placeholders} filled from values (name, value pairs).
+func sayer(words map[string]string) func(key string, values ...string) string {
+	return func(key string, values ...string) string {
+		text, ok := words[key]
+		if !ok {
+			text, ok = base[key]
+		}
+		if !ok {
+			panic(internal("no words for " + key))
+		}
+		return placeholderRE.ReplaceAllStringFunc(text, func(m string) string {
+			p := m[1 : len(m)-1]
+			for i := 0; i+1 < len(values); i += 2 {
+				if values[i] == p {
+					return values[i+1]
+				}
+			}
+			panic(internal(key + " needs {" + p + "}"))
+		})
+	}
 }
 
 func deref(s *string) string {

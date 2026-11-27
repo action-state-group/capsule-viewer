@@ -1565,6 +1565,275 @@
         "adjudicate_differing_twins": false,
         "witnesses": []
       }
+    },
+    "card-theirs": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "name": "Alder Print Co."
+      },
+      "audience": {
+        "kind": "shared"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "sample": 10,
+      "machine": {
+        "file": "alder-history-card.json",
+        "text": "{\"disclosures\":{\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":null,\"did_not_hold\":0,\"held\":0,\"of\":1,\"undecided\":1},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":3,\"undecided\":2},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":1,\"held\":0,\"of\":2,\"undecided\":1}],\"class_missing\":{\"count\":1,\"of\":11},\"controller_class\":\"person_declared\",\"coverage_start\":\"2026-04\",\"derivation\":\"standard_history/3\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":0,\"of\":1,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":1,\"open\":0,\"split\":0,\"withdrawn\":0},\"of\":1},\"received\":{\"by_forum\":{\"auto\":0,\"external\":1,\"network\":1,\"of\":2,\"rail\":0},\"by_outcome\":{\"against\":1,\"for\":0,\"no_finding\":0,\"of\":2,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":2}},\"happened\":{\"no_record\":3,\"of\":11,\"receipt_only\":4,\"stamped_by_both\":4},\"holder_kind\":\"person\",\"in_window\":{\"counted\":11,\"not_counted\":2,\"of\":13},\"local_times\":{\"count\":2,\"of\":11},\"not_counted\":{\"no_witness_time\":1,\"of\":2,\"shop_preauth\":1},\"not_honoured\":{\"count\":1,\"of\":5},\"outcomes\":{\"did_not_hold\":5,\"held\":1,\"of\":11,\"undecided\":5},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"remedied\":{\"count\":1,\"of\":5},\"roles\":{\"bought\":4,\"of\":11,\"provided\":7},\"since\":\"2026-03\",\"unpriced\":{\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-11-27T03:12:00Z\",\"first_checkpoint_time\":\"2026-09-01T00:00:00Z\"},\"policy\":{\"digest\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"window\":{\"months\":3}}}},\"records\":[{\"capsule_id\":\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-11-27T03:12:30Z\"}]}",
+        "verify": {
+          "verdict": "VALID",
+          "bundle_digest": "3c8e38c7fd76f3da127854811f4371577e87a131ba058c95d17bd4dfc6f7c0f6",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "pass",
+            "witnesses": "pass"
+          },
+          "witness": {
+            "by": "Action State's witness",
+            "at": "2026-11-27T03:13:00Z"
+          }
+        }
+      }
+    },
+    "card-theirs-failed": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "name": "Alder Print Co."
+      },
+      "audience": {
+        "kind": "shared"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "machine": {
+        "file": "alder-history-card.json",
+        "text": "{\"disclosures\":{\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":null,\"did_not_hold\":0,\"held\":0,\"of\":1,\"undecided\":1},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":3,\"undecided\":2},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":1,\"held\":0,\"of\":2,\"undecided\":1}],\"class_missing\":{\"count\":1,\"of\":11},\"controller_class\":\"person_declared\",\"coverage_start\":\"2026-04\",\"derivation\":\"standard_history/3\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":0,\"of\":1,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":1,\"open\":0,\"split\":0,\"withdrawn\":0},\"of\":1},\"received\":{\"by_forum\":{\"auto\":0,\"external\":1,\"network\":1,\"of\":2,\"rail\":0},\"by_outcome\":{\"against\":1,\"for\":0,\"no_finding\":0,\"of\":2,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":2}},\"happened\":{\"no_record\":3,\"of\":11,\"receipt_only\":4,\"stamped_by_both\":4},\"holder_kind\":\"person\",\"in_window\":{\"counted\":11,\"not_counted\":2,\"of\":13},\"local_times\":{\"count\":2,\"of\":11},\"not_counted\":{\"no_witness_time\":1,\"of\":2,\"shop_preauth\":1},\"not_honoured\":{\"count\":1,\"of\":5},\"outcomes\":{\"did_not_hold\":5,\"held\":1,\"of\":11,\"undecided\":5},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"remedied\":{\"count\":1,\"of\":5},\"roles\":{\"bought\":4,\"of\":11,\"provided\":7},\"since\":\"2026-03\",\"unpriced\":{\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-11-27T03:12:00Z\",\"first_checkpoint_time\":\"2026-09-01T00:00:00Z\"},\"policy\":{\"digest\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"window\":{\"months\":3}}}},\"records\":[{\"capsule_id\":\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-11-27T03:12:30Z\"}]}",
+        "verify": {
+          "verdict": "INVALID",
+          "bundle_digest": "3c8e38c7fd76f3da127854811f4371577e87a131ba058c95d17bd4dfc6f7c0f6",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "fail",
+            "witnesses": "withheld"
+          }
+        }
+      }
+    },
+    "card-theirs-v1-unwitnessed": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "recipient",
+      "holder": {
+        "name": "Kestrel Print"
+      },
+      "audience": {
+        "kind": "shared"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "machine": {
+        "file": "kestrel.json",
+        "text": "{\"disclosures\":{\"64a309ac36862f845a90c611c424babbd7d94797b3faad9e64bced1606a79d6d\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":0,\"held\":1,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":0,\"held\":1,\"of\":1,\"undecided\":0}],\"class_missing\":{\"count\":1,\"of\":5},\"controller_class\":\"person_declared\",\"derivation\":\"standard_history/1\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":1,\"external\":0,\"network\":0,\"of\":2,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":2,\"open\":0,\"split\":1,\"withdrawn\":0},\"of\":2},\"received\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":1,\"of\":1,\"rail\":0},\"by_outcome\":{\"against\":0,\"for\":0,\"no_finding\":0,\"of\":1,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":1}},\"happened\":{\"no_record\":1,\"of\":5,\"receipt_only\":2,\"stamped_by_both\":2},\"holder_kind\":\"person\",\"in_window\":{\"counted\":5,\"not_counted\":2,\"of\":7},\"outcomes\":{\"did_not_hold\":1,\"held\":3,\"of\":5,\"undecided\":1},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"roles\":{\"bought\":2,\"of\":5,\"provided\":3},\"since\":\"2026-03\",\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-10-28T12:00:00Z\",\"first_checkpoint_time\":\"2026-03-04T09:00:00Z\"},\"policy\":{\"digest\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"window\":{\"months\":3}}}},\"records\":[{\"capsule_id\":\"64a309ac36862f845a90c611c424babbd7d94797b3faad9e64bced1606a79d6d\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-10-01T09:00:00Z\"}]}",
+        "verify": {
+          "verdict": "VALID",
+          "bundle_digest": "eeeb6f77c8ac07d178266b7a0f266562309c51d9613e772473a7d8945d219edc",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "pass",
+            "witnesses": "withheld"
+          }
+        }
+      }
+    },
+    "card-yours": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "owner",
+      "holder": {
+        "name": "Maya"
+      },
+      "audience": {
+        "kind": "private"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "machine": {
+        "file": "maya-history-card.json",
+        "text": "{\"disclosures\":{\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":null,\"did_not_hold\":0,\"held\":0,\"of\":1,\"undecided\":1},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":3,\"undecided\":2},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":1,\"held\":0,\"of\":2,\"undecided\":1}],\"class_missing\":{\"count\":1,\"of\":11},\"controller_class\":\"person_declared\",\"coverage_start\":\"2026-04\",\"derivation\":\"standard_history/3\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":0,\"of\":1,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":1,\"open\":0,\"split\":0,\"withdrawn\":0},\"of\":1},\"received\":{\"by_forum\":{\"auto\":0,\"external\":1,\"network\":1,\"of\":2,\"rail\":0},\"by_outcome\":{\"against\":1,\"for\":0,\"no_finding\":0,\"of\":2,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":2}},\"happened\":{\"no_record\":3,\"of\":11,\"receipt_only\":4,\"stamped_by_both\":4},\"holder_kind\":\"person\",\"in_window\":{\"counted\":11,\"not_counted\":2,\"of\":13},\"local_times\":{\"count\":2,\"of\":11},\"not_counted\":{\"no_witness_time\":1,\"of\":2,\"shop_preauth\":1},\"not_honoured\":{\"count\":1,\"of\":5},\"outcomes\":{\"did_not_hold\":5,\"held\":1,\"of\":11,\"undecided\":5},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"remedied\":{\"count\":1,\"of\":5},\"roles\":{\"bought\":4,\"of\":11,\"provided\":7},\"since\":\"2026-03\",\"unpriced\":{\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-11-27T03:12:00Z\",\"first_checkpoint_time\":\"2026-09-01T00:00:00Z\"},\"deals\":[{\"agreed_at\":\"2026-09-02T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"4500\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-301\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"agreed\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"status\":\"agreed\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"status\":\"not_reached\"}]},{\"agreed_at\":\"2026-09-05T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"12000\"},\"counterparty_class\":\"business_agent\",\"deal\":\"deal-302\",\"disputes\":[{\"forum\":\"rail\",\"outcome\":\"for\",\"side\":\"raised\"}],\"happened\":\"receipt_only\",\"role\":\"bought\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"agreed\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"status\":\"not_due\"}]},{\"agreed_at\":\"2026-09-10T10:00:00Z\",\"amount\":{\"assetCode\":\"EUR\",\"assetScale\":2,\"value\":\"999\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-303\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"role\":\"bought\",\"rows\":[{\"owed_by\":\"holder\",\"remedy\":\"none\",\"status\":\"agreed\",\"value\":\"not_met\"},{\"owed_by\":\"counterparty\",\"status\":\"agreed\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"status\":\"not_reached\"}]},{\"agreed_at\":\"2026-09-12T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"1850\"},\"deal\":\"deal-304\",\"disputes\":[],\"happened\":\"receipt_only\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"remedy\":\"due\",\"status\":\"ruled\",\"value\":\"not_met\"}]},{\"agreed_at\":\"2026-09-15T10:00:00Z\",\"amount\":{\"assetCode\":\"BTC\",\"assetScale\":11,\"value\":\"21000\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-305\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"remedy\":\"made\",\"status\":\"ruled\",\"value\":\"not_met\"},{\"owed_by\":\"holder\",\"remedy\":\"made\",\"status\":\"agreed\",\"value\":\"not_met\"},{\"owed_by\":\"counterparty\",\"status\":\"uncontested\",\"value\":\"met\"}]},{\"agreed_at\":\"2026-09-20T10:00:00Z\",\"counterparty_class\":\"person_agent\",\"deal\":\"deal-306\",\"disputes\":[],\"happened\":\"receipt_only\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"agreed\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"remedy\":\"none\",\"status\":\"uncontested\",\"value\":\"not_met\"},{\"owed_by\":\"counterparty\",\"remedy\":\"not_honoured\",\"status\":\"ruled\",\"value\":\"not_met\"}]},{\"agreed_at\":\"2026-09-25T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":0,\"value\":\"300\"},\"counterparty_class\":\"business_agent\",\"deal\":\"deal-307\",\"disputes\":[{\"forum\":\"network\",\"outcome\":\"open\",\"side\":\"received\"}],\"happened\":\"no_record\",\"role\":\"bought\",\"rows\":[{\"owed_by\":\"holder\",\"remedy\":\"none\",\"status\":\"agreed\",\"value\":\"not_met\"},{\"owed_by\":\"counterparty\",\"status\":\"in_dispute\"}]},{\"agreed_at\":\"2026-10-01T10:00:00Z\",\"amount\":{\"assetCode\":\"EUR\",\"assetScale\":2,\"value\":\"5000\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-308\",\"disputes\":[{\"forum\":\"external\",\"outcome\":\"against\",\"side\":\"received\"}],\"happened\":\"stamped_by_both\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"remedy\":\"not_honoured\",\"status\":\"ruled\",\"value\":\"not_met\"},{\"owed_by\":\"counterparty\",\"status\":\"no_statement\"}]},{\"agreed_at\":\"2026-10-05T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"0\"},\"counterparty_class\":\"business_agent\",\"deal\":\"deal-309\",\"disputes\":[],\"happened\":\"no_record\",\"role\":\"bought\",\"rows\":[{\"owed_by\":\"counterparty\",\"status\":\"waiting\",\"value\":\"not_met\"},{\"owed_by\":\"holder\",\"remedy\":\"none\",\"status\":\"agreed_so_far\",\"value\":\"not_met\"}]},{\"agreed_at\":\"2026-10-10T10:00:00Z\",\"counterparty_class\":\"person_agent\",\"deal\":\"deal-310\",\"disputes\":[],\"happened\":\"no_record\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"not_reached\"}]},{\"agreed_at\":\"2026-10-12T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"1000\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-311\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"left_out\":\"no_witness_time\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"agreed\",\"value\":\"met\"}]},{\"agreed_at\":\"2026-10-15T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"6000\"},\"counterparty_class\":\"shop_preauth\",\"deal\":\"deal-312\",\"disputes\":[{\"forum\":\"rail\",\"outcome\":\"open\",\"side\":\"received\"}],\"happened\":\"receipt_only\",\"left_out\":\"no_witness_time\",\"role\":\"bought\",\"rows\":[{\"owed_by\":\"counterparty\",\"status\":\"agreed\",\"value\":\"met\"}]},{\"agreed_at\":\"2026-06-01T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"4500\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-313\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"remedy\":\"none\",\"status\":\"agreed\",\"value\":\"not_met\"}]},{\"agreed_at\":\"2026-10-20T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"2500\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-314\",\"disputes\":[],\"happened\":\"receipt_only\",\"role\":\"provided\",\"rows\":[{\"owed_by\":\"holder\",\"status\":\"agreed_so_far\",\"value\":\"met\"},{\"owed_by\":\"counterparty\",\"status\":\"uncontested\",\"value\":\"met\"}]}],\"policy\":{\"digest\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"window\":{\"months\":3}}}},\"records\":[{\"capsule_id\":\"e74f1afbc79d34aa06b9a3532c40e8e03cdac97a8afc16173bb36c4dfa9152d0\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-11-27T03:12:30Z\"}]}",
+        "verify": {
+          "verdict": "VALID",
+          "bundle_digest": "72919d1868458ad9d5d26a120260b9a33484fd625abc122114bcf045ce823698",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "pass",
+            "witnesses": "pass"
+          },
+          "witness": {
+            "by": "Action State's witness",
+            "at": "2026-11-27T03:13:00Z"
+          }
+        }
+      },
+      "deals": {
+        "deal-301": {
+          "item": "200 conference badges, delivered by Friday",
+          "amount": {
+            "value": "1000000",
+            "assetCode": "BTC",
+            "assetScale": 11
+          },
+          "recorded": {
+            "state": "passed",
+            "at": "2026-11-27T03:12:00Z"
+          },
+          "time_stamped": {
+            "state": "passed",
+            "by": "Action State's witness",
+            "at": "2026-11-27T03:13:00Z"
+          },
+          "countersigned": {
+            "state": "not_checked"
+          },
+          "receipt": "maya-receipt-deal-301.html"
+        },
+        "deal-304": {
+          "item": "Logo stickers",
+          "recorded": {
+            "state": "passed",
+            "at": "2026-11-27T03:12:00Z",
+            "through": {
+              "k": 3,
+              "n": 5
+            }
+          },
+          "time_stamped": {
+            "state": "none"
+          }
+        },
+        "deal-307": {
+          "recorded": {
+            "state": "none"
+          },
+          "time_stamped": {
+            "state": "failed"
+          },
+          "countersigned": {
+            "state": "passed",
+            "by": "Ledger Notary",
+            "at": "2026-11-20T10:00:00Z"
+          }
+        }
+      }
+    },
+    "card-yours-empty": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "owner",
+      "holder": {
+        "name": "Maya"
+      },
+      "audience": {
+        "kind": "private"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "machine": {
+        "file": "maya-history-card.json",
+        "text": "{\"disclosures\":{\"888c1fdf43f33dcc1494f416d794bb9392853df2f5619926cc9b4152cd721ec8\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":null,\"did_not_hold\":0,\"held\":0,\"of\":1,\"undecided\":1},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":1,\"held\":0,\"of\":3,\"undecided\":2},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":1,\"held\":0,\"of\":2,\"undecided\":1}],\"class_missing\":{\"count\":1,\"of\":11},\"controller_class\":\"person_declared\",\"coverage_start\":\"2026-04\",\"derivation\":\"standard_history/3\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":0,\"of\":1,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":1,\"open\":0,\"split\":0,\"withdrawn\":0},\"of\":1},\"received\":{\"by_forum\":{\"auto\":0,\"external\":1,\"network\":1,\"of\":2,\"rail\":0},\"by_outcome\":{\"against\":1,\"for\":0,\"no_finding\":0,\"of\":2,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":2}},\"happened\":{\"no_record\":3,\"of\":11,\"receipt_only\":4,\"stamped_by_both\":4},\"holder_kind\":\"person\",\"in_window\":{\"counted\":11,\"not_counted\":2,\"of\":13},\"local_times\":{\"count\":2,\"of\":11},\"not_counted\":{\"no_witness_time\":1,\"of\":2,\"shop_preauth\":1},\"not_honoured\":{\"count\":1,\"of\":5},\"outcomes\":{\"did_not_hold\":0,\"held\":0,\"of\":0,\"undecided\":0},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"remedied\":{\"count\":1,\"of\":5},\"roles\":{\"bought\":4,\"of\":11,\"provided\":7},\"since\":\"2026-03\",\"unpriced\":{\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-11-27T03:12:00Z\",\"first_checkpoint_time\":\"2026-09-01T00:00:00Z\"},\"deals\":[],\"policy\":{}}},\"records\":[{\"capsule_id\":\"888c1fdf43f33dcc1494f416d794bb9392853df2f5619926cc9b4152cd721ec8\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-11-27T03:12:30Z\"}]}",
+        "verify": {
+          "verdict": "VALID",
+          "bundle_digest": "89c3fc036a8f5eee38178def96bdb43eb0a65beede9ce4efe134840b53f76adf",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "pass",
+            "witnesses": "withheld"
+          }
+        }
+      }
+    },
+    "card-yours-v1": {
+      "view": "history-view/v0",
+      "kind": "deal",
+      "surface": "neutral",
+      "reader": "owner",
+      "holder": {
+        "name": "Rowan"
+      },
+      "audience": {
+        "kind": "private"
+      },
+      "built_at": "2026-11-27T03:15:00Z",
+      "checked": {
+        "where": "builder",
+        "by": "capsulectl verify, on the card this page carries"
+      },
+      "rows": [],
+      "checks": [],
+      "machine": {
+        "file": "rowan-card.json",
+        "text": "{\"disclosures\":{\"64a309ac36862f845a90c611c424babbd7d94797b3faad9e64bced1606a79d6d\":{\"agent_input\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"bands\":[{\"currency\":\"BTC\",\"decade\":-7,\"did_not_hold\":0,\"held\":1,\"of\":1,\"undecided\":0},{\"currency\":\"EUR\",\"decade\":0,\"did_not_hold\":1,\"held\":0,\"of\":1,\"undecided\":0},{\"currency\":\"USD\",\"decade\":1,\"did_not_hold\":0,\"held\":1,\"of\":2,\"undecided\":1},{\"currency\":\"USD\",\"decade\":2,\"did_not_hold\":0,\"held\":1,\"of\":1,\"undecided\":0}],\"class_missing\":{\"count\":1,\"of\":5},\"controller_class\":\"person_declared\",\"derivation\":\"standard_history/1\",\"disputes\":{\"raised\":{\"by_forum\":{\"auto\":1,\"external\":0,\"network\":0,\"of\":2,\"rail\":1},\"by_outcome\":{\"against\":0,\"for\":1,\"no_finding\":0,\"of\":2,\"open\":0,\"split\":1,\"withdrawn\":0},\"of\":2},\"received\":{\"by_forum\":{\"auto\":0,\"external\":0,\"network\":1,\"of\":1,\"rail\":0},\"by_outcome\":{\"against\":0,\"for\":0,\"no_finding\":0,\"of\":1,\"open\":1,\"split\":0,\"withdrawn\":0},\"of\":1}},\"happened\":{\"no_record\":1,\"of\":5,\"receipt_only\":2,\"stamped_by_both\":2},\"holder_kind\":\"person\",\"in_window\":{\"counted\":5,\"not_counted\":2,\"of\":7},\"outcomes\":{\"did_not_hold\":1,\"held\":3,\"of\":5,\"undecided\":1},\"policy\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"roles\":{\"bought\":2,\"of\":5,\"provided\":3},\"since\":\"2026-03\",\"window\":{\"months\":3}}}},\"extensions\":{\"x-standard-history/v0\":{\"as_of\":{\"anchor\":\"0a3a88faf7a2294fa5590ee30ffeaf35182fd22e945cdc2431170de610cb2212\",\"anchor_time\":\"2026-10-28T12:00:00Z\",\"first_checkpoint_time\":\"2026-03-04T09:00:00Z\"},\"deals\":[{\"agreed_at\":\"2026-09-02T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"4500\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-01\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"outcome\":\"held\",\"role\":\"provided\"},{\"agreed_at\":\"2026-08-15T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"12000\"},\"counterparty_class\":\"business_agent\",\"deal\":\"deal-02\",\"disputes\":[{\"forum\":\"rail\",\"outcome\":\"for\",\"side\":\"raised\"}],\"happened\":\"receipt_only\",\"outcome\":\"held\",\"role\":\"bought\"},{\"agreed_at\":\"2026-10-20T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"1850\"},\"deal\":\"deal-03\",\"disputes\":[{\"forum\":\"network\",\"outcome\":\"open\",\"side\":\"received\"}],\"happened\":\"no_record\",\"outcome\":\"undecided\",\"role\":\"provided\"},{\"agreed_at\":\"2026-07-28T12:00:00Z\",\"amount\":{\"assetCode\":\"EUR\",\"assetScale\":2,\"value\":\"999\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-04\",\"disputes\":[{\"forum\":\"auto\",\"outcome\":\"split\",\"side\":\"raised\"}],\"happened\":\"stamped_by_both\",\"outcome\":\"did_not_hold\",\"role\":\"bought\"},{\"agreed_at\":\"2026-09-10T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"6000\"},\"counterparty_class\":\"shop_preauth\",\"deal\":\"deal-05\",\"disputes\":[{\"forum\":\"rail\",\"outcome\":\"open\",\"side\":\"received\"}],\"happened\":\"receipt_only\",\"outcome\":\"held\",\"role\":\"bought\"},{\"agreed_at\":\"2026-10-01T10:00:00Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":2,\"value\":\"500\"},\"counterparty_class\":\"shop_preauth\",\"deal\":\"deal-06\",\"disputes\":[],\"happened\":\"receipt_only\",\"outcome\":\"held\",\"role\":\"bought\"},{\"agreed_at\":\"2026-07-28T11:59:59Z\",\"amount\":{\"assetCode\":\"USD\",\"assetScale\":0,\"value\":\"300\"},\"counterparty_class\":\"person_agent\",\"deal\":\"deal-07\",\"disputes\":[],\"happened\":\"stamped_by_both\",\"outcome\":\"held\",\"role\":\"provided\"},{\"agreed_at\":\"2026-10-27T10:00:00Z\",\"amount\":{\"assetCode\":\"BTC\",\"assetScale\":11,\"value\":\"21000\"},\"counterparty_class\":\"business_agent\",\"deal\":\"deal-08\",\"disputes\":[],\"happened\":\"receipt_only\",\"outcome\":\"held\",\"role\":\"provided\"}],\"policy\":{\"digest\":\"2cc796d2069a0ced9a272cb5b15a05d6bef97a4f7599aad5124b1ae88ba770ec\",\"window\":{\"months\":3}}}},\"records\":[{\"capsule_id\":\"64a309ac36862f845a90c611c424babbd7d94797b3faad9e64bced1606a79d6d\",\"key_id\":\"5b0d2c1f0a9e8d7c6b5a49382716051f4e3d2c1b0a99887766554433221100ff\",\"timestamp\":\"2026-10-01T09:00:00Z\"}]}",
+        "verify": {
+          "verdict": "VALID",
+          "bundle_digest": "26c9b9e5c0a6508e1895efa290cd52672cd9f3aad68e11c450d991cced8299df",
+          "checks": {
+            "producer_signatures": "pass",
+            "interval_coverage": "pass",
+            "graph_closure": "pass",
+            "per_record_membership": "pass",
+            "checkpoint": "pass",
+            "witnesses": "fail"
+          }
+        }
+      }
     }
   }
 }

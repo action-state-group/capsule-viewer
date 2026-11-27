@@ -359,9 +359,11 @@ light palette.
 **Serialization.** TypeScript, Go and the browser write the same bytes
 because the HTML is serialized by the HTML fragment serialization rules,
 written out in the view itself: in text, escape `&`, `<`, `>` and U+00A0.
-Caller text never goes in an attribute (attributes hold only the view's own
-tokens, and a test checks that), so attribute escaping cannot differ between
-engines. Go writes it with its own serializer, never `html/template`, whose
+Caller text never goes in an attribute, except a card page's
+validated values (section 11: a plain `.json` or `.html` file name, an
+RFC 3339 time, a percent-encoded download): an attribute value may hold no
+`<`, `>`, `"` or U+00A0, and its `&` is written `&amp;`, so attribute
+escaping cannot differ between engines. Go writes it with its own serializer, never `html/template`, whose
 `&#39;` and `&#34;` differ. The layout follows [203]: one column under 900px,
 two above, and print; the first screen shows the header and the hero.
 
@@ -427,3 +429,125 @@ None touches the Devcon S08 image (capsules 0.1.10).
   off-state lines in section 5 are new copy for Sherlock2.
 - The look follows the Muse History card ([207] mock). If review changes
   that, Steven sees it before the build.
+
+## 11. The card page (capsule-viewer#384)
+
+Status: built for #384 (Steven, 2026-11-25: one History view, yours and
+their card by perspective, machine and .html forms; RECORDED means
+checkpointed), with Sherlock2's answers on the open points
+(buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=92cd3346f2982f3630699fd0c56e98ff4ff54a773b4dc478fd0b80a1b4b14fbe&thread=0614ef5a39648aaf8b77d64801310f234657fdefc5c6f90c20c9e6016c04d0a8
+and her correction on the seller's name,
+buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=1623c8d3ad4192d9736caae6bc470fd910460714e9375f634ec1294ec0e8573d&thread=0614ef5a39648aaf8b77d64801310f234657fdefc5c6f90c20c9e6016c04d0a8).
+
+**One object, two forms.** A deal page that carries `machine` is a card
+page, drawn from the signed object itself, in the x-deal-v1 receipt's look
+(#382): header and tags, a plain top line, the stamp row, "Is this record
+intact?", "Check it yourself", "What this does not prove", and the footer.
+The machine form is that object: the page offers its exact bytes as the
+download ("Download card") and the `capsulectl verify --bundle <file>` line
+with the answer to expect. The .html form adds nothing the object or the
+holder's own book does not carry.
+
+```json
+{
+  "view": "history-view/v0", "kind": "deal", "surface": "neutral",
+  "reader": "owner", "holder": {"name": "Maya"}, "audience": {"kind": "private"},
+  "built_at": "2026-11-27T03:15:00Z",
+  "checked": {"where": "builder", "by": "capsulectl verify"},
+  "rows": [], "checks": [],
+  "machine": {
+    "file": "maya-history-card.json",
+    "text": "<the card bundle's canonical JSON>",
+    "verify": {
+      "verdict": "VALID", "bundle_digest": "<64 hex>",
+      "checks": {"producer_signatures": "pass", "interval_coverage": "pass",
+                 "graph_closure": "pass", "per_record_membership": "pass",
+                 "checkpoint": "pass", "witnesses": "pass"},
+      "witness": {"by": "Action State's witness", "at": "2026-11-27T03:13:00Z"}
+    }
+  },
+  "deals": {
+    "deal-301": {
+      "item": "200 conference badges",
+      "amount": {"value": "1000000", "assetCode": "BTC", "assetScale": 11},
+      "recorded": {"state": "passed", "at": "2026-11-27T03:12:00Z"},
+      "time_stamped": {"state": "passed", "by": "Action State's witness", "at": "2026-11-27T03:13:00Z"},
+      "countersigned": {"state": "not_checked"},
+      "receipt": "maya-receipt-deal-301.html"
+    }
+  },
+  "sample": 0
+}
+```
+
+- `machine.text` is the card bundle as capsulectl wrote it, in canonical JSON
+  (RFC 8785). `verify` is capsulectl verify's own answer on that bundle. The
+  view takes the SHA-256 of `text` and refuses the page unless it is
+  `verify.bundle_digest`, so one bundle's answer is never drawn beside another
+  bundle. The view verifies no signature.
+- The counts are the card's own `outcomes` tally (and `not_counted`'s
+  `no_witness_time`, "waiting for a time-stamp"), never computed by the view,
+  so whatever the card counts (shop_preauth purchases included, #372) is what
+  the page says, in the words the demo's chat uses ("24 deals, 0 didn't go as
+  agreed, 2 not final yet", "every one went as agreed"; Steven's words,
+  evidencebook-skills#272 item 4), with "As <name> reported." under them.
+- **Your History** (`reader: owner`, `audience: private`): the holder's own
+  copy, whose `x-standard-history/v0` block carries the deal entries (AAC SH
+  §5.2, §11.2). One row per entry, newest first: bought or sold, the item, the
+  row's top line from its term results (the receipt's words where the meaning
+  is the same), the amount, when it was agreed, each side's term result, "Their
+  signed agreement is in your records." when the entry's `happened` is
+  `stamped_by_both`, the stamp row and a link to that deal's receipt page.
+- **Their History** (`reader: recipient`, `audience: shared`): the card the
+  holder sent, counts only, no rows, no stamps and no seal (Steven's Q3 ruling:
+  a sent card is counts only). An object carrying deal entries is refused on
+  this page, so a counts-only page can never embed or offer private entries.
+- `deals` (Your History only) adds, per entry id, what the entry does not carry
+  and the holder's own book does: the agreement's `terms.item`, its agreed
+  amount (the /3 entry's amount is its value band's floor, said as "from … (its
+  value band)" when no amount is given), the stamp slots and the receipt page's
+  file name. An id that is not an entry of the object is refused. The other
+  side's name is not drawn: no sealed record holds it yet (evidencebook#1031),
+  and a key id is never shown as a name.
+- `sample` is how many of the card's deals are sample history the operator
+  made, said once.
+
+**A row's top line and seal.** A deal entry carries no settlement facts, so a
+row says only what its term results support: "Ruled: your side's term not met"
+(with its remedy), "In dispute before the adjudicator", "The two sides'
+statements differ", "Not met: …" for a term both sides or one uncontested side
+say was not met, "Went as agreed: both sides say every term was met", "Nothing
+is due yet", "No term has come due", else "Not final yet"; a /1 or /2 entry's
+outcome otherwise. The harbour seal ("Didn't go as agreed", the receipt's own
+shapes, decorative and said in words) shows only on a row with a final not-met
+ruling, as the receipt draws it; the Done seal needs the settle record, which a
+History row does not have, so a History never draws it.
+
+**Stamps.** RECORDED means checkpointed: it fills only from the row's
+`recorded` slot (a checkpoint that covers the deal's last step verified;
+"Checkpointed through step k of n" when it covers part). TIME-STAMPED fills
+from the `time_stamped` slot (the witness and its time). COUNTERSIGNED fills
+only from a countersignature checked on that deal's bundle; the other side's
+half of the deal is said in words, never as COUNTERSIGNED. Every slot that is
+absent reads "Not checked here". On the legacy deal page the `deal_report`
+check no longer fills RECORDED either: it says each deal was read with its own
+report, not that a checkpoint covers it.
+
+**Times.** The static page (TypeScript or Go) draws every time in UTC and says
+"Times are in UTC."; `renderHistoryView` rewrites each `time[data-time]` into
+the reader's zone and says "Times are in your time zone." (pass
+`{localTime: false}` to keep UTC). Pages without card times are unchanged.
+
+**Layout order** (#448): the top line, then the rows' facts, then the proof
+and the caveats ("What this does not prove"), then "Technical details" (the
+card token, the signing key, the fingerprint and the deal ids), collapsed.
+
+**Tests.** `vectors/history-view/make_cards.py` writes the card vectors (small
+synthetic bundles; the cards and entries are AAC's /3 vector
+`outcomes-from-rows` and the real /1 fixture `person-own`) and
+`fill_card_reasons.mjs` their refusal reasons; both twins are held to the
+goldens and reasons. `ts/test/history-view-card.test.ts` takes real
+capsulectl bundles with their real verify output, a changed bundle, the
+download's bytes, caller text in markup, the reader's zone, and the seal and
+words shared with the receipt.
+
