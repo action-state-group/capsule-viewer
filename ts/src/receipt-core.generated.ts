@@ -5550,6 +5550,17 @@ const root = {};
     providerUtc: providerUtc,
     plainTime: plainTime,
     localTimes: localTimes,
+    // How the model reads one report entry or the legs, so the source test (js-tests/receipt_v0_sources.test.js)
+    // rebuilds a value from the entry its source names and compares the whole of it.
+    entryReaders: {
+      item: function (e, stepsKey) { return items([e], stepsKey)[0] || null; },
+      told: function (e) { return told(map(e)); },
+      deadline: function (e) { return deadline(map(e)); },
+      merchant: function (e) { return merchant(map(e)); },
+      journey: function (e) { return journeyOf([e])[0] || null; },
+      authorityBlocks: function (list) { var a = authorityOf({ authority: list }); return a === null ? [] : a.blocks; },
+      legBand: function (settlements) { return legBand(settlements.map(function (s) { return { settlement: map(s) }; })); },
+    },
     // The anti-hardcode test's formatters and derivations (capsule-viewer#488), unit-tested there.
     FORMATS: FORMATS,
     DERIVATIONS: DERIVATIONS,
@@ -5604,7 +5615,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "02ec33b8767085a0deadf4877b854a63844db6fb270dc0095377ab77d2c28168",
+      "script_sha256": "4d315d949f771c569d0483c92571d422b0ab2e1641c2fa0eb0c242d77970a488",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5651,7 +5662,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "a2499702292db245d46a37f0e4d933f64703d9a3fb785e8c49669acf3f611a8a",
+      "script_sha256": "588ceeabc53b3a0abc17a80d8a232bae0eaf36c6e25ad79394b46db5f4c1d7a0",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5697,7 +5708,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "674772932d8ad65d330ed2a3ac50fd60720432228ada7dcc8b1a96cda704b8c0",
+      "script_sha256": "23b3622df699c29d93fc396b1f1d420c8759395459715101e9813465c5fce432",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5745,7 +5756,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "4cabe6a330761571763cbf2ec9b870003abb3e23017df7b9e9301f718fd6f6ae",
+      "script_sha256": "d18fcf0adb50baea2ac27b97351c76ec7f85434599ad59d8c583867e37e22d99",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5787,7 +5798,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "7b6787acb2f6daa32c5e11b0b628dbd9ee701cd5f31c787d99fe450d07499add",
+      "script_sha256": "5afc8028f4fa2855428b1f56591896924343715c6aa44d0bb3f6767ad7bd4013",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

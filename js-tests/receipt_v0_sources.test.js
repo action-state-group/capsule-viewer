@@ -85,17 +85,9 @@ const DERIVED = (api) => ({
   amount: (value, got) => value === api.formatAmount(got[0], got[1]),
   count: (value, got) => Array.isArray(got[0]) && value === String(got[0].length),
   join: (value, got) => Array.isArray(got[0]) && value === got[0].map(String).join(", "),
-  // receipt_core.js told(): text, at and authority text, joined.
-  told: (value, got) => isObj(got[0]) && value.text === [got[0].text, got[0].at, got[0].authority_text].filter((x) => typeof x === "string" && x).join(" · ") && sameList(value.steps, strs(got[0].steps)),
-  // receipt_core.js deadline().
-  deadline: (value, got) => {
-    const d = got[0];
-    if (!isObj(d)) return false;
-    const s = (k) => (typeof d[k] === "string" ? d[k] : null);
-    const when = s("cancel_by") || s("due_by") || "";
-    const marking = s("marking") || s("status") || "";
-    return value.text === `${when} · ${marking}: ${s("text") || ""}. ${s("holds") || ""}`.trim();
-  },
+  // The whole told line and deadline, rebuilt from the entry (the core's own reader).
+  told: (value, got) => isObj(got[0]) && sameValue(value, api.entryReaders.told(got[0])),
+  deadline: (value, got) => isObj(got[0]) && sameValue(value, api.entryReaders.deadline(got[0])),
   producer: (value, got) => Array.isArray(value) && value.every((p) => p === null || got.some((g) => isObj(g) && typeof g.version === "string" && p === `${g.name || "an unnamed producer"} ${g.version} (${g.commit || "unknown"})`)),
   producer_name: (value, got) => Array.isArray(value) && value.every((n) => n === null || got.some((g) => isObj(g) && g.name === n)),
   payload_digest: (value, got) => value === api.recordDigest(got[0]),
@@ -125,33 +117,62 @@ const DERIVED = (api) => ({
       return isObj(p) && [p["x-deal-v0"]?.deal_id, p.deal_id, p.chain_id].includes(value);
     })),
   rail: (value, got) => value.state === "missing" && value.rail === got[0],
-  // The legs' summed amounts: a band, its currency the legs' asset (legBand).
-  legs: (value, got) => got.length > 0 && got.every((g) => isObj(g) && g.status === "settled") && (value.band === null || typeof value.band.currency === "string"),
-  // The act the page found unapproved or approved is the record named; with no act, nothing is named.
+  // The legs' summed amounts (legBand), rebuilt from the settlements named.
+  legs: (value, got) => got.length > 0 && got.every((g) => isObj(g) && g.status === "settled") && sameValue(value.band, api.entryReaders.legBand(got)),
+  // The act the page's own check names is the record named and its action that record's. The line's
+  // state, why and approvers are that check's result over the copy's whole deal log (afterYesOf), held
+  // case by case in js-tests/receipt_deal_view_lines.test.js, not a value read from one member.
   after_yes: (value, got, from) => (value.act ? from[0].record === value.act.step && got[0] === value.act.action : value.act === undefined && "bundle" in from[0]),
-  // Each accepted text is an acceptance opening the report holds for that step; the name is one a
-  // counterparty opening holds.
+  // Each accepted text is an acceptance opening the report holds for that step. The name is the label
+  // counterpartyOf builds from the openings' last value of each kind, when every one recomputed
+  // (unchecked false); when one did not, the page dropped it after its own fingerprint check.
   counterparty_openings: (value, got) =>
     value.accepted.every((a) => a.text === null || (Array.isArray(got[1]) && got[1].some((o) => o?.step === a.step && o?.text === a.text))) &&
-    (value.who === null || (isObj(got[0]) && (got[0].steps || []).some((e) => Object.values(e || {}).some((x) => typeof x === "string" && value.who.includes(x))))),
+    (value.who === null || value.unchecked || value.who === counterpartyLabel(got[0])),
 });
 
-/** An object-valued member against the report entry its source names: the same text, steps or id. */
-function sameEntry(value, got) {
-  // The sealed AUTHORITY blocks (authorityOf): each block's action, in order.
-  if ("blocks" in value) return Array.isArray(got) && sameList(value.blocks.map((b) => b.action), got.filter(isObj).map((b) => (typeof b.action === "string" ? b.action : "")));
+/** Two values the same, a model's own `src`/`sources` left out. */
+function sameValue(a, b) {
+  const strip = (v) => JSON.parse(JSON.stringify(v ?? null), (k, x) => (isObj(x) ? (delete x.src, delete x.sources, x) : x));
+  return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
+}
+
+/** counterpartyOf's label, from each kind's last value in the counterparty openings. */
+function counterpartyLabel(openings) {
+  const got = {};
+  for (const e of (isObj(openings) && Array.isArray(openings.steps) ? openings.steps : [])) {
+    for (const k of ["payee", "name", "domain", "phone", "email"]) if (typeof e?.[k] === "string") got[k] = e[k];
+  }
+  const label = got.payee || got.name || got.domain || got.phone || got.email || null;
+  return label !== null && got.domain && label !== got.domain ? `${label} (${got.domain})` : label;
+}
+
+/**
+ * An object-valued member against the report entry its source names, rebuilt
+ * whole by the core's own reader for that kind of entry (api.entryReaders).
+ */
+export function sameEntry(value, got, api) {
+  // The sealed AUTHORITY blocks, rebuilt by the core's reader (authorityOf).
+  if ("blocks" in value) return Array.isArray(got) && sameValue(value.blocks, api.entryReaders.authorityBlocks(got));
   if (!isObj(got)) return false;
   // A join of the composition, with its corroboration: the verifier's join entry.
-  if ("join" in value && "corroboration" in value) return value.join.basis === got.basis && value.join.result === got.result && sameList(value.join.members, got.members);
-  if ("text" in value && "flagged" in value) {
-    const steps = strs(got.steps ?? got.capsule_id);
-    return (value.text === got.text || (value.text === "" && got.text === undefined)) && sameList(value.steps, got.capsule_id !== undefined && !got.steps ? strs([got.capsule_id].flat()) : steps);
+  if ("join" in value && "corroboration" in value) {
+    const text = (v) => (typeof v === "string" ? v : "");
+    return value.join.basis === text(got.basis) && value.join.result === text(got.result) && value.join.declared === text(got.declared) && value.join.derived === (typeof got.derived === "string" ? got.derived : null) && sameList(value.join.members, strs(got.members).concat(["", ""]).slice(0, 2));
   }
-  if ("order_id" in value) return value.order_id === (typeof got.order_id === "string" ? got.order_id : null);
-  if ("proven" in value) return sameList(value.proven, strs(got.proven)) && sameList(value.not_proven, strs(got.not_proven));
-  if ("by" in value && "facts" in value) return value.by === (typeof got.by === "string" ? got.by : "") && value.step === (typeof got.step === "string" ? got.step : null);
+  const r = api.entryReaders;
+  // A did, later or anomaly item (an anomaly is always flagged, its text "" when the entry has none).
+  if ("text" in value && "flagged" in value) {
+    if (value.flagged && value.at === null) return sameValue(value, { text: typeof got.text === "string" ? got.text : "", steps: strs(got.steps), at: null, flagged: true });
+    return sameValue(value, r.item(got, "steps")) || sameValue(value, r.item(got, "capsule_id"));
+  }
+  if ("order_id" in value) return sameValue(value, r.merchant(got));
+  if ("proven" in value) return sameValue(value, { proven: strs(got.proven), not_proven: strs(got.not_proven), confirmed: got.merchant === "confirmed", steps: strs(got.steps) });
+  if ("by" in value && "facts" in value) return sameValue(value, r.journey(got));
   return false;
 }
+
+export const DERIVED_FOR_TEST = (api) => DERIVED(api);
 
 /** Every problem with the sources in `model`: unresolved, disagreeing or of no known kind. */
 export function sourceProblems(api, model, ins) {
@@ -186,7 +207,7 @@ export function sourceProblems(api, model, ins) {
     } else if (Array.isArray(value)) {
       if (!sameList(value, strs(got))) problems.push(`${where}: list differs`);
     } else if (isObj(value)) {
-      if (!sameEntry(value, got)) problems.push(`${where}: ${JSON.stringify(value).slice(0, 120)} is not the entry its source names`);
+      if (!sameEntry(value, got, api)) problems.push(`${where}: ${JSON.stringify(value).slice(0, 120)} is not the entry its source names`);
     } else if (value !== got && tokenText(got) !== value) problems.push(`${where}: ${JSON.stringify(value)} is not ${JSON.stringify(got)}`);
   };
   const walk = (node, where, scope) => {
@@ -422,5 +443,44 @@ describe("the v0 and provider receipt models name each value's source (view-mode
     expect(sourceProblems(m.api, m.model, m.ins)).toEqual([]);
     const at = m.model.sources.commitments.from.filter((f) => f.record === id).map((f) => f.path);
     expect(at).toEqual(expect.arrayContaining(["/agent_input/body/x.y_commitment", "/agent_input/body/x/y_commitment"]));
+  });
+
+  it("fails when a displayed field of a report entry is not the entry's (merchant, journey, deadline, authority)", async () => {
+    const picks = [
+      ["merchant", (r) => r.report.merchant.length, (r) => (r.report.merchant[0].we_say += " (edited)"), /report\.merchant\[0\]\.src: .* is not the entry/],
+      ["journey", (r) => r.report.journey.some((j) => j.facts.length), (r) => (r.report.journey.find((j) => j.facts.length).facts[0][1] += " (edited)"), /report\.journey\[\d+\]\.src: .* is not the entry/],
+      ["deadline", (r) => r.report.deadlines.length, (r) => (r.report.deadlines[0].flagged = !r.report.deadlines[0].flagged), /report\.deadlines\[0\]\.src: .* is not deadline/],
+      ["authority", (r) => r.authority_sealed?.blocks.length, (r) => (r.authority_sealed.blocks[0].covered = !r.authority_sealed.blocks[0].covered), /authority_sealed: .* is not the entry/],
+    ];
+    const found = [];
+    for await (const m of models()) {
+      const r = m.model.receipt || (m.kind === "unilateral" ? m.model : null);
+      if (!r) continue;
+      for (const [name, has, edit, fails] of picks) {
+        if (found.includes(name) || !has(r)) continue;
+        const edited = structuredClone(m.model);
+        edit(edited.receipt || edited);
+        expect(problemsOf(m, edited), name).toMatch(fails);
+        found.push(name);
+      }
+    }
+    // The fixtures carry journeys and authority blocks; no fixture's report has a merchant or deadline entry.
+    expect(found.sort()).toEqual(["authority", "journey"]);
+    const api = loaded.unilateral.api;
+    const merchantEntry = { order_id: "o-1", verified: true, merchant_says: "shipped", we_say: "received", items: ["a", "b"], steps: ["s1"] };
+    const merchant = api.entryReaders.merchant(merchantEntry);
+    expect(sameEntry(merchant, merchantEntry, api)).toBe(true);
+    expect(sameEntry({ ...merchant, merchant_says: "edited" }, merchantEntry, api)).toBe(false);
+    expect(sameEntry({ ...merchant, rows: [] }, merchantEntry, api)).toBe(false);
+    const deadlineEntry = { due_by: "2026-12-01", status: "open", text: "return", holds: "the seller" };
+    const due = api.entryReaders.deadline(deadlineEntry);
+    expect(DERIVED_FOR_TEST(api).deadline(due, [deadlineEntry])).toBe(true);
+    expect(DERIVED_FOR_TEST(api).deadline({ ...due, flagged: false }, [deadlineEntry])).toBe(false);
+    // The legs' band is rebuilt by legBand: a wrong one fails.
+    const derived = DERIVED_FOR_TEST(loaded.unilateral.api);
+    const leg = { status: "settled", received: { value: "1000", assetCode: "BTC", assetScale: 11 } };
+    const band = loaded.unilateral.api.entryReaders.legBand([leg]);
+    expect(derived.legs({ band }, [leg])).toBe(true);
+    expect(derived.legs({ band: { currency: "wrong", decade: 99 } }, [leg])).toBe(false);
   });
 });

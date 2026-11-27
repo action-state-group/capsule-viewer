@@ -5546,6 +5546,17 @@
     providerUtc: providerUtc,
     plainTime: plainTime,
     localTimes: localTimes,
+    // How the model reads one report entry or the legs, so the source test (js-tests/receipt_v0_sources.test.js)
+    // rebuilds a value from the entry its source names and compares the whole of it.
+    entryReaders: {
+      item: function (e, stepsKey) { return items([e], stepsKey)[0] || null; },
+      told: function (e) { return told(map(e)); },
+      deadline: function (e) { return deadline(map(e)); },
+      merchant: function (e) { return merchant(map(e)); },
+      journey: function (e) { return journeyOf([e])[0] || null; },
+      authorityBlocks: function (list) { var a = authorityOf({ authority: list }); return a === null ? [] : a.blocks; },
+      legBand: function (settlements) { return legBand(settlements.map(function (s) { return { settlement: map(s) }; })); },
+    },
     // The anti-hardcode test's formatters and derivations (capsule-viewer#488), unit-tested there.
     FORMATS: FORMATS,
     DERIVATIONS: DERIVATIONS,
