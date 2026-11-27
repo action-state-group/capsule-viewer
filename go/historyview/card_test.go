@@ -172,6 +172,14 @@ func TestCardSignedNoteAndLedeFollowTheChecks(t *testing.T) {
 		html, err := Render(m, nil)
 		require.NoError(t, err)
 		assert.Contains(t, html, `data-signature="`+status+`">`+textEscaper.Replace(base[key])+`</p>`, status)
+		// "Signed by" only when the signature check passed; otherwise the claimed signer.
+		if status == "pass" {
+			assert.Contains(t, html, "<p>Signed by you, key ", status)
+			assert.NotContains(t, html, "names its signer", status)
+		} else {
+			assert.Contains(t, html, "<p>This card names its signer as you, key ", status)
+			assert.NotContains(t, html, "<p>Signed by", status)
+		}
 	}
 	m := cardYours(t)
 	v := m["machine"].(map[string]any)["verify"].(map[string]any)

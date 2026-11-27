@@ -279,6 +279,7 @@
     "card.stamp.time_stamped.partial": "Time-stamped through step {k} of {n}",
     "card.stamp.countersigned.partial": "Countersigned through step {k} of {n}",
     "card.signed.failed": "capsulectl verify reported that this card's signature didn't verify.",
-    "card.signed.unchecked": "capsulectl verify reported no signature check for this card."
+    "card.signed.unchecked": "capsulectl verify reported no signature check for this card.",
+    "card.signed.claimed": "This card names its signer as {name}, key {key}"
   }
 }

@@ -760,7 +760,8 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 				parts := make([]string, 0, len(byHolder))
 				for _, x := range byHolder {
 					statusKey := "card.status." + x.status
-					if _, ok := base[statusKey+".not_met"]; ok && x.value == "not_met" {
+					// "ruled" keeps its status word plus its own suffix below.
+					if _, ok := base[statusKey+".not_met"]; ok && x.value == "not_met" && x.status != "ruled" {
 						statusKey += ".not_met"
 					}
 					s := say(termKey(x.holder)+".label") + ": " + say(statusKey)
@@ -867,7 +868,13 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 	if owner {
 		signer = say("card.signed.you")
 	}
-	signedLine := []any{say("card.signed.by", "name", signer, "key", shortID(obj.keyID))}
+	// "Signed by" only when capsulectl verify reported the signature passed;
+	// otherwise the page names the signer the card claims (ts: card.signed.claimed).
+	signedKey := "card.signed.claimed"
+	if proof["producer_signatures"] == "pass" {
+		signedKey = "card.signed.by"
+	}
+	signedLine := []any{say(signedKey, "name", signer, "key", shortID(obj.keyID))}
 	if obj.signedAt != nil {
 		signedLine = append(signedLine, " · ", timeEl(obj.signedAt))
 	}

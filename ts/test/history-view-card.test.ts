@@ -527,6 +527,43 @@ describe("round 1 of the review", () => {
     expect(note("withheld")).toBe(words["card.signed.unchecked"]);
   });
 
+  it("the signed panel says Signed by only when the signature check passed", () => {
+    const panel = (producer: string) => {
+      const input = clone(cases["card-theirs"]) as Json;
+      const v = (input["machine"] as Json)["verify"] as Json;
+      (v["checks"] as Json)["producer_signatures"] = producer;
+      if (producer === "fail") v["verdict"] = "INVALID";
+      return page(input, { localTime: false }).querySelector(
+        '[data-history="signed"]',
+      )?.textContent;
+    };
+    expect(panel("pass")).toBe(
+      `Who signed this cardSigned by Alder Print Co., key 5b0d2c1f…00ff · Nov 27, 2026, 03:12 UTC${words["card.signed.note"]}`,
+    );
+    expect(panel("fail")).toBe(
+      `Who signed this cardThis card names its signer as Alder Print Co., key 5b0d2c1f…00ff · Nov 27, 2026, 03:12 UTC${words["card.signed.failed"]}`,
+    );
+    expect(panel("withheld")).toBe(
+      `Who signed this cardThis card names its signer as Alder Print Co., key 5b0d2c1f…00ff · Nov 27, 2026, 03:12 UTC${words["card.signed.unchecked"]}`,
+    );
+  });
+
+  it("each term's words in full: a ruling keeps its status word once", () => {
+    const lines = [
+      ...page(cases["card-yours"], { localTime: false }).querySelectorAll(
+        ".cvh-row-detail",
+      ),
+    ].map((e) => e.textContent ?? "");
+    expect(lines).toContain("Your side: ruled, not met");
+    expect(lines).toContain(
+      "Your side: ruled, not met; Their side: no statement",
+    );
+    expect(lines).toContain(
+      "Your side: both say it was not met, so far; Their side: waiting for the other side",
+    );
+    expect(lines.join("\n")).not.toMatch(/: , |not met, not met/u);
+  });
+
   it("a failed witness check is not summed up as every test passing", () => {
     const p = page(cases["card-yours-v1"]);
     expect(p.querySelector("[data-proof]")?.getAttribute("data-proof")).toBe(

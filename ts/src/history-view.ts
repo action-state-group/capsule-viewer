@@ -1551,7 +1551,13 @@ function buildCardPage(
               .sort((a, b) => (a.holder === b.holder ? 0 : a.holder ? -1 : 1))
               .map(
                 (x) =>
-                  `${say(x.holder ? "card.term.yours.label" : "card.term.theirs.label")}: ${say(x.value === "not_met" && BASE[`card.status.${x.status}.not_met`] !== undefined ? `card.status.${x.status}.not_met` : `card.status.${x.status}`)}${x.status === "ruled" && x.value !== undefined ? say(`card.status.ruled.${x.value}`) : ""}`,
+                  `${say(x.holder ? "card.term.yours.label" : "card.term.theirs.label")}: ${say(
+                    x.value === "not_met" &&
+                      x.status !== "ruled" &&
+                      BASE[`card.status.${x.status}.not_met`] !== undefined
+                      ? `card.status.${x.status}.not_met`
+                      : `card.status.${x.status}`,
+                  )}${x.status === "ruled" && x.value !== undefined ? say(`card.status.ruled.${x.value}`) : ""}`,
               )
               .join("; ")
           : null;
@@ -1683,10 +1689,17 @@ function buildCardPage(
     el(
       "p",
       null,
-      say("card.signed.by", {
-        name: owner ? say("card.signed.you") : name,
-        key: short(obj.keyId),
-      }),
+      // "Signed by" only when capsulectl verify reported the signature passed;
+      // otherwise the page names the signer the card claims.
+      say(
+        proof["producer_signatures"] === "pass"
+          ? "card.signed.by"
+          : "card.signed.claimed",
+        {
+          name: owner ? say("card.signed.you") : name,
+          key: short(obj.keyId),
+        },
+      ),
       ...(obj.signedAt !== undefined ? [" · ", time(obj.signedAt)] : []),
     ),
     // What the signature shows is said only when capsulectl verify reported
