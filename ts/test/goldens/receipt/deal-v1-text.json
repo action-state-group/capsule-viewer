@@ -7969,7 +7969,7 @@
     "text": "Private: your copy"
    },
    {
-    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-006e9cae981de463.bundle.json",
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-c676526ac47e3688.bundle.json",
     "text": "Download proof file"
    },
    {
@@ -8097,15 +8097,15 @@
    },
    {
     "at": ".cv-mono",
-    "text": "9bb5b608…fa26"
+    "text": "b5d189b0…ee88"
    },
    {
-    "at": ".cv-rcpt-id data-record-id=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
+    "at": ".cv-rcpt-id data-record-id=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
     "text": " · agree"
    },
    {
     "at": ".cv-mono cv-rcpt-fullid",
-    "text": "9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26"
+    "text": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
    },
    {
     "at": ".cv-mono cv-muted",
@@ -8161,14 +8161,14 @@
    },
    {
     "at": "data-verify-command=download",
-    "text": "capsulectl deal verify --bundle deal-006e9cae981de463.bundle.json"
+    "text": "capsulectl deal verify --bundle deal-c676526ac47e3688.bundle.json"
    },
    {
-    "at": ".cv-muted data-expect=a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7",
-    "text": "Expect: VALID, fingerprint a3060d22…29b7."
+    "at": ".cv-muted data-expect=d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083",
+    "text": "Expect: VALID, fingerprint d41c64ad…9083."
    },
    {
-    "at": ".cv-rcpt-button data-proof-download=deal-006e9cae981de463.bundle.json",
+    "at": ".cv-rcpt-button data-proof-download=deal-c676526ac47e3688.bundle.json",
     "text": "Download proof file"
    },
    {
@@ -8206,15 +8206,15 @@
     "text": "1 · 0"
    },
    {
-    "at": ".cv-mono data-inventory-record=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
     "text": "",
     "attrs": {
-     "title": "9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26"
+     "title": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
     }
    },
    {
-    "at": ".cv-mono data-inventory-record=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
-    "text": "9bb5b608…fa26"
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "b5d189b0…ee88"
    },
    {
     "at": "data-label=Shown",
@@ -8226,7 +8226,7 @@
    },
    {
     "at": ".cv-mono",
-    "text": "deal/72ca6f51eb79d25838941c1944dcddde"
+    "text": "deal/fc0f2b14290ab000522413e38436fde4"
    },
    {
     "at": ".cv-rcpt-field",
@@ -8234,7 +8234,7 @@
    },
    {
     "at": ".cv-mono",
-    "text": "a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7"
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
    },
    {
     "at": ".cv-rcpt-field",
@@ -8387,7 +8387,7 @@
    },
    {
     "at": ".cv-mono data-bundle-digest=true",
-    "text": "a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7"
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
    },
    {
     "at": ".cv-section__title",
@@ -8438,7 +8438,7 @@
     "text": "Shared copy"
    },
    {
-    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-006e9cae981de463.bundle.json",
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-c676526ac47e3688.bundle.json",
     "text": "Download proof file"
    },
    {
@@ -8554,15 +8554,15 @@
    },
    {
     "at": ".cv-mono",
-    "text": "9bb5b608…fa26"
+    "text": "b5d189b0…ee88"
    },
    {
-    "at": ".cv-rcpt-id data-record-id=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
+    "at": ".cv-rcpt-id data-record-id=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
     "text": " · agree"
    },
    {
     "at": ".cv-mono cv-rcpt-fullid",
-    "text": "9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26"
+    "text": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
    },
    {
     "at": ".cv-mono cv-muted",
@@ -8618,14 +8618,14 @@
    },
    {
     "at": "data-verify-command=download",
-    "text": "capsulectl deal verify --bundle deal-006e9cae981de463.bundle.json"
+    "text": "capsulectl deal verify --bundle deal-c676526ac47e3688.bundle.json"
    },
    {
-    "at": ".cv-muted data-expect=a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7",
-    "text": "Expect: VALID, fingerprint a3060d22…29b7."
+    "at": ".cv-muted data-expect=d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083",
+    "text": "Expect: VALID, fingerprint d41c64ad…9083."
    },
    {
-    "at": ".cv-rcpt-button data-proof-download=deal-006e9cae981de463.bundle.json",
+    "at": ".cv-rcpt-button data-proof-download=deal-c676526ac47e3688.bundle.json",
     "text": "Download proof file"
    },
    {
@@ -8663,15 +8663,15 @@
     "text": "1 · 0"
    },
    {
-    "at": ".cv-mono data-inventory-record=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
     "text": "",
     "attrs": {
-     "title": "9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26"
+     "title": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
     }
    },
    {
-    "at": ".cv-mono data-inventory-record=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
-    "text": "9bb5b608…fa26"
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "b5d189b0…ee88"
    },
    {
     "at": "data-label=Shown",
@@ -8683,7 +8683,7 @@
    },
    {
     "at": ".cv-mono",
-    "text": "deal/72ca6f51eb79d25838941c1944dcddde"
+    "text": "deal/fc0f2b14290ab000522413e38436fde4"
    },
    {
     "at": ".cv-rcpt-field",
@@ -8691,7 +8691,7 @@
    },
    {
     "at": ".cv-mono",
-    "text": "a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7"
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
    },
    {
     "at": ".cv-rcpt-field",
@@ -8844,7 +8844,7 @@
    },
    {
     "at": ".cv-mono data-bundle-digest=true",
-    "text": "a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7"
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
    },
    {
     "at": ".cv-section__title",
@@ -8895,7 +8895,7 @@
     "text": "Shared copy"
    },
    {
-    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-006e9cae981de463.bundle.json",
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-c676526ac47e3688.bundle.json",
     "text": "Download proof file"
    },
    {
@@ -9011,15 +9011,15 @@
    },
    {
     "at": ".cv-mono",
-    "text": "9bb5b608…fa26"
+    "text": "b5d189b0…ee88"
    },
    {
-    "at": ".cv-rcpt-id data-record-id=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
+    "at": ".cv-rcpt-id data-record-id=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
     "text": " · agree"
    },
    {
     "at": ".cv-mono cv-rcpt-fullid",
-    "text": "9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26"
+    "text": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
    },
    {
     "at": ".cv-mono cv-muted",
@@ -9075,14 +9075,14 @@
    },
    {
     "at": "data-verify-command=download",
-    "text": "capsulectl deal verify --bundle deal-006e9cae981de463.bundle.json"
+    "text": "capsulectl deal verify --bundle deal-c676526ac47e3688.bundle.json"
    },
    {
-    "at": ".cv-muted data-expect=a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7",
-    "text": "Expect: VALID, fingerprint a3060d22…29b7."
+    "at": ".cv-muted data-expect=d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083",
+    "text": "Expect: VALID, fingerprint d41c64ad…9083."
    },
    {
-    "at": ".cv-rcpt-button data-proof-download=deal-006e9cae981de463.bundle.json",
+    "at": ".cv-rcpt-button data-proof-download=deal-c676526ac47e3688.bundle.json",
     "text": "Download proof file"
    },
    {
@@ -9120,15 +9120,15 @@
     "text": "1 · 0"
    },
    {
-    "at": ".cv-mono data-inventory-record=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
     "text": "",
     "attrs": {
-     "title": "9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26"
+     "title": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
     }
    },
    {
-    "at": ".cv-mono data-inventory-record=9bb5b6083f4d05db1e54e244e732c1164ae5676cb626927ff8595f879ecefa26",
-    "text": "9bb5b608…fa26"
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "b5d189b0…ee88"
    },
    {
     "at": "data-label=Shown",
@@ -9140,7 +9140,7 @@
    },
    {
     "at": ".cv-mono",
-    "text": "deal/72ca6f51eb79d25838941c1944dcddde"
+    "text": "deal/fc0f2b14290ab000522413e38436fde4"
    },
    {
     "at": ".cv-rcpt-field",
@@ -9148,7 +9148,7 @@
    },
    {
     "at": ".cv-mono",
-    "text": "a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7"
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
    },
    {
     "at": ".cv-rcpt-field",
@@ -9301,7 +9301,7 @@
    },
    {
     "at": ".cv-mono data-bundle-digest=true",
-    "text": "a3060d22b3d46e3dcaf6abbcafc2c038f645bf38877c07b267404f380ce529b7"
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
    },
    {
     "at": ".cv-section__title",
