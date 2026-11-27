@@ -449,7 +449,13 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     model: "m",
     served_at: "2026-10-30T19:50:00 UTC",
     payments: paid
-      ? [{ capsule_id: "943636c8ec93ae8d3d82", received: "995 msat", fee: "5 msat" }]
+      ? [
+          {
+            capsule_id: "943636c8ec93ae8d3d82",
+            received: "995 msat",
+            fee: "5 msat",
+          },
+        ]
       : [],
     total: paid ? "995 msat" : "0 msat",
   });
@@ -480,13 +486,16 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     ["payment_required", "payment required"],
     ["upstream_error", "upstream error"],
     ["timeout", "timed out"],
-  ])("a failed exchange that names %s says why in words", async (cls, words) => {
-    const page = await draw(model("failed", cls));
-    expect(page.status).toBe(
-      `This node's record says the exchange failed: ${words}.${FAILED_TAIL}`,
-    );
-    expect(page.text).not.toContain(cls);
-  });
+  ])(
+    "a failed exchange that names %s says why in words",
+    async (cls, words) => {
+      const page = await draw(model("failed", cls));
+      expect(page.status).toBe(
+        `This node's record says the exchange failed: ${words}.${FAILED_TAIL}`,
+      );
+      expect(page.text).not.toContain(cls);
+    },
+  );
 
   it("a failed exchange with no reason or no payment says it failed", async () => {
     for (const m of [model("failed", null), model("failed", null, false)]) {
