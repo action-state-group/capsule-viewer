@@ -3645,7 +3645,7 @@
     return line;
   };
   // "Agreement: Started": the agreement's own state, never a word for where the deal's terms stand.
-  P.agreementState = function (model) { return w("deal.agreement.state", { state: this.token("deal.state", vof(model.agreement).state) }); };
+  P.agreementState = function (model) { return w("deal.agreement.state", { state: lowerFirst(this.token("deal.state", vof(model.agreement).state)) }); };
   // "Terms: Both say the same so far (2 of 2)": each status the rows give, in the rows' order, with its count.
   P.termsTally = function (rows) {
     var self = this, order = [], counts = {};
@@ -3992,8 +3992,9 @@
     var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
     var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
     // What the deal was for, from the holder's own sealed offer (#461); the seller is not named: no record
-    // the agreement cites seals the seller's name, and a key id is never drawn as one. An offer the copy
-    // carries (book.offer) is shown on every copy it travels in (u499, u561 items 1 and 5); one capsulectl
+    // the agreement cites seals the seller's name yet (evidencebook#1031, ruled yes in u561 item 3), and a key id is
+    // never drawn as one. An offer the copy carries (book.offer) is shown on every copy it travels in (u499; u561
+    // items 2 and 5); one capsulectl
     // gave beside the copy (deal_offer) is not in it, so only the holder's own page shows it.
     if (model.item !== null && (model.item.src.report !== "deal_offer" || this.ownPage(model))) line.push(this.p(w("deal.hero.item", { item: model.item.value }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
     if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
@@ -4117,7 +4118,12 @@
   };
 
   // "What happened, step by step": one row per record the copy carries, each opening to what it records.
-  P.termWord = function (id) { return id === null ? "-" : word("deal.term." + id) || id; };
+  // A term by its name in words, lower-cased mid-sentence ("Final ruling on delivery"); null when the record names none.
+  function lowerFirst(text) { return typeof text === "string" && text ? text.charAt(0).toLowerCase() + text.slice(1) : text; }
+  P.termWord = function (id) { return id === null ? null : lowerFirst(word("deal.term." + id) || id); };
+  // A line about a step, in the voice of the book it is in: the holder's (say: "You", or "The holder" when shown to
+  // others) or the other side's (".other").
+  P.stepSay = function (model, step, key, values) { return vof(step.book) === "other" ? w(key + ".other", values) : this.say(model, key, values); };
   P.stepTitle = function (model, step) {
     if (!step.shown) return w("deal.step.withheld");
     var kind = vof(step.kind), leg = vof(step.leg), self = this;
@@ -4132,25 +4138,36 @@
       return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: amount });
     }
     if (kind === "statement") {
+      var parts = [];
       // A statement that names an arrived record: the ruling (or cancellation) it records as received.
       var names = vof(step.names);
       if (names !== null) {
         var named = names.record !== null ? model.sealed_steps.find(function (o) { return o.record === names.record; }) : null;
         var ruling = named ? vof(named.ruling) : null;
-        var key = "deal.step.names." + names.kind + (names.kind === "ruling" && ruling === null ? ".unread" : "");
-        return vof(step.book) === "other" ? w(key + ".other", { term: ruling !== null ? this.termWord(ruling.row) : "-" }) : this.say(model, key, { term: ruling !== null ? this.termWord(ruling.row) : "-" });
+        var term = ruling !== null ? this.termWord(ruling.row) : null;
+        var key = "deal.step.names." + names.kind + (names.kind === "ruling" && term === null ? ".unread" : "");
+        parts.push(this.stepSay(model, step, key, { term: term }));
       }
-      var said = (vof(step.statements) || []).map(function (st) { return self.termWord(st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : "-"); }).join("; ");
-      return vof(step.book) === "other" ? w("deal.step.statement.other", { said: said || "-" }) : this.say(model, "deal.step.statement", { said: said || "-" });
+      var said = (vof(step.statements) || []).map(function (st) {
+        return (word("deal.term." + st.row) || st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : w("deal.value.unread"));
+      }).join("; ");
+      // A statement says its terms too when it carries any, beside a ruling it names; one with neither is said so.
+      if (said) parts.push(this.stepSay(model, step, "deal.step.statement", { said: said }));
+      if (!parts.length) parts.push(w("deal.step.statement.empty"));
+      return parts.join(" · ");
     }
     if (kind === "dispute") {
       var dispute = vof(step.dispute);
-      var dkey = "deal.step.dispute." + (["dispute", "withdrawal", "challenge"].indexOf(dispute.kind) >= 0 ? dispute.kind : "other");
-      return w(dkey, { term: this.termWord(dispute.row), forum: dispute.forum || "-", kind: dispute.kind || "-" });
+      var dterm = this.termWord(dispute.row);
+      if (dispute.kind === "challenge") return this.stepSay(model, step, "deal.step.dispute.challenge", {});
+      if ((dispute.kind === "dispute" || dispute.kind === "withdrawal") && dterm !== null) return this.stepSay(model, step, "deal.step.dispute." + dispute.kind, { term: dterm });
+      return w("deal.step.dispute.other", { kind: dispute.kind || kind });
     }
     if (kind === "ruling") {
       var r = vof(step.ruling);
-      var values = { term: this.termWord(r.row), value: r.value !== null ? this.token("deal.value", r.value) : "-", side: r.against !== null ? this.token("deal.side", r.against) : "-" };
+      var rterm = this.termWord(r.row);
+      if (rterm === null || r.value === null) return w("deal.step.kind.ruling");
+      var values = { term: rterm, value: this.token("deal.value", r.value), side: r.against !== null ? this.token("deal.side", r.against) : null };
       return w("deal.step.ruling" + (r.against !== null ? ".against" : "") + (r.final ? ".final" : ""), values);
     }
     if (kind === "perform") return w("deal.step.perform", { act: vof(step.act) !== null ? vof(step.act) : "-" });
@@ -4162,7 +4179,7 @@
     var d = this.d, self = this;
     var kind = vof(step.kind), leg = vof(step.leg);
     var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [kind !== null ? kind : w("deal.drawer.kind.withheld")])]];
-    if (vof(step.book) !== null) rows.push([w("deal.drawer.book"), w("deal.book." + vof(step.book))]);
+    if (vof(step.book) !== null) rows.push([w("deal.drawer.book"), vof(step.book) === "holder" ? this.say(model, "deal.book.holder") : w("deal.book." + vof(step.book))]);
     if (vof(step.time) !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(vof(step.time))]);
     if (leg !== null) {
       rows.push([w("deal.drawer.leg"), leg.leg + " · " + leg.status]);
@@ -4184,7 +4201,8 @@
       rows.push([w("deal.drawer.ruling"), ruling.value !== null ? this.token("deal.value", ruling.value) : "-"]);
       rows.push([w("deal.drawer.against"), ruling.against !== null ? this.sideWord(ruling.against) : w("deal.drawer.against.none")]);
       rows.push([w("deal.drawer.final"), w(ruling.final ? "deal.drawer.final.yes" : "deal.drawer.final.no")]);
-      if (ruling.remedy !== null && ruling.remedy.kind !== null) rows.push([w("deal.drawer.remedy"), d.el("span", { class: "cv-mono" }, [ruling.remedy.kind])]);
+      // The remedy's kind in words where the pack has them, else as recorded, in mono.
+      if (ruling.remedy !== null && ruling.remedy.kind !== null) rows.push([w("deal.drawer.remedy"), word("deal.remedy." + ruling.remedy.kind) !== null ? w("deal.remedy." + ruling.remedy.kind) : d.el("span", { class: "cv-mono" }, [ruling.remedy.kind])]);
       if (ruling.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [ruling.forum])]);
     }
     if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [this.short(names.record)]) : w("deal.drawer.names.unread")]);

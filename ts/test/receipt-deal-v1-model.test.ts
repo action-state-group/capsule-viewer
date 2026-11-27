@@ -147,9 +147,9 @@ describe("the ARD run's ruled deal, the holder's keep copy on a page", () => {
       ["agree", "Deal agreed"],
       ["settle", "Payment recorded as settled: 1,000 msat"],
       ["statement", "You said: Delivery: not met; Payment as agreed: met"],
-      ["dispute", "Dispute on Delivery, taken to external:ard-demo"],
-      ["ruling", "Final ruling on Delivery: not met, against the seller"],
-      ["statement", "You noted the ruling on Delivery"],
+      ["dispute", "You disputed delivery"],
+      ["ruling", "Final ruling on delivery: not met, against the seller"],
+      ["statement", "You noted the ruling on delivery"],
     ]);
     // The ruling is not one of the bundle's records: its raw record is the module's, at L2.
     expect(
@@ -170,7 +170,7 @@ describe("the ARD run's ruled deal, the holder's keep copy on a page", () => {
       ).map((f) => f.textContent ?? "");
     expect(fields(RULING)).toEqual(
       expect.arrayContaining([
-        "Bookthe adjudicator's",
+        "Recorded inthe adjudicator's book",
         "TermDelivery",
         "Rulednot met",
         "Againstseller",
@@ -180,7 +180,7 @@ describe("the ARD run's ruled deal, the holder's keep copy on a page", () => {
     );
     expect(fields(DISPUTE)).toEqual(
       expect.arrayContaining([
-        "Bookthe holder's",
+        "Recorded inyour book",
         "TermDelivery",
         "Forumexternal:ard-demo",
       ]),
@@ -195,9 +195,9 @@ describe("the ARD run's ruled deal, the holder's keep copy on a page", () => {
     const status = root.querySelector(
       '[data-card="status"] [data-card-status]',
     );
-    expect(status?.textContent).toBe("Agreement: Started");
+    expect(status?.textContent).toBe("Agreement: started");
     expect(root.querySelector("[data-deal-state]")?.textContent).toBe(
-      "Agreement: Started",
+      "Agreement: started",
     );
   });
 
@@ -349,6 +349,89 @@ describe("the deal model: a full adjudicator copy (evidencebook#861)", () => {
       "/extensions/x-deal-v1/book/relied_on/" + RULING + "/record",
     ]);
     for (const s of m.sealed_steps) expect(s.time).toBeNull();
+  });
+
+  // The other side's statement as the holder's copy received it: it names the
+  // ruling and states a term, and its block says it had seen the dispute. A
+  // pair whose header and record attest its payload (signatures are capsulectl's).
+  const RECEIVED = "0e".repeat(32);
+  const withReceived = (): Obj => {
+    const b = full();
+    const bk = book(b);
+    const ruling = (bk["relied_on"] as Obj)[RULING] as Obj;
+    const agreement = bk["agreement"] as Obj;
+    const counterparty = ((agreement["payload"] as Obj)["body"] as Obj)[
+      "counterparty_key"
+    ];
+    const payload = {
+      body: {
+        statements: [{ row: "delivered", value: "not_met" }],
+        names: {
+          ruling: {
+            type: "deal-record",
+            digest_alg: "SHA-256",
+            digest: core.recordDigest(ruling["payload"]),
+          },
+        },
+      },
+      "x-deal-v1": {
+        record_type: "statement",
+        seq: 2,
+        at: "2026-11-27T14:50:45Z",
+        seen: DISPUTE,
+      },
+    };
+    const header = {
+      book_id: "deal/other",
+      seq: 2,
+      links: [],
+      payload_commitments: [core.recordDigest(payload)],
+    };
+    const record = {
+      capsule_id: RECEIVED,
+      key_id: counterparty,
+      timestamp: "2026-11-27T14:50:45.123Z",
+      model_attestation: {
+        compute_attestation: { agent_input_digest: core.recordDigest(header) },
+      },
+    };
+    (bk["received"] as Obj)["records"] = {
+      [RECEIVED]: { record, header, payload },
+    };
+    return b;
+  };
+
+  it("a received record is a step and an L2 raw record once, in causal order, with no time", async () => {
+    const mod = module();
+    const m = (await mod.buildModel(context(withReceived()))) as Model;
+    expect(m.sealed_steps.map((s) => s.record)).toEqual([
+      AGREEMENT,
+      STATEMENT,
+      DISPUTE,
+      RULING,
+      RECEIVED,
+    ]);
+    const step = m.sealed_steps[4]!;
+    expect(step.src).toEqual({
+      bundle: "/extensions/x-deal-v1/book/received/records/" + RECEIVED,
+    });
+    expect(step.book?.value).toBe("other");
+    expect(step.time).toBeNull();
+    const L0 = document.createElement("div");
+    const L2 = document.createElement("div");
+    mod.render(m, { L0, L1: document.createElement("div"), L2, depth: "L2" });
+    // A statement that names a ruling and states a term says both.
+    expect(
+      L0.querySelector(`[data-step-record="${RECEIVED}"] .cv-rcpt-step__title`)
+        ?.textContent,
+    ).toBe(
+      "The other side noted the ruling on delivery · The other side said: Delivery: not met",
+    );
+    const raw = L2.querySelectorAll(`[data-book-record="${RECEIVED}"]`);
+    expect(raw).toHaveLength(1);
+    expect(raw[0]!.textContent).toContain(RECEIVED);
+    expect(raw[0]!.textContent).not.toContain("timestamp");
+    expect(raw[0]!.textContent).not.toContain("14:50");
   });
 
   it("received without records, or a pair under another record's id, is refused", async () => {

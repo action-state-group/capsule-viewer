@@ -109,10 +109,10 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     expect(state.getAttribute("data-deal-state")).toBe("started");
     // The deal-level line stays start.state (section 9), said as the agreement's state (#476); the terms' count
     // sits beside it, outside it.
-    expect(state.textContent).toBe("Agreement: Started");
+    expect(state.textContent).toBe("Agreement: started");
     expect(state.querySelector("[data-deal-terms]")).toBeNull();
     expect(host.L1.querySelector("[data-deal-terms]").textContent).toBe("Terms: Both say the same so far (2 of 2)");
-    expect(host.L1.querySelector(".cv-metric__value").textContent).toBe("Agreement: Started · Terms: Both say the same so far (2 of 2)");
+    expect(host.L1.querySelector(".cv-metric__value").textContent).toBe("Agreement: started · Terms: Both say the same so far (2 of 2)");
     expect(host.L1.querySelector("[data-settled]")).toBeNull();
     expect(host.L1.textContent).not.toMatch(/closed|close\b|done/i);
   });
