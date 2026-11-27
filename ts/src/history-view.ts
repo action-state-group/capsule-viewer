@@ -1347,7 +1347,7 @@ function buildCardPage(
       download: file ?? "",
       "data-history": "download",
     },
-    say("card.download"),
+    say(owner ? "card.download.private" : "card.download"),
   );
   const header = el(
     "header",
@@ -1537,21 +1537,35 @@ function buildCardPage(
         );
       const amount = x?.amount ?? d.amount;
       const facts: (HistoryElement | string)[] = [];
-      if (amount !== undefined)
+      const exact = x?.amount !== undefined || d.terms === undefined;
+      // A band whose floor is 0 says nothing about the amount (Sherlock2).
+      if (amount !== undefined && (exact || amount.value !== "0"))
         facts.push(
-          x?.amount !== undefined || d.terms === undefined
+          exact
             ? amountText(amount)
             : say("card.row.amount.band", { amount: amountText(amount) }),
           " · ",
         );
       facts.push(say("card.row.agreed"), " ", time(d.agreed));
+      // A side with more than one term numbers them, so the reader can tell
+      // them apart (Sherlock2).
+      const sides = { yours: 0, theirs: 0 };
+      const many = (holder: boolean): boolean =>
+        (t ?? []).filter((x) => x.holder === holder).length > 1;
+      const label = (holder: boolean): string => {
+        const side = holder ? "yours" : "theirs";
+        sides[side] += 1;
+        return many(holder)
+          ? say(`card.term.${side}.label.n`, { n: String(sides[side]) })
+          : say(`card.term.${side}.label`);
+      };
       const termLine =
         t !== undefined && t.length > 0
           ? [...t]
               .sort((a, b) => (a.holder === b.holder ? 0 : a.holder ? -1 : 1))
               .map(
                 (x) =>
-                  `${say(x.holder ? "card.term.yours.label" : "card.term.theirs.label")}: ${say(
+                  `${label(x.holder)}: ${say(
                     x.value === "not_met" &&
                       x.status !== "ruled" &&
                       BASE[`card.status.${x.status}.not_met`] !== undefined
@@ -1691,14 +1705,12 @@ function buildCardPage(
       null,
       // "Signed by" only when capsulectl verify reported the signature passed;
       // otherwise the page names the signer the card claims.
+      // The signature proves the key, not the name: the name stays a label.
       say(
-        proof["producer_signatures"] === "pass"
+        (proof["producer_signatures"] === "pass"
           ? "card.signed.by"
-          : "card.signed.claimed",
-        {
-          name: owner ? say("card.signed.you") : name,
-          key: short(obj.keyId),
-        },
+          : "card.signed.claimed") + (owner ? ".owner" : ""),
+        { name, key: short(obj.keyId) },
       ),
       ...(obj.signedAt !== undefined ? [" · ", time(obj.signedAt)] : []),
     ),

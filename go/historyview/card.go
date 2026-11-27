@@ -590,7 +590,7 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 		"href", "data:application/json;charset=utf-8,"+encodeURIComponent(text),
 		"download", file,
 		"data-history", "download",
-	), say("card.download"))
+	), say(map[bool]string{true: "card.download.private", false: "card.download"}[owner]))
 	title := say("card.title.owner")
 	if !owner {
 		title = say("card.title.recipient", "name", name)
@@ -744,8 +744,10 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 				amt = x.amount
 			}
 			var facts []any
-			if amt != nil {
-				if (x != nil && x.amount != nil) || !d.hasTerms {
+			exact := (x != nil && x.amount != nil) || !d.hasTerms
+			// A band whose floor is 0 says nothing about the amount (Sherlock2).
+			if amt != nil && (exact || amt.value != "0") {
+				if exact {
 					facts = append(facts, amountText(amt))
 				} else {
 					facts = append(facts, say("card.row.amount.band", "amount", amountText(amt)))
@@ -758,13 +760,24 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 				byHolder := append([]termResult{}, t...)
 				sort.SliceStable(byHolder, func(i, j int) bool { return byHolder[i].holder && !byHolder[j].holder })
 				parts := make([]string, 0, len(byHolder))
+				// A side with more than one term numbers them (Sherlock2).
+				perSide := map[bool]int{}
+				for _, x := range byHolder {
+					perSide[x.holder]++
+				}
+				seen := map[bool]int{}
 				for _, x := range byHolder {
 					statusKey := "card.status." + x.status
 					// "ruled" keeps its status word plus its own suffix below.
 					if _, ok := base[statusKey+".not_met"]; ok && x.value == "not_met" && x.status != "ruled" {
 						statusKey += ".not_met"
 					}
-					s := say(termKey(x.holder)+".label") + ": " + say(statusKey)
+					seen[x.holder]++
+					label := say(termKey(x.holder) + ".label")
+					if perSide[x.holder] > 1 {
+						label = say(termKey(x.holder)+".label.n", "n", strconv.Itoa(seen[x.holder]))
+					}
+					s := label + ": " + say(statusKey)
 					if x.status == "ruled" && x.value != "" {
 						s += say("card.status.ruled." + x.value)
 					}
@@ -864,17 +877,17 @@ func buildCardPage(r *reader, o *object, overlay any, hasOverlay bool) (*element
 	}
 
 	// Who signed the card, and what that shows.
-	signer := name
-	if owner {
-		signer = say("card.signed.you")
-	}
 	// "Signed by" only when capsulectl verify reported the signature passed;
 	// otherwise the page names the signer the card claims (ts: card.signed.claimed).
 	signedKey := "card.signed.claimed"
 	if proof["producer_signatures"] == "pass" {
 		signedKey = "card.signed.by"
 	}
-	signedLine := []any{say(signedKey, "name", signer, "key", shortID(obj.keyID))}
+	// The signature proves the key, not the name: the name stays a label.
+	if owner {
+		signedKey += ".owner"
+	}
+	signedLine := []any{say(signedKey, "name", name, "key", shortID(obj.keyID))}
 	if obj.signedAt != nil {
 		signedLine = append(signedLine, " · ", timeEl(obj.signedAt))
 	}

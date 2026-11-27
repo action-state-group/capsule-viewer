@@ -538,13 +538,13 @@ describe("round 1 of the review", () => {
       )?.textContent;
     };
     expect(panel("pass")).toBe(
-      `Who signed this cardSigned by Alder Print Co., key 5b0d2c1f…00ff · Nov 27, 2026, 03:12 UTC${words["card.signed.note"]}`,
+      `Who signed this cardSigned by key 5b0d2c1f…00ff, the key you know as Alder Print Co. · Nov 27, 2026, 03:12 UTC${words["card.signed.note"]}`,
     );
     expect(panel("fail")).toBe(
-      `Who signed this cardThis card names its signer as Alder Print Co., key 5b0d2c1f…00ff · Nov 27, 2026, 03:12 UTC${words["card.signed.failed"]}`,
+      `Who signed this cardThis card names its signer as key 5b0d2c1f…00ff, the key you know as Alder Print Co. · Nov 27, 2026, 03:12 UTC${words["card.signed.failed"]}`,
     );
     expect(panel("withheld")).toBe(
-      `Who signed this cardThis card names its signer as Alder Print Co., key 5b0d2c1f…00ff · Nov 27, 2026, 03:12 UTC${words["card.signed.unchecked"]}`,
+      `Who signed this cardThis card names its signer as key 5b0d2c1f…00ff, the key you know as Alder Print Co. · Nov 27, 2026, 03:12 UTC${words["card.signed.unchecked"]}`,
     );
   });
 
