@@ -36,6 +36,8 @@ export const TAG_ATTRIBUTES = [
   "data-fmt",
   "data-ph",
   "data-derive",
+  "data-case",
+  "data-where",
 ];
 
 type Place = { at: string; text: string; attrs?: Record<string, string> };

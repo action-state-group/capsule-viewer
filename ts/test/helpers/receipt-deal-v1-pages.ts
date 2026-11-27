@@ -67,14 +67,35 @@ export const FIXTURES: readonly Fixture[] = [
 export const CARRIERS = [null, "report", "page"] as const;
 export type Carrier = (typeof CARRIERS)[number];
 
-/** The page drawn at L2 for one fixture and carrier; the root holds the whole page. */
+/** The page drawn at L2 for one fixture and carrier, and what the receipt module was given. */
+export type Drawn = {
+  readonly root: HTMLElement;
+  /** The verified context the receipt module built its model from (the page's own checks in it). */
+  readonly contexts: Obj[];
+};
 export async function drawPage(
   fixture: Fixture,
   carrier: Carrier,
   bundle: Obj = fixture.bundle(),
 ): Promise<HTMLElement> {
+  return (await drawn(fixture, carrier, bundle)).root;
+}
+export async function drawn(
+  fixture: Fixture,
+  carrier: Carrier,
+  bundle: Obj = fixture.bundle(),
+): Promise<Drawn> {
+  const contexts: Obj[] = [];
   const registry = createPresentationRegistry();
-  for (const m of receiptModules()) registry.register(m);
+  for (const m of receiptModules()) {
+    registry.register({
+      ...m,
+      buildModel: (context: unknown) => {
+        contexts.push(context as Obj);
+        return m.buildModel(context as never);
+      },
+    } as typeof m);
+  }
   const outer = document.createElement("div");
   if (carrier !== null) outer.setAttribute("data-receipt-carrier", carrier);
   const root = document.createElement("main");
@@ -86,7 +107,7 @@ export async function drawPage(
     verifierReport: fixture.report(),
     ...(fixture.options ? fixture.options() : {}),
   });
-  return root;
+  return { root, contexts };
 }
 
 /** The receipt module's three regions (L0, L1, L2) on a drawn page. */
