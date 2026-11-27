@@ -13789,7 +13789,7 @@ ${body}
     }
     return { directory, entries };
   }
-  function withVerifierReport(context, reading = { kind: "pass" }, verifyCommand, countersigned, countersignedCopy) {
+  function withVerifierReport(context, reading = { kind: "pass" }, verifyCommand, countersigned, countersignedCopy, dealOffer) {
     if (reading.profile === DEAL_V02) return withDealV0Report(context, reading);
     const extensions2 = [
       ...context.verification.extensions,
@@ -13815,7 +13815,11 @@ ${body}
         ...countersigned === void 0 ? {} : { countersigned },
         // The page's own check of the countersigned copy it carries
         // (countersigned-copy.ts): present only when every check passed.
-        ...countersignedCopy === void 0 ? {} : { countersigned_copy: countersignedCopy }
+        ...countersignedCopy === void 0 ? {} : { countersigned_copy: countersignedCopy },
+        // The holder's sealed offer record as the page's maker gave it
+        // (dealOffer), unchecked: the receipt module checks it against the
+        // copy's own sealed agreement before drawing its item (#461).
+        ...dealOffer === void 0 ? {} : { deal_offer: dealOffer }
       }
     ];
     return {
@@ -18341,7 +18345,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("89dae804b4c41f1a6d04e6d5d18d5626ace68021");
+    return commitPrefix("ae17d1b9538a0b1ef1ff115a3d4463b98e09808c");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -29405,7 +29409,8 @@ ${pad.repeat(depth)}`;
       reading,
       options.verifyCommand,
       countersignedStamps(stamps),
-      countersignedCopy ?? void 0
+      countersignedCopy ?? void 0,
+      options.dealOffer
     ) : context;
     const verdictLine = reading?.kind === "fail" && reading.why === "verdict" ? reading.verdict : void 0;
     const { bundle, verification } = context;
