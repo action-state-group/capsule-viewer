@@ -23,7 +23,7 @@
 // Run with RECEIPT_SCRIPT_DIR=<dir holding mutated receipt_*.js> to see it
 // fail on a mutant.
 import { beforeAll, describe, expect, it } from "vitest";
-import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, withAddedWords, withCurrentPack, VIEWER_FIELDS, withoutAmountCard, withoutViewerFields, withoutViewerLines } from "./receiptScripts.js";
+import { caseInputs, canonHtml, canonNodes, KINDS, levelNodes, loadScript, packAddsOnly, receiptGolden, renderInto, refusedCases, withAddedWords, withCurrentPack, VIEWER_FIELDS, withoutAmountCard, withoutSources, withoutViewerFields, withoutViewerLines } from "./receiptScripts.js";
 // The receipt wording pack id, Go and Python alike (evidencebook#956, #439): never one named "example".
 const PACK_ID = "capsuleviewer.receipt.wording.en/v1";
 
@@ -145,10 +145,35 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
 
   it("covers every receipt fixture, at every audience, and the edited copies", () => {
     const names = new Set(oracle.cases.map((c) => c.name));
-    expect(oracle.cases.length).toBe(173);
+    expect(oracle.cases.length).toBe(180);
     expect([...names].filter((n) => !n.includes("+")).length).toBe(29);
-    // 23 deal edits, 63 of the provider's receipt.
-    expect([...names].filter((n) => n.includes("+")).length).toBe(86);
+    // 23 deal edits, 63 of the provider's receipt, 7 copies edited after signing.
+    expect([...names].filter((n) => n.includes("+")).length).toBe(93);
+  });
+
+  // u526 step 1 (Steven 2026-11-17): before any Python receipt module is deleted, its output on the
+  // refusal, withheld and tamper cases is frozen into this golden. These name them; dropping one fails.
+  it("keeps the frozen refusal, withheld and tamper cases (u526)", () => {
+    const cases = (name) => oracle.cases.filter((c) => c.name === name);
+    const accepted = (name, kind) => cases(name).some((c) => c.modules[kind]?.can_render === true);
+    // Refusal: the seller declined (the seller's receipt), the counterparty's limit (one copy and a signed refusal).
+    expect(accepted("seller-declined", "seller")).toBe(true);
+    expect(accepted("one-sided-refusal-keep", "bilateral")).toBe(true);
+    // Withheld: a counterparty's and an adjudicator's copy of each kind, which leave steps out.
+    for (const [name, kind] of [["counterparty", "unilateral"], ["adjudicator", "unilateral"], ["seller-counterparty", "seller"], ["seller-adjudicator", "seller"], ["bilateral-counterparty", "bilateral"], ["bilateral-adjudicator", "bilateral"]]) {
+      expect(accepted(name, kind), name).toBe(true);
+    }
+    expect(oracle.cases.some((c) => ["counterparty", "adjudicator"].includes(c.name) && c.modules.unilateral.model?.steps.some((s) => s.disclosure === "withheld"))).toBe(true);
+    // Tamper: each kind's copy edited after signing, with capsulectl's report on the edited bytes: no module draws it.
+    const tampered = ["keep", "seller-keep", "bilateral-keep", "mesh-provider-selected"].flatMap((n) => [`${n}+tamper-payload`, `${n}+tamper-record`]).filter((n) => n !== "mesh-provider-selected+tamper-payload");
+    for (const name of tampered) {
+      expect(cases(name).length, name).toBe(1);
+      expect(cases(name)[0].env.verification.outcome, name).toBe("failed");
+      expect(Object.values(cases(name)[0].modules).map((m) => m.can_render), name).toEqual([false, false, false, false]);
+    }
+    // And with the report on the original bytes, which the page refuses to bind (ts/test/receipt-stale-report.test.ts).
+    expect(refusedCases().map((c) => c.name)).toEqual(["keep+stale-report", "seller-keep+stale-report", "bilateral-keep+stale-report", "mesh-provider-selected+stale-report"]);
+    for (const c of refusedCases()) expect(c.refused, c.name).toMatch(/^the report is for bundle /);
   });
 
   it("compares every case, model and depth (the count is the parity result)", async () => {
@@ -204,7 +229,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only)
     // + 63 edits of the provider's receipt (declined by all three); 34 accepted (module, case)
     // pairs, the 32 fixture pairs rendered at L0, L1 and L2.
-    expect({ ...compared, bytes: undefined }).toEqual({ cases: 173, accepted: 34, models: 34, renders: 98, bytes: undefined });
+    expect({ ...compared, bytes: undefined }).toEqual({ cases: 180, accepted: 34, models: 34, renders: 98, bytes: undefined });
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
 
@@ -256,7 +281,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
       }
       compared.accepted += 1;
       const model = await module.buildModel(context);
-      expect(model, c.name).toEqual(py.model);
+      expect(withoutSources(model), c.name).toEqual(py.model);
       const host = renderInto(lib, module, model, "L2");
       const [l0, l1, l2] = levelNodes(host);
       expect(l1.childNodes.length, c.name).toBe(0);
@@ -276,7 +301,7 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     // manifest names the owner's only) and 45 edited copies it still accepts:
     // 31 confirmed, 12 failed (no reason, each reason class, an unknown one or
     // not text, no payment with and without a reason) and 2 dispatched (#465).
-    expect(compared).toEqual({ accepted: 48, declined: 125 });
+    expect(compared).toEqual({ accepted: 48, declined: 132 });
   }, 300000);
 
   it("each script registers exactly its own module, under its manifest", () => {

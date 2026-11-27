@@ -174,6 +174,8 @@ describe("line 3: who the deal was with and their words accepting (#383)", () =>
       report: { counterparty_openings: { key: KEY, steps: [{ step: profile, payee: "Example Stickers", domain: "example.net" }] } },
     });
     expect(mixed.receipt.counterparty_named).toEqual({ who: "Example Stickers", unchecked: true, accepted: [] });
+    // Its source is the one value that recomputed, never the one that did not (the view-model note's section 2).
+    expect(mixed.receipt.sources.counterparty_named.from.slice(1).map((f) => f.path)).toEqual(["/agent_input/report/counterparty_openings/steps/0/payee"]);
     expect(mixed.lines("counterparty")).toHaveLength(2);
   });
 
@@ -254,7 +256,9 @@ describe("line 4: each act came after the holder's yes (#383)", () => {
     const out = await draw(opts.name || STANDALONE, { audience: opts.audience || "keep", kind: opts.kind || "unilateral", carrier: opts.carrier, ...stubbed });
     const lines = out.lines("after-yes");
     const line = out.host.L0.querySelector('[data-rung="after-yes"]');
-    return { yes: out.receipt.after_yes, text: lines[0], count: lines.length, state: line && line.getAttribute("data-after-yes") };
+    // The line's source (the view-model note's section 2) is compared apart: `src`.
+    const { src, ...model } = out.receipt.after_yes || {};
+    return { yes: out.receipt.after_yes === undefined ? undefined : model, src, text: lines[0], count: lines.length, state: line && line.getAttribute("data-after-yes") };
   };
 
   it("passes when each act follows its approval, which answers the check's verdict first", async () => {
@@ -271,10 +275,12 @@ describe("line 4: each act came after the holder's yes (#383)", () => {
       { "e4c5d1d2": both(block({ record_type: "claim", refs: [] }), body({ unchecked: true })) },
     ];
     for (const payloads of cases) {
-      const { yes: model, text, state } = await yes({ payloads });
+      const { yes: model, src, text, state } = await yes({ payloads });
       expect(model.state).toBe("failed");
       expect(model.why).toBe("unapproved");
       expect(model.act.step.startsWith("e4c5d1d2")).toBe(true);
+      // The act it names is read from that record.
+      expect(src).toEqual({ derived: "after_yes", from: [{ record: model.act.step, path: "/agent_input/body/action" }] });
       expect(state).toBe("failed");
       // The act is named by its line in the sealed report.
       expect(text).toBe("Each act came after your yes: failed; “Noted the payee for this profile's own history (never shared)” was taken without your yes.");

@@ -3,9 +3,10 @@
 
 ``testdata/receipt/oracle-golden.json.gz`` is the output of
 ``tests/receipt_oracle.py`` (canRender, model and the page at L0, L1 and L2 for
-every receipt fixture and audience). ``js-tests/receipt_parity.test.js`` holds
-the module-slot scripts to it. While the Python modules exist, this test holds
-the file to them; regenerate with
+every receipt fixture and audience, the edited copies, and the copies edited
+after signing that u526 freezes before any Python module goes).
+``js-tests/receipt_parity.test.js`` holds the module-slot scripts to it. While
+the Python modules exist, this test holds the file to them; regenerate with
 ``python tests/receipt_oracle.py | gzip -n -9 > tests/testdata/receipt/oracle-golden.json.gz``.
 """
 import gzip

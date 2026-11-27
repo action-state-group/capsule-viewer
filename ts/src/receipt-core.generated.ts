@@ -546,7 +546,7 @@ const root = {};
       var cid = str(get(r, "capsule_id"));
       if (cid === null || s.leg !== "payee_observed" || s.status !== "settled") return;
       var input = disclosed(cid, "agent_input");
-      legs.push({ settlement: s, input: isMap(input) ? input : null });
+      legs.push({ id: cid, settlement: s, input: isMap(input) ? input : null });
     });
     return legs;
   }
@@ -631,18 +631,23 @@ const root = {};
       // The first rail a disclosed action names, other than the simulated one:
       // test money is said once, at the top (money.test; the 0.25.0 top line),
       // so it draws no second line here, and never hides a real rail named after it.
-      var rail = null;
+      var rail = null, railAt = null;
       v.records.forEach(function (cid) {
         var p = v.disclosed(cid, "agent_input");
         var named = str(get(map(get(p, "body")), "rail"));
-        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "" && named !== TEST_RAIL) rail = named;
+        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "" && named !== TEST_RAIL) {
+          rail = named;
+          railAt = inRecord(cid, "/agent_input/body/rail");
+        }
       });
-      return rail === null ? null : { state: "missing", rail: rail, band: null };
+      // The rail is the first disclosed action's own (the view-model note's section 2: each value its source).
+      return rail === null ? null : { state: "missing", rail: rail, band: null, src: { derived: "rail", from: [railAt] } };
     }
     var railOf = legRail(legs);
     var state = railOf !== "lightning" ? railOf : lightningProof(legs);
     if (state === "sealed" && (checked === "proof" || checked === "failed")) state = checked;
-    return { state: state, rail: null, band: legBand(legs) };
+    // The band is the legs' summed amounts (legBand): each leg's settlement is a source.
+    return { state: state, rail: null, band: legBand(legs), src: { derived: "legs", from: legs.map(function (l) { return inRecord(l.id, "/record/settlement"); }) } };
   }
 
   // Whether a settlement line rests on a settled leg (any state but "missing").
@@ -835,14 +840,16 @@ const root = {};
   // values that recomputed; `unchecked` is true when any value did not;
   // `accepted` lists each acceptance in order, its text only when it
   // recomputed. A step named twice verifies no second entry for it.
-  function counterpartyOf(reader, raw) {
+  // `checkedAt`, when given, gets for each kind it names the index of the opening entry that decided it.
+  function counterpartyOf(reader, raw, checkedAt) {
+    checkedAt = checkedAt || {};
     var hasWho = own(raw, "counterparty_openings"), hasAccepted = own(raw, "acceptance_openings");
     if (!hasWho && !hasAccepted) return null;
     var out = { who: null, unchecked: false, accepted: [] };
     var cp = map(get(raw, "counterparty_openings"));
     var key = hexBytes(get(cp, "key"));
     var got = {}, seen = {};
-    seq(get(cp, "steps")).forEach(function (e) {
+    seq(get(cp, "steps")).forEach(function (e, index) {
       var entry = map(e);
       var step = or(str(get(entry, "step")), "");
       var payload = reader.headers.has(step) ? reader.payload(step) : null;
@@ -855,9 +862,12 @@ const root = {};
         seen[step + "\u0000" + kind] = true;
         // The last entry for a field decides it; one that did not recompute
         // leaves the field unnamed rather than an earlier entry's value.
-        if (ok) got[kind] = value;
-        else {
+        if (ok) {
+          got[kind] = value;
+          checkedAt[kind] = index;
+        } else {
           delete got[kind];
+          delete checkedAt[kind];
           out.unchecked = true;
         }
       });
@@ -1004,6 +1014,8 @@ const root = {};
     var out = { state: yes.state, approvers: yes.approvers.filter(function (a) { return APPROVERS.indexOf(a) >= 0; }) };
     if (yes.why) out.why = yes.why;
     if (yes.act) out.act = { step: yes.act.id, action: str(get(yes.act.body, "action")) };
+    // The page's own check over the copy's deal log (afterYesOf); the act it names is read from its record.
+    out.src = { derived: "after_yes", from: yes.act ? [inRecord(yes.act.id, "/agent_input/body/action")] : [{ bundle: "/records" }] };
     return out;
   }
 
@@ -1130,70 +1142,84 @@ const root = {};
     return null;
   }
 
-  function facts(recordType, body) {
+  // A fact with where it was read (the view-model note's section 2): `at(path)` names a member of the
+  // record's body; an amount names its two members (formatAmount joins them). Null `at`: no source.
+  function withSrc(f, src) { if (f !== null && src) f.src = src; return f; }
+  function amountSrc(minorSrc, currencySrc) { return minorSrc && currencySrc ? { derived: "amount", from: [minorSrc, currencySrc] } : null; }
+
+  function facts(recordType, body, at) {
+    at = at || function () { return null; };
     var terms = map(get(body, "terms"));
+    var currencyAt = truthy(get(body, "currency")) ? at("/currency") : at("/terms/currency");
     var currency = or(get(body, "currency"), get(terms, "currency"));
+    var tok = function (name, value, path) { return withSrc(token(name, value), at(path)); };
+    var amt = function (name, minor, cur, minorPath, curSrc) { return withSrc(amountFact(name, minor, cur), amountSrc(at(minorPath), curSrc)); };
     var found;
     if (recordType === "baseline") {
       var intent = map(get(body, "intent"));
       var asked = map(get(intent, "asked"));
-      found = [token("deal_type", get(body, "deal_type"))]
-        .concat(sortedKeys(asked).map(function (key) { return token("asked." + key, asked[key]); }))
+      found = [tok("deal_type", get(body, "deal_type"), "/deal_type")]
+        .concat(sortedKeys(asked).map(function (key) { return tok("asked." + key, asked[key], "/intent/asked/" + pointerKey(key)); }))
         .concat([
-          token("allowed", get(intent, "allowed")),
-          token("item", get(terms, "item")),
-          token("quantity", get(terms, "quantity")),
-          amountFact("price", get(terms, "price_minor"), get(terms, "currency")),
-          token("expect_close_by", get(body, "expect_close_by")),
+          tok("allowed", get(intent, "allowed"), "/intent/allowed"),
+          tok("item", get(terms, "item"), "/terms/item"),
+          tok("quantity", get(terms, "quantity"), "/terms/quantity"),
+          amt("price", get(terms, "price_minor"), get(terms, "currency"), "/terms/price_minor", at("/terms/currency")),
+          tok("expect_close_by", get(body, "expect_close_by"), "/expect_close_by"),
         ]);
     } else if (recordType === "check") {
       found = [
-        token("action", get(body, "action")),
-        token("action_class", get(body, "action_class")),
-        amountFact("amount", get(body, "amount_minor"), currency),
-        amountFact("authorized_max", get(body, "authorized_max_minor"), currency),
-        token("item", get(terms, "item")),
-        token("quantity", get(terms, "quantity")),
-        token("material_fields_changed", get(body, "material_fields_changed")),
-        token("offer_fields_changed", get(body, "offer_fields_changed")),
+        tok("action", get(body, "action"), "/action"),
+        tok("action_class", get(body, "action_class"), "/action_class"),
+        amt("amount", get(body, "amount_minor"), currency, "/amount_minor", currencyAt),
+        amt("authorized_max", get(body, "authorized_max_minor"), currency, "/authorized_max_minor", currencyAt),
+        tok("item", get(terms, "item"), "/terms/item"),
+        tok("quantity", get(terms, "quantity"), "/terms/quantity"),
+        tok("material_fields_changed", get(body, "material_fields_changed"), "/material_fields_changed"),
+        tok("offer_fields_changed", get(body, "offer_fields_changed"), "/offer_fields_changed"),
       ];
     } else if (recordType === "verdict") {
       var differences = get(body, "differences");
       found = [
-        token("result", get(body, "result")),
-        token("disposition", get(body, "disposition")),
-        Array.isArray(differences) ? fact("differences", String(differences.length), "count") : null,
-        token("judge", get(map(get(body, "judge")), "kind")),
-        token("rules", get(map(get(body, "rules")), "status")),
-        token("notes", get(body, "notes")),
+        tok("result", get(body, "result"), "/result"),
+        tok("disposition", get(body, "disposition"), "/disposition"),
+        // The count of differences, not their text: derived from the list.
+        Array.isArray(differences) ? withSrc(fact("differences", String(differences.length), "count"), at("/differences") && { derived: "count", from: [at("/differences")] }) : null,
+        tok("judge", get(map(get(body, "judge")), "kind"), "/judge/kind"),
+        tok("rules", get(map(get(body, "rules")), "status"), "/rules/status"),
+        tok("notes", get(body, "notes"), "/notes"),
       ];
     } else if (recordType === "approval") {
-      found = [token("approver", get(body, "approver")), token("choice", get(body, "choice"))];
+      found = [tok("approver", get(body, "approver"), "/approver"), tok("choice", get(body, "choice"), "/choice")];
     } else if (recordType === "action") {
       found = [
-        token("action", get(body, "action")),
-        amountFact("amount", get(body, "amount_minor"), currency),
-        token("direction", get(body, "direction")),
-        token("rail", get(body, "rail")),
+        tok("action", get(body, "action"), "/action"),
+        amt("amount", get(body, "amount_minor"), currency, "/amount_minor", currencyAt),
+        tok("direction", get(body, "direction"), "/direction"),
+        tok("rail", get(body, "rail"), "/rail"),
       ];
     } else if (recordType === "claim") {
-      found = [token("class", get(body, "class")), token("source_kind", get(body, "source_kind"))];
+      found = [tok("class", get(body, "class"), "/class"), tok("source_kind", get(body, "source_kind"), "/source_kind")];
     } else {
       found = [];
     }
     return found.filter(function (f) { return f !== null; });
   }
 
+  // RFC 6901: one member name as a JSON pointer token.
+  function pointerKey(k) { return String(k).replace(/~/g, "~0").replace(/\//g, "~1"); }
+
   function item(text, steps, at, flagged) {
     return { text: text, steps: steps || [], at: at === undefined ? null : at, flagged: !!flagged };
   }
 
-  function items(raw, stepsKey) {
+  // `at(i)`: the source of the list's i-th entry (each item keeps the entry it was read from), or none.
+  function items(raw, stepsKey, at) {
     var out = [];
-    seq(raw).forEach(function (entry) {
+    seq(raw).forEach(function (entry, i) {
       entry = map(entry);
       var text = str(get(entry, "text"));
-      if (text !== null) out.push(item(text, strings(get(entry, stepsKey || "steps")), str(get(entry, "at"))));
+      if (text !== null) out.push(withSrc(item(text, strings(get(entry, stepsKey || "steps")), str(get(entry, "at"))), at ? at(i) : null));
     });
     return out;
   }
@@ -1229,9 +1255,9 @@ const root = {};
   }
 
   // The errand's journey as the sealed report states it (model.py Move).
-  function journeyOf(raw) {
+  function journeyOf(raw, at) {
     var out = [];
-    seq(raw).forEach(function (e) {
+    seq(raw).forEach(function (e, i) {
       if (!isMap(e)) return;
       var entry = map(e);
       // A move with no key is still a move: capsulectl's page lists it as who moved, with no label.
@@ -1242,45 +1268,69 @@ const root = {};
         var value = str(facts[name]);
         if (value !== null) pairs.push([name, value]);
       });
-      out.push({ by: or(str(get(entry, "by")), ""), key: key, step: str(get(entry, "step")), facts: pairs, classes: Array.isArray(get(facts, "classes")) ? strings(get(facts, "classes")) : null });
+      out.push(withSrc({ by: or(str(get(entry, "by")), ""), key: key, step: str(get(entry, "step")), facts: pairs, classes: Array.isArray(get(facts, "classes")) ? strings(get(facts, "classes")) : null }, at ? at(i) : null));
     });
     return out;
   }
 
+  // `capsuleId` names the sealed report; its `report` object is `raw`, at /agent_input/report of that record
+  // (the standalone report's pair has the same shape, so one pointer reads either).
   function report(capsuleId, raw) {
+    var base = function (path) { return inRecord(capsuleId, "/agent_input/report" + path); };
+    var each = function (path) { return function (i) { return base(path + "/" + i); }; };
     var life = map(get(raw, "lifecycle"));
     var deadlines = seq(get(raw, "deadlines")).map(map);
     var anomalies = seq(get(raw, "anomalies")).map(map);
     var side = function (name) {
-      return anomalies.filter(function (a) { return get(a, "side") === name; })
-        .map(function (a) { return item(or(str(get(a, "text")), ""), strings(get(a, "steps")), null, true); });
+      var out = [];
+      anomalies.forEach(function (a, i) {
+        if (get(a, "side") === name) out.push(withSrc(item(or(str(get(a, "text")), ""), strings(get(a, "steps")), null, true), base("/anomalies/" + i)));
+      });
+      return out;
     };
-    return {
+    var r = {
       capsule_id: capsuleId,
       audience: or(str(get(raw, "audience")), ""),
       state: str(get(life, "state")),
-      did: items(get(raw, "did")),
+      did: items(get(raw, "did"), "steps", each("/did")),
       money: str(get(map(get(raw, "money")), "text")),
       lifecycle: str(get(life, "text")),
-      later: items(get(life, "later"), "capsule_id"),
+      later: items(get(life, "later"), "capsule_id", each("/lifecycle/later")),
       may_change: str(get(life, "may_change")),
       as_of: str(get(life, "as_of")),
       scope: str(get(raw, "scope")),
       did_line: str(get(raw, "did_line")),
       instructions: str(get(raw, "instructions")),
-      told: seq(get(raw, "told")).map(function (t) { return told(map(t)); }),
-      deadlines: deadlines.map(deadline),
+      // A told line and a deadline join several members of their entry: the entry is their source.
+      told: seq(get(raw, "told")).map(function (t, i) { return withSrc(told(map(t)), { derived: "told", from: [base("/told/" + i)] }); }),
+      deadlines: deadlines.map(function (d, i) { return withSrc(deadline(d), { derived: "deadline", from: [base("/deadlines/" + i)] }); }),
       deadline_note: deadlines.length ? str(get(deadlines[0], "note")) : null,
-      cancellations: seq(get(raw, "cancellations")).map(map).map(function (c) {
-        return { proven: strings(get(c, "proven")), not_proven: strings(get(c, "not_proven")), confirmed: get(c, "merchant") === "confirmed", steps: strings(get(c, "steps")) };
+      cancellations: seq(get(raw, "cancellations")).map(map).map(function (c, i) {
+        return withSrc({ proven: strings(get(c, "proven")), not_proven: strings(get(c, "not_proven")), confirmed: get(c, "merchant") === "confirmed", steps: strings(get(c, "steps")) }, base("/cancellations/" + i));
       }),
-      merchant: seq(get(raw, "merchant")).map(function (m) { return merchant(map(m)); }),
+      merchant: seq(get(raw, "merchant")).map(function (m, i) { return withSrc(merchant(map(m)), base("/merchant/" + i)); }),
       email_scope: str(get(raw, "email_scope")),
       agent_anomalies: side("agent"),
       counterparty_anomalies: side("counterparty"),
       withheld: strings(get(raw, "withheld")),
-      journey: journeyOf(get(raw, "journey")),
+      journey: journeyOf(get(raw, "journey"), each("/journey")),
     };
+    r.sources = sourcesOf(r, {
+      capsule_id: inRecord(capsuleId, "/record/capsule_id"),
+      audience: base("/audience"),
+      state: base("/lifecycle/state"),
+      money: base("/money/text"),
+      lifecycle: base("/lifecycle/text"),
+      may_change: base("/lifecycle/may_change"),
+      as_of: base("/lifecycle/as_of"),
+      scope: base("/scope"),
+      did_line: base("/did_line"),
+      instructions: base("/instructions"),
+      deadline_note: base("/deadlines/0/note"),
+      email_scope: base("/email_scope"),
+      withheld: own(raw, "withheld") ? base("/withheld") : null,
+    });
+    return r;
   }
 
   // The sealed report's AUTHORITY blocks (capsule-viewer#383, line 5), which
@@ -1396,14 +1446,30 @@ const root = {};
     return [named, rep];
   };
 
-  function stepOf(reader, cid, entry) {
+  // Sources (the view-model note's section 2) of a model's plain members: each member whose value is not
+  // null gets its source; a member with no value has none.
+  function sourcesOf(model, srcs) {
+    var out = {};
+    Object.keys(srcs).forEach(function (k) {
+      var v = model[k];
+      if (v !== null && v !== undefined && srcs[k]) out[k] = srcs[k];
+    });
+    return out;
+  }
+
+  // `entryAt(member)`: the source of a member of this step's entry in the sealed report's `steps`, or null.
+  function stepOf(reader, cid, entry, entryAt, citedAt) {
+    entryAt = entryAt || function () { return null; };
     var payload = reader.payload(cid);
     var recordType = null;
+    var recordTypeAt = null;
     var body = {};
     if (payload !== null) {
       var typed = str(get(payload, "type"));
       recordType = or(str(get(map(get(payload, EXTENSION)), "record_type")),
         or(str(get(payload, "record_type")), typed !== null && own(RECORD_TYPE_BY_TYPED, typed) ? typed : null));
+      recordTypeAt = truthy(str(get(map(get(payload, EXTENSION)), "record_type"))) ? "/agent_input/" + EXTENSION + "/record_type"
+        : truthy(str(get(payload, "record_type"))) ? "/agent_input/record_type" : "/agent_input/type";
       body = map(get(payload, "body"));
     }
     var key = or(recordType, "");
@@ -1414,18 +1480,34 @@ const root = {};
       var stepKind = or(str(get(entry, "kind")), "");
       section = own(SECTION_BY_STEP_KIND, stepKind) ? SECTION_BY_STEP_KIND[stepKind] : "other";
     }
-    return {
+    var step = {
       capsule_id: cid,
       disclosure: reader.disclosure(cid),
       section: section,
       record_type: recordType,
       log: reader.log(cid),
       key_id: str(get(reader.headers.get(cid) || {}, "key_id")),
-      facts: facts(kind, body),
+      facts: facts(kind, body, payload === null ? null : function (path) { return inRecord(cid, "/agent_input/body" + path); }),
       line: str(get(entry, "line")),
       at: str(get(entry, "at")),
       n: int(get(entry, "n")),
     };
+    step.sources = stepSources(step, cid, recordTypeAt, entryAt, citedAt || null);
+    return step;
+  }
+
+  // A step the copy does not carry (not_present) is known only by the report entry that cites it.
+  function stepSources(step, cid, recordTypeAt, entryAt, citedAt) {
+    return sourcesOf(step, {
+      capsule_id: step.disclosure !== "not_present" ? inRecord(cid, "/record/capsule_id") : (entryAt("capsule_id") || citedAt || null),
+      record_type: recordTypeAt === null ? null : inRecord(cid, recordTypeAt),
+      // Where the record sits on its log: the membership proof the page checked.
+      log: { checked: "memberships", path: "/" + pointerKey(cid) + "/log_coordinates" },
+      key_id: inRecord(cid, "/record/key_id"),
+      line: entryAt("line"),
+      at: entryAt("at"),
+      n: entryAt("n"),
+    });
   }
 
   function producerOf(payload) {
@@ -1440,24 +1522,41 @@ const root = {};
     return str(get(producer, "version")) === null ? null : str(get(producer, "name"));
   }
 
-  function committed(reader, stepId, commitmentOf, nonce, text, label) {
+  // `at`: the sources of the opening's members, {step, text, commitment, label} (the text is the sealed
+  // report's opening, shown only once this page checked it against the step's commitment).
+  function committed(reader, stepId, commitmentOf, nonce, text, label, at) {
     label = label === undefined ? null : label;
-    if (stepId === null || reader.disclosure(stepId) === "not_present") return { state: "not_present", step: stepId, text: null, label: label };
-    var payload = reader.payload(stepId);
-    if (payload === null) return { state: "withheld", step: stepId, text: null, label: label };
-    var state = checkOpening(commitmentOf(payload), nonce, text);
-    return { state: state, step: stepId, text: state === "opened" ? str(text) : null, label: label };
+    at = at || {};
+    var out;
+    if (stepId === null || reader.disclosure(stepId) === "not_present") out = { state: "not_present", step: stepId, text: null, label: label };
+    else if (reader.payload(stepId) === null) out = { state: "withheld", step: stepId, text: null, label: label };
+    else {
+      var state = checkOpening(commitmentOf(reader.payload(stepId)), nonce, text);
+      out = { state: state, step: stepId, text: state === "opened" ? str(text) : null, label: label };
+    }
+    out.sources = sourcesOf(out, {
+      step: at.step || null,
+      text: at.text ? { record: at.text.record, path: at.text.path, checked_against: at.commitment } : null,
+      label: at.label || null,
+    });
+    return out;
   }
 
-  function askedOf(reader, raw) {
+  // `reportId`: the sealed report whose `report` object is `raw` (report(), above).
+  function askedOf(reader, raw, reportId) {
     var opening = map(get(raw, "asked_opening"));
-    return committed(reader, str(get(raw, "asked_step")), function (p) {
+    var stepId = str(get(raw, "asked_step"));
+    return committed(reader, stepId, function (p) {
       return get(map(get(map(get(p, "body")), "intent")), "verbatim_commitment");
-    }, get(opening, "nonce"), get(opening, "text"));
+    }, get(opening, "nonce"), get(opening, "text"), null, {
+      step: inRecord(reportId, "/agent_input/report/asked_step"),
+      text: inRecord(reportId, "/agent_input/report/asked_opening/text"),
+      commitment: stepId === null ? null : inRecord(stepId, "/agent_input/body/intent/verbatim_commitment"),
+    });
   }
 
-  function statementsOf(reader, raw) {
-    return seq(get(raw, "representations")).map(map).map(function (r) {
+  function statementsOf(reader, raw, reportId) {
+    return seq(get(raw, "representations")).map(map).map(function (r, i) {
       var index = int(get(r, "index"));
       var claimOf = function (payload) {
         var body = map(get(payload, "body"));
@@ -1472,7 +1571,14 @@ const root = {};
       var stepId = str(get(r, "step"));
       var payload = stepId ? reader.payload(stepId) : null;
       var label = payload !== null ? str(get(claimOf(payload), "class")) : null;
-      return committed(reader, stepId, commitmentOf, get(r, "nonce"), get(r, "text"), label);
+      var claimAt = stepId === null ? null : "/agent_input/body" + (index === null ? "" : "/claims/" + index);
+      var here = "/agent_input/report/representations/" + i;
+      return committed(reader, stepId, commitmentOf, get(r, "nonce"), get(r, "text"), label, {
+        step: inRecord(reportId, here + "/step"),
+        text: inRecord(reportId, here + "/text"),
+        commitment: claimAt === null ? null : inRecord(stepId, claimAt + "/text_commitment"),
+        label: claimAt === null ? null : inRecord(stepId, claimAt + "/class"),
+      });
     });
   }
 
@@ -1524,26 +1630,45 @@ const root = {};
     if (audience !== null && rep.audience !== audience) throw new Unavailable("this copy was cut for " + rep.audience + ", not " + audience);
 
     var entries = new Map();
-    seq(get(raw, "steps")).map(map).forEach(function (e) {
+    var entryIndex = new Map();
+    seq(get(raw, "steps")).map(map).forEach(function (e, i) {
       var cid = str(get(e, "capsule_id"));
-      if (cid !== null) entries.set(cid, e);
+      if (cid !== null) { entries.set(cid, e); entryIndex.set(cid, i); }
     });
+    var entryAt = function (cid) {
+      return function (member) { return entryIndex.has(cid) ? inRecord(reportId, "/agent_input/report/steps/" + entryIndex.get(cid) + "/" + member) : null; };
+    };
     var order = v.records.filter(function (cid) { return !reader.isReport(cid); });
     var cited = Array.from(entries.keys());
-    rep.did.concat(rep.told, rep.later).forEach(function (i) { cited = cited.concat(i.steps); });
+    // Where each step the report cites is named: the first item naming it (a did, told or later item).
+    var citedAt = new Map();
+    rep.did.concat(rep.told, rep.later).forEach(function (i) {
+      cited = cited.concat(i.steps);
+      i.steps.forEach(function (cid) { if (!citedAt.has(cid) && i.src) citedAt.set(cid, { derived: "cited", from: [i.src.derived ? i.src.from[0] : i.src] }); });
+    });
     cited.forEach(function (cid) {
       if (order.indexOf(cid) < 0 && !reader.isReport(cid)) order.push(cid);
     });
-    var steps = order.map(function (cid) { return stepOf(reader, cid, entries.has(cid) ? entries.get(cid) : {}); });
+    var steps = order.map(function (cid) { return stepOf(reader, cid, entries.has(cid) ? entries.get(cid) : {}, entryAt(cid), citedAt.get(cid)); });
     v.records.forEach(function (cid) {
       if (!reader.isReport(cid)) return;
-      steps.push({
+      var step = {
         capsule_id: cid, disclosure: reader.disclosure(cid), section: "report", record_type: cid === reportId ? REPORT_TYPE : null,
         log: reader.log(cid), key_id: str(get(reader.headers.get(cid), "key_id")), facts: [], line: null, at: null, n: null,
-      });
+      };
+      // The report's type is the one this page found the named report by (Reader.isReport), not a member it shows.
+      step.sources = stepSources(step, cid, cid === reportId && reader.payload(cid) !== null ? "/agent_input/type" : null, function () { return null; });
+      steps.push(step);
     });
 
     var payloads = v.records.map(function (cid) { return reader.payload(cid); }).filter(function (p) { return p !== null; });
+    // Where each producer was read: the records whose payload names one (producerOf).
+    var producerAt = [];
+    v.records.forEach(function (cid) {
+      var p = reader.payload(cid);
+      if (p === null || producerOf(p) === null) return;
+      producerAt.push(inRecord(cid, isMap(get(map(get(p, EXTENSION)), "producer")) ? "/agent_input/" + EXTENSION + "/producer" : "/agent_input/producer"));
+    });
     var demo = payloads.some(function (p) {
       return get(map(get(p, EXTENSION)), "record_type") === "baseline" && get(map(get(p, "body")), "demo") === true;
     });
@@ -1551,8 +1676,8 @@ const root = {};
       deal_id: or(str(get(raw, "deal_id")), ""),
       demo: demo,
       headline: headlineOf(steps, v.root, rep),
-      asked: askedOf(reader, raw),
-      statements: statementsOf(reader, raw),
+      asked: askedOf(reader, raw, reportId),
+      statements: statementsOf(reader, raw, reportId),
       steps: steps,
       report: rep,
       producers: distinct(payloads.map(producerOf)),
@@ -1568,6 +1693,18 @@ const root = {};
     if (v.assurance.book_witnessed) model.book_witnessed = v.assurance.book_witnessed;
     if (v.assurance.countersign_reported) model.countersign_reported = v.assurance.countersign_reported;
     if (reader.standalone() && v.assurance.report_checked_here === true) model.report_checked_here = true;
+    model.headline.sources = sourcesOf(model.headline, { state: rep.sources.state || null });
+    // Where each plain member the drawer shows as a value was read (the view-model note's section 2), as the
+    // x-deal-v1 model's `sources`. Steps, facts, openings, report items and the report carry their own.
+    model.sources = sourcesOf(model, {
+      deal_id: inRecord(reportId, "/agent_input/report/deal_id"),
+      producers: producerAt.length ? { derived: "producer", from: producerAt } : null,
+      producer_names: producerAt.length ? { derived: "producer_name", from: producerAt } : null,
+      bundle_digest: { checked: "bundle_digest" },
+      report_checked: model.report_checked_here === true ? { checked: "report_check" } : { report: "x-deal-v0", path: "/status" },
+      book_witnessed: { report: "x-deal-v0", path: "/witnessed" },
+      countersign_reported: { report: "x-deal-v0", path: "/countersign" },
+    });
     return model;
   }
 
@@ -2327,9 +2464,12 @@ const root = {};
 
   // ---- the seller model (seller.py) -----------------------------------------
 
-  function sellerAmount(body, minorKey) {
+  // `at(path)`: the source of a member of `body`; the amount names its two members (formatAmount joins them).
+  function sellerAmount(body, minorKey, at) {
     var minor = get(body, minorKey || "amount_minor"), currency = str(get(body, "currency"));
-    if (typeof minor === "number" && Number.isInteger(minor) && currency) return fact("amount", formatAmount(minor, currency), "amount");
+    if (typeof minor === "number" && Number.isInteger(minor) && currency) {
+      return withSrc(fact("amount", formatAmount(minor, currency), "amount"), at ? amountSrc(at("/" + (minorKey || "amount_minor")), at("/currency")) : null);
+    }
     return null;
   }
 
@@ -2344,6 +2484,34 @@ const root = {};
       ref = map(ref);
       var digest = str(get(ref, "digest"));
       if (get(ref, "rel") === rel && digest !== null) out.push(digest);
+    });
+    return out;
+  }
+
+  // Where each of refDigests' digests sits in the payload, in the same order (a source for each).
+  function refPointers(payload, rel) {
+    var inExtension = !truthy(get(payload, "refs"));
+    var base = inExtension ? "/agent_input/" + pointerKey(EXTENSION) + "/refs/" : "/agent_input/refs/";
+    var out = [];
+    seq(or(get(payload, "refs"), get(map(get(payload, EXTENSION)), "refs"))).forEach(function (ref, i) {
+      ref = map(ref);
+      if (get(ref, "rel") === rel && str(get(ref, "digest")) !== null) out.push(base + i + "/digest");
+    });
+    return out;
+  }
+
+  // The JSON pointer (under the body) of each of commitmentsOf's commitments, in the same order: its
+  // label joins member names with "." for the page, which a member name holding a "." would make ambiguous.
+  function commitmentPointers(body, prefix) {
+    prefix = prefix || "";
+    var out = [];
+    sortedKeys(body).forEach(function (key) {
+      var value = body[key];
+      if (key.slice(-"_commitment".length) === "_commitment") {
+        if (str(value) !== null) out.push(prefix + "/" + pointerKey(key));
+        return;
+      }
+      out = out.concat(commitmentPointers(map(value), prefix + "/" + pointerKey(key)));
     });
     return out;
   }
@@ -2396,23 +2564,39 @@ const root = {};
       if (d !== null) byDigest.set(d, cid);
     });
 
+    var bodyAt = function (cid, path) { return inRecord(cid, "/agent_input/body" + path); };
     var acceptances = [];
     bodies("action-approval/v0").forEach(function (pair) {
       var cid = pair[0], body = pair[1];
       if (get(body, "kind") !== ACCEPTANCE_KIND) return;
       var named = str(get(map(get(body, "proposed_action_ref")), "digest"));
-      acceptances.push({
+      var acceptance = {
         step: cid, channel: str(get(body, "channel")), observed_at: str(get(body, "observed_at")), offer_digest: named,
         offer: named && byDigest.has(named) ? byDigest.get(named) : null,
+      };
+      acceptance.sources = sourcesOf(acceptance, {
+        step: inRecord(cid, "/record/capsule_id"),
+        channel: bodyAt(cid, "/channel"),
+        observed_at: bodyAt(cid, "/observed_at"),
+        offer_digest: bodyAt(cid, "/proposed_action_ref/digest"),
+        // The offer whose payload digest this page computed equals the one named.
+        offer: acceptance.offer === null ? null : { derived: "ref", from: [bodyAt(cid, "/proposed_action_ref/digest"), inRecord(acceptance.offer, "/agent_input")] },
       });
+      acceptances.push(acceptance);
     });
 
     var proposed = bodies("proposed-action/v0").filter(function (pair) { return ["offer", "commit"].indexOf(get(pair[1], "action")) >= 0; });
     var supersededBy = new Map();
+    // The source of each "supersedes" link: the newer offer's reference and the older offer it names.
+    var supersededByAt = new Map();
     proposed.forEach(function (pair) {
-      refDigests(payloads.get(pair[0]), "supersedes").forEach(function (d) {
+      var at = refPointers(payloads.get(pair[0]), "supersedes");
+      refDigests(payloads.get(pair[0]), "supersedes").forEach(function (d, i) {
         var old = byDigest.get(d);
-        if (truthy(old)) supersededBy.set(old, pair[0]);
+        if (truthy(old)) {
+          supersededBy.set(old, pair[0]);
+          supersededByAt.set(old, { derived: "ref_by", from: [inRecord(pair[0], at[i]), inRecord(old, "/agent_input")] });
+        }
       });
     });
     var acceptedBy = new Map();
@@ -2420,18 +2604,38 @@ const root = {};
     var offers = proposed.map(function (pair) {
       var cid = pair[0], body = pair[1];
       var supersedes = null;
+      var supersedesAt = null;
       var refs = refDigests(payloads.get(cid), "supersedes");
-      for (var i = 0; i < refs.length; i++) if (byDigest.has(refs[i])) { supersedes = byDigest.get(refs[i]); break; }
-      return {
-        step: cid, action: pyStr(get(body, "action")), amount: sellerAmount(body), digest: digestOfPayload.get(cid),
+      var refsAt = refPointers(payloads.get(cid), "supersedes");
+      for (var i = 0; i < refs.length; i++) {
+        if (byDigest.has(refs[i])) {
+          supersedes = byDigest.get(refs[i]);
+          supersedesAt = { derived: "ref", from: [inRecord(cid, refsAt[i]), inRecord(supersedes, "/agent_input")] };
+          break;
+        }
+      }
+      var offer = {
+        step: cid, action: pyStr(get(body, "action")), amount: sellerAmount(body, null, function (path) { return bodyAt(cid, path); }), digest: digestOfPayload.get(cid),
         supersedes: supersedes, superseded_by: supersededBy.has(cid) ? supersededBy.get(cid) : null,
         accepted_by: acceptedBy.has(cid) ? acceptedBy.get(cid) : null,
       };
+      offer.sources = sourcesOf(offer, {
+        step: inRecord(cid, "/record/capsule_id"),
+        action: bodyAt(cid, "/action"),
+        // This page's digest of the offer's payload (recordDigest).
+        digest: { derived: "payload_digest", from: [inRecord(cid, "/agent_input")] },
+        supersedes: supersedesAt,
+        superseded_by: supersededByAt.has(cid) ? supersededByAt.get(cid) : null,
+        accepted_by: offer.accepted_by === null ? null : { derived: "ref_by", from: [bodyAt(offer.accepted_by, "/proposed_action_ref/digest"), inRecord(cid, "/agent_input")] },
+      });
+      return offer;
     });
 
     var evidence = bodies("evidence").map(function (pair) {
-      return { step: pair[0], disclosure: "disclosed", source: str(get(pair[1], "source")), verified: get(pair[1], "verified") === true };
-    }).concat(withheld("evidence").map(function (cid) { return { step: cid, disclosure: "withheld", source: null, verified: null }; }));
+      var e = { step: pair[0], disclosure: "disclosed", source: str(get(pair[1], "source")), verified: get(pair[1], "verified") === true };
+      e.sources = sourcesOf(e, { step: inRecord(pair[0], "/record/capsule_id"), source: bodyAt(pair[0], "/source"), verified: bodyAt(pair[0], "/verified") });
+      return e;
+    }).concat(withheld("evidence").map(function (cid) { return { step: cid, disclosure: "withheld", source: null, verified: null, sources: { step: inRecord(cid, "/record/capsule_id") } }; }));
 
     var handover = { state: "not_present", step: null, facts: [] };
     var delivered = bodies("action-outcome/v0").map(function (pair) { return [pair[0], map(get(pair[1], "delivered"))]; })
@@ -2439,18 +2643,21 @@ const root = {};
     if (delivered.length) {
       var last = delivered[delivered.length - 1];
       var terms = last[1];
+      var deliveredAt = function (path) { return bodyAt(last[0], "/delivered" + path); };
       var hf = ["item", "quantity"].filter(function (k) { return own(terms, k); })
-        .map(function (k) { return fact(k, pyStr(terms[k]), k === "quantity" ? "count" : "token"); });
-      var price = sellerAmount(terms, "price_minor");
-      if (price) hf.push(fact("price", price.value, "amount"));
+        .map(function (k) { return withSrc(fact(k, pyStr(terms[k]), k === "quantity" ? "count" : "token"), deliveredAt("/" + k)); });
+      var price = sellerAmount(terms, "price_minor", deliveredAt);
+      if (price) hf.push(withSrc(fact("price", price.value, "amount"), price.src));
       handover = { state: "recorded", step: last[0], facts: hf };
     } else if (withheld("outcome").length) {
       var wo = withheld("outcome");
       handover = { state: "withheld", step: wo[wo.length - 1], facts: [] };
     }
+    if (handover.step !== null) handover.sources = { step: inRecord(handover.step, "/record/capsule_id") };
 
     var closes = bodies("close");
     var outcome = closes.length ? str(get(closes[closes.length - 1][1], "outcome")) : null;
+    var outcomeAt = closes.length ? bodyAt(closes[closes.length - 1][0], "/outcome") : null;
 
     var baselines = bodies("baseline");
     var opening = baselines.length ? baselines[0][1] : {};
@@ -2458,13 +2665,15 @@ const root = {};
     var authorityBody = authorities.length ? authorities[0][1] : {};
     var intent = map(get(opening, "intent"));
     var oterms = map(get(opening, "terms"));
-    var it = truthy(str(get(oterms, "item"))) ? fact("item", oterms.item) : "not_present";
-    if (typeof it === "string" && truthy(str(get(map(get(intent, "asked")), "item")))) it = fact("item", pyStr(map(get(intent, "asked")).item));
+    var openingId = baselines.length ? baselines[0][0] : null;
+    var it = truthy(str(get(oterms, "item"))) ? withSrc(fact("item", oterms.item), bodyAt(openingId, "/terms/item")) : "not_present";
+    if (typeof it === "string" && truthy(str(get(map(get(intent, "asked")), "item")))) it = withSrc(fact("item", pyStr(map(get(intent, "asked")).item)), bodyAt(openingId, "/intent/asked/item"));
 
     var commits = offers.filter(function (o) { return o.action === "commit"; });
-    var acted = bodies("action-record/v0").filter(function (pair) { return get(pair[1], "action") === "commit"; }).map(function (pair) { return pair[1]; });
+    var acted = bodies("action-record/v0").filter(function (pair) { return get(pair[1], "action") === "commit"; });
     var amount = "not_present";
-    if (acted.length && sellerAmount(acted[acted.length - 1])) amount = sellerAmount(acted[acted.length - 1]) || "not_present";
+    var lastActed = acted.length ? acted[acted.length - 1] : null;
+    if (lastActed !== null && sellerAmount(lastActed[1])) amount = sellerAmount(lastActed[1], null, function (path) { return bodyAt(lastActed[0], path); }) || "not_present";
     else if (commits.length && commits[commits.length - 1].amount) amount = commits[commits.length - 1].amount;
     else if (receipt.steps.some(function (s) { return kindOf.get(s.capsule_id) === "act" && s.disclosure === "withheld"; })) amount = "withheld";
 
@@ -2490,14 +2699,18 @@ const root = {};
     else if (addressSteps.length) address = "withheld";
     else address = "not_present";
 
+    var authorityId = authorities.length ? authorities[0][0] : null;
     var authority = [
-      truthy(get(authorityBody, "allowed_actions")) ? fact("allowed_actions", iter(authorityBody.allowed_actions).map(pyStr).join(", ")) : null,
-      truthy(str(get(authorityBody, "outcome_id"))) ? fact("outcome_id", authorityBody.outcome_id) : null,
+      truthy(get(authorityBody, "allowed_actions")) ? withSrc(fact("allowed_actions", iter(authorityBody.allowed_actions).map(pyStr).join(", ")), { derived: "join", from: [bodyAt(authorityId, "/allowed_actions")] }) : null,
+      truthy(str(get(authorityBody, "outcome_id"))) ? withSrc(fact("outcome_id", authorityBody.outcome_id), bodyAt(authorityId, "/outcome_id")) : null,
     ].filter(function (f) { return f !== null; });
     var commitments = [];
     payloads.forEach(function (p, cid) { commitments = commitments.concat(commitmentsOf(cid, map(get(p, "body")))); });
+    // Each commitment is [step, member, value]: its value is that step's body member (commitmentPointers).
+    var commitmentAt = [];
+    payloads.forEach(function (p, cid) { commitmentPointers(map(get(p, "body"))).forEach(function (path) { commitmentAt.push(bodyAt(cid, path)); }); });
     var keys = distinct(receipt.steps.map(function (s) { return s.key_id; }).filter(truthy));
-    return {
+    var seller = {
       receipt: receipt,
       item: truthy(opening) || !withheld("open").length ? it : "withheld",
       amount: amount,
@@ -2512,6 +2725,12 @@ const root = {};
       commitments: commitments,
       keys: keys,
     };
+    seller.sources = sourcesOf(seller, {
+      outcome: outcomeAt,
+      commitments: commitmentAt.length ? { derived: "commitments", from: commitmentAt } : null,
+      keys: keys.length ? { derived: "distinct", from: receipt.steps.filter(function (s) { return truthy(s.key_id); }).map(function (s) { return inRecord(s.capsule_id, "/record/key_id"); }) } : null,
+    });
+    return seller;
   }
 
   // ---- the composition (composed.py, bilateral.py) ---------------------------
@@ -2619,6 +2838,15 @@ const root = {};
       return get(raw, "outcome") === "artifact" && isMap(get(raw, "bundle"));
     });
   }
+  // Where each carried copy sits in the bundle: a party's own sources resolve inside it.
+  function carriedAt(v) {
+    var block = map(get(map(get(v.bundle, "extensions")), COMPOSED_KIND));
+    var out = [];
+    seq(get(block, "members")).map(map).forEach(function (raw, i) {
+      if (get(raw, "outcome") === "artifact" && isMap(get(raw, "bundle"))) out.push("/extensions/" + pointerKey(COMPOSED_KIND) + "/members/" + i + "/bundle");
+    });
+    return out;
+  }
 
   // sides.missing_member: the one absence member, its body read
   // from the bundle's own block (carried, its digest reproduced:
@@ -2702,6 +2930,7 @@ const root = {};
     var problem = compositionProblem(composition);
     if (problem !== null) return Promise.reject(new Unavailable(problem));
     var raws = carriedBodies(v);
+    var rawsAt = carriedAt(v);
     var members = [];
     for (var i = 0; i < raws.length; i++) {
       var member = composition.members.find(function (m) { return m.id === pyStr(get(raws[i], "id")); });
@@ -2723,10 +2952,21 @@ const root = {};
         var cut = copyAudience(pv);
         if (!sellerKindEngaged(pv) && sealedSide(pv) === "seller") throw new Unavailable(m.id + " is sealed as a seller's copy and does not engage the seller kind");
         var seller = sellerKindEngaged(pv) ? buildSeller(pv, cut) : null;
-        return {
+        var party = {
           member: m.id, observer: m.observer, role: observer ? observer.role : null, custody_domain: observer ? observer.custody_domain : null,
           audience: cut, deals: namedDeals(pv), assurance: pv.assurance, receipt: buildReceipt(pv, cut), seller: seller,
         };
+        var mi = composition.members.indexOf(m), oi = composition.observers.indexOf(observer);
+        // The record pointers under `receipt` and `seller` resolve in this party's carried copy (`src`).
+        party.src = { bundle: rawsAt[i] };
+        party.sources = sourcesOf(party, {
+          member: { report: COMPOSED_KIND, path: "/members/" + mi + "/id" },
+          observer: { report: COMPOSED_KIND, path: "/members/" + mi + "/observer" },
+          role: oi < 0 ? null : { bundle: "/extensions/" + pointerKey(COMPOSED_KIND) + "/observers/" + oi + "/role" },
+          custody_domain: oi < 0 ? null : { bundle: "/extensions/" + pointerKey(COMPOSED_KIND) + "/observers/" + oi + "/custody_domain" },
+          audience: party.receipt.report.sources.audience || null,
+        });
+        return party;
       });
       if (!pageMayShow(env.audience, parties.map(function (p) { return p.audience; }))) {
         throw new Unavailable("a page does not show copies cut for " + parties.map(function (p) { return p.audience; }).join(", "));
@@ -2734,7 +2974,7 @@ const root = {};
       var deal = oneDeal(parties.map(function (p) { return p.deals; }));
       var joins = composition.joins.map(function (j, i) { return { join: j, corroboration: composition.corroboration[i] }; });
       var missing = missingMember(v, composition);
-      return {
+      var model = {
         deal: deal[0] === "agree" ? deal[1][0] : null,
         deal_state: deal[0],
         named: deal[1],
@@ -2746,6 +2986,14 @@ const root = {};
         case: missing !== null ? (missing.kind === "refusal" ? "limit" : "one_sided") : twoCopyCase(deal[0], joins),
         missing: missing,
       };
+      // The composition is the page's verifier's result (compositionOf): each join and corroboration is its entry.
+      joins.forEach(function (j, i) { j.src = { report: COMPOSED_KIND, path: "/joins/" + i }; });
+      model.sources = sourcesOf(model, {
+        // The one deal every carried copy's disclosed records name (namedDeals).
+        deal: model.deal === null ? null : { derived: "one_deal", from: parties.map(function (p, i) { return { bundle: rawsAt[i] }; }) },
+        bundle_digest: { checked: "bundle_digest" },
+      });
+      return model;
     });
   }
 
@@ -4969,17 +5217,36 @@ const root = {};
       var received = providerAmount(get(settlement, "received"));
       var fee = providerAmount(get(settlement, "receive_fee"));
       total = total !== null && received !== null && received.msat !== null ? addDigits(total, received.msat) : null;
-      return { capsule_id: pyText(get(leg, "capsule_id")), received: received && received.text, fee: fee && fee.text };
+      var id = pyText(get(leg, "capsule_id"));
+      var payment = { capsule_id: id, received: received && received.text, fee: fee && fee.text };
+      // A leg's amounts are its record's settlement members, formatted by providerAmount.
+      payment.sources = sourcesOf(payment, {
+        capsule_id: inRecord(id, "/record/capsule_id"),
+        received: { derived: "provider_amount", from: [inRecord(id, "/record/settlement/received")] },
+        fee: { derived: "provider_amount", from: [inRecord(id, "/record/settlement/receive_fee")] },
+      });
+      return payment;
     });
-    return {
+    var exchangeId = pyText(get(parts.exchange, "capsule_id"));
+    var model = {
       effect: parts.effect,
       reason: parts.reason,
-      exchange_id: pyText(get(parts.exchange, "capsule_id")),
+      exchange_id: exchangeId,
       model: pyText(get(map(get(parts.exchange, "model_attestation")), "model_id")),
       served_at: providerUtc(pyText(get(parts.exchange, "timestamp"))),
       payments: payments,
       total: total === null ? null : groupDigits(total) + " msat",
     };
+    model.sources = sourcesOf(model, {
+      effect: inRecord(exchangeId, "/record/effect/status"),
+      reason: inRecord(exchangeId, "/record/model_attestation/compute_attestation/" + pointerKey(PROVIDER_POC) + "/failure_class"),
+      exchange_id: inRecord(exchangeId, "/record/capsule_id"),
+      model: inRecord(exchangeId, "/record/model_attestation/model_id"),
+      served_at: { derived: "provider_utc", from: [inRecord(exchangeId, "/record/timestamp")] },
+      // The sum of every leg's received amount, in msat.
+      total: { derived: "provider_total", from: parts.legs.map(function (leg) { return inRecord(pyText(get(leg, "capsule_id")), "/record/settlement/received"); }) },
+    });
+    return model;
   }
 
   // provider.render, all in L0 (the twin's page has one level and shows the
@@ -5176,8 +5443,10 @@ const root = {};
         if (line !== null) receipt.settlement = line;
       }
       var reader = new Reader(v);
-      var raw = reader.sealedReport()[1];
-      var named = counterpartyOf(reader, raw);
+      var sealed = reader.sealedReport();
+      var raw = sealed[1];
+      var checkedAt = {};
+      var named = counterpartyOf(reader, raw, checkedAt);
       if (named !== null) receipt.counterparty_named = named;
       var authority = authorityOf(raw);
       if (authority !== null) receipt.authority_sealed = authority;
@@ -5185,6 +5454,21 @@ const root = {};
       if (referee !== null) receipt.referee = referee;
       var yes = afterYesModel(v);
       if (yes !== null) receipt.after_yes = yes;
+      // Where each of these lines was read, beside the receipt's own sources. The settlement line and the
+      // after-yes line are this page's own computation over the copy's records (settlementOf, afterYesOf).
+      var inReport = function (path) { return inRecord(sealed[0], "/agent_input/report" + path); };
+      // The settlement line and the after-yes line carry their own `src` (settlementOf, afterYesModel).
+      var lines = sourcesOf(receipt, {
+        // The accepted words, from the acceptance openings; who, from each opening value whose fingerprint
+        // this page recomputed (a value that did not is not a source).
+        counterparty_named: { derived: "counterparty_openings", from: [own(raw, "acceptance_openings") ? inReport("/acceptance_openings") : null].concat(Object.keys(checkedAt).sort().map(function (kind) {
+          return inReport("/counterparty_openings/steps/" + checkedAt[kind] + "/" + kind);
+        })) },
+        authority_sealed: inReport("/authority"),
+        referee: inRecord(sealed[0], "/agent_input/referee"),
+      });
+      receipt.sources = receipt.sources || {};
+      Object.keys(lines).forEach(function (k) { receipt.sources[k] = lines[k]; });
     };
     var buildChecked = function (context) {
       var v = view(context, e);
@@ -5275,6 +5559,17 @@ const root = {};
     providerUtc: providerUtc,
     plainTime: plainTime,
     localTimes: localTimes,
+    // How the model reads one report entry or the legs, so the source test (js-tests/receipt_v0_sources.test.js)
+    // rebuilds a value from the entry its source names and compares the whole of it.
+    entryReaders: {
+      item: function (e, stepsKey) { return items([e], stepsKey)[0] || null; },
+      told: function (e) { return told(map(e)); },
+      deadline: function (e) { return deadline(map(e)); },
+      merchant: function (e) { return merchant(map(e)); },
+      journey: function (e) { return journeyOf([e])[0] || null; },
+      authorityBlocks: function (list) { var a = authorityOf({ authority: list }); return a === null ? [] : a.blocks; },
+      legBand: function (settlements) { return legBand(settlements.map(function (s) { return { settlement: map(s) }; })); },
+    },
     // The anti-hardcode test's formatters and derivations (capsule-viewer#488), unit-tested there.
     FORMATS: FORMATS,
     DERIVATIONS: DERIVATIONS,
@@ -5329,7 +5624,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "19510e1b894849979056d1d0c016a7e9cf5590b88db0faf51c0502d9fed5f471",
+      "script_sha256": "ae5fdd3daa0039e37929f74ccc7e16f0adca8eb707449ce932aae1e68683033d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5376,7 +5671,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "a6389143e5955f6ee4fab9aa8bfb28997b936e5c3952a014eb6d0bf92aceb41f",
+      "script_sha256": "4354ef7bbca2734b0b0f902ae187f686cb605a34af12624d2822db99ed9a3ae8",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5422,7 +5717,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "b764c2aad38f70026e443a81db81dbce86a6eb8cf9d2c6a7033beab60139f45c",
+      "script_sha256": "7027fa7ed2f5437769cf40c6640a2c9eef6d8786364c4697ec6c0690ae39be38",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5470,7 +5765,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "7dd89553802a09b9dc7dee80a0b4a92d0d683314f8c962b3b4f1f6f7cd252adc",
+      "script_sha256": "54e0d70339e7f11fd93f5ee097d5608a2a933ed0dd636a94c1461b625f7ebf25",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5512,7 +5807,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "63eab9cfe14f929126c274a98cd7bc0e0b5720450b9a1fffc3653d0bd6fd5b2f",
+      "script_sha256": "d6ef87068417946f2292e70465ed248e542516517ae52652f1daa5fafae92a6d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
