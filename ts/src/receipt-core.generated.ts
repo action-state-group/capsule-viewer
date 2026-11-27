@@ -2096,10 +2096,13 @@ const root = {};
     return copy;
   }
   // The holder's own offer (#461, Sherlock2's rule on #384: the item is the agreement's offer `terms.item`; the
-  // view-model note's section 4 item 1): the book's `offer` pair when the copy carries one, else the `deal_offer`
+  // view-model note's section 4 item 1): the book's `offer` when the copy carries one, else the `deal_offer`
   // capsulectl gave beside the copy. Either is read only when it is a propose record whose SHA-256 over its JCS bytes
-  // is the offer digest the copy's own sealed agreement cites. A carried pair that is not is refused; a side input
+  // is the offer digest the copy's own sealed agreement cites. A carried offer that is not is refused; a side input
   // that is not draws nothing. Its terms are said as recorded: the price in the offer's own currency, never converted.
+  // The carried offer is the offer's sent pair {record, agent_input} (#498; evidencebook xdealv1.Pair, the form every
+  // holder of an offer has): the record is the standalone Capsule whose agent_input_digest is the record's digest.
+  // capsulectl checks its signature and signer (xdealv1.VerifySent); the page checks only that chain.
   function holderOffer(steps, book, given) {
     var agree = steps.find(function (s) { return vof(s.kind) === "agree" && s.offer_ref !== null; });
     var cited = agree ? agree.offer_ref : null;
@@ -2110,12 +2113,13 @@ const root = {};
     }
     var t = null, src = null;
     if (book.offer !== null) {
-      var id = str(get(get(book.offer, "record"), "capsule_id"));
-      var header = attestedHeader(get(book.offer, "record"), get(book.offer, "header"));
-      var payload = get(book.offer, "payload");
-      t = header !== null && str(seq(get(header, "payload_commitments"))[0]) === recordDigest(payload) ? terms(payload) : null;
-      if (t === null) throw new Unavailable("the x-deal-v1 extension's offer is not the offer the copy's agreement cites");
-      src = function (path) { return inRecord(id, "/payload/body/terms" + path); };
+      var record = get(book.offer, "record"), input = get(book.offer, "agent_input");
+      var id = str(get(record, "capsule_id"));
+      var attested = str(get(map(get(map(get(record, "model_attestation")), "compute_attestation")), "agent_input_digest"));
+      var sent = Object.keys(book.offer).length === 2 && own(book.offer, "agent_input") && attested !== null && recordDigest(input) === attested;
+      t = sent ? terms(input) : null;
+      if (t === null) throw new Unavailable("the x-deal-v1 extension's offer is not the sent offer the copy's agreement cites");
+      src = function (path) { return inRecord(id, "/agent_input/body/terms" + path); };
     } else if (isMap(given)) {
       t = terms(given);
       src = function (path) { return { report: "deal_offer", path: "/body/terms" + path }; };
@@ -5624,7 +5628,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "ae5fdd3daa0039e37929f74ccc7e16f0adca8eb707449ce932aae1e68683033d",
+      "script_sha256": "b0dcfd2755acf8149484a54946cb765251e990e87270c33af70d9a78c919520d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5671,7 +5675,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "4354ef7bbca2734b0b0f902ae187f686cb605a34af12624d2822db99ed9a3ae8",
+      "script_sha256": "9e437890e530c2bfecec2bdb46a6964ba1a3fc01826d40a06c54871291a76412",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5717,7 +5721,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "7027fa7ed2f5437769cf40c6640a2c9eef6d8786364c4697ec6c0690ae39be38",
+      "script_sha256": "be2dd77b1d512f1c7c6da86f1359b388ac48018f00682623cb9434fa8792e908",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5765,7 +5769,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "54e0d70339e7f11fd93f5ee097d5608a2a933ed0dd636a94c1461b625f7ebf25",
+      "script_sha256": "225d54be9e9bf59e5bb0a6136b4bb01708da0dcf3143c6a738022a675c13b2da",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5807,7 +5811,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "d6ef87068417946f2292e70465ed248e542516517ae52652f1daa5fafae92a6d",
+      "script_sha256": "c5d36eacc69bc31c802121695085a9e9bb4d6ba0c4938934b527f39e11247540",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

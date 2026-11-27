@@ -93,7 +93,9 @@ Every value is a `Sourced<T>`:
 
 `record` points into a signed record (its `record`, `header` or `payload`, read only once the
 header's digest is the one the record attests and the payload's digest is the header's commitment,
-as `dealSteps` checks today, `receipt_core.js:1914-1936`). `report` marks a value capsulectl
+as `dealSteps` checks today, `receipt_core.js:1914-1936`; or, for a pair sent whole, `{record,
+agent_input}` such as the sealed report or the carried offer, its `record` or `agent_input`, read
+only once `agent_input`'s digest is the one the record attests). `report` marks a value capsulectl
 reported and the page did not check; the page says so wherever it shows one. `checked` marks a
 side input given beside the bundle that this page checked in the browser and put into the verified
 context (the countersigned copy and its signers, `ts/src/verifier-report.ts:418-457`,
@@ -183,6 +185,10 @@ bundle itself (so the downloaded file shows them too):
    and `dealBook` refuses any other member, `receipt_core.js:1701-1713`). Checked by the
    agreement's `body.offer.digest`. Carries `terms.item`, `quantity`, `price_minor`, `currency`.
    The `deal_offer` side input of #461 then retires.
+   The pair is the offer's sent pair `{record, agent_input}` (#498, evidencebook#1065): the form
+   every holder of the offer has, where a buyer whose seller made the offer never holds the
+   seller's `{record, header, payload}` journal pair. `deal_offer` stays until the copies
+   capsulectl writes carry it.
    **Ruled yes** for the keep copy, and u499 extends to x-deal-v1 counterparty copies, so they
    carry it too (u561 (ops `proprietary/inbox.md`, Steven 2026-11-27, ops commit `fe2ae717`), items 2 and 5).
 2. **The seller's name**, sealed by the holder's book bound to the counterparty key, in a record

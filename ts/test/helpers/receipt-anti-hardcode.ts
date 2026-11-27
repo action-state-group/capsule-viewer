@@ -85,8 +85,9 @@ const ext = (bundle: Obj, name: string): Obj => {
 };
 
 /**
- * A record's pair ({record, header, payload}, or the standalone report's
- * {record, agent_input}): the book's pair for that Capsule id, else the
+ * A record's pair ({record, header, payload}, or a pair sent whole,
+ * {record, agent_input}: the standalone report, the book's offer): the book's
+ * pair for that Capsule id, else the
  * bundle's record with its disclosed header and the payload its header
  * commits to in evidencebook/payloads.
  */
@@ -108,6 +109,8 @@ export function pairOf(bundle: Obj, id: string): Obj | undefined {
   const pair = pairs.find(
     (p) => isObj(p["record"]) && p["record"]["capsule_id"] === id,
   );
+  // A pair sent whole ({record, agent_input}: the offer, #498) is its own pair.
+  if (pair !== undefined && "agent_input" in pair) return pair;
   const records = Array.isArray(bundle["records"]) ? bundle["records"] : [];
   const record = records.find((r) => isObj(r) && r["capsule_id"] === id) as
     | Obj
