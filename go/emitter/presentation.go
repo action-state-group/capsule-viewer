@@ -161,9 +161,7 @@ type OfflineOptions struct {
 	// refuses the build. They reach the page as renderOptions' charts.
 	Charts []json.RawMessage
 	// Receipts are the deal receipts a report page carries (capsule-viewer#228),
-	// by deal id (each claim's deal: the subject of the records it cites, else
-	// the claim id's part before "::", capsule-viewer ts/src/claim-subject.ts;
-	// evidencebook#116): each deal's receipt bundle as
+	// by deal id (each claim's deal, ReceiptDeals): each deal's receipt bundle as
 	// the JSON text the node served, kept exactly as given. A non-nil map, empty
 	// or not, marks the page as a deal report: its claims whose deal is not here
 	// say "receipt not carried with this page". Each text must be JSON
@@ -187,6 +185,16 @@ type OfflineOptions struct {
 	// report like Receipts. The page runtime embedded here reads this entry only
 	// from the release that refreshes it after capsule-viewer#358.
 	ReceiptsNotClosed []string
+	// ReceiptDeals is each claim's deal, by claim id, as the page's builder
+	// decided it (evidencebook#116: evidencebook's report reads a claim's deal
+	// from the subject of the records it cites, else the claim id's part
+	// before "::", and owns that rule). A claim gets the receipt line of its
+	// deal here and none when it is not here. Nil, the page takes a claim's
+	// deal from its id's part before "::", as before. It reaches the page as
+	// renderOptions' receiptDeals, and is refused without Receipts,
+	// ReceiptsWithheld or ReceiptsNotClosed, and for a claim id or deal id
+	// that is empty or "__proto__".
+	ReceiptDeals map[string]string
 }
 
 // checkReceipts refuses a receipt that is not JSON, or one named by an empty
@@ -195,7 +203,18 @@ type OfflineOptions struct {
 // (evidencebook#116), and the page looks a deal up by the whole id. A
 // deal id given twice, or in more than one of carried, withheld and not closed,
 // is refused too.
-func checkReceipts(receipts map[string]string, withheld, notClosed []string) error {
+func checkReceipts(receipts map[string]string, withheld, notClosed []string, deals map[string]string) error {
+	if deals != nil && receipts == nil && withheld == nil && notClosed == nil {
+		return fmt.Errorf("receipt deals are given for a page that carries no receipts")
+	}
+	for claim, deal := range deals {
+		if claim == "" || claim == "__proto__" {
+			return fmt.Errorf("receipt deals: claim id %q is empty or __proto__", claim)
+		}
+		if err := checkReceiptDealID(deal); err != nil {
+			return err
+		}
+	}
 	seen := make(map[string]bool, len(withheld)+len(notClosed))
 	for _, deals := range [][]string{withheld, notClosed} {
 		for _, deal := range deals {
@@ -471,6 +490,13 @@ func renderOptions(o OfflineOptions, format string, charts []interface{}) (strin
 		}
 		options["receipts"] = receipts
 	}
+	if o.ReceiptDeals != nil {
+		deals := make(map[string]interface{}, len(o.ReceiptDeals))
+		for claim, deal := range o.ReceiptDeals {
+			deals[claim] = deal
+		}
+		options["receiptDeals"] = deals
+	}
 	encoded, err := canonical.JCS(options)
 	if err != nil {
 		return "", err
@@ -498,7 +524,7 @@ func BuildOfflineHTML(value interface{}, runtime []byte, o OfflineOptions) (stri
 	if err != nil {
 		return "", err
 	}
-	if err := checkReceipts(o.Receipts, o.ReceiptsWithheld, o.ReceiptsNotClosed); err != nil {
+	if err := checkReceipts(o.Receipts, o.ReceiptsWithheld, o.ReceiptsNotClosed, o.ReceiptDeals); err != nil {
 		return "", err
 	}
 	bootstrap := DefaultBootstrap

@@ -5,7 +5,6 @@ import type {
   ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { ClaimReason } from "./claim-reasons.js";
-import { dealPrefixOf } from "./claim-subject.js";
 import type { Words } from "./contract-report-wording.js";
 import { ROW_TIERS, type RowTier, type TierOf } from "./evidence-contract.js";
 import { leadWithProvenance, renderCheckYourself } from "./report-front.js";
@@ -243,14 +242,33 @@ export type DealReceiptEntry = string | null | ReceiptNotClosed;
 export interface ReceiptsInput {
   readonly texts: Readonly<Record<string, DealReceiptEntry>>;
   readonly open: (text: string, panel: HTMLElement) => Promise<ReceiptOpen>;
+  /**
+   * Each claim's deal by claim id, as the page's builder decided it
+   * (`RenderEvidenceGraphOptions.receiptDeals`); a claim not here has none.
+   * Absent, a claim's deal is its id's part before `::` ({@link dealIdOf}).
+   */
+  readonly deals?: Readonly<Record<string, string>>;
 }
 
-/** The deal a claim belongs to, which picks its receipt (claim-subject.ts), or none. */
-export type DealsOf = (claim: ResultClaim) => string | undefined;
+/** The deal a claim belongs to: its id before the first `::`, as the inference-deals Result writes it, or none. */
+export function dealIdOf(claimId: string): string | undefined {
+  const at = claimId.indexOf("::");
+  return at > 0 ? claimId.slice(0, at) : undefined;
+}
 
-/** The receipts as the claims read them: the option and each claim's deal. */
-interface PageReceipts extends ReceiptsInput {
-  readonly deals: DealsOf;
+/**
+ * A claim's deal on this page: the builder's when it gave them (the report
+ * that checked the receipts reads it from the subject of the records the
+ * claim cites, evidencebook#116), else its id's part before `::`.
+ */
+function dealOf(
+  claim: ResultClaim,
+  receipts: ReceiptsInput,
+): string | undefined {
+  if (receipts.deals === undefined) return dealIdOf(claim.id);
+  return Object.prototype.hasOwnProperty.call(receipts.deals, claim.id)
+    ? receipts.deals[claim.id]
+    : undefined;
 }
 
 /**
@@ -264,9 +282,9 @@ interface PageReceipts extends ReceiptsInput {
 function receiptLine(
   claim: ResultClaim,
   w: Words,
-  receipts: PageReceipts,
+  receipts: ReceiptsInput,
 ): HTMLElement[] {
-  const deal = receipts.deals(claim);
+  const deal = dealOf(claim, receipts);
   if (deal === undefined) return [];
   const line = el("div", "rcpt");
   line.dataset.receiptDeal = deal;
@@ -358,7 +376,7 @@ function claimItem(
   claim: ResultClaim,
   w: Words,
   reasons?: ReasonsOf,
-  receipts?: PageReceipts,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const item = el("li", "");
   item.dataset.claimRef = claim.id;
@@ -379,7 +397,7 @@ function rowItem(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: PageReceipts,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const label = w.row(row.requirementRef, "label");
   const name = el("span", "rname");
@@ -444,7 +462,7 @@ function groupedRows(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: PageReceipts,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const box = el("div", "groups");
   const order: (string | undefined)[] = [];
@@ -492,7 +510,7 @@ function byContract(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: PageReceipts,
+  receipts?: ReceiptsInput,
 ): HTMLElement {
   const contracts = [...new Set(rows.map((row) => row.contractRef))];
   if (contracts.length <= 1)
@@ -534,10 +552,7 @@ export async function drawGeneric(
   tierOf?: TierOf,
   reasons?: ReasonsOf,
   receipts?: ReceiptsInput,
-  deals: DealsOf = (claim) => dealPrefixOf(claim.id),
 ): Promise<void> {
-  const page: PageReceipts | undefined =
-    receipts === undefined ? undefined : { ...receipts, deals };
   const tierFor = (claim: ResultClaim): RowTier =>
     tierOf === undefined
       ? "unstated"
@@ -572,7 +587,7 @@ export async function drawGeneric(
   section.dataset.section = "rows";
   const rows = rowsOf(inForce);
   if (tierOf === undefined)
-    section.append(byContract(rows, w, false, undefined, reasons, page));
+    section.append(byContract(rows, w, false, undefined, reasons, receipts));
   else
     for (const tier of ROW_TIERS) {
       const inTier = rows.filter(
@@ -590,7 +605,7 @@ export async function drawGeneric(
           }),
         ),
         el("p", "rnote", w.t(`generic.rtier.${tier}.note`)),
-        byContract(inTier, w, false, tierOf, reasons, page),
+        byContract(inTier, w, false, tierOf, reasons, receipts),
       );
       section.append(part);
     }
@@ -606,7 +621,7 @@ export async function drawGeneric(
         "",
         w.t("generic.later.title", { n: later.length.toLocaleString() }),
       ),
-      byContract(laterRows, w, true, tierOf, reasons, page),
+      byContract(laterRows, w, true, tierOf, reasons, receipts),
     );
     section.append(part);
   }

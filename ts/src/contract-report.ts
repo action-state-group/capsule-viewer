@@ -15,7 +15,6 @@ import type { ClaimReason } from "./claim-reasons.js";
 import {
   drawGeneric,
   GENERIC_FRAME,
-  type DealsOf,
   type ReceiptsInput,
 } from "./generic-report-view.js";
 import { drawLines, LINES_FRAME } from "./outcome-report-view.js";
@@ -222,7 +221,6 @@ export async function renderContractReport(
   wording?: WordingPackInput,
   contract?: CheckedContract,
   receipts?: ReceiptsInput,
-  deals?: DealsOf,
 ): Promise<void> {
   const tierOf = tierReader(result, contract);
   const w = await contractReportWords(input.grouping, wording, {
@@ -334,7 +332,6 @@ export async function renderContractReport(
       // citing one contract (the Words gate); the reason itself shows always.
       input.reasons,
       receipts,
-      deals,
     );
   regions.L0.append(levels.L0);
   regions.L1.append(levels.L1);

@@ -454,8 +454,11 @@ CONTRACT_REPORT_MODULE = Move(
             "- **Other sealed records.** A module MAY also show other sealed records of the bundle (for example\n",
             "- **Deal receipts** (capsule-viewer#228). A page may carry, beside the bundle, the receipt of each deal\n"
             "  a report's claims are about: the page's `receipts` setting maps a deal id to that deal's receipt\n"
-            "  bundle, as the JSON text the node served. The deal id of a claim is its `id` before the first `::`,\n"
-            "  as the inference-deals Result writes it; a claim with no `::` has none. Only a page that carries the\n"
+            "  bundle, as the JSON text the node served. A claim's deal id is the entry for its `id` in the page's\n"
+            "  `receiptDeals` setting when the page carries one (the page builder's filing: evidencebook's report\n"
+            "  reads it from the subject of the records the claim cites, evidencebook#116), and a claim with no\n"
+            "  entry has none; without that setting it is the claim's `id` before the first `::`, as the\n"
+            "  inference-deals Result writes it, and a claim with no `::` has none. Only a page that carries the\n"
             "  setting (possibly empty) draws anything for it, and only the generic grouping draws a claim's row.\n"
             "  Under each claim of a deal whose receipt is carried, the module draws an \"Open receipt\" control\n"
             "  (`generic.receipt.open`, closed again by `generic.receipt.close`); under a claim of a deal whose\n"

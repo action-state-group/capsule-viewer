@@ -120,3 +120,33 @@ func TestBuildOfflineHTMLCarriesADealIDWithColons(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, got, `"receipts":{"deal::1":"{}","deal::2":null,"deal::3":{"state":"not-closed"}}`)
 }
+
+// evidencebook#116: the builder files each claim under its deal; the page
+// reads receiptDeals in place of the claim id's prefix.
+func TestBuildOfflineHTMLCarriesReceiptDeals(t *testing.T) {
+	bundle := chartBundle(t)
+	o := OfflineOptions{Audience: "*", ReceiptsWithheld: []string{"deal::1"}, ReceiptDeals: map[string]string{"conv-1::paid": "deal::1"}}
+	got, err := BuildOfflineHTML(bundle, []byte(marker), o)
+	require.NoError(t, err)
+	require.Contains(t, got, `"receiptDeals":{"conv-1::paid":"deal::1"}`)
+	embedded, err := BuildEmbeddedHTML(bundle, []byte(marker), o)
+	require.NoError(t, err)
+	require.Contains(t, embedded.HTML, `"receiptDeals":{"conv-1::paid":"deal::1"}`)
+
+	plain, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", ReceiptsWithheld: []string{"d1"}})
+	require.NoError(t, err)
+	require.NotContains(t, plain, `receiptDeals`, "no deals given: the page reads the prefix, as before")
+
+	for name, o := range map[string]OfflineOptions{
+		"no receipts":       {Audience: "*", ReceiptDeals: map[string]string{"c": "d"}},
+		"empty claim id":    {Audience: "*", ReceiptsWithheld: []string{"d"}, ReceiptDeals: map[string]string{"": "d"}},
+		"__proto__ claim":   {Audience: "*", ReceiptsWithheld: []string{"d"}, ReceiptDeals: map[string]string{"__proto__": "d"}},
+		"empty deal id":     {Audience: "*", ReceiptsWithheld: []string{"d"}, ReceiptDeals: map[string]string{"c": ""}},
+		"__proto__ deal id": {Audience: "*", ReceiptsWithheld: []string{"d"}, ReceiptDeals: map[string]string{"c": "__proto__"}},
+	} {
+		_, err := BuildOfflineHTML(bundle, []byte(marker), o)
+		require.Error(t, err, name)
+		_, err = BuildEmbeddedHTML(bundle, []byte(marker), o)
+		require.Error(t, err, name)
+	}
+}
