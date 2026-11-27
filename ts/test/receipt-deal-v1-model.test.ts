@@ -52,6 +52,7 @@ type Model = {
   records: Sourced<Obj>[];
   item: Sourced<string>;
   quantity: Sourced<number>;
+  price: Sourced<{ minor: number; currency: string }>;
   book_witnessed: unknown;
   rows: { relied_on: { time: string | null }[] }[];
 };
