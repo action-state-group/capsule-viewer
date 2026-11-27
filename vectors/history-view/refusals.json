@@ -1,5 +1,5 @@
 {
-  "_comment": "history-view/v0 inputs the view refuses, with the reasons in order that the TypeScript view and the Go twin both give (docs/design/history-view.md section 3). An input given as a string is JSON text, kept as written; a muse- overlay is given inline.",
+  "_comment": "history-view/v0 inputs the view refuses, with the reasons in order that the TypeScript view gives (docs/design/history-view.md section 3). An input given as a string is JSON text, kept as written; a muse- overlay is given inline.",
   "cases": [
     {
       "name": "digit keys come first, in number order",
