@@ -844,6 +844,21 @@
     "deal.else.half.checked.report": "This copy carries the other side's signed agreement. It covers their agreement only, not anything after it.",
     "deal.proof.lede.answers.failed": "No. capsulectl verify failed a test when this page was made. The page shows its answers; it did not re-check by itself.",
     "deal.hero.item": "{item}",
-    "deal.proof.lede.answers.some": "These are the only answers capsulectl verify gave this page; a test marked – was not among them. Download the proof file and check it yourself."
+    "deal.proof.lede.answers.some": "These are the only answers capsulectl verify gave this page; a test marked – was not among them. Download the proof file and check it yourself.",
+    "record.rung.10.sub": "a sealed Result over these records",
+    "record.rung.10.proves.own": "A sealed Result in this file cites this record. A receipt carries none: a ruling on a term is one of the deal's own records, in the steps above. Not: that any ruling is right.",
+    "record.rung.10.proves.shared": "A sealed Result in this file cites this record. A receipt carries none: a ruling on a term is one of the deal's own records, in the steps above. Not: that any ruling is right.",
+    "record.rung.11.sub": "another party's signature over this file",
+    "record.rung.11.proves.own": "Another party signed this file's records too; the COUNTERSIGNED stamp says who. Not: that they agree with each term's status.",
+    "record.rung.11.proves.shared": "Another party signed this file's records too; the COUNTERSIGNED stamp says who. Not: that they agree with each term's status.",
+    "receipt_page.check.reported": "{check}: {status}, as capsulectl verify reported it. This page did not run this test.",
+    "receipt_page.check.reported.also": "{check}: {status}, as capsulectl verify reported it. This page also ran this test itself, in the list above.",
+    "receipt_page.check.witnesses": "Outside time stamp",
+    "receipt_page.ladder.lede": "One ladder for every record in this file: each rung's status, and how many of the {n} records have it.",
+    "receipt_page.ladder.count": "{k} of {n} records",
+    "receipt_page.ladder.records": "records {ids}",
+    "receipt_page.ladder.inclusion": "each record's leaf and seq",
+    "receipt_page.times.withheld": "Record times are shown only on the holder's own copy. This copy was made for someone else, so the record views here leave them out.",
+    "deal.proof.cited": "Each test, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
   }
 }

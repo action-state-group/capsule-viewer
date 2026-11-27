@@ -44,6 +44,43 @@ export interface RecordPageInput {
   readonly stamps: readonly CountersignatureStamp[];
   readonly result?: ResultRoot | undefined;
   readonly voice: RecordVoice;
+  /**
+   * A shared receipt copy's record view: the record's own times are left
+   * out (Sherlock2's u239: only the holder's own page shows a record's
+   * time; capsule-viewer#482).
+   */
+  readonly timesWithheld?: boolean;
+}
+
+/**
+ * The members that hold a record's own time: the capsule's `timestamp`, a
+ * payload's `committed_at`, a leg's `observed_at` and an x-deal-v1 step's
+ * `at`. Each is left out only when its value is a time, so a member of the
+ * same name that holds anything else stays.
+ */
+const RECORD_TIME_MEMBERS: ReadonlySet<string> = new Set([
+  "timestamp",
+  "committed_at",
+  "observed_at",
+  "at",
+]);
+const TIME_VALUE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/u;
+
+/** `value` with every record time (RECORD_TIME_MEMBERS) left out, at any depth. */
+export function withoutRecordTimes(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutRecordTimes);
+  if (value === null || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, member] of Object.entries(value))
+    if (
+      !(
+        RECORD_TIME_MEMBERS.has(key) &&
+        typeof member === "string" &&
+        TIME_VALUE.test(member)
+      )
+    )
+      out[key] = withoutRecordTimes(member);
+  return out;
 }
 
 const object = (value: unknown): Record<string, unknown> =>
@@ -651,7 +688,10 @@ function tagWord(tag: FieldTag, w: Words): string {
 
 /** The capsule JSON card: every member, in clear or by digest. */
 function capsuleCard(input: RecordPageInput, w: Words): HTMLElement {
-  const raw = object(input.context.recordIndex.get(input.capsuleId));
+  const stored = input.context.recordIndex.get(input.capsuleId);
+  const raw = object(
+    input.timesWithheld === true ? withoutRecordTimes(stored) : stored,
+  );
   const card = el("section", "l3-card");
   card.dataset.l3 = "capsule";
   card.append(el("h4", "l3-k", w.t("record.capsule.title")));
@@ -732,10 +772,15 @@ function footer(w: Words): HTMLElement {
   return foot;
 }
 
-/** The record page for `input.capsuleId`, in the record's entry. */
+/**
+ * The record page for `input.capsuleId`, in the record's entry. On a receipt
+ * page the ladder and its footer are drawn once for the whole page
+ * (renderPageLadder), so `ladder` is false there.
+ */
 export function renderRecordPage(
   input: RecordPageInput,
   w: Words,
+  options: { readonly ladder?: boolean } = {},
 ): HTMLElement {
   const raw = object(input.context.recordIndex.get(input.capsuleId));
   const page = el("div", "cv-l3");
@@ -752,7 +797,129 @@ export function renderRecordPage(
   );
   const cols = el("div", "l3-cols");
   cols.append(envelopeCard(input, w), capsuleCard(input, w));
-  page.append(cols, ladderCard(input, w), footer(w));
+  page.append(cols);
+  if (options.ladder !== false) page.append(ladderCard(input, w), footer(w));
+  return page;
+}
+
+/** What the page's one ladder counts each rung over: every record it shows. */
+export interface PageLadderInput {
+  readonly context: VerifiedBundleContext;
+  readonly capsuleIds: readonly string[];
+  readonly stamps: readonly CountersignatureStamp[];
+  readonly result?: ResultRoot | undefined;
+  readonly voice: RecordVoice;
+}
+
+/** The words the page's one ladder adds: its lede, a count and a list of records. */
+export interface PageLadderWords {
+  lede(n: number): string;
+  count(k: number, n: number): string;
+  records(ids: string): string;
+  /** The line under rung 5's name, whose per-record line names one record's leaf and seq. */
+  inclusionSub(): string;
+}
+
+const STATUS_ORDER: readonly RungStatus[] = [
+  "FAIL",
+  "INCONCLUSIVE",
+  "NOT_CHECKED",
+  "NOT_PRESENT",
+  "PASS",
+];
+
+/**
+ * The ladder once for a whole page (a receipt page, capsule-viewer#489):
+ * each rung's status over every record, as "PASS · 4 of 4 records", and
+ * for a status only some records have, which ones by short id. The rung's
+ * own words are the record words `w`; what a rung proves does not change
+ * from record to record, so the table says it once.
+ */
+export function renderPageLadder(
+  input: PageLadderInput,
+  w: Words,
+  words: PageLadderWords,
+): HTMLElement {
+  const n = input.capsuleIds.length;
+  const per = input.capsuleIds.map((capsuleId) => ({
+    capsuleId,
+    rungs: ladder({ ...input, capsuleId }, w),
+  }));
+  const page = el("div", "cv-l3");
+  page.dataset.pageLadder = "";
+  const card = el("section", "l3-card l3-ladder");
+  card.dataset.l3 = "ladder";
+  card.append(
+    el("h3", "l3-title", w.t("record.ladder.title")),
+    el("p", "l3-note", words.lede(n)),
+  );
+  const table = el("table", "l3-table");
+  const head = el("tr");
+  for (const key of [
+    "record.ladder.col.n",
+    "record.ladder.col.proof",
+    "record.ladder.col.proves",
+    "record.ladder.col.status",
+    "record.ladder.col.check",
+  ])
+    head.append(el("th", "", w.t(key)));
+  const thead = el("thead");
+  thead.append(head);
+  table.append(thead);
+  const body = el("tbody");
+  const rungCount = per[0]?.rungs.length ?? 0;
+  for (let i = 0; i < rungCount; i++) {
+    const number = per[0]!.rungs[i]!.n;
+    const by = new Map<RungStatus, string[]>();
+    for (const record of per) {
+      const status = record.rungs[i]!.status;
+      by.set(status, [...(by.get(status) ?? []), record.capsuleId]);
+    }
+    const tr = el("tr");
+    tr.dataset.rung = String(number);
+    tr.dataset.rungStatus = [...by.keys()].sort().join(" ");
+    tr.append(el("td", "l3-n", String(number)));
+    const name = el("td");
+    name.append(
+      el("b", "", w.t(`record.rung.${number}.title`)),
+      el(
+        "div",
+        "l3-sub",
+        // A rung's line names one record's parent or log position on a
+        // record's own ladder; here it names no record.
+        number === 4
+          ? w.t("record.rung.4.sub.none")
+          : number === 5
+            ? words.inclusionSub()
+            : per[0]!.rungs[i]!.sub,
+      ),
+    );
+    tr.append(
+      name,
+      el("td", "", w.t(`record.rung.${number}.proves.${input.voice}`)),
+    );
+    const status = el("td");
+    for (const state of STATUS_ORDER) {
+      const ids = by.get(state);
+      if (ids === undefined) continue;
+      const line = el("div");
+      line.dataset.status = state;
+      const chip = el("span", `l3-status l3-s-${state}`, state);
+      chip.dataset.status = state;
+      line.append(chip, " ", words.count(ids.length, n));
+      if (ids.length < n)
+        line.append(
+          " · ",
+          words.records(ids.map((id) => shortHex(id)).join(", ")),
+        );
+      status.append(line);
+    }
+    tr.append(status, el("td", "l3-cmd", w.t(`record.rung.${number}.check`)));
+    body.append(tr);
+  }
+  table.append(body);
+  card.append(table);
+  page.append(card, footer(w));
   return page;
 }
 
@@ -788,4 +955,8 @@ export const RECORD_PAGE_CSS = `
 .cv-l3 .l3-foot{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:16px;font-size:12.5px}
 .cv-l3 .l3-foot p{margin:0}
 @media (max-width:40rem){.cv-l3 .l3-table,.cv-l3 .l3-table tbody,.cv-l3 .l3-table tr,.cv-l3 .l3-table td{display:block}.cv-l3 .l3-table thead{display:none}.cv-l3 .l3-table tr{border-bottom:1px solid #E3DED3;padding:6px 0}.cv-l3 .l3-table td{border:0;padding:3px 6px}}
+/* A receipt page's checked section, as a card (capsule-viewer#489). */
+details.cv-checked--card{border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:10px;padding:12px 16px;margin:16px 0}
+details.cv-checked--card>summary{cursor:pointer}
+details.cv-checked--card[open]>summary{margin-bottom:8px}
 `;

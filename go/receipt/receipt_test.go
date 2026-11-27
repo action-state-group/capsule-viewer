@@ -30,7 +30,7 @@ func sum(b []byte) string {
 func TestGeneratedFilesAreCurrent(t *testing.T) {
 	out, err := writer.Outputs(writer.DefaultSources("."))
 	require.NoError(t, err)
-	require.Len(t, out, 2*len(Kinds)+1+len(writer.StyleCopies))
+	require.Len(t, out, 2*len(Kinds)+2+len(writer.StyleCopies))
 	for name, want := range out {
 		got, err := os.ReadFile(name)
 		require.NoError(t, err)
