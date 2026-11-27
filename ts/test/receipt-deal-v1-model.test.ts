@@ -149,7 +149,7 @@ describe("the ARD run's ruled deal, the holder's keep copy on a page", () => {
       ["statement", "You said: Delivery: not met; Payment as agreed: met"],
       ["dispute", "You disputed delivery"],
       ["ruling", "Final ruling on delivery: not met, against the seller"],
-      ["statement", "You noted the ruling on delivery"],
+      ["statement", "You recorded that the ruling on delivery reached you"],
     ]);
     // The ruling is not one of the bundle's records: its raw record is the module's, at L2.
     expect(
@@ -425,7 +425,7 @@ describe("the deal model: a full adjudicator copy (evidencebook#861)", () => {
       L0.querySelector(`[data-step-record="${RECEIVED}"] .cv-rcpt-step__title`)
         ?.textContent,
     ).toBe(
-      "The other side noted the ruling on delivery · The other side said: Delivery: not met",
+      "The other side recorded that the ruling on delivery reached them · The other side said: Delivery: not met",
     );
     const raw = L2.querySelectorAll(`[data-book-record="${RECEIVED}"]`);
     expect(raw).toHaveLength(1);
