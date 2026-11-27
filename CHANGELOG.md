@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Removed
+
+- The Go module drops `go/historyview`, the Go twin of the History view (#477, receipt view-model note `docs/design/receipt-view-model.md` row 11). No repository imported it: Muse's `history page`, its intended caller, draws with its own template. The TypeScript `history-view` and the `vectors/history-view/` vectors stay. Removing an exported package breaks the module's API, so the next `go/` tag is a minor bump (go/v0.28.0).
+
 ### Changed
 
 - The provider's own receipt (`capsuleviewer.receipt.provider/v0`) also draws an exchange whose record says it failed or was sent on with no response (#465; Steven's u1578 E and F, evidencebook#205). A failed record's page says "This node's record says the exchange failed: <reason>. It was not served. Any payment this node received for it is listed below.", with the reason only when the record names one of the classes payment required, refused, upstream error, timed out or dropped (never its code); a failed exchange with no payment is drawn too. A dispatched record's page says "This node's record says the request was sent on, but the host reported no response. It does not show that the exchange was served." Both label the model "Model asked for" and the time "Recorded at", and the owner's page is titled "Your record of an exchange you were asked to serve" (Sherlock2's words); the confirmed page is unchanged. A record summarising failures not sealed one by one is not drawn. `checkReceipt` now answers `checked` for such a bundle at the owner's audience, where it answered `no_module`. The model gains `effect` and `reason`. The wording pack gains the words as `provider.*` keys and keeps its id, so its digest changes, and with it every receipt script's and manifest's `script_sha256` and `ts/src/receipt-core.generated.ts`. The frozen Python twin draws the same, and the oracle golden is regenerated with the new cases.

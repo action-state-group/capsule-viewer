@@ -150,7 +150,7 @@ def main() -> None:
     doc["cases"] = {k: v for k, v in doc["cases"].items() if not k.startswith("card-")} | cases
     path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
     # A refusal's reasons are the view's own; fill_card_reasons.mjs writes them from the TypeScript view,
-    # and both twins are then held to them.
+    # and the view is then held to them.
     path = HERE / "refusals.json"
     doc = json.loads(path.read_text())
     old = {c["name"]: c.get("reasons") for c in doc["cases"]}

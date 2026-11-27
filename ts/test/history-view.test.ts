@@ -5,7 +5,7 @@
 // verdict, and the word gates (neutral banned terms, T8, the Muse snapshot).
 //
 // UPDATE_GOLDENS=1 npx vitest run test/history-view.test.ts
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -114,6 +114,16 @@ describe("the History view's vectors", () => {
           expect(text).not.toContain(banned);
     });
   }
+
+  // A golden whose vector was renamed or removed would otherwise stay behind
+  // unchecked (the deleted Go twin held this; capsule-viewer#477).
+  it("every golden has a vector", () => {
+    const orphans = readdirSync(goldens)
+      .filter((f) => f.endsWith(".html"))
+      .map((f) => f.slice(0, -".html".length))
+      .filter((name) => !Object.hasOwn(vectors.cases, name));
+    expect(orphans).toEqual([]);
+  });
 });
 
 describe("the view's own pack", () => {

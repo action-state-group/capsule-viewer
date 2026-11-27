@@ -5,6 +5,9 @@ actionstate-muse#334. The TypeScript view shipped in viewer 0.14.0 and the Go
 twin, `go/historyview`, in capsule-viewer#253. The three callers move onto it
 in their own items (section 9).
 
+Retired: `go/historyview` was deleted in capsule-viewer#477 with no importer
+(`docs/design/receipt-view-model.md` row 11); the Go twin text below is history.
+
 ## Sources
 
 | Ref | Where | What it fixes |
