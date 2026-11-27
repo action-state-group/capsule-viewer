@@ -110,7 +110,12 @@ describe("the receipt export (#383)", () => {
     expect(
       (await renderReceipt(fixture("mesh-provider-selected"), page)).kind,
     ).toBe("checked");
-    const [l0, l1, l2] = [...page.children] as HTMLElement[];
+    expect(page.children.length).toBe(3);
+    const [l0, l1, l2] = [...page.children] as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+    ];
     expect(l1.textContent).toBe("");
     expect(l2.textContent).toBe("");
     const text = l0.textContent ?? "";
@@ -139,6 +144,25 @@ describe("the receipt export (#383)", () => {
     await renderReceipt(fixture("mesh-payer-selected"), page);
     expect(page.textContent).not.toContain("an exchange you served");
   });
+
+  // A page saved for anyone to check, or a report, never addresses the
+  // reader as the owner (#395): the provider's page draws no title there.
+  it.each(["page", "report"] as const)(
+    "a provider's receipt carried by a %s draws no owner's title (#390)",
+    async (carrier) => {
+      const shared = host();
+      const result = await renderReceipt(
+        fixture("mesh-provider-selected"),
+        shared,
+        { carrier },
+      );
+      expect(result.kind).toBe("checked");
+      const text = shared.textContent ?? "";
+      expect(text).not.toMatch(/\byou(r)?\b/i);
+      expect(text).toContain("This is this node's own record of its half");
+      expect(shared.querySelector("h2")).toBeNull();
+    },
+  );
 
   it("a receipt both sides stamped is `both`, tone ok", async () => {
     const result = await checkReceipt(fixture("bilateral-keep"));

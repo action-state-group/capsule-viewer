@@ -18,6 +18,10 @@ module and the Python twin reads from capsulectl's report: the verification
 result, the assurance, and both for each carried copy of a composition.
 ``js-tests/receipt_parity.test.js`` hands the scripts these same inputs and
 fails on any difference.
+
+Regenerate the golden on Python 3.11 or later (CI's): the provider's time
+cases rely on 3.11's ``datetime.fromisoformat``, which reads ``+05``,
+``+0530`` and a time with no seconds; 3.10 reads none of them.
 """
 from __future__ import annotations
 

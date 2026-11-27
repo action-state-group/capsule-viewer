@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
- * The deal receipt for a browser consumer (capsule-viewer#383, CV-TS): the
+ * The receipt for a browser consumer (capsule-viewer#383, CV-TS): the
  * same receipt modules the Go package `receipt` ships to Go page builders,
  * built from the one source (go/receipt/receipt_core.js), for a page that
  * bundles them itself, such as a saved receipt page or an exchanges row.

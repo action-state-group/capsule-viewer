@@ -4234,9 +4234,11 @@
   // provider._utc: a time with its offset (RFC 3339, seconds optional, the
   // offset as +05, +0500 or +05:00), in UTC to the second
   // ("2026-10-30T19:50:00 UTC"), or "?" when it is not one, has no offset or
-  // falls outside years 1 to 9999. Python's fromisoformat also reads a few
-  // spellings no provider bundle carries (a basic-format date, an offset with
-  // seconds, 24:00); this shows "?" for them (js-tests/receipt_provider.test.js).
+  // falls outside years 1 to 9999. Python's fromisoformat (3.11 and later)
+  // also reads spellings no provider bundle carries, and this shows "?" for
+  // each: another separator than T, t or a space, an hour with no minutes, a
+  // basic-format time, a comma before the fraction, 24:00, an offset with
+  // seconds (js-tests/receipt_provider.test.js).
   function providerUtc(stamp) {
     var m = ISO_OFFSET.exec(stamp);
     if (m === null) return "?";
@@ -4285,7 +4287,9 @@
     return { exchange: exchange[0], legs: others };
   }
 
-  // provider._text: a scalar as Python's str() writes it; "" for null, a map or a list.
+  // provider._text: a scalar as Python's str() writes it; "" for null, a map or
+  // a list. A float such as 1.0 reads "1" here and "1.0" there; no provider
+  // bundle writes a number where this reads text.
   function pyText(value) {
     if (value === null || value === undefined || typeof value === "object") return "";
     if (typeof value === "boolean") return value ? "True" : "False";
@@ -4315,8 +4319,10 @@
 
   // provider.render, all in L0 (the twin's page has one level and shows the
   // payments expanded), under the title the twin's page heads it with. The
-  // served time stays in UTC, as the twin says it: it is no data-time span,
-  // so the page's local-time pass leaves it.
+  // title addresses the owner ("Your receipt ..."), so a shared copy (a page
+  // saved for anyone, or a report) draws none: its other lines speak of
+  // "this node" (#395). The served time stays in UTC, as the twin says it: it
+  // is no data-time span, so the page's local-time pass leaves it.
   function drawProvider(doc, depth, model) {
     var d = new Drawing(doc);
     var kit = new Kit(d);
@@ -4327,7 +4333,7 @@
     var rows = model.payments.map(function (p) { return [mono(p.capsule_id), p.received || notShown, p.fee || notShown]; });
     var table = kit.dataTable([w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
     var l0 = d.el("div", { "data-level": "L0" }, [
-      d.el("h2", {}, [w("provider.title")]),
+      sharedCarrier(drawCarrier) ? null : d.el("h2", {}, [w("provider.title")]),
       d.el("div", { class: "cv-provider-receipt", "data-module": moduleId("provider") }, [
         d.el("p", { "data-provider": "own-half" }, [w("provider.own_half")]),
         d.el("p", { "data-provider": "no-content" }, [w("provider.no_content")]),
@@ -4341,7 +4347,7 @@
 
   // ---- the modules (presentation contract: canRender, buildModel, render) ----
 
-  // The module's manifest id: the x-deal-v0 modules are /v0, the x-deal-v1 module /v1.
+  // The module's manifest id: the x-deal-v1 module is /v1, every other /v0.
   function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal, provider: drawProvider };

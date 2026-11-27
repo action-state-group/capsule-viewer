@@ -4238,9 +4238,11 @@ const root = {};
   // provider._utc: a time with its offset (RFC 3339, seconds optional, the
   // offset as +05, +0500 or +05:00), in UTC to the second
   // ("2026-10-30T19:50:00 UTC"), or "?" when it is not one, has no offset or
-  // falls outside years 1 to 9999. Python's fromisoformat also reads a few
-  // spellings no provider bundle carries (a basic-format date, an offset with
-  // seconds, 24:00); this shows "?" for them (js-tests/receipt_provider.test.js).
+  // falls outside years 1 to 9999. Python's fromisoformat (3.11 and later)
+  // also reads spellings no provider bundle carries, and this shows "?" for
+  // each: another separator than T, t or a space, an hour with no minutes, a
+  // basic-format time, a comma before the fraction, 24:00, an offset with
+  // seconds (js-tests/receipt_provider.test.js).
   function providerUtc(stamp) {
     var m = ISO_OFFSET.exec(stamp);
     if (m === null) return "?";
@@ -4289,7 +4291,9 @@ const root = {};
     return { exchange: exchange[0], legs: others };
   }
 
-  // provider._text: a scalar as Python's str() writes it; "" for null, a map or a list.
+  // provider._text: a scalar as Python's str() writes it; "" for null, a map or
+  // a list. A float such as 1.0 reads "1" here and "1.0" there; no provider
+  // bundle writes a number where this reads text.
   function pyText(value) {
     if (value === null || value === undefined || typeof value === "object") return "";
     if (typeof value === "boolean") return value ? "True" : "False";
@@ -4319,8 +4323,10 @@ const root = {};
 
   // provider.render, all in L0 (the twin's page has one level and shows the
   // payments expanded), under the title the twin's page heads it with. The
-  // served time stays in UTC, as the twin says it: it is no data-time span,
-  // so the page's local-time pass leaves it.
+  // title addresses the owner ("Your receipt ..."), so a shared copy (a page
+  // saved for anyone, or a report) draws none: its other lines speak of
+  // "this node" (#395). The served time stays in UTC, as the twin says it: it
+  // is no data-time span, so the page's local-time pass leaves it.
   function drawProvider(doc, depth, model) {
     var d = new Drawing(doc);
     var kit = new Kit(d);
@@ -4331,7 +4337,7 @@ const root = {};
     var rows = model.payments.map(function (p) { return [mono(p.capsule_id), p.received || notShown, p.fee || notShown]; });
     var table = kit.dataTable([w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
     var l0 = d.el("div", { "data-level": "L0" }, [
-      d.el("h2", {}, [w("provider.title")]),
+      sharedCarrier(drawCarrier) ? null : d.el("h2", {}, [w("provider.title")]),
       d.el("div", { class: "cv-provider-receipt", "data-module": moduleId("provider") }, [
         d.el("p", { "data-provider": "own-half" }, [w("provider.own_half")]),
         d.el("p", { "data-provider": "no-content" }, [w("provider.no_content")]),
@@ -4345,7 +4351,7 @@ const root = {};
 
   // ---- the modules (presentation contract: canRender, buildModel, render) ----
 
-  // The module's manifest id: the x-deal-v0 modules are /v0, the x-deal-v1 module /v1.
+  // The module's manifest id: the x-deal-v1 module is /v1, every other /v0.
   function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
 
   var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal, provider: drawProvider };
@@ -4645,7 +4651,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "dc87a25d9ba14fc0050324829c4790571becb761c251bd148257c32cff000de7",
+      "script_sha256": "297f0b3c05a7eda27a6b647f9f01ec1e6d7d6ca03648a107a9adc6dcdaf8bdf6",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4692,7 +4698,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "fffb8757b3c3d36c892c00172672202b6ef4fe0b43c4029e4cd88bb05810db89",
+      "script_sha256": "7be9733e9f0504023a4de413f49a68102883ea5f05d1e233917a890872a8dfc9",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4738,7 +4744,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "2151cfac0da6a6174ab3953860c3fcc17655cf9fe447f823c037ef8c4e3b43cd",
+      "script_sha256": "b26f0752e6fe8f7e76d541dfeef198f47abc1e96c1ee82599dca9e75dda52d1f",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4786,7 +4792,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "f11c028ab86d9fd9f30378e2d31db5bf1b50d2fc2d67fcc7a96cfa28b4db1db4",
+      "script_sha256": "bb00526d5e14ad468de6769501c57967fd51580e876249221a26ca8b495e1c93",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -4828,7 +4834,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "bc9c887f81c12f6d01cedcd7bc494bdebf32410388ed06d64ce5e6bdac2fbd9c",
+      "script_sha256": "9b86fabf8742e6e0bc2c24cc81f2e628b169f1cd081775621257d10504094560",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

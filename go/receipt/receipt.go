@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package receipt is capsule-viewer's receipt renderer for Go page builders:
-// the deal receipt modules as module-slot scripts, each with the manifest
+// the receipt modules as module-slot scripts, each with the manifest
 // that pins it, ready for go/emitter's module slot (capsule-viewer#383).
 // It is the one place receipts are drawn: capsulectl's pages and reports and
 // the browser build carry these modules rather than a renderer of their own.

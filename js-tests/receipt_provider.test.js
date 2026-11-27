@@ -76,10 +76,19 @@ describe("the provider's receipt: the served time (provider._utc)", () => {
     expect(api.providerUtc(stamp)).toBe(shown);
   });
 
-  // Python's fromisoformat reads these too (2026-10-31T00:00:00 UTC and
-  // 2026-10-30T14:49:30 UTC); no provider bundle writes them, and the script
-  // shows "?" rather than a time it is not sure of.
-  it.each(["2026-10-30T24:00:00+00:00", "2026-10-30T19:50:00+05:00:30"])("script only: %s is ?", (stamp) => {
+  // Python's fromisoformat reads these too, on Python 3.15:
+  // 2026-10-31T00:00:00, 2026-10-30T14:49:30, 2026-10-30T19:50:00,
+  // 2026-10-30T19:00:00, 2026-10-30T19:50:00 and 2026-10-30T19:50:00 UTC.
+  // No provider bundle writes them, and the script shows "?" rather than a
+  // time it is not sure of.
+  it.each([
+    "2026-10-30T24:00:00+00:00",
+    "2026-10-30T19:50:00+05:00:30",
+    "2026-10-30x19:50:00Z",
+    "2026-10-30T19Z",
+    "2026-10-30T195000Z",
+    "2026-10-30T19:50:00,25Z",
+  ])("script only: %s is ?", (stamp) => {
     expect(api.providerUtc(stamp)).toBe("?");
   });
 });

@@ -13,7 +13,8 @@
 //
 // It writes the same bytes the Python writer (capsule_viewer.receipt_slot)
 // wrote for capsule-viewer 0.25.0 (apart from the dark overrides and the
-// words added since, capsule-viewer#391), so the JSON it fills in is serialised the
+// words added since, capsule-viewer#391, and the provider's script and
+// manifest, which that writer never wrote, #390), so the JSON it fills in is serialised the
 // way Python's json.dumps does: keys in file order, non-ASCII text as is,
 // and only '"', '\\' and control characters escaped. One difference: a number
 // keeps the text it was written with (Python would print 2.50 as 2.5); no
