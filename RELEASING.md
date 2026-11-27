@@ -52,12 +52,8 @@ The prefix is only on the Git tag. The registry version stays plain (`0.1.0`).
    bump of `@action-state-group/agent-action-capsule` or
    `@action-state-group/cll` sets `verifierVersion` or `cllVersion` there the
    same way.
-   Pull requests run only the fast checks, and TypeScript full check
-   (`ts-full.yml`, Node 22 and 24) runs nightly and on `main`, after the tag
-   is cut on the merge. So before merging, run
-   `gh workflow run ts-full.yml --ref release/<package>-v<version>` and merge
-   only when it passes on the branch's current head; run it again after any
-   push to the branch, including an update from `main`.
+   Pull requests run the whole TypeScript check on Node 22 and 24 (ci.yml's
+   `ts` job), so the release pull request's own checks cover it.
 3. **Merge.** [Release · Tag](https://github.com/action-state-group/capsule-viewer/actions/workflows/tag-release.yml)
    runs on the merge. For each package whose version changed it creates the
    tag and GitHub Release on the merge commit and dispatches the package's
