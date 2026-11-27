@@ -2,14 +2,16 @@
 """The Python receipt modules as the test oracle for their module-slot twins.
 
 ``python tests/receipt_oracle.py`` prints, as one JSON document, what the
-three Python modules make of every receipt fixture under
+Python receipt modules make of every receipt fixture under
 ``testdata/receipt/`` (every ``*.bundle.json``: the single copies, the seller
 and producer copies, the compositions and the golden), for each audience a
 page may be for and each depth, and of a set of edited copies (the seller kind
-dropped from a seller's copy, added to a buyer's). Per case and per module:
+dropped from a seller's copy, added to a buyer's; the provider's receipt with
+its records edited). Per case and per module:
 whether ``canRender`` accepts it, and when it does the model
 (``dataclasses.asdict``, a carried member's raw verifier report left out) and
-``render``'s output at each depth.
+``render``'s output at each depth. The provider's module has one level, so its
+output is under ``page``.
 
 Beside each case it prints the inputs the page's runtime does not hand a
 module and the Python twin reads from capsulectl's report: the verification
@@ -35,6 +37,7 @@ from capsule_viewer.kit.contract import KIT  # noqa: E402
 from capsule_viewer.receipt import (  # noqa: E402
     PLACEHOLDERS,
     BilateralReceiptModule,
+    ProviderReceiptModule,
     SellerReceiptModule,
     UnilateralReceiptModule,
 )
@@ -90,6 +93,13 @@ def case(name: str, bundle: dict, output: dict, audience: str, depths=DEPTHS, ed
             entry["model"] = plain(model)
             entry["html"] = {d: _module(kind, pack, d, audience, assurance, composition).render(model, KIT) for d in depths}
         modules[kind] = entry
+    provider = ProviderReceiptModule()
+    entry = {"can_render": provider.canRender(context)}
+    if entry["can_render"]:
+        model = provider.buildModel(context)
+        entry["model"] = plain(model)
+        entry["html"] = {"page": provider.render(model, KIT)}
+    modules["provider"] = entry
     return {
         "name": name,
         "audience": audience,
@@ -130,6 +140,104 @@ def edits() -> list[tuple[str, dict, dict, str]]:
     edited = copy.deepcopy(bundle)
     name_every_producer(edited, {"name": "goose", "version": "1.2.3", "commit": "abc1234"})
     out.append(("keep+one-producer", edited, report_for(edited, output), audience_of("keep")))
+    out.extend(provider_edits())
+    return out
+
+
+PROVIDER = "mesh-provider-selected"
+
+
+def provider_edits() -> list[tuple[str, dict, dict, str]]:
+    """The provider's receipt with its records edited: each way it stops being
+    an exchange this node served with its payments (the cases
+    tests/test_receipt_provider.py names), and amounts and times at the edges
+    of what the page shows. The verifier's report is bound to the edited bytes."""
+    bundle, output = load(PROVIDER)
+
+    def edited(label: str, edit) -> tuple[str, dict, dict, str]:
+        b = copy.deepcopy(bundle)
+        root = next(r for r in b["records"] if r["capsule_id"] == b["root"])
+        legs = [r for r in b["records"] if "settlement" in r]
+        edit(b, root, legs)
+        return (f"{PROVIDER}+{label}", b, report_for(b, output), "keep")
+
+    def poc(value):
+        return lambda b, root, legs: root["model_attestation"]["compute_attestation"].__setitem__("x-mesh-poc-v1", value)
+
+    def leg_status(status):
+        def edit(b, root, legs):
+            if status is ...:
+                del legs[0]["settlement"]["status"]
+            else:
+                legs[0]["settlement"]["status"] = status
+        return edit
+
+    def effect_status(status):
+        def edit(b, root, legs):
+            if status is ...:
+                del root["effect"]["status"]
+            else:
+                root["effect"]["status"] = status
+        return edit
+
+    def amount(member, value, index=0):
+        def edit(b, root, legs):
+            if value is ...:
+                del legs[index]["settlement"][member]
+            else:
+                legs[index]["settlement"][member] = value
+        return edit
+
+    def stamp(value):
+        return lambda b, root, legs: root.__setitem__("timestamp", value)
+
+    out = [
+        edited("root-is-a-leg", lambda b, root, legs: b.__setitem__("root", legs[0]["capsule_id"])),
+        edited("poc-empty", poc({})),
+        edited("poc-requested", poc({"serving_provenance": {}, "role": "requested"})),
+        edited("poc-no-provenance", poc({"role": "served"})),
+        edited("poc-gone", lambda b, root, legs: root["model_attestation"]["compute_attestation"].pop("x-mesh-poc-v1")),
+        edited("poc-served", poc({"serving_provenance": {}, "role": "served"})),
+        edited("poc-role-null", poc({"serving_provenance": {}, "role": None})),
+        edited("no-model", lambda b, root, legs: root["model_attestation"].pop("model_id")),
+    ]
+    for status in ("pending", "failed", "reversed", None, ...):
+        out.append(edited(f"leg-{'missing' if status is ... else status}", leg_status(status)))
+    for status in ("failed", "planned", "dispatched", "refused", None, ...):
+        out.append(edited(f"effect-{'missing' if status is ... else status}", effect_status(status)))
+    out.append(edited("no-effect", lambda b, root, legs: root.pop("effect")))
+    big = {"value": "9007199254740993995", "assetCode": "BTC", "assetScale": 11}
+    for label, edit in (
+        ("received-big", amount("received", big)),
+        ("received-both-big", lambda b, root, legs: [leg["settlement"].__setitem__("received", dict(big)) for leg in legs]),
+        ("received-usd", amount("received", {"value": "7", "assetCode": "USD", "assetScale": 2})),
+        ("received-sats", amount("received", {"value": "12", "assetCode": "BTC", "assetScale": 8})),
+        ("received-extra", amount("received", {"value": "5", "assetCode": "BTC", "assetScale": 11, "extra": 1})),
+        ("received-leading-zero", amount("received", {"value": "0995", "assetCode": "BTC", "assetScale": 11})),
+        ("received-negative", amount("received", {"value": "-5", "assetCode": "BTC", "assetScale": 11})),
+        ("received-number", amount("received", {"value": 995, "assetCode": "BTC", "assetScale": 11})),
+        ("received-scale-256", amount("received", {"value": "7", "assetCode": "USD", "assetScale": 256})),
+        ("received-scale-255", amount("received", {"value": "7", "assetCode": "USD", "assetScale": 255})),
+        ("received-scale-true", amount("received", {"value": "7", "assetCode": "USD", "assetScale": True})),
+        ("received-no-code", amount("received", {"value": "995", "assetCode": "", "assetScale": 11})),
+        ("received-gone", amount("received", ...)),
+        ("fee-gone", amount("receive_fee", ..., 1)),
+        ("fee-zero", amount("receive_fee", {"value": "0", "assetCode": "BTC", "assetScale": 11}, 1)),
+        ("time-offset", stamp("2026-10-30T14:50:00-05:00")),
+        ("time-lower-z", stamp("2026-10-30T19:50:00z")),
+        ("time-fraction", stamp("2026-10-30T19:50:00.250+00:00")),
+        ("time-no-seconds", stamp("2026-10-30T19:50Z")),
+        ("time-space", stamp("2026-10-30 19:50:00+00:00")),
+        ("time-short-offset", stamp("2026-10-30T19:50:00+05")),
+        ("time-basic-offset", stamp("2026-10-30T19:50:00+0530")),
+        ("time-no-offset", stamp("2026-10-30T19:50:00")),
+        ("time-not-a-time", stamp("not a time")),
+        ("time-year-0", stamp("0001-01-01T00:00:00+01:00")),
+        ("time-year-10000", stamp("9999-12-31T23:59:59-01:00")),
+        ("time-31-june", stamp("2026-06-31T10:00:00Z")),
+        ("time-empty", stamp("")),
+    ):
+        out.append(edited(label, edit))
     return out
 
 

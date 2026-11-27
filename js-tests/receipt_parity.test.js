@@ -6,7 +6,8 @@
 // compositions, the deal-view golden, and the copies capsulectl as capsule-cli
 // main builds it cut, main-*) at every audience a page may be for,
 // and for each copy whose seller kind was dropped or added, each of the
-// three scripts must:
+// three deal scripts, and the provider's own receipt (capsule-viewer#390) on
+// those and on the provider's receipt with its records edited, must:
 //   - accept (canRender) exactly the cases the golden records as accepted;
 //   - build the same model, field for field (dataclasses.asdict on the
 //     Python side);
@@ -144,9 +145,10 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
 
   it("covers every receipt fixture, at every audience, and the edited copies", () => {
     const names = new Set(oracle.cases.map((c) => c.name));
-    expect(oracle.cases.length).toBe(110);
+    expect(oracle.cases.length).toBe(158);
     expect([...names].filter((n) => !n.includes("+")).length).toBe(29);
-    expect([...names].filter((n) => n.includes("+")).length).toBe(23);
+    // 23 deal edits, 48 of the provider's receipt.
+    expect([...names].filter((n) => n.includes("+")).length).toBe(71);
   });
 
   it("compares every case, model and depth (the count is the parity result)", async () => {
@@ -198,10 +200,11 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     console.log(`receipt parity: ${JSON.stringify(compared)}`);
     expect(differences).toEqual([]);
     expect(drawn).toEqual(VIEWER_LINES_DRAWN);
-    // 29 fixtures x 3 audiences + 23 edited copies (21 declined by
-    // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only); 34 accepted (module, case)
+    // 29 fixtures x 3 audiences + 23 deal edits (21 declined by
+    // all three, as the Python twin declines it; the two producer ones are accepted by the unilateral module, at L2 only)
+    // + 48 edits of the provider's receipt (declined by all three); 34 accepted (module, case)
     // pairs, the 32 fixture pairs rendered at L0, L1 and L2.
-    expect({ ...compared, bytes: undefined }).toEqual({ cases: 110, accepted: 34, models: 34, renders: 98, bytes: undefined });
+    expect({ ...compared, bytes: undefined }).toEqual({ cases: 158, accepted: 34, models: 34, renders: 98, bytes: undefined });
     expect(compared.bytes).toBeGreaterThan(1000000);
   }, 600000);
 
@@ -224,8 +227,55 @@ describe("receipt scripts vs the Python modules (the oracle)", () => {
     }
   }, 300000);
 
+  // The provider's module has one level: the twin's page is the script's L0
+  // under the title the twin's page heads it with (the shell's, in Python),
+  // and L1 and L2 are empty. Its served time stays in UTC, as the twin's.
+  it("the provider's own receipt: the same cases, model and page as the Python twin (#390)", async () => {
+    const lib = loadScript("provider");
+    const compared = { accepted: 0, declined: 0 };
+    const differences = [];
+    for (const c of oracle.cases) {
+      const py = c.modules.provider;
+      const { context, env } = caseInputs(c);
+      // The edited copies are the module's cases, not report checks: a page
+      // asks nothing of a provider's receipt beyond the runtime's gate.
+      const asked = [];
+      const module = lib.api.createModule("provider", {
+        ...env,
+        reportCheck: () => asked.push("report"),
+        preimageCheck: () => asked.push("preimage"),
+      });
+      const accepts = await module.canRender(context);
+      if (accepts !== py.can_render) {
+        differences.push(`${c.name} @${c.audience}: canRender ${accepts}, Python ${py.can_render}`);
+        continue;
+      }
+      if (!accepts) {
+        compared.declined += 1;
+        continue;
+      }
+      compared.accepted += 1;
+      const model = await module.buildModel(context);
+      expect(model, c.name).toEqual(py.model);
+      const host = renderInto(lib, module, model, "L2");
+      const [l0, l1, l2] = levelNodes(host);
+      expect(l1.childNodes.length, c.name).toBe(0);
+      expect(l2.childNodes.length, c.name).toBe(0);
+      const [title, ...page] = [...l0.children];
+      expect(title.outerHTML).toBe("<h2>Your receipt for an exchange you served</h2>");
+      const js = canonNodes(lib.document, page);
+      const want = canonHtml(lib.document, py.html.page);
+      if (js !== want) differences.push(`${c.name}: page differs\n  js: ${js}\n  py: ${want}`);
+      expect(asked, c.name).toEqual([]);
+    }
+    expect(differences).toEqual([]);
+    // The fixture at its three audiences (the twin's module takes any; the
+    // manifest names the owner's only) and 31 edited copies it still accepts.
+    expect(compared).toEqual({ accepted: 34, declined: 124 });
+  }, 300000);
+
   it("each script registers exactly its own module, under its manifest", () => {
-    for (const kind of KINDS) {
+    for (const kind of [...KINDS, "provider"]) {
       const lib = loadScript(kind);
       expect(lib.registered.length).toBe(1);
       expect(lib.registered[0].manifest.id).toBe(`capsuleviewer.receipt.${kind}/v0`);

@@ -31,21 +31,29 @@ describe("a browser that cannot check a receipt", () => {
     expect(host.childNodes.length).toBe(0);
   });
 
-  it("answers cannot_check with no strict result", async () => {
-    mode.value = "no-strict";
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const text = readFileSync(
-      resolve(
-        process.cwd(),
-        "..",
-        "tests",
-        "testdata",
-        "receipt",
-        "mesh-payer-selected.bundle.json",
-      ),
-      "utf8",
-    );
-    expect(await checkReceipt(text)).toEqual({ kind: "cannot_check" });
-  });
+  // A deal receipt and a provider's own receipt (#390) alike.
+  it.each(["mesh-payer-selected", "mesh-provider-selected"])(
+    "answers cannot_check with no strict result, and draws nothing: %s",
+    async (name) => {
+      mode.value = "no-strict";
+      const { readFileSync } = await import("node:fs");
+      const { resolve } = await import("node:path");
+      const text = readFileSync(
+        resolve(
+          process.cwd(),
+          "..",
+          "tests",
+          "testdata",
+          "receipt",
+          `${name}.bundle.json`,
+        ),
+        "utf8",
+      );
+      expect(await checkReceipt(text)).toEqual({ kind: "cannot_check" });
+      const host = document.createElement("div");
+      host.append(document.createElement("p"));
+      expect(await renderReceipt(text, host)).toEqual({ kind: "cannot_check" });
+      expect(host.childNodes.length).toBe(0);
+    },
+  );
 });

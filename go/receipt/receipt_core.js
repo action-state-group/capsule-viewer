@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-// The deal receipt modules, in the page: capsuleviewer.receipt.unilateral/v0,
+// The receipt modules, in the page: capsuleviewer.receipt.unilateral/v0,
 // capsuleviewer.receipt.seller/v0 and capsuleviewer.receipt.bilateral/v0 (the
-// x-deal-v0 modules, each with a Python twin) and capsuleviewer.receipt.deal/v1
-// (the x-deal-v1 sealed report, no twin), as module-slot scripts (agent-action-capsule's presentation contract, as
+// x-deal-v0 modules, each with a Python twin), capsuleviewer.receipt.deal/v1
+// (the x-deal-v1 sealed report, no twin) and capsuleviewer.receipt.provider/v0
+// (a Mesh provider's own record of an exchange it served, with a Python twin,
+// capsule-viewer#390), as module-slot scripts (agent-action-capsule's presentation contract, as
 // capsulectl.deal-view/v0 and capsuleviewer.history/v0 are).
 //
-// This file is the source of the four scripts the manifests pin
-// (go/receipt/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js and
-// receipt_deal.js; capsule-viewer#383 made go/receipt the one receipt renderer).
+// This file is the source of the five scripts the manifests pin
+// (go/receipt/receipt_unilateral.js, receipt_seller.js, receipt_bilateral.js,
+// receipt_deal.js and receipt_provider.js; capsule-viewer#383 made go/receipt the one receipt renderer).
 // `go generate` in go/receipt writes each one from
 // it, filling the lines marked "@generated": the module it registers, its
 // manifest, the words (compiled in from the example English wording pack,
@@ -21,7 +23,7 @@
 // and a script never registers a module the builder did not choose.
 //
 // It is the twin of the Python modules (capsule_viewer.receipt: model.py,
-// module.py, seller.py, bilateral.py, role.py, frozen at 0.25.0), which stay the test oracle:
+// module.py, seller.py, bilateral.py, role.py, provider.py, frozen at 0.25.0), which stay the test oracle:
 // js-tests/receipt_parity.test.js renders every receipt fixture both ways
 // and fails on any difference in the model or the rendered result. Names
 // below follow the Python ones, so a reader can hold the two side by side.
@@ -4181,12 +4183,168 @@
     return dr.page(l0, w("depth.l1"), l1, depth === "L1" || depth === "L2", l2, depth === "L2", keep ? dr.actions(model.case) : null);
   }
 
+  // ---- the provider's own receipt (provider.py) ------------------------------
+  // capsuleviewer.receipt.provider/v0: the page for a bundle of one exchange a
+  // Mesh node served and the payments it received for it (capsules-plugin
+  // provider-receipt-bundle, Mesh-LLM/capsules-plugin#134). Not a deal
+  // receipt: the root is the node's own record of the exchange it served
+  // (x-mesh-poc-v1) and every other record is a settled payee_observed leg.
+  // It reads no request or response text and nothing of who asked.
+
+  var PROVIDER_POC = "x-mesh-poc-v1";
+  var PROVIDER_LEG = "payee_observed";
+  var CANONICAL_UINT = /^(?:0|[1-9][0-9]*)$/;
+
+  // group_thousands on a canonical integer string: amounts are exact at any size.
+  function groupDigits(digits) {
+    var head = digits.length % 3 || 3;
+    var out = [digits.slice(0, head)];
+    for (var i = head; i < digits.length; i += 3) out.push(digits.slice(i, i + 3));
+    return out.join(",");
+  }
+  // The sum of two canonical integer strings, digit by digit.
+  function addDigits(a, b) {
+    var out = "", carry = 0;
+    for (var i = a.length - 1, j = b.length - 1; i >= 0 || j >= 0 || carry; i--, j--) {
+      var s = (i >= 0 ? +a[i] : 0) + (j >= 0 ? +b[j] : 0) + carry;
+      out = (s % 10) + out;
+      carry = s >= 10 ? 1 : 0;
+    }
+    return out.replace(/^0+(?=.)/, "");
+  }
+
+  // provider.amount_text: an AAC exact amount (exactly value, assetCode and
+  // assetScale; a canonical integer string, a code, a scale of 0 to 255) with
+  // its unit. A BTC amount at scale 11 reads in msat; any other is shown as
+  // sealed, never converted. null when it is not one: the page then shows
+  // nothing rather than a number with no unit. `msat` is the value in msat,
+  // for the total.
+  function providerAmount(amount) {
+    if (!isMap(amount)) return null;
+    var keys = Object.keys(amount).sort();
+    if (keys.join(",") !== "assetCode,assetScale,value") return null;
+    var value = amount.value, code = amount.assetCode, scale = amount.assetScale;
+    if (typeof value !== "string" || !CANONICAL_UINT.test(value)) return null;
+    if (typeof code !== "string" || code === "" || int(scale) === null || scale < 0 || scale > 255) return null;
+    if (code === "BTC" && scale === 11) return { text: groupDigits(value) + " msat", msat: value };
+    return { text: value + " × 10^-" + scale + " " + code, msat: null };
+  }
+
+  var ISO_OFFSET = /^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2})(\.\d+)?)?([Zz]|[+-]\d{2}(?::?\d{2})?)$/;
+  // provider._utc: a time with its offset (RFC 3339, seconds optional, the
+  // offset as +05, +0500 or +05:00), in UTC to the second
+  // ("2026-10-30T19:50:00 UTC"), or "?" when it is not one, has no offset or
+  // falls outside years 1 to 9999. Python's fromisoformat also reads a few
+  // spellings no provider bundle carries (a basic-format date, an offset with
+  // seconds, 24:00); this shows "?" for them (js-tests/receipt_provider.test.js).
+  function providerUtc(stamp) {
+    var m = ISO_OFFSET.exec(stamp);
+    if (m === null) return "?";
+    var y = +m[1], mo = +m[2], da = +m[3], h = +m[4], mi = +m[5], s = m[6] === undefined ? 0 : +m[6];
+    if (y < 1 || mo < 1 || mo > 12 || da < 1 || da > 31 || h > 23 || mi > 59 || s > 59) return "?";
+    var base = new Date(0);
+    base.setUTCFullYear(y, mo - 1, da);
+    base.setUTCHours(h, mi, s, 0);
+    // The date must exist as written (no 31 June).
+    if (base.getUTCFullYear() !== y || base.getUTCMonth() !== mo - 1 || base.getUTCDate() !== da) return "?";
+    var off = 0;
+    if (m[8] !== "Z" && m[8] !== "z") {
+      var digits = m[8].slice(1).replace(":", "");
+      var oh = +digits.slice(0, 2), om = digits.length > 2 ? +digits.slice(2, 4) : 0;
+      if (oh > 23 || om > 59) return "?";
+      off = (m[8][0] === "-" ? -1 : 1) * (oh * 60 + om);
+    }
+    var when = new Date(base.getTime() - off * 60000);
+    var year = when.getUTCFullYear();
+    if (year < 1 || year > 9999) return "?";
+    // toISOString writes years 1 to 9999 as four digits.
+    return when.toISOString().slice(0, 19) + " UTC";
+  }
+
+  // provider._is_leg: a payment this node received, only a settled one.
+  function isProviderLeg(record) {
+    var leg = map(get(record, "settlement"));
+    return get(leg, "leg") === PROVIDER_LEG && get(leg, "sealer_role") === "payee" && get(leg, "status") === "settled";
+  }
+
+  // provider._parts: the served exchange record and the legs, when the bundle is exactly those.
+  function providerParts(v) {
+    var records = get(v.bundle, "records");
+    if (!Array.isArray(records) || !records.every(isMap)) return null;
+    var root = get(v.bundle, "root");
+    var exchange = records.filter(function (r) { return get(r, "capsule_id") === root; });
+    var others = records.filter(function (r) { return get(r, "capsule_id") !== root; });
+    if (exchange.length !== 1 || !others.length || !others.every(isProviderLeg)) return null;
+    var poc = get(map(get(map(get(exchange[0], "model_attestation")), "compute_attestation")), PROVIDER_POC);
+    // The node's own served record: a mesh exchange block naming its serving
+    // provenance and not marked as another role.
+    if (!isMap(poc) || !isMap(get(poc, "serving_provenance"))) return null;
+    if ((own(poc, "role") ? poc.role : "served") !== "served") return null;
+    // Only an exchange that was served (its effect confirmed).
+    if (get(map(get(exchange[0], "effect")), "status") !== "confirmed") return null;
+    return { exchange: exchange[0], legs: others };
+  }
+
+  // provider._text: a scalar as Python's str() writes it; "" for null, a map or a list.
+  function pyText(value) {
+    if (value === null || value === undefined || typeof value === "object") return "";
+    if (typeof value === "boolean") return value ? "True" : "False";
+    return String(value);
+  }
+
+  // provider.build_model, field for field.
+  function buildProvider(v) {
+    var parts = v.verified ? providerParts(v) : null;
+    if (parts === null) throw new Unavailable("not a provider's served exchange with its payments");
+    var total = "0";
+    var payments = parts.legs.map(function (leg) {
+      var settlement = map(get(leg, "settlement"));
+      var received = providerAmount(get(settlement, "received"));
+      var fee = providerAmount(get(settlement, "receive_fee"));
+      total = total !== null && received !== null && received.msat !== null ? addDigits(total, received.msat) : null;
+      return { capsule_id: pyText(get(leg, "capsule_id")), received: received && received.text, fee: fee && fee.text };
+    });
+    return {
+      exchange_id: pyText(get(parts.exchange, "capsule_id")),
+      model: pyText(get(map(get(parts.exchange, "model_attestation")), "model_id")),
+      served_at: providerUtc(pyText(get(parts.exchange, "timestamp"))),
+      payments: payments,
+      total: total === null ? null : groupDigits(total) + " msat",
+    };
+  }
+
+  // provider.render, all in L0 (the twin's page has one level and shows the
+  // payments expanded), under the title the twin's page heads it with. The
+  // served time stays in UTC, as the twin says it: it is no data-time span,
+  // so the page's local-time pass leaves it.
+  function drawProvider(doc, depth, model) {
+    var d = new Drawing(doc);
+    var kit = new Kit(d);
+    var mono = function (id) { return d.el("span", { class: "cv-mono" }, [id.slice(0, 16)]); };
+    var metrics = [{ label: w("provider.model"), value: model.model || "?" }, { label: w("provider.served_at"), value: model.served_at || "?" }];
+    if (model.total !== null) metrics.push({ label: w("provider.total"), value: model.total });
+    var notShown = w("provider.not_shown");
+    var rows = model.payments.map(function (p) { return [mono(p.capsule_id), p.received || notShown, p.fee || notShown]; });
+    var table = kit.dataTable([w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
+    var l0 = d.el("div", { "data-level": "L0" }, [
+      d.el("h2", {}, [w("provider.title")]),
+      d.el("div", { class: "cv-provider-receipt", "data-module": moduleId("provider") }, [
+        d.el("p", { "data-provider": "own-half" }, [w("provider.own_half")]),
+        d.el("p", { "data-provider": "no-content" }, [w("provider.no_content")]),
+        kit.metricGrid(metrics),
+        kit.drilldown(w("provider.received_count", { count: String(model.payments.length) }), [table], true),
+        d.el("p", { class: "cv-muted", "data-provider": "records" }, [w("provider.records_note") + " ", mono(model.exchange_id)]),
+      ]),
+    ]);
+    return [l0, d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
+  }
+
   // ---- the modules (presentation contract: canRender, buildModel, render) ----
 
   // The module's manifest id: the x-deal-v0 modules are /v0, the x-deal-v1 module /v1.
   function moduleId(kind) { return "capsuleviewer.receipt." + kind + (kind === "deal" ? "/v1" : "/v0"); }
 
-  var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal };
+  var DRAW = { unilateral: drawUnilateral, seller: drawSeller, bilateral: drawBilateral, deal: drawDeal, provider: drawProvider };
 
   // A wording line's runs: the text between each pair of backticks as a
   // <code> element, the rest as text. The npm export's page lines drop the
@@ -4221,7 +4379,7 @@
         : [w("row.cannot_check") + ". " + w("row.cannot_check_pointer")]);
     return [d.el("div", { "data-level": "L0" }, [line]), d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
   }
-  var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title" };
+  var TITLES = { unilateral: "page.title", seller: "seller.title", bilateral: "bilateral.title", deal: "deal.title", provider: "provider.title" };
 
   // The kit stylesheet, the receipt's dark overrides and its own rules
   // (receipt.css, #429), each once per document under its own id (their
@@ -4315,7 +4473,8 @@
       if (downgraded(context)) return { cannot_check: true, reason: "downgraded" };
       if (reportRuleNotRun(context)) return { cannot_check: true, reason: "report_rule" };
       var asked = [
-        pageChecks && kind !== "deal" ? askReportCheck(context, e.reportCheck) : null,
+        // A provider bundle carries no sealed report.
+        pageChecks && kind !== "deal" && kind !== "provider" ? askReportCheck(context, e.reportCheck) : null,
         // The settlement line's Lightning proof, on the x-deal-v0 receipts only.
         pageChecks && settles ? askSettlementCheck(context, e.preimageCheck) : null,
       ].filter(function (p) { return p !== null; });
@@ -4347,6 +4506,7 @@
     };
     var buildChecked = function (context) {
       var v = view(context, e);
+      if (kind === "provider") return buildProvider(v);
       if (kind === "deal") return buildDeal(v, e.audience);
       if (kind === "bilateral") return buildBilateral(v, e);
       if (kind === "seller") {
@@ -4426,6 +4586,8 @@
     utf8: utf8,
     jcs: jcs,
     formatAmount: formatAmount,
+    providerAmount: providerAmount,
+    providerUtc: providerUtc,
     plainTime: plainTime,
     localTimes: localTimes,
     bundleVerified: bundleVerified,

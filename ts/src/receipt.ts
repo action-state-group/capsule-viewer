@@ -6,7 +6,7 @@
  * bundles them itself, such as a saved receipt page or an exchanges row.
  *
  * It verifies the bundle with agent-action-capsule's runtime, resolves it
- * among the four receipt modules at the reader's audience, and draws the
+ * among the receipt modules at the reader's audience, and draws the
  * receipt the module chose. It never draws a receipt the runtime did not
  * verify. The words are the receipt modules' own (the example English
  * pack), so a consumer carries no receipt words of its own.
@@ -38,6 +38,7 @@ export const RECEIPT_KINDS = [
   "seller",
   "bilateral",
   "deal",
+  "provider",
 ] as const;
 export type ReceiptKind = (typeof RECEIPT_KINDS)[number];
 
@@ -68,7 +69,7 @@ export type ReceiptResult =
       readonly kind: "cannot_check";
       readonly reason?: "report_rule" | "downgraded";
     }
-  /** Verified, but no receipt module draws it (not a deal receipt). */
+  /** Verified, but no receipt module draws it (not a deal receipt or a provider's own receipt). */
   | { readonly kind: "no_module" };
 
 export interface ReceiptOptions {
@@ -101,7 +102,7 @@ interface Core {
 }
 const core = RECEIPT_CORE as Core;
 
-/** The four receipt modules, each with the manifest go/receipt ships for it. */
+/** The receipt modules, each with the manifest go/receipt ships for it. */
 export function receiptModules(): PresentationModule[] {
   return RECEIPT_KINDS.map((kind) => {
     const module = core.createModule(kind, {

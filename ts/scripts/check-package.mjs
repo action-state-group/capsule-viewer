@@ -96,7 +96,7 @@ try {
     "--input-type=module",
     "-e",
     `const { receiptModules } = await import(${JSON.stringify(name + "/receipt")});
-     if (receiptModules().length !== 4) throw new Error("no receipt modules");`,
+     if (receiptModules().length !== 5) throw new Error("no receipt modules");`,
   ]);
   console.log(
     `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules`,

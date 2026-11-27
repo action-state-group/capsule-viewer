@@ -752,6 +752,18 @@
     "countersign.reported.unverified": "capsulectl verify reported a countersignature of a type it does not check, so this page does not show it as a countersignature.",
     "countersign.reported.receipt.verified": " Its log signature verifies, as capsulectl verify reported.",
     "countersign.reported.receipt.absent": " It carries no log signature.",
-    "countersign.reported.receipt.unverified": " Its log signature does not verify, as capsulectl verify reported."
+    "countersign.reported.receipt.unverified": " Its log signature does not verify, as capsulectl verify reported.",
+    "provider.title": "Your receipt for an exchange you served",
+    "provider.own_half": "This is this node's own record of its half of the exchange. It is not a joint record, and the other party has not countersigned it.",
+    "provider.no_content": "It names the model and what was received. It holds no request or response text.",
+    "provider.records_note": "The exchange and each payment are records of their own, listed below.",
+    "provider.model": "Model served",
+    "provider.served_at": "Served at",
+    "provider.received": "Received",
+    "provider.received_count": "Received ({count})",
+    "provider.fee": "Fee for receiving",
+    "provider.total": "Received in total",
+    "provider.payment_record": "Payment record",
+    "provider.not_shown": "not shown"
   }
 }
