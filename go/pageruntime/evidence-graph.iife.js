@@ -18410,7 +18410,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("413142e6f8a2eb1a7b64a0e182c7c9829dbf9f51");
+    return commitPrefix("f9fff24bdb7edd2ab879df6bed6abf16c947cc04");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -29601,18 +29601,28 @@ ${pad.repeat(depth)}`;
     return style.transform !== "none" || style.translate !== "none" || style.rotate !== "none" || style.scale !== "none" || style.perspective !== "none" || style.filter !== "none" || style.backdropFilter !== "none" || /paint|layout|strict|content/.test(style.contain) || /transform|perspective|filter/.test(style.willChange) || style.containerType !== "normal" || style.contentVisibility === "auto";
   }
   function settled(view) {
+    const page = view.document;
     return new Promise((done) => {
       let waiting = true;
       const next = () => {
         if (!waiting) return;
         waiting = false;
+        page.removeEventListener("visibilitychange", hidden);
         view.setTimeout(done, 0);
       };
+      const stillHidden = () => {
+        if (page.visibilityState === "hidden") next();
+      };
+      const hidden = () => {
+        if (page.visibilityState === "hidden")
+          view.setTimeout(stillHidden, HIDDEN_MS);
+      };
       view.requestAnimationFrame(next);
-      view.setTimeout(next, SETTLE_MS);
+      page.addEventListener("visibilitychange", hidden);
+      hidden();
     });
   }
-  var SETTLE_MS = 100;
+  var HIDDEN_MS = 100;
   var checkingRenders = /* @__PURE__ */ new WeakMap();
   var RECEIPT_MODULE_IDS = /* @__PURE__ */ new Set([
     "capsuleviewer.receipt.unilateral/v0",
