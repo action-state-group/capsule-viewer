@@ -472,7 +472,7 @@ describe("Codex round 1 (#478): the signature claim, accepted entries, sources a
     for (const m of [unchecked, failed]) {
       const l1 = draw(m).L1.textContent ?? "";
       expect(l1).toContain(words["card.module.not_proven.true.unsigned"]);
-      expect(l1).not.toContain("Only that its holder signed");
+      expect(l1).not.toContain("signed these counts and");
     }
   });
 

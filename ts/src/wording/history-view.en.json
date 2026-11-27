@@ -310,7 +310,7 @@
     "card.reported.unnamed": "As its holder reported.",
     "card.signed.by.unnamed": "Signed by key {key}",
     "card.signed.claimed.unnamed": "This card names its signer as key {key}",
-    "card.not_proven.true.unnamed": "That the deals went as its holder counted them. Only that its holder signed these counts and they weren't changed since.",
+    "card.not_proven.true.unnamed": "That the deals went as its holder counted them. Only that whoever holds the signing key signed these counts and they weren't changed since.",
     "card.module.property.card_form": "The card has exactly the members a standard card has",
     "card.module.property.counts_integral": "Every count is a whole number, never a fraction or a share",
     "card.module.property.denominator": "Every count carries its total, and the totals agree",
