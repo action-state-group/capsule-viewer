@@ -20,7 +20,9 @@ func cvOut(t *testing.T, name string) string {
 	if dir == "" {
 		t.Skip("CV488_OUT not set")
 	}
-	return filepath.Join(dir, name)
+	out := filepath.Join(dir, name)
+	require.NoError(t, os.MkdirAll(filepath.Dir(out), 0o755))
+	return out
 }
 
 func cvCopy(t *testing.T, from, name string) {

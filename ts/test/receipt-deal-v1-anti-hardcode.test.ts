@@ -21,6 +21,7 @@ import {
   moduleRegions,
   type Fixture,
   type Carrier,
+  read,
 } from "./helpers/receipt-deal-v1-pages.js";
 
 /** The page, its regions and what the check reads besides it. */
@@ -58,6 +59,7 @@ export async function page(
       },
       entry,
       digest: await bundleDigest(bundle as never),
+      countersignatures: (context["countersignatures"] ?? []) as unknown[],
       memberships: ((context["completeness"] as Obj | undefined)?.[
         "memberships"
       ] ?? {}) as Obj,
@@ -267,6 +269,7 @@ describe("the formatters a value's text comes from", () => {
       "key",
       "leaves",
       "length",
+      "named",
       "ordinal",
     ]);
   });
@@ -451,4 +454,59 @@ describe("a differential pair differs on the page exactly where its one member d
       }
     });
   }
+});
+
+describe("the check reads relations and rarer lines too", () => {
+  it("a statement's named record re-pointed at another record the copy holds fails", async () => {
+    const p = await ruledPage();
+    const node = p.regions[0]!.querySelector('[data-derive="named"]')!;
+    const [digest, target] = node.getAttribute("data-ptr")!.split(" ");
+    // Another record the copy holds: the dispute.
+    const other =
+      "8b0dc2e82b5142f3eacccfe4731ba91cd01af49d3197a9cc338049753a35bae0";
+    expect(target).not.toContain(other);
+    node.setAttribute(
+      "data-ptr",
+      `${digest} record:${other}#/record/capsule_id`,
+    );
+    node.textContent = core.FORMATS["short"]!(other);
+    expect(problemsOf(p).join("\n")).toMatch(/derived named says/);
+  });
+
+  // The ruled copy edited where the page reads only the sealed report and the
+  // page's own checks, with capsulectl's report rebound to the edited bytes:
+  // a scope line, a countersignature the page checks, a report time with
+  // fractions of a second.
+  it("an edited copy's scope line, countersignature status and as_of are marked and resolve", async () => {
+    const bundle = ruled.bundle();
+    const content = ((bundle["extensions"] as Obj)["x-deal-report/v0"] as Obj)[
+      "agent_input"
+    ] as Obj;
+    (content["report"] as Obj)["scope"] = "Only the delivery term.";
+    content["as_of"] = "2026-11-27T14:51:23.250Z";
+    const copy = read("countersigned", "countersigned-copy.bundle.json");
+    bundle["countersignatures"] = copy["countersignatures"];
+    const report = ruled.report();
+    report["bundle_digest"] = await bundleDigest(bundle as never);
+    const edited: Fixture = {
+      ...ruled,
+      name: "ruled-dispute (edited)",
+      bundle: () => bundle,
+      report: () => report,
+    };
+    const p = await page(edited, null, bundle);
+    expect(p.regions).toHaveLength(3);
+    expect(p.regions.flatMap((r) => check(r, p.inputs))).toEqual([]);
+    const text = p.regions.map((r) => r.textContent).join("");
+    expect(text).toContain("Only the delivery term.");
+    expect(
+      p.regions[2]!.querySelector(
+        '[data-rung="countersign"] [data-ptr^="checked:countersignatures#"]',
+      ),
+    ).not.toBeNull();
+    // A report time the page does not read as a UTC instant is said as stored.
+    expect(p.regions[1]!.querySelector("[data-as-of]")!.textContent).toContain(
+      "2026-11-27T14:51:23.250Z",
+    );
+  });
 });

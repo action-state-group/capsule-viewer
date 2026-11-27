@@ -2960,9 +2960,10 @@ const root = {};
   //   ordinal: its row's place in its list (1-based), the closest li or tr;
   //   leaves: the leaves an MMR of the size its one source gives holds (mmrLeaves);
   //   key: the last member name of its one source (a settlement member's name);
+  //   named: the short id of the record (second source) whose payload digest is the digest a statement names (first);
   //   book: on a pack node, whose book a record is in: its signing key (first source) is the agreement's own key,
   //     its counterparty_key or its adjudicator's key (second source), and the key says which.
-  var DERIVATIONS = ["count", "length", "count_where", "ordinal", "leaves", "key", "book"];
+  var DERIVATIONS = ["count", "length", "count_where", "ordinal", "leaves", "key", "named", "book"];
   function derivedNode(d, how, text, srcs, attrs) {
     if (DERIVATIONS.indexOf(how) < 0) throw new Error("no derivation " + how);
     return d.el("span", Object.assign({ "data-src": "field", "data-derive": how, "data-ptr": srcs.map(sourceRef).join(" ") }, attrs || {}), [String(text)]);
@@ -3116,7 +3117,7 @@ const root = {};
     var aud = model.report.audience;
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: this.withheldKinds(model) }), { "data-shared": aud }));
     if (model.referee) parts.push(this.p(w("referee.named", { referee: model.referee }), { "data-rung": "referee" }));
-    if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
+    if (model.report.scope) parts.push(this.p(tagging !== null ? this.val(model.report.scope, inRecord(model.report.capsule_id, "/agent_input/report/scope")) : model.report.scope, { "data-sealed-text": "scope" }));
     if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     // Only a half capsulectl reported as verified is said; any other status,
@@ -3200,7 +3201,11 @@ const root = {};
   P.countersign = function (model) {
     // A two-sided copy is not unsigned by the other party: its half is above.
     if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : "countersign.none");
-    return w("countersign.some", { statuses: model.countersignatures.join(", ") });
+    // Each status as the page's own check of that countersignature gave it (the context's countersignatures).
+    var self = this;
+    var statuses = tagging === null ? model.countersignatures.join(", ")
+      : this.joined(model.countersignatures.map(function (st, i) { return self.val(st, { checked: "countersignatures", path: "/" + i + "/status" }); }), "comma");
+    return w("countersign.some", { statuses: statuses });
   };
   // Line 9 (capsule-viewer#383): the countersign rung capsulectl verify
   // resolved against the directory it was given, one line per
@@ -3871,7 +3876,7 @@ const root = {};
     if (start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
     // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
-    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : this.timed("deal.as_of", model.as_of, {}, S.as_of);
+    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of, {}, S.as_of) : w("deal.as_of", { at: this.val(model.as_of, S.as_of) });
     out.push(this.note(asOf, { "data-as-of": model.as_of }));
     return d.el("div", { "data-headline": "true" }, out);
   };
@@ -4447,7 +4452,11 @@ const root = {};
       }
       if (ruling.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [this.val(ruling.forum, at(rs, "/forum"))])]);
     }
-    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [this.val(names.record, idSrc(names.record), "short")]) : w("deal.drawer.names.unread")]);
+    // The record a statement names: shown by its id, marked with the digest the statement names and the record whose
+    // payload has that digest ("named"), so the test checks the statement names it.
+    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [
+      derivedNode(d, "named", shortText(names.record), [at(step.names.src, "/digest"), idSrc(names.record)]),
+    ]) : w("deal.drawer.names.unread")]);
     if (kind === "agree" && vof(step.role) !== null) rows.push([w("deal.drawer.role"), this.sideWord(vof(step.role), step.role.src)]);
     var id = d.el("details", { class: "cv-rcpt-id", "data-record-id": step.record }, [
       d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.val(step.record, idSrc(step.record), "short")]), w("deal.sep.dot"), kind !== null ? this.val(kind, step.kind.src) : w("deal.drawer.kind.withheld")]),
@@ -5293,7 +5302,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "8a59bceb153965b770e71c60f8772632fd0f4023117a6f2f0b5c35383db9e55a",
+      "script_sha256": "7cd75f1933e8a93d139eebdb155620a4adc77c31a5e58548cd435dbc410d247a",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5340,7 +5349,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "de3764236274b2be0c66884bdf2c8c8c8aa743f6ee5496b6049e26cb172d7014",
+      "script_sha256": "9e6ec0aaaaa9a38579a312e17cb2f98de5f8626aec40c9f85e8521765aa63dec",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5386,7 +5395,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "e6f2ccd2f1e003d81e297819f2b59d7ea4e578957ddee2d9d13f7cf152f0bc2e",
+      "script_sha256": "37fefb763fde4c0021a3199dbe93835498be5b8098488a4bb63e381861bed02d",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5434,7 +5443,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "0455eba443028820c9ad216411f9dd08905fe57eded66884cdc0379668ef0462",
+      "script_sha256": "bac60b1cad465e059cbf26adb8952e3d579885eccc06e028fd7fc52cefb2c723",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5476,7 +5485,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "ef43e8fc3d73a1faa1d76228a0311fc99edb26b862797ba91a2c8a6b48e0d4a6",
+      "script_sha256": "ddb537c50d0a4673e6bc68067f348da2412ad8d0883f9f205e923f552279d124",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",

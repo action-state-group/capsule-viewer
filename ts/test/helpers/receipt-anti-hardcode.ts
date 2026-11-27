@@ -33,6 +33,7 @@ type Core = {
   FORMATS: Record<string, (v: unknown) => string>;
   DERIVATIONS: string[];
   plainTime(v: string): string;
+  recordDigest(v: unknown): string | null;
 };
 export const core = RECEIPT_CORE as unknown as Core;
 
@@ -65,6 +66,8 @@ export type Inputs = {
   memberships: Obj;
   /** The bundle's digest, recomputed here (bundleDigest). */
   digest: string;
+  /** The page's own check of each countersignature on the bundle (the context's countersignatures). */
+  countersignatures: unknown[];
 };
 
 const isObj = (v: unknown): v is Obj =>
@@ -171,6 +174,8 @@ export function resolve(ref: string, inputs: Inputs): unknown {
       if (name === "bundle_digest")
         return path === "" ? inputs.digest : undefined;
       if (name === "memberships") return pointer(inputs.memberships, path);
+      if (name === "countersignatures")
+        return pointer(inputs.countersignatures, path);
       return Object.prototype.hasOwnProperty.call(inputs.entry, name)
         ? pointer(inputs.entry[name], path)
         : undefined;
@@ -403,6 +408,22 @@ export function check(
         );
       }
       if (how === "key") want = refs[0]!.split("/").pop() ?? null;
+      if (how === "named") {
+        // The named record's payload digest (or, withheld, its header's commitment) is the digest the statement names.
+        const id = values[1];
+        const pair =
+          typeof id === "string" ? pairOf(inputs.bundle, id) : undefined;
+        const header = pair?.["header"];
+        const digest = isObj(pair?.["payload"])
+          ? core.recordDigest(pair!["payload"])
+          : isObj(header)
+            ? (header["payload_commitments"] as unknown[] | undefined)?.[0]
+            : undefined;
+        want =
+          digest !== undefined && digest === values[0]
+            ? core.FORMATS["short"]!(id)
+            : null;
+      }
       if (how === "ordinal") {
         const row = el.closest("li, tr");
         const list = row?.parentElement;

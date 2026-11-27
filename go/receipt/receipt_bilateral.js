@@ -2956,9 +2956,10 @@
   //   ordinal: its row's place in its list (1-based), the closest li or tr;
   //   leaves: the leaves an MMR of the size its one source gives holds (mmrLeaves);
   //   key: the last member name of its one source (a settlement member's name);
+  //   named: the short id of the record (second source) whose payload digest is the digest a statement names (first);
   //   book: on a pack node, whose book a record is in: its signing key (first source) is the agreement's own key,
   //     its counterparty_key or its adjudicator's key (second source), and the key says which.
-  var DERIVATIONS = ["count", "length", "count_where", "ordinal", "leaves", "key", "book"];
+  var DERIVATIONS = ["count", "length", "count_where", "ordinal", "leaves", "key", "named", "book"];
   function derivedNode(d, how, text, srcs, attrs) {
     if (DERIVATIONS.indexOf(how) < 0) throw new Error("no derivation " + how);
     return d.el("span", Object.assign({ "data-src": "field", "data-derive": how, "data-ptr": srcs.map(sourceRef).join(" ") }, attrs || {}), [String(text)]);
@@ -3112,7 +3113,7 @@
     var aud = model.report.audience;
     if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: this.withheldKinds(model) }), { "data-shared": aud }));
     if (model.referee) parts.push(this.p(w("referee.named", { referee: model.referee }), { "data-rung": "referee" }));
-    if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
+    if (model.report.scope) parts.push(this.p(tagging !== null ? this.val(model.report.scope, inRecord(model.report.capsule_id, "/agent_input/report/scope")) : model.report.scope, { "data-sealed-text": "scope" }));
     if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     // Only a half capsulectl reported as verified is said; any other status,
@@ -3196,7 +3197,11 @@
   P.countersign = function (model) {
     // A two-sided copy is not unsigned by the other party: its half is above.
     if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : "countersign.none");
-    return w("countersign.some", { statuses: model.countersignatures.join(", ") });
+    // Each status as the page's own check of that countersignature gave it (the context's countersignatures).
+    var self = this;
+    var statuses = tagging === null ? model.countersignatures.join(", ")
+      : this.joined(model.countersignatures.map(function (st, i) { return self.val(st, { checked: "countersignatures", path: "/" + i + "/status" }); }), "comma");
+    return w("countersign.some", { statuses: statuses });
   };
   // Line 9 (capsule-viewer#383): the countersign rung capsulectl verify
   // resolved against the directory it was given, one line per
@@ -3867,7 +3872,7 @@
     if (start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
     // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
-    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : this.timed("deal.as_of", model.as_of, {}, S.as_of);
+    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of, {}, S.as_of) : w("deal.as_of", { at: this.val(model.as_of, S.as_of) });
     out.push(this.note(asOf, { "data-as-of": model.as_of }));
     return d.el("div", { "data-headline": "true" }, out);
   };
@@ -4443,7 +4448,11 @@
       }
       if (ruling.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [this.val(ruling.forum, at(rs, "/forum"))])]);
     }
-    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [this.val(names.record, idSrc(names.record), "short")]) : w("deal.drawer.names.unread")]);
+    // The record a statement names: shown by its id, marked with the digest the statement names and the record whose
+    // payload has that digest ("named"), so the test checks the statement names it.
+    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [
+      derivedNode(d, "named", shortText(names.record), [at(step.names.src, "/digest"), idSrc(names.record)]),
+    ]) : w("deal.drawer.names.unread")]);
     if (kind === "agree" && vof(step.role) !== null) rows.push([w("deal.drawer.role"), this.sideWord(vof(step.role), step.role.src)]);
     var id = d.el("details", { class: "cv-rcpt-id", "data-record-id": step.record }, [
       d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.val(step.record, idSrc(step.record), "short")]), w("deal.sep.dot"), kind !== null ? this.val(kind, step.kind.src) : w("deal.drawer.kind.withheld")]),
