@@ -601,4 +601,28 @@ describe("the deal model: the holder's own offer carried in the copy (book.offer
     const side = await draw(given, { deal_offer: offer() });
     expect(side.querySelector("[data-hero-item]")).toBeNull();
   });
+
+  it("the carried offer adds only the item line: none of its times is drawn (u239)", async () => {
+    // The offer's x-deal-v1.at, body.stated_at and Capsule timestamp are the
+    // offerer's own word, never a record time: every depth of the page is the
+    // same with and without the pair, the item line aside.
+    const all = async (b: Obj): Promise<string> => {
+      const mod = module({});
+      const m = await mod.buildModel(context(b));
+      const out = ["L0", "L1", "L2"].map(() => document.createElement("div"));
+      mod.render(m, { L0: out[0]!, L1: out[1]!, L2: out[2]!, depth: "L2" });
+      out.forEach((el) =>
+        el.querySelectorAll("[data-hero-item]").forEach((n) => n.remove()),
+      );
+      return out.map((el) => el.innerHTML).join("\n");
+    };
+    for (const audience of ["keep", "counterparty"]) {
+      const without = read("offer", "keep-copy.bundle.json");
+      content(without)["audience"] = audience;
+      without["records"] = [];
+      expect(await all(withOffer(sentPair(), audience))).toBe(
+        await all(without),
+      );
+    }
+  });
 });
