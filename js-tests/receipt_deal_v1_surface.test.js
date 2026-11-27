@@ -87,6 +87,9 @@ describe("the header and the top line", () => {
     const { host, model } = await draw(b);
     expect(model.role).toBe(null);
     expect(q(host.L0, "[data-receipt-title]").textContent).toBe("Deal receipt");
+    // A verified half shows the other party's agreement, not its role: the neutral words (#461, Codex round 1).
+    expect(q(host.L0, '[data-check="counterparty_half"] .cv-rcpt-proof__label').textContent).toBe("The other side's signed agreement");
+    expect(q(host.L0, '[data-else="half"]').textContent).toContain("This copy carries the other side's signed agreement.");
   });
 
   it("Done: settled, every term both say the same and met, and the holder's payment record held", async () => {
@@ -505,7 +508,7 @@ describe("#461: who and what, and capsulectl said once", () => {
       const failed = await draw(bundleOf(SELLER, asKeep), { assurance: { counterparty_half: "failed", checks } });
       expect(row(failed.host).getAttribute("data-check-status")).toBe("fail");
       expect(lede(failed.host).getAttribute("data-proof")).toBe("failed");
-      expect(lede(failed.host).textContent).toBe("No. These are capsulectl verify's answers when this page was made, and a test failed. The page shows its answers; it did not re-check by itself.");
+      expect(lede(failed.host).textContent).toBe("No. capsulectl verify failed a test when this page was made. The page shows its answers; it did not re-check by itself.");
     }
   });
 
@@ -656,6 +659,18 @@ describe("#461: the item from the holder's sealed offer, in the module", () => {
     b.extensions["x-deal-v1"].book.agreement.payload.body.offer.digest = lib.api.recordDigest(forged);
     // The header still commits to the sealed agreement, so the page reads that one, which cites the real offer.
     expect((await item(b, forged)).drawn).toBeNull();
+  });
+
+  it("on the holder's own page only: a shared copy, or the holder's copy carried in a report or page, shows no item", async () => {
+    const asShared = structuredClone(KEEP);
+    const x = asShared.extensions["x-deal-report/v0"];
+    x.agent_input = { ...x.agent_input, audience: "counterparty" };
+    expect((await item(asShared, OFFER)).drawn).toBeNull();
+    for (const carrier of ["report", "page"]) {
+      const { host } = await draw(structuredClone(KEEP), { assurance: { deal_offer: OFFER }, carrier });
+      expect(q(host.L0, "[data-hero-item]")).toBeNull();
+      expect(host.L0.textContent).not.toContain(ITEM);
+    }
   });
 
   it("names nothing about the seller: no key id, no name", async () => {

@@ -3692,6 +3692,13 @@
     return w(chosen || key, values);
   };
 
+  // A key that names the other side: its neutral form (".report", "the other side's") when the copy's own
+  // agreement does not say which side the holder is, since a verified half shows only that it is the
+  // other party's, not its role; else as say() picks it.
+  P.sideSay = function (model, key, values) {
+    return model.role === null ? w(key + ".report", values) : this.say(model, key, values);
+  };
+
   // A money member as a reader says it: BTC at scale 11 (or less) is counted in msat, with sats above
   // when it is whole sats; anything else as recorded (legAmount).
   function moneyOf(a) {
@@ -3740,7 +3747,9 @@
     var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
     // What the deal was for, from the holder's own sealed offer (#461); the seller is not named: no record
     // the agreement cites seals the seller's name, and a key id is never drawn as one.
-    if (model.item !== null) line.push(this.p(w("deal.hero.item", { item: model.item }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
+    // On the holder's own page only: the offer is given beside the copy, not carried in it, so a copy
+    // shown to others never shows it.
+    if (model.item !== null && this.ownPage(model)) line.push(this.p(w("deal.hero.item", { item: model.item }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
     if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
     if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
     var parts = [];
@@ -3951,7 +3960,7 @@
     // The other side's signed agreement, as capsulectl verify reported it (the card says only that it
     // was checked; this panel carries the attribution, #461). Drawn only when capsulectl reported on it.
     var half = model.counterparty_half === "verified" ? "pass" : model.counterparty_half === "failed" ? "fail" : null;
-    if (half !== null) rows.push(this.proofRow("counterparty_half", half, this.say(model, "deal.proof.counterparty_half"), null));
+    if (half !== null) rows.push(this.proofRow("counterparty_half", half, this.sideSay(model, "deal.proof.counterparty_half"), null));
     var stamp = this.timeStamp(model);
     var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
     // The summary counts every row it shows: any failed row, the agreement and the time stamp included,
@@ -4021,7 +4030,7 @@
       { key: "problems", label: w("deal.else.problems"), text: problemText },
       { key: "whose", label: w("deal.else.whose"), text: this.say(model, "deal.else.whose.text") },
     ];
-    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.say(model, "deal.else.half.checked") });
+    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.sideSay(model, "deal.else.half.checked") });
     return d.el("section", { class: "cv-rcpt-panel", "data-surface": "else" }, [
       d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.else")]),
       d.el("div", { class: "cv-rcpt-tiles" }, tiles.map(function (t) {

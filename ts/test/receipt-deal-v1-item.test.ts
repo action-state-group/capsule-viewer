@@ -12,6 +12,10 @@
  * (see its README): the buyer's keep copy, capsulectl's verify report on it
  * (VALID, x-deal-v1 pass) and the buyer's own sealed offer.
  */
+import {
+  bundleDigest,
+  verifyBundle,
+} from "@action-state-group/agent-action-capsule";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -102,20 +106,25 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     expect(item(root)).toBeNull();
   });
 
-  it("an agreement re-sealed to cite another offer, with its hash chain redone but not re-signed, draws no item", async () => {
-    // The trust boundary is the record's signature, which the page's runtime
-    // checks before any module draws: the module's own hash chain (payload ->
-    // header -> agent_input_digest) is redone here so only the signature is wrong.
-    const forged = structuredClone(data("offer.json"));
-    ((forged["body"] as Obj)["terms"] as Obj)["item"] = "forged item";
+  // capsulectl's report rebound to *bundle*: its digest recomputed, its record
+  // identities unchanged (the capsule ids stay), so the report's own binding
+  // holds and only the page's verification of the bundle decides.
+  const reboundReport = async (bundle: Obj): Promise<Obj> => {
+    const r = structuredClone(data("keep-copy.verify.json"));
+    r["bundle_digest"] = await bundleDigest(bundle as never);
+    return r;
+  };
+  // The agreement re-sealed to cite *offer*, its hash chain redone (payload ->
+  // header commitment -> the record's agent_input_digest) but not re-signed.
+  const reSealed = (offer: Obj): Obj => {
     const bundle = structuredClone(data("keep-copy.bundle.json"));
-    const agreement = ((bundle["extensions"] as Obj)["x-deal-v1"] as Obj)[
+    const book = ((bundle["extensions"] as Obj)["x-deal-v1"] as Obj)[
       "book"
     ] as Obj;
-    const pair = agreement["agreement"] as Obj;
+    const pair = book["agreement"] as Obj;
     const payload = pair["payload"] as Obj;
     ((payload["body"] as Obj)["offer"] as Obj)["digest"] =
-      core.recordDigest(forged);
+      core.recordDigest(offer);
     const header = pair["header"] as Obj;
     header["payload_commitments"] = [core.recordDigest(payload)];
     const id = (pair["record"] as Obj)["capsule_id"];
@@ -125,8 +134,42 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     ((record["model_attestation"] as Obj)["compute_attestation"] as Obj)[
       "agent_input_digest"
     ] = core.recordDigest(header);
-    (pair["record"] as Obj)["model_attestation"] = record["model_attestation"];
-    const root = await page(bundle, { dealOffer: forged });
+    pair["record"] = record;
+    return bundle;
+  };
+
+  it("control: a report rebound to the unchanged copy still binds, and the item is drawn", async () => {
+    const bundle = data("keep-copy.bundle.json");
+    const root = await page(bundle, {
+      dealOffer: data("offer.json"),
+      verifierReport: await reboundReport(bundle),
+    });
+    expect(item(root)).toBe(ITEM);
+  });
+
+  it("an agreement re-sealed to cite another offer, its hash chain redone but not re-signed, is refused by the page's own verification", async () => {
+    // The trust boundary is the record's signature, which the page's runtime
+    // checks before any module draws; the report here binds to the forged
+    // bundle, so only that check stands between it and the receipt.
+    const forged = structuredClone(data("offer.json"));
+    ((forged["body"] as Obj)["terms"] as Obj)["item"] = "forged item";
+    const bundle = reSealed(forged);
+    const agreementId = String(
+      (
+        (
+          (((bundle["extensions"] as Obj)["x-deal-v1"] as Obj)["book"] as Obj)[
+            "agreement"
+          ] as Obj
+        )["record"] as Obj
+      )["capsule_id"],
+    );
+    const checked = await verifyBundle(bundle);
+    expect(checked.capsuleResults[agreementId]?.ok).toBe(false);
+    const root = await page(bundle, {
+      dealOffer: forged,
+      verifierReport: await reboundReport(bundle),
+    });
+    expect(root.querySelector("[data-receipt-surface]")).toBeNull();
     expect(item(root)).toBeNull();
     expect(root.textContent).not.toContain("forged item");
   });
