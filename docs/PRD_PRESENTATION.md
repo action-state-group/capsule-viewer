@@ -82,8 +82,12 @@ Requirements:
   capsule-viewer's `buildModel` (u476 as amended by u562, 2026-11-27). A host runs that code and
   emits its JSON. No host keeps its own receipt or History reading.
 - **H3 Every host can get the JSON.** Whatever writes the page can also write the view model JSON
-  beside it, from the same run, for every neutral profile. Today only the receipt note specifies the
-  shape; History and Results follow it (see §10).
+  beside it, from the same run, for every neutral profile, as `<page base>.view-model.json`, never
+  overwriting (the file rule of actionstate-muse `docs/design/view-model-json.md`, #182, which is
+  reused here). Today only the receipt note specifies the `{value, src}` shape; History and Results
+  follow it (see §10). That Muse note also has a second producer (Go, with a parity test against the
+  page's `buildModel`); under H2 it becomes a host that emits capsule-viewer's model, and the Go
+  derivation retires.
 - **H4 Projections say they are partial.** A chat card, image or text may leave things out and must
   say so ("The full list is on the page."). None may contradict the page.
 
@@ -164,6 +168,20 @@ for its terms. If it needs renderer code, the profile is leaking the use case in
   --bundle`." An image, a text summary and a link preview are never proof.
 - **Five-second test:** on an opened phone page, a person can say what happened, what is supported
   and what was shared, without expanding anything. It tests comprehension, not a decision.
+- **The look (u558, u559; capsule-viewer#382, #384):** receipt and History share one visual
+  language: header and tags, a plain top line, the **seal**, three cards, the **stamp row**, the step
+  timeline beside the proof panel, "what this does not prove", and the footer. The technical depth
+  (ladder, provenance, producer envelope) stays under "For checkers" and "Technical details".
+  - **The seal** is an original drawn mascot that carries the outcome. "Done" only when settled,
+    every term agreed with its value met and the holder's settle record held; "Didn't go as
+    agreed" on a final not-met ruling; no seal otherwise (silence is not agreement).
+  - **Stamps are round graphical stamps**: RECORDED (checkpointed), TIME-STAMPED, COUNTERSIGNED
+    on a receipt and on Your History rows, and the round SHARED stamp on a shared History. A stamp is
+    drawn filled only when its check passed on this page (C13), as an **empty outline** when not
+    present ("Not checked here", "Not time-stamped yet"), and partial as "… through step k of n",
+    never filled. The round form is in actionstate-muse's History module (`history.css`
+    `[data-history="stamp"]`, golden `docs/design/golden/history-v0/`); capsule-viewer's receipt
+    draws stamps as dashed rectangles today, which this requirement changes.
 - **Showing it to someone else:** the page says in words how a copy for another party is made, and
   gives the verify site as a working link where the host allows links. It has no button that acts.
 
@@ -214,9 +232,11 @@ writing viewer code.
    (#474 PR 8) and Results need the same, and every page writer needs a way to write the JSON.
 2. **T3:** a guide for a deal terms pack to a receipt.
 3. **T2's authoring verbs:** evidencebook-skills#56.
+4. **Round stamps in capsule-viewer:** the receipt and History modules draw the stamp row as round
+   stamps with an empty outline when not present (§7), before the Muse modules retire.
 
 ## Change log
 
 - **v1.3 (2026-11-27):** product-neutral sections moved here from PRD_VIEWER_PRESENTATION v1.2.
   Added §3 (the human/machine pair), C11–C18, the profiles table, §8 (Terms Pack to report) and the
-  view-model owner (u476 amended by u562).
+  view-model owner (u476 amended by u562), the seal and round stamps (§7).
