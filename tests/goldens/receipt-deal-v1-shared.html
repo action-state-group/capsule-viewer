@@ -1,0 +1,289 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>receipt</title><style id="cv-kit-css">/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * kit.css -- the presentation component kit's stylesheet.
+ *
+ * The token block below is generated from capsule_viewer/kit/tokens.py
+ * (python -m capsule_viewer.kit tokens --write); tests/test_kit_tokens.py
+ * fails if the two disagree. Every colour in the component rules is a
+ * var(--cv-*) reference -- the same test refuses a literal colour outside the
+ * generated block.
+ *
+ * Phone behaviour lives here, in the primitives: each responsive component is
+ * its own size container and reflows on ITS width (@container), so a module
+ * that places a MetricGrid or DataTable in a narrow column gets the phone
+ * layout without writing a media query. Nothing in the kit scrolls the page
+ * sideways: long tokens (digests, ids) wrap anywhere.
+ */
+/* BEGIN GENERATED TOKENS (capsule_viewer.kit.tokens) -- do not edit by hand */
+:root {
+  --cv-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --cv-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --cv-font-size-sm: 0.8125rem;
+  --cv-font-size-md: 0.9375rem;
+  --cv-font-size-lg: 1.125rem;
+  --cv-line-height: 1.5;
+  --cv-space-1: 0.25rem;
+  --cv-space-2: 0.5rem;
+  --cv-space-3: 0.75rem;
+  --cv-space-4: 1rem;
+  --cv-space-5: 1.5rem;
+  --cv-radius: 0.5rem;
+  --cv-radius-pill: 999px;
+  --cv-color-text: #1b1f27;
+  --cv-color-text-muted: #4d5564;
+  --cv-color-surface: #ffffff;
+  --cv-color-surface-sunken: #f4f5f7;
+  --cv-color-border: #d3d7de;
+  --cv-color-accent: #2445a8;
+  --cv-color-positive-fg: #17603a;
+  --cv-color-positive-bg: #e6f3eb;
+  --cv-color-negative-fg: #a31d1d;
+  --cv-color-negative-bg: #fbe9e9;
+  --cv-color-caution-fg: #6f4700;
+  --cv-color-caution-bg: #fcf1dc;
+  --cv-color-neutral-fg: #3d4452;
+  --cv-color-neutral-bg: #eceef2;
+  --cv-color-info-fg: #1f3c94;
+  --cv-color-info-bg: #e7ecfb;
+}
+/* END GENERATED TOKENS */
+
+.cv-kit { font-family: var(--cv-font-sans); font-size: var(--cv-font-size-md); line-height: var(--cv-line-height); color: var(--cv-color-text); background: var(--cv-color-surface); overflow-wrap: anywhere; }
+body.cv-kit { margin: 0; }
+.cv-page { max-width: 60rem; margin: 0 auto; padding: var(--cv-space-5) var(--cv-space-4); }
+.cv-kit *, .cv-kit *::before, .cv-kit *::after { box-sizing: border-box; }
+.cv-kit :where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure) { margin: 0; padding: 0; }
+.cv-kit :where(ul, ol) { list-style: none; }
+.cv-mono { font-family: var(--cv-font-mono); font-size: var(--cv-font-size-sm); }
+.cv-muted { color: var(--cv-color-text-muted); }
+
+/* Section */
+.cv-section { margin: 0 0 var(--cv-space-5); }
+.cv-section__title { font-size: var(--cv-font-size-lg); font-weight: 600; margin-bottom: var(--cv-space-3); }
+.cv-section__body { display: flex; flex-direction: column; gap: var(--cv-space-3); min-width: 0; }
+
+/* MetricGrid: as many columns as fit, never narrower than the label needs; one column on a phone. */
+.cv-metrics-wrap { container-type: inline-size; }
+.cv-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); gap: var(--cv-space-3); }
+.cv-metric { min-width: 0; border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); padding: var(--cv-space-3); background: var(--cv-color-surface-sunken); }
+.cv-metric__label { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }
+.cv-metric__value { font-size: var(--cv-font-size-lg); font-weight: 600; }
+.cv-metric__note { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }
+@container (max-width: 24rem) { .cv-metrics { grid-template-columns: 1fr; } }
+
+/* DataTable: a real table when there is room; stacked label/value rows when there is not. */
+.cv-table-wrap { container-type: inline-size; }
+.cv-table { width: 100%; border-collapse: collapse; font-size: var(--cv-font-size-sm); }
+.cv-table caption { text-align: left; font-weight: 600; padding-bottom: var(--cv-space-2); }
+.cv-table th, .cv-table td { text-align: left; vertical-align: top; padding: var(--cv-space-2); border-bottom: 1px solid var(--cv-color-border); min-width: 0; }
+.cv-table th { color: var(--cv-color-text-muted); font-weight: 600; background: var(--cv-color-surface-sunken); }
+/* A column header is one short word: never broken mid-word to squeeze a wide table ("Ste" over "p"). */
+.cv-table th { overflow-wrap: normal; }
+@container (max-width: 40rem) {
+  .cv-table, .cv-table tbody, .cv-table tr, .cv-table td { display: block; width: 100%; }
+  .cv-table caption { display: block; }
+  .cv-table thead { display: none; }
+  .cv-table tr { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); margin-bottom: var(--cv-space-2); }
+  .cv-table td { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--cv-space-2); }
+  .cv-table td::before { content: attr(data-label); color: var(--cv-color-text-muted); font-weight: 600; }
+  .cv-table tr > td:last-child { border-bottom: 0; }
+}
+
+/* CalendarGrid: always seven columns; the cells shrink, the text wraps. */
+.cv-calendar { font-size: var(--cv-font-size-sm); }
+.cv-calendar__title { font-weight: 600; margin-bottom: var(--cv-space-2); }
+.cv-calendar__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.cv-calendar__dow { text-align: center; color: var(--cv-color-text-muted); font-weight: 600; padding: var(--cv-space-1) 0; }
+.cv-calendar__day { min-width: 0; min-height: 3rem; border: 1px solid var(--cv-color-border); border-radius: 4px; padding: 2px var(--cv-space-1); background: var(--cv-color-surface); }
+.cv-calendar__day--blank { border-color: transparent; background: transparent; }
+.cv-calendar__num { font-weight: 600; }
+.cv-calendar__mark { display: block; font-size: 0.6875rem; line-height: 1.25; border-radius: 3px; padding: 0 2px; }
+
+/* Tones shared by badges, pills, calendar marks and verification outcomes. */
+.cv-tone--positive { color: var(--cv-color-positive-fg); background: var(--cv-color-positive-bg); }
+.cv-tone--negative { color: var(--cv-color-negative-fg); background: var(--cv-color-negative-bg); }
+.cv-tone--caution { color: var(--cv-color-caution-fg); background: var(--cv-color-caution-bg); }
+.cv-tone--neutral { color: var(--cv-color-neutral-fg); background: var(--cv-color-neutral-bg); }
+.cv-tone--info { color: var(--cv-color-info-fg); background: var(--cv-color-info-bg); }
+
+/* Receipt sides: ours blue, theirs amber (always "as received"), a missing side grey and dashed. No side is ever the negative tone: one side missing is not a finding. */
+.cv-sides { display: flex; flex-direction: column; gap: var(--cv-space-2); margin: 0 0 var(--cv-space-3); }
+.cv-sides__case { padding: var(--cv-space-1) var(--cv-space-3); border-radius: var(--cv-radius); font-weight: 600; font-size: var(--cv-font-size-sm); }
+.cv-half { min-width: 0; border-radius: var(--cv-radius); padding: var(--cv-space-1) var(--cv-space-3) var(--cv-space-2); border: 1px solid var(--cv-color-border); }
+.cv-half > .cv-section { margin-bottom: 0; }
+.cv-half__label { font-size: var(--cv-font-size-sm); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cv-color-text-muted); margin-bottom: var(--cv-space-1); }
+.cv-half--ours { background: var(--cv-color-info-bg); border-color: var(--cv-color-info-fg); }
+.cv-half--theirs { background: var(--cv-color-caution-bg); border-color: var(--cv-color-caution-fg); }
+.cv-half--missing { background: var(--cv-color-neutral-bg); border: 1px dashed var(--cv-color-neutral-fg); }
+.cv-actions { display: flex; flex-wrap: wrap; column-gap: var(--cv-space-3); font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-info-fg); }
+.cv-actions__heading { font-weight: 400; color: var(--cv-color-text-muted); }
+
+/* DisclosureBadge and VerdictPill. The pill is scoped to the kit wrapper: the page shell's verification banner is a .cv-pill outside it, and a module's stylesheet must not restyle the banner (the frame check refuses the module). */
+.cv-badge, .cv-kit .cv-pill { display: inline-block; max-width: 100%; font-size: var(--cv-font-size-sm); font-weight: 600; border-radius: var(--cv-radius-pill); padding: 0 var(--cv-space-2); border: 1px solid currentColor; }
+.cv-badge { letter-spacing: 0.02em; }
+/* A state label breaks between words, never inside one. */
+.cv-badge, .cv-kit .cv-pill { overflow-wrap: normal; }
+.cv-refusal { color: var(--cv-color-negative-fg); background: var(--cv-color-negative-bg); border: 1px dashed currentColor; }
+
+/* CitationList */
+.cv-citations { display: flex; flex-direction: column; gap: var(--cv-space-2); counter-reset: cv-cite; }
+.cv-citation { counter-increment: cv-cite; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--cv-space-2); }
+.cv-citation::before { content: "[" counter(cv-cite) "]"; color: var(--cv-color-text-muted); }
+.cv-citation__ref { display: block; color: var(--cv-color-text-muted); }
+
+/* Drilldown: native details/summary -- opens with no script; prints open. */
+.cv-drilldown { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); background: var(--cv-color-surface); }
+.cv-drilldown > summary { cursor: pointer; padding: var(--cv-space-2) var(--cv-space-3); font-weight: 600; color: var(--cv-color-accent); }
+.cv-drilldown__body { padding: 0 var(--cv-space-3) var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-2); min-width: 0; }
+
+/* EvidenceDetails */
+.cv-evidence { display: flex; flex-direction: column; gap: var(--cv-space-2); }
+.cv-evidence__item { border-left: 3px solid var(--cv-color-border); padding-left: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-1); }
+.cv-evidence__head { display: flex; flex-wrap: wrap; gap: var(--cv-space-2); align-items: baseline; }
+.cv-evidence__label { font-weight: 600; }
+
+/* VerificationDetails */
+.cv-verification { display: flex; flex-direction: column; gap: var(--cv-space-2); }
+.cv-verification__outcome { border-radius: var(--cv-radius); padding: var(--cv-space-2) var(--cv-space-3); font-weight: 600; }
+.cv-checks { display: flex; flex-direction: column; gap: var(--cv-space-1); }
+.cv-check { display: flex; flex-wrap: wrap; gap: var(--cv-space-2); align-items: baseline; }
+
+/* PartyCard */
+.cv-party { border: 1px solid var(--cv-color-border); border-radius: var(--cv-radius); padding: var(--cv-space-3); background: var(--cv-color-surface-sunken); }
+.cv-party__role { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.cv-party__name { font-weight: 600; }
+.cv-party__facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--cv-space-1) var(--cv-space-3); margin-top: var(--cv-space-2); font-size: var(--cv-font-size-sm); }
+.cv-party__facts dt { color: var(--cv-color-text-muted); }
+.cv-party-wrap { container-type: inline-size; }
+@container (max-width: 20rem) { .cv-party__facts { grid-template-columns: minmax(0, 1fr); } }
+
+/* Timeline: entries in the order given. */
+.cv-timeline { border-left: 2px solid var(--cv-color-border); padding-left: var(--cv-space-3); display: flex; flex-direction: column; gap: var(--cv-space-3); }
+.cv-timeline__at { display: block; color: var(--cv-color-text-muted); }
+.cv-timeline__label { font-weight: 600; }
+
+@media print {
+  .cv-kit { background: none; }
+  .cv-drilldown > summary { color: var(--cv-color-text); }
+  /* A closed drilldown still prints its body (Chromium's details-content). */
+  .cv-drilldown::details-content { content-visibility: visible; display: block; }
+  .cv-section, .cv-metric, .cv-party, .cv-table tr, .cv-evidence__item { break-inside: avoid; }
+}
+</style><style id="cv-receipt-dark-css">/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * kit-dark.css -- GENERATED from tokens/tokens.json ("kit-dark") by
+ * scripts/gen-tokens.py. Do not edit by hand.
+ *
+ * Inserted after kit.css by the go/receipt modules only, as a stylesheet of
+ * their own, and scoped to a receipt ([data-receipt-module]), so no other
+ * kit module's card changes. Each colour token becomes
+ * light-dark(<light>, <dark>), which follows the colour scheme the host page
+ * declares (color-scheme), not the reader's OS: a host that declares
+ * "light dark" gets the dark values in dark mode, and a host that declares
+ * none stays light. A browser without light-dark() skips the @supports block
+ * and keeps kit.css's light values.
+ */
+@supports (color: light-dark(#000, #fff)) {
+  [data-receipt-module] {
+    --cv-color-text: light-dark(#1b1f27, #e6e9ef);
+    --cv-color-text-muted: light-dark(#4d5564, #aab1bd);
+    --cv-color-surface: light-dark(#ffffff, #16191f);
+    --cv-color-surface-sunken: light-dark(#f4f5f7, #1e222a);
+    --cv-color-border: light-dark(#d3d7de, #3a414d);
+    --cv-color-accent: light-dark(#2445a8, #9db4ff);
+    --cv-color-positive-fg: light-dark(#17603a, #7fd8a2);
+    --cv-color-positive-bg: light-dark(#e6f3eb, #12301f);
+    --cv-color-negative-fg: light-dark(#a31d1d, #ff9a92);
+    --cv-color-negative-bg: light-dark(#fbe9e9, #3b1a18);
+    --cv-color-caution-fg: light-dark(#6f4700, #f0c674);
+    --cv-color-caution-bg: light-dark(#fcf1dc, #33270d);
+    --cv-color-neutral-fg: light-dark(#3d4452, #c7ccd6);
+    --cv-color-neutral-bg: light-dark(#eceef2, #262b34);
+    --cv-color-info-fg: light-dark(#1f3c94, #a9bdff);
+    --cv-color-info-bg: light-dark(#e7ecfb, #1b2546);
+  }
+}
+</style><style id="cv-receipt-css">/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * receipt.css -- the receipt modules' own rules, inserted after kit.css and
+ * kit-dark.css by the go/receipt modules only, and scoped to a receipt
+ * ([data-receipt-module]), so no other kit module's card changes.
+ *
+ * kit.css lets text wrap anywhere so a long id never pushes a table sideways.
+ * Beside a 64-character record id that squeezed a short word to "buye / r".
+ * A side or a term name breaks between words, never inside one (#429).
+ */
+[data-receipt-module] .cv-receipt-word { overflow-wrap: normal; }
+
+/*
+ * The v1 receipt's top surface (#382, Steven's design): a header, a hero card
+ * with the seal and three cards, the stamps, then the steps beside the proof
+ * panel. One column under 720px, so a phone shows the proof panel and a step's
+ * drawer on one narrow screen; long ids and the verify line wrap.
+ */
+[data-receipt-module] .cv-rcpt { display: grid; gap: 0.875rem; }
+[data-receipt-module] .cv-rcpt-header { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
+[data-receipt-module] .cv-rcpt-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+[data-receipt-module] .cv-rcpt-title { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }
+[data-receipt-module] .cv-rcpt-tag { border-radius: var(--cv-radius-pill); padding: 0.125rem 0.625rem; font-size: var(--cv-font-size-sm); background: var(--cv-color-neutral-bg); color: var(--cv-color-neutral-fg); }
+[data-receipt-module] .cv-rcpt-tag--private { background: var(--cv-color-caution-bg); color: var(--cv-color-caution-fg); }
+[data-receipt-module] .cv-rcpt-button { display: inline-block; border-radius: var(--cv-radius); padding: 0.5rem 0.875rem; font-weight: 600; text-decoration: none; background: var(--cv-color-info-bg); color: var(--cv-color-info-fg); }
+[data-receipt-module] .cv-rcpt-button--primary { background: var(--cv-color-accent); color: #ffffff; }
+[data-receipt-module] .cv-rcpt-panel { background: var(--cv-color-surface); border: 1px solid var(--cv-color-border); border-radius: calc(var(--cv-radius) * 2); padding: 1rem 1.125rem; min-width: 0; }
+[data-receipt-module] .cv-rcpt-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1rem; align-items: center; }
+[data-receipt-module] .cv-rcpt-top { display: flex; gap: 0.875rem; align-items: center; min-width: 0; }
+[data-receipt-module] .cv-rcpt-seal { flex: none; }
+[data-receipt-module] .cv-rcpt-headline { margin: 0; font-size: 1.5rem; line-height: 1.25; }
+[data-receipt-module] .cv-rcpt-mood { margin: 0.25rem 0 0; font-weight: 600; }
+[data-receipt-module] .cv-rcpt-lede { margin: 0.25rem 0 0.5rem; }
+[data-receipt-module] .cv-rcpt-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.5rem; }
+[data-receipt-module] .cv-rcpt-card { background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); padding: 0.625rem 0.75rem; min-width: 0; }
+[data-receipt-module] .cv-rcpt-card__label, [data-receipt-module] .cv-rcpt-tile__label { font-size: var(--cv-font-size-sm); font-weight: 600; color: var(--cv-color-text-muted); }
+[data-receipt-module] .cv-rcpt-card__value { font-size: var(--cv-font-size-lg); font-weight: 700; overflow-wrap: anywhere; }
+[data-receipt-module] .cv-rcpt-card[data-card="other"] .cv-rcpt-card__value { font-size: var(--cv-font-size-md); font-weight: 600; }
+[data-receipt-module] .cv-rcpt-card__note, [data-receipt-module] .cv-rcpt-sub { display: block; font-size: var(--cv-font-size-sm); font-weight: 400; color: var(--cv-color-text-muted); }
+[data-receipt-module] .cv-rcpt-stamps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+[data-receipt-module] .cv-rcpt-stamp { border-radius: var(--cv-radius); padding: 0.375rem 0.625rem; font-size: var(--cv-font-size-sm); border: 1px dashed var(--cv-color-border); }
+[data-receipt-module] .cv-rcpt-stamp--filled { border-style: solid; background: var(--cv-color-positive-bg); color: var(--cv-color-positive-fg); }
+[data-receipt-module] .cv-rcpt-stamp__name { font-weight: 700; letter-spacing: 0.06em; }
+[data-receipt-module] .cv-rcpt-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0.875rem; align-items: start; }
+[data-receipt-module] .cv-rcpt-main, [data-receipt-module] .cv-rcpt-side { display: grid; gap: 0.875rem; min-width: 0; }
+[data-receipt-module] .cv-rcpt-h { margin: 0 0 0.25rem; font-size: var(--cv-font-size-lg); }
+[data-receipt-module] .cv-rcpt-h4 { font-weight: 600; margin-bottom: 0.25rem; }
+[data-receipt-module] .cv-rcpt-steps { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+[data-receipt-module] .cv-rcpt-step { border-top: 1px solid var(--cv-color-border); }
+[data-receipt-module] .cv-rcpt-step summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.625rem; align-items: center; padding: 0.625rem 0; cursor: pointer; list-style: none; }
+[data-receipt-module] .cv-rcpt-step__n { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--cv-color-info-bg); color: var(--cv-color-info-fg); font-size: var(--cv-font-size-sm); font-weight: 700; }
+[data-receipt-module] .cv-rcpt-step__title { font-weight: 600; overflow-wrap: anywhere; }
+[data-receipt-module] .cv-rcpt-step__time { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); white-space: nowrap; }
+[data-receipt-module] .cv-rcpt-step__drawer { padding: 0 0 0.75rem 2.125rem; }
+[data-receipt-module] .cv-rcpt-fields { display: grid; gap: 0.25rem; margin: 0; }
+[data-receipt-module] .cv-rcpt-field { display: grid; grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 1.2fr); gap: 0.5rem; }
+[data-receipt-module] .cv-rcpt-field dt { color: var(--cv-color-text-muted); }
+[data-receipt-module] .cv-rcpt-field dd { margin: 0; overflow-wrap: anywhere; }
+[data-receipt-module] .cv-rcpt-record { margin-top: 0.5rem; padding: 0.5rem 0.625rem; background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); display: grid; gap: 0.25rem; }
+[data-receipt-module] .cv-rcpt-record__label { font-size: var(--cv-font-size-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cv-color-text-muted); }
+[data-receipt-module] .cv-rcpt-fullid { display: block; overflow-wrap: anywhere; }
+[data-receipt-module] .cv-rcpt-proof { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+[data-receipt-module] .cv-rcpt-proof__row { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.5rem; }
+[data-receipt-module] .cv-rcpt-proof__label { display: block; font-weight: 600; }
+[data-receipt-module] .cv-rcpt-proof__code, [data-receipt-module] .cv-rcpt-proof__note { display: block; font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }
+[data-receipt-module] .cv-rcpt-mark { font-weight: 700; text-align: center; }
+[data-receipt-module] .cv-rcpt-mark--pass { color: var(--cv-color-positive-fg); }
+[data-receipt-module] .cv-rcpt-mark--fail { color: var(--cv-color-negative-fg); }
+[data-receipt-module] .cv-rcpt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[data-receipt-module] .cv-rcpt-check { margin-top: 0.75rem; padding: 0.625rem 0.75rem; background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); display: grid; gap: 0.375rem; justify-items: start; }
+[data-receipt-module] .cv-rcpt-command { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--cv-font-mono); font-size: var(--cv-font-size-sm); }
+[data-receipt-module] .cv-rcpt-list { margin: 0; padding-left: 1.125rem; list-style: disc; }
+[data-receipt-module] .cv-rcpt-list li { margin: 0.125rem 0; }
+[data-receipt-module] .cv-rcpt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.5rem; }
+[data-receipt-module] .cv-rcpt-tile { background: var(--cv-color-surface-sunken); border-radius: var(--cv-radius); padding: 0.625rem 0.75rem; }
+[data-receipt-module] .cv-rcpt-footer { font-size: var(--cv-font-size-sm); color: var(--cv-color-text-muted); }
+@media (max-width: 720px) {
+  [data-receipt-module] .cv-rcpt-hero, [data-receipt-module] .cv-rcpt-grid { grid-template-columns: minmax(0, 1fr); }
+  [data-receipt-module] .cv-rcpt-step__drawer { padding-left: 0; }
+  [data-receipt-module] .cv-rcpt-step summary { grid-template-columns: auto minmax(0, 1fr); row-gap: 0; }
+  [data-receipt-module] .cv-rcpt-step__time { grid-column: 2; white-space: normal; }
+  [data-receipt-module] .cv-rcpt-field { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+</style></head><body class="cv-kit"><main class="cv-page"><div class="cv-kit" data-receipt-module="capsuleviewer.receipt.deal/v1"><div data-level="L0"><div class="cv-rcpt" data-receipt-surface="v1"><div class="cv-rcpt-header" data-surface="header"><div class="cv-rcpt-tags"><span class="cv-rcpt-title" data-receipt-title="seller"><span data-src="pack" data-key="deal.surface.title.seller">Sale receipt</span></span><span class="cv-rcpt-tag" data-banner="shared"><span data-src="pack" data-key="deal.surface.tag.shared">Shared copy</span></span></div><div class="cv-rcpt-actions"><a class="cv-rcpt-button cv-rcpt-button--primary" href="#" download="deal-fe219bb1ab3d4dec.bundle.json" data-proof-download="deal-fe219bb1ab3d4dec.bundle.json"><span data-src="pack" data-key="deal.surface.download">Download proof file</span></a></div></div><div class="cv-rcpt-panel cv-rcpt-hero"><div class="cv-rcpt-top" data-surface="top"><svg viewBox="0 0 120 120" width="72" height="72" aria-hidden="true" focusable="false" class="cv-rcpt-seal" data-seal="done"><path d="M22 106 C18 70 34 44 60 42 C86 44 102 70 98 106 Z" fill="#7F96A8"></path><ellipse cx="60" cy="88" rx="24" ry="19" fill="#C9D5DE"></ellipse><circle cx="60" cy="40" r="26" fill="#8FA5B6"></circle><circle cx="50" cy="37" r="3.6" fill="#13202B"></circle><circle cx="70" cy="37" r="3.6" fill="#13202B"></circle><circle cx="43" cy="46" r="3.4" fill="#E8A3A3" opacity="0.7"></circle><circle cx="77" cy="46" r="3.4" fill="#E8A3A3" opacity="0.7"></circle><ellipse cx="60" cy="48" rx="9" ry="6" fill="#C9D5DE"></ellipse><ellipse cx="60" cy="45.5" rx="3.2" ry="2.2" fill="#13202B"></ellipse><path d="M57 50 Q60 53 63 50" stroke="#13202B" stroke-width="1.6" fill="none" stroke-linecap="round"></path><path d="M76 76 Q92 70 95 82 Q88 86 79 82 Z" fill="#6E8597"></path><circle cx="96" cy="78" r="14" fill="#C2412D"></circle><path d="M90.5 78.5 L94.5 82.5 L101.5 74.5" stroke="#FFFFFF" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="cv-rcpt-topline"><h2 class="cv-rcpt-headline" data-top-line="settled"><span data-src="pack" data-key="deal.top.settled.seller.report">Sale settled, as the holder's records show</span></h2><p class="cv-rcpt-mood" data-mood="done"><span data-src="pack" data-key="deal.seal.done">Done: recorded as settled, and both sides say the same</span></p><p class="cv-muted"><span data-src="pack" data-key="deal.seal.short">Intact, not true: the seal says the records are unchanged, not that what they say is true.</span></p></div></div><div class="cv-rcpt-cards" data-surface="cards"><div class="cv-rcpt-card" data-card="paid"><div class="cv-rcpt-card__label"><span data-src="pack" data-key="deal.card.payment">Payment</span></div><div class="cv-rcpt-card__value"><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/received" data-fmt="amount">2,000 msat</span></div><div class="cv-rcpt-card__note"><span data-src="pack" data-key="deal.card.payment.received">Recorded as received</span></div></div><div class="cv-rcpt-card" data-card="status"><div class="cv-rcpt-card__label"><span data-src="pack" data-key="deal.card.status">Status</span></div><div class="cv-rcpt-card__value"><span data-card-status="settled"><span data-src="pack" data-key="deal.card.status.done">Settled</span></span></div><div class="cv-rcpt-card__note"><span data-src="pack" data-key="deal.card.as_of">As of <span data-time="2026-11-25T17:49:56Z" data-src="field" data-ptr="record:d5dc630eb9cff831313a611b2d621f07fbbcb40b70c0a0ab8942ee5036c04bd9#/agent_input/as_of" data-fmt="second" data-ph="at">Nov 25, 2026, 17:49 UTC</span></span></div></div><div class="cv-rcpt-card" data-card="other"><div class="cv-rcpt-card__label"><span data-src="pack" data-key="deal.card.other.buyer">Buyer's side</span></div><div class="cv-rcpt-card__value"><span data-src="pack" data-key="deal.card.other.checked">Their signed agreement: checked</span></div></div></div></div><ul class="cv-rcpt-stamps" data-surface="stamps"><li class="cv-rcpt-stamp cv-rcpt-stamp--filled" data-stamp="recorded" data-stamp-state="filled"><span class="cv-rcpt-stamp__name"><span data-src="pack" data-key="deal.stamp.recorded">RECORDED</span></span> <span class="cv-rcpt-stamp__text"><span data-src="pack" data-key="deal.stamp.recorded.filled">Checkpointed</span></span></li><li class="cv-rcpt-stamp cv-rcpt-stamp--open" data-stamp="time_stamped" data-stamp-state="not_checked"><span class="cv-rcpt-stamp__name"><span data-src="pack" data-key="deal.stamp.time_stamped">TIME-STAMPED</span></span> <span class="cv-rcpt-stamp__text"><span data-src="pack" data-key="deal.stamp.time_stamped.not_checked">Not checked here</span></span></li><li class="cv-rcpt-stamp cv-rcpt-stamp--open" data-stamp="countersigned" data-stamp-state="open"><span class="cv-rcpt-stamp__name"><span data-src="pack" data-key="deal.stamp.countersigned">COUNTERSIGNED</span></span> <span class="cv-rcpt-stamp__text"><span data-src="pack" data-key="deal.stamp.countersigned.open">Not countersigned</span></span></li></ul><div class="cv-rcpt-grid"><div class="cv-rcpt-main"><section class="cv-rcpt-panel" data-surface="steps"><h3 class="cv-rcpt-h"><span data-src="pack" data-key="deal.section.steps">What happened, step by step</span></h3><p class="cv-muted"><span data-src="pack" data-key="deal.steps.lede"><span data-src="field" data-derive="count" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/capsule_id record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/capsule_id record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/record/capsule_id record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/record/capsule_id record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/record/capsule_id" data-ph="count">5</span> sealed steps in this copy. Open one to see exactly what was recorded.</span></p><ol class="cv-rcpt-steps"><li class="cv-rcpt-step" data-step="1" data-step-kind="agree" data-step-record="2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051"><details><summary><span class="cv-rcpt-step__n" aria-hidden="true"><span data-src="field" data-derive="ordinal" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/capsule_id">1</span></span><span class="cv-rcpt-step__title"><span data-src="pack" data-key="deal.step.agree">Deal agreed</span></span><span class="cv-rcpt-step__time"></span></summary><div class="cv-rcpt-step__drawer"><dl class="cv-rcpt-fields"><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.kind">Kind</span></dt><dd><span class="cv-mono"><span data-src="field" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/payload/x-deal-v1/record_type" data-fmt="text">agree</span></span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.book">Recorded in</span></dt><dd><span data-src="pack" data-key="deal.book.holder.report" data-derive="book" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/key_id record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/key_id">the holder's book</span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.role">Side</span></dt><dd><span class="cv-receipt-word" data-side="seller"><span data-src="pack" data-key="deal.side.seller" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/payload/body/role">seller</span></span></dd></div></dl><div class="cv-rcpt-record"><span class="cv-rcpt-record__label"><span data-src="pack" data-key="deal.drawer.record">Record</span></span><details class="cv-rcpt-id" data-record-id="2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051"><summary><span class="cv-mono"><span data-src="field" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/capsule_id" data-fmt="short">2a76c37c…e051</span></span><span data-src="pack" data-key="deal.sep.dot"> · </span><span data-src="field" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/payload/x-deal-v1/record_type" data-fmt="text">agree</span></summary><code class="cv-mono cv-rcpt-fullid"><span data-src="field" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/capsule_id" data-fmt="text">2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051</span></code></details><span class="cv-mono cv-muted"><span data-src="list"><span data-src="pack" data-key="deal.drawer.seq">seq <span data-src="field" data-ptr="record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/payload/x-deal-v1/seq" data-fmt="text" data-ph="seq">1</span></span></span></span></div></div></details></li><li class="cv-rcpt-step" data-step="2" data-step-kind="settle" data-step-record="8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1"><details><summary><span class="cv-rcpt-step__n" aria-hidden="true"><span data-src="field" data-derive="ordinal" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/capsule_id">2</span></span><span class="cv-rcpt-step__title"><span data-src="pack" data-key="deal.step.settle.payee">Payment recorded as received: <span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/received" data-fmt="amount" data-ph="amount">2,000 msat</span></span></span><span class="cv-rcpt-step__time"></span></summary><div class="cv-rcpt-step__drawer"><dl class="cv-rcpt-fields"><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.kind">Kind</span></dt><dd><span class="cv-mono"><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/payload/x-deal-v1/record_type" data-fmt="text">settle</span></span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.book">Recorded in</span></dt><dd><span data-src="pack" data-key="deal.book.holder.report" data-derive="book" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/key_id record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/key_id">the holder's book</span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.leg">Payment</span></dt><dd><span data-src="list"><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/leg" data-fmt="text">payee_observed</span><span data-src="pack" data-key="deal.sep.dot"> · </span><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/status" data-fmt="text">settled</span></span></dd></div><div class="cv-rcpt-field"><dt><span data-src="field" data-derive="key" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/received">received</span></dt><dd><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/received" data-fmt="amount">2,000 msat</span></dd></div><div class="cv-rcpt-field"><dt><span data-src="field" data-derive="key" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/receive_fee">receive_fee</span></dt><dd><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/receive_fee" data-fmt="amount">0 msat</span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.payment_ref">Payment reference</span></dt><dd><span class="cv-mono"><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/payment_ref/type" data-fmt="text">ln.payment_hash</span> <span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/settlement/payment_ref/value" data-fmt="short">cf0d7398…a191</span></span></dd></div></dl><div class="cv-rcpt-record"><span class="cv-rcpt-record__label"><span data-src="pack" data-key="deal.drawer.record">Record</span></span><details class="cv-rcpt-id" data-record-id="8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1"><summary><span class="cv-mono"><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/capsule_id" data-fmt="short">8d648a41…c2d1</span></span><span data-src="pack" data-key="deal.sep.dot"> · </span><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/payload/x-deal-v1/record_type" data-fmt="text">settle</span></summary><code class="cv-mono cv-rcpt-fullid"><span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/record/capsule_id" data-fmt="text">8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1</span></code></details><span class="cv-mono cv-muted"><span data-src="list"><span data-src="pack" data-key="deal.drawer.seq">seq <span data-src="field" data-ptr="record:8d648a4106698ad8081106b7ca541cb1fbe3c06743c92d479d5b0ecc5f46c2d1#/payload/x-deal-v1/seq" data-fmt="text" data-ph="seq">2</span></span></span></span></div></div></details></li><li class="cv-rcpt-step" data-step="3" data-step-kind="perform" data-step-record="fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24"><details><summary><span class="cv-rcpt-step__n" aria-hidden="true"><span data-src="field" data-derive="ordinal" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/record/capsule_id">3</span></span><span class="cv-rcpt-step__title"><span data-src="pack" data-key="deal.step.perform">Recorded as done: <span data-src="field" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/payload/body/act" data-fmt="text" data-ph="act">delivered</span></span></span><span class="cv-rcpt-step__time"></span></summary><div class="cv-rcpt-step__drawer"><dl class="cv-rcpt-fields"><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.kind">Kind</span></dt><dd><span class="cv-mono"><span data-src="field" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/payload/x-deal-v1/record_type" data-fmt="text">perform</span></span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.book">Recorded in</span></dt><dd><span data-src="pack" data-key="deal.book.holder.report" data-derive="book" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/record/key_id record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/key_id">the holder's book</span></dd></div></dl><div class="cv-rcpt-record"><span class="cv-rcpt-record__label"><span data-src="pack" data-key="deal.drawer.record">Record</span></span><details class="cv-rcpt-id" data-record-id="fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24"><summary><span class="cv-mono"><span data-src="field" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/record/capsule_id" data-fmt="short">fec6a77b…3d24</span></span><span data-src="pack" data-key="deal.sep.dot"> · </span><span data-src="field" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/payload/x-deal-v1/record_type" data-fmt="text">perform</span></summary><code class="cv-mono cv-rcpt-fullid"><span data-src="field" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/record/capsule_id" data-fmt="text">fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24</span></code></details><span class="cv-mono cv-muted"><span data-src="list"><span data-src="pack" data-key="deal.drawer.seq">seq <span data-src="field" data-ptr="record:fec6a77b9dbabc4617253e2dbeacfc20c0eeadb34b516c8724eadd8d76713d24#/payload/x-deal-v1/seq" data-fmt="text" data-ph="seq">3</span></span></span></span></div></div></details></li><li class="cv-rcpt-step" data-step="4" data-step-kind="statement" data-step-record="19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9"><details><summary><span class="cv-rcpt-step__n" aria-hidden="true"><span data-src="field" data-derive="ordinal" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/record/capsule_id">4</span></span><span class="cv-rcpt-step__title"><span data-src="list"><span data-src="pack" data-key="deal.step.statement.report">The holder said: <span data-src="list" data-ph="said"><span data-src="pack" data-key="deal.term_value"><span data-src="pack" data-key="deal.term.delivered" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/0/row" data-ph="term">Delivery</span>: <span data-src="pack" data-key="deal.value.met" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/0/value" data-ph="value">met</span></span><span data-src="pack" data-key="deal.sep.list">; </span><span data-src="pack" data-key="deal.term_value"><span data-src="pack" data-key="deal.term.paid_as_agreed" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/1/row" data-ph="term">Payment as agreed</span>: <span data-src="pack" data-key="deal.value.met" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/1/value" data-ph="value">met</span></span></span></span></span></span><span class="cv-rcpt-step__time"></span></summary><div class="cv-rcpt-step__drawer"><dl class="cv-rcpt-fields"><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.kind">Kind</span></dt><dd><span class="cv-mono"><span data-src="field" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/x-deal-v1/record_type" data-fmt="text">statement</span></span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.book">Recorded in</span></dt><dd><span data-src="pack" data-key="deal.book.holder.report" data-derive="book" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/record/key_id record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/record/key_id">the holder's book</span></dd></div><div class="cv-rcpt-field"><dt><span class="cv-receipt-word" data-row-id="delivered" title="delivered"><span data-src="pack" data-key="deal.term.delivered" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/0/row">Delivery</span></span></dt><dd><span data-src="pack" data-key="deal.value.met" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/0/value">met</span></dd></div><div class="cv-rcpt-field"><dt><span class="cv-receipt-word" data-row-id="paid_as_agreed" title="paid_as_agreed"><span data-src="pack" data-key="deal.term.paid_as_agreed" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/1/row">Payment as agreed</span></span></dt><dd><span data-src="pack" data-key="deal.value.met" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/body/statements/1/value">met</span></dd></div></dl><div class="cv-rcpt-record"><span class="cv-rcpt-record__label"><span data-src="pack" data-key="deal.drawer.record">Record</span></span><details class="cv-rcpt-id" data-record-id="19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9"><summary><span class="cv-mono"><span data-src="field" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/record/capsule_id" data-fmt="short">19a42cf5…f7c9</span></span><span data-src="pack" data-key="deal.sep.dot"> · </span><span data-src="field" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/x-deal-v1/record_type" data-fmt="text">statement</span></summary><code class="cv-mono cv-rcpt-fullid"><span data-src="field" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/record/capsule_id" data-fmt="text">19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9</span></code></details><span class="cv-mono cv-muted"><span data-src="list"><span data-src="pack" data-key="deal.drawer.seq">seq <span data-src="field" data-ptr="record:19a42cf5e7eef497c4c1988c21ac23e0c2b6eac36d0127b2881b0c04ba28f7c9#/payload/x-deal-v1/seq" data-fmt="text" data-ph="seq">4</span></span></span></span></div></div></details></li><li class="cv-rcpt-step" data-step="5" data-step-kind="statement" data-step-record="acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83"><details><summary><span class="cv-rcpt-step__n" aria-hidden="true"><span data-src="field" data-derive="ordinal" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/record/capsule_id">5</span></span><span class="cv-rcpt-step__title"><span data-src="list"><span data-src="pack" data-key="deal.step.statement.other">The other side said: <span data-src="list" data-ph="said"><span data-src="pack" data-key="deal.term_value"><span data-src="pack" data-key="deal.term.delivered" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/0/row" data-ph="term">Delivery</span>: <span data-src="pack" data-key="deal.value.met" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/0/value" data-ph="value">met</span></span><span data-src="pack" data-key="deal.sep.list">; </span><span data-src="pack" data-key="deal.term_value"><span data-src="pack" data-key="deal.term.paid_as_agreed" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/1/row" data-ph="term">Payment as agreed</span>: <span data-src="pack" data-key="deal.value.met" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/1/value" data-ph="value">met</span></span></span></span></span></span><span class="cv-rcpt-step__time"></span></summary><div class="cv-rcpt-step__drawer"><dl class="cv-rcpt-fields"><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.kind">Kind</span></dt><dd><span class="cv-mono"><span data-src="field" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/x-deal-v1/record_type" data-fmt="text">statement</span></span></dd></div><div class="cv-rcpt-field"><dt><span data-src="pack" data-key="deal.drawer.book">Recorded in</span></dt><dd><span data-src="pack" data-key="deal.book.other" data-derive="book" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/record/key_id record:2a76c37cf075744edc9b68ee3bed5adae6f285d3f68f4586431b45c5f54ae051#/payload/body/counterparty_key">the other side's book</span></dd></div><div class="cv-rcpt-field"><dt><span class="cv-receipt-word" data-row-id="delivered" title="delivered"><span data-src="pack" data-key="deal.term.delivered" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/0/row">Delivery</span></span></dt><dd><span data-src="pack" data-key="deal.value.met" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/0/value">met</span></dd></div><div class="cv-rcpt-field"><dt><span class="cv-receipt-word" data-row-id="paid_as_agreed" title="paid_as_agreed"><span data-src="pack" data-key="deal.term.paid_as_agreed" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/1/row">Payment as agreed</span></span></dt><dd><span data-src="pack" data-key="deal.value.met" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/body/statements/1/value">met</span></dd></div></dl><div class="cv-rcpt-record"><span class="cv-rcpt-record__label"><span data-src="pack" data-key="deal.drawer.record">Record</span></span><details class="cv-rcpt-id" data-record-id="acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83"><summary><span class="cv-mono"><span data-src="field" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/record/capsule_id" data-fmt="short">acdd47d7…3c83</span></span><span data-src="pack" data-key="deal.sep.dot"> · </span><span data-src="field" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/x-deal-v1/record_type" data-fmt="text">statement</span></summary><code class="cv-mono cv-rcpt-fullid"><span data-src="field" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/record/capsule_id" data-fmt="text">acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83</span></code></details><span class="cv-mono cv-muted"><span data-src="list"><span data-src="pack" data-key="deal.drawer.seq">seq <span data-src="field" data-ptr="record:acdd47d7abe897a67cd2e2b689402b4dfc480be8f95949b38c33d23fbcd33c83#/payload/x-deal-v1/seq" data-fmt="text" data-ph="seq">3</span></span></span></span></div></div></details></li></ol></section><section class="cv-rcpt-panel" data-surface="else"><h3 class="cv-rcpt-h"><span data-src="pack" data-key="deal.section.else">What else is in this receipt</span></h3><div class="cv-rcpt-tiles"><div class="cv-rcpt-tile" data-else="problems"><div class="cv-rcpt-tile__label"><span data-src="pack" data-key="deal.else.problems">Problems spotted</span></div><div><span data-src="pack" data-key="deal.else.problems.none">None</span></div></div><div class="cv-rcpt-tile" data-else="whose"><div class="cv-rcpt-tile__label"><span data-src="pack" data-key="deal.else.whose">Whose records these are</span></div><div><span data-src="pack" data-key="deal.else.whose.text.seller.report">Only the holder's side's records are here.</span></div></div><div class="cv-rcpt-tile" data-else="half"><div class="cv-rcpt-tile__label"><span data-src="pack" data-key="deal.else.half">The other side's agreement</span></div><div><span data-src="pack" data-key="deal.else.half.checked.report">This copy carries the other side's signed agreement. It covers their agreement only, not anything after it.</span></div></div></div></section></div><div class="cv-rcpt-side"><section class="cv-rcpt-panel" data-surface="proof"><h3 class="cv-rcpt-h"><span data-src="pack" data-key="deal.section.proof">Is this record intact?</span></h3><p class="cv-rcpt-lede" data-proof="passed"><span data-src="pack" data-key="deal.proof.lede.passed">Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself.</span></p><ul class="cv-rcpt-proof"><li class="cv-rcpt-proof__row" data-check="producer_signatures" data-check-status="pass"><span class="cv-rcpt-mark cv-rcpt-mark--pass" aria-hidden="true">✓</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">passed: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.producer_signatures">Signed by the agent's device</span></span><span class="cv-mono cv-rcpt-proof__code">producer signatures</span></span></li><li class="cv-rcpt-proof__row" data-check="interval_coverage" data-check-status="pass"><span class="cv-rcpt-mark cv-rcpt-mark--pass" aria-hidden="true">✓</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">passed: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.interval_coverage">No step missing from first to last</span></span><span class="cv-mono cv-rcpt-proof__code">interval coverage</span></span></li><li class="cv-rcpt-proof__row" data-check="graph_closure" data-check-status="pass"><span class="cv-rcpt-mark cv-rcpt-mark--pass" aria-hidden="true">✓</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">passed: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.graph_closure">Each step links to the one before</span></span><span class="cv-mono cv-rcpt-proof__code">graph closure</span></span></li><li class="cv-rcpt-proof__row" data-check="per_record_membership" data-check-status="pass"><span class="cv-rcpt-mark cv-rcpt-mark--pass" aria-hidden="true">✓</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">passed: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.per_record_membership">Every step is in this deal's log</span></span><span class="cv-mono cv-rcpt-proof__code">per record membership</span></span></li><li class="cv-rcpt-proof__row" data-check="checkpoint" data-check-status="pass"><span class="cv-rcpt-mark cv-rcpt-mark--pass" aria-hidden="true">✓</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">passed: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.checkpoint">The log's summary adds up</span></span><span class="cv-mono cv-rcpt-proof__code">checkpoint</span></span></li><li class="cv-rcpt-proof__row" data-check="counterparty_half" data-check-status="pass"><span class="cv-rcpt-mark cv-rcpt-mark--pass" aria-hidden="true">✓</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">passed: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.counterparty_half.report">The other side's signed agreement</span></span><span class="cv-mono cv-rcpt-proof__code">counterparty half</span></span></li><li class="cv-rcpt-proof__row" data-check="witnesses" data-check-status="absent"><span class="cv-rcpt-mark cv-rcpt-mark--absent" aria-hidden="true">–</span><span class="cv-rcpt-proof__text"><span class="cv-rcpt-sr">not in this copy: </span><span class="cv-rcpt-proof__label"><span data-src="pack" data-key="deal.proof.witness.not_checked">Witness time stamp: not checked here</span></span><span class="cv-mono cv-rcpt-proof__code">witnesses</span><span class="cv-rcpt-proof__note"><span data-src="pack" data-key="deal.proof.witness.note.report">The holder's History card's checkpoint may carry it.</span></span></span></li></ul><div class="cv-rcpt-check" data-surface="check"><div class="cv-rcpt-h4"><span data-src="pack" data-key="deal.check.title">Check it yourself</span></div><p class="cv-muted"><span data-src="pack" data-key="deal.check.page">On this page's own file, as capsulectl gave it:</span></p><pre class="cv-rcpt-command"><code data-verify-command="page"><span data-src="field" data-ptr="report:verify_command#" data-fmt="text">capsulectl deal verify --bundle receipt.html</span></code></pre><p class="cv-muted"><span data-src="pack" data-key="deal.check.download">On the downloaded proof file:</span></p><pre class="cv-rcpt-command"><code data-verify-command="download"><span data-src="pack" data-key="deal.check.download.command">capsulectl deal verify --bundle <span data-src="field" data-ptr="record:d5dc630eb9cff831313a611b2d621f07fbbcb40b70c0a0ab8942ee5036c04bd9#/agent_input/deal_id" data-fmt="proof_file" data-ph="file">deal-fe219bb1ab3d4dec.bundle.json</span></span></code></pre><p class="cv-muted" data-expect="cb525e5c0000000000000000000000000000000000000000000000000000b59a"><span data-src="pack" data-key="deal.check.expect">Expect: <span data-src="pack" data-key="deal.check.expect.verdict" data-ph="verdict">VALID</span>, fingerprint <span data-src="field" data-ptr="checked:bundle_digest#" data-fmt="short" data-ph="fingerprint">cb525e5c…b59a</span>.</span></p><a class="cv-rcpt-button" href="#" download="deal-fe219bb1ab3d4dec.bundle.json" data-proof-download="deal-fe219bb1ab3d4dec.bundle.json"><span data-src="pack" data-key="deal.surface.download">Download proof file</span></a></div></section><section class="cv-rcpt-panel" data-surface="not-proven"><h3 class="cv-rcpt-h"><span data-src="pack" data-key="deal.section.not_proven">What this does not prove</span></h3><ul class="cv-rcpt-list"><li><span data-src="pack" data-key="deal.not_proven.true">That what the agents said was true. Only that it wasn't changed after sealing.</span></li><li><span data-src="pack" data-key="deal.not_proven.who.report">Who made the records. The signing key is on the holder's agent's machine.</span></li><li><span data-src="pack" data-key="deal.not_proven.goods">That the goods shipped or arrived.</span></li><li><span data-src="pack" data-key="deal.not_proven.outside">Anything outside this deal.</span></li></ul></section></div></div></div></div></div></main></body></html>

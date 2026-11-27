@@ -538,13 +538,48 @@ describe("#461: who and what, and capsulectl said once", () => {
   });
 });
 
-// #461 in a real browser: on the first screen (900px high, as headlessChrome.js opens every page) the
-// surface says capsulectl at most once outside "Check it yourself", at a phone's width and a desktop's.
-// The PNGs in tests/goldens/ are review images of the surface (L0, toggles closed), own and shared copy;
-// fonts differ between machines, so pixels are not compared. Regenerate them with
+// The golden pages: the surface (L0, toggles closed) of the holder's own copy, a shared copy, and the buyer's keep
+// copy with its sealed offer, each one self-contained HTML page, its styles inlined and no script. The PNGs in
+// tests/goldens/ are screenshots of these pages; the pages themselves are checked in beside them
+// (receipt-deal-v1-<name>.html, capsule-viewer#509) so a reader outside these tests can open a current deal receipt.
+// Fonts differ between machines, so the PNGs' pixels are not compared; the pages' bytes are. Regenerate both with
 //   UPDATE_GOLDENS=1 npx vitest run js-tests/receipt_deal_v1_surface.test.js
 const GOLDENS = join(ROOT, "tests", "goldens");
 const UPDATE = process.env.UPDATE_GOLDENS === "1";
+const witnessed = { book_witnessed: { status: "verified", witness: "Action State's witness", at: "2026-11-25T14:31:31Z" } };
+const GOLDEN_PAGES = [
+  { name: "own", bundle: () => bundleOf(SELLER, asKeep), assurance: witnessed },
+  { name: "shared", bundle: () => bundleOf(SELLER), assurance: {} },
+  // The buyer's keep copy with the buyer's own sealed offer: the item in the hero (#461 item 1).
+  {
+    name: "item",
+    bundle: () => JSON.parse(readFileSync(join(DATA, "offer", "keep-copy.bundle.json"), "utf8")),
+    assurance: { deal_offer: JSON.parse(readFileSync(join(DATA, "offer", "offer.json"), "utf8")) },
+  },
+];
+async function goldenPage(page) {
+  const { lib, host } = await draw(page.bundle(), { assurance: page.assurance, depth: "L0" });
+  const styles = [...lib.document.head.querySelectorAll("style")].map((e) => e.outerHTML).join("");
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>receipt</title>${styles}</head><body class="cv-kit"><main class="cv-page">${host.L0.innerHTML}</main></body></html>\n`;
+}
+
+describe("the golden pages are checked in as the receipt draws them now (#509)", () => {
+  for (const page of GOLDEN_PAGES) {
+    it(`receipt-deal-v1-${page.name}.html`, async () => {
+      const html = await goldenPage(page);
+      const path = join(GOLDENS, `receipt-deal-v1-${page.name}.html`);
+      if (UPDATE) writeFileSync(path, html);
+      expect(existsSync(path), `golden ${path} is not committed; run with UPDATE_GOLDENS=1`).toBe(true);
+      // A plain equality, not toBe: on a stale page the message is the command, not a 30 kB diff.
+      expect(readFileSync(path, "utf8") === html, `golden ${path} differs from what the receipt draws now; run with UPDATE_GOLDENS=1`).toBe(true);
+      // Self-contained: no script, nothing loaded from elsewhere.
+      expect(html).not.toMatch(/<script|<link|<img|<iframe|\burl\(|@import/i);
+    });
+  }
+});
+
+// #461 in a real browser: on the first screen (900px high, as headlessChrome.js opens every page) the
+// surface says capsulectl at most once outside "Check it yourself", at a phone's width and a desktop's.
 describe.skipIf(!chromePath)("#461 above the fold, in headless Chromium, with its goldens", () => {
   let browser, tab, dir;
   beforeAll(async () => {
@@ -557,24 +592,12 @@ describe.skipIf(!chromePath)("#461 above the fold, in headless Chromium, with it
     if (dir) rmSync(dir, { recursive: true, force: true });
   }, CLOSE_TIMEOUT_MS);
 
-  const witnessed = { book_witnessed: { status: "verified", witness: "Action State's witness", at: "2026-11-25T14:31:31Z" } };
-  const PAGES = [
-    { name: "own", bundle: () => bundleOf(SELLER, asKeep), assurance: witnessed },
-    { name: "shared", bundle: () => bundleOf(SELLER), assurance: {} },
-    // The buyer's keep copy with the buyer's own sealed offer: the item in the hero (#461 item 1).
-    {
-      name: "item",
-      bundle: () => JSON.parse(readFileSync(join(DATA, "offer", "keep-copy.bundle.json"), "utf8")),
-      assurance: { deal_offer: JSON.parse(readFileSync(join(DATA, "offer", "offer.json"), "utf8")) },
-    },
-  ];
   for (const width of [390, 1280]) {
-    for (const page of PAGES) {
+    for (const page of GOLDEN_PAGES) {
       it(`the ${page.name} copy at ${width}px`, async () => {
-        const { lib, host } = await draw(page.bundle(), { assurance: page.assurance, depth: "L0" });
-        const styles = [...lib.document.head.querySelectorAll("style")].map((e) => e.outerHTML).join("");
+        // The same page the HTML golden holds, so the PNG is a screenshot of the checked-in page.
         const file = join(dir, `${page.name}-${width}.html`);
-        writeFileSync(file, `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>receipt</title>${styles}</head><body class="cv-kit"><main class="cv-page">${host.L0.innerHTML}</main></body></html>`);
+        writeFileSync(file, await goldenPage(page));
         await tab.open(pathToFileURL(file).href, { width, media: "screen" });
         await tab.evaluate("document.fonts.ready.then(() => true)");
         const said = await tab.evaluate(`(() => {
