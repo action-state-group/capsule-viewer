@@ -27,7 +27,6 @@ import { JSDOM } from "jsdom";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOSE_TIMEOUT_MS, findChrome, launch } from "./headlessChrome.js";
 import { aacBundleVerified, interfaceFields, runtimeRender, standInContext } from "./aacContext.js";
-import { existsSync } from "node:fs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPT_BYTES = readFileSync(join(ROOT, "src", "capsule_viewer", "static", "history_card.js"));
@@ -492,7 +491,11 @@ describe("History Basic wording: L0, T8, the page states and the checks-ran list
 });
 
 const SHAPE = JSON.parse(readFileSync(join(ROOT, "tests", "testdata", "aac-context", "verified-bundle-context-shape.json"), "utf8")).interfaces;
-const AAC_SRC = process.env.AAC_TS_SRC || resolve(ROOT, "..", "agent-action-capsule--main", "ts", "src");
+// AAC's ts/src at the tag of the @action-state-group/agent-action-capsule
+// version ts/package.json depends on, which ci.yml's js job and
+// scripts/ci-local.sh fetch. Unset, the comparison skips; set, a missing file
+// fails it.
+const AAC_SRC = process.env.AAC_TS_SRC;
 const required = (fields) => fields.filter((f) => !f.endsWith("?"));
 const allowed = (fields) => fields.map((f) => f.replace(/\?$/, ""));
 const host = (document) => ({ L0: document.createElement("div"), L1: document.createElement("div"), L2: document.createElement("div"), depth: "L0" });
@@ -517,7 +520,7 @@ describe("the page's verifier: agent-action-capsule's VerifiedBundleContext", ()
     expect(Object.isFrozen(ctx) && Object.isFrozen(ctx.verification)).toBe(true);
   });
 
-  it.skipIf(!existsSync(join(AAC_SRC, "bundle.ts")))("the vendored shape is AAC's interface source", () => {
+  it.skipIf(!AAC_SRC)("the vendored shape is AAC's interface source", () => {
     for (const [name, { file, fields }] of Object.entries(SHAPE)) {
       const [iface, nested] = name.split(".");
       expect(interfaceFields(readFileSync(join(AAC_SRC, file), "utf8"), iface, nested), name).toEqual(fields);

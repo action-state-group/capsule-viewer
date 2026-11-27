@@ -157,8 +157,4 @@ describe.skipIf(!chromePath)("consumer goldens (headless Chromium)", () => {
       }
     }
   }
-
-  // Not in this change: the fourth consumer state. Skipped, loudly, until the
-  // viewer can show it.
-  it.skip("TODO, NOT TESTED: the 'unable to verify in this viewer' 390px golden -- that state does not exist in this viewer yet; added with the WebCrypto-fallback change", () => {});
 });

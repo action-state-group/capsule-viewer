@@ -241,13 +241,3 @@ def test_a_copy_for_anyone_else_carries_no_private_banner(name):
     assert shape(html).private_banners == []
     assert "PRIVATE" not in html
 
-
-# ---- not in this change -----------------------------------------------------
-
-
-@pytest.mark.skip(
-    reason="TODO, NOT TESTED: the 'unable to verify in this viewer' state (the fourth consumer state) does not exist "
-    "in this viewer yet; its one-level check and its 390px golden are added with the WebCrypto-fallback change"
-)
-def test_unable_to_verify_in_this_viewer_is_one_level():
-    raise AssertionError("unreachable until the 'unable to verify in this viewer' state exists")

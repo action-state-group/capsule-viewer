@@ -78,9 +78,14 @@ light() {
   fi
   .venv/bin/pytest -q .github/test_release.py
 
-  # ci.yml: js
+  # ci.yml: js, with AAC's source at the tag of the version ts/package.json
+  # depends on, for the vendored AAC shape comparisons
   npm install --no-audit --no-fund
-  npm test -- --minWorkers=1 --maxWorkers=2
+  version="$(node -p 'require("./ts/package.json").dependencies["@action-state-group/agent-action-capsule"]')"
+  git init -q "$tmp/aac-ts"
+  git -C "$tmp/aac-ts" fetch -q --depth 1 "$aac" "refs/tags/ts/v$version"
+  git -C "$tmp/aac-ts" checkout -q FETCH_HEAD
+  AAC_TS_SRC="$tmp/aac-ts/ts/src" npm test -- --minWorkers=1 --maxWorkers=2
 
   # ci.yml: go
   (cd go && test -z "$(gofmt -l .)" && go mod tidy && test -z "$(git status --porcelain -- .)" \

@@ -160,6 +160,9 @@ export function standInContext(bundle, { verify, claims = {} } = {}) {
     }),
     countersignatures: [],
     capsuleResults,
+    // No fixture carries a category_coverage member, and AAC's verifier gives
+    // null for a Bundle without one.
+    categoryCoverage: null,
   };
   const certificate = bundle.completeness_certificate;
   return deepFreeze({
