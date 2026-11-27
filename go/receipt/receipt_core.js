@@ -471,6 +471,7 @@
       out.verdict = reportedVerdict(v);
       out.countersigned = reportedCountersigned(v);
       out.countersigned_copy = reportedCountersignedCopy(v);
+      out.deal_offer = reportedEntry(v, "deal_offer");
     }
     // The x-deal-v0 modules: capsulectl's report of the holder's own book's
     // witness time and its countersign rung, only when the page was given
@@ -1854,10 +1855,22 @@
       verdict: or(str(v.assurance.verdict), null),
       countersigned: Array.isArray(v.assurance.countersigned) ? v.assurance.countersigned : null,
       countersigned_copy: v.assurance.countersigned_copy || null,
+      item: offerItem(steps, v.assurance.deal_offer),
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
     };
+  }
+  // The item, from the holder's own sealed offer the page's maker gave (#461, Sherlock2's rule on #384:
+  // the item is the agreement's offer `terms.item`): only when the offer's SHA-256 over its JCS bytes is
+  // the digest the copy's own sealed agreement cites, and it is a propose record. Else null: nothing drawn.
+  function offerItem(steps, offer) {
+    if (!isMap(offer)) return null;
+    var agree = steps.find(function (s) { return s.kind === "agree" && s.offer_ref !== null; });
+    if (!agree || recordDigest(offer) !== agree.offer_ref) return null;
+    if (str(get(map(get(offer, EXTENSION_V1)), "record_type")) !== "propose") return null;
+    var item = str(get(map(get(map(get(offer, "body")), "terms")), "item"));
+    return item !== null && item.trim() !== "" ? item.trim() : null;
   }
   function roleOf(steps) {
     var agree = steps.find(function (s) { return s.kind === "agree"; });
@@ -1965,6 +1978,8 @@
         }, {}) : {},
         statements: statements,
         act: payload !== null ? str(get(body, "act")) : null,
+        // The offer the sealed agreement cites (#461): its digest, read only from the agreement's sealed payload.
+        offer_ref: payload !== null && str(get(block, "record_type")) === "agree" ? str(get(map(get(body, "offer")), "digest")) : null,
         // A refund or a remedy's payment (evidencebook payment.go: `reverses`, `remedy_for`), never the deal's own payment.
         refund: payload !== null && (own(body, "reverses") || own(body, "remedy_for")),
       };
@@ -3723,6 +3738,9 @@
     if (verdict.term) values.term = word("deal.term." + verdict.term) || verdict.term;
     var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
     var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
+    // What the deal was for, from the holder's own sealed offer (#461); the seller is not named: no record
+    // the agreement cites seals the seller's name, and a key id is never drawn as one.
+    if (model.item !== null) line.push(this.p(w("deal.hero.item", { item: model.item }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
     if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
     if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
     var parts = [];

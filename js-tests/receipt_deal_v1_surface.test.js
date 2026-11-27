@@ -550,6 +550,12 @@ describe.skipIf(!chromePath)("#461 above the fold, in headless Chromium, with it
   const PAGES = [
     { name: "own", bundle: () => bundleOf(SELLER, asKeep), assurance: witnessed },
     { name: "shared", bundle: () => bundleOf(SELLER), assurance: {} },
+    // The buyer's keep copy with the buyer's own sealed offer: the item in the hero (#461 item 1).
+    {
+      name: "item",
+      bundle: () => JSON.parse(readFileSync(join(DATA, "offer", "keep-copy.bundle.json"), "utf8")),
+      assurance: { deal_offer: JSON.parse(readFileSync(join(DATA, "offer", "offer.json"), "utf8")) },
+    },
   ];
   for (const width of [390, 1280]) {
     for (const page of PAGES) {
@@ -579,4 +585,84 @@ describe.skipIf(!chromePath)("#461 above the fold, in headless Chromium, with it
       }, 60000);
     }
   }
+});
+
+// #461 item 1 at the module: the item from the holder's own sealed offer (tests/testdata/deal-v1/offer, a real deal
+// written by capsulectl), drawn only when its SHA-256 over JCS is the digest the copy's own sealed agreement cites.
+describe("#461: the item from the holder's sealed offer, in the module", () => {
+  const OFFER_DIR = join(DATA, "offer");
+  const KEEP = JSON.parse(readFileSync(join(OFFER_DIR, "keep-copy.bundle.json"), "utf8"));
+  const OFFER = JSON.parse(readFileSync(join(OFFER_DIR, "offer.json"), "utf8"));
+  const ITEM = "200 conference badges, delivered by Friday";
+  const item = async (bundle, offer) => {
+    const { host, model } = await draw(bundle, { assurance: { deal_offer: offer } });
+    return { model: model.item, drawn: q(host.L0, ".cv-rcpt-hero [data-hero-item]")?.textContent ?? null, host };
+  };
+  const edited = (edit) => { const o = structuredClone(OFFER); edit(o); return o; };
+
+  it("the offer the agreement cites: its terms.item, in the hero", async () => {
+    const got = await item(structuredClone(KEEP), OFFER);
+    expect(got).toMatchObject({ model: ITEM, drawn: ITEM });
+  });
+
+  // The agreement re-sealed to cite *offer*, its hash chain redone (payload -> header commitment -> the record's
+  // agent_input_digest), as a module sees it: the record's signature is the runtime's to check before any module
+  // draws (ts/test/receipt-deal-v1-item.test.ts shows a page refuses such a copy).
+  const citing = async (offer) => {
+    const { lib } = await draw(structuredClone(KEEP));
+    const digest = lib.api.recordDigest;
+    const b = structuredClone(KEEP);
+    const pair = b.extensions["x-deal-v1"].book.agreement;
+    pair.payload.body.offer.digest = digest(offer);
+    pair.header.payload_commitments = [digest(pair.payload)];
+    const record = b.records.find((r) => r.capsule_id === pair.record.capsule_id);
+    record.model_attestation.compute_attestation.agent_input_digest = digest(pair.header);
+    pair.record = record;
+    return b;
+  };
+
+  it("anything else draws no item: none given, another offer, a record that is not a propose record", async () => {
+    for (const offer of [undefined, null, "text", edited((o) => { o.body.terms.item = "another"; })]) {
+      expect((await item(structuredClone(KEEP), offer)).drawn).toBeNull();
+    }
+    // Cited by the agreement, but not a propose record.
+    const agreeKind = edited((o) => { o["x-deal-v1"].record_type = "agree"; });
+    expect((await item(await citing(agreeKind), agreeKind)).drawn).toBeNull();
+  });
+
+  it("an offer that is not canonical JSON (a non-integer number) has no digest and draws no item", async () => {
+    const { lib } = await draw(structuredClone(KEEP));
+    const o = edited((x) => { x.body.terms.quantity = 1.5; });
+    expect(lib.api.recordDigest(o)).toBeNull();
+    expect((await item(structuredClone(KEEP), o)).drawn).toBeNull();
+  });
+
+  it("on an offer the agreement cites: a missing, blank or non-string item draws nothing; a padded one is trimmed", async () => {
+    // The chain helper itself works: the agreement now cites a changed offer, and its item is drawn.
+    const changed = edited((x) => { x.body.terms.item = "changed"; });
+    expect((await item(await citing(changed), changed)).drawn).toBe("changed");
+    for (const value of [undefined, "   ", 7, null]) {
+      const o = edited((x) => { if (value === undefined) delete x.body.terms.item; else x.body.terms.item = value; });
+      expect((await item(await citing(o), o)).drawn).toBeNull();
+    }
+    const padded = edited((x) => { x.body.terms.item = `  ${ITEM}  `; });
+    expect((await item(await citing(padded), padded)).drawn).toBe(ITEM);
+  });
+
+  it("an agreement payload that is not the sealed one draws no item, even with the offer it now names", async () => {
+    const b = structuredClone(KEEP);
+    const forged = edited((o) => { o.body.terms.item = "forged"; });
+    const { lib } = await draw(structuredClone(KEEP));
+    b.extensions["x-deal-v1"].book.agreement.payload.body.offer.digest = lib.api.recordDigest(forged);
+    // The header still commits to the sealed agreement, so the page reads that one, which cites the real offer.
+    expect((await item(b, forged)).drawn).toBeNull();
+  });
+
+  it("names nothing about the seller: no key id, no name", async () => {
+    const real = await item(structuredClone(KEEP), OFFER);
+    const hero = q(real.host.L0, ".cv-rcpt-hero").textContent;
+    const counterparty = KEEP.extensions["x-deal-v1"].book.agreement.payload.body.counterparty_key;
+    expect(hero).not.toContain(counterparty.slice(0, 8));
+    expect(hero.replace(ITEM, "")).not.toMatch(/seller:|from [A-Z]/);
+  });
 });
