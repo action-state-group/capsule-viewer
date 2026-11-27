@@ -317,12 +317,16 @@ describe("the ladder once per page, in the receipt pack's words", () => {
     const text = root.textContent ?? "";
     expect(text).not.toContain("record of the month");
     expect(text).not.toContain("the other party's signature over the Result");
+    // One name for the witness check on the page: the module's proof rows,
+    // which say "Outside time stamp" (#494), are not drawn beside the core.
+    expect(text).not.toContain("Outside time stamp");
+    expect(text).toContain("Witness time stamp");
     const rung11 = root.querySelector('[data-l3="ladder"] [data-rung="11"]')!;
     expect(rung11.textContent).toContain(
       "a countersigner's signature over this file",
     );
     expect(rung11.textContent).toContain(
-      "A countersigner also signed this file's records; the COUNTERSIGNED stamp names it and says whether it is independent of the parties. Not: that it checked any term, or that the other side agrees.",
+      "A countersigner also signed this file's records; the COUNTERSIGNED stamp names it, and says so when the directory does not list it as independent of the parties. Not: that it checked any term.",
     );
   });
 
