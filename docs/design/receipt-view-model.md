@@ -85,13 +85,17 @@ Every value is a `Sourced<T>`:
 ```
 { value: T, src: { record: <capsule_id>, path: <JSON pointer into that record's pair> }
               | { report: <member of the verifier's report> }
+              | { checked: <a side input the page checked itself, e.g. countersigned> }
               | { bundle: <JSON pointer into the bundle> } }
 ```
 
 `record` points into a signed record (its `record`, `header` or `payload`, read only once the
 header's digest is the one the record attests and the payload's digest is the header's commitment,
 as `dealSteps` checks today, `receipt_core.js:1914-1936`). `report` marks a value capsulectl
-reported and the page did not check; the page says so wherever it shows one. A value with no
+reported and the page did not check; the page says so wherever it shows one. `checked` marks a
+side input given beside the bundle that this page checked in the browser and put into the verified
+context (the countersigned copy and its signers, `ts/src/verifier-report.ts:418-457`,
+`withVerifierReport`), attributed as the page's own check. A value with no
 source is absent, never guessed.
 
 ### Fields (x-deal-v1; the v0 and provider kinds map the same way)
@@ -119,10 +123,10 @@ holder's offer record (section 4).
 | `as_of` (when the report was cut, never claimed as a witnessed time) | L1 | `S/as_of` | drawn as page time |
 | `witness` | L0, L2 | keep copy only: `reported` (`report: book_witnessed`, worded "as capsulectl verify reported on your own book; this page did not check it", u219), or `receipt` if Steven's (a) puts a receipt in the file; else `none`. Absent on counterparty and adjudicator copies | badge and runtime disagree |
 | `checks[]`: `name`, `result`, `by` | L2 | `report: checks` when capsulectl's report is given; else the page's own AAC checks | three lists |
-| `countersigned` (a countersigned copy, its signers, whether each is independent) | L0, L2 | the checked inputs the page is given today beside the bundle (`report: countersigned`, `countersigned_copy`; evidencebook `deal_v1_page.go:62-102`), kept as they are | `pageAssurance` |
+| `countersigned` (a countersigned copy, its signers, whether each is independent) | L0, L2 | the checked inputs the page is given today beside the bundle (`checked: countersigned`, `countersigned_copy`; evidencebook `deal_v1_page.go:62-102`, injected by `withVerifierReport`), kept as they are | `pageAssurance` |
 | `withheld` | L1, L2 | `S/rows_state`; steps whose payload the copy does not open; `bundle/completeness/suppressed_fields`, `payloads_mode` | partly |
 | `share` (how to make the other side's copy) | L1 | `report: share_commands` (capsulectl names its own command, as it does `verify_command` today); drawn as words and command text only | absent |
-| `records[]` (raw) | L2 | `bundle/records`, `R[*]`, `A` | runtime |
+| `records[]` (raw) | L2 | the same deduplicated collection `steps[]` reads (`bundle.records`, `A`, `R[*]`, `book/records`, `book/received/records`), so every step has its raw record | runtime |
 
 ## 3. Three depths, two drawers, one model
 
@@ -206,14 +210,17 @@ value, and every `Sourced` value resolves:
   placeholder value inside it. The test renders each fixture, walks the text nodes, and fails on
   any text that is not the named key's template with every placeholder filled by a tagged value,
   so a template that is only `{item}` (`deal.hero.item`) cannot pass hardcoded text.
-- A tagged value passes when its pointer, resolved in the fixture's bundle or verifier report,
+- A tagged value passes when its pointer, resolved in the fixture's bundle, verifier report or
+  checked side inputs (the `checked` source, which must keep the page's own-check attribution),
   gives the shown text through one of a closed list of formatters (amount in its asset, time,
   short id, token word), each with its own unit test; a value built from several members names
   each pointer. A negative test hardcodes one field while changing another and must fail.
 - A differential check: fixture pairs written by evidencebook's test helpers (signed with
-  generated keys, as `tests/testdata/deal-v1/offer` was) that differ in one sourced member (the
-  item, an amount, a ruling's `against`) must differ on the page in exactly the tagged nodes that
-  point at it. Editing a signed fixture by hand would only make the page refuse it.
+  generated keys, as `tests/testdata/deal-v1/offer` was) that differ in one semantic member (the
+  item, an amount, a ruling's `against`). The test compares the semantic fields of the two models
+  and the pack-keyed nodes that show them; record ids, digests and proofs also change with a
+  valid regeneration, so for those nodes it checks only that each resolves against its own
+  fixture. Editing a signed fixture by hand would only make the page refuse it.
 - No literal from a fixture (party names, items, amounts) appears in `go/receipt`, `ts/src` or
   any wording pack.
 
@@ -223,7 +230,8 @@ the existing tamper tests, which require an edited signed copy to be refused
 bundle, with a ruling only in `relied_on`, the ruling at `seq` 1 of the adjudicator's book and the
 dispute at a later `seq` of the holder's), a settled deal (new; `tests/testdata/deal-v1/keep-copy.bundle.json`
 is not settled: `settled` false, its one row `not_due`), a full adjudicator copy (`book.records`), a counterparty copy
-(`counterparty-copy.bundle.json`), an adjudicator copy (rows withheld), and the #461 offer copy.
+(`counterparty-copy.bundle.json`), a countersigned copy (`tests/testdata/deal-v1/countersigned`, whose nodes resolve to `checked` inputs), an adjudicator copy (rows withheld), and the #461 offer copy.
+The full adjudicator fixture asserts every received record is both a step and an L2 raw record.
 The counterparty and adjudicator fixtures also assert that no witness time, record time or
 named-witness column is drawn (u219, u238, u239).
 
