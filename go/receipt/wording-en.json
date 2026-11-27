@@ -754,7 +754,7 @@
     "countersign.reported.receipt.absent": " It carries no log signature.",
     "countersign.reported.receipt.unverified": " Its log signature does not verify, as capsulectl verify reported.",
     "provider.title": "Your receipt for an exchange you served",
-    "provider.own_half": "This is this node's own record of its half of the exchange. It is not a joint record, and the other party has not countersigned it.",
+    "provider.own_half": "This is this node's own record of its half of the exchange. It is not a joint record: the other party keeps its own.",
     "provider.no_content": "It names the model and what was received. It holds no request or response text.",
     "provider.records_note": "The exchange and each payment are records of their own, listed below.",
     "provider.model": "Model served",
