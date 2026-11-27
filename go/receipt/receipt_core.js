@@ -1690,14 +1690,29 @@
     return [named, content];
   };
 
-  // The settle legs a payment row relied on (evidencebook#588, docs/design/461-deal-profile.md
-  // section 9, "The payment legs and the bundle extension"). The x-deal-v1 extension is exactly
-  // {sealed_report, book}, and book is {agreement, relied_on}: relied_on holds, keyed by record id, the
-  // book pair of every record the holder's rows rely on, so a leg is read by its relied_on id. VerifyReportBundle
-  // refuses a bundle without the book, so this page does too. It checks the shape and that each key is its
-  // pair's Capsule id; it does not check who signed a record or the logs (the check capsulectl runs does
-  // that), so the side shown is the report's own. It picks no leg and derives no verdict from one: `check`
-  // stays the only verdict.
+  // The x-deal-v1 extension's book (evidencebook#588, docs/design/461-deal-profile.md section 9, "The payment legs
+  // and the bundle extension"; dealprofile/xdealv1/report_bundle.go, ReportBook). The extension is exactly
+  // {sealed_report, book}; book is {agreement, relied_on} and, as the view-model note's section 4 item 1 and
+  // evidencebook#861 add, an optional `offer` (the holder's own offer, one book pair), and on a full adjudicator copy
+  // `records` (every record of the holder's deal book, by record id) and `received` ({log_id, records, proofs}: the
+  // copy of the other side's book it holds, only beside records). relied_on holds, keyed by record id, the book pair of
+  // every record the holder's rows rely on, so a leg is read by its relied_on id. VerifyReportBundle refuses a bundle
+  // without the book, so this page does too. It checks the shape and that each key is its pair's Capsule id; it does
+  // not check who signed a record or the logs (the check capsulectl runs does that, and a v1 receipt is drawn only on
+  // capsulectl's answer, #405), so the side shown is the report's own. It picks no leg and derives no verdict from
+  // one: `check` stays the only verdict.
+  var V1_BOOK_MEMBERS = ["agreement", "relied_on", "offer", "records", "received"];
+  function bookPair(pair) {
+    if (!isMap(pair) || !isMap(get(pair, "record"))) throw new Unavailable("a book pair of the x-deal-v1 extension is not a Capsule pair");
+    return pair;
+  }
+  function bookPairs(pairs, what) {
+    if (!isMap(pairs)) throw new Unavailable("the x-deal-v1 extension's " + what + " is not an object");
+    Object.keys(pairs).forEach(function (k) {
+      if (get(get(bookPair(pairs[k]), "record"), "capsule_id") !== k) throw new Unavailable("a book pair's Capsule id is not its key in the x-deal-v1 extension: " + k);
+    });
+    return pairs;
+  }
   function dealBook(extension) {
     Object.keys(extension).forEach(function (k) {
       if (k !== "sealed_report" && k !== "book") throw new Unavailable("the x-deal-v1 extension has a member section 9 does not: " + k);
@@ -1705,16 +1720,24 @@
     var book = get(extension, "book");
     if (!isMap(book)) throw new Unavailable("the x-deal-v1 extension carries no book object");
     Object.keys(book).forEach(function (k) {
-      if (k !== "agreement" && k !== "relied_on") throw new Unavailable("the x-deal-v1 extension's book has a member section 9 does not: " + k);
+      if (V1_BOOK_MEMBERS.indexOf(k) < 0) throw new Unavailable("the x-deal-v1 extension's book has a member section 9 does not: " + k);
     });
     if (!isMap(get(book, "agreement")) || !isMap(get(book, "relied_on"))) throw new Unavailable("the x-deal-v1 extension's book has no agreement and relied_on objects");
-    var relied = get(book, "relied_on");
-    Object.keys(relied).forEach(function (k) {
-      var pair = relied[k];
-      if (!isMap(pair) || !isMap(get(pair, "record"))) throw new Unavailable("a book pair of the x-deal-v1 extension is not a Capsule pair");
-      if (get(get(pair, "record"), "capsule_id") !== k) throw new Unavailable("a book pair's Capsule id is not its key in the x-deal-v1 extension: " + k);
-    });
-    return relied;
+    var out = {
+      agreement: bookPair(get(book, "agreement")),
+      relied: bookPairs(get(book, "relied_on"), "relied_on"),
+      offer: own(book, "offer") ? bookPair(get(book, "offer")) : null,
+      records: own(book, "records") ? bookPairs(get(book, "records"), "records") : null,
+      received: null,
+    };
+    if (own(book, "received")) {
+      // evidencebook VerifyReportBundle: received is carried only with records, in a full adjudicator copy.
+      if (out.records === null) throw new Unavailable("the x-deal-v1 extension's book carries received without records");
+      var received = get(book, "received");
+      if (!isMap(received) || str(get(received, "log_id")) === null || !Array.isArray(get(received, "proofs"))) throw new Unavailable("the x-deal-v1 extension's received is not {log_id, records, proofs}");
+      out.received = bookPairs(get(received, "records"), "received records");
+    }
+    return out;
   }
 
   // A money member of a settlement as recorded: its value counted in 10^-assetScale of assetCode. A member
@@ -1794,11 +1817,13 @@
     var cut = closedWord(V1_AUDIENCES, get(content, "audience"), "audience");
     if (audience !== null && cut !== audience) throw new Unavailable("this copy was cut for " + cut + ", not " + audience);
     var startRaw = map(get(content, "start"));
-    var start = {
+    // The report's `start` is the agreement's state (section 2, agreement.state), never the deal's status.
+    var agreementState = sourced({
       state: closedWord(V1_START_STATES, get(startRaw, "state"), "start state"),
       local: flag(startRaw, "local", "start local"),
       by: optionalWord(V1_START_BY, get(startRaw, "by"), "start by"),
-    };
+    }, inRecord(sealed[0], "/agent_input/start"));
+    var keep = cut === "keep";
     if (!isMap(get(content, "report"))) throw new Unavailable("the v1 report's report text is not an object");
     var unnamed = get(content, "rulings_unnamed");
     // Both are left out at zero (section 9), so a present one is a positive count, or a non-empty list.
@@ -1808,10 +1833,14 @@
     var rawRows = get(content, "rows");
     if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
     var rows = rawRows.map(dealRow);
-    var relied = dealBook(map(get(map(get(v.bundle, "extensions")), EXTENSION_V1)));
+    // A shared copy carries no record time and no named-witness column (u219, u238, u239): not in the model either.
+    if (!keep) rows.forEach(function (row) { row.relied_on.forEach(function (e) { e.time = null; e.named_witness = null; }); });
+    var book = dealBook(map(get(map(get(v.bundle, "extensions")), EXTENSION_V1)));
+    var relied = book.relied;
     var legs = legsOf(rows, rowsState, relied);
     rows.forEach(function (row, i) { row.legs = legs[i]; });
     var withheldLegs = rowsState === "withheld" ? bookLegs(relied) : [];
+    if (!keep) rows.concat([{ legs: withheldLegs }]).forEach(function (row) { seq(row.legs).forEach(function (l) { l.observed_at = null; }); });
     // section 9: an adjudicator's copy, and only it, withholds the rows.
     if ((rowsState === "withheld") !== (cut === "adjudicator")) throw new Unavailable("the v1 report's rows_state is withheld exactly on an adjudicator's copy");
     if (rowsState !== "listed" && rows.length) throw new Unavailable("the v1 report lists rows while its rows_state is " + rowsState);
@@ -1819,13 +1848,15 @@
     var theirs = get(rests, "counterparty");
     var rep = report(sealed[0], map(get(content, "report")));
     rep.audience = cut;
-    var steps = dealSteps(v);
+    var steps = dealSteps(v, book, keep);
+    var records = steps.map(function (s) { var r = s.raw; delete s.raw; return r; });
+    var offer = holderOffer(steps, book, v.assurance.deal_offer);
     return {
       deal_id: or(str(get(content, "deal_id")), ""),
       audience: cut,
       as_of: or(str(get(content, "as_of")), ""),
       pack_digest: str(get(content, "pack_digest")),
-      start: start,
+      agreement: agreementState,
       settled: flag(content, "settled", "settled"),
       rows_state: rowsState,
       rows: rows,
@@ -1842,39 +1873,69 @@
       witnessed: v.assurance.witnesses,
       countersignatures: v.assurance.countersignatures,
       counterparty_half: or(str(v.assurance.counterparty_half), null),
-      book_witnessed: v.assurance.book_witnessed || null,
+      // capsulectl's report of the holder's own book's witness time: the keep copy's only (u219).
+      book_witnessed: keep ? v.assurance.book_witnessed || null : null,
       verification: v.verification,
       report_checked: or(str(v.assurance.report_checked), null),
       // The top surface (#382): every record the copy carries, the holder's role as its own
       // agreement states it, capsulectl's answer per check and the command it gave, and the
       // copy itself for "Download proof file" (null when it cannot be written back exactly).
       sealed_steps: steps,
+      // Every record the copy carries, once each, raw (section 2, records[]): the same collection the steps read.
+      records: records,
       role: roleOf(steps),
       checks: or(v.assurance.checks, null),
       verify_command: or(str(v.assurance.verify_command), null),
       verdict: or(str(v.assurance.verdict), null),
       countersigned: Array.isArray(v.assurance.countersigned) ? v.assurance.countersigned : null,
       countersigned_copy: v.assurance.countersigned_copy || null,
-      item: offerItem(steps, v.assurance.deal_offer),
+      // What the holder's own offer says (section 2: item, quantity, price), each with its source.
+      item: offer === null ? null : offer.item,
+      quantity: offer === null ? null : offer.quantity,
+      price: offer === null ? null : offer.price,
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
     };
   }
-  // The item, from the holder's own sealed offer the page's maker gave (#461, Sherlock2's rule on #384:
-  // the item is the agreement's offer `terms.item`): only when the offer's SHA-256 over its JCS bytes is
-  // the digest the copy's own sealed agreement cites, and it is a propose record. Else null: nothing drawn.
-  function offerItem(steps, offer) {
-    if (!isMap(offer)) return null;
-    var agree = steps.find(function (s) { return s.kind === "agree" && s.offer_ref !== null; });
-    if (!agree || recordDigest(offer) !== agree.offer_ref) return null;
-    if (str(get(map(get(offer, EXTENSION_V1)), "record_type")) !== "propose") return null;
-    var item = str(get(map(get(map(get(offer, "body")), "terms")), "item"));
-    return item !== null && item.trim() !== "" ? item.trim() : null;
+  // The holder's own offer (#461, Sherlock2's rule on #384: the item is the agreement's offer `terms.item`; the
+  // view-model note's section 4 item 1): the book's `offer` pair when the copy carries one, else the `deal_offer`
+  // capsulectl gave beside the copy. Either is read only when it is a propose record whose SHA-256 over its JCS bytes
+  // is the offer digest the copy's own sealed agreement cites. A carried pair that is not is refused; a side input
+  // that is not draws nothing. Its terms are said as recorded: the price in the offer's own currency, never converted.
+  function holderOffer(steps, book, given) {
+    var agree = steps.find(function (s) { return vof(s.kind) === "agree" && s.offer_ref !== null; });
+    var cited = agree ? agree.offer_ref : null;
+    function terms(payload) {
+      if (!isMap(payload) || cited === null || recordDigest(payload) !== cited) return null;
+      if (str(get(map(get(payload, EXTENSION_V1)), "record_type")) !== "propose") return null;
+      return map(get(map(get(payload, "body")), "terms"));
+    }
+    var t = null, src = null;
+    if (book.offer !== null) {
+      var id = str(get(get(book.offer, "record"), "capsule_id"));
+      var header = attestedHeader(get(book.offer, "record"), get(book.offer, "header"));
+      var payload = get(book.offer, "payload");
+      t = header !== null && str(seq(get(header, "payload_commitments"))[0]) === recordDigest(payload) ? terms(payload) : null;
+      if (t === null) throw new Unavailable("the x-deal-v1 extension's offer is not the offer the copy's agreement cites");
+      src = function (path) { return inRecord(id, "/payload/body/terms" + path); };
+    } else if (isMap(given)) {
+      t = terms(given);
+      src = function () { return { report: "deal_offer" }; };
+    }
+    if (t === null) return null;
+    var item = str(get(t, "item"));
+    var minor = int(get(t, "price_minor")), currency = str(get(t, "currency"));
+    return {
+      item: sourced(item !== null && item.trim() !== "" ? item.trim() : null, src("/item")),
+      quantity: sourced(int(get(t, "quantity")), src("/quantity")),
+      price: sourced(minor !== null && currency !== null ? { minor: minor, currency: currency } : null, src("")),
+    };
   }
   function roleOf(steps) {
-    var agree = steps.find(function (s) { return s.kind === "agree"; });
-    return agree && (agree.role === "buyer" || agree.role === "seller") ? agree.role : null;
+    var agree = steps.find(function (s) { return vof(s.kind) === "agree"; });
+    var role = agree ? vof(agree.role) : null;
+    return role === "buyer" || role === "seller" ? role : null;
   }
   // The copy as the page carries it: the emitter writes the bundle as JCS, so its JCS is the file.
   function proofFile(bundle) {
@@ -1932,58 +1993,223 @@
     }
   }
 
-  // One step per record the copy carries, in the copy's order: its time, its log place, its kind and
-  // what it records, as far as the copy opens it. A record whose payload the copy does not open is a
-  // step with no kind ("withheld").
-  function dealSteps(v) {
+  // ---- the deal model's values and their sources (docs/design/receipt-view-model.md section 2) ----
+
+  // A value as the deal model gives it to the drawer, `{value, src}`: src is a signed record and a JSON pointer into
+  // that record's pair ({record, header, payload}), a member of capsulectl's report ({report}), a side input this page
+  // checked itself ({checked}), or a pointer into the bundle ({bundle}). A value with no source is absent (null),
+  // never guessed. The model is derived and never sealed (PRD_VIEWER_PRESENTATION section 14.1): it has no schema.
+  function sourced(value, src) { return value === null || value === undefined ? null : { value: value, src: src }; }
+  function inRecord(id, path) { return { record: id, path: path }; }
+  function vof(s) { return s === null || s === undefined ? null : s.value; }
+
+  // The Capsule ids a record cites, as its copy states them: its header's `cites` links, the record's own
+  // `references`, every deal-record reference its payload makes (by payload digest: `prev`, a dispute's
+  // `statements`, a statement's `names`, ...), and a ruling's `read` and `sources` (the book heads it read, by
+  // record id). Used only to put the steps in an order; nothing is checked or concluded from them.
+  function citations(record, header, payload) {
+    var out = [];
+    seq(get(header, "links")).forEach(function (l) { if (get(l, "type") === "cites" && str(get(l, "target")) !== null) out.push(l.target); });
+    seq(get(record, "references")).forEach(function (r) { if (str(get(r, "digest")) !== null) out.push(r.digest); });
+    (function walk(node) {
+      if (Array.isArray(node)) { node.forEach(walk); return; }
+      if (!isMap(node)) return;
+      if (get(node, "type") === "deal-record" && str(get(node, "digest")) !== null) out.push(node.digest);
+      Object.keys(node).forEach(function (k) { walk(node[k]); });
+    })(payload);
+    var body = map(get(map(payload), "body"));
+    if (str(get(map(get(map(payload), EXTENSION_V1)), "record_type")) === "ruling") {
+      var ids = function (node) {
+        if (typeof node === "string") out.push(node);
+        else if (isMap(node)) Object.keys(node).forEach(function (k) { ids(node[k]); });
+      };
+      ids(get(body, "read"));
+      ids(get(body, "sources"));
+    }
+    return out;
+  }
+
+  // The steps in causal order (section 2, steps[]): the agreement first, then each record after every record it
+  // cites, the records of one book by their seq; a shared copy carries no times, so the keep copy alone breaks the
+  // remaining ties by the step's sealed time, and every copy then by record id.
+  function causalOrder(steps, agreementId, keep) {
+    var byKey = {};
+    steps.forEach(function (s) { byKey[s.record] = s.record; if (s.payload_digest !== null) byKey[s.payload_digest] = s.record; });
+    var after = {};
+    steps.forEach(function (s) {
+      after[s.record] = {};
+      s.cites.forEach(function (c) { if (own(byKey, c) && byKey[c] !== s.record) after[s.record][byKey[c]] = true; });
+    });
+    var books = {};
+    steps.forEach(function (s) {
+      var n = vof(s.seq);
+      if (s.book_id !== null && n !== null) (books[s.book_id] = books[s.book_id] || []).push(s);
+    });
+    Object.keys(books).forEach(function (b) {
+      var list = books[b].slice().sort(function (x, y) { return vof(x.seq) - vof(y.seq); });
+      for (var i = 1; i < list.length; i++) if (vof(list[i].seq) > vof(list[i - 1].seq)) after[list[i].record][list[i - 1].record] = true;
+    });
+    if (own(after, agreementId)) {
+      after[agreementId] = {};
+      steps.forEach(function (s) { if (s.record !== agreementId) after[s.record][agreementId] = true; });
+    }
+    function before(x, y) {
+      if (keep) {
+        var a = vof(x.time), b = vof(y.time);
+        if (a !== b) return a === null ? 1 : b === null ? -1 : a < b ? -1 : 1;
+      }
+      return x.record < y.record ? -1 : x.record > y.record ? 1 : 0;
+    }
+    var done = {}, out = [];
+    while (out.length < steps.length) {
+      var left = steps.filter(function (s) { return !own(done, s.record); });
+      var ready = left.filter(function (s) { return Object.keys(after[s.record]).every(function (k) { return own(done, k); }); });
+      // A cycle cannot occur between digests; a copy that states one still shows every step, by the tie order.
+      var next = (ready.length ? ready : left).slice().sort(before)[0];
+      done[next.record] = true;
+      out.push(next);
+    }
+    return out;
+  }
+
+  // Which book a step is in, by the key that signed its record, as the copy's own agreement names the parties:
+  // the agreement's own key (the holder's book), its counterparty_key (the other side's), its adjudicator's key.
+  function bookOf(record, agreementRecord, agreementBody) {
+    var key = str(get(record, "key_id"));
+    if (key === null) return null;
+    if (key === str(get(agreementRecord, "key_id"))) return "holder";
+    if (key === str(get(agreementBody, "counterparty_key"))) return "other";
+    if (key === str(get(map(get(agreementBody, "adjudicator")), "key_id"))) return "adjudicator";
+    return null;
+  }
+
+  // One step per record the copy carries, once each by Capsule id (section 2, steps[]): the bundle's records, the
+  // book's agreement and relied_on, and on a full adjudicator copy its records and received records, so a ruling the
+  // copy holds only in relied_on is a step. Each says its book, kind, place and what it records, as far as the copy
+  // opens it; a record whose payload the copy does not open is a step with no kind ("withheld"). A pair whose record
+  // is not the bundle's record of the same Capsule id is refused. On a shared copy no time is kept (u219, u238, u239).
+  function dealSteps(v, book, keep) {
     var bundle = v.bundle;
     var payloads = map(get(map(get(bundle, "extensions")), "evidencebook/payloads"));
     var disclosures = map(get(bundle, "disclosures"));
-    var book = map(get(map(get(bundle, "extensions")), EXTENSION_V1)).book;
-    var pairs = {};
-    var agreement = map(get(map(book), "agreement"));
-    if (isMap(get(agreement, "record"))) pairs[str(get(get(agreement, "record"), "capsule_id"))] = agreement;
-    var relied = map(get(map(book), "relied_on"));
-    Object.keys(relied).forEach(function (k) { pairs[k] = map(relied[k]); });
-    return seq(get(bundle, "records")).filter(isMap).map(function (record) {
+    var pairs = {}, ids = [];
+    function add(pair, where) {
+      var record = get(pair, "record");
+      var id = str(get(record, "capsule_id"));
+      if (id === null) return;
+      if (own(pairs, id)) {
+        if (recordDigest(get(pairs[id].pair, "record")) !== recordDigest(record)) throw new Unavailable("the x-deal-v1 extension carries two different records under one Capsule id: " + id);
+        return;
+      }
+      pairs[id] = { pair: pair, where: where };
+    }
+    var base = "/extensions/" + EXTENSION_V1 + "/book/";
+    add(book.agreement, base + "agreement");
+    Object.keys(book.relied).forEach(function (k) { add(book.relied[k], base + "relied_on/" + k); });
+    if (book.records !== null) Object.keys(book.records).forEach(function (k) { add(book.records[k], base + "records/" + k); });
+    if (book.received !== null) Object.keys(book.received).forEach(function (k) { add(book.received[k], base + "received/records/" + k); });
+    var bundled = {};
+    seq(get(bundle, "records")).forEach(function (record, i) {
+      if (!isMap(record)) return;
       var id = or(str(get(record, "capsule_id")), "");
-      var pair = own(pairs, id) ? pairs[id] : null;
+      if (own(bundled, id)) return;
+      if (own(pairs, id) && recordDigest(get(pairs[id].pair, "record")) !== recordDigest(record)) throw new Unavailable("a book pair's record is not the bundle's record of the same Capsule id: " + id);
+      bundled[id] = { record: record, where: "/records/" + i };
+      ids.push(id);
+    });
+    Object.keys(pairs).forEach(function (id) { if (!own(bundled, id)) ids.push(id); });
+    var agreementId = str(get(get(book.agreement, "record"), "capsule_id"));
+    var raw = ids.map(function (id) {
+      var pair = own(pairs, id) ? pairs[id].pair : null;
+      var record = own(bundled, id) ? bundled[id].record : get(pair, "record");
       var header = attestedHeader(record, pair ? get(pair, "header") : get(map(get(disclosures, id)), "agent_input"));
       var payload = null;
+      var commitment = header !== null ? str(seq(get(header, "payload_commitments"))[0]) : null;
       if (header !== null) {
-        payload = pair && isMap(get(pair, "payload")) && recordDigest(get(pair, "payload")) === str(seq(get(header, "payload_commitments"))[0])
+        payload = pair && isMap(get(pair, "payload")) && recordDigest(get(pair, "payload")) === commitment
           ? get(pair, "payload")
           : committedPayload(header, payloads);
       }
+      return { id: id, record: record, header: header, payload: payload, commitment: commitment, where: own(bundled, id) ? bundled[id].where : pairs[id].where, bundled: own(bundled, id) };
+    });
+    var agreement = raw.find(function (r) { return r.id === agreementId; });
+    var agreementBody = agreement && agreement.payload !== null ? map(get(agreement.payload, "body")) : {};
+    var steps = raw.map(function (r) {
+      var id = r.id, record = r.record, header = r.header, payload = r.payload;
+      var shown = payload !== null;
       var block = map(get(map(payload), EXTENSION_V1));
       var body = map(get(map(payload), "body"));
+      var kind = shown ? str(get(block, "record_type")) : null;
       var coords = map(get(map(get(v.memberships, id)), "log_coordinates"));
-      var statements = seq(get(body, "statements")).filter(isMap).map(function (st) {
-        return { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")) };
-      });
+      var settlement = get(record, "settlement");
+      var at = shown ? str(get(block, "at")) : null;
+      var leg = isMap(settlement) ? readLeg(record, id, null) : null;
+      if (leg !== null && !keep) leg.observed_at = null;
+      var names = map(get(body, "names"));
+      var named = ["ruling", "cancellation"].find(function (k) { return isMap(get(names, k)); });
       return {
         record: id,
-        // The step's own sealed time (its block's `at`), else the record's timestamp to the second.
-        time: stepTime(payload !== null ? str(get(block, "at")) : null, str(get(record, "timestamp"))),
-        seq: payload !== null && int(get(block, "seq")) !== null ? int(get(block, "seq")) : header !== null ? int(get(header, "seq")) : null,
-        leaf: int(get(coords, "leaf_index")),
-        kind: payload !== null ? str(get(block, "record_type")) : null,
-        shown: payload !== null,
-        role: payload !== null ? str(get(body, "role")) : null,
-        leg: isMap(get(record, "settlement")) ? readLeg(record, id, null) : null,
-        // The settlement's money members as recorded, for the page to say in msat and sats.
-        money: isMap(get(record, "settlement")) ? LEG_MONEY.reduce(function (acc, k) {
-          if (own(get(record, "settlement"), k) && isMap(get(get(record, "settlement"), k))) acc[k] = get(get(record, "settlement"), k);
+        // Where the copy holds the record: a bundle record, or a book pair of the x-deal-v1 extension.
+        src: { bundle: r.where },
+        bundled: r.bundled,
+        book: sourced(bookOf(record, agreement ? agreement.record : null, agreementBody), inRecord(id, "/record/key_id")),
+        // The step's own sealed time (its block's `at`), else the record's timestamp to the second; the keep copy's only.
+        time: keep ? sourced(stepTime(at, str(get(record, "timestamp"))), inRecord(id, at !== null && validUtcTime(at) ? "/payload/" + EXTENSION_V1 + "/at" : "/record/timestamp")) : null,
+        seq: shown && int(get(block, "seq")) !== null ? sourced(int(get(block, "seq")), inRecord(id, "/payload/" + EXTENSION_V1 + "/seq"))
+          : header !== null ? sourced(int(get(header, "seq")), inRecord(id, "/header/seq")) : null,
+        leaf: sourced(int(get(coords, "leaf_index")), { checked: "per_record_membership" }),
+        kind: sourced(kind, inRecord(id, "/payload/" + EXTENSION_V1 + "/record_type")),
+        shown: shown,
+        role: shown ? sourced(str(get(body, "role")), inRecord(id, "/payload/body/role")) : null,
+        leg: sourced(leg, inRecord(id, "/record/settlement")),
+        // The settlement's money members as recorded, each shown once in its recorded asset.
+        money: isMap(settlement) ? LEG_MONEY.reduce(function (acc, k) {
+          if (isMap(get(settlement, k))) acc[k] = sourced(get(settlement, k), inRecord(id, "/record/settlement/" + k));
           return acc;
         }, {}) : {},
-        statements: statements,
-        act: payload !== null ? str(get(body, "act")) : null,
+        statements: shown ? sourced(seq(get(body, "statements")).filter(isMap).map(function (st) {
+          return { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")) };
+        }), inRecord(id, "/payload/body/statements")) : null,
+        // The arrived record a statement names (evidencebook xdealv1 StatementNames): a ruling or a cancellation,
+        // by its payload digest; `record` is filled below when the copy carries it.
+        names: named !== undefined ? sourced({ kind: named, digest: str(get(get(names, named), "digest")), record: null }, inRecord(id, "/payload/body/names/" + named)) : null,
+        dispute: kind === "dispute" ? sourced({
+          kind: str(get(body, "kind")), row: str(get(body, "row")), forum: str(get(body, "forum")), adjudicator: str(get(body, "adjudicator")),
+        }, inRecord(id, "/payload/body")) : null,
+        ruling: kind === "ruling" ? sourced({
+          row: str(get(body, "row")),
+          against: optionalWordOrNull(V1_SIDES, get(body, "against")),
+          value: optionalWordOrNull(V1_VALUES, get(body, "value")),
+          remedy: isMap(get(body, "remedy")) ? {
+            kind: str(get(get(body, "remedy"), "kind")),
+            amount_minor: int(get(get(body, "remedy"), "amount_minor")),
+            currency: str(get(get(body, "remedy"), "currency")),
+            due: str(get(get(body, "remedy"), "due")),
+          } : null,
+          final: get(body, "final") === true,
+          forum: str(get(body, "forum")),
+        }, inRecord(id, "/payload/body")) : null,
+        act: shown ? sourced(str(get(body, "act")), inRecord(id, "/payload/body/act")) : null,
         // The offer the sealed agreement cites (#461): its digest, read only from the agreement's sealed payload.
-        offer_ref: payload !== null && str(get(block, "record_type")) === "agree" ? str(get(map(get(body, "offer")), "digest")) : null,
+        offer_ref: kind === "agree" ? str(get(map(get(body, "offer")), "digest")) : null,
         // A refund or a remedy's payment (evidencebook payment.go: `reverses`, `remedy_for`), never the deal's own payment.
-        refund: payload !== null && (own(body, "reverses") || own(body, "remedy_for")),
+        refund: shown && (own(body, "reverses") || own(body, "remedy_for")),
+        raw: sourced(record, { bundle: r.where + (r.bundled ? "" : "/record") }),
+        payload_digest: shown ? recordDigest(payload) : r.commitment,
+        cites: citations(record, header, payload),
+        book_id: header !== null ? str(get(header, "book_id")) : null,
       };
     });
+    var ordered = agreementId !== null ? causalOrder(steps, agreementId, keep) : steps;
+    ordered.forEach(function (s) {
+      if (s.names !== null && s.names.value.digest !== null) {
+        var hit = ordered.find(function (o) { return o.payload_digest === s.names.value.digest; });
+        if (hit) s.names.value.record = hit.record;
+      }
+    });
+    // The order's working members are not the model's.
+    ordered.forEach(function (s) { delete s.cites; delete s.book_id; });
+    return ordered;
   }
   function stepTime(at, timestamp) {
     if (at !== null && validUtcTime(at)) return at;
@@ -3386,18 +3612,22 @@
   };
   P.dealState = function (model) {
     var d = this.d;
-    var parts = [this.token("deal.state", model.start.state)];
-    // The deal-level line is the start state, then "settled" or nothing: no close, no done (section 9).
-    if (model.start.state === "started" && model.settled) parts.push(" · ", d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
-    var line = d.el("span", { "data-deal-state": model.start.state }, parts);
+    var start = vof(model.agreement);
+    // The report's start is the agreement's state, said as that (section 2, agreement.state), then "settled" or
+    // nothing: no close, no done (section 9).
+    var parts = [this.agreementState(model)];
+    if (start.state === "started" && model.settled) parts.push(" · ", d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
+    var line = d.el("span", { "data-deal-state": start.state }, parts);
     // A started deal not yet settled also says where its terms stand, as the rows below give them, so
     // the value never reads behind the terms ("Started" beside two terms met, #430). It counts the
     // statuses shown, beside the deal-level line and outside it: it is not a deal state and claims no close.
-    if (model.start.state === "started" && !model.settled && model.rows_state === "listed" && model.rows.length) {
+    if (start.state === "started" && !model.settled && model.rows_state === "listed" && model.rows.length) {
       return [line, " · ", d.el("span", { "data-deal-terms": "true" }, [this.termsTally(model.rows)])];
     }
     return line;
   };
+  // "Agreement: Started": the agreement's own state, never a word for where the deal's terms stand.
+  P.agreementState = function (model) { return w("deal.agreement.state", { state: this.token("deal.state", vof(model.agreement).state) }); };
   // "Terms: Both say the same so far (2 of 2)": each status the rows give, in the rows' order, with its count.
   P.termsTally = function (rows) {
     var self = this, order = [], counts = {};
@@ -3423,8 +3653,9 @@
   P.dealHeadline = function (model) {
     var d = this.d;
     var out = [this.kit.metricGrid([{ label: w("l0.state"), value: this.dealState(model) }])];
-    if (model.start.by !== null) out.push(this.note(w("deal.start.by", { by: this.token("deal.start.by", model.start.by) }), { "data-start-by": model.start.by }));
-    if (model.start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
+    var start = vof(model.agreement);
+    if (start.by !== null) out.push(this.note(w("deal.start.by", { by: this.token("deal.start.by", start.by) }), { "data-start-by": start.by }));
+    if (start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
     // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
     var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: model.as_of });
@@ -3640,12 +3871,12 @@
     var relied = [];
     if (model.rows_state === "listed") model.rows.forEach(function (r) { seq(r.legs).forEach(function (l) { if (mine(l) && relied.indexOf(l.record) < 0) relied.push(l.record); }); });
     return model.sealed_steps.filter(function (s) {
-      return s.leg !== null && !s.refund && mine(s.leg) && (!relied.length || relied.indexOf(s.record) >= 0);
+      return s.leg !== null && !s.refund && mine(s.leg.value) && (!relied.length || relied.indexOf(s.record) >= 0);
     });
   }
   function ownLeg(model) {
     var legs = ownLegs(model);
-    return legs.length === 1 ? legs[0].leg : null;
+    return legs.length === 1 ? legs[0].leg.value : null;
   }
   function paidLeg(model) {
     var leg = ownLeg(model);
@@ -3660,7 +3891,7 @@
     var rows = model.rows_state === "listed" ? model.rows : [];
     var ruled = rows.find(function (r) { return r.status === "ruled" && r.ruling !== null && r.ruling.value === "not_met"; });
     if (ruled) return { mood: "not_as_agreed", line: "ruled_not_met", term: ruled.id, remedy: ruled.remedy };
-    if (model.start.state !== "started") return { mood: null, line: "state." + model.start.state };
+    if (vof(model.agreement).state !== "started") return { mood: null, line: "state." + vof(model.agreement).state };
     var leg = paidLeg(model);
     if (model.settled) {
       var conceded = rows.find(function (r) { return r.value === "not_met" && r.remedy_made; });
@@ -3699,18 +3930,15 @@
     return model.role === null ? w(key + ".report", values) : this.say(model, key, values);
   };
 
-  // A money member as a reader says it: BTC at scale 11 (or less) is counted in msat, with sats above
-  // when it is whole sats; anything else as recorded (legAmount).
+  // A money member as a reader says it, once, in its recorded asset: BTC at scale 11 is counted in msat and at
+  // scale 8 in sats (the units those scales name); anything else as recorded (legAmount). Never converted.
   function moneyOf(a) {
     var value = str(get(a, "value")), code = str(get(a, "assetCode")), scale = int(get(a, "assetScale"));
-    if (code === "BTC" && value !== null && /^\d+$/.test(value) && scale !== null && scale >= 0 && scale <= 11) {
-      var msat = Number(value) * Math.pow(10, 11 - scale);
-      if (Number.isSafeInteger(msat)) {
-        var main = groupThousands(msat) + " msat";
-        return msat % 1000 === 0 && msat > 0 ? { main: groupThousands(msat / 1000) + (msat === 1000 ? " sat" : " sats"), sub: main } : { main: main, sub: null };
-      }
+    if (code === "BTC" && value !== null && /^\d+$/.test(value) && (scale === 11 || scale === 8) && Number.isSafeInteger(Number(value))) {
+      var n = Number(value);
+      return groupThousands(n) + (scale === 11 ? " msat" : n === 1 ? " sat" : " sats");
     }
-    return { main: legAmount(a), sub: null };
+    return legAmount(a);
   }
   P.surfaceHeader = function (model) {
     var d = this.d;
@@ -3746,10 +3974,10 @@
     var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
     var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
     // What the deal was for, from the holder's own sealed offer (#461); the seller is not named: no record
-    // the agreement cites seals the seller's name, and a key id is never drawn as one.
-    // On the holder's own page only: the offer is given beside the copy, not carried in it, so a copy
-    // shown to others never shows it.
-    if (model.item !== null && this.ownPage(model)) line.push(this.p(w("deal.hero.item", { item: model.item }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
+    // the agreement cites seals the seller's name, and a key id is never drawn as one. An offer the copy
+    // carries (book.offer) is shown on every copy it travels in (u499, u561 items 1 and 5); one capsulectl
+    // gave beside the copy (deal_offer) is not in it, so only the holder's own page shows it.
+    if (model.item !== null && (model.item.src.report !== "deal_offer" || this.ownPage(model))) line.push(this.p(w("deal.hero.item", { item: model.item.value }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
     if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
     if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
     var parts = [];
@@ -3784,14 +4012,14 @@
     if (verdict.mood === "done") return w("deal.card.status.done");
     var rows = model.rows_state === "listed" ? model.rows : [];
     var first = rows.length ? rows[0].status : null;
-    if (first !== null && model.start.state === "started" && rows.every(function (r) { return r.status === first; })) return this.token("deal.status", first);
-    return this.token("deal.state", model.start.state);
+    if (first !== null && vof(model.agreement).state === "started" && rows.every(function (r) { return r.status === first; })) return this.token("deal.status", first);
+    // Else the agreement's own state, labelled as that, never "Started" as the deal's status beside a ruled term.
+    return this.agreementState(model);
   };
   P.legMoney = function (model, leg, key) {
-    var step = model.sealed_steps.find(function (s) { return s.leg === leg; });
-    var m = step ? step.money[key] : null;
-    var said = m ? moneyOf(m) : { main: "-", sub: null };
-    return said.sub ? [said.main, this.d.el("span", { class: "cv-rcpt-sub" }, [said.sub])] : said.main;
+    var step = model.sealed_steps.find(function (s) { return vof(s.leg) === leg; });
+    var m = step ? vof(step.money[key]) : null;
+    return m ? moneyOf(m) : "-";
   };
 
   // The three stamps (Muse design §3.3, as #382 item 14 words them), each from its own evidence.
@@ -3871,51 +4099,85 @@
   };
 
   // "What happened, step by step": one row per record the copy carries, each opening to what it records.
+  P.termWord = function (id) { return id === null ? "-" : word("deal.term." + id) || id; };
   P.stepTitle = function (model, step) {
     if (!step.shown) return w("deal.step.withheld");
-    if (step.kind === "agree") return w("deal.step.agree");
-    if (step.kind === "settle" && step.leg !== null) {
-      var payee = step.leg.leg.indexOf("payee") === 0;
+    var kind = vof(step.kind), leg = vof(step.leg), self = this;
+    if (kind === "agree") return w("deal.step.agree");
+    if (kind === "settle" && leg !== null) {
+      var payee = leg.leg.indexOf("payee") === 0;
       var raw = this.rawMoney(step, payee ? "received" : "amount");
-      var amount = raw !== null ? moneyOf(raw).sub || moneyOf(raw).main : "-";
-      if (step.refund) return w("deal.step.settle.refund", { amount: amount, status: step.leg.status });
+      var amount = raw !== null ? moneyOf(raw) : "-";
+      if (step.refund) return w("deal.step.settle.refund", { amount: amount, status: leg.status });
       // "Paid" only for a leg recorded as settled: a pending, failed or reversed one says its status.
-      if (step.leg.status !== "settled") return w("deal.step.settle.status", { amount: amount, status: step.leg.status });
+      if (leg.status !== "settled") return w("deal.step.settle.status", { amount: amount, status: leg.status });
       return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: amount });
     }
-    if (step.kind === "statement") {
-      var self = this;
-      var said = step.statements.map(function (st) { return (word("deal.term." + st.row) || st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : "-"); }).join("; ");
-      return this.say(model, "deal.step.statement", { said: said || "-" });
+    if (kind === "statement") {
+      // A statement that names an arrived record: the ruling (or cancellation) it records as received.
+      var names = vof(step.names);
+      if (names !== null) {
+        var named = names.record !== null ? model.sealed_steps.find(function (o) { return o.record === names.record; }) : null;
+        var ruling = named ? vof(named.ruling) : null;
+        var key = "deal.step.names." + names.kind + (names.kind === "ruling" && ruling === null ? ".unread" : "");
+        return vof(step.book) === "other" ? w(key + ".other", { term: ruling !== null ? this.termWord(ruling.row) : "-" }) : this.say(model, key, { term: ruling !== null ? this.termWord(ruling.row) : "-" });
+      }
+      var said = (vof(step.statements) || []).map(function (st) { return self.termWord(st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : "-"); }).join("; ");
+      return vof(step.book) === "other" ? w("deal.step.statement.other", { said: said || "-" }) : this.say(model, "deal.step.statement", { said: said || "-" });
     }
-    if (step.kind === "perform") return w("deal.step.perform", { act: step.act !== null ? step.act : "-" });
-    var known = step.kind !== null ? word("deal.step.kind." + step.kind) : null;
-    return known !== null ? known : w("deal.step.other", { kind: step.kind || "-" });
+    if (kind === "dispute") {
+      var dispute = vof(step.dispute);
+      var dkey = "deal.step.dispute." + (["dispute", "withdrawal", "challenge"].indexOf(dispute.kind) >= 0 ? dispute.kind : "other");
+      return w(dkey, { term: this.termWord(dispute.row), forum: dispute.forum || "-", kind: dispute.kind || "-" });
+    }
+    if (kind === "ruling") {
+      var r = vof(step.ruling);
+      var values = { term: this.termWord(r.row), value: r.value !== null ? this.token("deal.value", r.value) : "-", side: r.against !== null ? this.token("deal.side", r.against) : "-" };
+      return w("deal.step.ruling" + (r.against !== null ? ".against" : "") + (r.final ? ".final" : ""), values);
+    }
+    if (kind === "perform") return w("deal.step.perform", { act: vof(step.act) !== null ? vof(step.act) : "-" });
+    var known = kind !== null ? word("deal.step.kind." + kind) : null;
+    return known !== null ? known : w("deal.step.other", { kind: kind || "-" });
   };
-  P.rawMoney = function (step, key) { return step.money && own(step.money, key) ? step.money[key] : null; };
+  P.rawMoney = function (step, key) { return step.money && own(step.money, key) ? vof(step.money[key]) : null; };
   P.stepDrawer = function (model, step) {
     var d = this.d, self = this;
-    var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [step.kind !== null ? step.kind : w("deal.drawer.kind.withheld")])]];
-    if (step.time !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(step.time)]);
-    if (step.leg !== null) {
-      var leg = step.leg;
+    var kind = vof(step.kind), leg = vof(step.leg);
+    var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [kind !== null ? kind : w("deal.drawer.kind.withheld")])]];
+    if (vof(step.book) !== null) rows.push([w("deal.drawer.book"), w("deal.book." + vof(step.book))]);
+    if (vof(step.time) !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(vof(step.time))]);
+    if (leg !== null) {
       rows.push([w("deal.drawer.leg"), leg.leg + " · " + leg.status]);
       leg.money.forEach(function (m) {
         var raw = self.rawMoney(step, m[0]);
-        var said = raw !== null ? moneyOf(raw) : { main: m[1], sub: null };
-        rows.push([m[0], said.sub ? said.main + " (" + said.sub + ")" : said.main]);
+        rows.push([m[0], raw !== null ? moneyOf(raw) : m[1]]);
       });
       if (leg.payment_ref !== null) rows.push([w("deal.drawer.payment_ref"), d.el("span", { class: "cv-mono" }, [leg.payment_ref.type + " " + self.short(leg.payment_ref.value)])]);
     }
-    step.statements.forEach(function (st) { rows.push([self.termName(st.row), st.value !== null ? self.token("deal.value", st.value) : "-"]); });
-    if (step.kind === "agree" && step.role !== null) rows.push([w("deal.drawer.role"), this.sideWord(step.role)]);
+    (vof(step.statements) || []).forEach(function (st) { rows.push([self.termName(st.row), st.value !== null ? self.token("deal.value", st.value) : "-"]); });
+    var dispute = vof(step.dispute), ruling = vof(step.ruling), names = vof(step.names);
+    if (dispute !== null) {
+      if (dispute.row !== null) rows.push([w("deal.drawer.term"), this.termName(dispute.row)]);
+      if (dispute.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [dispute.forum])]);
+      if (dispute.adjudicator !== null) rows.push([w("deal.drawer.adjudicator"), d.el("span", { class: "cv-mono", title: dispute.adjudicator }, [this.short(dispute.adjudicator)])]);
+    }
+    if (ruling !== null) {
+      if (ruling.row !== null) rows.push([w("deal.drawer.term"), this.termName(ruling.row)]);
+      rows.push([w("deal.drawer.ruling"), ruling.value !== null ? this.token("deal.value", ruling.value) : "-"]);
+      rows.push([w("deal.drawer.against"), ruling.against !== null ? this.sideWord(ruling.against) : w("deal.drawer.against.none")]);
+      rows.push([w("deal.drawer.final"), w(ruling.final ? "deal.drawer.final.yes" : "deal.drawer.final.no")]);
+      if (ruling.remedy !== null && ruling.remedy.kind !== null) rows.push([w("deal.drawer.remedy"), d.el("span", { class: "cv-mono" }, [ruling.remedy.kind])]);
+      if (ruling.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [ruling.forum])]);
+    }
+    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [this.short(names.record)]) : w("deal.drawer.names.unread")]);
+    if (kind === "agree" && vof(step.role) !== null) rows.push([w("deal.drawer.role"), this.sideWord(vof(step.role))]);
     var id = d.el("details", { class: "cv-rcpt-id", "data-record-id": step.record }, [
-      d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.short(step.record)]), " · ", step.kind !== null ? step.kind : w("deal.drawer.kind.withheld")]),
+      d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.short(step.record)]), " · ", kind !== null ? kind : w("deal.drawer.kind.withheld")]),
       d.el("code", { class: "cv-mono cv-rcpt-fullid" }, [step.record]),
     ]);
     var place = [];
-    if (step.seq !== null) place.push(w("deal.drawer.seq", { seq: String(step.seq) }));
-    if (step.leaf !== null) place.push(w("deal.drawer.leaf", { leaf: String(step.leaf) }));
+    if (vof(step.seq) !== null) place.push(w("deal.drawer.seq", { seq: String(vof(step.seq)) }));
+    if (vof(step.leaf) !== null) place.push(w("deal.drawer.leaf", { leaf: String(vof(step.leaf)) }));
     return [
       d.el("dl", { class: "cv-rcpt-fields" }, rows.map(function (r) { return d.el("div", { class: "cv-rcpt-field" }, [d.el("dt", {}, [r[0]]), d.el("dd", {}, [r[1]])]); })),
       d.el("div", { class: "cv-rcpt-record" }, [d.el("span", { class: "cv-rcpt-record__label" }, [w("deal.drawer.record")]), id].concat(place.length ? [d.el("span", { class: "cv-mono cv-muted" }, [place.join(" · ")])] : [])),
@@ -3929,12 +4191,12 @@
     var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w(steps.length === 1 ? "deal.steps.lede.one" : "deal.steps.lede", { count: String(steps.length) }))];
     if (!steps.length) return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([this.note(w("deal.steps.none"))]));
     var list = d.el("ol", { class: "cv-rcpt-steps" }, steps.map(function (step, i) {
-      return d.el("li", { class: "cv-rcpt-step", "data-step": String(i + 1), "data-step-kind": step.kind || "withheld" }, [
+      return d.el("li", { class: "cv-rcpt-step", "data-step": String(i + 1), "data-step-kind": vof(step.kind) || "withheld", "data-step-record": step.record }, [
         d.el("details", {}, [
           d.el("summary", {}, [
             d.el("span", { class: "cv-rcpt-step__n", "aria-hidden": "true" }, [String(i + 1)]),
             d.el("span", { class: "cv-rcpt-step__title" }, [self.stepTitle(model, step)]),
-            d.el("span", { class: "cv-rcpt-step__time" }, [step.time !== null && own ? self.v1Time(step.time) : ""]),
+            d.el("span", { class: "cv-rcpt-step__time" }, [vof(step.time) !== null && own ? self.v1Time(vof(step.time)) : ""]),
           ]),
           d.el("div", { class: "cv-rcpt-step__drawer" }, self.stepDrawer(model, step)),
         ]),
@@ -4049,8 +4311,8 @@
   P.recordTable = function (model) {
     var d = this.d, self = this;
     var rows = model.sealed_steps.map(function (step, i) {
-      return [String(i + 1), self.stepTitle(model, step), d.el("span", { class: "cv-mono" }, [step.kind !== null ? step.kind : "-"]),
-        d.el("span", { class: "cv-mono" }, [(step.seq !== null ? String(step.seq) : "-") + " · " + (step.leaf !== null ? String(step.leaf) : "-")]),
+      return [String(i + 1), self.stepTitle(model, step), d.el("span", { class: "cv-mono" }, [vof(step.kind) !== null ? vof(step.kind) : "-"]),
+        d.el("span", { class: "cv-mono" }, [(vof(step.seq) !== null ? String(vof(step.seq)) : "-") + " · " + (vof(step.leaf) !== null ? String(vof(step.leaf)) : "-")]),
         d.el("span", { class: "cv-mono", "data-inventory-record": step.record, title: step.record }, [self.short(step.record)]),
         w(step.shown ? "deal.inventory.shown" : "deal.inventory.withheld")];
     });
@@ -4067,6 +4329,21 @@
     ];
   };
 
+  // The raw record of each record the copy carries only in its x-deal-v1 book (a ruling held in relied_on, a full
+  // adjudicator copy's records and received): the runtime draws the bundle's own records, so every step has its raw
+  // record (section 2, records[]), appended after the core's part of L2 (contract section 9).
+  P.bookRecords = function (model) {
+    var d = this.d, self = this;
+    var extra = model.records.filter(function (r) { return r.src.bundle.indexOf("/records/") !== 0; });
+    if (!extra.length) return [];
+    return [this.kit.section(w("deal.section.book_records"), [this.note(w("deal.book_records.lede"))].concat(extra.map(function (r) {
+      var id = or(str(get(r.value, "capsule_id")), "");
+      return d.el("details", { class: "cv-rcpt-id", "data-book-record": id, "data-ptr": r.src.bundle }, [
+        d.el("summary", {}, [d.el("span", { class: "cv-mono", title: id }, [self.short(id)])]),
+        d.el("pre", { class: "cv-mono cv-rcpt-raw" }, [JSON.stringify(r.value, null, 2)]),
+      ]);
+    })), 3)];
+  };
   function drawDeal(doc, depth, model) {
     var dr = new Drawer(doc, depth, false);
     var d = dr.d;
@@ -4082,7 +4359,7 @@
     // For checkers: every sealed record, the copy's facts, then where the deal stands and its terms.
     var l1 = dr.recordTable(model).concat([dr.dealHeadline(model)], dr.dealL1(model));
     // Technical details: the ladder of rungs as the page drew them before, and the report's grounds.
-    var l2 = [dr.kit.section(w("deal.section.rungs"), dr.copyNotes(model), 3)].concat(dr.dealL2(model));
+    var l2 = [dr.kit.section(w("deal.section.rungs"), dr.copyNotes(model), 3)].concat(dr.dealL2(model), dr.bookRecords(model));
     var levels = dr.page(l0, w("deal.depth.l1.checkers"), l1, depth === "L1" || depth === "L2", l2, depth === "L2", null, w("deal.depth.l2.technical"));
     levels[1].appendChild(dr.surfaceFooter(model));
     return levels;
