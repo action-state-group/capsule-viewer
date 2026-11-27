@@ -69,14 +69,22 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
 
-  # The npm package @action-state-group/capsule-viewer, on Node 24: `npm run
-  # check`'s steps without test/presentation-builder.test.ts, which takes about
-  # 8 of this job's minutes on a hosted runner. ts-full.yml runs the whole
-  # `npm run check` on Node 22 and 24 nightly and on main when its inputs
-  # change, as publish-ts.yml does before uploading; scripts/ci-local.sh runs it
-  # before a push.
+  # The npm package @action-state-group/capsule-viewer: the whole `npm run
+  # check` on Node 22 and 24, as publish-ts.yml checks it before uploading.
+  # Its tests are CPU-bound jsdom work, about 18 minutes of CPU per Node
+  # version, so each version runs in two vitest shards on runners of their own
+  # (one shard took the whole job to 9 of the 10 minutes a pull request may
+  # take, capsule-viewer#466). The shards together run `npm run check`'s steps:
+  # format:check and typecheck in shard 1, build and check:package in shard 2,
+  # and each runs its half of the tests. Keep them in step with ts/package.json.
   ts:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+        shard: [1, 2]
+    name: ts (${{ matrix.node }}, shard ${{ matrix.shard }}/2)
     defaults:
       run:
         working-directory: ts
@@ -84,18 +92,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: ts/package-lock.json
       - run: npm ci
       # The CSP and offline-page browser tests skip without a Chrome; the
       # hosted runner ships one, so its absence is a failure here.
       - run: test -x /usr/bin/google-chrome
-      - run: npm run format:check
-      - run: npm run typecheck
-      - run: npx vitest run --exclude test/presentation-builder.test.ts
-      - run: npm run build
-      - run: npm run check:package
+      - if: matrix.shard == 1
+        run: npm run format:check && npm run typecheck
+      - run: npx vitest run --shard=${{ matrix.shard }}/2
+      - if: matrix.shard == 2
+        run: npm run build && npm run check:package
 
   # The Go module github.com/action-state-group/capsule-viewer/go. A Go release
   # is the pushed go/v* tag itself, so this job on main is its gate before the

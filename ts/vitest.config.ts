@@ -13,9 +13,9 @@ import { defineConfig } from "vitest/config";
 // is held by the tests' deterministic budgets (page bytes, for one).
 //
 // Every record in a bundle also draws its own page (record-page.ts), so the
-// 450-record report is about 150,000 DOM elements in jsdom and
-// presentation-builder.test.ts, which builds it in four packagings, needs
-// more heap than a runner's default (about 4 GB). The cap is a ceiling, not a
+// 450-record report is about 150,000 DOM elements in jsdom and each
+// presentation-builder-outcome-*.test.ts, which builds it in four packagings,
+// needs more heap than a runner's default (about 4 GB). The cap is a ceiling, not a
 // reservation.
 const HANG_CEILING_MS = 20 * 60_000;
 
