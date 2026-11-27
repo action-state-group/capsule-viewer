@@ -3,8 +3,8 @@
 
 /** The receipt pack's record words, laid over the generic pack's on a receipt page: the pack's exact text and its SHA-256. */
 export const RECEIPT_RECORD_PACK = {
-  pack: "{\n  \"wording_pack_version\": \"aac.wording-pack/v0\",\n  \"id\": \"capsuleviewer.receipt.wording.en/v1\",\n  \"locale\": \"en\",\n  \"entries\": {\n    \"record.rung.10.sub\": \"a sealed Result over these records\",\n    \"record.rung.10.proves.own\": \"A sealed Result in this file cites this record. A receipt carries none: a ruling on a term is one of the deal's own records, in the steps above. Not: that any ruling is right.\",\n    \"record.rung.10.proves.shared\": \"A sealed Result in this file cites this record. A receipt carries none: a ruling on a term is one of the deal's own records, in the steps above. Not: that any ruling is right.\",\n    \"record.rung.11.sub\": \"another party's signature over this file\",\n    \"record.rung.11.proves.own\": \"Another party signed this file's records too; the COUNTERSIGNED stamp says who. Not: that they agree with each term's status.\",\n    \"record.rung.11.proves.shared\": \"Another party signed this file's records too; the COUNTERSIGNED stamp says who. Not: that they agree with each term's status.\"\n  }\n}\n",
-  sha256: "b21341570827b4a8807bd57f1ae9bd904b501593e612ca8941556923f9a4851f",
+  pack: "{\n  \"wording_pack_version\": \"aac.wording-pack/v0\",\n  \"id\": \"capsuleviewer.receipt.wording.en/v1\",\n  \"locale\": \"en\",\n  \"entries\": {\n    \"record.rung.10.sub\": \"a sealed Result over these records\",\n    \"record.rung.10.proves.own\": \"A receipt carries no sealed Result: a ruling on a term is one of the deal's own records, in the steps above. Not: that any ruling is right.\",\n    \"record.rung.10.proves.shared\": \"A receipt carries no sealed Result: a ruling on a term is one of the deal's own records, in the steps above. Not: that any ruling is right.\",\n    \"record.rung.11.sub\": \"a countersigner's signature over this file\",\n    \"record.rung.11.proves.own\": \"A countersigner also signed this file's records; the COUNTERSIGNED stamp names it and says whether it is independent of the parties. Not: that it checked any term, or that the other side agrees.\",\n    \"record.rung.11.proves.shared\": \"A countersigner also signed this file's records; the COUNTERSIGNED stamp names it and says whether it is independent of the parties. Not: that it checked any term, or that the other side agrees.\"\n  }\n}\n",
+  sha256: "49f32f73bb482de5676b011eee61f8aa62e6156c465ae847237dcf37c680a9bb",
 } as const;
 
 /** The receipt pack's lines the core draws on a receipt page, by key. */
@@ -37,13 +37,14 @@ export const RECEIPT_PAGE_WORDS: Readonly<Record<string, string>> = {
   "deal.proof.counterparty_half.report": "The other side's signed agreement",
   "deal.proof.lede.answers.failed": "No. capsulectl verify failed a test when this page was made. The page shows its answers; it did not re-check by itself.",
   "deal.proof.lede.answers.some": "These are the only answers capsulectl verify gave this page; a test marked – was not among them. Download the proof file and check it yourself.",
-  "receipt_page.check.reported": "{check}: {status}, as capsulectl verify reported it. This page did not run this test.",
-  "receipt_page.check.reported.also": "{check}: {status}, as capsulectl verify reported it. This page also ran this test itself, in the list above.",
-  "receipt_page.check.witnesses": "Outside time stamp",
+  "receipt_page.check.reported": "{check}: {status}, as capsulectl verify reported it. This page did not run this check.",
+  "receipt_page.check.reported.also": "{check}: {status}, as capsulectl verify reported it. This page also ran this check itself, in the list above.",
+  "receipt_page.check.witnesses": "Witness time stamp",
   "receipt_page.ladder.lede": "One ladder for every record in this file: each rung's status, and how many of the {n} records have it.",
   "receipt_page.ladder.count": "{k} of {n} records",
   "receipt_page.ladder.records": "records {ids}",
   "receipt_page.ladder.inclusion": "each record's leaf and seq",
+  "receipt_page.content.times_withheld": "The content as recorded matches the digest the record commits to. It is shown here with its record times left out, so what is shown is not exactly what the digest covers.",
   "receipt_page.times.withheld": "Record times are shown only on the holder's own copy. This copy was made for someone else, so the record views here leave them out.",
-  "deal.proof.cited": "Each test, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+  "deal.proof.cited": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
 };

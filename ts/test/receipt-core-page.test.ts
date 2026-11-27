@@ -85,11 +85,11 @@ describe("one check list, drawn by the core, on a receipt page", () => {
       "capsulectl-witnesses",
     ]);
     expect(rows[0]!.textContent).toBe(
-      "Signed by the agent's device: passed, as capsulectl verify reported it. This page also ran this test itself, in the list above.",
+      "Signed by the agent's device: passed, as capsulectl verify reported it. This page also ran this check itself, in the list above.",
     );
     // A test the page does not run says so.
     expect(rows[5]!.textContent).toBe(
-      "Outside time stamp: not run on this copy, as capsulectl verify reported it. This page did not run this test.",
+      "Witness time stamp: not run on this copy, as capsulectl verify reported it. This page did not run this check.",
     );
     // The module draws no list of its own: its panel cites the core's.
     expect(root.querySelector(".cv-rcpt-proof")).toBeNull();
@@ -99,7 +99,7 @@ describe("one check list, drawn by the core, on a receipt page", () => {
     );
     expect(cite?.getAttribute("href")).toBe("#cv-checked");
     expect(cite?.textContent).toBe(
-      "Each test, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”.",
+      "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”.",
     );
     // The panel's own summary stays, and so does the banner's count, which
     // is the section's.
@@ -157,11 +157,12 @@ describe("the one witness line is the core's", () => {
     ).toContain("Time-stamped by W at ");
     const section = core(root);
     expect(section.querySelector('[data-witness="self"]')).toBeNull();
-    expect(
-      section
-        .querySelector('[data-witness="book"]')
-        ?.getAttribute("data-book-witness"),
-    ).toBe("verified");
+    // Said once in L2, as its row in the check list (Codex, #493).
+    const said = (text: string): number =>
+      [...section.querySelectorAll("p, li")].filter((n) =>
+        n.textContent?.includes(text),
+      ).length;
+    expect(said("Time-stamped by W at ")).toBe(1);
     expect(
       section
         .querySelector('[data-check="capsulectl-witnesses"]')
@@ -196,9 +197,14 @@ describe("the one witness line is the core's", () => {
         withWitness(json("keep-copy.verify.json"), witnessed),
       );
       const section = core(root);
+      const row = section.querySelector('[data-check="capsulectl-witnesses"]');
+      expect(row?.textContent).toContain(line);
+      // Said once in L2 (Codex, #493).
       expect(
-        section.querySelector('[data-witness="book"]')?.textContent,
-      ).toContain(line);
+        [...section.querySelectorAll("p, li")].filter((n) =>
+          n.textContent?.includes(line),
+        ),
+      ).toHaveLength(1);
       expect(section.querySelector('[data-witness="self"]')).not.toBeNull();
       expect(
         section
@@ -226,7 +232,10 @@ describe("the one witness line is the core's", () => {
       const report = json("keep-copy.verify.json");
       if (witnessed !== undefined) withWitness(report, witnessed);
       const root = await page("keep-copy", report);
-      expect(root.querySelector('[data-witness="book"]')).toBeNull();
+      expect(
+        root.querySelector('[data-check="capsulectl-witnesses"] [data-time]'),
+      ).toBeNull();
+      expect(root.textContent).not.toContain("your own book");
       expect(
         root.querySelector('[data-witness-notice="file-no-receipt"]'),
       ).not.toBeNull();
@@ -241,7 +250,10 @@ describe("the one witness line is the core's", () => {
         withWitness(json("keep-copy.verify.json"), VERIFIED),
         { carrier },
       );
-      expect(root.querySelector('[data-witness="book"]')).toBeNull();
+      expect(
+        root.querySelector('[data-check="capsulectl-witnesses"] [data-time]'),
+      ).toBeNull();
+      expect(root.textContent).not.toContain("your own book");
       expect(root.textContent).not.toContain("Time-stamped by");
     }
   });
@@ -251,7 +263,10 @@ describe("the one witness line is the core's", () => {
       "counterparty-copy",
       withWitness(json("counterparty-copy.verify.json"), VERIFIED),
     );
-    expect(root.querySelector('[data-witness="book"]')).toBeNull();
+    expect(
+      root.querySelector('[data-check="capsulectl-witnesses"] [data-time]'),
+    ).toBeNull();
+    expect(root.textContent).not.toContain("your own book");
     expect(root.textContent).not.toContain("Time-stamped by");
   });
 });
@@ -279,6 +294,24 @@ describe("the ladder once per page, in the receipt pack's words", () => {
     expect(rung1.textContent).toContain(`PASS ${n} of ${n} records`);
   });
 
+  it("keeps each rung's own note, with the records it is about", async () => {
+    const root = await page(
+      "counterparty-copy",
+      json("counterparty-copy.verify.json"),
+    );
+    const ladder = root.querySelector("[data-page-ladder]")!;
+    // Rung 2 notes how many committed members each record disclosed; rung 6
+    // why this page does not run it.
+    expect(
+      ladder.querySelectorAll('[data-rung="2"] [data-rung-note]').length,
+    ).toBeGreaterThan(0);
+    expect(
+      ladder.querySelector('[data-rung="6"] [data-rung-note]')?.textContent,
+    ).toBe(
+      "this page does not run it: a bundle carries no earlier head to compare against",
+    );
+  });
+
   it("says no contract report's Result words on a receipt", async () => {
     const root = await page("keep-copy", json("keep-copy.verify.json"));
     const text = root.textContent ?? "";
@@ -286,10 +319,10 @@ describe("the ladder once per page, in the receipt pack's words", () => {
     expect(text).not.toContain("the other party's signature over the Result");
     const rung11 = root.querySelector('[data-l3="ladder"] [data-rung="11"]')!;
     expect(rung11.textContent).toContain(
-      "another party's signature over this file",
+      "a countersigner's signature over this file",
     );
     expect(rung11.textContent).toContain(
-      "Another party signed this file's records too; the COUNTERSIGNED stamp says who. Not: that they agree with each term's status.",
+      "A countersigner also signed this file's records; the COUNTERSIGNED stamp names it and says whether it is independent of the parties. Not: that it checked any term, or that the other side agrees.",
     );
   });
 
@@ -353,6 +386,19 @@ describe("no record time on a copy made for someone else (#482, u239)", () => {
       "Record times are shown only on the holder's own copy. This copy was made for someone else, so the record views here leave them out.",
     );
     expect(core(root).querySelector('[data-exact="as-parsed"]')).toBeNull();
+    // The digest check is said of the content as recorded, never of the
+    // content shown without its times (Codex, #493).
+    expect(text).not.toContain(
+      "The content shown matches the digest the record commits to.",
+    );
+    const said = core(root).querySelectorAll(
+      '[data-content-check="digest-times-withheld"]',
+    );
+    expect(said.length).toBeGreaterThan(0);
+    for (const line of said)
+      expect(line.textContent).toBe(
+        "The content as recorded matches the digest the record commits to. It is shown here with its record times left out, so what is shown is not exactly what the digest covers.",
+      );
     expect(
       core(root).querySelector('[data-exact="times-withheld"]'),
     ).not.toBeNull();
@@ -397,5 +443,44 @@ describe("a page with no receipt module is unchanged", () => {
         .querySelector('[data-region="L2-core"]')
         ?.hasAttribute("data-checked-id"),
     ).toBe(false);
+  });
+});
+
+describe("every receipt kind this viewer ships takes the core's receipt page", () => {
+  it("a provider receipt too (Codex, #493)", async () => {
+    const receipt = (name: string): Obj =>
+      JSON.parse(
+        readFileSync(
+          resolve(process.cwd(), "..", "tests", "testdata", "receipt", name),
+          "utf8",
+        ),
+      ) as Obj;
+    const registry = createPresentationRegistry();
+    for (const module of receiptModules()) registry.register(module);
+    const root = document.createElement("main");
+    document.body.append(root);
+    await renderEvidenceGraph(
+      receipt("mesh-provider-selected.bundle.json"),
+      root,
+      undefined,
+      {
+        depth: "L2",
+        // The provider receipt is drawn for its holder only.
+        audience: "keep",
+        registry,
+        verifierReport: receipt("mesh-provider-selected.verify.json"),
+      },
+    );
+    expect(
+      root.querySelector(
+        '[data-receipt-module="capsuleviewer.receipt.provider/v0"]',
+      ),
+    ).not.toBeNull();
+    expect(headings(root)).not.toContain("The ten checks");
+    expect(root.querySelector("[data-page-ladder]")).not.toBeNull();
+    expect(root.querySelector("#cv-checked")?.classList).toContain(
+      "cv-checked--card",
+    );
+    expect(root.textContent).not.toContain("record of the month");
   });
 });

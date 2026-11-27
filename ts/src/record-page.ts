@@ -913,6 +913,26 @@ export function renderPageLadder(
           words.records(ids.map((id) => shortHex(id)).join(", ")),
         );
       status.append(line);
+      // Each rung's own note (what was disclosed, why it was not checked),
+      // once per distinct note, with the records it is about when it is not
+      // every record of this status.
+      const notes = new Map<string, string[]>();
+      for (const record of per)
+        if (record.rungs[i]!.status === state) {
+          const note = record.rungs[i]!.note;
+          if (note !== undefined)
+            notes.set(note, [...(notes.get(note) ?? []), record.capsuleId]);
+        }
+      for (const [note, about] of notes) {
+        const said = el("div", "l3-sub", note);
+        said.dataset.rungNote = "";
+        if (about.length < ids.length)
+          said.append(
+            " · ",
+            words.records(about.map((id) => shortHex(id)).join(", ")),
+          );
+        status.append(said);
+      }
     }
     tr.append(status, el("td", "l3-cmd", w.t(`record.rung.${number}.check`)));
     body.append(tr);

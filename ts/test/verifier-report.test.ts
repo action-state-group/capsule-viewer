@@ -402,7 +402,11 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       const root = await page(r);
       // Beside the core the module draws no witness line of its own.
       expect(root.querySelector('[data-rung="witness"]')).toBeNull();
-      return root.querySelector('[data-witness="book"]')?.textContent;
+      // capsulectl's book witness is its row in the core's check list.
+      const row = root.querySelector('[data-check="capsulectl-witnesses"]');
+      return row?.textContent?.includes("your own book")
+        ? row.textContent
+        : undefined;
     };
     expect(
       await rung({

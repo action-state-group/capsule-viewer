@@ -1381,8 +1381,9 @@ async function renderVerificationPage(
   if (model.parentWitness !== undefined)
     renderParentWitness(page, model.parentWitness);
   // On a receipt page whose holder's book capsulectl reported witnessed,
-  // its line says the file carries no receipt itself, so "self-witnessed"
-  // is not said beside it (#489).
+  // its line (under the banner, and its row in the check list below) says
+  // the file carries no receipt itself, so "self-witnessed" is not said
+  // beside it (#489).
   const book = receipt?.bookWitness;
   if (model.selfWitnessed && book?.status !== "verified") {
     // A checkpoint with no transparency-service receipt was witnessed by
@@ -1393,11 +1394,6 @@ async function renderVerificationPage(
     );
     witness.dataset.witness = "self";
     page.append(witness);
-  }
-  if (book !== undefined) {
-    const line = bookWitnessLine(book);
-    line.dataset.witness = "book";
-    page.append(line);
   }
   // A copy made for someone else shows no record's own time (u239, #482).
   if (receipt?.shared === true) {
@@ -1857,9 +1853,10 @@ function renderCitedMember(
       exact.dataset.exact = "times-withheld";
     if (content.dataset.exact !== undefined)
       content.dataset.exact = "times-withheld";
-    const note = element("p", receiptWord("receipt_page.times.withheld"));
-    note.dataset.times = "withheld";
-    host.append(checked, content, note);
+    // The digest check is of the content as recorded, not of what is shown.
+    checked.textContent = receiptWord("receipt_page.content.times_withheld");
+    checked.dataset.contentCheck = "digest-times-withheld";
+    host.append(checked, content);
     return;
   }
   // A withheld member shows the digest the record committed to; a supplied
@@ -3665,6 +3662,19 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The receipt modules this viewer ships (go/receipt), every kind: on a page
+ * one of them draws, the core draws as a receipt page's core (#489). This is
+ * not RECEIPT_MODULE_IDS, which admits a receipt carried in a report.
+ */
+const RECEIPT_PAGE_MODULE_IDS: ReadonlySet<string> = new Set([
+  "capsuleviewer.receipt.unilateral/v0",
+  "capsuleviewer.receipt.seller/v0",
+  "capsuleviewer.receipt.bilateral/v0",
+  "capsuleviewer.receipt.deal/v1",
+  "capsuleviewer.receipt.provider/v0",
+]);
+
+/**
  * The mark a carried receipt's panel bears, so the receipt module draws the
  * copy as one shared in a report rather than as the owner's private file
  * (Sherlock2, ops bc71ecae, #383): the module reads it from its host's
@@ -3706,7 +3716,7 @@ function receiptCoreOf(
   reading: VerifierReading | null,
   root: HTMLElement,
 ): ReceiptCore | undefined {
-  if (module === undefined || !RECEIPT_MODULE_IDS.has(module.manifest.id))
+  if (module === undefined || !RECEIPT_PAGE_MODULE_IDS.has(module.manifest.id))
     return undefined;
   const pass = reading?.kind === "pass" ? reading : null;
   const audience = sealedAudience(context);

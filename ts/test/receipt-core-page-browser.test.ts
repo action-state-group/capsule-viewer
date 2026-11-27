@@ -162,7 +162,9 @@ describe.skipIf(executablePath === undefined)(
               await page.isVisible('#cv-checked [data-checks="capsulectl"]'),
             ).toBe(true);
             expect(
-              await page.isVisible('#cv-checked [data-witness="book"]'),
+              await page.isVisible(
+                '#cv-checked [data-check="capsulectl-witnesses"]',
+              ),
             ).toBe(true);
           }
           expect(
