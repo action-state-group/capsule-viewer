@@ -13,13 +13,17 @@ are flat sibling panels with no workflow controls in the HTML (§15.1 items 2 an
 disclosure is built before rendering (§15.2). This note applies those rules to the receipt and
 History pages capsulectl and the ARD demo make today, and departs from the PRD in one place:
 
-- **The owner (delta vs u476).** PRD §14.2 and Steven's ruling u476 (ops `proprietary/inbox.md`,
-  2026-10-19, capsule-viewer#40) give the view-model JSON to the Muse plugin. Ethan's HOW answer
-  puts this view in capsule-viewer, which reverses that for the neutral profiles; Sherlock2 has
-  already put that question to Steven, recommending neutral profiles (receipt, History, Results)
-  in capsule-viewer and Muse-only ones in Muse
+- **The owner (u476).** PRD §14.2 and Steven's ruling u476 (ops `proprietary/inbox.md`,
+  2026-10-19, capsule-viewer#40) give the view-model JSON that the Muse plugin emits for Muse chat
+  to the Muse plugin. The receipt module and its `buildModel` already live in capsule-viewer, and no
+  PR here emits a model JSON for Muse or moves a Muse profile, so none of them changes that owner.
+  Sherlock2 is asking Steven the owner question for the neutral profiles in that narrower form,
+  recommending neutral profiles (receipt, History, Results) in capsule-viewer and Muse-only ones in
+  Muse
   (buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=27cb5e160d6571767e6bf3e9495366bd5cad6e4a13f53109086802e31e3f2185&thread=29f39b3dd29d2c1318a1971af542afe0268d52588a881fb9854a9a45aca7eea6,
-  item 1). **No PR below starts before Steven rules on it.** Sherlock2 also proposes folding this
+  item 1; narrowed in its review of this note,
+  buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=719998855145083387cd4f2f9dfd4fb17c59728fd4dc5f96c0ed716e5ca9882f&thread=29f39b3dd29d2c1318a1971af542afe0268d52588a881fb9854a9a45aca7eea6).
+  A later PR that would emit a model JSON for Muse waits on his ruling. Sherlock2 also proposes folding this
   review's rules (its C11 to C18) into the PRD as v1.3 (same message); if that lands, the PRD is the
   spec and this note is its implementation plan.
 
@@ -73,8 +77,8 @@ capsule-viewer `go/receipt`, `ts/src` (the runtime's own modules also implement 
 the records it misses today. It is a pure function over the verified context (and the verifier's
 report when one is given), never sealed, so it adds nothing a checker must trust (PRD §14.1). It
 has no published schema and no `spec_version`, so it can change with the viewer; whether it lives
-in capsule-viewer is Steven's ruling above. Every drawer reads only this model, the runtime's L2
-included (section 3).
+in capsule-viewer is the narrower u476 question above. The module's drawers read only this model;
+the core's banner and its part of L2 stay the core's (section 3).
 
 `buildModel` keeps its input: the verified context plus the checked inputs the page is given
 beside the bundle (capsulectl's verifier report, the countersigned copy and its signers, the
@@ -117,12 +121,12 @@ holder's offer record (section 4).
 | `ruling.ordered` (what the ruling orders: kind, amount, currency, due) | L0 | the ruling record `R[S/rows/<i>/ruling/record]/payload/body/remedy` | not drawn |
 | `waiting_on` per term | L0 | a member capsulectl's report adds to the row (PR 5); the model never derives it, so the viewer invents no status rule | absent ("Waiting for the other side" with no who) |
 | `money` (each leg) | L0 | `R[id]/record/settlement/amount`, `/received`, `/receive_fee` (each `value`, `assetCode`, `assetScale`, as `readLeg` keeps them today; the seller's step reads `received`), each shown once in its recorded asset, never converted | `readLeg`; "1 sat" over "1,000 msat" today |
-| `steps[]`: `record`, `book` (holder, other side, adjudicator), `kind`, `side`, `at`, `summary` (`at` on the keep copy only, see section 4) | L1 | every record the copy carries, once each by Capsule id: `bundle.records`, `A`, `R[*]`, and on a full adjudicator copy `book/records` and `book/received/records` (evidencebook `dealprofile/xdealv1/report_bundle.go`, `ReportBook`). Ordered by each record's sealed `x-deal-v1/at`; `seq` orders only within one book, since each book numbers its own records | `dealSteps` (records only); `dealBook` refuses `records` and `received` |
+| `steps[]`: `record`, `book` (holder, other side, adjudicator), `kind`, `side`, `at`, `summary` (`at` on the keep copy only, see section 4) | L1 | every record the copy carries, once each by Capsule id: `bundle.records`, `A`, `R[*]`, and on a full adjudicator copy `book/records` and `book/received/records` (evidencebook `dealprofile/xdealv1/report_bundle.go`, `ReportBook`). Ordered causally on every copy, since shared copies carry no times (section 4) and `seq` orders only within one book: the agreement first, then each record after every record it cites, records of one book by its `seq`; the keep copy breaks remaining ties by `x-deal-v1/at` | `dealSteps` (records only); `dealBook` refuses `records` and `received` |
 | step `summary` by kind | L1 | agree: `item` via `body/offer`; perform: `body/act`, `/observed`, `/statements`; settle: the leg; statement: `body/statements` and `body/names` (the ruling it names); dispute: `body/row`, `/forum`, `/adjudicator`; ruling: `body/row`, `/against`, `/value`, `/remedy`, `/final`, `/forum` | statements only |
 | `agreement.state` | L1 | `S/start/state`, `/by` (the agreement's start, labelled so) | drawn as deal status |
 | `as_of` (when the report was cut, never claimed as a witnessed time) | L1 | `S/as_of` | drawn as page time |
 | `witness` | L0, L2 | keep copy only: `reported` (`report: book_witnessed`, worded "as capsulectl verify reported on your own book; this page did not check it", u219), or `receipt` if Steven's (a) puts a receipt in the file; else `none`. Absent on counterparty and adjudicator copies | badge and runtime disagree |
-| `checks[]`: `name`, `result`, `by` | L2 | `report: checks` when capsulectl's report is given; else the page's own AAC checks | three lists |
+| `checks[]`: `name`, `result`, `by` | L0 (cited) | the core's result: `report: checks` when capsulectl's report is given, else the page's own AAC checks; the core draws the list (section 3), the model only cites it | three lists |
 | `countersigned` (a countersigned copy, its signers, whether each is independent) | L0, L2 | the checked inputs the page is given today beside the bundle (`checked: countersigned`, `countersigned_copy`; evidencebook `deal_v1_page.go:62-102`, injected by `withVerifierReport`), kept as they are | `pageAssurance` |
 | `withheld` | L1, L2 | `S/rows_state`; steps whose payload the copy does not open; `bundle/completeness/suppressed_fields`, `payloads_mode` | partly |
 | `share` (how to make the other side's copy) | L1 | `report: share_commands` (capsulectl names its own command, as it does `verify_command` today); drawn as words and command text only | absent |
@@ -134,12 +138,16 @@ holder's offer record (section 4).
 | --- | --- | --- |
 | L0 (always visible) | who, what, how many, how much, the outcome per term with whom it waits on, the witness state, one line on what this copy withholds | receipt module |
 | L1 | one line per step, the ruling included, each opening to its sealed fields; the agreement's state; the share line | receipt module |
-| L2 | one check list (the model's `checks`, one name per check everywhere), the witness line that matches L0, the ladder once per page, the raw records | generic runtime |
+| L2 | the core's part first (contract §9): one check list, the witness line, the ladder once per page; then the module's appended detail (raw records) | generic runtime (core), then receipt module |
 
 L1 and L2 are flat sibling panels, never a panel inside a panel (PRD §15.1 item 2). The generic
-runtime keeps only L2 on a receipt page, and on such a page reads `checks` and
-`witness` from the model the module's `buildModel` returned instead of its own, so the banner, the check list and the badge
-say one thing. Its per-record ladder is drawn once and with the receipt pack, not the
+runtime's part of L2 stays the core's: a module "MUST NOT replace, reorder or reword it" and
+may only append after it (`spec/presentation-contract-v0.md:729-731`), and the banner takes no
+module data. So the direction is core to module, never the reverse: capsulectl's checks and its
+witness report reach the core through the existing `verifierReport` option to
+`renderEvidenceGraph` (`ts/src/evidence-graph-view.ts:2903`, read at :3622-3625), the core draws
+the one check list and the witness line from them, and the module's L0 badge cites the core's
+result, so the banner, the check list and the badge say one thing. Its per-record ladder is drawn once and with the receipt pack, not the
 contract-report pack. On a page with no receipt module (a generic AAC bundle) the runtime is
 unchanged.
 
@@ -230,7 +238,7 @@ the existing tamper tests, which require an edited signed copy to be refused
 bundle, with a ruling only in `relied_on`, the ruling at `seq` 1 of the adjudicator's book and the
 dispute at a later `seq` of the holder's), a settled deal (new; `tests/testdata/deal-v1/keep-copy.bundle.json`
 is not settled: `settled` false, its one row `not_due`), a full adjudicator copy (`book.records`), a counterparty copy
-(`counterparty-copy.bundle.json`), a countersigned copy (`tests/testdata/deal-v1/countersigned`, whose nodes resolve to `checked` inputs), an adjudicator copy (rows withheld), and the #461 offer copy.
+(`counterparty-copy.bundle.json`, asserting the causal step order with no times), a countersigned copy (`tests/testdata/deal-v1/countersigned`, whose nodes resolve to `checked` inputs), an adjudicator copy (rows withheld), and the #461 offer copy.
 The full adjudicator fixture asserts every received record is both a step and an L2 raw record.
 The counterparty and adjudicator fixtures also assert that no witness time, record time or
 named-witness column is drawn (u219, u238, u239).
@@ -244,7 +252,7 @@ means for the retire list:
 | Path | Status | Decision |
 | --- | --- | --- |
 | v1 `v1ReportPage` | live, the demo receipt | keep; it is the page this note rebuilds |
-| v0 `dealReportHTML` | live for x-deal-v0 deals only (`deal set-version x-deal-v0`) | **proposed keep**: it is not a second renderer (same emitter, same receipt modules), so the model covers it when the v0 kinds move (PR 4). Sherlock2 proposed retiring it (c987ff76); removing it removes a released verb for v0 deals, so that is a question for Steven (section 8), not decided here |
+| v0 `dealReportHTML` | live for x-deal-v0 deals only (`deal set-version x-deal-v0`) | **proposed keep**: it is not a second renderer (same emitter, same receipt modules), so the model covers it when the v0 kinds move (PR 4). Sherlock2 proposed retiring it (c987ff76); removing it removes a released verb for v0 deals, so it stays; Sherlock2 withdrew its retire item in its review of this note |
 | compose `deal compose --html` + eb `deal-view.js` | reachable, no caller outside tests | **retire** under u224, after evidencebook#850; the site installer change goes first |
 | eb `capsulectl-deal-en.json` `page.*` | feeds compose only: `dealPageBoot` (deal_report.go:589) has one caller, deal_compose_page.go:89, and the v0 report page's bootstrap carries only the verifier report and verify command | retires with compose; nothing moves |
 | book receipts (`--receipts`) | reachable, no caller outside tests; draws v1 receipts with no renderer | keep the flag; evidencebook adds `receipt.Deal` to the modules it loads (report_receipts.go:94-105) with an embedded v1 receipt test (PR 5b). Not on the critical path |
@@ -268,7 +276,7 @@ for that door only; the rest keep building, stacked where needed.
 | --- | --- | --- | --- | --- |
 | 1 | capsule-viewer | the deal kind's `buildModel` fixed in place (`buildDeal`, `dealSteps`, `dealBook`): `Sourced` values; reads an optional `book.offer` (checked by the agreement's offer digest) beside the `deal_offer` input, and `book.records`/`book.received` of a full adjudicator copy; steps from `records` and `book.relied_on` (the ruling a step); statement `names` and dispute bodies drawn; `start` labelled as the agreement's state; each amount once, in its recorded asset. New ruled-dispute fixture from the ARD run's bundle | M | Sherlock2's wording for new lines |
 | 2 | capsule-viewer | the anti-hardcode test (section 5) and the drawer's source tags | M | 1 |
-| 3 | capsule-viewer | runtime on a receipt page: L2 reads the model's `checks` and `witness` (one list, badge and line agree), ladder once per page, record views take the receipt pack, the checked section styled as a card | M | 1 |
+| 3 | capsule-viewer | the core on a receipt page: its banner and L2 check list draw capsulectl's checks and witness report from `verifierReport` (one list; the module's badge cites the core's result; no contract change), ladder once per page, record views take the receipt pack, the checked section styled as a card | M | 1 |
 | 4 | capsule-viewer | the v0 kinds (unilateral, seller, bilateral) and provider onto the same model shape; freeze the Python oracle's output on the refusal, withheld and tamper cases into the receipt golden (u526 step 1); nothing deleted | L | 2 |
 | 5 | evidencebook | bump the capsule-viewer pin to 1's merge; then the keep copy carries `book.offer` (section 4 item 1, profile section 9 updated); the verifier report gives `share_commands` and each row's `waiting_on`; check what `detail_commitment` opens (section 4 item 3); stop sending `deal_offer` only after the pinned viewer reads `book.offer` | M | Steven's go on section 4 item 1; 1 |
 | 5b | evidencebook | book receipts load `receipt.Deal`, with an embedded v1 receipt test | S | 1 |
@@ -286,14 +294,13 @@ coordinator's call (asg-rules standing rule 3).
 
 ## 8. Doors and gates
 
-- **Steven: where the model lives** (delta vs u476, PRD §14.2). Asked by Sherlock2 in 27cb5e16
-  item 1. Every PR in section 7 waits on it. The rest of the model (no schema, no `spec_version`,
-  never sealed) carries no product meaning.
+- **Steven: where neutral profiles' models live** (u476, PRD §14.2), asked by Sherlock2 in the
+  narrower form above. No PR in section 7 emits a model JSON for Muse, so none waits on it; a later
+  one that would, does. The model itself (no schema, no `spec_version`, never sealed) carries no
+  product meaning.
 - **Steven: section 4 items 1 to 4** (what each copy discloses: the offer, the seller's name, the
   delivered quantity, the witness receipt in the keep copy, delta vs u219), and whether u499
   extends to x-deal-v1 copies.
-- **Steven: the v0 page path** (Sherlock2's proposal to retire it, c987ff76). Recommended: keep,
-  since it is not a second renderer.
 - **Steven: the PRD docs PR of PR 12** (u526).
 - Wording for new lines (the withheld line, the share line, "waiting on", the agreement-state
   label) is Sherlock2's under the wording delegation.
