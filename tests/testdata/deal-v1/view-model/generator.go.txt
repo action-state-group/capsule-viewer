@@ -1,0 +1,120 @@
+package deal
+
+// Throwaway: writes capsule-viewer#488's x-deal-v1 fixtures. Not committed to evidencebook.
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/action-state-group/capsule-cli/cli"
+	"github.com/stretchr/testify/require"
+)
+
+func cvOut(t *testing.T, name string) string {
+	dir := os.Getenv("CV488_OUT")
+	if dir == "" {
+		t.Skip("CV488_OUT not set")
+	}
+	out := filepath.Join(dir, name)
+	require.NoError(t, os.MkdirAll(filepath.Dir(out), 0o755))
+	return out
+}
+
+func cvCopy(t *testing.T, from, name string) {
+	raw, err := os.ReadFile(from)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(cvOut(t, name), raw, 0o644))
+}
+
+// The offer record's payload, as capsulectl hands it to the page (deal_offer).
+func cvOfferPayload(t *testing.T, offerFile, name string) {
+	var sent struct {
+		AgentInput json.RawMessage `json:"agent_input"`
+	}
+	require.NoError(t, json.Unmarshal(mustRead(t, offerFile), &sent))
+	require.NotEmpty(t, sent.AgentInput)
+	require.NoError(t, os.WriteFile(cvOut(t, name), sent.AgentInput, 0o644))
+}
+
+// A deal paid and settled for item at amount, the seller saying it was paid as agreed; the buyer's keep copy.
+func cvSettled(t *testing.T, item string, amount int, name string) {
+	v1Fixture(t)
+	h := agreedBoth(t, func(key string) string {
+		return strings.Replace(offerTo(key), `"item": "lamp"`, `"item": "`+item+`"`, 1)
+	})
+	h.buyer.act(t)
+	dealRun(t, "note", "--deal", h.dealID, "--kind", "intent", "--input", writeJSON(t, v1BuyerIntent), "--opening", writeJSON(t, v1Opening))
+	in := fmt.Sprintf(`{"action":"pay","amount_minor":%d,"authorized_max_minor":%d,"terms":{"item":"%s","price_minor":%d,"currency":"USD"},"payment_ref":"%s"}`, amount, amount, item, amount, v1LnHash)
+	out := dealRun(t, "check", "--deal", h.dealID, "--input", writeJSON(t, in))
+	require.Equal(t, "pass", out["verdict"], "%v", out)
+	var check string
+	withSession(t, func(s *dealSession) {
+		journal, err := s.v1DealJournal(t.Context(), h.dealID)
+		require.NoError(t, err)
+		check = checkDigest(t, journal)
+	})
+	dealRun(t, "settle", "--deal", h.dealID, "--check", check, "--sent", "--payment-ref-type", "ln.payment_hash")
+	leg := filepath.Join(t.TempDir(), "leg.json")
+	dealRun(t, "settle", "--deal", h.dealID, "--check", check, "--status", "settled", "--out", leg)
+	stated := filepath.Join(t.TempDir(), "statement.json")
+	dealRun(t, "statement", "--deal", h.dealID, "--statement", "paid_as_agreed=met", "--out", stated)
+	h.seller.act(t)
+	dealRun(t, "receive", leg)
+	dealRun(t, "receive", stated)
+	sstated := filepath.Join(t.TempDir(), "sstatement.json")
+	dealRun(t, "statement", "--deal", h.dealID, "--statement", "paid_as_agreed=met", "--out", sstated)
+	h.buyer.act(t)
+	dealRun(t, "receive", sstated)
+	// Past the row's window, so both sides' "met" is final and the deal settles.
+	clockAt(t, time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC))
+	dealRun(t, "tick")
+	file := filepath.Join(t.TempDir(), "copy.json")
+	dealRun(t, "report", "--deal", h.dealID, "--bundle", file)
+	cvCopy(t, file, name+".bundle.json")
+	cvOfferPayload(t, h.offerFile, name+".offer.json")
+}
+
+func TestCV488SettledLamp(t *testing.T)   { cvSettled(t, "lamp", 4500, "settled") }
+func TestCV488SettledKettle(t *testing.T) { cvSettled(t, "kettle", 4500, "pair/item-b") }
+func TestCV488SettledLess(t *testing.T)   { cvSettled(t, "lamp", 4400, "pair/amount-b") }
+
+// A ruled dispute: the buyer disputes, the adjudicator rules against `against`; the adjudicator copy the buyer cut,
+// the full adjudicator copy the buyer answered with, and the buyer's keep copy after the ruling.
+func cvRuled(t *testing.T, against, name string, full bool) {
+	h, adj := adjudicatedDeal(t)
+	h.buyer.act(t)
+	dispute := filepath.Join(t.TempDir(), "dispute.json")
+	dealRun(t, "dispute", "--deal", h.dealID, "--row", "paid_as_agreed", "--out", dispute)
+	buyerCopy := adjudicatorCopy(t, h.buyer, h.dealID)
+	args := []string{"ruling", "--deal", h.dealID, "--row", "paid_as_agreed", "--value", "not_met", "--against", against, "--final",
+		"--dispute", dispute, "--copy", buyerCopy}
+	if full {
+		cvCopy(t, buyerCopy, "adjudicator-copy.bundle.json")
+		request := adjudicatorRequest(t, h.dealID)
+		answer := filepath.Join(t.TempDir(), "answer.json")
+		h.buyer.act(t)
+		dealRun(t, "respond", "--request", request, "--requester", adj.party.signer, "--output", answer)
+		var a v1Answer
+		require.NoError(t, json.Unmarshal(mustRead(t, answer), &a))
+		require.NoError(t, os.WriteFile(cvOut(t, "full-adjudicator-copy.bundle.json"), a.Bundle, 0o644))
+		args = append(args, "--answer", answer)
+	}
+	adj.act(t)
+	rulingFile := filepath.Join(t.TempDir(), "ruling.json")
+	dealRun(t, append(args, "--out", rulingFile)...)
+	h.buyer.act(t)
+	dealRun(t, "receive", rulingFile)
+	clockAt(t, cli.DealClock().Add(72*time.Hour))
+	dealRun(t, "tick")
+	file := filepath.Join(t.TempDir(), "keep.json")
+	dealRun(t, "report", "--deal", h.dealID, "--bundle", file)
+	cvCopy(t, file, name+".bundle.json")
+}
+
+func TestCV488RuledAgainstSeller(t *testing.T) { cvRuled(t, "seller", "pair/ruled-a", true) }
+func TestCV488RuledAgainstBuyer(t *testing.T)  { cvRuled(t, "buyer", "pair/ruled-b", false) }

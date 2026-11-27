@@ -1767,11 +1767,14 @@
     var ref = get(settlement, "payment_ref");
     return {
       record: id,
+      // Where the leg's members are read: its record's settlement (section 2, money).
+      src: inRecord(id, "/record/settlement"),
       side: side,
       sealer_role: str(get(settlement, "sealer_role")),
       leg: leg,
       status: status,
-      money: LEG_MONEY.filter(function (k) { return own(settlement, k); }).map(function (k) { return [k, legAmount(get(settlement, k))]; }),
+      // Each money member: its name, as an older line says it (legAmount), and as recorded.
+      money: LEG_MONEY.filter(function (k) { return own(settlement, k); }).map(function (k) { return [k, legAmount(get(settlement, k)), get(settlement, k)]; }),
       observed_at: str(get(settlement, "observed_at")),
       payment_ref: isMap(ref) ? { type: or(str(get(ref, "type")), ""), value: or(str(get(ref, "value")), "") } : null,
     };
@@ -1800,7 +1803,10 @@
         // say why no payment record is shown (#432), never for a verdict.
         e.record_type = str(get(map(get(map(get(get(relied, e.record), "payload")), EXTENSION_V1)), "record_type"));
         if (!own(record, "settlement")) return;
-        legs.push(readLeg(record, e.record, e.side));
+        var leg = readLeg(record, e.record, e.side);
+        // Where the side was read: the report's relied_on entry (set by buildDeal before the legs are read).
+        leg.side_src = e.src ? at(e.src, "/side") : null;
+        legs.push(leg);
       });
       return legs;
     });
@@ -1833,6 +1839,11 @@
     var rawRows = get(content, "rows");
     if (!Array.isArray(rawRows)) throw new Unavailable("the v1 report's rows is not an array");
     var rows = rawRows.map(dealRow);
+    // Each row's and each relied_on entry's place in the sealed report, for the drawer's source tags (#488).
+    rows.forEach(function (row, i) {
+      row.src = inRecord(sealed[0], "/agent_input/rows/" + i);
+      row.relied_on.forEach(function (e, j) { e.src = inRecord(sealed[0], "/agent_input/rows/" + i + "/relied_on/" + j); });
+    });
     // A shared copy carries no record time and no named-witness column (u219, u238, u239): not in the model either.
     if (!keep) rows.forEach(function (row) { row.relied_on.forEach(function (e) { e.time = null; e.named_witness = null; }); });
     var book = dealBook(map(get(map(get(v.bundle, "extensions")), EXTENSION_V1)));
@@ -1901,6 +1912,33 @@
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
+      // Where each plain member above that the drawer shows as a value was read (section 2: every value has its
+      // source). These members keep their plain shape because the v0 kinds' drawer helpers share it until PR 4 of
+      // the note moves them. Rows, relied_on entries and legs carry their own (`src`). A member that only picks a
+      // pack line (settled, rows_state, the checks, the witness report) is not shown as a value and has none here.
+      sources: {
+        deal_id: inRecord(sealed[0], "/agent_input/deal_id"),
+        as_of: inRecord(sealed[0], "/agent_input/as_of"),
+        pack_digest: inRecord(sealed[0], "/agent_input/pack_digest"),
+        profile: inRecord(sealed[0], "/agent_input/profile"),
+        log_id: inRecord(sealed[0], "/agent_input/deal_checkpoint/log_id"),
+        checkpoint_size: inRecord(sealed[0], "/agent_input/deal_checkpoint/mmr_size"),
+        own_size: inRecord(sealed[0], "/agent_input/rests_on/own/size"),
+        counted: inRecord(sealed[0], "/agent_input/rests_on/counterparty/counted"),
+        fork_at: inRecord(sealed[0], "/agent_input/rests_on/counterparty/fork_at"),
+        witnesses: inRecord(sealed[0], "/agent_input/rests_on/witnesses"),
+        rows: inRecord(sealed[0], "/agent_input/rows"),
+        // The bundle's digest, which the page binds capsulectl's report to (verifier-report.ts, boundToBundle).
+        bundle_digest: { checked: "bundle_digest" },
+        // capsulectl's report as the page was given it: its verdict, and its x-deal-v1 entry's status.
+        verdict: { report: "capsulectl", path: "/verdict" },
+        report_checked: { report: "x-deal-v1", path: "/status" },
+        // The command the page's maker gave for checking this copy (verifyCommand).
+        verify_command: { report: "verify_command" },
+        // The page's own checks: its classification of each countersignature and of the countersigned copy.
+        countersigned: { checked: "countersigned" },
+        countersigned_copy: { checked: "countersigned_copy" },
+      },
     };
   }
   // A record with its time (`timestamp`) and a leg's observed time (`settlement.observed_at`) left out, for a copy or
@@ -1937,7 +1975,7 @@
       src = function (path) { return inRecord(id, "/payload/body/terms" + path); };
     } else if (isMap(given)) {
       t = terms(given);
-      src = function () { return { report: "deal_offer" }; };
+      src = function (path) { return { report: "deal_offer", path: "/body/terms" + path }; };
     }
     if (t === null) return null;
     var item = str(get(t, "item"));
@@ -2175,7 +2213,8 @@
         time: keep ? sourced(stepTime(at, str(get(record, "timestamp"))), inRecord(id, at !== null && validUtcTime(at) ? "/payload/" + EXTENSION_V1 + "/at" : "/record/timestamp")) : null,
         seq: shown && int(get(block, "seq")) !== null ? sourced(int(get(block, "seq")), inRecord(id, "/payload/" + EXTENSION_V1 + "/seq"))
           : header !== null ? sourced(int(get(header, "seq")), inRecord(id, "/header/seq")) : null,
-        leaf: sourced(int(get(coords, "leaf_index")), { checked: "per_record_membership" }),
+        // The record's leaf, from the inclusion proof the page checked (its per-record membership).
+        leaf: sourced(int(get(coords, "leaf_index")), { checked: "memberships", path: "/" + id + "/log_coordinates/leaf_index" }),
         kind: sourced(kind, inRecord(id, "/payload/" + EXTENSION_V1 + "/record_type")),
         shown: shown,
         role: shown ? sourced(str(get(body, "role")), inRecord(id, "/payload/body/role")) : null,
@@ -2185,9 +2224,10 @@
           if (isMap(get(settlement, k))) acc[k] = sourced(get(settlement, k), inRecord(id, "/record/settlement/" + k));
           return acc;
         }, {}) : {},
-        statements: shown ? sourced(seq(get(body, "statements")).filter(isMap).map(function (st) {
-          return { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")) };
-        }), inRecord(id, "/payload/body/statements")) : null,
+        // Each statement with its place in the record's list (`i`), where the drawer reads it.
+        statements: shown ? sourced(seq(get(body, "statements")).map(function (st, i) {
+          return isMap(st) ? { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")), i: i } : null;
+        }).filter(function (st) { return st !== null; }), inRecord(id, "/payload/body/statements")) : null,
         // The arrived record a statement names (evidencebook xdealv1 StatementNames): a ruling or a cancellation,
         // by its payload digest; `record` is filled below when the copy carries it.
         names: named !== undefined ? sourced({ kind: named, digest: str(get(get(names, named), "digest")), record: null }, inRecord(id, "/payload/body/names/" + named)) : null,
@@ -2762,7 +2802,8 @@
     });
     var head = d.el("thead", {}, [d.el("tr", {}, columns.map(function (c) { return d.el("th", { scope: "col" }, [c]); }))]);
     var body = d.el("tbody", {}, rows.map(function (row) {
-      return d.el("tr", {}, row.map(function (cell, i) { return d.el("td", { "data-label": columns[i] }, [cell]); }));
+      // A column's header may be a marked node (a draw that marks its sources); the label is its text.
+      return d.el("tr", {}, row.map(function (cell, i) { return d.el("td", { "data-label": typeof columns[i] === "string" ? columns[i] : columns[i].textContent }, [cell]); }));
     }));
     return d.el("div", { class: "cv-table-wrap", "data-cv": "data-table" }, [d.el("table", { class: "cv-table" }, [head, body])]);
   };
@@ -2816,13 +2857,112 @@
     if (sharedCarrier(drawCarrier) && own(WORDS, key + ".report")) return WORDS[key + ".report"];
     return own(WORDS, key) ? WORDS[key] : null;
   }
-  function w(key, values) {
+  // A key's text as a string, whatever the draw: for formatters and the v0 drawers.
+  function wText(key, values) {
     var template = word(key);
     if (template === null) return "[" + key + "]";
     return template.replace(PLACEHOLDER, function (_, name) {
       if (!values || !own(values, name)) throw new Error("no value for {" + name + "} in " + key);
       return values[name];
     });
+  }
+  // A key's text: a string, or, while a draw marks its sources (`tagging`, the x-deal-v1 drawer), a node the
+  // anti-hardcode test reads (packNode).
+  function w(key, values) {
+    if (tagging !== null && word(key) !== null) return packNode(tagging, key, values);
+    return wText(key, values);
+  }
+
+  // ---- source tags (the view-model note's section 5, capsule-viewer#488) -----
+  //
+  // While the x-deal-v1 drawer draws, every word it shows is marked with where it came from, so a test can tell a
+  // wording-pack string or a value read from the copy from text the viewer made up:
+  //   * a pack node: `data-src="pack"`, `data-key` the key whose template it is (its ".report" or ".seller" form when
+  //     that was the one used); its text is the template's own, each placeholder a child node marked `data-ph`;
+  //   * a value node: `data-src="field"`, `data-ptr` the value's source (sourceRef) and `data-fmt` the formatter
+  //     (FORMATS) that turned the value into the text shown;
+  //   * a derived node: `data-derive` one of a closed list (DERIVATIONS), `data-ptr` every source it reads,
+  //     space-separated, so the test recomputes it from them;
+  //   * a token: a pack node whose key is the token's prefix and value, `data-ptr` where the value was read.
+  // The marks change no text a reader sees. The v0 and provider drawers are not marked yet (PR 4 of the note).
+  var tagging = null;
+  var TEXT_NODE = 3;
+  function packNode(d, key, values) {
+    var chosen = sharedCarrier(drawCarrier) && own(WORDS, key + ".report") ? key + ".report" : key;
+    var template = WORDS[chosen];
+    var node = d.el("span", { "data-src": "pack", "data-key": chosen });
+    var re = new RegExp(PLACEHOLDER.source, "g"), last = 0, m;
+    while ((m = re.exec(template)) !== null) {
+      if (m.index > last) node.appendChild(d.doc.createTextNode(template.slice(last, m.index)));
+      if (!values || !own(values, m[1])) throw new Error("no value for {" + m[1] + "} in " + key);
+      node.appendChild(placeholderNode(d, m[1], values[m[1]]));
+      last = re.lastIndex;
+    }
+    if (last < template.length) node.appendChild(d.doc.createTextNode(template.slice(last)));
+    return node;
+  }
+  // A placeholder's value: the node it is (marked with the placeholder's name), else a plain span around it, which
+  // the anti-hardcode test refuses since nothing says where its text came from.
+  function placeholderNode(d, name, value) {
+    var node = value !== null && typeof value === "object" && value.nodeType === 1 && !value.hasAttribute("data-ph")
+      ? value : d.el("span", {}, Array.isArray(value) ? value : [value === null || value === undefined ? "" : value]);
+    node.setAttribute("data-ph", name);
+    return node;
+  }
+  // A Sourced value's source as one string: record:<capsule id>#<pointer into its pair>, report:<input>#<pointer>,
+  // checked:<input>#<pointer>, bundle:<pointer>, or pack:<id|sha256>.
+  function sourceRef(src) {
+    if (own(src, "record")) return "record:" + src.record + "#" + src.path;
+    if (own(src, "report")) return "report:" + src.report + "#" + (src.path || "");
+    if (own(src, "checked")) return "checked:" + src.checked + "#" + (src.path || "");
+    if (own(src, "bundle")) return "bundle:" + src.bundle;
+    if (own(src, "pack")) return "pack:" + src.pack;
+    throw new Error("a source with no kind");
+  }
+  // The closed list of formatters a value node's text comes from; each is unit-tested (ts/test).
+  var FORMATS = {
+    // As recorded.
+    text: function (v) { return String(v); },
+    // As recorded, with surrounding white space left out.
+    trim: function (v) { return String(v).trim(); },
+    // A money member ({value, assetCode, assetScale}), once, in its recorded asset (moneyOf).
+    amount: function (v) { return moneyOf(v); },
+    // A record id, digest or key as its short form ("record.short").
+    short: function (v) { return shortText(String(v)); },
+    // A raw record as JSON, and the same with its time and a leg's observed time left out (timeless).
+    json: function (v) { return JSON.stringify(v, null, 2); },
+    json_timeless: function (v) { return JSON.stringify(timeless(v), null, 2); },
+    // A record's time to the second (stepTime): its sealed `at`, else its timestamp without fractions.
+    second: function (v) { return stepTime(null, String(v)); },
+    // A money member as an older line says it (legAmount): value and asset code, scaled.
+    asset: function (v) { return legAmount(v); },
+    // A UTC instant's clock to the minute ("18:56 UTC"), said beside a deadline's local time.
+    utc_minutes: function (v) { return utcClock(String(v), true); },
+    // The proof file's name from the deal id ("<deal>.bundle.json"), quoted for a shell when it is not plain.
+    proof_file: function (v) {
+      var name = (v || "deal") + ".bundle.json";
+      return /^[A-Za-z0-9._-]+$/.test(name) ? name : "'" + name.replace(/'/g, "'\\''") + "'";
+    },
+  };
+  // A value node: the value formatted, marked with its source and formatter.
+  function valueNode(d, value, src, fmt, attrs) {
+    if (!own(FORMATS, fmt)) throw new Error("no formatter " + fmt);
+    return d.el("span", Object.assign({ "data-src": "field", "data-ptr": sourceRef(src), "data-fmt": fmt }, attrs || {}), [FORMATS[fmt](value)]);
+  }
+  // The closed list of values the viewer works out from its sources; the test recomputes each from them.
+  //   count: how many sources it lists (each must resolve);
+  //   length: how many items the one array it names holds;
+  //   count_where: how many items of the one array it names have `data-where` (member=value);
+  //   ordinal: its row's place in its list (1-based), the closest li or tr;
+  //   leaves: the leaves an MMR of the size its one source gives holds (mmrLeaves);
+  //   key: the last member name of its one source (a settlement member's name);
+  //   named: the short id of the record (second source) whose payload digest is the digest a statement names (first);
+  //   book: on a pack node, whose book a record is in: its signing key (first source) is the agreement's own key,
+  //     its counterparty_key or its adjudicator's key (second source), and the key says which.
+  var DERIVATIONS = ["count", "length", "count_where", "ordinal", "leaves", "key", "named", "book"];
+  function derivedNode(d, how, text, srcs, attrs) {
+    if (DERIVATIONS.indexOf(how) < 0) throw new Error("no derivation " + how);
+    return d.el("span", Object.assign({ "data-src": "field", "data-derive": how, "data-ptr": srcs.map(sourceRef).join(" ") }, attrs || {}), [String(text)]);
   }
 
   // ---- drawing: one copy (module.py, seller.py) ------------------------------
@@ -2849,21 +2989,28 @@
   P.p = function (text, attrs) { return this.d.el("p", attrs, [text]); };
   P.note = function (text, attrs) { return this.d.el("p", Object.assign({ class: "cv-muted" }, attrs || {}), [text]); };
   // module.py's time_el, _timed, _short, _short_id, _fact_value and checked_note.
-  P.timeEl = function (at) {
+  // A time: a data-time span the page says in the reader's zone, or the value as stored. While the draw is marked
+  // (`tagging`) and the time's source is given, the span is itself the value node (the time to the second, "second").
+  P.timeEl = function (at, src) {
     var shown = plainTime(at);
-    return shown !== at ? this.d.el("span", { "data-time": at }, [shown]) : at;
+    var marks = tagging !== null && src ? { "data-src": "field", "data-ptr": sourceRef(src), "data-fmt": "second" } : null;
+    if (shown !== at) return this.d.el("span", Object.assign({ "data-time": at }, marks || {}), [shown]);
+    return marks !== null ? this.d.el("span", marks, [at]) : at;
   };
-  P.timed = function (key, at, values) {
+  P.timed = function (key, at, values, src) {
+    // A marked draw gives the time as the {at} placeholder's node, and its other values as nodes.
+    if (tagging !== null) return w(key, Object.assign({}, values || {}, { at: this.timeEl(at, src) }));
     var clean = {};
     Object.keys(values || {}).forEach(function (k) { clean[k] = values[k].split(TIME_MARK).join(""); });
     var parts = w(key, Object.assign({ at: TIME_MARK }, clean)).split(TIME_MARK);
     if (parts.length < 2) return parts[0];
     return [parts[0], this.timeEl(at), parts.slice(1).join(TIME_MARK)];
   };
-  P.short = function (id) {
+  function shortText(id) {
     if (id.length <= SHORT_HEAD + SHORT_TAIL + 1) return id;
-    return w("record.short", { head: id.slice(0, SHORT_HEAD), tail: id.slice(-SHORT_TAIL) });
-  };
+    return wText("record.short", { head: id.slice(0, SHORT_HEAD), tail: id.slice(-SHORT_TAIL) });
+  }
+  P.short = function (id) { return shortText(id); };
   P.shortId = function (id) { return this.d.el("span", { class: "cv-mono", "data-capsule-id": id }, [this.short(id)]); };
   P.factValue = function (f) {
     var d = this.d;
@@ -2964,9 +3111,9 @@
   P.copyNotes = function (model) {
     var parts = [];
     var aud = model.report.audience;
-    if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: model.report.withheld.join(", ") }), { "data-shared": aud }));
+    if (SHARED_AUDIENCES.indexOf(aud) >= 0) parts.push(this.p(w("shared." + aud, { kinds: this.withheldKinds(model) }), { "data-shared": aud }));
     if (model.referee) parts.push(this.p(w("referee.named", { referee: model.referee }), { "data-rung": "referee" }));
-    if (model.report.scope) parts.push(this.p(model.report.scope, { "data-sealed-text": "scope" }));
+    if (model.report.scope) parts.push(this.p(tagging !== null ? this.val(model.report.scope, inRecord(model.report.capsule_id, "/agent_input/report/scope")) : model.report.scope, { "data-sealed-text": "scope" }));
     if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
     parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     // Only a half capsulectl reported as verified is said; any other status,
@@ -2979,6 +3126,14 @@
     if (model.settlement) parts.push(this.p(this.settlement(model.settlement), { "data-rung": "settlement", "data-settlement": model.settlement.state }));
     if (testMoney(model)) parts.push(this.p(w("money.test"), { class: "cv-tone--caution", "data-test-money": "true" }));
     return parts;
+  };
+  // The kinds of record a shared copy withholds, as its sealed report lists them; in a marked draw, each read from
+  // the report's `withheld` list.
+  P.withheldKinds = function (model) {
+    var rep = model.report;
+    if (tagging === null) return rep.withheld.join(", ");
+    var self = this;
+    return this.joined(rep.withheld.map(function (k, i) { return self.val(k, inRecord(rep.capsule_id, "/agent_input/report/withheld/" + i)); }), "comma");
   };
   // The holder's own copy drawn for the holder: neither a shared copy nor a
   // page or report shown to others. Its lines may say "your".
@@ -3042,7 +3197,11 @@
   P.countersign = function (model) {
     // A two-sided copy is not unsigned by the other party: its half is above.
     if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : "countersign.none");
-    return w("countersign.some", { statuses: model.countersignatures.join(", ") });
+    // Each status as the page's own check of that countersignature gave it (the context's countersignatures).
+    var self = this;
+    var statuses = tagging === null ? model.countersignatures.join(", ")
+      : this.joined(model.countersignatures.map(function (st, i) { return self.val(st, { checked: "countersignatures", path: "/" + i + "/status" }); }), "comma");
+    return w("countersign.some", { statuses: statuses });
   };
   // Line 9 (capsule-viewer#383): the countersign rung capsulectl verify
   // resolved against the directory it was given, one line per
@@ -3624,59 +3783,96 @@
 
   // ---- drawing: the v1 deal receipt -----------------------------------------
 
-  P.token = function (prefix, value) {
+  // A recorded token in words: the pack's word for it when the pack has one, else the token as recorded. Marked, it
+  // is a pack node whose `data-ptr` is where the token was read, or a value node.
+  P.token = function (prefix, value, src) {
     var text = word(prefix + "." + value);
+    if (tagging !== null && src) {
+      if (text === null) return this.val(value, src, "text");
+      var node = w(prefix + "." + value);
+      node.setAttribute("data-ptr", sourceRef(src));
+      return node;
+    }
     return text !== null ? text : value;
   };
+  // A value read from the copy, formatted (FORMATS) and marked with its source.
+  P.val = function (value, src, fmt, attrs) { return valueNode(this.d, value, src, fmt || "text", attrs); };
+  // A source one step further in: a member of the value `src` names.
+  function at(src, suffix) {
+    var out = Object.assign({}, src);
+    out.path = (src.path || "") + suffix;
+    return out;
+  }
+  // Nodes joined by a pack separator ("deal.sep.<kind>": "list" is "; ", "dot" " · "), marked as a list
+  // (`data-src="list"`): its items, each a marked node, between separators.
+  P.joined = function (parts, kind) {
+    var out = [];
+    parts.forEach(function (p, i) { if (i) out.push(w("deal.sep." + kind)); out.push(p); });
+    return this.d.el("span", { "data-src": "list" }, out);
+  };
+  // A word said mid-sentence: its first letter lower-cased, marked so the test reads its template the same way.
+  function lowerNode(node) {
+    if (node === null || typeof node !== "object") return lowerFirst(node);
+    node.setAttribute("data-case", "lower-first");
+    var first = node.firstChild;
+    while (first !== null && first.nodeType !== TEXT_NODE) first = first.firstChild;
+    if (first !== null) first.nodeValue = lowerFirst(first.nodeValue);
+    return node;
+  }
   P.dealState = function (model) {
     var d = this.d;
     var start = vof(model.agreement);
     // The report's start is the agreement's state, said as that (section 2, agreement.state), then "settled" or
     // nothing: no close, no done (section 9).
     var parts = [this.agreementState(model)];
-    if (start.state === "started" && model.settled) parts.push(" · ", d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
+    if (start.state === "started" && model.settled) parts.push(w("deal.sep.dot"), d.el("span", { "data-settled": "true" }, [w("deal.settled")]));
     var line = d.el("span", { "data-deal-state": start.state }, parts);
     // A started deal not yet settled also says where its terms stand, as the rows below give them, so
     // the value never reads behind the terms ("Started" beside two terms met, #430). It counts the
     // statuses shown, beside the deal-level line and outside it: it is not a deal state and claims no close.
     if (start.state === "started" && !model.settled && model.rows_state === "listed" && model.rows.length) {
-      return [line, " · ", d.el("span", { "data-deal-terms": "true" }, [this.termsTally(model.rows)])];
+      return [line, w("deal.sep.dot"), d.el("span", { "data-deal-terms": "true" }, [this.termsTally(model)])];
     }
     return line;
   };
   // "Agreement: Started": the agreement's own state, never a word for where the deal's terms stand.
-  P.agreementState = function (model) { return w("deal.agreement.state", { state: lowerFirst(this.token("deal.state", vof(model.agreement).state)) }); };
+  P.agreementState = function (model) {
+    return w("deal.agreement.state", { state: lowerNode(this.token("deal.state", vof(model.agreement).state, at(model.agreement.src, "/state"))) });
+  };
   // "Terms: Both say the same so far (2 of 2)": each status the rows give, in the rows' order, with its count.
-  P.termsTally = function (rows) {
-    var self = this, order = [], counts = {};
-    rows.forEach(function (row) {
-      if (!own(counts, row.status)) { order.push(row.status); counts[row.status] = 0; }
-      counts[row.status] += 1;
-    });
-    var total = String(rows.length);
-    return w("deal.state.terms", { tally: order.map(function (status) {
-      return w("deal.state.terms.count", { status: self.token("deal.status", status), count: String(counts[status]), total: total });
-    }).join("; ") });
+  P.termsTally = function (model) {
+    var self = this, d = this.d, rows = model.rows, order = [];
+    rows.forEach(function (row) { if (order.indexOf(row.status) < 0) order.push(row.status); });
+    var all = model.sources.rows;
+    return w("deal.state.terms", { tally: this.joined(order.map(function (status) {
+      var first = rows.find(function (r) { return r.status === status; });
+      return w("deal.state.terms.count", {
+        status: self.token("deal.status", status, at(first.src, "/status")),
+        count: derivedNode(d, "count_where", rows.filter(function (r) { return r.status === status; }).length, [all], { "data-where": "status=" + status }),
+        total: derivedNode(d, "length", rows.length, [all]),
+      });
+    }), "list") });
   };
   // A term by its name in words (#429). The page holds no terms pack (section 9, "Row text"), so the
   // wording pack words the profile's known term ids, as a stand-in (Sherlock2, #437): once a deal
   // terms pack carries term text, the pack's name wins over these. Any other id is shown as it is. The id stays on
   // the element. A name or a side breaks between words, never inside one (receipt.css).
-  P.termName = function (id) {
-    var text = word("deal.term." + id);
-    if (text === null) return this.d.el("span", { class: "cv-mono", "data-row-id": id }, [id]);
-    return this.d.el("span", { class: "cv-receipt-word", "data-row-id": id, title: id }, [text]);
+  P.termName = function (id, src) {
+    // A row the record names by no term id (a dispute's cited statements carry only digests): nothing to say.
+    if (id === "") return this.d.el("span", { class: "cv-mono", "data-row-id": id });
+    if (word("deal.term." + id) === null) return this.d.el("span", { class: "cv-mono", "data-row-id": id }, [this.val(id, src)]);
+    return this.d.el("span", { class: "cv-receipt-word", "data-row-id": id, title: id }, [this.token("deal.term", id, src)]);
   };
-  P.sideWord = function (side) { return this.d.el("span", { class: "cv-receipt-word", "data-side": side }, [this.token("deal.side", side)]); };
+  P.sideWord = function (side, src) { return this.d.el("span", { class: "cv-receipt-word", "data-side": side }, [this.token("deal.side", side, src)]); };
   P.dealHeadline = function (model) {
-    var d = this.d;
+    var d = this.d, S = model.sources;
     var out = [this.kit.metricGrid([{ label: w("l0.state"), value: this.dealState(model) }])];
     var start = vof(model.agreement);
-    if (start.by !== null) out.push(this.note(w("deal.start.by", { by: this.token("deal.start.by", start.by) }), { "data-start-by": start.by }));
+    if (start.by !== null) out.push(this.note(w("deal.start.by", { by: this.token("deal.start.by", start.by, at(model.agreement.src, "/by")) }), { "data-start-by": start.by }));
     if (start.local) out.push(this.note(w("deal.local"), { "data-local": "start" }));
     if (model.rows_state !== "listed") out.push(this.note(w("deal.rows." + model.rows_state), { "data-rows-state": model.rows_state }));
     // Times in the reader's own zone where the page has a script (#423); the data keeps UTC.
-    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of) : w("deal.as_of", { at: model.as_of });
+    var asOf = !model.as_of ? w("deal.as_of", { at: w("deal.no_time") }) : validUtcTime(model.as_of) ? this.timed("deal.as_of", model.as_of, {}, S.as_of) : w("deal.as_of", { at: this.val(model.as_of, S.as_of) });
     out.push(this.note(asOf, { "data-as-of": model.as_of }));
     return d.el("div", { "data-headline": "true" }, out);
   };
@@ -3684,27 +3880,28 @@
   // date-only value is shown as stored, since converting it would move the day.
   // A deadline also says its UTC time beside the local one, since a short
   // zone name is ambiguous (Sherlock2, #423).
-  P.dateText = function (value) {
+  P.dateText = function (value, src) {
     if (value === "not_set") return w("deal.date.not_set");
-    if (!validUtcTime(value)) return value;
-    return this.d.el("span", {}, [this.timeEl(value), " (" + utcClock(value, true) + ")"]);
+    if (!validUtcTime(value)) return this.val(value, src);
+    return this.d.el("span", {}, [w("deal.date.with_utc", { local: this.timeEl(value, src), utc: this.val(value, src, "utc_minutes") })]);
   };
   // An x-deal-v1 time: the reader's zone for a real UTC instant, else as stored.
-  P.v1Time = function (value) { return validUtcTime(value) ? this.timeEl(value) : value; };
+  P.v1Time = function (value, src) { return validUtcTime(value) ? this.timeEl(value, src) : this.val(value, src); };
+  P.dash = function () { return w("deal.dash"); };
   P.rowDetail = function (row) {
     var bits = [];
     // A ruled term shows the ruling's value, not a statement value: a statement's value is not the ruling's.
-    if (row.value !== null && row.status !== "ruled") bits.push(w("deal.row.value", { value: this.token("deal.value", row.value) }));
-    if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy) }));
+    if (row.value !== null && row.status !== "ruled") bits.push(w("deal.row.value", { value: this.token("deal.value", row.value, at(row.src, "/value")) }));
+    if (row.remedy !== null) bits.push(w("deal.row.remedy", { remedy: this.token("deal.remedy", row.remedy, at(row.src, "/remedy")) }));
     if (row.remedy === "not_counted" && row.remedy_made) bits.push(w("deal.row.remedy_made"));
     if (row.ruling !== null) {
-      var value = this.token("deal.value", row.ruling.value);
+      var value = this.token("deal.value", row.ruling.value, at(row.src, "/ruling/value"));
       // `against` is buyer, seller or null (anything else declined the report); null: the ruling alone.
-      bits.push(row.ruling.against !== null ? w("deal.row.ruling", { value: value, side: this.token("deal.side", row.ruling.against) }) : w("deal.row.ruling.bare", { value: value }));
+      bits.push(row.ruling.against !== null ? w("deal.row.ruling", { value: value, side: this.token("deal.side", row.ruling.against, at(row.src, "/ruling/against")) }) : w("deal.row.ruling.bare", { value: value }));
     }
-    bits.push(w("deal.row.check", { check: this.token("deal.check", row.check) }));
+    bits.push(w("deal.row.check", { check: this.token("deal.check", row.check, at(row.src, "/check")) }));
     if (row.local) bits.push(w("deal.local"));
-    return bits.join("; ");
+    return this.joined(bits, "list");
   };
   P.dealRows = function (model) {
     var d = this.d, self = this;
@@ -3712,16 +3909,25 @@
     if (!model.rows.length) return [this.note(w("deal.rows.none"), { "data-rows-state": "listed" })];
     var rows = model.rows.map(function (row) {
       return [
-        self.termName(row.id),
-        self.sideWord(row.owed_by),
-        d.el("span", { "data-row-status": row.status }, [self.token("deal.status", row.status)]),
-        self.dateText(row.due),
-        self.dateText(row.window_end),
+        self.termName(row.id, at(row.src, "/id")),
+        self.sideWord(row.owed_by, at(row.src, "/owed_by")),
+        d.el("span", { "data-row-status": row.status }, [self.token("deal.status", row.status, at(row.src, "/status"))]),
+        self.dateText(row.due, at(row.src, "/due")),
+        self.dateText(row.window_end, at(row.src, "/window_end")),
         self.rowDetail(row),
       ];
     });
     return [this.kit.dataTable([w("deal.col.row"), w("deal.col.owed_by"), w("deal.col.status"), w("deal.col.due"), w("deal.col.window_end"), w("deal.col.detail")], rows),
       this.note(w("deal.rows.note"))];
+  };
+  // A leg's money members, each by its member name and as recorded ("amount 1000 BTC").
+  P.legMembers = function (leg) {
+    var d = this.d, self = this;
+    if (!leg.money.length) return this.dash();
+    return this.joined(leg.money.map(function (m) {
+      var src = at(leg.src, "/" + m[0]);
+      return d.el("span", {}, [derivedNode(d, "key", m[0], [src]), " ", self.val(m[2], src, "asset")]);
+    }), "list");
   };
   // The payment legs the rows relied on, each as its record states it (evidencebook#588). No leg is picked
   // and no verdict is drawn from one: the check above stays the only verdict.
@@ -3732,24 +3938,24 @@
     var rows = [];
     function cells(leg, lead) {
       return lead.concat([
-        leg.leg,
-        leg.status,
-        leg.money.length ? leg.money.map(function (m) { return m[0] + " " + m[1]; }).join("; ") : "-",
+        self.val(leg.leg, at(leg.src, "/leg")),
+        self.val(leg.status, at(leg.src, "/status")),
+        self.legMembers(leg),
         // A record's time only on the holder's own page (Sherlock2, u239).
-        leg.observed_at !== null && self.ownPage(model) ? self.v1Time(leg.observed_at) : w("deal.no_time"),
-        leg.payment_ref !== null ? leg.payment_ref.type + " " + leg.payment_ref.value : "-",
-        d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [leg.record]),
+        leg.observed_at !== null && self.ownPage(model) ? self.v1Time(leg.observed_at, at(leg.src, "/observed_at")) : w("deal.no_time"),
+        leg.payment_ref !== null ? d.el("span", {}, [self.val(leg.payment_ref.type, at(leg.src, "/payment_ref/type")), " ", self.val(leg.payment_ref.value, at(leg.src, "/payment_ref/value"))]) : self.dash(),
+        d.el("span", { class: "cv-mono", "data-leg-record": leg.record }, [self.val(leg.record, inRecord(leg.record, "/record/capsule_id"))]),
       ]);
     }
     var head = [w(withheld ? "deal.col.sealer" : "deal.col.leg_side"), w("deal.col.leg"), w("deal.col.leg_status"), w("deal.col.amount"), w("deal.col.observed"), w("deal.col.payment_ref"), w("deal.col.record")];
     if (withheld) {
       // The rows are withheld, so no record is tied to a term: the side is the settlement's own sealer_role.
-      model.withheld_legs.forEach(function (leg) { rows.push(cells(leg, [leg.sealer_role !== null ? leg.sealer_role : "-"])); });
+      model.withheld_legs.forEach(function (leg) { rows.push(cells(leg, [leg.sealer_role !== null ? self.val(leg.sealer_role, at(leg.src, "/sealer_role")) : self.dash()])); });
     } else {
       head.unshift(w("deal.col.row"));
       model.rows.forEach(function (row) {
         row.legs.forEach(function (leg) {
-          rows.push(cells(leg, [self.termName(row.id), self.sideWord(leg.side)]));
+          rows.push(cells(leg, [self.termName(row.id, at(row.src, "/id")), self.sideWord(leg.side, leg.side_src)]));
         });
       });
     }
@@ -3775,33 +3981,33 @@
     return statements === types.length ? "statements" : statements ? "mixed" : "other";
   }
   P.dealL1 = function (model) {
+    var S = model.sources;
     return [
-      this.note(w("summary.standalone", { status: model.report_checked === null ? "-" : model.report_checked }), { "data-sealed": "x-deal-report" }),
+      this.note(w("summary.standalone", { status: model.report_checked === null ? this.dash() : this.val(model.report_checked, S.report_checked) }), { "data-sealed": "x-deal-report" }),
       this.note(w("deal.report.scope")),
       this.kit.section(w("deal.section.rows"), this.dealRows(model)),
     ].concat(this.dealLegs(model));
   };
   P.dealL2 = function (model) {
-    var d = this.d, kit = this.kit, self = this;
+    var d = this.d, kit = this.kit, self = this, S = model.sources;
     var out = [kit.verificationDetails(model.verification)];
     if (model.bundle_digest) {
-      out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
+      out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [this.val(model.bundle_digest, S.bundle_digest)])]));
     }
     // Each record's time and named-witness flag are the holder's own report's (VerifyReport checks only
     // that a record is witnessed exactly when it has a time). Only the holder's own page shows them; a
     // counterparty's or adjudicator's copy, or a page shown to others, lists the records without them
     // (Sherlock2, u239). This table is the only place a relied_on time is drawn.
     var witnessColumns = this.ownPage(model);
-    // The yes says whose word it is (#424): this page checked no witness receipt. The pack's bare
-    // "deal.named_witness.yes" stays as the frozen pack has it (packAddsOnly).
-    var yes = w("deal.named_witness.report.own");
     var basis = [];
     model.rows.forEach(function (row) {
       row.relied_on.forEach(function (e) {
-        var cells = [self.termName(row.id), d.el("span", { class: "cv-mono" }, [e.record]), self.sideWord(e.side)];
+        var cells = [self.termName(row.id, at(row.src, "/id")), d.el("span", { class: "cv-mono" }, [self.val(e.record, at(e.src, "/record"))]), self.sideWord(e.side, at(e.src, "/side"))];
         // The time in the reader's zone, as the header's (#431).
-        if (witnessColumns) cells.push(e.time !== null ? self.v1Time(e.time) : w("deal.no_time"),
-          d.el("span", { "data-named-witness": e.named_witness ? "yes" : "no" }, [e.named_witness ? yes : w("deal.named_witness.no")]));
+        // The yes says whose word it is (#424): this page checked no witness receipt. The pack's bare
+        // "deal.named_witness.yes" stays as the frozen pack has it (packAddsOnly).
+        if (witnessColumns) cells.push(e.time !== null ? self.v1Time(e.time, at(e.src, "/time")) : w("deal.no_time"),
+          d.el("span", { "data-named-witness": e.named_witness ? "yes" : "no" }, [w(e.named_witness ? "deal.named_witness.report.own" : "deal.named_witness.no")]));
         basis.push(cells);
       });
     });
@@ -3812,16 +4018,16 @@
       : [this.note(w("deal.basis.none"))];
     out.push(kit.section(w("deal.section.basis"), inner, 3));
     var rest = [];
-    if (model.pack_digest) rest.push(this.note(w("deal.pack_digest"), { "data-pack": "true" }), d.el("p", { class: "cv-mono" }, [model.pack_digest]));
+    if (model.pack_digest) rest.push(this.note(w("deal.pack_digest"), { "data-pack": "true" }), d.el("p", { class: "cv-mono" }, [this.val(model.pack_digest, S.pack_digest)]));
     var r = model.rests_on;
-    if (r.own_size !== null) rest.push(this.note(w("deal.rests.own", { size: String(r.own_size) })));
+    if (r.own_size !== null) rest.push(this.note(w("deal.rests.own", { size: this.val(r.own_size, S.own_size) })));
     if (r.counterparty !== null) {
-      rest.push(this.note(w("deal.rests.counterparty", { counted: r.counterparty.counted === null ? "-" : String(r.counterparty.counted) })));
-      if (r.counterparty.fork_at) rest.push(this.note(w("deal.rests.fork", { at: String(r.counterparty.fork_at) })));
+      rest.push(this.note(w("deal.rests.counterparty", { counted: r.counterparty.counted === null ? this.dash() : this.val(r.counterparty.counted, S.counted) })));
+      if (r.counterparty.fork_at) rest.push(this.note(w("deal.rests.fork", { at: this.val(r.counterparty.fork_at, S.fork_at) })));
     }
     if (r.counterparty_layer !== null) rest.push(this.note(w(r.counterparty_layer ? "deal.rests.layer" : "deal.rests.no_layer")));
-    if (r.witnesses !== null) rest.push(this.note(w("deal.rests.witnesses", { count: String(r.witnesses) })));
-    rest.push(this.note(w("wording.provenance", { id: PACK.id, sha: PACK.sha256 || "-" })));
+    if (r.witnesses !== null) rest.push(this.note(w("deal.rests.witnesses", { count: derivedNode(d, "length", r.witnesses, [S.witnesses]) })));
+    rest.push(this.note(w("wording.provenance", { id: this.val(PACK.id, { pack: "id" }), sha: PACK.sha256 ? this.val(PACK.sha256, { pack: "sha256" }) : this.dash() })));
     out.push(kit.section(w("deal.section.rests"), rest, 3));
     return out;
   };
@@ -3983,21 +4189,24 @@
     });
     return link;
   };
+  // The row of the report a term id names, for where its words were read.
+  function rowOf(model, id) { return model.rows.find(function (r) { return r.id === id; }) || null; }
 
   P.topLine = function (model, verdict) {
     var d = this.d;
     var key = "deal.top." + verdict.line;
     var values = {};
-    if (verdict.term) values.term = word("deal.term." + verdict.term) || verdict.term;
-    var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
+    var row = verdict.term ? rowOf(model, verdict.term) : null;
+    if (verdict.term) values.term = this.token("deal.term", verdict.term, at(row.src, "/id"));
+    var text = verdict.line === "terms" ? this.termsTally(model) : this.say(model, key, values);
     var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
     // What the deal was for, from the holder's own sealed offer (#461); the seller is not named: no record
     // the agreement cites seals the seller's name yet (evidencebook#1031, ruled yes in u561 item 3), and a key id is
     // never drawn as one. An offer the copy carries (book.offer) is shown on every copy it travels in (u499; u561
     // items 2 and 5); one capsulectl
     // gave beside the copy (deal_offer) is not in it, so only the holder's own page shows it.
-    if (model.item !== null && (model.item.src.report !== "deal_offer" || this.ownPage(model))) line.push(this.p(w("deal.hero.item", { item: model.item.value }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
-    if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
+    if (model.item !== null && (model.item.src.report !== "deal_offer" || this.ownPage(model))) line.push(this.p(w("deal.hero.item", { item: this.val(model.item.value, model.item.src, "trim") }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
+    if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy, at(row.src, "/remedy")) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
     if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
     var parts = [];
     if (verdict.mood !== null) parts.push(this.seal(verdict.mood));
@@ -4006,18 +4215,19 @@
   };
 
   P.surfaceCards = function (model, verdict) {
-    var d = this.d;
+    var d = this.d, S = model.sources;
     var cards = [];
     var leg = ownLeg(model);
     if (leg !== null) {
       var amountKey = model.role === "seller" ? "received" : "amount";
       // Said as recorded, never in the page's own voice: the page checks no payment proof (u203).
-      var recorded = leg.status === "settled" ? w(model.role === "seller" ? "deal.card.payment.received" : "deal.card.payment.settled") : w("deal.card.payment.status", { status: leg.status });
+      var recorded = leg.status === "settled" ? w(model.role === "seller" ? "deal.card.payment.received" : "deal.card.payment.settled") : w("deal.card.payment.status", { status: this.val(leg.status, at(leg.src, "/status")) });
       cards.push({ key: "paid", label: w("deal.card.payment"), value: this.legMoney(model, leg, amountKey), note: recorded });
     } else if (ownLegs(model).length > 1) {
-      cards.push({ key: "paid", label: w("deal.card.payment"), value: w("deal.card.payment.several", { count: String(ownLegs(model).length) }), note: null });
+      var several = ownLegs(model);
+      cards.push({ key: "paid", label: w("deal.card.payment"), value: w("deal.card.payment.several", { count: derivedNode(d, "count", several.length, several.map(function (s) { return s.leg.src; })) }), note: null });
     }
-    cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of) : null });
+    cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of, {}, S.as_of) : null });
     // The other side's half, named by side only when the copy's own agreement says which side the holder is.
     if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.checked" : "deal.card.other.none"), note: null });
     return d.el("div", { class: "cv-rcpt-cards", "data-surface": "cards" }, cards.map(function (c) {
@@ -4031,19 +4241,19 @@
     if (verdict.mood === "done") return w("deal.card.status.done");
     var rows = model.rows_state === "listed" ? model.rows : [];
     var first = rows.length ? rows[0].status : null;
-    if (first !== null && vof(model.agreement).state === "started" && rows.every(function (r) { return r.status === first; })) return this.token("deal.status", first);
+    if (first !== null && vof(model.agreement).state === "started" && rows.every(function (r) { return r.status === first; })) return this.token("deal.status", first, at(rows[0].src, "/status"));
     // Else the agreement's own state, labelled as that, never "Started" as the deal's status beside a ruled term.
     return this.agreementState(model);
   };
   P.legMoney = function (model, leg, key) {
     var step = model.sealed_steps.find(function (s) { return vof(s.leg) === leg; });
-    var m = step ? vof(step.money[key]) : null;
-    return m ? moneyOf(m) : "-";
+    var m = step && own(step.money, key) ? step.money[key] : null;
+    return m ? this.val(m.value, m.src, "amount") : this.dash();
   };
 
   // The three stamps (Muse design §3.3, as #382 item 14 words them), each from its own evidence.
   P.stamps = function (model) {
-    var d = this.d, self = this;
+    var d = this.d, self = this, S = model.sources;
     var checks = model.checks;
     var recorded;
     var checkpoint = checks !== null && own(checks, "checkpoint") ? checks.checkpoint.status : null;
@@ -4052,7 +4262,8 @@
     else if (checkpoint !== "pass") recorded = { state: "open" };
     else {
       var leaves = mmrLeaves(model.checkpoint_size), size = model.rests_on.own_size;
-      recorded = leaves !== null && size !== null && leaves < size ? { state: "partial", k: leaves, n: size } : { state: "filled" };
+      recorded = leaves !== null && size !== null && leaves < size
+        ? { state: "partial", k: derivedNode(d, "leaves", leaves, [S.checkpoint_size]), n: this.val(size, S.own_size) } : { state: "filled" };
     }
     var witness = this.timeStamp(model);
     var counter = this.countersigned(model);
@@ -4060,11 +4271,11 @@
     return d.el("ul", { class: "cv-rcpt-stamps", "data-surface": "stamps" }, items.map(function (it) {
       var name = it[0], s = it[1];
       var values = {};
-      if (s.k !== undefined) { values.k = String(s.k); values.n = String(s.n); }
+      if (s.k !== undefined) { values.k = s.k; values.n = s.n; }
       if (s.witness !== undefined) values.witness = s.witness;
       if (s.signer !== undefined) values.signer = s.signer;
       var key = "deal.stamp." + name + "." + (s.words || s.state);
-      var text = s.at !== undefined ? self.timed(key, s.at, values) : w(key, values);
+      var text = s.at !== undefined ? self.timed(key, s.at, values, s.at_src) : w(key, values);
       return d.el("li", { class: "cv-rcpt-stamp cv-rcpt-stamp--" + (s.state === "filled" ? "filled" : "open"), "data-stamp": name, "data-stamp-state": s.state }, [
         d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [text]),
       ]);
@@ -4080,17 +4291,24 @@
     // decides the stamp even when a countersignature on this very bundle failed: the copy is the
     // signed one the page checked (Sherlock2 on #457). Unless the signer's directory row lists it as
     // independent of both parties, the line says the row does not (u649).
+    var S = model.sources;
     var copy = model.countersigned_copy;
     var copyAt = copy ? stepTime(null, copy.at) : null;
-    if (copy && copyAt !== null && validUtcTime(copyAt)) return { state: "filled", words: copy.independent ? "filled_copy" : "filled_copy_not_listed", signer: copy.name, at: copyAt, k: copy.k, n: copy.n };
+    if (copy && copyAt !== null && validUtcTime(copyAt)) {
+      return { state: "filled", words: copy.independent ? "filled_copy" : "filled_copy_not_listed", signer: this.val(copy.name, at(S.countersigned_copy, "/name")),
+        at: copyAt, at_src: at(S.countersigned_copy, "/at"), k: this.val(copy.k, at(S.countersigned_copy, "/k")), n: this.val(copy.n, at(S.countersigned_copy, "/n")) };
+    }
     var list = model.countersigned;
     if (list === null) return model.countersignatures.length ? { state: "not_checked" } : { state: "open" };
     var given = list.filter(function (c) { return c.kind !== "hollow"; });
     if (!given.length) return { state: "open" };
     // AAC's classifier keeps the signer's own time, fractions of a second included; the page says it to the second.
-    var secondOf = function (at) { var t = at !== null ? stepTime(null, at) : null; return t !== null && validUtcTime(t) ? t : null; };
+    var secondOf = function (t) { var s = t !== null ? stepTime(null, t) : null; return s !== null && validUtcTime(s) ? s : null; };
     var resolved = given.find(function (c) { return c.kind === "resolved" && c.name !== null && secondOf(c.at) !== null; });
-    if (resolved) return { state: "filled", signer: resolved.name, at: secondOf(resolved.at) };
+    if (resolved) {
+      var i = list.indexOf(resolved);
+      return { state: "filled", signer: this.val(resolved.name, at(S.countersigned, "/" + i + "/name")), at: secondOf(resolved.at), at_src: at(S.countersigned, "/" + i + "/at") };
+    }
     if (given.some(function (c) { return c.kind === "invalid"; })) return { state: "failed" };
     if (given.some(function (c) { return c.kind === "not-independent"; })) return { state: "self" };
     if (given.some(function (c) { return c.kind === "unresolved-signer"; })) return { state: "unresolved" };
@@ -4120,21 +4338,24 @@
   // "What happened, step by step": one row per record the copy carries, each opening to what it records.
   // A term by its name in words, lower-cased mid-sentence ("Final ruling on delivery"); null when the record names none.
   function lowerFirst(text) { return typeof text === "string" && text ? text.charAt(0).toLowerCase() + text.slice(1) : text; }
-  P.termWord = function (id) { return id === null ? null : lowerFirst(word("deal.term." + id) || id); };
+  P.termWord = function (id, src) { return id === null ? null : lowerNode(this.token("deal.term", id, src)); };
   // A line about a step, in the voice of the book it is in: the holder's (say: "You", or "The holder" when shown to
   // others) or the other side's (".other").
   P.stepSay = function (model, step, key, values) { return vof(step.book) === "other" ? w(key + ".other", values) : this.say(model, key, values); };
+  // A record's own Capsule id, where the copy holds it.
+  function idSrc(id) { return inRecord(id, "/record/capsule_id"); }
   P.stepTitle = function (model, step) {
     if (!step.shown) return w("deal.step.withheld");
     var kind = vof(step.kind), leg = vof(step.leg), self = this;
     if (kind === "agree") return w("deal.step.agree");
     if (kind === "settle" && leg !== null) {
       var payee = leg.leg.indexOf("payee") === 0;
-      var raw = this.rawMoney(step, payee ? "received" : "amount");
-      var amount = raw !== null ? moneyOf(raw) : "-";
-      if (step.refund) return w("deal.step.settle.refund", { amount: amount, status: leg.status });
+      var money = this.rawMoney(step, payee ? "received" : "amount");
+      var amount = money !== null ? this.val(money.value, money.src, "amount") : this.dash();
+      var status = this.val(leg.status, at(leg.src, "/status"));
+      if (step.refund) return w("deal.step.settle.refund", { amount: amount, status: status });
       // "Paid" only for a leg recorded as settled: a pending, failed or reversed one says its status.
-      if (leg.status !== "settled") return w("deal.step.settle.status", { amount: amount, status: leg.status });
+      if (leg.status !== "settled") return w("deal.step.settle.status", { amount: amount, status: status });
       return w(payee ? "deal.step.settle.payee" : "deal.step.settle.payer", { amount: amount });
     }
     if (kind === "statement") {
@@ -4144,79 +4365,105 @@
       if (names !== null) {
         var named = names.record !== null ? model.sealed_steps.find(function (o) { return o.record === names.record; }) : null;
         var ruling = named ? vof(named.ruling) : null;
-        var term = ruling !== null ? this.termWord(ruling.row) : null;
+        var term = ruling !== null ? this.termWord(ruling.row, at(named.ruling.src, "/row")) : null;
         var key = "deal.step.names." + names.kind + (names.kind === "ruling" && term === null ? ".unread" : "");
         parts.push(this.stepSay(model, step, key, { term: term }));
       }
       var said = (vof(step.statements) || []).map(function (st) {
-        return (word("deal.term." + st.row) || st.row) + ": " + (st.value !== null ? self.token("deal.value", st.value) : w("deal.value.unread"));
-      }).join("; ");
+        var src = at(step.statements.src, "/" + st.i);
+        return w("deal.term_value", { term: self.token("deal.term", st.row, at(src, "/row")), value: st.value !== null ? self.token("deal.value", st.value, at(src, "/value")) : w("deal.value.unread") });
+      });
       // A statement says its terms too when it carries any, beside a ruling it names; one with neither is said so.
-      if (said) parts.push(this.stepSay(model, step, "deal.step.statement", { said: said }));
+      if (said.length) parts.push(this.stepSay(model, step, "deal.step.statement", { said: this.joined(said, "list") }));
       if (!parts.length) parts.push(w("deal.step.statement.empty"));
-      return parts.join(" · ");
+      return this.joined(parts, "dot");
     }
     if (kind === "dispute") {
       var dispute = vof(step.dispute);
-      var dterm = this.termWord(dispute.row);
+      var dterm = this.termWord(dispute.row, at(step.dispute.src, "/row"));
       if (dispute.kind === "challenge") return this.stepSay(model, step, "deal.step.dispute.challenge", {});
       if ((dispute.kind === "dispute" || dispute.kind === "withdrawal") && dterm !== null) return this.stepSay(model, step, "deal.step.dispute." + dispute.kind, { term: dterm });
-      return w("deal.step.dispute.other", { kind: dispute.kind || kind });
+      return w("deal.step.dispute.other", { kind: dispute.kind ? this.val(dispute.kind, at(step.dispute.src, "/kind")) : this.val(kind, step.kind.src) });
     }
     if (kind === "ruling") {
-      var r = vof(step.ruling);
-      var rterm = this.termWord(r.row);
+      var r = vof(step.ruling), rsrc = step.ruling.src;
+      var rterm = this.termWord(r.row, at(rsrc, "/row"));
       if (rterm === null || r.value === null) return w("deal.step.kind.ruling");
-      var values = { term: rterm, value: this.token("deal.value", r.value), side: r.against !== null ? this.token("deal.side", r.against) : null };
+      var values = { term: rterm, value: this.token("deal.value", r.value, at(rsrc, "/value")), side: r.against !== null ? this.token("deal.side", r.against, at(rsrc, "/against")) : null };
       return w("deal.step.ruling" + (r.against !== null ? ".against" : "") + (r.final ? ".final" : ""), values);
     }
-    if (kind === "perform") return w("deal.step.perform", { act: vof(step.act) !== null ? vof(step.act) : "-" });
+    if (kind === "perform") return w("deal.step.perform", { act: vof(step.act) !== null ? this.val(vof(step.act), step.act.src) : this.dash() });
     var known = kind !== null ? word("deal.step.kind." + kind) : null;
-    return known !== null ? known : w("deal.step.other", { kind: kind || "-" });
+    return known !== null ? w("deal.step.kind." + kind) : w("deal.step.other", { kind: kind ? this.val(kind, step.kind.src) : this.dash() });
   };
-  P.rawMoney = function (step, key) { return step.money && own(step.money, key) ? vof(step.money[key]) : null; };
+  P.rawMoney = function (step, key) { return step.money && own(step.money, key) ? step.money[key] : null; };
+  // Whose book a record is in, in words, marked with the two keys that say so: the record's signing key and the
+  // agreement's key it matches (its own, its counterparty_key or its adjudicator's).
+  P.bookWord = function (model, step) {
+    var book = vof(step.book);
+    var node = book === "holder" ? this.say(model, "deal.book.holder") : w("deal.book." + book);
+    var agree = model.sealed_steps.find(function (s) { return vof(s.kind) === "agree"; });
+    if (agree && node && typeof node === "object") {
+      var path = book === "holder" ? "/record/key_id" : book === "other" ? "/payload/body/counterparty_key" : "/payload/body/adjudicator/key_id";
+      node.setAttribute("data-derive", "book");
+      node.setAttribute("data-ptr", [sourceRef(step.book.src), sourceRef(inRecord(agree.record, path))].join(" "));
+    }
+    return node;
+  };
   P.stepDrawer = function (model, step) {
     var d = this.d, self = this;
     var kind = vof(step.kind), leg = vof(step.leg);
-    var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [kind !== null ? kind : w("deal.drawer.kind.withheld")])]];
-    if (vof(step.book) !== null) rows.push([w("deal.drawer.book"), vof(step.book) === "holder" ? this.say(model, "deal.book.holder") : w("deal.book." + vof(step.book))]);
-    if (vof(step.time) !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(vof(step.time))]);
+    var rows = [[w("deal.drawer.kind"), d.el("span", { class: "cv-mono" }, [kind !== null ? this.val(kind, step.kind.src) : w("deal.drawer.kind.withheld")])]];
+    if (vof(step.book) !== null) rows.push([w("deal.drawer.book"), this.bookWord(model, step)]);
+    if (vof(step.time) !== null && this.ownPage(model)) rows.push([w("deal.drawer.time"), this.v1Time(vof(step.time), step.time.src)]);
     if (leg !== null) {
-      rows.push([w("deal.drawer.leg"), leg.leg + " · " + leg.status]);
+      rows.push([w("deal.drawer.leg"), this.joined([this.val(leg.leg, at(leg.src, "/leg")), this.val(leg.status, at(leg.src, "/status"))], "dot")]);
       leg.money.forEach(function (m) {
-        var raw = self.rawMoney(step, m[0]);
-        rows.push([m[0], raw !== null ? moneyOf(raw) : m[1]]);
+        var money = self.rawMoney(step, m[0]), src = at(leg.src, "/" + m[0]);
+        rows.push([derivedNode(d, "key", m[0], [src]), money !== null ? self.val(money.value, money.src, "amount") : self.val(m[2], src, "asset")]);
       });
-      if (leg.payment_ref !== null) rows.push([w("deal.drawer.payment_ref"), d.el("span", { class: "cv-mono" }, [leg.payment_ref.type + " " + self.short(leg.payment_ref.value)])]);
+      if (leg.payment_ref !== null) rows.push([w("deal.drawer.payment_ref"), d.el("span", { class: "cv-mono" }, [this.val(leg.payment_ref.type, at(leg.src, "/payment_ref/type")), " ", this.val(leg.payment_ref.value, at(leg.src, "/payment_ref/value"), "short")])]);
     }
-    (vof(step.statements) || []).forEach(function (st) { rows.push([self.termName(st.row), st.value !== null ? self.token("deal.value", st.value) : "-"]); });
+    (vof(step.statements) || []).forEach(function (st) {
+      var src = at(step.statements.src, "/" + st.i);
+      rows.push([self.termName(st.row, at(src, "/row")), st.value !== null ? self.token("deal.value", st.value, at(src, "/value")) : self.dash()]);
+    });
     var dispute = vof(step.dispute), ruling = vof(step.ruling), names = vof(step.names);
     if (dispute !== null) {
-      if (dispute.row !== null) rows.push([w("deal.drawer.term"), this.termName(dispute.row)]);
-      if (dispute.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [dispute.forum])]);
-      if (dispute.adjudicator !== null) rows.push([w("deal.drawer.adjudicator"), d.el("span", { class: "cv-mono", title: dispute.adjudicator }, [this.short(dispute.adjudicator)])]);
+      var ds = step.dispute.src;
+      if (dispute.row !== null) rows.push([w("deal.drawer.term"), this.termName(dispute.row, at(ds, "/row"))]);
+      if (dispute.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [this.val(dispute.forum, at(ds, "/forum"))])]);
+      if (dispute.adjudicator !== null) rows.push([w("deal.drawer.adjudicator"), d.el("span", { class: "cv-mono", title: dispute.adjudicator }, [this.val(dispute.adjudicator, at(ds, "/adjudicator"), "short")])]);
     }
     if (ruling !== null) {
-      if (ruling.row !== null) rows.push([w("deal.drawer.term"), this.termName(ruling.row)]);
-      rows.push([w("deal.drawer.ruling"), ruling.value !== null ? this.token("deal.value", ruling.value) : "-"]);
-      rows.push([w("deal.drawer.against"), ruling.against !== null ? this.sideWord(ruling.against) : w("deal.drawer.against.none")]);
+      var rs = step.ruling.src;
+      if (ruling.row !== null) rows.push([w("deal.drawer.term"), this.termName(ruling.row, at(rs, "/row"))]);
+      rows.push([w("deal.drawer.ruling"), ruling.value !== null ? this.token("deal.value", ruling.value, at(rs, "/value")) : this.dash()]);
+      rows.push([w("deal.drawer.against"), ruling.against !== null ? this.sideWord(ruling.against, at(rs, "/against")) : w("deal.drawer.against.none")]);
       rows.push([w("deal.drawer.final"), w(ruling.final ? "deal.drawer.final.yes" : "deal.drawer.final.no")]);
       // The remedy's kind in words where the pack has them, else as recorded, in mono.
-      if (ruling.remedy !== null && ruling.remedy.kind !== null) rows.push([w("deal.drawer.remedy"), word("deal.remedy." + ruling.remedy.kind) !== null ? w("deal.remedy." + ruling.remedy.kind) : d.el("span", { class: "cv-mono" }, [ruling.remedy.kind])]);
-      if (ruling.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [ruling.forum])]);
+      if (ruling.remedy !== null && ruling.remedy.kind !== null) {
+        var kindSrc = at(rs, "/remedy/kind");
+        rows.push([w("deal.drawer.remedy"), word("deal.remedy." + ruling.remedy.kind) !== null ? this.token("deal.remedy", ruling.remedy.kind, kindSrc) : d.el("span", { class: "cv-mono" }, [this.val(ruling.remedy.kind, kindSrc)])]);
+      }
+      if (ruling.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [this.val(ruling.forum, at(rs, "/forum"))])]);
     }
-    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [this.short(names.record)]) : w("deal.drawer.names.unread")]);
-    if (kind === "agree" && vof(step.role) !== null) rows.push([w("deal.drawer.role"), this.sideWord(vof(step.role))]);
+    // The record a statement names: shown by its id, marked with the digest the statement names and the record whose
+    // payload has that digest ("named"), so the test checks the statement names it.
+    if (names !== null) rows.push([w("deal.drawer.names." + names.kind), names.record !== null ? d.el("span", { class: "cv-mono", title: names.record }, [
+      derivedNode(d, "named", shortText(names.record), [at(step.names.src, "/digest"), idSrc(names.record)]),
+    ]) : w("deal.drawer.names.unread")]);
+    if (kind === "agree" && vof(step.role) !== null) rows.push([w("deal.drawer.role"), this.sideWord(vof(step.role), step.role.src)]);
     var id = d.el("details", { class: "cv-rcpt-id", "data-record-id": step.record }, [
-      d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.short(step.record)]), " · ", kind !== null ? kind : w("deal.drawer.kind.withheld")]),
-      d.el("code", { class: "cv-mono cv-rcpt-fullid" }, [step.record]),
+      d.el("summary", {}, [d.el("span", { class: "cv-mono" }, [this.val(step.record, idSrc(step.record), "short")]), w("deal.sep.dot"), kind !== null ? this.val(kind, step.kind.src) : w("deal.drawer.kind.withheld")]),
+      d.el("code", { class: "cv-mono cv-rcpt-fullid" }, [this.val(step.record, idSrc(step.record))]),
     ]);
     var place = [];
-    if (vof(step.seq) !== null) place.push(w("deal.drawer.seq", { seq: String(vof(step.seq)) }));
-    if (vof(step.leaf) !== null) place.push(w("deal.drawer.leaf", { leaf: String(vof(step.leaf)) }));
+    if (vof(step.seq) !== null) place.push(w("deal.drawer.seq", { seq: this.val(vof(step.seq), step.seq.src) }));
+    if (vof(step.leaf) !== null) place.push(w("deal.drawer.leaf", { leaf: this.val(vof(step.leaf), step.leaf.src) }));
     return [
       d.el("dl", { class: "cv-rcpt-fields" }, rows.map(function (r) { return d.el("div", { class: "cv-rcpt-field" }, [d.el("dt", {}, [r[0]]), d.el("dd", {}, [r[1]])]); })),
-      d.el("div", { class: "cv-rcpt-record" }, [d.el("span", { class: "cv-rcpt-record__label" }, [w("deal.drawer.record")]), id].concat(place.length ? [d.el("span", { class: "cv-mono cv-muted" }, [place.join(" · ")])] : [])),
+      d.el("div", { class: "cv-rcpt-record" }, [d.el("span", { class: "cv-rcpt-record__label" }, [w("deal.drawer.record")]), id].concat(place.length ? [d.el("span", { class: "cv-mono cv-muted" }, [this.joined(place, "dot")])] : [])),
     ];
   };
   P.timeline = function (model) {
@@ -4224,15 +4471,16 @@
     var steps = model.sealed_steps;
     // Each step's time only on the holder's own page (Sherlock2, u239).
     var own = this.ownPage(model);
-    var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w(steps.length === 1 ? "deal.steps.lede.one" : "deal.steps.lede", { count: String(steps.length) }))];
+    var count = derivedNode(d, "count", steps.length, steps.map(function (s) { return idSrc(s.record); }));
+    var head = [d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.steps")]), this.note(w(steps.length === 1 ? "deal.steps.lede.one" : "deal.steps.lede", { count: count }))];
     if (!steps.length) return d.el("section", { class: "cv-rcpt-panel", "data-surface": "steps" }, head.concat([this.note(w("deal.steps.none"))]));
     var list = d.el("ol", { class: "cv-rcpt-steps" }, steps.map(function (step, i) {
       return d.el("li", { class: "cv-rcpt-step", "data-step": String(i + 1), "data-step-kind": vof(step.kind) || "withheld", "data-step-record": step.record }, [
         d.el("details", {}, [
           d.el("summary", {}, [
-            d.el("span", { class: "cv-rcpt-step__n", "aria-hidden": "true" }, [String(i + 1)]),
+            d.el("span", { class: "cv-rcpt-step__n", "aria-hidden": "true" }, [derivedNode(d, "ordinal", i + 1, [idSrc(step.record)])]),
             d.el("span", { class: "cv-rcpt-step__title" }, [self.stepTitle(model, step)]),
-            d.el("span", { class: "cv-rcpt-step__time" }, [vof(step.time) !== null && own ? self.v1Time(vof(step.time)) : ""]),
+            d.el("span", { class: "cv-rcpt-step__time" }, [vof(step.time) !== null && own ? self.v1Time(vof(step.time), step.time.src) : ""]),
           ]),
           d.el("div", { class: "cv-rcpt-step__drawer" }, self.stepDrawer(model, step)),
         ]),
@@ -4277,13 +4525,15 @@
     ];
     return d.el("section", { class: "cv-rcpt-panel", "data-surface": "proof" }, parts);
   };
+  // A check row. The rows are the core's to draw on a receipt page (PR 3 of the view-model note), so they are not
+  // marked here (the anti-hardcode test leaves them out).
   P.proofRow = function (name, status, text, note) {
     var d = this.d;
     var mark = status === "pass" ? "✓" : status === "fail" ? "✗" : "–";
     var parts = [
       d.el("span", { class: "cv-rcpt-mark cv-rcpt-mark--" + status, "aria-hidden": "true" }, [mark]),
       d.el("span", { class: "cv-rcpt-proof__text" }, [
-        d.el("span", { class: "cv-rcpt-sr" }, [w("deal.proof.status." + status) + ": "]),
+        d.el("span", { class: "cv-rcpt-sr" }, [wText("deal.proof.status." + status) + ": "]),
         d.el("span", { class: "cv-rcpt-proof__label" }, [text]),
         d.el("span", { class: "cv-mono cv-rcpt-proof__code" }, [name.replace(/_/g, " ")]),
       ].concat(note ? [d.el("span", { class: "cv-rcpt-proof__note" }, [note])] : [])),
@@ -4291,20 +4541,23 @@
     return d.el("li", { class: "cv-rcpt-proof__row", "data-check": name, "data-check-status": status }, parts);
   };
   P.checkYourself = function (model) {
-    var d = this.d;
+    var d = this.d, S = model.sources;
     var parts = [d.el("div", { class: "cv-rcpt-h4" }, [w("deal.check.title")])];
     // capsulectl's command checks the file it was given (this page); the downloaded proof file is checked
     // by name, quoted for a shell when it is not plain.
     if (model.verify_command !== null) {
-      parts.push(this.note(w("deal.check.page")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "page" }, [model.verify_command])]));
+      parts.push(this.note(w("deal.check.page")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "page" }, [this.val(model.verify_command, S.verify_command)])]));
     }
     if (model.proof_file !== null) {
-      var name = proofName(model);
-      var quoted = /^[A-Za-z0-9._-]+$/.test(name) ? name : "'" + name.replace(/'/g, "'\\''") + "'";
-      parts.push(this.note(w("deal.check.download")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "download" }, ["capsulectl deal verify --bundle " + quoted])]));
+      parts.push(this.note(w("deal.check.download")), d.el("pre", { class: "cv-rcpt-command" }, [d.el("code", { "data-verify-command": "download" }, [
+        w("deal.check.download.command", { file: this.val(model.deal_id, S.deal_id, "proof_file") }),
+      ])]));
     }
     if (model.verify_command === null && model.proof_file === null) parts.push(this.note(w("deal.check.no_command")));
-    if (model.bundle_digest) parts.push(this.note(w("deal.check.expect", { verdict: model.verdict || "VALID", fingerprint: this.short(model.bundle_digest) }), { "data-expect": model.bundle_digest }));
+    if (model.bundle_digest) {
+      var verdict = model.verdict ? this.val(model.verdict, S.verdict) : w("deal.check.expect.verdict");
+      parts.push(this.note(w("deal.check.expect", { verdict: verdict, fingerprint: this.val(model.bundle_digest, S.bundle_digest, "short") }), { "data-expect": model.bundle_digest }));
+    }
     if (model.proof_file !== null) parts.push(this.proofDownload(model, "cv-rcpt-button"));
     return d.el("div", { class: "cv-rcpt-check", "data-surface": "check" }, parts);
   };
@@ -4322,7 +4575,9 @@
     var problems = rows.filter(function (r) { return r.status === "in_dispute" || r.status === "in_disagreement" || (r.ruling !== null && r.ruling.value === "not_met"); });
     var self = this;
     var problemText = model.rows_state === "withheld" ? w("deal.else.problems.withheld") : problems.length
-      ? problems.map(function (r) { return (word("deal.term." + r.id) || r.id) + ": " + self.token("deal.status", r.status); }).join("; ")
+      ? this.joined(problems.map(function (r) {
+        return w("deal.term_value", { term: self.token("deal.term", r.id, at(r.src, "/id")), value: self.token("deal.status", r.status, at(r.src, "/status")) });
+      }), "list")
       : w("deal.else.problems.none");
     var tiles = [
       { key: "problems", label: w("deal.else.problems"), text: problemText },
@@ -4339,25 +4594,25 @@
   P.surfaceFooter = function (model) {
     var parts = [w("deal.footer.times")];
     parts.push(" ", this.ownPage(model) ? w("deal.footer.private") : w("deal.footer.shared"));
-    if (model.as_of && validUtcTime(model.as_of)) parts.push(" ", this.timed("deal.footer.after", model.as_of));
+    if (model.as_of && validUtcTime(model.as_of)) parts.push(" ", this.timed("deal.footer.after", model.as_of, {}, model.sources.as_of));
     return this.d.el("p", { class: "cv-rcpt-footer", "data-surface": "footer" }, parts);
   };
 
   // "For checkers: every sealed record": each record once, then the copy's own facts.
   P.recordTable = function (model) {
-    var d = this.d, self = this;
+    var d = this.d, self = this, S = model.sources;
     var rows = model.sealed_steps.map(function (step, i) {
-      return [String(i + 1), self.stepTitle(model, step), d.el("span", { class: "cv-mono" }, [vof(step.kind) !== null ? vof(step.kind) : "-"]),
-        d.el("span", { class: "cv-mono" }, [(vof(step.seq) !== null ? String(vof(step.seq)) : "-") + " · " + (vof(step.leaf) !== null ? String(vof(step.leaf)) : "-")]),
-        d.el("span", { class: "cv-mono", "data-inventory-record": step.record, title: step.record }, [self.short(step.record)]),
+      return [derivedNode(d, "ordinal", i + 1, [idSrc(step.record)]), self.stepTitle(model, step), d.el("span", { class: "cv-mono" }, [vof(step.kind) !== null ? self.val(vof(step.kind), step.kind.src) : self.dash()]),
+        d.el("span", { class: "cv-mono" }, [self.joined([vof(step.seq) !== null ? self.val(vof(step.seq), step.seq.src) : self.dash(), vof(step.leaf) !== null ? self.val(vof(step.leaf), step.leaf.src) : self.dash()], "dot")]),
+        d.el("span", { class: "cv-mono", "data-inventory-record": step.record, title: step.record }, [self.val(step.record, idSrc(step.record), "short")]),
         w(step.shown ? "deal.inventory.shown" : "deal.inventory.withheld")];
     });
     var facts = [
-      [w("deal.inventory.log"), model.log_id !== null ? d.el("span", { class: "cv-mono" }, [model.log_id]) : w("deal.inventory.not_recorded")],
-      [w("deal.inventory.fingerprint"), model.bundle_digest ? d.el("span", { class: "cv-mono" }, [model.bundle_digest]) : w("deal.inventory.not_recorded")],
-      [w("deal.inventory.profile"), d.el("span", { class: "cv-mono" }, [EXTENSION_V1])],
+      [w("deal.inventory.log"), model.log_id !== null ? d.el("span", { class: "cv-mono" }, [this.val(model.log_id, S.log_id)]) : w("deal.inventory.not_recorded")],
+      [w("deal.inventory.fingerprint"), model.bundle_digest ? d.el("span", { class: "cv-mono" }, [this.val(model.bundle_digest, S.bundle_digest)]) : w("deal.inventory.not_recorded")],
+      [w("deal.inventory.profile"), d.el("span", { class: "cv-mono" }, [this.val(EXTENSION_V1, S.profile)])],
       [w("deal.inventory.producer"), w("deal.inventory.not_recorded")],
-      [w("deal.inventory.pack"), d.el("span", { class: "cv-mono" }, [PACK.id])],
+      [w("deal.inventory.pack"), d.el("span", { class: "cv-mono" }, [this.val(PACK.id, { pack: "id" })])],
     ];
     return [
       rows.length ? this.kit.dataTable([w("deal.col.step"), w("deal.col.what"), w("deal.col.kind"), w("deal.col.place"), w("deal.col.record"), w("deal.col.shown")], rows) : this.note(w("deal.steps.none")),
@@ -4367,7 +4622,8 @@
 
   // The raw record of each record the copy carries only in its x-deal-v1 book (a ruling held in relied_on, a full
   // adjudicator copy's records and received): the runtime draws the bundle's own records, so every step has its raw
-  // record (section 2, records[]), appended after the core's part of L2 (contract section 9).
+  // record (section 2, records[]), appended after the core's part of L2 (contract section 9). A page that shows no
+  // record time leaves the time out of the raw record too (json_timeless).
   P.bookRecords = function (model) {
     var d = this.d, self = this;
     var extra = model.records.filter(function (r) { return r.src.bundle.indexOf("/records/") !== 0; });
@@ -4377,13 +4633,22 @@
     return [this.kit.section(w("deal.section.book_records"), [this.note(w(lede))].concat(extra.map(function (r) {
       var id = or(str(get(r.value, "capsule_id")), "");
       return d.el("details", { class: "cv-rcpt-id", "data-book-record": id, "data-ptr": r.src.bundle }, [
-        d.el("summary", {}, [d.el("span", { class: "cv-mono", title: id }, [self.short(id)])]),
-        d.el("pre", { class: "cv-mono cv-rcpt-raw" }, [JSON.stringify(own ? r.value : timeless(r.value), null, 2)]),
+        d.el("summary", {}, [d.el("span", { class: "cv-mono", title: id }, [self.val(id, idSrc(id), "short")])]),
+        d.el("pre", { class: "cv-mono cv-rcpt-raw" }, [self.val(r.value, r.src, own ? "json" : "json_timeless")]),
       ]);
     })), 3)];
   };
+  // The x-deal-v1 drawer marks every word it shows with its source (`tagging`, section 5 of the view-model note).
   function drawDeal(doc, depth, model) {
     var dr = new Drawer(doc, depth, false);
+    tagging = dr.d;
+    try {
+      return drawDealTagged(dr, depth, model);
+    } finally {
+      tagging = null;
+    }
+  }
+  function drawDealTagged(dr, depth, model) {
     var d = dr.d;
     var verdict = dealVerdict(model);
     var main = d.el("div", { class: "cv-rcpt-main" }, [dr.timeline(model), dr.elseHere(model)]);
@@ -4979,6 +5244,9 @@
     providerUtc: providerUtc,
     plainTime: plainTime,
     localTimes: localTimes,
+    // The anti-hardcode test's formatters and derivations (capsule-viewer#488), unit-tested there.
+    FORMATS: FORMATS,
+    DERIVATIONS: DERIVATIONS,
     bundleVerified: bundleVerified,
   };
   if (typeof root.EvidenceGraph !== "undefined" && root.EvidenceGraph && typeof root.EvidenceGraph.registerPresentation === "function") {
