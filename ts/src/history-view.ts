@@ -2044,7 +2044,9 @@ function drawCardParts(f: CardFrame): CardParts {
               say(
                 sig === "pass"
                   ? "card.not_proven.true.unnamed"
-                  : "card.module.not_proven.true.unsigned",
+                  : sig === "none"
+                    ? "card.module.not_proven.true.unsigned.none"
+                    : "card.module.not_proven.true.unsigned",
               )
             : say("card.not_proven.true", { name }),
       ),

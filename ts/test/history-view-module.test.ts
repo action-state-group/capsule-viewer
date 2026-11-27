@@ -476,6 +476,21 @@ describe("Codex round 1 (#478): the signature claim, accepted entries, sources a
     }
   });
 
+  it("says nobody signed a card that carries no signature", async () => {
+    const b = bundleOf(DATA, "person-shared");
+    const root = b.records.find((r: Json) => r.capsule_id === b.root);
+    delete root.signature;
+    delete root.key_id;
+    const model = await buildHistoryViewModel(
+      await buildVerifiedBundleContext(b),
+    );
+    expect(model.signature?.value.status).toBe("NOT_PRESENT");
+    const l1 = draw(model).L1.textContent ?? "";
+    expect(l1).toContain(words["card.module.not_proven.true.unsigned.none"]);
+    expect(l1).toContain(words["card.module.signed.none"]);
+    expect(l1).not.toContain(words["card.module.not_proven.true.unsigned"]);
+  });
+
   it("keeps the reading's diagnostics on a card whose signature fails", async () => {
     const b = bundleOf(DATA, "neg-window-not-in-policy");
     const root = b.records.find((r: Json) => r.capsule_id === b.root);
