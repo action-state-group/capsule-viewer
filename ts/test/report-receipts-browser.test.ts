@@ -146,6 +146,9 @@ describe.skipIf(executablePath === undefined)(
       writeFileSync(file, html);
       await page.goto(`file://${file}`);
       await page.waitForSelector('[data-claim-ref="d1::req-1"]');
+      // The page's own verification section is drawn last, after the module
+      // that drew the claims has settled (#425): wait for it too.
+      await page.waitForSelector("#cv-checked", { state: "attached" });
       const violations = await page.evaluate(
         () =>
           (globalThis as unknown as { __violations: string[] }).__violations,
