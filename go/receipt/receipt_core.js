@@ -3745,7 +3745,7 @@
     }
     cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of) : null });
     // The other side's half, named by side only when the copy's own agreement says which side the holder is.
-    if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.verified" : "deal.card.other.none"), note: null });
+    if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.checked" : "deal.card.other.none"), note: null });
     return d.el("div", { class: "cv-rcpt-cards", "data-surface": "cards" }, cards.map(function (c) {
       var parts = [d.el("div", { class: "cv-rcpt-card__label" }, [c.label]), d.el("div", { class: "cv-rcpt-card__value" }, [c.value])];
       if (c.note) parts.push(d.el("div", { class: "cv-rcpt-card__note" }, [c.note]));
@@ -3838,7 +3838,7 @@
     if (!this.ownPage(model)) return { state: "not_checked" };
     var book = model.book_witnessed;
     if (book === null) return { state: "not_checked" };
-    if (book.status === "verified") return { state: "filled", at: book.at, witness: book.witness };
+    if (book.status === "verified") return { state: "filled", words: "filled_checked", at: book.at, witness: book.witness };
     if (book.status === "failed") return { state: "failed" };
     return { state: "open" };
   };
@@ -3930,11 +3930,19 @@
       var status = statuses[i] === null ? "absent" : ["pass", "fail", "withheld"].indexOf(statuses[i]) >= 0 ? statuses[i] : "absent";
       return self.proofRow(name, status, w("deal.proof." + name), null);
     });
+    // The other side's signed agreement, as capsulectl verify reported it (the card says only that it
+    // was checked; this panel carries the attribution, #461). Drawn only when capsulectl reported on it.
+    var half = model.counterparty_half === "verified" ? "pass" : model.counterparty_half === "failed" ? "fail" : null;
+    if (half !== null) rows.push(this.proofRow("counterparty_half", half, this.say(model, "deal.proof.counterparty_half"), null));
     var stamp = this.timeStamp(model);
     var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
-    // The summary counts every row it shows: any failed row, the time stamp included, makes it "failed".
-    if (stampState === "fail") lede = "deal.proof.lede.failed";
-    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
+    // The summary counts every row it shows: any failed row, the agreement and the time stamp included,
+    // makes it "failed". With no per-test answer but a row capsulectl did answer, the lede still names
+    // capsulectl as the source of the rows it shows.
+    if (stampState === "fail" || half === "fail") lede = "deal.proof.lede.failed";
+    else if (lede === "deal.proof.lede.none" && (stampState === "pass" || half === "pass")) lede = "deal.proof.lede.answers.some";
+    if (lede === "deal.proof.lede.failed") lede = "deal.proof.lede.answers.failed";
+    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled_checked", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
     rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
     var parts = [
       d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.proof")]),
@@ -3995,7 +4003,7 @@
       { key: "problems", label: w("deal.else.problems"), text: problemText },
       { key: "whose", label: w("deal.else.whose"), text: this.say(model, "deal.else.whose.text") },
     ];
-    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.say(model, "deal.else.half.text") });
+    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.say(model, "deal.else.half.checked") });
     return d.el("section", { class: "cv-rcpt-panel", "data-surface": "else" }, [
       d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.else")]),
       d.el("div", { class: "cv-rcpt-tiles" }, tiles.map(function (t) {
