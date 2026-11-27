@@ -51,6 +51,30 @@ export const FIXTURES: readonly Fixture[] = [
   plain("keep-copy", "offer"),
   plain("same-checkpoint", "countersigned"),
   plain("later-checkpoint", "countersigned"),
+  // The view-model note's section 5 fixtures (view-model/README.md): a settled deal given its offer and a verify
+  // command beside the copy, an adjudicator copy, a full adjudicator copy, and the differential pairs.
+  {
+    ...plain("settled", "view-model"),
+    name: "view-model/settled+given",
+    options: () => ({
+      dealOffer: read("view-model", "settled.offer.json"),
+      verifyCommand: "capsulectl deal verify --page receipt.html",
+    }),
+  },
+  plain("adjudicator-copy", "view-model"),
+  plain("full-adjudicator-copy", "view-model"),
+  {
+    ...plain("settled", "view-model"),
+    options: () => ({ dealOffer: read("view-model", "settled.offer.json") }),
+  },
+  ...["item-b", "amount-b"].map((name) => ({
+    ...plain(name, "view-model/pair"),
+    options: () => ({
+      dealOffer: read("view-model", "pair", `${name}.offer.json`),
+    }),
+  })),
+  plain("ruled-a", "view-model/pair"),
+  plain("ruled-b", "view-model/pair"),
   {
     ...plain("same-checkpoint", "countersigned"),
     name: "countersigned/same-checkpoint+copy",

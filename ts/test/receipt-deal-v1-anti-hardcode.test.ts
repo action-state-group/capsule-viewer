@@ -349,12 +349,106 @@ describe("no literal from a fixture is in the receipt's code or its pack", () =>
         .filter((f) => f.endsWith(".ts"))
         .map((f) => resolvePath(ROOT, "ts", "src", f)),
     ];
+    // A literal counts as a whole word ("lamp" is not in "clamp").
+    const word = (l: string): RegExp =>
+      new RegExp(
+        `(?<![A-Za-z0-9])${l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9])`,
+      );
     const found = sources.flatMap((file) => {
       const text = readFileSync(file, "utf8");
       return [...literals]
-        .filter((l) => l.length > 3 && text.includes(l))
+        .filter((l) => l.length > 3 && word(l).test(text))
         .map((l) => `${l} in ${file}`);
     });
     expect(found).toEqual([]);
   });
+});
+
+// ---- differential pairs (section 5): one semantic member differs, and the page differs there only ----
+
+/**
+ * What a page says, by where it read it: each marked value or token, keyed by
+ * its source with record ids, digests and keys left out (a valid regeneration
+ * signs with new keys, so those change in every pair), and the deal's own id
+ * too. Ids, digests, raw records and times are left out: they are checked
+ * only to resolve, against their own fixture.
+ */
+function said(regions: HTMLElement[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const node of regions.flatMap((r) =>
+    Array.from(r.querySelectorAll("[data-ptr]")),
+  )) {
+    // A settlement member's name is the same in both; its value is what the pair changes.
+    if (node.getAttribute("data-derive") === "key") continue;
+    const fmt = node.getAttribute("data-fmt");
+    if (
+      fmt === "short" ||
+      fmt === "json" ||
+      fmt === "json_timeless" ||
+      node.hasAttribute("data-time")
+    )
+      continue;
+    const ptr = node.getAttribute("data-ptr")!;
+    if (
+      /capsule_id|digest|key_id|counterparty_key|\/adjudicator|log_id|deal_id|bundle_digest|payment_ref\/value|memberships|\/record$|^bundle:/.test(
+        ptr,
+      )
+    )
+      continue;
+    const key = ptr.replace(/[0-9a-f]{64}/g, "<id>");
+    const text = node.getAttribute("data-key") ?? node.textContent ?? "";
+    out.set(key, [...(out.get(key) ?? []), text]);
+  }
+  return out;
+}
+
+describe("a differential pair differs on the page exactly where its one member does", () => {
+  const named = (name: string): Fixture =>
+    FIXTURES.find((f) => f.name === name)!;
+  const PAIRS = [
+    {
+      a: "view-model/settled",
+      b: "view-model/pair/item-b",
+      member: /^report:deal_offer#\/body\/terms\/item$/,
+      want: [["lamp"], ["kettle"]],
+    },
+    {
+      a: "view-model/settled",
+      b: "view-model/pair/amount-b",
+      member: /\/record\/settlement\/amount$/,
+      want: [["45.00 USD"], ["44.00 USD"]],
+    },
+    {
+      a: "view-model/pair/ruled-a",
+      b: "view-model/pair/ruled-b",
+      member: /\/against$/,
+      want: null,
+    },
+  ];
+  for (const pair of PAIRS) {
+    it(`${pair.a} and ${pair.b}`, async () => {
+      const [a, b] = await Promise.all([
+        page(named(pair.a), null),
+        page(named(pair.b), null),
+      ]);
+      for (const p of [a, b])
+        expect(p.regions.flatMap((r) => check(r, p.inputs))).toEqual([]);
+      const [sa, sb] = [said(a.regions), said(b.regions)];
+      const differs = [...new Set([...sa.keys(), ...sb.keys()])].filter(
+        (k) => JSON.stringify(sa.get(k)) !== JSON.stringify(sb.get(k)),
+      );
+      // Something differs, and only the member the pair changes.
+      expect(differs.length, JSON.stringify(differs)).toBeGreaterThan(0);
+      expect(differs.filter((k) => !pair.member.test(k))).toEqual([]);
+      if (pair.want !== null) {
+        const shown = (s: Map<string, string[]>) =>
+          [...s.entries()]
+            .filter(([k]) => pair.member.test(k))
+            .flatMap(([, v]) => v);
+        expect([[...new Set(shown(sa))], [...new Set(shown(sb))]]).toEqual(
+          pair.want,
+        );
+      }
+    });
+  }
 });
