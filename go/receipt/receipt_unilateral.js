@@ -1912,9 +1912,10 @@
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
-      // Where each plain member above was read (section 2: every value has its source). These members keep their
-      // plain shape because the v0 kinds' drawer helpers share it until PR 4 of the note moves them; the drawer
-      // reads a member's source here. Rows, relied_on entries and legs carry their own (`src`).
+      // Where each plain member above that the drawer shows as a value was read (section 2: every value has its
+      // source). These members keep their plain shape because the v0 kinds' drawer helpers share it until PR 4 of
+      // the note moves them. Rows, relied_on entries and legs carry their own (`src`). A member that only picks a
+      // pack line (settled, rows_state, the checks, the witness report) is not shown as a value and has none here.
       sources: {
         deal_id: inRecord(sealed[0], "/agent_input/deal_id"),
         as_of: inRecord(sealed[0], "/agent_input/as_of"),
@@ -1926,19 +1927,12 @@
         counted: inRecord(sealed[0], "/agent_input/rests_on/counterparty/counted"),
         fork_at: inRecord(sealed[0], "/agent_input/rests_on/counterparty/fork_at"),
         witnesses: inRecord(sealed[0], "/agent_input/rests_on/witnesses"),
-        counterparty_layer: inRecord(sealed[0], "/agent_input/rests_on/counterparty_layer"),
-        settled: inRecord(sealed[0], "/agent_input/settled"),
-        rows_state: inRecord(sealed[0], "/agent_input/rows_state"),
         rows: inRecord(sealed[0], "/agent_input/rows"),
-        audience: inRecord(sealed[0], "/agent_input/audience"),
         // The bundle's digest, which the page binds capsulectl's report to (verifier-report.ts, boundToBundle).
         bundle_digest: { checked: "bundle_digest" },
-        // capsulectl's report as the page was given it: its per-check results and verdict, and its x-deal-v1 entry.
-        checks: { report: "capsulectl" },
+        // capsulectl's report as the page was given it: its verdict, and its x-deal-v1 entry's status.
         verdict: { report: "capsulectl", path: "/verdict" },
-        counterparty_half: { report: "x-deal-v1", path: "/counterparty_half/status" },
         report_checked: { report: "x-deal-v1", path: "/status" },
-        book_witnessed: { report: "x-deal-v1", path: "/witnessed" },
         // The command the page's maker gave for checking this copy (verifyCommand).
         verify_command: { report: "verify_command" },
         // The page's own checks: its classification of each countersignature and of the countersigned copy.

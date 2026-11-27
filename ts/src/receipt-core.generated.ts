@@ -1916,9 +1916,10 @@ const root = {};
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
-      // Where each plain member above was read (section 2: every value has its source). These members keep their
-      // plain shape because the v0 kinds' drawer helpers share it until PR 4 of the note moves them; the drawer
-      // reads a member's source here. Rows, relied_on entries and legs carry their own (`src`).
+      // Where each plain member above that the drawer shows as a value was read (section 2: every value has its
+      // source). These members keep their plain shape because the v0 kinds' drawer helpers share it until PR 4 of
+      // the note moves them. Rows, relied_on entries and legs carry their own (`src`). A member that only picks a
+      // pack line (settled, rows_state, the checks, the witness report) is not shown as a value and has none here.
       sources: {
         deal_id: inRecord(sealed[0], "/agent_input/deal_id"),
         as_of: inRecord(sealed[0], "/agent_input/as_of"),
@@ -1930,19 +1931,12 @@ const root = {};
         counted: inRecord(sealed[0], "/agent_input/rests_on/counterparty/counted"),
         fork_at: inRecord(sealed[0], "/agent_input/rests_on/counterparty/fork_at"),
         witnesses: inRecord(sealed[0], "/agent_input/rests_on/witnesses"),
-        counterparty_layer: inRecord(sealed[0], "/agent_input/rests_on/counterparty_layer"),
-        settled: inRecord(sealed[0], "/agent_input/settled"),
-        rows_state: inRecord(sealed[0], "/agent_input/rows_state"),
         rows: inRecord(sealed[0], "/agent_input/rows"),
-        audience: inRecord(sealed[0], "/agent_input/audience"),
         // The bundle's digest, which the page binds capsulectl's report to (verifier-report.ts, boundToBundle).
         bundle_digest: { checked: "bundle_digest" },
-        // capsulectl's report as the page was given it: its per-check results and verdict, and its x-deal-v1 entry.
-        checks: { report: "capsulectl" },
+        // capsulectl's report as the page was given it: its verdict, and its x-deal-v1 entry's status.
         verdict: { report: "capsulectl", path: "/verdict" },
-        counterparty_half: { report: "x-deal-v1", path: "/counterparty_half/status" },
         report_checked: { report: "x-deal-v1", path: "/status" },
-        book_witnessed: { report: "x-deal-v1", path: "/witnessed" },
         // The command the page's maker gave for checking this copy (verifyCommand).
         verify_command: { report: "verify_command" },
         // The page's own checks: its classification of each countersignature and of the countersigned copy.
@@ -5299,7 +5293,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "16f3b7e3ef6071f8fe76363f9c576c1fc6573ea70851ca51e335441c5d6e899c",
+      "script_sha256": "8a59bceb153965b770e71c60f8772632fd0f4023117a6f2f0b5c35383db9e55a",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5346,7 +5340,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "4fbc9c67412cb72d192add42b834ca81c78549b2fe33692f090825651edb9de3",
+      "script_sha256": "de3764236274b2be0c66884bdf2c8c8c8aa743f6ee5496b6049e26cb172d7014",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5392,7 +5386,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "b864aa1027bdf6777879eb0c9e6780d034b7016c84ce699cf3c20db5dbeb27c1",
+      "script_sha256": "e6f2ccd2f1e003d81e297819f2b59d7ea4e578957ddee2d9d13f7cf152f0bc2e",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5440,7 +5434,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "f7589313f2ce4cd26b1194bd2780ec20b0146640eae19f10094da775030871fb",
+      "script_sha256": "0455eba443028820c9ad216411f9dd08905fe57eded66884cdc0379668ef0462",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
@@ -5482,7 +5476,7 @@ export const RECEIPT_MANIFESTS = {
     "priority": 1,
     "executable": {
       "carrier": "module-slot",
-      "script_sha256": "7d721a5b800cb19a6412d3023628caea213ec12c71f4cd59f01cb731a3b040e9",
+      "script_sha256": "ef43e8fc3d73a1faa1d76228a0311fc99edb26b862797ba91a2c8a6b48e0d4a6",
       "style_sha256": [
         "1b600ce6847453be63fd2613dbd07a9f6edc9ec9fe3ac6386ffece284c5ec73c",
         "1393b3ffc8c2702f79a9d2565201509560bc6008d34d325de8994b8d9ecc749b",
