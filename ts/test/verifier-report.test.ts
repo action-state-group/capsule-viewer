@@ -393,14 +393,20 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     expect(none.querySelector('[data-rung="counterparty-half"]')).toBeNull();
   });
 
-  it("the holder's own book's witness time, as capsulectl reported it (amended u203)", async () => {
+  it("the holder's own book's witness time, as capsulectl reported it (amended u203), in the core's verification section (#489)", async () => {
     const rung = async (
       witnessed?: unknown,
     ): Promise<string | null | undefined> => {
       const r = report();
       if (witnessed !== undefined) v1Entry(r)["witnessed"] = witnessed;
       const root = await page(r);
-      return root.querySelector('[data-rung="witness"]')?.textContent;
+      // Beside the core the module draws no witness line of its own.
+      expect(root.querySelector('[data-rung="witness"]')).toBeNull();
+      // capsulectl's book witness is its row in the core's check list.
+      const row = root.querySelector('[data-check="capsulectl-witnesses"]');
+      return row?.textContent?.includes("your own book")
+        ? row.textContent
+        : undefined;
     };
     expect(
       await rung({
@@ -417,7 +423,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     expect(await rung({ status: "withheld" })).toBe(
       "capsulectl verify found no time-stamp for your own book from the witnesses it was given. That does not mean there is none. This page did not check it itself.",
     );
-    // Nothing reported, or not a result: the line as before, never "Time-stamped".
+    // Nothing reported, or not a result: no line, never "Time-stamped".
     for (const w of [
       undefined,
       "verified",
@@ -425,9 +431,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       { status: "verified", witness: "", at: "t" },
       { status: "other" },
     ])
-      expect(await rung(w)).toBe(
-        "No witness result was reported to this page.",
-      );
+      expect(await rung(w)).toBeUndefined();
   });
 
   it("an x-deal-v1 page never draws the log line, only the file-scoped one (Sherlock2)", async () => {
@@ -487,7 +491,9 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     };
     const own = await page(r);
     expect(own.textContent).not.toContain(HEADER);
-    expect(own.querySelector('[data-rung="witness"]')?.textContent).toContain(
+    expect(
+      own.querySelector('[data-witness-notice="book-witnessed"]')?.textContent,
+    ).toContain(
       "This file carries no witness receipt, so this page did not check it itself.",
     );
     // Failed, withheld or nothing reported: the header stays.
@@ -536,7 +542,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
     expect(root.textContent).not.toContain("Time-stamped by");
   });
 
-  it("the header stays when no receipt module draws the line, or its render is discarded (#424)", async () => {
+  it("the witness line is the core's (#489): no receipt module, the header; a module's render discarded, the core's line stays", async () => {
     const HEADER =
       "This file carries no witness receipt, so this page could not check a time-stamp itself.";
     const r = report();
@@ -573,8 +579,11 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       registry,
       verifierReport: r,
     });
-    expect(broken.textContent).not.toContain("Time-stamped by");
-    expect(broken.textContent).toContain(HEADER);
+    expect(
+      broken.querySelector('[data-witness-notice="book-witnessed"]')
+        ?.textContent,
+    ).toContain("Time-stamped by W at ");
+    expect(broken.textContent).not.toContain(HEADER);
     // A module that draws but breaks the page's frame: discarded after the
     // frame check, and the header comes back too.
     const breaking = createPresentationRegistry();
@@ -604,8 +613,11 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       registry: breaking,
       verifierReport: r,
     });
-    expect(framed.textContent).not.toContain("Time-stamped by");
-    expect(framed.textContent).toContain(HEADER);
+    expect(
+      framed.querySelector('[data-witness-notice="book-witnessed"]')
+        ?.textContent,
+    ).toContain("Time-stamped by W at ");
+    expect(framed.textContent).not.toContain(HEADER);
   });
 
   it("the page's times are the reader's own, deadlines with UTC beside them (#423)", async () => {

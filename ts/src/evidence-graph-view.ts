@@ -11,8 +11,16 @@ import {
   countersignedStamps,
   verifierReportReading,
   withVerifierReport,
-  bookWitnessedOnKeep,
+  bookWitnessOf,
+  REPORTED_CHECKS,
+  sealedAudience,
+  type BookWitness,
+  type VerifierReading,
 } from "./verifier-report.js";
+import {
+  RECEIPT_PAGE_WORDS,
+  RECEIPT_RECORD_PACK,
+} from "./receipt-core-words.generated.js";
 import {
   AGENT_INPUT_ORIGINALS_EXTENSION,
   BOOK_PAYLOADS_EXTENSION,
@@ -94,8 +102,12 @@ import {
 } from "./outcome-report-presentation.js";
 import { composedSectionModule } from "./composed-view.js";
 import {
+  DEFAULT_PACKS,
   DEFAULT_WORDS,
   contractReportWords,
+  readWordingPack,
+  wordsOf,
+  type ContractReportGrouping,
   type Words,
 } from "./contract-report-wording.js";
 import {
@@ -106,7 +118,9 @@ import {
 } from "./evidence-contract.js";
 import {
   RECORD_PAGE_CSS,
+  renderPageLadder,
   renderRecordPage,
+  withoutRecordTimes,
   type RecordVoice,
 } from "./record-page.js";
 import {
@@ -270,6 +284,7 @@ function renderVerificationBanner(
   model: VerificationBanner,
   coverage: { uncheckpointed: number; total: number },
   witness: WitnessNotice | undefined,
+  bookWitness?: BookWitness,
 ): HTMLElement {
   const bar = element("div");
   // A failed bundle's bar is a callout on every page, with or without a
@@ -322,7 +337,18 @@ function renderVerificationBanner(
     detail.dataset.bannerDetail = "";
     root.append(detail);
   }
-  if (witness !== undefined) {
+  // On a receipt page, capsulectl's verified witness time of the holder's
+  // own book, on the holder's own page: the core's one witness line, in
+  // capsulectl's voice, in place of the file's notice (#489, u219, u561).
+  if (
+    bookWitness !== undefined &&
+    (model.state === "verified" || model.state === "incomplete")
+  ) {
+    const notice = bookWitnessLine(bookWitness);
+    notice.className = "cv-banner-detail cv-witness-notice";
+    notice.dataset.witnessNotice = "book-witnessed";
+    root.append(notice);
+  } else if (witness !== undefined) {
     const notice = element("p", WITNESS_NOTICE_LINES[witness]);
     // In the warning colour, as an incomplete banner: the bundle checks,
     // but only against its holder's own signatures.
@@ -1173,6 +1199,7 @@ function renderCheckLists(
   verifierHint: string | undefined,
   reportFailed: readonly PageReportFailure[] = [],
   verdict?: string,
+  reported: readonly ReportedRow[] = [],
 ): void {
   const groups = [
     ["page", CHECKED_ON_THIS_PAGE, lists.page as readonly string[]],
@@ -1203,10 +1230,18 @@ function renderCheckLists(
     ],
   ] as const;
   for (const [which, heading, ids] of groups) {
-    if (ids.length === 0) continue;
+    // capsulectl's own answers on a receipt page (#489) join its group.
+    const extra = which === "capsulectl" ? reported : [];
+    if (ids.length === 0 && extra.length === 0) continue;
     host.append(element("h4", heading));
     const list = element("ul");
     list.dataset.checks = which;
+    for (const row of extra) {
+      const item = row.node();
+      item.dataset.check = `capsulectl-${row.name}`;
+      item.dataset.checkStatus = row.status;
+      list.append(item);
+    }
     for (const id of ids) {
       const item = element(
         "li",
@@ -1273,6 +1308,7 @@ async function renderVerificationPage(
   checkedId: string,
   reportFailed: readonly PageReportFailure[] = [],
   verdict?: string,
+  receipt?: ReceiptCore,
 ): Promise<string> {
   const { bundle, verification: verified } = context;
   // The bundle's own checks passed but its standalone report did not: the
@@ -1344,7 +1380,12 @@ async function renderVerificationPage(
   renderReceipts(page, model.receipts);
   if (model.parentWitness !== undefined)
     renderParentWitness(page, model.parentWitness);
-  if (model.selfWitnessed) {
+  // On a receipt page whose holder's book capsulectl reported witnessed,
+  // its line (under the banner, and its row in the check list below) says
+  // the file carries no receipt itself, so "self-witnessed" is not said
+  // beside it (#489).
+  const book = receipt?.bookWitness;
+  if (model.selfWitnessed && book?.status !== "verified") {
     // A checkpoint with no transparency-service receipt was witnessed by
     // nobody but the log that produced it -- stated here in those words.
     const witness = element(
@@ -1353,6 +1394,12 @@ async function renderVerificationPage(
     );
     witness.dataset.witness = "self";
     page.append(witness);
+  }
+  // A copy made for someone else shows no record's own time (u239, #482).
+  if (receipt?.shared === true) {
+    const withheld = element("p", receiptWord("receipt_page.times.withheld"));
+    withheld.dataset.times = "withheld";
+    page.append(withheld);
   }
   // The content block's own styles: the records list is the core's, inside
   // no module's frame (record-content.ts RECORD_CONTENT_CSS).
@@ -1388,14 +1435,23 @@ async function renderVerificationPage(
       read,
       kind: (id) => recordKind(rawRecords.get(id), read.get(id)),
       build: (id, record) => {
-        const body = renderRecordEntry(id, record);
+        const body = renderRecordEntry(id, record, receipt?.shared === true);
         // The lowest level: this record's envelope, its capsule JSON and the
         // ladder of proofs, in the entry every link to the record lands on.
+        // On a receipt page the ladder is drawn once, after the records.
         if (l3 !== undefined && context.recordIndex.has(id))
           body.append(
             renderRecordPage(
-              { context, capsuleId: id, stamps, result, voice: l3.voice },
+              {
+                context,
+                capsuleId: id,
+                stamps,
+                result,
+                voice: l3.voice,
+                ...(receipt?.shared === true ? { timesWithheld: true } : {}),
+              },
               l3.words,
+              { ladder: receipt === undefined },
             ),
           );
         return body;
@@ -1403,16 +1459,47 @@ async function renderVerificationPage(
     },
     depth,
   );
+  // A receipt page's one ladder, over every record it shows (#489).
+  if (receipt !== undefined && l3 !== undefined && passed) {
+    const ids = model.records
+      .map((r) => r.capsuleId)
+      .filter((id) => context.recordIndex.has(id));
+    if (ids.length > 0)
+      page.append(
+        renderPageLadder(
+          { context, capsuleIds: ids, stamps, result, voice: l3.voice },
+          l3.words,
+          {
+            lede: (n) => receiptWord("receipt_page.ladder.lede", { n }),
+            count: (k, n) => receiptWord("receipt_page.ladder.count", { k, n }),
+            records: (list) =>
+              receiptWord("receipt_page.ladder.records", { ids: list }),
+            inclusionSub: () => receiptWord("receipt_page.ladder.inclusion"),
+          },
+        ),
+      );
+  }
   renderStamps(page, stamps);
   renderCompletenessStatement(page, model.completeness);
-  renderChecks(page, model.checks);
+  // A receipt page says its checks once, in the check lists below (#489).
+  if (receipt === undefined) renderChecks(page, model.checks);
   renderExtensions(page, extensions, presentationRefusalNotices(refused));
-  renderCheckLists(page, model.checkLists, verifierHint, reportFailed, verdict);
+  renderCheckLists(
+    page,
+    model.checkLists,
+    verifierHint,
+    reportFailed,
+    verdict,
+    receipt === undefined ? [] : reportedRows(receipt, model.checkLists),
+  );
   page.append(element("p", model.verifyIndependentlyLine));
   // Folded into one section, closed for a bundle that verified; its summary
   // line keeps the counts and what was not checked in view.
   const folded = document.createElement("details");
-  folded.className = "cv-checked";
+  // A receipt page's checked section is a card (#489; its rules are in
+  // RECORD_PAGE_CSS, which every verification section carries).
+  folded.className =
+    receipt === undefined ? "cv-checked" : "cv-checked cv-checked--card";
   folded.id = checkedId;
   folded.dataset.checked = "";
   // Open when the bundle did not verify, and at depth L2, where everything
@@ -1493,6 +1580,7 @@ function renderProvenance(
   capsuleId: string,
   coordinates: ActNode["logCoordinates"],
   times: RecordTimes,
+  timesWithheld = false,
 ): HTMLElement {
   const panel = element("section");
   panel.append(element("h4", "Provenance"));
@@ -1500,13 +1588,17 @@ function renderProvenance(
   appendValue(details, "capsule ID", capsuleId);
   if (times.provenanceMode !== undefined)
     appendValue(details, "provenance", times.provenanceMode);
-  appendTime(
-    details,
-    "action time",
-    times.actionTime,
-    "action time not stated",
-  );
-  appendTime(details, "seal time", times.sealTime, "seal time not stated");
+  // A shared receipt copy shows neither (u239, #482): the records section
+  // says once why.
+  if (!timesWithheld) {
+    appendTime(
+      details,
+      "action time",
+      times.actionTime,
+      "action time not stated",
+    );
+    appendTime(details, "seal time", times.sealTime, "seal time not stated");
+  }
   // The seal status is this record's own: coordinates exist only for a
   // record whose inclusion proof verified (the bundle renders only then), so
   // a record without them sits outside the checkpoint and says so.
@@ -1724,6 +1816,7 @@ function renderCitedMember(
   resolution: CitedRecord["agentInput"],
   committed: string | undefined,
   label: string = field,
+  timesWithheld = false,
 ): void {
   // A value that does not match its commitment is always noted, even where
   // the caller has no committed digest to name (a record no claim reaches).
@@ -1742,10 +1835,28 @@ function renderCitedMember(
       "The content shown matches the digest the record commits to.",
     );
     checked.dataset.contentCheck = "digest";
-    host.append(
-      checked,
-      renderContent(resolution.payload, DEFAULT_WORDS.lines),
+    if (!timesWithheld) {
+      host.append(
+        checked,
+        renderContent(resolution.payload, DEFAULT_WORDS.lines),
+      );
+      return;
+    }
+    // A shared receipt copy (#482, u239): the content with its record
+    // times left out, which is no longer exactly what the digest covers,
+    // and says so.
+    const content = renderContent(
+      withoutRecordTimes(resolution.payload),
+      DEFAULT_WORDS.lines,
     );
+    for (const exact of content.querySelectorAll<HTMLElement>("[data-exact]"))
+      exact.dataset.exact = "times-withheld";
+    if (content.dataset.exact !== undefined)
+      content.dataset.exact = "times-withheld";
+    // The digest check is of the content as recorded, not of what is shown.
+    checked.textContent = receiptWord("receipt_page.content.times_withheld");
+    checked.dataset.contentCheck = "digest-times-withheld";
+    host.append(checked, content);
     return;
   }
   // A withheld member shows the digest the record committed to; a supplied
@@ -1794,7 +1905,11 @@ function renderCitedRecord(
 
 // An evidence-book record's agent_input is the book's header; what the
 // capsule it carries sealed is the carried input, drawn the same way.
-function renderCarriedInput(host: HTMLElement, record: CitedRecord): void {
+function renderCarriedInput(
+  host: HTMLElement,
+  record: CitedRecord,
+  timesWithheld = false,
+): void {
   if (record.carriedInput === undefined) return;
   renderCitedMember(
     host,
@@ -1802,6 +1917,7 @@ function renderCarriedInput(host: HTMLElement, record: CitedRecord): void {
     record.carriedInput,
     record.carriedInputDigest,
     "agent_input of the capsule it carries",
+    timesWithheld,
   );
 }
 
@@ -1812,23 +1928,30 @@ function renderCarriedInput(host: HTMLElement, record: CitedRecord): void {
 function renderRecordEntry(
   capsuleId: string,
   record: CitedRecord,
+  timesWithheld = false,
 ): HTMLElement {
   const body = element("div");
   body.className = "cv-record-body";
-  body.append(renderProvenance(capsuleId, record.logCoordinates, record));
+  body.append(
+    renderProvenance(capsuleId, record.logCoordinates, record, timesWithheld),
+  );
   renderCitedMember(
     body,
     "agent_input",
     record.agentInput,
     record.agentInputDigest,
+    "agent_input",
+    timesWithheld,
   );
   renderCitedMember(
     body,
     "agent_output",
     record.agentOutput,
     record.agentOutputDigest,
+    "agent_output",
+    timesWithheld,
   );
-  renderCarriedInput(body, record);
+  renderCarriedInput(body, record, timesWithheld);
   if (record.cites.length > 0) {
     body.append(element("h5", "Cites"));
     const list = element("ul");
@@ -3539,6 +3662,19 @@ const RECEIPT_MODULE_IDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The receipt modules this viewer ships (go/receipt), every kind: on a page
+ * one of them draws, the core draws as a receipt page's core (#489). This is
+ * not RECEIPT_MODULE_IDS, which admits a receipt carried in a report.
+ */
+const RECEIPT_PAGE_MODULE_IDS: ReadonlySet<string> = new Set([
+  "capsuleviewer.receipt.unilateral/v0",
+  "capsuleviewer.receipt.seller/v0",
+  "capsuleviewer.receipt.bilateral/v0",
+  "capsuleviewer.receipt.deal/v1",
+  "capsuleviewer.receipt.provider/v0",
+]);
+
+/**
  * The mark a carried receipt's panel bears, so the receipt module draws the
  * copy as one shared in a report rather than as the owner's private file
  * (Sherlock2, ops bc71ecae, #383): the module reads it from its host's
@@ -3556,6 +3692,234 @@ const BOOK_WITNESS_MODULES: ReadonlySet<string> = new Set([
   "capsuleviewer.receipt.unilateral/v0",
   "capsuleviewer.receipt.seller/v0",
 ]);
+
+/**
+ * What the core draws differently on a receipt page (capsule-viewer#489,
+ * row 3 of section 7 of docs/design/receipt-view-model.md): capsulectl's
+ * answers in its one check list, the one witness line, the ladder once, the
+ * receipt pack's record words, and no record time on a copy made for someone
+ * else. A page with no receipt module has none of this.
+ */
+interface ReceiptCore {
+  /** capsulectl's passing report of this copy, or null. */
+  readonly reading: Extract<VerifierReading, { kind: "pass" }> | null;
+  /** capsulectl's book witness, on the holder's own copy drawn for the holder only. */
+  readonly bookWitness?: BookWitness;
+  /** A copy made for the counterparty or the adjudicator (#482). */
+  readonly shared: boolean;
+}
+
+/** The receipt page's core, or undefined when `module` is no receipt module. */
+function receiptCoreOf(
+  module: PresentationModule | undefined,
+  context: VerifiedBundleContext,
+  reading: VerifierReading | null,
+  root: HTMLElement,
+): ReceiptCore | undefined {
+  if (module === undefined || !RECEIPT_PAGE_MODULE_IDS.has(module.manifest.id))
+    return undefined;
+  const pass = reading?.kind === "pass" ? reading : null;
+  const audience = sealedAudience(context);
+  // The holder's own copy drawn for the holder: the conditions the module's
+  // own line had (#424, receipt_core.js ownPage), so no shared copy and no
+  // copy carried in a report or shown as a page shows the holder's time.
+  const ownPage =
+    BOOK_WITNESS_MODULES.has(module.manifest.id) &&
+    audience === "keep" &&
+    !sharedCarrierOf(root);
+  const book = ownPage ? bookWitnessOf(pass) : undefined;
+  return {
+    reading: pass,
+    ...(book === undefined ? {} : { bookWitness: book }),
+    shared: audience === "counterparty" || audience === "adjudicator",
+  };
+}
+
+/** A receipt pack line the core draws, its `{placeholders}` filled. */
+function receiptWord(
+  key: string,
+  vars: Readonly<Record<string, string | number>> = {},
+): string {
+  const text = RECEIPT_PAGE_WORDS[key];
+  if (text === undefined) throw new Error(`no receipt word ${key}`);
+  return text.replace(/\{(\w+)\}/gu, (whole, name: string) =>
+    Object.hasOwn(vars, name) ? String(vars[name]) : whole,
+  );
+}
+
+/** "14:31:31 UTC" from a UTC time, as the receipt module's utcClock writes it. */
+function utcClock(at: string): string {
+  return `${at.slice(11, 19)} UTC`;
+}
+
+/** The reader's local time of `at`, as the receipt module's localTimes writes it; `at` itself where Intl cannot. */
+function localTime(at: string): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(at));
+  } catch {
+    return at;
+  }
+}
+
+/** capsulectl's book-witness line, in the receipt pack's words (rung.book_witness*). */
+function bookWitnessLine(book: BookWitness): HTMLElement {
+  const line = element("p");
+  if (book.status !== "verified") {
+    line.textContent = receiptWord(
+      book.status === "failed"
+        ? "rung.book_witness_failed"
+        : "rung.book_witness_withheld",
+    );
+    line.dataset.bookWitness = book.status;
+    return line;
+  }
+  const mark = "\u0000";
+  const [before, ...after] = receiptWord("rung.book_witnessed", {
+    witness: book.witness,
+    utc: utcClock(book.at),
+    at: mark,
+  }).split(mark);
+  const time = element("span", localTime(book.at));
+  time.dataset.time = book.at;
+  line.append(before ?? "", time, after.join(mark));
+  line.dataset.bookWitness = "verified";
+  return line;
+}
+
+/** One of capsulectl's answers in the core's check list on a receipt page. */
+interface ReportedRow {
+  readonly name: string;
+  readonly status: "pass" | "fail" | "withheld";
+  readonly node: () => HTMLElement;
+}
+
+/** The page's own check (VerificationCheckLists) that is the same test as capsulectl's, by capsulectl's name. */
+const SAME_CHECK: Readonly<Record<string, string>> = {
+  producer_signatures: "producer-signatures",
+  interval_coverage: "range",
+  graph_closure: "closure",
+  per_record_membership: "membership",
+  checkpoint: "checkpoint-signature",
+};
+
+/**
+ * capsulectl's answers, each attributed, for the core's one check list on a
+ * receipt page (#489): each bundle check it reported, the other side's
+ * signed agreement, and the outside time stamp (on the holder's own page,
+ * capsulectl's book witness line; else its `witnesses` answer). A check
+ * capsulectl did not answer is not listed; the page's own lists stay as
+ * they are.
+ */
+function reportedRows(
+  receipt: ReceiptCore,
+  lists: VerificationCheckLists,
+): ReportedRow[] {
+  const reading = receipt.reading;
+  if (reading === null) return [];
+  const rows: ReportedRow[] = [];
+  const statusOf = (value: unknown): ReportedRow["status"] | undefined =>
+    value === "pass" || value === "fail" || value === "withheld"
+      ? value
+      : undefined;
+  const ranHere = new Set<string>(lists.page as readonly string[]);
+  const say = (name: string, label: string, status: ReportedRow["status"]) =>
+    receiptWord(
+      Object.hasOwn(SAME_CHECK, name) && ranHere.has(SAME_CHECK[name]!)
+        ? "receipt_page.check.reported.also"
+        : "receipt_page.check.reported",
+      { check: label, status: receiptWord(`deal.proof.status.${status}`) },
+    );
+  for (const name of REPORTED_CHECKS) {
+    if (name === "witnesses") continue;
+    const status = statusOf(reading.checks?.[name]?.status);
+    if (status === undefined) continue;
+    rows.push({
+      name,
+      status,
+      node: () =>
+        element("li", say(name, receiptWord(`deal.proof.${name}`), status)),
+    });
+  }
+  const half =
+    reading.counterpartyHalf === "verified"
+      ? "pass"
+      : reading.counterpartyHalf === "failed"
+        ? "fail"
+        : undefined;
+  if (half !== undefined)
+    rows.push({
+      name: "counterparty_half",
+      status: half,
+      node: () =>
+        element(
+          "li",
+          say(
+            "counterparty_half",
+            receiptWord("deal.proof.counterparty_half.report"),
+            half,
+          ),
+        ),
+    });
+  const book = receipt.bookWitness;
+  if (book !== undefined)
+    rows.push({
+      name: "witnesses",
+      status:
+        book.status === "verified"
+          ? "pass"
+          : book.status === "failed"
+            ? "fail"
+            : "withheld",
+      node: () => {
+        const item = element("li");
+        item.append(...Array.from(bookWitnessLine(book).childNodes));
+        return item;
+      },
+    });
+  else {
+    const status = statusOf(reading.checks?.["witnesses"]?.status);
+    if (status !== undefined)
+      rows.push({
+        name: "witnesses",
+        status,
+        node: () =>
+          element(
+            "li",
+            say(
+              "witnesses",
+              receiptWord("receipt_page.check.witnesses"),
+              status,
+            ),
+          ),
+      });
+  }
+  return rows;
+}
+
+/**
+ * A receipt page's record words (#489): the generic record words with the
+ * receipt pack's `record.rung.*` entries laid over them. A host's pack may
+ * not reword what a rung proves (LOCKED_ENTRIES); these entries are not a
+ * host's but the receipt pack this viewer ships, generated from
+ * go/receipt/wording-en.json, so a receipt's rungs 10 and 11 say what they
+ * prove for a receipt rather than for a contract report's Result.
+ */
+const RECEIPT_RECORD_WORDS_PACK = readWordingPack(
+  JSON.parse(RECEIPT_RECORD_PACK.pack),
+);
+function receiptRecordWords(grouping: ContractReportGrouping): Words {
+  return wordsOf(DEFAULT_PACKS[grouping], {
+    pack: RECEIPT_RECORD_WORDS_PACK,
+    sha256: RECEIPT_RECORD_PACK.sha256,
+  });
+}
 
 /** Whether `root` is drawn as a shared carrier (a report or a page), as the receipt module reads it. */
 function sharedCarrierOf(root: HTMLElement): boolean {
@@ -3814,19 +4178,19 @@ async function renderVerifiedContext(
   };
   let bar!: HTMLElement;
   let stripNode: HTMLElement | undefined;
-  // The header's witness line is left out only while the x-deal-v1 receipt
-  // module draws the one line in its place (#424): on the first frame only.
-  // Every later drawFrame() discards what the module wrote (a failed render,
-  // section or frame check), so the header comes back with it.
-  const oneWitnessLine =
-    selected !== undefined &&
-    BOOK_WITNESS_MODULES.has(selected.module.manifest.id) &&
-    bookWitnessedOnKeep(context, reading) &&
-    !sharedCarrierOf(root);
-  let framesDrawn = 0;
+  // A receipt page's core (#489): capsulectl's answers in its one check
+  // list, its witness line, one ladder and the receipt pack's words.
+  const receipt = verified
+    ? receiptCoreOf(selected?.module, context, reading, root)
+    : undefined;
+  // The one witness line on the holder's own receipt page is the core's,
+  // in capsulectl's voice (#424, #489): drawn under the banner in place of
+  // the file's notice, on every frame.
+  const bannerBook =
+    receipt?.bookWitness?.status === "verified"
+      ? receipt.bookWitness
+      : undefined;
   const drawFrame = (): void => {
-    const leaveOutWitnessLine = oneWitnessLine && framesDrawn === 0;
-    framesDrawn += 1;
     root.replaceChildren();
     root.classList.remove("cv-shell-chrome");
     renderPresentationHeader(root, bundle);
@@ -3838,14 +4202,15 @@ async function renderVerifiedContext(
         bannerModel,
         bundle,
         withStrict(context),
-        // Only while the x-deal-v1 receipt module draws the one line, on
-        // the holder's own copy not carried in a report or shown as a page
-        // (#424); a discarded render draws the frame again with the header.
-        leaveOutWitnessLine,
+        bannerBook !== undefined,
       ),
+      bannerBook,
     );
     const L2 = region("L2");
     const core = region("L2-core");
+    // On a receipt page the receipt module reads where the core's check
+    // list is, to point at it in place of drawing its own (#489).
+    if (receipt !== undefined) core.dataset.checkedId = checkedSectionId(root);
     const L2module = region("L2-module");
     L2.append(core, L2module);
     // On a failed bundle L0 and L1 are not created (presentation contract
@@ -4258,20 +4623,45 @@ async function renderVerifiedContext(
     contract,
     verified
       ? {
-          words: await contractReportWords(
-            contractReportGroupingOf(bundle),
-            options.wording,
-          ),
+          // A receipt page's record views take the receipt pack's record
+          // words, laid over the generic pack's (#489).
+          words:
+            receipt === undefined
+              ? await contractReportWords(
+                  contractReportGroupingOf(bundle),
+                  options.wording,
+                )
+              : receiptRecordWords(contractReportGroupingOf(bundle)),
           voice: options.voice ?? "shared",
         }
       : undefined,
     checkedSectionId(root),
     reportFailed,
     verdictLine,
+    receipt,
   );
   // The banner says the same counts as the section it links to.
   const summary = root.querySelector<HTMLElement>("[data-verify-summary]");
   if (summary !== null) summary.textContent = checkedLine;
+  // The receipt's links to the core's check list (#489) open it, as the
+  // banner's own link does.
+  if (receipt !== undefined) {
+    const checkedId = checkedSectionId(root);
+    for (const link of root.querySelectorAll<HTMLAnchorElement>(
+      "a[data-cites-core]",
+    ))
+      if (link.getAttribute("href") === `#${checkedId}`)
+        link.addEventListener("click", () => {
+          // This render's own section: another render in the document may
+          // carry an id drawn the same way.
+          const section = root.querySelector(`[id="${checkedId}"]`);
+          if (
+            section instanceof
+            root.ownerDocument.defaultView!.HTMLDetailsElement
+          )
+            section.open = true;
+        });
+  }
   linkCitedBy(root);
   // A page opened at a record's address shows that record.
   revealRecordsByHash(root.ownerDocument);

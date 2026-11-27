@@ -428,7 +428,11 @@ describe("capsulectl's failures on an x-deal-v0 page say which", () => {
         '[data-receipt-module="capsuleviewer.receipt.unilateral/v0"]',
       ),
     ).not.toBeNull();
-    expect(rungs(root, "witness")).toEqual([BOOK_LINE]);
+    // The core's one line, under the banner (#489); the module draws none.
+    expect(rungs(root, "witness")).toEqual([]);
+    expect(
+      root.querySelector('[data-witness-notice="book-witnessed"]')?.textContent,
+    ).toBe(BOOK_LINE);
     expect(root.textContent).not.toContain(HEADER_WITNESS);
   });
 });

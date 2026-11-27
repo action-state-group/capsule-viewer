@@ -225,7 +225,7 @@ describe("the holder's x-deal-v1 keep copy on a page, with capsulectl's report",
     return root;
   }
 
-  it("says capsulectl's verified time-stamp once, in its voice, in place of the header line (u219)", async () => {
+  it("says capsulectl's verified time-stamp once, in its voice, in place of the header line (u219): the core's line (#489)", async () => {
     const root = await keepPage(
       keepReport({
         status: "verified",
@@ -234,7 +234,11 @@ describe("the holder's x-deal-v1 keep copy on a page, with capsulectl's report",
       }),
     );
     expect(root.textContent).not.toContain(HEADER);
-    const line = root.querySelector('[data-rung="witness"]')?.textContent;
+    // The core draws it under the banner; the receipt module draws none.
+    expect(root.querySelector('[data-rung="witness"]')).toBeNull();
+    const line = root.querySelector(
+      '[data-witness-notice="book-witnessed"]',
+    )?.textContent;
     expect(line).toContain("Time-stamped by W at ");
     expect(line).toContain(
       "as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself.",

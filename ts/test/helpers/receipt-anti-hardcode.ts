@@ -19,7 +19,7 @@
  *   - a derived node (`data-derive`): recomputed from the sources it lists.
  *
  * Anything else that holds text fails, except white space between nodes and
- * the nodes PR 3 of the note replaces (EXCLUDED). The source is resolved, never
+ * any node listed in EXCLUDED (none since PR 3). The source is resolved, never
  * searched for: a record pointer reads that record's pair, a report pointer
  * capsulectl's report as the fixture holds it, a checked pointer the side
  * input as the page checked it, a bundle pointer the bundle.
@@ -38,21 +38,12 @@ type Core = {
 export const core = RECEIPT_CORE as unknown as Core;
 
 /**
- * The receipt module's nodes the note's PR 3 (#489) replaces with the core's
- * one check list and witness line; this PR leaves them unmarked. Each is one
- * node, never a container holding other parts ("Check it yourself" stays in).
+ * The receipt module's nodes left unchecked. None since the note's PR 3
+ * (#489): beside the core the module draws no check list or witness line of
+ * its own, and its proof panel's summary, its link to the core's list and
+ * the TIME-STAMPED stamp are pack words like every other node.
  */
-export const EXCLUDED = [
-  // proofPanel's heading, lede and check rows (the L0 "Is this record intact?" list).
-  '[data-surface="proof"] > h3',
-  '[data-surface="proof"] > [data-proof]',
-  '[data-surface="proof"] > .cv-rcpt-proof',
-  // dealL2's verification details.
-  '[data-cv="verification-details"]',
-  // copyNotes' witness line and the TIME-STAMPED stamp's text.
-  '[data-rung="witness"]',
-  '[data-stamp="time_stamped"] .cv-rcpt-stamp__text',
-];
+export const EXCLUDED: readonly string[] = [];
 
 /** What the check reads besides the page: the fixture's inputs and the page's own checks. */
 export type Inputs = {

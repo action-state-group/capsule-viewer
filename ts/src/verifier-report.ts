@@ -506,7 +506,7 @@ function withDealV0Report(
  * standalone report's, a disclosed record's, or the x-deal-v0 section
  * itself when it names no sealed report.
  */
-function sealedAudience(context: VerifiedBundleContext): unknown {
+export function sealedAudience(context: VerifiedBundleContext): unknown {
   const exts = obj(obj(context.bundle)["extensions"]);
   const standalone = obj(obj(exts[STANDALONE])["agent_input"]);
   if (DEAL_V1 in exts) return standalone["audience"];
@@ -521,29 +521,40 @@ function sealedAudience(context: VerifiedBundleContext): unknown {
     : undefined;
 }
 
+/** capsulectl's report of the holder's own book's witness time, in a state the receipt draws. */
+export type BookWitness =
+  | {
+      readonly status: "verified";
+      readonly witness: string;
+      readonly at: string;
+    }
+  | { readonly status: "failed" | "withheld" };
+
 /**
- * Whether the page draws capsulectl's verified witness time of the holder's
- * own book as one line in its receipt (capsule-viewer#424): a passing
- * reading whose `witnessed` is verified, on the holder's own (keep) copy.
- * The page then leaves out its header line "This file carries no witness
- * receipt…", which that one line says itself; every other page keeps it.
+ * capsulectl's book witness of a passing reading, read by the receipt
+ * module's own rules (receipt_core.js bookWitnessed): failed or withheld as
+ * they are, verified only with a witness and a UTC time; anything else,
+ * undefined. Whose page may show it is the caller's (u219, u239).
  */
-export function bookWitnessedOnKeep(
-  context: VerifiedBundleContext,
+export function bookWitnessOf(
   reading: VerifierReading | null,
-): boolean {
-  if (reading?.kind !== "pass") return false;
-  // The receipt's own conditions for drawing the line (receipt_core.js
-  // bookWitnessed): verified, with a witness and a time.
-  const w = obj(reading.witnessed);
+): BookWitness | undefined {
+  if (reading?.kind !== "pass") return undefined;
+  const got = obj(reading.witnessed);
+  if (got["status"] === "failed" || got["status"] === "withheld")
+    return { status: got["status"] };
   if (
-    w["status"] !== "verified" ||
-    typeof w["witness"] !== "string" ||
-    w["witness"] === "" ||
-    !utcInstant(w["at"])
+    got["status"] !== "verified" ||
+    typeof got["witness"] !== "string" ||
+    got["witness"] === "" ||
+    !utcInstant(got["at"])
   )
-    return false;
-  return sealedAudience(context) === "keep";
+    return undefined;
+  return {
+    status: "verified",
+    witness: got["witness"],
+    at: got["at"] as string,
+  };
 }
 
 /** A UTC RFC 3339 time to the second, as the receipt module's validUtcTime reads it. */

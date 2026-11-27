@@ -3,3 +3,4 @@ node_modules/
 test/testdata/
 test/goldens/
 src/receipt-core.generated.ts
+src/receipt-core-words.generated.ts

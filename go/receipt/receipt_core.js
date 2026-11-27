@@ -1933,6 +1933,8 @@
         // capsulectl's report as the page was given it: its verdict, and its x-deal-v1 entry's status.
         verdict: { report: "capsulectl", path: "/verdict" },
         report_checked: { report: "x-deal-v1", path: "/status" },
+        // capsulectl's witness time of the holder's own book (verify --stamp-proof), as its x-deal-v1 entry gives it.
+        book_witness: { report: "x-deal-v1", path: "/witnessed" },
         // The command the page's maker gave for checking this copy (verifyCommand).
         verify_command: { report: "verify_command" },
         // The page's own checks: its classification of each countersignature and of the countersigned copy.
@@ -2976,6 +2978,11 @@
   // second person and no prompts for the owner's agent (Sherlock2, #386;
   // "page" differs from "report" only in two lines, capsule-viewer#395).
   function sharedCarrier(carrier) { return carrier === "report" || carrier === "page"; }
+  // The id of the page core's check list, when the core draws one beside this receipt (capsule-viewer#489): set by
+  // render for one draw, from the core's L2 region before the module's. The core then says each check, who ran it,
+  // and capsulectl's witness line once; this receipt points at them and does not repeat them. A receipt drawn on
+  // its own (renderReceipt) has none and keeps its own lists.
+  var drawCore = null;
 
   function Drawer(doc, depth, seller) {
     this.d = new Drawing(doc);
@@ -2983,6 +2990,7 @@
     this.depth = depth;
     this.seller = !!seller;
     this.carrier = drawCarrier;
+    this.core = drawCore;
   }
   var P = Drawer.prototype;
 
@@ -3115,7 +3123,8 @@
     if (model.referee) parts.push(this.p(w("referee.named", { referee: model.referee }), { "data-rung": "referee" }));
     if (model.report.scope) parts.push(this.p(tagging !== null ? this.val(model.report.scope, inRecord(model.report.capsule_id, "/agent_input/report/scope")) : model.report.scope, { "data-sealed-text": "scope" }));
     if (model.counterparty_named) parts = parts.concat(this.counterpartyNamed(model.counterparty_named));
-    parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
+    // Beside the page core, its witness line and check list say it (#489).
+    if (!this.core) parts.push(this.p(this.witness(model), { "data-rung": "witness" }));
     // Only a half capsulectl reported as verified is said; any other status,
     // or none, draws no line (a failed half fails the x-deal-v1 entry, which
     // refuses the copy before it is drawn).
@@ -3487,7 +3496,7 @@
 
   P.l2 = function (model) {
     var d = this.d, kit = this.kit, self = this;
-    var out = [kit.verificationDetails(model.verification)];
+    var out = this.core ? [] : [kit.verificationDetails(model.verification)];
     if (model.bundle_digest) {
       out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
     }
@@ -3990,7 +3999,7 @@
   };
   P.dealL2 = function (model) {
     var d = this.d, kit = this.kit, self = this, S = model.sources;
-    var out = [kit.verificationDetails(model.verification)];
+    var out = this.core ? [] : [kit.verificationDetails(model.verification)];
     if (model.bundle_digest) {
       out.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [this.val(model.bundle_digest, S.bundle_digest)])]));
     }
@@ -4276,8 +4285,10 @@
       if (s.signer !== undefined) values.signer = s.signer;
       var key = "deal.stamp." + name + "." + (s.words || s.state);
       var text = s.at !== undefined ? self.timed(key, s.at, values, s.at_src) : w(key, values);
+      // TIME-STAMPED cites the page core's answer, where the core says it (#489).
+      var shown = name === "time_stamped" && self.core ? d.el("a", { href: "#" + self.core, "data-cites-core": "witness" }, [text]) : text;
       return d.el("li", { class: "cv-rcpt-stamp cv-rcpt-stamp--" + (s.state === "filled" ? "filled" : "open"), "data-stamp": name, "data-stamp-state": s.state }, [
-        d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [text]),
+        d.el("span", { class: "cv-rcpt-stamp__name" }, [w("deal.stamp." + name)]), " ", d.el("span", { class: "cv-rcpt-stamp__text" }, [shown]),
       ]);
     }));
   };
@@ -4330,7 +4341,10 @@
     if (!this.ownPage(model)) return { state: "not_checked" };
     var book = model.book_witnessed;
     if (book === null) return { state: "not_checked" };
-    if (book.status === "verified") return { state: "filled", words: "filled_checked", at: book.at, witness: book.witness };
+    var S = model.sources;
+    if (book.status === "verified") {
+      return { state: "filled", words: "filled_checked", at: book.at, at_src: at(S.book_witness, "/at"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
+    }
     if (book.status === "failed") return { state: "failed" };
     return { state: "open" };
   };
@@ -4515,6 +4529,16 @@
     if (stampState === "fail" || half === "fail") lede = "deal.proof.lede.failed";
     else if (lede === "deal.proof.lede.none" && (stampState === "pass" || half === "pass")) lede = "deal.proof.lede.answers.some";
     if (lede === "deal.proof.lede.failed") lede = "deal.proof.lede.answers.failed";
+    // Beside the page core, its one check list says each answer and who gave it; this panel gives its summary and
+    // points there (#489).
+    if (this.core) {
+      return d.el("section", { class: "cv-rcpt-panel", "data-surface": "proof" }, [
+        d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.proof")]),
+        this.p(w(lede), { class: "cv-rcpt-lede", "data-proof": lede.split(".").pop() }),
+        this.p(d.el("a", { href: "#" + this.core, "data-cites-core": "checks" }, [w("deal.proof.cited")]), { "data-proof-cites": "core" }),
+        this.checkYourself(model),
+      ]);
+    }
     var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled_checked", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
     rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
     var parts = [
@@ -4789,7 +4813,7 @@
     l0.push(dr.sides(model.case, halves, keep));
     if (!one) l0.push(d.el("p", { class: "cv-muted" }, [w("parts.own")]));
     var l1 = model.parties.map(function (p, i) { return d.el("div", { "data-party": p.member }, [kit.section(heading(p), drawn[i].l1, 3)]); });
-    var l2 = [kit.verificationDetails(model.verification)];
+    var l2 = dr.core ? [] : [kit.verificationDetails(model.verification)];
     if (model.bundle_digest) {
       l2.push(d.el("p", {}, [w("l2.bundle_digest"), " ", d.el("span", { class: "cv-mono", "data-bundle-digest": "true" }, [model.bundle_digest])]));
     }
@@ -5201,11 +5225,14 @@
         var carried = host.L0.closest ? host.L0.closest("[data-receipt-carrier]") : null;
         var mark = carried ? carried.getAttribute("data-receipt-carrier") : null;
         drawCarrier = mark === "report" || mark === "page" ? mark : null;
+        var core = host.L2.previousElementSibling;
+        drawCore = core && core.getAttribute("data-region") === "L2-core" ? core.getAttribute("data-checked-id") || null : null;
         var levels;
         try {
           levels = model && model.cannot_check === true ? cannotCheckLevels(doc, model.reason) : DRAW[kind](doc, depth, model);
         } finally {
           drawCarrier = null;
+          drawCore = null;
         }
         // One text node per run of text, as the Python twin's HTML parses: the
         // browser shapes each text node on its own, so a run built from several
