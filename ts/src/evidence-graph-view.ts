@@ -3797,8 +3797,15 @@ function bookWitnessLine(book: BookWitness): HTMLElement {
     line.textContent =
       book.witness === undefined
         ? receiptWord(key)
-        : receiptWord(`${key}_named`, { witness: book.witness });
+        : receiptWord(
+            book.independent === false
+              ? `${key}_named_not_listed`
+              : `${key}_named`,
+            { witness: book.witness },
+          );
     line.dataset.bookWitness = book.status;
+    if (book.witness !== undefined && book.independent === false)
+      line.dataset.witnessListed = "not";
     return line;
   }
   const mark = "\u0000";

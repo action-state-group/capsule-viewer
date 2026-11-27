@@ -584,6 +584,8 @@ export type BookWitness =
       readonly status: "failed" | "withheld";
       /** The witness capsulectl names, when it names one. */
       readonly witness?: string;
+      /** For a named witness, the page's reading of its directory row, when it has one. */
+      readonly independent?: boolean;
     };
 
 /**
@@ -603,10 +605,14 @@ export function bookWitnessOf(
     typeof got["witness"] === "string" && got["witness"] !== ""
       ? got["witness"]
       : undefined;
+  const independent =
+    typeof got["independent"] === "boolean"
+      ? { independent: got["independent"] }
+      : {};
   if (got["status"] === "failed" || got["status"] === "withheld")
     return named === undefined
       ? { status: got["status"] }
-      : { status: got["status"], witness: named };
+      : { status: got["status"], witness: named, ...independent };
   if (
     got["status"] !== "verified" ||
     named === undefined ||
@@ -617,9 +623,7 @@ export function bookWitnessOf(
     status: "verified",
     witness: named,
     at: got["at"] as string,
-    ...(typeof got["independent"] === "boolean"
-      ? { independent: got["independent"] }
-      : {}),
+    ...independent,
   };
 }
 

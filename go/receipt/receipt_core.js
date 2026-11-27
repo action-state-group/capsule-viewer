@@ -412,8 +412,9 @@
     if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
     var named = typeof got.witness === "string" && got.witness !== "" ? got.witness : null;
     if (got.status === "verified" && (named === null || !validUtcTime(got.at))) return null;
-    if (got.status !== "verified") return { status: got.status, witness: named };
-    return { status: got.status, witness: named, at: got.at, independent: typeof got.independent === "boolean" ? got.independent : null };
+    var independent = named !== null && typeof got.independent === "boolean" ? got.independent : null;
+    if (got.status !== "verified") return { status: got.status, witness: named, independent: independent };
+    return { status: got.status, witness: named, at: got.at, independent: independent };
   }
 
   // capsulectl's report of an x-deal-v0 copy, as the page's runtime hands it
@@ -3433,7 +3434,7 @@
       // Its directory entry, where the page read it, says whether it is listed as independent of the parties (#508).
       if (book.status === "verified") return this.timed(book.independent === false ? "rung.book_witnessed_not_listed" : "rung.book_witnessed", book.at, { witness: book.witness, utc: utcClock(book.at) });
       var bookKey = book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld";
-      return book.witness !== null ? w(bookKey + "_named", { witness: book.witness }) : w(bookKey);
+      return book.witness !== null ? w(bookKey + (book.independent === false ? "_named_not_listed" : "_named"), { witness: book.witness }) : w(bookKey);
     }
     if (model.witnessed === "pass") return w("rung.witness_verified");
     if (model.witnessed === "fail") return w("rung.witness_failed");
@@ -4634,8 +4635,9 @@
       return { state: "filled", words: book.independent === false ? "filled_checked_not_listed" : "filled_checked", at: book.at, at_src: at(S.book_witness, "/at"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
     }
     var state = book.status === "failed" ? "failed" : "open";
-    // A failed or withheld time stamp names its witness where capsulectl names it.
-    if (book.witness !== null) return { state: state, words: state + "_named", witness: this.val(book.witness, at(S.book_witness, "/witness")) };
+    // A failed or withheld time stamp names its witness where capsulectl names it, and says the same of its
+    // directory entry.
+    if (book.witness !== null) return { state: state, words: state + (book.independent === false ? "_named_not_listed" : "_named"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
     return { state: state };
   };
 

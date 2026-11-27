@@ -170,37 +170,62 @@ describe("the witness's directory entry on an x-deal-v1 keep page (#508)", () =>
     }
   });
 
-  it("a failed or withheld time stamp names the witness capsulectl names, and says nothing of independence", async () => {
-    const lines: [Obj, string, string, string][] = [
+  it("a failed or withheld time stamp names the witness capsulectl names, and its directory entry the same way", async () => {
+    const both: [string, Obj, boolean][] = [
+      ["not listed", { witness: "Example Witness", independent_of: [] }, true],
       [
-        { status: "failed", witness: "Example Witness", independent_of: [] },
+        "listed",
+        {
+          witness: "Example Witness",
+          independent_of: [COUNTERPARTY, ...HOLDER],
+        },
+        false,
+      ],
+      ["no directory entry reported", { witness: "Example Witness" }, false],
+    ];
+    const states: [string, string, string, string][] = [
+      [
+        "failed",
         "Example Witness: didn't verify",
         "Witness time stamp from Example Witness: didn't verify",
         "capsulectl verify reported that your own book's witness time-stamp from Example Witness did not verify",
       ],
       [
-        { status: "withheld", witness: "Example Witness", independent_of: [] },
+        "withheld",
         "Not time-stamped yet by Example Witness",
         "Witness time stamp from Example Witness: not in this copy",
         "capsulectl verify found no time-stamp for your own book from Example Witness.",
       ],
-      [
-        { status: "failed" },
-        "Didn't verify",
-        "Witness time stamp: didn't verify",
-        "capsulectl verify reported that your own book's witness time-stamp did not verify",
-      ],
     ];
-    for (const [witnessed, stamp, proof, line] of lines) {
-      const host = await alone(v1Copy(), v1Report(witnessed));
-      expect(stampText(host)).toBe(stamp);
-      expect(proofRow(host)).toContain(proof);
-      expect(host.textContent).not.toContain(NOT_LISTED);
-      const root = await fullPage(v1Report(witnessed));
-      expect(checkRow(root)).toContain(line);
-      expect(root.textContent).not.toContain(NOT_LISTED);
-      root.remove();
-    }
+    for (const [status, stamp, proof, line] of states)
+      for (const [why, member, notListed] of both) {
+        const witnessed = { status, ...member };
+        const label = `${status}, ${why}`;
+        const host = await alone(v1Copy(), v1Report(witnessed));
+        expect(stampText(host), label).toBe(
+          notListed ? `${stamp}. ${NOT_LISTED}` : stamp,
+        );
+        expect(proofRow(host), label).toContain(proof);
+        expect(proofRow(host).includes(NOT_LISTED), label).toBe(notListed);
+        const root = await fullPage(v1Report(witnessed));
+        expect(checkRow(root), label).toContain(line);
+        expect(checkRow(root).includes(NOT_LISTED), label).toBe(notListed);
+        root.remove();
+      }
+  });
+
+  it("an unnamed failed time stamp is as before", async () => {
+    const witnessed = { status: "failed", independent_of: [] };
+    const host = await alone(v1Copy(), v1Report(witnessed));
+    expect(stampText(host)).toBe("Didn't verify");
+    expect(proofRow(host)).toContain("Witness time stamp: didn't verify");
+    expect(host.textContent).not.toContain(NOT_LISTED);
+    const root = await fullPage(v1Report(witnessed));
+    expect(checkRow(root)).toContain(
+      "capsulectl verify reported that your own book's witness time-stamp did not verify",
+    );
+    expect(root.textContent).not.toContain(NOT_LISTED);
+    root.remove();
   });
 });
 
@@ -227,5 +252,25 @@ describe("the witness's directory entry on an x-deal-v0 keep copy (#508)", () =>
       expect(line, why).toContain("Time-stamped by Example Witness at ");
       expect(line.includes(NOT_LISTED), why).toBe(notListed);
     }
+  });
+
+  it("names a failed or withheld witness and says the same of its entry", async () => {
+    for (const status of ["failed", "withheld"])
+      for (const [list, notListed] of [
+        [[], true],
+        [V0_HOLDER, false],
+      ] as const) {
+        const host = await alone(
+          v0Copy(),
+          v0Report({
+            status,
+            witness: "Example Witness",
+            independent_of: list,
+          }),
+        );
+        const line = witnessRung(host);
+        expect(line, status).toContain("from Example Witness");
+        expect(line.includes(NOT_LISTED), status).toBe(notListed);
+      }
   });
 });
