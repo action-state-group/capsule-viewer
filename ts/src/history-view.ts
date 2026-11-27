@@ -2246,11 +2246,17 @@ export interface ModuleCard {
  * The drawer's card object from the module's view model. The card and its
  * entries already passed the card's own check (standard-history-card.ts), so
  * this projects them and adds no rule of the shaped-input page (whose limits
- * on ids and amount members are a caller's, not the card's). A card that is
- * not drawn still names its key in "Who signed this card".
+ * on ids and amount members are a caller's, not the card's). It reads only
+ * the members the card's entry rule checks under the card's token (SH 5.2;
+ * 11.2 for /3 and /4): `rows` under /3 and /4, `outcome` under /1 and /2,
+ * never the other. A card that is not drawn still names its key in "Who
+ * signed this card".
  */
 function moduleCardObject(mc: ModuleCard): CardObject {
   const card = mc.card ?? {};
+  const byRows =
+    card["derivation"] === "standard_history/3" ||
+    card["derivation"] === "standard_history/4";
   const num = (v: unknown): number => (typeof v === "number" ? v : 0);
   const oc = isObj(card["outcomes"]) ? card["outcomes"] : {};
   const nc = isObj(card["not_counted"]) ? card["not_counted"] : {};
@@ -2260,7 +2266,7 @@ function moduleCardObject(mc: ModuleCard): CardObject {
       ? undefined
       : mc.deals.filter(isObj).map((d): CardDeal => {
           const amount = isObj(d["amount"]) ? d["amount"] : undefined;
-          const outcome = d["outcome"];
+          const outcome = byRows ? undefined : d["outcome"];
           return {
             id: typeof d["deal"] === "string" ? d["deal"] : "",
             // Checked by the card's entry rule (an IP 5.2 time, a role), so neither fallback is reached.
@@ -2283,20 +2289,21 @@ function moduleCardObject(mc: ModuleCard): CardObject {
               outcome === "undecided"
                 ? outcome
                 : undefined,
-            terms: Array.isArray(d["rows"])
-              ? d["rows"].filter(isObj).map((row) => ({
-                  holder: row["owed_by"] === "holder",
-                  status: row["status"] as RowStatus,
-                  value:
-                    row["value"] === "met" || row["value"] === "not_met"
-                      ? row["value"]
-                      : undefined,
-                  remedy:
-                    typeof row["remedy"] === "string"
-                      ? row["remedy"]
-                      : undefined,
-                }))
-              : undefined,
+            terms:
+              byRows && Array.isArray(d["rows"])
+                ? d["rows"].filter(isObj).map((row) => ({
+                    holder: row["owed_by"] === "holder",
+                    status: row["status"] as RowStatus,
+                    value:
+                      row["value"] === "met" || row["value"] === "not_met"
+                        ? row["value"]
+                        : undefined,
+                    remedy:
+                      typeof row["remedy"] === "string"
+                        ? row["remedy"]
+                        : undefined,
+                  }))
+                : undefined,
             bothHalves: d["happened"] === "stamped_by_both",
           };
         });

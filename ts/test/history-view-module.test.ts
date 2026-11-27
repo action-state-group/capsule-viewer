@@ -539,6 +539,51 @@ describe("Codex round 1 (#478): the signature claim, accepted entries, sources a
     );
   });
 
+  it("reads under /1 only the members the /1 entry rule checks", async () => {
+    const b = bundleOf(DATA, "person-own");
+    const deals = b.extensions["x-standard-history/v0"].deals;
+    // /1 checks `outcome`, not `rows`: a /1 entry's rows are never drawn.
+    deals[0].rows = [{}];
+    const model = await buildHistoryViewModel(standIn(DATA, "person-own", b));
+    expect(model.state).toBe("card");
+    expect(model.card?.["derivation"]?.value).toBe("standard_history/1");
+    const page = draw(model);
+    expect(page.L0.querySelectorAll('[data-history="row"]')).toHaveLength(
+      deals.length,
+    );
+    expect(page.text).not.toContain("undefined");
+  });
+
+  it("draws a /3 card's rows from their term results", async () => {
+    const vectors = readJson(join(DATA, "aac", "vectors-3.json"));
+    const input = vectors.cases.find(
+      (c: Json) => c.id === "outcomes-from-rows",
+    ).inputs;
+    const b = bundleOf(DATA, "person-own");
+    b.extensions["x-standard-history/v0"] = {
+      policy: input.policy,
+      as_of: input.as_of,
+      deals: input.deals,
+    };
+    const base = standIn(DATA, "person-own", b);
+    const r = base.resolvedDisclosures.get(base.root);
+    const ctx = {
+      ...base,
+      resolvedDisclosures: new Map(base.resolvedDisclosures).set(base.root, {
+        ...r,
+        agent_input: { state: "disclosed", payload: input.card },
+      }),
+    };
+    const model = await buildHistoryViewModel(ctx);
+    expect(model.state).toBe("card");
+    const page = draw(model);
+    expect(page.L0.querySelectorAll('[data-history="row"]')).toHaveLength(
+      input.deals.length,
+    );
+    expect(page.L0.textContent).toContain(words["card.term.yours.label"]!);
+    expect(page.text).not.toContain("undefined");
+  });
+
   it("attributes the copy and what the block carries to the card's reading", async () => {
     const model = await buildHistoryViewModel(standIn(DATA, "person-own"));
     expect(model.copy).toEqual({
