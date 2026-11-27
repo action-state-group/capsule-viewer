@@ -146,6 +146,9 @@ describe.skipIf(executablePath === undefined)(
       writeFileSync(file, html);
       await page.goto(`file://${file}`);
       await page.waitForSelector('[data-claim-ref="d1::req-1"]');
+      // The page's own verification section is drawn last, after the module
+      // that drew the claims has settled (#425): wait for it too.
+      await page.waitForSelector("#cv-checked", { state: "attached" });
       const violations = await page.evaluate(
         () =>
           (globalThis as unknown as { __violations: string[] }).__violations,
@@ -158,6 +161,25 @@ describe.skipIf(executablePath === undefined)(
         () =>
           (globalThis as unknown as { __violations: string[] }).__violations,
       );
+
+    /**
+     * Opens the receipt under `claim` and waits until the page has finished
+     * opening it. The deal module draws its banner part way through the nested
+     * render; the receipt's verification section, which its banner link points
+     * at, is drawn after the module has settled, and the panel's
+     * `data-receipt-state` is set only once all of it is done (or the receipt
+     * was refused). Reading before that reads a half-drawn receipt (#425).
+     */
+    const openAt = async (
+      page: Page,
+      claim: string,
+    ): Promise<string | null> => {
+      await page.click(`${claim} button[data-receipt="open"]`);
+      const panel = await page.waitForSelector(
+        `${claim} .rcpt-panel[data-receipt-state]`,
+      );
+      return panel.getAttribute("data-receipt-state");
+    };
 
     const receiptsOf = (): Record<string, string> => ({
       d1: data("deal-receipt", "composition-artifact.json"),
@@ -176,15 +198,13 @@ describe.skipIf(executablePath === undefined)(
         expect(await page.$(`${claim("d3")} button[data-receipt]`)).toBeNull();
 
         // d1: the other half came back.
-        await page.click(`${claim("d1")} button[data-receipt="open"]`);
-        await page.waitForSelector(`${claim("d1")} .rcpt-panel .deal-banner`);
+        expect(await openAt(page, claim("d1"))).toBe("opened");
         expect(
           await page.textContent(`${claim("d1")} .rcpt-panel .deal-banner`),
         ).toContain("Stamped by both sides");
 
         // d2: nothing came back from the other side.
-        await page.click(`${claim("d2")} button[data-receipt="open"]`);
-        await page.waitForSelector(`${claim("d2")} .rcpt-panel .deal-banner`);
+        expect(await openAt(page, claim("d2"))).toBe("opened");
         expect(
           await page.textContent(`${claim("d2")} .rcpt-panel .deal-banner`),
         ).toContain("Your receipt only");
@@ -240,31 +260,27 @@ describe.skipIf(executablePath === undefined)(
         d3: JSON.stringify({ bundle_kind: "evidence-bundle/v2" }),
       });
       try {
-        await page.click(
-          '[data-claim-ref^="d1::"] button[data-receipt="open"]',
+        expect(await openAt(page, '[data-claim-ref^="d1::"]')).toBe(
+          "unreadable",
         );
-        await page.waitForSelector('[data-claim-ref^="d1::"] .rcpt-panel p');
         expect(
           await page.textContent('[data-claim-ref^="d1::"] .rcpt-panel'),
         ).toBe(
           "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
         );
-        await page.click(
-          '[data-claim-ref^="d3::"] button[data-receipt="open"]',
+        expect(await openAt(page, '[data-claim-ref^="d3::"]')).toBe(
+          "unverified",
         );
-        await page.waitForSelector('[data-claim-ref^="d3::"] .rcpt-panel p');
         expect(
           await page.textContent('[data-claim-ref^="d3::"] .rcpt-panel'),
         ).toBe(
           "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged.",
         );
         // The other deal still opens, and the report's own rows are still there.
-        await page.click(
-          '[data-claim-ref^="d2::"] button[data-receipt="open"]',
-        );
-        await page.waitForSelector(
-          '[data-claim-ref^="d2::"] .rcpt-panel .deal-banner',
-        );
+        expect(await openAt(page, '[data-claim-ref^="d2::"]')).toBe("opened");
+        expect(
+          await page.$('[data-claim-ref^="d2::"] .rcpt-panel .deal-banner'),
+        ).not.toBeNull();
         expect(await page.$$("[data-claim-ref]")).toHaveLength(3);
       } finally {
         await page.close();
@@ -276,27 +292,11 @@ describe.skipIf(executablePath === undefined)(
         d2: data("deal-receipt", "composition-refusal.json"),
       });
       try {
-        await page.click(
-          '[data-claim-ref^="d1::"] button[data-receipt="open"]',
-        );
-        await page.waitForSelector(
-          '[data-claim-ref^="d1::"] .rcpt-panel .deal-banner, [data-claim-ref^="d1::"] .rcpt-panel[data-receipt-state]:not([data-receipt-state="opened"])',
-        );
-        expect(
-          await page.getAttribute(
-            '[data-claim-ref^="d1::"] .rcpt-panel',
-            "data-receipt-state",
-          ),
-        ).toBe("opened");
+        expect(await openAt(page, '[data-claim-ref^="d1::"]')).toBe("opened");
         expect(
           await page.$('[data-claim-ref^="d1::"] .rcpt-panel .deal-banner'),
         ).not.toBeNull();
-        await page.click(
-          '[data-claim-ref^="d2::"] button[data-receipt="open"]',
-        );
-        await page.waitForSelector(
-          '[data-claim-ref^="d2::"] .rcpt-panel .deal-banner',
-        );
+        expect(await openAt(page, '[data-claim-ref^="d2::"]')).toBe("opened");
         expect(
           await page.textContent(
             '[data-claim-ref^="d2::"] .rcpt-panel .deal-banner',
