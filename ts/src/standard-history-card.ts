@@ -414,6 +414,22 @@ function checkEntry(deal: Json, derivation: string): void {
       );
 }
 
+/**
+ * Whether one deal entry has the form SH 5.2 (under /3 and /4, 11.2) gives it
+ * under the card's token: the rule the recount applies to every entry. The
+ * page applies it before it draws an entry, since the recount does not run
+ * when the block carries no snapshot (or, under /1, no policy).
+ */
+export function dealEntryReadable(deal: unknown, derivation: unknown): boolean {
+  try {
+    checkEntry(deal, shelf(derivation) ? (derivation as string) : DERIVATION);
+    return true;
+  } catch (err) {
+    if (err instanceof StandardHistoryInputError) return false;
+    throw err;
+  }
+}
+
 // SH 11.3 and 11.4: a counted /3 deal's outcome, the first rule that applies, and for a did_not_hold deal whether the
 // holder did not honour a ruling or remedied its unmet rows. Only rows the holder owed can make a deal did_not_hold.
 function outcomeOf(rows: Json[]): {

@@ -513,6 +513,32 @@ describe("Codex round 1 (#478): the signature claim, accepted entries, sources a
     expect(page.L2.textContent).toContain("d".repeat(250));
   });
 
+  it("lists no entry the card's entry rule did not accept, even when the recount does not run", async () => {
+    const b = bundleOf(DATA, "person-own");
+    const block = b.extensions["x-standard-history/v0"];
+    delete block.as_of;
+    block.deals = [{}];
+    const model = await buildHistoryViewModel(standIn(DATA, "person-own", b));
+    expect(model.state).toBe("card");
+    expect(model.properties.value.counts_recompute).toBe("NOT_CHECKED");
+    expect(model.deals).toBeUndefined();
+    expect(model.deals_unreadable).toEqual({
+      value: true,
+      src: { checked: "card_check" },
+    });
+    const page = draw(model);
+    expect(page.L0.querySelectorAll('[data-history="row"]')).toHaveLength(0);
+    expect(page.L0.textContent).toContain(words["card.module.rows.unreadable"]);
+    expect(page.text).not.toContain("1970");
+    // Entries of the right form are listed without the recount.
+    const ok = bundleOf(DATA, "person-own");
+    delete ok.extensions["x-standard-history/v0"].as_of;
+    const listed = await buildHistoryViewModel(standIn(DATA, "person-own", ok));
+    expect(listed.deals?.length).toBe(
+      ok.extensions["x-standard-history/v0"].deals.length,
+    );
+  });
+
   it("attributes the copy and what the block carries to the card's reading", async () => {
     const model = await buildHistoryViewModel(standIn(DATA, "person-own"));
     expect(model.copy).toEqual({

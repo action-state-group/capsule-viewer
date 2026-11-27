@@ -38,6 +38,7 @@ import { readerAnchorWitness } from "./reader-witnesses.js";
 import {
   CARD_PROPERTIES,
   type CardProperties,
+  dealEntryReadable,
   type CardProperty,
   type CardReading,
   type Held,
@@ -181,8 +182,14 @@ export interface HistoryViewModel {
   readonly card?: Readonly<Record<string, Sourced<unknown>>>;
   /** The block's snapshot, when it carries one. */
   readonly as_of?: Sourced<Record<string, unknown>>;
-  /** The block's deal entries (the holder's own copy), on a standard card only. */
+  /**
+   * The block's deal entries (the holder's own copy), on a standard card
+   * only, and only when every entry has the form the card's check requires
+   * (the recount checks them only when it runs).
+   */
   readonly deals?: readonly Sourced<Record<string, unknown>>[];
+  /** The block carries deal entries, and one of them does not have that form: none is listed. */
+  readonly deals_unreadable?: Sourced<true>;
 }
 
 const STATUSES: readonly CardCheckStatus[] = [
@@ -384,14 +391,21 @@ export async function buildHistoryViewModel(
     entries_match: checked("card_check", m.entriesMatch),
     covered: checked("membership", m.covered),
     card,
-    ...(m.deals !== null
-      ? {
-          deals: m.deals.map((d, i) => ({
-            value: clone(d) as Record<string, unknown>,
-            src: { bundle: `${BLOCK}/deals/${i}` },
-          })),
-        }
-      : {}),
+    ...(m.deals === null
+      ? {}
+      : m.deals.every((d) =>
+            dealEntryReadable(
+              d,
+              (m.card as Record<string, unknown>)["derivation"],
+            ),
+          )
+        ? {
+            deals: m.deals.map((d, i) => ({
+              value: clone(d) as Record<string, unknown>,
+              src: { bundle: `${BLOCK}/deals/${i}` },
+            })),
+          }
+        : { deals_unreadable: checked("card_check", true as const) }),
   };
 }
 
@@ -428,6 +442,7 @@ function moduleCard(model: HistoryViewModel): ModuleCard {
     signedAt: model.signer?.signed_at.value ?? "",
     asOf: model.as_of?.value,
     deals: model.deals?.map((d) => d.value),
+    dealsUnreadable: model.deals_unreadable?.value === true,
   };
 }
 

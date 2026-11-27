@@ -2236,7 +2236,10 @@ export interface ModuleCard {
   readonly keyId: string;
   readonly signedAt: string;
   readonly asOf: Readonly<Record<string, unknown>> | undefined;
+  /** Entries the module checked with the card's entry rule; absent when none is listed. */
   readonly deals: readonly unknown[] | undefined;
+  /** The block carries entries that do not have that form. */
+  readonly dealsUnreadable: boolean;
 }
 
 /**
@@ -2260,6 +2263,7 @@ function moduleCardObject(mc: ModuleCard): CardObject {
           const outcome = d["outcome"];
           return {
             id: typeof d["deal"] === "string" ? d["deal"] : "",
+            // Checked by the card's entry rule (an IP 5.2 time, a role), so neither fallback is reached.
             agreed:
               (typeof d["agreed_at"] === "string"
                 ? parseInstant(d["agreed_at"])
@@ -2326,6 +2330,11 @@ export function historyModuleCardParts(mc: ModuleCard): {
 } {
   const failed = mc.frame.state !== "card" || mc.card === undefined;
   const obj = moduleCardObject(mc);
+  const say0 = (key: string): string => {
+    const t = BASE[key];
+    if (t === undefined) throw new Error(`history-view: no words for ${key}`);
+    return t;
+  };
   const parts = drawCardParts({
     owner: mc.own,
     words: {},
@@ -2350,7 +2359,18 @@ export function historyModuleCardParts(mc: ModuleCard): {
       ...children,
     );
   return {
-    L0: region("L0", parts.hero, parts.rows),
+    L0: region(
+      "L0",
+      parts.hero,
+      parts.rows,
+      mc.dealsUnreadable && !failed
+        ? el(
+            "p",
+            { class: "cvh-note", "data-history": "rows-unreadable" },
+            say0("card.module.rows.unreadable"),
+          )
+        : null,
+    ),
     L1: region("L1", parts.signed, parts.notProven),
     L2: region("L2", parts.proof, parts.technical),
   };
