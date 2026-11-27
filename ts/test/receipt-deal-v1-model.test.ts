@@ -45,6 +45,8 @@ type Step = {
   names: Sourced<{ kind: string; record: string | null }>;
   ruling: Sourced<{ row: string; against: string; value: string }>;
   dispute: Sourced<{ kind: string; row: string; forum: string }>;
+  statements: Sourced<{ row: string; value: string | null }[]> | null;
+  cites_statements: Sourced<{ digest: string; record: string | null }[]> | null;
 };
 type Model = {
   agreement: Sourced<{ state: string }>;
@@ -186,6 +188,60 @@ describe("the ARD run's ruled deal, the holder's keep copy on a page", () => {
         "Forumexternal:ard-demo",
       ]),
     );
+  });
+
+  // #491 (PRD C16, no bare "-"): a dispute's `statements` are references to
+  // the statement records it cites (evidencebook DisputeBody), not term
+  // statements, so its drawer shows each as the record it names.
+  it("draws the statement a dispute cites as that record, never a blank '-' field", async () => {
+    const root = await page(ruledBundle(), ruledReport());
+    const fields = Array.from(
+      root.querySelectorAll(`[data-step-record="${DISPUTE}"] .cv-rcpt-field`),
+    ).map((f) => f.textContent ?? "");
+    expect(fields).toContain(
+      `Statement it cites${STATEMENT.slice(0, 8)}…${STATEMENT.slice(-4)}`,
+    );
+    expect(fields.filter((f) => f === "-" || f.endsWith("-"))).toEqual([]);
+    const m = await model(ruledBundle());
+    const dispute = m.sealed_steps.find((s) => s.record === DISPUTE)!;
+    expect(dispute.statements).toBeNull();
+    expect(dispute.cites_statements?.value.map((r) => r.record)).toEqual([
+      STATEMENT,
+    ]);
+  });
+
+  it("says a cited statement the copy does not carry is not in it", async () => {
+    const b = ruledBundle();
+    const pair = (book(b)["relied_on"] as Obj)[DISPUTE] as Obj;
+    const refs = ((pair["payload"] as Obj)["body"] as Obj)[
+      "statements"
+    ] as Obj[];
+    refs[0]!["digest"] = "00".repeat(32);
+    // The pair's hash chain redone (payload -> header commitment -> the
+    // record's agent_input_digest), so the page still opens the payload.
+    const header = pair["header"] as Obj;
+    header["payload_commitments"] = [core.recordDigest(pair["payload"])];
+    const record = (b["records"] as Obj[]).find(
+      (r) => r["capsule_id"] === DISPUTE,
+    )!;
+    ((record["model_attestation"] as Obj)["compute_attestation"] as Obj)[
+      "agent_input_digest"
+    ] = core.recordDigest(header);
+    pair["record"] = record;
+    const m = await module().buildModel(context(b));
+    const host = {
+      L0: document.createElement("div"),
+      L1: document.createElement("div"),
+      L2: document.createElement("div"),
+      depth: "L2",
+    };
+    module().render(m, host);
+    const fields = [host.L0, host.L1, host.L2].flatMap((el) =>
+      Array.from(
+        el.querySelectorAll(`[data-step-record="${DISPUTE}"] .cv-rcpt-field`),
+      ).map((f) => f.textContent ?? ""),
+    );
+    expect(fields).toContain("Statement it citesnot in this copy");
   });
 
   it("says the agreement's state as that, never 'Started' as the deal's status beside the ruling", async () => {
@@ -602,17 +658,19 @@ describe("the deal model: the holder's own offer carried in the copy (book.offer
     expect(side.querySelector("[data-hero-item]")).toBeNull();
   });
 
-  it("the carried offer adds only the item line: none of its times is drawn (u239)", async () => {
+  it("the carried offer adds only the item line and its quantity and price: none of its times is drawn (u239)", async () => {
     // The offer's x-deal-v1.at, body.stated_at and Capsule timestamp are the
     // offerer's own word, never a record time: every depth of the page is the
-    // same with and without the pair, the item line aside.
+    // same with and without the pair, the item line and its terms line aside.
     const all = async (b: Obj): Promise<string> => {
       const mod = module({});
       const m = await mod.buildModel(context(b));
       const out = ["L0", "L1", "L2"].map(() => document.createElement("div"));
       mod.render(m, { L0: out[0]!, L1: out[1]!, L2: out[2]!, depth: "L2" });
       out.forEach((el) =>
-        el.querySelectorAll("[data-hero-item]").forEach((n) => n.remove()),
+        el
+          .querySelectorAll("[data-hero-item], [data-hero-terms]")
+          .forEach((n) => n.remove()),
       );
       return out.map((el) => el.innerHTML).join("\n");
     };
@@ -624,5 +682,77 @@ describe("the deal model: the holder's own offer carried in the copy (book.offer
         await all(without),
       );
     }
+  });
+
+  // #487 (u561 item 2: the keep copy shows the offer's item, quantity and
+  // price; item 5: so does the counterparty's copy that carries it), worded
+  // as Sherlock2 gave them on #503: "Quantity: 200 · Total: 60.00 USD".
+  describe("the offer's quantity and price, under the item", () => {
+    const draw = async (b: Obj, assurance: Obj = {}): Promise<HTMLElement> => {
+      const mod = module(assurance);
+      const L0 = document.createElement("div");
+      mod.render(await mod.buildModel(context(b)), {
+        L0,
+        L1: document.createElement("div"),
+        L2: document.createElement("div"),
+        depth: "L0",
+      });
+      return L0;
+    };
+    const line = (root: HTMLElement): string | null =>
+      root.querySelector("[data-hero-terms]")?.textContent ?? null;
+    const values = (root: HTMLElement): (string | null)[][] =>
+      Array.from(
+        root.querySelectorAll("[data-hero-terms] [data-src='field']"),
+      ).map((e) => [e.getAttribute("data-ptr"), e.getAttribute("data-fmt")]);
+    // The copy given *o* beside it (capsulectl's deal_offer), its agreement citing *o*.
+    const sideInput = (o: Obj, audience: string): Obj => {
+      const b = citing(read("offer", "keep-copy.bundle.json"), o);
+      content(b)["audience"] = audience;
+      b["records"] = [];
+      return b;
+    };
+
+    it("keep copy, the offer given beside it: quantity and total under the item, each from the offer", async () => {
+      const root = await draw(sideInput(offer(), "keep"), {
+        deal_offer: offer(),
+      });
+      expect(root.querySelector("[data-hero-item]")?.textContent).toBe(ITEM);
+      expect(line(root)).toBe("Quantity: 200 · Total: 60.00 USD");
+      expect(values(root)).toEqual([
+        ["report:deal_offer#/body/terms/quantity", "text"],
+        ["report:deal_offer#/body/terms", "price"],
+      ]);
+    });
+
+    it("counterparty copy carrying the offer: drawn from the carried record; given beside it only: not drawn", async () => {
+      const carried = await draw(withOffer(sentPair(), "counterparty"));
+      expect(line(carried)).toBe("Quantity: 200 · Total: 60.00 USD");
+      expect(values(carried).map((v) => v[0])).toEqual([
+        `record:${OFFER_ID}#/agent_input/body/terms/quantity`,
+        `record:${OFFER_ID}#/agent_input/body/terms`,
+      ]);
+      const side = await draw(sideInput(offer(), "counterparty"), {
+        deal_offer: offer(),
+      });
+      expect(side.querySelector("[data-hero-terms]")).toBeNull();
+    });
+
+    it("an offer without them draws neither, and one without a price draws the quantity alone", async () => {
+      const bare = offer();
+      const t = (bare["body"] as Obj)["terms"] as Obj;
+      delete t["quantity"];
+      delete t["price_minor"];
+      expect(
+        (
+          await draw(sideInput(bare, "keep"), { deal_offer: bare })
+        ).querySelector("[data-hero-terms]"),
+      ).toBeNull();
+      const q = offer();
+      delete ((q["body"] as Obj)["terms"] as Obj)["price_minor"];
+      expect(line(await draw(sideInput(q, "keep"), { deal_offer: q }))).toBe(
+        "Quantity: 200",
+      );
+    });
   });
 });

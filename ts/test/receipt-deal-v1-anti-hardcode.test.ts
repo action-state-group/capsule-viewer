@@ -213,6 +213,16 @@ describe("the formatters a value's text comes from", () => {
     );
     expect(f["asset"]!("nope")).toBe("-");
   });
+  it("price: an offer's terms' price in its own currency, never converted", () => {
+    expect(f["price"]!({ price_minor: 6000, currency: "USD" })).toBe(
+      "60.00 USD",
+    );
+    expect(f["price"]!({ price_minor: 1500, currency: "BTC" })).toBe(
+      "1,500 msat",
+    );
+    expect(f["price"]!({ price_minor: 6000 })).toBe("-");
+    expect(f["price"]!("nope")).toBe("-");
+  });
   it("short: a long id as its head and tail, a short one whole", () => {
     expect(
       f["short"]!(
@@ -255,6 +265,7 @@ describe("the formatters a value's text comes from", () => {
       "asset",
       "json",
       "json_timeless",
+      "price",
       "proof_file",
       "second",
       "short",

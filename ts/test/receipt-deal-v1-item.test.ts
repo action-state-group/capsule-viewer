@@ -78,13 +78,19 @@ describe("#461: the item from the holder's own sealed offer, on a page", () => {
     expect(root.querySelector(".cv-rcpt-hero [data-hero-item]")).not.toBeNull();
   });
 
-  it("no offer given: no item, and the rest of the receipt is unchanged", async () => {
+  it("no offer given: no item, quantity or total, and the rest of the receipt is unchanged", async () => {
     const without = await page(data("keep-copy.bundle.json"), {});
     expect(item(without)).toBeNull();
     const withOffer = await page(data("keep-copy.bundle.json"), {
       dealOffer: data("offer.json"),
     });
+    // The offer's quantity and total, under the item (#487).
+    expect(withOffer.querySelector("[data-hero-terms]")?.textContent).toBe(
+      "Quantity: 200 · Total: 60.00 USD",
+    );
+    expect(without.querySelector("[data-hero-terms]")).toBeNull();
     withOffer.querySelector("[data-hero-item]")?.remove();
+    withOffer.querySelector("[data-hero-terms]")?.remove();
     expect(withOffer.innerHTML).toBe(without.innerHTML);
   });
 

@@ -2368,9 +2368,16 @@
           return acc;
         }, {}) : {},
         // Each statement with its place in the record's list (`i`), where the drawer reads it.
-        statements: shown ? sourced(seq(get(body, "statements")).map(function (st, i) {
+        // A dispute's `statements` are not term statements but references to the statement records it cites
+        // (evidencebook xdealv1 DisputeBody, []Ref), read as `cites_statements` below (#491).
+        statements: shown && kind !== "dispute" ? sourced(seq(get(body, "statements")).map(function (st, i) {
           return isMap(st) ? { row: or(str(get(st, "row")), ""), value: optionalWordOrNull(V1_VALUES, get(st, "value")), i: i } : null;
         }).filter(function (st) { return st !== null; }), inRecord(id, "/payload/body/statements")) : null,
+        // The statement records a dispute cites, each by its payload digest; `record` is filled below when the copy
+        // carries it, as a statement's `names` is.
+        cites_statements: shown && kind === "dispute" ? sourced(seq(get(body, "statements")).map(function (ref, i) {
+          return isMap(ref) ? { digest: str(get(ref, "digest")), record: null, i: i } : null;
+        }).filter(function (ref) { return ref !== null; }), inRecord(id, "/payload/body/statements")) : null,
         // The arrived record a statement names (evidencebook xdealv1 StatementNames): a ruling or a cancellation,
         // by its payload digest; `record` is filled below when the copy carries it.
         names: named !== undefined ? sourced({ kind: named, digest: str(get(get(names, named), "digest")), record: null }, inRecord(id, "/payload/body/names/" + named)) : null,
@@ -2407,6 +2414,10 @@
         var hit = ordered.find(function (o) { return o.payload_digest === s.names.value.digest; });
         if (hit) s.names.value.record = hit.record;
       }
+      (vof(s.cites_statements) || []).forEach(function (ref) {
+        var cited = ref.digest !== null ? ordered.find(function (o) { return o.payload_digest === ref.digest; }) : null;
+        if (cited) ref.record = cited.record;
+      });
     });
     // The order's working members are not the model's.
     ordered.forEach(function (s) { delete s.cites; delete s.book_id; });
@@ -3190,6 +3201,11 @@
     second: function (v) { return stepTime(null, String(v)); },
     // A money member as an older line says it (legAmount): value and asset code, scaled.
     asset: function (v) { return legAmount(v); },
+    // An offer's price, from its terms ({price_minor, currency}), in the offer's own currency, never converted.
+    price: function (v) {
+      var minor = int(get(v, "price_minor")), currency = str(get(v, "currency"));
+      return minor !== null && currency !== null ? formatAmount(minor, currency) : "-";
+    },
     // A UTC instant's clock to the minute ("18:56 UTC"), said beside a deadline's local time.
     utc_minutes: function (v) { return utcClock(String(v), true); },
     // The proof file's name from the deal id ("<deal>.bundle.json"), quoted for a shell when it is not plain.
@@ -3413,7 +3429,9 @@
     }
     if (model.witnessed === "pass") return w("rung.witness_verified");
     if (model.witnessed === "fail") return w("rung.witness_failed");
-    if (model.witnessed === "withheld") return w("rung.unwitnessed");
+    // The x-deal-v1 page (its model alone has sealed_steps) says the witness check by the core's noun (#494); the v0
+    // pages keep the frozen Python pack's words.
+    if (model.witnessed === "withheld") return w(Array.isArray(model.sealed_steps) ? "deal.rung.unwitnessed" : "rung.unwitnessed");
     return w("rung.unreported");
   };
   // Who the deal was with and their words accepting (counterpartyOf): only
@@ -3457,7 +3475,8 @@
   };
   P.countersign = function (model) {
     // A two-sided copy is not unsigned by the other party: its half is above.
-    if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : "countersign.none");
+    // On an x-deal-v1 page "the other party" reads as the deal's other side (#494); the v0 pages keep the frozen words.
+    if (!model.countersignatures.length) return w(model.counterparty_half === "verified" ? "countersign.none.two_sided" : Array.isArray(model.sealed_steps) ? "deal.countersign.none" : "countersign.none");
     // Each status as the page's own check of that countersignature gave it (the context's countersignatures).
     var self = this;
     var statuses = tagging === null ? model.countersignatures.join(", ")
@@ -4466,7 +4485,14 @@
     // never drawn as one. An offer the copy carries (book.offer) is shown on every copy it travels in (u499; u561
     // items 2 and 5); one capsulectl
     // gave beside the copy (deal_offer) is not in it, so only the holder's own page shows it.
-    if (model.item !== null && (model.item.src.report !== "deal_offer" || this.ownPage(model))) line.push(this.p(w("deal.hero.item", { item: this.val(model.item.value, model.item.src, "trim") }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
+    var self = this;
+    var shown = function (v) { return v !== null && (v.src.report !== "deal_offer" || self.ownPage(model)); };
+    if (shown(model.item)) line.push(this.p(w("deal.hero.item", { item: this.val(model.item.value, model.item.src, "trim") }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
+    // The offer's quantity and price, under the same rule (u561 item 2): each only when the offer states it.
+    var terms = [];
+    if (shown(model.quantity)) terms.push(w("deal.hero.quantity", { quantity: this.val(model.quantity.value, model.quantity.src) }));
+    if (shown(model.price)) terms.push(w("deal.hero.price", { price: this.val({ price_minor: model.price.value.minor, currency: model.price.value.currency }, model.price.src, "price") }));
+    if (terms.length) line.push(this.p(this.joined(terms, "dot"), { class: "cv-rcpt-lede", "data-hero-terms": "" }));
     if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy, at(row.src, "/remedy")) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
     if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
     var parts = [];
@@ -4587,7 +4613,7 @@
     }
     return null;
   }
-  // TIME-STAMPED and the proof panel's "Outside time stamp" row, one decision: capsulectl's check of
+  // TIME-STAMPED and the proof panel's "Witness time stamp" row, one decision: capsulectl's check of
   // the holder's own book, on the holder's own page only (a shared copy never shows the holder's time).
   P.timeStamp = function (model) {
     if (!this.ownPage(model)) return { state: "not_checked" };
@@ -4701,6 +4727,14 @@
       if (dispute.forum !== null) rows.push([w("deal.drawer.forum"), d.el("span", { class: "cv-mono" }, [this.val(dispute.forum, at(ds, "/forum"))])]);
       if (dispute.adjudicator !== null) rows.push([w("deal.drawer.adjudicator"), d.el("span", { class: "cv-mono", title: dispute.adjudicator }, [this.val(dispute.adjudicator, at(ds, "/adjudicator"), "short")])]);
     }
+    // Each statement a dispute cites, as the record it names (#491; PRD C16: no bare "-"): its id, marked with the
+    // digest the dispute cites and the record whose payload has that digest, or that the copy does not carry it.
+    (vof(step.cites_statements) || []).forEach(function (ref) {
+      var src = at(step.cites_statements.src, "/" + ref.i);
+      rows.push([w("deal.drawer.cites_statement"), ref.record !== null ? d.el("span", { class: "cv-mono", title: ref.record }, [
+        derivedNode(d, "named", shortText(ref.record), [at(src, "/digest"), idSrc(ref.record)]),
+      ]) : w("deal.drawer.cites_statement.unread")]);
+    });
     if (ruling !== null) {
       var rs = step.ruling.src;
       if (ruling.row !== null) rows.push([w("deal.drawer.term"), this.termName(ruling.row, at(rs, "/row"))]);

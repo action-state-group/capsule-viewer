@@ -184,7 +184,7 @@ describe("the x-deal-v1 page of the ARD run's deal", () => {
     const no = await page((c) => ({ ...asKeep(c), rows: c.rows.map((r) => ({ ...r, relied_on: r.relied_on.map((e) => ({ ...e, time: null, witnessed: false })) })) }));
     for (const r of table(no.host.L2, BASIS)) expect([r[3].textContent, r[4].textContent]).toEqual(["no time", "no"]);
     // The header still says the file carries no witness receipt the page checked.
-    expect(host.L2.querySelector('[data-rung="witness"]').textContent).toBe("No outside time stamp: this copy carries no witness receipt.");
+    expect(host.L2.querySelector('[data-rung="witness"]').textContent).toBe("No witness time stamp: this copy carries no witness receipt.");
   });
 
   // Sherlock2, u239: a copy that is not the holder's own page lists the records each term rests on,
