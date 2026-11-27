@@ -370,11 +370,11 @@ only".
 
 ### The receipt modules in the page: module-slot scripts
 
-The three receipt modules (unilateral, seller, bilateral) also ship as module-slot
+The receipt modules (unilateral, seller, bilateral, and the provider's own receipt) also ship as module-slot
 scripts, the form a page builder puts in a page (capsulectl `presentation build`, from
 a plugin that carries them, or a Go page builder through package `receipt`):
-`go/receipt/receipt_unilateral.js`, `receipt_seller.js` and `receipt_bilateral.js`
-(and `receipt_deal.js`), pinned by `go/receipt/manifest-*.json`
+`go/receipt/receipt_unilateral.js`, `receipt_seller.js`, `receipt_bilateral.js` and
+`receipt_provider.js` (and `receipt_deal.js`), pinned by `go/receipt/manifest-*.json`
 (`executable.carrier` `module-slot`, `script_sha256`, and `style_sha256` for the kit
 stylesheet each script inserts once at render).
 
@@ -398,8 +398,9 @@ stylesheet each script inserts once at render).
   did not choose. `tests/test_receipt_module_slot.py` fails when a committed file is not
   what the generator writes.
 - **The Python modules are the test oracle.** `js-tests/receipt_parity.test.js` runs
-  every receipt fixture, at every audience, and every copy whose seller kind was dropped
-  or added, through both (`tests/receipt_oracle.py` prints the Python side): the same
+  every receipt fixture, at every audience, every copy whose seller kind was dropped
+  or added, and the provider's receipt with its records edited (#390), through both
+  (`tests/receipt_oracle.py` prints the Python side): the same
   `canRender`, the same model field for field, and the same render at L0, L1 and L2 (both
   parsed and serialised one canonical way). `js-tests/receipt_module_slot.test.js` also
   holds the receipt goldens' pages to the same pixels in headless Chromium, and renders the

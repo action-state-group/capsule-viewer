@@ -57,7 +57,7 @@ const host = (): HTMLElement => {
 };
 
 describe("the receipt export (#383)", () => {
-  it("offers the four modules with the manifests go/receipt ships", () => {
+  it("offers the five modules with the manifests go/receipt ships", () => {
     expect(receiptModules().map((m) => m.manifest)).toEqual(
       RECEIPT_KINDS.map(goManifest),
     );
@@ -84,6 +84,85 @@ describe("the receipt export (#383)", () => {
       ],
     });
   });
+
+  // capsule-viewer#390: a Mesh provider's own record of an exchange it
+  // served and the payments it received, drawn by the provider module (the
+  // Python twin's page, words unchanged), for its owner only.
+  it("checks and draws a provider's own receipt, for its owner only (#390)", async () => {
+    const result = await checkReceipt(fixture("mesh-provider-selected"));
+    expect(result).toMatchObject({
+      kind: "checked",
+      module: "capsuleviewer.receipt.provider/v0",
+      both: false,
+      records: { total: 3 },
+    });
+    // The row's words are a one-sided receipt's, as the plugin's own check
+    // gave this bundle before (one_sided).
+    expect(receiptLabel(result)).toBe("your receipt only");
+    expect(
+      await checkReceipt(fixture("mesh-provider-selected"), {
+        audience: "counterparty",
+      }),
+    ).toEqual({ kind: "no_module" });
+
+    const page = host();
+    page.append(document.createElement("p"));
+    expect(
+      (await renderReceipt(fixture("mesh-provider-selected"), page)).kind,
+    ).toBe("checked");
+    expect(page.children.length).toBe(3);
+    const [l0, l1, l2] = [...page.children] as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+    ];
+    expect(l1.textContent).toBe("");
+    expect(l2.textContent).toBe("");
+    const text = l0.textContent ?? "";
+    for (const words of [
+      "Your receipt for an exchange you served",
+      "This is this node's own record of its half of the exchange. It is not a joint record, and the other party has not countersigned it.",
+      "It names the model and what was received. It holds no request or response text.",
+      "Model served",
+      "Served at2026-10-30T19:50:00 UTC",
+      "Received in total1,990 msat",
+      "Received (2)",
+      "Fee for receiving",
+      "The exchange and each payment are records of their own, listed below.",
+    ])
+      expect(text).toContain(words);
+    // Not a deal: no deal or offer words, and the served time stays in UTC
+    // (no time for the page's local-time pass).
+    expect(text).not.toMatch(/deal|offer/i);
+    expect(l0.querySelector("[data-time]")).toBeNull();
+    expect(
+      l0.querySelector(
+        '[data-receipt-module="capsuleviewer.receipt.provider/v0"]',
+      ),
+    ).not.toBeNull();
+    // A deal receipt drawn into the same host replaces it.
+    await renderReceipt(fixture("mesh-payer-selected"), page);
+    expect(page.textContent).not.toContain("an exchange you served");
+  });
+
+  // A page saved for anyone to check, or a report, never addresses the
+  // reader as the owner (#395): the provider's page draws no title there.
+  it.each(["page", "report"] as const)(
+    "a provider's receipt carried by a %s draws no owner's title (#390)",
+    async (carrier) => {
+      const shared = host();
+      const result = await renderReceipt(
+        fixture("mesh-provider-selected"),
+        shared,
+        { carrier },
+      );
+      expect(result.kind).toBe("checked");
+      const text = shared.textContent ?? "";
+      expect(text).not.toMatch(/\byou(r)?\b/i);
+      expect(text).toContain("This is this node's own record of its half");
+      expect(shared.querySelector("h2")).toBeNull();
+    },
+  );
 
   it("a receipt both sides stamped is `both`, tone ok", async () => {
     const result = await checkReceipt(fixture("bilateral-keep"));
@@ -259,9 +338,12 @@ describe("the receipt export (#383)", () => {
     });
     expect(receiptLabel({ kind: "no_module" })).toBeNull();
     expect(receiptPageLines({ kind: "no_module" })).toBeNull();
-    expect(await checkReceipt(fixture("mesh-provider-selected"))).toEqual({
-      kind: "no_module",
-    });
+    // A provider's own receipt is no receipt module's at another audience (#390).
+    expect(
+      await checkReceipt(fixture("mesh-provider-selected"), {
+        audience: "adjudicator",
+      }),
+    ).toEqual({ kind: "no_module" });
   });
 });
 

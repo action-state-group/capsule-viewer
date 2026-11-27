@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package receipt is capsule-viewer's receipt renderer for Go page builders:
-// the deal receipt modules as module-slot scripts, each with the manifest
+// the receipt modules as module-slot scripts, each with the manifest
 // that pins it, ready for go/emitter's module slot (capsule-viewer#383).
 // It is the one place receipts are drawn: capsulectl's pages and reports and
 // the browser build carry these modules rather than a renderer of their own.
 //
 // The modules are capsuleviewer.receipt.unilateral/v0, .seller/v0 and
-// .bilateral/v0 (the x-deal-v0 receipt, a seller's copy and a composed pair)
-// and capsuleviewer.receipt.deal/v1 (the x-deal-v1 sealed report). Each
+// .bilateral/v0 (the x-deal-v0 receipt, a seller's copy and a composed pair),
+// capsuleviewer.receipt.deal/v1 (the x-deal-v1 sealed report) and
+// capsuleviewer.receipt.provider/v0 (a Mesh provider's own record of an
+// exchange it served and the payments it received, capsule-viewer#390). Each
 // script registers exactly one module, so a page carries one script per
 // module it chose.
 //
-// receipt_core.js is the source of all four. `go generate` writes each
+// receipt_core.js is the source of all five. `go generate` writes each
 // receipt_<kind>.js and the executable block of each manifest-<kind>.json
 // from it, the manifest, wording-en.json, the kit stylesheet
 // (src/capsule_viewer/static/kit.css), the receipt's dark overrides
@@ -40,10 +42,11 @@ const (
 	Seller     = "seller"
 	Bilateral  = "bilateral"
 	Deal       = "deal"
+	Provider   = "provider"
 )
 
 // Kinds are the receipt modules this package carries.
-var Kinds = []string{Unilateral, Seller, Bilateral, Deal}
+var Kinds = []string{Unilateral, Seller, Bilateral, Deal, Provider}
 
 var (
 	//go:embed receipt_unilateral.js
@@ -54,6 +57,8 @@ var (
 	bilateralJS []byte
 	//go:embed receipt_deal.js
 	dealJS []byte
+	//go:embed receipt_provider.js
+	providerJS []byte
 
 	//go:embed manifest-unilateral.json
 	unilateralManifest []byte
@@ -63,6 +68,8 @@ var (
 	bilateralManifest []byte
 	//go:embed manifest-deal.json
 	dealManifest []byte
+	//go:embed manifest-provider.json
+	providerManifest []byte
 
 	// The stylesheets every module's manifest pins, in its style_sha256
 	// order: the kit stylesheet, the receipt's dark overrides and the
@@ -83,6 +90,7 @@ var byKind = map[string]files{
 	Seller:     {sellerJS, sellerManifest},
 	Bilateral:  {bilateralJS, bilateralManifest},
 	Deal:       {dealJS, dealManifest},
+	Provider:   {providerJS, providerManifest},
 }
 
 type manifest struct {

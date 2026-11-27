@@ -57,6 +57,7 @@ func TestModulePinsItsScriptAndStylesheet(t *testing.T) {
 		Seller:     "capsuleviewer.receipt.seller/v0",
 		Bilateral:  "capsuleviewer.receipt.bilateral/v0",
 		Deal:       "capsuleviewer.receipt.deal/v1",
+		Provider:   "capsuleviewer.receipt.provider/v0",
 	}
 	for _, kind := range Kinds {
 		m, err := Module(kind)
@@ -124,12 +125,12 @@ func TestStylesReturnsCopies(t *testing.T) {
 }
 
 func TestUnknownKindIsRefused(t *testing.T) {
-	_, err := Module("provider")
-	assert.ErrorContains(t, err, `no "provider" receipt module`)
+	_, err := Module("payer")
+	assert.ErrorContains(t, err, `no "payer" receipt module`)
 	_, err = ID("")
 	assert.Error(t, err)
-	styles, err := Styles("provider")
-	assert.ErrorContains(t, err, `no "provider" receipt module`)
+	styles, err := Styles("payer")
+	assert.ErrorContains(t, err, `no "payer" receipt module`)
 	assert.Nil(t, styles)
 }
 
@@ -186,8 +187,8 @@ func fixture(t *testing.T, name string) map[string]interface{} {
 // registry) picks these modules as the reference runtime would: each
 // registers beside the built-ins without ambiguity, and each Mesh fixture
 // resolves to the module below. A Mesh provider's receipt is not a deal (no
-// x-deal-v0 block), so no receipt module here takes it: it stays the Python
-// provider module's, frozen at 0.25.0.
+// x-deal-v0 block): only the provider module takes it, and only for its
+// owner (capsule-viewer#390).
 func TestResolutionPicksTheReceiptModule(t *testing.T) {
 	registry, err := presentation.NewBuiltinRegistry(presentation.ReferenceRuntime())
 	require.NoError(t, err)
@@ -204,11 +205,14 @@ func TestResolutionPicksTheReceiptModule(t *testing.T) {
 	// A payer's keep copy is the unilateral receipt at the owner's audience
 	// and at "*", the audience a report opens a carried receipt for (#383:
 	// the module then draws it as a shared copy). A provider's receipt is
-	// never a receipt module's.
+	// the provider module's at the owner's audience only, as the Python twin's
+	// manifest says; at any other the built-in page shows it.
 	cases := []struct{ name, audience, want string }{
 		{"mesh-payer-selected", "keep", "capsuleviewer.receipt.unilateral/v0"},
 		{"mesh-payer-selected", "*", "capsuleviewer.receipt.unilateral/v0"},
-		{"mesh-provider-selected", "keep", "aac.builtin.no-aggregate/v0"},
+		{"mesh-provider-selected", "keep", "capsuleviewer.receipt.provider/v0"},
+		{"mesh-provider-selected", "*", "aac.builtin.no-aggregate/v0"},
+		{"mesh-provider-selected", "counterparty", "aac.builtin.no-aggregate/v0"},
 	}
 	for _, c := range cases {
 		d, _ := presentation.DescribeBundle(fixture(t, c.name))
