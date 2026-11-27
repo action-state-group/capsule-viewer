@@ -473,6 +473,92 @@ for (const setting of SETTINGS)
         });
       }
 
+      // A busy page draws its next frame late, here 200 ms after it is asked
+      // for, longer than any timer the check could wait on (#500). Frames
+      // still run their callbacks in the order they were asked for, so the
+      // module's drawing still comes before the check's own frame.
+      const LATE_FRAMES =
+        "{const frame=window.requestAnimationFrame.bind(window);" +
+        "window.requestAnimationFrame=(f)=>{setTimeout(()=>frame(f),200);return 0}}";
+      it("one that draws a layer over the banner on a late next frame is discarded", async () => {
+        expect(
+          await kept("", "", undefined, {
+            late: {
+              css: "[data-test-module]{position:fixed;margin:0;top:0;left:0;right:0;height:100vh;background:#eee}",
+              when: "frame",
+            },
+            hostScript: LATE_FRAMES,
+          }),
+        ).toBe(false);
+      });
+
+      it("one that moves the banner on a late next frame is discarded", async () => {
+        expect(
+          await kept("", "", undefined, {
+            late: { css: ".cv-shell-bar{margin-top:-100vh}", when: "frame" },
+            hostScript: LATE_FRAMES,
+          }),
+        ).toBe(false);
+      });
+
+      it("one that styles its own content on a late next frame renders", async () => {
+        expect(
+          await kept("", "", undefined, {
+            late: {
+              css: "[data-test-module]{color:red;margin-top:4px}",
+              when: "frame",
+            },
+            hostScript: LATE_FRAMES,
+          }),
+        ).toBe(true);
+      });
+
+      // A hidden page draws no frames; a timer stands in for the frame, so
+      // the render still finishes and a timer's drawing is still checked.
+      const HIDDEN =
+        "Object.defineProperty(document,'visibilityState',{get:()=>'hidden'});" +
+        "window.requestAnimationFrame=()=>0;";
+      it("one that moves the banner on the next timer of a hidden page is discarded", async () => {
+        expect(
+          await kept("", "", undefined, {
+            late: { css: ".cv-shell-bar{margin-top:-100vh}", when: "timer" },
+            hostScript: HIDDEN,
+          }),
+        ).toBe(false);
+      });
+
+      it("one that styles its own content on a hidden page renders", async () => {
+        expect(
+          await kept("[data-test-module]{color:red}", "", undefined, {
+            hostScript: HIDDEN,
+          }),
+        ).toBe(true);
+      });
+
+      // The page changes visibility 50 ms after the module renders, while the
+      // check waits.
+      const turns = (to: "hidden" | "visible"): string =>
+        `{let state=${JSON.stringify(to === "hidden" ? "visible" : "hidden")};` +
+        "Object.defineProperty(document,'visibilityState',{get:()=>state});" +
+        `window.readerScrolls=()=>setTimeout(()=>{state=${JSON.stringify(to)};` +
+        "document.dispatchEvent(new Event('visibilitychange'))},50)}";
+      it("one that moves the banner on a late next frame of a page shown while the check waits is discarded", async () => {
+        expect(
+          await kept("", "", undefined, {
+            late: { css: ".cv-shell-bar{margin-top:-100vh}", when: "frame" },
+            hostScript: LATE_FRAMES + turns("visible"),
+          }),
+        ).toBe(false);
+      });
+
+      it("one that styles its own content on a page hidden while the check waits renders", async () => {
+        expect(
+          await kept("[data-test-module]{color:red}", "", undefined, {
+            hostScript: "window.requestAnimationFrame=()=>0;" + turns("hidden"),
+          }),
+        ).toBe(true);
+      });
+
       for (const [css, pageCss] of [
         // Paint containment clips as overflow does.
         ["#host{height:0}", "#host{contain:paint;height:400px}"],

@@ -3622,23 +3622,36 @@ function holdsFixed(style: CSSStyleDeclaration): boolean {
   );
 }
 
-// Resolves after the next frame and then the timers already due. A page
-// that is not shown draws no frames, so a timer stands in for the frame
-// there.
+// Resolves after the next frame and then the timers already due. A frame
+// runs its callbacks in the order they were asked for, so this one runs
+// after any a module asked for while it rendered, however late a busy page
+// draws that frame (#500). A hidden page draws no frames, so while the page
+// is hidden a timer stands in for the frame; a page shown again before the
+// timer fires waits for its frame after all.
 function settled(view: Window): Promise<void> {
+  const page = view.document;
   return new Promise((done) => {
     let waiting = true;
     const next = (): void => {
       if (!waiting) return;
       waiting = false;
+      page.removeEventListener("visibilitychange", hidden);
       view.setTimeout(done, 0);
     };
+    const stillHidden = (): void => {
+      if (page.visibilityState === "hidden") next();
+    };
+    const hidden = (): void => {
+      if (page.visibilityState === "hidden")
+        view.setTimeout(stillHidden, HIDDEN_MS);
+    };
     view.requestAnimationFrame(next);
-    view.setTimeout(next, SETTLE_MS);
+    page.addEventListener("visibilitychange", hidden);
+    hidden();
   });
 }
-// The longest the settle waits for a frame.
-const SETTLE_MS = 100;
+// How long a hidden page's settle waits in place of a frame.
+const HIDDEN_MS = 100;
 
 // By root, the renders still verifying on it: their `checking` bars, and
 // what the root held before the first of them began.
