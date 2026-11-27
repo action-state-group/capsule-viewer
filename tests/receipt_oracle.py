@@ -7,7 +7,9 @@ Python receipt modules make of every receipt fixture under
 and producer copies, the compositions and the golden), for each audience a
 page may be for and each depth, and of a set of edited copies (the seller kind
 dropped from a seller's copy, added to a buyer's; the provider's receipt with
-its records edited). Per case and per module:
+its records edited; and, for u526, one copy of each kind edited after
+signing, with capsulectl's report on the edited bytes and with its report on
+the original bytes, which no page binds). Per case and per module:
 whether ``canRender`` accepts it, and when it does the model
 (``dataclasses.asdict``, a carried member's raw verifier report left out) and
 ``render``'s output at each depth. The provider's module has one level, so its
@@ -277,6 +279,65 @@ def provider_edits() -> list[tuple[str, dict, dict, str]]:
     return out
 
 
+# One copy per module kind, edited after signing (u526: the refusal, withheld
+# and tamper cases are frozen into this golden before any Python module goes).
+TAMPERED = ("keep", "seller-keep", "bilateral-keep", "mesh-provider-selected")
+
+
+def tamper_edits() -> list[tuple[str, dict, dict, str]]:
+    """Copies edited after signing, each with what capsulectl verify says of
+    the edited bytes: a disclosed payload changed (its disclosure no longer
+    matches the header's commitment), or a record's own fields changed (its
+    identity no longer recomputes). Either way the report is INVALID, bound to
+    the edited bytes, so the modules are handed a failed verification."""
+    out = []
+    for name in TAMPERED:
+        bundle, output = load(name)
+        disclosed = [cid for cid, d in (bundle.get("disclosures") or {}).items() if isinstance(d.get("agent_input"), dict)]
+        if disclosed:
+            edited = copy.deepcopy(bundle)
+            cid = disclosed[0]
+            edited["disclosures"][cid]["agent_input"]["tampered"] = True
+            report = report_for(edited, output)
+            report["verdict"] = "INVALID"
+            report["disclosures"] = [
+                {**e, "status": "disclosure_mismatch"} if e.get("capsule_id") == cid and e.get("member") == "agent_input" else e
+                for e in output.get("disclosures") or ()
+            ]
+            out.append((f"{name}+tamper-payload", edited, report, audience_of(name)))
+        edited = copy.deepcopy(bundle)
+        record = edited["records"][0]
+        record["action_type"] = str(record.get("action_type")) + "-tampered"
+        report = report_for(edited, output)
+        report["verdict"] = "INVALID"
+        report["record_identity"] = {**output["record_identity"], record["capsule_id"]: "failed"}
+        out.append((f"{name}+tamper-record", edited, report, audience_of(name)))
+    return out
+
+
+def stale_reports() -> list[tuple[str, dict, dict, str]]:
+    """Copies edited after signing, handed capsulectl's report on the original
+    bytes: the report does not name the edited copy, so the page refuses to
+    bind it before any module sees the copy (verifier_report.py and the
+    page's own binding, ts/src/verifier-report.ts boundToBundle)."""
+    out = []
+    for name in TAMPERED:
+        bundle, output = load(name)
+        edited = copy.deepcopy(bundle)
+        edited["records"][0]["action_type"] = str(edited["records"][0].get("action_type")) + "-tampered"
+        out.append((f"{name}+stale-report", edited, output, audience_of(name)))
+    return out
+
+
+def refused(name: str, bundle: dict, output: dict, audience: str) -> dict:
+    """A case the page refuses before any module runs: why, and no modules."""
+    try:
+        context_from_capsulectl(bundle, output)
+    except VerifierReportError as exc:
+        return {"name": name, "audience": audience, "bundle": bundle, "verify": output, "refused": str(exc), "modules": {}}
+    raise AssertionError(f"{name}: the report was bound to the edited copy")
+
+
 def name_every_producer(bundle: dict, producer: dict) -> None:
     """Every disclosed record names *producer*: in its x-deal-v0 block when it
     has one, else in its own header (a typed record, such as the sealed report)."""
@@ -308,6 +369,10 @@ def main() -> int:
             cases.append(case(name, bundle, output, audience))
     for label, bundle, output, audience in edits():
         cases.append(case(label, bundle, output, audience, depths=("L2",), edited=True))
+    for label, bundle, output, audience in tamper_edits():
+        cases.append(case(label, bundle, output, audience, depths=("L2",), edited=True))
+    for label, bundle, output, audience in stale_reports():
+        cases.append(refused(label, bundle, output, audience))
     json.dump({"cases": cases, "audience_of": {c["name"]: audience_of(c["name"]) for c in cases if "+" not in c["name"]}}, sys.stdout, ensure_ascii=False)
     return 0
 
