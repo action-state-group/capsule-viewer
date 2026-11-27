@@ -119,6 +119,68 @@ export interface HistoryViewInput {
   readonly period?: { readonly from: string; readonly to: string };
 }
 
+/** The card page's input (#384, design note section 11): a deal page drawn from its signed card bundle. */
+export interface HistoryCardInput {
+  readonly view: typeof HISTORY_VIEW;
+  readonly kind: "deal";
+  readonly surface: "neutral" | "product";
+  /** `owner` draws Your History from the holder's own copy; `recipient` draws a card someone was sent. */
+  readonly reader: "owner" | "recipient";
+  readonly holder: { readonly name: string };
+  /** `private` with `owner`, `shared` with `recipient`. */
+  readonly audience: { readonly kind: "private" | "shared" };
+  readonly built_at: string;
+  readonly checked: { readonly where: "builder"; readonly by: string };
+  readonly rows: readonly [];
+  readonly checks: readonly [];
+  readonly machine: {
+    /** A plain `.json` file name: the download's name and the verify line's argument. */
+    readonly file: string;
+    /** The card bundle's canonical JSON (RFC 8785); its SHA-256 must be `verify.bundle_digest`. */
+    readonly text: string;
+    readonly verify: {
+      readonly verdict: "VALID" | "INVALID";
+      readonly bundle_digest: string;
+      readonly checks: Readonly<
+        Partial<
+          Record<
+            | "producer_signatures"
+            | "interval_coverage"
+            | "graph_closure"
+            | "per_record_membership"
+            | "checkpoint"
+            | "witnesses",
+            "pass" | "fail" | "withheld"
+          >
+        >
+      >;
+      /** Required exactly when `checks.witnesses` is `pass`. */
+      readonly witness?: { readonly by: string; readonly at: string };
+    };
+  };
+  /** Owner only: per deal entry id, what the holder's own book adds. */
+  readonly deals?: Readonly<
+    Record<
+      string,
+      {
+        readonly item?: string;
+        readonly amount?: {
+          readonly value: string;
+          readonly assetCode: string;
+          readonly assetScale: number;
+        };
+        readonly recorded?: HistorySlot;
+        readonly time_stamped?: HistorySlot;
+        readonly countersigned?: HistorySlot;
+        /** A plain `.html` file name: that deal's receipt page beside this one. */
+        readonly receipt?: string;
+      }
+    >
+  >;
+  /** How many of the card's deals are sample history. */
+  readonly sample?: number;
+}
+
 /** An overlay pack: a product caller's words for keys of the view's own pack. */
 export interface HistoryViewOverlay {
   readonly id: string;
@@ -174,7 +236,14 @@ export interface HistoryElement {
   readonly children: readonly (HistoryElement | string)[];
 }
 
-const TOKEN = /^[a-z0-9 _.-]*$/u;
+/** An attribute name: the view's own, never caller text. */
+const ATTR_NAME = /^[a-zA-Z][a-zA-Z0-9-]*$/u;
+/**
+ * An attribute value may hold caller-derived text (a file name, a time, a
+ * percent-encoded download) only without the characters whose attribute
+ * serialization differs between engines; `&` is written as `&amp;`.
+ */
+const ATTR_VALUE = /^[^<>"\u00a0]*$/u;
 
 function el(
   tag: string,
@@ -183,7 +252,7 @@ function el(
 ): HistoryElement {
   const pairs = Object.entries(attrs ?? {});
   for (const [name, value] of pairs)
-    if (!TOKEN.test(name) || !TOKEN.test(value))
+    if (!ATTR_NAME.test(name) || !ATTR_VALUE.test(value))
       throw new Error(
         `history-view: attribute ${name}=${value} is not a view token`,
       );
@@ -205,9 +274,18 @@ function escapeText(text: string): string {
 /** The tree as HTML, by the HTML fragment serialization rules. */
 export function serializeHistoryElement(node: HistoryElement | string): string {
   if (typeof node === "string") return escapeText(node);
-  const attrs = node.attrs.map(([n, v]) => ` ${n}="${v}"`).join("");
+  const attrs = node.attrs
+    .map(([n, v]) => ` ${n}="${v.replace(/&/gu, "&amp;")}"`)
+    .join("");
   return `<${node.tag}${attrs}>${node.children.map(serializeHistoryElement).join("")}</${node.tag}>`;
 }
+
+const SVG_TAGS: ReadonlySet<string> = new Set([
+  "svg",
+  "path",
+  "circle",
+  "ellipse",
+]);
 
 /** The tree as DOM, text set as text nodes only. */
 export function historyElementToDom(
@@ -215,7 +293,9 @@ export function historyElementToDom(
   doc: Document,
 ): Node {
   if (typeof node === "string") return doc.createTextNode(node);
-  const out = doc.createElement(node.tag);
+  const out = SVG_TAGS.has(node.tag)
+    ? doc.createElementNS("http://www.w3.org/2000/svg", node.tag)
+    : doc.createElement(node.tag);
   for (const [n, v] of node.attrs) out.setAttribute(n, v);
   for (const child of node.children)
     out.appendChild(historyElementToDom(child, doc));
@@ -610,6 +690,1320 @@ function readRow(
   };
 }
 
+// --- the card page (#384) ---------------------------------------------------
+//
+// A deal page that carries its signed object (`machine`) is drawn from that
+// object: the counts from its card, and on the holder's own copy one row per
+// deal entry its x-standard-history/v0 block lists. The caller adds only what
+// a deal entry does not carry and the holder's own book does (`deals`, keyed
+// by the entry's id), and capsulectl verify's answer, which is bound to the
+// object by its bundle digest: the SHA-256 of the object's text, which must be
+// the bundle's canonical JSON, as capsulectl reports it.
+
+/** SHA-256 of the UTF-8 bytes of `text`, as lowercase hex (synchronous). */
+export function sha256Hex(text: string): string {
+  const K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+    0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+    0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+    0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+    0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+    0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ];
+  const bytes = new TextEncoder().encode(text);
+  const len = bytes.length;
+  const padded = new Uint8Array(((len + 9 + 63) >> 6) << 6);
+  padded.set(bytes);
+  padded[len] = 0x80;
+  const view = new DataView(padded.buffer);
+  view.setUint32(padded.length - 8, Math.floor(len / 0x20000000));
+  view.setUint32(padded.length - 4, (len << 3) >>> 0);
+  const h = [
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
+    0x1f83d9ab, 0x5be0cd19,
+  ];
+  const w = new Array<number>(64);
+  const rot = (x: number, n: number): number => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const a = w[i - 15] ?? 0;
+      const b = w[i - 2] ?? 0;
+      const s0 = rot(a, 7) ^ rot(a, 18) ^ (a >>> 3);
+      const s1 = rot(b, 17) ^ rot(b, 19) ^ (b >>> 10);
+      w[i] = ((w[i - 16] ?? 0) + s0 + (w[i - 7] ?? 0) + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, k] = h as [
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+    ];
+    for (let i = 0; i < 64; i++) {
+      const t1 =
+        (k +
+          (rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)) +
+          ((e & f) ^ (~e & g)) +
+          (K[i] ?? 0) +
+          (w[i] ?? 0)) |
+        0;
+      const t2 =
+        ((rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)) +
+          ((a & b) ^ (a & c) ^ (b & c))) |
+        0;
+      k = g;
+      g = f;
+      f = e;
+      e = (d + t1) | 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (t1 + t2) | 0;
+    }
+    const add = [a, b, c, d, e, f, g, k];
+    for (let i = 0; i < 8; i++) h[i] = ((h[i] ?? 0) + (add[i] ?? 0)) | 0;
+  }
+  return h.map((x) => (x >>> 0).toString(16).padStart(8, "0")).join("");
+}
+
+/** The term-row statuses of AAC SH §11.2, in the order the page lists them. */
+const ROW_STATUSES = [
+  "not_reached",
+  "not_due",
+  "no_statement",
+  "waiting",
+  "uncontested",
+  "agreed_so_far",
+  "agreed",
+  "in_disagreement",
+  "in_dispute",
+  "ruled",
+] as const;
+type RowStatus = (typeof ROW_STATUSES)[number];
+
+interface TermResult {
+  readonly holder: boolean;
+  readonly status: RowStatus;
+  readonly value: "met" | "not_met" | undefined;
+  readonly remedy: string | undefined;
+}
+
+interface Amount {
+  readonly value: string;
+  readonly code: string;
+  readonly scale: number;
+}
+
+interface CardDeal {
+  readonly id: string;
+  readonly agreed: Instant;
+  readonly role: "provided" | "bought";
+  readonly amount: Amount | undefined;
+  readonly outcome: "held" | "did_not_hold" | "undecided" | undefined;
+  readonly terms: readonly TermResult[] | undefined;
+  readonly bothHalves: boolean;
+}
+
+interface DealExtra {
+  readonly item: string | undefined;
+  readonly amount: Amount | undefined;
+  readonly recorded: Slot | undefined;
+  readonly witness: Slot | undefined;
+  readonly countersigned: Slot | undefined;
+  readonly receipt: string | undefined;
+}
+
+/** capsulectl verify's checks the proof panel shows, in the receipt's order. */
+const PROOF_CHECKS = [
+  "producer_signatures",
+  "interval_coverage",
+  "graph_closure",
+  "per_record_membership",
+  "checkpoint",
+] as const;
+
+const FILE_JSON = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.json$/u;
+const FILE_HTML = /^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.html$/u;
+const HEX64 = /^[0-9a-f]{64}$/u;
+// An amount as the standard card reads one (standard_history_card.js VALUE,
+// CURRENCY): an exact integer string, an ISO 4217 code or a CAIP-19 asset id,
+// a scale 0 to 255.
+const DIGITS = /^(0|[1-9][0-9]{0,299})$/u;
+const CURRENCY =
+  /^(?:[A-Z]{3}|[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128})$/u;
+
+function isObj(v: Json): v is Record<string, Json> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+function count(v: Json): number | undefined {
+  return typeof v === "number" && Number.isSafeInteger(v) && v >= 0
+    ? v
+    : undefined;
+}
+
+function readAmount(r: Reader, v: Json, path: string): Amount | undefined {
+  const o = r.object(
+    v,
+    path,
+    ["value", "assetCode", "assetScale"],
+    ["value", "assetCode", "assetScale"],
+  );
+  if (!o) return undefined;
+  const value = typeof o["value"] === "string" ? o["value"] : "";
+  const code = typeof o["assetCode"] === "string" ? o["assetCode"] : "";
+  const scale = o["assetScale"];
+  if (
+    !DIGITS.test(value) ||
+    !CURRENCY.test(code) ||
+    typeof scale !== "number" ||
+    !Number.isSafeInteger(scale) ||
+    scale < 0 ||
+    scale > 255
+  ) {
+    r.refuse(
+      path,
+      "is not an amount (an integer value, an ISO 4217 or CAIP-19 assetCode, assetScale 0 to 255)",
+    );
+    return undefined;
+  }
+  return { value, code, scale };
+}
+
+/** "1,000" for "1000": thousands with commas. */
+function grouped(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/gu, ",");
+}
+
+/**
+ * An amount in words: bitcoin amounts as sat, or msat when not a whole sat;
+ * any other asset as its decimal value and code.
+ */
+export function amountText(a: {
+  readonly value: string;
+  readonly code: string;
+  readonly scale: number;
+}): string {
+  if (a.code === "BTC" && a.scale <= 11) {
+    const msat = a.value === "0" ? "0" : a.value + "0".repeat(11 - a.scale);
+    if (msat === "0") return "0 sat";
+    if (msat.length > 3 && msat.endsWith("000"))
+      return `${grouped(msat.slice(0, -3))} sat`;
+    return `${grouped(msat)} msat`;
+  }
+  if (a.scale === 0) return `${grouped(a.value)} ${a.code}`;
+  const padded = a.value.padStart(a.scale + 1, "0");
+  const whole = padded.slice(0, padded.length - a.scale);
+  return `${grouped(whole)}.${padded.slice(padded.length - a.scale)} ${a.code}`;
+}
+
+/** What the card page reads from the signed object; refusals go to `r`. */
+interface CardObject {
+  readonly derivation: string;
+  readonly keyId: string;
+  readonly signedAt: Instant | undefined;
+  readonly outcomes: {
+    readonly of: number;
+    readonly held: number;
+    readonly didNotHold: number;
+    readonly undecided: number;
+  };
+  readonly waiting: number;
+  readonly asOf: Instant | undefined;
+  readonly deals: readonly CardDeal[] | undefined;
+}
+
+function readCardObject(r: Reader, text: string): CardObject | undefined {
+  let doc: Json;
+  try {
+    doc = JSON.parse(text) as Json;
+  } catch {
+    r.refuse("input.machine.text", "is not JSON");
+    return undefined;
+  }
+  const bad = (why: string): undefined => {
+    r.refuse("input.machine.text", why);
+    return undefined;
+  };
+  if (!isObj(doc)) return bad("is not a bundle");
+  const records = doc["records"];
+  const root = Array.isArray(records) ? records[0] : undefined;
+  if (!isObj(root)) return bad("has no root record");
+  const cid = root["capsule_id"];
+  const disclosures = doc["disclosures"];
+  const disclosed =
+    typeof cid === "string" && isObj(disclosures)
+      ? disclosures[cid]
+      : undefined;
+  const card = isObj(disclosed) ? disclosed["agent_input"] : undefined;
+  if (!isObj(card)) return bad("discloses no card on its root record");
+  const derivation = card["derivation"];
+  if (
+    typeof derivation !== "string" ||
+    !/^standard_history\/[1-4]$/u.test(derivation)
+  )
+    return bad("its card is not a standard_history card");
+  const oc = card["outcomes"];
+  if (
+    isObj(oc) &&
+    Object.keys(oc).some(
+      (k) => !["of", "held", "did_not_hold", "undecided"].includes(k),
+    )
+  )
+    return bad("its card's outcomes carry a member SH §4 does not have");
+  const of = isObj(oc) ? count(oc["of"]) : undefined;
+  const held = isObj(oc) ? count(oc["held"]) : undefined;
+  const didNotHold = isObj(oc) ? count(oc["did_not_hold"]) : undefined;
+  const undecided = isObj(oc) ? count(oc["undecided"]) : undefined;
+  if (
+    of === undefined ||
+    held === undefined ||
+    didNotHold === undefined ||
+    undecided === undefined ||
+    held + didNotHold + undecided !== of
+  )
+    return bad("its card's outcomes are not a tally");
+  const nc = card["not_counted"];
+  const waiting = isObj(nc) ? (count(nc["no_witness_time"]) ?? 0) : 0;
+  const keyId = typeof root["key_id"] === "string" ? root["key_id"] : "";
+  const signedAt =
+    typeof root["timestamp"] === "string"
+      ? parseInstant(root["timestamp"])
+      : undefined;
+  const ext = isObj(doc["extensions"])
+    ? doc["extensions"]["x-standard-history/v0"]
+    : undefined;
+  const asOf =
+    isObj(ext) &&
+    isObj(ext["as_of"]) &&
+    typeof ext["as_of"]["anchor_time"] === "string"
+      ? parseInstant(ext["as_of"]["anchor_time"])
+      : undefined;
+  let deals: CardDeal[] | undefined;
+  if (isObj(ext) && "deals" in ext) {
+    deals = [];
+    const list = ext["deals"];
+    if (!Array.isArray(list)) return bad("its deals are not a list");
+    for (const [i, d] of list.entries()) {
+      const path = `input.machine.text deals[${i}]`;
+      if (!isObj(d)) {
+        r.refuse(path, "is not a deal entry");
+        continue;
+      }
+      const id = typeof d["deal"] === "string" ? d["deal"] : "";
+      const agreed =
+        typeof d["agreed_at"] === "string"
+          ? parseInstant(d["agreed_at"])
+          : undefined;
+      const role = d["role"];
+      if (
+        id === "" ||
+        id.length > 200 ||
+        agreed === undefined ||
+        (role !== "provided" && role !== "bought")
+      ) {
+        r.refuse(path, "has no deal id, agreed time or role");
+        continue;
+      }
+      const amount =
+        "amount" in d
+          ? readAmount(r, d["amount"], `${path}.amount`)
+          : undefined;
+      const outcome = d["outcome"];
+      let terms: TermResult[] | undefined;
+      if (Array.isArray(d["rows"])) {
+        terms = [];
+        for (const row of d["rows"]) {
+          const status = isObj(row) ? row["status"] : undefined;
+          const value = isObj(row) ? row["value"] : undefined;
+          const remedy = isObj(row) ? row["remedy"] : undefined;
+          if (
+            !isObj(row) ||
+            (row["owed_by"] !== "holder" &&
+              row["owed_by"] !== "counterparty") ||
+            typeof status !== "string" ||
+            !(ROW_STATUSES as readonly string[]).includes(status) ||
+            (value !== undefined && value !== "met" && value !== "not_met") ||
+            (remedy !== undefined && typeof remedy !== "string")
+          ) {
+            r.refuse(path, "has a row that is not an SH §11.2 row result");
+            continue;
+          }
+          terms.push({
+            holder: row["owed_by"] === "holder",
+            status: status as RowStatus,
+            value: value as "met" | "not_met" | undefined,
+            remedy: remedy as string | undefined,
+          });
+        }
+      }
+      deals.push({
+        id,
+        agreed,
+        role,
+        amount,
+        outcome:
+          outcome === "held" ||
+          outcome === "did_not_hold" ||
+          outcome === "undecided"
+            ? outcome
+            : undefined,
+        terms,
+        bothHalves: d["happened"] === "stamped_by_both",
+      });
+    }
+  }
+  return {
+    derivation,
+    keyId,
+    signedAt,
+    outcomes: { of, held, didNotHold, undecided },
+    waiting,
+    asOf,
+    deals,
+  };
+}
+
+const CARD_TOP = [
+  "view",
+  "kind",
+  "surface",
+  "reader",
+  "holder",
+  "audience",
+  "built_at",
+  "checked",
+  "rows",
+  "checks",
+  "machine",
+  "deals",
+  "sample",
+] as const;
+
+/** The card page's element tree, or every reason it is refused. */
+function buildCardPage(
+  r: Reader,
+  o: Record<string, Json>,
+  overlay: unknown,
+):
+  | { readonly ok: true; readonly tree: HistoryElement }
+  | { readonly ok: false; readonly reasons: readonly string[] } {
+  for (const k of Object.keys(o))
+    if (!(CARD_TOP as readonly string[]).includes(k))
+      r.refuse(`input.${k}`, "is not a member of a card page");
+  if (o["kind"] !== "deal")
+    r.refuse("input.kind", "a card page is a deal page");
+  const surface =
+    r.oneOf(o["surface"], "input.surface", ["neutral", "product"] as const) ??
+    "neutral";
+  const reader =
+    r.oneOf(o["reader"], "input.reader", ["owner", "recipient"] as const) ??
+    "recipient";
+  let words: Record<string, string> = {};
+  if (overlay !== undefined) {
+    if (surface !== "product")
+      r.refuse("overlay", "a neutral page takes no overlay");
+    else words = readOverlay(r, overlay);
+  }
+  const ho = r.object(o["holder"], "input.holder", ["name"], ["name"]);
+  const name = ho ? r.string(ho["name"], "input.holder.name", 200) : undefined;
+  const au = r.object(o["audience"], "input.audience", ["kind"], ["kind"]);
+  const audience = au
+    ? r.oneOf(au["kind"], "input.audience.kind", ["private", "shared"] as const)
+    : undefined;
+  if (reader === "owner" && audience !== undefined && audience !== "private")
+    r.refuse("input.audience.kind", "the holder's own page is private");
+  if (reader === "recipient" && audience !== undefined && audience !== "shared")
+    r.refuse("input.audience.kind", "a card someone was sent is shared");
+  const built = r.time(o["built_at"], "input.built_at") ?? EPOCH;
+  const ck = r.object(
+    o["checked"],
+    "input.checked",
+    ["where", "by"],
+    ["where", "by"],
+  );
+  if (ck) {
+    r.oneOf(ck["where"], "input.checked.where", ["builder"] as const);
+    r.string(ck["by"], "input.checked.by", 200);
+  }
+  if (!Array.isArray(o["rows"]) || o["rows"].length > 0)
+    r.refuse(
+      "input.rows",
+      "must be empty: a card page reads its rows from its object",
+    );
+  if (!Array.isArray(o["checks"]) || o["checks"].length > 0)
+    r.refuse(
+      "input.checks",
+      "must be empty: a card page shows capsulectl verify's checks",
+    );
+  const sample =
+    "sample" in o ? r.count(o["sample"], "input.sample") : undefined;
+
+  // The object and capsulectl verify's answer on it.
+  const mo = r.object(
+    o["machine"],
+    "input.machine",
+    ["file", "text", "verify"],
+    ["file", "text", "verify"],
+  );
+  const file = mo ? r.string(mo["file"], "input.machine.file", 160) : undefined;
+  if (file !== undefined && !FILE_JSON.test(file))
+    r.refuse("input.machine.file", "is not a plain .json file name");
+  const text = mo
+    ? r.string(mo["text"], "input.machine.text", 16_000_000)
+    : undefined;
+  const vo = mo
+    ? r.object(
+        mo["verify"],
+        "input.machine.verify",
+        ["verdict", "bundle_digest", "checks", "witness"],
+        ["verdict", "bundle_digest", "checks"],
+      )
+    : null;
+  const verdict = vo
+    ? r.oneOf(vo["verdict"], "input.machine.verify.verdict", [
+        "VALID",
+        "INVALID",
+      ] as const)
+    : undefined;
+  const digest = vo
+    ? r.string(vo["bundle_digest"], "input.machine.verify.bundle_digest", 64)
+    : undefined;
+  if (digest !== undefined && !HEX64.test(digest))
+    r.refuse("input.machine.verify.bundle_digest", "is not 64 lowercase hex");
+  if (text !== undefined && digest !== undefined && sha256Hex(text) !== digest)
+    r.refuse(
+      "input.machine.text",
+      "is not the bundle capsulectl verify answered for (its SHA-256 is not the bundle_digest)",
+    );
+  const proof: Record<string, "pass" | "fail" | "withheld"> = {};
+  const cko = vo
+    ? r.object(
+        vo["checks"],
+        "input.machine.verify.checks",
+        [...PROOF_CHECKS, "witnesses"],
+        [],
+      )
+    : null;
+  if (cko)
+    for (const [k, v] of Object.entries(cko)) {
+      const s = r.oneOf(v, `input.machine.verify.checks.${k}`, [
+        "pass",
+        "fail",
+        "withheld",
+      ] as const);
+      if (s) proof[k] = s;
+    }
+  let witnessBy: string | undefined;
+  let witnessAt: Instant | undefined;
+  if (vo && "witness" in vo) {
+    const wo = r.object(
+      vo["witness"],
+      "input.machine.verify.witness",
+      ["by", "at"],
+      ["by", "at"],
+    );
+    witnessBy = wo
+      ? r.string(wo["by"], "input.machine.verify.witness.by", 200)
+      : undefined;
+    witnessAt = wo
+      ? r.time(wo["at"], "input.machine.verify.witness.at")
+      : undefined;
+  }
+  if (proof["witnesses"] === "pass" && witnessAt === undefined)
+    r.refuse(
+      "input.machine.verify.witness",
+      "is missing (a passed witness check names its witness and time)",
+    );
+  if (proof["witnesses"] !== "pass" && vo && "witness" in vo)
+    r.refuse(
+      "input.machine.verify.witness",
+      "is only for a passed witness check",
+    );
+
+  const obj = text !== undefined ? readCardObject(r, text) : undefined;
+  if (obj && reader === "recipient" && obj.deals !== undefined)
+    r.refuse(
+      "input.machine.text",
+      "carries the holder's deal entries; a card someone was sent never does",
+    );
+  if (obj && reader === "owner" && obj.deals === undefined)
+    r.refuse(
+      "input.machine.text",
+      "carries no deal entries; the holder's own page is drawn from its own copy",
+    );
+
+  // What the holder's own book adds per deal.
+  const extras = new Map<string, DealExtra>();
+  if ("deals" in o) {
+    if (reader !== "owner")
+      r.refuse("input.deals", "is only for the holder's own page");
+    const dm = r.object(
+      o["deals"],
+      "input.deals",
+      obj?.deals?.map((d) => d.id) ?? [],
+      [],
+    );
+    if (dm)
+      for (const [id, v] of Object.entries(dm)) {
+        const path = `input.deals.${id}`;
+        const e = r.object(
+          v,
+          path,
+          [
+            "item",
+            "amount",
+            "recorded",
+            "time_stamped",
+            "countersigned",
+            "receipt",
+          ],
+          [],
+        );
+        if (!e) continue;
+        const receipt =
+          "receipt" in e
+            ? r.string(e["receipt"], `${path}.receipt`, 160)
+            : undefined;
+        if (receipt !== undefined && !FILE_HTML.test(receipt))
+          r.refuse(`${path}.receipt`, "is not a plain .html file name");
+        extras.set(id, {
+          item:
+            "item" in e ? r.string(e["item"], `${path}.item`, 300) : undefined,
+          amount:
+            "amount" in e
+              ? readAmount(r, e["amount"], `${path}.amount`)
+              : undefined,
+          recorded:
+            "recorded" in e
+              ? readSlot(r, e["recorded"], `${path}.recorded`, false)
+              : undefined,
+          witness:
+            "time_stamped" in e
+              ? readSlot(r, e["time_stamped"], `${path}.time_stamped`, true)
+              : undefined,
+          countersigned:
+            "countersigned" in e
+              ? readSlot(r, e["countersigned"], `${path}.countersigned`, true)
+              : undefined,
+          receipt,
+        });
+      }
+  }
+
+  if (r.reasons.length > 0 || !obj || name === undefined)
+    return {
+      ok: false,
+      reasons: r.reasons.length > 0 ? r.reasons : ["input: no card"],
+    };
+
+  const say = (
+    key: string,
+    values: Readonly<Record<string, string>> = {},
+  ): string => {
+    const t = words[key] ?? BASE[key];
+    if (t === undefined) throw new Error(`history-view: no words for ${key}`);
+    return t.replace(PLACEHOLDER, (_, p: string) => {
+      const v = values[p];
+      if (v === undefined) throw new Error(`history-view: ${key} needs {${p}}`);
+      return v;
+    });
+  };
+  const plural = (
+    key: string,
+    n: number,
+    values: Record<string, string> = {},
+  ): string =>
+    say(`${key}.${n === 1 ? "one" : "other"}`, {
+      n: grouped(String(n)),
+      ...values,
+    });
+  const short = (id: string): string =>
+    id.length > 16 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id;
+  // A time the scripted page rewrites into the reader's zone.
+  const time = (t: Instant): HistoryElement =>
+    el(
+      "time",
+      { datetime: new Date(t.ms).toISOString(), "data-time": "minute" },
+      minuteOf(t),
+    );
+  const owner = reader === "owner";
+  const failed = verdict !== "VALID";
+
+  // Header: title, tag, download.
+  const download = el(
+    "a",
+    {
+      class: "cvh-button",
+      href: `data:application/json;charset=utf-8,${encodeURIComponent(text ?? "")}`,
+      download: file ?? "",
+      "data-history": "download",
+    },
+    say(owner ? "card.download.private" : "card.download"),
+  );
+  const header = el(
+    "header",
+    { class: "cvh-header", "data-history": "header" },
+    el(
+      "h1",
+      { class: "cvh-title" },
+      owner ? say("card.title.owner") : say("card.title.recipient", { name }),
+    ),
+    el(
+      "p",
+      { class: "cvh-tags" },
+      el(
+        "span",
+        { class: "cvh-tag", "data-audience": owner ? "private" : "shared" },
+        say(owner ? "card.tag.private" : "card.tag.shared"),
+      ),
+      download,
+    ),
+  );
+
+  // The top line: the card's counts, as its holder reported them.
+  const oc = obj.outcomes;
+  const counts =
+    oc.of === 0
+      ? say("card.counts.none")
+      : plural("card.counts", oc.of) +
+        (oc.didNotHold === 0 && oc.undecided === 0
+          ? say(oc.of === 1 ? "card.counts.all.one" : "card.counts.all")
+          : say("card.counts.didnt", { k: grouped(String(oc.didNotHold)) }) +
+            (oc.undecided > 0
+              ? say("card.counts.open", { u: grouped(String(oc.undecided)) })
+              : ""));
+  const heroLines: (HistoryElement | null)[] = failed
+    ? [
+        el(
+          "p",
+          { class: "cvh-hero-line", "data-history": "top-line" },
+          say("card.failed"),
+        ),
+      ]
+    : [
+        el("p", { class: "cvh-hero-line", "data-history": "top-line" }, counts),
+        el(
+          "p",
+          { class: "cvh-hero-note" },
+          owner ? say("card.reported.owner") : say("card.reported", { name }),
+        ),
+        obj.waiting > 0
+          ? el(
+              "p",
+              { class: "cvh-hero-note" },
+              plural("card.waiting", obj.waiting),
+            )
+          : null,
+        sample !== undefined && sample > 0
+          ? el(
+              "p",
+              { class: "cvh-hero-note", "data-history": "sample" },
+              plural("card.sample", sample),
+            )
+          : null,
+        obj.asOf !== undefined
+          ? el(
+              "p",
+              { class: "cvh-hero-note" },
+              say("card.as_of.before"),
+              time(obj.asOf),
+              say("card.as_of.after"),
+            )
+          : null,
+      ];
+  const hero = el(
+    "section",
+    { class: "cvh-hero", "data-history": "hero" },
+    ...heroLines,
+  );
+
+  // The rows: the holder's own deals, newest first.
+  let rowList: HistoryElement | null = null;
+  if (owner && !failed && obj.deals !== undefined && obj.deals.length > 0) {
+    const sorted = [...obj.deals].sort(
+      (a, b) =>
+        b.agreed.ms - a.agreed.ms || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+    const stamp = (
+      nameKey: string,
+      state: string,
+      line: (HistoryElement | string)[],
+    ): HistoryElement =>
+      el(
+        "li",
+        {
+          class: "cvh-stamp",
+          "data-filled": state === "filled" ? "yes" : "no",
+          "data-state": state,
+        },
+        el("span", { class: "cvh-stamp-name" }, say(nameKey)),
+        el("span", { class: "cvh-stamp-line" }, ...line),
+      );
+    const slotState = (s: Slot | undefined): string =>
+      s === undefined || s.state === "not_checked"
+        ? "not_checked"
+        : s.state === "passed"
+          ? s.through !== undefined && s.through.k < s.through.n
+            ? "partial"
+            : "filled"
+          : s.state === "failed"
+            ? "failed"
+            : "open";
+    const items = sorted.map((d) => {
+      const x = extras.get(d.id);
+      // No sealed record names the other side yet (evidencebook#1031), so the
+      // row never names them (Sherlock2, #384 point 1).
+      const title = say(
+        d.role === "bought" ? "card.row.bought" : "card.row.sold",
+      );
+      // The row's top line, from its term results (SH §11.2) or, on a /1 or /2
+      // card, its outcome. A History row has no settlement facts, so it never
+      // says "settled" and never draws the Done seal.
+      let line: string;
+      let seal = false;
+      const t = d.terms;
+      if (t !== undefined && t.length > 0) {
+        const ruled = t.find(
+          (x) => x.status === "ruled" && x.value === "not_met",
+        );
+        if (ruled) {
+          seal = true;
+          line = say("card.row.ruled", {
+            term: say(ruled.holder ? "card.term.yours" : "card.term.theirs"),
+          });
+          if (
+            ruled.remedy === "made" ||
+            ruled.remedy === "due" ||
+            ruled.remedy === "not_honoured"
+          )
+            line += say(`card.row.remedy.${ruled.remedy}`);
+        } else if (t.some((x) => x.status === "in_dispute"))
+          line = say("card.row.in_dispute");
+        else if (t.some((x) => x.status === "in_disagreement"))
+          line = say("card.row.in_disagreement");
+        else if (
+          t.some(
+            (x) =>
+              x.value === "not_met" &&
+              (x.status === "agreed" ||
+                x.status === "agreed_so_far" ||
+                x.status === "uncontested"),
+          )
+        ) {
+          const stated = t.find(
+            (x) =>
+              x.value === "not_met" &&
+              (x.status === "agreed" ||
+                x.status === "agreed_so_far" ||
+                x.status === "uncontested"),
+          );
+          line = say("card.row.not_met", {
+            term: say(stated?.holder ? "card.term.yours" : "card.term.theirs"),
+          });
+          if (stated?.remedy === "made") line += say("card.row.remedy.made");
+        } else if (t.every((x) => x.status === "agreed" && x.value === "met"))
+          line = say("card.row.went");
+        else if (
+          t.every(
+            (x) =>
+              (x.status === "agreed" ||
+                x.status === "uncontested" ||
+                x.status === "ruled") &&
+              x.value === "met",
+          )
+        )
+          line = say("card.row.went.final");
+        else if (t.every((x) => x.status === "not_due"))
+          line = say("card.row.not_due");
+        else if (t.every((x) => x.status === "not_reached"))
+          line = say("card.row.not_reached");
+        else line = say("card.row.open");
+      } else
+        line = say(
+          d.outcome === "held"
+            ? "card.row.outcome.held"
+            : d.outcome === "did_not_hold"
+              ? "card.row.outcome.did_not_hold"
+              : "card.row.outcome.undecided",
+        );
+      const amount = x?.amount ?? d.amount;
+      const facts: (HistoryElement | string)[] = [];
+      const exact = x?.amount !== undefined || d.terms === undefined;
+      // A band whose floor is 0 says nothing about the amount (Sherlock2).
+      if (amount !== undefined && (exact || amount.value !== "0"))
+        facts.push(
+          exact
+            ? amountText(amount)
+            : say("card.row.amount.band", { amount: amountText(amount) }),
+          " · ",
+        );
+      facts.push(say("card.row.agreed"), " ", time(d.agreed));
+      // A side with more than one term numbers them, so the reader can tell
+      // them apart (Sherlock2).
+      const sides = { yours: 0, theirs: 0 };
+      const many = (holder: boolean): boolean =>
+        (t ?? []).filter((x) => x.holder === holder).length > 1;
+      const label = (holder: boolean): string => {
+        const side = holder ? "yours" : "theirs";
+        sides[side] += 1;
+        return many(holder)
+          ? say(`card.term.${side}.label.n`, { n: String(sides[side]) })
+          : say(`card.term.${side}.label`);
+      };
+      const termLine =
+        t !== undefined && t.length > 0
+          ? [...t]
+              .sort((a, b) => (a.holder === b.holder ? 0 : a.holder ? -1 : 1))
+              .map(
+                (x) =>
+                  `${label(x.holder)}: ${say(
+                    x.value === "not_met" &&
+                      x.status !== "ruled" &&
+                      BASE[`card.status.${x.status}.not_met`] !== undefined
+                      ? `card.status.${x.status}.not_met`
+                      : `card.status.${x.status}`,
+                  )}${x.status === "ruled" && x.value !== undefined ? say(`card.status.ruled.${x.value}`) : ""}`,
+              )
+              .join("; ")
+          : null;
+      // A slot that covers part of the deal's steps says how far, and is not
+      // drawn filled (the receipt's partial stamp).
+      const part = (
+        key: string,
+        s: Slot | undefined,
+      ): (HistoryElement | string)[] =>
+        s?.through !== undefined && s.at !== undefined
+          ? [
+              say(key, { k: String(s.through.k), n: String(s.through.n) }),
+              " · ",
+              time(s.at),
+            ]
+          : [];
+      const rec = x?.recorded;
+      const recState = slotState(rec);
+      const recLine =
+        recState === "partial"
+          ? part("card.stamp.recorded.partial", rec)
+          : recState === "filled" && rec?.at
+            ? [say("card.stamp.recorded.filled"), " · ", time(rec.at)]
+            : [say(`card.stamp.recorded.${recState}`)];
+      const ts = x?.witness;
+      const tsState = slotState(ts);
+      const tsLine =
+        tsState === "partial"
+          ? [
+              `${ts?.by ?? ""} · `,
+              ...part("card.stamp.time_stamped.partial", ts),
+            ]
+          : tsState === "filled" && ts?.at
+            ? [`${ts.by ?? ""} · `, time(ts.at)]
+            : [say(`card.stamp.time_stamped.${tsState}`)];
+      const cs = x?.countersigned;
+      const csState = slotState(cs);
+      const csLine =
+        csState === "partial"
+          ? [
+              say("card.stamp.countersigned.by", { signer: cs?.by ?? "" }),
+              " · ",
+              ...part("card.stamp.countersigned.partial", cs),
+            ]
+          : csState === "filled" && cs?.at
+            ? [
+                say("card.stamp.countersigned.by", { signer: cs.by ?? "" }),
+                " · ",
+                time(cs.at),
+                say("card.stamp.countersigned.clock"),
+              ]
+            : [say(`card.stamp.countersigned.${csState}`)];
+      return el(
+        "li",
+        {
+          class: "cvh-row",
+          "data-history": "row",
+          "data-deal-state": seal ? "not_as_agreed" : "plain",
+        },
+        el(
+          "div",
+          { class: "cvh-row-head" },
+          seal ? sealSvg("not_as_agreed") : null,
+          el(
+            "div",
+            null,
+            el("p", { class: "cvh-row-title" }, title),
+            x?.item !== undefined
+              ? el("p", { class: "cvh-row-item" }, x.item)
+              : null,
+            el(
+              "p",
+              { class: "cvh-row-line", "data-history": "row-line" },
+              line,
+            ),
+            seal
+              ? el("p", { class: "cvh-sr" }, say("card.seal.not_as_agreed"))
+              : null,
+          ),
+        ),
+        el("p", { class: "cvh-row-detail" }, ...facts),
+        termLine !== null
+          ? el("p", { class: "cvh-row-detail" }, termLine)
+          : null,
+        d.bothHalves
+          ? el(
+              "p",
+              { class: "cvh-row-detail", "data-history": "both-halves" },
+              say("card.row.both_halves"),
+            )
+          : null,
+        el(
+          "ul",
+          { class: "cvh-stamps" },
+          stamp("card.stamp.recorded", recState, recLine),
+          stamp("card.stamp.time_stamped", tsState, tsLine),
+          stamp("card.stamp.countersigned", csState, csLine),
+        ),
+        x?.receipt !== undefined
+          ? el(
+              "p",
+              null,
+              el(
+                "a",
+                {
+                  class: "cvh-link",
+                  href: x.receipt,
+                  "data-history": "receipt",
+                },
+                say("card.row.receipt"),
+              ),
+            )
+          : null,
+      );
+    });
+    rowList = el(
+      "section",
+      { class: "cvh-rows-block" },
+      el("h2", null, say("card.rows.heading")),
+      el("ol", { class: "cvh-rows", "data-history": "rows" }, ...items),
+    );
+  }
+
+  // Who signed the card, and what that shows.
+  const signed = el(
+    "section",
+    { class: "cvh-panel", "data-history": "signed" },
+    el("h2", null, say("card.signed.heading")),
+    el(
+      "p",
+      null,
+      // "Signed by" only when capsulectl verify reported the signature passed;
+      // otherwise the page names the signer the card claims.
+      // The signature proves the key, not the name: the name stays a label.
+      say(
+        (proof["producer_signatures"] === "pass"
+          ? "card.signed.by"
+          : "card.signed.claimed") + (owner ? ".owner" : ""),
+        { name, key: short(obj.keyId) },
+      ),
+      ...(obj.signedAt !== undefined ? [" · ", time(obj.signedAt)] : []),
+    ),
+    // What the signature shows is said only when capsulectl verify reported
+    // the signature check passed.
+    el(
+      "p",
+      {
+        class: "cvh-note",
+        "data-signature": proof["producer_signatures"] ?? "absent",
+      },
+      say(
+        proof["producer_signatures"] === "pass"
+          ? "card.signed.note"
+          : proof["producer_signatures"] === "fail"
+            ? "card.signed.failed"
+            : "card.signed.unchecked",
+      ),
+    ),
+  );
+
+  // "Is this record intact?": capsulectl verify's own answer per check.
+  const statuses = PROOF_CHECKS.map((c) => proof[c]);
+  const lede = failed
+    ? "card.proof.lede.failed"
+    : statuses.some((s) => s === "fail") || proof["witnesses"] === "fail"
+      ? "card.proof.lede.failed"
+      : statuses.every((s) => s === "pass")
+        ? "card.proof.lede.passed"
+        : "card.proof.lede.partial";
+  const proofRow = (
+    code: string,
+    status: string,
+    label: (HistoryElement | string)[],
+  ): HistoryElement =>
+    el(
+      "li",
+      {
+        class: "cvh-proof-row",
+        "data-check": code,
+        "data-check-status": status,
+      },
+      el(
+        "span",
+        { class: "cvh-mark", "data-status": status },
+        status === "pass" ? "✓" : status === "fail" ? "✗" : "–",
+      ),
+      el(
+        "span",
+        null,
+        el(
+          "span",
+          { class: "cvh-sr" },
+          `${say(`card.proof.status.${status}`)}: `,
+        ),
+        el("span", null, ...label),
+        " ",
+        el("code", { class: "cvh-code" }, code.replace(/_/gu, " ")),
+      ),
+    );
+  const witnessStatus = proof["witnesses"] ?? "absent";
+  const proofRows = [
+    ...PROOF_CHECKS.map((c) =>
+      proofRow(c, proof[c] ?? "absent", [say(`card.proof.${c}`)]),
+    ),
+    proofRow(
+      "witnesses",
+      witnessStatus,
+      witnessStatus === "pass" && witnessAt !== undefined
+        ? [
+            say("card.proof.witness.filled", { witness: witnessBy ?? "" }),
+            " ",
+            time(witnessAt),
+          ]
+        : [
+            say(
+              witnessStatus === "fail"
+                ? "card.proof.witness.failed"
+                : "card.proof.witness.open",
+            ),
+          ],
+    ),
+  ];
+  const command = `capsulectl verify --bundle ${file ?? ""}`;
+  const proofPanel = el(
+    "section",
+    { class: "cvh-panel", "data-history": "proof" },
+    el("h2", null, say("card.proof.heading")),
+    el(
+      "p",
+      { class: "cvh-note", "data-proof": lede.split(".").pop() ?? "" },
+      say(lede),
+    ),
+    el("ul", { class: "cvh-proof-list" }, ...proofRows),
+    el(
+      "div",
+      { class: "cvh-check", "data-history": "check" },
+      el("p", { class: "cvh-check-title" }, say("card.check.title")),
+      el("p", { class: "cvh-note" }, say("card.check.download")),
+      el(
+        "pre",
+        { class: "cvh-command" },
+        el("code", { "data-verify-command": "download" }, command),
+      ),
+      el(
+        "p",
+        { class: "cvh-note", "data-expect": digest ?? "" },
+        say("card.check.expect", {
+          verdict: verdict ?? "",
+          fingerprint: short(digest ?? ""),
+        }),
+      ),
+    ),
+  );
+
+  const notProven = el(
+    "section",
+    { class: "cvh-panel cvh-callout", "data-history": "does-not-show" },
+    el("h2", null, say("card.not_proven.heading")),
+    el(
+      "ul",
+      null,
+      el(
+        "li",
+        null,
+        owner
+          ? say("card.not_proven.true.owner")
+          : say("card.not_proven.true", { name }),
+      ),
+      el(
+        "li",
+        null,
+        owner
+          ? say("card.not_proven.who.owner")
+          : say("card.not_proven.who", { name }),
+      ),
+      el("li", null, say("card.not_proven.outside")),
+    ),
+  );
+
+  const technical = el(
+    "details",
+    { class: "cvh-technical", "data-history": "technical" },
+    el("summary", null, say("card.technical")),
+    el(
+      "dl",
+      null,
+      el("dt", null, say("card.technical.card")),
+      el("dd", null, el("code", null, obj.derivation)),
+      el("dt", null, say("card.technical.key")),
+      el("dd", null, el("code", null, obj.keyId)),
+      el("dt", null, say("card.technical.digest")),
+      el("dd", null, el("code", null, digest ?? "")),
+      ...(owner && obj.deals !== undefined
+        ? [
+            el("dt", null, say("card.technical.deals")),
+            el(
+              "dd",
+              null,
+              ...obj.deals.map((d) => el("code", { class: "cvh-id" }, d.id)),
+            ),
+          ]
+        : []),
+    ),
+  );
+
+  const footer = el(
+    "footer",
+    { class: "cvh-footer", "data-history": "footer" },
+    el("p", { "data-history": "times" }, say("card.footer.utc")),
+    el(
+      "p",
+      null,
+      owner ? say("card.footer.private") : say("card.footer.shared", { name }),
+    ),
+    el(
+      "p",
+      null,
+      say("card.footer.built.before"),
+      time(built),
+      say("card.footer.built.after"),
+    ),
+  );
+
+  const tree = el(
+    "section",
+    {
+      class: "cv-history cvh-card",
+      "data-history": "view",
+      "data-kind": "deal",
+      "data-surface": surface,
+      "data-perspective": owner ? "yours" : "theirs",
+      "data-verdict": failed ? "failed" : "pass",
+    },
+    header,
+    el("div", { class: "cvh-main" }, hero, rowList, owner ? null : signed),
+    el(
+      "div",
+      { class: "cvh-side" },
+      proofPanel,
+      notProven,
+      owner ? signed : null,
+    ),
+    el("div", { class: "cvh-wide" }, technical, footer),
+  );
+  return { ok: true, tree };
+}
+
+/** The harbour seal, as the receipt draws it (receipt_core.js SEAL_BODY and SEAL_MOODS; a test holds the two equal). */
+export const SEAL_SHAPES: {
+  readonly body: readonly (readonly [
+    string,
+    Readonly<Record<string, string>>,
+  ])[];
+  readonly moods: Readonly<
+    Record<
+      string,
+      readonly (readonly [string, Readonly<Record<string, string>>])[]
+    >
+  >;
+} = {
+  body: [
+    [
+      "path",
+      {
+        d: "M22 106 C18 70 34 44 60 42 C86 44 102 70 98 106 Z",
+        fill: "#7F96A8",
+      },
+    ],
+    ["ellipse", { cx: "60", cy: "88", rx: "24", ry: "19", fill: "#C9D5DE" }],
+    ["circle", { cx: "60", cy: "40", r: "26", fill: "#8FA5B6" }],
+  ],
+  moods: {
+    not_as_agreed: [
+      [
+        "path",
+        {
+          d: "M45 31 L54 34 M75 31 L66 34",
+          stroke: "#13202B",
+          "stroke-width": "1.8",
+          "stroke-linecap": "round",
+        },
+      ],
+      ["circle", { cx: "50", cy: "39", r: "3.4", fill: "#13202B" }],
+      ["circle", { cx: "70", cy: "39", r: "3.4", fill: "#13202B" }],
+      ["ellipse", { cx: "60", cy: "49", rx: "9", ry: "6", fill: "#C9D5DE" }],
+      [
+        "ellipse",
+        { cx: "60", cy: "46.5", rx: "3.2", ry: "2.2", fill: "#13202B" },
+      ],
+      [
+        "path",
+        {
+          d: "M56.5 53 Q60 50.5 63.5 53",
+          stroke: "#13202B",
+          "stroke-width": "1.6",
+          fill: "none",
+          "stroke-linecap": "round",
+        },
+      ],
+      ["path", { d: "M76 76 Q92 70 95 82 Q88 86 79 82 Z", fill: "#6E8597" }],
+      ["circle", { cx: "96", cy: "78", r: "14", fill: "#D97A1E" }],
+      [
+        "path",
+        {
+          d: "M96 71 L96 79",
+          stroke: "#FFFFFF",
+          "stroke-width": "2.8",
+          "stroke-linecap": "round",
+        },
+      ],
+      ["circle", { cx: "96", cy: "84.5", r: "1.7", fill: "#FFFFFF" }],
+    ],
+  },
+};
+
+function sealSvg(mood: string): HistoryElement {
+  const shapes = [...SEAL_SHAPES.body, ...(SEAL_SHAPES.moods[mood] ?? [])];
+  return el(
+    "svg",
+    {
+      viewBox: "0 0 120 120",
+      width: "48",
+      height: "48",
+      "aria-hidden": "true",
+      focusable: "false",
+      class: "cvh-seal-art",
+      "data-seal": mood,
+    },
+    ...shapes.map(([tag, attrs]) => el(tag, attrs)),
+  );
+}
+
 // --- the page --------------------------------------------------------------
 
 const TOP = [
@@ -642,6 +2036,12 @@ export function buildHistoryView(
   | { readonly ok: true; readonly tree: HistoryElement }
   | { readonly ok: false; readonly reasons: readonly string[] } {
   const r = new Reader();
+  // A deal page that carries its signed object is the card page (#384).
+  if (isObj(input) && "machine" in input) {
+    if (input["view"] !== HISTORY_VIEW)
+      r.refuse("input.view", `is not ${HISTORY_VIEW}`);
+    return buildCardPage(r, input, overlay);
+  }
   const o = r.object(input, "input", TOP, [
     "view",
     "kind",
@@ -1041,9 +2441,8 @@ export function buildHistoryView(
   const statusOf = (id: string): CheckStatus | undefined =>
     checks.find((c) => c.id === id)?.status;
   const dealRecorded = statusOf("deal_report") === "pass";
-  // RECORDED is drawn on a row only when the deal_report check passed. When
-  // it did not run, the checks list says so once for the card (Sherlock2,
-  // F10); when it failed, the page draws no rows at all.
+  // When the deal_report check did not run, the checks list says so once for
+  // the card (Sherlock2, F10); when it failed, the page draws no rows at all.
   const witnessFailed = statusOf("witness") === "fail";
   const secondFailed = statusOf("second_signature") === "fail";
   // The seal's first lines say how the records are locked; only checks that
@@ -1289,7 +2688,9 @@ export function buildHistoryView(
         el(
           "ul",
           { class: "cvh-stamps" },
-          dealRecorded ? stamp("stamp.recorded", true, "passed", null) : null,
+          // RECORDED means checkpointed (Steven, #384): the deal report check
+          // says each deal was read with its own report, not that a checkpoint
+          // covers it, so it fills no RECORDED stamp here.
           ...slotStamps(x),
         ),
       );
@@ -1622,6 +3023,7 @@ export function renderHistoryView(
   input: unknown,
   container: Element,
   overlay?: unknown,
+  options: { readonly localTime?: boolean } = {},
 ): boolean {
   const doc = container.ownerDocument;
   const built = buildHistoryView(input, overlay);
@@ -1638,7 +3040,41 @@ export function renderHistoryView(
         doc,
       );
   container.replaceChildren(node);
+  if (built.ok && options.localTime !== false) localTimes(container, overlay);
   return built.ok;
+}
+
+/**
+ * A card page's times in the reader's own zone (the static page says them in
+ * UTC), and its footer saying so. Pages without such times are unchanged.
+ */
+function localTimes(container: Element, overlay: unknown): void {
+  const times = container.querySelectorAll("time[data-time]");
+  if (times.length === 0) return;
+  const view = container.ownerDocument.defaultView as
+    | (Window & { Intl?: typeof Intl })
+    | null;
+  const I = view?.Intl ?? Intl;
+  const fmt = new I.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+  for (const t of times) {
+    const at = Date.parse(t.getAttribute("datetime") ?? "");
+    if (!Number.isNaN(at)) t.textContent = fmt.format(new Date(at));
+  }
+  const note = container.querySelector('[data-history="times"]');
+  const words =
+    isObj(overlay) && isObj(overlay["entries"])
+      ? overlay["entries"]["card.footer.local"]
+      : undefined;
+  if (note)
+    note.textContent =
+      typeof words === "string" ? words : (BASE["card.footer.local"] ?? "");
 }
 
 /** The view's stylesheet: one column under 900px, two above, print, and a dark palette (with its own background) on a dark screen. */
@@ -1661,8 +3097,26 @@ export const historyViewStyles = `.cv-history{--cvh-ink:#1f2733;--cvh-slate:#6b7
 .cvh-seal-title{font-weight:700}.cvh-checked summary{cursor:pointer;font-weight:700;color:var(--cvh-navy)}
 .cvh-check[data-status=fail]{color:var(--cvh-bad)}.cvh-check[data-status=pass]{color:var(--cvh-ok)}
 .cvh-main,.cvh-side{display:grid;gap:16px;align-content:start}.cvh-refused{border:1px solid var(--cvh-bad);color:var(--cvh-bad);padding:8px 12px;border-radius:8px}
-@media screen and (prefers-color-scheme:dark){.cv-history{--cvh-ink:#e8eaee;--cvh-slate:#a3a9b3;--cvh-line:#33373e;--cvh-cream:#22262d;--cvh-navy:#c3d0e8;--cvh-ok:#5fcf90;--cvh-bad:#ff8f84;background:#16181c;color-scheme:dark}.cvh-badge[data-audience=private]{background:#3a2f1a;border-color:#e6b85c}}
-@media (min-width:900px){.cv-history{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}.cvh-header{grid-column:1/-1}}
+.cvh-card{--cvh-ink:#1b1f27;--cvh-slate:#4d5564;--cvh-line:#d3d7de;--cvh-cream:#f4f5f7;--cvh-navy:#2445a8;--cvh-ok:#17603a;--cvh-bad:#a31d1d}
+.cvh-card .cvh-header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}.cvh-tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0}
+.cvh-tag{border-radius:999px;padding:2px 10px;font-size:13px;background:#eceef2;color:#3d4452}.cvh-tag[data-audience=private]{background:#fcf1dc;color:#6f4700}
+.cvh-button{display:inline-block;border-radius:8px;padding:6px 12px;font-weight:600;text-decoration:none;background:#e7ecfb;color:#1f3c94}
+.cvh-card .cvh-hero,.cvh-panel,.cvh-card .cvh-row{background:#fff;border:1px solid var(--cvh-line);border-radius:16px;padding:14px 16px}
+.cvh-card .cvh-hero-line{font-size:24px;line-height:1.25}.cvh-card .cvh-row{border-radius:12px}.cvh-card .cvh-row[data-deal-state=not_as_agreed]{border-color:#d97a1e;border-width:2px}
+.cvh-row-head{display:flex;gap:12px;align-items:flex-start}.cvh-seal-art{flex:none}.cvh-row-item{font-weight:600}.cvh-row-line{font-size:17px}
+.cvh-card .cvh-stamp{border-radius:8px;border:1px dashed var(--cvh-line);padding:5px 10px;font-size:13px;color:var(--cvh-slate)}
+.cvh-card .cvh-stamp[data-filled=yes]{border:1px solid var(--cvh-ok);background:#e6f3eb;color:var(--cvh-ok)}.cvh-card .cvh-stamp[data-state=failed]{border:1px solid var(--cvh-bad);background:#fbe9e9;color:var(--cvh-bad)}
+.cvh-card .cvh-stamp-name{letter-spacing:.06em;display:block}.cvh-card .cvh-stamp-line{margin:0}
+.cvh-panel p{margin:0 0 8px}.cvh-panel ul{margin:0;padding-left:18px}.cvh-proof-list{list-style:none;padding:0!important;display:grid;gap:8px}
+.cvh-proof-row{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px}.cvh-proof-row span span{display:block}.cvh-mark{font-weight:700;text-align:center}
+.cvh-mark[data-status=pass]{color:var(--cvh-ok)}.cvh-mark[data-status=fail]{color:var(--cvh-bad)}.cvh-code{display:block;font-size:12px;color:var(--cvh-slate)}
+.cvh-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cvh-check{background:var(--cvh-cream);border-radius:8px;padding:10px 12px;margin-top:12px}.cvh-check-title{font-weight:700}
+.cvh-command{margin:0 0 8px;white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,Menlo,monospace}
+.cvh-wide{display:grid;gap:12px}.cvh-technical summary{cursor:pointer;font-weight:700;color:var(--cvh-navy)}.cvh-technical dd{margin:0 0 8px;overflow-wrap:anywhere}.cvh-id{display:block}
+.cvh-footer{font-size:13px;color:var(--cvh-slate)}.cvh-footer p{margin:0 0 4px}.cvh-link{color:var(--cvh-navy);font-weight:600}
+@media screen and (prefers-color-scheme:dark){.cv-history{--cvh-ink:#e8eaee;--cvh-slate:#a3a9b3;--cvh-line:#33373e;--cvh-cream:#22262d;--cvh-navy:#c3d0e8;--cvh-ok:#5fcf90;--cvh-bad:#ff8f84;background:#16181c;color-scheme:dark}.cvh-badge[data-audience=private]{background:#3a2f1a;border-color:#e6b85c}.cvh-card .cvh-hero,.cvh-panel,.cvh-card .cvh-row{background:#1d2026}.cvh-tag,.cvh-button{background:#2a2f38;color:#dfe5f2}.cvh-tag[data-audience=private]{background:#3a2f1a;color:#f2d8a7}.cvh-card .cvh-stamp[data-filled=yes]{background:#173325}.cvh-card .cvh-stamp[data-state=failed]{background:#3a1d1d}}
+@media (min-width:900px){.cv-history{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}.cvh-header{grid-column:1/-1}.cvh-wide{grid-column:1/-1}}
 @media print{.cv-history{max-width:none;grid-template-columns:1fr}.cvh-proof code{display:block}}
 `;
 

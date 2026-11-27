@@ -223,10 +223,10 @@ func TestEmptyWitnessValuesAreNoValues(t *testing.T) {
 	assert.NotContains(t, html, "is not registered with the witness yet")
 }
 
-// A row's RECORDED stamp follows the deal report check (Sherlock2, F10):
-// drawn and filled when it passed, not drawn when it did not run (the checks
-// list says that once for the card), and a failed check draws no rows.
-func TestRecordedStampFollowsTheDealReportCheck(t *testing.T) {
+// RECORDED means checkpointed (Steven, #384); the deal report check says only
+// that each deal was read with its own report, so it never fills the stamp:
+// rows either way, or no rows when it failed.
+func TestDealReportCheckFillsNoRecordedStamp(t *testing.T) {
 	render := func(status string) string {
 		var m map[string]any
 		require.NoError(t, json.Unmarshal(cases(t)["muse-owner"], &m))
@@ -241,8 +241,7 @@ func TestRecordedStampFollowsTheDealReportCheck(t *testing.T) {
 	}
 	rows := strings.Count(render("pass"), `data-history="row"`)
 	require.Positive(t, rows)
-	passed := render("pass")
-	assert.Equal(t, rows, strings.Count(passed, `data-filled="yes" data-state="passed"><span class="cvh-stamp-name">RECORDED`))
+	assert.Zero(t, strings.Count(render("pass"), `cvh-stamp-name">RECORDED`))
 	assert.Equal(t, rows, strings.Count(render("not_run"), `data-history="row"`))
 	assert.Zero(t, strings.Count(render("not_run"), `cvh-stamp-name">RECORDED`))
 	assert.Zero(t, strings.Count(render("fail"), `data-history="row"`))
