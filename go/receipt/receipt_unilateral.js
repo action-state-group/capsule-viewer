@@ -542,7 +542,7 @@
       var cid = str(get(r, "capsule_id"));
       if (cid === null || s.leg !== "payee_observed" || s.status !== "settled") return;
       var input = disclosed(cid, "agent_input");
-      legs.push({ settlement: s, input: isMap(input) ? input : null });
+      legs.push({ id: cid, settlement: s, input: isMap(input) ? input : null });
     });
     return legs;
   }
@@ -627,18 +627,23 @@
       // The first rail a disclosed action names, other than the simulated one:
       // test money is said once, at the top (money.test; the 0.25.0 top line),
       // so it draws no second line here, and never hides a real rail named after it.
-      var rail = null;
+      var rail = null, railAt = null;
       v.records.forEach(function (cid) {
         var p = v.disclosed(cid, "agent_input");
         var named = str(get(map(get(p, "body")), "rail"));
-        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "" && named !== TEST_RAIL) rail = named;
+        if (rail === null && isMap(p) && recordTypeOf(p) === "action" && named !== null && named !== "" && named !== TEST_RAIL) {
+          rail = named;
+          railAt = inRecord(cid, "/agent_input/body/rail");
+        }
       });
-      return rail === null ? null : { state: "missing", rail: rail, band: null };
+      // The rail is the first disclosed action's own (the view-model note's section 2: each value its source).
+      return rail === null ? null : { state: "missing", rail: rail, band: null, src: { derived: "rail", from: [railAt] } };
     }
     var railOf = legRail(legs);
     var state = railOf !== "lightning" ? railOf : lightningProof(legs);
     if (state === "sealed" && (checked === "proof" || checked === "failed")) state = checked;
-    return { state: state, rail: null, band: legBand(legs) };
+    // The band is the legs' summed amounts (legBand): each leg's settlement is a source.
+    return { state: state, rail: null, band: legBand(legs), src: { derived: "legs", from: legs.map(function (l) { return inRecord(l.id, "/record/settlement"); }) } };
   }
 
   // Whether a settlement line rests on a settled leg (any state but "missing").
@@ -1000,6 +1005,8 @@
     var out = { state: yes.state, approvers: yes.approvers.filter(function (a) { return APPROVERS.indexOf(a) >= 0; }) };
     if (yes.why) out.why = yes.why;
     if (yes.act) out.act = { step: yes.act.id, action: str(get(yes.act.body, "action")) };
+    // The page's own check over the copy's deal log (afterYesOf); the act it names is read from its record.
+    out.src = { derived: "after_yes", from: yes.act ? [inRecord(yes.act.id, "/agent_input/body/action")] : [{ bundle: "/records" }] };
     return out;
   }
 
@@ -2472,6 +2479,34 @@
     return out;
   }
 
+  // Where each of refDigests' digests sits in the payload, in the same order (a source for each).
+  function refPointers(payload, rel) {
+    var inExtension = !truthy(get(payload, "refs"));
+    var base = inExtension ? "/agent_input/" + pointerKey(EXTENSION) + "/refs/" : "/agent_input/refs/";
+    var out = [];
+    seq(or(get(payload, "refs"), get(map(get(payload, EXTENSION)), "refs"))).forEach(function (ref, i) {
+      ref = map(ref);
+      if (get(ref, "rel") === rel && str(get(ref, "digest")) !== null) out.push(base + i + "/digest");
+    });
+    return out;
+  }
+
+  // The JSON pointer (under the body) of each of commitmentsOf's commitments, in the same order: its
+  // label joins member names with "." for the page, which a member name holding a "." would make ambiguous.
+  function commitmentPointers(body, prefix) {
+    prefix = prefix || "";
+    var out = [];
+    sortedKeys(body).forEach(function (key) {
+      var value = body[key];
+      if (key.slice(-"_commitment".length) === "_commitment") {
+        if (str(value) !== null) out.push(prefix + "/" + pointerKey(key));
+        return;
+      }
+      out = out.concat(commitmentPointers(map(value), prefix + "/" + pointerKey(key)));
+    });
+    return out;
+  }
+
   function commitmentsOf(step, body, prefix) {
     prefix = prefix || "";
     var out = [];
@@ -2536,17 +2571,23 @@
         observed_at: bodyAt(cid, "/observed_at"),
         offer_digest: bodyAt(cid, "/proposed_action_ref/digest"),
         // The offer whose payload digest this page computed equals the one named.
-        offer: acceptance.offer === null ? null : { derived: "payload_digest", from: [bodyAt(cid, "/proposed_action_ref/digest"), inRecord(acceptance.offer, "/agent_input")] },
+        offer: acceptance.offer === null ? null : { derived: "ref", from: [bodyAt(cid, "/proposed_action_ref/digest"), inRecord(acceptance.offer, "/agent_input")] },
       });
       acceptances.push(acceptance);
     });
 
     var proposed = bodies("proposed-action/v0").filter(function (pair) { return ["offer", "commit"].indexOf(get(pair[1], "action")) >= 0; });
     var supersededBy = new Map();
+    // The source of each "supersedes" link: the newer offer's reference and the older offer it names.
+    var supersededByAt = new Map();
     proposed.forEach(function (pair) {
-      refDigests(payloads.get(pair[0]), "supersedes").forEach(function (d) {
+      var at = refPointers(payloads.get(pair[0]), "supersedes");
+      refDigests(payloads.get(pair[0]), "supersedes").forEach(function (d, i) {
         var old = byDigest.get(d);
-        if (truthy(old)) supersededBy.set(old, pair[0]);
+        if (truthy(old)) {
+          supersededBy.set(old, pair[0]);
+          supersededByAt.set(old, { derived: "ref_by", from: [inRecord(pair[0], at[i]), inRecord(old, "/agent_input")] });
+        }
       });
     });
     var acceptedBy = new Map();
@@ -2554,8 +2595,16 @@
     var offers = proposed.map(function (pair) {
       var cid = pair[0], body = pair[1];
       var supersedes = null;
+      var supersedesAt = null;
       var refs = refDigests(payloads.get(cid), "supersedes");
-      for (var i = 0; i < refs.length; i++) if (byDigest.has(refs[i])) { supersedes = byDigest.get(refs[i]); break; }
+      var refsAt = refPointers(payloads.get(cid), "supersedes");
+      for (var i = 0; i < refs.length; i++) {
+        if (byDigest.has(refs[i])) {
+          supersedes = byDigest.get(refs[i]);
+          supersedesAt = { derived: "ref", from: [inRecord(cid, refsAt[i]), inRecord(supersedes, "/agent_input")] };
+          break;
+        }
+      }
       var offer = {
         step: cid, action: pyStr(get(body, "action")), amount: sellerAmount(body, null, function (path) { return bodyAt(cid, path); }), digest: digestOfPayload.get(cid),
         supersedes: supersedes, superseded_by: supersededBy.has(cid) ? supersededBy.get(cid) : null,
@@ -2566,6 +2615,9 @@
         action: bodyAt(cid, "/action"),
         // This page's digest of the offer's payload (recordDigest).
         digest: { derived: "payload_digest", from: [inRecord(cid, "/agent_input")] },
+        supersedes: supersedesAt,
+        superseded_by: supersededByAt.has(cid) ? supersededByAt.get(cid) : null,
+        accepted_by: offer.accepted_by === null ? null : { derived: "ref_by", from: [bodyAt(offer.accepted_by, "/proposed_action_ref/digest"), inRecord(cid, "/agent_input")] },
       });
       return offer;
     });
@@ -2645,8 +2697,9 @@
     ].filter(function (f) { return f !== null; });
     var commitments = [];
     payloads.forEach(function (p, cid) { commitments = commitments.concat(commitmentsOf(cid, map(get(p, "body")))); });
-    // Each commitment is [step, member, value]: its value is that step's body member (dots name nested members).
-    var commitmentAt = commitments.map(function (c) { return bodyAt(c[0], "/" + c[1].split(".").map(pointerKey).join("/")); });
+    // Each commitment is [step, member, value]: its value is that step's body member (commitmentPointers).
+    var commitmentAt = [];
+    payloads.forEach(function (p, cid) { commitmentPointers(map(get(p, "body"))).forEach(function (path) { commitmentAt.push(bodyAt(cid, path)); }); });
     var keys = distinct(receipt.steps.map(function (s) { return s.key_id; }).filter(truthy));
     var seller = {
       receipt: receipt,
@@ -5394,12 +5447,12 @@
       // Where each of these lines was read, beside the receipt's own sources. The settlement line and the
       // after-yes line are this page's own computation over the copy's records (settlementOf, afterYesOf).
       var inReport = function (path) { return inRecord(sealed[0], "/agent_input/report" + path); };
+      // The settlement line and the after-yes line carry their own `src` (settlementOf, afterYesModel).
       var lines = sourcesOf(receipt, {
-        settlement: { derived: "settlement", from: [{ bundle: "/records" }] },
-        counterparty_named: { derived: "counterparty_openings", from: ["counterparty_openings", "acceptance_openings"].filter(function (k) { return own(raw, k); }).map(function (k) { return inReport("/" + k); }) },
+        // Who, from the openings the page fingerprinted; the accepted words, from the openings it checked.
+        counterparty_named: { derived: "counterparty_openings", from: ["counterparty_openings", "acceptance_openings"].map(function (k) { return own(raw, k) ? inReport("/" + k) : null; }) },
         authority_sealed: inReport("/authority"),
         referee: inRecord(sealed[0], "/agent_input/referee"),
-        after_yes: { derived: "after_yes", from: [{ bundle: "/records" }] },
       });
       receipt.sources = receipt.sources || {};
       Object.keys(lines).forEach(function (k) { receipt.sources[k] = lines[k]; });

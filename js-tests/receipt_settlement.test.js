@@ -259,7 +259,10 @@ describe("the settlement line (#383)", () => {
     it("keeps \"not recorded\" when an action names a rail but no leg settled it", async () => {
       // The evidence record (f4eb6f65, x-deal-v0) is made an action naming the card rail: the line says no settlement record is here.
       const missing = await sellerLines({ blocks: { f4eb6f65: { record_type: "action" } }, bodies: { f4eb6f65: { rail: "card" } } });
-      expect(missing.model.receipt.settlement).toEqual({ state: "missing", rail: "card", band: null });
+      const { src, ...line } = missing.model.receipt.settlement;
+      expect(line).toEqual({ state: "missing", rail: "card", band: null });
+      // The rail is read from that action's own body (the view-model note's section 2).
+      expect(src).toEqual({ derived: "rail", from: [{ record: expect.stringMatching(/^f4eb6f65/), path: "/agent_input/body/rail" }] });
       expect(missing.line.textContent).toBe("Payment: a card payment; the card processor's report is not in this file.");
       expect(missing.headline).toBe("Payment: Not recorded in this copy");
       expect(missing.note).toMatch(/^This copy carries no payment record\./);
