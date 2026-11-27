@@ -563,3 +563,61 @@ capsulectl bundles with their real verify output, a changed bundle, the
 download's bytes, caller text in markup, the reader's zone, and the seal and
 words shared with the receipt.
 
+
+## 12. The History view as a presentation module (capsule-viewer#478)
+
+Status: built for #478, the receipt view-model note's section 7 row 8
+(`docs/design/receipt-view-model.md`).
+
+**What it reads.** `historyViewModule` (`ts/src/history-view-module.ts`,
+manifest `capsuleviewer.history-view/v0`) is a presentation module: the runtime
+hands it the verified context of an `x-standard-history/v0` bundle, and it reads
+the card itself. Its reading (`ts/src/standard-history-card.ts`) is the Python
+module-slot History card's (`src/capsule_viewer/static/standard_history_card.js`):
+the verification gate, the block's closed shape, the card as the root record's
+disclosed `agent_input`, and the card's SH 4 to 6, 11 and 12 check, with the
+states `unverified`, `unreadable`, `refused` and `card`. Then, in the Python
+module's order, the card's signature (`readerCardSignature`; a failure is the
+state `signature_failed`), the snapshot's witness under the reader's own list
+(`readerAnchorWitness`; a block checkpoint that is not its anchor's makes the
+block `unreadable`) and the card statements' registration (`readerCardRegistered`).
+`test/history-view-module-parity.test.ts` and `test/history-view-module.test.ts`
+hold both steps to the Python module on every committed bundle, every AAC /1, /3
+and /4 vector and each refusal branch.
+
+**The view model is the JSON.** `buildModel` returns plain JSON whose values are
+`{value, src}`, the receipt view model's `Sourced` (receipt-view-model.md
+section 2): `{record, path}` points into the root record (`/key_id`,
+`/timestamp`) or, under `/agent_input`, into the card it discloses; `{bundle}`
+into the `x-standard-history/v0` block (its `as_of`, each deal entry);
+`{checked}` names a check this page ran (`card_check`, `signature`,
+`anchor_witness`, `card_registered`, `membership`). Every member of a standard
+card is in the model, sourced, even those the page does not draw, since an agent
+answers from the JSON (PRD v1.3 section 3, H1). `historyViewModelJson` is that
+JSON for a page writer to save beside the page (H3); the page draws only from
+the model, so the parsed JSON draws the same page.
+
+**What it draws.** The card anatomy of section 11, placed in the host's regions:
+L0 the counts (and, on the holder's own copy, the rows), L1 "Who signed this
+card" (from the page's own signature check) and "What this does not prove", L2
+"Which checks ran" (the card's six properties as this page checked them, what
+the block does not carry, the witness and registration lines) and the
+technical details. The core runtime draws the page's title, the verification
+section and the bundle's download, so the module draws no header, no
+"Is this record intact?", no download and no footer. A row has no stamps: the
+holder's book is not in the bundle. No sealed record names the holder
+(evidencebook#1031), so the lines that name one have nameless variants. The
+module inserts the view's stylesheet once per page; its manifest pins it
+(`executable.style_sha256`), and a page that registers the module adds that
+pin to its `style-src`, as for any module's stylesheets.
+
+**Shipping.** Exported from the package and from the browser runtime
+(`EvidenceGraph.historyViewModule`), not registered by default: it reads the
+same bundles as the Python module, so one registry holds one of them. The
+shaped-input entry points (`historyViewHtml`, `renderHistoryView`) keep their
+contract and goldens for loop's 0.17.0 copy and the ARD demo's 0.27.2 copy.
+
+**Not here.** The Python History card also draws size bands, roles, disputes,
+the not-counted tallies and a reader witness-list editor. Whether capsulectl's
+page (receipt-view-model.md PR 10) drops them or the anatomy grows first is
+Steven's call through Sherlock2 before PR 10 merges.
