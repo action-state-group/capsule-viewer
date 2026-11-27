@@ -317,8 +317,8 @@ describe("the ladder once per page, in the receipt pack's words", () => {
     const text = root.textContent ?? "";
     expect(text).not.toContain("record of the month");
     expect(text).not.toContain("the other party's signature over the Result");
-    // One name for the witness check on the page: the module's proof rows,
-    // which say "Outside time stamp" (#494), are not drawn beside the core.
+    // One name for the witness check on the page: the module's proof rows
+    // are not drawn beside the core, and since #494 they use its noun too.
     expect(text).not.toContain("Outside time stamp");
     expect(text).toContain("Witness time stamp");
     const rung11 = root.querySelector('[data-l3="ladder"] [data-rung="11"]')!;

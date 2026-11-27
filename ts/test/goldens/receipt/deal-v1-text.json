@@ -392,10 +392,6 @@
    },
    {
     "at": ".cv-rcpt-field",
-    "text": "-"
-   },
-   {
-    "at": ".cv-rcpt-field",
     "text": "Term"
    },
    {
@@ -431,6 +427,21 @@
    {
     "at": ".cv-mono",
     "text": "4dedacf1…fd30"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Statement it cites"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "",
+    "attrs": {
+     "title": "b81915f3fc469cd122cd55908fdaceca98f9f2fac5185bd769949dc03d5db0fc"
+    }
+   },
+   {
+    "at": ".cv-mono",
+    "text": "b81915f3…b0fc"
    },
    {
     "at": ".cv-rcpt-record__label",
@@ -1610,10 +1621,6 @@
    },
    {
     "at": ".cv-rcpt-field",
-    "text": "-"
-   },
-   {
-    "at": ".cv-rcpt-field",
     "text": "Term"
    },
    {
@@ -1649,6 +1656,21 @@
    {
     "at": ".cv-mono",
     "text": "4dedacf1…fd30"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Statement it cites"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "",
+    "attrs": {
+     "title": "b81915f3fc469cd122cd55908fdaceca98f9f2fac5185bd769949dc03d5db0fc"
+    }
+   },
+   {
+    "at": ".cv-mono",
+    "text": "b81915f3…b0fc"
    },
    {
     "at": ".cv-rcpt-record__label",
@@ -2772,10 +2794,6 @@
    },
    {
     "at": ".cv-rcpt-field",
-    "text": "-"
-   },
-   {
-    "at": ".cv-rcpt-field",
     "text": "Term"
    },
    {
@@ -2811,6 +2829,21 @@
    {
     "at": ".cv-mono",
     "text": "4dedacf1…fd30"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Statement it cites"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "",
+    "attrs": {
+     "title": "b81915f3fc469cd122cd55908fdaceca98f9f2fac5185bd769949dc03d5db0fc"
+    }
+   },
+   {
+    "at": ".cv-mono",
+    "text": "b81915f3…b0fc"
    },
    {
     "at": ".cv-rcpt-record__label",
@@ -4002,7 +4035,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -4447,7 +4480,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -4892,7 +4925,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -5795,7 +5828,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -6801,7 +6834,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -7807,7 +7840,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -8885,6 +8918,1397 @@
   ]
  ],
  "offer/keep-copy / page": [
+  [
+   {
+    "at": ".cv-rcpt-title data-receipt-title=buyer",
+    "text": "Order receipt"
+   },
+   {
+    "at": ".cv-rcpt-tag data-banner=shared",
+    "text": "Shared copy"
+   },
+   {
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-c676526ac47e3688.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-headline data-top-line=all.not_due",
+    "text": "Nothing is due yet"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Status"
+   },
+   {
+    "at": "data-card-status=all.not_due",
+    "text": "Not due"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "As of "
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Seller's side"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "Their signed agreement: checked"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "RECORDED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--filled data-stamp=recorded data-stamp-state=filled",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Checkpointed"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "TIME-STAMPED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=time_stamped data-stamp-state=not_checked",
+    "text": " "
+   },
+   {
+    "at": "data-cites-core=witness",
+    "text": "Not checked here"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "COUNTERSIGNED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=countersigned data-stamp-state=open",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Not countersigned"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What happened, step by step"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "1 sealed step in this copy. Open it to see exactly what was recorded."
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "1"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Side"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "b5d189b0…ee88"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": " · agree"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 1 · leaf 0"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What else is in this receipt"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Problems spotted"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=problems",
+    "text": "None"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Whose records these are"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=whose",
+    "text": "Only the holder's side's records are here."
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "The other side's agreement"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=half",
+    "text": "This copy carries the other side's signed agreement. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "Is this record intact?"
+   },
+   {
+    "at": ".cv-rcpt-lede data-proof=passed",
+    "text": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself."
+   },
+   {
+    "at": "data-cites-core=checks",
+    "text": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+   },
+   {
+    "at": ".cv-rcpt-h4",
+    "text": "Check it yourself"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "On the downloaded proof file:"
+   },
+   {
+    "at": "data-verify-command=download",
+    "text": "capsulectl deal verify --bundle deal-c676526ac47e3688.bundle.json"
+   },
+   {
+    "at": ".cv-muted data-expect=d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083",
+    "text": "Expect: VALID, fingerprint d41c64ad…9083."
+   },
+   {
+    "at": ".cv-rcpt-button data-proof-download=deal-c676526ac47e3688.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What this does not prove"
+   },
+   {
+    "at": ".cv-rcpt-list",
+    "text": "That what the agents said was true. Only that it wasn't changed after sealing.Who made the records. The signing key is on the holder's agent's machine.That the goods shipped or arrived.Anything outside this deal."
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "For checkers: every sealed record"
+   },
+   {
+    "at": ".cv-table",
+    "text": "StepWhatKindLog position (seq · leaf)RecordShown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "1"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "1 · 0"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "",
+    "attrs": {
+     "title": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "b5d189b0…ee88"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Log"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "deal/fc0f2b14290ab000522413e38436fde4"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Proof fingerprint"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Profile checked against"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "x-deal-v1"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Producer versionnot recorded"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Wording pack"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "capsuleviewer.receipt.wording.en/v1"
+   },
+   {
+    "at": ".cv-metric__label",
+    "text": "Where it stands"
+   },
+   {
+    "at": "data-deal-state=started",
+    "text": "Agreement: started"
+   },
+   {
+    "at": ".cv-metric__value",
+    "text": " · "
+   },
+   {
+    "at": "data-deal-terms=true",
+    "text": "Terms: Not due (1 of 1)"
+   },
+   {
+    "at": ".cv-muted data-local=start",
+    "text": "Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word."
+   },
+   {
+    "at": ".cv-muted data-as-of=2026-09-27T18:00:00Z",
+    "text": "As the holder computed it at . This is not a time any witness attests."
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-muted data-sealed=x-deal-report",
+    "text": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Terms"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermOwed byStatusDueContest window endsDetail"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-row-status=not_due",
+    "text": "Not due"
+   },
+   {
+    "at": "data-time=2026-11-01T23:59:59Z",
+    "text": "@2026-11-01T23:59:59Z"
+   },
+   {
+    "at": "data-label=Due",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-time=2026-11-04T23:59:59Z",
+    "text": "@2026-11-04T23:59:59Z"
+   },
+   {
+    "at": "data-label=Contest window ends",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-label=Detail",
+    "text": "Payment check: not recomputed"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Each status is the one the holder computed. This page shows it and does not compute it."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Payment records the terms' statuses rest on"
+   },
+   {
+    "at": ".cv-muted data-legs=none",
+    "text": "No payment record is among the records the terms' statuses rest on."
+   },
+   {
+    "at": ".cv-muted data-legs-why=no_records",
+    "text": "No term's status rests on any record yet, so there is no payment record to show."
+   },
+   {
+    "at": ".cv-rcpt-footer data-surface=footer",
+    "text": "Times are in your time zone. This is a shared copy of the holder's records. Records sealed after  are not in this receipt."
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "Technical details"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this copy carries"
+   },
+   {
+    "at": "data-rung=counterparty-half",
+    "text": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": "data-rung=countersign",
+    "text": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above."
+   },
+   {
+    "at": ".cv-drilldown__body",
+    "text": "The verifier's report is for the bundle with digest "
+   },
+   {
+    "at": ".cv-mono data-bundle-digest=true",
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "The records each term's status rests on"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "No record is listed for any term."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this report rests on"
+   },
+   {
+    "at": ".cv-muted data-pack=true",
+    "text": "The terms pack the agreement cites, by digest:"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The holder's own log held 1 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side's log was counted to 1 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side keeps its own record of this deal."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "This page's words: wording pack capsuleviewer.receipt.wording.en/v1, sha256 <PACK_SHA256>."
+   }
+  ]
+ ],
+ "offer/keep-copy+given / own": [
+  [
+   {
+    "at": ".cv-rcpt-title data-receipt-title=buyer",
+    "text": "Order receipt"
+   },
+   {
+    "at": ".cv-rcpt-tag cv-rcpt-tag--private data-banner=private",
+    "text": "Private: your copy"
+   },
+   {
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-c676526ac47e3688.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-headline data-top-line=all.not_due",
+    "text": "Nothing is due yet"
+   },
+   {
+    "at": ".cv-rcpt-lede data-hero-item=",
+    "text": "200 conference badges, delivered by Friday"
+   },
+   {
+    "at": ".cv-rcpt-lede data-hero-terms=",
+    "text": "Quantity: 200 · Total: 60.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Status"
+   },
+   {
+    "at": "data-card-status=all.not_due",
+    "text": "Not due"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "As of "
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Seller's side"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "Their signed agreement: checked"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "RECORDED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--filled data-stamp=recorded data-stamp-state=filled",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Checkpointed"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "TIME-STAMPED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=time_stamped data-stamp-state=not_checked",
+    "text": " "
+   },
+   {
+    "at": "data-cites-core=witness",
+    "text": "Not checked here"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "COUNTERSIGNED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=countersigned data-stamp-state=open",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Not countersigned"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What happened, step by step"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "1 sealed step in this copy. Open it to see exactly what was recorded."
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "1"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Deal agreed"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inyour book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "When"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Side"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "b5d189b0…ee88"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": " · agree"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 1 · leaf 0"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What else is in this receipt"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Problems spotted"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=problems",
+    "text": "None"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Whose records these are"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=whose",
+    "text": "Only your side's records are here. The seller keeps its own copy, signed by them."
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "The other side's agreement"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=half",
+    "text": "This copy carries the seller's signed agreement. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "Is this record intact?"
+   },
+   {
+    "at": ".cv-rcpt-lede data-proof=passed",
+    "text": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself."
+   },
+   {
+    "at": "data-cites-core=checks",
+    "text": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+   },
+   {
+    "at": ".cv-rcpt-h4",
+    "text": "Check it yourself"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "On the downloaded proof file:"
+   },
+   {
+    "at": "data-verify-command=download",
+    "text": "capsulectl deal verify --bundle deal-c676526ac47e3688.bundle.json"
+   },
+   {
+    "at": ".cv-muted data-expect=d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083",
+    "text": "Expect: VALID, fingerprint d41c64ad…9083."
+   },
+   {
+    "at": ".cv-rcpt-button data-proof-download=deal-c676526ac47e3688.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What this does not prove"
+   },
+   {
+    "at": ".cv-rcpt-list",
+    "text": "That what the agents said was true. Only that it wasn't changed after sealing.Who made the records. The signing key is on your agent's machine.That the goods shipped or arrived.Anything outside this deal."
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "For checkers: every sealed record"
+   },
+   {
+    "at": ".cv-table",
+    "text": "StepWhatKindLog position (seq · leaf)RecordShown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "1"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "1 · 0"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "",
+    "attrs": {
+     "title": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "b5d189b0…ee88"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Log"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "deal/fc0f2b14290ab000522413e38436fde4"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Proof fingerprint"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Profile checked against"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "x-deal-v1"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Producer versionnot recorded"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Wording pack"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "capsuleviewer.receipt.wording.en/v1"
+   },
+   {
+    "at": ".cv-metric__label",
+    "text": "Where it stands"
+   },
+   {
+    "at": "data-deal-state=started",
+    "text": "Agreement: started"
+   },
+   {
+    "at": ".cv-metric__value",
+    "text": " · "
+   },
+   {
+    "at": "data-deal-terms=true",
+    "text": "Terms: Not due (1 of 1)"
+   },
+   {
+    "at": ".cv-muted data-local=start",
+    "text": "Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word."
+   },
+   {
+    "at": ".cv-muted data-as-of=2026-09-27T18:00:00Z",
+    "text": "As the holder computed it at . This is not a time any witness attests."
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-muted data-sealed=x-deal-report",
+    "text": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Terms"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermOwed byStatusDueContest window endsDetail"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-row-status=not_due",
+    "text": "Not due"
+   },
+   {
+    "at": "data-time=2026-11-01T23:59:59Z",
+    "text": "@2026-11-01T23:59:59Z"
+   },
+   {
+    "at": "data-label=Due",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-time=2026-11-04T23:59:59Z",
+    "text": "@2026-11-04T23:59:59Z"
+   },
+   {
+    "at": "data-label=Contest window ends",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-label=Detail",
+    "text": "Payment check: not recomputed"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Each status is the one the holder computed. This page shows it and does not compute it."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Payment records the terms' statuses rest on"
+   },
+   {
+    "at": ".cv-muted data-legs=none",
+    "text": "No payment record is among the records the terms' statuses rest on."
+   },
+   {
+    "at": ".cv-muted data-legs-why=no_records",
+    "text": "No term's status rests on any record yet, so there is no payment record to show."
+   },
+   {
+    "at": ".cv-rcpt-footer data-surface=footer",
+    "text": "Times are in your time zone. This file is your private copy: to show this deal to someone, send them the copy made for them. Records sealed after  are not in this receipt."
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "Technical details"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this copy carries"
+   },
+   {
+    "at": "data-rung=counterparty-half",
+    "text": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": "data-rung=countersign",
+    "text": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above."
+   },
+   {
+    "at": ".cv-drilldown__body",
+    "text": "The verifier's report is for the bundle with digest "
+   },
+   {
+    "at": ".cv-mono data-bundle-digest=true",
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "The records each term's status rests on"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "No record is listed for any term."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this report rests on"
+   },
+   {
+    "at": ".cv-muted data-pack=true",
+    "text": "The terms pack the agreement cites, by digest:"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The holder's own log held 1 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side's log was counted to 1 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side keeps its own record of this deal."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "This page's words: wording pack capsuleviewer.receipt.wording.en/v1, sha256 <PACK_SHA256>."
+   }
+  ]
+ ],
+ "offer/keep-copy+given / report": [
+  [
+   {
+    "at": ".cv-rcpt-title data-receipt-title=buyer",
+    "text": "Order receipt"
+   },
+   {
+    "at": ".cv-rcpt-tag data-banner=shared",
+    "text": "Shared copy"
+   },
+   {
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-c676526ac47e3688.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-headline data-top-line=all.not_due",
+    "text": "Nothing is due yet"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Status"
+   },
+   {
+    "at": "data-card-status=all.not_due",
+    "text": "Not due"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "As of "
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Seller's side"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "Their signed agreement: checked"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "RECORDED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--filled data-stamp=recorded data-stamp-state=filled",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Checkpointed"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "TIME-STAMPED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=time_stamped data-stamp-state=not_checked",
+    "text": " "
+   },
+   {
+    "at": "data-cites-core=witness",
+    "text": "Not checked here"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "COUNTERSIGNED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=countersigned data-stamp-state=open",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Not countersigned"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What happened, step by step"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "1 sealed step in this copy. Open it to see exactly what was recorded."
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "1"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Side"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "b5d189b0…ee88"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": " · agree"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 1 · leaf 0"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What else is in this receipt"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Problems spotted"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=problems",
+    "text": "None"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Whose records these are"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=whose",
+    "text": "Only the holder's side's records are here."
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "The other side's agreement"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=half",
+    "text": "This copy carries the other side's signed agreement. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "Is this record intact?"
+   },
+   {
+    "at": ".cv-rcpt-lede data-proof=passed",
+    "text": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself."
+   },
+   {
+    "at": "data-cites-core=checks",
+    "text": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+   },
+   {
+    "at": ".cv-rcpt-h4",
+    "text": "Check it yourself"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "On the downloaded proof file:"
+   },
+   {
+    "at": "data-verify-command=download",
+    "text": "capsulectl deal verify --bundle deal-c676526ac47e3688.bundle.json"
+   },
+   {
+    "at": ".cv-muted data-expect=d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083",
+    "text": "Expect: VALID, fingerprint d41c64ad…9083."
+   },
+   {
+    "at": ".cv-rcpt-button data-proof-download=deal-c676526ac47e3688.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What this does not prove"
+   },
+   {
+    "at": ".cv-rcpt-list",
+    "text": "That what the agents said was true. Only that it wasn't changed after sealing.Who made the records. The signing key is on the holder's agent's machine.That the goods shipped or arrived.Anything outside this deal."
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "For checkers: every sealed record"
+   },
+   {
+    "at": ".cv-table",
+    "text": "StepWhatKindLog position (seq · leaf)RecordShown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "1"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "1 · 0"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "",
+    "attrs": {
+     "title": "b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=b5d189b0df6edbe134151f2e4480254a3968fee7b46a46aa3a06490b0fcdee88",
+    "text": "b5d189b0…ee88"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Log"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "deal/fc0f2b14290ab000522413e38436fde4"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Proof fingerprint"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Profile checked against"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "x-deal-v1"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Producer versionnot recorded"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Wording pack"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "capsuleviewer.receipt.wording.en/v1"
+   },
+   {
+    "at": ".cv-metric__label",
+    "text": "Where it stands"
+   },
+   {
+    "at": "data-deal-state=started",
+    "text": "Agreement: started"
+   },
+   {
+    "at": ".cv-metric__value",
+    "text": " · "
+   },
+   {
+    "at": "data-deal-terms=true",
+    "text": "Terms: Not due (1 of 1)"
+   },
+   {
+    "at": ".cv-muted data-local=start",
+    "text": "Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word."
+   },
+   {
+    "at": ".cv-muted data-as-of=2026-09-27T18:00:00Z",
+    "text": "As the holder computed it at . This is not a time any witness attests."
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-muted data-sealed=x-deal-report",
+    "text": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Terms"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermOwed byStatusDueContest window endsDetail"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-row-status=not_due",
+    "text": "Not due"
+   },
+   {
+    "at": "data-time=2026-11-01T23:59:59Z",
+    "text": "@2026-11-01T23:59:59Z"
+   },
+   {
+    "at": "data-label=Due",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-time=2026-11-04T23:59:59Z",
+    "text": "@2026-11-04T23:59:59Z"
+   },
+   {
+    "at": "data-label=Contest window ends",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-label=Detail",
+    "text": "Payment check: not recomputed"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Each status is the one the holder computed. This page shows it and does not compute it."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Payment records the terms' statuses rest on"
+   },
+   {
+    "at": ".cv-muted data-legs=none",
+    "text": "No payment record is among the records the terms' statuses rest on."
+   },
+   {
+    "at": ".cv-muted data-legs-why=no_records",
+    "text": "No term's status rests on any record yet, so there is no payment record to show."
+   },
+   {
+    "at": ".cv-rcpt-footer data-surface=footer",
+    "text": "Times are in your time zone. This is a shared copy of the holder's records. Records sealed after  are not in this receipt."
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "Technical details"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this copy carries"
+   },
+   {
+    "at": "data-rung=counterparty-half",
+    "text": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": "data-rung=countersign",
+    "text": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above."
+   },
+   {
+    "at": ".cv-drilldown__body",
+    "text": "The verifier's report is for the bundle with digest "
+   },
+   {
+    "at": ".cv-mono data-bundle-digest=true",
+    "text": "d41c64ad12f4eef3c6d83fabf8f6552771480e383d66e4d5e07c48eb85f49083"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "The records each term's status rests on"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "No record is listed for any term."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this report rests on"
+   },
+   {
+    "at": ".cv-muted data-pack=true",
+    "text": "The terms pack the agreement cites, by digest:"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The holder's own log held 1 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side's log was counted to 1 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side keeps its own record of this deal."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "This page's words: wording pack capsuleviewer.receipt.wording.en/v1, sha256 <PACK_SHA256>."
+   }
+  ]
+ ],
+ "offer/keep-copy+given / page": [
   [
    {
     "at": ".cv-rcpt-title data-receipt-title=buyer",
@@ -15484,7 +16908,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -15994,7 +17418,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -16504,7 +17928,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -17100,7 +18524,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -17719,7 +19143,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",
@@ -18338,7 +19762,7 @@
    },
    {
     "at": "data-rung=countersign",
-    "text": "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy."
+    "text": "Not countersigned in this copy. Another copy of this deal may carry its own countersignature."
    },
    {
     "at": ".cv-drilldown__body",

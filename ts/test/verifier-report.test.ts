@@ -385,7 +385,7 @@ describe("capsulectl's report of an x-deal-v1 copy, on a receipt page (#405)", (
       const root = await page(r);
       expect(root.querySelector('[data-rung="counterparty-half"]')).toBeNull();
       expect(root.querySelector('[data-rung="countersign"]')?.textContent).toBe(
-        "Not countersigned in this copy. A signature from the other party, if there is one, is in their own copy.",
+        "Not countersigned in this copy. Another copy of this deal may carry its own countersignature.",
       );
     }
     // The page never says a half capsulectl did not report: no report, no line.

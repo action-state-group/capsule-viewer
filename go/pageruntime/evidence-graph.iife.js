@@ -13907,17 +13907,17 @@ ${body}
     "deal.proof.graph_closure": "Each step links to the one before",
     "deal.proof.per_record_membership": "Every step is in this deal's log",
     "deal.proof.checkpoint": "The log's summary adds up",
-    "deal.proof.witness.filled": "Outside time stamp: {witness} at {at}, as capsulectl verify reported on your own book",
-    "deal.proof.witness.open": "Outside time stamp: not in this copy",
-    "deal.proof.witness.not_checked": "Outside time stamp: not checked here",
-    "deal.proof.witness.failed": "Outside time stamp: didn't verify",
+    "deal.proof.witness.filled": "Witness time stamp: {witness} at {at}, as capsulectl verify reported on your own book",
+    "deal.proof.witness.open": "Witness time stamp: not in this copy",
+    "deal.proof.witness.not_checked": "Witness time stamp: not checked here",
+    "deal.proof.witness.failed": "Witness time stamp: didn't verify",
     "deal.proof.witness.note": "Your History card's checkpoint may carry it.",
     "deal.proof.witness.note.report": "The holder's History card's checkpoint may carry it.",
     "deal.proof.status.pass": "passed",
     "deal.proof.status.fail": "failed",
     "deal.proof.status.absent": "not in this copy",
     "deal.proof.status.withheld": "not run on this copy",
-    "deal.proof.witness.filled_checked": "Outside time stamp: {witness} at {at}, on your own book",
+    "deal.proof.witness.filled_checked": "Witness time stamp: {witness} at {at}, on your own book",
     "deal.proof.counterparty_half": "The seller's signed agreement",
     "deal.proof.counterparty_half.seller": "The buyer's signed agreement",
     "deal.proof.counterparty_half.report": "The other side's signed agreement",
@@ -13929,7 +13929,7 @@ ${body}
     "receipt_page.ladder.lede": "One ladder for every record in this file: each rung's status, and how many of the {n} records have it.",
     "receipt_page.ladder.count": "{k} of {n} records",
     "receipt_page.ladder.records": "records {ids}",
-    "receipt_page.ladder.inclusion": "each record's leaf and seq",
+    "receipt_page.ladder.inclusion": "each record's place in the log",
     "receipt_page.content.times_withheld": "The content as recorded matches the digest the record commits to. It is shown here with its record times left out, so what is shown is not exactly what the digest covers.",
     "receipt_page.times.withheld": "Record times are shown only on the holder's own copy. This copy was made for someone else, so the record views here leave them out.",
     "deal.proof.cited": "Each check, and whether capsulectl verify or this page ran it, is listed under \u201CHow this page was checked\u201D."
@@ -18410,7 +18410,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("353ff7b4cd31ab3661f00187be56d18cbf6ab29d");
+    return commitPrefix("413142e6f8a2eb1a7b64a0e182c7c9829dbf9f51");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -31015,9 +31015,9 @@ ${pad.repeat(depth)}`;
       "card.proof.graph_closure": "Each step links to the one before",
       "card.proof.per_record_membership": "Every step is in this card's log",
       "card.proof.checkpoint": "The log's summary adds up",
-      "card.proof.witness.filled": "Outside time stamp: {witness} at",
-      "card.proof.witness.open": "Outside time stamp: not in this copy",
-      "card.proof.witness.failed": "Outside time stamp: didn't verify",
+      "card.proof.witness.filled": "Witness time stamp: {witness} at",
+      "card.proof.witness.open": "Witness time stamp: not in this copy",
+      "card.proof.witness.failed": "Witness time stamp: didn't verify",
       "card.check.title": "Check it yourself",
       "card.check.download": "On the downloaded card:",
       "card.check.expect": "Expect: {verdict}, fingerprint {fingerprint}.",

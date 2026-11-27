@@ -253,6 +253,34 @@ func TestFrozenPythonCopiesStayFrozen(t *testing.T) {
 // record (#460, Sherlock2's wording): in these records a countersignature is
 // a third party re-checking a bundle (the countersign.* lines), never the
 // other party signing, so no provider.* line uses the word.
+// The witness check has one name across the module and the core (#494,
+// Sherlock2 on #493): "Witness time stamp", as receipt_page.check.witnesses
+// says it. "Outside" read as someone independent of the parties, while the
+// default witness is ours and not independent (u523).
+func TestWitnessCheckHasOneName(t *testing.T) {
+	b, err := os.ReadFile("wording-en.json")
+	require.NoError(t, err)
+	var pack struct {
+		Entries map[string]string `json:"entries"`
+	}
+	require.NoError(t, json.Unmarshal(b, &pack))
+	noun := pack.Entries["receipt_page.check.witnesses"]
+	require.Equal(t, "Witness time stamp", noun)
+	// rung.unwitnessed is the v0 pages' line, which keeps the frozen Python
+	// pack's words (TestFrozenPythonCopiesStayFrozen); the deal page says
+	// deal.rung.unwitnessed instead.
+	for key, words := range pack.Entries {
+		if key == "rung.unwitnessed" {
+			continue
+		}
+		assert.NotContains(t, strings.ToLower(words), "outside time stamp", key)
+	}
+	assert.True(t, strings.HasPrefix(pack.Entries["deal.rung.unwitnessed"], "No "+strings.ToLower(noun[:1])+noun[1:]+":"))
+	for _, state := range []string{"filled", "open", "not_checked", "failed", "filled_checked"} {
+		assert.True(t, strings.HasPrefix(pack.Entries["deal.proof.witness."+state], noun+":"), state)
+	}
+}
+
 func TestProviderWordsNeverCallTheOtherPartyACountersigner(t *testing.T) {
 	b, err := os.ReadFile("wording-en.json")
 	require.NoError(t, err)

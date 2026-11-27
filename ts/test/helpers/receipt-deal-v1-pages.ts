@@ -49,6 +49,12 @@ export const FIXTURES: readonly Fixture[] = [
   plain("keep-copy"),
   plain("counterparty-copy"),
   plain("keep-copy", "offer"),
+  // The holder's own offer given beside its keep copy (#461): the hero names its item, quantity and price (#487).
+  {
+    ...plain("keep-copy", "offer"),
+    name: "offer/keep-copy+given",
+    options: () => ({ dealOffer: read("offer", "offer.json") }),
+  },
   plain("same-checkpoint", "countersigned"),
   plain("later-checkpoint", "countersigned"),
   // The view-model note's section 5 fixtures (view-model/README.md): a settled deal given its offer and a verify
