@@ -129,6 +129,9 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
       effect: status?.getAttribute("data-effect") ?? null,
       text: l0.textContent,
       rows: l0.querySelectorAll("tbody tr").length,
+      tables: l0.querySelectorAll("table").length,
+      noContent: l0.querySelector('[data-provider="no-content"]')?.textContent ?? null,
+      records: l0.querySelector('[data-provider="records"]')?.textContent ?? null,
     };
   }
 
@@ -153,14 +156,37 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     expect(page.text).not.toContain("something_new");
   });
 
-  it("a failed exchange with no payment is drawn, with no payment row", async () => {
-    for (const label of ["failed-no-payment", "failed-timeout-no-payment"]) {
-      const page = await draw(label);
-      expect(page.model.payments).toEqual([]);
-      expect(page.rows).toBe(0);
-      expect(page.text).toContain("Received (0)");
-    }
-    expect((await draw("failed-timeout-no-payment")).status).toBe(`This node's record says the exchange failed: timed out.${FAILED_TAIL}`);
+  // Sherlock2 on #470: a failed exchange with no payment says so and draws
+  // no Received section: no total, no "(0)", no empty table.
+  const UNPAID_TAIL = " It was not served. This node received no payment for it.";
+  it.each([
+    ["failed-no-payment", null],
+    ["failed-timeout-no-payment", "page"],
+  ])("a failed exchange with no payment (%s, carrier %s) says no payment was received and draws no Received section", async (label, carrier) => {
+    const page = await draw(label, carrier);
+    expect(page.model.payments).toEqual([]);
+    expect(page.rows).toBe(0);
+    expect(page.tables).toBe(0);
+    expect(page.noContent).toBe("It names the model. It holds no request or response text.");
+    expect(page.records).toBe(`The exchange is a record of its own: ${page.model.exchange_id.slice(0, 16)}`);
+    expect(page.text).not.toContain("Received");
+    expect(page.text).not.toMatch(/payment[^.]*listed below/);
+    expect(page.text).not.toContain("0 msat");
+  });
+
+  it("the unpaid line names the reason when the record has one, and none when not", async () => {
+    expect((await draw("failed-timeout-no-payment")).status).toBe(`This node's record says the exchange failed: timed out.${UNPAID_TAIL}`);
+    expect((await draw("failed-no-payment")).status).toBe(`This node's record says the exchange failed.${UNPAID_TAIL}`);
+  });
+
+  it("a failed exchange with a payment draws its line and Received section as merged at 44e9c14", async () => {
+    const page = await draw("failed-timeout");
+    expect(page.status).toBe(`This node's record says the exchange failed: timed out.${FAILED_TAIL}`);
+    expect(page.noContent).toBe("It names the model and what was received. It holds no request or response text.");
+    expect(page.records).toMatch(/^The exchange and each payment are records of their own, listed below\. /);
+    expect(page.text).toContain(`Received (${page.model.payments.length})`);
+    expect(page.text).toContain("Received in total");
+    expect(page.rows).toBe(page.model.payments.length);
   });
 
   it("a dispatched exchange says no response was recorded, and names no reason", async () => {

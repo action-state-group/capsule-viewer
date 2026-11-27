@@ -5296,15 +5296,20 @@
     // A failed or dispatched exchange was not served: its page says what the
     // record says, asks no "served" of its labels and heads it accordingly.
     var served = model.effect === "confirmed";
+    // A failed exchange with no payment says so and draws no Received
+    // section: no total, no "(0)", no empty table (Sherlock2, #470). Only a
+    // failed exchange may have no payment (providerParts).
+    var unpaid = !model.payments.length;
+    var tail = unpaid ? "_unpaid" : "";
     var status = served ? null
       : model.effect === "dispatched" ? w("provider.status.dispatched")
-      : model.reason !== null ? w("provider.status.failed_reason", { reason: w("provider.reason." + model.reason) })
-      : w("provider.status.failed");
+      : model.reason !== null ? w("provider.status.failed_reason" + tail, { reason: w("provider.reason." + model.reason) })
+      : w("provider.status.failed" + tail);
     var metrics = [
       { label: w(served ? "provider.model" : "provider.model_asked"), value: model.model || "?" },
       { label: w(served ? "provider.served_at" : "provider.recorded_at"), value: model.served_at || "?" },
     ];
-    if (model.total !== null) metrics.push({ label: w("provider.total"), value: model.total });
+    if (model.total !== null && !unpaid) metrics.push({ label: w("provider.total"), value: model.total });
     var notShown = w("provider.not_shown");
     var rows = model.payments.map(function (p) { return [mono(p.capsule_id), p.received || notShown, p.fee || notShown]; });
     var table = kit.dataTable([w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
@@ -5313,10 +5318,10 @@
       d.el("div", { class: "cv-provider-receipt", "data-module": moduleId("provider") }, [
         d.el("p", { "data-provider": "own-half" }, [w("provider.own_half")]),
         status === null ? null : d.el("p", { "data-provider": "status", "data-effect": model.effect }, [status]),
-        d.el("p", { "data-provider": "no-content" }, [w("provider.no_content")]),
+        d.el("p", { "data-provider": "no-content" }, [w("provider.no_content" + tail)]),
         kit.metricGrid(metrics),
-        kit.drilldown(w("provider.received_count", { count: String(model.payments.length) }), [table], true),
-        d.el("p", { class: "cv-muted", "data-provider": "records" }, [w("provider.records_note") + " ", mono(model.exchange_id)]),
+        unpaid ? null : kit.drilldown(w("provider.received_count", { count: String(model.payments.length) }), [table], true),
+        d.el("p", { class: "cv-muted", "data-provider": "records" }, [w("provider.records_note" + tail) + " ", mono(model.exchange_id)]),
       ]),
     ]);
     return [l0, d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];

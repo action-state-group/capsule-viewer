@@ -479,6 +479,7 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
       status:
         regions.L0.querySelector('[data-provider="status"]')?.textContent ??
         null,
+      tables: regions.L0.querySelectorAll("table").length,
     };
   };
 
@@ -497,17 +498,41 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     },
   );
 
-  it("a failed exchange with no reason or no payment says it failed", async () => {
-    for (const m of [model("failed", null), model("failed", null, false)]) {
-      const page = await draw(m);
-      expect(page.status).toBe(
-        `This node's record says the exchange failed.${FAILED_TAIL}`,
-      );
-    }
-    expect((await draw(model("failed", null, false))).text).toContain(
-      "Received (0)",
+  it("a failed exchange with a payment and no reason says it failed, with its Received section", async () => {
+    const page = await draw(model("failed", null));
+    expect(page.status).toBe(
+      `This node's record says the exchange failed.${FAILED_TAIL}`,
     );
+    expect(page.text).toContain("Received (1)");
+    expect(page.text).toContain("Received in total995 msat");
   });
+
+  // Sherlock2 on #470: a failed exchange with no payment says so and draws
+  // no Received section: no total, no "(0)", no empty table.
+  it.each([
+    ["timeout", ": timed out"],
+    [null, ""],
+  ])(
+    "a failed exchange with no payment (reason %s) says none was received and draws no Received section",
+    async (cls, words) => {
+      for (const carrier of [undefined, "page"] as const) {
+        const page = await draw(model("failed", cls, false), carrier);
+        expect(page.status).toBe(
+          `This node's record says the exchange failed${words}. It was not served. This node received no payment for it.`,
+        );
+        expect(page.text).toContain(
+          "It names the model. It holds no request or response text.",
+        );
+        expect(page.text).toContain(
+          "The exchange is a record of its own: 5cd79a2e1d368d41",
+        );
+        expect(page.tables).toBe(0);
+        expect(page.text).not.toContain("Received");
+        expect(page.text).not.toMatch(/payment[^.]*listed below/);
+        expect(page.text).not.toContain("0 msat");
+      }
+    },
+  );
 
   it("a dispatched exchange says the host reported no response", async () => {
     const page = await draw(model("dispatched", null));

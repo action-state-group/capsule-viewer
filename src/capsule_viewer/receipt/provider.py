@@ -55,6 +55,14 @@ STATUS_FAILED = (
     "This node's record says the exchange failed{reason}. It was not served. "
     "Any payment this node received for it is listed below."
 )
+# A failed exchange with no payment says so and draws no Received section
+# (Sherlock2, capsule-viewer#470): the Go pack's provider.*_unpaid keys.
+STATUS_FAILED_UNPAID = (
+    "This node's record says the exchange failed{reason}. It was not served. "
+    "This node received no payment for it."
+)
+NO_CONTENT_UNPAID = "It names the model. It holds no request or response text."
+RECORDS_NOTE_UNPAID = "The exchange is a record of its own:"
 STATUS_DISPATCHED = (
     "This node's record says the request was sent on, but the host reported no response. "
     "It does not show that the exchange was served."
@@ -247,17 +255,21 @@ class ProviderReceiptModule:
 
     def render(self, model: ProviderModel, services: KitServices) -> str:
         served = model.effect == "confirmed"
+        # Only a failed exchange may have no payment (_parts).
+        unpaid = not model.payments
         if served:
             status = ""
         elif model.effect == "dispatched":
             status = STATUS_DISPATCHED
         else:
-            status = STATUS_FAILED.format(reason=f": {REASONS[model.reason]}" if model.reason else "")
+            status = (STATUS_FAILED_UNPAID if unpaid else STATUS_FAILED).format(
+                reason=f": {REASONS[model.reason]}" if model.reason else ""
+            )
         metrics = [
             Metric(MODEL if served else MODEL_ASKED, model.model or "?"),
             Metric(SERVED_AT if served else RECORDED_AT, model.served_at or "?"),
         ]
-        if model.total is not None:
+        if model.total is not None and not unpaid:
             metrics.append(Metric(TOTAL, model.total))
         rows = [
             (
@@ -276,10 +288,12 @@ class ProviderReceiptModule:
                 if status
                 else Markup("")
             )
-            + Markup('<p data-provider="no-content">') + NO_CONTENT + Markup("</p>")
+            + Markup('<p data-provider="no-content">') + (NO_CONTENT_UNPAID if unpaid else NO_CONTENT) + Markup("</p>")
             + services.metric_grid(metrics)
-            + services.drilldown(f"{RECEIVED} ({len(model.payments)})", table, expanded=True)
-            + Markup('<p class="cv-muted" data-provider="records">') + RECORDS_NOTE + Markup(" ")
+            + (Markup("") if unpaid else services.drilldown(f"{RECEIVED} ({len(model.payments)})", table, expanded=True))
+            + Markup('<p class="cv-muted" data-provider="records">')
+            + (RECORDS_NOTE_UNPAID if unpaid else RECORDS_NOTE)
+            + Markup(" ")
             + Markup('<span class="cv-mono">') + model.exchange_id[:16] + Markup("</span></p>")
             + Markup("</div>")
         )

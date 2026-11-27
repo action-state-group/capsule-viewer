@@ -305,7 +305,7 @@ func TestProviderWordsNeverCallTheOtherPartyACountersigner(t *testing.T) {
 // A failed or dispatched exchange's page is drawn in Sherlock2's words
 // (#465): its labels and title never say it was served, a failed record's
 // reason is one of the five classes the plugin writes, in words, and only
-// provider.status.failed_reason takes a {reason}.
+// provider.status.failed_reason and its _unpaid twin take a {reason}.
 func TestProviderNotServedWords(t *testing.T) {
 	b, err := os.ReadFile("wording-en.json")
 	require.NoError(t, err)
@@ -320,12 +320,24 @@ func TestProviderNotServedWords(t *testing.T) {
 	assert.Equal(t, "This node's record says the exchange failed: {reason}. It was not served. Any payment this node received for it is listed below.", e["provider.status.failed_reason"])
 	assert.Equal(t, strings.Replace(e["provider.status.failed_reason"], ": {reason}", "", 1), e["provider.status.failed"])
 	assert.Equal(t, "This node's record says the request was sent on, but the host reported no response. It does not show that the exchange was served.", e["provider.status.dispatched"])
+	// A failed exchange with no payment (Sherlock2, #470): its own status
+	// line, no-content line and records line; the page draws no Received
+	// section, so none of its lines speaks of a payment listed or received.
+	assert.Equal(t, "This node's record says the exchange failed: {reason}. It was not served. This node received no payment for it.", e["provider.status.failed_reason_unpaid"])
+	assert.Equal(t, strings.Replace(e["provider.status.failed_reason_unpaid"], ": {reason}", "", 1), e["provider.status.failed_unpaid"])
+	assert.Equal(t, "It names the model. It holds no request or response text.", e["provider.no_content_unpaid"])
+	assert.Equal(t, "The exchange is a record of its own:", e["provider.records_note_unpaid"])
+	for _, key := range []string{"provider.status.failed_unpaid", "provider.status.failed_reason_unpaid", "provider.no_content_unpaid", "provider.records_note_unpaid"} {
+		assert.NotContains(t, e[key], "Received", key)
+		assert.NotContains(t, e[key], "listed below", key)
+		assert.NotContains(t, e[key], "0 msat", key)
+	}
 	reasons := map[string]string{}
 	for key, words := range e {
 		if class, ok := strings.CutPrefix(key, "provider.reason."); ok {
 			reasons[class] = words
 		}
-		if strings.HasPrefix(key, "provider.") && key != "provider.status.failed_reason" && key != "provider.received_count" {
+		if strings.HasPrefix(key, "provider.") && key != "provider.status.failed_reason" && key != "provider.status.failed_reason_unpaid" && key != "provider.received_count" {
 			assert.NotContains(t, words, "{", key)
 		}
 	}

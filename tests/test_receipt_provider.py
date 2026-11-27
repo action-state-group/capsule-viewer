@@ -16,11 +16,15 @@ from receipt_helpers import PACK, PACK_SHA, load, render, report_for, visible_te
 from capsule_viewer.receipt.provider import (
     MODEL_ASKED,
     NO_CONTENT,
+    NO_CONTENT_UNPAID,
     OWN_HALF,
     REASONS,
     RECORDED_AT,
+    RECORDS_NOTE,
+    RECORDS_NOTE_UNPAID,
     STATUS_DISPATCHED,
     STATUS_FAILED,
+    STATUS_FAILED_UNPAID,
     TITLE_ASKED,
     ProviderReceiptModule,
     amount_text,
@@ -265,13 +269,31 @@ def test_a_failed_exchange_says_it_failed_and_why_in_words(failure_class, words)
         assert failure_class not in text
 
 
-def test_a_failed_exchange_with_no_payment_is_drawn_with_no_payment_row():
+@pytest.mark.parametrize(("failure_class", "words"), [("timeout", "timed out"), (..., None)])
+def test_a_failed_exchange_with_no_payment_says_so_and_draws_no_received_section(failure_class, words):
+    # Sherlock2 on #470: no total, no "(0)", no empty table.
     module = ProviderReceiptModule()
-    context = _edited("failed", "timeout", legs=False)
+    context = _edited("failed", failure_class, legs=False)
     model = module.buildModel(context)
-    assert model.payments == () and model.reason == "timeout"
-    text = visible_text(provider_receipt_page(context))
-    assert _failed("timed out") in text and "Received (0)" in text
+    assert model.payments == ()
+    html = provider_receipt_page(context)
+    text = visible_text(html)
+    assert STATUS_FAILED_UNPAID.format(reason=f": {words}" if words else "") in text
+    assert f'<p data-provider="no-content">{NO_CONTENT_UNPAID}</p>' in html
+    assert f'<p class="cv-muted" data-provider="records">{RECORDS_NOTE_UNPAID} <span' in html
+    assert "<table" not in html
+    assert "Received" not in text and "0 msat" not in text
+    assert not re.search(r"payment[^.]*listed below", text)
+
+
+def test_a_failed_exchange_with_a_payment_draws_its_line_and_received_section_as_merged():
+    context = _edited("failed", "timeout")
+    html = provider_receipt_page(context)
+    text = visible_text(html)
+    assert _failed("timed out") in text
+    assert _failed("timed out").endswith("Any payment this node received for it is listed below.")
+    assert NO_CONTENT in text and RECORDS_NOTE in text and "Received in total" in text
+    assert f"Received ({len(ProviderReceiptModule().buildModel(context).payments)})" in text
 
 
 @pytest.mark.parametrize("status", ["confirmed", "dispatched"])
@@ -314,6 +336,10 @@ def test_the_new_words_are_the_go_packs():
     assert entries["provider.status.dispatched"] == STATUS_DISPATCHED
     assert entries["provider.status.failed"] == STATUS_FAILED.format(reason="")
     assert entries["provider.status.failed_reason"] == STATUS_FAILED.format(reason=": {reason}")
+    assert entries["provider.status.failed_unpaid"] == STATUS_FAILED_UNPAID.format(reason="")
+    assert entries["provider.status.failed_reason_unpaid"] == STATUS_FAILED_UNPAID.format(reason=": {reason}")
+    assert entries["provider.no_content_unpaid"] == NO_CONTENT_UNPAID
+    assert entries["provider.records_note_unpaid"] == RECORDS_NOTE_UNPAID
     assert {k.removeprefix("provider.reason."): v for k, v in entries.items() if k.startswith("provider.reason.")} == REASONS
 
 
