@@ -161,7 +161,9 @@ type OfflineOptions struct {
 	// refuses the build. They reach the page as renderOptions' charts.
 	Charts []json.RawMessage
 	// Receipts are the deal receipts a report page carries (capsule-viewer#228),
-	// by deal id (the claim id's part before "::"): each deal's receipt bundle as
+	// by deal id (each claim's deal: the subject of the records it cites, else
+	// the claim id's part before "::", capsule-viewer ts/src/claim-subject.ts;
+	// evidencebook#116): each deal's receipt bundle as
 	// the JSON text the node served, kept exactly as given. A non-nil map, empty
 	// or not, marks the page as a deal report: its claims whose deal is not here
 	// say "receipt not carried with this page". Each text must be JSON
@@ -188,8 +190,9 @@ type OfflineOptions struct {
 }
 
 // checkReceipts refuses a receipt that is not JSON, or one named by an empty
-// deal id, "__proto__" or an id with "::" in it (a claim's deal id never has
-// one), so a report page never carries a receipt it cannot parse or reach. A
+// deal id or "__proto__", so a report page never carries a receipt it cannot
+// parse or reach. A deal id may contain "::": a subject id is any string
+// (evidencebook#116), and the page looks a deal up by the whole id. A
 // deal id given twice, or in more than one of carried, withheld and not closed,
 // is refused too.
 func checkReceipts(receipts map[string]string, withheld, notClosed []string) error {
@@ -219,8 +222,8 @@ func checkReceipts(receipts map[string]string, withheld, notClosed []string) err
 func checkReceiptDealID(deal string) error {
 	// "__proto__" is refused because the page reads its options as an
 	// object literal, where that key sets a prototype and no own member.
-	if deal == "" || deal == "__proto__" || strings.Contains(deal, "::") {
-		return fmt.Errorf("receipt deal id %q is empty, __proto__ or contains ::", deal)
+	if deal == "" || deal == "__proto__" {
+		return fmt.Errorf("receipt deal id %q is empty or __proto__", deal)
 	}
 	return nil
 }

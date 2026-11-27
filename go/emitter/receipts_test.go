@@ -38,10 +38,9 @@ func TestBuildOfflineHTMLCarriesReceiptsAsGivenText(t *testing.T) {
 func TestBuildOfflineHTMLRefusesAReceiptItCannotCarry(t *testing.T) {
 	bundle := chartBundle(t)
 	for name, receipts := range map[string]map[string]string{
-		"not JSON":        {"d1": "this is not json"},
-		"empty deal id":   {"": `{}`},
-		"deal id with ::": {"d1::req": `{}`},
-		"__proto__":       {"__proto__": `{}`},
+		"not JSON":      {"d1": "this is not json"},
+		"empty deal id": {"": `{}`},
+		"__proto__":     {"__proto__": `{}`},
 	} {
 		_, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{Audience: "*", Receipts: receipts})
 		require.Error(t, err, name)
@@ -68,7 +67,6 @@ func TestBuildOfflineHTMLCarriesAWithheldReceiptAsNull(t *testing.T) {
 	// A deal is carried or withheld, not both; a withheld id is checked like a carried one.
 	for name, o := range map[string]OfflineOptions{
 		"both":          {Audience: "*", Receipts: map[string]string{"d1": `{}`}, ReceiptsWithheld: []string{"d1"}},
-		"bad id":        {Audience: "*", ReceiptsWithheld: []string{"d1::req"}},
 		"__proto__":     {Audience: "*", ReceiptsWithheld: []string{"__proto__"}},
 		"empty deal id": {Audience: "*", ReceiptsWithheld: []string{""}},
 	} {
@@ -99,7 +97,6 @@ func TestBuildOfflineHTMLCarriesANotClosedReceiptAsAStateObject(t *testing.T) {
 		"withheld too":   {Audience: "*", ReceiptsWithheld: []string{"d1"}, ReceiptsNotClosed: []string{"d1"}},
 		"twice":          {Audience: "*", ReceiptsNotClosed: []string{"d1", "d1"}},
 		"withheld twice": {Audience: "*", ReceiptsWithheld: []string{"d1", "d1"}},
-		"bad id":         {Audience: "*", ReceiptsNotClosed: []string{"d1::req"}},
 		"__proto__":      {Audience: "*", ReceiptsNotClosed: []string{"__proto__"}},
 		"empty deal id":  {Audience: "*", ReceiptsNotClosed: []string{""}},
 	} {
@@ -108,4 +105,18 @@ func TestBuildOfflineHTMLCarriesANotClosedReceiptAsAStateObject(t *testing.T) {
 		_, err = BuildEmbeddedHTML(bundle, []byte(marker), o)
 		require.Error(t, err, name)
 	}
+}
+
+// evidencebook#116: a deal is its claims' subject id, which may contain "::",
+// so the page carries it as given in each of the three entries.
+func TestBuildOfflineHTMLCarriesADealIDWithColons(t *testing.T) {
+	bundle := chartBundle(t)
+	got, err := BuildOfflineHTML(bundle, []byte(marker), OfflineOptions{
+		Audience:          "*",
+		Receipts:          map[string]string{"deal::1": `{}`},
+		ReceiptsWithheld:  []string{"deal::2"},
+		ReceiptsNotClosed: []string{"deal::3"},
+	})
+	require.NoError(t, err)
+	require.Contains(t, got, `"receipts":{"deal::1":"{}","deal::2":null,"deal::3":{"state":"not-closed"}}`)
 }

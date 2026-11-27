@@ -74,6 +74,7 @@ import {
   jsonDigest,
 } from "@action-state-group/agent-action-capsule";
 import { chartDatasetOf, resultDocument } from "./chart-dataset.js";
+import { claimDeals } from "./claim-subject.js";
 import { claimReasons } from "./claim-reasons.js";
 import { ChartRefusal, checkChart, type ChartDataset } from "./chart-spec.js";
 import { renderChart, renderChartRefused, renderCharts } from "./chart-view.js";
@@ -2528,6 +2529,8 @@ interface ContractReportModel {
   readonly unfit?: true;
   readonly bundle: unknown;
   readonly verification: BundleVerificationResult;
+  /** Each claim's deal, which picks its receipt (claim-subject.ts). */
+  readonly deals: ReadonlyMap<string, string>;
 }
 
 /**
@@ -2638,6 +2641,7 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
         : {}),
       bundle: context.bundle,
       verification: withStrict(context),
+      deals: claimDeals(context, result.claims),
     };
   },
   render: async (model, host) => {
@@ -2665,6 +2669,7 @@ const contractReportModule: PresentationModule<ContractReportModel> = {
       (host as WordedHost).wording,
       (host as WordedHost).contract,
       (host as WordedHost).receipts,
+      (claim) => model.deals.get(claim.id),
     );
   },
 };

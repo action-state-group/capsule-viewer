@@ -82,11 +82,64 @@ function dealsResult(): Obj {
   return bundle;
 }
 
+/**
+ * The deals Result, its claims citing members of subjects (evidencebook#116
+ * PR 6): `d1::req-1` a member of `deal-A`, `d2::req-2` a member of `deal-B`,
+ * both also citing one shared supporting record (`day-2`).
+ */
+function subjectsResult(): Obj {
+  const bundle = dealsResult();
+  const header = (seq: number, extra: Obj): Obj => ({
+    v: 1,
+    book_id: "holder",
+    seq,
+    epistemic_type: "producer_claim",
+    committed_at: "2026-09-24T10:00:00Z",
+    links: [],
+    ...extra,
+  });
+  const records = bundle.records as Obj[];
+  const disclosures = bundle.disclosures as Obj;
+  for (const [n, [deal, seq]] of [
+    ["a", ["deal-A", 1]],
+    ["b", ["deal-B", 3]],
+  ] as const) {
+    records.push({ capsule_id: `root-${n}` }, { capsule_id: `member-${n}` });
+    disclosures[`root-${n}`] = {
+      agent_input: header(seq, {
+        record_type: "subject_root",
+        statement: {
+          subject_kind: "deal",
+          subject_id: deal,
+          membership: "field:/correlation/exchange_id",
+        },
+      }),
+    };
+    disclosures[`member-${n}`] = {
+      agent_input: header(seq + 1, {
+        record_type: "exchange",
+        correlation: { exchange_id: deal },
+        links: [{ type: "cites", target: `root-${n}` }],
+      }),
+    };
+  }
+  const doc = (disclosures.result as Obj).agent_input as Obj;
+  const cite = (digest: string): Obj => ({ digest_alg: "SHA-256", digest });
+  for (const claim of doc.claims as Obj[]) {
+    if (claim.id === "d1::req-1")
+      claim.evidence = [cite("member-a"), cite("day-2")];
+    if (claim.id === "d2::req-2")
+      claim.evidence = [cite("member-b"), cite("day-2")];
+  }
+  return bundle;
+}
+
 async function draw(
   receipts: Record<string, DealReceiptEntry> | undefined,
   withModule = true,
+  result: Obj = dealsResult(),
 ): Promise<HTMLElement> {
-  const { bundle } = await sealEvidenceBundle(dealsResult());
+  const { bundle } = await sealEvidenceBundle(result);
   const root = document.createElement("main");
   document.body.append(root);
   const registry = createPresentationRegistry();
@@ -144,6 +197,30 @@ describe("a deal line's receipt", () => {
         .map((line) => line.textContent)
         .join(" "),
     ).not.toMatch(/no record/iu);
+    expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
+  });
+
+  it("picks a claim's receipt by the subject of the member it cites, not its id's prefix, though two subjects' claims share a record", async () => {
+    const root = await draw(
+      { "deal-A": await receiptText("deal-A"), "deal-B": null, d1: null },
+      true,
+      subjectsResult(),
+    );
+    const a = claim(root, "d1::req-1");
+    expect(a.querySelector<HTMLElement>(".rcpt")!.dataset.receiptDeal).toBe(
+      "deal-A",
+    );
+    a.querySelector<HTMLButtonElement>('button[data-receipt="open"]')!.click();
+    await settle(a);
+    expect(
+      a.querySelector<HTMLElement>("[data-stand-in-receipt]")!.dataset
+        .standInReceipt,
+    ).toBe("deal-A");
+    const b = claim(root, "d2::req-2");
+    expect(b.querySelector<HTMLElement>(".rcpt")!.dataset.receiptDeal).toBe(
+      "deal-B",
+    );
+    expect(b.querySelector('[data-receipt="withheld"]')).not.toBeNull();
     expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
   });
 

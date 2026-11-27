@@ -11,7 +11,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
-import { sha256Hex } from "@action-state-group/agent-action-capsule";
+import {
+  buildVerifiedBundleContext,
+  sha256Hex,
+  type ResultClaim,
+} from "@action-state-group/agent-action-capsule";
 import { renderEvidenceGraph } from "../src/browser.js";
 import {
   checkWordingPackInput,
@@ -28,6 +32,7 @@ import {
   type WordingPack,
 } from "../src/contract-report-wording.js";
 import { nestingProblems, levelToggle } from "../src/report-levels.js";
+import { claimDeals } from "../src/claim-subject.js";
 import { sealEvidenceBundle } from "./helpers/sealed-bundle.js";
 import { ladderPack } from "./helpers/ladder-pack.js";
 
@@ -1775,6 +1780,73 @@ it("a Result whose claims the card cannot place one by one is drawn as the gener
   expect(root.querySelector('[data-page="result"]')).not.toBeNull();
   // every claim is listed, the re-judged one too
   expect(root.textContent).toContain(again.id);
+});
+
+it("draws the card for two conversations that are members of one subject and judge one requirement (evidencebook#116 PR 6)", async () => {
+  // A card's row is a conversation (the claim id's part before ::), never
+  // the subject its records belong to: two conversations of one deal are
+  // two rows, so the claims still fit the card.
+  const source = fixture("compliance-bundle.json");
+  (source.extensions as Obj)["contract-report/v1"] = {};
+  const header = (seq: number, extra: Obj): Obj => ({
+    v: 1,
+    book_id: "holder",
+    seq,
+    epistemic_type: "producer_claim",
+    committed_at: "2026-09-24T10:00:00Z",
+    links: [],
+    ...extra,
+  });
+  (source.records as Obj[]).push({ capsule_id: "subject-root" });
+  (source.disclosures as Obj)["subject-root"] = {
+    agent_input: header(1, {
+      record_type: "subject_root",
+      statement: {
+        subject_kind: "deal",
+        subject_id: "deal-1",
+        membership: "field:/correlation/exchange_id",
+      },
+    }),
+  };
+  for (const [seq, id] of [
+    [2, "s1.art5"],
+    [3, "s2.art5"],
+  ] as const) {
+    const record = (source.records as Obj[]).find((r) => r.capsule_id === id)!;
+    record.evidence_record_header = header(seq, {
+      record_type: "judged_row",
+      correlation: { exchange_id: "deal-1" },
+      links: [{ type: "cites", target: "subject-root" }],
+    });
+  }
+  const doc = ((source.disclosures as Obj).result as Obj).agent_input as Obj;
+  const art5 = (doc.claims as Obj[]).filter(
+    (c) => c.requirement_ref === "art5.no_manipulation_or_deception",
+  );
+  expect(new Set(art5.map((c) => (c.id as string).split("::")[0])).size).toBe(
+    2,
+  );
+  // Both conversations' art5 records are members of deal-1.
+  const { bundle, ids } = await sealEvidenceBundle(structuredClone(source));
+  const deals = claimDeals(
+    await buildVerifiedBundleContext(bundle),
+    art5.map(
+      (c) =>
+        ({
+          id: c.id,
+          evidence: (c.evidence as Obj[]).map((e) => ({
+            digest: ids[e.digest as string],
+          })),
+        }) as unknown as ResultClaim,
+    ),
+  );
+  expect(art5.map((c) => deals.get(c.id as string))).toEqual([
+    "deal-1",
+    "deal-1",
+  ]);
+  const root = await renderSource(source);
+  expect(root.querySelector('[data-notice="card-unfit"]')).toBeNull();
+  expect(root.querySelector('[data-page="compliance"]')).not.toBeNull();
 });
 
 for (const [name, file, change] of [
