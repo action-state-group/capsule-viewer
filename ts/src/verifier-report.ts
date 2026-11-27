@@ -421,6 +421,7 @@ export function withVerifierReport(
   verifyCommand?: string,
   countersigned?: readonly CountersignedStamp[],
   countersignedCopy?: CountersignedCopyStamp,
+  dealOffer?: unknown,
 ): VerifiedBundleContext {
   if (reading.profile === DEAL_V0) return withDealV0Report(context, reading);
   const extensions = [
@@ -454,6 +455,10 @@ export function withVerifierReport(
       ...(countersignedCopy === undefined
         ? {}
         : { countersigned_copy: countersignedCopy }),
+      // The holder's sealed offer record as the page's maker gave it
+      // (dealOffer), unchecked: the receipt module checks it against the
+      // copy's own sealed agreement before drawing its item (#461).
+      ...(dealOffer === undefined ? {} : { deal_offer: dealOffer }),
     },
   ] as unknown as VerifiedBundleContext["verification"]["extensions"];
   return {

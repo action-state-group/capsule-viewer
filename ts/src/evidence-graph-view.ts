@@ -2910,6 +2910,15 @@ export interface RenderEvidenceGraphOptions {
    */
   readonly countersignedCopy?: CountersignedCopyInput;
   /**
+   * The holder's own sealed offer record for an x-deal-v1 copy capsulectl
+   * passed (`{"x-deal-v1": block, "body": ...}`, as evidencebook seals it),
+   * for the receipt's item (#461). It is passed to the receipt module
+   * unchecked; the module draws the offer's `terms.item` only when the
+   * record's SHA-256 over its JCS bytes is the digest the copy's own sealed
+   * agreement cites as its `offer`. Otherwise it is ignored.
+   */
+  readonly dealOffer?: unknown;
+  /**
    * The exact command that checks this file outside the page, shown when
    * this viewer cannot verify it (see {@link renderUnableToVerify}).
    */
@@ -3638,6 +3647,7 @@ async function renderVerifiedContext(
           options.verifyCommand,
           countersignedStamps(stamps),
           countersignedCopy ?? undefined,
+          options.dealOffer,
         )
       : context;
   const verdictLine =

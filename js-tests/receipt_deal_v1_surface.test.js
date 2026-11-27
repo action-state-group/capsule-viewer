@@ -11,7 +11,7 @@
 //   * the steps are the records the copy carries, each once, each opening to what it records;
 //   * the proof panel is capsulectl's answer per check; the stamps each from their own evidence;
 //   * a shared copy, or a page shown to others, never says "your" or shows the holder's time.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -87,6 +87,9 @@ describe("the header and the top line", () => {
     const { host, model } = await draw(b);
     expect(model.role).toBe(null);
     expect(q(host.L0, "[data-receipt-title]").textContent).toBe("Deal receipt");
+    // A verified half shows the other party's agreement, not its role: the neutral words (#461, Codex round 1).
+    expect(q(host.L0, '[data-check="counterparty_half"] .cv-rcpt-proof__label').textContent).toBe("The other side's signed agreement");
+    expect(q(host.L0, '[data-else="half"]').textContent).toContain("This copy carries the other side's signed agreement.");
   });
 
   it("Done: settled, every term both say the same and met, and the holder's payment record held", async () => {
@@ -161,7 +164,7 @@ describe("the cards and the stamps", () => {
     expect(q(paid, ".cv-rcpt-card__label").textContent).toBe("Payment");
     expect(q(paid, ".cv-rcpt-card__value").textContent).toBe("2 sats2,000 msat");
     expect(q(paid, ".cv-rcpt-card__note").textContent).toBe("Recorded as received");
-    expect(q(host.L0, '[data-card="other"]').textContent).toContain("Their signed agreement: capsulectl verify reported it verified");
+    expect(q(host.L0, '[data-card="other"]').textContent).toContain("Their signed agreement: checked");
     // The page checks no payment proof: nothing on the surface says "paid" in its own voice.
     expect(host.L0.textContent).not.toMatch(/\bPaid\b/);
   });
@@ -186,8 +189,9 @@ describe("the cards and the stamps", () => {
     const own = await draw(bundleOf(SELLER, asKeep), { assurance: witnessed });
     expect(q(own.host.L0, '[data-stamp="time_stamped"]').getAttribute("data-stamp-state")).toBe("filled");
     expect(q(own.host.L0, '[data-check="witnesses"]').getAttribute("data-check-status")).toBe("pass");
-    // Said in capsulectl's voice, never the page's (u219).
-    expect(q(own.host.L0, '[data-stamp="time_stamped"]').textContent).toMatch(/, as capsulectl verify reported$/);
+    // The stamp says what was checked; the proof panel names capsulectl as the source (u219, #461).
+    expect(q(own.host.L0, '[data-stamp="time_stamped"] .cv-rcpt-stamp__text').textContent).toMatch(/^Action State's witness · .+$/);
+    expect(q(own.host.L0, '[data-stamp="time_stamped"]').textContent).not.toContain("capsulectl");
     for (const carrier of ["report", "page"]) {
       const shown = await draw(bundleOf(SELLER, asKeep), { assurance: witnessed, carrier });
       expect(q(shown.host.L0, '[data-stamp="time_stamped"]').getAttribute("data-stamp-state")).toBe("not_checked");
@@ -262,14 +266,15 @@ describe("is this record intact, and check it yourself", () => {
     const { host } = await draw(bundleOf(SELLER, asKeep));
     const shown = [...host.L0.querySelectorAll("[data-check]")].map((r) => [r.getAttribute("data-check"), r.getAttribute("data-check-status")]);
     expect(shown).toEqual([
-      ["producer_signatures", "pass"], ["interval_coverage", "pass"], ["graph_closure", "pass"], ["per_record_membership", "pass"], ["checkpoint", "pass"], ["witnesses", "absent"],
+      ["producer_signatures", "pass"], ["interval_coverage", "pass"], ["graph_closure", "pass"], ["per_record_membership", "pass"], ["checkpoint", "pass"],
+      ["counterparty_half", "pass"], ["witnesses", "absent"],
     ]);
     expect(q(host.L0, "[data-proof]").textContent).toBe("Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself.");
     expect(host.L0.textContent).not.toMatch(/\bVerified\b/);
   });
 
   it("no answer from capsulectl: every row is not in this copy and the page says so; a failed check says no", async () => {
-    const none = await draw(bundleOf(SELLER, asKeep), { assurance: { checks: null } });
+    const none = await draw(bundleOf(SELLER, asKeep), { assurance: { checks: null, counterparty_half: null } });
     expect([...none.host.L0.querySelectorAll("[data-check-status]")].every((r) => r.getAttribute("data-check-status") === "absent")).toBe(true);
     expect(q(none.host.L0, "[data-proof]").getAttribute("data-proof")).toBe("none");
     const failed = await draw(bundleOf(SELLER, asKeep), { assurance: { checks: { ...ALL_PASS, graph_closure: { status: "fail", findings: ["x"] } } } });
@@ -442,4 +447,237 @@ describe.skipIf(!chromePath)("on a phone, in headless Chromium: one column, noth
       expect(columns).toBe(width <= 720 ? 1 : 2);
     }, 60000);
   }
+});
+
+// capsule-viewer#461 (Steven's 11-26 hand run): the receipt names no one the copy does not name, says
+// capsulectl once above the fold, and keeps the verify commands.
+describe("#461: who and what, and capsulectl said once", () => {
+  const witnessed = { book_witnessed: { status: "verified", witness: "Action State's witness", at: "2026-11-25T14:31:31Z" } };
+  // "capsulectl" in L0 outside "Check it yourself", whose commands stay (item 3).
+  const attributions = (host) => {
+    const l0 = host.L0.cloneNode(true);
+    l0.querySelector('[data-surface="check"]')?.remove();
+    return (l0.textContent.match(/capsulectl/g) || []).length;
+  };
+
+  it("item 1: the hero names no party and no item when the copy carries none, and fills nothing in", async () => {
+    for (const drawn of [await draw(bundleOf(SELLER, asKeep)), await draw(bundleOf(SELLER)), await draw(bundleOf(BUYER))]) {
+      const hero = q(drawn.host.L0, ".cv-rcpt-hero").textContent;
+      // The Alder copy's only near hints: the record's operator (the holder's own) and the seller's own perform observation.
+      expect(hero).not.toMatch(/alder|badge|ard-/i);
+    }
+  });
+
+  it("item 2: capsulectl is said once above the fold, by the proof panel, on own, shared, seller and buyer copies", async () => {
+    const cases = [
+      await draw(bundleOf(SELLER, asKeep), { assurance: witnessed }),
+      await draw(bundleOf(SELLER)),
+      await draw(bundleOf(SELLER, asKeep), { assurance: witnessed, carrier: "report" }),
+      await draw(bundleOf(BUYER, asKeep), { assurance: witnessed }),
+      await draw(bundleOf(SELLER, asKeep), { assurance: { ...witnessed, checks: null } }),
+      await draw(bundleOf(SELLER, asKeep), { assurance: { ...witnessed, checks: { ...ALL_PASS, graph_closure: { status: "fail", findings: ["x"] } } } }),
+    ];
+    for (const { host } of cases) {
+      expect(attributions(host)).toBe(1);
+      expect(q(host.L0, '[data-surface="proof"] [data-proof]').textContent).toContain("capsulectl verify");
+    }
+  });
+
+  it("item 2: the card, stamp, time stamp row and tile say what was checked", async () => {
+    const { host } = await draw(bundleOf(SELLER, asKeep), { assurance: witnessed });
+    expect(q(host.L0, '[data-card="other"] .cv-rcpt-card__value').textContent).toBe("Their signed agreement: checked");
+    expect(q(host.L0, '[data-check="witnesses"] .cv-rcpt-proof__label').textContent).toMatch(/^Outside time stamp: Action State's witness at .+, on your own book$/);
+    expect(q(host.L0, '[data-else="half"]').textContent).toContain("This copy carries the buyer's signed agreement. It covers their agreement only, not anything after it.");
+    const shared = await draw(bundleOf(SELLER));
+    expect(q(shared.host.L0, '[data-else="half"]').textContent).toContain("This copy carries the other side's signed agreement.");
+    expect(q(shared.host.L0, '[data-check="counterparty_half"] .cv-rcpt-proof__label').textContent).toBe("The other side's signed agreement");
+    const buyer = await draw(bundleOf(BUYER, asKeep));
+    expect(q(buyer.host.L0, '[data-check="counterparty_half"] .cv-rcpt-proof__label').textContent).toBe("The seller's signed agreement");
+  });
+
+  it("item 2: the other side's agreement is a proof row as capsulectl reported it, and a failed one makes the summary say no", async () => {
+    const row = (host) => q(host.L0, '[data-check="counterparty_half"]');
+    const lede = (host) => q(host.L0, "[data-proof]");
+    const ok = await draw(bundleOf(SELLER, asKeep));
+    expect(row(ok.host).getAttribute("data-check-status")).toBe("pass");
+    expect(lede(ok.host).getAttribute("data-proof")).toBe("passed");
+    const none = await draw(bundleOf(SELLER, asKeep), { assurance: { counterparty_half: null } });
+    expect(row(none.host)).toBeNull();
+    expect(q(none.host.L0, '[data-card="other"] .cv-rcpt-card__value').textContent).toBe("Not in this copy");
+    for (const checks of [ALL_PASS, { ...ALL_PASS, checkpoint: { status: "withheld", findings: [] } }, null]) {
+      const failed = await draw(bundleOf(SELLER, asKeep), { assurance: { counterparty_half: "failed", checks } });
+      expect(row(failed.host).getAttribute("data-check-status")).toBe("fail");
+      expect(lede(failed.host).getAttribute("data-proof")).toBe("failed");
+      expect(lede(failed.host).textContent).toBe("No. capsulectl verify failed a test when this page was made. The page shows its answers; it did not re-check by itself.");
+    }
+  });
+
+  it("item 2: with no per-test answer, the rows capsulectl did answer are still attributed to it", async () => {
+    for (const assurance of [{ checks: null }, { checks: null, counterparty_half: null, ...witnessed }]) {
+      const { host } = await draw(bundleOf(SELLER, asKeep), { assurance });
+      expect(q(host.L0, "[data-proof]").getAttribute("data-proof")).toBe("some");
+      expect(q(host.L0, "[data-proof]").textContent).toBe("These are the only answers capsulectl verify gave this page; a test marked – was not among them. Download the proof file and check it yourself.");
+    }
+    const nothing = await draw(bundleOf(SELLER, asKeep), { assurance: { checks: null, counterparty_half: null } });
+    expect(q(nothing.host.L0, "[data-proof]").getAttribute("data-proof")).toBe("none");
+  });
+
+  it("item 3: Check it yourself keeps both verify commands", async () => {
+    const { host } = await draw(bundleOf(SELLER, asKeep), { assurance: witnessed });
+    const check = q(host.L0, '[data-surface="check"]');
+    expect(q(check, '[data-verify-command="page"]').textContent).toBe("capsulectl deal verify --bundle receipt.html");
+    expect(q(check, '[data-verify-command="download"]').textContent).toBe("capsulectl deal verify --bundle deal-fe219bb1ab3d4dec.bundle.json");
+  });
+});
+
+// #461 in a real browser: on the first screen (900px high, as headlessChrome.js opens every page) the
+// surface says capsulectl at most once outside "Check it yourself", at a phone's width and a desktop's.
+// The PNGs in tests/goldens/ are review images of the surface (L0, toggles closed), own and shared copy;
+// fonts differ between machines, so pixels are not compared. Regenerate them with
+//   UPDATE_GOLDENS=1 npx vitest run js-tests/receipt_deal_v1_surface.test.js
+const GOLDENS = join(ROOT, "tests", "goldens");
+const UPDATE = process.env.UPDATE_GOLDENS === "1";
+describe.skipIf(!chromePath)("#461 above the fold, in headless Chromium, with its goldens", () => {
+  let browser, tab, dir;
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), "cv-deal-461-"));
+    browser = await launch(chromePath);
+    tab = await browser.newPage();
+  }, 150000);
+  afterAll(async () => {
+    if (browser) await browser.close();
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  }, CLOSE_TIMEOUT_MS);
+
+  const witnessed = { book_witnessed: { status: "verified", witness: "Action State's witness", at: "2026-11-25T14:31:31Z" } };
+  const PAGES = [
+    { name: "own", bundle: () => bundleOf(SELLER, asKeep), assurance: witnessed },
+    { name: "shared", bundle: () => bundleOf(SELLER), assurance: {} },
+    // The buyer's keep copy with the buyer's own sealed offer: the item in the hero (#461 item 1).
+    {
+      name: "item",
+      bundle: () => JSON.parse(readFileSync(join(DATA, "offer", "keep-copy.bundle.json"), "utf8")),
+      assurance: { deal_offer: JSON.parse(readFileSync(join(DATA, "offer", "offer.json"), "utf8")) },
+    },
+  ];
+  for (const width of [390, 1280]) {
+    for (const page of PAGES) {
+      it(`the ${page.name} copy at ${width}px`, async () => {
+        const { lib, host } = await draw(page.bundle(), { assurance: page.assurance, depth: "L0" });
+        const styles = [...lib.document.head.querySelectorAll("style")].map((e) => e.outerHTML).join("");
+        const file = join(dir, `${page.name}-${width}.html`);
+        writeFileSync(file, `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>receipt</title>${styles}</head><body class="cv-kit"><main class="cv-page">${host.L0.innerHTML}</main></body></html>`);
+        await tab.open(pathToFileURL(file).href, { width, media: "screen" });
+        await tab.evaluate("document.fonts.ready.then(() => true)");
+        const said = await tab.evaluate(`(() => {
+          const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+          const out = [];
+          for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            if (!/capsulectl/.test(n.textContent) || n.parentElement.closest('[data-surface="check"]')) continue;
+            const r = n.parentElement.getBoundingClientRect();
+            if (r.top < window.innerHeight && r.height > 0) out.push(n.textContent);
+          }
+          return out;
+        })()`);
+        expect(said.length).toBeLessThanOrEqual(1);
+        const shot = await tab.screenshot();
+        const path = join(GOLDENS, `receipt-deal-v1-${page.name}-${width}.png`);
+        if (UPDATE) writeFileSync(path, shot);
+        expect(existsSync(path), `golden ${path} is not committed; run with UPDATE_GOLDENS=1`).toBe(true);
+        expect(readFileSync(path).readUInt32BE(16)).toBe(width);
+      }, 60000);
+    }
+  }
+});
+
+// #461 item 1 at the module: the item from the holder's own sealed offer (tests/testdata/deal-v1/offer, a real deal
+// written by capsulectl), drawn only when its SHA-256 over JCS is the digest the copy's own sealed agreement cites.
+describe("#461: the item from the holder's sealed offer, in the module", () => {
+  const OFFER_DIR = join(DATA, "offer");
+  const KEEP = JSON.parse(readFileSync(join(OFFER_DIR, "keep-copy.bundle.json"), "utf8"));
+  const OFFER = JSON.parse(readFileSync(join(OFFER_DIR, "offer.json"), "utf8"));
+  const ITEM = "200 conference badges, delivered by Friday";
+  const item = async (bundle, offer) => {
+    const { host, model } = await draw(bundle, { assurance: { deal_offer: offer } });
+    return { model: model.item, drawn: q(host.L0, ".cv-rcpt-hero [data-hero-item]")?.textContent ?? null, host };
+  };
+  const edited = (edit) => { const o = structuredClone(OFFER); edit(o); return o; };
+
+  it("the offer the agreement cites: its terms.item, in the hero", async () => {
+    const got = await item(structuredClone(KEEP), OFFER);
+    expect(got).toMatchObject({ model: ITEM, drawn: ITEM });
+  });
+
+  // The agreement re-sealed to cite *offer*, its hash chain redone (payload -> header commitment -> the record's
+  // agent_input_digest), as a module sees it: the record's signature is the runtime's to check before any module
+  // draws (ts/test/receipt-deal-v1-item.test.ts shows a page refuses such a copy).
+  const citing = async (offer) => {
+    const { lib } = await draw(structuredClone(KEEP));
+    const digest = lib.api.recordDigest;
+    const b = structuredClone(KEEP);
+    const pair = b.extensions["x-deal-v1"].book.agreement;
+    pair.payload.body.offer.digest = digest(offer);
+    pair.header.payload_commitments = [digest(pair.payload)];
+    const record = b.records.find((r) => r.capsule_id === pair.record.capsule_id);
+    record.model_attestation.compute_attestation.agent_input_digest = digest(pair.header);
+    pair.record = record;
+    return b;
+  };
+
+  it("anything else draws no item: none given, another offer, a record that is not a propose record", async () => {
+    for (const offer of [undefined, null, "text", edited((o) => { o.body.terms.item = "another"; })]) {
+      expect((await item(structuredClone(KEEP), offer)).drawn).toBeNull();
+    }
+    // Cited by the agreement, but not a propose record.
+    const agreeKind = edited((o) => { o["x-deal-v1"].record_type = "agree"; });
+    expect((await item(await citing(agreeKind), agreeKind)).drawn).toBeNull();
+  });
+
+  it("an offer that is not canonical JSON (a non-integer number) has no digest and draws no item", async () => {
+    const { lib } = await draw(structuredClone(KEEP));
+    const o = edited((x) => { x.body.terms.quantity = 1.5; });
+    expect(lib.api.recordDigest(o)).toBeNull();
+    expect((await item(structuredClone(KEEP), o)).drawn).toBeNull();
+  });
+
+  it("on an offer the agreement cites: a missing, blank or non-string item draws nothing; a padded one is trimmed", async () => {
+    // The chain helper itself works: the agreement now cites a changed offer, and its item is drawn.
+    const changed = edited((x) => { x.body.terms.item = "changed"; });
+    expect((await item(await citing(changed), changed)).drawn).toBe("changed");
+    for (const value of [undefined, "   ", 7, null]) {
+      const o = edited((x) => { if (value === undefined) delete x.body.terms.item; else x.body.terms.item = value; });
+      expect((await item(await citing(o), o)).drawn).toBeNull();
+    }
+    const padded = edited((x) => { x.body.terms.item = `  ${ITEM}  `; });
+    expect((await item(await citing(padded), padded)).drawn).toBe(ITEM);
+  });
+
+  it("an agreement payload that is not the sealed one draws no item, even with the offer it now names", async () => {
+    const b = structuredClone(KEEP);
+    const forged = edited((o) => { o.body.terms.item = "forged"; });
+    const { lib } = await draw(structuredClone(KEEP));
+    b.extensions["x-deal-v1"].book.agreement.payload.body.offer.digest = lib.api.recordDigest(forged);
+    // The header still commits to the sealed agreement, so the page reads that one, which cites the real offer.
+    expect((await item(b, forged)).drawn).toBeNull();
+  });
+
+  it("on the holder's own page only: a shared copy, or the holder's copy carried in a report or page, shows no item", async () => {
+    const asShared = structuredClone(KEEP);
+    const x = asShared.extensions["x-deal-report/v0"];
+    x.agent_input = { ...x.agent_input, audience: "counterparty" };
+    expect((await item(asShared, OFFER)).drawn).toBeNull();
+    for (const carrier of ["report", "page"]) {
+      const { host } = await draw(structuredClone(KEEP), { assurance: { deal_offer: OFFER }, carrier });
+      expect(q(host.L0, "[data-hero-item]")).toBeNull();
+      expect(host.L0.textContent).not.toContain(ITEM);
+    }
+  });
+
+  it("names nothing about the seller: no key id, no name", async () => {
+    const real = await item(structuredClone(KEEP), OFFER);
+    const hero = q(real.host.L0, ".cv-rcpt-hero").textContent;
+    const counterparty = KEEP.extensions["x-deal-v1"].book.agreement.payload.body.counterparty_key;
+    expect(hero).not.toContain(counterparty.slice(0, 8));
+    expect(hero.replace(ITEM, "")).not.toMatch(/seller:|from [A-Z]/);
+  });
 });

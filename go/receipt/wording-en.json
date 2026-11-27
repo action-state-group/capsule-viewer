@@ -775,6 +775,18 @@
     "provider.reason.refused": "refused",
     "provider.reason.upstream_error": "upstream error",
     "provider.reason.timeout": "timed out",
-    "provider.reason.dropped": "dropped"
+    "provider.reason.dropped": "dropped",
+    "deal.card.other.checked": "Their signed agreement: checked",
+    "deal.stamp.time_stamped.filled_checked": "{witness} · {at}",
+    "deal.proof.witness.filled_checked": "Outside time stamp: {witness} at {at}, on your own book",
+    "deal.proof.counterparty_half": "The seller's signed agreement",
+    "deal.proof.counterparty_half.seller": "The buyer's signed agreement",
+    "deal.proof.counterparty_half.report": "The other side's signed agreement",
+    "deal.else.half.checked": "This copy carries the seller's signed agreement. It covers their agreement only, not anything after it.",
+    "deal.else.half.checked.seller": "This copy carries the buyer's signed agreement. It covers their agreement only, not anything after it.",
+    "deal.else.half.checked.report": "This copy carries the other side's signed agreement. It covers their agreement only, not anything after it.",
+    "deal.proof.lede.answers.failed": "No. capsulectl verify failed a test when this page was made. The page shows its answers; it did not re-check by itself.",
+    "deal.hero.item": "{item}",
+    "deal.proof.lede.answers.some": "These are the only answers capsulectl verify gave this page; a test marked – was not among them. Download the proof file and check it yourself."
   }
 }

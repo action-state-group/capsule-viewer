@@ -471,6 +471,7 @@
       out.verdict = reportedVerdict(v);
       out.countersigned = reportedCountersigned(v);
       out.countersigned_copy = reportedCountersignedCopy(v);
+      out.deal_offer = reportedEntry(v, "deal_offer");
     }
     // The x-deal-v0 modules: capsulectl's report of the holder's own book's
     // witness time and its countersign rung, only when the page was given
@@ -1854,10 +1855,22 @@
       verdict: or(str(v.assurance.verdict), null),
       countersigned: Array.isArray(v.assurance.countersigned) ? v.assurance.countersigned : null,
       countersigned_copy: v.assurance.countersigned_copy || null,
+      item: offerItem(steps, v.assurance.deal_offer),
       log_id: str(get(map(get(content, "deal_checkpoint")), "log_id")),
       checkpoint_size: int(get(map(get(content, "deal_checkpoint")), "mmr_size")),
       proof_file: proofFile(v.bundle),
     };
+  }
+  // The item, from the holder's own sealed offer the page's maker gave (#461, Sherlock2's rule on #384:
+  // the item is the agreement's offer `terms.item`): only when the offer's SHA-256 over its JCS bytes is
+  // the digest the copy's own sealed agreement cites, and it is a propose record. Else null: nothing drawn.
+  function offerItem(steps, offer) {
+    if (!isMap(offer)) return null;
+    var agree = steps.find(function (s) { return s.kind === "agree" && s.offer_ref !== null; });
+    if (!agree || recordDigest(offer) !== agree.offer_ref) return null;
+    if (str(get(map(get(offer, EXTENSION_V1)), "record_type")) !== "propose") return null;
+    var item = str(get(map(get(map(get(offer, "body")), "terms")), "item"));
+    return item !== null && item.trim() !== "" ? item.trim() : null;
   }
   function roleOf(steps) {
     var agree = steps.find(function (s) { return s.kind === "agree"; });
@@ -1965,6 +1978,8 @@
         }, {}) : {},
         statements: statements,
         act: payload !== null ? str(get(body, "act")) : null,
+        // The offer the sealed agreement cites (#461): its digest, read only from the agreement's sealed payload.
+        offer_ref: payload !== null && str(get(block, "record_type")) === "agree" ? str(get(map(get(body, "offer")), "digest")) : null,
         // A refund or a remedy's payment (evidencebook payment.go: `reverses`, `remedy_for`), never the deal's own payment.
         refund: payload !== null && (own(body, "reverses") || own(body, "remedy_for")),
       };
@@ -3677,6 +3692,13 @@
     return w(chosen || key, values);
   };
 
+  // A key that names the other side: its neutral form (".report", "the other side's") when the copy's own
+  // agreement does not say which side the holder is, since a verified half shows only that it is the
+  // other party's, not its role; else as say() picks it.
+  P.sideSay = function (model, key, values) {
+    return model.role === null ? w(key + ".report", values) : this.say(model, key, values);
+  };
+
   // A money member as a reader says it: BTC at scale 11 (or less) is counted in msat, with sats above
   // when it is whole sats; anything else as recorded (legAmount).
   function moneyOf(a) {
@@ -3723,6 +3745,11 @@
     if (verdict.term) values.term = word("deal.term." + verdict.term) || verdict.term;
     var text = verdict.line === "terms" ? this.termsTally(model.rows) : this.say(model, key, values);
     var line = [d.el("h2", { class: "cv-rcpt-headline", "data-top-line": verdict.line }, [text])];
+    // What the deal was for, from the holder's own sealed offer (#461); the seller is not named: no record
+    // the agreement cites seals the seller's name, and a key id is never drawn as one.
+    // On the holder's own page only: the offer is given beside the copy, not carried in it, so a copy
+    // shown to others never shows it.
+    if (model.item !== null && this.ownPage(model)) line.push(this.p(w("deal.hero.item", { item: model.item }), { class: "cv-rcpt-lede", "data-hero-item": "" }));
     if (verdict.line === "ruled_not_met" && verdict.remedy !== null) line.push(this.p(w("deal.row.remedy", { remedy: this.token("deal.remedy", verdict.remedy) }), { class: "cv-rcpt-lede", "data-remedy": verdict.remedy }));
     if (verdict.mood !== null) line.push(this.p(w("deal.seal." + verdict.mood), { class: "cv-rcpt-mood", "data-mood": verdict.mood }), this.note(w("deal.seal.short")));
     var parts = [];
@@ -3745,7 +3772,7 @@
     }
     cards.push({ key: "status", label: w("deal.card.status"), value: d.el("span", { "data-card-status": verdict.line }, [this.statusWord(model, verdict)]), note: model.as_of && validUtcTime(model.as_of) ? this.timed("deal.card.as_of", model.as_of) : null });
     // The other side's half, named by side only when the copy's own agreement says which side the holder is.
-    if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.verified" : "deal.card.other.none"), note: null });
+    if (model.role !== null) cards.push({ key: "other", label: w(model.role === "seller" ? "deal.card.other.buyer" : "deal.card.other.seller"), value: w(model.counterparty_half === "verified" ? "deal.card.other.checked" : "deal.card.other.none"), note: null });
     return d.el("div", { class: "cv-rcpt-cards", "data-surface": "cards" }, cards.map(function (c) {
       var parts = [d.el("div", { class: "cv-rcpt-card__label" }, [c.label]), d.el("div", { class: "cv-rcpt-card__value" }, [c.value])];
       if (c.note) parts.push(d.el("div", { class: "cv-rcpt-card__note" }, [c.note]));
@@ -3838,7 +3865,7 @@
     if (!this.ownPage(model)) return { state: "not_checked" };
     var book = model.book_witnessed;
     if (book === null) return { state: "not_checked" };
-    if (book.status === "verified") return { state: "filled", at: book.at, witness: book.witness };
+    if (book.status === "verified") return { state: "filled", words: "filled_checked", at: book.at, witness: book.witness };
     if (book.status === "failed") return { state: "failed" };
     return { state: "open" };
   };
@@ -3930,11 +3957,19 @@
       var status = statuses[i] === null ? "absent" : ["pass", "fail", "withheld"].indexOf(statuses[i]) >= 0 ? statuses[i] : "absent";
       return self.proofRow(name, status, w("deal.proof." + name), null);
     });
+    // The other side's signed agreement, as capsulectl verify reported it (the card says only that it
+    // was checked; this panel carries the attribution, #461). Drawn only when capsulectl reported on it.
+    var half = model.counterparty_half === "verified" ? "pass" : model.counterparty_half === "failed" ? "fail" : null;
+    if (half !== null) rows.push(this.proofRow("counterparty_half", half, this.sideSay(model, "deal.proof.counterparty_half"), null));
     var stamp = this.timeStamp(model);
     var stampState = stamp.state === "filled" ? "pass" : stamp.state === "failed" ? "fail" : "absent";
-    // The summary counts every row it shows: any failed row, the time stamp included, makes it "failed".
-    if (stampState === "fail") lede = "deal.proof.lede.failed";
-    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
+    // The summary counts every row it shows: any failed row, the agreement and the time stamp included,
+    // makes it "failed". With no per-test answer but a row capsulectl did answer, the lede still names
+    // capsulectl as the source of the rows it shows.
+    if (stampState === "fail" || half === "fail") lede = "deal.proof.lede.failed";
+    else if (lede === "deal.proof.lede.none" && (stampState === "pass" || half === "pass")) lede = "deal.proof.lede.answers.some";
+    if (lede === "deal.proof.lede.failed") lede = "deal.proof.lede.answers.failed";
+    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled_checked", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
     rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
     var parts = [
       d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.proof")]),
@@ -3995,7 +4030,7 @@
       { key: "problems", label: w("deal.else.problems"), text: problemText },
       { key: "whose", label: w("deal.else.whose"), text: this.say(model, "deal.else.whose.text") },
     ];
-    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.say(model, "deal.else.half.text") });
+    if (model.counterparty_half === "verified") tiles.push({ key: "half", label: w("deal.else.half"), text: this.sideSay(model, "deal.else.half.checked") });
     return d.el("section", { class: "cv-rcpt-panel", "data-surface": "else" }, [
       d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.else")]),
       d.el("div", { class: "cv-rcpt-tiles" }, tiles.map(function (t) {
