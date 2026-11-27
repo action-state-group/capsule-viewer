@@ -184,36 +184,41 @@ describe("the manifest", () => {
   });
 });
 
-describe("the view model is the Python module's, through the same checks", () => {
-  const compare = async (context: Json) => {
-    const ours: Json = await buildHistoryViewModel(context);
-    const theirs: Json = await py.module.buildModel(context);
-    expect(ours.state).toBe(theirs.state);
-    expect(ours.copy.value).toBe(theirs.own ? "own" : "shared");
-    expect(ours.properties.value).toEqual(clone(theirs.properties));
-    if (theirs.signature)
-      expect({
-        status: ours.signature.value.status,
-        key: ours.signature.value.key,
-      }).toEqual(theirs.signature);
-    if (ours.state === "card" || ours.state === "refused") {
-      expect(ours.witness.value.status).toBe(theirs.witness.status);
-      expect(ours.witness.value.shown).toBe(theirs.witness.shown);
-      if (theirs.witness.shown)
-        expect(ours.witness.value.witness).toBe(theirs.witness.witness);
-      expect(ours.registration.value.status).toBe(theirs.registration.status);
-      expect(ours.registration.value.shown).toBe(theirs.registration.shown);
-      expect(ours.skipped).toEqual(theirs.skipped);
-      expect(ours.held.value).toEqual(theirs.held);
-    }
-    if (ours.state === "refused") expect(ours.fails).toEqual(theirs.fails);
-    if (ours.state === "card") {
-      expect(ours.covered.value).toBe(theirs.covered);
-      expect(ours.entries_match.value).toBe(theirs.entriesMatch);
-    }
-    return ours as HistoryViewModel;
-  };
+/** The TS model against the Python module's, member by member. */
+const compare = async (context: Json) => {
+  const ours: Json = await buildHistoryViewModel(context);
+  const theirs: Json = await py.module.buildModel(context);
+  expect(ours.state).toBe(theirs.state);
+  expect(ours.copy.value).toBe(theirs.own ? "own" : "shared");
+  expect(ours.properties.value).toEqual(clone(theirs.properties));
+  if (theirs.signature)
+    expect({
+      status: ours.signature.value.status,
+      key: ours.signature.value.key,
+    }).toEqual(theirs.signature);
+  if (ours.state === "card" || ours.state === "refused") {
+    expect(ours.witness.value.status).toBe(theirs.witness.status);
+    expect(ours.witness.value.shown).toBe(theirs.witness.shown);
+    if (theirs.witness.shown)
+      expect(ours.witness.value.witness).toBe(theirs.witness.witness);
+    expect(ours.registration.value.status).toBe(theirs.registration.status);
+    expect(ours.registration.value.shown).toBe(theirs.registration.shown);
+    expect(ours.skipped).toEqual(theirs.skipped);
+    expect(ours.held.value).toEqual(theirs.held);
+  }
+  if (ours.state === "refused" || ours.state === "signature_failed") {
+    expect(ours.fails).toEqual(theirs.fails);
+    if (theirs.skipped) expect(ours.skipped).toEqual(theirs.skipped);
+    if (theirs.held) expect(ours.held.value).toEqual(theirs.held);
+  }
+  if (ours.state === "card") {
+    expect(ours.covered.value).toBe(theirs.covered);
+    expect(ours.entries_match.value).toBe(theirs.entriesMatch);
+  }
+  return ours as HistoryViewModel;
+};
 
+describe("the view model is the Python module's, through the same checks", () => {
   for (const [dir, label] of [
     [DATA, ""],
     [WITNESS, "witness/"],
@@ -432,5 +437,165 @@ describe("the page it draws", () => {
     expect(
       host.L2.querySelector('[data-history="card-checks"]'),
     ).not.toBeNull();
+  });
+});
+
+describe("Codex round 1 (#478): the signature claim, accepted entries, sources and registration", () => {
+  const VECTORS = readJson(
+    join(ROOT, "vectors", "card-registration-v0", "vectors.json"),
+  );
+  const statement = VECTORS.cases.find(
+    (x: Json) => x.name === "pass-eddsa-time",
+  ).statements[0];
+
+  it("says its holder signed the counts only when this page checked the signature", async () => {
+    const pass = await buildHistoryViewModel(
+      await buildVerifiedBundleContext(bundleOf(DATA, "person-shared")),
+    );
+    expect(pass.signature?.value.status).toBe("PASS");
+    expect(draw(pass).L1.textContent).toContain(
+      words["card.not_proven.true.unnamed"],
+    );
+    // The stand-in context carries no strict result: the signature is not checked here.
+    const unchecked = await buildHistoryViewModel(
+      standIn(DATA, "person-shared"),
+    );
+    expect(unchecked.signature?.value.status).toBe("NOT_CHECKED");
+    const failedBundle = bundleOf(DATA, "person-shared");
+    const root = failedBundle.records[0];
+    root.signature =
+      (root.signature[0] === "A" ? "B" : "A") + root.signature.slice(1);
+    const failed = await buildHistoryViewModel(
+      await buildVerifiedBundleContext(failedBundle),
+    );
+    expect(failed.state).toBe("signature_failed");
+    for (const m of [unchecked, failed]) {
+      const l1 = draw(m).L1.textContent ?? "";
+      expect(l1).toContain(words["card.module.not_proven.true.unsigned"]);
+      expect(l1).not.toContain("Only that its holder signed");
+    }
+  });
+
+  it("keeps the reading's diagnostics on a card whose signature fails", async () => {
+    const b = bundleOf(DATA, "neg-window-not-in-policy");
+    const root = b.records.find((r: Json) => r.capsule_id === b.root);
+    root.signature =
+      (root.signature[0] === "A" ? "B" : "A") + root.signature.slice(1);
+    const model = await buildHistoryViewModel(
+      await buildVerifiedBundleContext(b),
+    );
+    expect(model.state).toBe("signature_failed");
+    expect(model.fails).toEqual(["window_from_policy"]);
+    expect(model.held?.value).toEqual({
+      policy: true,
+      as_of: true,
+      deals: false,
+    });
+    expect(model.card).toBeUndefined();
+    expect(draw(model).L2.querySelectorAll("[data-check]")).toHaveLength(6);
+  });
+
+  it("draws every entry the card's check accepted, whatever the shaped-input page's limits", async () => {
+    const b = bundleOf(DATA, "person-own");
+    const deals = b.extensions["x-standard-history/v0"].deals;
+    deals[0].deal = "d".repeat(250);
+    deals[0].amount.note = "an amount member the card's check does not read";
+    const context = standIn(DATA, "person-own", b);
+    const model = await buildHistoryViewModel(context);
+    expect(model.state).toBe("card");
+    const page = draw(model);
+    expect(
+      page.L0.querySelector('[data-history="top-line"]')?.textContent,
+    ).toMatch(/^\d+ deals?/u);
+    expect(page.L0.querySelectorAll('[data-history="row"]')).toHaveLength(
+      deals.length,
+    );
+    expect(page.L2.textContent).toContain("d".repeat(250));
+  });
+
+  it("attributes the copy and what the block carries to the card's reading", async () => {
+    const model = await buildHistoryViewModel(standIn(DATA, "person-own"));
+    expect(model.copy).toEqual({
+      value: "own",
+      src: { checked: "card_check" },
+    });
+    expect(model.held?.src).toEqual({ checked: "card_check" });
+  });
+
+  it("checks card statements as the Python module does, and draws each outcome", async () => {
+    const withStatements = (name: string) => {
+      const b = bundleOf(WITNESS, name);
+      b.extensions["x-standard-history/v0"].card_statements = [statement];
+      return b;
+    };
+    setReaderWitnessPolicy(VECTORS.policies.default);
+    // A statement by another key than the card's: FAIL, drawn as a note.
+    const real = await buildVerifiedBundleContext(
+      withStatements("person-shared-witnessed"),
+    );
+    const failed = await compare(real);
+    expect(failed.registration?.value).toEqual({
+      status: "FAIL",
+      shown: false,
+    });
+    expect(draw(failed).L2.textContent).toContain(
+      words["card.module.registration.failed"],
+    );
+    // No verified signature to name a key: NOT_CHECKED, "a card statement came".
+    const unchecked = await compare(
+      standIn(
+        WITNESS,
+        "person-shared-witnessed",
+        withStatements("person-shared-witnessed"),
+      ),
+    );
+    expect(unchecked.registration?.value.status).toBe("NOT_CHECKED");
+    expect(draw(unchecked).L2.textContent).toContain(
+      words["card.module.registration.came"],
+    );
+    // A refused card: the step runs, and nothing is shown as registered.
+    const refused = await compare(
+      await buildVerifiedBundleContext(
+        (() => {
+          const b = bundleOf(DATA, "neg-window-not-in-policy");
+          b.extensions["x-standard-history/v0"].card_statements = [statement];
+          return b;
+        })(),
+      ),
+    );
+    expect(refused.state).toBe("refused");
+    expect(refused.registration?.value.shown).toBe(false);
+  });
+
+  it("draws a passing registration with its service and time, and none on a refused card", async () => {
+    const base = await buildHistoryViewModel(
+      await buildVerifiedBundleContext(bundleOf(DATA, "person-shared")),
+    );
+    const pass: HistoryViewModel = {
+      ...base,
+      registration: {
+        value: {
+          status: "PASS",
+          shown: true,
+          service: "service-a",
+          at: 1793520240,
+        },
+        src: { checked: "card_registered" },
+      },
+    };
+    const text = draw(pass).L2.textContent ?? "";
+    expect(text).toContain(
+      "Registered with service-a by the key this card is signed with",
+    );
+    expect(text).toContain("2026");
+    expect(text).toContain(words["card.module.registration.note"]);
+    const untimed = draw({
+      ...pass,
+      registration: {
+        value: { status: "PASS", shown: true, service: "service-a", at: null },
+        src: { checked: "card_registered" },
+      },
+    }).L2.textContent;
+    expect(untimed).toContain("Registered with service-a");
   });
 });

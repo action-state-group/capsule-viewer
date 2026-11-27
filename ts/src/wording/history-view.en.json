@@ -316,6 +316,7 @@
     "card.module.property.denominator": "Every count carries its total, and the totals agree",
     "card.module.property.window_from_policy": "The window is the one the holder's policy sets",
     "card.module.property.as_of": "The card is as of the snapshot it names",
-    "card.module.property.counts_recompute": "The counts recount from the deal entries"
+    "card.module.property.counts_recompute": "The counts recount from the deal entries",
+    "card.module.not_proven.true.unsigned": "That the deals went as its holder counted them. This page did not confirm who signed these counts."
   }
 }

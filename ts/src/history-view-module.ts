@@ -306,7 +306,8 @@ export async function buildHistoryViewModel(
   const read = readStandardHistory(context);
   const copy: Sourced<"own" | "shared"> = {
     value: read.own ? "own" : "shared",
-    src: { bundle: read.own ? `${BLOCK}/deals` : BLOCK },
+    // Derived by the card's reading (whether the block carries deal entries), not a member it points at.
+    src: { checked: "card_check" },
   };
   if (read.state === "unverified" || read.state === "unreadable")
     return {
@@ -327,30 +328,42 @@ export async function buildHistoryViewModel(
       copy,
       properties: checked("card_check", noneChecked()),
     };
+  const root = rootRecord(context);
+  const signer = {
+    key: { value: root.key_id, src: { record: rootId, path: "/key_id" } },
+    signed_at: {
+      value: root.timestamp,
+      src: { record: rootId, path: "/timestamp" },
+    },
+  };
+  // A card whose signature does not check keeps the reading's diagnostics (as
+  // the Python module keeps them) and loses its card, its counts and any
+  // witness line; the registration step does not run on it.
   if (signature.status === "FAIL")
     return {
       state: "signature_failed",
       copy,
       properties: checked("card_check", m.properties),
+      skipped: m.skipped,
+      held: checked("card_check", m.held),
+      ...(m.state === "refused" ? { fails: m.fails } : {}),
       signature: checked("signature", signature),
+      witness: checked("anchor_witness", {
+        status: witness.status,
+        shown: false,
+      }),
+      signer,
     };
   const registration = await registrationOf(m, context);
-  const root = rootRecord(context);
   const common = {
     copy,
     properties: checked("card_check", m.properties),
     skipped: m.skipped,
-    held: { value: m.held, src: { bundle: BLOCK } },
+    held: checked("card_check", m.held),
     signature: checked("signature", signature),
     witness: checked("anchor_witness", witness),
     registration: checked("card_registered", registration),
-    signer: {
-      key: { value: root.key_id, src: { record: rootId, path: "/key_id" } },
-      signed_at: {
-        value: root.timestamp,
-        src: { record: rootId, path: "/timestamp" },
-      },
-    },
+    signer,
   };
   const asOf =
     m.held.as_of && m.state === "card"

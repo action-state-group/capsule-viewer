@@ -2040,7 +2040,12 @@ function drawCardParts(f: CardFrame): CardParts {
         owner
           ? say("card.not_proven.true.owner")
           : name === undefined
-            ? say("card.not_proven.true.unnamed")
+            ? // "Only that its holder signed" only when this page checked the signature.
+              say(
+                sig === "pass"
+                  ? "card.not_proven.true.unnamed"
+                  : "card.module.not_proven.true.unsigned",
+              )
             : say("card.not_proven.true", { name }),
       ),
       el(
@@ -2235,6 +2240,80 @@ export interface ModuleCard {
 }
 
 /**
+ * The drawer's card object from the module's view model. The card and its
+ * entries already passed the card's own check (standard-history-card.ts), so
+ * this projects them and adds no rule of the shaped-input page (whose limits
+ * on ids and amount members are a caller's, not the card's). A card that is
+ * not drawn still names its key in "Who signed this card".
+ */
+function moduleCardObject(mc: ModuleCard): CardObject {
+  const card = mc.card ?? {};
+  const num = (v: unknown): number => (typeof v === "number" ? v : 0);
+  const oc = isObj(card["outcomes"]) ? card["outcomes"] : {};
+  const nc = isObj(card["not_counted"]) ? card["not_counted"] : {};
+  const asOf = mc.asOf?.["anchor_time"];
+  const deals =
+    mc.deals === undefined
+      ? undefined
+      : mc.deals.filter(isObj).map((d): CardDeal => {
+          const amount = isObj(d["amount"]) ? d["amount"] : undefined;
+          const outcome = d["outcome"];
+          return {
+            id: typeof d["deal"] === "string" ? d["deal"] : "",
+            agreed:
+              (typeof d["agreed_at"] === "string"
+                ? parseInstant(d["agreed_at"])
+                : undefined) ?? EPOCH,
+            role: d["role"] === "bought" ? "bought" : "provided",
+            amount:
+              amount === undefined
+                ? undefined
+                : {
+                    value: String(amount["value"]),
+                    code: String(amount["assetCode"]),
+                    scale: num(amount["assetScale"]),
+                  },
+            outcome:
+              outcome === "held" ||
+              outcome === "did_not_hold" ||
+              outcome === "undecided"
+                ? outcome
+                : undefined,
+            terms: Array.isArray(d["rows"])
+              ? d["rows"].filter(isObj).map((row) => ({
+                  holder: row["owed_by"] === "holder",
+                  status: row["status"] as RowStatus,
+                  value:
+                    row["value"] === "met" || row["value"] === "not_met"
+                      ? row["value"]
+                      : undefined,
+                  remedy:
+                    typeof row["remedy"] === "string"
+                      ? row["remedy"]
+                      : undefined,
+                }))
+              : undefined,
+            bothHalves: d["happened"] === "stamped_by_both",
+          };
+        });
+  return {
+    derivation:
+      typeof card["derivation"] === "string" ? card["derivation"] : "",
+    keyId: mc.keyId,
+    signedAt: parseInstant(mc.signedAt),
+    outcomes: {
+      of: num(oc["of"]),
+      held: num(oc["held"]),
+      didNotHold: num(oc["did_not_hold"]),
+      undecided: num(oc["undecided"]),
+    },
+    waiting: num(nc["no_witness_time"]),
+    asOf: typeof asOf === "string" ? parseInstant(asOf) : undefined,
+    deals,
+  };
+}
+
+/**
  * The module page's three regions (history-view-module.ts): L0 the counts
  * and the holder's rows, L1 who signed it and what this does not prove, L2
  * the card's own checks and the technical details. Each region is a
@@ -2245,46 +2324,17 @@ export function historyModuleCardParts(mc: ModuleCard): {
   readonly L1: HistoryElement;
   readonly L2: HistoryElement;
 } {
-  const r = new Reader();
   const failed = mc.frame.state !== "card" || mc.card === undefined;
-  let obj: CardObject | undefined;
-  if (!failed) {
-    const ext: Record<string, unknown> = {};
-    if (mc.asOf !== undefined) ext["as_of"] = mc.asOf;
-    if (mc.deals !== undefined) ext["deals"] = mc.deals;
-    obj = readCardDoc(r, {
-      records: [
-        { capsule_id: "root", key_id: mc.keyId, timestamp: mc.signedAt },
-      ],
-      disclosures: { root: { agent_input: mc.card } },
-      extensions: { "x-standard-history/v0": ext },
-    });
-  }
+  const obj = moduleCardObject(mc);
   const parts = drawCardParts({
     owner: mc.own,
     words: {},
     name: undefined,
-    // A card that is not drawn still names its key in "Who signed this card".
-    obj: obj ?? {
-      derivation:
-        typeof mc.card?.["derivation"] === "string"
-          ? (mc.card["derivation"] as string)
-          : "",
-      keyId: mc.keyId,
-      signedAt: parseInstant(mc.signedAt),
-      outcomes: { of: 0, held: 0, didNotHold: 0, undecided: 0 },
-      waiting: 0,
-      asOf: undefined,
-      deals: undefined,
-    },
+    obj,
     extras: new Map(),
     sample: undefined,
-    // A standard card the drawer could not read (it never should) draws no counts either.
-    failed: failed || r.reasons.length > 0,
-    module:
-      failed || r.reasons.length === 0
-        ? mc.frame
-        : { ...mc.frame, state: "unreadable" },
+    failed,
+    module: mc.frame,
   });
   const region = (depth: string, ...children: (HistoryElement | null)[]) =>
     el(
