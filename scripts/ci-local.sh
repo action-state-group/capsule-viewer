@@ -29,9 +29,16 @@ killtree() {
   kill -TERM "$1" 2>/dev/null || true
 }
 cleanup() {
+  local status=$?
   if [ -n "$light_pid" ]; then
     killtree "$light_pid"
     wait "$light_pid" 2>/dev/null || true
+    # A failed or interrupted run still shows what the light sections said,
+    # a failure of theirs included.
+    if [ "$status" -ne 0 ] && [ -s "$tmp/light.log" ]; then
+      echo "== light sections (python, js, go, pageruntime), stopped:" >&2
+      cat "$tmp/light.log" >&2
+    fi
   fi
   rm -rf "$tmp"
 }
@@ -42,8 +49,9 @@ aac=https://github.com/action-state-group/agent-action-capsule.git
 # The light sections (ci.yml's python, js, go and pageruntime jobs) run one
 # after another in the background, beside the ts/ legs in the foreground: they
 # share no files with ts/ (python uses .venv, js the root node_modules, go its
-# module, pageruntime a worktree of its own), and running them one at a time
-# keeps the machine at one vitest run plus one light section (#466).
+# module, pageruntime a worktree of its own). They run one at a time, and the
+# root js suite gets two vitest workers, so the machine carries the ts/ vitest
+# pool (its CPU count less one) plus at most two more workers (#466).
 light() {
   set -euo pipefail
   # ci.yml: python
@@ -72,7 +80,7 @@ light() {
 
   # ci.yml: js
   npm install --no-audit --no-fund
-  npm test
+  npm test -- --maxWorkers=2
 
   # ci.yml: go
   (cd go && test -z "$(gofmt -l .)" && go mod tidy && test -z "$(git status --porcelain -- .)" \
