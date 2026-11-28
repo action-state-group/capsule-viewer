@@ -14,8 +14,6 @@
 import {
   buildVerifiedBundleContext,
   bundleVerified,
-  isProducerSelection,
-  SELECTION_NOT_CHECKABLE,
   Sha256UnavailableError,
   VERIFICATION_BANNER_LINES,
   verificationBanner,
@@ -33,6 +31,7 @@ import {
   withVerifierReport,
 } from "./verifier-report.js";
 import { RECEIPT_CORE, RECEIPT_MANIFESTS } from "./receipt-core.generated.js";
+import { selectionOnly } from "./receipt-selection.js";
 
 /** The receipt kinds, as go/receipt names them. */
 export const RECEIPT_KINDS = [
@@ -216,20 +215,6 @@ function runtimeLine(
   return banner.detail === ""
     ? banner.line
     : `${banner.line}. ${banner.detail}`;
-}
-
-// Every strict claim passed with no finding, except interval coverage,
-// withheld only because the producer chose the records.
-function selectionOnly(context: VerifiedBundleContext): boolean {
-  const strict = context.strict;
-  if (strict === undefined || !isProducerSelection(context.verification))
-    return false;
-  return strict.claims.every((claim) =>
-    claim.name === "interval_coverage"
-      ? claim.findings.length === 1 &&
-        claim.findings[0] === SELECTION_NOT_CHECKABLE
-      : claim.status === "pass" && claim.findings.length === 0,
-  );
 }
 
 type Found =
