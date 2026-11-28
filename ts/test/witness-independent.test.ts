@@ -45,8 +45,12 @@ const v0Report = (witnessed: unknown): Obj => {
   return r;
 };
 
+// The short stamp and proof-row lines follow the witness's name; the longer
+// lines capsulectl's answer is said in name it again (Sherlock2 on #513).
 const NOT_LISTED =
   "Its directory entry does not list it as independent of the parties.";
+const LINE_NOT_LISTED =
+  "The directory entry for Example Witness does not list it as independent of the parties.";
 const AT = "2026-11-25T14:41:19Z";
 const verified = (extra: Obj = {}): Obj => ({
   status: "verified",
@@ -143,13 +147,13 @@ describe("the witness's directory entry on an x-deal-v1 keep page (#508)", () =>
     expect(HOLDER).toHaveLength(1);
     for (const [why, witnessed, notListed] of cases) {
       const root = await fullPage(v1Report(witnessed));
-      for (const [where, text] of [
-        ["stamp", stampText(root)],
-        ["banner", banner(root)],
-        ["check list", checkRow(root)],
+      for (const [where, text, sentence] of [
+        ["stamp", stampText(root), NOT_LISTED],
+        ["banner", banner(root), LINE_NOT_LISTED],
+        ["check list", checkRow(root), LINE_NOT_LISTED],
       ] as const) {
         expect(text, `${why}: ${where}`).toContain("Example Witness");
-        expect(text.includes(NOT_LISTED), `${why}: ${where}`).toBe(notListed);
+        expect(text.includes(sentence), `${why}: ${where}`).toBe(notListed);
       }
       expect(
         root
@@ -209,7 +213,7 @@ describe("the witness's directory entry on an x-deal-v1 keep page (#508)", () =>
         expect(proofRow(host).includes(NOT_LISTED), label).toBe(notListed);
         const root = await fullPage(v1Report(witnessed));
         expect(checkRow(root), label).toContain(line);
-        expect(checkRow(root).includes(NOT_LISTED), label).toBe(notListed);
+        expect(checkRow(root).includes(LINE_NOT_LISTED), label).toBe(notListed);
         root.remove();
       }
   });
@@ -225,6 +229,7 @@ describe("the witness's directory entry on an x-deal-v1 keep page (#508)", () =>
       "capsulectl verify reported that your own book's witness time-stamp did not verify",
     );
     expect(root.textContent).not.toContain(NOT_LISTED);
+    expect(root.textContent).not.toContain(LINE_NOT_LISTED);
     root.remove();
   });
 });
@@ -250,7 +255,7 @@ describe("the witness's directory entry on an x-deal-v0 keep copy (#508)", () =>
       const host = await alone(v0Copy(), v0Report(witnessed));
       const line = witnessRung(host);
       expect(line, why).toContain("Time-stamped by Example Witness at ");
-      expect(line.includes(NOT_LISTED), why).toBe(notListed);
+      expect(line.includes(LINE_NOT_LISTED), why).toBe(notListed);
     }
   });
 
@@ -270,7 +275,7 @@ describe("the witness's directory entry on an x-deal-v0 keep copy (#508)", () =>
         );
         const line = witnessRung(host);
         expect(line, status).toContain("from Example Witness");
-        expect(line.includes(NOT_LISTED), status).toBe(notListed);
+        expect(line.includes(LINE_NOT_LISTED), status).toBe(notListed);
       }
   });
 });
