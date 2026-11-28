@@ -23,7 +23,12 @@
     "./receipt": {
       "types": "./dist/receipt.d.ts",
       "import": "./dist/receipt.js"
-    }
+    },
+    "./dealing-wording": {
+      "types": "./dist/dealing-wording.d.ts",
+      "import": "./dist/dealing-wording.js"
+    },
+    "./wording/dealing.en.json": "./dist/wording/dealing.en.json"
   },
   "engines": {
     "node": ">=20"

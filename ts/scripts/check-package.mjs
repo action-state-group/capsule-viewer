@@ -48,6 +48,9 @@ try {
     "dist/evidence-graph.iife.js",
     "dist/receipt.js",
     "dist/receipt.d.ts",
+    "dist/dealing-wording.js",
+    "dist/dealing-wording.d.ts",
+    "dist/wording/dealing.en.json",
   ])
     assert(paths.includes(required), `${required} is not in the package`);
   for (const path of paths)
@@ -98,8 +101,21 @@ try {
     `const { receiptModules } = await import(${JSON.stringify(name + "/receipt")});
      if (receiptModules().length !== 5) throw new Error("no receipt modules");`,
   ]);
+  // The one layer order and status words (#448) load from the installed
+  // package, as a module and as the raw pack the Mesh plugin can pin.
+  run("node", [
+    "--input-type=module",
+    "-e",
+    `import { deepStrictEqual } from "node:assert/strict";
+     const source = ${JSON.stringify(readFileSync(join(root, "src/wording/dealing.en.json"), "utf8"))};
+     const { DEALING_WORDING, dealingSay } = await import(${JSON.stringify(name + "/dealing-wording")});
+     const { default: raw } = await import(${JSON.stringify(name + "/wording/dealing.en.json")}, { with: { type: "json" } });
+     deepStrictEqual(raw, JSON.parse(source), "the published raw pack is not the source pack");
+     deepStrictEqual(DEALING_WORDING, JSON.parse(source), "the published module's pack is not the source pack");
+     if (dealingSay("layer.technical") !== "Technical details") throw new Error("no words");`,
+  ]);
   console.log(
-    `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules`,
+    `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules and the dealing wording`,
   );
 } finally {
   rmSync(temporary, { recursive: true, force: true });
