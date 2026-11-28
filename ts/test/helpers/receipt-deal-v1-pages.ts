@@ -81,6 +81,11 @@ export const FIXTURES: readonly Fixture[] = [
   })),
   plain("ruled-a", "view-model/pair"),
   plain("ruled-b", "view-model/pair"),
+  // A buyer's keep copy of a deal paid in full, given its offer (buyer-paid/README.md, #512).
+  {
+    ...plain("keep-copy", "buyer-paid"),
+    options: () => ({ dealOffer: read("buyer-paid", "keep-copy.offer.json") }),
+  },
   {
     ...plain("same-checkpoint", "countersigned"),
     name: "countersigned/same-checkpoint+copy",

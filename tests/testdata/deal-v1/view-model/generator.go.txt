@@ -1,6 +1,6 @@
 package deal
 
-// Throwaway: writes capsule-viewer#488's x-deal-v1 fixtures. Not committed to evidencebook.
+// Throwaway: writes capsule-viewer#488's and #512's x-deal-v1 fixtures. Not committed to evidencebook.
 
 import (
 	"encoding/json"
@@ -43,10 +43,15 @@ func cvOfferPayload(t *testing.T, offerFile, name string) {
 
 // A deal paid and settled for item at amount, the seller saying it was paid as agreed; the buyer's keep copy.
 func cvSettled(t *testing.T, item string, amount int, name string) {
-	v1Fixture(t)
-	h := agreedBoth(t, func(key string) string {
+	cvPaid(t, item, amount, func(key string) string {
 		return strings.Replace(offerTo(key), `"item": "lamp"`, `"item": "`+item+`"`, 1)
-	})
+	}, name)
+}
+
+// cvSettled with the offer made by offer.
+func cvPaid(t *testing.T, item string, amount int, offer func(key string) string, name string) {
+	v1Fixture(t)
+	h := agreedBoth(t, offer)
 	h.buyer.act(t)
 	dealRun(t, "note", "--deal", h.dealID, "--kind", "intent", "--input", writeJSON(t, v1BuyerIntent), "--opening", writeJSON(t, v1Opening))
 	in := fmt.Sprintf(`{"action":"pay","amount_minor":%d,"authorized_max_minor":%d,"terms":{"item":"%s","price_minor":%d,"currency":"USD"},"payment_ref":"%s"}`, amount, amount, item, amount, v1LnHash)
@@ -82,6 +87,19 @@ func cvSettled(t *testing.T, item string, amount int, name string) {
 func TestCV488SettledLamp(t *testing.T)   { cvSettled(t, "lamp", 4500, "settled") }
 func TestCV488SettledKettle(t *testing.T) { cvSettled(t, "kettle", 4500, "pair/item-b") }
 func TestCV488SettledLess(t *testing.T)   { cvSettled(t, "lamp", 4400, "pair/amount-b") }
+
+// capsule-viewer#512: a buyer's keep copy of a deal paid in full, its offer naming item, quantity and price, the
+// row owing that price and the payment that amount (inside v1BuyerIntent's 5000 cap).
+func TestCV512BuyerPaid(t *testing.T) {
+	cvPaid(t, "Oak desk lamp", 4500, func(key string) string {
+		o := strings.Replace(offerTo(key), `"terms": {"item": "lamp", "currency": "USD"}`,
+			`"terms": {"item": "Oak desk lamp", "quantity": 1, "price_minor": 4500, "currency": "USD"}`, 1)
+		o = strings.Replace(o, `"owed": {"amount_minor": 6000, "currency": "USD"}`, `"owed": {"amount_minor": 4500, "currency": "USD"}`, 1)
+		require.Contains(t, o, `"price_minor": 4500`)
+		require.Contains(t, o, `"amount_minor": 4500`)
+		return o
+	}, "buyer-paid/keep-copy")
+}
 
 // A ruled dispute: the buyer disputes, the adjudicator rules against `against`; the adjudicator copy the buyer cut,
 // the full adjudicator copy the buyer answered with, and the buyer's keep copy after the ruling.

@@ -12,13 +12,14 @@ UPDATE_GOLDENS=1 npx vitest run js-tests/goldens.test.js js-tests/adjudications_
 
 ## The x-deal-v1 receipt
 
-`js-tests/receipt_deal_v1_surface.test.js` draws three x-deal-v1 receipt pages with the deal module (`go/receipt/receipt_deal.js`), from the copies in [`../testdata/deal-v1/`](../testdata/deal-v1/README.md) and the capsulectl verify answer the test states for each copy (`envOf` and `GOLDEN_PAGES` in the test; not a capsulectl run). Each page is checked in as HTML, and each PNG is a screenshot of that same page.
+`js-tests/receipt_deal_v1_surface.test.js` draws four x-deal-v1 receipt pages with the deal module (`go/receipt/receipt_deal.js`), from the copies in [`../testdata/deal-v1/`](../testdata/deal-v1/README.md) and the capsulectl verify answer the test states for each copy (`envOf` and `GOLDEN_PAGES` in the test; not a capsulectl run). Each page is checked in as HTML, and each PNG is a screenshot of that same page.
 
 | Page | Images | What it is |
 |---|---|---|
 | `receipt-deal-v1-own.html` | `receipt-deal-v1-own-{390,1280}.png` | The holder's own copy, as the holder's private page shows it: the seller's copy of the ARD demo's deal-fe219bb1ab3d4dec (`counterparty-copy.bundle.json`, read as the seller's keep copy), settled and paid, with a verified witness time stamp on the seller's book. A "Sale receipt". |
 | `receipt-deal-v1-shared.html` | `receipt-deal-v1-shared-{390,1280}.png` | The same seller copy as shared with the other side (`--share counterparty`): no "your", no time on its steps, no holder's witness time. |
 | `receipt-deal-v1-item.html` | `receipt-deal-v1-item-{390,1280}.png` | The buyer's own keep copy with the buyer's sealed offer (`offer/keep-copy.bundle.json`, `offer/offer.json`): an "Order receipt" with the item, quantity and total in the hero, nothing due yet and no payment record. |
+| `receipt-deal-v1-buyer-paid.html` | `receipt-deal-v1-buyer-paid-{390,1280}.png` | A buyer's own keep copy of a deal paid in full and settled, with the buyer's sealed offer (`buyer-paid/keep-copy.bundle.json`, `buyer-paid/keep-copy.offer.json`): an "Order receipt" naming what was bought (item, quantity, total), the amount paid ("Payment 45.00 USD, recorded as settled") and to whom (the seller's side). |
 
 The HTML pages are what a reader outside these tests opens to see a current deal receipt. Each is self-contained: its styles are inlined, and it carries no script and loads nothing over the network, so it opens from `file://`. It holds only the surface (L0) with every toggle closed: the "For checkers" and "Technical details" layers are not on it, and since it has no script, its "Download proof file" buttons do nothing. Judge the page's words and layout, not those buttons.
 

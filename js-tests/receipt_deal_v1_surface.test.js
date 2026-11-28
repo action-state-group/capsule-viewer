@@ -538,9 +538,10 @@ describe("#461: who and what, and capsulectl said once", () => {
   });
 });
 
-// The golden pages: the surface (L0, toggles closed) of the holder's own copy, a shared copy, and the buyer's keep
-// copy with its sealed offer, each one self-contained HTML page, its styles inlined and no script. The PNGs in
-// tests/goldens/ are screenshots of these pages; the pages themselves are checked in beside them
+// The golden pages: the surface (L0, toggles closed) of the holder's own copy, a shared copy, the buyer's keep
+// copy with its sealed offer, and a paid buyer's keep copy with its sealed offer (#512), each one self-contained
+// HTML page, its styles inlined and no script. The PNGs in tests/goldens/ are screenshots of these pages; the
+// pages themselves are checked in beside them
 // (receipt-deal-v1-<name>.html, capsule-viewer#509) so a reader outside these tests can open a current deal receipt.
 // Fonts differ between machines, so the PNGs' pixels are not compared; the pages' bytes are. Regenerate both with
 //   UPDATE_GOLDENS=1 npx vitest run js-tests/receipt_deal_v1_surface.test.js
@@ -555,6 +556,13 @@ const GOLDEN_PAGES = [
     name: "item",
     bundle: () => JSON.parse(readFileSync(join(DATA, "offer", "keep-copy.bundle.json"), "utf8")),
     assurance: { deal_offer: JSON.parse(readFileSync(join(DATA, "offer", "offer.json"), "utf8")) },
+  },
+  // The buyer's keep copy of a deal paid in full and settled, with the buyer's sealed offer (buyer-paid/,
+  // capsule-viewer#512): what was bought, the amount paid and to whom, on the buyer's own page.
+  {
+    name: "buyer-paid",
+    bundle: () => JSON.parse(readFileSync(join(DATA, "buyer-paid", "keep-copy.bundle.json"), "utf8")),
+    assurance: { deal_offer: JSON.parse(readFileSync(join(DATA, "buyer-paid", "keep-copy.offer.json"), "utf8")) },
   },
 ];
 async function goldenPage(page) {
@@ -581,6 +589,40 @@ describe("the golden pages are checked in as the receipt draws them now (#509)",
       expect(html).not.toMatch(/<script|<link|<img|<iframe|\burl\(|@import/i);
     });
   }
+});
+
+// capsule-viewer#512: the buyer-paid page answers a buyer's "what was bought and paid, to whom". The fixture's own
+// facts are checked first, so a regenerated golden cannot accept a copy that is not a paid buyer's keep copy.
+describe("the paid buyer's own receipt (#512)", () => {
+  const page = GOLDEN_PAGES.find((p) => p.name === "buyer-paid");
+  it("the fixture: the buyer's keep copy, settled, its row agreed and met, offer price = row owed = payment", () => {
+    const b = page.bundle();
+    const report = b.extensions["x-deal-report/v0"].agent_input;
+    expect(report).toMatchObject({ audience: "keep", settled: true });
+    expect(report.rows).toHaveLength(1);
+    expect(report.rows[0]).toMatchObject({ id: "paid_as_agreed", owed_by: "buyer", status: "agreed", value: "met", owed: { amount_minor: 4500, currency: "USD" } });
+    const offer = page.assurance.deal_offer.body;
+    expect(offer).toMatchObject({ role: "buyer", terms: { item: "Oak desk lamp", quantity: 1, price_minor: 4500, currency: "USD" } });
+    expect(offer.terms_rows.rows[0].owed).toEqual(report.rows[0].owed);
+    // The one payment record: the buyer's own, settled, for the price (its settlement member, as capsulectl sealed it).
+    const paid = b.records.filter((r) => r.settlement).map((r) => r.settlement);
+    expect(paid).toEqual([expect.objectContaining({ sealer_role: "payer", status: "settled", amount: { assetCode: "USD", assetScale: 2, value: "4500" } })]);
+  });
+
+  it("the page: an order receipt naming the item, quantity and total, the amount paid, and the seller as the other side", async () => {
+    const { host } = await draw(page.bundle(), { assurance: page.assurance, depth: "L0" });
+    expect(q(host.L0, "[data-receipt-title]").textContent).toBe("Order receipt");
+    expect(q(host.L0, '[data-banner="private"]').textContent).toBe("Private: your copy");
+    expect(q(host.L0, "[data-top-line]").getAttribute("data-top-line")).toBe("settled");
+    expect(q(host.L0, "[data-hero-item]").textContent).toBe("Oak desk lamp");
+    expect(q(host.L0, "[data-hero-terms]").textContent).toBe("Quantity: 1 · Total: 45.00 USD");
+    const paid = q(host.L0, '[data-card="paid"]');
+    expect(paid.querySelector(".cv-rcpt-card__value").textContent).toBe("45.00 USD");
+    expect(paid.querySelector(".cv-rcpt-card__note").textContent).toBe("Recorded as settled");
+    const other = q(host.L0, '[data-card="other"]');
+    expect(other.querySelector(".cv-rcpt-card__label").textContent).toBe("Seller's side");
+    expect(other.querySelector(".cv-rcpt-card__value").textContent).toBe("Their signed agreement: checked");
+  });
 });
 
 // #461 in a real browser: on the first screen (900px high, as headlessChrome.js opens every page) the

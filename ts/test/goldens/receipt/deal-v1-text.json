@@ -32704,6 +32704,2541 @@
    }
   ]
  ],
+ "buyer-paid/keep-copy / own": [
+  [
+   {
+    "at": ".cv-rcpt-title data-receipt-title=buyer",
+    "text": "Order receipt"
+   },
+   {
+    "at": ".cv-rcpt-tag cv-rcpt-tag--private data-banner=private",
+    "text": "Private: your copy"
+   },
+   {
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-f9f179b3071d7cf7.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-seal data-seal=done",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-headline data-top-line=settled",
+    "text": "Settled, as your records show"
+   },
+   {
+    "at": ".cv-rcpt-lede data-hero-item=",
+    "text": "Oak desk lamp"
+   },
+   {
+    "at": ".cv-rcpt-lede data-hero-terms=",
+    "text": "Quantity: 1 · Total: 45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-mood data-mood=done",
+    "text": "Done: recorded as settled, and both sides say the same"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Intact, not true: the seal says the records are unchanged, not that what they say is true."
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Payment"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "Recorded as settled"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Status"
+   },
+   {
+    "at": "data-card-status=settled",
+    "text": "Settled"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "As of "
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Seller's side"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "Their signed agreement: checked"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "RECORDED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--filled data-stamp=recorded data-stamp-state=filled",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Checkpointed"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "TIME-STAMPED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=time_stamped data-stamp-state=not_checked",
+    "text": " "
+   },
+   {
+    "at": "data-cites-core=witness",
+    "text": "Not checked here"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "COUNTERSIGNED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=countersigned data-stamp-state=open",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Not countersigned"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What happened, step by step"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "4 sealed steps in this copy. Open one to see exactly what was recorded."
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "1"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Deal agreed"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inyour book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "When"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Side"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "4dd18dd8…5350"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": " · agree"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 1 · leaf 0"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "2"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Payment recorded as settled: 45.00 USD"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "settle"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inyour book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "When"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Paymentpayer_observed · settled"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "amount45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Payment reference"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "ln.payment_hash abababab…abab"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2fe18b0e…9777"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": " · settle"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 2 · leaf 1"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "3"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "You said: Payment as agreed: met"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inyour book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "When"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "met"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "f74f9bba…e10d"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": " · statement"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 3 · leaf 2"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "4"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "The other side said: Payment as agreed: met"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe other side's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "When"
+   },
+   {
+    "at": "data-time=2026-09-27T18:00:00Z",
+    "text": "@2026-09-27T18:00:00Z"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "met"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": " · statement"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 2"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What else is in this receipt"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Problems spotted"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=problems",
+    "text": "None"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Whose records these are"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=whose",
+    "text": "Only your side's records are here. The seller keeps its own copy, signed by them."
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "The other side's agreement"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=half",
+    "text": "This copy carries the seller's signed agreement. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "Is this record intact?"
+   },
+   {
+    "at": ".cv-rcpt-lede data-proof=passed",
+    "text": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself."
+   },
+   {
+    "at": "data-cites-core=checks",
+    "text": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+   },
+   {
+    "at": ".cv-rcpt-h4",
+    "text": "Check it yourself"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "On the downloaded proof file:"
+   },
+   {
+    "at": "data-verify-command=download",
+    "text": "capsulectl deal verify --bundle deal-f9f179b3071d7cf7.bundle.json"
+   },
+   {
+    "at": ".cv-muted data-expect=561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba",
+    "text": "Expect: VALID, fingerprint 561d7643…84ba."
+   },
+   {
+    "at": ".cv-rcpt-button data-proof-download=deal-f9f179b3071d7cf7.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What this does not prove"
+   },
+   {
+    "at": ".cv-rcpt-list",
+    "text": "That what the agents said was true. Only that it wasn't changed after sealing.Who made the records. The signing key is on your agent's machine.That the goods shipped or arrived.Anything outside this deal."
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "For checkers: every sealed record"
+   },
+   {
+    "at": ".cv-table",
+    "text": "StepWhatKindLog position (seq · leaf)RecordShown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "1"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "1 · 0"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": "",
+    "attrs": {
+     "title": "4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": "4dd18dd8…5350"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "2"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Payment recorded as settled: 45.00 USD"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "settle"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2 · 1"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": "",
+    "attrs": {
+     "title": "2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": "2fe18b0e…9777"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "3"
+   },
+   {
+    "at": "data-label=What",
+    "text": "You said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "3 · 2"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": "",
+    "attrs": {
+     "title": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": "f74f9bba…e10d"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "4"
+   },
+   {
+    "at": "data-label=What",
+    "text": "The other side said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2 · -"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": "",
+    "attrs": {
+     "title": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Log"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "deal/1a84cbfa4bbbb07fd5091a867865c999"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Proof fingerprint"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Profile checked against"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "x-deal-v1"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Producer versionnot recorded"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Wording pack"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "capsuleviewer.receipt.wording.en/v1"
+   },
+   {
+    "at": ".cv-metric__label",
+    "text": "Where it stands"
+   },
+   {
+    "at": "data-deal-state=started",
+    "text": "Agreement: started · "
+   },
+   {
+    "at": "data-settled=true",
+    "text": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it."
+   },
+   {
+    "at": ".cv-muted data-start-by=acceptor_named",
+    "text": "Started by: the acceptor, as named."
+   },
+   {
+    "at": ".cv-muted data-as-of=2026-11-06T09:00:00Z",
+    "text": "As the holder computed it at . This is not a time any witness attests."
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   },
+   {
+    "at": ".cv-muted data-sealed=x-deal-report",
+    "text": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Terms"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermOwed byStatusDueContest window endsDetail"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-row-status=agreed",
+    "text": "Both say the same"
+   },
+   {
+    "at": "data-time=2026-11-01T23:59:59Z",
+    "text": "@2026-11-01T23:59:59Z"
+   },
+   {
+    "at": "data-label=Due",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-time=2026-11-04T23:59:59Z",
+    "text": "@2026-11-04T23:59:59Z"
+   },
+   {
+    "at": "data-label=Contest window ends",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-label=Detail",
+    "text": "Statement: met; Payment check: not recomputed; Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Each status is the one the holder computed. This page shows it and does not compute it."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Payment records the terms' statuses rest on"
+   },
+   {
+    "at": ".cv-muted data-legs=none",
+    "text": "No payment record is among the records the terms' statuses rest on."
+   },
+   {
+    "at": ".cv-muted data-legs-why=statements",
+    "text": "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment."
+   },
+   {
+    "at": ".cv-rcpt-footer data-surface=footer",
+    "text": "Times are in your time zone. This file is your private copy: to show this deal to someone, send them the copy made for them. Records sealed after  are not in this receipt."
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "Technical details"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this copy carries"
+   },
+   {
+    "at": "data-rung=counterparty-half",
+    "text": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": "data-rung=countersign",
+    "text": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above."
+   },
+   {
+    "at": ".cv-drilldown__body",
+    "text": "The verifier's report is for the bundle with digest "
+   },
+   {
+    "at": ".cv-mono data-bundle-digest=true",
+    "text": "561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "The records each term's status rests on"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermRecordSideTimeTime from a named witness"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-label=Time",
+    "text": "no time"
+   },
+   {
+    "at": "data-named-witness=no",
+    "text": "no"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+   },
+   {
+    "at": ".cv-receipt-word data-side=seller",
+    "text": "seller"
+   },
+   {
+    "at": "data-label=Time",
+    "text": "no time"
+   },
+   {
+    "at": "data-named-witness=no",
+    "text": "no"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this report rests on"
+   },
+   {
+    "at": ".cv-muted data-pack=true",
+    "text": "The terms pack the agreement cites, by digest:"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The holder's own log held 3 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side's log was counted to 2 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side keeps its own record of this deal."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "This page's words: wording pack capsuleviewer.receipt.wording.en/v1, sha256 <PACK_SHA256>."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Other records in this file"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Records this file carries beside the deal's own, such as the ruling, shown as they were recorded."
+   },
+   {
+    "at": ".cv-mono",
+    "text": "",
+    "attrs": {
+     "title": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+    }
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-raw",
+    "text": "{\n  \"action_id\": \"deal/dca873ee1fb74f32aee116d061faaff1#2\",\n  \"action_type\": \"fyi\",\n  \"assurance\": {\n    \"attestation_mode\": \"self_attested\",\n    \"effect_mode\": \"not_applicable\",\n    \"ledger_mode\": \"standalone\"\n  },\n  \"canonicalization_id\": \"jcs\",\n  \"capsule_id\": \"c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046\",\n  \"developer\": \"capsulectl-deal\",\n  \"format_version\": \"4\",\n  \"key_id\": \"e2bb14def895e88965175cad1054e3a0cfe91d2ce54cb324f2935d2796a7ce67\",\n  \"model_attestation\": {\n    \"compute_attestation\": {\n      \"agent_input_digest\": \"c4bfe40a19f4454adfca9c4c7a87516647dfc817fec41838138052eb741d0320\"\n    }\n  },\n  \"operator\": \"deal\",\n  \"references\": [\n    {\n      \"digest\": \"3fb01eb6f897c19a17c977779d26caa8d0a3d878667f5a2360a1f00430a20638\",\n      \"digest_alg\": \"SHA-256\",\n      \"type\": \"agent-action-capsule\"\n    }\n  ],\n  \"signature\": \"d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820e2bb14def895e88965175cad1054e3a0cfe91d2ce54cb324f2935d2796a7ce670127a05820c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b4104658401a55743023759b74fc2366ffe3061a0e597db266be8a095d5f7cf7181cbd2fcb91734d6ebe1c2a6bed14a70895b8185ae100f9cd8d51af00c838fe292c361a0f\",\n  \"spec_version\": \"draft-mih-scitt-agent-action-capsule-05\",\n  \"timestamp\": \"2026-09-27T18:00:00Z\"\n}"
+   }
+  ]
+ ],
+ "buyer-paid/keep-copy / report": [
+  [
+   {
+    "at": ".cv-rcpt-title data-receipt-title=buyer",
+    "text": "Order receipt"
+   },
+   {
+    "at": ".cv-rcpt-tag data-banner=shared",
+    "text": "Shared copy"
+   },
+   {
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-f9f179b3071d7cf7.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-seal data-seal=done",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-headline data-top-line=settled",
+    "text": "Settled, as the holder's records show"
+   },
+   {
+    "at": ".cv-rcpt-mood data-mood=done",
+    "text": "Done: recorded as settled, and both sides say the same"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Intact, not true: the seal says the records are unchanged, not that what they say is true."
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Payment"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "Recorded as settled"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Status"
+   },
+   {
+    "at": "data-card-status=settled",
+    "text": "Settled"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "As of "
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Seller's side"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "Their signed agreement: checked"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "RECORDED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--filled data-stamp=recorded data-stamp-state=filled",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Checkpointed"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "TIME-STAMPED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=time_stamped data-stamp-state=not_checked",
+    "text": " "
+   },
+   {
+    "at": "data-cites-core=witness",
+    "text": "Not checked here"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "COUNTERSIGNED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=countersigned data-stamp-state=open",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Not countersigned"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What happened, step by step"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "4 sealed steps in this copy. Open one to see exactly what was recorded."
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "1"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Side"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "4dd18dd8…5350"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": " · agree"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 1 · leaf 0"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "2"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Payment recorded as settled: 45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "settle"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Paymentpayer_observed · settled"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "amount45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Payment reference"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "ln.payment_hash abababab…abab"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2fe18b0e…9777"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": " · settle"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 2 · leaf 1"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "3"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "The holder said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "met"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "f74f9bba…e10d"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": " · statement"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 3 · leaf 2"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "4"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "The other side said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe other side's book"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "met"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": " · statement"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 2"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What else is in this receipt"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Problems spotted"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=problems",
+    "text": "None"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Whose records these are"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=whose",
+    "text": "Only the holder's side's records are here."
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "The other side's agreement"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=half",
+    "text": "This copy carries the other side's signed agreement. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "Is this record intact?"
+   },
+   {
+    "at": ".cv-rcpt-lede data-proof=passed",
+    "text": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself."
+   },
+   {
+    "at": "data-cites-core=checks",
+    "text": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+   },
+   {
+    "at": ".cv-rcpt-h4",
+    "text": "Check it yourself"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "On the downloaded proof file:"
+   },
+   {
+    "at": "data-verify-command=download",
+    "text": "capsulectl deal verify --bundle deal-f9f179b3071d7cf7.bundle.json"
+   },
+   {
+    "at": ".cv-muted data-expect=561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba",
+    "text": "Expect: VALID, fingerprint 561d7643…84ba."
+   },
+   {
+    "at": ".cv-rcpt-button data-proof-download=deal-f9f179b3071d7cf7.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What this does not prove"
+   },
+   {
+    "at": ".cv-rcpt-list",
+    "text": "That what the agents said was true. Only that it wasn't changed after sealing.Who made the records. The signing key is on the holder's agent's machine.That the goods shipped or arrived.Anything outside this deal."
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "For checkers: every sealed record"
+   },
+   {
+    "at": ".cv-table",
+    "text": "StepWhatKindLog position (seq · leaf)RecordShown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "1"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "1 · 0"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": "",
+    "attrs": {
+     "title": "4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": "4dd18dd8…5350"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "2"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Payment recorded as settled: 45.00 USD"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "settle"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2 · 1"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": "",
+    "attrs": {
+     "title": "2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": "2fe18b0e…9777"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "3"
+   },
+   {
+    "at": "data-label=What",
+    "text": "The holder said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "3 · 2"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": "",
+    "attrs": {
+     "title": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": "f74f9bba…e10d"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "4"
+   },
+   {
+    "at": "data-label=What",
+    "text": "The other side said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2 · -"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": "",
+    "attrs": {
+     "title": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Log"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "deal/1a84cbfa4bbbb07fd5091a867865c999"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Proof fingerprint"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Profile checked against"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "x-deal-v1"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Producer versionnot recorded"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Wording pack"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "capsuleviewer.receipt.wording.en/v1"
+   },
+   {
+    "at": ".cv-metric__label",
+    "text": "Where it stands"
+   },
+   {
+    "at": "data-deal-state=started",
+    "text": "Agreement: started · "
+   },
+   {
+    "at": "data-settled=true",
+    "text": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it."
+   },
+   {
+    "at": ".cv-muted data-start-by=acceptor_named",
+    "text": "Started by: the acceptor, as named."
+   },
+   {
+    "at": ".cv-muted data-as-of=2026-11-06T09:00:00Z",
+    "text": "As the holder computed it at . This is not a time any witness attests."
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   },
+   {
+    "at": ".cv-muted data-sealed=x-deal-report",
+    "text": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Terms"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermOwed byStatusDueContest window endsDetail"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-row-status=agreed",
+    "text": "Both say the same"
+   },
+   {
+    "at": "data-time=2026-11-01T23:59:59Z",
+    "text": "@2026-11-01T23:59:59Z"
+   },
+   {
+    "at": "data-label=Due",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-time=2026-11-04T23:59:59Z",
+    "text": "@2026-11-04T23:59:59Z"
+   },
+   {
+    "at": "data-label=Contest window ends",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-label=Detail",
+    "text": "Statement: met; Payment check: not recomputed; Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Each status is the one the holder computed. This page shows it and does not compute it."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Payment records the terms' statuses rest on"
+   },
+   {
+    "at": ".cv-muted data-legs=none",
+    "text": "No payment record is among the records the terms' statuses rest on."
+   },
+   {
+    "at": ".cv-muted data-legs-why=statements",
+    "text": "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment."
+   },
+   {
+    "at": ".cv-rcpt-footer data-surface=footer",
+    "text": "Times are in your time zone. This is a shared copy of the holder's records. Records sealed after  are not in this receipt."
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "Technical details"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this copy carries"
+   },
+   {
+    "at": "data-rung=counterparty-half",
+    "text": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": "data-rung=countersign",
+    "text": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above."
+   },
+   {
+    "at": ".cv-drilldown__body",
+    "text": "The verifier's report is for the bundle with digest "
+   },
+   {
+    "at": ".cv-mono data-bundle-digest=true",
+    "text": "561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "The records each term's status rests on"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermRecordSide"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+   },
+   {
+    "at": ".cv-receipt-word data-side=seller",
+    "text": "seller"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this report rests on"
+   },
+   {
+    "at": ".cv-muted data-pack=true",
+    "text": "The terms pack the agreement cites, by digest:"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The holder's own log held 3 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side's log was counted to 2 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side keeps its own record of this deal."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "This page's words: wording pack capsuleviewer.receipt.wording.en/v1, sha256 <PACK_SHA256>."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Other records in this file"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Records this file carries beside the deal's own, such as the ruling, shown as they were recorded. Their times are left out of this copy."
+   },
+   {
+    "at": ".cv-mono",
+    "text": "",
+    "attrs": {
+     "title": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+    }
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-raw",
+    "text": "{\n  \"action_id\": \"deal/dca873ee1fb74f32aee116d061faaff1#2\",\n  \"action_type\": \"fyi\",\n  \"assurance\": {\n    \"attestation_mode\": \"self_attested\",\n    \"effect_mode\": \"not_applicable\",\n    \"ledger_mode\": \"standalone\"\n  },\n  \"canonicalization_id\": \"jcs\",\n  \"capsule_id\": \"c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046\",\n  \"developer\": \"capsulectl-deal\",\n  \"format_version\": \"4\",\n  \"key_id\": \"e2bb14def895e88965175cad1054e3a0cfe91d2ce54cb324f2935d2796a7ce67\",\n  \"model_attestation\": {\n    \"compute_attestation\": {\n      \"agent_input_digest\": \"c4bfe40a19f4454adfca9c4c7a87516647dfc817fec41838138052eb741d0320\"\n    }\n  },\n  \"operator\": \"deal\",\n  \"references\": [\n    {\n      \"digest\": \"3fb01eb6f897c19a17c977779d26caa8d0a3d878667f5a2360a1f00430a20638\",\n      \"digest_alg\": \"SHA-256\",\n      \"type\": \"agent-action-capsule\"\n    }\n  ],\n  \"signature\": \"d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820e2bb14def895e88965175cad1054e3a0cfe91d2ce54cb324f2935d2796a7ce670127a05820c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b4104658401a55743023759b74fc2366ffe3061a0e597db266be8a095d5f7cf7181cbd2fcb91734d6ebe1c2a6bed14a70895b8185ae100f9cd8d51af00c838fe292c361a0f\",\n  \"spec_version\": \"draft-mih-scitt-agent-action-capsule-05\"\n}"
+   }
+  ]
+ ],
+ "buyer-paid/keep-copy / page": [
+  [
+   {
+    "at": ".cv-rcpt-title data-receipt-title=buyer",
+    "text": "Order receipt"
+   },
+   {
+    "at": ".cv-rcpt-tag data-banner=shared",
+    "text": "Shared copy"
+   },
+   {
+    "at": ".cv-rcpt-button cv-rcpt-button--primary data-proof-download=deal-f9f179b3071d7cf7.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-seal data-seal=done",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-headline data-top-line=settled",
+    "text": "Settled, as the holder's records show"
+   },
+   {
+    "at": ".cv-rcpt-mood data-mood=done",
+    "text": "Done: recorded as settled, and both sides say the same"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Intact, not true: the seal says the records are unchanged, not that what they say is true."
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Payment"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "Recorded as settled"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Status"
+   },
+   {
+    "at": "data-card-status=settled",
+    "text": "Settled"
+   },
+   {
+    "at": ".cv-rcpt-card__note",
+    "text": "As of "
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   },
+   {
+    "at": ".cv-rcpt-card__label",
+    "text": "Seller's side"
+   },
+   {
+    "at": ".cv-rcpt-card__value",
+    "text": "Their signed agreement: checked"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "RECORDED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--filled data-stamp=recorded data-stamp-state=filled",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Checkpointed"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "TIME-STAMPED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=time_stamped data-stamp-state=not_checked",
+    "text": " "
+   },
+   {
+    "at": "data-cites-core=witness",
+    "text": "Not checked here"
+   },
+   {
+    "at": ".cv-rcpt-stamp__name",
+    "text": "COUNTERSIGNED"
+   },
+   {
+    "at": ".cv-rcpt-stamp cv-rcpt-stamp--open data-stamp=countersigned data-stamp-state=open",
+    "text": " "
+   },
+   {
+    "at": ".cv-rcpt-stamp__text",
+    "text": "Not countersigned"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What happened, step by step"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "4 sealed steps in this copy. Open one to see exactly what was recorded."
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "1"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Side"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "4dd18dd8…5350"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": " · agree"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 1 · leaf 0"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "2"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "Payment recorded as settled: 45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "settle"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Paymentpayer_observed · settled"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "amount45.00 USD"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Payment reference"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "ln.payment_hash abababab…abab"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2fe18b0e…9777"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": " · settle"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 2 · leaf 1"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "3"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "The holder said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe holder's book"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "met"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "f74f9bba…e10d"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": " · statement"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 3 · leaf 2"
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "",
+    "attrs": {
+     "aria-hidden": "true"
+    }
+   },
+   {
+    "at": ".cv-rcpt-step__n",
+    "text": "4"
+   },
+   {
+    "at": ".cv-rcpt-step__title",
+    "text": "The other side said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Kind"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Recorded inthe other side's book"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "met"
+   },
+   {
+    "at": ".cv-rcpt-record__label",
+    "text": "Record"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": ".cv-rcpt-id data-record-id=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": " · statement"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-fullid",
+    "text": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+   },
+   {
+    "at": ".cv-mono cv-muted",
+    "text": "seq 2"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What else is in this receipt"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Problems spotted"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=problems",
+    "text": "None"
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "Whose records these are"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=whose",
+    "text": "Only the holder's side's records are here."
+   },
+   {
+    "at": ".cv-rcpt-tile__label",
+    "text": "The other side's agreement"
+   },
+   {
+    "at": ".cv-rcpt-tile data-else=half",
+    "text": "This copy carries the other side's signed agreement. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "Is this record intact?"
+   },
+   {
+    "at": ".cv-rcpt-lede data-proof=passed",
+    "text": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself."
+   },
+   {
+    "at": "data-cites-core=checks",
+    "text": "Each check, and whether capsulectl verify or this page ran it, is listed under “How this page was checked”."
+   },
+   {
+    "at": ".cv-rcpt-h4",
+    "text": "Check it yourself"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "On the downloaded proof file:"
+   },
+   {
+    "at": "data-verify-command=download",
+    "text": "capsulectl deal verify --bundle deal-f9f179b3071d7cf7.bundle.json"
+   },
+   {
+    "at": ".cv-muted data-expect=561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba",
+    "text": "Expect: VALID, fingerprint 561d7643…84ba."
+   },
+   {
+    "at": ".cv-rcpt-button data-proof-download=deal-f9f179b3071d7cf7.bundle.json",
+    "text": "Download proof file"
+   },
+   {
+    "at": ".cv-rcpt-h",
+    "text": "What this does not prove"
+   },
+   {
+    "at": ".cv-rcpt-list",
+    "text": "That what the agents said was true. Only that it wasn't changed after sealing.Who made the records. The signing key is on the holder's agent's machine.That the goods shipped or arrived.Anything outside this deal."
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "For checkers: every sealed record"
+   },
+   {
+    "at": ".cv-table",
+    "text": "StepWhatKindLog position (seq · leaf)RecordShown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "1"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Deal agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "agree"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "1 · 0"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": "",
+    "attrs": {
+     "title": "4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=4dd18dd87e255868135f10fd70b0172d918133f0aa674fa16dfb6ac51d605350",
+    "text": "4dd18dd8…5350"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "2"
+   },
+   {
+    "at": "data-label=What",
+    "text": "Payment recorded as settled: 45.00 USD"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "settle"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2 · 1"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": "",
+    "attrs": {
+     "title": "2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=2fe18b0e61c1041c8fb279f0c31d4e564013475597f797df69673babc03d9777",
+    "text": "2fe18b0e…9777"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "3"
+   },
+   {
+    "at": "data-label=What",
+    "text": "The holder said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "3 · 2"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": "",
+    "attrs": {
+     "title": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d",
+    "text": "f74f9bba…e10d"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": "data-label=Step",
+    "text": "4"
+   },
+   {
+    "at": "data-label=What",
+    "text": "The other side said: Payment as agreed: met"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "statement"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "2 · -"
+   },
+   {
+    "at": ".cv-mono data-inventory-record=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": "",
+    "attrs": {
+     "title": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+    }
+   },
+   {
+    "at": ".cv-mono data-inventory-record=c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": "data-label=Shown",
+    "text": "Shown"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Log"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "deal/1a84cbfa4bbbb07fd5091a867865c999"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Proof fingerprint"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Profile checked against"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "x-deal-v1"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Producer versionnot recorded"
+   },
+   {
+    "at": ".cv-rcpt-field",
+    "text": "Wording pack"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "capsuleviewer.receipt.wording.en/v1"
+   },
+   {
+    "at": ".cv-metric__label",
+    "text": "Where it stands"
+   },
+   {
+    "at": "data-deal-state=started",
+    "text": "Agreement: started · "
+   },
+   {
+    "at": "data-settled=true",
+    "text": "Settled: every term has both sides saying the same, is uncontested, or is ruled with its remedy made, as the holder computed it."
+   },
+   {
+    "at": ".cv-muted data-start-by=acceptor_named",
+    "text": "Started by: the acceptor, as named."
+   },
+   {
+    "at": ".cv-muted data-as-of=2026-11-06T09:00:00Z",
+    "text": "As the holder computed it at . This is not a time any witness attests."
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   },
+   {
+    "at": ".cv-muted data-sealed=x-deal-report",
+    "text": "This report's text is carried in the file outside the log. capsulectl verify reported its signature check as: pass. This page did not check the signature itself."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "A report that passes the check shows who signed it and which deal it covers. It does not show that each term's status is correct. It is the holder's own record of the deal."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Terms"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermOwed byStatusDueContest window endsDetail"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": "data-row-status=agreed",
+    "text": "Both say the same"
+   },
+   {
+    "at": "data-time=2026-11-01T23:59:59Z",
+    "text": "@2026-11-01T23:59:59Z"
+   },
+   {
+    "at": "data-label=Due",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-time=2026-11-04T23:59:59Z",
+    "text": "@2026-11-04T23:59:59Z"
+   },
+   {
+    "at": "data-label=Contest window ends",
+    "text": " (23:59 UTC)"
+   },
+   {
+    "at": "data-label=Detail",
+    "text": "Statement: met; Payment check: not recomputed; Holder's time only: this result rests on a record with no time from a named witness, so when it happened is the holder's own word."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Each status is the one the holder computed. This page shows it and does not compute it."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Payment records the terms' statuses rest on"
+   },
+   {
+    "at": ".cv-muted data-legs=none",
+    "text": "No payment record is among the records the terms' statuses rest on."
+   },
+   {
+    "at": ".cv-muted data-legs-why=statements",
+    "text": "These terms rest only on what the sides say, not on a payment record, so this page does not show or check a payment."
+   },
+   {
+    "at": ".cv-rcpt-footer data-surface=footer",
+    "text": "Times are in your time zone. This is a shared copy of the holder's records. Records sealed after  are not in this receipt."
+   },
+   {
+    "at": "data-time=2026-11-06T09:00:00Z",
+    "text": "@2026-11-06T09:00:00Z"
+   }
+  ],
+  [
+   {
+    "at": ".cv-drilldown data-cv=drilldown",
+    "text": "Technical details"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this copy carries"
+   },
+   {
+    "at": "data-rung=counterparty-half",
+    "text": "Signed by both sides: this copy carries the other party's signed agreement, recorded in their own book. capsulectl verify reported it as verified; this page did not check it itself. It covers their agreement only, not anything after it."
+   },
+   {
+    "at": "data-rung=countersign",
+    "text": "No countersignature in this copy (a separate signature over the whole copy). The other party's own signed agreement is the line above."
+   },
+   {
+    "at": ".cv-drilldown__body",
+    "text": "The verifier's report is for the bundle with digest "
+   },
+   {
+    "at": ".cv-mono data-bundle-digest=true",
+    "text": "561d764370aced9cf99f677720be74982103214bdc399cac9adafc77fd9c84ba"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "The records each term's status rests on"
+   },
+   {
+    "at": ".cv-table",
+    "text": "TermRecordSide"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "f74f9bbae84a7851fd9c05ddc0a8a78d45b64a626cb72fdd1896bb5666a8e10d"
+   },
+   {
+    "at": ".cv-receipt-word data-side=buyer",
+    "text": "buyer"
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "",
+    "attrs": {
+     "title": "paid_as_agreed"
+    }
+   },
+   {
+    "at": ".cv-receipt-word data-row-id=paid_as_agreed",
+    "text": "Payment as agreed"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+   },
+   {
+    "at": ".cv-receipt-word data-side=seller",
+    "text": "seller"
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "What this report rests on"
+   },
+   {
+    "at": ".cv-muted data-pack=true",
+    "text": "The terms pack the agreement cites, by digest:"
+   },
+   {
+    "at": ".cv-mono",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The holder's own log held 3 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side's log was counted to 2 records."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "The other side keeps its own record of this deal."
+   },
+   {
+    "at": ".cv-muted",
+    "text": "This page's words: wording pack capsuleviewer.receipt.wording.en/v1, sha256 <PACK_SHA256>."
+   },
+   {
+    "at": ".cv-section__title",
+    "text": "Other records in this file"
+   },
+   {
+    "at": ".cv-muted",
+    "text": "Records this file carries beside the deal's own, such as the ruling, shown as they were recorded. Their times are left out of this copy."
+   },
+   {
+    "at": ".cv-mono",
+    "text": "",
+    "attrs": {
+     "title": "c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046"
+    }
+   },
+   {
+    "at": ".cv-mono",
+    "text": "c090bd47…1046"
+   },
+   {
+    "at": ".cv-mono cv-rcpt-raw",
+    "text": "{\n  \"action_id\": \"deal/dca873ee1fb74f32aee116d061faaff1#2\",\n  \"action_type\": \"fyi\",\n  \"assurance\": {\n    \"attestation_mode\": \"self_attested\",\n    \"effect_mode\": \"not_applicable\",\n    \"ledger_mode\": \"standalone\"\n  },\n  \"canonicalization_id\": \"jcs\",\n  \"capsule_id\": \"c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b41046\",\n  \"developer\": \"capsulectl-deal\",\n  \"format_version\": \"4\",\n  \"key_id\": \"e2bb14def895e88965175cad1054e3a0cfe91d2ce54cb324f2935d2796a7ce67\",\n  \"model_attestation\": {\n    \"compute_attestation\": {\n      \"agent_input_digest\": \"c4bfe40a19f4454adfca9c4c7a87516647dfc817fec41838138052eb741d0320\"\n    }\n  },\n  \"operator\": \"deal\",\n  \"references\": [\n    {\n      \"digest\": \"3fb01eb6f897c19a17c977779d26caa8d0a3d878667f5a2360a1f00430a20638\",\n      \"digest_alg\": \"SHA-256\",\n      \"type\": \"agent-action-capsule\"\n    }\n  ],\n  \"signature\": \"d284584ca30378236170706c69636174696f6e2f6167656e742d616374696f6e2d63617073756c652d6964045820e2bb14def895e88965175cad1054e3a0cfe91d2ce54cb324f2935d2796a7ce670127a05820c090bd4782da04c258b1da8d1cc02903211524c917968a34920fb6e1b9b4104658401a55743023759b74fc2366ffe3061a0e597db266be8a095d5f7cf7181cbd2fcb91734d6ebe1c2a6bed14a70895b8185ae100f9cd8d51af00c838fe292c361a0f\",\n  \"spec_version\": \"draft-mih-scitt-agent-action-capsule-05\"\n}"
+   }
+  ]
+ ],
  "countersigned/same-checkpoint+copy / own": [
   [
    {
