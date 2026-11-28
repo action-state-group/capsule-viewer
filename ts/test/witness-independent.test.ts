@@ -234,6 +234,77 @@ describe("the witness's directory entry on an x-deal-v1 keep page (#508)", () =>
   });
 });
 
+describe("a witness the reader's directory marks as its own (u655)", () => {
+  const own: [string, Obj, boolean][] = [
+    ["own, an empty list", { own_witness: true, independent_of: [] }, false],
+    [
+      "own, the holder only",
+      { own_witness: true, independent_of: HOLDER },
+      false,
+    ],
+    ["own, no list", { own_witness: true }, false],
+    [
+      "not own (false), an empty list",
+      { own_witness: false, independent_of: [] },
+      true,
+    ],
+    ["mark absent, an empty list", { independent_of: [] }, true],
+    [
+      "a mark that is not true",
+      { own_witness: "true", independent_of: [] },
+      true,
+    ],
+  ];
+
+  it("draws no not-listed line for its own witness, on every surface; any other mark keeps the key rule", async () => {
+    for (const [why, member, notListed] of own) {
+      const root = await fullPage(v1Report(verified(member)));
+      for (const [where, text, sentence] of [
+        ["stamp", stampText(root), NOT_LISTED],
+        ["banner", banner(root), LINE_NOT_LISTED],
+        ["check list", checkRow(root), LINE_NOT_LISTED],
+      ] as const) {
+        expect(text, `${why}: ${where}`).toContain("Example Witness");
+        expect(text.includes(sentence), `${why}: ${where}`).toBe(notListed);
+      }
+      root.remove();
+      const host = await alone(v1Copy(), v1Report(verified(member)));
+      expect(proofRow(host).includes(NOT_LISTED), `${why}: proof`).toBe(
+        notListed,
+      );
+    }
+  });
+
+  it("names a failed or withheld own witness without the line", async () => {
+    for (const status of ["failed", "withheld"]) {
+      const witnessed = {
+        status,
+        witness: "Example Witness",
+        own_witness: true,
+        independent_of: [],
+      };
+      const host = await alone(v1Copy(), v1Report(witnessed));
+      expect(stampText(host), status).toContain("Example Witness");
+      expect(host.textContent, status).not.toContain(NOT_LISTED);
+      const root = await fullPage(v1Report(witnessed));
+      expect(checkRow(root), status).toContain("from Example Witness");
+      expect(root.textContent, status).not.toContain(LINE_NOT_LISTED);
+      root.remove();
+    }
+  });
+
+  it("on an x-deal-v0 copy too", async () => {
+    const host = await alone(
+      v0Copy(),
+      v0Report(verified({ own_witness: true, independent_of: [] })),
+    );
+    expect(host.querySelector('[data-rung="witness"]')?.textContent).toContain(
+      "Time-stamped by Example Witness at ",
+    );
+    expect(host.textContent).not.toContain(LINE_NOT_LISTED);
+  });
+});
+
 describe("the witness's directory entry on an x-deal-v0 keep copy (#508)", () => {
   const witnessRung = (host: HTMLElement): string =>
     host.querySelector('[data-rung="witness"]')?.textContent ?? "";

@@ -304,9 +304,16 @@ function withVerdict(
  * answer, left out when the member carries no list or the page cannot tell,
  * so the witness line then says nothing about independence. A member
  * capsulectl sent under that name is never taken as the page's answer.
+ *
+ * A witness the reader's directory marks as its own (`own_witness: true`,
+ * carried from the row capsulectl selected) gets no answer either: under
+ * u120 our witness stays independent, so no receipt says its entry does not
+ * list it as independent (ops u655, Steven's (A) on #508). Any other value
+ * of the mark, or none, is not own, and the key rule above applies.
  */
 function witnessedOf(context: VerifiedBundleContext, given: Obj): Obj {
   const { independent: _sent, ...witnessed } = given;
+  if (witnessed["own_witness"] === true) return witnessed;
   const listed = witnessed["independent_of"];
   if (!Array.isArray(listed) || !listed.every((key) => typeof key === "string"))
     return witnessed;
