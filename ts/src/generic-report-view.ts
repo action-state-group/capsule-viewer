@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
-import type {
-  BundleVerificationResult,
-  ResultClaim,
-  ResultRoot,
+import {
+  subjectBundleBinding,
+  type BundleVerificationResult,
+  type ResultClaim,
+  type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { ClaimReason } from "./claim-reasons.js";
 import type { Words } from "./contract-report-wording.js";
@@ -248,6 +249,12 @@ export interface ReceiptsInput {
    * Absent, a claim's deal is its id's part before `::` ({@link dealIdOf}).
    */
   readonly deals?: Readonly<Record<string, string>>;
+  /**
+   * The claims whose carried receipt is a different Bundle from the one the
+   * claim's `subject_bundle` names (agent-action-capsule Evidence Result
+   * §4.5), by claim id. {@link drawGeneric} fills it; a caller never does.
+   */
+  readonly different?: ReadonlySet<string>;
 }
 
 /** The deal a claim belongs to: its id before the first `::`, as the inference-deals Result writes it, or none. */
@@ -269,6 +276,50 @@ function dealOf(
   return Object.prototype.hasOwnProperty.call(receipts.deals, claim.id)
     ? receipts.deals[claim.id]
     : undefined;
+}
+
+/**
+ * The claims whose carried receipt is not the Bundle their `subject_bundle`
+ * names (Evidence Result §4.5): the carried bundle's bundle digest differs.
+ * A claim with no `subject_bundle` binds nothing and is never here, and a
+ * text that is not a JSON object is left to opening, which says it could not
+ * be read: a different Bundle is never worded as a load error, nor a load
+ * error as a different Bundle.
+ */
+async function differentReceipts(
+  claims: readonly ResultClaim[],
+  receipts: ReceiptsInput,
+): Promise<Set<string>> {
+  const different = new Set<string>();
+  for (const claim of claims) {
+    if (claim.subjectBundle === undefined) continue;
+    const deal = dealOf(claim, receipts);
+    if (deal === undefined) continue;
+    const text = Object.prototype.hasOwnProperty.call(receipts.texts, deal)
+      ? receipts.texts[deal]
+      : undefined;
+    if (typeof text !== "string") continue;
+    let carried: unknown;
+    try {
+      carried = JSON.parse(text);
+    } catch {
+      continue;
+    }
+    if (
+      typeof carried !== "object" ||
+      carried === null ||
+      Array.isArray(carried)
+    )
+      continue;
+    if (
+      (await subjectBundleBinding(
+        claim.subjectBundle,
+        carried as Record<string, unknown>,
+      )) === "different"
+    )
+      different.add(claim.id);
+  }
+  return different;
 }
 
 /**
@@ -313,6 +364,14 @@ function receiptLine(
       ),
     );
     note.dataset.receipt = kind;
+    line.append(note);
+    return [line];
+  }
+  if (receipts.different?.has(claim.id) === true) {
+    // Another Bundle than the one this Result names for the claim: never
+    // shown as this claim's, and no control to open it (§4.5).
+    const note = el("p", "rcpt-note", w.t("generic.receipt.different"));
+    note.dataset.receipt = "different";
     line.append(note);
     return [line];
   }
@@ -551,8 +610,12 @@ export async function drawGeneric(
   w: Words,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  given?: ReceiptsInput,
 ): Promise<void> {
+  const receipts: ReceiptsInput | undefined =
+    given === undefined
+      ? undefined
+      : { ...given, different: await differentReceipts(result.claims, given) };
   const tierFor = (claim: ResultClaim): RowTier =>
     tierOf === undefined
       ? "unstated"

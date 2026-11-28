@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Added
+
+- A report page compares each carried deal receipt with the receipt its claim names (#353). When a claim carries agent-action-capsule's `subject_bundle` (Evidence Result §4.5, agent-action-capsule#674), the generic grouping computes the carried receipt's bundle digest before it draws the claim's receipt line. A different receipt is not shown and gets no "Open receipt" control. It reads with the new locked entry `generic.receipt.different` ("This receipt is not the one this report names for this deal, so it is not shown. The rest of the report is unchanged."), never as a load or check failure. An equal one opens as before and still shows the receipt's own checks. A claim with no `subject_bundle` is paired by its deal key alone, as before. `spec/contract-report-module-v1.md` §2 "Deal receipts" states the comparison. Needs agent-action-capsule's TypeScript package with `subjectBundleBinding`.
+
 ### Changed
 
 - The receipt's witness lines (the x-deal-v1 TIME-STAMPED stamp and "Witness time stamp" row, the page core's witness check and banner line, and the x-deal-v0 witness line) read the witness's directory entry when capsulectl's `witnessed` member carries it as `independent_of` (#508, the reading contract of ops u652): unless that list names both parties' keys, the line adds "Its directory entry does not list it as independent of the parties.", as the countersigned copy's does (#457). With no list, or a list the page cannot judge, nothing is said about independence, and nothing is said for a witness the reader's directory marks as its own (`own_witness: true`, carried by capsulectl; ops u655). A failed or withheld time stamp names its witness where capsulectl names it, and says the same of that witness's entry.

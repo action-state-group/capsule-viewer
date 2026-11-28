@@ -485,6 +485,23 @@ CONTRACT_REPORT_MODULE = Move(
             "capsule-viewer#228: a deal line opens the receipt module",
         ),
         (
+            "The module pairs a claim with a receipt by the deal id key alone and cannot check that the\n"
+            "  receipt is that deal's (a claim's deal id is the producer's own index, not an id the receipt carries):\n"
+            "  that filing is the page builder's, and the module trusts it. The page\n"
+            "  reaches nothing outside itself. These seven strings are locked entries (§3): a pack cannot reword them.",
+            "The module pairs a claim with a receipt by the deal id key. When the claim carries\n"
+            "  `subject_bundle` (ER §4.5), the module also computes the carried bundle's bundle digest and compares\n"
+            "  it with the member's digest before it draws anything for the claim: a different bundle says\n"
+            "  `generic.receipt.different`, with no control, and is never worded as a load error or a failed check;\n"
+            "  an equal one draws the control as above, and opening still shows the receipt's own checks, since a\n"
+            "  match is not a pass. A text that is not JSON is not compared and opens as unreadable. A claim with no\n"
+            "  `subject_bundle` is paired by the key alone, a filing that is the page builder's and that the module\n"
+            "  trusts (capsule-viewer#353). The comparison is display-only: no verdict, grade, tally, bucket or count\n"
+            "  changes with it. The page\n"
+            "  reaches nothing outside itself. These nine strings are locked entries (§3): a pack cannot reword them.",
+            "capsule-viewer#353: a carried receipt is compared with the claim's subject_bundle",
+        ),
+        (
             "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n",
             "| `row.<requirement_ref>.label`, `.detail`, `.not_evaluable` | A row's name, its explanation, and the note shown when its claims are not evaluable. |\n"
             "| `row.<requirement_ref>.reason.<code>` | The pack's sentence for a claim's `reason` token `<code>` (§2). `<code>` is a token ER §4.4 registers, other than `label`, `detail` and `not_evaluable`, which would name another row key. With no sentence for a token, the module shows the core's words for a registered token and the raw token for any other, never nothing. |\n",

@@ -132,10 +132,16 @@ rules bind it:
   JSON says `generic.receipt.unreadable`, one that does not pass its checks says
   `generic.receipt.unverified` (a failed check is never worded as a load error), and a verified one no
   receipt module takes says `generic.receipt.no_module`; none draws a fallback page, and the report is
-  unchanged. The module pairs a claim with a receipt by the deal id key alone and cannot check that the
-  receipt is that deal's (a claim's deal id is the producer's own index, not an id the receipt carries):
-  that filing is the page builder's, and the module trusts it. The page
-  reaches nothing outside itself. These seven strings are locked entries (§3): a pack cannot reword them.
+  unchanged. The module pairs a claim with a receipt by the deal id key. When the claim carries
+  `subject_bundle` (ER §4.5), the module also computes the carried bundle's bundle digest and compares
+  it with the member's digest before it draws anything for the claim: a different bundle says
+  `generic.receipt.different`, with no control, and is never worded as a load error or a failed check;
+  an equal one draws the control as above, and opening still shows the receipt's own checks, since a
+  match is not a pass. A text that is not JSON is not compared and opens as unreadable. A claim with no
+  `subject_bundle` is paired by the key alone, a filing that is the page builder's and that the module
+  trusts (capsule-viewer#353). The comparison is display-only: no verdict, grade, tally, bucket or count
+  changes with it. The page
+  reaches nothing outside itself. These nine strings are locked entries (§3): a pack cannot reword them.
 - **Other sealed records.** A module MAY also show other sealed records of the bundle (for example
   per-case reports) under the same rules: every number traces to sealed records, withheld stays
   explicit, and producer text is labelled as the producer's.
