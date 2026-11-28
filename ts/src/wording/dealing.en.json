@@ -1,0 +1,34 @@
+{
+  "wording_pack_version": "0",
+  "id": "capsuleviewer.dealing.wording/v0",
+  "locale": "en",
+  "_comment": "The one layer order and the one set of status words for every surface that shows a deal: the receipt, the History view and the Mesh Evidence rows (capsule-viewer#448; docs/design/dealing-order.md). Words and layer ids only: no verdict, tier or grade words. Sherlock2 ruled the words under the wording delegation, 2026-11-28.",
+  "layers": ["verdict", "facts", "trust", "technical"],
+  "trust": ["rewritten", "same_story", "as_offered", "stands_behind"],
+  "technical": ["content", "payment_steps", "checks"],
+  "entries": {
+    "noun.deal": "Deal",
+    "noun.deal.lower": "deal",
+    "noun.deals.lower": "deals",
+    "layer.technical": "Technical details",
+    "layer.caveats": "What this does not show",
+    "trust.rewritten.met": "Sealed",
+    "trust.rewritten.met.time_stamped": "Sealed · Time-stamped {at}",
+    "trust.rewritten.not_met": "Changed after sealing",
+    "trust.same_story.met": "Confirmed by them",
+    "trust.same_story.not_met": "They recorded something different",
+    "trust.same_story.not_checked": "Their copy not checked",
+    "trust.as_offered.met": "As offered",
+    "trust.as_offered.not_met": "Not as offered",
+    "trust.as_offered.absent": "No offer in this copy",
+    "trust.stands_behind.met": "Countersigned by {name}",
+    "trust.stands_behind.name_fallback": "{role} · {key}",
+    "trust.stands_behind.not_met.owner": "Only your own signature",
+    "trust.stands_behind.not_met": "Only the holder's signature",
+    "word.time_stamped": "Time-stamped"
+  },
+  "pending": {
+    "trust.rewritten.not_checkpointed": "TODO(#448): what the first trust answer says for a record that is signed but not yet checkpointed. Asked of Sherlock2 (Buzz 4eec61e7); no surface draws it until answered.",
+    "trust.stands_behind.not_independent": "TODO(#448): whether the sentence saying the signer's directory entry does not list it as independent of the parties stays beside \"Countersigned by {name}\". Asked of Sherlock2 (Buzz 4eec61e7); no surface draws it until answered."
+  }
+}

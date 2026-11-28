@@ -48,6 +48,9 @@ try {
     "dist/evidence-graph.iife.js",
     "dist/receipt.js",
     "dist/receipt.d.ts",
+    "dist/dealing-wording.js",
+    "dist/dealing-wording.d.ts",
+    "dist/wording/dealing.en.json",
   ])
     assert(paths.includes(required), `${required} is not in the package`);
   for (const path of paths)
@@ -98,8 +101,19 @@ try {
     `const { receiptModules } = await import(${JSON.stringify(name + "/receipt")});
      if (receiptModules().length !== 5) throw new Error("no receipt modules");`,
   ]);
+  // The one layer order and status words (#448) load from the installed
+  // package, as a module and as the raw pack the Mesh plugin can pin.
+  run("node", [
+    "--input-type=module",
+    "-e",
+    `const { DEALING_WORDING, dealingSay } = await import(${JSON.stringify(name + "/dealing-wording")});
+     if (DEALING_WORDING.layers.join() !== "verdict,facts,trust,technical") throw new Error("no layer order");
+     if (dealingSay("layer.technical") !== "Technical details") throw new Error("no words");
+     const { default: raw } = await import(${JSON.stringify(name + "/wording/dealing.en.json")}, { with: { type: "json" } });
+     if (raw.id !== DEALING_WORDING.id) throw new Error("raw pack differs");`,
+  ]);
   console.log(
-    `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules`,
+    `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules and the dealing wording`,
   );
 } finally {
   rmSync(temporary, { recursive: true, force: true });
