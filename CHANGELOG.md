@@ -21,6 +21,7 @@ here. The format follows
 
 ### Fixed
 
+- An x-deal-v0 deal copy that carries no witness evidence (none has since u225) draws the banner notice "This file carries no witness receipt, so this page could not check a time-stamp itself." as an x-deal-v1 copy does, in place of the line that said it "could be a private copy of the log" (#527, Sherlock2 u286). The key is what the copy carries, not its profile: a copy with a checkpoint witness entry, a witness chain under any name it has been carried under (`parent-log-witness/v1`, `x-cadence-witness/v0`, `cadence-witness/v0`, `x-deal-cadence-v0`), or either in a `composed/v1` member keeps its notice as before.
 - A row-input History page draws its "How this was checked" items as in 0.27.2 again (#516). 0.28.0's rule for the card page's "Check it yourself" box (`.cvh-check`, #384) was not scoped to the card page, so it also gave each of those items a cream box, padding and margin; it is now `.cvh-card .cvh-check`. Text and markup are unchanged.
 
 ## ts 0.28.0 and go 0.28.0 (2026-11-27)

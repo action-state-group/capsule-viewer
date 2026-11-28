@@ -40,6 +40,13 @@ const CADENCE_EXTENSIONS = [
 /** The `parent-log-witness/v1` extension (Evidence Bundle -03), which
  * replaces the v0 names: the same chain, its log member named `parent`. */
 const PARENT_LOG_WITNESS = "parent-log-witness/v1";
+/** Every extension name a witness chain has been carried under, newest
+ * first: what a bundle carries, read by name alone (`witnessNotice`), not
+ * which chain this page checks (`chainOf`). */
+export const WITNESS_CHAIN_EXTENSIONS = [
+  PARENT_LOG_WITNESS,
+  ...CADENCE_EXTENSIONS,
+] as const;
 /** A v0 path is 16 hashes: up to 65535 deals per tick. */
 const CADENCE_DEPTH = 16;
 /** The most hashes a v1 path may hold (AAC PARENT_WITNESS_MAX_PATH). */

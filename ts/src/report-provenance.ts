@@ -15,6 +15,7 @@ import { buildVerificationPageModel } from "@action-state-group/agent-action-cap
 import { VIEWER_BUILD, type ViewerBuild } from "./viewer-build.js";
 import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
 import { levelToggle } from "./report-levels.js";
+import { WITNESS_CHAIN_EXTENSIONS } from "./cadence-witness.js";
 
 /**
  * Who judged, who witnessed, and what verified: one folded line at the top
@@ -500,7 +501,8 @@ export const WITNESS_NOTICE_LINES = {
     "No witness result: none was reported to this page, so it does not show whether any witness has seen this log. What it shows was checked only against its holder's own signatures.",
   // Every x-deal-v1 page: no x-deal-v1 copy ever carries witness evidence
   // (u219), so the page speaks of this file, never of the holder's log
-  // (Sherlock2, evidencebook#935).
+  // (Sherlock2, evidencebook#935). An x-deal-v0 copy that carries none,
+  // as none has since u225, too (Sherlock2 u286, capsule-viewer#527).
   "file-no-receipt":
     "This file carries no witness receipt, so this page could not check a time-stamp itself.",
 } as const;
@@ -517,7 +519,10 @@ export type WitnessNotice = keyof typeof WITNESS_NOTICE_LINES;
  * checkpoint's signature verified: with no signed checkpoint there is
  * nothing for a witness to cover. An x-deal-v1 bundle gets `file-no-receipt`
  * in place of either: no x-deal-v1 copy carries witness evidence (u219), so
- * the page speaks of this file, never of the holder's log.
+ * the page speaks of this file, never of the holder's log. An x-deal-v0
+ * bundle gets it too when it carries no witness evidence (u225, ruled u286,
+ * capsule-viewer#527); one written before u225 carries its chain, and when
+ * that could not be checked here it keeps `not-witnessed`.
  */
 export function witnessNotice(
   bundle: unknown,
@@ -528,7 +533,44 @@ export function witnessNotice(
   const extensions = isObject(bundle) ? bundle.extensions : undefined;
   if (isObject(extensions) && "x-deal-v1" in extensions)
     return "file-no-receipt";
+  if (
+    isObject(extensions) &&
+    "x-deal-v0" in extensions &&
+    !carriesWitnessEvidence(bundle)
+  )
+    return "file-no-receipt";
   return verified.strict === undefined ? "witness-unreported" : "not-witnessed";
+}
+
+/**
+ * Whether `bundle` carries any witness evidence, read by presence alone so
+ * the page never says a file has no receipt when it carries one, however
+ * malformed (u286): an entry in its checkpoint's witness list, a witness
+ * chain under any name it has been carried under, or either in a copy a
+ * `composed/v1` member carries.
+ */
+function carriesWitnessEvidence(bundle: unknown): boolean {
+  if (!isObject(bundle)) return false;
+  const checkpoint = bundle.checkpoint;
+  if (isObject(checkpoint)) {
+    const witnesses = checkpoint.witnesses;
+    if (
+      witnesses !== undefined &&
+      witnesses !== null &&
+      !(Array.isArray(witnesses) && witnesses.length === 0)
+    )
+      return true;
+  }
+  const extensions = bundle.extensions;
+  if (!isObject(extensions)) return false;
+  if (WITNESS_CHAIN_EXTENSIONS.some((name) => Object.hasOwn(extensions, name)))
+    return true;
+  const composed = extensions["composed/v1"];
+  const members = isObject(composed) ? composed.members : undefined;
+  return (
+    Array.isArray(members) &&
+    members.some((m) => isObject(m) && carriesWitnessEvidence(m.bundle))
+  );
 }
 
 /**
