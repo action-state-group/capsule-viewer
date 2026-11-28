@@ -14303,6 +14303,10 @@ ${body}
       ...independent
     };
   }
+  function copyStampTime(at) {
+    const m = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?Z$/u.exec(at);
+    return m !== null && utcInstant(`${m[1]}Z`) ? `${m[1]}Z` : null;
+  }
   function utcInstant(value) {
     if (typeof value !== "string") return false;
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)) return false;
@@ -14356,6 +14360,8 @@ ${body}
     "deal.proof.status.fail": "failed",
     "deal.proof.status.absent": "not in this copy",
     "deal.proof.status.withheld": "not run on this copy",
+    "deal.stamp.countersigned.filled_copy": "Countersigned by {signer} at {at}, through record {k} of {n}.",
+    "deal.stamp.countersigned.filled_copy_not_listed": "Countersigned by {signer} at {at}, through record {k} of {n}. Its directory entry does not list it as independent of the parties.",
     "deal.proof.witness.filled_checked": "Witness time stamp: {witness} at {at}, on your own book",
     "deal.proof.witness.filled_checked_not_listed": "Witness time stamp: {witness} at {at}, on your own book. Its directory entry does not list it as independent of the parties.",
     "deal.proof.witness.open_named": "Witness time stamp from {witness}: not in this copy",
@@ -18854,7 +18860,7 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("8a9483e1dca6da3d26e05eef2851d88e8b58da33");
+    return commitPrefix("ab411d7abd4b196db52dda2d56331c967e3584f8");
   }
   var commit = builtCommit();
   var unreleased = true;
@@ -28559,10 +28565,13 @@ ${pad.repeat(depth)}`;
       item.append(receipt);
     }
   }
-  function renderStamps(host, stamps) {
+  function renderStamps(host, stamps, copy) {
     host.append(element6("h4", "Countersignatures"));
     const list2 = element6("ul");
+    const copyLine = copy === void 0 ? null : countersignedCopyLine(copy);
+    if (copyLine !== null) list2.append(copyLine);
     stamps.forEach((stamp) => {
+      if (copyLine !== null && stamp.kind === "hollow") return;
       const item = element6("li");
       item.dataset.stampKind = stamp.kind;
       item.append(element6("span", stampText(stamp)));
@@ -28576,6 +28585,24 @@ ${pad.repeat(depth)}`;
       list2.append(item);
     });
     host.append(list2);
+  }
+  function countersignedCopyLine(copy) {
+    const at = copyStampTime(copy.at);
+    if (at === null) return null;
+    const item = element6("li");
+    item.dataset.stampKind = "countersigned-copy";
+    if (!copy.independent) item.dataset.countersignerListed = "not";
+    const mark = "\0";
+    const [before, ...after] = receiptWord(
+      copy.independent ? "deal.stamp.countersigned.filled_copy" : "deal.stamp.countersigned.filled_copy_not_listed",
+      { signer: copy.name, at: mark, k: copy.k, n: copy.n }
+    ).split(mark);
+    const time = element6("span", localTime(at));
+    time.dataset.time = at;
+    const text2 = element6("span");
+    text2.append(before ?? "", time, after.join(mark));
+    item.append(text2);
+    return item;
   }
   function renderReceipts(host, receipts3) {
     host.append(element6("h4", "Receipts"));
@@ -29032,7 +29059,8 @@ ${pad.repeat(depth)}`;
         `${contract.refused.sha256} (not read: ${contract.refused.reason})`
       );
     page.append(summary);
-    renderReceipts(page, model.receipts);
+    if (receipt === void 0 || model.receipts.length > 0)
+      renderReceipts(page, model.receipts);
     if (model.parentWitness !== void 0)
       renderParentWitness(page, model.parentWitness);
     const book = receipt?.bookWitness;
@@ -29113,7 +29141,7 @@ ${pad.repeat(depth)}`;
           )
         );
     }
-    renderStamps(page, stamps);
+    renderStamps(page, stamps, receipt?.countersignedCopy);
     renderCompletenessStatement(page, model.completeness);
     if (receipt === void 0) renderChecks(page, model.checks);
     renderExtensions(page, extensions2, presentationRefusalNotices(refused));
@@ -30493,7 +30521,7 @@ ${pad.repeat(depth)}`;
     "capsuleviewer.receipt.unilateral/v0",
     "capsuleviewer.receipt.seller/v0"
   ]);
-  function receiptCoreOf(module, context, reading, root) {
+  function receiptCoreOf(module, context, reading, root, countersignedCopy) {
     if (module === void 0 || !RECEIPT_PAGE_MODULE_IDS.has(module.manifest.id))
       return void 0;
     const pass2 = reading?.kind === "pass" ? reading : null;
@@ -30503,7 +30531,8 @@ ${pad.repeat(depth)}`;
     return {
       reading: pass2,
       ...book === void 0 ? {} : { bookWitness: book },
-      shared: audience === "counterparty" || audience === "adjudicator"
+      shared: audience === "counterparty" || audience === "adjudicator",
+      ...countersignedCopy === null ? {} : { countersignedCopy }
     };
   }
   function receiptWord(key, vars = {}) {
@@ -30800,7 +30829,7 @@ ${pad.repeat(depth)}`;
     };
     let bar;
     let stripNode;
-    const receipt = verified ? receiptCoreOf(selected?.module, context, reading, root) : void 0;
+    const receipt = verified ? receiptCoreOf(selected?.module, context, reading, root, countersignedCopy) : void 0;
     const bannerBook = receipt?.bookWitness?.status === "verified" ? receipt.bookWitness : void 0;
     const drawFrame = () => {
       root.replaceChildren();
