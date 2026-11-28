@@ -210,8 +210,8 @@ point 2 as it is.
 | the keep receipt's view-model JSON | the JSON of capsule-viewer's receipt `buildModel` (u562), written beside the page by the program that draws it, in the same shape the skill reads today or with the skill changed in the same PR; the Go projection in `viewmodel.go` for receipts is deleted. How a Go program gets `buildModel`'s output is E1 | evidencebook capsulectl |
 | `actionstate.receipt.sale/v0` (x-deal-sale/v0) | a new capsule-viewer receipt kind on the receipt module's one `buildModel` (#473's PR 4, capsule-viewer#499, put the v0 kinds on it), worded in `go/receipt/wording-en.json`, drawn by a new `deal sale bundle --html`; or retired, if Q2 says so | evidencebook capsulectl |
 | `actionstate.history/v0` (a sent History, x-history-selection/v0 from `capsulectl deal history`, `muse: internal/plugin/history.go:364-408`) | a capsule-viewer History module for x-history-selection/v0. #473's History work reads only x-standard-history/v0 (`receipt-view-model.md` section 7 row 8, capsule-viewer#490), a different bundle (the History card counts deals and carries no deal's content), so this needs its own reader rule, audiences and withheld fields, kept as the plugin's module has them (`presentation.go:169-183`); drawn by `deal history --html` | evidencebook capsulectl |
-| `history page` (your own History, static, read-only: `deal report --read-only` per deal, no checkpoint, `history_page.go:20-28,199-223`) | capsule-viewer's History view over the same rows, keeping the read-only reads and the PRIVATE banner; the plugin draws it with capsule-viewer/go as a static page with no script, as today (`historyViewHtml`) | the plugin |
-| My Rules (`actionstate.rules/v0`, `.standard/v0`), Checkup, Statement, with their view-model JSON and `checkup lint --page` | Q1. If they are designed pages of the one viewer: capsule-viewer modules keyed to their record kinds, words in capsule-viewer packs, drawn by the plugin through capsule-viewer/go; `checkup lint --page` checks the page against the capsule-viewer module's script digest instead of the plugin's (`rulespage.go:93-153`) | the plugin |
+| `history page` (your own History, static, read-only: `deal report --read-only` per deal, no checkpoint, `history_page.go:20-28,199-223`) | capsule-viewer's History view over the same rows, keeping the read-only reads and the PRIVATE banner. `historyViewHtml` is TypeScript, so a Go program cannot call it today: E2 decides how the plugin gets it (a static page built through E1's mechanism, or a page that embeds capsule-viewer's `history-view.iife.js` and the rows as data, as `ebs: demo/ard/pages.py:123-132` does). This page has no bundle, so 2.2's point 2 is met per row: each row names the command that re-checks that deal (`capsulectl deal report --deal <id> --bundle <file>`, then `capsulectl deal verify --bundle <file>`), and the plugin's page test runs it, since capsule-viewer's test cannot | the plugin |
+| My Rules (`actionstate.rules/v0`, `.standard/v0`), Checkup, Statement, with their view-model JSON and `checkup lint --page` | Q1. If they are designed pages of the one viewer: capsule-viewer modules keyed to their record kinds, words in capsule-viewer packs, drawn by the plugin through capsule-viewer/go; `checkup lint --page` keeps every check it makes today (`rulespage.go:105-146`: the bundle element loads, the module mounts, the page cannot navigate away, and the sealed table's digest matches when one is given), with only the expected script digest changed to the capsule-viewer module's; its tests refuse a wrong module, an edited page, a wrong table and a page that navigates | the plugin |
 | the rules report's two wording layers (`internal/rulesresult/words.go`) | wording data: a capsule-viewer contract-report pack (a JSON file, as `ts/src/wording/contract-report-*.en.json` are), if Q1 is (a); else a JSON file in the plugin instead of Go strings. The "not met is not a broken rule" line is kept either way | evidencebook report SDK (unchanged) |
 | `ucp view`, `acp view` | Q1, as above; the receipt each links is already capsulectl's own page (`muse: internal/plugin/ucp.go:441-445`) | the plugin |
 | capsulectl wording pack | retired: no Action State pack is pinned; installs use capsulectl's built-in wording, which is what current installs already show (1.3). Q3 decides whether the three card tags survive, and where | (none) |
@@ -233,11 +233,13 @@ for what it names; the rest keep building, stacked where needed. `#473 PR n` is 
 | 6 | evidencebook, then actionstate-muse | the keep receipt's view-model JSON from capsule-viewer's `buildModel` (E1), written by `deal report`; then the plugin copies it and deletes its receipt projection from `viewmodel.go` | M, then S | E1 |
 | 7 | capsule-viewer | the sale receipt kind (x-deal-sale/v0) on the one `buildModel`, words in `go/receipt/wording-en.json` | M | Q2; Sherlock2's words for new lines |
 | 8 | capsule-viewer | a History module for x-history-selection/v0 (2.3), beside #490's x-standard-history/v0 module | M | none (stacks on #490 if it shares its code) |
-| 9 | evidencebook | bump capsulectl's capsule-viewer pin to 7 and 8 (and the #473 rows merged by then); add `deal sale bundle --html` and `deal history --html`, each drawing with capsule-viewer/go | M | 7, 8 |
-| 10 | actionstate-muse | `receipt page --sale` and `history --deal` through row 9's verbs; `history page` through capsule-viewer/go (a `go.mod` pin of capsule-viewer/go); delete `receipt.js.tmpl`, `receipt.css`, `wording/receipt.json`, `history.js.tmpl`, `history.css`, `wording/history.json`, the sale and History modules and `history_page.go`'s template | M (mostly deletion) | 9 in a capsulectl release |
+| 9a | evidencebook | bump capsulectl's capsule-viewer pin to 7 (and the #473 rows merged by then); add `deal sale bundle --html`, drawing with capsule-viewer/go | S | 7 (Q2 (a) only) |
+| 9b | evidencebook | bump capsulectl's capsule-viewer pin to 8; add `deal history --html`, drawing with capsule-viewer/go | S | 8 |
+| 10a | actionstate-muse | `receipt page --sale` through 9a's verb, or, under Q2 (b), `receipt page --sale` removed; either way delete `receipt.js.tmpl`, `receipt.css`, `wording/receipt.json` and the sale module | M (mostly deletion) | 9a in a capsulectl release, or Q2 (b) |
+| 10b | actionstate-muse | `history --deal` through 9b's verb; `history page` through capsule-viewer's History view (E2) with its per-row re-check line; delete `history.js.tmpl`, `history.css`, `wording/history.json`, the History module and `history_page.go`'s template | M | 9b in a capsulectl release; E2 |
 | 11 | capsule-viewer | My Rules, Checkup, Statement and the UCP/ACP views as modules, and the rules report's two layers as a contract-report pack, if Q1 is (a) | M each, one lane each | Q1 |
-| 12 | actionstate-muse | the remaining pages through capsule-viewer/go (or, if Q1 is (b), kept in the plugin and brought to the three points there); `checkup lint --page` re-pointed at the module the page now carries, with a valid page and a wrong-module or edited page refused; then delete `internal/presentation`, the `presentation install|list|build` verbs, `cli-plugin-metadata`'s `presentations` member and the remaining page packs, tests and harnesses; `doctor --repair` removes the plugin's old `capsulectl-actionstate.d/presentations/` and `wording/` files after the pin is gone | L (deletion) | 10, 11 (or Q1's (b)) |
-| 13 | actionstate-site | drop the `presentation install` step and its `presentations_refused` check; bump `install/plugin.json` and the install skill to the plugin release that carries 12, in one install revision | S | 12 released |
+| 12 | actionstate-muse | by Q1's answer. (a): My Rules, Checkup, Statement and the UCP/ACP views through capsule-viewer/go, with `checkup lint --page` re-pointed as 2.3 says; then delete `internal/presentation`, the `presentation install|list|build` verbs, `cli-plugin-metadata`'s `presentations` member, the remaining page packs, tests and harnesses; the skill and `run-dry-run.sh` move off `presentation list|build` (`muse: skills/actionstate-rules/SKILL.md:285-295`) to the verbs that now draw each page, in the same PR, and the dry run passes. (b): those pages, their modules, packs, `rulespage.go` and the `presentation` verbs stay in the plugin, brought to 2.2's three points there by the plugin's own test; only what rows 4, 5, 10a and 10b replaced is deleted, and this note records that the plugin layer is reduced, not nothing. (c): nothing is deleted until the neutral kinds Q1 (c) names exist; that is new work with its own issue. In every branch, `doctor --repair` removes the plugin's old module files, and a wording pack file only when no capsulectl profile pins it | L (deletion) under (a) | 10a, 10b, 11 (or Q1's (b) or (c)) |
+| 13 | actionstate-site | drop the `presentation install` step and its `presentations_refused` check (under Q1 (a)); bump `install/plugin.json` (the plugin and its skill) and `install/release.json` (capsulectl and the deal plugin, filled by `scripts/install-fill.sh:103-115`) together, to the plugin release that carries 12 and the capsulectl release that carries 9a and 9b, in one install revision, and test that published pair | S | 12 released |
 
 **Ordering rule for the installer.** The site changes before the plugin removes anything it
 calls: row 3 lands and deploys before row 5's plugin release, and row 13 only after the plugin
@@ -249,29 +251,32 @@ expects another.
 (asg-rules standing rule 3):
 
 - evidencebook's capsulectl (`capsulectl/go.mod`, `report/go.mod`) pins a capsule-viewer commit;
-  row 9 moves it once for rows 7 and 8, as #473 PR 5 moved it for the receipt rows.
-- The plugin calls the capsulectl on the host for receipts, sale and sent History, so rows 4 and
-  10 name the capsulectl release they need and check for the verb, as the plugin already checks for
+  rows 9a and 9b move it for rows 7 and 8, as #473 PR 5 moved it for the receipt rows.
+- The plugin calls the capsulectl on the host for receipts, sale and sent History, so rows 4,
+  10a and 10b name the capsulectl release they need and check for the verb, as the plugin already checks for
   `presentation build --module` (`muse: internal/plugin/checkup.go:228-231`). For the pages it
-  draws itself (rows 10 and 12) it pins capsule-viewer/go by commit in its own `go.mod`
+  draws itself (rows 10b and 12) it pins capsule-viewer/go by commit in its own `go.mod`
   (today only an indirect `v0.19.2`, `muse: go.mod:19`).
-- The site pins the plugin by version and sha256 and capsulectl by tag (`install/plugin.json`);
-  rows 3 and 13 change those, and its revision list (`install/rc*/`) keeps older installs
+- The site pins the plugin and its skill by version and sha256 (`install/plugin.json`) and
+  capsulectl with the deal plugin by tag and sha256 (`install/release.json`); rows 3 and 13 change
+  those, and its revision list (`install/rc*/`) keeps older installs
   reproducible.
 - **Installed hosts.** Module files live at digest-named paths and are never overwritten
   (`muse: internal/presentation/presentation.go:218-220`, `install.go:119-128`); capsulectl loads
   only the presentations a plugin's `cli-plugin-metadata` advertises
   (`cli: cli/plugin_presentations.go:159-176`), so once a plugin stops advertising a module its file
-  is inert. The pinned wording pack is not inert: row 3 un-pins it before row 12's `doctor --repair`
-  removes the file, so no profile points at a deleted pack. Rows 3 and 12 each test an upgraded host
-  that holds several old module generations and a pinned pack.
+  is inert. A pinned wording pack is not inert: row 3 un-pins it from the deal profile, and row 12's
+  `doctor --repair` deletes a pack file only when no capsulectl profile pins it (it reads every
+  profile, since a person may have pinned the same file on another), reporting any it keeps. Rows 3
+  and 12 each test an upgraded host that holds several old module generations, a pinned pack on the
+  deal profile and the same pack pinned on another profile.
 
 **Release batching** (standing rule 3, the coordinator's call): one capsule-viewer release (npm and
-`go/`) after rows 2, 7 and 8; one capsulectl release carrying rows 6 and 9; one plugin release for
-rows 4 and 5, one for rows 6, 10 and 12 (or one, if they are ready together); one site install
+`go/`) after rows 2, 7 and 8; one capsulectl release carrying rows 6, 9a and 9b; one plugin release for
+rows 4 and 5, one for rows 6, 10a, 10b and 12 (or one, if they are ready together); one site install
 revision per plugin release. No row cuts a release on its own merge.
 
-**What is deleted, in the end.** In actionstate-muse: `internal/presentation/` whole (templates,
+**What is deleted, in the end** (Q1 (a); under (b) or (c), row 12 says what stays). In actionstate-muse: `internal/presentation/` whole (templates,
 generated scripts, stylesheets, `install.go`, `rulespage.go` once lint has its new check, tests,
 harnesses), the page packs `wording/{receipt,history,checkup,statement,myrules}.json` (any entry
 the plugin's own text output still speaks stays), `wording/capsulectl.go` and `wording/capsulectl/`,
@@ -283,7 +288,7 @@ what #473 already deletes.
 
 ## 4. Open questions
 
-**For Steven (product: what a person sees, the product boundary).** None gates rows 1 to 10.
+**For Steven (product: what a person sees, the product boundary).** Q1 gates rows 11 and 12 only; Q2 gates rows 7, 9a and 10a only, and History (rows 8, 9b, 10b) does not wait on it.
 
 - **Q1. Are My Rules, Checkup, Statement and the UCP/ACP evidence views designed pages of the one
   viewer?** They draw Action State's own record kinds (`actionstate.rules_compare/v0`,
@@ -297,8 +302,8 @@ what #473 already deletes.
   why this is asked rather than assumed; the record is silent on whether these pages are
   paid-product content.
 - **Q2. Is the whole-sale page still wanted?** `receipt page --sale` is the only page of an
-  x-deal-sale/v0 bundle, and only on x-deal-v0 deals. (a) Yes: rows 7, 9 and 10 build it. (b) No:
-  rows 7 and 9 drop it and row 10 only deletes it.
+  x-deal-sale/v0 bundle, and only on x-deal-v0 deals. (a) Yes: rows 7, 9a and 10a build it. (b) No:
+  rows 7 and 9a are not done, and row 10a removes `--sale` and deletes the module.
 
 **For Sherlock2 (wording, under Steven's delegation).**
 
@@ -319,6 +324,11 @@ what #473 already deletes.
   rules out. Options: an embedded JavaScript engine running `go/receipt`'s module script in
   capsulectl; capsule-viewer publishing a model-only entry point the Go side runs the same way;
   or the skill reading the page's own model. The row's design note picks one.
+- **E2. How the plugin draws `history page` with capsule-viewer's History view** (row 10b), for
+  the same reason: E1's mechanism if it can run `historyViewHtml` at build time (the page stays
+  script-free), or a self-contained page that embeds the released `history-view.iife.js` with its
+  sha256 and the rows as data (as the ARD demo does), which runs a script where today's page runs
+  none. The row's lane picks one and says which in its PR.
 
 **Engineering's, decided here.** capsule-viewer owns every page this note moves; capsulectl stays a
 generic presentation host and nothing in capsule-cli changes; a moved page is drawn by the command
@@ -327,4 +337,4 @@ replaced by capsule-viewer's existing modules rather than ported, so no code mov
 repository to the public one (only words, through Sherlock2, and only for pages Q1 places here).
 Deleting the plugin's presentation layer and its `presentation` verbs carries out Steven's ruling,
 so it is engineering's call with the ruling linked (asg-rules tracking.md, one-way doors). A muse
-page verb that changes what draws it (rows 4 and 10) keeps its name and flags.
+page verb that changes what draws it (rows 4, 10a and 10b) keeps its name and flags.
