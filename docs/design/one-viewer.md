@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # One viewer: capsule-viewer makes the designed pages, the plugin's presentation layer retires (design note)
 
-Status: draft, capsule-viewer#524. Design only: no code changes here. Read at origin/main on
+Status: converged with Codex and Sherlock2 (PR #525), capsule-viewer#524; Q1 and Q2 are open for Steven. Design only: no code changes here. Read at origin/main on
 2026-11-28: capsule-viewer `7bb5b55`, actionstate-muse `bbfc5ca`, capsule-cli `82d3283`,
 actionstate-site `042d13a`, evidencebook `dfd0093`, evidencebook-skills `0e2bdad`,
 Mesh-LLM/capsules-plugin `e7e9f50`, mesh-llm `74c8765c9`. Paths below are relative to each
@@ -122,7 +122,9 @@ Two more pieces of the presentation layer sit outside `internal/presentation`:
   built-in key makes capsulectl use its built-in wording for everything, not only the missing key
   (`cli: cli/narration.go:383`, `builtinUntilUpdated`), and the install check warns
   ("the pinned wording pack lacks keys this release uses: say.verify.not_read"). So today the
-  three Action State card tags are not shown on any install with a current capsulectl, and the
+  three Action State card tags are not shown on any install with a current capsulectl (cards show
+  the deal plugin's own built-in tags instead, `eb: capsulectl/internal/deal/assets/wording/capsulectl-deal-en.json:91-94`:
+  "PAUSED FOR YOU", "NOT ALLOWED BY YOUR RULES", "STOP: CHECK THIS"), and the
   pack only adds a warning. Each capsulectl key added later reopens the same gap, because the pack
   is a vendored copy (`PROVENANCE.json`, `used_for`).
 
@@ -216,7 +218,7 @@ point 2 as it is.
 | My Rules (`actionstate.rules/v0`, `.standard/v0`), Checkup, Statement, with their view-model JSON and `checkup lint --page` | Q1. If they are designed pages of the one viewer: capsule-viewer modules keyed to their record kinds, words in capsule-viewer packs, drawn by the plugin through capsule-viewer/go; `checkup lint --page` keeps every check it makes today (`rulespage.go:105-146`: the bundle element loads, the module mounts, the page cannot navigate away, and the sealed table's digest matches when one is given), with only the expected script digest changed to the capsule-viewer module's; its tests refuse a wrong module, an edited page, a wrong table and a page that navigates | the plugin |
 | the rules report's two wording layers (`internal/rulesresult/words.go`) | wording data: a capsule-viewer contract-report pack (a JSON file, as `ts/src/wording/contract-report-*.en.json` are), if Q1 is (a); else a JSON file in the plugin instead of Go strings. The "not met is not a broken rule" line is kept either way | evidencebook report SDK (unchanged) |
 | `ucp view`, `acp view` | Q1, as above; the receipt each links is already capsulectl's own page (`muse: internal/plugin/ucp.go:441-445`) | the plugin |
-| capsulectl wording pack | retired: no Action State pack is pinned; installs use capsulectl's built-in wording, which is what current installs already show (1.3). Q3 decides whether the three card tags survive, and where | (none) |
+| capsulectl wording pack | retired: no Action State pack is pinned; installs use the built-in wording of capsulectl and its deal plugin, which is what current installs already show (1.3); the "ACTION STATE ·" prefix on the three card tags is dropped (Q3, ruled) | (none) |
 
 ## 3. Order: PRs per repository
 
@@ -229,7 +231,7 @@ for what it names; the rest keep building, stacked where needed. `#473 PR n` is 
 | --- | --- | --- | --- | --- |
 | 1 | capsule-viewer | this note | S | Codex, Sherlock2 |
 | 2 | capsule-viewer | the acceptance test of 2.2 over today's modules and standalone entry points | M | none |
-| 3 | actionstate-site | the installer tolerates a plugin with no `presentation install` verb and no wording pack: it runs the verb only when the plugin lists it, pins no Action State pack, and un-pins one an earlier install pinned (the `actionstate.capsulectl-en-*` case the uninstall steps already un-pin, `install/actionstate-install.SKILL.md.tpl:1086`, `install/install.md:275`), leaving a person's own pack as it is (`install.sh.tpl:815-826`). Tests: a fresh install, an upgrade from 0.0.18 with its Action State pin, and an upgrade with a person's own pin | S | Q3 only if Sherlock2 keeps the tags |
+| 3 | actionstate-site | the installer tolerates a plugin with no `presentation install` verb and no wording pack: it runs the verb only when the plugin lists it, pins no Action State pack, and un-pins one an earlier install pinned (the `actionstate.capsulectl-en-*` case the uninstall steps already un-pin, `install/actionstate-install.SKILL.md.tpl:1086`, `install/install.md:275`), leaving a person's own pack as it is (`install.sh.tpl:815-826`). Tests: a fresh install, an upgrade from 0.0.18 with its Action State pin, and an upgrade with a person's own pin | S | none (Q3 ruled (a)) |
 | 4 | actionstate-muse | `receipt page --deal` through capsulectl's `deal report --html` (keep and counterparty); the three x-deal-v0 receipt modules leave `ReceiptModules` and `cli-plugin-metadata`; the skill's receipt lines change with it. The receipt's view-model JSON stays the Go projection until row 6 | M | none (capsulectl already draws both copies) |
 | 5 | actionstate-muse | drop `WordingPack`, `InstallWording`, the pack's doctor check and `presentation install`'s `capsulectl_wording` member | S | 3 deployed on the site |
 | 6 | evidencebook, then actionstate-muse | the keep receipt's view-model JSON from capsule-viewer's `buildModel` (E1), written by `deal report`; then the plugin copies it and deletes its receipt projection from `viewmodel.go` | M, then S | E1 |
@@ -302,22 +304,26 @@ what #473 already deletes.
   not receipt, card or report pages; they stay in the plugin, which is then not "nothing", and
   they are brought to the three points there. (c) They move once their records are neutral kinds
   (for example the rules comparison as a contract-report Result, which capsule-viewer already
-  draws). The ruling's "out of scope: enterprise paid-product content stays off public surfaces" is
-  why this is asked rather than assumed; the record is silent on whether these pages are
-  paid-product content.
+  draws). The trade: under (a) the donatable viewer carries `actionstate.*` record kinds, one
+  organisation's namespace in the neutral viewer; (c) avoids that. The ruling's "out of scope:
+  enterprise paid-product content stays off public surfaces" is why this is asked rather than
+  assumed; the record is silent on whether these pages are paid-product content. Sherlock2's
+  recommendation (buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=89359656979f63be123699822b7c4d49f4dc654923b9a6f40556f02fa85fe1be&thread=a8986d8504abf9570be2ec5cc320eeec9ba50f98412e8ddc1222d0d64168b6e5): (c) for My Rules, (b) for Checkup, Statement and the UCP/ACP views
+  until each has a neutral kind.
 - **Q2. Is the whole-sale page still wanted?** `receipt page --sale` is the only page of an
   x-deal-sale/v0 bundle, and only on x-deal-v0 deals. (a) Yes: rows 7, 9a and 10a build it. (b) No:
-  rows 7 and 9a are not done, and row 10a removes `--sale` and deletes the module.
+  rows 7 and 9a are not done, and row 10a removes `--sale` and deletes the module. Sherlock2
+  recommends (b), since the page draws only x-deal-v0 and x-deal-v1 is the default.
 
-**For Sherlock2 (wording, under Steven's delegation).**
+**For Sherlock2 (wording, under Steven's delegation).** Q3 is ruled.
 
-- **Q3. The approval-card tags.** "ACTION STATE · PAUSED FOR YOU", "ACTION STATE · NOT ALLOWED BY
-  YOUR RULES", "ACTION STATE · STOP: CHECK THIS" (`muse: wording/capsulectl/actionstate.json`) are
-  not shown today on current installs (1.3). (a) Drop them: capsulectl's built-in tags stand, and
-  rows 3 and 5 retire the pack. (b) Keep them: they need a home that cannot fall behind
-  capsulectl's keys (a capsulectl profile setting for the three tags alone, a capsule-cli change,
-  or a pack the plugin rebuilds from the host's capsulectl at install), and rows 3 and 5 change to
-  that.
+- **Q3. The approval-card tags: ruled (a), drop them** (Sherlock2, 2026-11-28, under the wording
+  delegation: buzz://message?channel=0d760ea3-529d-4dec-b309-24184967f8e0&id=89359656979f63be123699822b7c4d49f4dc654923b9a6f40556f02fa85fe1be&thread=a8986d8504abf9570be2ec5cc320eeec9ba50f98412e8ddc1222d0d64168b6e5). "ACTION STATE · PAUSED FOR YOU", "ACTION STATE · NOT ALLOWED BY YOUR RULES" and
+  "ACTION STATE · STOP: CHECK THIS" (`muse: wording/capsulectl/actionstate.json`) are not shown on
+  current installs (1.3); the deal plugin's built-in pack already says the same words without the
+  prefix (`eb: capsulectl/internal/deal/assets/wording/capsulectl-deal-en.json:91-94`), and keeping
+  the prefix would need a capsule-cli change or a pack that falls behind every new key. Rows 3 and 5
+  retire the pack with no wait.
 - **Words for new capsule-viewer lines** (the sale kind, the x-history-selection module, and any
   module Q1 adds): Sherlock2's, each PR sending its new keys.
 
