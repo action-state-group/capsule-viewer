@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEALING_WORDING, dealingSay } from "../src/dealing-wording.js";
 
@@ -40,11 +39,33 @@ describe("the dealing wording pack", () => {
     expect(dealingSay("layer.technical")).toBe("Technical details");
   });
 
-  it("gives every trust question a met and a not-met answer", () => {
-    for (const q of pack.trust) {
-      expect(pack.entries).toHaveProperty(`trust.${q}.met`);
-      expect(pack.entries).toHaveProperty(`trust.${q}.not_met`);
-    }
+  it("words every trust answer exactly as Sherlock2 ruled", () => {
+    const ruled: [string, Record<string, string>, string][] = [
+      ["trust.rewritten.met", {}, "Sealed"],
+      ["trust.rewritten.not_met", {}, "Changed after sealing"],
+      ["trust.same_story.met", {}, "Confirmed by them"],
+      ["trust.same_story.not_met", {}, "They recorded something different"],
+      ["trust.same_story.not_checked", {}, "Their copy not checked"],
+      ["trust.as_offered.met", {}, "As offered"],
+      ["trust.as_offered.not_met", {}, "Not as offered"],
+      ["trust.as_offered.absent", {}, "No offer in this copy"],
+      ["trust.stands_behind.met", { name: "N" }, "Countersigned by N"],
+      [
+        "trust.stands_behind.name_fallback",
+        { role: "Seller", key: "ab12cd34" },
+        "Seller · ab12cd34",
+      ],
+      ["trust.stands_behind.not_met.owner", {}, "Only your own signature"],
+      ["trust.stands_behind.not_met", {}, "Only the holder's signature"],
+    ];
+    for (const [key, values, text] of ruled)
+      expect(dealingSay(key, values), key).toBe(text);
+    const trustKeys = Object.keys(pack.entries).filter((k) =>
+      k.startsWith("trust."),
+    );
+    expect(trustKeys.sort()).toEqual(
+      [...ruled.map((r) => r[0]), "trust.rewritten.met.time_stamped"].sort(),
+    );
   });
 
   it("rides the time stamp on the first answer, not a fifth slot", () => {
@@ -75,6 +96,25 @@ describe("the dealing wording pack", () => {
     expect(() => dealingSay("trust.nope")).toThrow(/no entry/);
     expect(() => dealingSay("trust.stands_behind.met")).toThrow(/\{name\}/);
     expect(() => dealingSay("constructor")).toThrow(/no entry/);
+    expect(() =>
+      dealingSay("trust.stands_behind.name_fallback", { role: "Seller" }),
+    ).toThrow(/\{key\}/);
+    expect(() =>
+      dealingSay("trust.stands_behind.name_fallback", { key: "ab12" }),
+    ).toThrow(/\{role\}/);
+  });
+
+  it("takes only the caller's own values, and puts them in literally", () => {
+    const inherited = Object.create({ name: "Inherited" }) as Record<
+      string,
+      string
+    >;
+    expect(() => dealingSay("trust.stands_behind.met", inherited)).toThrow(
+      /\{name\}/,
+    );
+    expect(dealingSay("trust.stands_behind.met", { name: "$& {role}" })).toBe(
+      "Countersigned by $& {role}",
+    );
   });
 
   it("carries words and layer ids only: no verdict, tier or grade words", () => {
@@ -83,13 +123,8 @@ describe("the dealing wording pack", () => {
       expect(text).not.toMatch(word);
   });
 
-  it("is the JSON file the package publishes, byte for byte as data", () => {
-    const raw = JSON.parse(
-      readFileSync(new URL("../src/wording/dealing.en.json", import.meta.url), {
-        encoding: "utf8",
-      }),
-    ) as unknown;
-    expect(raw).toEqual(pack);
+  it("names itself capsuleviewer.dealing.wording/v0", () => {
     expect(pack.id).toBe("capsuleviewer.dealing.wording/v0");
+    expect(pack.locale).toBe("en");
   });
 });

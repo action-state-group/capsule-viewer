@@ -106,11 +106,13 @@ try {
   run("node", [
     "--input-type=module",
     "-e",
-    `const { DEALING_WORDING, dealingSay } = await import(${JSON.stringify(name + "/dealing-wording")});
-     if (DEALING_WORDING.layers.join() !== "verdict,facts,trust,technical") throw new Error("no layer order");
-     if (dealingSay("layer.technical") !== "Technical details") throw new Error("no words");
+    `import { deepStrictEqual } from "node:assert/strict";
+     const source = ${JSON.stringify(readFileSync(join(root, "src/wording/dealing.en.json"), "utf8"))};
+     const { DEALING_WORDING, dealingSay } = await import(${JSON.stringify(name + "/dealing-wording")});
      const { default: raw } = await import(${JSON.stringify(name + "/wording/dealing.en.json")}, { with: { type: "json" } });
-     if (raw.id !== DEALING_WORDING.id) throw new Error("raw pack differs");`,
+     deepStrictEqual(raw, JSON.parse(source), "the published raw pack is not the source pack");
+     deepStrictEqual(DEALING_WORDING, JSON.parse(source), "the published module's pack is not the source pack");
+     if (dealingSay("layer.technical") !== "Technical details") throw new Error("no words");`,
   ]);
   console.log(
     `${packed.filename}: ${paths.length} files, emits a page, offers the receipt modules and the dealing wording`,
