@@ -249,13 +249,17 @@ export interface ReceiptsInput {
    * Absent, a claim's deal is its id's part before `::` ({@link dealIdOf}).
    */
   readonly deals?: Readonly<Record<string, string>>;
-  /**
-   * The claims whose carried receipt is a different Bundle from the one the
-   * claim's `subject_bundle` names (agent-action-capsule Evidence Result
-   * §4.5), by claim id. {@link drawGeneric} fills it; a caller never does.
-   */
-  readonly different?: ReadonlySet<string>;
 }
+
+/**
+ * The receipts as {@link drawGeneric} draws them: the page's, with the claims
+ * whose carried receipt is a different Bundle from the one their
+ * `subject_bundle` names (Evidence Result §4.5), by claim id. Internal: a
+ * caller gives {@link ReceiptsInput}, and drawGeneric computes `different`.
+ */
+type DrawnReceipts = ReceiptsInput & {
+  readonly different?: ReadonlySet<string>;
+};
 
 /** The deal a claim belongs to: its id before the first `::`, as the inference-deals Result writes it, or none. */
 export function dealIdOf(claimId: string): string | undefined {
@@ -270,7 +274,7 @@ export function dealIdOf(claimId: string): string | undefined {
  */
 function dealOf(
   claim: ResultClaim,
-  receipts: ReceiptsInput,
+  receipts: DrawnReceipts,
 ): string | undefined {
   if (receipts.deals === undefined) return dealIdOf(claim.id);
   return Object.prototype.hasOwnProperty.call(receipts.deals, claim.id)
@@ -288,7 +292,7 @@ function dealOf(
  */
 async function differentReceipts(
   claims: readonly ResultClaim[],
-  receipts: ReceiptsInput,
+  receipts: DrawnReceipts,
 ): Promise<Set<string>> {
   const different = new Set<string>();
   for (const claim of claims) {
@@ -311,13 +315,22 @@ async function differentReceipts(
       Array.isArray(carried)
     )
       continue;
-    if (
-      (await subjectBundleBinding(
+    let binding: string;
+    try {
+      binding = await subjectBundleBinding(
         claim.subjectBundle,
         carried as Record<string, unknown>,
-      )) === "different"
-    )
+      );
+    } catch {
+      // JSON with no JCS form (a fraction, an integer past 2^53, a lone
+      // surrogate) has no bundle digest, while the named Bundle's digest is
+      // over its JCS form: it cannot be the named Bundle, so it is a
+      // different one. It parsed, so it is not a load error, and the throw
+      // stays on this claim's line: the report still draws.
       different.add(claim.id);
+      continue;
+    }
+    if (binding === "different") different.add(claim.id);
   }
   return different;
 }
@@ -333,7 +346,7 @@ async function differentReceipts(
 function receiptLine(
   claim: ResultClaim,
   w: Words,
-  receipts: ReceiptsInput,
+  receipts: DrawnReceipts,
 ): HTMLElement[] {
   const deal = dealOf(claim, receipts);
   if (deal === undefined) return [];
@@ -435,7 +448,7 @@ function claimItem(
   claim: ResultClaim,
   w: Words,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const item = el("li", "");
   item.dataset.claimRef = claim.id;
@@ -456,7 +469,7 @@ function rowItem(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const label = w.row(row.requirementRef, "label");
   const name = el("span", "rname");
@@ -521,7 +534,7 @@ function groupedRows(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const box = el("div", "groups");
   const order: (string | undefined)[] = [];
@@ -569,7 +582,7 @@ function byContract(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const contracts = [...new Set(rows.map((row) => row.contractRef))];
   if (contracts.length <= 1)
@@ -612,7 +625,7 @@ export async function drawGeneric(
   reasons?: ReasonsOf,
   given?: ReceiptsInput,
 ): Promise<void> {
-  const receipts: ReceiptsInput | undefined =
+  const receipts: DrawnReceipts | undefined =
     given === undefined
       ? undefined
       : { ...given, different: await differentReceipts(result.claims, given) };

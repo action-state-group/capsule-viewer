@@ -137,7 +137,8 @@ rules bind it:
   it with the member's digest before it draws anything for the claim: a different bundle says
   `generic.receipt.different`, with no control, and is never worded as a load error or a failed check;
   an equal one draws the control as above, and opening still shows the receipt's own checks, since a
-  match is not a pass. A text that is not JSON is not compared and opens as unreadable. A claim with no
+  match is not a pass. A text that is not JSON is not compared and opens as unreadable; JSON with no JCS
+  form has no bundle digest, so it cannot be the named bundle and reads as a different one. A claim with no
   `subject_bundle` is paired by the key alone, a filing that is the page builder's and that the module
   trusts (capsule-viewer#353). The comparison is display-only: no verdict, grade, tally, bucket or count
   changes with it. The page

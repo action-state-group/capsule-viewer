@@ -437,4 +437,27 @@ describe("a deal line's receipt against the claim's subject_bundle", () => {
     // `plain` has no deal on this page, so nothing is drawn for it
     expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
   });
+
+  it("draws the report when a carried receipt has no bundle digest (JSON with no JCS form), and says that receipt is not the named one", async () => {
+    const meant = await digestOf(await receiptText("deal-one"));
+    const odd = JSON.parse(await receiptText("deal-one")) as Obj;
+    odd["x-fraction"] = 0.5; // JSON.parse reads it; JCS has no form for it
+    const root = await draw(
+      { d1: JSON.stringify(odd), d2: await receiptText("deal-two") },
+      true,
+      undefined,
+      { "d1::req-1": meant },
+    );
+    expect(root.querySelector('[data-page="contract-report"]')).not.toBeNull();
+    expect(root.querySelectorAll("[data-claim-ref]")).toHaveLength(3);
+    const line = claim(root, "d1::req-1");
+    expect(line.querySelector('[data-receipt="different"]')!.textContent).toBe(
+      DIFFERENT,
+    );
+    expect(line.querySelector("button")).toBeNull();
+    // the other deal's line is untouched
+    expect(
+      claim(root, "d2::req-2").querySelector('button[data-receipt="open"]'),
+    ).not.toBeNull();
+  });
 });
