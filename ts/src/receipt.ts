@@ -14,6 +14,8 @@
 import {
   buildVerifiedBundleContext,
   bundleVerified,
+  isProducerSelection,
+  SELECTION_NOT_CHECKABLE,
   Sha256UnavailableError,
   VERIFICATION_BANNER_LINES,
   verificationBanner,
@@ -50,7 +52,12 @@ export type ReceiptResult =
       readonly module: string;
       /** A two-sided receipt both sides stamped. */
       readonly both: boolean;
-      /** The runtime's own banner line for the state it reached. */
+      /**
+       * The runtime's banner line for the state it reached. When the runtime
+       * draws no not-checked list for an incomplete verdict, the line also
+       * names what was not run (capsule-viewer#523), since a row or saved
+       * page shows this line and no list.
+       */
       readonly runtimeLine: string;
       /** Records in the bundle, and how many are tied to a signed checkpoint. */
       readonly records: { readonly total: number; readonly tied: number };
@@ -186,9 +193,43 @@ async function verified(bundle: unknown): Promise<Verified | ReceiptResult> {
   const total = Array.isArray(records) ? records.length : 0;
   return {
     context,
-    runtimeLine: banner.line,
+    runtimeLine: runtimeLine(context, banner),
     records: { total, tied: Math.max(0, total - banner.uncheckpointed) },
   };
+}
+
+/**
+ * The banner line, naming what was not run when the runtime's verdict is
+ * incomplete and it draws no not-checked list (capsule-viewer#523). A
+ * producer selection whose only unchecked claim is that nothing was left out
+ * (a Mesh node's receipt) says so in Sherlock2's words; any other such
+ * verdict carries the runtime's own sentence for it, as the full page's
+ * banner detail does.
+ */
+function runtimeLine(
+  context: VerifiedBundleContext,
+  banner: ReturnType<typeof verificationBanner>,
+): string {
+  if (banner.line !== VERIFICATION_BANNER_LINES.incompleteNoList)
+    return banner.line;
+  if (selectionOnly(context)) return fill("row.page.not_run.selection");
+  return banner.detail === ""
+    ? banner.line
+    : `${banner.line}. ${banner.detail}`;
+}
+
+// Every strict claim passed with no finding, except interval coverage,
+// withheld only because the producer chose the records.
+function selectionOnly(context: VerifiedBundleContext): boolean {
+  const strict = context.strict;
+  if (strict === undefined || !isProducerSelection(context.verification))
+    return false;
+  return strict.claims.every((claim) =>
+    claim.name === "interval_coverage"
+      ? claim.findings.length === 1 &&
+        claim.findings[0] === SELECTION_NOT_CHECKABLE
+      : claim.status === "pass" && claim.findings.length === 0,
+  );
 }
 
 type Found =

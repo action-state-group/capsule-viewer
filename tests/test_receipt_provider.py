@@ -15,10 +15,15 @@ import pytest
 from receipt_helpers import PACK, PACK_SHA, load, render, report_for, visible_text
 
 from capsule_viewer.receipt.provider import (
+    EXCHANGE_RECORD,
+    MINUTE_NOTE,
     MODEL_ASKED,
     NO_CONTENT,
     NO_CONTENT_UNPAID,
+    NOT_SHOWN,
     OWN_HALF,
+    PAYMENT_HASH,
+    PAYMENT_RECORD,
     REASONS,
     RECORDED_AT,
     RECORDS_NOTE,
@@ -29,6 +34,7 @@ from capsule_viewer.receipt.provider import (
     TITLE_ASKED,
     ProviderReceiptModule,
     amount_text,
+    payment_hash,
     provider_receipt_page,
 )
 from capsule_viewer.shell import INCOMPLETE_SELECTION
@@ -198,12 +204,13 @@ def test_the_fee_says_what_it_is_the_fee_for_and_the_time_says_its_zone():
 
 
 @pytest.mark.parametrize(
-    ("stamp", "shown"),
+    ("stamp", "instant"),
     [
-        ("2026-10-30T19:50:00Z", "2026-10-30T19:50:00 UTC"),
-        ("2026-10-30T19:50:00z", "2026-10-30T19:50:00 UTC"),
-        ("2026-10-30T14:50:00-05:00", "2026-10-30T19:50:00 UTC"),
-        ("2026-10-30T19:50:00+00:00", "2026-10-30T19:50:00 UTC"),
+        ("2026-10-30T19:50:00Z", "2026-10-30T19:50:00Z"),
+        ("2026-10-30T19:50:00z", "2026-10-30T19:50:00Z"),
+        ("2026-10-30T14:50:00-05:00", "2026-10-30T19:50:00Z"),
+        ("2026-10-30T19:50:00+00:00", "2026-10-30T19:50:00Z"),
+        ("2026-11-28T02:21:29Z", "2026-11-28T02:21:29Z"),
         ("2026-10-30T19:50:00", "?"),
         ("not a time", "?"),
         ("0001-01-01T00:00:00+01:00", "?"),
@@ -211,10 +218,131 @@ def test_the_fee_says_what_it_is_the_fee_for_and_the_time_says_its_zone():
         ("", "?"),
     ],
 )
-def test_the_time_is_shown_in_utc_or_not_at_all(stamp, shown):
+def test_the_time_is_read_as_a_utc_instant_or_not_at_all(stamp, instant):
     from capsule_viewer.receipt.provider import _utc
 
-    assert _utc(stamp) == shown
+    assert _utc(stamp) == instant
+
+
+# capsule-viewer#522 (Sherlock2, ops 8fdfbac7 and 1af9bb82; receipt-presentation.md R6):
+# the time in UTC words to the minute, never ":00", as a data-time span a page with a
+# script says in the reader's zone, and one note that records keep the minute.
+@pytest.mark.parametrize(
+    ("stamp", "words"),
+    [
+        ("2026-11-28T02:21:00Z", "Nov 28, 2026, 02:21 UTC"),
+        ("2026-11-28T02:21:29Z", "Nov 28, 2026, 02:21 UTC"),
+        ("2026-11-27T20:21:00-06:00", "Nov 28, 2026, 02:21 UTC"),
+    ],
+)
+@pytest.mark.parametrize("status", ["confirmed", "failed", "dispatched"])
+def test_the_time_is_said_to_the_minute_with_the_note_on_every_variant(stamp, words, status):
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
+    root["timestamp"] = stamp
+    root["effect"]["status"] = status
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    html = provider_receipt_page(context)
+    text = visible_text(html)
+    label = "Served at" if status == "confirmed" else RECORDED_AT
+    assert f"{label} {words}" in text
+    assert re.search(r"\d\d:\d\d:\d\d", text) is None
+    assert text.count(MINUTE_NOTE) == 1
+    instant = _utc_of(stamp)
+    assert f'<span data-time="{instant}">{words}</span>' in html
+
+
+def _utc_of(stamp):
+    from capsule_viewer.receipt.provider import _utc
+
+    return _utc(stamp)
+
+
+def test_the_unpaid_page_keeps_the_minute_note_and_an_unreadable_time_is_a_question_mark():
+    context = _edited("failed", legs=False)
+    text = visible_text(provider_receipt_page(context))
+    assert MINUTE_NOTE in text
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    root = next(r for r in edited["records"] if r["capsule_id"] == edited["root"])
+    root["timestamp"] = "not a time"
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    html = provider_receipt_page(context)
+    assert "Served at ?" in visible_text(html) and "data-time" not in html
+
+
+# capsule-viewer#520 (Sherlock2, ops 8fdfbac7): each payment leads with its Lightning
+# payment hash, in full, with its record id beside it.
+def test_each_payment_leads_with_its_full_payment_hash_and_its_record_id_beside_it():
+    bundle, _ = load(NAME)
+    html = _page()
+    text = visible_text(html)
+    assert f"{PAYMENT_HASH} {PAYMENT_RECORD} Received Fee for receiving" in text
+    for leg in (r for r in bundle["records"] if "settlement" in r):
+        digest = leg["settlement"]["payment_ref"]["value"]
+        assert f'<span class="cv-mono">{digest}</span>' in html
+        assert f"{digest} {leg['capsule_id'][:16]} 995 msat 5 msat" in text
+
+
+@pytest.mark.parametrize(
+    "ref",
+    [
+        None,
+        {"type": "ln.preimage", "value": "a" * 64},
+        {"type": "ln.payment_hash", "value": 7},
+        {"type": "ln.payment_hash", "value": "A" * 64},
+        {"type": "ln.payment_hash", "value": "a" * 63},
+        {"type": "ln.payment_hash", "value": "a" * 65},
+        {"type": "ln.payment_hash", "value": "g" * 64},
+        {"type": "ln.payment_hash", "value": "a" * 64 + "\n"},
+        {"value": "a" * 64},
+        "a" * 64,
+    ],
+)
+def test_a_leg_without_a_lightning_payment_hash_shows_not_shown(ref):
+    assert payment_hash({"payment_ref": ref} if ref is not None else {}) is None
+    bundle, output = load(NAME)
+    edited = copy.deepcopy(bundle)
+    leg = next(r for r in edited["records"] if "settlement" in r)
+    if ref is None:
+        del leg["settlement"]["payment_ref"]
+    else:
+        leg["settlement"]["payment_ref"] = ref
+    context, _ = context_from_capsulectl(edited, report_for(edited, output))
+    model = ProviderReceiptModule().buildModel(context)
+    assert [p.payment_hash is None for p in model.payments].count(True) == 1
+    assert f"not shown {leg['capsule_id'][:16]}" in visible_text(provider_receipt_page(context))
+
+
+def test_a_lowercase_64_hex_hash_is_the_payment_hash():
+    assert payment_hash({"payment_ref": {"type": "ln.payment_hash", "value": "0f" * 32}}) == "0f" * 32
+
+
+# capsule-viewer#521: the note comes before the records it says are listed below: the
+# exchange record, labelled, then the Received table naming each payment record.
+def test_the_records_note_comes_before_the_records_it_lists():
+    bundle, _ = load(NAME)
+    text = visible_text(_page())
+    root = bundle["root"][:16]
+    note = text.index(RECORDS_NOTE)
+    assert text.index(f"{EXCHANGE_RECORD} {root}") > note
+    assert text.index("Received (2)") > note
+    assert text.index(RECORDS_NOTE) > text.index(MINUTE_NOTE)
+    for leg in (r for r in bundle["records"] if "settlement" in r):
+        assert text.index(leg["capsule_id"][:16]) > note
+    # Nothing follows the records: the note is not the module's last line.
+    assert not text.split(RECORDS_NOTE, 1)[1].strip().startswith(root)
+
+
+def test_the_new_labels_are_the_go_packs():
+    entries = json.loads((Path(__file__).parents[1] / "go" / "receipt" / "wording-en.json").read_text(encoding="utf-8"))["entries"]
+    assert entries["provider.payment_hash"] == PAYMENT_HASH
+    assert entries["provider.payment_record"] == PAYMENT_RECORD
+    assert entries["provider.exchange_record"] == EXCHANGE_RECORD
+    assert entries["provider.minute_note"] == MINUTE_NOTE
+    assert entries["provider.records_note"] == RECORDS_NOTE
+    assert entries["provider.not_shown"] == NOT_SHOWN
 
 
 # capsule-viewer#465: a failed or dispatched exchange, drawn with its real

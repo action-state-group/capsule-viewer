@@ -43,6 +43,10 @@ const fixture = (name: string): string =>
     ),
     "utf8",
   );
+// Sherlock2's words for #523 (go/receipt/wording-en.json row.page.not_run.selection).
+const SELECTION_LINE =
+  "None of the bundle's checks failed, but one can't be run on this file: whether anything was left out, because the producer chose which records it holds.";
+
 const goManifest = (kind: string): { id: string } =>
   JSON.parse(
     readFileSync(
@@ -124,17 +128,23 @@ describe("the receipt export (#383)", () => {
       "This is this node's own record of its half of the exchange. It is not a joint record: the other party keeps its own.",
       "It names the model and what was received. It holds no request or response text.",
       "Model served",
-      "Served at2026-10-30T19:50:00 UTC",
+      "Served at",
+      "Records keep the time to the minute.",
       "Received in total1,990 msat",
       "Received (2)",
+      "Payment hash",
+      "Payment record",
       "Fee for receiving",
       "The exchange and each payment are records of their own, listed below.",
     ])
       expect(text).toContain(words);
-    // Not a deal: no deal or offer words, and the served time stays in UTC
-    // (no time for the page's local-time pass).
+    // Not a deal: no deal or offer words. The owner's page says the served
+    // time in the reader's zone, to the minute (R6; Sherlock2 on #522).
     expect(text).not.toMatch(/deal|offer/i);
-    expect(l0.querySelector("[data-time]")).toBeNull();
+    expect(l0.querySelector("[data-time]")?.getAttribute("data-time")).toBe(
+      "2026-10-30T19:50:00Z",
+    );
+    expect(text).not.toMatch(/\d\d:\d\d:\d\d/);
     expect(
       l0.querySelector(
         '[data-receipt-module="capsuleviewer.receipt.provider/v0"]',
@@ -145,8 +155,37 @@ describe("the receipt export (#383)", () => {
     expect(page.textContent).not.toContain("an exchange you served");
   });
 
+  // capsule-viewer#523: a producer selection checks everything but whether
+  // anything was left out, and the runtime draws no not-checked list for
+  // it, so the line the row and the saved page show names that check
+  // (Sherlock2's words).
+  it.each(["mesh-provider-selected", "mesh-payer-selected"])(
+    "the line for %s names the check that can't be run (#523)",
+    async (name) => {
+      const result = await checkReceipt(fixture(name));
+      if (result.kind !== "checked") throw new Error("not checked");
+      expect(result.runtimeLine).toBe(SELECTION_LINE);
+      expect(receiptPageLines(result, { carrier: "page" })?.lines[2]).toBe(
+        SELECTION_LINE,
+      );
+      expect(receiptPageLines(result)?.lines[2]).toBe(SELECTION_LINE);
+    },
+  );
+
   // A page saved for anyone to check, or a report, never addresses the
   // reader as the owner (#395): the provider's page draws no title there.
+  it.each(["page", "report"] as const)(
+    "a provider's receipt carried by a %s keeps its time in UTC words (#522)",
+    async (carrier) => {
+      const shared = host();
+      await renderReceipt(fixture("mesh-provider-selected"), shared, {
+        carrier,
+      });
+      expect(shared.querySelector("[data-time]")).toBeNull();
+      expect(shared.textContent).toContain("Oct 30, 2026, 19:50 UTC");
+    },
+  );
+
   it.each(["page", "report"] as const)(
     "a provider's receipt carried by a %s draws no owner's title (#390)",
     async (carrier) => {
@@ -447,11 +486,12 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     reason,
     exchange_id: "5cd79a2e1d368d4126c8710bd68eb209",
     model: "m",
-    served_at: "2026-10-30T19:50:00 UTC",
+    served_at: "2026-10-30T19:50:00Z",
     payments: paid
       ? [
           {
             capsule_id: "943636c8ec93ae8d3d82",
+            payment_hash: null,
             received: "995 msat",
             fee: "5 msat",
           },
@@ -563,7 +603,9 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
         "Your record of an exchange you were asked to serve",
       );
       expect(page.text).toContain("Model asked for");
-      expect(page.text).toContain("Recorded at2026-10-30T19:50:00 UTC");
+      expect(page.text).toContain("Recorded at");
+      expect(page.text).toContain("Records keep the time to the minute.");
+      expect(page.text).not.toMatch(/\d\d:\d\d:\d\d/);
       expect(page.text).not.toMatch(/Model served|Served at/);
       // A shared copy draws no owner's title and never says "you".
       const shared = await draw(model(effect, null), "page");

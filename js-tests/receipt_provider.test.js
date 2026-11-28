@@ -5,7 +5,7 @@
 // to the twin on the fixture and its edited copies. The rows marked "script
 // only" are where a script number or date is not Python's.
 import { describe, expect, it } from "vitest";
-import { caseInputs, loadScript, receiptGolden } from "./receiptScripts.js";
+import { caseInputs, loadScript, readBundle, receiptGolden } from "./receiptScripts.js";
 
 const { api } = loadScript("provider");
 const text = (amount) => api.providerAmount(amount)?.text ?? null;
@@ -51,23 +51,23 @@ describe("the provider's receipt: amounts (provider.amount_text)", () => {
 
 describe("the provider's receipt: the served time (provider._utc)", () => {
   it.each([
-    ["2026-10-30T19:50:00Z", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30T19:50:00z", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30T14:50:00-05:00", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30T19:50:00+00:00", "2026-10-30T19:50:00 UTC"],
+    ["2026-10-30T19:50:00Z", "2026-10-30T19:50:00Z"],
+    ["2026-10-30T19:50:00z", "2026-10-30T19:50:00Z"],
+    ["2026-10-30T14:50:00-05:00", "2026-10-30T19:50:00Z"],
+    ["2026-10-30T19:50:00+00:00", "2026-10-30T19:50:00Z"],
     ["2026-10-30T19:50:00", "?"],
     ["not a time", "?"],
     ["0001-01-01T00:00:00+01:00", "?"],
     ["9999-12-31T23:59:59-01:00", "?"],
     ["", "?"],
     // As Python's fromisoformat reads them (checked against it on Python 3.15).
-    ["2026-10-30T19:50Z", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30 19:50:00+00:00", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30t19:50:00Z", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30T19:50:00.1234567+00:00", "2026-10-30T19:50:00 UTC"],
-    ["2026-10-30T19:50:00+05", "2026-10-30T14:50:00 UTC"],
-    ["2026-10-30T19:50:00+0530", "2026-10-30T14:20:00 UTC"],
-    ["2026-10-30T19:50:00-00:00", "2026-10-30T19:50:00 UTC"],
+    ["2026-10-30T19:50Z", "2026-10-30T19:50:00Z"],
+    ["2026-10-30 19:50:00+00:00", "2026-10-30T19:50:00Z"],
+    ["2026-10-30t19:50:00Z", "2026-10-30T19:50:00Z"],
+    ["2026-10-30T19:50:00.1234567+00:00", "2026-10-30T19:50:00Z"],
+    ["2026-10-30T19:50:00+05", "2026-10-30T14:50:00Z"],
+    ["2026-10-30T19:50:00+0530", "2026-10-30T14:20:00Z"],
+    ["2026-10-30T19:50:00-00:00", "2026-10-30T19:50:00Z"],
     ["2026-10-30T19:50:60Z", "?"],
     ["2026-06-31T10:00:00Z", "?"],
     ["0000-12-31T23:00:00-02:00", "?"],
@@ -183,7 +183,7 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
     const page = await draw("failed-timeout");
     expect(page.status).toBe(`This node's record says the exchange failed: timed out.${FAILED_TAIL}`);
     expect(page.noContent).toBe("It names the model and what was received. It holds no request or response text.");
-    expect(page.records).toMatch(/^The exchange and each payment are records of their own, listed below\. /);
+    expect(page.records).toBe("The exchange and each payment are records of their own, listed below.");
     expect(page.text).toContain(`Received (${page.model.payments.length})`);
     expect(page.text).toContain("Received in total");
     expect(page.rows).toBe(page.model.payments.length);
@@ -233,4 +233,96 @@ describe("the provider's receipt: a failed or dispatched exchange (#465)", () =>
       expect(await draw(label)).toBeNull();
     },
   );
+});
+
+// capsule-viewer#520-#522, from the hand run of Mesh-LLM/capsules-plugin#398,
+// in Sherlock2's words (ops 8fdfbac7 and 1af9bb82).
+describe("the provider's receipt: payment hash, records note and the minute (#520-#522)", () => {
+  const golden = receiptGolden();
+  const fixture = golden.cases.find((c) => c.name === "mesh-provider-selected" && c.audience === "keep");
+
+  async function draw({ carrier = null, localTime = false, edit = null } = {}) {
+    const lib = loadScript("provider");
+    const bundle = structuredClone(readBundle(fixture.name));
+    if (edit) edit(bundle);
+    const { context, env } = caseInputs({ ...fixture, bundle });
+    const module = lib.api.createModule("provider", { ...env, localTime });
+    const model = await module.buildModel(context);
+    const doc = lib.document;
+    const host = { L0: doc.createElement("div"), L1: doc.createElement("div"), L2: doc.createElement("div"), depth: "L0" };
+    if (carrier) {
+      const wrap = doc.createElement("div");
+      wrap.setAttribute("data-receipt-carrier", carrier);
+      wrap.append(host.L0, host.L1, host.L2);
+    }
+    module.render(model, host, {});
+    return { model, l0: host.L0, text: host.L0.textContent };
+  }
+  const legs = () => readBundle(fixture.name).records.filter((r) => r.settlement);
+
+  it.each([null, "page", "report"])("each payment leads with its full Lightning payment hash, its record id beside it (carrier %s)", async (carrier) => {
+    const { l0 } = await draw({ carrier });
+    expect([...l0.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual(["Payment hash", "Payment record", "Received", "Fee for receiving"]);
+    const rows = [...l0.querySelectorAll("tbody tr")].map((tr) => [...tr.querySelectorAll("td")].map((td) => td.textContent));
+    expect(rows).toEqual(legs().map((leg) => [leg.settlement.payment_ref.value, leg.capsule_id.slice(0, 16), "995 msat", "5 msat"]));
+    expect(rows[0][0]).toHaveLength(64);
+  });
+
+  it.each([
+    [undefined],
+    [{ type: "ln.preimage", value: "a".repeat(64) }],
+    [{ type: "ln.payment_hash", value: 7 }],
+    [{ type: "ln.payment_hash", value: "A".repeat(64) }],
+    [{ type: "ln.payment_hash", value: "a".repeat(63) }],
+    [{ type: "ln.payment_hash", value: "a".repeat(65) }],
+    [{ type: "ln.payment_hash", value: "g".repeat(64) }],
+    [{ type: "ln.payment_hash", value: "a".repeat(64) + "\n" }],
+    [{ value: "a".repeat(64) }],
+    ["a".repeat(64)],
+  ])("a leg without a Lightning payment hash (%j) shows not shown", async (ref) => {
+    const { model, l0 } = await draw({
+      edit: (bundle) => {
+        const leg = bundle.records.find((r) => r.settlement);
+        if (ref === undefined) delete leg.settlement.payment_ref;
+        else leg.settlement.payment_ref = ref;
+      },
+    });
+    expect(model.payments.filter((p) => p.payment_hash === null)).toHaveLength(1);
+    expect([...l0.querySelectorAll("tbody tr td:first-child")].map((td) => td.textContent)).toContain("not shown");
+  });
+
+  it("the records note comes before the records it lists (#521)", async () => {
+    const { model, text } = await draw();
+    const note = text.indexOf("The exchange and each payment are records of their own, listed below.");
+    expect(note).toBeGreaterThan(-1);
+    expect(text.indexOf(`Exchange record ${model.exchange_id.slice(0, 16)}`)).toBeGreaterThan(note);
+    expect(text.indexOf("Received (2)")).toBeGreaterThan(note);
+    for (const leg of legs()) expect(text.indexOf(leg.capsule_id.slice(0, 16))).toBeGreaterThan(note);
+  });
+
+  it("the time is said to the minute in UTC words, as a data-time span, with one note (#522)", async () => {
+    const { l0, text } = await draw();
+    const span = l0.querySelector("[data-time]");
+    expect(span.getAttribute("data-time")).toBe("2026-10-30T19:50:00Z");
+    expect(span.textContent).toBe("Oct 30, 2026, 19:50 UTC");
+    expect(text).not.toMatch(/\d\d:\d\d:\d\d/);
+    expect(text.split("Records keep the time to the minute.")).toHaveLength(2);
+  });
+
+  it("a page with a script says the time in the reader's zone, with the zone named", async () => {
+    const { l0 } = await draw({ localTime: true });
+    const shown = l0.querySelector("[data-time]").textContent;
+    expect(shown).not.toBe("Oct 30, 2026, 19:50 UTC");
+    expect(shown).toMatch(/2026/);
+    expect(shown).not.toMatch(/:\d\d:\d\d/);
+    // The zone is named (Intl's short zone name, "UTC" or "GMT…" in a UTC test run, "CDT" elsewhere).
+    expect(shown).toMatch(/[A-Z]{2,}|GMT[+-]\d/);
+  });
+
+  it.each(["page", "report"])("a shared copy (%s) keeps the time in UTC words, which no local-time pass rewrites", async (carrier) => {
+    const { l0, text } = await draw({ carrier, localTime: true });
+    expect(l0.querySelector("[data-time]")).toBeNull();
+    expect(text).toContain("Oct 30, 2026, 19:50 UTC");
+    expect(text).toContain("Records keep the time to the minute.");
+  });
 });
