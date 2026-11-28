@@ -84,7 +84,7 @@ export const HISTORY_VIEW_MANIFEST: PresentationManifest = Object.freeze({
   executable: {
     carrier: "core-runtime",
     style_sha256: [
-      "657b325a53ff4b809b5101084e294c017ce0189949a71327bacb991bbf06c747",
+      "121fdcc6556ba4903270ca6a5eab0b3521f0e6ca1f8e86b91530ae696b9854a2",
     ],
   },
 }) as PresentationManifest;
