@@ -13606,13 +13606,16 @@ ${body}
     return typeof key === "string" && /^[0-9a-f]{64}$/u.test(key) ? key : null;
   }
   function listedIndependent(rows, keyId, name, holder, counterparty) {
-    if (counterparty === null || holder.length === 0) return false;
     const row2 = rows.map(obj2).find(
       (r) => r["name"] === name && Array.isArray(r["key_ids"]) && r["key_ids"].includes(keyId)
     );
-    const listed = row2?.["independent_of"];
-    if (!Array.isArray(listed)) return false;
-    return [...holder, counterparty].every((key) => listed.includes(key));
+    return listsParties(row2?.["independent_of"], holder, counterparty) === true;
+  }
+  function listsParties(listed, holder, counterparty) {
+    if (!Array.isArray(listed) || listed.length === 0) return false;
+    const known = counterparty === null ? holder : [...holder, counterparty];
+    if (!known.every((key) => listed.includes(key))) return false;
+    return holder.length > 0 && counterparty !== null ? true : null;
   }
 
   // src/verifier-report.ts
@@ -13682,7 +13685,7 @@ ${body}
     const pass2 = {
       kind: "pass",
       ...typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {},
-      ...isObj2(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {},
+      ...isObj2(entry["witnessed"]) ? { witnessed: witnessedOf(context, entry["witnessed"]) } : {},
       checks: reportedChecks(r),
       ...typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}
     };
@@ -13717,6 +13720,30 @@ ${body}
       verdict: typeof verdict2 === "string" && verdict2 !== "" ? verdict2 : "not valid"
     };
   }
+  function witnessedOf(context, given) {
+    const { independent: _sent, ...witnessed } = given;
+    if (witnessed["own_witness"] === true) return witnessed;
+    const listed = witnessed["independent_of"];
+    if (!Array.isArray(listed) || !listed.every((key) => typeof key === "string"))
+      return witnessed;
+    const independent = listsParties(
+      listed,
+      holderKeys(context),
+      counterpartyKey(context.bundle)
+    );
+    return independent === null ? witnessed : { ...witnessed, independent };
+  }
+  function holderKeys(context) {
+    const keys = new Set(declaredProducerKeys(context.bundle));
+    if (bundleVerified(context.verification)) {
+      const records = obj3(context.bundle)["records"];
+      for (const record of Array.isArray(records) ? records : []) {
+        const key = obj3(record)["key_id"];
+        if (typeof key === "string" && /^[0-9a-f]{64}$/u.test(key)) keys.add(key);
+      }
+    }
+    return [...keys];
+  }
   async function dealV0Reading(context, r, extensions2) {
     const entries = extensions2.filter((e) => e["kind"] === DEAL_V02);
     if (entries.length !== 1) return null;
@@ -13730,7 +13757,7 @@ ${body}
     return withVerdict(r, {
       kind: "pass",
       profile: DEAL_V02,
-      ...isObj2(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {},
+      ...isObj2(entry["witnessed"]) ? { witnessed: witnessedOf(context, entry["witnessed"]) } : {},
       ...countersign === null ? {} : { countersign },
       ...typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}
     });
@@ -13859,14 +13886,17 @@ ${body}
   function bookWitnessOf(reading) {
     if (reading?.kind !== "pass") return void 0;
     const got = obj3(reading.witnessed);
+    const named = typeof got["witness"] === "string" && got["witness"] !== "" ? got["witness"] : void 0;
+    const independent = typeof got["independent"] === "boolean" ? { independent: got["independent"] } : {};
     if (got["status"] === "failed" || got["status"] === "withheld")
-      return { status: got["status"] };
-    if (got["status"] !== "verified" || typeof got["witness"] !== "string" || got["witness"] === "" || !utcInstant(got["at"]))
+      return named === void 0 ? { status: got["status"] } : { status: got["status"], witness: named, ...independent };
+    if (got["status"] !== "verified" || named === void 0 || !utcInstant(got["at"]))
       return void 0;
     return {
       status: "verified",
-      witness: got["witness"],
-      at: got["at"]
+      witness: named,
+      at: got["at"],
+      ...independent
     };
   }
   function utcInstant(value) {
@@ -13898,6 +13928,11 @@ ${body}
     "rung.book_witnessed": "Time-stamped by {witness} at {at} ({utc}), as capsulectl verify reported on your own book. This file carries no witness receipt, so this page did not check it itself.",
     "rung.book_witness_failed": "capsulectl verify reported that your own book's witness time-stamp did not verify, so no time-stamp is shown. This page did not check it itself.",
     "rung.book_witness_withheld": "capsulectl verify found no time-stamp for your own book from the witnesses it was given. That does not mean there is none. This page did not check it itself.",
+    "rung.book_witnessed_not_listed": "Time-stamped by {witness} at {at} ({utc}), as capsulectl verify reported on your own book. The directory entry for {witness} does not list it as independent of the parties. This file carries no witness receipt, so this page did not check it itself.",
+    "rung.book_witness_failed_named": "capsulectl verify reported that your own book's witness time-stamp from {witness} did not verify, so no time-stamp is shown. This page did not check it itself.",
+    "rung.book_witness_withheld_named": "capsulectl verify found no time-stamp for your own book from {witness}. That does not mean there is none. This page did not check it itself.",
+    "rung.book_witness_failed_named_not_listed": "capsulectl verify reported that your own book's witness time-stamp from {witness} did not verify, so no time-stamp is shown. The directory entry for {witness} does not list it as independent of the parties. This page did not check it itself.",
+    "rung.book_witness_withheld_named_not_listed": "capsulectl verify found no time-stamp for your own book from {witness}. That does not mean there is none. The directory entry for {witness} does not list it as independent of the parties. This page did not check it itself.",
     "deal.proof.lede.passed": "Yes. capsulectl verify passed every test when this page was made. The page shows its answer; it did not re-check by itself.",
     "deal.proof.lede.partial": "capsulectl verify passed every test it ran when this page was made; a test marked \u2013 was not run on this copy. The page shows its answer; it did not re-check by itself.",
     "deal.proof.lede.failed": "No. capsulectl verify reported a test that failed.",
@@ -13918,6 +13953,11 @@ ${body}
     "deal.proof.status.absent": "not in this copy",
     "deal.proof.status.withheld": "not run on this copy",
     "deal.proof.witness.filled_checked": "Witness time stamp: {witness} at {at}, on your own book",
+    "deal.proof.witness.filled_checked_not_listed": "Witness time stamp: {witness} at {at}, on your own book. Its directory entry does not list it as independent of the parties.",
+    "deal.proof.witness.open_named": "Witness time stamp from {witness}: not in this copy",
+    "deal.proof.witness.failed_named": "Witness time stamp from {witness}: didn't verify",
+    "deal.proof.witness.open_named_not_listed": "Witness time stamp from {witness}: not in this copy. Its directory entry does not list it as independent of the parties.",
+    "deal.proof.witness.failed_named_not_listed": "Witness time stamp from {witness}: didn't verify. Its directory entry does not list it as independent of the parties.",
     "deal.proof.counterparty_half": "The seller's signed agreement",
     "deal.proof.counterparty_half.seller": "The buyer's signed agreement",
     "deal.proof.counterparty_half.report": "The other side's signed agreement",
@@ -18410,10 +18450,10 @@ ${s} .check .steps{margin:12px 0 0;padding-left:20px;font-size:14px;line-height:
   }
   function builtCommit() {
     if (false) return void 0;
-    return commitPrefix("6ade36cd6f820e7be9ad99e06dcbc5711ea5c919");
+    return commitPrefix("645ce92de7f9b8a983a9365464f700148cf70070");
   }
   var commit = builtCommit();
-  var unreleased = false;
+  var unreleased = true;
   var VIEWER_BUILD = {
     viewer: "@action-state-group/capsule-viewer",
     viewerVersion: "0.28.0",
@@ -29686,22 +29726,30 @@ ${pad.repeat(depth)}`;
   function bookWitnessLine(book) {
     const line = element6("p");
     if (book.status !== "verified") {
-      line.textContent = receiptWord(
-        book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld"
+      const key = book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld";
+      line.textContent = book.witness === void 0 ? receiptWord(key) : receiptWord(
+        book.independent === false ? `${key}_named_not_listed` : `${key}_named`,
+        { witness: book.witness }
       );
       line.dataset.bookWitness = book.status;
+      if (book.witness !== void 0 && book.independent === false)
+        line.dataset.witnessListed = "not";
       return line;
     }
     const mark = "\0";
-    const [before, ...after] = receiptWord("rung.book_witnessed", {
-      witness: book.witness,
-      utc: utcClock(book.at),
-      at: mark
-    }).split(mark);
+    const [before, ...after] = receiptWord(
+      book.independent === false ? "rung.book_witnessed_not_listed" : "rung.book_witnessed",
+      {
+        witness: book.witness,
+        utc: utcClock(book.at),
+        at: mark
+      }
+    ).split(mark);
     const time = element6("span", localTime(book.at));
     time.dataset.time = book.at;
     line.append(before ?? "", time, after.join(mark));
     line.dataset.bookWitness = "verified";
+    if (book.independent === false) line.dataset.witnessListed = "not";
     return line;
   }
   var SAME_CHECK = {
@@ -33247,7 +33295,7 @@ ${pad.repeat(depth)}`;
 .cvh-proof-row{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px}.cvh-proof-row span span{display:block}.cvh-mark{font-weight:700;text-align:center}
 .cvh-mark[data-status=pass]{color:var(--cvh-ok)}.cvh-mark[data-status=fail]{color:var(--cvh-bad)}.cvh-code{display:block;font-size:12px;color:var(--cvh-slate)}
 .cvh-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.cvh-check{background:var(--cvh-cream);border-radius:8px;padding:10px 12px;margin-top:12px}.cvh-check-title{font-weight:700}
+.cvh-card .cvh-check{background:var(--cvh-cream);border-radius:8px;padding:10px 12px;margin-top:12px}.cvh-check-title{font-weight:700}
 .cvh-command{margin:0 0 8px;white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,Menlo,monospace}
 .cvh-wide{display:grid;gap:12px}.cvh-technical summary{cursor:pointer;font-weight:700;color:var(--cvh-navy)}.cvh-technical dd{margin:0 0 8px;overflow-wrap:anywhere}.cvh-id{display:block}
 .cvh-footer{font-size:13px;color:var(--cvh-slate)}.cvh-footer p{margin:0 0 4px}.cvh-link{color:var(--cvh-navy);font-weight:600}
