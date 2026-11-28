@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
-import type {
-  BundleVerificationResult,
-  ResultClaim,
-  ResultRoot,
+import {
+  subjectBundleBinding,
+  type BundleVerificationResult,
+  type ResultClaim,
+  type ResultRoot,
 } from "@action-state-group/agent-action-capsule";
 import type { ClaimReason } from "./claim-reasons.js";
 import type { Words } from "./contract-report-wording.js";
@@ -250,6 +251,16 @@ export interface ReceiptsInput {
   readonly deals?: Readonly<Record<string, string>>;
 }
 
+/**
+ * The receipts as {@link drawGeneric} draws them: the page's, with the claims
+ * whose carried receipt is a different Bundle from the one their
+ * `subject_bundle` names (Evidence Result §4.5), by claim id. Internal: a
+ * caller gives {@link ReceiptsInput}, and drawGeneric computes `different`.
+ */
+type DrawnReceipts = ReceiptsInput & {
+  readonly different?: ReadonlySet<string>;
+};
+
 /** The deal a claim belongs to: its id before the first `::`, as the inference-deals Result writes it, or none. */
 export function dealIdOf(claimId: string): string | undefined {
   const at = claimId.indexOf("::");
@@ -263,12 +274,65 @@ export function dealIdOf(claimId: string): string | undefined {
  */
 function dealOf(
   claim: ResultClaim,
-  receipts: ReceiptsInput,
+  receipts: DrawnReceipts,
 ): string | undefined {
   if (receipts.deals === undefined) return dealIdOf(claim.id);
   return Object.prototype.hasOwnProperty.call(receipts.deals, claim.id)
     ? receipts.deals[claim.id]
     : undefined;
+}
+
+/**
+ * The claims whose carried receipt is not the Bundle their `subject_bundle`
+ * names (Evidence Result §4.5): the carried bundle's bundle digest differs.
+ * A claim with no `subject_bundle` binds nothing and is never here, and a
+ * text that is not a JSON object is left to opening, which says it could not
+ * be read: a different Bundle is never worded as a load error, nor a load
+ * error as a different Bundle.
+ */
+async function differentReceipts(
+  claims: readonly ResultClaim[],
+  receipts: DrawnReceipts,
+): Promise<Set<string>> {
+  const different = new Set<string>();
+  for (const claim of claims) {
+    if (claim.subjectBundle === undefined) continue;
+    const deal = dealOf(claim, receipts);
+    if (deal === undefined) continue;
+    const text = Object.prototype.hasOwnProperty.call(receipts.texts, deal)
+      ? receipts.texts[deal]
+      : undefined;
+    if (typeof text !== "string") continue;
+    let carried: unknown;
+    try {
+      carried = JSON.parse(text);
+    } catch {
+      continue;
+    }
+    if (
+      typeof carried !== "object" ||
+      carried === null ||
+      Array.isArray(carried)
+    )
+      continue;
+    let binding: string;
+    try {
+      binding = await subjectBundleBinding(
+        claim.subjectBundle,
+        carried as Record<string, unknown>,
+      );
+    } catch {
+      // JSON with no JCS form (a fraction, an integer past 2^53, a lone
+      // surrogate) has no bundle digest, while the named Bundle's digest is
+      // over its JCS form: it cannot be the named Bundle, so it is a
+      // different one. It parsed, so it is not a load error, and the throw
+      // stays on this claim's line: the report still draws.
+      different.add(claim.id);
+      continue;
+    }
+    if (binding === "different") different.add(claim.id);
+  }
+  return different;
 }
 
 /**
@@ -282,7 +346,7 @@ function dealOf(
 function receiptLine(
   claim: ResultClaim,
   w: Words,
-  receipts: ReceiptsInput,
+  receipts: DrawnReceipts,
 ): HTMLElement[] {
   const deal = dealOf(claim, receipts);
   if (deal === undefined) return [];
@@ -313,6 +377,14 @@ function receiptLine(
       ),
     );
     note.dataset.receipt = kind;
+    line.append(note);
+    return [line];
+  }
+  if (receipts.different?.has(claim.id) === true) {
+    // Another Bundle than the one this Result names for the claim: never
+    // shown as this claim's, and no control to open it (§4.5).
+    const note = el("p", "rcpt-note", w.t("generic.receipt.different"));
+    note.dataset.receipt = "different";
     line.append(note);
     return [line];
   }
@@ -376,7 +448,7 @@ function claimItem(
   claim: ResultClaim,
   w: Words,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const item = el("li", "");
   item.dataset.claimRef = claim.id;
@@ -397,7 +469,7 @@ function rowItem(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const label = w.row(row.requirementRef, "label");
   const name = el("span", "rname");
@@ -462,7 +534,7 @@ function groupedRows(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const box = el("div", "groups");
   const order: (string | undefined)[] = [];
@@ -510,7 +582,7 @@ function byContract(
   later: boolean,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  receipts?: DrawnReceipts,
 ): HTMLElement {
   const contracts = [...new Set(rows.map((row) => row.contractRef))];
   if (contracts.length <= 1)
@@ -551,8 +623,12 @@ export async function drawGeneric(
   w: Words,
   tierOf?: TierOf,
   reasons?: ReasonsOf,
-  receipts?: ReceiptsInput,
+  given?: ReceiptsInput,
 ): Promise<void> {
+  const receipts: DrawnReceipts | undefined =
+    given === undefined
+      ? undefined
+      : { ...given, different: await differentReceipts(result.claims, given) };
   const tierFor = (claim: ResultClaim): RowTier =>
     tierOf === undefined
       ? "unstated"

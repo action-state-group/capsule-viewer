@@ -476,6 +476,7 @@
     "generic.receipt.not_closed": "No receipt: this deal had not closed when this page was built.",
     "generic.receipt.withheld": "The holder's disclosure policy keeps this receipt off this page.",
     "generic.receipt.unreadable": "This receipt could not be read, so it is not shown. The rest of the report is unchanged.",
-    "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged."
+    "generic.receipt.unverified": "This receipt did not pass its checks, so it is not shown. The rest of the report is unchanged.",
+    "generic.receipt.different": "This receipt is not the one this report names for this deal, so it is not shown. The rest of the report is unchanged."
   }
 }

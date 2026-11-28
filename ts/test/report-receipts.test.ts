@@ -11,6 +11,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { bundleDigest } from "@action-state-group/agent-action-capsule";
 import {
   createPresentationRegistry,
   renderEvidenceGraph,
@@ -61,8 +62,8 @@ async function receiptText(dealId: string): Promise<string> {
   return JSON.stringify(sealed);
 }
 
-/** The Result with claims `d1::req-1`, `d2::req-2` and `plain` (no deal). */
-function dealsResult(): Obj {
+/** The Result with claims `d1::req-1`, `d2::req-2` and `plain` (no deal), each claim named in `subjects` carrying that `subject_bundle` digest (Evidence Result §4.5). */
+function dealsResult(subjects: Record<string, string> = {}): Obj {
   const bundle = JSON.parse(data("result-root-bundle.json")) as Obj;
   bundle.extensions = {
     ...((bundle.extensions as Obj | undefined) ?? {}),
@@ -74,8 +75,12 @@ function dealsResult(): Obj {
     "claim-2": "d2::req-2",
     "claim-3": "plain",
   };
-  for (const claim of doc.claims as Obj[])
+  for (const claim of doc.claims as Obj[]) {
     claim.id = names[claim.id as string]!;
+    const digest = subjects[claim.id as string];
+    if (digest !== undefined)
+      claim.subject_bundle = { digest_alg: "SHA-256", digest };
+  }
   const buckets = (doc.aggregate as Obj).buckets as Record<string, string[]>;
   for (const key of Object.keys(buckets))
     buckets[key] = buckets[key]!.map((id) => names[id]!);
@@ -86,8 +91,9 @@ async function draw(
   receipts: Record<string, DealReceiptEntry> | undefined,
   withModule = true,
   receiptDeals?: Record<string, string>,
+  subjects?: Record<string, string>,
 ): Promise<HTMLElement> {
-  const { bundle } = await sealEvidenceBundle(dealsResult());
+  const { bundle } = await sealEvidenceBundle(dealsResult(subjects));
   const root = document.createElement("main");
   document.body.append(root);
   const registry = createPresentationRegistry();
@@ -319,5 +325,139 @@ describe("a deal line's receipt", () => {
     }
     expect(root.querySelectorAll("[data-claim-ref]")).toHaveLength(3);
     expect(root.querySelector('[data-page="contract-report"]')).not.toBeNull();
+  });
+});
+
+// capsule-viewer#353: a claim's `subject_bundle` (agent-action-capsule
+// Evidence Result §4.5) names the one receipt bundle the producer meant, by
+// its bundle digest. The page compares a carried receipt with it before it
+// draws anything for the claim.
+describe("a deal line's receipt against the claim's subject_bundle", () => {
+  const digestOf = async (text: string): Promise<string> =>
+    bundleDigest(JSON.parse(text) as Record<string, unknown>);
+  const DIFFERENT =
+    "This receipt is not the one this report names for this deal, so it is not shown. The rest of the report is unchanged.";
+
+  it("opens a receipt whose bundle digest is the one the claim names, and draws it with its own checks", async () => {
+    const text = await receiptText("deal-one");
+    const root = await draw({ d1: text }, true, undefined, {
+      "d1::req-1": await digestOf(text),
+    });
+    const line = claim(root, "d1::req-1");
+    expect(line.querySelector('[data-receipt="different"]')).toBeNull();
+    line
+      .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
+      .click();
+    await settle(line);
+    expect(
+      line.querySelector<HTMLElement>("[data-stand-in-receipt]")!.dataset
+        .standInReceipt,
+    ).toBe("deal-one");
+  });
+
+  it("says a receipt filed under the claim's deal is a different one when its digest is not the one named, with no control, never as a load or check failure", async () => {
+    const meant = await receiptText("deal-one");
+    const filed = await receiptText("deal-two");
+    const root = await draw({ d1: filed }, true, undefined, {
+      "d1::req-1": await digestOf(meant),
+    });
+    const line = claim(root, "d1::req-1");
+    expect(line.querySelector('[data-receipt="different"]')!.textContent).toBe(
+      DIFFERENT,
+    );
+    expect(line.querySelector("button")).toBeNull();
+    expect(line.querySelector(".rcpt-panel")).toBeNull();
+    expect(line.textContent).not.toMatch(/could not be read|did not pass/u);
+    expect(root.querySelector("[data-stand-in-receipt]")).toBeNull();
+  });
+
+  it("matches the same bundle re-serialized with other whitespace and key order, since the digest is over its JCS form", async () => {
+    const text = await receiptText("deal-one");
+    const reordered = (value: unknown): unknown =>
+      Array.isArray(value)
+        ? value.map(reordered)
+        : typeof value === "object" && value !== null
+          ? Object.fromEntries(
+              Object.entries(value as Obj)
+                .reverse()
+                .map(([k, v]) => [k, reordered(v)]),
+            )
+          : value;
+    const respaced = JSON.stringify(reordered(JSON.parse(text)), null, 3);
+    expect(respaced).not.toBe(text);
+    const root = await draw({ d1: respaced }, true, undefined, {
+      "d1::req-1": await digestOf(text),
+    });
+    const line = claim(root, "d1::req-1");
+    expect(line.querySelector('[data-receipt="different"]')).toBeNull();
+    expect(line.querySelector('button[data-receipt="open"]')).not.toBeNull();
+  });
+
+  it("checks each claim against its own named bundle, and leaves a claim with no subject_bundle paired by its key alone", async () => {
+    const one = await receiptText("deal-one");
+    const two = await receiptText("deal-two");
+    const root = await draw({ d1: one, d2: two }, true, undefined, {
+      "d1::req-1": await digestOf(two),
+    });
+    expect(
+      claim(root, "d1::req-1").querySelector('[data-receipt="different"]'),
+    ).not.toBeNull();
+    // d2's claim names no bundle: today's control, no comparison
+    expect(
+      claim(root, "d2::req-2").querySelector('button[data-receipt="open"]'),
+    ).not.toBeNull();
+  });
+
+  it("keeps the not carried, withheld and unreadable lines for a claim that names a bundle", async () => {
+    const meant = await digestOf(await receiptText("deal-one"));
+    const root = await draw(
+      { d1: "this is not json", d2: null },
+      true,
+      undefined,
+      {
+        "d1::req-1": meant,
+        "d2::req-2": meant,
+        plain: meant,
+      },
+    );
+    const unreadable = claim(root, "d1::req-1");
+    expect(unreadable.querySelector('[data-receipt="different"]')).toBeNull();
+    unreadable
+      .querySelector<HTMLButtonElement>('button[data-receipt="open"]')!
+      .click();
+    await settle(unreadable);
+    expect(
+      unreadable
+        .querySelector(".rcpt-panel")!
+        .getAttribute("data-receipt-state"),
+    ).toBe("unreadable");
+    expect(
+      claim(root, "d2::req-2").querySelector('[data-receipt="withheld"]'),
+    ).not.toBeNull();
+    // `plain` has no deal on this page, so nothing is drawn for it
+    expect(claim(root, "plain").querySelector(".rcpt")).toBeNull();
+  });
+
+  it("draws the report when a carried receipt has no bundle digest (JSON with no JCS form), and says that receipt is not the named one", async () => {
+    const meant = await digestOf(await receiptText("deal-one"));
+    const odd = JSON.parse(await receiptText("deal-one")) as Obj;
+    odd["x-fraction"] = 0.5; // JSON.parse reads it; JCS has no form for it
+    const root = await draw(
+      { d1: JSON.stringify(odd), d2: await receiptText("deal-two") },
+      true,
+      undefined,
+      { "d1::req-1": meant },
+    );
+    expect(root.querySelector('[data-page="contract-report"]')).not.toBeNull();
+    expect(root.querySelectorAll("[data-claim-ref]")).toHaveLength(3);
+    const line = claim(root, "d1::req-1");
+    expect(line.querySelector('[data-receipt="different"]')!.textContent).toBe(
+      DIFFERENT,
+    );
+    expect(line.querySelector("button")).toBeNull();
+    // the other deal's line is untouched
+    expect(
+      claim(root, "d2::req-2").querySelector('button[data-receipt="open"]'),
+    ).not.toBeNull();
   });
 });
