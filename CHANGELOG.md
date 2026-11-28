@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- A row-input History page draws its "How this was checked" items as in 0.27.2 again (#516). 0.28.0's rule for the card page's "Check it yourself" box (`.cvh-check`, #384) was not scoped to the card page, so it also gave each of those items a cream box, padding and margin; it is now `.cvh-card .cvh-check`. Text and markup are unchanged.
+
 ## ts 0.28.0 and go 0.28.0 (2026-11-27)
 
 Both state viewer 0.28.0: `ts/v0.28.0`, then `go/v0.28.0` on the commit that ships its page runtime. Pull requests: #415, #417, #419, #420, #421, #422, #426, #427, #428, #435, #436, #437, #438, #441, #442, #444, #449, #451, #453, #455, #457, #458, #459, #462, #464, #467, #468, #469, #472, #474, #475, #483, #484, #485, #486, #493, #495, #499, #501, #502, #503, #510. The Go module drops `go/historyview` (#486), a breaking change, so `go/v0.28.0` is a minor release, not a patch. Mesh-LLM/capsules-plugin#398 updates to this release.
