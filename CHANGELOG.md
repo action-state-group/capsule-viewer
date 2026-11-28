@@ -11,6 +11,10 @@ here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The receipt's witness lines (the x-deal-v1 TIME-STAMPED stamp and "Witness time stamp" row, the page core's witness check and banner line, and the x-deal-v0 witness line) read the witness's directory entry when capsulectl's `witnessed` member carries it as `independent_of` (#508, the reading contract of ops u652): unless that list names both parties' keys, the line adds "Its directory entry does not list it as independent of the parties.", as the countersigned copy's does (#457). With no list, or a list the page cannot judge, nothing is said about independence, and nothing is said for a witness the reader's directory marks as its own (`own_witness: true`, carried by capsulectl; ops u655). A failed or withheld time stamp names its witness where capsulectl names it, and says the same of that witness's entry.
+
 ### Fixed
 
 - A row-input History page draws its "How this was checked" items as in 0.27.2 again (#516). 0.28.0's rule for the card page's "Check it yourself" box (`.cvh-check`, #384) was not scoped to the card page, so it also gave each of those items a cream box, padding and margin; it is now `.cvh-card .cvh-check`. Text and markup are unchanged.

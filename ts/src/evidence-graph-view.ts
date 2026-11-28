@@ -3781,28 +3781,49 @@ function localTime(at: string): string {
   }
 }
 
-/** capsulectl's book-witness line, in the receipt pack's words (rung.book_witness*). */
+/**
+ * capsulectl's book-witness line, in the receipt pack's words
+ * (rung.book_witness*): the witness named where capsulectl names it, and,
+ * for a time stamp, that its directory entry does not list it as
+ * independent of the parties when the page read that row so (#508).
+ */
 function bookWitnessLine(book: BookWitness): HTMLElement {
   const line = element("p");
   if (book.status !== "verified") {
-    line.textContent = receiptWord(
+    const key =
       book.status === "failed"
         ? "rung.book_witness_failed"
-        : "rung.book_witness_withheld",
-    );
+        : "rung.book_witness_withheld";
+    line.textContent =
+      book.witness === undefined
+        ? receiptWord(key)
+        : receiptWord(
+            book.independent === false
+              ? `${key}_named_not_listed`
+              : `${key}_named`,
+            { witness: book.witness },
+          );
     line.dataset.bookWitness = book.status;
+    if (book.witness !== undefined && book.independent === false)
+      line.dataset.witnessListed = "not";
     return line;
   }
   const mark = "\u0000";
-  const [before, ...after] = receiptWord("rung.book_witnessed", {
-    witness: book.witness,
-    utc: utcClock(book.at),
-    at: mark,
-  }).split(mark);
+  const [before, ...after] = receiptWord(
+    book.independent === false
+      ? "rung.book_witnessed_not_listed"
+      : "rung.book_witnessed",
+    {
+      witness: book.witness,
+      utc: utcClock(book.at),
+      at: mark,
+    },
+  ).split(mark);
   const time = element("span", localTime(book.at));
   time.dataset.time = book.at;
   line.append(before ?? "", time, after.join(mark));
   line.dataset.bookWitness = "verified";
+  if (book.independent === false) line.dataset.witnessListed = "not";
   return line;
 }
 

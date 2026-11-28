@@ -401,13 +401,20 @@
 
   // capsulectl's report of the holder's own book's witness time (verify
   // --stamp-proof, beside the copy and never in it), from its x-deal-v1
-  // entry: {status, witness, at} with strings only, else null.
+  // entry: {status, witness, at} with strings only, else null. The witness
+  // of a failed or withheld one where capsulectl names it, and on a verified
+  // one the page runtime's reading of the witness's directory row
+  // (verifier-report.ts witnessedOf, #508): independent true or false, else
+  // null (no row, or the page cannot tell), which says nothing.
   function bookWitnessed(verification, extension) {
     var entry = extension === EXTENSION ? capsulectlV0Entry(verification) : seq(map(verification).extensions).map(map).find(function (e) { return e.kind === EXTENSION_V1 && e.report === "standalone"; });
     var got = entry !== undefined ? map(entry.witnessed) : {};
     if (["verified", "failed", "withheld"].indexOf(got.status) < 0) return null;
-    if (got.status === "verified" && (typeof got.witness !== "string" || got.witness === "" || !validUtcTime(got.at))) return null;
-    return got.status === "verified" ? { status: got.status, witness: got.witness, at: got.at } : { status: got.status };
+    var named = typeof got.witness === "string" && got.witness !== "" ? got.witness : null;
+    if (got.status === "verified" && (named === null || !validUtcTime(got.at))) return null;
+    var independent = named !== null && typeof got.independent === "boolean" ? got.independent : null;
+    if (got.status !== "verified") return { status: got.status, witness: named, independent: independent };
+    return { status: got.status, witness: named, at: got.at, independent: independent };
   }
 
   // capsulectl's report of an x-deal-v0 copy, as the page's runtime hands it
@@ -3424,8 +3431,10 @@
     if (book) {
       // One line: the reader's local time, with UTC beside it (a short zone
       // name such as CST is ambiguous), and the file's own fact (#424).
-      if (book.status === "verified") return this.timed("rung.book_witnessed", book.at, { witness: book.witness, utc: utcClock(book.at) });
-      return w(book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld");
+      // Its directory entry, where the page read it, says whether it is listed as independent of the parties (#508).
+      if (book.status === "verified") return this.timed(book.independent === false ? "rung.book_witnessed_not_listed" : "rung.book_witnessed", book.at, { witness: book.witness, utc: utcClock(book.at) });
+      var bookKey = book.status === "failed" ? "rung.book_witness_failed" : "rung.book_witness_withheld";
+      return book.witness !== null ? w(bookKey + (book.independent === false ? "_named_not_listed" : "_named"), { witness: book.witness }) : w(bookKey);
     }
     if (model.witnessed === "pass") return w("rung.witness_verified");
     if (model.witnessed === "fail") return w("rung.witness_failed");
@@ -4621,10 +4630,15 @@
     if (book === null) return { state: "not_checked" };
     var S = model.sources;
     if (book.status === "verified") {
-      return { state: "filled", words: "filled_checked", at: book.at, at_src: at(S.book_witness, "/at"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
+      // Unless the witness's directory entry, as the page read it, lists it as independent of both parties, the
+      // line says it does not (#508, as the countersigned copy's does under u650); with no entry read, nothing.
+      return { state: "filled", words: book.independent === false ? "filled_checked_not_listed" : "filled_checked", at: book.at, at_src: at(S.book_witness, "/at"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
     }
-    if (book.status === "failed") return { state: "failed" };
-    return { state: "open" };
+    var state = book.status === "failed" ? "failed" : "open";
+    // A failed or withheld time stamp names its witness where capsulectl names it, and says the same of its
+    // directory entry.
+    if (book.witness !== null) return { state: state, words: state + (book.independent === false ? "_named_not_listed" : "_named"), witness: this.val(book.witness, at(S.book_witness, "/witness")) };
+    return { state: state };
   };
 
   // "What happened, step by step": one row per record the copy carries, each opening to what it records.
@@ -4825,7 +4839,8 @@
         this.checkYourself(model),
       ]);
     }
-    var stampText = stamp.state === "filled" ? this.timed("deal.proof.witness.filled_checked", stamp.at, { witness: stamp.witness }) : w("deal.proof.witness." + stamp.state);
+    var stampKey = "deal.proof.witness." + (stamp.words || stamp.state);
+    var stampText = stamp.state === "filled" ? this.timed(stampKey, stamp.at, { witness: stamp.witness }) : w(stampKey, stamp.witness !== undefined ? { witness: stamp.witness } : {});
     rows.push(this.proofRow("witnesses", stampState, stampText, stamp.state === "filled" ? null : this.say(model, "deal.proof.witness.note")));
     var parts = [
       d.el("h3", { class: "cv-rcpt-h" }, [w("deal.section.proof")]),

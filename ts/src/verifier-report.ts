@@ -19,11 +19,17 @@
  */
 
 import {
+  bundleVerified,
+  declaredProducerKeys,
   jcs,
   sha256Hex,
   type VerifiedBundleContext,
 } from "@action-state-group/agent-action-capsule";
-import type { CountersignedCopyStamp } from "./countersigned-copy.js";
+import {
+  counterpartyKey,
+  listsParties,
+  type CountersignedCopyStamp,
+} from "./countersigned-copy.js";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj =>
@@ -210,7 +216,9 @@ export async function verifierReportReading(
   const pass: VerifierReading = {
     kind: "pass",
     ...(typeof halfStatus === "string" ? { counterpartyHalf: halfStatus } : {}),
-    ...(isObj(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}),
+    ...(isObj(entry["witnessed"])
+      ? { witnessed: witnessedOf(context, entry["witnessed"]) }
+      : {}),
     checks: reportedChecks(r),
     ...(typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}),
   };
@@ -283,6 +291,53 @@ function withVerdict(
 }
 
 /**
+ * capsulectl's `witnessed` member with the page's own reading of the witness
+ * row it reported (capsule-viewer#508, the reading contract of ops u652): when
+ * the member carries `independent_of`, the directory row's list as the
+ * reader's witness directory states it, the page decides, as for the
+ * countersigned copy (#457), whether that list names both parties
+ * (listsParties). The holder's keys are the producer key the copy declares
+ * and, when the copy verifies, the keys its records are signed with (a fresh
+ * copy declares none; the key a capsulectl copy declares is its records'
+ * signing key). The counterparty's is the key the holder's sealed x-deal-v1
+ * agreement names; an x-deal-v0 copy names none. `independent` is the
+ * answer, left out when the member carries no list or the page cannot tell,
+ * so the witness line then says nothing about independence. A member
+ * capsulectl sent under that name is never taken as the page's answer.
+ *
+ * A witness the reader's directory marks as its own (`own_witness: true`,
+ * carried from the row capsulectl selected) gets no answer either: under
+ * u120 our witness stays independent, so no receipt says its entry does not
+ * list it as independent (ops u655, Steven's (A) on #508). Any other value
+ * of the mark, or none, is not own, and the key rule above applies.
+ */
+function witnessedOf(context: VerifiedBundleContext, given: Obj): Obj {
+  const { independent: _sent, ...witnessed } = given;
+  if (witnessed["own_witness"] === true) return witnessed;
+  const listed = witnessed["independent_of"];
+  if (!Array.isArray(listed) || !listed.every((key) => typeof key === "string"))
+    return witnessed;
+  const independent = listsParties(
+    listed,
+    holderKeys(context),
+    counterpartyKey(context.bundle),
+  );
+  return independent === null ? witnessed : { ...witnessed, independent };
+}
+
+function holderKeys(context: VerifiedBundleContext): string[] {
+  const keys = new Set(declaredProducerKeys(context.bundle));
+  if (bundleVerified(context.verification)) {
+    const records = obj(context.bundle)["records"];
+    for (const record of Array.isArray(records) ? records : []) {
+      const key = obj(record)["key_id"];
+      if (typeof key === "string" && /^[0-9a-f]{64}$/u.test(key)) keys.add(key);
+    }
+  }
+  return [...keys];
+}
+
+/**
  * capsulectl's report of an x-deal-v0 copy (capsule-viewer#383, CV3b): its
  * one x-deal-v0 entry, and on a pass the two members only capsulectl can
  * check:
@@ -316,7 +371,9 @@ async function dealV0Reading(
   return withVerdict(r, {
     kind: "pass",
     profile: DEAL_V0,
-    ...(isObj(entry["witnessed"]) ? { witnessed: entry["witnessed"] } : {}),
+    ...(isObj(entry["witnessed"])
+      ? { witnessed: witnessedOf(context, entry["witnessed"]) }
+      : {}),
     ...(countersign === null ? {} : { countersign }),
     ...(typeof r["verdict"] === "string" ? { verdict: r["verdict"] } : {}),
   });
@@ -527,33 +584,53 @@ export type BookWitness =
       readonly status: "verified";
       readonly witness: string;
       readonly at: string;
+      /** The page's reading of the witness's directory row (witnessedOf), when it has one. */
+      readonly independent?: boolean;
     }
-  | { readonly status: "failed" | "withheld" };
+  | {
+      readonly status: "failed" | "withheld";
+      /** The witness capsulectl names, when it names one. */
+      readonly witness?: string;
+      /** For a named witness, the page's reading of its directory row, when it has one. */
+      readonly independent?: boolean;
+    };
 
 /**
  * capsulectl's book witness of a passing reading, read by the receipt
  * module's own rules (receipt_core.js bookWitnessed): failed or withheld as
- * they are, verified only with a witness and a UTC time; anything else,
- * undefined. Whose page may show it is the caller's (u219, u239).
+ * they are, with the witness when capsulectl names one; verified only with a
+ * witness and a UTC time, and with the page's reading of its directory row
+ * when it has one; anything else, undefined. Whose page may show it is the
+ * caller's (u219, u239).
  */
 export function bookWitnessOf(
   reading: VerifierReading | null,
 ): BookWitness | undefined {
   if (reading?.kind !== "pass") return undefined;
   const got = obj(reading.witnessed);
+  const named =
+    typeof got["witness"] === "string" && got["witness"] !== ""
+      ? got["witness"]
+      : undefined;
+  const independent =
+    typeof got["independent"] === "boolean"
+      ? { independent: got["independent"] }
+      : {};
   if (got["status"] === "failed" || got["status"] === "withheld")
-    return { status: got["status"] };
+    return named === undefined
+      ? { status: got["status"] }
+      : { status: got["status"], witness: named, ...independent };
   if (
     got["status"] !== "verified" ||
-    typeof got["witness"] !== "string" ||
-    got["witness"] === "" ||
+    named === undefined ||
     !utcInstant(got["at"])
   )
     return undefined;
   return {
     status: "verified",
-    witness: got["witness"],
+    witness: named,
     at: got["at"] as string,
+    ...independent,
   };
 }
 
