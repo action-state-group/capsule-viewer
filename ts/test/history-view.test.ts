@@ -785,3 +785,44 @@ describe("the stylesheet's dark palette (issue 310)", () => {
     expect(light).not.toContain("background");
   });
 });
+
+describe("the card page's check box stays on the card page (issue 516)", () => {
+  // 0.28.0 drew the card's "Check it yourself" box with an unscoped
+  // `.cvh-check` rule, which also boxed each "How this was checked" item of
+  // a row-input page (`li.cvh-check`). jsdom does not resolve the box's
+  // `var(--cvh-cream)` background, so its padding and margin stand for it.
+  const styled = (input: Json): HTMLElement => {
+    const host = document.createElement("div");
+    const style = document.createElement("style");
+    style.textContent = historyViewStyles;
+    const page = document.createElement("div");
+    expect(renderHistoryView(input, page)).toBe(true);
+    host.append(style, page);
+    document.body.append(host);
+    return host;
+  };
+
+  it("a row-input page draws its check items without the box", () => {
+    const host = styled(mesh());
+    const items = host.querySelectorAll<HTMLElement>(
+      '[data-history="checked"] li.cvh-check',
+    );
+    expect(items.length).toBeGreaterThan(0);
+    for (const li of items) {
+      const s = getComputedStyle(li);
+      expect(s.paddingTop).toBe("");
+      expect(s.marginTop).toBe("");
+    }
+    host.remove();
+  });
+
+  it("the card page keeps its check box", () => {
+    const host = styled(vectors.cases["card-theirs"] as Json);
+    const box = host.querySelector<HTMLElement>('[data-history="check"]')!;
+    expect(box.classList.contains("cvh-check")).toBe(true);
+    const s = getComputedStyle(box);
+    expect(s.paddingTop).toBe("10px");
+    expect(s.marginTop).toBe("12px");
+    host.remove();
+  });
+});
