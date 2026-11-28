@@ -44,14 +44,13 @@ export {
   setReaderWitnessPolicy,
 } from "./reader-witnesses.js";
 
-// The deal receipt's two checks a module may not run (capsule-viewer#214;
+// The deal receipt's check a module may not run (capsule-viewer#214;
 // evidencebook-deal#94, 9b frame 8): a Lightning settlement's preimage
-// against its payment hash (lightning-v0 `preimage_verified`), and a deal
-// bundle's parent-log-witness/v1 chain (or the older x-cadence-witness/v0) with its receipts under the reader's
-// own witness list. Built from cll's checkpoint and MMR verifiers and
-// agent-action-capsule's JCS and receipt check; the module verifies nothing.
+// against its payment hash (lightning-v0 `preimage_verified`). A deal
+// bundle's parent-log witness is agent-action-capsule's to check, in the
+// context's strict result (`parentWitness`), so the runtime has no check of
+// its own for it (capsule-viewer#237).
 export { paymentPreimageCheck } from "./payment-preimage.js";
-export { readerCadenceWitness } from "./cadence-witness.js";
 
 // The History card's card_registered (capsule-viewer#342; standard-history-v0
 // section 13): AAC's checkCardRegistered over the card statements the block

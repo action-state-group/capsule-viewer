@@ -86,11 +86,9 @@ const WITNESS_CONTRACT = [
   "setReaderWitnessPolicy",
 ] as const;
 
-// The deal receipt's preimage and witness checks (capsule-viewer#214).
-const RECEIPT_CONTRACT = [
-  "paymentPreimageCheck",
-  "readerCadenceWitness",
-] as const;
+// The deal receipt's preimage check (capsule-viewer#214); its witness check
+// retired for AAC's strict result (capsule-viewer#237).
+const RECEIPT_CONTRACT = ["paymentPreimageCheck"] as const;
 
 // The History card's signature check (capsule-viewer#211).
 const SIGNATURE_CONTRACT = ["readerCardSignature"] as const;

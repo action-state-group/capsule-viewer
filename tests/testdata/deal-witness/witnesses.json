@@ -1,0 +1,13 @@
+{
+  "directory_version": "1",
+  "witnesses": [
+    {
+      "endpoint": "https://127.0.0.1:62498",
+      "key_ids": [
+        "3b4c920e196fffa75751a0c0665b1208b37a5f3cb87886d106361b6e24c7e581"
+      ],
+      "name": "test witness",
+      "since": "2026-01-01"
+    }
+  ]
+}

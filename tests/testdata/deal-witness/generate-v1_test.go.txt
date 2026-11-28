@@ -1,0 +1,51 @@
+package deal
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+// Writes capsule-viewer#237's parent-log-witness/v1 fixtures: today's
+// capsulectl copy (which carries no chain since u225) with the holder's
+// production parent-log-witness/v1 block put in by withHolderChain.
+func TestViewer237Fixtures(t *testing.T) {
+	out := os.Getenv("VIEWER237_OUT")
+	if out == "" {
+		t.Skip("VIEWER237_OUT not set")
+	}
+	public, key, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	endpoint, _ := countingWitness(t)
+	p := cadenceFixture(t, endpoint, public, "1h", "0s", 0)
+	now := clockAt(t, time.Date(2026, 10, 4, 9, 0, 0, 0, time.UTC))
+	dealID := retailDeal(t)
+	require.Equal(t, "ticked", dealRun(t, "tick")["state"])
+	deliverAt(t, p, cadenceSize(t, p), key, time.Date(2026, 10, 4, 9, 0, 5, 0, time.UTC))
+	write := func(name string) {
+		dir := t.TempDir()
+		copyPath := filepath.Join(dir, "copy.json")
+		dealRun(t, "report", "--deal", dealID, "--bundle", copyPath)
+		chained := withHolderChain(t, p, dealID, copyPath)
+		requireParentWitness(t, mustRead(t, chained), "")
+		require.NoError(t, os.WriteFile(filepath.Join(out, name+".bundle.json"), mustRead(t, chained), 0o644))
+	}
+	write("parent-all")
+	*now = now.Add(10 * time.Minute)
+	dealRun(t, "note", "--deal", dealID, "--kind", "message", "--input", writeJSON(t, `{"from":"counterparty","text":"Your order has shipped."}`))
+	write("parent-part")
+	spki, err := x509.MarshalPKIXPublicKey(public)
+	require.NoError(t, err)
+	dir, err := json.MarshalIndent(map[string]any{"directory_version": "1", "witnesses": []any{rawKeyRow(endpoint, public)}}, "", "  ")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(out, "witnesses.json"), append(dir, '\n'), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(out, "witness-spki.hex"), []byte(hex.EncodeToString(spki)+"\n"), 0o644))
+}

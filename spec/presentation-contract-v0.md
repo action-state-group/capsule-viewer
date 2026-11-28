@@ -177,10 +177,9 @@ anchor's makes the block unreadable.
 
 The same holds for a check a module's line needs that is a digest or proof over verified content
 (capsule-viewer#214, for the deal receipt): `paymentPreimageCheck` compares a Lightning
-settlement leg's preimage with its `ln.payment_hash` (lightning-v0 `preimage_verified`), and
-`readerCadenceWitness` walks a deal bundle's `x-cadence-witness/v0` chain from the context's own
-authenticated checkpoint to the cadence checkpoint and checks its receipts under the reader's
-witness list. The second takes the context itself, never bytes the module chose. Each answers
+settlement leg's preimage with its `ln.payment_hash` (lightning-v0 `preimage_verified`). A deal
+bundle's parent-log witness is agent-action-capsule's to check, in the context's strict result
+(`parentWitness`); the runtime has no check of its own for it (capsule-viewer#237). The check answers
 `PASS`, `FAIL`, `NOT_PRESENT` or `NOT_CHECKED`; a module draws a line as passed only on `PASS`, and
 a check the page cannot run is `NOT_CHECKED`, never a pass.
 
