@@ -29,8 +29,10 @@ describe("the dealing wording pack", () => {
 
   it("holds the six ruled words", () => {
     expect(dealingSay("word.sealed")).toBe("Sealed");
+    expect(dealingSay("word.in_checkpoint")).toBe("In a checkpoint");
     expect(dealingSay("trust.same_story.met")).toBe("Confirmed by them");
     expect(dealingSay("word.time_stamped")).toBe("Time-stamped");
+    expect(dealingSay("word.countersigned")).toBe("Countersigned");
     expect(dealingSay("trust.stands_behind.met", { name: "N" })).toBe(
       "Countersigned by N",
     );
@@ -58,7 +60,7 @@ describe("the dealing wording pack", () => {
       ],
       [
         "trust.stands_behind.name_fallback",
-        { role: "Seller", key: "ab12cd34" },
+        { role: "Seller", short_key: "ab12cd34" },
         "Seller · ab12cd34",
       ],
       ["trust.stands_behind.not_met.owner", {}, "Only your own signature"],
@@ -99,9 +101,9 @@ describe("the dealing wording pack", () => {
     expect(() => dealingSay("constructor")).toThrow(/no entry/);
     expect(() =>
       dealingSay("trust.stands_behind.name_fallback", { role: "Seller" }),
-    ).toThrow(/\{key\}/);
+    ).toThrow(/\{short_key\}/);
     expect(() =>
-      dealingSay("trust.stands_behind.name_fallback", { key: "ab12" }),
+      dealingSay("trust.stands_behind.name_fallback", { short_key: "ab12" }),
     ).toThrow(/\{role\}/);
   });
 

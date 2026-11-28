@@ -25,10 +25,12 @@
     "trust.as_offered.absent": "No offer in this copy",
     "trust.stands_behind.met": "Countersigned by {name}",
     "trust.stands_behind.met.not_independent": "Countersigned by {name} · not listed as independent",
-    "trust.stands_behind.name_fallback": "{role} · {key}",
+    "trust.stands_behind.name_fallback": "{role} · {short_key}",
     "trust.stands_behind.not_met.owner": "Only your own signature",
     "trust.stands_behind.not_met": "Only the holder's signature",
     "word.sealed": "Sealed",
-    "word.time_stamped": "Time-stamped"
+    "word.in_checkpoint": "In a checkpoint",
+    "word.time_stamped": "Time-stamped",
+    "word.countersigned": "Countersigned"
   }
 }

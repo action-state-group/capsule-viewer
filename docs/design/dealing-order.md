@@ -22,7 +22,8 @@ words in its own pack, and this pack takes only the shared ones out of them.
 ## The order (`layers`)
 
 1. **Verdict**: one sentence that includes the amount, in the largest text. Warnings appear only
-   here. A trust answer in its not-met form also raises a warning here.
+   here. A trust answer in its not-met form (Changed after sealing, They recorded something
+   different, Not as offered) also raises a warning here; a not-checked or absent answer does not.
 2. **Facts**: who, to whom, what, how much and when, by friendly name. The owner's own copy shows
    the exact amount; a copy made for others shows the value band. A receipt also gives the
    dispute window.
@@ -34,16 +35,17 @@ words in its own pack, and this pack takes only the shared ones out of them.
 
 ## The trust line
 
-| Question | Met | Not met |
-|---|---|---|
-| Rewritten? | Sealed and checkpointed; signed but not yet checkpointed: "Sealed, not yet checkpointed", a pending state drawn neutrally and raising no warning | Changed after sealing |
-| Same story on both sides? | Confirmed by them | They recorded something different; Their copy not checked |
-| As offered? | As offered | Not as offered; No offer in this copy |
-| Who stands behind it? | Countersigned by {name}; "Countersigned by {name} · not listed as independent" when the signer's directory entry does not list it as independent of the parties (the receipt keeps its full sentence where it shows it today). {name} is "{role} · {key}" until a sealed record names the signer (evidencebook#1031) | Only your own signature (owner's copy); Only the holder's signature (copies for others) |
+| Question | Met | Not met (raises the layer-1 warning) | Not checked or absent (neutral, no warning) |
+|---|---|---|---|
+| Rewritten? | Sealed and checkpointed | Changed after sealing | Sealed, not yet checkpointed |
+| Same story on both sides? | Confirmed by them | They recorded something different | Their copy not checked |
+| As offered? | As offered | Not as offered | No offer in this copy |
+| Who stands behind it? | Countersigned by {name}; "Countersigned by {name} · not listed as independent" when the signer's directory entry does not list it as independent of the parties (the receipt keeps its full sentence where it shows it today). {name} is "{role} · {short_key}" (the shortened key id the receipt already draws, never a full key) until a sealed record names the signer (evidencebook#1031) | (none) | Only your own signature (owner's copy); Only the holder's signature (copies for others) |
 
+Only the three not-met forms raise the warning in the verdict layer.
 A witness adds "· Time-stamped {at}" to the end of the first answer; it is not a fifth slot.
-"Sealed" stays the word for the signed step itself, so the Mesh steps line reads Sealed, then In a
-checkpoint, then Confirmed by them. One word per idea does not make
+"Sealed" (`word.sealed`) stays the word for the signed step itself, so the Mesh steps line reads
+Sealed, then In a checkpoint (`word.in_checkpoint`), then Confirmed by them. One word per idea does not make
 different evidence equal. Each surface answers from its own check and keeps its existing states:
 partial, open, not checked, failed, and the attributed form "as capsulectl verify reported"
 wherever the page did not run the check itself. A deal is a "Deal" on every surface, the Mesh rows
