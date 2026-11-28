@@ -76,7 +76,7 @@ export interface Shown {
   readonly checkedHereMarker: boolean;
   /** `[data-checked]` and `[data-checked-here]` notes: whether each says the page checked it here. */
   readonly checkedNotes: { here: boolean; text: string }[];
-  /** Ladder rungs: `<n>:<status>`. */
+  /** Ladder rung lines, `<n>:<statuses>:<owner>` (owner: a record id, a short id, or "*"). */
   readonly rungs: string[];
   /** The History row view's checks and its "where" line. */
   readonly rowChecks: string[];
@@ -130,34 +130,47 @@ const recordsOf = (bundle: Obj): Obj[] =>
 const idsOf = (bundle: Obj): Set<string> =>
   new Set(recordsOf(bundle).map((r) => String(r["capsule_id"])));
 /**
- * What a rung's PASS reads in the bundle (record-page.ts, ladder), checked
- * from the bundle itself: a PASS over a bundle with none of it is false.
+ * What a rung's PASS reads, for the record it is drawn for (record-page.ts,
+ * ladder), checked from the bundle itself: a PASS for a record that carries
+ * none of it is false. Rungs 7 and 11 read bundle-level members (witness
+ * receipts, countersignatures), so those stay bundle-wide.
  */
-const RUNG_CARRIES: Record<string, (bundle: Obj) => boolean> = {
-  // 2: a disclosed body for a committed member.
-  "2": (b) => Object.keys((b["disclosures"] ?? {}) as Obj).length > 0,
-  // 4: a parent the record names that is a record of this bundle.
-  "4": (b) =>
-    recordsOf(b).some((r) =>
-      idsOf(b).has(
-        String((r["chain"] as Obj | undefined)?.["parent_capsule_id"]),
-      ),
+const RUNG_CARRIES: Record<string, (bundle: Obj, record: Obj) => boolean> = {
+  // 2: a disclosed body for one of the record's committed members.
+  "2": (b, r) =>
+    Object.hasOwn((b["disclosures"] ?? {}) as Obj, String(r["capsule_id"])),
+  // 4: the parent the record names is a record of this bundle.
+  "4": (b, r) =>
+    idsOf(b).has(
+      String((r["chain"] as Obj | undefined)?.["parent_capsule_id"]),
     ),
-  // 7: a witness receipt.
   "7": (b) => JSON.stringify(b).includes('"receipts"'),
-  // 9: every cited agent-action-capsule reference is a record of this bundle.
-  "9": (b) =>
-    recordsOf(b).some((r) => {
-      const refs = ((r["references"] ?? []) as Obj[]).filter(
-        (x) => x["type"] === "agent-action-capsule",
-      );
-      return (
-        refs.length > 0 && refs.every((x) => idsOf(b).has(String(x["digest"])))
-      );
-    }),
-  // 11: a countersignature.
+  // 9: every agent-action-capsule reference the record cites is a record of this bundle.
+  "9": (b, r) => {
+    const refs = ((r["references"] ?? []) as Obj[]).filter(
+      (x) => x["type"] === "agent-action-capsule",
+    );
+    return (
+      refs.length > 0 && refs.every((x) => idsOf(b).has(String(x["digest"])))
+    );
+  },
   "11": (b) => JSON.stringify(b).includes("countersign"),
 };
+/**
+ * The records a rung line is drawn for: a record page's own id, the short
+ * ids an aggregated line lists ("ab12…ef34"), or every record ("*").
+ */
+function rungOwners(bundle: Obj, owner: string | undefined): Obj[] {
+  const records = recordsOf(bundle);
+  if (owner === undefined || owner === "*") return records;
+  const short = /^([0-9a-f]{4})…([0-9a-f]{4})$/u.exec(owner);
+  return records.filter((r) => {
+    const id = String(r["capsule_id"]);
+    return short === null
+      ? id === owner
+      : id.startsWith(short[1]!) && id.endsWith(short[2]!);
+  });
+}
 
 /** The History card's proof rows the lede sums (history-view.ts PROOF_CHECKS). */
 const CARD_PROOF = [
@@ -298,7 +311,7 @@ export async function violations(
             `1:"checked here" note with page list [${core.page.join(",")}] failed [${core.failed.join(",")}]`,
           );
       for (const rung of shown.rungs) {
-        const [n, statuses] = rung.split(":");
+        const [n, statuses, owner] = rung.split(":");
         // An aggregated row lists every status its records have ("NOT_CHECKED PASS").
         if (!statuses!.split(" ").includes("PASS")) continue;
         const needs = RUNG_CHECKS[n!];
@@ -309,10 +322,19 @@ export async function violations(
         for (const id of needs)
           if (!core.page.includes(id))
             add(`1:rung ${n} PASS without ${id} in the page list`);
-        // And the bundle carries what the rung reads, read here from the bundle itself.
+        // And each record it passes for carries what the rung reads, read
+        // here from the bundle itself.
         const carries = RUNG_CARRIES[n!];
-        if (carries !== undefined && !carries(c.bundle!))
-          add(`1:rung ${n} PASS on a bundle that carries nothing it reads`);
+        if (carries !== undefined) {
+          const owners = rungOwners(c.bundle!, owner);
+          if (owners.length === 0)
+            add(`1:rung ${n} PASS for no record (${owner})`);
+          for (const r of owners)
+            if (!carries(c.bundle!, r))
+              add(
+                `1:rung ${n} PASS for record ${String(r["capsule_id"]).slice(0, 12)}, which carries nothing it reads`,
+              );
+        }
       }
       // "This page checked it itself" (summary.standalone.here) over the
       // standalone x-deal-v0 report: only where that check passes here.
@@ -702,12 +724,33 @@ describe.skipIf(executablePath === undefined)(
                 text: e.textContent ?? "",
               }),
             ),
+            // Each rung line, `<n>:<status>:<owner>`: on a record's own
+            // ladder the record; on the page ladder each status line names
+            // the records it covers, or all of them ("*").
             rungs: Array.from(
               document.querySelectorAll<HTMLElement>(
                 "tr[data-rung][data-rung-status]",
               ),
-              (r) => `${r.dataset.rung}:${r.dataset.rungStatus}`,
-            ),
+            ).flatMap((r) => {
+              const own = r.closest<HTMLElement>("[data-record-page]");
+              if (own !== null)
+                return [
+                  `${r.dataset.rung}:${r.dataset.rungStatus}:${own.dataset.recordPage}`,
+                ];
+              const lines = Array.from(
+                r.querySelectorAll<HTMLElement>("div[data-status]"),
+              );
+              if (lines.length === 0)
+                return [`${r.dataset.rung}:${r.dataset.rungStatus}:*`];
+              return lines.flatMap((line) => {
+                const ids = (line.textContent ?? "").match(
+                  /[0-9a-f]{4}…[0-9a-f]{4}/gu,
+                );
+                return (ids ?? ["*"]).map(
+                  (id) => `${r.dataset.rung}:${line.dataset.status}:${id}`,
+                );
+              });
+            }),
             rowChecks: Array.from(
               document.querySelectorAll<HTMLElement>("li.cvh-check"),
               (e) => e.dataset.status ?? "",
@@ -1092,10 +1135,25 @@ describe.skipIf(executablePath === undefined)(
           await after(q, (s) => ({ ...s, checkedHereMarker: true })),
         ).toMatch(/data-checked-here on a report this page did not check/u);
       });
-      it("a rung that passes on a bundle with nothing it reads", async () => {
+      it("a rung that passes for one record on another record's evidence", async () => {
+        // result-generic: the Result's references resolve; a day record cites nothing.
+        const p = await clean("contract report / result-generic");
+        const bare = (p.c.bundle!["records"] as Obj[]).find(
+          (r) => ((r["references"] ?? []) as unknown[]).length === 0,
+        )!;
+        const id = String(bare["capsule_id"]);
+        const short = `${id.slice(0, 4)}…${id.slice(-4)}`;
+        expect(
+          await after(p, (s) => ({
+            ...s,
+            rungs: [...s.rungs, `9:PASS:${short}`],
+          })),
+        ).toMatch(/rung 9 PASS for record .*, which carries nothing it reads/u);
+      });
+      it("a rung that passes for records that carry nothing it reads", async () => {
         const p = await clean("core (no module) / signed");
         expect(await after(p, (s) => ({ ...s, rungs: ["9:PASS"] }))).toMatch(
-          /rung 9 PASS on a bundle that carries nothing it reads/u,
+          /rung 9 PASS for record .*, which carries nothing it reads/u,
         );
       });
       it("a static row page that says its checks ran in this browser", async () => {
