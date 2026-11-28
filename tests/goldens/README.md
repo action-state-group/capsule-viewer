@@ -8,7 +8,7 @@ UPDATE_GOLDENS=1 npx vitest run js-tests/goldens.test.js js-tests/adjudications_
   js-tests/standard_history_card.test.js js-tests/receipt_deal_v1_surface.test.js
 ```
 
-`js-tests/goldens.test.js` draws the Rules page and the unilateral and bilateral receipts (`rules-*`, `receipt-keep-*`, `receipt-counterparty-*`, `receipt-bilateral-*`); `js-tests/adjudications_card.test.js` and `js-tests/standard_history_card.test.js` draw the `adjudications-page-*` and `standard-history-*` images.
+`js-tests/goldens.test.js` draws the Rules page, the unilateral and bilateral receipts and the provider's own receipt (`rules-*`, `receipt-keep-*`, `receipt-counterparty-*`, `receipt-bilateral-*`, `receipt-provider-*`); `js-tests/adjudications_card.test.js` and `js-tests/standard_history_card.test.js` draw the `adjudications-page-*` and `standard-history-*` images.
 
 ## The x-deal-v1 receipt
 
