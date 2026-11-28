@@ -83,6 +83,17 @@ export interface CoreLists {
   readonly capsulectl: readonly string[];
 }
 
+/** The states the negative fixtures target (each checked in `violations`). */
+export type Target =
+  | "no-report"
+  | "report-refused"
+  | "checkpoint-signature claimed by no one"
+  | "checkpoint-signature failed"
+  | "producer-signatures not run"
+  | "unsigned: not verified"
+  | "graph_closure not run"
+  | "rows not run";
+
 export interface PageCase {
   /** `<entry point> / <fixture>`. */
   readonly name: string;
@@ -97,8 +108,10 @@ export interface PageCase {
   readonly input?: Obj;
   /** The exact lists the page must draw, stated by hand (point 1). */
   readonly core?: CoreLists;
-  /** For a negative fixture: the one check it targets, and what must hold first. */
-  readonly target?: string;
+  /** For a negative fixture: the state it targets, which must hold first. */
+  readonly target?: Target;
+  /** The element the entry point's module (or view) draws; the page fails without it. */
+  readonly region: string;
   /** Run the page with no SubtleCrypto (a browser-capability negative case). */
   readonly noWebCrypto?: boolean;
   html(): Promise<string>;
@@ -111,6 +124,7 @@ function modulePage(
   kind: string | null,
   options: Obj,
   extra: Partial<PageCase> = {},
+  bootstrapExtra = "",
 ): PageCase {
   const report = options["verifierReport"] as Obj | undefined;
   return {
@@ -118,6 +132,10 @@ function modulePage(
     entry,
     shape: "bundle",
     bundle,
+    region:
+      kind === null
+        ? '[data-page="verification"]'
+        : `[data-receipt-module="capsuleviewer.receipt.${kind}/${kind === "deal" ? "v1" : "v0"}"]`,
     ...(report === undefined ? {} : { report }),
     ...extra,
     async html() {
@@ -125,7 +143,7 @@ function modulePage(
       return emitEvidenceGraphHtml(bundle, core, {
         coreRuntimeSha256: hex(core),
         modules: kind === null ? [] : [receiptModule(kind)],
-        bootstrap: `const OPTIONS = ${escapeJsonForHtmlScript(JSON.stringify({ depth: "L2", ...options }))}; window.__drawn = renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, OPTIONS);`,
+        bootstrap: `const OPTIONS = ${escapeJsonForHtmlScript(JSON.stringify({ depth: "L2", ...options }))}; window.__drawn = renderEvidenceGraph(window.__BUNDLE__, document.getElementById("app"), undefined, OPTIONS);${bootstrapExtra}`,
       });
     },
   };
@@ -147,6 +165,7 @@ const ALL_PAGE = [
   "disclosures",
   "producer-signatures",
 ];
+const BILATERAL_PAGE = [...ALL_PAGE, "composed"];
 const none = { failed: [], notChecked: [], capsulectl: [] };
 
 function v0Pages(): PageCase[] {
@@ -170,26 +189,49 @@ function v0Pages(): PageCase[] {
         {
           core: {
             ...none,
-            page:
-              kind === "bilateral"
-                ? [...ALL_PAGE.slice(0, 7), "composed", ALL_PAGE[7]!]
-                : ALL_PAGE,
+            page: kind === "bilateral" ? BILATERAL_PAGE : ALL_PAGE,
           },
         },
       ),
     ),
-    // Negative: capsulectl's report for another bundle, which the page must refuse;
-    // the page's own checks still run.
-    modulePage(
-      "receipt unilateral/v0",
-      "keep + another bundle's report",
-      receipt("keep.bundle.json"),
-      "unilateral",
-      { verifierReport: receipt("counterparty.verify.json") },
-      { core: { ...none, page: ALL_PAGE }, target: "report-refused" },
+    // Negative, per kind: capsulectl's report for another bundle, which the
+    // page must refuse; the page's own checks still run.
+    ...(
+      [
+        ["unilateral", "keep", "counterparty", ALL_PAGE],
+        ["seller", "seller-keep", "seller-counterparty", ALL_PAGE],
+        [
+          "bilateral",
+          "bilateral-keep",
+          "bilateral-counterparty",
+          BILATERAL_PAGE,
+        ],
+      ] as const
+    ).map(([kind, f, other, page]) =>
+      modulePage(
+        `receipt ${kind}/v0`,
+        `${f} + another bundle's report`,
+        receipt(`${f}.bundle.json`),
+        kind,
+        { verifierReport: receipt(`${other}.verify.json`) },
+        { core: { ...none, page }, target: "report-refused" },
+      ),
     ),
   ];
 }
+
+/** The provider's copy: no range certificate and no disclosed payloads to check. */
+const PROVIDER: CoreLists = {
+  ...none,
+  page: [
+    "record-digests",
+    "record-rules",
+    "closure",
+    "membership",
+    "checkpoint-signature",
+    "producer-signatures",
+  ],
+};
 
 function providerPages(): PageCase[] {
   return [
@@ -198,7 +240,12 @@ function providerPages(): PageCase[] {
       "mesh-provider-selected",
       receipt("mesh-provider-selected.bundle.json"),
       "provider",
-      { verifierReport: receipt("mesh-provider-selected.verify.json") },
+      // The provider receipt is drawn for its holder only.
+      {
+        audience: "keep",
+        verifierReport: receipt("mesh-provider-selected.verify.json"),
+      },
+      { core: PROVIDER },
     ),
     // Negative: no report beside the bundle.
     modulePage(
@@ -206,8 +253,8 @@ function providerPages(): PageCase[] {
       "mesh-provider-selected, no report",
       receipt("mesh-provider-selected.bundle.json"),
       "provider",
-      {},
-      { target: "no-report" },
+      { audience: "keep" },
+      { core: PROVIDER, target: "no-report" },
     ),
   ];
 }
@@ -371,6 +418,8 @@ const historyDocument = (
   name: `${entry} / ${name}`,
   entry,
   shape: "machine" in input ? "card" : "rows",
+  region:
+    "machine" in input ? '[data-history="proof"]' : '[data-history="view"]',
   input,
   ...extra,
   async html() {
@@ -439,13 +488,14 @@ function historyPages(): PageCase[] {
   for (const [name, input] of Object.entries(cases)) {
     if (name.startsWith("card-")) continue;
     // Negative: a case whose checks did not run reads not run, with no "ran" line.
-    const target =
+    const target: { target?: Target } =
       name === "goose-no-checkpoints" ? { target: "rows not run" } : {};
     out.push(historyDocument("historyViewDocument", name, input, target));
     out.push({
       name: `historyViewHtml / ${name}`,
       entry: "historyViewHtml",
       shape: "rows",
+      region: '[data-history="view"]',
       input,
       ...target,
       async html() {
@@ -489,22 +539,58 @@ function contractReportPages(): PageCase[] {
       cases: { name: string; bundle: Obj }[];
     }
   ).cases;
+  // The vectors' reports carry no signatures and no signed checkpoint, so the
+  // page runs the rest and claims neither signature check.
+  const core: CoreLists = {
+    ...none,
+    page: [
+      "record-digests",
+      "record-rules",
+      "closure",
+      "range",
+      "membership",
+      "disclosures",
+    ],
+  };
+  const region = "[data-core-strip] [data-bucket]";
   return [
     ...cases.map((c) =>
-      modulePage("contract report", c.name, c.bundle, null, {}),
+      modulePage(
+        "contract report",
+        c.name,
+        c.bundle,
+        null,
+        {},
+        { core, region },
+      ),
     ),
-    // Negative: the vectors' reports are not signed, so no signature check ran.
+    // Negative: no signature check ran, so the page may not read verified.
     modulePage(
       "contract report",
       "result-generic, unsigned",
       cases[0]!.bundle,
       null,
       {},
-      {
-        target: "unsigned: not verified",
-      },
+      { core, region, target: "unsigned: not verified" },
     ),
   ];
+}
+
+/**
+ * A plain bundle page whose bootstrap also tries the network: the offline
+ * check must report it (a self-test of point 3).
+ */
+export async function fetchingPage(): Promise<PageCase> {
+  const page = (await corePages())[0]!;
+  return modulePage(
+    "core (no module)",
+    "signed, fetching",
+    page.bundle!,
+    null,
+    {},
+    { core: page.core! },
+    ' fetch("https://example.invalid/").catch(() => {});',
+  );
 }
 
 export async function allPages(): Promise<PageCase[]> {

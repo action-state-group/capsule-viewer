@@ -23,6 +23,7 @@
  */
 import {
   buildVerifiedBundleContext,
+  jcs,
   verificationBanner,
   verificationCheckLists,
 } from "@action-state-group/agent-action-capsule";
@@ -39,6 +40,7 @@ import { chromium, type Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   allPages,
+  fetchingPage,
   type Obj,
   type PageCase,
 } from "./helpers/one-viewer-pages.js";
@@ -67,15 +69,18 @@ export interface Shown {
   } | null;
   /** Elements outside the core's lists that name a check: `[data-check]`. */
   readonly claims: { id: string; status: string | null }[];
-  /** `[data-checked]` notes: whether each says the page checked it here. */
+  /** Whether the entry point's own region was drawn (PageCase.region). */
+  readonly region: boolean;
+  /** `[data-checked]` and `[data-checked-here]` notes: whether each says the page checked it here. */
   readonly checkedNotes: { here: boolean; text: string }[];
   /** Ladder rungs: `<n>:<status>`. */
   readonly rungs: string[];
   /** The History row view's checks and its "where" line. */
   readonly rowChecks: string[];
   readonly rowWhere: string | null;
-  /** The History card's proof lede key and its text. */
+  /** The History card's proof lede key and its text, and its "Expect" line. */
   readonly lede: { key: string; text: string } | null;
+  readonly expectLine: { digest: string; text: string } | null;
   /** Bundle-level re-check lines: `[data-verify-command]`, `[data-verifier-hint]`. */
   readonly lines: string[];
   /** The receipt's "Check it yourself" notes, for the pack's fallback line. */
@@ -96,12 +101,32 @@ const SAME_CHECK: Record<string, string> = {
   per_record_membership: "membership",
   checkpoint: "checkpoint-signature",
 };
-/** Ladder rungs whose PASS rests on a check of the core's page list. */
-const RUNG_CHECK: Record<string, string> = {
-  "1": "record-digests",
-  "3": "producer-signatures",
-  "5": "membership",
+/**
+ * What a ladder rung's PASS rests on (ts/src/record-page.ts, ladder): the
+ * checks of the core's page list it needs, or null where no page may pass
+ * it (rung 6, no bundle carries a retained head; rung 8, not read yet).
+ */
+const RUNG_CHECKS: Record<string, readonly string[] | null> = {
+  "1": ["record-digests"],
+  "2": ["disclosures"],
+  "3": ["producer-signatures"],
+  "4": ["record-rules"],
+  "5": ["membership", "checkpoint-signature"],
+  "6": null,
+  "7": ["witness-receipts"],
+  "8": null,
+  "9": ["record-digests"],
+  "10": ["record-digests"],
+  "11": ["countersignatures"],
 };
+/** The History card's proof rows the lede sums (history-view.ts PROOF_CHECKS). */
+const CARD_PROOF = [
+  "producer_signatures",
+  "interval_coverage",
+  "graph_closure",
+  "per_record_membership",
+  "checkpoint",
+];
 
 /** The receipt pack's fallback re-check line, and the command it names. */
 const NO_COMMAND = (
@@ -141,6 +166,9 @@ function reported(report: Obj | undefined): Map<string, string> {
   return out;
 }
 
+const sameJson = (a: unknown, b: unknown): boolean =>
+  Buffer.from(jcs(a as never)).equals(Buffer.from(jcs(b as never)));
+
 /** AAC's own reading of the bundle in Node: the checks a runtime can run on it. */
 async function oracle(bundle: unknown) {
   const context = await buildVerifiedBundleContext(bundle);
@@ -165,7 +193,9 @@ export async function violations(
 
   // ---- 3: offline, nothing leaves the page.
   for (const r of offline.requests) add(`3:request ${r}`);
-  for (const v of offline.csp) if (v !== "connect-src") add(`3:csp ${v}`);
+  for (const v of offline.csp) add(`3:csp ${v}`);
+  if (!shown.region)
+    add(`0:the entry point's region (${c.region}) is not drawn`);
 
   // ---- 1: each check has a status and an attribution from one list.
   if (c.shape === "bundle") {
@@ -212,6 +242,7 @@ export async function violations(
       for (const row of core.capsulectl)
         status.set(`capsulectl-${row.split(":")[0]}`, row.split(":")[1]!);
       for (const claim of shown.claims) {
+        if (claim.status === null) add(`1:claim ${claim.id} has no status`);
         const listed =
           status.get(claim.id) ?? status.get(`capsulectl-${claim.id}`);
         if (listed === undefined)
@@ -227,37 +258,70 @@ export async function violations(
             `1:"checked here" note with page list [${core.page.join(",")}] failed [${core.failed.join(",")}]`,
           );
       for (const rung of shown.rungs) {
-        const [n, s] = rung.split(":");
-        const id = RUNG_CHECK[n!];
-        if (s === "PASS" && id !== undefined && !core.page.includes(id))
-          add(`1:rung ${n} PASS without ${id} in the page list`);
+        const [n, statuses] = rung.split(":");
+        // An aggregated row lists every status its records have ("NOT_CHECKED PASS").
+        if (!statuses!.split(" ").includes("PASS")) continue;
+        const needs = RUNG_CHECKS[n!];
+        if (needs === undefined || needs === null)
+          add(`1:rung ${n} PASS, which no page may pass`);
+        else
+          for (const id of needs)
+            if (!core.page.includes(id))
+              add(`1:rung ${n} PASS without ${id} in the page list`);
       }
       // Negative fixtures reach their state.
-      if (c.target === "no-report" || c.target === "report-refused") {
-        if (core.capsulectl.length > 0)
-          add(`1:${c.target}: capsulectl rows drawn`);
-        if (!shown.cannotCheck && c.entry === "receipt deal/v1")
-          add(`1:${c.target}: no can't-check line`);
+      const target = c.target;
+      switch (target) {
+        case undefined:
+          break;
+        case "no-report":
+        case "report-refused":
+          if (core.capsulectl.length > 0)
+            add(`1:${target}: capsulectl rows drawn`);
+          if (!shown.cannotCheck && c.entry === "receipt deal/v1")
+            add(`1:${target}: no can't-check line`);
+          break;
+        // A check absent from both: nobody claims it, and the page does not read verified.
+        case "checkpoint-signature claimed by no one":
+          if (
+            core.page.includes("checkpoint-signature") ||
+            core.capsulectl.length > 0 ||
+            shown.verify === "verified"
+          )
+            add(
+              "1:an unsigned checkpoint is claimed, or the page reads verified",
+            );
+          break;
+        case "checkpoint-signature failed":
+          if (!core.failed.includes("checkpoint-signature"))
+            add("1:forged checkpoint not in the failed list");
+          break;
+        case "producer-signatures not run":
+          if (
+            core.page.includes("producer-signatures") ||
+            !core.notChecked.includes("producer-signatures")
+          )
+            add("1:producer signatures shown as run with no SubtleCrypto");
+          break;
+        case "unsigned: not verified":
+          if (
+            core.page.includes("checkpoint-signature") ||
+            core.page.includes("producer-signatures") ||
+            shown.verify === "verified"
+          )
+            add(
+              "1:an unsigned report claims a signature check, or reads verified",
+            );
+          break;
+        case "graph_closure not run":
+        case "rows not run":
+          add(`0:target ${target} on a bundle page`);
+          break;
+        default: {
+          const never: never = target;
+          add(`0:unknown target ${String(never)}`);
+        }
       }
-      // A check absent from both: nobody claims it, and the page does not read verified.
-      if (
-        c.target === "checkpoint-signature claimed by no one" &&
-        (core.page.includes("checkpoint-signature") ||
-          core.capsulectl.length > 0 ||
-          shown.verify === "verified")
-      )
-        add("1:an unsigned checkpoint is claimed, or the page reads verified");
-      if (
-        c.target === "checkpoint-signature failed" &&
-        !core.failed.includes("checkpoint-signature")
-      )
-        add("1:forged checkpoint not in the failed list");
-      if (
-        c.target === "producer-signatures not run" &&
-        (core.page.includes("producer-signatures") ||
-          !core.notChecked.includes("producer-signatures"))
-      )
-        add("1:producer signatures shown as run with no SubtleCrypto");
     }
   }
   if (c.shape === "card") {
@@ -273,6 +337,25 @@ export async function violations(
     // Attribution: the lede says capsulectl verify answered and the page did not re-check.
     if (shown.lede === null || !/capsulectl verify/u.test(shown.lede.text))
       add("1:card rows carry no capsulectl attribution");
+    // The lede sums capsulectl's answer: failed, passed every test, or partial.
+    const verify = machine["verify"] as Obj;
+    const want =
+      verify["verdict"] !== "VALID" ||
+      Object.values(checks).some((s) => s === "fail")
+        ? "failed"
+        : CARD_PROOF.every((k) => checks[k] === "pass")
+          ? "passed"
+          : "partial";
+    if (shown.lede !== null && shown.lede.key !== want)
+      add(`1:card lede ${shown.lede.key}, capsulectl's answer sums to ${want}`);
+    if (
+      shown.expectLine === null ||
+      shown.expectLine.digest !== verify["bundle_digest"] ||
+      !new RegExp(`\\b${String(verify["verdict"])}\\b`, "u").test(
+        shown.expectLine.text,
+      )
+    )
+      add("1:card's Expect line is not capsulectl's verdict and digest");
     if (
       c.target === "graph_closure not run" &&
       shown.claims.find((x) => x.id === "graph_closure")?.status !== "absent"
@@ -280,6 +363,13 @@ export async function violations(
       add("1:unanswered graph_closure not shown as not run");
   }
   if (c.shape === "rows") {
+    const want = ((c.input!["checks"] ?? []) as Obj[]).map((x) =>
+      String(x["status"]),
+    );
+    if (JSON.stringify(shown.rowChecks) !== JSON.stringify(want))
+      add(
+        `1:row checks [${shown.rowChecks.join(",")}], the input says [${want.join(",")}]`,
+      );
     const ran = shown.rowChecks.some((s) => s === "pass" || s === "fail");
     if (ran && shown.rowWhere === null)
       add("1:row checks with no line saying who ran them");
@@ -319,12 +409,19 @@ export async function violations(
     }
     if (exported === undefined) add("2:no bundle to export");
     else {
+      // The file a reader gets is the page's own bundle, byte for byte in canonical form.
+      const own =
+        c.shape === "card"
+          ? JSON.parse(String((c.input!["machine"] as Obj)["text"]))
+          : c.bundle;
+      if (!sameJson(exported, own))
+        add("2:the exported bundle is not the page's own");
       const o = await oracle(exported);
       // The card shows capsulectl's verdict; a bundle page its own banner.
       const pageSays =
         c.shape === "card"
-          ? ((c.input!["machine"] as Obj)["verify"] as Obj)["verdict"] ===
-            "VALID"
+          ? shown.expectLine !== null &&
+            /\bVALID\b/u.test(shown.expectLine.text)
             ? "verified"
             : "failed"
           : shown.verify;
@@ -392,8 +489,10 @@ const KNOWN: {
       "receipt unilateral/v0 / keep + another bundle's report",
       "receipt seller/v0 / seller-keep",
       "receipt seller/v0 / seller-counterparty",
+      "receipt seller/v0 / seller-keep + another bundle's report",
       "receipt bilateral/v0 / bilateral-keep",
       "receipt bilateral/v0 / bilateral-counterparty",
+      "receipt bilateral/v0 / bilateral-keep + another bundle's report",
       "receipt provider/v0 / mesh-provider-selected",
       "receipt provider/v0 / mesh-provider-selected, no report",
     ],
@@ -498,7 +597,7 @@ describe.skipIf(executablePath === undefined)(
         await page.evaluate(
           () => (globalThis as unknown as { __drawn?: Promise<void> }).__drawn,
         );
-        const shown: Shown = await page.evaluate(() => {
+        const shown: Shown = await page.evaluate((region: string) => {
           const ids = (which: string) =>
             Array.from(
               document.querySelectorAll<HTMLElement>(
@@ -535,8 +634,11 @@ describe.skipIf(executablePath === undefined)(
                 id: e.dataset.check!,
                 status: e.dataset.checkStatus ?? null,
               })),
+            region: document.querySelector(region) !== null,
             checkedNotes: Array.from(
-              document.querySelectorAll<HTMLElement>("[data-checked]"),
+              document.querySelectorAll<HTMLElement>(
+                "[data-checked], [data-checked-here]",
+              ),
               (e) => ({
                 here: /in this browser|checked here|tested here/iu.test(
                   e.textContent ?? "",
@@ -561,6 +663,14 @@ describe.skipIf(executablePath === undefined)(
                   text: ledeNode.textContent ?? "",
                 }
               : null,
+            expectLine: (() => {
+              const e = document.querySelector<HTMLElement>(
+                '[data-history="check"] [data-expect]',
+              );
+              return e === null
+                ? null
+                : { digest: e.dataset.expect ?? "", text: e.textContent ?? "" };
+            })(),
             lines: [
               ...new Set(
                 Array.from(
@@ -594,7 +704,7 @@ describe.skipIf(executablePath === undefined)(
             refusal:
               document.querySelector("[data-refusal]")?.textContent ?? null,
           };
-        });
+        }, c.region);
         // The bundle as a reader gets it: the page's download, else the page's own copy.
         let exported: unknown;
         const link =
@@ -850,6 +960,71 @@ describe.skipIf(executablePath === undefined)(
         });
         expect(text).toMatch(/3:request https:\/\/example.invalid/u);
         expect(text).toMatch(/3:csp script-src-elem/u);
+      });
+      it("a page that tries the network, opened for real", async () => {
+        const c = await fetchingPage();
+        const { shown, exported, offline } = await open(c);
+        const text = (await violations(c, shown, exported, offline)).join("\n");
+        expect(text).toMatch(/3:csp connect-src/u);
+      });
+      it("a rung that passes, alone or beside other statuses, without its check", async () => {
+        const p = await clean("core (no module) / signed, no SubtleCrypto");
+        expect(
+          await after(p, (s) => ({
+            ...s,
+            rungs: [...s.rungs, "3:NOT_CHECKED PASS"],
+          })),
+        ).toMatch(/rung 3 PASS without producer-signatures/u);
+        expect(await after(p, (s) => ({ ...s, rungs: ["6:PASS"] }))).toMatch(
+          /rung 6 PASS, which no page may pass/u,
+        );
+      });
+      it("an exported bundle that is another valid bundle", async () => {
+        const p = await clean("receipt deal/v1 / keep-copy");
+        const other = (await allPages()).find(
+          (x) => x.name === "receipt deal/v1 / counterparty-copy",
+        )!.bundle;
+        expect(await after(p, (s) => s, other)).toMatch(
+          /the exported bundle is not the page's own/u,
+        );
+      });
+      it("a card whose lede or Expect line is not capsulectl's answer", async () => {
+        const p = await clean(
+          "History card / person-shared, graph_closure not answered",
+        );
+        expect(
+          await after(p, (s) => ({
+            ...s,
+            lede: { ...s.lede!, key: "passed" },
+          })),
+        ).toMatch(/card lede passed, capsulectl's answer sums to partial/u);
+        expect(
+          await after(p, (s) => ({
+            ...s,
+            expectLine: { ...s.expectLine!, text: "Expect: INVALID." },
+          })),
+        ).toMatch(/Expect line is not capsulectl's verdict/u);
+      });
+      it("a row whose status is not the input's", async () => {
+        const p = await clean("historyViewDocument / muse-owner");
+        expect(
+          await after(p, (s) => ({
+            ...s,
+            rowChecks: s.rowChecks.map(() => "pass"),
+          })),
+        ).toMatch(/row checks \[pass,pass,pass\], the input says/u);
+      });
+      it("a claim with no status, and a page whose module drew nothing", async () => {
+        const p = await clean("receipt deal/v1 / keep-copy");
+        expect(
+          await after(p, (s) => ({
+            ...s,
+            claims: [{ id: "closure", status: null }],
+          })),
+        ).toMatch(/claim closure has no status/u);
+        expect(await after(p, (s) => ({ ...s, region: false }))).toMatch(
+          /0:the entry point's region/u,
+        );
       });
       it("a static row page that says its checks ran in this browser", async () => {
         const p = await clean("historyViewDocument / muse-owner");
