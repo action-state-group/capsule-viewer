@@ -293,6 +293,18 @@ CONTRACT = Move(
             "no strict verdict. A pass names a key; it never says who holds it.",
             "capsule-viewer#211: the History card's signature check",
         ),
+        # Section 3: the runtime's own cadence-witness check is retired; the
+        # parent-log witness is AAC's strict result (capsule-viewer#237).
+        (
+            "settlement leg's preimage with its `ln.payment_hash` (lightning-v0 `preimage_verified`), and\n"
+            "`readerCadenceWitness` walks a deal bundle's `x-cadence-witness/v0` chain from the context's own\n"
+            "authenticated checkpoint to the cadence checkpoint and checks its receipts under the reader's\n"
+            "witness list. The second takes the context itself, never bytes the module chose. Each answers\n",
+            "settlement leg's preimage with its `ln.payment_hash` (lightning-v0 `preimage_verified`). A deal\n"
+            "bundle's parent-log witness is agent-action-capsule's to check, in the context's strict result\n"
+            "(`parentWitness`); the runtime has no check of its own for it (capsule-viewer#237). The check answers\n",
+            "capsule-viewer#237: the runtime's cadence-witness check retired",
+        ),
         # Section 6.2: the witness notice joins the banner's frame
         # (capsule-viewer#162, evidencebook#209).
         (

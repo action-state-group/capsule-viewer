@@ -11,9 +11,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { WITNESS_CHAIN_EXTENSIONS } from "../src/cadence-witness.js";
 import { renderEvidenceGraph } from "../src/evidence-graph-view.js";
 import {
+  WITNESS_CHAIN_EXTENSIONS,
   WITNESS_NOTICE_LINES,
   witnessNotice,
 } from "../src/report-provenance.js";

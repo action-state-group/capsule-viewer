@@ -19,6 +19,10 @@ here. The format follows
 
 - The receipt's witness lines (the x-deal-v1 TIME-STAMPED stamp and "Witness time stamp" row, the page core's witness check and banner line, and the x-deal-v0 witness line) read the witness's directory entry when capsulectl's `witnessed` member carries it as `independent_of` (#508, the reading contract of ops u652): unless that list names both parties' keys, the line adds "Its directory entry does not list it as independent of the parties.", as the countersigned copy's does (#457). With no list, or a list the page cannot judge, nothing is said about independence, and nothing is said for a witness the reader's directory marks as its own (`own_witness: true`, carried by capsulectl; ops u655). A failed or withheld time stamp names its witness where capsulectl names it, and says the same of that witness's entry.
 
+### Removed
+
+- The page runtime's `readerCadenceWitness` global and `ts/src/cadence-witness.ts` (#237, J.8): the viewer no longer walks a deal bundle's witness chain or checks its receipts itself. A chain carried as `parent-log-witness/v1` is agent-action-capsule's to check, and the verification page draws its result (`parentWitness`) as before; a copy that carries the chain under an older name (`x-cadence-witness/v0`) gets no parent-log line. A presentation module that called the global (evidencebook's deal page, `dealWitnessOf`) falls back to its "not checked" branch from its next viewer pin.
+
 ### Fixed
 
 - An x-deal-v0 deal copy that carries no witness evidence (none has since u225) draws the banner notice "This file carries no witness receipt, so this page could not check a time-stamp itself." as an x-deal-v1 copy does, in place of the line that said it "could be a private copy of the log" (#527, Sherlock2 u286). The key is what the copy carries, not its profile: a copy with a checkpoint witness entry, a witness chain under any name it has been carried under (`parent-log-witness/v1`, `x-cadence-witness/v0`, `cadence-witness/v0`, `x-deal-cadence-v0`), or either in a `composed/v1` member keeps its notice as before.

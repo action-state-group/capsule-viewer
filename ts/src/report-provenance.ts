@@ -15,7 +15,6 @@ import { buildVerificationPageModel } from "@action-state-group/agent-action-cap
 import { VIEWER_BUILD, type ViewerBuild } from "./viewer-build.js";
 import { DEFAULT_WORDS, type Words } from "./contract-report-wording.js";
 import { levelToggle } from "./report-levels.js";
-import { WITNESS_CHAIN_EXTENSIONS } from "./cadence-witness.js";
 
 /**
  * Who judged, who witnessed, and what verified: one folded line at the top
@@ -541,6 +540,20 @@ export function witnessNotice(
     return "file-no-receipt";
   return verified.strict === undefined ? "witness-unreported" : "not-witnessed";
 }
+
+/**
+ * Every extension name a witness chain has been carried under, newest
+ * first: `parent-log-witness/v1` (Evidence Bundle -03), then the names
+ * capsule-cli's deal bundles used before it. Read by presence alone; this
+ * page checks no chain itself (agent-action-capsule's strict result
+ * carries `parentWitness`, capsule-viewer#237).
+ */
+export const WITNESS_CHAIN_EXTENSIONS = [
+  "parent-log-witness/v1",
+  "x-cadence-witness/v0",
+  "cadence-witness/v0",
+  "x-deal-cadence-v0",
+] as const;
 
 /**
  * Whether `bundle` carries any witness evidence, read by presence alone so
