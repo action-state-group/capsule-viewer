@@ -33,6 +33,7 @@ from ..kit.contract import KitServices, ModuleManifest
 from ..registry import Registry
 from ..shell import present
 from .model import group_thousands
+from .module import time_el
 
 TITLE = "Your receipt for an exchange you served"
 # The page's own sentences. Public text: Sherlock2's PM (Mesh-LLM/capsules-plugin#134);
@@ -44,8 +45,14 @@ OWN_HALF = (
 )
 NO_CONTENT = "It names the model and what was received. It holds no request or response text."
 RECORDS_NOTE = "The exchange and each payment are records of their own, listed below."
+# The label of the exchange record's id under RECORDS_NOTE (capsule-viewer#521: the
+# sentence comes before the records it lists).
+EXCHANGE_RECORD = "Exchange record"
 MODEL = "Model served"
 SERVED_AT = "Served at"
+# Every time the plugin seals is cut to the minute (Evidence Layer -00 §12.1), so the page
+# says so once and never prints seconds (Sherlock2 on capsule-viewer#522, ops 8fdfbac7).
+MINUTE_NOTE = "Records keep the time to the minute."
 # A failed or dispatched exchange was not served (capsule-viewer#465): Sherlock2's
 # words for its page, the same as the Go pack's provider.* keys.
 TITLE_ASKED = "Your record of an exchange you were asked to serve"
@@ -78,11 +85,18 @@ REASONS = {
 }
 RECEIVED = "Received"
 FEE = "Fee for receiving"
+# A payment is named first by its Lightning payment hash, what the wallet shows, with its
+# record id beside it (Sherlock2 on capsule-viewer#520, ops 8fdfbac7).
+PAYMENT_HASH = "Payment hash"
+PAYMENT_RECORD = "Payment record"
+NOT_SHOWN = "not shown"
 TOTAL = "Received in total"
 
 _CANONICAL = re.compile(r"0|[1-9][0-9]*")
 _POC = "x-mesh-poc-v1"
 _LEG = "payee_observed"
+_LN_HASH = "ln.payment_hash"
+_HASH = re.compile(r"[0-9a-f]{64}")
 
 
 def _load_manifest() -> dict:
@@ -122,9 +136,20 @@ def amount_text(amount: Frozen) -> str | None:
     return f"{int(value)} × 10^-{scale} {code}"
 
 
+def payment_hash(settlement: Frozen) -> str | None:
+    """The Lightning payment hash a leg names (``payment_ref`` of type ``ln.payment_hash``,
+    64 lowercase hex digits), or ``None`` for any other reference or none."""
+    ref = _get(settlement, "payment_ref")
+    value = _get(ref, "value")
+    if _get(ref, "type") != _LN_HASH or not isinstance(value, str) or not _HASH.fullmatch(value):
+        return None
+    return value
+
+
 @dataclass(frozen=True)
 class Payment:
     capsule_id: str
+    payment_hash: str | None
     received: str | None
     fee: str | None
 
@@ -141,7 +166,8 @@ class ProviderModel:
 
 
 def _utc(stamp: str) -> str:
-    """An RFC 3339 time in UTC, with the zone said; "?" when it is not one with an offset."""
+    """An RFC 3339 time as the same instant in UTC (``2026-10-30T19:50:00Z``), which the page
+    says in words (``time_el``); "?" when it is not one with an offset."""
     try:
         # Before Python 3.11 fromisoformat does not read a trailing Z.
         when = datetime.fromisoformat(stamp[:-1] + "+00:00" if stamp[-1:] in "Zz" and stamp else stamp)
@@ -150,7 +176,7 @@ def _utc(stamp: str) -> str:
     if when.tzinfo is None:
         return "?"
     try:
-        return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S UTC")
+        return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     except (OverflowError, ValueError):  # at the edge of the year range
         return "?"
 
@@ -245,6 +271,7 @@ class ProviderReceiptModule:
             payments=tuple(
                 Payment(
                     _text(_get(leg, "capsule_id")),
+                    payment_hash(_get(leg, "settlement")),
                     amount_text(_get(_get(leg, "settlement"), "received")),
                     amount_text(_get(_get(leg, "settlement"), "receive_fee")),
                 )
@@ -266,21 +293,41 @@ class ProviderReceiptModule:
             status = (STATUS_FAILED_UNPAID if unpaid else STATUS_FAILED).format(
                 reason=f": {REASONS[model.reason]}" if model.reason else ""
             )
+        # The time in words in UTC, as a data-time span a page with a script says in the
+        # reader's zone (receipt-presentation.md R6; Sherlock2 on capsule-viewer#522).
         metrics = [
             Metric(MODEL if served else MODEL_ASKED, model.model or "?"),
-            Metric(SERVED_AT if served else RECORDED_AT, model.served_at or "?"),
+            Metric(SERVED_AT if served else RECORDED_AT, time_el(model.served_at) if model.served_at else "?"),
         ]
         if model.total is not None and not unpaid:
             metrics.append(Metric(TOTAL, model.total))
+        def mono(text: str) -> Markup:
+            return Markup('<span class="cv-mono">') + text + Markup("</span>")
+
         rows = [
             (
-                Markup('<span class="cv-mono">') + p.capsule_id[:16] + Markup("</span>"),
-                p.received or "not shown",
-                p.fee or "not shown",
+                mono(p.payment_hash) if p.payment_hash else NOT_SHOWN,
+                mono(p.capsule_id[:16]),
+                p.received or NOT_SHOWN,
+                p.fee or NOT_SHOWN,
             )
             for p in model.payments
         ]
-        table = services.data_table(("Payment record", RECEIVED, FEE), rows)
+        table = services.data_table((PAYMENT_HASH, PAYMENT_RECORD, RECEIVED, FEE), rows)
+        # The note comes before what it lists: the exchange record, then each payment
+        # (capsule-viewer#521). With no payment the note itself names the exchange record.
+        if unpaid:
+            records = (
+                Markup('<p class="cv-muted" data-provider="records">')
+                + RECORDS_NOTE_UNPAID + Markup(" ") + mono(model.exchange_id[:16]) + Markup("</p>")
+            )
+        else:
+            records = (
+                Markup('<p class="cv-muted" data-provider="records">') + RECORDS_NOTE + Markup("</p>")
+                + Markup('<p data-provider="exchange-record">') + EXCHANGE_RECORD + Markup(" ")
+                + mono(model.exchange_id[:16]) + Markup("</p>")
+                + services.drilldown(f"{RECEIVED} ({len(model.payments)})", table, expanded=True)
+            )
         return str(
             Markup(f'<div class="cv-provider-receipt" data-module="{escape(self.manifest.id)}">')
             + Markup('<p data-provider="own-half">') + OWN_HALF + Markup("</p>")
@@ -291,11 +338,8 @@ class ProviderReceiptModule:
             )
             + Markup('<p data-provider="no-content">') + (NO_CONTENT_UNPAID if unpaid else NO_CONTENT) + Markup("</p>")
             + services.metric_grid(metrics)
-            + (Markup("") if unpaid else services.drilldown(f"{RECEIVED} ({len(model.payments)})", table, expanded=True))
-            + Markup('<p class="cv-muted" data-provider="records">')
-            + (RECORDS_NOTE_UNPAID if unpaid else RECORDS_NOTE)
-            + Markup(" ")
-            + Markup('<span class="cv-mono">') + model.exchange_id[:16] + Markup("</span></p>")
+            + Markup('<p class="cv-muted" data-provider="minute">') + MINUTE_NOTE + Markup("</p>")
+            + records
             + Markup("</div>")
         )
 

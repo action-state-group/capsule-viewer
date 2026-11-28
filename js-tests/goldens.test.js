@@ -1,8 +1,8 @@
 // Screenshot goldens for the consumer modules, at a phone (390px) and a
 // desktop (1280px) width, with every toggle closed and with every toggle
 // opened: the Rules page (verified, and failed), the unilateral receipt (the
-// owner's keep copy and the counterparty copy) and the bilateral receipt (keep
-// and counterparty). The pages are the modules' real output.
+// owner's keep copy and the counterparty copy), the bilateral receipt (keep
+// and counterparty) and the provider's own receipt. The pages are the modules' real output.
 //
 // The PNGs in tests/goldens/ are review images: a reviewer opens the 390px one
 // and sees L0 without scrolling. Fonts differ between machines, so this suite
@@ -43,6 +43,13 @@ const PAGES = [
   { name: "receipt-counterparty", args: receipt("counterparty", "counterparty") },
   { name: "receipt-bilateral-keep", args: receipt("bilateral-keep", "keep"), keep: true, oneScreen: false },
   { name: "receipt-bilateral-counterparty", args: receipt("bilateral-counterparty", "counterparty"), oneScreen: false },
+  // A Mesh node's own record of an exchange it served (the provider module, #390): each
+  // payment by its full Lightning payment hash with its record id beside it, the
+  // records note before the records it lists, and the time to the minute (#520-#522).
+  // Its page has one level and no L0 region: its first screen runs down to the
+  // line of its one toggle, the Received table (l0), which is drawn open
+  // (minDetails, openAtStart); the payment rows below it may scroll.
+  { name: "receipt-provider", args: receipt("mesh-provider-selected", "keep"), l0: ".cv-provider-receipt > details > summary", minDetails: 1, openAtStart: 1 },
 ];
 
 const chromePath = findChrome();
@@ -55,9 +62,10 @@ if (!chromePath) {
 
 const OPEN_ALL = `document.querySelectorAll("details").forEach((d) => { d.open = true; }); document.querySelectorAll("details").length`;
 
-const MEASURE = `(() => {
+// l0 names the element holding a page's surface: its L0 region, unless the page says otherwise.
+const MEASURE = (l0Selector = '[data-level="L0"]') => `(() => {
   const box = (el) => (el && el.checkVisibility() ? el.getBoundingClientRect() : null);
-  const l0 = box(document.querySelector('[data-level="L0"]'));
+  const l0 = box(document.querySelector(${JSON.stringify(l0Selector)}));
   const outcome = box(document.querySelector(".cv-verification__outcome"));
   const banner = document.querySelector('[data-banner="private"]');
   const details = [...document.querySelectorAll("details")];
@@ -117,7 +125,7 @@ describe.skipIf(!chromePath)("consumer goldens (headless Chromium)", () => {
         it(`${golden}`, async () => {
           await tab.open(urls[page.name], { width, media: "screen" });
           if (state === "open") await tab.evaluate(OPEN_ALL);
-          const m = await tab.evaluate(MEASURE);
+          const m = await tab.evaluate(MEASURE(page.l0));
 
           // One level of details, and the toggles in the state named.
           expect(m.nested).toBe(0);
@@ -125,8 +133,8 @@ describe.skipIf(!chromePath)("consumer goldens (headless Chromium)", () => {
             expect(m.details).toBe(0);
             expect(m.l0Bottom).toBeNull();
           } else {
-            expect(m.details).toBeGreaterThanOrEqual(2);
-            expect(m.open).toBe(state === "open" ? m.details : 0);
+            expect(m.details).toBeGreaterThanOrEqual(page.minDetails ?? 2);
+            expect(m.open).toBe(state === "open" ? m.details : (page.openAtStart ?? 0));
             expect(m.l0Bottom).toBeGreaterThan(0);
           }
           // The verification state is on the first screen at every width.

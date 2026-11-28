@@ -5134,6 +5134,16 @@
 
   var PROVIDER_POC = "x-mesh-poc-v1";
   var PROVIDER_LEG = "payee_observed";
+  var LN_HASH = /^[0-9a-f]{64}$/;
+
+  // provider.payment_hash: the Lightning payment hash a leg names (payment_ref
+  // of type ln.payment_hash, 64 lowercase hex digits), what the wallet shows
+  // (Sherlock2 on #520); null for any other reference or none.
+  function paymentHash(settlement) {
+    var ref = map(get(settlement, "payment_ref"));
+    var value = get(ref, "value");
+    return get(ref, "type") === "ln.payment_hash" && typeof value === "string" && LN_HASH.test(value) ? value : null;
+  }
   var CANONICAL_UINT = /^(?:0|[1-9][0-9]*)$/;
 
   // group_thousands on a canonical integer string: amounts are exact at any size.
@@ -5173,8 +5183,8 @@
 
   var ISO_OFFSET = /^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2})(\.\d+)?)?([Zz]|[+-]\d{2}(?::?\d{2})?)$/;
   // provider._utc: a time with its offset (RFC 3339, seconds optional, the
-  // offset as +05, +0500 or +05:00), in UTC to the second
-  // ("2026-10-30T19:50:00 UTC"), or "?" when it is not one, has no offset or
+  // offset as +05, +0500 or +05:00), as the same instant in UTC
+  // ("2026-10-30T19:50:00Z", said in words by plainTime), or "?" when it is not one, has no offset or
   // falls outside years 1 to 9999. Python's fromisoformat (3.11 and later)
   // also reads spellings no provider bundle carries, and this shows "?" for
   // each: another separator than T, t or a space, an hour with no minutes, a
@@ -5201,7 +5211,7 @@
     var year = when.getUTCFullYear();
     if (year < 1 || year > 9999) return "?";
     // toISOString writes years 1 to 9999 as four digits.
-    return when.toISOString().slice(0, 19) + " UTC";
+    return when.toISOString().slice(0, 19) + "Z";
   }
 
   // provider._is_leg: a payment this node received, only a settled one.
@@ -5267,10 +5277,11 @@
       var fee = providerAmount(get(settlement, "receive_fee"));
       total = total !== null && received !== null && received.msat !== null ? addDigits(total, received.msat) : null;
       var id = pyText(get(leg, "capsule_id"));
-      var payment = { capsule_id: id, received: received && received.text, fee: fee && fee.text };
+      var payment = { capsule_id: id, payment_hash: paymentHash(settlement), received: received && received.text, fee: fee && fee.text };
       // A leg's amounts are its record's settlement members, formatted by providerAmount.
       payment.sources = sourcesOf(payment, {
         capsule_id: inRecord(id, "/record/capsule_id"),
+        payment_hash: inRecord(id, "/record/settlement/payment_ref/value"),
         received: { derived: "provider_amount", from: [inRecord(id, "/record/settlement/received")] },
         fee: { derived: "provider_amount", from: [inRecord(id, "/record/settlement/receive_fee")] },
       });
@@ -5302,12 +5313,19 @@
   // payments expanded), under the title the twin's page heads it with. The
   // title addresses the owner ("Your receipt ..."), so a shared copy (a page
   // saved for anyone, or a report) draws none: its other lines speak of
-  // "this node" (#395). The served time stays in UTC, as the twin says it: it
-  // is no data-time span, so the page's local-time pass leaves it.
+  // "this node" (#395). The served time follows receipt-presentation.md R6
+  // (Sherlock2 on #522): a data-time span the page says in the reader's zone,
+  // in UTC words where nothing rewrites it, never with seconds; a shared copy
+  // keeps the UTC words, since it is read elsewhere (Sherlock2 on
+  // capsules-plugin#408).
   function drawProvider(doc, depth, model) {
     var d = new Drawing(doc);
     var kit = new Kit(d);
-    var mono = function (id) { return d.el("span", { class: "cv-mono" }, [id.slice(0, 16)]); };
+    var mono = function (id) { return d.el("span", { class: "cv-mono" }, [id]); };
+    var shared = sharedCarrier(drawCarrier);
+    var stamp = model.served_at || "?";
+    var shownAt = plainTime(stamp);
+    var at = shownAt !== stamp && !shared ? d.el("span", { "data-time": stamp }, [shownAt]) : shownAt;
     // A failed or dispatched exchange was not served: its page says what the
     // record says, asks no "served" of its labels and heads it accordingly.
     var served = model.effect === "confirmed";
@@ -5324,12 +5342,24 @@
       : w("provider.status.failed" + tail);
     var metrics = [
       { label: w(served ? "provider.model" : "provider.model_asked"), value: model.model || "?" },
-      { label: w(served ? "provider.served_at" : "provider.recorded_at"), value: model.served_at || "?" },
+      { label: w(served ? "provider.served_at" : "provider.recorded_at"), value: at },
     ];
     if (model.total !== null && !unpaid) metrics.push({ label: w("provider.total"), value: model.total });
     var notShown = w("provider.not_shown");
-    var rows = model.payments.map(function (p) { return [mono(p.capsule_id), p.received || notShown, p.fee || notShown]; });
-    var table = kit.dataTable([w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
+    // Each payment leads with its Lightning payment hash, in full, and its record id beside it (Sherlock2 on #520).
+    var rows = model.payments.map(function (p) {
+      return [p.payment_hash ? mono(p.payment_hash) : notShown, mono(p.capsule_id.slice(0, 16)), p.received || notShown, p.fee || notShown];
+    });
+    var table = kit.dataTable([w("provider.payment_hash"), w("provider.payment_record"), w("provider.received"), w("provider.fee")], rows);
+    // The note comes before what it lists: the exchange record, then each
+    // payment (#521). With no payment the note itself names the exchange record.
+    var records = unpaid
+      ? [d.el("p", { class: "cv-muted", "data-provider": "records" }, [w("provider.records_note_unpaid") + " ", mono(model.exchange_id.slice(0, 16))])]
+      : [
+        d.el("p", { class: "cv-muted", "data-provider": "records" }, [w("provider.records_note")]),
+        d.el("p", { "data-provider": "exchange-record" }, [w("provider.exchange_record") + " ", mono(model.exchange_id.slice(0, 16))]),
+        kit.drilldown(w("provider.received_count", { count: String(model.payments.length) }), [table], true),
+      ];
     var l0 = d.el("div", { "data-level": "L0" }, [
       sharedCarrier(drawCarrier) ? null : d.el("h2", {}, [w(served ? "provider.title" : "provider.title_asked")]),
       d.el("div", { class: "cv-provider-receipt", "data-module": moduleId("provider") }, [
@@ -5337,9 +5367,8 @@
         status === null ? null : d.el("p", { "data-provider": "status", "data-effect": model.effect }, [status]),
         d.el("p", { "data-provider": "no-content" }, [w("provider.no_content" + tail)]),
         kit.metricGrid(metrics),
-        unpaid ? null : kit.drilldown(w("provider.received_count", { count: String(model.payments.length) }), [table], true),
-        d.el("p", { class: "cv-muted", "data-provider": "records" }, [w("provider.records_note" + tail) + " ", mono(model.exchange_id)]),
-      ]),
+        d.el("p", { class: "cv-muted", "data-provider": "minute" }, [w("provider.minute_note")]),
+      ].concat(records)),
     ]);
     return [l0, d.el("div", { "data-level": "L1" }, []), d.el("div", { "data-level": "L2" }, [])];
   }
