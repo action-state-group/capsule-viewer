@@ -6,8 +6,10 @@ import {
 import {
   checkCountersignedCopy,
   type CountersignedCopyInput,
+  type CountersignedCopyStamp,
 } from "./countersigned-copy.js";
 import {
+  copyStampTime,
   countersignedStamps,
   verifierReportReading,
   withVerifierReport,
@@ -641,10 +643,19 @@ function renderSignerStatement(
 function renderStamps(
   host: HTMLElement,
   stamps: readonly CountersignatureStamp[],
+  copy?: CountersignedCopyStamp,
 ): void {
   host.append(element("h4", "Countersignatures"));
   const list = element("ul");
+  // On a receipt page whose countersigned copy the page checked itself, that
+  // copy's line comes first, as the COUNTERSIGNED stamp says it (#518,
+  // receipt view-model note section 2, `countersigned`): the shown file's own
+  // "none" is then not said, and any countersignature it does carry is still
+  // listed below.
+  const copyLine = copy === undefined ? null : countersignedCopyLine(copy);
+  if (copyLine !== null) list.append(copyLine);
   stamps.forEach((stamp) => {
+    if (copyLine !== null && stamp.kind === "hollow") return;
     const item = element("li");
     item.dataset.stampKind = stamp.kind;
     item.append(element("span", stampText(stamp)));
@@ -658,6 +669,32 @@ function renderStamps(
     list.append(item);
   });
   host.append(list);
+}
+
+// The countersigned copy's line in the receipt pack's words, its time drawn
+// as the stamp draws it, or null when the stamp would not fill from it (a
+// time the module does not read as one).
+function countersignedCopyLine(
+  copy: CountersignedCopyStamp,
+): HTMLElement | null {
+  const at = copyStampTime(copy.at);
+  if (at === null) return null;
+  const item = element("li");
+  item.dataset.stampKind = "countersigned-copy";
+  if (!copy.independent) item.dataset.countersignerListed = "not";
+  const mark = "\u0000";
+  const [before, ...after] = receiptWord(
+    copy.independent
+      ? "deal.stamp.countersigned.filled_copy"
+      : "deal.stamp.countersigned.filled_copy_not_listed",
+    { signer: copy.name, at: mark, k: copy.k, n: copy.n },
+  ).split(mark);
+  const time = element("span", localTime(at));
+  time.dataset.time = at;
+  const text = element("span");
+  text.append(before ?? "", time, after.join(mark));
+  item.append(text);
+  return item;
 }
 
 function renderReceipts(
@@ -1377,7 +1414,10 @@ async function renderVerificationPage(
       `${contract.refused.sha256} (not read: ${contract.refused.reason})`,
     );
   page.append(summary);
-  renderReceipts(page, model.receipts);
+  // A receipt page says a file with no receipt once, in "What this copy
+  // carries" (Sherlock2's ruling on #518); a receipt it discloses is listed.
+  if (receipt === undefined || model.receipts.length > 0)
+    renderReceipts(page, model.receipts);
   if (model.parentWitness !== undefined)
     renderParentWitness(page, model.parentWitness);
   // On a receipt page whose holder's book capsulectl reported witnessed,
@@ -1479,7 +1519,7 @@ async function renderVerificationPage(
         ),
       );
   }
-  renderStamps(page, stamps);
+  renderStamps(page, stamps, receipt?.countersignedCopy);
   renderCompletenessStatement(page, model.completeness);
   // A receipt page says its checks once, in the check lists below (#489).
   if (receipt === undefined) renderChecks(page, model.checks);
@@ -3720,6 +3760,12 @@ interface ReceiptCore {
   readonly bookWitness?: BookWitness;
   /** A copy made for the counterparty or the adjudicator (#482). */
   readonly shared: boolean;
+  /**
+   * The countersigned copy the page checked itself (#456), the same finding
+   * the receipt's COUNTERSIGNED stamp reads, so Technical details say what
+   * the stamp says (#518).
+   */
+  readonly countersignedCopy?: CountersignedCopyStamp;
 }
 
 /** The receipt page's core, or undefined when `module` is no receipt module. */
@@ -3728,6 +3774,7 @@ function receiptCoreOf(
   context: VerifiedBundleContext,
   reading: VerifierReading | null,
   root: HTMLElement,
+  countersignedCopy: CountersignedCopyStamp | null,
 ): ReceiptCore | undefined {
   if (module === undefined || !RECEIPT_PAGE_MODULE_IDS.has(module.manifest.id))
     return undefined;
@@ -3745,6 +3792,7 @@ function receiptCoreOf(
     reading: pass,
     ...(book === undefined ? {} : { bookWitness: book }),
     shared: audience === "counterparty" || audience === "adjudicator",
+    ...(countersignedCopy === null ? {} : { countersignedCopy }),
   };
 }
 
@@ -4215,7 +4263,7 @@ async function renderVerifiedContext(
   // A receipt page's core (#489): capsulectl's answers in its one check
   // list, its witness line, one ladder and the receipt pack's words.
   const receipt = verified
-    ? receiptCoreOf(selected?.module, context, reading, root)
+    ? receiptCoreOf(selected?.module, context, reading, root, countersignedCopy)
     : undefined;
   // The one witness line on the holder's own receipt page is the core's,
   // in capsulectl's voice (#424, #489): drawn under the banner in place of

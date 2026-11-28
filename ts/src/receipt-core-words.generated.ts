@@ -36,6 +36,8 @@ export const RECEIPT_PAGE_WORDS: Readonly<Record<string, string>> = {
   "deal.proof.status.fail": "failed",
   "deal.proof.status.absent": "not in this copy",
   "deal.proof.status.withheld": "not run on this copy",
+  "deal.stamp.countersigned.filled_copy": "Countersigned by {signer} at {at}, through record {k} of {n}.",
+  "deal.stamp.countersigned.filled_copy_not_listed": "Countersigned by {signer} at {at}, through record {k} of {n}. Its directory entry does not list it as independent of the parties.",
   "deal.proof.witness.filled_checked": "Witness time stamp: {witness} at {at}, on your own book",
   "deal.proof.witness.filled_checked_not_listed": "Witness time stamp: {witness} at {at}, on your own book. Its directory entry does not list it as independent of the parties.",
   "deal.proof.witness.open_named": "Witness time stamp from {witness}: not in this copy",

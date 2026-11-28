@@ -67,10 +67,38 @@ async function stamp(
   });
   const li = root.querySelector('[data-stamp="countersigned"]');
   expect(li, "the receipt draws the COUNTERSIGNED stamp").not.toBeNull();
-  return {
+  const top = {
     state: li!.getAttribute("data-stamp-state"),
     text: li!.querySelector(".cv-rcpt-stamp__text")!.textContent ?? "",
   };
+  // Technical details say what the stamp says (#518): the copy's line, in
+  // the stamp's words, exactly when the stamp fills from it; otherwise the
+  // shown file's own countersignatures as before.
+  const details = technicalCountersignatures(root);
+  const copyLines = details.filter((d) => d.kind === "countersigned-copy");
+  if (top.state === "filled") {
+    expect(copyLines.map((d) => d.text)).toEqual([top.text]);
+    expect(details.map((d) => d.text)).not.toContain("Countersigned: none");
+  } else {
+    expect(copyLines).toEqual([]);
+  }
+  root.remove();
+  return top;
+}
+
+// The Technical details' Countersignatures list: each line's kind and text.
+function technicalCountersignatures(
+  root: HTMLElement,
+): { kind: string | null; text: string }[] {
+  const heading = [...root.querySelectorAll("h4")].find(
+    (h) => h.textContent === "Countersignatures",
+  );
+  expect(heading, "Technical details list the countersignatures").toBeDefined();
+  const list = heading!.nextElementSibling!;
+  return [...list.children].map((item) => ({
+    kind: item.getAttribute("data-stamp-kind"),
+    text: item.querySelector("span")!.textContent ?? "",
+  }));
 }
 
 const UNFILLED = { state: "open", text: "Not countersigned" };
@@ -123,6 +151,45 @@ describe("the countersigned copy a v1 receipt page carries (#456)", () => {
         await stamp("same-checkpoint", given(copy(), rowsIndependentOf(list))),
         why,
       ).toEqual({ state: "filled", text });
+  });
+
+  it("Technical details keep the shown file's own countersignature beside the checked copy's line (#518)", async () => {
+    // The copy's countersignature put on the shown file: it signs the copy's
+    // digest, so on the shown file it fails. The stamp still fills from the
+    // copy, and Technical details say both.
+    const onShown = (name: string): Obj => {
+      const got = fixture(name);
+      if (name === "same-checkpoint.bundle.json")
+        got["countersignatures"] = copy()["countersignatures"];
+      return got;
+    };
+    const registry = createPresentationRegistry();
+    for (const module of receiptModules()) registry.register(module);
+    const root = document.createElement("main");
+    document.body.append(root);
+    await renderEvidenceGraph(
+      onShown("same-checkpoint.bundle.json"),
+      root,
+      undefined,
+      {
+        depth: "L2",
+        registry,
+        verifierReport: onShown("same-checkpoint.verify.json"),
+        countersignedCopy: given() as never,
+      },
+    );
+    const top = root.querySelector('[data-stamp="countersigned"]')!;
+    expect(top.getAttribute("data-stamp-state")).toBe("filled");
+    const line = `Countersigned by Example Countersigner at ${local(AT)}, through record 1 of 1.${NOT_LISTED}`;
+    expect(top.querySelector(".cv-rcpt-stamp__text")!.textContent).toBe(line);
+    expect(technicalCountersignatures(root)).toEqual([
+      { kind: "countersigned-copy", text: line },
+      {
+        kind: "invalid",
+        text: "a countersignature is present but failed to verify",
+      },
+    ]);
+    root.remove();
   });
 
   it("without the copy the stamp is as before", async () => {
