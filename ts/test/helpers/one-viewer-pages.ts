@@ -173,6 +173,8 @@ function v0Pages(): PageCase[] {
     ["unilateral", "keep"],
     ["unilateral", "counterparty"],
     ["unilateral", "adjudicator"],
+    // A standalone report the page checks itself (summary.standalone.here).
+    ["unilateral", "main-standalone-keep"],
     ["seller", "seller-keep"],
     ["seller", "seller-counterparty"],
     ["bilateral", "bilateral-keep"],

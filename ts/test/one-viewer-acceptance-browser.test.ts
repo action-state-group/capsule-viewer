@@ -38,6 +38,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, type Browser } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { dealStandaloneReport } from "../src/deal-standalone-report.js";
 import {
   allPages,
   fetchingPage,
@@ -71,6 +72,8 @@ export interface Shown {
   readonly claims: { id: string; status: string | null }[];
   /** Whether the entry point's own region was drawn (PageCase.region). */
   readonly region: boolean;
+  /** Whether the page carries the `[data-checked-here]` marker. */
+  readonly checkedHereMarker: boolean;
   /** `[data-checked]` and `[data-checked-here]` notes: whether each says the page checked it here. */
   readonly checkedNotes: { here: boolean; text: string }[];
   /** Ladder rungs: `<n>:<status>`. */
@@ -119,6 +122,43 @@ const RUNG_CHECKS: Record<string, readonly string[] | null> = {
   "10": ["record-digests"],
   "11": ["countersignatures"],
 };
+/** The records a bundle carries, as the ladder reads them. */
+const recordsOf = (bundle: Obj): Obj[] =>
+  ((bundle["records"] ?? []) as Obj[]).filter(
+    (r) => typeof r === "object" && r !== null,
+  );
+const idsOf = (bundle: Obj): Set<string> =>
+  new Set(recordsOf(bundle).map((r) => String(r["capsule_id"])));
+/**
+ * What a rung's PASS reads in the bundle (record-page.ts, ladder), checked
+ * from the bundle itself: a PASS over a bundle with none of it is false.
+ */
+const RUNG_CARRIES: Record<string, (bundle: Obj) => boolean> = {
+  // 2: a disclosed body for a committed member.
+  "2": (b) => Object.keys((b["disclosures"] ?? {}) as Obj).length > 0,
+  // 4: a parent the record names that is a record of this bundle.
+  "4": (b) =>
+    recordsOf(b).some((r) =>
+      idsOf(b).has(
+        String((r["chain"] as Obj | undefined)?.["parent_capsule_id"]),
+      ),
+    ),
+  // 7: a witness receipt.
+  "7": (b) => JSON.stringify(b).includes('"receipts"'),
+  // 9: every cited agent-action-capsule reference is a record of this bundle.
+  "9": (b) =>
+    recordsOf(b).some((r) => {
+      const refs = ((r["references"] ?? []) as Obj[]).filter(
+        (x) => x["type"] === "agent-action-capsule",
+      );
+      return (
+        refs.length > 0 && refs.every((x) => idsOf(b).has(String(x["digest"])))
+      );
+    }),
+  // 11: a countersignature.
+  "11": (b) => JSON.stringify(b).includes("countersign"),
+};
+
 /** The History card's proof rows the lede sums (history-view.ts PROOF_CHECKS). */
 const CARD_PROOF = [
   "producer_signatures",
@@ -262,13 +302,26 @@ export async function violations(
         // An aggregated row lists every status its records have ("NOT_CHECKED PASS").
         if (!statuses!.split(" ").includes("PASS")) continue;
         const needs = RUNG_CHECKS[n!];
-        if (needs === undefined || needs === null)
+        if (needs === undefined || needs === null) {
           add(`1:rung ${n} PASS, which no page may pass`);
-        else
-          for (const id of needs)
-            if (!core.page.includes(id))
-              add(`1:rung ${n} PASS without ${id} in the page list`);
+          continue;
+        }
+        for (const id of needs)
+          if (!core.page.includes(id))
+            add(`1:rung ${n} PASS without ${id} in the page list`);
+        // And the bundle carries what the rung reads, read here from the bundle itself.
+        const carries = RUNG_CARRIES[n!];
+        if (carries !== undefined && !carries(c.bundle!))
+          add(`1:rung ${n} PASS on a bundle that carries nothing it reads`);
       }
+      // "This page checked it itself" (summary.standalone.here) over the
+      // standalone x-deal-v0 report: only where that check passes here.
+      if (
+        shown.checkedHereMarker &&
+        (c.noWebCrypto === true ||
+          (await dealStandaloneReport(c.bundle)) !== "pass")
+      )
+        add("1:data-checked-here on a report this page did not check and pass");
       // Negative fixtures reach their state.
       const target = c.target;
       switch (target) {
@@ -486,6 +539,7 @@ const KNOWN: {
       "receipt unilateral/v0 / keep",
       "receipt unilateral/v0 / counterparty",
       "receipt unilateral/v0 / adjudicator",
+      "receipt unilateral/v0 / main-standalone-keep",
       "receipt unilateral/v0 / keep + another bundle's report",
       "receipt seller/v0 / seller-keep",
       "receipt seller/v0 / seller-counterparty",
@@ -635,6 +689,8 @@ describe.skipIf(executablePath === undefined)(
                 status: e.dataset.checkStatus ?? null,
               })),
             region: document.querySelector(region) !== null,
+            checkedHereMarker:
+              document.querySelector("[data-checked-here]") !== null,
             checkedNotes: Array.from(
               document.querySelectorAll<HTMLElement>(
                 "[data-checked], [data-checked-here]",
@@ -1024,6 +1080,22 @@ describe.skipIf(executablePath === undefined)(
         ).toMatch(/claim closure has no status/u);
         expect(await after(p, (s) => ({ ...s, region: false }))).toMatch(
           /0:the entry point's region/u,
+        );
+      });
+      it('"this page checked it itself" where the page did not check that report', async () => {
+        // The page that does check its standalone report carries the marker...
+        const p = await clean("receipt unilateral/v0 / main-standalone-keep");
+        expect(p.shown.checkedHereMarker).toBe(true);
+        // ...and the same marker on a copy whose report only capsulectl read fails.
+        const q = await clean("receipt deal/v1 / keep-copy");
+        expect(
+          await after(q, (s) => ({ ...s, checkedHereMarker: true })),
+        ).toMatch(/data-checked-here on a report this page did not check/u);
+      });
+      it("a rung that passes on a bundle with nothing it reads", async () => {
+        const p = await clean("core (no module) / signed");
+        expect(await after(p, (s) => ({ ...s, rungs: ["9:PASS"] }))).toMatch(
+          /rung 9 PASS on a bundle that carries nothing it reads/u,
         );
       });
       it("a static row page that says its checks ran in this browser", async () => {
