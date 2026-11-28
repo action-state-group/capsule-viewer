@@ -929,6 +929,11 @@ function readCardObject(r: Reader, text: string): CardObject | undefined {
     r.refuse("input.machine.text", "is not JSON");
     return undefined;
   }
+  return readCardDoc(r, doc);
+}
+
+/** The card object from a parsed bundle (or, for the module page, the verified card set in a bundle's shape). */
+function readCardDoc(r: Reader, doc: Json): CardObject | undefined {
   const bad = (why: string): undefined => {
     r.refuse("input.machine.text", why);
     return undefined;
@@ -1304,6 +1309,152 @@ function buildCardPage(
       ok: false,
       reasons: r.reasons.length > 0 ? r.reasons : ["input: no card"],
     };
+  const parts = drawCardParts({
+    owner: reader === "owner",
+    words,
+    name,
+    obj,
+    extras,
+    sample,
+    failed: verdict !== "VALID",
+    machine: {
+      text: text ?? "",
+      file: file ?? "",
+      verdict: verdict ?? "",
+      digest: digest ?? "",
+      proof,
+      witnessBy,
+      witnessAt,
+      built,
+    },
+  });
+  const owner = reader === "owner";
+  const tree = el(
+    "section",
+    {
+      class: "cv-history cvh-card",
+      "data-history": "view",
+      "data-kind": "deal",
+      "data-surface": surface,
+      "data-perspective": owner ? "yours" : "theirs",
+      "data-verdict": parts.failed ? "failed" : "pass",
+    },
+    parts.header,
+    el(
+      "div",
+      { class: "cvh-main" },
+      parts.hero,
+      parts.rows,
+      owner ? null : parts.signed,
+    ),
+    el(
+      "div",
+      { class: "cvh-side" },
+      parts.proof,
+      parts.notProven,
+      owner ? parts.signed : null,
+    ),
+    el("div", { class: "cvh-wide" }, parts.technical, parts.footer),
+  );
+  return { ok: true, tree };
+}
+
+/** What the caller's page shows beside the card: capsulectl verify's answer and the object's bytes. */
+interface MachineFrame {
+  readonly text: string;
+  readonly file: string;
+  readonly verdict: string;
+  readonly digest: string;
+  readonly proof: Readonly<Record<string, "pass" | "fail" | "withheld">>;
+  readonly witnessBy: string | undefined;
+  readonly witnessAt: Instant | undefined;
+  readonly built: Instant;
+}
+
+/** What the module's page shows beside the card: the checks this page ran on it (history-view-module.ts). */
+export interface ModuleFrame {
+  readonly state:
+    | "card"
+    | "refused"
+    | "unreadable"
+    | "unverified"
+    | "signature_failed";
+  readonly signature: {
+    readonly status: "PASS" | "FAIL" | "NOT_PRESENT" | "NOT_CHECKED";
+    readonly key: string | null;
+  };
+  readonly properties: Readonly<Record<string, string>> | undefined;
+  readonly fails: readonly string[];
+  readonly skipped: readonly string[];
+  readonly held:
+    | {
+        readonly policy: boolean;
+        readonly as_of: boolean;
+        readonly deals: boolean;
+      }
+    | undefined;
+  readonly witness:
+    | {
+        readonly status: string;
+        readonly shown: boolean;
+        readonly witness?: string;
+        readonly at?: number | null;
+      }
+    | undefined;
+  readonly registration:
+    | {
+        readonly status: string;
+        readonly shown: boolean;
+        readonly service?: string;
+        readonly at?: number | null;
+      }
+    | undefined;
+}
+
+/**
+ * One card page's inputs: the card object and either the caller's
+ * `machine` (the shaped-input page) or the module's checks. A module page has
+ * no holder name (no sealed record holds one, evidencebook#1031).
+ */
+interface CardFrame {
+  readonly owner: boolean;
+  readonly words: Readonly<Record<string, string>>;
+  readonly name: string | undefined;
+  readonly obj: CardObject;
+  readonly extras: ReadonlyMap<string, DealExtra>;
+  readonly sample: number | undefined;
+  /** No counts are drawn. */
+  readonly failed: boolean;
+  readonly machine?: MachineFrame;
+  readonly module?: ModuleFrame;
+}
+
+/** The card page's parts; the caller's page and the module place them. */
+interface CardParts {
+  readonly failed: boolean;
+  readonly header: HistoryElement | null;
+  readonly hero: HistoryElement;
+  readonly rows: HistoryElement | null;
+  readonly signed: HistoryElement;
+  readonly proof: HistoryElement;
+  readonly notProven: HistoryElement;
+  readonly technical: HistoryElement;
+  readonly footer: HistoryElement | null;
+}
+
+function drawCardParts(f: CardFrame): CardParts {
+  const { owner, words, name, obj, extras, sample, failed } = f;
+  const m = f.machine;
+  const mod = f.module;
+  // The caller's page's own inputs; on a module page they are absent and the
+  // parts that read them are not placed.
+  const proof: Readonly<Record<string, "pass" | "fail" | "withheld">> =
+    m?.proof ?? {};
+  const witnessBy = m?.witnessBy;
+  const witnessAt = m?.witnessAt;
+  const digest = m?.digest;
+  const verdict = m?.verdict;
+  const file = m?.file;
 
   const say = (
     key: string,
@@ -1335,39 +1486,43 @@ function buildCardPage(
       { datetime: new Date(t.ms).toISOString(), "data-time": "minute" },
       minuteOf(t),
     );
-  const owner = reader === "owner";
-  const failed = verdict !== "VALID";
-
-  // Header: title, tag, download.
-  const download = el(
-    "a",
-    {
-      class: "cvh-button",
-      href: `data:application/json;charset=utf-8,${encodeURIComponent(text ?? "")}`,
-      download: file ?? "",
-      "data-history": "download",
-    },
-    say(owner ? "card.download.private" : "card.download"),
-  );
-  const header = el(
-    "header",
-    { class: "cvh-header", "data-history": "header" },
-    el(
-      "h1",
-      { class: "cvh-title" },
-      owner ? say("card.title.owner") : say("card.title.recipient", { name }),
-    ),
-    el(
-      "p",
-      { class: "cvh-tags" },
-      el(
-        "span",
-        { class: "cvh-tag", "data-audience": owner ? "private" : "shared" },
-        say(owner ? "card.tag.private" : "card.tag.shared"),
-      ),
-      download,
-    ),
-  );
+  // Header: title, tag, download (the caller's page only: on a module page
+  // the core runtime draws the page's title and the bundle's download).
+  const download = m
+    ? el(
+        "a",
+        {
+          class: "cvh-button",
+          href: `data:application/json;charset=utf-8,${encodeURIComponent(m.text)}`,
+          download: m.file,
+          "data-history": "download",
+        },
+        say(owner ? "card.download.private" : "card.download"),
+      )
+    : null;
+  const header = !m
+    ? null
+    : el(
+        "header",
+        { class: "cvh-header", "data-history": "header" },
+        el(
+          "h1",
+          { class: "cvh-title" },
+          owner
+            ? say("card.title.owner")
+            : say("card.title.recipient", { name: name ?? "" }),
+        ),
+        el(
+          "p",
+          { class: "cvh-tags" },
+          el(
+            "span",
+            { class: "cvh-tag", "data-audience": owner ? "private" : "shared" },
+            say(owner ? "card.tag.private" : "card.tag.shared"),
+          ),
+          download,
+        ),
+      );
 
   // The top line: the card's counts, as its holder reported them.
   const oc = obj.outcomes;
@@ -1386,15 +1541,30 @@ function buildCardPage(
         el(
           "p",
           { class: "cvh-hero-line", "data-history": "top-line" },
-          say("card.failed"),
+          say(mod ? `card.module.${mod.state}` : "card.failed"),
         ),
+        ...(mod?.state === "refused"
+          ? [
+              el(
+                "ul",
+                { class: "cvh-note", "data-history": "fails" },
+                ...mod.fails.map((p) =>
+                  el("li", null, say(`card.module.property.${p}`)),
+                ),
+              ),
+            ]
+          : []),
       ]
     : [
         el("p", { class: "cvh-hero-line", "data-history": "top-line" }, counts),
         el(
           "p",
           { class: "cvh-hero-note" },
-          owner ? say("card.reported.owner") : say("card.reported", { name }),
+          owner
+            ? say("card.reported.owner")
+            : name === undefined
+              ? say("card.reported.unnamed")
+              : say("card.reported", { name }),
         ),
         obj.waiting > 0
           ? el(
@@ -1663,13 +1833,17 @@ function buildCardPage(
               say("card.row.both_halves"),
             )
           : null,
-        el(
-          "ul",
-          { class: "cvh-stamps" },
-          stamp("card.stamp.recorded", recState, recLine),
-          stamp("card.stamp.time_stamped", tsState, tsLine),
-          stamp("card.stamp.countersigned", csState, csLine),
-        ),
+        // A module page has nothing to fill a row's stamps with (the
+        // holder's book is not in the bundle), so it draws none.
+        mod
+          ? null
+          : el(
+              "ul",
+              { class: "cvh-stamps" },
+              stamp("card.stamp.recorded", recState, recLine),
+              stamp("card.stamp.time_stamped", tsState, tsLine),
+              stamp("card.stamp.countersigned", csState, csLine),
+            ),
         x?.receipt !== undefined
           ? el(
               "p",
@@ -1695,7 +1869,26 @@ function buildCardPage(
     );
   }
 
-  // Who signed the card, and what that shows.
+  // Who signed the card, and what that shows. The caller's page takes
+  // capsulectl verify's signature check; the module's page its own
+  // (readerCardSignature, the root record's strict verdict).
+  const sig: "pass" | "fail" | "absent" | "none" = m
+    ? (m.proof["producer_signatures"] ?? "absent") === "pass"
+      ? "pass"
+      : m.proof["producer_signatures"] === "fail"
+        ? "fail"
+        : "absent"
+    : mod?.signature.status === "PASS"
+      ? "pass"
+      : mod?.signature.status === "FAIL"
+        ? "fail"
+        : mod?.signature.status === "NOT_PRESENT"
+          ? "none"
+          : "absent";
+  const signerKey =
+    mod?.signature.status === "PASS" && mod.signature.key !== null
+      ? mod.signature.key
+      : obj.keyId;
   const signed = el(
     "section",
     { class: "cvh-panel", "data-history": "signed" },
@@ -1703,31 +1896,37 @@ function buildCardPage(
     el(
       "p",
       null,
-      // "Signed by" only when capsulectl verify reported the signature passed;
-      // otherwise the page names the signer the card claims.
-      // The signature proves the key, not the name: the name stays a label.
+      // "Signed by" only when the signature check passed; otherwise the page
+      // names the signer the card claims. The signature proves the key, not
+      // the name: the name stays a label.
       say(
-        (proof["producer_signatures"] === "pass"
-          ? "card.signed.by"
-          : "card.signed.claimed") + (owner ? ".owner" : ""),
-        { name, key: short(obj.keyId) },
+        (sig === "pass" ? "card.signed.by" : "card.signed.claimed") +
+          (owner ? ".owner" : name === undefined ? ".unnamed" : ""),
+        name === undefined
+          ? { key: short(signerKey) }
+          : { name, key: short(signerKey) },
       ),
       ...(obj.signedAt !== undefined ? [" · ", time(obj.signedAt)] : []),
     ),
-    // What the signature shows is said only when capsulectl verify reported
-    // the signature check passed.
+    // What the signature shows is said only when the check passed.
     el(
       "p",
       {
         class: "cvh-note",
-        "data-signature": proof["producer_signatures"] ?? "absent",
+        "data-signature": m
+          ? (m.proof["producer_signatures"] ?? "absent")
+          : (mod?.signature.status ?? "NOT_CHECKED"),
       },
       say(
-        proof["producer_signatures"] === "pass"
+        sig === "pass"
           ? "card.signed.note"
-          : proof["producer_signatures"] === "fail"
-            ? "card.signed.failed"
-            : "card.signed.unchecked",
+          : m
+            ? sig === "fail"
+              ? "card.signed.failed"
+              : "card.signed.unchecked"
+            : sig === "none"
+              ? "card.module.signed.none"
+              : "card.module.signed.unchecked",
       ),
     ),
   );
@@ -1795,7 +1994,7 @@ function buildCardPage(
     ),
   ];
   const command = `capsulectl verify --bundle ${file ?? ""}`;
-  const proofPanel = el(
+  const callerProof = el(
     "section",
     { class: "cvh-panel", "data-history": "proof" },
     el("h2", null, say("card.proof.heading")),
@@ -1826,6 +2025,8 @@ function buildCardPage(
     ),
   );
 
+  const proofPanel = mod ? moduleChecks(mod, say, time) : callerProof;
+
   const notProven = el(
     "section",
     { class: "cvh-panel cvh-callout", "data-history": "does-not-show" },
@@ -1838,14 +2039,23 @@ function buildCardPage(
         null,
         owner
           ? say("card.not_proven.true.owner")
-          : say("card.not_proven.true", { name }),
+          : name === undefined
+            ? // "Only that its holder signed" only when this page checked the signature.
+              say(
+                sig === "pass"
+                  ? "card.not_proven.true.unnamed"
+                  : sig === "none"
+                    ? "card.module.not_proven.true.unsigned.none"
+                    : "card.module.not_proven.true.unsigned",
+              )
+            : say("card.not_proven.true", { name }),
       ),
       el(
         "li",
         null,
         owner
           ? say("card.not_proven.who.owner")
-          : say("card.not_proven.who", { name }),
+          : say("card.not_proven.who", name === undefined ? {} : { name }),
       ),
       el("li", null, say("card.not_proven.outside")),
     ),
@@ -1862,8 +2072,13 @@ function buildCardPage(
       el("dd", null, el("code", null, obj.derivation)),
       el("dt", null, say("card.technical.key")),
       el("dd", null, el("code", null, obj.keyId)),
-      el("dt", null, say("card.technical.digest")),
-      el("dd", null, el("code", null, digest ?? "")),
+      // The proof fingerprint is capsulectl verify's (the caller's page only).
+      ...(m
+        ? [
+            el("dt", null, say("card.technical.digest")),
+            el("dd", null, el("code", null, digest ?? "")),
+          ]
+        : []),
       ...(owner && obj.deals !== undefined
         ? [
             el("dt", null, say("card.technical.deals")),
@@ -1877,46 +2092,297 @@ function buildCardPage(
     ),
   );
 
-  const footer = el(
-    "footer",
-    { class: "cvh-footer", "data-history": "footer" },
-    el("p", { "data-history": "times" }, say("card.footer.utc")),
-    el(
-      "p",
-      null,
-      owner ? say("card.footer.private") : say("card.footer.shared", { name }),
-    ),
-    el(
-      "p",
-      null,
-      say("card.footer.built.before"),
-      time(built),
-      say("card.footer.built.after"),
-    ),
-  );
+  const footer = !m
+    ? null
+    : el(
+        "footer",
+        { class: "cvh-footer", "data-history": "footer" },
+        el("p", { "data-history": "times" }, say("card.footer.utc")),
+        el(
+          "p",
+          null,
+          owner
+            ? say("card.footer.private")
+            : say("card.footer.shared", { name: name ?? "" }),
+        ),
+        el(
+          "p",
+          null,
+          say("card.footer.built.before"),
+          time(m.built),
+          say("card.footer.built.after"),
+        ),
+      );
 
-  const tree = el(
-    "section",
-    {
-      class: "cv-history cvh-card",
-      "data-history": "view",
-      "data-kind": "deal",
-      "data-surface": surface,
-      "data-perspective": owner ? "yours" : "theirs",
-      "data-verdict": failed ? "failed" : "pass",
-    },
+  return {
+    failed,
     header,
-    el("div", { class: "cvh-main" }, hero, rowList, owner ? null : signed),
+    hero,
+    rows: rowList,
+    signed,
+    proof: proofPanel,
+    notProven,
+    technical,
+    footer,
+  };
+}
+
+/**
+ * The module page's own check panel (L2, after the core's verification
+ * section): the card's SH 6 properties as this page checked them, what the
+ * block does not carry, the snapshot's witness and the card statements'
+ * registration under the reader's own list (the Python module's "Which
+ * checks ran").
+ */
+function moduleChecks(
+  mod: ModuleFrame,
+  say: (key: string, values?: Readonly<Record<string, string>>) => string,
+  time: (t: Instant) => HistoryElement,
+): HistoryElement {
+  const mark = (status: string): string =>
+    status === "PASS" ? "✓" : status === "FAIL" ? "✗" : "–";
+  const rows = Object.entries(mod.properties ?? {}).map(([p, status]) =>
     el(
-      "div",
-      { class: "cvh-side" },
-      proofPanel,
-      notProven,
-      owner ? signed : null,
+      "li",
+      { class: "cvh-proof-row", "data-check": p, "data-check-status": status },
+      el("span", { class: "cvh-mark", "data-status": status }, mark(status)),
+      el(
+        "span",
+        null,
+        el(
+          "span",
+          { class: "cvh-sr" },
+          `${say(`card.module.status.${status}`)}: `,
+        ),
+        el("span", null, say(`card.module.property.${p}`)),
+        mod.skipped.includes(p)
+          ? el("span", { class: "cvh-note" }, say("card.module.skipped"))
+          : null,
+      ),
     ),
-    el("div", { class: "cvh-wide" }, technical, footer),
   );
-  return { ok: true, tree };
+  const missing = mod.held
+    ? (["policy", "as_of", "deals"] as const).filter((k) => !mod.held![k])
+    : [];
+  const at = (seconds: number | null | undefined): HistoryElement[] =>
+    typeof seconds === "number" && Number.isFinite(seconds)
+      ? [time({ ms: seconds * 1000 })]
+      : [];
+  const w = mod.witness;
+  const reg = mod.registration;
+  return el(
+    "section",
+    { class: "cvh-panel", "data-history": "card-checks" },
+    el("h2", null, say("card.module.checks.heading")),
+    el("p", { class: "cvh-note" }, say("card.module.checks.lead")),
+    el("ul", { class: "cvh-proof-list" }, ...rows),
+    missing.length > 0
+      ? el(
+          "p",
+          { class: "cvh-note", "data-history": "not-held" },
+          say("card.module.not_held", {
+            what: missing
+              .map((k) => say(`card.module.not_held.${k}`))
+              .join(", "),
+          }),
+        )
+      : null,
+    w?.shown && w.witness !== undefined
+      ? el(
+          "p",
+          { "data-history": "witness" },
+          say("card.module.witness.line", { witness: w.witness }),
+          ...(at(w.at).length > 0 ? [" · ", ...at(w.at)] : []),
+        )
+      : w?.status === "NOT_CHECKED"
+        ? el(
+            "p",
+            { class: "cvh-note", "data-history": "witness" },
+            say("card.module.witness.came"),
+          )
+        : null,
+    reg?.shown && reg.service !== undefined
+      ? el(
+          "p",
+          { "data-history": "registration" },
+          say("card.module.registration.line", { service: reg.service }),
+          ...(at(reg.at).length > 0 ? [" · ", ...at(reg.at)] : []),
+          el(
+            "span",
+            { class: "cvh-note" },
+            ` ${say("card.module.registration.note")}`,
+          ),
+        )
+      : reg?.status === "NOT_CHECKED"
+        ? el(
+            "p",
+            { class: "cvh-note", "data-history": "registration" },
+            say("card.module.registration.came"),
+          )
+        : reg?.status === "FAIL"
+          ? el(
+              "p",
+              { class: "cvh-note", "data-history": "registration" },
+              say("card.module.registration.failed"),
+            )
+          : null,
+  );
+}
+
+/** The module page's card, read for the drawer from the module's view model. */
+export interface ModuleCard {
+  readonly frame: ModuleFrame;
+  readonly own: boolean;
+  /** The card (the root record's disclosed agent_input); absent unless the card is standard. */
+  readonly card: Readonly<Record<string, unknown>> | undefined;
+  readonly keyId: string;
+  readonly signedAt: string;
+  readonly asOf: Readonly<Record<string, unknown>> | undefined;
+  /** Entries the module checked with the card's entry rule; absent when none is listed. */
+  readonly deals: readonly unknown[] | undefined;
+  /** The block carries entries that do not have that form. */
+  readonly dealsUnreadable: boolean;
+}
+
+/**
+ * The drawer's card object from the module's view model. The card and its
+ * entries already passed the card's own check (standard-history-card.ts), so
+ * this projects them and adds no rule of the shaped-input page (whose limits
+ * on ids and amount members are a caller's, not the card's). It reads only
+ * the members the card's entry rule checks under the card's token (SH 5.2;
+ * 11.2 for /3 and /4): `rows` under /3 and /4, `outcome` under /1 and /2,
+ * never the other. A card that is not drawn still names its key in "Who
+ * signed this card".
+ */
+function moduleCardObject(mc: ModuleCard): CardObject {
+  const card = mc.card ?? {};
+  const byRows =
+    card["derivation"] === "standard_history/3" ||
+    card["derivation"] === "standard_history/4";
+  const num = (v: unknown): number => (typeof v === "number" ? v : 0);
+  const oc = isObj(card["outcomes"]) ? card["outcomes"] : {};
+  const nc = isObj(card["not_counted"]) ? card["not_counted"] : {};
+  const asOf = mc.asOf?.["anchor_time"];
+  const deals =
+    mc.deals === undefined
+      ? undefined
+      : mc.deals.filter(isObj).map((d): CardDeal => {
+          const amount = isObj(d["amount"]) ? d["amount"] : undefined;
+          const outcome = byRows ? undefined : d["outcome"];
+          return {
+            id: typeof d["deal"] === "string" ? d["deal"] : "",
+            // Checked by the card's entry rule (an IP 5.2 time, a role), so neither fallback is reached.
+            agreed:
+              (typeof d["agreed_at"] === "string"
+                ? parseInstant(d["agreed_at"])
+                : undefined) ?? EPOCH,
+            role: d["role"] === "bought" ? "bought" : "provided",
+            amount:
+              amount === undefined
+                ? undefined
+                : {
+                    value: String(amount["value"]),
+                    code: String(amount["assetCode"]),
+                    scale: num(amount["assetScale"]),
+                  },
+            outcome:
+              outcome === "held" ||
+              outcome === "did_not_hold" ||
+              outcome === "undecided"
+                ? outcome
+                : undefined,
+            terms:
+              byRows && Array.isArray(d["rows"])
+                ? d["rows"].filter(isObj).map((row) => ({
+                    holder: row["owed_by"] === "holder",
+                    status: row["status"] as RowStatus,
+                    value:
+                      row["value"] === "met" || row["value"] === "not_met"
+                        ? row["value"]
+                        : undefined,
+                    remedy:
+                      typeof row["remedy"] === "string"
+                        ? row["remedy"]
+                        : undefined,
+                  }))
+                : undefined,
+            bothHalves: d["happened"] === "stamped_by_both",
+          };
+        });
+  return {
+    derivation:
+      typeof card["derivation"] === "string" ? card["derivation"] : "",
+    keyId: mc.keyId,
+    signedAt: parseInstant(mc.signedAt),
+    outcomes: {
+      of: num(oc["of"]),
+      held: num(oc["held"]),
+      didNotHold: num(oc["did_not_hold"]),
+      undecided: num(oc["undecided"]),
+    },
+    waiting: num(nc["no_witness_time"]),
+    asOf: typeof asOf === "string" ? parseInstant(asOf) : undefined,
+    deals,
+  };
+}
+
+/**
+ * The module page's three regions (history-view-module.ts): L0 the counts
+ * and the holder's rows, L1 who signed it and what this does not prove, L2
+ * the card's own checks and the technical details. Each region is a
+ * `cv-history` element, so the view's stylesheet applies to it.
+ */
+export function historyModuleCardParts(mc: ModuleCard): {
+  readonly L0: HistoryElement;
+  readonly L1: HistoryElement;
+  readonly L2: HistoryElement;
+} {
+  const failed = mc.frame.state !== "card" || mc.card === undefined;
+  const obj = moduleCardObject(mc);
+  const say0 = (key: string): string => {
+    const t = BASE[key];
+    if (t === undefined) throw new Error(`history-view: no words for ${key}`);
+    return t;
+  };
+  const parts = drawCardParts({
+    owner: mc.own,
+    words: {},
+    name: undefined,
+    obj,
+    extras: new Map(),
+    sample: undefined,
+    failed,
+    module: mc.frame,
+  });
+  const region = (depth: string, ...children: (HistoryElement | null)[]) =>
+    el(
+      "section",
+      {
+        class: "cv-history cvh-card cvh-module",
+        "data-history": "view",
+        "data-depth": depth,
+        "data-kind": "deal",
+        "data-perspective": mc.own ? "yours" : "theirs",
+        "data-verdict": parts.failed ? "failed" : "pass",
+      },
+      ...children,
+    );
+  return {
+    L0: region(
+      "L0",
+      parts.hero,
+      parts.rows,
+      mc.dealsUnreadable && !failed
+        ? el(
+            "p",
+            { class: "cvh-note", "data-history": "rows-unreadable" },
+            say0("card.module.rows.unreadable"),
+          )
+        : null,
+    ),
+    L1: region("L1", parts.signed, parts.notProven),
+    L2: region("L2", parts.proof, parts.technical),
+  };
 }
 
 /** The harbour seal, as the receipt draws it (receipt_core.js SEAL_BODY and SEAL_MOODS; a test holds the two equal). */

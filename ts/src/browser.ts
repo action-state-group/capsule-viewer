@@ -76,3 +76,14 @@ export {
   historyViewStyles,
   renderHistoryView,
 } from "./history-view.js";
+
+// The History view as a presentation module over the x-standard-history/v0
+// bundle (capsule-viewer#478). Not registered by default: it reads the same
+// bundles as the module-slot History card (capsuleviewer.standard-history/v0),
+// so a page registers one of the two, with
+// EvidenceGraph.registerPresentation(EvidenceGraph.historyViewModule).
+export {
+  buildHistoryViewModel,
+  historyViewModelJson,
+  historyViewModule,
+} from "./history-view-module.js";
