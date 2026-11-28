@@ -189,9 +189,10 @@ const TSWords = "../../ts/src/receipt-core-words.generated.ts"
 const CoreRecordPrefix = "record.rung."
 
 // CorePagePrefixes mark the receipt pack's other entries the core draws on a
-// receipt page: its own lines there, capsulectl's book-witness lines and the
-// proof panel's check labels, said the same way the module says them.
-var CorePagePrefixes = []string{"receipt_page.", "rung.book_witness", "deal.proof."}
+// receipt page: its own lines there, capsulectl's book-witness lines, the
+// proof panel's check labels and the countersigned copy's stamp line (#518),
+// said the same way the module says them.
+var CorePagePrefixes = []string{"receipt_page.", "rung.book_witness", "deal.proof.", "deal.stamp.countersigned.filled_copy"}
 
 // coreWords is the TypeScript copy of the receipt pack's entries the core
 // draws (receipt view-model note section 3, row 3 of section 7): the

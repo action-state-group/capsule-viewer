@@ -634,6 +634,17 @@ export function bookWitnessOf(
   };
 }
 
+/**
+ * The countersigned copy's time as the receipt module's stamp reads it
+ * (receipt_deal.js `stepTime(null, at)` then `validUtcTime`): fractions of a
+ * second dropped, then a real UTC time to the second, or null. The core's
+ * Technical details line uses it so it fills exactly when the stamp does.
+ */
+export function copyStampTime(at: string): string | null {
+  const m = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?Z$/u.exec(at);
+  return m !== null && utcInstant(`${m[1]}Z`) ? `${m[1]}Z` : null;
+}
+
 /** A UTC RFC 3339 time to the second, as the receipt module's validUtcTime reads it. */
 function utcInstant(value: unknown): boolean {
   if (typeof value !== "string") return false;
