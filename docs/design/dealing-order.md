@@ -1,8 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # One layer order and one set of status words for every deal surface (design note)
 
-Status: capsule-viewer#448. The words were ruled by Sherlock2 under the wording delegation on
-2026-11-28; two cases are still pending (below). Source: Steven's request of 2026-11-26 on #448.
+Status: capsule-viewer#448. Sherlock2 ruled the words under the wording delegation on
+2026-11-28, and ruled the first answer's states and the not-independent form in a follow-up the
+same day. Source: Steven's request of 2026-11-26 on #448.
 
 **What it is for.** A deal is shown in three places: the receipt (`go/receipt`), the History view
 (`ts/src/history-view.ts`) and the Mesh plugin's Evidence rows (Mesh-LLM/capsules-plugin). Each
@@ -35,26 +36,18 @@ words in its own pack, and this pack takes only the shared ones out of them.
 
 | Question | Met | Not met |
 |---|---|---|
-| Rewritten? | Sealed; with a witness, "Sealed · Time-stamped {at}" | Changed after sealing |
+| Rewritten? | Sealed and checkpointed; signed but not yet checkpointed: "Sealed, not yet checkpointed", a pending state drawn neutrally and raising no warning | Changed after sealing |
 | Same story on both sides? | Confirmed by them | They recorded something different; Their copy not checked |
 | As offered? | As offered | Not as offered; No offer in this copy |
-| Who stands behind it? | Countersigned by {name} ("{role} · {key}" until a sealed record names the signer, evidencebook#1031) | Only your own signature (owner's copy); Only the holder's signature (copies for others) |
+| Who stands behind it? | Countersigned by {name}; "Countersigned by {name} · not listed as independent" when the signer's directory entry does not list it as independent of the parties (the receipt keeps its full sentence where it shows it today). {name} is "{role} · {key}" until a sealed record names the signer (evidencebook#1031) | Only your own signature (owner's copy); Only the holder's signature (copies for others) |
 
-Time-stamped rides on the first answer; it is not a fifth slot. One word per idea does not make
+A witness adds "· Time-stamped {at}" to the end of the first answer; it is not a fifth slot.
+"Sealed" stays the word for the signed step itself, so the Mesh steps line reads Sealed, then In a
+checkpoint, then Confirmed by them. One word per idea does not make
 different evidence equal. Each surface answers from its own check and keeps its existing states:
 partial, open, not checked, failed, and the attributed form "as capsulectl verify reported"
 wherever the page did not run the check itself. A deal is a "Deal" on every surface, the Mesh rows
 included.
-
-## Pending
-
-These keys sit in the pack's `pending` member, never in `entries`, and no surface draws them
-until Sherlock2 answers:
-
-- `trust.rewritten.not_checkpointed`: what the first answer says for a record that is signed but
-  not yet checkpointed.
-- `trust.stands_behind.not_independent`: whether the sentence saying the signer's directory entry
-  does not list it as independent of the parties stays beside "Countersigned by {name}".
 
 ## Surfaces
 

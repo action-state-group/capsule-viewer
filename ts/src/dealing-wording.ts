@@ -29,8 +29,6 @@ export interface DealingWording {
   readonly trust: readonly TrustQuestion[];
   readonly technical: readonly TechnicalPart[];
   readonly entries: Readonly<Record<string, string>>;
-  /** Keys whose words are not ruled yet: never drawn, never in `entries`. */
-  readonly pending: Readonly<Record<string, string>>;
 }
 
 export const DEALING_WORDING: DealingWording = PACK as DealingWording;
@@ -39,7 +37,7 @@ const PLACEHOLDER = /\{([a-z_]+)\}/g;
 
 /**
  * One entry's words with its `{placeholders}` filled. Throws on a key the
- * pack does not hold (a pending key included) or a placeholder left unfilled,
+ * pack does not hold or a placeholder left unfilled,
  * so a surface never draws a key name or a raw `{name}`.
  */
 export function dealingSay(

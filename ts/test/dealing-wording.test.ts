@@ -28,7 +28,7 @@ describe("the dealing wording pack", () => {
   });
 
   it("holds the six ruled words", () => {
-    expect(dealingSay("trust.rewritten.met")).toBe("Sealed");
+    expect(dealingSay("word.sealed")).toBe("Sealed");
     expect(dealingSay("trust.same_story.met")).toBe("Confirmed by them");
     expect(dealingSay("word.time_stamped")).toBe("Time-stamped");
     expect(dealingSay("trust.stands_behind.met", { name: "N" })).toBe(
@@ -41,7 +41,8 @@ describe("the dealing wording pack", () => {
 
   it("words every trust answer exactly as Sherlock2 ruled", () => {
     const ruled: [string, Record<string, string>, string][] = [
-      ["trust.rewritten.met", {}, "Sealed"],
+      ["trust.rewritten.met", {}, "Sealed and checkpointed"],
+      ["trust.rewritten.not_checkpointed", {}, "Sealed, not yet checkpointed"],
       ["trust.rewritten.not_met", {}, "Changed after sealing"],
       ["trust.same_story.met", {}, "Confirmed by them"],
       ["trust.same_story.not_met", {}, "They recorded something different"],
@@ -50,6 +51,11 @@ describe("the dealing wording pack", () => {
       ["trust.as_offered.not_met", {}, "Not as offered"],
       ["trust.as_offered.absent", {}, "No offer in this copy"],
       ["trust.stands_behind.met", { name: "N" }, "Countersigned by N"],
+      [
+        "trust.stands_behind.met.not_independent",
+        { name: "N" },
+        "Countersigned by N · not listed as independent",
+      ],
       [
         "trust.stands_behind.name_fallback",
         { role: "Seller", key: "ab12cd34" },
@@ -64,32 +70,27 @@ describe("the dealing wording pack", () => {
       k.startsWith("trust."),
     );
     expect(trustKeys.sort()).toEqual(
-      [...ruled.map((r) => r[0]), "trust.rewritten.met.time_stamped"].sort(),
+      [
+        ...ruled.map((r) => r[0]),
+        "trust.rewritten.met.time_stamped",
+        "trust.rewritten.not_checkpointed.time_stamped",
+      ].sort(),
     );
   });
 
   it("rides the time stamp on the first answer, not a fifth slot", () => {
     expect(dealingSay("trust.rewritten.met.time_stamped", { at: "T" })).toBe(
-      "Sealed · Time-stamped T",
+      "Sealed and checkpointed · Time-stamped T",
     );
+    expect(
+      dealingSay("trust.rewritten.not_checkpointed.time_stamped", { at: "T" }),
+    ).toBe("Sealed, not yet checkpointed · Time-stamped T");
     const questions = new Set(
       Object.keys(pack.entries)
         .filter((k) => k.startsWith("trust."))
         .map((k) => k.split(".")[1]),
     );
     expect([...questions].sort()).toEqual([...pack.trust].sort());
-  });
-
-  it("keeps unruled keys out of the entries a surface can draw", () => {
-    expect(Object.keys(pack.pending).sort()).toEqual([
-      "trust.rewritten.not_checkpointed",
-      "trust.stands_behind.not_independent",
-    ]);
-    for (const [key, note] of Object.entries(pack.pending)) {
-      expect(pack.entries).not.toHaveProperty(key);
-      expect(note).toMatch(/^TODO\(#448\): /);
-      expect(() => dealingSay(key)).toThrow(/no entry/);
-    }
   });
 
   it("refuses a missing key or an unfilled placeholder", () => {
